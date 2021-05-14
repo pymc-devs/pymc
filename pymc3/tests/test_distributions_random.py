@@ -284,12 +284,6 @@ class TestAsymmetricLaplace(BaseTestCases.BaseTestCase):
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestStudentT(BaseTestCases.BaseTestCase):
-    distribution = pm.StudentT
-    params = {"nu": 5.0, "mu": 0.0, "lam": 1.0}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestChiSquared(BaseTestCases.BaseTestCase):
     distribution = pm.ChiSquared
     params = {"nu": 2.0}
@@ -479,6 +473,29 @@ class TestGumbel(BaseTestDistribution):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
     ]
+
+
+class TestStudentT(BaseTestDistribution):
+    pymc_dist = pm.StudentT
+    pymc_dist_params = {"nu": 5.0, "mu": -1.0, "sigma": 2.0}
+    expected_rv_op_params = {"nu": 5.0, "mu": -1.0, "sigma": 2.0}
+    reference_dist_params = {"df": 5.0, "loc": -1.0, "scale": 2.0}
+    reference_dist = seeded_scipy_distribution_builder("t")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestStudentTLam(BaseTestDistribution):
+    pymc_dist = pm.StudentT
+    lam, sigma = get_tau_sigma(tau=2.0)
+    pymc_dist_params = {"nu": 5.0, "mu": -1.0, "lam": lam}
+    expected_rv_op_params = {"nu": 5.0, "mu": -1.0, "lam": sigma}
+    reference_dist_params = {"df": 5.0, "loc": -1.0, "scale": sigma}
+    reference_dist = seeded_scipy_distribution_builder("t")
+    tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
 class TestNormal(BaseTestDistribution):
@@ -1133,13 +1150,6 @@ class TestScalarParameterSamples(SeededTest):
             return draws
 
         pymc3_random(pm.AsymmetricLaplace, {"b": Rplus, "kappa": Rplus, "mu": R}, ref_rand=ref_rand)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_student_t(self):
-        def ref_rand(size, nu, mu, lam):
-            return st.t.rvs(nu, mu, lam ** -0.5, size=size)
-
-        pymc3_random(pm.StudentT, {"nu": Rplus, "mu": R, "lam": Rplus}, ref_rand=ref_rand)
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_ex_gaussian(self):
