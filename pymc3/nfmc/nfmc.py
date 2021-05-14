@@ -30,7 +30,7 @@ import pymc3.nfmc.posdef as posdef
 
 from pymc3.tuning.scaling import find_hessian
 from pymc3.tuning.starting import find_MAP
-from pymc3.backends.ndarray import NDArray
+from pymc3.backends.ndarray import NDArray, point_list_to_multitrace
 from pymc3.blocking import ArrayOrdering, DictToArrayBijection
 from pymc3.model import Point, modelcontext, set_data
 from pymc3.distributions.distribution import draw_values, to_tuple
@@ -167,6 +167,14 @@ class NFMC:
         self.random_seed = random_seed
         self.chain = chain
 
+        # Set the torch seed.
+        if self.random_seed != 1:
+            np.random.seed(self.random_seed)
+            self.gen = torch.Generator()
+            self.gen.manual_seed(self.random_seed)
+        else:
+            self.gen = None
+            
         # Separating out so I can keep track. These are SINF params.
         assert 0.0 <= frac_validate <= 1.0
         self.frac_validate = frac_validate
@@ -213,12 +221,12 @@ class NFMC:
 
         if self.init_samples is None:
             init_rnd = sample_prior_predictive(
-                self.draws,
+                self.init_draws,
                 var_names=[v.name for v in self.model.unobserved_RVs],
                 model=self.model,
             )
 
-            for i in range(self.draws):
+            for i in range(self.init_draws):
                 
                 point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
                 population.append(self.model.dict_to_array(point))
@@ -228,17 +236,56 @@ class NFMC:
         elif self.init_samples is not None:
             
             self.prior_samples = np.copy(self.init_samples)
-            
+
+        self.weighted_samples = np.copy(self.prior_samples)
+        self.nf_samples = np.copy(self.weighted_samples)
+        self.get_posterior_logp()
+        self.get_prior_logp()
+        self.log_weight = self.posterior_logp - self.prior_logp
+        self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
+        self.evidence = np.exp(self.log_evidence)
+        self.log_weight = self.log_weight - logsumexp(self.log_weight)
+
+        if self.pareto:
+            psiw = az.psislw(self.log_weight)
+            self.log_weight = psiw[0]
+            self.weights = np.exp(self.log_weight)
+        elif not self.pareto:
+            inf_weights = np.isinf(np.exp(self.log_weight))
+            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
+                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
+            self.log_weight = self.log_weight - logsumexp(self.log_weight)
+            self.weights = np.exp(self.log_weight)
+
+        self.weights = self.weights / np.sum(self.weights)
+        self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
+        self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
+        if self.init_local:
+            self.local_exploration(None, dlogq_func=lambda x: self.prior_dlogp(x),
+                                   log_thresh=np.log(self.local_thresh) - np.log(self.init_draws))
+            self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
+            self.sinf_logw = np.append(self.sinf_logw, self.local_log_weight + self.log_evidence + np.log(self.init_draws))
+            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
+            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
+            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
+            self.log_weight = np.append(self.log_weight, self.local_log_weight)
+            self.weights = np.append(self.weights, self.local_weights)
+
+        self.all_logq = np.array([])
+        self.nf_models = []
+        '''
         self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
         self.all_logq = np.array([])
         self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
         self.nf_models = []
+        '''
 
     def setup_logp(self):
         """Set up the prior and likelihood logp functions, and derivatives."""
         shared = make_shared_replacements(self.variables, self.model)
 
         self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
+        self.prior_dlogp_func = logp_forw([gradient(self.model.varlogpt, self.variables)], self.variables, shared)
         self.likelihood_logp_func = logp_forw([self.model.datalogpt], self.variables, shared)
         self.posterior_logp_func = logp_forw([self.model.logpt], self.variables, shared)
         self.posterior_dlogp_func = logp_forw([gradient(self.model.logpt, self.variables)], self.variables, shared)
@@ -275,6 +322,10 @@ class NFMC:
 
     def optim_target_dlogp_nojac(self, param_vals):
         return -1.0 * self.posterior_dlogp_nojac(param_vals)
+
+    def prior_dlogp(self, param_vals):
+        dlogps = [self.prior_dlogp_func(val) for val in param_vals]
+        return np.array(dlogps).squeeze()
 
     def target_logp(self, param_vals):
         logps = [self.posterior_logp_func(val) for val in param_vals]
@@ -442,12 +493,11 @@ class NFMC:
     def update_adam(self, step, opt_state, opt_update, get_params):
         """Jax implemented ADAM update."""
         params = np.asarray(get_params(opt_state)).astype(np.float64)
-        #params = params.reshape(-1, len(params))
         value = np.float64(self.adam_logp(floatX(params.squeeze())))
         grads = -1 * jnp.asarray(np.float64(self.adam_dlogp(floatX(params.squeeze()))))
         opt_state = opt_update(step, grads, opt_state)
         update_params = np.asarray(get_params(opt_state)).astype(np.float64)
-        #update_params = update_params.reshape(-1, len(update_params))
+        
         return value, opt_state, update_params
 
     def adam_map_hess(self):
@@ -484,11 +534,7 @@ class NFMC:
                                       options={'maxiter': self.optim_iter, 'ftol': self.ftol, 'gtol': self.gtol},
                                       jac=self.optim_target_dlogp)
             print(f'lbfgs Hessian inverse = {self.scipy_opt.hess_inv.todense()}')
-            if posdef.isPD(self.scipy_opt.hess_inv.todense()):
-                self.hess_inv = self.scipy_opt.hess_inv.todense()
-            else:
-                print(f'L-BFGS-B Hessian was not positive semi-definite - resorting to finding the nearest PSD matrix.')
-                self.hess_inv = posdef.nearestPD(self.hess_inv)
+            self.hess_inv = self.scipy_opt.hess_inv.todense()
         print(f'Final MAP solution = {self.mu_map}')
         print(f'Inverse Hessian at MAP = {self.hess_inv}')
 
@@ -555,7 +601,8 @@ class NFMC:
             elif not self.local_grad:
                 if logq_func is None:
                     raise Exception('Gradient-free approximates gradients with finite difference. Requires you to supply logq_func.')
-                self.log_weight_grad = approx_fprime(sample, self.target_logp, np.finfo(float).eps) - approx_fprime(sample, logq_func, np.finfo(float).eps)
+                self.log_weight_grad = (approx_fprime(sample, self.target_logp, np.finfo(float).eps)
+                                        - approx_fprime(sample, logq_func, np.finfo(float).eps))
 
             self.log_weight_grad = np.asarray(self.log_weight_grad).astype(np.float64)
             delta = 1.0 * self.local_step_size
@@ -569,8 +616,12 @@ class NFMC:
                 if line_search_iter >= self.max_line_search:
                     break
 
-            local_log_w = self.high_log_weight[i] + self.target_logp(proposed_step) - np.log(np.exp(self.target_logp(proposed_step)) + np.exp(self.target_logp(sample)))
-            modif_log_w = self.high_log_weight[i] + self.target_logp(sample) - np.log(np.exp(self.target_logp(proposed_step)) + np.exp(self.target_logp(sample)))
+            local_log_w = (self.high_log_weight[i] + self.target_logp(proposed_step) -
+                           np.log(np.exp(self.target_logp(proposed_step)) +
+                                  np.exp(self.target_logp(sample))))
+            modif_log_w = (self.high_log_weight[i] + self.target_logp(sample) -
+                           np.log(np.exp(self.target_logp(proposed_step)) +
+                                  np.exp(self.target_logp(sample))))
             self.local_log_weight = np.append(self.local_log_weight, local_log_w)
             self.modified_log_weight = np.append(self.modified_log_weight, modif_log_w)
             self.local_weights = np.append(self.local_weights, np.exp(local_log_w))
@@ -589,7 +640,7 @@ class NFMC:
 
             self.nf_model = GIS(torch.from_numpy(self.prior_samples[fit_idx, ...].astype(np.float32)),
                                 torch.from_numpy(self.prior_samples[val_idx, ...].astype(np.float32)),
-                                iteration=self.iteration, alpha=None, verbose=self.verbose, n_component=self.n_component,
+                                iteration=self.iteration, alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
                                 interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
                                 edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
                                 NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
@@ -597,13 +648,13 @@ class NFMC:
         elif self.frac_validate == 0.0:
             fit_idx = np.arange(self.prior_samples.shape[0])
             self.nf_model = GIS(torch.from_numpy(self.prior_samples.astype(np.float32)),
-                                iteration=self.iteration, alpha=None, verbose=self.verbose, n_component=self.n_component,
+                                iteration=self.iteration, alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
                                 interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
                                 edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
                                 NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
                                 batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
             
-        self.nf_samples, self.logq = self.nf_model.sample(self.init_draws, device=torch.device('cpu'))
+        self.nf_samples, self.logq = self.nf_model.sample(self.init_draws, device=torch.device('cpu'), gen=self.gen)
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.logq = self.logq.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
@@ -663,10 +714,6 @@ class NFMC:
                 self.hess_inv = np.array([1.0 / self.target_hessian(self.mu_map.reshape(-1, self.mu_map.size))]).reshape(-1, 1)
             else:
                 self.hess_inv = np.linalg.inv(self.target_hessian(self.mu_map.reshape(-1, self.mu_map.size)))
-
-        if not posdef.isPD(self.hess_inv):
-            print(f'Inverse Hessian is not positive semi-definite - resorting to nearest PSD matrix.')
-            self.hess_inv = posdef.nearestPD(self.hess_inv)
             
         self.weighted_samples = np.random.multivariate_normal(self.mu_map, self.hess_inv, size=self.init_draws)
         self.nf_samples = np.copy(self.weighted_samples)
@@ -855,7 +902,7 @@ class NFMC:
                                 NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
                                 batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
             
-        self.nf_samples, self.logq = self.nf_model.sample(num_draws, device=torch.device('cpu'))
+        self.nf_samples, self.logq = self.nf_model.sample(num_draws, device=torch.device('cpu'), gen=self.gen)
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.logq = self.logq.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
@@ -900,7 +947,7 @@ class NFMC:
 
     def reinitialize_nf(self):
         """Draw a fresh set of samples from the most recent NF fit. Used to start a set of NF fits without local exploration."""
-        self.nf_samples, self.logq = self.nf_model.sample(self.init_draws, device=torch.device('cpu'))
+        self.nf_samples, self.logq = self.nf_model.sample(self.init_draws, device=torch.device('cpu'), gen=self.gen)
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.logq = self.logq.numpy().astype(np.float64)
         self.weighted_samples = np.copy(self.nf_samples)
@@ -959,7 +1006,24 @@ class NFMC:
         #)
         self.posterior = self.weighted_samples[resampling_indexes, ...]
         #self.posterior = self.nf_samples[resampling_indexes, ...]
-        
+
+    def nf_samples_to_trace(self):
+        """Convert NF samples to a trace."""
+        lenght_pos = len(self.nf_samples)
+        varnames = [v.name for v in self.variables]
+        with self.model:
+            self.nf_strace = NDArray(name=self.model.name)
+            self.nf_strace.setup(lenght_pos, self.chain)
+        for i in range(lenght_pos):
+            value = []
+            size = 0
+            for var in varnames:
+                shape, new_size = self.var_info[var]
+                value.append(self.nf_samples[i][size : size + new_size].reshape(shape))
+                size += new_size
+            self.nf_strace.record(point={k: v for k, v in zip(varnames, value)})
+        self.nf_trace = point_list_to_multitrace(self.nf_strace, model=self.model)
+            
     def posterior_to_trace(self):
         """Save results into a PyMC3 trace."""
         lenght_pos = len(self.posterior)

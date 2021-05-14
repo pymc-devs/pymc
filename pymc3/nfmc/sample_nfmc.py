@@ -233,7 +233,7 @@ def sample_nfmc(
     (
         traces,
         log_evidence,
-        weighted_samples,
+        q_samples,
         importance_weights,
         logp,
         logq,
@@ -244,7 +244,7 @@ def sample_nfmc(
     ) = zip(*results)
     trace = MultiTrace(traces)
     trace.report.log_evidence = log_evidence
-    trace.report.weighted_samples = weighted_samples
+    trace.report.q_samples = q_samples
     trace.report.importance_weights = importance_weights
     trace.report.logp = logp
     trace.report.logq = logq
@@ -397,8 +397,8 @@ def sample_nfmc_int(
     nfmc.setup_logp()
     if init_method == 'prior':
         nfmc.initialize_population()
-        nfmc.initialize_nf()
-        iter_qmodel_dict['qprior'] = nfmc.nf_model
+        #nfmc.initialize_nf()
+        #iter_qmodel_dict['qprior'] = nfmc.nf_model
     elif init_method == 'full_rank':
         print(f'Initializing with full-rank EL2O approx family.')
         nfmc.get_map_laplace()
@@ -415,8 +415,9 @@ def sample_nfmc_int(
     else:
         raise ValueError('init_method must be one of: prior, full_rank, lbfgs, adam, map+laplace or simulation.')
 
-    iter_sample_dict['q_init0'] = nfmc.nf_samples
-    iter_weight_dict['q_init0'] = nfmc.weights
+    nfmc.nf_samples_to_trace()
+    iter_sample_dict['q_init_raw'] = nfmc.nf_trace
+    iter_weight_dict['q_init_raw'] = nfmc.weights
     
     iter_log_evidence = 1.0 * nfmc.log_evidence
 
@@ -425,7 +426,8 @@ def sample_nfmc_int(
         for j in range(nf_local_iter):
             print(f"Local exploration iteration: {int(j + 1)}, logZ Estimate: {nfmc.log_evidence}")
             nfmc.fit_nf(num_draws=draws)
-            iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_samples
+            nfmc.nf_samples_to_trace()
+            iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_trace
             iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
             iter_logp_dict[f'q_init{int(j + 1)}'] = nfmc.posterior_logp
             iter_logq_dict[f'q_init{int(j + 1)}'] = nfmc.logq
@@ -436,7 +438,7 @@ def sample_nfmc_int(
             if abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol:
                 print(f"Local exploration iteration: {int(j + 1)}, logZ Estimate: {nfmc.log_evidence}")
                 print(f"Normalizing constant estimate has stabilised during local exploration initialization - ending NF fits with local exploration.")
-                iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_samples
+                iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_trace
                 iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
                 iter_logp_dict[f'q_init{int(j + 1)}'] = nfmc.posterior_logp
                 iter_logq_dict[f'q_init{int(j + 1)}'] = nfmc.logq
@@ -465,7 +467,8 @@ def sample_nfmc_int(
             _log.info(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence}")
 
         nfmc.fit_nf(num_draws=draws)
-        iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
+        nfmc.nf_samples_to_trace()
+        iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_trace
         iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
         iter_logp_dict[f'q{int(stage)}'] = nfmc.posterior_logp
         iter_logq_dict[f'q{int(stage)}'] = nfmc.logq
@@ -476,7 +479,7 @@ def sample_nfmc_int(
         stage += 1
         if stage > 1 and abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol:
             print(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence}")
-            iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
+            iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_trace
             iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
             iter_logp_dict[f'q{int(stage)}'] = nfmc.posterior_logp
             iter_logq_dict[f'q{int(stage)}'] = nfmc.logq
@@ -490,7 +493,8 @@ def sample_nfmc_int(
 
     if full_local:
         nfmc.final_nf()
-        iter_sample_dict[f'q_final'] = nfmc.nf_samples
+        nfmc.nf_samples_to_trace()
+        iter_sample_dict[f'q_final'] = nfmc.nf_trace
         iter_weight_dict[f'q_final'] = nfmc.weights
         iter_logp_dict[f'q_final'] = nfmc.posterior_logp
         iter_logq_dict[f'q_final'] = nfmc.logq
@@ -500,7 +504,6 @@ def sample_nfmc_int(
         iter_qmodel_dict[f'q_final'] = nfmc.nf_model
     elif not full_local:
         nfmc.resample()
-    iter_sample_dict['posterior'] = nfmc.posterior
 
     return (
         nfmc.posterior_to_trace(),
