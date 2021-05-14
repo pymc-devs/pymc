@@ -17,6 +17,7 @@ __all__ = [
     "IncorrectArgumentsError",
     "TraceDirectoryError",
     "ImputationWarning",
+    "ShapeWarning",
     "ShapeError",
 ]
 
@@ -37,6 +38,12 @@ class TraceDirectoryError(ValueError):
 
 class ImputationWarning(UserWarning):
     """Warning that there are missing values that will be imputed."""
+
+    pass
+
+
+class ShapeWarning(UserWarning):
+    """ Something that could lead to shape problems down the line. """
 
     pass
 
