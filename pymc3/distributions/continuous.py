@@ -1793,6 +1793,21 @@ class Lognormal(PositiveContinuous):
         )
 
 
+class StudentTRV(RandomVariable):
+    name = "studentt"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("StudentT", "\\operatorname{StudentT}")
+
+    @classmethod
+    def rng_fn(cls, rng, nu, mu, sigma, size=None):
+        return stats.t.rvs(nu, mu, sigma, size=size, random_state=rng)
+
+
+studentt = StudentTRV()
+
+
 class StudentT(Continuous):
     r"""
     Student's T log-likelihood.
@@ -1856,45 +1871,22 @@ class StudentT(Continuous):
         with pm.Model():
             x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
     """
+    rv_op = studentt
 
-    def __init__(self, nu, mu=0, lam=None, sigma=None, sd=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @classmethod
+    def dist(cls, nu, mu=0, lam=None, sigma=None, sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
-        self.nu = nu = at.as_tensor_variable(floatX(nu))
+        nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
-        self.lam = lam = at.as_tensor_variable(lam)
-        self.sigma = self.sd = sigma = at.as_tensor_variable(sigma)
-        self.mean = self.median = self.mode = self.mu = mu = at.as_tensor_variable(mu)
+        sigma = at.as_tensor_variable(sigma)
 
-        self.variance = at.switch((nu > 2) * 1, (1 / self.lam) * (nu / (nu - 2)), np.inf)
-
-        assert_negative_support(lam, "lam (sigma)", "StudentT")
+        assert_negative_support(sigma, "sigma (lam)", "StudentT")
         assert_negative_support(nu, "nu", "StudentT")
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from StudentT distribution.
+        return super().dist([nu, mu, sigma], **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # nu, mu, lam = draw_values([self.nu, self.mu, self.lam], point=point, size=size)
-        # return generate_samples(
-        #     stats.t.rvs, nu, loc=mu, scale=lam ** -0.5, dist_shape=self.shape, size=size
-        # )
-
-    def logp(self, value):
+    def logp(value, nu, mu, sigma):
         """
         Calculate log-probability of StudentT distribution at specified value.
 
@@ -1908,11 +1900,7 @@ class StudentT(Continuous):
         -------
         TensorVariable
         """
-        nu = self.nu
-        mu = self.mu
-        lam = self.lam
-        sigma = self.sigma
-
+        lam, sigma = get_tau_sigma(sigma=sigma)
         return bound(
             gammaln((nu + 1.0) / 2.0)
             + 0.5 * at.log(lam / (nu * np.pi))
@@ -1923,10 +1911,7 @@ class StudentT(Continuous):
             sigma > 0,
         )
 
-    def _distr_parameters_for_repr(self):
-        return ["nu", "mu", "lam"]
-
-    def logcdf(self, value):
+    def logcdf(value, nu, mu, sigma):
         """
         Compute the log of the cumulative distribution function for Student's T distribution
         at the specified value.
@@ -1946,10 +1931,8 @@ class StudentT(Continuous):
                 f"StudentT.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
-        nu = self.nu
-        mu = self.mu
-        sigma = self.sigma
-        lam = self.lam
+        lam, sigma = get_tau_sigma(sigma=sigma)
+
         t = (value - mu) / sigma
         sqrt_t2_nu = at.sqrt(t ** 2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
