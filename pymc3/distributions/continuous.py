@@ -34,6 +34,7 @@ from aesara.tensor.random.basic import (
     halfcauchy,
     halfnormal,
     invgamma,
+    laplace,
     logistic,
     lognormal,
     normal,
@@ -152,10 +153,16 @@ class BoundedContinuous(Continuous):
 
         def transform_params(rv_var):
             _, _, _, *args = rv_var.owner.inputs
-            lower = args[cls.bound_args_indices[0]]
-            upper = args[cls.bound_args_indices[1]]
+
+            lower, upper = None, None
+            if cls.bound_args_indices[0] is not None:
+                lower = args[cls.bound_args_indices[0]]
+            if cls.bound_args_indices[1] is not None:
+                upper = args[cls.bound_args_indices[1]]
+
             lower = at.as_tensor_variable(lower) if lower is not None else None
             upper = at.as_tensor_variable(upper) if upper is not None else None
+
             return lower, upper
 
         return transforms.interval(transform_params)
@@ -1505,37 +1512,17 @@ class Laplace(Continuous):
     b: float
         Scale parameter (b > 0).
     """
+    rv_op = laplace
 
-    def __init__(self, mu, b, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.b = b = at.as_tensor_variable(floatX(b))
-        self.mean = self.median = self.mode = self.mu = mu = at.as_tensor_variable(floatX(mu))
-
-        self.variance = 2 * self.b ** 2
+    @classmethod
+    def dist(cls, mu, b, *args, **kwargs):
+        b = at.as_tensor_variable(floatX(b))
+        mu = at.as_tensor_variable(floatX(mu))
 
         assert_negative_support(b, "b", "Laplace")
+        return super().dist([mu, b], *args, **kwargs)
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Laplace distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, b = draw_values([self.mu, self.b], point=point, size=size)
-        # return generate_samples(np.random.laplace, mu, b, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, mu, b):
         """
         Calculate log-probability of Laplace distribution at specified value.
 
@@ -1549,12 +1536,9 @@ class Laplace(Continuous):
         -------
         TensorVariable
         """
-        mu = self.mu
-        b = self.b
-
         return -at.log(2 * b) - abs(value - mu) / b
 
-    def logcdf(self, value):
+    def logcdf(value, mu, b):
         """
         Compute the log of the cumulative distribution function for Laplace distribution
         at the specified value.
@@ -1569,12 +1553,10 @@ class Laplace(Continuous):
         -------
         TensorVariable
         """
-        a = self.mu
-        b = self.b
-        y = (value - a) / b
+        y = (value - mu) / b
         return bound(
             at.switch(
-                at.le(value, a),
+                at.le(value, mu),
                 at.log(0.5) + y,
                 at.switch(
                     at.gt(y, 1),
@@ -1980,7 +1962,7 @@ class StudentT(Continuous):
         )
 
 
-class Pareto(Continuous):
+class Pareto(BoundedContinuous):
     r"""
     Pareto log-likelihood.
 
@@ -2026,6 +2008,7 @@ class Pareto(Continuous):
         Scale parameter (m > 0).
     """
     rv_op = pareto
+    bound_args_indices = (1, None)  # lower-bounded by `m`
 
     @classmethod
     def dist(
@@ -2038,30 +2021,6 @@ class Pareto(Continuous):
         assert_negative_support(m, "m", "Pareto")
 
         return super().dist([alpha, m], **kwargs)
-
-    def _random(self, alpha, m, size=None):
-        u = np.random.uniform(size=size)
-        return m * (1.0 - u) ** (-1.0 / alpha)
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Pareto distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # alpha, m = draw_values([self.alpha, self.m], point=point, size=size)
-        # return generate_samples(self._random, alpha, m, dist_shape=self.shape, size=size)
 
     def logp(
         value: Union[float, np.ndarray, TensorVariable],
