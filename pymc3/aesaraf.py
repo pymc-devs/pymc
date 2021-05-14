@@ -46,10 +46,12 @@ from aesara.graph.op import Op, compute_test_value
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.shape import SpecifyShape
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorVariable
 
+from pymc3.exceptions import ShapeError
 from pymc3.vartypes import continuous_types, int_types, isgenerator, typefilter
 
 PotentialShapeType = Union[
@@ -153,6 +155,16 @@ def change_rv_size(
         Expand the existing size by `new_size`.
 
     """
+    # Check the dimensionality of the `new_size` kwarg
+    new_size_ndim = np.ndim(new_size)
+    if new_size_ndim > 1:
+        raise ShapeError("The `new_size` must be ≤1-dimensional.", actual=new_size_ndim)
+    elif new_size_ndim == 0:
+        new_size = (new_size,)
+
+    # Extract the RV node that is to be resized, together with its inputs, name and tag
+    if isinstance(rv_var.owner.op, SpecifyShape):
+        rv_var = rv_var.owner.inputs[0]
     rv_node = rv_var.owner
     rng, size, dtype, *dist_params = rv_node.inputs
     name = rv_var.name
@@ -161,10 +173,10 @@ def change_rv_size(
     if expand:
         if rv_node.op.ndim_supp == 0 and at.get_vector_length(size) == 0:
             size = rv_node.op._infer_shape(size, dist_params)
-        new_size = tuple(at.atleast_1d(new_size)) + tuple(size)
+        new_size = tuple(new_size) + tuple(size)
 
-    # Make sure the new size is a tensor. This helps to not unnecessarily pick
-    # up a `Cast` in some cases
+    # Make sure the new size is a tensor. This dtype-aware conversion helps
+    # to not unnecessarily pick up a `Cast` in some cases (see #4652).
     new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
 
     new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
