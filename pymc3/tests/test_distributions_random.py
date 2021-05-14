@@ -278,12 +278,6 @@ class TestKumaraswamy(BaseTestCases.BaseTestCase):
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestLaplace(BaseTestCases.BaseTestCase):
-    distribution = pm.Laplace
-    params = {"mu": 1.0, "b": 1.0}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestAsymmetricLaplace(BaseTestCases.BaseTestCase):
     distribution = pm.AsymmetricLaplace
     params = {"kappa": 1.0, "b": 1.0, "mu": 0.0}
@@ -442,6 +436,32 @@ class TestDiscreteWeibull(BaseTestDistribution):
     expected_rv_op_params = {"q": 0.25, "beta": 2.0}
     reference_dist_params = {"q": 0.25, "beta": 2.0}
     reference_dist = seeded_discrete_weibul_rng_fn
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestPareto(BaseTestDistribution):
+    pymc_dist = pm.Pareto
+    pymc_dist_params = {"alpha": 3.0, "m": 2.0}
+    expected_rv_op_params = {"alpha": 3.0, "m": 2.0}
+    reference_dist_params = {"b": 3.0, "scale": 2.0}
+    reference_dist = seeded_scipy_distribution_builder("pareto")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestLaplace(BaseTestDistribution):
+    pymc_dist = pm.Laplace
+    pymc_dist_params = {"mu": 0.0, "b": 1.0}
+    expected_rv_op_params = {"mu": 0.0, "b": 1.0}
+    reference_dist_params = {"loc": 0.0, "scale": 1.0}
+    reference_dist = seeded_scipy_distribution_builder("laplace")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -1101,13 +1121,6 @@ class TestScalarParameterSamples(SeededTest):
             {"mu": Domain([1.0, 1.0, 1.0]), "lam": Domain([1.0, 1.0, 1.0]), "alpha": Rplus},
             ref_rand=ref_rand,
         )
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_laplace(self):
-        def ref_rand(size, mu, b):
-            return st.laplace.rvs(mu, b, size=size)
-
-        pymc3_random(pm.Laplace, {"mu": R, "b": Rplus}, ref_rand=ref_rand)
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_laplace_asymmetric(self):

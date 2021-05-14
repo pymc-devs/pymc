@@ -1250,7 +1250,6 @@ class TestMatchesScipy:
             with pytest.raises(ValueError, match=f"Incompatible parametrization. {expected}"):
                 NegativeBinomial("x", mu=mu, p=p, alpha=alpha, n=n)
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_laplace(self):
         self.check_logp(
             Laplace,
