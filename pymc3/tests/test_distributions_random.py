@@ -187,11 +187,10 @@ class BaseTestCases:
 
         @staticmethod
         def sample_random_variable(random_variable, size):
-            """Draws samples from a RandomVariable using its .random() method."""
-            if size is None:
-                return random_variable.eval()
-            else:
-                return change_rv_size(random_variable, size, expand=True).eval()
+            """ Draws samples from a RandomVariable. """
+            if size:
+                random_variable = change_rv_size(random_variable, size, expand=True)
+            return random_variable.eval()
 
         @pytest.mark.parametrize("size", [None, (), 1, (1,), 5, (4, 5)], ids=str)
         @pytest.mark.parametrize("shape", [None, ()], ids=str)
