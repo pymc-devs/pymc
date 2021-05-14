@@ -34,6 +34,7 @@ from aesara.tensor.random.basic import (
     halfcauchy,
     halfnormal,
     invgamma,
+    laplace,
     logistic,
     lognormal,
     normal,
@@ -1469,21 +1470,6 @@ class Exponential(PositiveContinuous):
         )
 
 
-class LaplaceRV(RandomVariable):
-    name = "laplace"
-    ndim_supp = 0
-    ndims_params = [0, 0]
-    dtype = "floatX"
-    _print_name = ("Laplace", "\\operatorname{Laplace}")
-
-    @classmethod
-    def rng_fn(cls, rng, mu, b, size=None):
-        return stats.laplace.rvs(mu, b, size=size, random_state=rng)
-
-
-laplace = LaplaceRV()
-
-
 class Laplace(Continuous):
     r"""
     Laplace log-likelihood.
@@ -1534,7 +1520,7 @@ class Laplace(Continuous):
         mu = at.as_tensor_variable(floatX(mu))
 
         assert_negative_support(b, "b", "Laplace")
-        return super().dist([mu, b], **kwargs)
+        return super().dist([mu, b], *args, **kwargs)
 
     def logp(value, mu, b):
         """

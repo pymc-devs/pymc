@@ -1123,12 +1123,6 @@ class TestScalarParameterSamples(SeededTest):
             ref_rand=ref_rand,
         )
 
-    def test_laplace(self):
-        def ref_rand(size, mu, b):
-            return st.laplace.rvs(mu, b, size=size)
-
-        pymc3_random(pm.Laplace, {"mu": R, "b": Rplus}, ref_rand=ref_rand)
-
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_laplace_asymmetric(self):
         def ref_rand(size, kappa, b, mu):
