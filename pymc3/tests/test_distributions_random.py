@@ -461,7 +461,6 @@ class TestStudentT(BaseTestDistribution):
     expected_rv_op_params = {"nu": 5.0, "mu": 0.0, "lam": 1.0}
     reference_dist_params = {"df": 5.0, "loc": 0.0, "scale": 1.0}
     reference_dist = seeded_scipy_distribution_builder("t")
-    size = 15
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
