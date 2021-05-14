@@ -2655,6 +2655,7 @@ class ChiSquared(Gamma):
     nu: int
         Degrees of freedom (nu > 0).
     """
+    rv_op = chi_squared
 
     @classmethod
     def dist(cls, nu, *args, **kwargs):

@@ -304,6 +304,7 @@ class TestChiSquared(BaseTestCases.BaseTestCase):
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
+        "check_rv_size",
     ]
 
 
