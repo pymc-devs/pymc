@@ -448,7 +448,6 @@ class TestPareto(BaseTestDistribution):
     pymc_dist_params = {"alpha": 3.0, "m": 2.0}
     expected_rv_op_params = {"alpha": 3.0, "m": 2.0}
     reference_dist_params = {"b": 3.0, "scale": 2.0}
-    size = 15
     reference_dist = seeded_scipy_distribution_builder("pareto")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
