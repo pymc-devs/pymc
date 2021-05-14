@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import sys
 
 import aesara
 import numpy as np
@@ -168,6 +169,9 @@ class TestSensitivityInitialCondition:
         np.testing.assert_array_equal(np.ravel(model5_sens_ic), model5._sens_ic)
 
 
+@pytest.mark.xfail(
+    condition=sys.platform == "win32", reason="https://github.com/pymc-devs/aesara/issues/390"
+)
 def test_logp_scalar_ode():
     """Test the computation of the log probability for these models"""
 
