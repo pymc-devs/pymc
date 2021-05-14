@@ -1302,7 +1302,7 @@ class TestMatchesScipy:
             n_samples=5,  # Just testing alternative parametrization
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+   # @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_t(self):
         self.check_logp(
             StudentT,
