@@ -329,6 +329,7 @@ class BinaryMetropolis(ArrayStep):
 
     def astep(self, q0: RaveledVars, logp) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
 
+        logp_q0 = logp(q0)
         point_map_info = q0.point_map_info
         q0 = q0.data
 
@@ -340,8 +341,9 @@ class BinaryMetropolis(ArrayStep):
         # Locations where switches occur, according to p_jump
         switch_locs = rand_array < p_jump
         q[switch_locs] = True - q[switch_locs]
+        logp_q = logp(RaveledVars(q, point_map_info))
 
-        accept = logp(q) - logp(q0)
+        accept = logp_q - logp_q0
         q_new, accepted = metrop_select(accept, q, q0)
         self.accepted += accepted
 
