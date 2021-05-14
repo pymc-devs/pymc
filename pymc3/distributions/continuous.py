@@ -2602,6 +2602,21 @@ class InverseGamma(PositiveContinuous):
         )
 
 
+class ChiSquaredRV(RandomVariable):
+    name = "chi_squared"
+    ndim_supp = 0
+    ndims_params = [0]
+    dtype = "floatX"
+    _print_name = ("ChiSquared", "\\operatorname{ChiSquared}")
+
+    @classmethod
+    def rng_fn(cls, rng, nu, size=None):
+        return stats.chi2(nu, size=size, random_state=rng)
+
+
+chi_squared = ChiSquaredRV()
+
+
 class ChiSquared(Gamma):
     r"""
     :math:`\chi^2` log-likelihood.
@@ -2641,7 +2656,8 @@ class ChiSquared(Gamma):
         Degrees of freedom (nu > 0).
     """
 
-    def __init__(self, nu, *args, **kwargs):
+    @classmethod
+    def dist(cls, nu, *args, **kwargs):
         self.nu = nu = at.as_tensor_variable(floatX(nu))
         super().__init__(alpha=nu / 2.0, beta=0.5, *args, **kwargs)
 

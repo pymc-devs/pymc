@@ -295,10 +295,16 @@ class TestStudentT(BaseTestCases.BaseTestCase):
     params = {"nu": 5.0, "mu": 0.0, "lam": 1.0}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestChiSquared(BaseTestCases.BaseTestCase):
     distribution = pm.ChiSquared
     params = {"nu": 2.0}
+    expected_rv_op_params = {"nu": 2.0}
+    reference_dist_params = {"df": 2.0}
+    reference_dist = seeded_numpy_distribution_builder("chisquare")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+    ]
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
