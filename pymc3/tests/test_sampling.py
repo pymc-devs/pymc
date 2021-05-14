@@ -213,7 +213,7 @@ class TestSample(SeededTest):
                 return_inferencedata=True,
                 discard_tuned_samples=True,
                 idata_kwargs={"prior": prior},
-                random_seed=-1
+                random_seed=-1,
             )
             assert "prior" in result
             assert isinstance(result, InferenceData)
