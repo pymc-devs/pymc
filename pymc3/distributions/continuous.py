@@ -1819,8 +1819,8 @@ class StudentTRV(RandomVariable):
     _print_name = ("StudentT", "\\operatorname{StudentT}")
 
     @classmethod
-    def rng_fn(cls, rng, nu, mu, lam, size=None):
-        return stats.t.rvs(nu, mu, lam ** -0.5, size=size, random_state=rng)
+    def rng_fn(cls, rng, nu, mu, sigma, size=None):
+        return stats.t.rvs(nu, mu, sigma, size=size, random_state=rng)
 
 
 studentt = StudentTRV()
@@ -1891,23 +1891,20 @@ class StudentT(Continuous):
     """
     rv_op = studentt
 
-
     @classmethod
     def dist(cls, nu, mu=0, lam=None, sigma=None, sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
-        lam = at.as_tensor_variable(lam)
-        variance = at.switch((nu > 2) * 1, (1 / lam) * (nu / (nu - 2)), np.inf)
+        sigma = at.as_tensor_variable(sigma)
 
-        assert_negative_support(lam, "lam (sigma)", "StudentT")
+        assert_negative_support(sigma, "sigma (lam)", "StudentT")
         assert_negative_support(nu, "nu", "StudentT")
 
-        return super().dist([nu, mu, lam], **kwargs)
+        return super().dist([nu, mu, sigma], **kwargs)
 
-
-    def logp(value, nu, mu, lam):
+    def logp(value, nu, mu, sigma):
         """
         Calculate log-probability of StudentT distribution at specified value.
 
@@ -1921,7 +1918,7 @@ class StudentT(Continuous):
         -------
         TensorVariable
         """
-        lam, sigma = get_tau_sigma(tau=lam, sigma=None)
+        lam, sigma = get_tau_sigma(sigma=sigma)
         return bound(
             gammaln((nu + 1.0) / 2.0)
             + 0.5 * at.log(lam / (nu * np.pi))
@@ -1932,7 +1929,7 @@ class StudentT(Continuous):
             sigma > 0,
         )
 
-    def logcdf(value, nu, mu, lam):
+    def logcdf(value, nu, mu, sigma):
         """
         Compute the log of the cumulative distribution function for Student's T distribution
         at the specified value.
@@ -1952,7 +1949,8 @@ class StudentT(Continuous):
                 f"StudentT.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
-        lam, sigma = get_tau_sigma(tau=lam, sigma=None)
+        lam, sigma = get_tau_sigma(sigma=sigma)
+
         t = (value - mu) / sigma
         sqrt_t2_nu = at.sqrt(t ** 2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)

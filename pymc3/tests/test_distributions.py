@@ -1309,12 +1309,26 @@ class TestMatchesScipy:
             {"nu": Rplus, "mu": R, "lam": Rplus},
             lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam ** -0.5),
         )
+        self.check_logp(
+            StudentT,
+            R,
+            {"nu": Rplus, "mu": R, "sigma": Rplus},
+            lambda value, nu, mu, sigma: sp.t.logpdf(value, nu, mu, sigma),
+            n_samples=5,  # Just testing alternative parametrization
+        )
         self.check_logcdf(
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "lam": Rplus},
             lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam ** -0.5),
-            n_samples=10,
+            n_samples=10,  # relies on slow incomplete beta
+        )
+        self.check_logcdf(
+            StudentT,
+            R,
+            {"nu": Rplus, "mu": R, "sigma": Rplus},
+            lambda value, nu, mu, sigma: sp.t.logcdf(value, nu, mu, sigma),
+            n_samples=5,  # Just testing alternative parametrization
         )
 
     def test_cauchy(self):

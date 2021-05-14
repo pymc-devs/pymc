@@ -457,15 +457,25 @@ class TestGumbel(BaseTestDistribution):
 
 class TestStudentT(BaseTestDistribution):
     pymc_dist = pm.StudentT
-    pymc_dist_params = {"nu": 5.0, "mu": 0.0, "lam": 1.0}
-    expected_rv_op_params = {"nu": 5.0, "mu": 0.0, "lam": 1.0}
-    reference_dist_params = {"df": 5.0, "loc": 0.0, "scale": 1.0}
+    pymc_dist_params = {"nu": 5.0, "mu": -1.0, "sigma": 2.0}
+    expected_rv_op_params = {"nu": 5.0, "mu": -1.0, "sigma": 2.0}
+    reference_dist_params = {"df": 5.0, "loc": -1.0, "scale": 2.0}
     reference_dist = seeded_scipy_distribution_builder("t")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
+
+
+class TestStudentTLam(BaseTestDistribution):
+    pymc_dist = pm.StudentT
+    lam, sigma = get_tau_sigma(tau=2.0)
+    pymc_dist_params = {"nu": 5.0, "mu": -1.0, "lam": lam}
+    expected_rv_op_params = {"nu": 5.0, "mu": -1.0, "lam": sigma}
+    reference_dist_params = {"df": 5.0, "loc": -1.0, "scale": sigma}
+    reference_dist = seeded_scipy_distribution_builder("t")
+    tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
 class TestNormal(BaseTestDistribution):
