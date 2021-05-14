@@ -194,7 +194,7 @@ def build_disaster_model(masked=False):
 
 
 @pytest.mark.xfail(
-    reason="_check_start_shape fails with start dictionary"
+    reason="Arviz summary fails"
     # condition=(aesara.config.floatX == "float32"), reason="Fails on float32"
 )
 class TestDisasterModel(SeededTest):
@@ -222,7 +222,6 @@ class TestDisasterModel(SeededTest):
             az.summary(tr)
 
 
-@pytest.mark.xfail(reason="_check_start_shape fails with start dictionary")
 class TestLatentOccupancy(SeededTest):
     """
     From the PyMC example list
@@ -278,7 +277,7 @@ class TestLatentOccupancy(SeededTest):
                 "theta": np.array(5, dtype="f"),
             }
             step_one = pm.Metropolis([model["theta_interval__"], model["psi_logodds__"]])
-            step_two = pm.BinaryMetropolis([model.z])
+            step_two = pm.BinaryMetropolis([model.rvs_to_values[model["z"]]])
             pm.sample(50, step=[step_one, step_two], start=start, chains=1)
 
 
