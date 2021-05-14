@@ -684,6 +684,11 @@ def sample(
 def _check_start_shape(model, start):
     if not isinstance(start, dict):
         raise TypeError("start argument must be a dict or an array-like of dicts")
+
+    # Filter "non-input" variables
+    initial_point = model.initial_point
+    start = {k: v for k, v in start.items() if k in initial_point}
+
     e = ""
     for var in model.basic_RVs:
         var_shape = model.fastfn(var.shape)(start)
