@@ -1000,7 +1000,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         ----------
         name : str
             Name of the dimension.
-            Forbidden: {"chain", "draw"}
+            Forbidden: {"chain", "draw", "__sample__"}
         values : optional, array-like
             Coordinate values or ``None`` (for auto-numbering).
             If ``None`` is passed, a ``length`` must be specified.
@@ -1008,9 +1008,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             A symbolic scalar of the dimensions length.
             Defaults to ``aesara.shared(len(values))``.
         """
-        if name in {"draw", "chain"}:
+        if name in {"draw", "chain", "__sample__"}:
             raise ValueError(
-                "Dimensions can not be named `draw` or `chain`, as they are reserved for the sampler's outputs."
+                "Dimensions can not be named `draw`, `chain` or `__sample__`, "
+                "as those are reserved for use in `InferenceData`."
             )
         if values is None and length is None:
             raise ValueError(
@@ -1022,7 +1023,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             )
         if name in self.coords:
             if not values.equals(self.coords[name]):
-                raise ValueError("Duplicate and incompatiple coordinate: %s." % name)
+                raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
         else:
             self._coords[name] = values
             self._dim_lengths[name] = length or aesara.shared(len(values))
