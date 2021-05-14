@@ -2659,7 +2659,7 @@ class ChiSquared(Gamma):
 
     @classmethod
     def dist(cls, nu, *args, **kwargs):
-        self.nu = nu = at.as_tensor_variable(floatX(nu))
+        nu = at.as_tensor_variable(floatX(nu))
         super().__init__(alpha=nu / 2.0, beta=0.5, *args, **kwargs)
 
 
