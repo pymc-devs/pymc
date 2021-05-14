@@ -1822,7 +1822,9 @@ class StudentTRV(RandomVariable):
     def rng_fn(cls, rng, nu, mu, lam, size=None):
         return stats.t.rvs(nu, mu, lam ** -0.5, size=size, random_state=rng)
 
+
 studentt = StudentTRV()
+
 
 class StudentT(Continuous):
     r"""
@@ -1888,8 +1890,8 @@ class StudentT(Continuous):
             x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
     """
     rv_op = studentt
-    
-    
+
+
     @classmethod
     def dist(cls, nu, mu=0, lam=None, sigma=None, sd=None, *args, **kwargs):
         if sd is not None:
@@ -1904,7 +1906,7 @@ class StudentT(Continuous):
 
         return super().dist([nu, mu, lam], **kwargs)
 
-   
+
     def logp(value, nu, mu, lam):
         """
         Calculate log-probability of StudentT distribution at specified value.
