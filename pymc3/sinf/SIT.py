@@ -138,11 +138,14 @@ class SIT(nn.Module):
         return -torch.mean(self.evaluate_density(data, start=start, end=end, param=param))
     
     
-    def sample(self, nsample, start=None, end=0, device=torch.device('cuda'), param=None):
+    def sample(self, nsample, start=None, end=0, device=torch.device('cuda'), param=None, gen=None):
 
         #device must be the same as the device of the model
-        
-        x = torch.randn(nsample, self.ndim, device=device)
+
+        if gen is not None:
+            x = torch.randn(nsample, self.ndim, device=device, generator=gen)
+        else:
+            x = torch.randn(nsample, self.ndim, device=device)
         logq = -self.ndim/2.*torch.log(torch.tensor(2.*math.pi)) - torch.sum(x**2,  dim=1)/2
         x, logj = self.inverse(x, start=start, end=end, param=param)
         logp = logj + logq
