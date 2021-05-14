@@ -3032,8 +3032,12 @@ def test_ordered_probit_probs():
     assert isinstance(x, TensorVariable)
 
 
-@pytest.mark.parametrize("size", [(), (1,), (4,), (4, 4, 4)], ids=str)
-def test_car_logp(size):
+@pytest.mark.parametrize(
+    "sparse, size",
+    [(False, ()), (False, (1,)), (False, (4,)), (False, (4, 4, 4)), (True, ()), (True, (4,))],
+    ids=str,
+)
+def test_car_logp(sparse, size):
     """
     Tests the log probability function for the CAR distribution by checking
     against Scipy's multivariate normal logpdf, up to an additive constant.
@@ -3058,6 +3062,10 @@ def test_car_logp(size):
     cov = np.linalg.inv(prec)
     scipy_logp = scipy.stats.multivariate_normal.logpdf(xs, mu, cov)
 
+    if sparse:
+        W = aesara.tensor.as_tensor_variable(W)
+        W = aesara.sparse.csr_from_dense(W)
+
     car_dist = CAR.dist(mu, W, alpha, tau, size=size)
     # xs = np.broadcast_to(xs, size + mu.shape)
     car_logp = logpt(car_dist, xs).eval()
@@ -3070,7 +3078,8 @@ def test_car_logp(size):
     assert np.allclose(delta_logp - delta_logp[0], 0.0)
 
 
-def test_car_rng_fn():
+@pytest.mark.parametrize("sparse", [True, False])
+def test_car_rng_fn(sparse):
     delta = 0.05  # limit for KS p-value
     n_fails = 15  # Allows the KS fails a certain number of times
     size = (100,)
@@ -3086,6 +3095,9 @@ def test_car_rng_fn():
     D = W.sum(axis=0)
     prec = tau * (np.diag(D) - alpha * W)
     cov = np.linalg.inv(prec)
+    if sparse:
+        W = aesara.tensor.as_tensor_variable(W)
+        W = aesara.sparse.csr_from_dense(W)
 
     with Model():
         car = pm.CAR("car", mu, W, alpha, tau, size=size)

@@ -2050,9 +2050,13 @@ class CAR(Continuous):
         """
 
         D = W.sum(axis=0)
+        sparse = isinstance(W, aesara.sparse.SparseType)
 
         Dinv_sqrt = at.diag(1 / at.sqrt(D))
-        DWD = at.dot(at.dot(Dinv_sqrt, W), Dinv_sqrt)
+        if sparse:
+            DWD = at.dot(aesara.sparse.dot(Dinv_sqrt, W), Dinv_sqrt)
+        else:
+            DWD = at.dot(at.dot(Dinv_sqrt, W), Dinv_sqrt)
         lam = at.slinalg.eigvalsh(DWD, at.eye(DWD.shape[0]))
 
         d, _ = W.shape
@@ -2064,9 +2068,10 @@ class CAR(Continuous):
         logdet = at.log(1 - alpha.T * lam[:, None]).sum()
         delta = value - mu
 
-        if not isinstance(W, aesara.sparse.SparseType):
-            W = aesara.sparse.csr_from_dense(W)
-        Wdelta = aesara.sparse.dot(delta, W)
+        if sparse:
+            Wdelta = aesara.sparse.dot(delta, W)
+        else:
+            Wdelta = at.dot(delta, W)
 
         tau_dot_delta = D[None, :] * delta - alpha * Wdelta
         logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
