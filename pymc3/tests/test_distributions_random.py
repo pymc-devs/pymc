@@ -379,13 +379,9 @@ class BaseTestDistribution(SeededTest):
         sizes_to_check = self.sizes_to_check or [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
         sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
         for size, expected in zip(sizes_to_check, sizes_expected):
-            actual = change_rv_size(self.pymc_rv, size).eval().shape
+            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
+            actual = tuple(pymc_rv.shape.eval())
             assert actual == expected, f"size={size}, expected={expected}, actual={actual}"
-
-        # test negative sizes raise
-        for size in [-2, (3, -2)]:
-            with pytest.raises(ValueError):
-                change_rv_size(self.pymc_rv, size).eval()
 
         # test multi-parameters sampling for univariate distributions (with univariate inputs)
         if self.pymc_dist.rv_op.ndim_supp == 0 and sum(self.pymc_dist.rv_op.ndims_params) == 0:
@@ -400,7 +396,8 @@ class BaseTestDistribution(SeededTest):
                 (5, self.repeated_params_shape),
             ]
             for size, expected in zip(sizes_to_check, sizes_expected):
-                actual = change_rv_size(self.pymc_rv, size).eval().shape
+                pymc_rv = self.pymc_dist.dist(**params, size=size)
+                actual = tuple(pymc_rv.shape.eval())
                 assert actual == expected
 
     def validate_tests_list(self):
