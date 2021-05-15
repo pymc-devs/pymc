@@ -19,22 +19,21 @@ import types
 import warnings
 
 from abc import ABCMeta
-from typing import TYPE_CHECKING
-
-import dill
-
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.var import RandomStateSharedVariable
-
-from pymc3.distributions import _logcdf, _logp
-
-if TYPE_CHECKING:
-    from typing import Optional, Callable
+from typing import Optional, Sequence, Tuple, Union
 
 import aesara
-import aesara.graph.basic
 import aesara.tensor as at
+import dill
+import numpy as np
 
+from aesara.graph.basic import Variable
+from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.random.var import RandomStateSharedVariable
+from aesara.tensor.var import TensorVariable
+
+from pymc3.aesaraf import change_rv_size, pandas_to_array
+from pymc3.distributions import _logcdf, _logp
+from pymc3.exceptions import ShapeError, ShapeWarning
 from pymc3.util import UNSET, get_repr_for_variable
 from pymc3.vartypes import string_types
 
@@ -51,6 +50,20 @@ vectorized_ppc = contextvars.ContextVar(
 )  # type: contextvars.ContextVar[Optional[Callable]]
 
 PLATFORM = sys.platform
+
+# User-provided can be lazily specified as scalars
+Shape = Union[int, TensorVariable, Sequence[Union[int, TensorVariable, type(Ellipsis)]]]
+Dims = Union[str, Sequence[Union[str, None, type(Ellipsis)]]]
+Size = Union[int, TensorVariable, Sequence[Union[int, TensorVariable]]]
+
+# After conversion to vectors
+WeakShape = Union[TensorVariable, Tuple[Union[int, TensorVariable, type(Ellipsis)], ...]]
+WeakDims = Tuple[Union[str, None, type(Ellipsis)], ...]
+
+# After Ellipsis were substituted
+StrongShape = Union[TensorVariable, Tuple[Union[int, TensorVariable], ...]]
+StrongDims = Sequence[Union[str, None]]
+StrongSize = Union[TensorVariable, Tuple[Union[int, TensorVariable], ...]]
 
 
 class _Unpickling:
@@ -107,13 +120,187 @@ class DistributionMeta(ABCMeta):
         return new_cls
 
 
+def _convert_dims(dims: Dims) -> Optional[WeakDims]:
+    """ Process a user-provided dims variable into None or a valid dims tuple. """
+    if dims is None:
+        return None
+
+    if isinstance(dims, str):
+        dims = (dims,)
+    elif isinstance(dims, (list, tuple)):
+        dims = tuple(dims)
+    else:
+        raise ValueError(f"The `dims` parameter must be a tuple, str or list. Actual: {type(dims)}")
+
+    if any(d == Ellipsis for d in dims[:-1]):
+        raise ValueError(f"Ellipsis in `dims` may only appear in the last position. Actual: {dims}")
+
+    return dims
+
+
+def _convert_shape(shape: Shape) -> Optional[WeakShape]:
+    """ Process a user-provided shape variable into None or a valid shape object. """
+    if shape is None:
+        return None
+
+    if isinstance(shape, int) or (isinstance(shape, TensorVariable) and shape.ndim == 0):
+        shape = (shape,)
+    elif isinstance(shape, (list, tuple)):
+        shape = tuple(shape)
+    else:
+        raise ValueError(
+            f"The `shape` parameter must be a tuple, TensorVariable, int or list. Actual: {type(shape)}"
+        )
+
+    if isinstance(shape, tuple) and any(s == Ellipsis for s in shape[:-1]):
+        raise ValueError(
+            f"Ellipsis in `shape` may only appear in the last position. Actual: {shape}"
+        )
+
+    return shape
+
+
+def _convert_size(size: Size) -> Optional[StrongSize]:
+    """ Process a user-provided size variable into None or a valid size object. """
+    if size is None:
+        return None
+
+    if isinstance(size, int) or (isinstance(size, TensorVariable) and size.ndim == 0):
+        size = (size,)
+    elif isinstance(size, (list, tuple)):
+        size = tuple(size)
+    else:
+        raise ValueError(
+            f"The `size` parameter must be a tuple, TensorVariable, int or list. Actual: {type(size)}"
+        )
+
+    if isinstance(size, tuple) and Ellipsis in size:
+        raise ValueError(f"The `size` parameter cannot contain an Ellipsis. Actual: {size}")
+
+    return size
+
+
+def _resize_from_dims(
+    dims: WeakDims, ndim_implied: int, model
+) -> Tuple[int, StrongSize, StrongDims]:
+    """Determines a potential resize shape from a `dims` tuple.
+
+    Parameters
+    ----------
+    dims : array-like
+        A vector of dimension names, None or Ellipsis.
+    ndim_implied : int
+        Number of RV dimensions that were implied from its inputs alone.
+    model : pm.Model
+        The current model on stack.
+
+    Returns
+    -------
+    ndim_resize : int
+        Number of dimensions that should be added through resizing.
+    resize_shape : array-like
+        The shape of the new dimensions.
+    """
+    if Ellipsis in dims:
+        # Auto-complete the dims tuple to the full length.
+        # We don't have a way to know the names of implied
+        # dimensions, so they will be `None`.
+        dims = (*dims[:-1], *[None] * ndim_implied)
+
+    ndim_resize = len(dims) - ndim_implied
+
+    # All resize dims must be known already (numerically or symbolically).
+    unknowndim_resize_dims = set(dims[:ndim_resize]) - set(model.dim_lengths)
+    if unknowndim_resize_dims:
+        raise KeyError(
+            f"Dimensions {unknowndim_resize_dims} are unknown to the model and cannot be used to specify a `size`."
+        )
+
+    # The numeric/symbolic resize tuple can be created using model.RV_dim_lengths
+    resize_shape = tuple(model.dim_lengths[dname] for dname in dims[:ndim_resize])
+    return ndim_resize, resize_shape, dims
+
+
+def _resize_from_observed(
+    observed, ndim_implied: int
+) -> Tuple[int, StrongSize, Union[np.ndarray, Variable]]:
+    """Determines a potential resize shape from observations.
+
+    Parameters
+    ----------
+    observed : scalar, array-like
+        The value of the `observed` kwarg to the RV creation.
+    ndim_implied : int
+        Number of RV dimensions that were implied from its inputs alone.
+
+    Returns
+    -------
+    ndim_resize : int
+        Number of dimensions that should be added through resizing.
+    resize_shape : array-like
+        The shape of the new dimensions.
+    observed : scalar, array-like
+        Observations as numpy array or `Variable`.
+    """
+    if not hasattr(observed, "shape"):
+        observed = pandas_to_array(observed)
+    ndim_resize = observed.ndim - ndim_implied
+    resize_shape = tuple(observed.shape[d] for d in range(ndim_resize))
+    return ndim_resize, resize_shape, observed
+
+
 class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
     rv_class = None
     rv_op = None
 
-    def __new__(cls, name, *args, **kwargs):
+    def __new__(
+        cls,
+        name: str,
+        *args,
+        rng=None,
+        dims: Optional[Dims] = None,
+        initval=None,
+        observed=None,
+        total_size=None,
+        transform=UNSET,
+        **kwargs,
+    ) -> RandomVariable:
+        """Adds a RandomVariable corresponding to a PyMC3 distribution to the current model.
+
+        Note that all remaining kwargs must be compatible with ``.dist()``
+
+        Parameters
+        ----------
+        cls : type
+            A PyMC3 distribution.
+        name : str
+            Name for the new model variable.
+        rng : optional
+            Random number generator to use with the RandomVariable.
+        dims : tuple, optional
+            A tuple of dimension names known to the model.
+        initval : optional
+            Test value to be attached to the output RV.
+            Must match its shape exactly.
+        observed : optional
+            Observed data to be passed when registering the random variable in the model.
+            See ``Model.register_rv``.
+        total_size : float, optional
+            See ``Model.register_rv``.
+        transform : optional
+            See ``Model.register_rv``.
+        **kwargs
+            Keyword arguments that will be forwarded to ``.dist()``.
+            Most prominently: ``shape`` and ``size``
+
+        Returns
+        -------
+        rv : RandomVariable
+            The created RV, registered in the Model.
+        """
+
         try:
             from pymc3.model import Model
 
@@ -126,51 +313,84 @@ class Distribution(metaclass=DistributionMeta):
                 "for a standalone distribution."
             )
 
-        rng = kwargs.pop("rng", None)
-
-        if rng is None:
-            rng = model.next_rng()
-
-        if not isinstance(name, string_types):
-            raise TypeError(f"Name needs to be a string but got: {name}")
-
-        data = kwargs.pop("observed", None)
-
-        total_size = kwargs.pop("total_size", None)
-
-        dims = kwargs.pop("dims", None)
-
-        if "shape" in kwargs:
-            raise DeprecationWarning("The `shape` keyword is deprecated; use `size`.")
-
-        testval = kwargs.pop("testval", None)
-
-        if testval is not None:
+        if "testval" in kwargs:
+            initval = kwargs.pop("testval")
             warnings.warn(
                 "The `testval` argument is deprecated; use `initval`.",
                 DeprecationWarning,
                 stacklevel=2,
             )
 
-        initval = kwargs.pop("initval", testval)
+        if not isinstance(name, string_types):
+            raise TypeError(f"Name needs to be a string but got: {name}")
 
-        transform = kwargs.pop("transform", UNSET)
+        if rng is None:
+            rng = model.next_rng()
 
-        rv_out = cls.dist(*args, rng=rng, **kwargs)
+        if dims is not None and "shape" in kwargs:
+            raise ValueError(
+                f"Passing both `dims` ({dims}) and `shape` ({kwargs['shape']}) is not supported!"
+            )
+        if dims is not None and "size" in kwargs:
+            raise ValueError(
+                f"Passing both `dims` ({dims}) and `size` ({kwargs['size']}) is not supported!"
+            )
+        dims = _convert_dims(dims)
 
-        if testval is not None:
-            rv_out.tag.test_value = testval
+        # Create the RV without specifying testval, because the testval may have a shape
+        # that only matches after replicating with a size implied by dims (see below).
+        rv_out = cls.dist(*args, rng=rng, testval=None, **kwargs)
+        ndim_actual = rv_out.ndim
+        resize_shape = None
 
-        return model.register_rv(
-            rv_out, name, data, total_size, dims=dims, transform=transform, initval=initval
-        )
+        # `dims` are only available with this API, because `.dist()` can be used
+        # without a modelcontext and dims are not tracked at the Aesara level.
+        if dims is not None:
+            ndim_resize, resize_shape, dims = _resize_from_dims(dims, ndim_actual, model)
+        elif observed is not None:
+            ndim_resize, resize_shape, observed = _resize_from_observed(observed, ndim_actual)
+
+        if resize_shape:
+            # A batch size was specified through `dims`, or implied by `observed`.
+            rv_out = change_rv_size(rv_var=rv_out, new_size=resize_shape, expand=True)
+
+        if initval is not None:
+            # Assigning the testval earlier causes trouble because the RV may not be created with the final shape already.
+            rv_out.tag.test_value = initval
+
+        return model.register_rv(rv_out, name, observed, total_size, dims=dims, transform=transform)
 
     @classmethod
-    def dist(cls, dist_params, rng=None, **kwargs):
+    def dist(
+        cls,
+        dist_params,
+        *,
+        shape: Optional[Shape] = None,
+        size: Optional[Size] = None,
+        initval=None,
+        **kwargs,
+    ) -> RandomVariable:
+        """Creates a RandomVariable corresponding to the `cls` distribution.
 
-        testval = kwargs.pop("testval", None)
+        Parameters
+        ----------
+        dist_params : array-like
+            The inputs to the `RandomVariable` `Op`.
+        shape : int, tuple, Variable, optional
+            A tuple of sizes for each dimension of the new RV.
+        size : int, tuple, Variable, optional
+            For creating the RV like in Aesara/NumPy.
+        initival : optional
+            Test value to be attached to the output RV.
+            Must match its shape exactly.
 
-        if testval is not None:
+        Returns
+        -------
+        rv : RandomVariable
+            The created RV.
+        """
+        if "testval" in kwargs:
+            initval = kwargs.pop("testval")
             warnings.warn(
                 "The `testval` argument is deprecated. "
                 "Use `initval` to set initial values for a `Model`; "
@@ -179,12 +399,65 @@ class Distribution(metaclass=DistributionMeta):
                 DeprecationWarning,
                 stacklevel=2,
             )
+        if "dims" in kwargs:
+            raise NotImplementedError("The use of a `.dist(dims=...)` API is not supported.")
+        if shape is not None and size is not None:
+            raise ValueError(
+                f"Passing both `shape` ({shape}) and `size` ({size}) is not supported!"
+            )
+        shape = _convert_shape(shape)
+        size = _convert_size(size)
 
-        rv_var = cls.rv_op(*dist_params, rng=rng, **kwargs)
+        ndim_supp = cls.rv_op.ndim_supp
+        ndim_expected = None
+        ndim_batch = None
+        create_size = None
 
+        if shape is not None:
+            ndim_expected = len(tuple(shape))
+            ndim_batch = ndim_expected - ndim_supp
+            create_size = tuple(shape)[:ndim_batch]
+        elif size is not None:
+            ndim_expected = ndim_supp + len(tuple(size))
+            ndim_batch = ndim_expected - ndim_supp
+            create_size = size
+
+        # Create the RV with a `size` right away.
+        # This is not necessarily the final result.
+        rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
+        ndim_actual = rv_out.ndim
+        ndims_unexpected = ndim_actual != ndim_expected
+
+        if shape is not None and ndims_unexpected:
+            # This is rare, but happens, for example, with MvNormal(np.ones((2, 3)), np.eye(3), shape=(2, 3)).
+            # Recreate the RV without passing `size` to created it with just the implied dimensions.
+            rv_out = cls.rv_op(*dist_params, size=None, **kwargs)
+
+            # Now resize by the "extra" dimensions that were not implied from support and parameters
+            if rv_out.ndim < ndim_expected:
+                expand_shape = shape[: ndim_expected - rv_out.ndim]
+                rv_out = change_rv_size(rv_var=rv_out, new_size=expand_shape, expand=True)
+            if not rv_out.ndim == ndim_expected:
+                raise ShapeError(
+                    f"Failed to create the RV with the expected dimensionality. "
+                    f"This indicates a severe problem. Please open an issue.",
+                    actual=ndim_actual,
+                    expected=ndim_batch + ndim_supp,
+                )
+
+        # Warn about the edge cases where the RV Op creates more dimensions than
+        # it should based on `size` and `RVOp.ndim_supp`.
+        if size is not None and ndims_unexpected:
+            warnings.warn(
+                f"You may have expected a ({len(tuple(size))}+{ndim_supp})-dimensional RV, but the resulting RV will be {ndim_actual}-dimensional."
+                ' To silence this warning use `warnings.simplefilter("ignore", pm.ShapeWarning)`.',
+                ShapeWarning,
+            )
+
+        rng = kwargs.pop("rng", None)
         if (
-            rv_var.owner
-            and isinstance(rv_var.owner.op, RandomVariable)
+            rv_out.owner
+            and isinstance(rv_out.owner.op, RandomVariable)
             and isinstance(rng, RandomStateSharedVariable)
             and not getattr(rng, "default_update", None)
         ):
@@ -194,11 +467,11 @@ class Distribution(metaclass=DistributionMeta):
             # Without it, the `RandomVariable`s could not be optimized to allow
             # in-place RNG updates, forcing all sample results from compiled
             # functions to be the same on repeated evaluations.
-            new_rng = rv_var.owner.outputs[0]
-            rv_var.update = (rng, new_rng)
+            new_rng = rv_out.owner.outputs[0]
+            rv_out.update = (rng, new_rng)
             rng.default_update = new_rng
 
-        return rv_var
+        return rv_out
 
     def _distr_parameters_for_repr(self):
         """Return the names of the parameters for this distribution (e.g. "mu"

@@ -48,7 +48,6 @@ from aesara.tensor.var import TensorVariable
 from pandas import Series
 
 from pymc3.aesaraf import (
-    change_rv_size,
     compile_rv_inplace,
     gradient,
     hessian,
@@ -1061,14 +1060,18 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             New values for the shared variable.
         coords : optional, dict
             New coordinate values for dimensions of the shared variable.
-            Must be provided for all named dimensions that change in length.
+            Must be provided for all named dimensions that change in length
+            and already have coordinate values.
         """
         shared_object = self[name]
         if not isinstance(shared_object, SharedVariable):
             raise TypeError(
-                f"The variable `{name}` must be defined as `pymc3.Data` inside the model to allow updating. "
+                f"The variable `{name}` must be a `SharedVariable` (e.g. `pymc3.Data`) to allow updating. "
                 f"The current type is: {type(shared_object)}"
             )
+
+        if isinstance(values, list):
+            values = np.array(values)
         values = pandas_to_array(values)
         dims = self.RV_dims.get(name, None) or ()
         coords = coords or {}
@@ -1090,10 +1093,11 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             # Reject resizing if we already know that it would create shape problems.
             # NOTE: If there are multiple pm.Data containers sharing this dim, but the user only
             #       changes the values for one of them, they will run into shape problems nonetheless.
-            if not isinstance(length_tensor, ScalarSharedVariable) and length_changed:
+            length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
+            if not isinstance(length_belongs_to, SharedVariable) and length_changed:
                 raise ShapeError(
-                    f"Resizing dimension {dname} with values of length {new_length} would lead to incompatibilities, "
-                    f"because the dimension was not initialized from a shared variable. "
+                    f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
+                    f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
                     f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
                     f"for example by a model variable.",
                     actual=new_length,
@@ -1130,6 +1134,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         ----------
         rv_var: TensorVariable
         name: str
+            Intended name for the model variable.
         data: array_like (optional)
             If data is provided, the variable is observed. If None,
             the variable is unobserved.
@@ -1150,6 +1155,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         rv_var.name = name
         rv_var.tag.total_size = total_size
 
+        # Associate previously unknown dimension names with
+        # the length of the corresponding RV dimension.
+        if dims is not None:
+            for d, dname in enumerate(dims):
+                if not dname in self.dim_lengths:
+                    self.add_coord(dname, values=None, length=rv_var.shape[d])
+
         if data is None:
             self.free_RVs.append(rv_var)
             self.create_value_var(rv_var, transform)
@@ -1161,11 +1173,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 and not isinstance(data, (GenTensorVariable, Minibatch))
                 and data.owner is not None
             ):
-                raise TypeError("Observed data cannot consist of symbolic variables.")
+                raise TypeError(
+                    "Variables that depend on other nodes cannot be used for observed data."
+                    f"The data variable was: {data}"
+                )
 
-            # `rv_var` is potentially a new variable (e.g. the original
-            # variable could have its size changed to match the data, or be a
-            # new graph that accounts for missing data)
+            # `rv_var` is potentially changed by `make_obs_var`,
+            # for example into a new graph for imputation of missing data.
             rv_var = self.make_obs_var(rv_var, data, dims, transform)
 
         return rv_var
@@ -1179,6 +1193,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         ==========
         rv_var
             The random variable that is observed.
+            Its dimensionality must be compatible with the data already.
         data
             The observed data.
         dims: tuple
@@ -1190,21 +1205,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         name = rv_var.name
         data = pandas_to_array(data).astype(rv_var.dtype)
 
-        # The shapes of the observed random variable and its data might not
-        # match.  We need need to update the observed random variable's `size`
-        # (i.e. number of samples) so that it matches the data.
-
-        # Setting `size` produces a random variable with shape `size +
-        # support_shape`, where `len(support_shape) == op.ndim_supp`, we need
-        # to disregard the last `op.ndim_supp`-many dimensions when we
-        # determine the appropriate `size` value from `data.shape`.
-        ndim_supp = rv_var.owner.op.ndim_supp
-        if ndim_supp > 0:
-            new_size = data.shape[:-ndim_supp]
-        else:
-            new_size = data.shape
-
-        rv_var = change_rv_size(rv_var, new_size)
+        if data.ndim != rv_var.ndim:
+            raise ShapeError(
+                "Dimensionality of data and RV don't match.", actual=data.ndim, expected=rv_var.ndim
+            )
 
         if aesara.config.compute_test_value != "off":
             test_value = getattr(rv_var.tag, "test_value", None)
