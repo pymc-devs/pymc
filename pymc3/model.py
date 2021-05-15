@@ -1116,8 +1116,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             ):
                 raise TypeError("Observed data cannot consist of symbolic variables.")
 
-            data = pandas_to_array(data)
-
             # `rv_var` is potentially a new variable (e.g. the original
             # variable could have its size changed to match the data, or be a
             # new graph that accounts for missing data)
