@@ -35,6 +35,7 @@ import pymc3 as pm
 from pymc3 import Deterministic, Potential
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.distributions import Normal, logpt_sum, transforms
+from pymc3.exceptions import ShapeError
 from pymc3.model import Point, ValueGradFunction
 from pymc3.tests.helpers import SeededTest
 
@@ -461,33 +462,33 @@ def test_make_obs_var():
     # Create a fake model and fake distribution to be used for the test
     fake_model = pm.Model()
     with fake_model:
-        fake_distribution = pm.Normal.dist(mu=0, sigma=1)
+        fake_distribution = pm.Normal.dist(mu=0, sigma=1, size=(3, 3))
         # Create the testval attribute simply for the sake of model testing
         fake_distribution.name = input_name
 
+    # The function requires data and RV dimensionality to be compatible
+    with pytest.raises(ShapeError, match="Dimensionality of data and RV don't match."):
+        fake_model.make_obs_var(fake_distribution, np.ones((3, 3, 1)), None, None)
+
     # Check function behavior using the various inputs
+    # dense, sparse: Ensure that the missing values are appropriately set to None
+    # masked: a deterministic variable is returned
+
     dense_output = fake_model.make_obs_var(fake_distribution, dense_input, None, None)
-    del fake_model.named_vars[fake_distribution.name]
-    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None)
-    del fake_model.named_vars[fake_distribution.name]
-    masked_output = fake_model.make_obs_var(fake_distribution, masked_array_input, None, None)
-    assert not isinstance(masked_output, RandomVariable)
-
-    # Ensure that the missing values are appropriately set to None
-    for func_output in [dense_output, sparse_output]:
-        assert isinstance(func_output.owner.op, RandomVariable)
-
-    # Ensure that the Aesara variable names are correctly set.
-    # Note that the output for masked inputs do not have their names set
-    # to the passed value.
-    for func_output in [dense_output, sparse_output]:
-        assert func_output.name == input_name
-
-    # Ensure the that returned functions are all of the correct type
+    assert dense_output == fake_distribution
     assert isinstance(dense_output.tag.observations, TensorConstant)
-    assert sparse.basic._is_sparse_variable(sparse_output.tag.observations)
+    del fake_model.named_vars[fake_distribution.name]
 
-    # Masked output is something weird. Just ensure it has missing values
+    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None)
+    assert sparse_output == fake_distribution
+    assert sparse.basic._is_sparse_variable(sparse_output.tag.observations)
+    del fake_model.named_vars[fake_distribution.name]
+
+    # Here the RandomVariable is split into observed/imputed and a Deterministic is returned
+    masked_output = fake_model.make_obs_var(fake_distribution, masked_array_input, None, None)
+    assert masked_output != fake_distribution
+    assert not isinstance(masked_output, RandomVariable)
+    # Ensure it has missing values
     assert {"testing_inputs_missing"} == {v.name for v in fake_model.vars}
     assert {"testing_inputs", "testing_inputs_observed"} == {
         v.name for v in fake_model.observed_RVs
