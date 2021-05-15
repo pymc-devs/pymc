@@ -18,10 +18,13 @@ import pytest
 
 from aesara import shared
 from aesara.tensor.sharedvar import ScalarSharedVariable
+from aesara.tensor.var import TensorVariable
 
 import pymc3 as pm
 
+from pymc3.aesaraf import floatX
 from pymc3.distributions import logpt
+from pymc3.exceptions import ShapeError
 from pymc3.tests.helpers import SeededTest
 
 
@@ -159,22 +162,40 @@ class TestData(SeededTest):
         """
         with pm.Model() as m:
             x = pm.Data("x", [1.0, 2.0, 3.0])
-            _ = pm.Normal("y", mu=x, size=3)
-            trace = pm.sample(
-                chains=1, return_inferencedata=False, compute_convergence_checks=False
+            y = pm.Normal("y", mu=x, size=(2, 3))
+            assert y.eval().shape == (2, 3)
+            idata = pm.sample(
+                chains=1,
+                tune=500,
+                draws=550,
+                return_inferencedata=True,
+                compute_convergence_checks=False,
             )
+        samples = idata.posterior["y"]
+        assert samples.shape == (1, 550, 2, 3)
 
         np.testing.assert_allclose(np.array([1.0, 2.0, 3.0]), x.get_value(), atol=1e-1)
-        np.testing.assert_allclose(np.array([1.0, 2.0, 3.0]), trace["y"].mean(0), atol=1e-1)
+        np.testing.assert_allclose(
+            np.array([1.0, 2.0, 3.0]), samples.mean(("chain", "draw", "y_dim_0")), atol=1e-1
+        )
 
         with m:
             pm.set_data({"x": np.array([2.0, 4.0, 6.0])})
-            trace = pm.sample(
-                chains=1, return_inferencedata=False, compute_convergence_checks=False
+            assert y.eval().shape == (2, 3)
+            idata = pm.sample(
+                chains=1,
+                tune=500,
+                draws=620,
+                return_inferencedata=True,
+                compute_convergence_checks=False,
             )
+        samples = idata.posterior["y"]
+        assert samples.shape == (1, 620, 2, 3)
 
         np.testing.assert_allclose(np.array([2.0, 4.0, 6.0]), x.get_value(), atol=1e-1)
-        np.testing.assert_allclose(np.array([2.0, 4.0, 6.0]), trace["y"].mean(0), atol=1e-1)
+        np.testing.assert_allclose(
+            np.array([2.0, 4.0, 6.0]), samples.mean(("chain", "draw", "y_dim_0")), atol=1e-1
+        )
 
     def test_shared_scalar_as_rv_input(self):
         # See https://github.com/pymc-devs/pymc3/issues/3139
@@ -217,7 +238,7 @@ class TestData(SeededTest):
             )
         with pytest.raises(TypeError) as error:
             pm.set_data({"beta": [1.1, 2.2, 3.3]}, model=model)
-        error.match("defined as `pymc3.Data` inside the model")
+        error.match("The variable `beta` must be a `SharedVariable`")
 
     @pytest.mark.xfail(reason="Depends on ModelGraph")
     def test_model_to_graphviz_for_model_with_data_container(self):
@@ -282,6 +303,38 @@ class TestData(SeededTest):
         assert "columns" in pmodel.dim_lengths
         assert isinstance(pmodel.dim_lengths["columns"], ScalarSharedVariable)
         assert pmodel.dim_lengths["columns"].eval() == 7
+
+    def test_symbolic_coords(self):
+        """
+        In v4 dimensions can be created without passing coordinate values.
+        Their lengths are then automatically linked to the corresponding Tensor dimension.
+        """
+        with pm.Model() as pmodel:
+            intensity = pm.Data("intensity", np.ones((2, 3)), dims=("row", "column"))
+            assert "row" in pmodel.dim_lengths
+            assert "column" in pmodel.dim_lengths
+            assert isinstance(pmodel.dim_lengths["row"], TensorVariable)
+            assert isinstance(pmodel.dim_lengths["column"], TensorVariable)
+            assert pmodel.dim_lengths["row"].eval() == 2
+            assert pmodel.dim_lengths["column"].eval() == 3
+
+            intensity.set_value(floatX(np.ones((4, 5))))
+            assert pmodel.dim_lengths["row"].eval() == 4
+            assert pmodel.dim_lengths["column"].eval() == 5
+
+    def test_no_resize_of_implied_dimensions(self):
+        with pm.Model() as pmodel:
+            # Imply a dimension through RV params
+            pm.Normal("n", mu=[1, 2, 3], dims="city")
+            # _Use_ the dimension for a data variable
+            inhabitants = pm.Data("inhabitants", [100, 200, 300], dims="city")
+
+            # Attempting to re-size the dimension through the data variable would
+            # cause shape problems in InferenceData conversion, because the RV remains (3,).
+            with pytest.raises(
+                ShapeError, match="was initialized from 'n' which is not a shared variable"
+            ):
+                pmodel.set_data("inhabitants", [1, 2, 3, 4])
 
     def test_implicit_coords_series(self):
         ser_sales = pd.Series(
