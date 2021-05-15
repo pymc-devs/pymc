@@ -156,7 +156,7 @@ def change_rv_size(
             size = rv_node.op._infer_shape(size, dist_params)
         new_size = tuple(np.atleast_1d(new_size)) + tuple(size)
 
-    # Make sure the new size is int64 so that it doesn't unnecessarily pick
+    # Make sure the new size is a tensor. This helps to not unnecessarily pick
     # up a `Cast` in some cases
     new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
 
