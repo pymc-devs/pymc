@@ -509,6 +509,7 @@ class TestNormal(BaseTestDistribution):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
+
 class TestLogitNormal(BaseTestDistribution):
     def logit_normal_rng_fn(self, rng, size, loc, scale):
         return expit(st.norm.rvs(loc=loc, scale=scale, size=size, random_state=rng))
@@ -1035,6 +1036,7 @@ class TestZeroInflatedBinomial(BaseTestDistribution):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
+
 
 
 class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
