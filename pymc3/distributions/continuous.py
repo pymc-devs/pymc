@@ -46,6 +46,7 @@ from aesara.tensor.random.basic import (
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 from scipy import stats
+from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 from pymc3.aesaraf import floatX
@@ -66,7 +67,7 @@ from pymc3.distributions.dist_math import (
 )
 from pymc3.distributions.distribution import Continuous
 from pymc3.distributions.special import log_i0
-from pymc3.math import invlogit, log1mexp, log1pexp, logdiffexp, logit
+from pymc3.math import log1mexp, log1pexp, logdiffexp, logit
 from pymc3.util import UNSET
 
 __all__ = [
@@ -3726,6 +3727,7 @@ class Logistic(Continuous):
             0 < s,
         )
 
+
 class LogitNormalRV(RandomVariable):
     name = "logit_normal"
     ndim_supp = 0
@@ -3735,9 +3737,11 @@ class LogitNormalRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, mu, sigma, size=None):
-        return invlogit(stats.norm.rvs(loc=mu, scale=sigma, size=size, random_state=rng))
+        return expit(stats.norm.rvs(loc=mu, scale=sigma, size=size, random_state=rng))
+
 
 logit_normal = LogitNormalRV()
+
 
 class LogitNormal(UnitContinuous):
     r"""
@@ -3822,8 +3826,6 @@ class LogitNormal(UnitContinuous):
             tau > 0,
         )
 
-
-        
 
 class Interpolated(BoundedContinuous):
     r"""
