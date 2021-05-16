@@ -15,6 +15,7 @@ import functools
 import itertools
 
 from contextlib import ExitStack as does_not_raise
+from pymc3.math import invlogit
 from typing import Callable, List, Optional
 
 import aesara
@@ -301,11 +302,6 @@ class TestExGaussian(BaseTestCases.BaseTestCase):
     params = {"mu": 0.0, "sigma": 1.0, "nu": 1.0}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestLogitNormal(BaseTestCases.BaseTestCase):
-    distribution = pm.LogitNormal
-    params = {"mu": 0.0, "sigma": 1.0}
-
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestZeroInflatedNegativeBinomial(BaseTestCases.BaseTestCase):
@@ -508,6 +504,22 @@ class TestNormal(BaseTestDistribution):
     reference_dist_params = {"loc": 5.0, "scale": 10.0}
     size = 15
     reference_dist = seeded_numpy_distribution_builder("normal")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+class TestLogitNormal(BaseTestDistribution):
+    def logit_normal_rng_fn(self, rng, size, loc, scale):
+        return expit(st.norm.rvs(loc=loc, scale=scale, size=size, random_state=rng))
+
+    pymc_dist = pm.LogitNormal
+    pymc_dist_params = {"mu": 5.0, "sigma": 10.0}
+    expected_rv_op_params = {"mu": 5.0, "sigma": 10.0}
+    reference_dist_params = {"loc": 5.0, "scale": 10.0}
+    reference_dist = lambda self: functools.partial(
+        self.logit_normal_rng_fn, rng=self.get_random_state()
+    )
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -1384,7 +1396,6 @@ class TestScalarParameterSamples(SeededTest):
         with expectation:
             m.random()
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_logitnormal(self):
         def ref_rand(size, mu, sigma):
             return expit(st.norm.rvs(loc=mu, scale=sigma, size=size))
