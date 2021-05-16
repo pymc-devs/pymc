@@ -378,6 +378,9 @@ class Distribution(metaclass=DistributionMeta):
             The inputs to the `RandomVariable` `Op`.
         shape : int, tuple, Variable, optional
             A tuple of sizes for each dimension of the new RV.
+
+            An Ellipsis (...) may be inserted in the last position to short-hand refer to
+            all the dimensions that the RV would get if no shape/size/dims were passed at all.
         size : int, tuple, Variable, optional
             For creating the RV like in Aesara/NumPy.
         initival : optional
@@ -414,9 +417,16 @@ class Distribution(metaclass=DistributionMeta):
         create_size = None
 
         if shape is not None:
-            ndim_expected = len(tuple(shape))
-            ndim_batch = ndim_expected - ndim_supp
-            create_size = tuple(shape)[:ndim_batch]
+            if Ellipsis in shape:
+                # Ellipsis short-hands all implied dimensions. Therefore
+                # we don't know how many dimensions to expect.
+                ndim_expected = ndim_batch = None
+                # Create the RV with its implied shape and resize later
+                create_size = None
+            else:
+                ndim_expected = len(tuple(shape))
+                ndim_batch = ndim_expected - ndim_supp
+                create_size = tuple(shape)[:ndim_batch]
         elif size is not None:
             ndim_expected = ndim_supp + len(tuple(size))
             ndim_batch = ndim_expected - ndim_supp
@@ -429,21 +439,25 @@ class Distribution(metaclass=DistributionMeta):
         ndims_unexpected = ndim_actual != ndim_expected
 
         if shape is not None and ndims_unexpected:
-            # This is rare, but happens, for example, with MvNormal(np.ones((2, 3)), np.eye(3), shape=(2, 3)).
-            # Recreate the RV without passing `size` to created it with just the implied dimensions.
-            rv_out = cls.rv_op(*dist_params, size=None, **kwargs)
+            if Ellipsis in shape:
+                # Resize and we're done!
+                rv_out = change_rv_size(rv_var=rv_out, new_size=shape[:-1], expand=True)
+            else:
+                # This is rare, but happens, for example, with MvNormal(np.ones((2, 3)), np.eye(3), shape=(2, 3)).
+                # Recreate the RV without passing `size` to created it with just the implied dimensions.
+                rv_out = cls.rv_op(*dist_params, size=None, **kwargs)
 
-            # Now resize by the "extra" dimensions that were not implied from support and parameters
-            if rv_out.ndim < ndim_expected:
-                expand_shape = shape[: ndim_expected - rv_out.ndim]
-                rv_out = change_rv_size(rv_var=rv_out, new_size=expand_shape, expand=True)
-            if not rv_out.ndim == ndim_expected:
-                raise ShapeError(
-                    f"Failed to create the RV with the expected dimensionality. "
-                    f"This indicates a severe problem. Please open an issue.",
-                    actual=ndim_actual,
-                    expected=ndim_batch + ndim_supp,
-                )
+                # Now resize by any remaining "extra" dimensions that were not implied from support and parameters
+                if rv_out.ndim < ndim_expected:
+                    expand_shape = shape[: ndim_expected - rv_out.ndim]
+                    rv_out = change_rv_size(rv_var=rv_out, new_size=expand_shape, expand=True)
+                if not rv_out.ndim == ndim_expected:
+                    raise ShapeError(
+                        f"Failed to create the RV with the expected dimensionality. "
+                        f"This indicates a severe problem. Please open an issue.",
+                        actual=ndim_actual,
+                        expected=ndim_batch + ndim_supp,
+                    )
 
         # Warn about the edge cases where the RV Op creates more dimensions than
         # it should based on `size` and `RVOp.ndim_supp`.
