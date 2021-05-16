@@ -3962,7 +3962,7 @@ class Interpolated(BoundedContinuous):
 class MoyalRV(RandomVariable):
     name = "moyal"
     ndim_supp = 0
-    ndims_params = [0, 0, 0]
+    ndims_params = [0, 0]
     dtype = "floatX"
     _print_name = ("Moyal", "\\operatorname{Moyal}")
 
