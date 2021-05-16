@@ -1496,7 +1496,6 @@ class TestMatchesScipy:
             lambda value, sigma: sp.halfcauchy.logpdf(value, 0, sigma),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_skew_normal(self):
         self.check_logp(
             SkewNormal,
@@ -2545,7 +2544,6 @@ class TestMatchesScipy:
         with Model():
             Beta("beta", alpha=1.0, beta=1.0, size=(10, 20))
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_rice(self):
         self.check_logp(
             Rice,
