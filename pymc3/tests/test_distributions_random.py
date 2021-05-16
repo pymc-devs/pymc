@@ -319,12 +319,6 @@ class TestZeroInflatedBinomial(BaseTestCases.BaseTestCase):
     params = {"n": 10, "p": 0.6, "psi": 0.3}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestMoyal(BaseTestCases.BaseTestCase):
-    distribution = pm.Moyal
-    params = {"mu": 0.0, "sigma": 1.0}
-
-
 class BaseTestDistribution(SeededTest):
     pymc_dist: Optional[Callable] = None
     pymc_dist_params = dict()
@@ -484,6 +478,19 @@ class TestStudentT(BaseTestDistribution):
     expected_rv_op_params = {"nu": 5.0, "mu": -1.0, "sigma": 2.0}
     reference_dist_params = {"df": 5.0, "loc": -1.0, "scale": 2.0}
     reference_dist = seeded_scipy_distribution_builder("t")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestMoyal(BaseTestDistribution):
+    pymc_dist = pm.Moyal
+    pymc_dist_params = {"mu": 0.0, "sigma": 1.0}
+    expected_rv_op_params = {"mu": 0.0, "sigma": 1.0}
+    reference_dist_params = {"loc": 0.0, "scale": 1.0}
+    reference_dist = seeded_scipy_distribution_builder("moyal")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -1391,7 +1398,6 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.LogitNormal, {"mu": R, "sigma": Rplus}, ref_rand=ref_rand)
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_moyal(self):
         def ref_rand(size, mu, sigma):
             return st.moyal.rvs(loc=mu, scale=sigma, size=size)
