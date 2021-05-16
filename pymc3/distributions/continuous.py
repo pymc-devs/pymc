@@ -46,8 +46,8 @@ from aesara.tensor.random.basic import (
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 from scipy import stats
-from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
+from scipy.special import expit
 
 from pymc3.aesaraf import floatX
 from pymc3.distributions import logp_transform, transforms
