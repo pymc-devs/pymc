@@ -521,6 +521,13 @@ class TestSkewNormal(BaseTestDistribution):
     ]
 
 
+class TestSkewNormalTau(BaseTestDistribution):
+    pymc_dist = pm.SkewNormal
+    pymc_dist_params = {"mu": 0.0, "tau": 1.0, "alpha": 5.0}
+    expected_rv_op_params = {"mu": 0.0, "sigma": 1.0 ** -0.5, "alpha": 5.0}
+    tests_to_run = ["check_pymc_params_match_rv_op"]
+
+
 class TestRice(BaseTestDistribution):
     pymc_dist = pm.Rice
     nu = sigma = 2
@@ -533,6 +540,14 @@ class TestRice(BaseTestDistribution):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
+
+
+class TestRiceB(BaseTestDistribution):
+    pymc_dist = pm.Rice
+    b, sigma = 1, 2
+    pymc_dist_params = {"b": b, "sigma": sigma}
+    expected_rv_op_params = {"nu": b * sigma, "sigma": sigma}
+    tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
 class TestStudentTLam(BaseTestDistribution):
