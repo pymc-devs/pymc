@@ -3959,6 +3959,21 @@ class Interpolated(BoundedContinuous):
         return []
 
 
+class MoyalRV(RandomVariable):
+    name = "moyal"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("Moyal", "\\operatorname{Moyal}")
+
+    @classmethod
+    def rng_fn(cls, rng, mu, sigma, size=None):
+        return stats.moyal.rvs(mu, sigma, size=size, random_state=rng)
+
+
+moyal = MoyalRV()
+
+
 class Moyal(Continuous):
     r"""
     Moyal log-likelihood.
@@ -4006,43 +4021,18 @@ class Moyal(Continuous):
     sigma: float
         Scale parameter (sigma > 0).
     """
+    rv_op = moyal
 
-    def __init__(self, mu=0, sigma=1.0, *args, **kwargs):
-        self.mu = at.as_tensor_variable(floatX(mu))
-        self.sigma = at.as_tensor_variable(floatX(sigma))
+    @classmethod
+    def dist(cls, mu=0, sigma=1.0, *args, **kwargs):
+        mu = at.as_tensor_variable(floatX(mu))
+        sigma = at.as_tensor_variable(floatX(sigma))
 
         assert_negative_support(sigma, "sigma", "Moyal")
 
-        self.mean = self.mu + self.sigma * (np.euler_gamma + at.log(2))
-        self.median = self.mu - self.sigma * at.log(2 * at.erfcinv(1 / 2) ** 2)
-        self.mode = self.mu
-        self.variance = (np.pi ** 2 / 2.0) * self.sigma ** 2
+        return super().dist([mu, sigma], *args, **kwargs)
 
-        super().__init__(*args, **kwargs)
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Moyal distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, sigma = draw_values([self.mu, self.sigma], point=point, size=size)
-        # return generate_samples(
-        #     stats.moyal.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size
-        # )
-
-    def logp(self, value):
+    def logp(value, mu, sigma):
         """
         Calculate log-probability of Moyal distribution at specified value.
 
@@ -4056,15 +4046,13 @@ class Moyal(Continuous):
         -------
         TensorVariable
         """
-        mu = self.mu
-        sigma = self.sigma
         scaled = (value - mu) / sigma
         return bound(
             (-(1 / 2) * (scaled + at.exp(-scaled)) - at.log(sigma) - (1 / 2) * at.log(2 * np.pi)),
             0 < sigma,
         )
 
-    def logcdf(self, value):
+    def logcdf(value, mu, sigma):
         """
         Compute the log of the cumulative distribution function for Moyal distribution
         at the specified value.
@@ -4079,9 +4067,6 @@ class Moyal(Continuous):
         -------
         TensorVariable
         """
-        mu = self.mu
-        sigma = self.sigma
-
         scaled = (value - mu) / sigma
         return bound(
             at.log(at.erfc(at.exp(-scaled / 2) * (2 ** -0.5))),
