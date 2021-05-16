@@ -15,7 +15,6 @@ import functools
 import itertools
 
 from contextlib import ExitStack as does_not_raise
-from pymc3.math import invlogit
 from typing import Callable, List, Optional
 
 import aesara
@@ -1036,7 +1035,6 @@ class TestZeroInflatedBinomial(BaseTestDistribution):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
-
 
 
 class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
