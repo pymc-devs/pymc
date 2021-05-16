@@ -236,7 +236,7 @@ class TestShapeDimsSize:
         [
             "implicit",
             "shape",
-            # "shape...",
+            "shape...",
             "dims",
             "dims...",
             "size",
@@ -273,9 +273,9 @@ class TestShapeDimsSize:
                     if parametrization == "shape":
                         rv = pm.Normal("rv", mu=mu, shape=batch_shape + param_shape)
                         assert rv.eval().shape == expected_shape
-                    # elif parametrization == "shape...":
-                    #     rv = pm.Normal("rv", mu=mu, shape=(*batch_shape, ...))
-                    #     assert rv.eval().shape == batch_shape + param_shape
+                    elif parametrization == "shape...":
+                        rv = pm.Normal("rv", mu=mu, shape=(*batch_shape, ...))
+                        assert rv.eval().shape == batch_shape + param_shape
                     elif parametrization == "dims":
                         rv = pm.Normal("rv", mu=mu, dims=batch_dims + param_dims)
                         assert rv.eval().shape == expected_shape
@@ -376,7 +376,7 @@ class TestShapeDimsSize:
             pm.Normal.dist(mu=mu, dims=("town",))
         assert pm.Normal.dist(mu=mu, shape=(3,)).eval().shape == (3,)
         assert pm.Normal.dist(mu=mu, shape=(5, 3)).eval().shape == (5, 3)
-        # assert pm.Normal.dist(mu=mu, shape=(7, ...)).eval().shape == (7, 3)
+        assert pm.Normal.dist(mu=mu, shape=(7, ...)).eval().shape == (7, 3)
         assert pm.Normal.dist(mu=mu, size=(3,)).eval().shape == (3,)
         assert pm.Normal.dist(mu=mu, size=(4, 3)).eval().shape == (4, 3)
 
@@ -402,9 +402,9 @@ class TestShapeDimsSize:
         assert rv.ndim == 3
         assert tuple(rv.shape.eval()) == (5, 4, 3)
 
-        # rv = pm.MvNormal.dist(mu=np.ones((4, 3, 2)), cov=np.eye(2), shape=(6, 5, ...))
-        # assert rv.ndim == 5
-        # assert tuple(rv.shape.eval()) == (6, 5, 4, 3, 2)
+        rv = pm.MvNormal.dist(mu=np.ones((4, 3, 2)), cov=np.eye(2), shape=(6, 5, ...))
+        assert rv.ndim == 5
+        assert tuple(rv.shape.eval()) == (6, 5, 4, 3, 2)
 
         with pytest.warns(None):
             rv = pm.MvNormal.dist(mu=[1, 2, 3], cov=np.eye(3), size=(5, 4))
