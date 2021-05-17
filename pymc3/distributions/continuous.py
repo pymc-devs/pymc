@@ -3465,8 +3465,8 @@ class RiceRV(RandomVariable):
     _print_name = ("Rice", "\\operatorname{Rice}")
 
     @classmethod
-    def rng_fn(cls, rng, nu, sigma, size=None):
-        return stats.rice.rvs(b=nu / sigma, scale=sigma, size=size, random_state=rng)
+    def rng_fn(cls, rng, b, sigma, size=None):
+        return stats.rice.rvs(b=b, scale=sigma, size=size, random_state=rng)
 
 
 rice = RiceRV()
@@ -3539,10 +3539,10 @@ class Rice(PositiveContinuous):
             sigma = sd
 
         nu, b, sigma = cls.get_nu_b(nu, b, sigma)
-        nu = at.as_tensor_variable(floatX(nu))
+        b = at.as_tensor_variable(floatX(b))
         sigma = at.as_tensor_variable(floatX(sigma))
 
-        return super().dist([nu, sigma], *args, **kwargs)
+        return super().dist([b, sigma], *args, **kwargs)
 
     @classmethod
     def get_nu_b(cls, nu, b, sigma):
@@ -3556,7 +3556,7 @@ class Rice(PositiveContinuous):
             return nu, b, sigma
         raise ValueError("Rice distribution must specify either nu" " or b.")
 
-    def logp(value, nu, sigma):
+    def logp(value, b, sigma):
         """
         Calculate log-probability of Rice distribution at specified value.
 
@@ -3570,12 +3570,10 @@ class Rice(PositiveContinuous):
         -------
         TensorVariable
         """
-        b = nu / sigma
         x = value / sigma
         return bound(
             at.log(x * at.exp((-(x - b) * (x - b)) / 2) * i0e(x * b) / sigma),
             sigma >= 0,
-            nu >= 0,
             value > 0,
         )
 

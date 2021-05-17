@@ -530,10 +530,10 @@ class TestSkewNormalTau(BaseTestDistribution):
 
 class TestRice(BaseTestDistribution):
     pymc_dist = pm.Rice
-    nu = sigma = 2
-    pymc_dist_params = {"nu": nu, "sigma": sigma}
-    expected_rv_op_params = {"nu": nu, "sigma": sigma}
-    reference_dist_params = {"b": nu / sigma, "scale": sigma}
+    b, sigma = 1, 2
+    pymc_dist_params = {"b": b, "sigma": sigma}
+    expected_rv_op_params = {"b": b, "sigma": sigma}
+    reference_dist_params = {"b": b, "scale": sigma}
     reference_dist = seeded_scipy_distribution_builder("rice")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
@@ -542,11 +542,11 @@ class TestRice(BaseTestDistribution):
     ]
 
 
-class TestRiceB(BaseTestDistribution):
+class TestRiceNu(BaseTestDistribution):
     pymc_dist = pm.Rice
-    b, sigma = 1, 2
-    pymc_dist_params = {"b": b, "sigma": sigma}
-    expected_rv_op_params = {"nu": b * sigma, "sigma": sigma}
+    nu = sigma = 2
+    pymc_dist_params = {"nu": nu, "sigma": sigma}
+    expected_rv_op_params = {"b": nu / sigma, "sigma": sigma}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
