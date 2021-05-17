@@ -18,6 +18,7 @@ import copy
 import numpy as np
 import theano.tensor as tt
 
+from scipy.linalg import cholesky
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal, median_abs_deviation
 from scipy.optimize import minimize, approx_fprime
@@ -78,6 +79,9 @@ class NFMC:
         mean_field_EL2O=False,
         absEL2O=1e-10,
         fracEL2O=1e-2,
+        EL2O_draws=100,
+        maxiter_EL2O=500,
+        EL2O_optim_method='L-BFGS-B',
         scipy_map_method='L-BFGS-B',
         adam_lr=1e-3,
         adam_b1=0.9,
@@ -139,6 +143,9 @@ class NFMC:
         self.use_hess_EL2O = use_hess_EL2O
         self.absEL2O = absEL2O
         self.fracEL2O = fracEL2O
+        self.EL2O_draws = EL2O_draws
+        self.maxiter_EL2O = maxiter_EL2O
+        self.EL2O_optim_method = EL2O_optim_method
         self.scipy_map_method = scipy_map_method
         self.adam_lr = adam_lr
         self.adam_b1 = adam_b1
@@ -246,39 +253,12 @@ class NFMC:
         self.evidence = np.exp(self.log_evidence)
         self.log_weight = self.log_weight - logsumexp(self.log_weight)
 
-        if self.pareto:
-            psiw = az.psislw(self.log_weight)
-            self.log_weight = psiw[0]
-            self.weights = np.exp(self.log_weight)
-        elif not self.pareto:
-            inf_weights = np.isinf(np.exp(self.log_weight))
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
-                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
-            self.log_weight = self.log_weight - logsumexp(self.log_weight)
-            self.weights = np.exp(self.log_weight)
-
-        self.weights = self.weights / np.sum(self.weights)
-        self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-        self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
-        if self.init_local:
-            self.local_exploration(None, dlogq_func=lambda x: self.prior_dlogp(x),
-                                   log_thresh=np.log(self.local_thresh) - np.log(self.init_draws))
-            self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-            self.sinf_logw = np.append(self.sinf_logw, self.local_log_weight + self.log_evidence + np.log(self.init_draws))
-            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
-            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
-            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
-            self.log_weight = np.append(self.log_weight, self.local_log_weight)
-            self.weights = np.append(self.weights, self.local_weights)
-
+        self.regularize_weights()
+        self.calculate_ess()
+        self.init_weights_cleanup(None, lambda x: self.prior_dlogp(x))
+        
         self.all_logq = np.array([])
         self.nf_models = []
-        '''
-        self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
-        self.all_logq = np.array([])
-        self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
-        self.nf_models = []
-        '''
 
     def setup_logp(self):
         """Set up the prior and likelihood logp functions, and derivatives."""
@@ -389,6 +369,39 @@ class NFMC:
         else:
             map_dict = find_MAP(start=map_start, model=self.model, method=self.scipy_map_method)
         return map_dict
+
+    def regularize_weights(self):
+        """Apply Pareto smoothing or clipping to importance weights."""
+        if self.pareto:
+            psiw = az.psislw(self.log_weight)
+            self.log_weight = psiw[0]
+            self.weights = np.exp(self.log_weight)
+        elif not self.pareto:
+            inf_weights = np.isinf(np.exp(self.log_weight))
+            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
+                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
+            self.log_weight = self.log_weight - logsumexp(self.log_weight)
+            self.weights = np.exp(self.log_weight)
+
+    def calculate_ess(self):
+        """Calculate ESS (divided by the number of samples) for current iteration."""
+        self.ess = np.exp(-logsumexp(2 * self.log_weight) - np.log(len(self.log_weight)))
+            
+    def init_weights_cleanup(self, logq_func=None, dlogq_func=None):
+        """Finish initializing the first importance weights (including possible local exploration)."""
+        self.weights = self.weights / np.sum(self.weights)
+        self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
+        self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
+        if self.init_local:
+            self.local_exploration(logq_func=logq_func, dlogq_func=dlogq_func,
+                                   log_thresh=np.log(self.local_thresh) - np.log(self.init_draws))
+            self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
+            self.sinf_logw = np.append(self.sinf_logw, self.local_log_weight + self.log_evidence + np.log(self.init_draws))
+            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
+            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
+            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
+            self.log_weight = np.append(self.log_weight, self.local_log_weight)
+            self.weights = np.append(self.weights, self.local_weights)
             
     def get_sim_data(self, point):
         """Generate simulated data using the supplied simulator function."""
@@ -448,28 +461,10 @@ class NFMC:
         self.evidence = np.exp(self.log_evidence)
         self.log_weight = self.log_weight - logsumexp(self.log_weight)
 
-        if self.pareto:
-            psiw = az.psislw(self.log_weight)
-            self.log_weight = psiw[0]
-            self.weights = np.exp(self.log_weight)
-        elif not self.pareto:
-            inf_weights = np.isinf(np.exp(self.log_weight))
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
-                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
-            self.log_weight = logsumexp(self.log_weight) - np.log(len(self.log_weight))
-            self.weights = np.exp(self.log_weight)
-
-        self.weights = self.weights / np.sum(self.weights)
-        self.importance_weights = np.copy(self.weights)
-        if self.init_local:
-            self.local_exploration(None, dlogq_func=jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_map, self.hess_inv)))
-            self.importance_weights = np.copy(self.weights)
-            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
-            self.importance_weights = np.append(self.importance_weights, self.local_weights)
-            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
-            self.log_weight = np.append(self.log_weight, self.local_log_weight)
-            self.weights = np.append(self.weights, self.local_weights)
-
+        self.regularize_weights()
+        self.init_weights_cleanup(None, jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_map, self.hess_inv)))
+        self.calculate_ess()
+        
         self.all_logq = np.array([])
         self.nf_models = []
             
@@ -509,7 +504,8 @@ class NFMC:
 
         for i in range(self.adam_steps):
             value, opt_state, update_params = self.update_adam(i, opt_state, opt_update, get_params)
-            target_diff = np.abs((value - np.float64(self.adam_logp(floatX(update_params)))) / max(value, np.float64(self.adam_logp(floatX(update_params)))))
+            target_diff = np.abs((value - np.float64(self.adam_logp(floatX(update_params)))) /
+                                 max(value, np.float64(self.adam_logp(floatX(update_params)))))
             if target_diff <= self.ftol:
                 print(f'ADAM converged at step {i}')
                 break
@@ -546,31 +542,10 @@ class NFMC:
         self.evidence = np.exp(self.log_evidence)
         self.log_weight = self.log_weight - logsumexp(self.log_weight)
 
-        if self.pareto:
-            psiw = az.psislw(self.log_weight)
-            self.log_weight = psiw[0]
-            self.weights = np.exp(self.log_weight)
-        elif not self.pareto:
-            inf_weights = np.isinf(np.exp(self.log_weight))
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
-                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
-            self.log_weight = self.log_weight - logsumexp(self.log_weight)
-            self.weights = np.exp(self.log_weight)
-
-        self.weights = self.weights / np.sum(self.weights)
-        self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-        self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
-        if self.init_local:
-            self.local_exploration(None, dlogq_func=jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_map, self.hess_inv)),
-                                   log_thresh=np.log(self.local_thresh) - np.log(self.init_draws))
-            self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-            self.sinf_logw = np.append(self.sinf_logw, self.local_log_weight + self.log_evidence + np.log(self.init_draws))
-            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
-            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
-            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
-            self.log_weight = np.append(self.log_weight, self.local_log_weight)
-            self.weights = np.append(self.weights, self.local_weights)
-
+        self.regularize_weights()
+        self.init_weights_cleanup(None, jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_map, self.hess_inv)))
+        self.calculate_ess()
+        
         self.all_logq = np.array([])
         self.nf_models = []
         
@@ -630,7 +605,7 @@ class NFMC:
 
         self.log_weight[self.high_iw_idx] = self.modified_log_weight
         self.weights[self.high_iw_idx] = self.modified_weights
-    
+        
     def initialize_nf(self):
         """Intialize the first NF approx, by fitting to the prior samples."""
         if self.frac_validate > 0.0:
@@ -669,30 +644,9 @@ class NFMC:
         self.evidence = np.exp(self.log_evidence)
         self.log_weight = self.log_weight - logsumexp(self.log_weight)
         
-        if self.pareto:
-            psiw = az.psislw(self.log_weight)
-            self.log_weight = psiw[0]
-            self.weights = np.exp(self.log_weight)
-        elif not self.pareto:
-            inf_weights = np.isinf(np.exp(self.log_weight))
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
-                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
-            self.log_weight = self.log_weight - logsumexp(self.log_weight)
-            self.weights = np.exp(self.log_weight)
-
-        self.weights = self.weights / np.sum(self.weights)
-        self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-        self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
-        if self.init_local:
-            self.local_exploration(logq_func=None, dlogq_func=lambda x: approx_fprime(x.squeeze(), self.sinf_logq, np.finfo(float).eps),
-                                   log_thresh=np.log(self.local_thresh) - np.log(self.init_draws))
-            self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-            self.sinf_logw = np.append(self.sinf_logw, self.local_log_weight + self.log_evidence + np.log(self.init_draws))
-            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
-            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
-            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
-            self.log_weight = np.append(self.log_weight, self.local_log_weight)
-            self.weights = np.append(self.weights, self.local_weights)
+        self.regularize_weights()
+        self.init_weights_cleanup(None, lambda x: approx_fprime(x.squeeze(), self.sinf_logq, np.finfo(float).eps))
+        self.calculate_ess()
         
         self.nf_models.append(self.nf_model)
 
@@ -723,30 +677,9 @@ class NFMC:
         self.evidence = np.exp(self.log_evidence)
         self.log_weight = self.log_weight - logsumexp(self.log_weight)
         
-        if self.pareto:
-            psiw = az.psislw(self.log_weight)
-            self.log_weight = psiw[0]
-            self.weights = np.exp(self.log_weight)
-        elif not self.pareto:
-            inf_weights = np.isinf(np.exp(self.log_weight))
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
-                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
-            self.log_weight = self.log_weight - logsumexp(self.log_weight)
-            self.weights = np.exp(self.log_weight)
-
-        self.weights = self.weights / np.sum(self.weights)
-        self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-        self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
-        if self.init_local:
-            self.local_exploration(None, dlogq_func=jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_map, self.hess_inv)),
-                                   log_thresh=np.log(self.local_thresh) - np.log(self.init_draws))
-            self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-            self.sinf_logw = np.append(self.sinf_logw, self.local_log_weight + self.log_evidence + np.log(self.init_draws))
-            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
-            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
-            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
-            self.log_weight = np.append(self.log_weight, self.local_log_weight)
-            self.weights = np.append(self.weights, self.local_weights)
+        self.regularize_weights()
+        self.init_weights_cleanup(None, jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_map, self.hess_inv)))
+        self.calculate_ess()
         
         self.all_logq = np.array([])
         self.nf_models = []
@@ -796,7 +729,10 @@ class NFMC:
 
         self.zk = np.random.multivariate_normal(self.mu_k, self.Sigma_k, size=len(self.mu_k))
 
-        while self.EL2O[-1] > self.absEL2O and abs((self.EL2O[-1] - self.EL2O[-2]) / self.EL2O[-1]) > self.fracEL2O:
+        Niter = 1
+        while (self.EL2O[-1] > self.absEL2O
+               and abs((self.EL2O[-1] - self.EL2O[-2]) / self.EL2O[-1]) > self.fracEL2O
+               and Niter < self.maxiter_EL2O):
 
             self.zk = np.vstack((self.zk, np.random.multivariate_normal(self.mu_k, self.Sigma_k)))
             Nk = len(self.zk)
@@ -831,11 +767,13 @@ class NFMC:
                 temp += np.matmul(self.Sigma_k, joint_logp)
             self.mu_k = np.mean(self.zk, axis=0) + temp / Nk
             
-            self.EL2O = np.append(self.EL2O, 1 / (len(self.zk)) * (np.sum((self.target_logp(self.zk) -
-                                                                           jax.vmap(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k), in_axes=0)(self.zk))**2) +
-                                                                   np.sum((self.target_dlogp(self.zk) -
-                                                                           jax.vmap(jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)), in_axes=0)(self.zk))**2)
-            ))
+            self.EL2O = np.append(self.EL2O, (1 / (len(self.zk)) * (np.sum((self.target_logp(self.zk) -
+                                                                            jax.vmap(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k), in_axes=0)(self.zk))**2) +
+                                                                    np.sum((self.target_dlogp(self.zk) -
+                                                                            jax.vmap(jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)), in_axes=0)(self.zk))**2)
+            )))
+
+            Niter += 1
 
         print(f'Final EL2O mu = {self.mu_k}')
         print(f'Final EL2O Sigma = {self.Sigma_k}')
@@ -848,34 +786,91 @@ class NFMC:
         self.evidence = np.exp(self.log_evidence)
         self.log_weight = self.log_weight - logsumexp(self.log_weight)
 
-        if self.pareto:
-            psiw = az.psislw(self.log_weight)
-            self.log_weight = psiw[0]
-            self.weights = np.exp(self.log_weight)
-        elif not self.pareto:
-            inf_weights = np.isinf(np.exp(self.log_weight))
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
-                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
-            self.log_weight = self.log_weight - logsumexp(self.log_weight)
-            self.weights = np.exp(self.log_weight)
-
-        self.weights = self.weights / np.sum(self.weights)
-        self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-        self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
-        if self.init_local:
-            self.local_exploration(logq_func=None, dlogq_func=jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)),
-                                   log_thresh=np.log(self.local_thresh) - np.log(self.init_draws))
-            self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-            self.sinf_logw = np.append(self.sinf_logw, self.local_log_weight + self.log_evidence + np.log(self.init_draws))
-            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
-            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
-            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
-            self.log_weight = np.append(self.log_weight, self.local_log_weight)
-            self.weights = np.append(self.weights, self.local_weights)
+        self.regularize_weights()
+        self.init_weights_cleanup(None, jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)))
+        self.calculate_ess()
         
         self.all_logq = np.array([])
         self.nf_models = []
 
+    def run_el2o_optim(self):
+        """Runs EL2O, optimizing for the elements of the Cholesky decomposition of the covariance."""
+        self.mu_k = self.mu_map
+        self.Sigma_k = self.Sigma_map
+        self.L_k = cholesky(self.Sigma_k, lower=True)
+        self.tril_ind = np.tril_indices(len(self.L_k))
+
+        if self.mean_field_EL2O:
+            self.L_k = np.diag(self.L_k) * np.eye(len(self.L_k))
+            self.tril_ind = np.diag_indices_from(self.L_k)
+            
+        self.const_k = 0
+        self.EL2O = [1e10, 1]
+    
+        Ndim = len(self.mu_k)
+        Niter = 1
+        while (self.EL2O[-1] > self.absEL2O
+               and abs((self.EL2O[-1] - self.EL2O[-2]) / self.EL2O[-1]) > self.fracEL2O
+               and Niter < self.maxiter_EL2O):
+            
+            print(f"EL2O iteration: {Niter}")
+            if Niter < 3:
+                self.zk = np.random.multivariate_normal(self.mu_k, np.matmul(self.L_k, self.L_k.T), size=self.EL2O_draws)
+            else:
+                self.zk = np.vstack((self.zk,
+                                     np.random.multivariate_normal(self.mu_k, np.matmul(self.L_k, self.L_k.T),
+                                                                   size=self.EL2O_draws)))
+            self.zk = self.zk.reshape(-1, Ndim)
+
+            eloargs0 = np.copy(self.mu_k)
+            eloargs0 = np.append(eloargs0, self.L_k[self.tril_ind])
+            eloargs0 = np.append(eloargs0, self.const_k)
+
+            opt_result = minimize(self.elo_cost, x0=eloargs0,
+                                  options={'maxiter': self.optim_iter, 'ftol': self.ftol, 'gtol': self.gtol},
+                                  method=self.EL2O_optim_method, args=(self.zk,))        
+            self.mu_k = opt_result.x[0:Ndim]
+            self.L_k[self.tril_ind] = opt_result.x[Ndim:-1]
+            self.const_k = opt_result.x[-1]
+
+            Niter += 1
+            self.EL2O = np.append(self.EL2O, self.elo_cost(opt_result.x, self.zk))
+            print(f'EL2O: {self.elo_cost(opt_result.x, self.zk)}')
+
+        self.Sigma_k = np.matmul(self.L_k, self.L_k.T)
+        print(f'Final EL2O mu = {self.mu_k}')
+        print(f'Final EL2O Sigma = {self.Sigma_k}')
+        self.weighted_samples = np.random.multivariate_normal(self.mu_k, self.Sigma_k, size=self.init_draws)
+        self.nf_samples = np.copy(self.weighted_samples)
+
+        self.get_posterior_logp()
+        self.log_weight = self.posterior_logp - multivariate_normal.logpdf(self.nf_samples, self.mu_k.squeeze(), self.Sigma_k, allow_singular=True)
+        self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
+        self.evidence = np.exp(self.log_evidence)
+        self.log_weight = self.log_weight - logsumexp(self.log_weight)
+
+        self.regularize_weights()
+        self.init_weights_cleanup(None, jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)))
+        self.calculate_ess()
+
+        self.all_logq = np.array([])
+        self.nf_models = []
+
+    def elo_cost(self, eloargs, z):
+        """EL2O cost function, used for EL2O optimization."""
+        _mu_k = eloargs[0:z.shape[1]]
+        _L_k = np.zeros((z.shape[1], z.shape[1]))
+        _L_k[self.tril_ind] = eloargs[z.shape[1]:-1]
+        _const_k = eloargs[-1]
+        elo = (1 / len(z)) * (np.sum((self.target_logp(z) -
+                                       jax.vmap(lambda x: self.logq_fr_el2o(x, _mu_k, np.matmul(_L_k, _L_k.T)), in_axes=0)(z)
+                                       + _const_k)**2) +
+                               np.sum((self.target_dlogp(z) -
+                                       jax.vmap(jax.grad(lambda x: self.logq_fr_el2o(x, _mu_k, np.matmul(_L_k, _L_k.T))), in_axes=0)(z))**2
+                               ))       
+
+        return elo
+    
     def fit_nf(self, num_draws):
         """Fit the NF model for a given iteration after initialization."""
         if self.frac_validate > 0.0:
@@ -917,17 +912,8 @@ class NFMC:
         self.evidence = np.exp(self.log_evidence)
         self.log_weight = self.log_weight - logsumexp(self.log_weight)
 
-        if self.pareto:
-            psiw = az.psislw(self.log_weight)
-            self.log_weight = psiw[0]
-            self.weights = np.exp(self.log_weight)
-        elif not self.pareto:
-            inf_weights = np.isinf(np.exp(self.log_weight))
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
-                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
-            self.log_weight = self.log_weight - logsumexp(self.log_weight)
-            self.weights = np.exp(self.log_weight)
-
+        self.regularize_weights()
+        
         self.weights = self.weights / np.sum(self.weights)
         if self.nf_local_iter > 0:
             self.local_exploration(logq_func=None, dlogq_func=lambda x: approx_fprime(x.squeeze(), self.sinf_logq, np.finfo(float).eps),
@@ -942,36 +928,31 @@ class NFMC:
         elif self.nf_local_iter == 0:
             self.sinf_logw = np.append(self.sinf_logw, self.log_weight + self.log_evidence + np.log(num_draws))
             self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
-        
+
+        self.calculate_ess()
         self.nf_models.append(self.nf_model)
 
     def reinitialize_nf(self):
         """Draw a fresh set of samples from the most recent NF fit. Used to start a set of NF fits without local exploration."""
-        self.nf_samples, self.logq = self.nf_model.sample(self.init_draws, device=torch.device('cpu'), gen=self.gen)
-        self.nf_samples = self.nf_samples.numpy().astype(np.float64)
-        self.logq = self.logq.numpy().astype(np.float64)
-        self.weighted_samples = np.copy(self.nf_samples)
-        self.all_logq = np.copy(self.logq)
-        self.get_posterior_logp()
-        self.log_weight = self.posterior_logp - self.logq
-        self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
-        self.evidence = np.exp(self.log_evidence)
-        self.log_weight = self.log_weight - logsumexp(self.log_weight)
-        
-        if self.pareto:
-            psiw = az.psislw(self.log_weight)
-            self.log_weight = psiw[0]
-            self.weights = np.exp(self.log_weight)
-        elif not self.pareto:
-            inf_weights = np.isinf(np.exp(self.log_weight))
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
-                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
+        if self.nf_model == 'init':
+            print('Continuing normal SINF fits, starting from initialization samples.')
+        else:
+            self.nf_samples, self.logq = self.nf_model.sample(self.init_draws, device=torch.device('cpu'), gen=self.gen)
+            self.nf_samples = self.nf_samples.numpy().astype(np.float64)
+            self.logq = self.logq.numpy().astype(np.float64)
+            self.weighted_samples = np.copy(self.nf_samples)
+            self.all_logq = np.copy(self.logq)
+            self.get_posterior_logp()
+            self.log_weight = self.posterior_logp - self.logq
+            self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
+            self.evidence = np.exp(self.log_evidence)
             self.log_weight = self.log_weight - logsumexp(self.log_weight)
-            self.weights = np.exp(self.log_weight)
-
-        self.weights = self.weights / np.sum(self.weights)
-        self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-        self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
+        
+            self.regularize_weights()
+            self.weights = self.weights / np.sum(self.weights)
+            self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
+            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
+            self.calculate_ess()
 
     def final_nf(self):
         """Final NF fit used to ensure the target distribution is the asymptotic distribution of our importance sampling."""
