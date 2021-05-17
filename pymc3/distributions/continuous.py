@@ -3193,7 +3193,7 @@ class SkewNormal(Continuous):
 
         return super().dist([mu, sigma, alpha], *args, **kwargs)
 
-    def logp(value, alpha, mu, sigma):
+    def logp(value, mu, sigma, alpha):
         """
         Calculate log-probability of SkewNormal distribution at specified value.
 
