@@ -155,7 +155,9 @@ class Distribution(metaclass=DistributionMeta):
 
         rv_out = cls.dist(*args, rng=rng, **kwargs)
 
-        rv_registered = model.register_rv(rv_out, name, data, total_size, dims=dims, transform=transform)
+        rv_registered = model.register_rv(
+            rv_out, name, data, total_size, dims=dims, transform=transform
+        )
 
         # Add in high-level string representations
         # (simply assigning var.__str__ is not enough, since str() will default to the
