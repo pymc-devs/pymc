@@ -9,6 +9,7 @@
 
 ### New Features
 - The `CAR` distribution has been added to allow for use of conditional autoregressions which often are used in spatial and network models.
+- Add `logcdf` method to Kumaraswamy distribution (see [#4706](https://github.com/pymc-devs/pymc3/pull/4706)).
 - ...
 
 ### Maintenance
