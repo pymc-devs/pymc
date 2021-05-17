@@ -266,12 +266,6 @@ class TestTruncatedNormalUpper(BaseTestCases.BaseTestCase):
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestSkewNormal(BaseTestCases.BaseTestCase):
-    distribution = pm.SkewNormal
-    params = {"mu": 0.0, "sigma": 1.0, "alpha": 5.0}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestWald(BaseTestCases.BaseTestCase):
     distribution = pm.Wald
     params = {"mu": 1.0, "lam": 1.0, "alpha": 0.0}
@@ -512,6 +506,49 @@ class TestKumaraswamy(BaseTestDistribution):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
+
+
+class TestSkewNormal(BaseTestDistribution):
+    pymc_dist = pm.SkewNormal
+    pymc_dist_params = {"mu": 0.0, "sigma": 1.0, "alpha": 5.0}
+    expected_rv_op_params = {"mu": 0.0, "sigma": 1.0, "alpha": 5.0}
+    reference_dist_params = {"loc": 0.0, "scale": 1.0, "a": 5.0}
+    reference_dist = seeded_scipy_distribution_builder("skewnorm")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestSkewNormalTau(BaseTestDistribution):
+    pymc_dist = pm.SkewNormal
+    tau, sigma = get_tau_sigma(tau=2.0)
+    pymc_dist_params = {"mu": 0.0, "tau": tau, "alpha": 5.0}
+    expected_rv_op_params = {"mu": 0.0, "sigma": sigma, "alpha": 5.0}
+    tests_to_run = ["check_pymc_params_match_rv_op"]
+
+
+class TestRice(BaseTestDistribution):
+    pymc_dist = pm.Rice
+    b, sigma = 1, 2
+    pymc_dist_params = {"b": b, "sigma": sigma}
+    expected_rv_op_params = {"b": b, "sigma": sigma}
+    reference_dist_params = {"b": b, "scale": sigma}
+    reference_dist = seeded_scipy_distribution_builder("rice")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestRiceNu(BaseTestDistribution):
+    pymc_dist = pm.Rice
+    nu = sigma = 2
+    pymc_dist_params = {"nu": nu, "sigma": sigma}
+    expected_rv_op_params = {"b": nu / sigma, "sigma": sigma}
+    tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
 class TestStudentTLam(BaseTestDistribution):
@@ -1145,7 +1182,6 @@ class TestScalarParameterSamples(SeededTest):
             pm.TruncatedNormal, {"mu": R, "sigma": Rplusbig, "upper": Rplusbig}, ref_rand=ref_rand
         )
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_skew_normal(self):
         def ref_rand(size, alpha, mu, sigma):
             return st.skewnorm.rvs(size=size, a=alpha, loc=mu, scale=sigma)

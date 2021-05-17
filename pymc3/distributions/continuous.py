@@ -3102,6 +3102,21 @@ class VonMises(CircularContinuous):
         )
 
 
+class SkewNormalRV(RandomVariable):
+    name = "skewnormal"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("SkewNormal", "\\operatorname{SkewNormal}")
+
+    @classmethod
+    def rng_fn(cls, rng, mu, sigma, alpha, size=None):
+        return stats.skewnorm.rvs(a=alpha, loc=mu, scale=sigma, size=size, random_state=rng)
+
+
+skewnormal = SkewNormalRV()
+
+
 class SkewNormal(Continuous):
     r"""
     Univariate skew-normal log-likelihood.
@@ -3160,51 +3175,25 @@ class SkewNormal(Continuous):
     approaching plus/minus infinite we get a half-normal distribution.
 
     """
+    rv_op = skewnormal
 
-    def __init__(self, mu=0.0, sigma=None, tau=None, alpha=1, sd=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    @classmethod
+    def dist(cls, alpha=1, mu=0.0, sigma=None, tau=None, sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.mu = mu = at.as_tensor_variable(floatX(mu))
-        self.tau = at.as_tensor_variable(tau)
-        self.sigma = self.sd = at.as_tensor_variable(sigma)
-
-        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
-
-        self.mean = mu + self.sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha ** 2) ** 0.5
-        self.variance = self.sigma ** 2 * (1 - (2 * alpha ** 2) / ((1 + alpha ** 2) * np.pi))
+        alpha = at.as_tensor_variable(floatX(alpha))
+        mu = at.as_tensor_variable(floatX(mu))
+        tau = at.as_tensor_variable(tau)
+        sigma = at.as_tensor_variable(sigma)
 
         assert_negative_support(tau, "tau", "SkewNormal")
         assert_negative_support(sigma, "sigma", "SkewNormal")
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from SkewNormal distribution.
+        return super().dist([mu, sigma, alpha], *args, **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, tau, _, alpha = draw_values(
-        #     [self.mu, self.tau, self.sigma, self.alpha], point=point, size=size
-        # )
-        # return generate_samples(
-        #     stats.skewnorm.rvs, a=alpha, loc=mu, scale=tau ** -0.5, dist_shape=self.shape, size=size
-        # )
-
-    def logp(self, value):
+    def logp(value, mu, sigma, alpha):
         """
         Calculate log-probability of SkewNormal distribution at specified value.
 
@@ -3218,19 +3207,13 @@ class SkewNormal(Continuous):
         -------
         TensorVariable
         """
-        tau = self.tau
-        sigma = self.sigma
-        mu = self.mu
-        alpha = self.alpha
+        tau, sigma = get_tau_sigma(sigma=sigma)
         return bound(
             at.log(1 + at.erf(((value - mu) * at.sqrt(tau) * alpha) / at.sqrt(2)))
             + (-tau * (value - mu) ** 2 + at.log(tau / np.pi / 2.0)) / 2.0,
             tau > 0,
             sigma > 0,
         )
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "sigma", "alpha"]
 
 
 class Triangular(BoundedContinuous):
@@ -3474,6 +3457,21 @@ class Gumbel(Continuous):
         )
 
 
+class RiceRV(RandomVariable):
+    name = "rice"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("Rice", "\\operatorname{Rice}")
+
+    @classmethod
+    def rng_fn(cls, rng, b, sigma, size=None):
+        return stats.rice.rvs(b=b, scale=sigma, size=size, random_state=rng)
+
+
+rice = RiceRV()
+
+
 class Rice(PositiveContinuous):
     r"""
     Rice distribution.
@@ -3533,42 +3531,21 @@ class Rice(PositiveContinuous):
        b = \dfrac{\nu}{\sigma}
 
     """
+    rv_op = rice
 
-    def __init__(self, nu=None, sigma=None, b=None, sd=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @classmethod
+    def dist(cls, nu=None, sigma=None, b=None, sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
 
-        nu, b, sigma = self.get_nu_b(nu, b, sigma)
-        self.nu = nu = at.as_tensor_variable(floatX(nu))
-        self.sigma = self.sd = sigma = at.as_tensor_variable(floatX(sigma))
-        self.b = b = at.as_tensor_variable(floatX(b))
+        nu, b, sigma = cls.get_nu_b(nu, b, sigma)
+        b = at.as_tensor_variable(floatX(b))
+        sigma = at.as_tensor_variable(floatX(sigma))
 
-        nu_sigma_ratio = -(nu ** 2) / (2 * sigma ** 2)
-        self.mean = (
-            sigma
-            * np.sqrt(np.pi / 2)
-            * at.exp(nu_sigma_ratio / 2)
-            * (
-                (1 - nu_sigma_ratio) * at.i0(-nu_sigma_ratio / 2)
-                - nu_sigma_ratio * at.i1(-nu_sigma_ratio / 2)
-            )
-        )
-        self.variance = (
-            2 * sigma ** 2
-            + nu ** 2
-            - (np.pi * sigma ** 2 / 2)
-            * (
-                at.exp(nu_sigma_ratio / 2)
-                * (
-                    (1 - nu_sigma_ratio) * at.i0(-nu_sigma_ratio / 2)
-                    - nu_sigma_ratio * at.i1(-nu_sigma_ratio / 2)
-                )
-            )
-            ** 2
-        )
+        return super().dist([b, sigma], *args, **kwargs)
 
-    def get_nu_b(self, nu, b, sigma):
+    @classmethod
+    def get_nu_b(cls, nu, b, sigma):
         if sigma is None:
             sigma = 1.0
         if nu is None and b is not None:
@@ -3579,35 +3556,7 @@ class Rice(PositiveContinuous):
             return nu, b, sigma
         raise ValueError("Rice distribution must specify either nu" " or b.")
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Rice distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # nu, sigma = draw_values([self.nu, self.sigma], point=point, size=size)
-        # return generate_samples(self._random, nu=nu, sigma=sigma, dist_shape=self.shape, size=size)
-
-    def _random(self, nu, sigma, size):
-        """Wrapper around stats.rice.rvs that converts Rice's
-        parametrization to scipy.rice. All parameter arrays should have
-        been broadcasted properly by generate_samples at this point and size is
-        the scipy.rvs representation.
-        """
-        return stats.rice.rvs(b=nu / sigma, scale=sigma, size=size)
-
-    def logp(self, value):
+    def logp(value, b, sigma):
         """
         Calculate log-probability of Rice distribution at specified value.
 
@@ -3621,19 +3570,12 @@ class Rice(PositiveContinuous):
         -------
         TensorVariable
         """
-        nu = self.nu
-        sigma = self.sigma
-        b = self.b
         x = value / sigma
         return bound(
             at.log(x * at.exp((-(x - b) * (x - b)) / 2) * i0e(x * b) / sigma),
             sigma >= 0,
-            nu >= 0,
             value > 0,
         )
-
-    def _distr_parameters_for_repr(self):
-        return ["nu", "sigma"]
 
 
 class Logistic(Continuous):
