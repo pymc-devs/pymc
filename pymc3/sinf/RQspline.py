@@ -2,23 +2,29 @@ import torch
 import torch.nn as nn
 import math
 
-def Percentile(input, percentiles):
-    """
-    Find the percentiles of a tensor along the last dimension.
-    Adapted from https://github.com/aliutkus/torchpercentile/blob/master/torchpercentile/percentile.py
-    """
-    percentiles = percentiles.double()
-    in_sorted, in_argsort = torch.sort(input, dim=-1)
-    positions = percentiles * (input.shape[-1]-1) / 100
-    floored = torch.floor(positions)
-    ceiled = floored + 1
-    ceiled[ceiled > input.shape[-1] - 1] = input.shape[-1] - 1
-    weight_ceiled = positions-floored
+def quantile_weights(input, quantiles, weights, scale):
+    '''
+    input, weights: 1D array
+    scale: scalar
+    '''
+    in_sorted, indices = torch.sort(input)
+    weight_sorted = weights[indices] / torch.sum(weights)
+    boundary = torch.cumsum(weight_sorted, dim=0)
+    boundary = boundary - weight_sorted / 2.
+    boundary = torch.cat((torch.zeros(1), boundary, torch.ones(1)), dim=0)
+    weight_sorted = torch.cat((torch.zeros(1), weight_sorted, torch.zeros(1)), dim=0)
+    in_sorted = torch.cat((in_sorted[0].reshape(1)-scale, in_sorted, in_sorted[-1].reshape(1)+scale), dim=0)
+    ceiled = torch.bucketize(quantiles, boundary)
+    ceiled[ceiled<1] = 1
+    floored = ceiled - 1
+    ceiled[ceiled>len(boundary)-1] = 0
+    weight_ceiled = (quantiles - boundary[floored]) / (weight_sorted[floored] + weight_sorted[ceiled]) * 2.
     weight_floored = 1.0 - weight_ceiled
-    d0 = in_sorted[..., floored.long()] * weight_floored
-    d1 = in_sorted[..., ceiled.long()] * weight_ceiled
+    d0 = in_sorted[floored.long()] * weight_floored
+    d1 = in_sorted[ceiled.long()] * weight_ceiled
     result = d0+d1
     return result
+
 
 class kde(object):
     """
@@ -317,20 +323,21 @@ def estimate_knots_gaussian(data, interp_nbin, above_noise, weight=None, edge_bi
     if not KDE and weight is not None:
         raise NotImplementedError
 
-    start = 100 / (interp_nbin-2*edge_bins+1)
-    end = 100-start
+    start = 1. / (interp_nbin-2*edge_bins+1)
+    end = 1.-start
     q1 = torch.linspace(start, end, interp_nbin-2*edge_bins, device=data.device)
     if edge_bins > 0:
         start = start / (edge_bins+1)
         end = q1[0]-start
         q0 = torch.linspace(start, end, edge_bins, device=data.device)
-        end = 100-start
+        end = 1.-start
         start = q1[-1] + start
         q2 = torch.linspace(start, end, edge_bins, device=data.device)
         q = torch.cat((q0,q1,q2), dim=0)
     else:
         q = q1
-    x = Percentile(data.T, q).to(torch.get_default_dtype())
+    x = torch.randn(data.shape[1], interp_nbin, device=data.device)
+    x = torch.sort(x, dim=1)[0]
     y = x.clone()
     deriv = torch.ones_like(x)
 
@@ -340,6 +347,11 @@ def estimate_knots_gaussian(data, interp_nbin, above_noise, weight=None, edge_bi
             if KDE:
                 rho = kde(data[:,i], bw_factor=bw_factor, weights=weight, batchsize=batchsize)
                 scale = (rho.covariance[0,0]+1)**0.5
+                if weight is not None:
+                    x[i] = quantile_weights(data[:,i], q, weight, scale)
+                else:
+                    x[i] = quantile_weights(data[:,i], q, torch.ones(data.shape[1], device=data.device), scale)
+
                 y[i] = 2**0.5 * scale * torch.erfinv(2*rho.cdf(x[i]).double()-1).to(torch.get_default_dtype())
                 dy = y[i,1:] - y[i,:-1]
                 dx = x[i,1:] - x[i,:-1]
@@ -349,13 +361,18 @@ def estimate_knots_gaussian(data, interp_nbin, above_noise, weight=None, edge_bi
                     select[1:] += dx <= eps 
                     select[1:] += torch.isnan(dy)
                     select += ~torch.isfinite(y[i])
-                    x[i,select] = torch.rand(torch.sum(select).item(), device=x.device)*(torch.max(data[:,i])-torch.min(data[:,i])) + torch.min(data[:,i]) 
+                    x[i,select] = torch.rand(torch.sum(select).item(), device=x.device)*(torch.max(data[:,i])-torch.min(data[:,i])+4*scale) + torch.min(data[:,i]) - 2*scale 
                     x[i] = torch.sort(x[i])[0]
                     y[i] = 2**0.5 * scale * torch.erfinv(2*rho.cdf(x[i]).double()-1).to(torch.get_default_dtype())
                     dy = y[i,1:] - y[i,:-1]
                     dx = x[i,1:] - x[i,:-1]
             else:
-                y[i] = 2**0.5 * torch.erfinv(2*q.double()/100.-1).to(torch.get_default_dtype())
+                scale = eps
+                if weight is not None:
+                    x[i] = quantile_weights(data[:,i], q, weight, scale)
+                else:
+                    x[i] = quantile_weights(data[:,i], q, torch.ones(data.shape[1], device=data.device), scale)
+                y[i] = 2**0.5 * torch.erfinv(2*q.double()-1).to(torch.get_default_dtype())
                 dy = y[i,1:] - y[i,:-1]
                 dx = x[i,1:] - x[i,:-1]
                 q0 = q.clone()
@@ -365,10 +382,10 @@ def estimate_knots_gaussian(data, interp_nbin, above_noise, weight=None, edge_bi
                     select[1:] += dx <= eps 
                     select[1:] += torch.isnan(dy)
                     select += ~torch.isfinite(y[i])
-                    q0[select] = torch.rand(torch.sum(select).item(), device=q.device)*100
+                    q0[select] = torch.rand(torch.sum(select).item(), device=q.device)
                     q0 = torch.sort(q0)[0]
-                    x[i] = Percentile(data[:,i], q0).to(torch.get_default_dtype())
-                    y[i] = 2**0.5 * torch.erfinv(2*q0.double()/100.-1).to(torch.get_default_dtype())
+                    x[i] = quantile_weights(data[:,i], q0, torch.ones(data.shape[1], device=data.device), scale)
+                    y[i] = 2**0.5 * torch.erfinv(2*q0.double()-1).to(torch.get_default_dtype())
                     dy = y[i,1:] - y[i,:-1]
                     dx = x[i,1:] - x[i,:-1]
             h = dx
@@ -393,16 +410,16 @@ def estimate_knots_gaussian(data, interp_nbin, above_noise, weight=None, edge_bi
                     endx2 = torch.sort(data[data[:,i]>x[i,-1],i], descending=True)[0]
                     if KDE:
                         if len(endx1) > 10:
-                            endx1 = Percentile(endx1, torch.linspace(0,100,11, device=endx1.device)[1:-1]).to(torch.get_default_dtype())
+                            endx1 = torch.quantile(endx1, torch.linspace(0,1,11,device=endx1.device)[1:-1])
                         endy1 = 2**0.5 * scale * torch.erfinv(2*rho.cdf(endx1).double()-1).to(torch.get_default_dtype()) - y[i,0]
                         if len(endx2) > 10:
-                            endx2 = Percentile(endx2, torch.linspace(0,100,11, device=endx2.device)[1:-1]).to(torch.get_default_dtype())
+                            endx2 = torch.quantile(endx2, torch.linspace(0,1,11,device=endx1.device)[1:-1])
                         endy2 = 2**0.5 * scale * torch.erfinv(2*rho.cdf(endx2).double()-1).to(torch.get_default_dtype()) - y[i,-1]
                     else:
                         endy1 = 2**0.5 * torch.erfinv(2*torch.linspace(0.5,len(endx1)-0.5,len(endx1),device=data.device,dtype=torch.float64)/len(data)-1).to(torch.get_default_dtype()) - y[i,0]
                         endy2 = 2**0.5 * torch.erfinv(2*(1-torch.linspace(0.5,len(endx2)-0.5,len(endx2),device=data.device,dtype=torch.float64)/len(data))-1).to(torch.get_default_dtype()) - y[i,-1]
                     endx1 -= x[i,0]
-                    select1 = torch.isfinite(endy1) & (endy1>0) & (endx1>0)
+                    select1 = torch.isfinite(endy1) & (endy1<0) & (endx1<0)
                     deriv[i,0] = torch.sum(endx1[select1]*endy1[select1]) / torch.sum(endx1[select1]*endx1[select1])
                     endx2 -= x[i,-1]
                     select2 = torch.isfinite(endy2) & (endy2>0) & (endx2>0)
@@ -436,14 +453,14 @@ def estimate_knots_gaussian(data, interp_nbin, above_noise, weight=None, edge_bi
 
 def estimate_knots(data, sample, interp_nbin, above_noise, edge_bins=4, derivclip=1, extrapolate='regression', alpha=(0, 0), KDE=True, bw_factor_data=1, bw_factor_sample=1, batchsize=None):
 
-    start = 100 / (interp_nbin-2*edge_bins+1)
-    end = 100-start
+    start = 1. / (interp_nbin-2*edge_bins+1)
+    end = 1.-start
     q1 = torch.linspace(start, end, interp_nbin-2*edge_bins, device=data.device)
     if edge_bins > 0:
         start = start / (edge_bins+1)
         end = q1[0]-start
         q0 = torch.linspace(start, end, edge_bins, device=data.device)
-        end = 100-start
+        end = 1.-start
         start = q1[-1] + start
         q2 = torch.linspace(start, end, edge_bins, device=data.device)
         q = torch.cat((q0,q1,q2), dim=0)
@@ -451,18 +468,17 @@ def estimate_knots(data, sample, interp_nbin, above_noise, edge_bins=4, derivcli
         q = q1
     y = torch.zeros(sample.shape[1], interp_nbin, device=sample.device)
     for i in range(len(y)):
-        y[i] = Percentile(sample[:,i], q)
+        y[i] = torch.quantile(sample[:,i], q)
     x = y.clone()
     deriv = torch.ones_like(y)
     
     if KDE:
-        invq = torch.cat((torch.linspace(0, q[0], 5, device=data.device)[:-1], q, torch.linspace(q[-1], 100, 5, device=data.device)[1:]), dim=0)
+        invq = torch.cat((torch.linspace(0, q[0], 5, device=data.device)[:-1], q, torch.linspace(q[-1], 1, 5, device=data.device)[1:]), dim=0)
     else:
         invq = q
-    #invy = Percentile(data.T, invq).to(torch.get_default_dtype())
     invy = torch.zeros(data.shape[1], len(invq), device=data.device)
     for i in range(len(invy)):
-        invy[i] = Percentile(data[:,i], invq)
+        invy[i] = torch.quantile(data[:,i], invq)
     
     eps = 1e-5
     for i in range(data.shape[1]):
@@ -510,10 +526,10 @@ def estimate_knots(data, sample, interp_nbin, above_noise, edge_bins=4, derivcli
                     select = torch.zeros(len(y[i]), dtype=bool, device=y.device)
                     select[1:] = dy <= eps 
                     select[1:] += dx <= eps 
-                    q0[select] = torch.rand(torch.sum(select).item(), device=y.device)*100
+                    q0[select] = torch.rand(torch.sum(select).item(), device=y.device)
                     q0 = torch.sort(q0)[0]
-                    y[i] = Percentile(sample[:,i], q0).to(torch.get_default_dtype())
-                    x[i] = Percentile(data[:,i], q0).to(torch.get_default_dtype())
+                    y[i] = torch.quantile(sample[:,i], q0)
+                    x[i] = torch.quantile(data[:,i], q0)
                     dy = y[i,1:] - y[i,:-1]
                     dx = x[i,1:] - x[i,:-1]
             h = dx
@@ -539,14 +555,14 @@ def estimate_knots(data, sample, interp_nbin, above_noise, edge_bins=4, derivcli
                         deriv[i,-1] = 1
                 elif extrapolate == 'regression':
                     try:
-                        endx = Percentile(data[data[:,i]<x[i,0],i], torch.linspace(0,90,10, device=data.device)) - x[i,0]
-                        endy = Percentile(sample[sample[:,i]<y[i,0],i], torch.linspace(0,90,10, device=data.device)) - y[i,0]
+                        endx = torch.quantile(data[data[:,i]<x[i,0],i], torch.linspace(0,0.9,10, device=data.device)) - x[i,0]
+                        endy = torch.quantile(sample[sample[:,i]<y[i,0],i], torch.linspace(0,0.9,10, device=data.device)) - y[i,0]
                         deriv[i,0] = torch.sum(endy*endy) / torch.sum(endx*endy)
                     except:
                         deriv[i,0] = 1
                     try:
-                        endx = Percentile(data[data[:,i]>x[i,-1],i], torch.linspace(10,100,10, device=data.device)) - x[i,-1]
-                        endy = Percentile(sample[sample[:,i]>y[i,-1],i], torch.linspace(10,100,10, device=data.device)) - y[i,-1]
+                        endx = torch.quantile(data[data[:,i]>x[i,-1],i], torch.linspace(0.1,1,10, device=data.device)) - x[i,-1]
+                        endy = torch.quantile(sample[sample[:,i]>y[i,-1],i], torch.linspace(0.1,1,10, device=data.device)) - y[i,-1]
                         deriv[i,-1] = torch.sum(endy*endy) / torch.sum(endx*endy)
                     except:
                         deriv[i,-1] = 1
