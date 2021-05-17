@@ -278,12 +278,6 @@ class TestWald(BaseTestCases.BaseTestCase):
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestKumaraswamy(BaseTestCases.BaseTestCase):
-    distribution = pm.Kumaraswamy
-    params = {"a": 1.0, "b": 1.0}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestAsymmetricLaplace(BaseTestCases.BaseTestCase):
     distribution = pm.AsymmetricLaplace
     params = {"kappa": 1.0, "b": 1.0, "mu": 0.0}
@@ -491,6 +485,28 @@ class TestMoyal(BaseTestDistribution):
     expected_rv_op_params = {"mu": 0.0, "sigma": 1.0}
     reference_dist_params = {"loc": 0.0, "scale": 1.0}
     reference_dist = seeded_scipy_distribution_builder("moyal")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestKumaraswamy(BaseTestDistribution):
+    def kumaraswamy_rng_fn(self, a, b, size, uniform_rng_fct):
+        return (1 - (1 - uniform_rng_fct(size=size)) ** (1 / b)) ** (1 / a)
+
+    def seeded_kumaraswamy_rng_fn(self):
+        uniform_rng_fct = functools.partial(
+            getattr(np.random.RandomState, "uniform"), self.get_random_state()
+        )
+        return functools.partial(self.kumaraswamy_rng_fn, uniform_rng_fct=uniform_rng_fct)
+
+    pymc_dist = pm.Kumaraswamy
+    pymc_dist_params = {"a": 1.0, "b": 1.0}
+    expected_rv_op_params = {"a": 1.0, "b": 1.0}
+    reference_dist_params = {"a": 1.0, "b": 1.0}
+    reference_dist = seeded_kumaraswamy_rng_fn
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",

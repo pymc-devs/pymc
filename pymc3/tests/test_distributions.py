@@ -1110,7 +1110,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=5, float32=3),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_kumaraswamy(self):
         # Scipy does not have a built-in Kumaraswamy pdf
         def scipy_log_pdf(value, a, b):
