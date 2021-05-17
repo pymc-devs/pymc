@@ -1275,7 +1275,7 @@ class KumaraswamyRV(RandomVariable):
     name = "kumaraswamy"
     ndim_supp = 0
     ndims_params = [0, 0]
-    dtype = "int64"
+    dtype = "floatX"
     _print_name = ("Kumaraswamy", "\\operatorname{Kumaraswamy}")
 
     @classmethod
