@@ -1375,7 +1375,8 @@ class Kumaraswamy(UnitContinuous):
         -------
         TensorVariable
         """
-        return bound(at.log1p(-((1 - value ** a) ** b)), value >= 0, value <= 1)
+        logcdf = at.log1p(-((1 - value ** a) ** b))
+        return bound(at.switch(value < 1, logcdf, 0), value >= 0, a > 0, b > 0)
 
 
 class Exponential(PositiveContinuous):
