@@ -1271,6 +1271,22 @@ class Beta(UnitContinuous):
         )
 
 
+class KumaraswamyRV(RandomVariable):
+    name = "kumaraswamy"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("Kumaraswamy", "\\operatorname{Kumaraswamy}")
+
+    @classmethod
+    def rng_fn(cls, rng, a, b, size):
+        u = rng.uniform(size=size)
+        return (1 - (1 - u) ** (1 / b)) ** (1 / a)
+
+
+kumaraswamy = KumaraswamyRV()
+
+
 class Kumaraswamy(UnitContinuous):
     r"""
     Kumaraswamy log-likelihood.
@@ -1313,48 +1329,19 @@ class Kumaraswamy(UnitContinuous):
     b: float
         b > 0.
     """
+    rv_op = kumaraswamy
 
-    def __init__(self, a, b, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.a = a = at.as_tensor_variable(floatX(a))
-        self.b = b = at.as_tensor_variable(floatX(b))
-
-        ln_mean = at.log(b) + at.gammaln(1 + 1 / a) + at.gammaln(b) - at.gammaln(1 + 1 / a + b)
-        self.mean = at.exp(ln_mean)
-        ln_2nd_raw_moment = (
-            at.log(b) + at.gammaln(1 + 2 / a) + at.gammaln(b) - at.gammaln(1 + 2 / a + b)
-        )
-        self.variance = at.exp(ln_2nd_raw_moment) - self.mean ** 2
+    @classmethod
+    def dist(cls, a, b, *args, **kwargs):
+        a = at.as_tensor_variable(floatX(a))
+        b = at.as_tensor_variable(floatX(b))
 
         assert_negative_support(a, "a", "Kumaraswamy")
         assert_negative_support(b, "b", "Kumaraswamy")
 
-    def _random(self, a, b, size=None):
-        u = np.random.uniform(size=size)
-        return (1 - (1 - u) ** (1 / b)) ** (1 / a)
+        return super().dist([a, b], *args, **kwargs)
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Kumaraswamy distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # a, b = draw_values([self.a, self.b], point=point, size=size)
-        # return generate_samples(self._random, a, b, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, a, b):
         """
         Calculate log-probability of Kumaraswamy distribution at specified value.
 
@@ -1368,12 +1355,28 @@ class Kumaraswamy(UnitContinuous):
         -------
         TensorVariable
         """
-        a = self.a
-        b = self.b
-
         logp = at.log(a) + at.log(b) + (a - 1) * at.log(value) + (b - 1) * at.log(1 - value ** a)
 
         return bound(logp, value >= 0, value <= 1, a > 0, b > 0)
+
+    def logcdf(value, a, b):
+        r"""
+        Compute the log of cumulative distribution function for the Kumaraswamy distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for
+            multiple values are desired the values must be provided in a numpy
+            array or Aesara tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        logcdf = log1mexp(-(b * at.log1p(-(value ** a))))
+        return bound(at.switch(value < 1, logcdf, 0), value >= 0, a > 0, b > 0)
 
 
 class Exponential(PositiveContinuous):

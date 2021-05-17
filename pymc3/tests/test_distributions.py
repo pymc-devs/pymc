@@ -1110,15 +1110,28 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=5, float32=3),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_kumaraswamy(self):
-        # Scipy does not have a built-in Kumaraswamy pdf
+        # Scipy does not have a built-in Kumaraswamy
         def scipy_log_pdf(value, a, b):
             return (
                 np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value ** a)
             )
 
-        self.check_logp(Kumaraswamy, Unit, {"a": Rplus, "b": Rplus}, scipy_log_pdf)
+        def scipy_log_cdf(value, a, b):
+            return pm.math.log1mexp_numpy(-(b * np.log1p(-(value ** a))))
+
+        self.check_logp(
+            Kumaraswamy,
+            Unit,
+            {"a": Rplus, "b": Rplus},
+            scipy_log_pdf,
+        )
+        self.check_logcdf(
+            Kumaraswamy,
+            Unit,
+            {"a": Rplus, "b": Rplus},
+            scipy_log_cdf,
+        )
 
     def test_exponential(self):
         self.check_logp(
