@@ -1359,6 +1359,24 @@ class Kumaraswamy(UnitContinuous):
 
         return bound(logp, value >= 0, value <= 1, a > 0, b > 0)
 
+    def logcdf(value, a, b):
+        r"""
+        Compute the log of cumulative distribution function for the Kumaraswamy distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for
+            multiple values are desired the values must be provided in a numpy
+            array or Aesara tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return bound(at.log1p(-((1 - value ** a) ** b)), value >= 0, value <= 1)
+
 
 class Exponential(PositiveContinuous):
     r"""

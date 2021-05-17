@@ -1117,7 +1117,11 @@ class TestMatchesScipy:
                 np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value ** a)
             )
 
+        def scipy_log_cdf(value, a, b):
+            return np.log1p(-((1 - value ** a) ** b))
+
         self.check_logp(Kumaraswamy, Unit, {"a": Rplus, "b": Rplus}, scipy_log_pdf)
+        self.check_logcdf(Kumaraswamy, Unit, {"a": Rplus, "b": Rplus}, scipy_log_cdf)
 
     def test_exponential(self):
         self.check_logp(
