@@ -1375,7 +1375,7 @@ class Kumaraswamy(UnitContinuous):
         -------
         TensorVariable
         """
-        logcdf = at.log1p(-((1 - value ** a) ** b))
+        logcdf = log1mexp(-(b * at.log1p(-(value ** a))))
         return bound(at.switch(value < 1, logcdf, 0), value >= 0, a > 0, b > 0)
 
 
