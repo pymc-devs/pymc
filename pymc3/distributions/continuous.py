@@ -47,6 +47,7 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
+from scipy.special import expit
 
 from pymc3.aesaraf import floatX
 from pymc3.distributions import logp_transform, transforms
@@ -66,7 +67,7 @@ from pymc3.distributions.dist_math import (
 )
 from pymc3.distributions.distribution import Continuous
 from pymc3.distributions.special import log_i0
-from pymc3.math import invlogit, log1mexp, log1pexp, logdiffexp, logit
+from pymc3.math import log1mexp, log1pexp, logdiffexp, logit
 from pymc3.util import UNSET
 
 __all__ = [
@@ -3672,6 +3673,21 @@ class Logistic(Continuous):
         )
 
 
+class LogitNormalRV(RandomVariable):
+    name = "logit_normal"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("logitNormal", "\\operatorname{logitNormal}")
+
+    @classmethod
+    def rng_fn(cls, rng, mu, sigma, size=None):
+        return expit(stats.norm.rvs(loc=mu, scale=sigma, size=size, random_state=rng))
+
+
+logit_normal = LogitNormalRV()
+
+
 class LogitNormal(UnitContinuous):
     r"""
     Logit-Normal log-likelihood.
@@ -3716,44 +3732,22 @@ class LogitNormal(UnitContinuous):
     tau: float
         Scale parameter (tau > 0).
     """
+    rv_op = logit_normal
 
-    def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
+    @classmethod
+    def dist(cls, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
-        self.mu = mu = at.as_tensor_variable(floatX(mu))
+        mu = at.as_tensor_variable(floatX(mu))
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = at.as_tensor_variable(sigma)
-        self.tau = tau = at.as_tensor_variable(tau)
-
-        self.median = invlogit(mu)
+        sigma = sd = at.as_tensor_variable(sigma)
+        tau = at.as_tensor_variable(tau)
         assert_negative_support(sigma, "sigma", "LogitNormal")
         assert_negative_support(tau, "tau", "LogitNormal")
 
-        super().__init__(**kwargs)
+        return super().dist([mu, sigma], **kwargs)
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from LogitNormal distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, _, sigma = draw_values([self.mu, self.tau, self.sigma], point=point, size=size)
-        # return expit(
-        #     generate_samples(stats.norm.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size)
-        # )
-
-    def logp(self, value):
+    def logp(value, mu, sigma):
         """
         Calculate log-probability of LogitNormal distribution at specified value.
 
@@ -3767,8 +3761,7 @@ class LogitNormal(UnitContinuous):
         -------
         TensorVariable
         """
-        mu = self.mu
-        tau = self.tau
+        tau, sigma = get_tau_sigma(sigma=sigma)
         return bound(
             -0.5 * tau * (logit(value) - mu) ** 2
             + 0.5 * at.log(tau / (2.0 * np.pi))
@@ -3777,9 +3770,6 @@ class LogitNormal(UnitContinuous):
             value < 1,
             tau > 0,
         )
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "sigma"]
 
 
 class Interpolated(BoundedContinuous):

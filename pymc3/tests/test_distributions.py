@@ -2527,7 +2527,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_logitnormal(self):
         self.check_logp(
             LogitNormal,

@@ -158,7 +158,7 @@ class BaseTestCases:
             self.model = pm.Model()
 
         def get_random_variable(self, shape, with_vector_params=False, name=None):
-            """ Creates a RandomVariable of the parametrized distribution. """
+            """Creates a RandomVariable of the parametrized distribution."""
             if with_vector_params:
                 params = {
                     key: value * np.ones(self.shape, dtype=np.dtype(type(value)))
@@ -187,7 +187,7 @@ class BaseTestCases:
 
         @staticmethod
         def sample_random_variable(random_variable, size):
-            """ Draws samples from a RandomVariable using its .random() method. """
+            """Draws samples from a RandomVariable using its .random() method."""
             if size is None:
                 return random_variable.eval()
             else:
@@ -196,7 +196,7 @@ class BaseTestCases:
         @pytest.mark.parametrize("size", [None, (), 1, (1,), 5, (4, 5)], ids=str)
         @pytest.mark.parametrize("shape", [None, ()], ids=str)
         def test_scalar_distribution_shape(self, shape, size):
-            """ Draws samples of different [size] from a scalar [shape] RV. """
+            """Draws samples of different [size] from a scalar [shape] RV."""
             rv = self.get_random_variable(shape)
             exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
             exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
@@ -216,7 +216,7 @@ class BaseTestCases:
             "shape", [None, (), (1,), (1, 1), (1, 2), (10, 11, 1), (9, 10, 2)], ids=str
         )
         def test_scalar_sample_shape(self, shape, size):
-            """ Draws samples of scalar [size] from a [shape] RV. """
+            """Draws samples of scalar [size] from a [shape] RV."""
             rv = self.get_random_variable(shape)
             exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
             exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
@@ -287,12 +287,6 @@ class TestChiSquared(BaseTestCases.BaseTestCase):
 class TestExGaussian(BaseTestCases.BaseTestCase):
     distribution = pm.ExGaussian
     params = {"mu": 0.0, "sigma": 1.0, "nu": 1.0}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestLogitNormal(BaseTestCases.BaseTestCase):
-    distribution = pm.LogitNormal
-    params = {"mu": 0.0, "sigma": 1.0}
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
@@ -573,6 +567,32 @@ class TestNormal(BaseTestDistribution):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
+
+
+class TestLogitNormal(BaseTestDistribution):
+    def logit_normal_rng_fn(self, rng, size, loc, scale):
+        return expit(st.norm.rvs(loc=loc, scale=scale, size=size, random_state=rng))
+
+    pymc_dist = pm.LogitNormal
+    pymc_dist_params = {"mu": 5.0, "sigma": 10.0}
+    expected_rv_op_params = {"mu": 5.0, "sigma": 10.0}
+    reference_dist_params = {"loc": 5.0, "scale": 10.0}
+    reference_dist = lambda self: functools.partial(
+        self.logit_normal_rng_fn, rng=self.get_random_state()
+    )
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestLogitNormalTau(BaseTestDistribution):
+    pymc_dist = pm.LogitNormal
+    tau, sigma = get_tau_sigma(tau=25.0)
+    pymc_dist_params = {"mu": 1.0, "tau": tau}
+    expected_rv_op_params = {"mu": 1.0, "sigma": sigma}
+    tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
 class TestNormalTau(BaseTestDistribution):
@@ -1443,7 +1463,6 @@ class TestScalarParameterSamples(SeededTest):
         with expectation:
             m.random()
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_logitnormal(self):
         def ref_rand(size, mu, sigma):
             return expit(st.norm.rvs(loc=mu, scale=sigma, size=size))
