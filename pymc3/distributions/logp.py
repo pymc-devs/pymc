@@ -318,37 +318,38 @@ def add_logp(op, var, rvs_to_values, *add_inputs, **kwargs):
     if len(add_inputs) != 2:
         raise ValueError(f"Expected 2 inputs but got: {len(add_inputs)}")
 
-    rv, loc = find_rv_branch(add_inputs)
+    base_rv, loc = find_rv_branch(add_inputs)
 
-    if len(rv) != 1:
+    if len(base_rv) != 1:
         raise NotImplementedError(
-            f"Logp of addition requires one branch with an unregistered RandomVariable but got {len(rv)}"
+            f"Logp of addition requires one branch with an unregistered RandomVariable but got {len(base_rv)}"
         )
 
-    rv = rv[0]
-    rv_value = rvs_to_values.get(rv, getattr(rv.tag, "value_var", rv))
+    var_value = rvs_to_values.get(var, var)
     loc = loc[0]
-    loc_value = rvs_to_values.get(loc, getattr(loc.tag, "value_var", loc))
+    base_rv = base_rv[0]
+    base_value = base_rv.type()
 
-    new_rvs_to_values = rvs_to_values.copy()
-    new_rvs_to_values[rv] = rv_value
-
-    logp_rv = logpt(rv, new_rvs_to_values, **kwargs)
+    logp_base_rv = logpt(base_rv, {base_rv: base_value}, **kwargs)
     fgraph = FunctionGraph(
-        [i for i in graph_inputs((logp_rv,)) if not isinstance(i, Constant)],
-        [logp_rv],
+        [i for i in graph_inputs((logp_base_rv,)) if not isinstance(i, Constant)],
+        [logp_base_rv],
         clone=False,
     )
+    fgraph.replace(base_value, var_value - loc, import_missing=True)
+    logp_add_rv = fgraph.outputs[0]
 
-    var_value = rvs_to_values.get(var, var)
+    # Replace rvs in graph
+    # TODO: This shouldn't be here
+    (logp_add_rv,), _ = rvs_to_value_vars(
+        (logp_add_rv,),
+        apply_transforms=True,  # Change this
+        initial_replacements=None,
+    )
 
-    fgraph.add_input(loc_value)
-    fgraph.add_input(var_value)
-    fgraph.replace(rv_value, var_value - loc_value)
+    logp_add_rv.name = f"__logp_{var.name}"
 
-    logp_rv.name = f"__logp_{var.name}"
-
-    return logp_rv
+    return logp_add_rv
 
 
 @_logp.register(Mul)
@@ -357,40 +358,41 @@ def mul_logp(op, var, rvs_to_values, *mul_inputs, **kwargs):
     if len(mul_inputs) != 2:
         raise ValueError(f"Expected 2 inputs but got: {len(mul_inputs)}")
 
-    rv, scale = find_rv_branch(mul_inputs)
+    base_rv, scale = find_rv_branch(mul_inputs)
 
-    if len(rv) != 1:
+    if len(base_rv) != 1:
         raise NotImplementedError(
-            f"Logp of product requires one branch with an unregistered RandomVariable but got {len(rv)}"
+            f"Logp of product requires one branch with an unregistered RandomVariable but got {len(base_rv)}"
         )
 
-    rv = rv[0]
-    rv_value = rvs_to_values.get(rv, getattr(rv.tag, "value_var", rv))
+    var_value = rvs_to_values.get(var, var)
     scale = scale[0]
-    scale_value = rvs_to_values.get(scale, getattr(scale.tag, "value_var", scale))
+    base_rv = base_rv[0]
+    base_value = base_rv.type()
 
-    new_rvs_to_values = rvs_to_values.copy()
-    new_rvs_to_values[rv] = rv_value
-
-    logp_rv = logpt(rv, new_rvs_to_values, **kwargs)
+    logp_base_rv = logpt(base_rv, {base_rv: base_value}, **kwargs)
     fgraph = FunctionGraph(
-        [i for i in graph_inputs((logp_rv,)) if not isinstance(i, Constant)],
-        [logp_rv],
+        [i for i in graph_inputs((logp_base_rv,)) if not isinstance(i, Constant)],
+        [logp_base_rv],
         clone=False,
     )
 
-    var_value = rvs_to_values.get(var, var)
-
-    fgraph.add_input(scale_value)
-    fgraph.add_input(var_value)
     # TODO: This is not correct for discrete variables
     # TODO: Undefined behavior for scale = 0
-    fgraph.replace(rv_value, var_value / scale_value)
+    fgraph.replace(base_value, var_value / scale, import_missing=True)
+    logp_mul_rv = fgraph.outputs[0] - at.log(at.abs_(scale))
 
-    logp_rv = fgraph.outputs[0] - at.log(at.abs_(scale_value))
-    logp_rv.name = f"__logp_{var.name}"
+    # Replace rvs in graph
+    # TODO: This shouldn't be here
+    (logp_mul_rv,), _ = rvs_to_value_vars(
+        (logp_mul_rv,),
+        apply_transforms=True,  # Change this
+        initial_replacements=None,
+    )
 
-    return logp_rv
+    logp_mul_rv.name = f"__logp_{var.name}"
+
+    return logp_mul_rv
 
 
 def convert_indices(indices, entry):

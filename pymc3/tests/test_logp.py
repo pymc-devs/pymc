@@ -77,7 +77,7 @@ def test_logpt_add():
     random variable and ``loc`` is an tensor variable or a registered random variable
     """
     with Model() as m:
-        loc = Uniform("loc", 0, 1)
+        loc = Exponential("loc", 10)
         x = Normal.dist(0, 1) + loc
         m.register_rv(x, "x")
 
@@ -98,8 +98,8 @@ def test_logpt_add():
 
     # Test logp is correct
     f_logp = aesara.function([x_value_var, loc_value_var], x_logp)
-    np.testing.assert_almost_equal(f_logp(50, 50), sp.norm(50, 1).logpdf(50))
-    np.testing.assert_almost_equal(f_logp(50, 0), sp.norm(0, 1).logpdf(50), decimal=5)
+    np.testing.assert_almost_equal(f_logp(50, np.log(50)), sp.norm(50, 1).logpdf(50))
+    np.testing.assert_almost_equal(f_logp(50, np.log(10)), sp.norm(10, 1).logpdf(50), decimal=5)
 
 
 def test_logpt_mul():
@@ -108,7 +108,7 @@ def test_logpt_mul():
     random variable and ``scale`` is an tensor variable or a registered random variable
     """
     with Model() as m:
-        scale = Uniform("scale", 0, 1)
+        scale = Exponential("scale", 10)
         x = Exponential.dist(1) * scale
         m.register_rv(x, "x")
 
@@ -129,9 +129,8 @@ def test_logpt_mul():
 
     # Test logp is correct
     f_logp = aesara.function([x_value_var, scale_value_var], x_logp)
-    np.testing.assert_almost_equal(f_logp(0, 5), sp.expon(scale=5).logpdf(0))
-    np.testing.assert_almost_equal(f_logp(-2, -2), sp.expon(scale=2).logpdf(2))
-    assert f_logp(2, -2) == -np.inf
+    np.testing.assert_almost_equal(f_logp(0, np.log(5)), sp.expon(scale=5).logpdf(0))
+    np.testing.assert_almost_equal(f_logp(2, np.log(2)), sp.expon(scale=2).logpdf(2))
 
 
 def test_logpt_mul_add():
@@ -140,8 +139,8 @@ def test_logpt_mul_add():
     random variable and ``loc`` and ``scale`` are tensor variables or registered random variables
     """
     with Model() as m:
-        loc = Uniform("loc", 0, 1)
-        scale = Uniform("scale", 0, 1)
+        loc = Exponential("loc", 10)
+        scale = Exponential("scale", 10)
         x = loc + scale * Normal.dist(0, 1)
         m.register_rv(x, "x")
 
@@ -164,11 +163,14 @@ def test_logpt_mul_add():
 
     # Test logp is correct
     f_logp = aesara.function([x_value_var, loc_value_var, scale_value_var], x_logp)
-    np.testing.assert_almost_equal(f_logp(-1, 0, 2), sp.norm(0, 2).logpdf(-1))
-    np.testing.assert_almost_equal(f_logp(95, 100, 15), sp.norm(100, 15).logpdf(95), decimal=6)
+    np.testing.assert_almost_equal(f_logp(-1, np.log(0), np.log(2)), sp.norm(0, 2).logpdf(-1))
+    np.testing.assert_almost_equal(
+        f_logp(95, np.log(100), np.log(15)), sp.norm(100, 15).logpdf(95), decimal=6
+    )
 
 
-def test_logpt_not_implemented():
+@pytest.mark.parametrize("op", [at.add, at.mul])
+def test_logpt_not_implemented(op):
     """Test that logpt for add and mul fail if inputs are 0 or 2 unregistered rvs"""
 
     with Model() as m:
@@ -179,14 +181,14 @@ def test_logpt_not_implemented():
         registered1 = Normal("registered1", 0, 1)
         registered2 = Normal("registered2", 0, 1)
 
-        x_fail1 = variable1 + variable2
-        x_fail2 = unregistered1 + unregistered2
-        x_fail3 = registered1 + variable1
-        x_fail4 = registered1 + registered2
+        x_fail1 = op(variable1, variable2)
+        x_fail2 = op(unregistered1, unregistered2)
+        x_fail3 = op(registered1, variable1)
+        x_fail4 = op(registered1, registered2)
 
-        x_pass1 = variable1 + unregistered2
-        x_pass2 = unregistered1 + variable2
-        x_pass3 = registered1 + unregistered1
+        x_pass1 = op(variable1, unregistered2)
+        x_pass2 = op(unregistered1, variable2)
+        x_pass3 = op(registered1, unregistered1)
 
         m.register_rv(x_fail1, "x_fail1")
         m.register_rv(x_fail2, "x_fail2")
