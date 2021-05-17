@@ -1496,7 +1496,6 @@ class TestMatchesScipy:
             lambda value, sigma: sp.halfcauchy.logpdf(value, 0, sigma),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_skew_normal(self):
         self.check_logp(
             SkewNormal,
@@ -2545,19 +2544,24 @@ class TestMatchesScipy:
         with Model():
             Beta("beta", alpha=1.0, beta=1.0, size=(10, 20))
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Some combinations underflow to -inf in float32 in pymc version",
+    )
     def test_rice(self):
-        self.check_logp(
-            Rice,
-            Rplus,
-            {"nu": Rplus, "sigma": Rplusbig},
-            lambda value, nu, sigma: sp.rice.logpdf(value, b=nu / sigma, loc=0, scale=sigma),
-        )
         self.check_logp(
             Rice,
             Rplus,
             {"b": Rplus, "sigma": Rplusbig},
             lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma),
+        )
+
+    def test_rice_nu(self):
+        self.check_logp(
+            Rice,
+            Rplus,
+            {"nu": Rplus, "sigma": Rplusbig},
+            lambda value, nu, sigma: sp.rice.logpdf(value, b=nu / sigma, loc=0, scale=sigma),
         )
 
     def test_moyal_logp(self):
