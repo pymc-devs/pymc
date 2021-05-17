@@ -523,8 +523,9 @@ class TestSkewNormal(BaseTestDistribution):
 
 class TestSkewNormalTau(BaseTestDistribution):
     pymc_dist = pm.SkewNormal
-    pymc_dist_params = {"mu": 0.0, "tau": 1.0, "alpha": 5.0}
-    expected_rv_op_params = {"mu": 0.0, "sigma": 1.0 ** -0.5, "alpha": 5.0}
+    tau, sigma = get_tau_sigma(tau=2.0)
+    pymc_dist_params = {"mu": 0.0, "tau": tau, "alpha": 5.0}
+    expected_rv_op_params = {"mu": 0.0, "sigma": sigma, "alpha": 5.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
