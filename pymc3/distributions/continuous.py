@@ -3193,7 +3193,7 @@ class SkewNormal(Continuous):
 
         return super().dist([mu, sigma, alpha], *args, **kwargs)
 
-    def logp(value, alpha, mu, sigma, tau):
+    def logp(value, alpha, mu, sigma):
         """
         Calculate log-probability of SkewNormal distribution at specified value.
 
@@ -3207,7 +3207,7 @@ class SkewNormal(Continuous):
         -------
         TensorVariable
         """
-        tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
+        tau, sigma = get_tau_sigma(sigma=sigma)
         return bound(
             at.log(1 + at.erf(((value - mu) * at.sqrt(tau) * alpha) / at.sqrt(2)))
             + (-tau * (value - mu) ** 2 + at.log(tau / np.pi / 2.0)) / 2.0,
