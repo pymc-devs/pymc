@@ -527,6 +527,14 @@ class TestLogitNormal(BaseTestDistribution):
     ]
 
 
+class TestLogitNormalTau(BaseTestDistribution):
+    pymc_dist = pm.LogitNormal
+    tau, sigma = get_tau_sigma(tau=25.0)
+    pymc_dist_params = {"mu": 1.0, "tau": tau}
+    expected_rv_op_params = {"mu": 1.0, "sigma": sigma}
+    tests_to_run = ["check_pymc_params_match_rv_op"]
+
+
 class TestNormalTau(BaseTestDistribution):
     pymc_dist = pm.Normal
     tau, sigma = get_tau_sigma(tau=25.0)
