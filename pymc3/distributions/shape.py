@@ -167,7 +167,7 @@ def resize_from_observed(
     return ndim_resize, resize_shape, observed
 
 
-def extract_size(shape=None, size=None, ndim_supp=None):
+def find_size(shape=None, size=None, ndim_supp=None):
     shape = convert_shape(shape)
     size = convert_size(size)
 
