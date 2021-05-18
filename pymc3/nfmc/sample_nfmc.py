@@ -249,6 +249,9 @@ def sample_nfmc(
         train_logq,
         logZ,
         q_models,
+        q_ess,
+        train_ess,
+        total_ess,
     ) = zip(*results)
     trace = MultiTrace(traces)
     trace.report.log_evidence = log_evidence
@@ -260,6 +263,9 @@ def sample_nfmc(
     trace.report.train_logq = train_logq
     trace.report.logZ = logZ
     trace.report.q_models = q_models
+    trace.report.q_ess = q_ess
+    trace.report.train_ess = train_ess
+    trace.report.total_ess = total_ess
     trace.report._n_draws = draws
     trace.report._t_sampling = time.time() - t1
     
@@ -407,6 +413,9 @@ def sample_nfmc_int(
     iter_train_logq_dict = {}
     iter_logZ_dict = {}
     iter_qmodel_dict = {}
+    iter_q_ess_dict = {}
+    iter_train_ess_dict = {}
+    iter_total_ess_dict = {}
     
     nfmc.initialize_var_info()
     nfmc.setup_logp()
@@ -440,16 +449,21 @@ def sample_nfmc_int(
     iter_sample_dict['q_init0'] = nfmc.nf_trace
     iter_weight_dict['q_init0'] = nfmc.weights
     iter_logZ_dict['q_init0'] = nfmc.log_evidence
+    iter_q_ess_dict['q_init0'] = nfmc.q_ess
+    iter_total_ess_dict['q_init0'] = nfmc.total_ess
     
     iter_log_evidence = 1.0 * nfmc.log_evidence
-    iter_ess = 1.0 * nfmc.ess
+    iter_ess = 1.0 * nfmc.q_ess
+
+    print(f"Initialization logZ: {nfmc.log_evidence:.3f}, ESS/N: {nfmc.q_ess:.3f}")
     
     if nf_local_iter > 0:
         print(f'Using local exploration to improve the SINF initialization.')
         for j in range(nf_local_iter):
-            print(f"Local exploration iteration: {int(j + 1)}, logZ Estimate: {nfmc.log_evidence}, ESS/N: {nfmc.ess}")
             nfmc.fit_nf(num_draws=draws)
             nfmc.nf_samples_to_trace()
+            print(f"Local exploration iteration: {int(j + 1)}, logZ: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f}")
+            print(f"Local exploration iteration: {int(j + 1)}, q_init{int(j+1)} ESS/N: {nfmc.q_ess:.3f}")
             iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_trace
             iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
             iter_logp_dict[f'q_init{int(j + 1)}'] = nfmc.posterior_logp
@@ -458,11 +472,13 @@ def sample_nfmc_int(
             iter_train_logq_dict[f'q_init{int(j + 1)}'] = nfmc.train_logq
             iter_logZ_dict[f'q_init{int(j + 1)}'] = nfmc.log_evidence
             iter_qmodel_dict[f'q_init{int(j + 1)}'] = nfmc.nf_model
-            if (abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol or (nfmc.ess / iter_ess) <= ess_tol):
-                print(f"Local exploration iteration: {int(j + 1)}, logZ Estimate: {nfmc.log_evidence}, ESS/N: {nfmc.ess}")
+            iter_q_ess_dict[f'q_init{int(j + 1)}'] = nfmc.q_ess
+            iter_train_ess_dict[f'q_init{int(j + 1)}'] = nfmc.train_ess
+            iter_total_ess_dict[f'q_init{int(j + 1)}'] = nfmc.total_ess
+            if (abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol or (nfmc.q_ess / iter_ess) <= ess_tol):
                 if abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol:
                     print("Normalizing constant estimate has stabilised during local exploration initialization - ending NF fits with local exploration.")
-                elif j == 0 and abs(iter_log_evidence - nfmc.log_evidence) > norm_tol and (nfmc.ess / iter_ess) <= ess_tol:
+                elif j == 0 and abs(iter_log_evidence - nfmc.log_evidence) > norm_tol and (nfmc.q_ess / iter_ess) <= ess_tol:
                     print(f"Effective sample size has decreased by more than specified tolerance of {ess_tol}")
                     print("Only using the initialization samples.")
                     nfmc.nf_model = 'init'
@@ -470,7 +486,7 @@ def sample_nfmc_int(
                     nfmc.weighted_samples = nfmc.weighted_samples[:-len(nfmc.weights), :]
                     nfmc.importance_weights = nfmc.importance_weights[:-len(nfmc.weights)]
                     nfmc.sinf_logw = nfmc.sinf_logw[:-len(nfmc.weights)]
-                elif j > 0 and abs(iter_log_evidence - nfmc.log_evidence) > norm_tol and (nfmc.ess / iter_ess) <= ess_tol:
+                elif j > 0 and abs(iter_log_evidence - nfmc.log_evidence) > norm_tol and (nfmc.q_ess / iter_ess) <= ess_tol:
                     print(f"Effective sample size has decreased by more than specified tolerance of {ess_tol}")
                     print("Discarding most recent samples.")
                     nfmc.nf_model = iter_qmodel_dict[f'q_init{int(j)}']
@@ -480,12 +496,19 @@ def sample_nfmc_int(
                     nfmc.sinf_logw = nfmc.sinf_logw[:-len(nfmc.weights)]
                 break
             iter_log_evidence = 1.0 * nfmc.log_evidence
-            iter_ess = 1.0 * nfmc.ess
+            iter_ess = 1.0 * nfmc.q_ess
         print('Re-initializing SINF fits using samples from latest iteration after local exploration.')
         nfmc.reinitialize_nf()
-        print(f'reinit logZ = {nfmc.log_evidence}')
+        print(f'Re-initialization logZ: {nfmc.log_evidence:.3f}, ESS/N: {nfmc.q_ess:.3f}')
+        iter_sample_dict[f'q_reinit'] = nfmc.nf_trace
+        iter_weight_dict[f'q_reinit'] = nfmc.weights
+        iter_logp_dict[f'q_reinit'] = nfmc.posterior_logp
+        iter_logq_dict[f'q_reinit'] = nfmc.logq
+        iter_logZ_dict[f'q_reinit'] = nfmc.log_evidence
+        iter_q_ess_dict[f'q_reinit'] = nfmc.q_ess
+        iter_total_ess_dict[f'q_reinit'] = nfmc.total_ess
         iter_log_evidence = 1.0 * nfmc.log_evidence
-        iter_ess = 1.0 * nfmc.ess
+        iter_ess = 1.0 * nfmc.q_ess
         
     if full_local:
         print('Using local exploration at every iteration except the final one (where IW exceed the local threshold).')
@@ -498,11 +521,11 @@ def sample_nfmc_int(
         
     for i in range(nf_iter):
 
-        if _log is not None:
-            _log.info(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence}, ESS/N: {nfmc.ess}")
-
         nfmc.fit_nf(num_draws=draws)
         nfmc.nf_samples_to_trace()
+        if _log is not None:
+            _log.info(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f}")
+            _log.info(f"Stage: {stage:3d}, q ESS/N: {nfmc.q_ess:.3f}")
         iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_trace
         iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
         iter_logp_dict[f'q{int(stage)}'] = nfmc.posterior_logp
@@ -511,10 +534,12 @@ def sample_nfmc_int(
         iter_train_logq_dict[f'q{stage}'] = nfmc.train_logq
         iter_logZ_dict[f'q{int(stage)}'] = nfmc.log_evidence
         iter_qmodel_dict[f'q{int(stage)}'] = nfmc.nf_model
+        iter_q_ess_dict[f'q{int(stage)}'] = nfmc.q_ess
+        iter_train_ess_dict[f'q{int(stage)}'] = nfmc.train_ess
+        iter_total_ess_dict[f'q{int(stage)}'] = nfmc.total_ess
         stage += 1
         if (abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol or
-            (nfmc.ess / iter_ess) <= ess_tol):
-            print(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence}, ESS/N: {nfmc.ess}")
+            (nfmc.q_ess / iter_ess) <= ess_tol):
             if abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol:
                 print("Normalizing constant estimate has stabilised - ending NF fits.")
             else:
@@ -525,7 +550,7 @@ def sample_nfmc_int(
                 nfmc.importance_weights = nfmc.importance_weights[:-len(nfmc.weights)]
             break
         iter_log_evidence = 1.0 * nfmc.log_evidence
-        iter_ess = nfmc.ess
+        iter_ess = nfmc.q_ess
 
     if full_local:
         nfmc.final_nf()
@@ -538,6 +563,9 @@ def sample_nfmc_int(
         iter_train_logq_dict[f'q_final'] = nfmc.train_logq
         iter_logZ_dict[f'q_final'] = nfmc.log_evidence
         iter_qmodel_dict[f'q_final'] = nfmc.nf_model
+        iter_q_ess_dict[f'q_final'] = nfmc.q_ess
+        iter_train_ess_dict[f'q_final'] = nfmc.train_ess
+        iter_total_ess_dict[f'q_final'] = nfmc.total_ess
     elif not full_local:
         nfmc.resample()
 
@@ -552,4 +580,7 @@ def sample_nfmc_int(
         iter_train_logq_dict,
         iter_logZ_dict,
         iter_qmodel_dict,
+        iter_q_ess_dict,
+        iter_train_ess_dict,
+        iter_total_ess_dict,
     )
