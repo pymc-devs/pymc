@@ -96,7 +96,6 @@ class NFMC:
         sim_start=None,
         sim_optim_method='lbfgs',
         sim_tol=0.01,
-        pareto=False,
         local_thresh=3,
         local_step_size=0.1,
         local_grad=True,
@@ -116,7 +115,9 @@ class NFMC:
         n_component=None,
         interp_nbin=None,
         KDE=True,
-        bw_factor=0.5,
+        bw_factor_min=0.5,
+        bw_factor_max=2.5,
+        bw_factor_num=11,
         edge_bins=None,
         ndata_wT=None,
         MSWD_max_iter=None,
@@ -160,8 +161,6 @@ class NFMC:
         self.sim_start = sim_start
         self.sim_optim_method = sim_optim_method
         self.sim_tol = sim_tol
-        
-        self.pareto = pareto
 
         # Local exploration params.
         self.local_thresh = local_thresh
@@ -195,7 +194,7 @@ class NFMC:
         self.n_component = n_component
         self.interp_nbin = interp_nbin
         self.KDE = KDE
-        self.bw_factor = bw_factor
+        self.bw_factors = np.linspace(bw_factor_min, bw_factor_max, bw_factor_num)
         self.edge_bins = edge_bins
         self.ndata_wT = ndata_wT
         self.MSWD_max_iter = MSWD_max_iter
@@ -251,7 +250,7 @@ class NFMC:
         self.log_weight = self.posterior_logp - self.prior_logp
         self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
         self.evidence = np.exp(self.log_evidence)
-        self.log_weight = self.log_weight - logsumexp(self.log_weight)
+        self.log_weight = self.log_weight - self.log_evidence
 
         self.regularize_weights()
         self.init_weights_cleanup(None, lambda x: self.prior_dlogp(x))
@@ -372,39 +371,35 @@ class NFMC:
         return map_dict
 
     def regularize_weights(self):
-        """Apply Pareto smoothing or clipping to importance weights."""
-        if self.pareto:
-            psiw = az.psislw(self.log_weight)
-            self.log_weight = psiw[0]
-            self.weights = np.exp(self.log_weight)
-        elif not self.pareto:
-            inf_weights = np.isinf(np.exp(self.log_weight))
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
-                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
-            self.log_weight = self.log_weight - logsumexp(self.log_weight)
-            self.weights = np.exp(self.log_weight)
+        """Apply clipping to importance weights."""
+        inf_weights = np.isinf(np.exp(self.log_weight))
+        self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
+                                  - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
+        self.weights = np.exp(self.log_weight)
 
     def calculate_ess(self, logw):
         """Calculate ESS given a set of sample weights"""
         logw = logw - logsumexp(logw)
         ess = np.exp(-logsumexp(2 * logw) - np.log(logw.shape[0]))
         return ess
-                        
+
+    def calculate_weight_variance(self):
+        """Calculates the variance of importance weights for a given q."""
+        return np.var(self.weight)
+        
     def init_weights_cleanup(self, logq_func=None, dlogq_func=None):
         """Finish initializing the first importance weights (including possible local exploration)."""
-        self.weights = self.weights / np.sum(self.weights)
-        self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-        self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
+        self.sinf_logw = np.copy(self.log_weight)
+        self.importance_weights = np.copy(self.weights)
         if self.init_local:
             self.local_exploration(logq_func=logq_func, dlogq_func=dlogq_func,
-                                   log_thresh=np.log(self.local_thresh) - np.log(self.init_draws))
-            self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-            self.sinf_logw = np.append(self.sinf_logw, self.local_log_weight + self.log_evidence + np.log(self.init_draws))
-            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
+                                   log_thresh=np.log(self.local_thresh))
             self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
             self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
             self.log_weight = np.append(self.log_weight, self.local_log_weight)
             self.weights = np.append(self.weights, self.local_weights)
+            self.sinf_logw = np.copy(self.log_weight)
+            self.importance_weights = np.copy(self.weights)
             
     def get_sim_data(self, point):
         """Generate simulated data using the supplied simulator function."""
@@ -462,7 +457,7 @@ class NFMC:
         self.log_weight = self.posterior_logp - multivariate_normal.logpdf(self.nf_samples, self.mu_map.squeeze(), self.hess_inv, allow_singular=True)
         self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
         self.evidence = np.exp(self.log_evidence)
-        self.log_weight = self.log_weight - logsumexp(self.log_weight)
+        self.log_weight = self.log_weight - self.log_evidence
 
         self.regularize_weights()
         self.init_weights_cleanup(None, jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_map, self.hess_inv)))
@@ -544,7 +539,7 @@ class NFMC:
         self.log_weight = self.posterior_logp - multivariate_normal.logpdf(self.nf_samples, self.mu_map.squeeze(), self.hess_inv, allow_singular=True)
         self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
         self.evidence = np.exp(self.log_evidence)
-        self.log_weight = self.log_weight - logsumexp(self.log_weight)
+        self.log_weight = self.log_weight - self.log_evidence
 
         self.regularize_weights()
         self.init_weights_cleanup(None, jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_map, self.hess_inv)))
@@ -646,7 +641,7 @@ class NFMC:
         self.log_weight = self.posterior_logp - self.logq
         self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
         self.evidence = np.exp(self.log_evidence)
-        self.log_weight = self.log_weight - logsumexp(self.log_weight)
+        self.log_weight = self.log_weight - self.log_evidence
         
         self.regularize_weights()
         self.init_weights_cleanup(None, lambda x: approx_fprime(x.squeeze(), self.sinf_logq, np.finfo(float).eps))
@@ -680,7 +675,7 @@ class NFMC:
         self.log_weight = self.posterior_logp - multivariate_normal.logpdf(self.nf_samples, self.mu_map, self.hess_inv, allow_singular=True)
         self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
         self.evidence = np.exp(self.log_evidence)
-        self.log_weight = self.log_weight - logsumexp(self.log_weight)
+        self.log_weight = self.log_weight - self.log_evidence
         
         self.regularize_weights()
         self.init_weights_cleanup(None, jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_map, self.hess_inv)))
@@ -790,7 +785,7 @@ class NFMC:
         self.log_weight = self.posterior_logp - multivariate_normal.logpdf(self.nf_samples, self.mu_k.squeeze(), self.Sigma_k, allow_singular=True)
         self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
         self.evidence = np.exp(self.log_evidence)
-        self.log_weight = self.log_weight - logsumexp(self.log_weight)
+        self.log_weight = self.log_weight - self.log_evidence
 
         self.regularize_weights()
         self.init_weights_cleanup(None, jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)))
@@ -854,7 +849,7 @@ class NFMC:
         self.log_weight = self.posterior_logp - multivariate_normal.logpdf(self.nf_samples, self.mu_k.squeeze(), self.Sigma_k, allow_singular=True)
         self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
         self.evidence = np.exp(self.log_evidence)
-        self.log_weight = self.log_weight - logsumexp(self.log_weight)
+        self.log_weight = self.log_weight - self.log_evidence
 
         self.regularize_weights()
         self.init_weights_cleanup(None, jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)))
@@ -881,62 +876,81 @@ class NFMC:
     
     def fit_nf(self, num_draws):
         """Fit the NF model for a given iteration after initialization."""
-        if self.frac_validate > 0.0:
-            num_val = int(self.frac_validate * self.weighted_samples.shape[0])
-            val_idx = np.random.choice(np.arange(self.weighted_samples.shape[0]), size=num_val, replace=False)
-            fit_idx = np.delete(np.arange(self.weighted_samples.shape[0]), val_idx)
-            self.train_ess = self.calculate_ess(self.sinf_logw[fit_idx, ...])
-            self.nf_model = GIS(torch.from_numpy(self.weighted_samples[fit_idx, ...].astype(np.float32)),
-                                torch.from_numpy(self.weighted_samples[val_idx, ...].astype(np.float32)),
-                                weight_train=torch.from_numpy(self.importance_weights[fit_idx, ...].astype(np.float32)),
-                                weight_validate=torch.from_numpy(self.importance_weights[val_idx, ...].astype(np.float32)),
-                                iteration=self.iteration, alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
-                                interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
-                                edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
-                                NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
-                                batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
-        elif self.frac_validate == 0.0:
-            fit_idx = np.arange(self.weighted_samples.shape[0])
-            self.train_ess = self.calculate_ess(self.sinf_logw[fit_idx, ...])
-            self.nf_model = GIS(torch.from_numpy(self.weighted_samples.astype(np.float32)),
-                                weight_train=torch.from_numpy(self.importance_weights.astype(np.float32)),
-                                iteration=self.iteration, alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
-                                interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
-                                edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
-                                NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
-                                batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
+        bw_var_weights = []
+        bw_nf_models = []
+        for bw_factor in self.bw_factors:
+            if self.frac_validate > 0.0:
+                num_val = int(self.frac_validate * self.weighted_samples.shape[0])
+                val_idx = np.random.choice(np.arange(self.weighted_samples.shape[0]), size=num_val, replace=False)
+                fit_idx = np.delete(np.arange(self.weighted_samples.shape[0]), val_idx)
+                self.train_ess = self.calculate_ess(self.sinf_logw[fit_idx, ...])
+                self.nf_model = GIS(torch.from_numpy(self.weighted_samples[fit_idx, ...].astype(np.float32)),
+                                    torch.from_numpy(self.weighted_samples[val_idx, ...].astype(np.float32)),
+                                    weight_train=torch.from_numpy(self.importance_weights[fit_idx, ...].astype(np.float32)),
+                                    weight_validate=torch.from_numpy(self.importance_weights[val_idx, ...].astype(np.float32)),
+                                    iteration=self.iteration, alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
+                                    interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=bw_factor,
+                                    edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
+                                    NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
+                                    batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
+            elif self.frac_validate == 0.0:
+                fit_idx = np.arange(self.weighted_samples.shape[0])
+                train_ess = self.calculate_ess(self.sinf_logw[fit_idx, ...])
+                self.nf_model = GIS(torch.from_numpy(self.weighted_samples.astype(np.float32)),
+                                    weight_train=torch.from_numpy(self.importance_weights.astype(np.float32)),
+                                    iteration=self.iteration, alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
+                                    interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=bw_factor,
+                                    edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
+                                    NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
+                                    batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
             
+            self.nf_samples, self.logq = self.nf_model.sample(num_draws, device=torch.device('cpu'), gen=self.gen)
+            self.nf_samples = self.nf_samples.numpy().astype(np.float64)
+            self.logq = self.logq.numpy().astype(np.float64)
+            self.all_logq = np.append(self.all_logq, self.logq)
+
+            self.get_posterior_logp()
+            self.log_weight = self.posterior_logp - self.logq
+            self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
+            self.log_weight = self.log_weight - self.log_evidence
+
+            self.regularize_weights()
+            bw_var_weights.append(np.var(self.weights))
+            bw_nf_models.append(self.nf_model)
+
+        min_var_idx = bw_var_weights.index(min(bw_var_weights))
+        self.nf_model = bw_nf_models[min_var_idx]
+        self.min_var_weights = bw_var_weights[min_var_idx]
+        self.min_var_bw = self.bw_factors[min_var_idx]
+        
         self.nf_samples, self.logq = self.nf_model.sample(num_draws, device=torch.device('cpu'), gen=self.gen)
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.logq = self.logq.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
-        self.all_logq =	np.append(self.all_logq, self.logq)
-
-        self.train_logp = self.target_logp(self.weighted_samples[fit_idx, ...])
-        self.train_logq = self.nf_model.evaluate_density(torch.from_numpy(self.weighted_samples[fit_idx, ...].astype(np.float32))).numpy().astype(np.float64)
+        self.all_logq = np.append(self.all_logq, self.logq)
         
         self.get_posterior_logp()
         self.log_weight = self.posterior_logp - self.logq
         self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
-        self.evidence = np.exp(self.log_evidence)
-        self.log_weight = self.log_weight - logsumexp(self.log_weight)
-
-        self.regularize_weights()
+        self.log_weight = self.log_weight - self.log_evidence
         
-        self.weights = self.weights / np.sum(self.weights)
+        self.regularize_weights()
+            
+        self.train_logp = self.target_logp(self.weighted_samples[fit_idx, ...])
+        self.train_logq = self.nf_model.evaluate_density(torch.from_numpy(self.weighted_samples[fit_idx, ...].astype(np.float32))).numpy().astype(np.float64)
+        
         if self.nf_local_iter > 0:
             self.local_exploration(logq_func=None, dlogq_func=lambda x: approx_fprime(x.squeeze(), self.sinf_logq, np.finfo(float).eps),
-                                   log_thresh=np.log(self.local_thresh) - np.log(num_draws))
-            self.sinf_logw = np.append(self.sinf_logw, self.log_weight + self.log_evidence + np.log(num_draws))
-            self.sinf_logw = np.append(self.sinf_logw, self.local_log_weight + self.log_evidence + np.log(num_draws))
-            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
+                                   log_thresh=np.log(self.local_thresh))
             self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
             self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
             self.log_weight = np.append(self.log_weight, self.local_log_weight)
             self.weights = np.append(self.weights, self.local_weights)
+            self.sinf_logw = np.append(self.sinf_logw, self.log_weight)
+            self.importance_weights = np.append(self.importance_weights, self.weights)
         elif self.nf_local_iter == 0:
-            self.sinf_logw = np.append(self.sinf_logw, self.log_weight + self.log_evidence + np.log(num_draws))
-            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
+            self.sinf_logw = np.append(self.sinf_logw, self.log_weight)
+            self.importance_weights = np.append(self.importance_weights, self.weights)
 
         self.q_ess = self.calculate_ess(self.log_weight)
         self.total_ess = self.calculate_ess(self.sinf_logw)
@@ -958,12 +972,11 @@ class NFMC:
             self.log_weight = self.posterior_logp - self.logq
             self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
             self.evidence = np.exp(self.log_evidence)
-            self.log_weight = self.log_weight - logsumexp(self.log_weight)
+            self.log_weight = self.log_weight - self.log_evidence
             
             self.regularize_weights()
-            self.weights = self.weights / np.sum(self.weights)
-            self.sinf_logw = self.log_weight + self.log_evidence + np.log(self.init_draws)
-            self.importance_weights = np.exp(self.sinf_logw - logsumexp(self.sinf_logw))
+            self.sinf_logw = np.copy(self.log_weight)
+            self.importance_weights = np.copy(self.weights)
             self.q_ess = self.calculate_ess(self.log_weight)
             self.total_ess = self.calculate_ess(self.sinf_logw)
 

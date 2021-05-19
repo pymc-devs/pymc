@@ -57,7 +57,6 @@ def sample_nfmc(
     sim_start=None,
     sim_optim_method='lbfgs',
     sim_tol=0.01,
-    pareto=False,
     local_thresh=3,
     local_step_size=0.1,
     local_grad=True,
@@ -80,7 +79,9 @@ def sample_nfmc(
     n_component=None,
     interp_nbin=None,
     KDE=True,
-    bw_factor=0.5,
+    bw_factor_min=0.5,
+    bw_factor_max=2.5,
+    bw_factor_num=11,
     edge_bins=None,
     ndata_wT=None,
     MSWD_max_iter=None,
@@ -195,7 +196,6 @@ def sample_nfmc(
 	sim_start,
         sim_optim_method,
         sim_tol,
-        pareto,
         local_thresh,
         local_step_size,
         local_grad,
@@ -219,7 +219,9 @@ def sample_nfmc(
         n_component,
         interp_nbin,
         KDE,
-        bw_factor,
+        bw_factor_min,
+        bw_factor_max,
+        bw_factor_num,
         edge_bins,
         ndata_wT,
         MSWD_max_iter,
@@ -301,7 +303,6 @@ def sample_nfmc_int(
     sim_start,
     sim_optim_method,
     sim_tol,
-    pareto,
     local_thresh,
     local_step_size,
     local_grad,
@@ -325,7 +326,9 @@ def sample_nfmc_int(
     n_component,
     interp_nbin,
     KDE,
-    bw_factor,
+    bw_factor_min,
+    bw_factor_max,
+    bw_factor_num,
     edge_bins,
     ndata_wT,
     MSWD_max_iter,
@@ -372,7 +375,6 @@ def sample_nfmc_int(
 	sim_start=sim_start,
         sim_optim_method=sim_optim_method,
         sim_tol=sim_tol,
-        pareto=pareto,
         local_thresh=local_thresh,
         local_step_size=local_step_size,
         local_grad=local_grad,
@@ -392,7 +394,9 @@ def sample_nfmc_int(
         n_component=n_component,
         interp_nbin=interp_nbin,
         KDE=KDE,
-        bw_factor=bw_factor,
+        bw_factor_min=bw_factor_min,
+        bw_factor_max=bw_factor_max,
+        bw_factor_num=bw_factor_num,
         edge_bins=edge_bins,
         ndata_wT=ndata_wT,
         MSWD_max_iter=MSWD_max_iter,
@@ -421,8 +425,6 @@ def sample_nfmc_int(
     nfmc.setup_logp()
     if init_method == 'prior':
         nfmc.initialize_population()
-        #nfmc.initialize_nf()
-        #iter_qmodel_dict['qprior'] = nfmc.nf_model
     elif init_method == 'EL2O_exact':
         print(f'Initializing with Gaussian EL2O approx family, using exact update steps.')
         print(f'Mean field EL2O: {mean_field_EL2O}')
@@ -464,6 +466,7 @@ def sample_nfmc_int(
             nfmc.nf_samples_to_trace()
             print(f"Local exploration iteration: {int(j + 1)}, logZ: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f}")
             print(f"Local exploration iteration: {int(j + 1)}, q_init{int(j+1)} ESS/N: {nfmc.q_ess:.3f}")
+            print(f"Local exploration iteration: {int(j + 1)}, Min variance BW factor: {nfmc.min_var_bw}, Var(IW): {nfmc.min_var_weights}")
             iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_trace
             iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
             iter_logp_dict[f'q_init{int(j + 1)}'] = nfmc.posterior_logp
@@ -526,6 +529,7 @@ def sample_nfmc_int(
         if _log is not None:
             _log.info(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f}")
             _log.info(f"Stage: {stage:3d}, q ESS/N: {nfmc.q_ess:.3f}")
+            _log.info(f"Stage: {stage:3d}, Min variance BW factor: {nfmc.min_var_bw}, Var(IW): {nfmc.min_var_weights}")
         iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_trace
         iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
         iter_logp_dict[f'q{int(stage)}'] = nfmc.posterior_logp
