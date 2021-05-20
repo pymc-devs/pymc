@@ -129,17 +129,20 @@ def maxSWDdirection(x, x2='gaussian', weight=None, n_component=None, maxiter=200
             lr /= down_fac
             while loss1 > loss + c*m*lr:
                 lr *= down_fac
-                if 2*n_component < ndim:
-                    UT = torch.cat((GT, w), dim=0).double()
-                    V = torch.cat((w.T, -GT.T), dim=1).double()
-                    w1 = (w.double() - lr * w.double() @ V @ torch.pinverse(torch.eye(2*n_component, dtype=torch.double, device=x.device)+lr/2*UT@V) @ UT).to(torch.get_default_dtype())
-                else:
-                    w1 = (w.double() @ (torch.eye(ndim, dtype=torch.double, device=x.device)-lr/2*WT.double()) @ torch.pinverse(torch.eye(ndim, dtype=torch.double, device=x.device)+lr/2*WT.double())).to(torch.get_default_dtype())
+                try:
+                    if 2*n_component < ndim:
+                        UT = torch.cat((GT, w), dim=0).double()
+                        V = torch.cat((w.T, -GT.T), dim=1).double()
+                        w1 = (w.double() - lr * w.double() @ V @ torch.pinverse(torch.eye(2*n_component, dtype=torch.double, device=x.device)+lr/2*UT@V) @ UT).to(torch.get_default_dtype())
+                    else:
+                        w1 = (w.double() @ (torch.eye(ndim, dtype=torch.double, device=x.device)-lr/2*WT.double()) @ torch.pinverse(torch.eye(ndim, dtype=torch.double, device=x.device)+lr/2*WT.double())).to(torch.get_default_dtype())
             
-                if x2 == 'gaussian':
-                    loss1 = -ObjectiveG(w1 @ x.T, pg, p, w=weight)
-                else:
-                    loss1 = -Objective(w1 @ x.T, w1 @ x2.T, p)
+                    if x2 == 'gaussian':
+                        loss1 = -ObjectiveG(w1 @ x.T, pg, p, w=weight)
+                    else:
+                        loss1 = -Objective(w1 @ x.T, w1 @ x2.T, p)
+                except:
+                    loss1 = 1e10
         
             if torch.max(torch.abs(w1-w)) < eps:
                 w = w1
