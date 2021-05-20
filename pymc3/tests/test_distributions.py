@@ -1109,15 +1109,28 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=5, float32=3),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_kumaraswamy(self):
-        # Scipy does not have a built-in Kumaraswamy pdf
+        # Scipy does not have a built-in Kumaraswamy
         def scipy_log_pdf(value, a, b):
             return (
                 np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value ** a)
             )
 
-        self.check_logp(Kumaraswamy, Unit, {"a": Rplus, "b": Rplus}, scipy_log_pdf)
+        def scipy_log_cdf(value, a, b):
+            return pm.math.log1mexp_numpy(-(b * np.log1p(-(value ** a))))
+
+        self.check_logp(
+            Kumaraswamy,
+            Unit,
+            {"a": Rplus, "b": Rplus},
+            scipy_log_pdf,
+        )
+        self.check_logcdf(
+            Kumaraswamy,
+            Unit,
+            {"a": Rplus, "b": Rplus},
+            scipy_log_cdf,
+        )
 
     def test_exponential(self):
         self.check_logp(
@@ -1249,7 +1262,6 @@ class TestMatchesScipy:
             with pytest.raises(ValueError, match=f"Incompatible parametrization. {expected}"):
                 NegativeBinomial("x", mu=mu, p=p, alpha=alpha, n=n)
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_laplace(self):
         self.check_logp(
             Laplace,
@@ -1301,7 +1313,6 @@ class TestMatchesScipy:
             n_samples=5,  # Just testing alternative parametrization
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_t(self):
         self.check_logp(
             StudentT,
@@ -1309,12 +1320,26 @@ class TestMatchesScipy:
             {"nu": Rplus, "mu": R, "lam": Rplus},
             lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam ** -0.5),
         )
+        self.check_logp(
+            StudentT,
+            R,
+            {"nu": Rplus, "mu": R, "sigma": Rplus},
+            lambda value, nu, mu, sigma: sp.t.logpdf(value, nu, mu, sigma),
+            n_samples=5,  # Just testing alternative parametrization
+        )
         self.check_logcdf(
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "lam": Rplus},
             lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam ** -0.5),
-            n_samples=10,
+            n_samples=10,  # relies on slow incomplete beta
+        )
+        self.check_logcdf(
+            StudentT,
+            R,
+            {"nu": Rplus, "mu": R, "sigma": Rplus},
+            lambda value, nu, mu, sigma: sp.t.logcdf(value, nu, mu, sigma),
+            n_samples=5,  # Just testing alternative parametrization
         )
 
     def test_cauchy(self):
@@ -1470,7 +1495,6 @@ class TestMatchesScipy:
             lambda value, sigma: sp.halfcauchy.logpdf(value, 0, sigma),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_skew_normal(self):
         self.check_logp(
             SkewNormal,
@@ -2502,7 +2526,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_logitnormal(self):
         self.check_logp(
             LogitNormal,
@@ -2519,14 +2542,11 @@ class TestMatchesScipy:
         with Model():
             Beta("beta", alpha=1.0, beta=1.0, size=(10, 20))
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Some combinations underflow to -inf in float32 in pymc version",
+    )
     def test_rice(self):
-        self.check_logp(
-            Rice,
-            Rplus,
-            {"nu": Rplus, "sigma": Rplusbig},
-            lambda value, nu, sigma: sp.rice.logpdf(value, b=nu / sigma, loc=0, scale=sigma),
-        )
         self.check_logp(
             Rice,
             Rplus,
@@ -2534,7 +2554,14 @@ class TestMatchesScipy:
             lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    def test_rice_nu(self):
+        self.check_logp(
+            Rice,
+            Rplus,
+            {"nu": Rplus, "sigma": Rplusbig},
+            lambda value, nu, sigma: sp.rice.logpdf(value, b=nu / sigma, loc=0, scale=sigma),
+        )
+
     def test_moyal_logp(self):
         # Using a custom domain, because the standard `R` domain undeflows with scipy in float64
         value_domain = Domain([-inf, -1.5, -1, -0.01, 0.0, 0.01, 1, 1.5, inf])
@@ -2545,7 +2572,6 @@ class TestMatchesScipy:
             lambda value, mu, sigma: floatX(sp.moyal.logpdf(value, mu, sigma)),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Pymc3 underflows earlier than scipy on float32",

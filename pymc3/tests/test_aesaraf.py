@@ -23,7 +23,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sps
 
-from aesara.graph.basic import Variable, ancestors
+from aesara.graph.basic import Constant, Variable, ancestors
 from aesara.tensor.random.basic import normal, uniform
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -66,6 +66,15 @@ def test_change_rv_size():
     rv_newer = change_rv_size(rv_new, new_size=(4,), expand=True)
     assert rv_newer.ndim == 3
     assert rv_newer.eval().shape == (4, 3, 2)
+
+    # Make sure we avoid introducing a `Cast` by converting the new size before
+    # constructing the new `RandomVariable`
+    rv = normal(0, 1)
+    new_size = np.array([4, 3], dtype="int32")
+    rv_newer = change_rv_size(rv, new_size=new_size, expand=False)
+    assert rv_newer.ndim == 2
+    assert isinstance(rv_newer.owner.inputs[1], Constant)
+    assert rv_newer.eval().shape == (4, 3)
 
 
 class TestBroadcasting:
