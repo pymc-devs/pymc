@@ -13,7 +13,7 @@ def GIS(data_train, data_validate=None, iteration=None, weight_train=None, weigh
     else:
         ndata = (torch.sum(weight_train)**2 / torch.sum(weight_train**2)).item()
     if interp_nbin is None:
-        interp_nbin = max(min(200, int(ndata**0.5)), 2)
+        interp_nbin = max(min(200, int(ndata**0.5)), 100)
     if alpha is None:
         alpha = (1-0.02*math.log10(ndata), 1-0.001*math.log10(ndata))
     if edge_bins is None:
