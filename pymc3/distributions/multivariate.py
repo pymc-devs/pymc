@@ -40,7 +40,7 @@ import pymc3 as pm
 
 from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import transforms
-from pymc3.distributions.continuous import ChiSquared, Normal
+from pymc3.distributions.continuous import ChiSquare, Normal
 from pymc3.distributions.dist_math import bound, factln, logpow
 from pymc3.distributions.distribution import Continuous, Discrete
 from pymc3.distributions.special import gammaln, multigammaln
@@ -905,7 +905,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         tril_testval = None
 
     c = at.sqrt(
-        ChiSquared("%s_c" % name, nu - np.arange(2, 2 + n_diag), shape=n_diag, testval=diag_testval)
+        ChiSquare("%s_c" % name, nu - np.arange(2, 2 + n_diag), shape=n_diag, testval=diag_testval)
     )
     pm._log.info("Added new variable %s_c to model diagonal of Wishart." % name)
     z = Normal("%s_z" % name, 0.0, 1.0, shape=n_tril, testval=tril_testval)

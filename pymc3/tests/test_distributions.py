@@ -48,7 +48,7 @@ from pymc3.distributions import (
     Bound,
     Categorical,
     Cauchy,
-    ChiSquared,
+    ChiSquare,
     Constant,
     DensityDist,
     Dirichlet,
@@ -1032,7 +1032,7 @@ class TestMatchesScipy:
 
     def test_chi_squared(self):
         self.check_logp(
-            ChiSquared,
+            ChiSquare,
             Rplus,
             {"nu": Rplusdunif},
             lambda value, nu: sp.chi2.logpdf(value, df=nu),

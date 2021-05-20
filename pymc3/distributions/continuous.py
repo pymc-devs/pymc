@@ -28,6 +28,7 @@ from aesara.tensor.random.basic import (
     BetaRV,
     WeibullRV,
     cauchy,
+    chisquare,
     exponential,
     gamma,
     gumbel,
@@ -87,7 +88,7 @@ __all__ = [
     "Weibull",
     "HalfStudentT",
     "Lognormal",
-    "ChiSquared",
+    "ChiSquare",
     "HalfNormal",
     "Wald",
     "Pareto",
@@ -2548,22 +2549,7 @@ class InverseGamma(PositiveContinuous):
         )
 
 
-class ChiSquaredRV(RandomVariable):
-    name = "chi_squared"
-    ndim_supp = 0
-    ndims_params = [0]
-    dtype = "floatX"
-    _print_name = ("ChiSquared", "\\operatorname{ChiSquared}")
-
-    @classmethod
-    def rng_fn(cls, rng, nu, size=None):
-        return stats.chi2(nu, size=size, random_state=rng)
-
-
-chi_squared = ChiSquaredRV()
-
-
-class ChiSquared(Gamma):
+class ChiSquare(Gamma):
     r"""
     :math:`\chi^2` log-likelihood.
 
@@ -2601,7 +2587,7 @@ class ChiSquared(Gamma):
     nu: int
         Degrees of freedom (nu > 0).
     """
-    rv_op = chi_squared
+    rv_op = chisquare
 
     @classmethod
     def dist(cls, nu, *args, **kwargs):

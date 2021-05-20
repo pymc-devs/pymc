@@ -277,9 +277,8 @@ class TestAsymmetricLaplace(BaseTestCases.BaseTestCase):
     params = {"kappa": 1.0, "b": 1.0, "mu": 0.0}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestChiSquared(BaseTestCases.BaseTestCase):
-    distribution = pm.ChiSquared
+class TestChiSquare(BaseTestCases.BaseTestCase):
+    distribution = pm.ChiSquare
     params = {"nu": 2.0}
     expected_rv_op_params = {"nu": 2.0}
     reference_dist_params = {"df": 2.0}

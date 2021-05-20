@@ -25,7 +25,7 @@ Continuous
    InverseGamma
    Weibull
    Lognormal
-   ChiSquared
+   ChiSquare
    Wald
    Pareto
    ExGaussian
