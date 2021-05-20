@@ -306,7 +306,7 @@ class TestChiSquared(BaseTestCases.BaseTestCase):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
-    
+
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestExGaussian(BaseTestCases.BaseTestCase):
