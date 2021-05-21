@@ -15,6 +15,7 @@
 import numpy as np
 
 from pandas import DataFrame, Series
+from scipy.special import expit  # pylint: disable=unused-import
 
 from pymc3.distributions.distribution import NoDistribution
 from pymc3.distributions.tree import LeafNode, SplitNode, Tree
@@ -30,7 +31,6 @@ class BaseBART(NoDistribution):
         m=200,
         alpha=0.25,
         split_prior=None,
-        scale=None,
         inv_link=None,
         jitter=False,
         *args,
@@ -63,22 +63,30 @@ class BaseBART(NoDistribution):
             )
         self.m = m
         self.alpha = alpha
-        self.y_std = Y.std()
-
-        if scale is None:
-            self.leaf_scale = NormalSampler(sigma=None)
-        elif isinstance(scale, (int, float)):
-            self.leaf_scale = NormalSampler(sigma=Y.std() / self.m ** scale)
 
         if inv_link is None:
-            self.inv_link = lambda x: x
+            self.inv_link = self.link = lambda x: x
+            self.init_mean = self.Y.mean()
+            self.Y_un = self.Y
+        elif isinstance(inv_link, str):
+            if inv_link == "logistic":
+                self.inv_link = expit
+                self.link = lambda x: (x - 0.5) * 10
+            elif inv_link == "exp":
+                self.inv_link = np.exp
+                self.link = np.log
+                self.Y[self.Y == 0] += 0.0001
         else:
-            self.inv_link = inv_link
+            self.inv_link, self.link = inv_link
+
+        self.init_mean = self.link(self.Y.mean())
+        self.Y_un = self.link(self.Y)
 
         self.num_observations = X.shape[0]
         self.num_variates = X.shape[1]
         self.available_predictors = list(range(self.num_variates))
         self.ssv = SampleSplittingVariable(split_prior, self.num_variates)
+        self.initial_value_leaf_nodes = self.init_mean / self.m
         self.trees = self.init_list_of_trees()
         self.all_trees = []
         self.mean = fast_mean()
@@ -96,7 +104,7 @@ class BaseBART(NoDistribution):
         return X, Y, missing_data
 
     def init_list_of_trees(self):
-        initial_value_leaf_nodes = self.Y.mean() / self.m
+        initial_value_leaf_nodes = self.initial_value_leaf_nodes
         initial_idx_data_points_leaf_nodes = np.array(range(self.num_observations), dtype="int32")
         list_of_trees = []
         for i in range(self.m):
@@ -110,7 +118,7 @@ class BaseBART(NoDistribution):
         # bartMachine: A Powerful Tool for Machine Learning in R. ArXiv e-prints, 2013
         # The sum_trees_output will contain the sum of the predicted output for all trees.
         # When R_j is needed we subtract the current predicted output for tree T_j.
-        self.sum_trees_output = np.full_like(self.Y, self.Y.mean())
+        self.sum_trees_output = np.full_like(self.Y, self.init_mean)
 
         return list_of_trees
 
@@ -181,14 +189,13 @@ class BaseBART(NoDistribution):
 
     def get_residuals(self):
         """Compute the residuals."""
-        R_j = self.Y - self.inv_link(self.sum_trees_output)
-
+        R_j = self.Y_un - self.sum_trees_output
         return R_j
 
     def draw_leaf_value(self, idx_data_points):
         """Draw the residual mean."""
         R_j = self.get_residuals()[idx_data_points]
-        draw = self.mean(R_j) + self.leaf_scale.random()
+        draw = self.mean(R_j)
         return draw
 
     def predict(self, X_new):
@@ -278,24 +285,6 @@ class SampleSplittingVariable:
                     return i
 
 
-class NormalSampler:
-    def __init__(self, sigma):
-        self.size = 5000
-        self.cache = []
-        self.sigma = sigma
-
-    def random(self):
-        if self.sigma is None:
-            return 0
-        else:
-            if not self.cache:
-                self.update()
-        return self.cache.pop()
-
-    def update(self):
-        self.cache = np.random.normal(loc=0.0, scale=self.sigma, size=self.size).tolist()
-
-
 class BART(BaseBART):
     """
     BART distribution.
@@ -317,11 +306,6 @@ class BART(BaseBART):
         Each element of split_prior should be in the [0, 1] interval and the elements should sum
         to 1. Otherwise they will be normalized.
         Defaults to None, all variable have the same a prior probability
-    scale : float
-        Controls the variance of the proposed leaf value. The leaf values are computed as a
-        Gaussian with mean equal to the conditional residual mean and variance proportional to
-        the variance of the response variable, and inversely proportional to the number of trees
-        and the scale parameter. Defaults to None, i.e the variance is 0.
     inv_link : numpy function
         Inverse link function defaults to None, i.e. the identity function.
     jitter : bool
@@ -330,10 +314,8 @@ class BART(BaseBART):
         otherwise it does not have any effect.
     """
 
-    def __init__(
-        self, X, Y, m=200, alpha=0.25, split_prior=None, scale=None, inv_link=None, jitter=False
-    ):
-        super().__init__(X, Y, m, alpha, split_prior, scale, inv_link)
+    def __init__(self, X, Y, m=200, alpha=0.25, split_prior=None, inv_link=None, jitter=False):
+        super().__init__(X, Y, m, alpha, split_prior, inv_link)
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
         if dist is None:
