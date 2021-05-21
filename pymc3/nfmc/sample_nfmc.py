@@ -92,6 +92,7 @@ def sample_nfmc(
     nocuda=False,
     patch=False,
     shape=[28,28,1],
+	redraw=True,
     random_seed=-1,
     parallel=False,
     chains=None,
@@ -122,7 +123,7 @@ def sample_nfmc(
     frac_validate: float
         Fraction of the live points at each NS iteration that we use for validation of the NF fit.
     alpha: tuple of floats
-        Regularization parameters used for the NF fit. 
+        Regularization parameters used for the NF fit.
     verbose: boolean
         Whether you want verbose output from the NF fit.
     random_seed: int
@@ -138,7 +139,7 @@ def sample_nfmc(
         convergence statistics. Default is 2.
 
     """
-    
+
     _log = logging.getLogger("pymc3")
     _log.info("Initializing normalizing flow based sampling...")
 
@@ -150,7 +151,7 @@ def sample_nfmc(
         )
     if cores is None:
         cores = _cpu_count()
-        
+
     _log.info(
         f"Sampling {chains} chain{'s' if chains > 1 else ''} "
         f"Cores available for optimization: {cores}"
@@ -232,6 +233,7 @@ def sample_nfmc(
         nocuda,
         patch,
         shape,
+		redraw,
         parallel,
     )
 
@@ -270,7 +272,7 @@ def sample_nfmc(
     trace.report.total_ess = total_ess
     trace.report._n_draws = draws
     trace.report._t_sampling = time.time() - t1
-    
+
     return trace
 
 
@@ -339,6 +341,7 @@ def sample_nfmc_int(
     nocuda,
     patch,
     shape,
+	redraw,
     parallel,
     random_seed,
     chain,
@@ -407,6 +410,7 @@ def sample_nfmc_int(
         nocuda=nocuda,
         patch=patch,
         shape=shape,
+		redraw=redraw,
     )
 
     iter_sample_dict = {}
@@ -420,7 +424,7 @@ def sample_nfmc_int(
     iter_q_ess_dict = {}
     iter_train_ess_dict = {}
     iter_total_ess_dict = {}
-    
+
     nfmc.initialize_var_info()
     nfmc.setup_logp()
     if init_method == 'prior':
@@ -453,12 +457,12 @@ def sample_nfmc_int(
     iter_logZ_dict['q_init0'] = nfmc.log_evidence
     iter_q_ess_dict['q_init0'] = nfmc.q_ess
     iter_total_ess_dict['q_init0'] = nfmc.total_ess
-    
+
     iter_log_evidence = 1.0 * nfmc.log_evidence
     iter_ess = 1.0 * nfmc.q_ess
 
     print(f"Initialization logZ: {nfmc.log_evidence:.3f}, ESS/N: {nfmc.q_ess:.3f}")
-    
+
     if nf_local_iter > 0:
         print(f'Using local exploration to improve the SINF initialization.')
         for j in range(nf_local_iter):
@@ -512,7 +516,7 @@ def sample_nfmc_int(
         iter_total_ess_dict[f'q_reinit'] = nfmc.total_ess
         iter_log_evidence = 1.0 * nfmc.log_evidence
         iter_ess = 1.0 * nfmc.q_ess
-        
+
     if full_local:
         print('Using local exploration at every iteration except the final one (where IW exceed the local threshold).')
         nfmc.nf_local_iter = 1
@@ -521,15 +525,11 @@ def sample_nfmc_int(
         nfmc.nf_local_iter = 0
 
     stage = 1
-        
+
     for i in range(nf_iter):
 
         nfmc.fit_nf(num_draws=draws)
         nfmc.nf_samples_to_trace()
-        if _log is not None:
-            _log.info(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f}")
-            _log.info(f"Stage: {stage:3d}, q ESS/N: {nfmc.q_ess:.3f}")
-            _log.info(f"Stage: {stage:3d}, Min variance BW factor: {nfmc.min_var_bw}, Var(IW): {nfmc.min_var_weights}")
         iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_trace
         iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
         iter_logp_dict[f'q{int(stage)}'] = nfmc.posterior_logp
@@ -541,6 +541,10 @@ def sample_nfmc_int(
         iter_q_ess_dict[f'q{int(stage)}'] = nfmc.q_ess
         iter_train_ess_dict[f'q{int(stage)}'] = nfmc.train_ess
         iter_total_ess_dict[f'q{int(stage)}'] = nfmc.total_ess
+        if _log is not None:
+            _log.info(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f}")
+            _log.info(f"Stage: {stage:3d}, q ESS/N: {nfmc.q_ess:.3f}")
+            _log.info(f"Stage: {stage:3d}, Min variance BW factor: {nfmc.min_var_bw}, Var(IW): {nfmc.min_var_weights}")
         stage += 1
         if (abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol or
             (nfmc.q_ess / iter_ess) <= ess_tol):
