@@ -153,6 +153,19 @@ class SIT(nn.Module):
         return x, logp
 
 
+    def score(self, data, start=0, end=None, param=None):
+
+        #returns score = dlogp / dx
+
+        data.requires_grad_(True)
+        logp = torch.sum(self.evaluate_density(data, start, end, param))
+        score = torch.autograd.grad(logp, data)[0]
+        data.requires_grad_(False)
+
+        return score
+
+
+
 
 class logit(nn.Module):
 
