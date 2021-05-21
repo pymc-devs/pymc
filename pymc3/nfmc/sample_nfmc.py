@@ -256,6 +256,7 @@ def sample_nfmc(
         q_ess,
         train_ess,
         total_ess,
+        min_var_bws,
     ) = zip(*results)
     trace = MultiTrace(traces)
     trace.report.log_evidence = log_evidence
@@ -271,7 +272,9 @@ def sample_nfmc(
     trace.report.train_ess = train_ess
     trace.report.total_ess = total_ess
     trace.report._n_draws = draws
+    trace.report.min_var_bws = min_var_bws
     trace.report._t_sampling = time.time() - t1
+
 
     return trace
 
@@ -424,6 +427,7 @@ def sample_nfmc_int(
     iter_q_ess_dict = {}
     iter_train_ess_dict = {}
     iter_total_ess_dict = {}
+    iter_min_var_bw_dict = {}
 
     nfmc.initialize_var_info()
     nfmc.setup_logp()
@@ -482,6 +486,7 @@ def sample_nfmc_int(
             iter_q_ess_dict[f'q_init{int(j + 1)}'] = nfmc.q_ess
             iter_train_ess_dict[f'q_init{int(j + 1)}'] = nfmc.train_ess
             iter_total_ess_dict[f'q_init{int(j + 1)}'] = nfmc.total_ess
+            iter_min_var_bw_dict[f'q_init{int(j + 1)}'] = nfmc.min_var_bw
             if (abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol or (nfmc.q_ess / iter_ess) <= ess_tol):
                 if abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol:
                     print("Normalizing constant estimate has stabilised during local exploration initialization - ending NF fits with local exploration.")
@@ -541,6 +546,7 @@ def sample_nfmc_int(
         iter_q_ess_dict[f'q{int(stage)}'] = nfmc.q_ess
         iter_train_ess_dict[f'q{int(stage)}'] = nfmc.train_ess
         iter_total_ess_dict[f'q{int(stage)}'] = nfmc.total_ess
+        iter_min_var_bw_dict[f'q{int(stage)}'] = nfmc.min_var_bw
         if _log is not None:
             _log.info(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f}")
             _log.info(f"Stage: {stage:3d}, q ESS/N: {nfmc.q_ess:.3f}")
@@ -574,6 +580,7 @@ def sample_nfmc_int(
         iter_q_ess_dict[f'q_final'] = nfmc.q_ess
         iter_train_ess_dict[f'q_final'] = nfmc.train_ess
         iter_total_ess_dict[f'q_final'] = nfmc.total_ess
+        iter_min_var_bw_dict[f'q_final'] = nfmc.min_var_bw
     elif not full_local:
         nfmc.resample()
 
@@ -591,4 +598,5 @@ def sample_nfmc_int(
         iter_q_ess_dict,
         iter_train_ess_dict,
         iter_total_ess_dict,
+        iter_min_var_bw_dict,
     )

@@ -264,7 +264,6 @@ class NFMC:
 
         self.all_logq = np.array([])
         self.nf_models = []
-        print(self.weighted_samples.shape)
 
     def setup_logp(self):
         """Set up the prior and likelihood logp functions, and derivatives."""
@@ -901,7 +900,6 @@ class NFMC:
                                     batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
             elif self.frac_validate == 0.0:
                 fit_idx = np.arange(self.weighted_samples.shape[0])
-                print(self.weighted_samples)
                 self.train_ess = self.calculate_ess(self.sinf_logw[fit_idx, ...])
                 self.nf_model = GIS(torch.from_numpy(self.weighted_samples.astype(np.float32)),
                                     weight_train=torch.from_numpy(self.importance_weights.astype(np.float32)),
