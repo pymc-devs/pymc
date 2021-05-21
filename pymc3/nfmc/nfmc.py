@@ -177,10 +177,7 @@ class NFMC:
         # Set the torch seed.
         if self.random_seed != 1:
             np.random.seed(self.random_seed)
-            self.gen = torch.Generator()
-            self.gen.manual_seed(self.random_seed)
-        else:
-            self.gen = None
+            torch.manual_seed(self.random_seed)
 
         # Separating out so I can keep track. These are SINF params.
         assert 0.0 <= frac_validate <= 1.0
@@ -633,7 +630,7 @@ class NFMC:
                                 NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
                                 batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
 
-        self.nf_samples, self.logq = self.nf_model.sample(self.init_draws, device=torch.device('cpu'), gen=self.gen)
+        self.nf_samples, self.logq = self.nf_model.sample(self.init_draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.logq = self.logq.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
@@ -911,7 +908,7 @@ class NFMC:
 
             if(self.redraw): #do the usual thing
 
-                self.nf_samples, self.logq = self.nf_model.sample(num_draws, device=torch.device('cpu'), gen=self.gen)
+                self.nf_samples, self.logq = self.nf_model.sample(num_draws, device=torch.device('cpu'))
                 self.nf_samples = self.nf_samples.numpy().astype(np.float64)
                 self.logq = self.logq.numpy().astype(np.float64)
                 self.all_logq = np.append(self.all_logq, self.logq)
@@ -937,7 +934,7 @@ class NFMC:
         self.min_var_bw = self.bw_factors[min_var_idx]
 
         if(self.redraw): #do the usual thing
-            self.nf_samples, self.logq = self.nf_model.sample(num_draws, device=torch.device('cpu'), gen=self.gen)
+            self.nf_samples, self.logq = self.nf_model.sample(num_draws, device=torch.device('cpu'))
             self.nf_samples = self.nf_samples.numpy().astype(np.float64)
             self.logq = self.logq.numpy().astype(np.float64)
             self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
@@ -985,7 +982,7 @@ class NFMC:
             self.q_ess = self.calculate_ess(self.sinf_logw)
             self.total_ess = self.calculate_ess(self.sinf_logw)
         else:
-            self.nf_samples, self.logq = self.nf_model.sample(self.init_draws, device=torch.device('cpu'), gen=self.gen)
+            self.nf_samples, self.logq = self.nf_model.sample(self.init_draws, device=torch.device('cpu'))
             self.nf_samples = self.nf_samples.numpy().astype(np.float64)
             self.logq = self.logq.numpy().astype(np.float64)
             self.weighted_samples = np.copy(self.nf_samples)
