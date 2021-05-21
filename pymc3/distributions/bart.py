@@ -306,8 +306,9 @@ class BART(BaseBART):
         Each element of split_prior should be in the [0, 1] interval and the elements should sum
         to 1. Otherwise they will be normalized.
         Defaults to None, all variable have the same a prior probability
-    inv_link : numpy function
-        Inverse link function defaults to None, i.e. the identity function.
+    inv_link : str or tuple of functions
+        Inverse link function defaults to None, i.e. the identity function. Accepted strings are
+        ``logistic`` or ``exp``.
     jitter : bool
         Whether to jitter the X values or not. Defaults to False. When values of X are repeated,
         jittering X has the effect of increasing the number of effective spliting variables,
