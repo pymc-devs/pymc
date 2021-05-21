@@ -177,7 +177,7 @@ class TestSample(SeededTest):
             y = pm.Normal("y", mu, sigma, observed=Y)
             trace = pm.sample(500, tune=100, random_seed=3415)
         var_imp = trace.report.variable_importance
-        assert var_imp[0] > var_imp[1:].sum()
+        assert var_imp[0] > 1 / 3
         npt.assert_almost_equal(var_imp.sum(), 1)
 
     def test_return_inferencedata(self, monkeypatch):
