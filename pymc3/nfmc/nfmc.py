@@ -254,7 +254,13 @@ class NFMC:
         self.evidence = np.exp(self.log_evidence)
         self.log_weight = self.log_weight - self.log_evidence
 
-        self.regularize_weights()
+        #same as in fitnf but prior~q
+        self.log_weight_pq_num = self.posterior_logp + 2*self.prior_logp
+        self.log_weight_pq_den = 3*self.prior_logp
+        self.log_evidence_pq = logsumexp(self.log_weight_pq_num) - logsumexp(self.log_weight_pq_den)
+        self.evidence_pq = np.exp(self.log_evidence_pq)
+
+        self.regularize_weights() #regularize pq weights also
         self.init_weights_cleanup(None, lambda x: self.prior_dlogp(x))
         self.q_ess = self.calculate_ess(self.log_weight)
         self.total_ess = self.calculate_ess(self.sinf_logw)
@@ -920,9 +926,15 @@ class NFMC:
                 self.logq = self.nf_model.evaluate_density(torch.from_numpy(self.weighted_samples[fit_idx, ...].astype(np.float32))).numpy().astype(np.float64)
                 self.train_logq = self.logq
 
+            #first estimator of evidence using E_p[1/q]
             self.log_weight = self.posterior_logp - self.logq
             self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
             self.log_weight = self.log_weight - self.log_evidence
+
+            #second estimator of evidence using E_q[pq]/E_q[q^2] to avoid SINF dropping low-p samples
+            self.log_weight_pq_num = (self.posterior_logp+2*self.logq)
+            self.log_weight_pq_den = 3*self.logq
+            self.log_evidence_pq = (logsumexp(self.log_weight_pq_num) - logsumexp(self.log_weight_pq_den)) #length factor unnecessary here
 
             self.regularize_weights()
             bw_var_weights.append(np.var(self.weights))
@@ -939,15 +951,21 @@ class NFMC:
             self.logq = self.logq.numpy().astype(np.float64)
             self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
             self.all_logq = np.append(self.all_logq, self.logq)
-
             self.get_posterior_logp()
         elif(~self.redraw):
             self.train_logp = self.posterior_logp
             self.logq = self.nf_model.evaluate_density(torch.from_numpy(self.weighted_samples[fit_idx, ...].astype(np.float32))).numpy().astype(np.float64)
             self.train_logq = self.logq
+
         self.log_weight = self.posterior_logp - self.logq
         self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
         self.log_weight = self.log_weight - self.log_evidence
+
+        #second estimator of evidence using E[pq]/E[q^2] to avoid SINF dropping low-p samples
+        #For now we don't actually end up using these weights except to get the evidence, but can later
+        self.log_weight_pq_num = (self.posterior_logp+2*self.logq)
+        self.log_weight_pq_den = 3*self.logq
+        self.log_evidence_pq = (logsumexp(self.log_weight_pq_num) - logsumexp(self.log_weight_pq_den)) #length factor unnecessary here
 
         self.regularize_weights()
 

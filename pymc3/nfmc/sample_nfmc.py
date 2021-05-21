@@ -465,14 +465,14 @@ def sample_nfmc_int(
     iter_log_evidence = 1.0 * nfmc.log_evidence
     iter_ess = 1.0 * nfmc.q_ess
 
-    print(f"Initialization logZ: {nfmc.log_evidence:.3f}, ESS/N: {nfmc.q_ess:.3f}")
+    print(f"Initialization logZ: {nfmc.log_evidence:.3f}, ESS/N: {nfmc.q_ess:.3f}, logZ_pq: {nfmc.log_evidence_pq:.3f}")
 
     if nf_local_iter > 0:
         print(f'Using local exploration to improve the SINF initialization.')
         for j in range(nf_local_iter):
             nfmc.fit_nf(num_draws=draws)
             nfmc.nf_samples_to_trace()
-            print(f"Local exploration iteration: {int(j + 1)}, logZ: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f}")
+            print(f"Local exploration iteration: {int(j + 1)}, logZ: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f}, logZ_pq: {nfmc.log_evidence_pq:.3f}")
             print(f"Local exploration iteration: {int(j + 1)}, q_init{int(j+1)} ESS/N: {nfmc.q_ess:.3f}")
             print(f"Local exploration iteration: {int(j + 1)}, Min variance BW factor: {nfmc.min_var_bw}, Var(IW): {nfmc.min_var_weights}")
             iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_trace
@@ -482,6 +482,7 @@ def sample_nfmc_int(
             iter_train_logp_dict[f'q_init{int(j + 1)}'] = nfmc.train_logp
             iter_train_logq_dict[f'q_init{int(j + 1)}'] = nfmc.train_logq
             iter_logZ_dict[f'q_init{int(j + 1)}'] = nfmc.log_evidence
+            iter_logZ_dict[f'q_init{int(j + 1)}_pq'] = nfmc.log_evidence_pq
             iter_qmodel_dict[f'q_init{int(j + 1)}'] = nfmc.nf_model
             iter_q_ess_dict[f'q_init{int(j + 1)}'] = nfmc.q_ess
             iter_train_ess_dict[f'q_init{int(j + 1)}'] = nfmc.train_ess
@@ -517,6 +518,7 @@ def sample_nfmc_int(
         iter_logp_dict[f'q_reinit'] = nfmc.posterior_logp
         iter_logq_dict[f'q_reinit'] = nfmc.logq
         iter_logZ_dict[f'q_reinit'] = nfmc.log_evidence
+        iter_logZ_dict[f'q_reinit_pq'] = nfmc.log_evidence_pq
         iter_q_ess_dict[f'q_reinit'] = nfmc.q_ess
         iter_total_ess_dict[f'q_reinit'] = nfmc.total_ess
         iter_log_evidence = 1.0 * nfmc.log_evidence
@@ -542,13 +544,14 @@ def sample_nfmc_int(
         iter_train_logp_dict[f'q{stage}'] = nfmc.train_logp
         iter_train_logq_dict[f'q{stage}'] = nfmc.train_logq
         iter_logZ_dict[f'q{int(stage)}'] = nfmc.log_evidence
+        iter_logZ_dict[f'q{int(stage)}_pq'] = nfmc.log_evidence_pq
         iter_qmodel_dict[f'q{int(stage)}'] = nfmc.nf_model
         iter_q_ess_dict[f'q{int(stage)}'] = nfmc.q_ess
         iter_train_ess_dict[f'q{int(stage)}'] = nfmc.train_ess
         iter_total_ess_dict[f'q{int(stage)}'] = nfmc.total_ess
         iter_min_var_bw_dict[f'q{int(stage)}'] = nfmc.min_var_bw
         if _log is not None:
-            _log.info(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f}")
+            _log.info(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f},logZ_pq Estimate: {nfmc.log_evidence_pq:.3f}")
             _log.info(f"Stage: {stage:3d}, q ESS/N: {nfmc.q_ess:.3f}")
             _log.info(f"Stage: {stage:3d}, Min variance BW factor: {nfmc.min_var_bw}, Var(IW): {nfmc.min_var_weights}")
         stage += 1
@@ -576,6 +579,7 @@ def sample_nfmc_int(
         iter_train_logp_dict[f'q_final'] = nfmc.train_logp
         iter_train_logq_dict[f'q_final'] = nfmc.train_logq
         iter_logZ_dict[f'q_final'] = nfmc.log_evidence
+        iter_logZ_dict[f'q_final_pq'] = nfmc.log_evidence_pq
         iter_qmodel_dict[f'q_final'] = nfmc.nf_model
         iter_q_ess_dict[f'q_final'] = nfmc.q_ess
         iter_train_ess_dict[f'q_final'] = nfmc.train_ess
