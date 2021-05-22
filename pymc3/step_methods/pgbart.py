@@ -121,7 +121,9 @@ class PGBART(ArrayStepShared):
                 # Update weights. Since the prior is used as the proposal,the weights
                 # are updated additively as the ratio of the new and old log_likelihoods
                 for p in particles:
-                    new_likelihood = self.likelihood_logp(inv_link(p.tree.predict_output()))
+                    new_likelihood = self.likelihood_logp(
+                        inv_link(bart.sum_trees_output + p.tree.predict_output())
+                    )
                     p.log_weight += new_likelihood - p.old_likelihood_logp
                     p.old_likelihood_logp = new_likelihood
 
@@ -199,6 +201,9 @@ class PGBART(ArrayStepShared):
         Initialize particles
         """
         prev_tree = self.get_old_tree_particle(tree_id, 0)
+        likelihood = self.likelihood_logp(self.bart.inv_link(prev_tree.tree.predict_output()))
+        prev_tree.old_likelihood_logp = likelihood
+        prev_tree.log_weight = likelihood - self.log_num_particles
         particles = [prev_tree]
 
         initial_idx_data_points_leaf_nodes = np.arange(self.bart.num_observations, dtype="int32")

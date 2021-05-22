@@ -66,8 +66,6 @@ class BaseBART(NoDistribution):
 
         if inv_link is None:
             self.inv_link = self.link = lambda x: x
-            self.init_mean = self.Y.mean()
-            self.Y_un = self.Y
         elif isinstance(inv_link, str):
             # The link function is just a rough approximation in order to allow the PGBART sampler
             # to propose reasonable values for the leaf nodes.
