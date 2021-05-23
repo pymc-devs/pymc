@@ -26,8 +26,9 @@ import aesara
 import aesara.tensor as at
 import dill
 
-from pymc3.aesaraf import change_rv_size
 from aesara.tensor.random.op import RandomVariable
+
+from pymc3.aesaraf import change_rv_size
 from pymc3.distributions import _logcdf, _logp
 from pymc3.distributions.shape import (
     Dims,
