@@ -559,6 +559,29 @@ class Normal(Continuous):
         )
 
 
+class TruncatedNormalRV(RandomVariable):
+    name = "truncated_normal"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("dTruncatedNormal", "\\operatorname{dTruncatedNormal}")
+
+    @classmethod
+    def rng_fn(cls, rng, mu, sigma, lower, upper, size):
+        vals = stats.truncnorm.rvs(
+            a=(lower - mu) / sigma,
+            b=(upper - mu) / sigma,
+            loc=mu,
+            scale=sigma,
+            size=size,
+            random_state=rng,
+        )
+        return vals
+
+
+truncated_normal = TruncatedNormalRV()
+
+
 class TruncatedNormal(BoundedContinuous):
     r"""
     Univariate truncated normal log-likelihood.
@@ -632,99 +655,39 @@ class TruncatedNormal(BoundedContinuous):
 
     """
 
-    def __init__(
-        self,
-        mu=0,
+    rv_op = truncated_normal
+    bound_args_indices = (2, 3)  # indexes for lower and upper args
+
+    @classmethod
+    def dist(
+        cls,
+        mu=None,
         sigma=None,
         tau=None,
+        sd=None,
         lower=None,
         upper=None,
         transform="auto",
-        sd=None,
         *args,
         **kwargs,
     ):
-        if sd is not None:
-            sigma = sd
-        tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = at.as_tensor_variable(sigma)
-        self.tau = at.as_tensor_variable(tau)
-        self.lower_check = at.as_tensor_variable(floatX(lower)) if lower is not None else lower
-        self.upper_check = at.as_tensor_variable(floatX(upper)) if upper is not None else upper
-        self.lower = (
-            at.as_tensor_variable(floatX(lower))
-            if lower is not None
-            else at.as_tensor_variable(-np.inf)
+        mu, sigma = _truncated_normal_prepare_mu_sigma_params(mu, sigma, tau, sd)
+        lower, lower_check, upper, upper_check = _truncated_normal_prepare_lower_and_upper(
+            lower, upper
         )
-        self.upper = (
-            at.as_tensor_variable(floatX(upper))
-            if upper is not None
-            else at.as_tensor_variable(np.inf)
-        )
-        self.mu = at.as_tensor_variable(floatX(mu))
 
-        if self.lower_check is None and self.upper_check is None:
-            self._defaultval = mu
-        elif self.lower_check is None and self.upper_check is not None:
-            self._defaultval = self.upper - 1.0
-        elif self.lower_check is not None and self.upper_check is None:
-            self._defaultval = self.lower + 1.0
+        if lower_check is None and upper_check is None:
+            _defaultval = mu
+        elif lower_check is None and upper_check is not None:
+            _defaultval = upper - 1.0
+        elif lower_check is not None and upper_check is None:
+            _defaultval = lower + 1.0
         else:
-            self._defaultval = (self.lower + self.upper) / 2
+            _defaultval = (lower + upper) / 2
 
-        assert_negative_support(sigma, "sigma", "TruncatedNormal")
-        assert_negative_support(tau, "tau", "TruncatedNormal")
+        return super().dist([mu, sigma, lower, upper], **kwargs)
 
-        super().__init__(
-            defaults=("_defaultval",),
-            transform=transform,
-            lower=lower,
-            upper=upper,
-            *args,
-            **kwargs,
-        )
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from TruncatedNormal distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, sigma, lower, upper = draw_values(
-        #     [self.mu, self.sigma, self.lower, self.upper], point=point, size=size
-        # )
-        # return generate_samples(
-        #     self._random,
-        #     mu=mu,
-        #     sigma=sigma,
-        #     lower=lower,
-        #     upper=upper,
-        #     dist_shape=self.shape,
-        #     size=size,
-        # )
-
-    def _random(self, mu, sigma, lower, upper, size):
-        """Wrapper around stats.truncnorm.rvs that converts TruncatedNormal's
-        parametrization to scipy.truncnorm. All parameter arrays should have
-        been broadcasted properly by generate_samples at this point and size is
-        the scipy.rvs representation.
-        """
-        return stats.truncnorm.rvs(
-            a=(lower - mu) / sigma, b=(upper - mu) / sigma, loc=mu, scale=sigma, size=size
-        )
-
-    def logp(self, value):
+    def logp(value, mu, sigma, lower, upper):
         """
         Calculate log-probability of TruncatedNormal distribution at specified value.
 
@@ -738,40 +701,67 @@ class TruncatedNormal(BoundedContinuous):
         -------
         TensorVariable
         """
-        mu = self.mu
-        sigma = self.sigma
-
-        norm = self._normalization()
-        logp = Normal.dist(mu=mu, sigma=sigma).logp(value) - norm
-
+        mu, sigma = _truncated_normal_prepare_mu_sigma_params(mu, sigma, tau=None, sd=None)
+        print(lower.eval())
+        lower, lower_check, upper, upper_check = _truncated_normal_prepare_lower_and_upper(
+            lower, upper
+        )
+        print(lower.eval())
+        norm = _truncated_normal_normalization(mu, sigma, lower, upper)
+        logp = Normal.logp(value, mu=mu, sigma=sigma) - norm
         bounds = [sigma > 0]
-        if self.lower_check is not None:
-            bounds.append(value >= self.lower)
-        if self.upper_check is not None:
-            bounds.append(value <= self.upper)
+        if lower_check is not None:
+            bounds.append(value >= lower)
+        if upper_check is not None:
+            bounds.append(value <= upper)
+        print([e.eval() for e in bounds])
         return bound(logp, *bounds)
-
-    def _normalization(self):
-        mu, sigma = self.mu, self.sigma
-
-        if self.lower_check is None and self.upper_check is None:
-            return 0.0
-
-        if self.lower_check is not None and self.upper_check is not None:
-            lcdf_a = normal_lcdf(mu, sigma, self.lower)
-            lcdf_b = normal_lcdf(mu, sigma, self.upper)
-            lsf_a = normal_lccdf(mu, sigma, self.lower)
-            lsf_b = normal_lccdf(mu, sigma, self.upper)
-
-            return at.switch(self.lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a))
-
-        if self.lower_check is not None:
-            return normal_lccdf(mu, sigma, self.lower)
-        else:
-            return normal_lcdf(mu, sigma, self.upper)
 
     def _distr_parameters_for_repr(self):
         return ["mu", "sigma", "lower", "upper"]
+
+
+def _truncated_normal_prepare_mu_sigma_params(mu, sigma, tau, sd):
+    sigma = sd if sd is not None else sigma
+    tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
+    sigma = at.as_tensor_variable(sigma)
+    tau = at.as_tensor_variable(tau)
+    mu = at.as_tensor_variable(floatX(mu))
+    assert_negative_support(sigma, "sigma", "TruncatedNormal")
+    assert_negative_support(tau, "tau", "TruncatedNormal")
+    return mu, sigma
+
+
+def _truncated_normal_normalization(mu, sigma, lower, upper):
+    lower, lower_check, upper, upper_check = _truncated_normal_prepare_lower_and_upper(lower, upper)
+    if lower_check is None and upper_check is None:
+        return 0.0
+
+    if lower_check is not None and upper_check is not None:
+        lcdf_a = normal_lcdf(mu, sigma, lower)
+        lcdf_b = normal_lcdf(mu, sigma, upper)
+        lsf_a = normal_lccdf(mu, sigma, lower)
+        lsf_b = normal_lccdf(mu, sigma, upper)
+        return at.switch(lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a))
+    if lower_check is not None:
+        return normal_lccdf(mu, sigma, lower)
+    else:
+        return normal_lcdf(mu, sigma, upper)
+
+
+def _truncated_normal_prepare_lower_and_upper(lower, upper):
+    lower_check = at.as_tensor_variable(floatX(lower)) if lower is not None else lower
+    upper_check = at.as_tensor_variable(floatX(upper)) if upper is not None else upper
+
+    lower = (
+        at.as_tensor_variable(floatX(lower))
+        if lower is not None
+        else at.as_tensor_variable(-np.inf)
+    )
+    upper = (
+        at.as_tensor_variable(floatX(upper)) if upper is not None else at.as_tensor_variable(np.inf)
+    )
+    return lower, lower_check, upper, upper_check
 
 
 class HalfNormal(PositiveContinuous):
