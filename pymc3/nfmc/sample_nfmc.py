@@ -257,6 +257,7 @@ def sample_nfmc(
         train_ess,
         total_ess,
         min_var_bws,
+        min_pq_bws
     ) = zip(*results)
     trace = MultiTrace(traces)
     trace.report.log_evidence = log_evidence
@@ -273,6 +274,7 @@ def sample_nfmc(
     trace.report.total_ess = total_ess
     trace.report._n_draws = draws
     trace.report.min_var_bws = min_var_bws
+    trace.report.min_pq_bws = min_pq_bws
     trace.report._t_sampling = time.time() - t1
 
 
@@ -428,6 +430,7 @@ def sample_nfmc_int(
     iter_train_ess_dict = {}
     iter_total_ess_dict = {}
     iter_min_var_bw_dict = {}
+    iter_min_pq_bw_dict = {}
 
     nfmc.initialize_var_info()
     nfmc.setup_logp()
@@ -474,7 +477,7 @@ def sample_nfmc_int(
             nfmc.nf_samples_to_trace()
             print(f"Local exploration iteration: {int(j + 1)}, logZ: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f}, logZ_pq: {nfmc.log_evidence_pq:.3f}")
             print(f"Local exploration iteration: {int(j + 1)}, q_init{int(j+1)} ESS/N: {nfmc.q_ess:.3f}")
-            print(f"Local exploration iteration: {int(j + 1)}, Min variance BW factor: {nfmc.min_var_bw}, Var(IW): {nfmc.min_var_weights}")
+            print(f"Local exploration iteration: {int(j + 1)}, Min variance BW factor: {nfmc.min_var_bw}, Var(IW): {nfmc.min_var_weights}, Min Zpq loss VW factor: {nfmc.min_pq_bw}")
             iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_trace
             iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
             iter_logp_dict[f'q_init{int(j + 1)}'] = nfmc.posterior_logp
@@ -488,6 +491,7 @@ def sample_nfmc_int(
             iter_train_ess_dict[f'q_init{int(j + 1)}'] = nfmc.train_ess
             iter_total_ess_dict[f'q_init{int(j + 1)}'] = nfmc.total_ess
             iter_min_var_bw_dict[f'q_init{int(j + 1)}'] = nfmc.min_var_bw
+            iter_min_pq_bw_dict[f'q_init{int(j + 1)}'] = nfmc.min_pq_bw
             if (abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol or (nfmc.q_ess / iter_ess) <= ess_tol):
                 if abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol:
                     print("Normalizing constant estimate has stabilised during local exploration initialization - ending NF fits with local exploration.")
@@ -550,10 +554,11 @@ def sample_nfmc_int(
         iter_train_ess_dict[f'q{int(stage)}'] = nfmc.train_ess
         iter_total_ess_dict[f'q{int(stage)}'] = nfmc.total_ess
         iter_min_var_bw_dict[f'q{int(stage)}'] = nfmc.min_var_bw
+        iter_min_pq_bw_dict[f'q{int(stage)}'] = nfmc.min_pq_bw
         if _log is not None:
             _log.info(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence:.3f}, Train ESS/N: {nfmc.train_ess:.3f},logZ_pq Estimate: {nfmc.log_evidence_pq:.3f}")
             _log.info(f"Stage: {stage:3d}, q ESS/N: {nfmc.q_ess:.3f}")
-            _log.info(f"Stage: {stage:3d}, Min variance BW factor: {nfmc.min_var_bw}, Var(IW): {nfmc.min_var_weights}")
+            _log.info(f"Stage: {stage:3d}, Min variance BW factor: {nfmc.min_var_bw}, Var(IW): {nfmc.min_var_weights}, Min Zpq BW factor: {nfmc.min_pq_bw}")
         stage += 1
         if (abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol or
             (nfmc.q_ess / iter_ess) <= ess_tol):
@@ -585,6 +590,7 @@ def sample_nfmc_int(
         iter_train_ess_dict[f'q_final'] = nfmc.train_ess
         iter_total_ess_dict[f'q_final'] = nfmc.total_ess
         iter_min_var_bw_dict[f'q_final'] = nfmc.min_var_bw
+        iter_min_pq_bw_dict[f'q_final'] = nfmc.min_pq_bw
     elif not full_local:
         nfmc.resample()
 
@@ -603,4 +609,5 @@ def sample_nfmc_int(
         iter_train_ess_dict,
         iter_total_ess_dict,
         iter_min_var_bw_dict,
+        iter_min_pq_bw_dict,
     )

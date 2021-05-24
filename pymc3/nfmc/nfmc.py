@@ -260,7 +260,7 @@ class NFMC:
         self.log_evidence_pq = logsumexp(self.log_weight_pq_num) - logsumexp(self.log_weight_pq_den)
         self.evidence_pq = np.exp(self.log_evidence_pq)
 
-        self.regularize_weights() #regularize pq weights also
+        self.regularize_weights()
         self.init_weights_cleanup(None, lambda x: self.prior_dlogp(x))
         self.q_ess = self.calculate_ess(self.log_weight)
         self.total_ess = self.calculate_ess(self.sinf_logw)
@@ -885,6 +885,7 @@ class NFMC:
     def fit_nf(self, num_draws):
         """Fit the NF model for a given iteration after initialization."""
         bw_var_weights = []
+        bw_pq_weights = []
         bw_nf_models = []
         for bw_factor in self.bw_factors:
             if self.frac_validate > 0.0:
@@ -938,12 +939,18 @@ class NFMC:
 
             self.regularize_weights()
             bw_var_weights.append(np.var(self.weights))
+            bw_pq_weights.append( sum( (np.exp(self.posterior_logp) -  np.exp(self.log_evidence_pq + self.logq)
+                                       )**2
+                                     )
+                                ) #alternative loss for choosing bw, check for underflow?
             bw_nf_models.append(self.nf_model)
 
         min_var_idx = bw_var_weights.index(min(bw_var_weights))
+        min_pq_idx  = bw_pq_weights.index(min(bw_pq_weights))
         self.nf_model = bw_nf_models[min_var_idx]
         self.min_var_weights = bw_var_weights[min_var_idx]
         self.min_var_bw = self.bw_factors[min_var_idx]
+        self.min_pq_bw = self.bw_factors[min_pq_idx]
 
         if(self.redraw): #do the usual thing
             self.nf_samples, self.logq = self.nf_model.sample(num_draws, device=torch.device('cpu'))
