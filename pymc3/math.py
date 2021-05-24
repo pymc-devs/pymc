@@ -477,11 +477,11 @@ def block_diagonal(matrices, sparse=False, format="csr"):
 
 
 def _linear_training_data(size=100):
-    r"""Create a simple linear model training dataset 
+    r"""Create a simple linear model training dataset
 
     Parameters
     ----------
-    size: int (default 100) number of observations 
+    size: int (default 100) number of observations
 
     Returns
     -------
@@ -490,9 +490,9 @@ def _linear_training_data(size=100):
 
     y: np.ndarray()
         Array of output values
-        
+
     """
-    np.random.seed(1234) 
+    np.random.seed(1234)
     X = np.random.normal(size=size)
     y = 1.2 * X + np.random.normal(size=size)
 
