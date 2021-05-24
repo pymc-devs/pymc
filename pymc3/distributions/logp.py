@@ -271,10 +271,8 @@ def _logp(
 
 
 @_logp.register(Elemwise)
-def logp_elemwise(op, *args, **kwargs):
-    if hasattr(op, "scalar_op"):
-        return _logp(op.scalar_op, *args, **kwargs)
-    raise NotImplementedError
+def elemwise_logp(op, *args, **kwargs):
+    return _logp(op.scalar_op, *args, **kwargs)
 
 
 # TODO: Implement DimShuffle logp?
@@ -287,14 +285,17 @@ def logp_elemwise(op, *args, **kwargs):
 #     raise NotImplementedError
 
 
-def find_rv_branch(inputs):
-    """
-    Helper function to find which input branch(es) contain unregistered random variables
-    """
-    rv_branch = []
-    no_rv_branch = []
+@_logp.register(Add)
+@_logp.register(Mul)
+def linear_logp(op, var, rvs_to_values, *linear_inputs, **kwargs):
 
-    for inp in inputs:
+    if len(linear_inputs) != 2:
+        raise ValueError(f"Expected 2 inputs but got: {len(linear_inputs)}")
+
+    # Find base_rv and constant inputs
+    base_rv = []
+    constant = []
+    for inp in linear_inputs:
         res_ancestors = list(walk_model((inp,), walk_past_rvs=True))
         # unregistered variables do not contain a value_var tag
         res_unregistered_ancestors = [
@@ -305,94 +306,47 @@ def find_rv_branch(inputs):
             and not getattr(v.tag, "value_var", False)
         ]
         if res_unregistered_ancestors:
-            rv_branch.append(inp)
+            base_rv.append(inp)
         else:
-            no_rv_branch.append(inp)
-
-    return rv_branch, no_rv_branch
-
-
-@_logp.register(Add)
-def add_logp(op, var, rvs_to_values, *add_inputs, **kwargs):
-
-    if len(add_inputs) != 2:
-        raise ValueError(f"Expected 2 inputs but got: {len(add_inputs)}")
-
-    base_rv, loc = find_rv_branch(add_inputs)
+            constant.append(inp)
 
     if len(base_rv) != 1:
         raise NotImplementedError(
-            f"Logp of addition requires one branch with an unregistered RandomVariable but got {len(base_rv)}"
+            f"Logp of linear transform requires one branch with an unregistered RandomVariable but got {len(base_rv)}"
         )
 
-    var_value = rvs_to_values.get(var, var)
-    loc = loc[0]
     base_rv = base_rv[0]
-    base_value = base_rv.type()
+    constant = constant[0]
+    var_value = rvs_to_values.get(var, var)
 
+    # Get logp of base_rv
+    base_value = base_rv.type()
     logp_base_rv = logpt(base_rv, {base_rv: base_value}, **kwargs)
     fgraph = FunctionGraph(
         [i for i in graph_inputs((logp_base_rv,)) if not isinstance(i, Constant)],
-        [logp_base_rv],
-        clone=False,
-    )
-    fgraph.replace(base_value, var_value - loc, import_missing=True)
-    logp_add_rv = fgraph.outputs[0]
-
-    # Replace rvs in graph
-    # TODO: This shouldn't be here
-    (logp_add_rv,), _ = rvs_to_value_vars(
-        (logp_add_rv,),
-        apply_transforms=True,  # Change this
-        initial_replacements=None,
-    )
-
-    logp_add_rv.name = f"__logp_{var.name}"
-
-    return logp_add_rv
-
-
-@_logp.register(Mul)
-def mul_logp(op, var, rvs_to_values, *mul_inputs, **kwargs):
-
-    if len(mul_inputs) != 2:
-        raise ValueError(f"Expected 2 inputs but got: {len(mul_inputs)}")
-
-    base_rv, scale = find_rv_branch(mul_inputs)
-
-    if len(base_rv) != 1:
-        raise NotImplementedError(
-            f"Logp of product requires one branch with an unregistered RandomVariable but got {len(base_rv)}"
-        )
-
-    var_value = rvs_to_values.get(var, var)
-    scale = scale[0]
-    base_rv = base_rv[0]
-    base_value = base_rv.type()
-
-    logp_base_rv = logpt(base_rv, {base_rv: base_value}, **kwargs)
-    fgraph = FunctionGraph(
-        [i for i in graph_inputs((logp_base_rv,)) if not isinstance(i, Constant)],
-        [logp_base_rv],
+        outputs=[logp_base_rv],
         clone=False,
     )
 
-    # TODO: This is not correct for discrete variables
-    # TODO: Undefined behavior for scale = 0
-    fgraph.replace(base_value, var_value / scale, import_missing=True)
-    logp_mul_rv = fgraph.outputs[0] - at.log(at.abs_(scale))
+    # Transform base_rv and apply jacobian correction (for continuous rvs)
+    if isinstance(op, Add):
+        fgraph.replace(base_value, var_value - constant, import_missing=True)
+        logp_linear_rv = fgraph.outputs[0]
+    elif isinstance(op, Mul):
+        fgraph.replace(base_value, var_value / constant, import_missing=True)
+        logp_linear_rv = fgraph.outputs[0]
+        if "float" in base_rv.dtype:
+            logp_linear_rv -= at.log(at.abs_(constant))
 
     # Replace rvs in graph
-    # TODO: This shouldn't be here
-    (logp_mul_rv,), _ = rvs_to_value_vars(
-        (logp_mul_rv,),
-        apply_transforms=True,  # Change this
+    (logp_linear_rv,), _ = rvs_to_value_vars(
+        (logp_linear_rv,),
+        apply_transforms=kwargs.get("transformed", True),
         initial_replacements=None,
     )
 
-    logp_mul_rv.name = f"__logp_{var.name}"
-
-    return logp_mul_rv
+    logp_linear_rv.name = f"__logp_{var.name}"
+    return logp_linear_rv
 
 
 def convert_indices(indices, entry):
