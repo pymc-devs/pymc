@@ -430,6 +430,13 @@ def test_pandas_to_array(input_dtype):
     assert isinstance(wrapped, TensorVariable)
 
 
+def test_pandas_to_array_pandas_index():
+    data = pd.Index([1, 2, 3])
+    result = pandas_to_array(data)
+    expected = np.array([1, 2, 3])
+    np.testing.assert_array_equal(result, expected)
+
+
 def test_walk_model():
     d = at.vector("d")
     b = at.vector("b")

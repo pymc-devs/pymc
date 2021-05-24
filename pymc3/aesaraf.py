@@ -86,7 +86,13 @@ def pandas_to_array(data):
     if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
         # typically, but not limited to pandas objects
         vals = data.to_numpy()
-        mask = data.isnull().to_numpy()
+        null_data = data.isnull()
+        if hasattr(null_data, "to_numpy"):
+            # pandas Series
+            mask = null_data.to_numpy()
+        else:
+            # pandas Index
+            mask = null_data
         if mask.any():
             # there are missing values
             ret = np.ma.MaskedArray(vals, mask)
