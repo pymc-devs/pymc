@@ -15,7 +15,7 @@
 import numpy as np
 
 from pandas import DataFrame, Series
-from scipy.special import expit  # pylint: disable=unused-import
+from scipy.special import expit
 
 from pymc3.distributions.distribution import NoDistribution
 from pymc3.distributions.tree import LeafNode, SplitNode, Tree
@@ -76,6 +76,8 @@ class BaseBART(NoDistribution):
                 self.inv_link = np.exp
                 self.link = np.log
                 self.Y[self.Y == 0] += 0.0001
+            else:
+                raise ValueError("Accepted strings are 'logistic' or 'exp'")
         else:
             self.inv_link, self.link = inv_link
 
