@@ -21,7 +21,7 @@
 
     import pymc3 as pm
 
-    X, y = pm._linear_training_data()
+    X, y = pm.math._linear_training_data()
     with pm.Model() as linear_model:
         weights = pm.Normal("weights", mu=0, sigma=1)
         noise = pm.Gamma("noise", alpha=2, beta=1)
