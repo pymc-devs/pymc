@@ -220,7 +220,7 @@ class Distribution:
 
         if "latex" in formatting:
             param_string = ",~".join(
-                [fr"\mathit{{{name}}}={value}" for name, value in zip(param_names, param_values)]
+                fr"\mathit{{{name}}}={value}" for name, value in zip(param_names, param_values)
             )
             if formatting == "latex_with_params":
                 return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}({params})$".format(
@@ -232,7 +232,7 @@ class Distribution:
         else:
             # one of the plain formattings
             param_string = ", ".join(
-                [f"{name}={value}" for name, value in zip(param_names, param_values)]
+                f"{name}={value}" for name, value in zip(param_names, param_values)
             )
             if formatting == "plain_with_params":
                 return f"{name} ~ {dist._distr_name_for_repr()}({param_string})"
@@ -902,10 +902,8 @@ def vectorize_aesara_function(f, inputs, output):
     signature.
     """
     inputs_signatures = ",".join(
-        [
-            get_vectorize_signature(var, var_name=f"i_{input_ind}")
-            for input_ind, var in enumerate(inputs)
-        ]
+        get_vectorize_signature(var, var_name=f"i_{input_ind}")
+        for input_ind, var in enumerate(inputs)
     )
     if len(inputs_signatures) > 0:
         output_signature = get_vectorize_signature(output, var_name="o")
@@ -920,7 +918,7 @@ def get_vectorize_signature(var, var_name="i"):
     if var.ndim == 0:
         return "()"
     else:
-        sig = ",".join([f"{var_name}_{axis_ind}" for axis_ind in range(var.ndim)])
+        sig = ",".join(f"{var_name}_{axis_ind}" for axis_ind in range(var.ndim))
         return f"({sig})"
 
 

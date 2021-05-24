@@ -150,11 +150,11 @@ def get_repr_for_variable(variable, formatting="plain"):
                 # do not escape_latex these, since it is not idempotent
                 if "latex" in formatting:
                     return "f({args})".format(
-                        args=",~".join([n for n in names if isinstance(n, str)])
+                        args=",~".join(n for n in names if isinstance(n, str))
                     )
                 else:
                     return "f({args})".format(
-                        args=", ".join([n for n in names if isinstance(n, str)])
+                        args=", ".join(n for n in names if isinstance(n, str))
                     )
             except IndexError:
                 pass

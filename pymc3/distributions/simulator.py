@@ -126,7 +126,7 @@ class Simulator(NoDistribution):
             dist = self
         name = name
         function = dist.function.__name__
-        params = ", ".join([var.name for var in dist.params])
+        params = ", ".join(var.name for var in dist.params)
         sum_stat = self.sum_stat.__name__ if hasattr(self.sum_stat, "__call__") else self.sum_stat
         distance = getattr(self.distance, "__name__", self.distance.__class__.__name__)
 

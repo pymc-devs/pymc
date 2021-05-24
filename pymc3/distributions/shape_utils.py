@@ -100,7 +100,7 @@ def shapes_broadcasting(*args, raise_exception=False):
             if raise_exception:
                 raise ValueError(
                     "Supplied shapes {} do not broadcast together".format(
-                        ", ".join([f"{a}" for a in args])
+                        ", ".join(f"{a}" for a in args)
                     )
                 )
             else:
@@ -162,7 +162,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
         if broadcasted_shape is None:
             raise ValueError(
                 "Cannot broadcast provided shapes {} given size: {}".format(
-                    ", ".join([f"{s}" for s in shapes]), size
+                    ", ".join(f"{s}" for s in shapes), size
                 )
             )
         return broadcasted_shape
@@ -175,7 +175,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
     except ValueError:
         raise ValueError(
             "Cannot broadcast provided shapes {} given size: {}".format(
-                ", ".join([f"{s}" for s in shapes]), size
+                ", ".join(f"{s}" for s in shapes), size
             )
         )
     broadcastable_shapes = []

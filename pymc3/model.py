@@ -2047,7 +2047,7 @@ def all_continuous(vars):
 
     vars_ = [var for var in vars if not isinstance(var, pm.model.ObservedRV)]
     if any(
-        [(var.dtype in pm.discrete_types or isinstance(var.distribution, pm.BART)) for var in vars_]
+        (var.dtype in pm.discrete_types or isinstance(var.distribution, pm.BART)) for var in vars_
     ):
         return False
     else:

@@ -530,7 +530,7 @@ class CholeskyCovPacked(Transform):
 class Chain(Transform):
     def __init__(self, transform_list):
         self.transform_list = transform_list
-        self.name = "+".join([transf.name for transf in self.transform_list])
+        self.name = "+".join(transf.name for transf in self.transform_list)
 
     def forward(self, x):
         y = x
