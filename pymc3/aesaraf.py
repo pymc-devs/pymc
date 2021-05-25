@@ -160,7 +160,7 @@ def change_rv_size(
     if expand:
         if rv_node.op.ndim_supp == 0 and at.get_vector_length(size) == 0:
             size = rv_node.op._infer_shape(size, dist_params)
-        new_size = tuple(np.atleast_1d(new_size)) + tuple(size)
+        new_size = tuple(at.atleast_1d(new_size)) + tuple(size)
 
     # Make sure the new size is a tensor. This helps to not unnecessarily pick
     # up a `Cast` in some cases
