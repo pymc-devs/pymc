@@ -621,7 +621,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             trace = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
-    @pytest.mark.xfail(reason="Flat not refactored for v4")
+    @pytest.mark.xfail(reason="EllipticalSlice not refactored for v4")
     def test_step_elliptical_slice(self):
         start, model, (K, L, mu, std, noise) = mv_prior_simple()
         unc = noise ** 0.5

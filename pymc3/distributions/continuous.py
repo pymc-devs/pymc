@@ -308,31 +308,36 @@ class Uniform(BoundedContinuous):
         )
 
 
+class FlatRV(RandomVariable):
+    name = "flat"
+    ndim_supp = 0
+    ndims_params = []
+    dtype = "floatX"
+    _print_name = ("Flat", "\\operatorname{Flat}")
+
+    @classmethod
+    def rng_fn(cls, rng, size):
+        raise NotImplementedError("Cannot sample from flat variable")
+
+
+flat = FlatRV()
+
+
 class Flat(Continuous):
     """
     Uninformative log-likelihood that returns 0 regardless of
     the passed value.
     """
 
-    def __init__(self, *args, **kwargs):
-        self._default = 0
-        super().__init__(defaults=("_default",), *args, **kwargs)
+    rv_op = flat
 
-    def random(self, point=None, size=None):
-        """Raises ValueError as it is not possible to sample from Flat distribution
+    @classmethod
+    def dist(cls, *, size=None, testval=None, **kwargs):
+        if testval is None:
+            testval = np.full(size, floatX(0.0))
+        return super().dist([], size=size, testval=testval, **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-        size: int, optional
-
-        Raises
-        -------
-        ValueError
-        """
-        raise ValueError("Cannot sample from Flat distribution")
-
-    def logp(self, value):
+    def logp(value):
         """
         Calculate log-probability of Flat distribution at specified value.
 
@@ -348,7 +353,7 @@ class Flat(Continuous):
         """
         return at.zeros_like(value)
 
-    def logcdf(self, value):
+    def logcdf(value):
         """
         Compute the log of the cumulative distribution function for Flat distribution
         at the specified value.
@@ -368,28 +373,33 @@ class Flat(Continuous):
         )
 
 
+class HalfFlatRV(RandomVariable):
+    name = "half_flat"
+    ndim_supp = 0
+    ndims_params = []
+    dtype = "floatX"
+    _print_name = ("HalfFlat", "\\operatorname{HalfFlat}")
+
+    @classmethod
+    def rng_fn(cls, rng, size):
+        raise NotImplementedError("Cannot sample from half_flat variable")
+
+
+halfflat = HalfFlatRV()
+
+
 class HalfFlat(PositiveContinuous):
     """Improper flat prior over the positive reals."""
 
-    def __init__(self, *args, **kwargs):
-        self._default = 1
-        super().__init__(defaults=("_default",), *args, **kwargs)
+    rv_op = halfflat
 
-    def random(self, point=None, size=None):
-        """Raises ValueError as it is not possible to sample from HalfFlat distribution
+    @classmethod
+    def dist(cls, *, size=None, testval=None, **kwargs):
+        if testval is None:
+            testval = np.full(size, floatX(1.0))
+        return super().dist([], size=size, testval=testval, **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-        size: int, optional
-
-        Raises
-        -------
-        ValueError
-        """
-        raise ValueError("Cannot sample from HalfFlat distribution")
-
-    def logp(self, value):
+    def logp(value):
         """
         Calculate log-probability of HalfFlat distribution at specified value.
 
@@ -405,7 +415,7 @@ class HalfFlat(PositiveContinuous):
         """
         return bound(at.zeros_like(value), value > 0)
 
-    def logcdf(self, value):
+    def logcdf(value):
         """
         Compute the log of the cumulative distribution function for HalfFlat distribution
         at the specified value.
