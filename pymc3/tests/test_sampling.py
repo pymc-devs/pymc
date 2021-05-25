@@ -688,10 +688,10 @@ class TestSamplePPC(SeededTest):
         meas_in_1 = pm.aesaraf.floatX(2 + 4 * np.random.randn(100))
         meas_in_2 = pm.aesaraf.floatX(5 + 4 * np.random.randn(100))
         with pm.Model() as model:
-            mu_in_1 = pm.Normal("mu_in_1", 0, 1)
-            sigma_in_1 = pm.HalfNormal("sd_in_1", 1)
-            mu_in_2 = pm.Normal("mu_in_2", 0, 1)
-            sigma_in_2 = pm.HalfNormal("sd__in_2", 1)
+            mu_in_1 = pm.Normal("mu_in_1", 0, 1, testval=0)
+            sigma_in_1 = pm.HalfNormal("sd_in_1", 1, testval=1)
+            mu_in_2 = pm.Normal("mu_in_2", 0, 1, testval=0)
+            sigma_in_2 = pm.HalfNormal("sd__in_2", 1, testval=1)
 
             in_1 = pm.Normal("in_1", mu_in_1, sigma_in_1, observed=meas_in_1)
             in_2 = pm.Normal("in_2", mu_in_2, sigma_in_2, observed=meas_in_2)
