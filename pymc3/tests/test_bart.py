@@ -1,7 +1,5 @@
 import numpy as np
 
-from scipy.special import expit
-
 import pymc3 as pm
 
 
@@ -106,7 +104,7 @@ def test_model():
 
     Y = np.repeat([0, 1], 50)
     with pm.Model() as model:
-        mu = pm.BART("mu", X, Y, m=50, inv_link=expit, scale=0.25)
+        mu = pm.BART("mu", X, Y, m=50, inv_link="logistic")
         y = pm.Bernoulli("y", mu, observed=Y)
         trace = pm.sample(1000, random_seed=212480)
 
