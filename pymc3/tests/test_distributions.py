@@ -2497,17 +2497,19 @@ class TestMatchesScipy:
             lambda value, mu, kappa: floatX(sp.vonmises.logpdf(value, kappa, loc=mu)),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_gumbel(self):
-        def gumbel(value, mu, beta):
-            return floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta))
-
-        self.check_logp(Gumbel, R, {"mu": R, "beta": Rplusbig}, gumbel)
-
-        def gumbellcdf(value, mu, beta):
-            return floatX(sp.gumbel_r.logcdf(value, loc=mu, scale=beta))
-
-        self.check_logcdf(Gumbel, R, {"mu": R, "beta": Rplusbig}, gumbellcdf)
+        self.check_logp(
+            Gumbel,
+            R,
+            {"mu": R, "beta": Rplusbig},
+            lambda value, mu, beta: sp.gumbel_r.logpdf(value, loc=mu, scale=beta),
+        )
+        self.check_logcdf(
+            Gumbel,
+            R,
+            {"mu": R, "beta": Rplusbig},
+            lambda value, mu, beta: sp.gumbel_r.logcdf(value, loc=mu, scale=beta),
+        )
 
     def test_logistic(self):
         self.check_logp(
