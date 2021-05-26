@@ -265,9 +265,9 @@ def _logp(
     The default assumes that the log-likelihood of a term is a zero.
 
     """
-    value_var = rvs_to_values.get(var, var)
-    return at.zeros_like(value_var)
-    # raise NotImplementedError(f"Logp cannot be computed for op {op}")
+    # value_var = rvs_to_values.get(var, var)
+    # return at.zeros_like(value_var)
+    raise NotImplementedError(f"Logp cannot be computed for op {op}")
 
 
 @_logp.register(Elemwise)
@@ -287,7 +287,7 @@ def elemwise_logp(op, *args, **kwargs):
 
 @_logp.register(Add)
 @_logp.register(Mul)
-def linear_logp(op, var, rvs_to_values, *linear_inputs, **kwargs):
+def linear_logp(op, var, rvs_to_values, *linear_inputs, transformed=True, **kwargs):
 
     if len(linear_inputs) != 2:
         raise ValueError(f"Expected 2 inputs but got: {len(linear_inputs)}")
@@ -319,34 +319,26 @@ def linear_logp(op, var, rvs_to_values, *linear_inputs, **kwargs):
     constant = constant[0]
     var_value = rvs_to_values.get(var, var)
 
-    # Get logp of base_rv
-    base_value = base_rv.type()
-    logp_base_rv = logpt(base_rv, {base_rv: base_value}, **kwargs)
-    fgraph = FunctionGraph(
-        [i for i in graph_inputs((logp_base_rv,)) if not isinstance(i, Constant)],
-        outputs=[logp_base_rv],
-        clone=False,
-    )
-
-    # Transform base_rv and apply jacobian correction (for continuous rvs)
+    # Get logp of base_rv with transformed input
     if isinstance(op, Add):
-        fgraph.replace(base_value, var_value - constant, import_missing=True)
-        logp_linear_rv = fgraph.outputs[0]
-    elif isinstance(op, Mul):
-        fgraph.replace(base_value, var_value / constant, import_missing=True)
-        logp_linear_rv = fgraph.outputs[0]
-        if "float" in base_rv.dtype:
-            logp_linear_rv -= at.log(at.abs_(constant))
+        base_value = var_value - constant
+    else:
+        base_value = var_value / constant
+    var_logp = logpt(base_rv, {base_rv: base_value}, transformed=transformed, **kwargs)
+
+    # Apply product jacobian correction for continuous rvs
+    if isinstance(op, Mul) and "float" in base_rv.dtype:
+        var_logp -= at.log(at.abs_(constant))
 
     # Replace rvs in graph
-    (logp_linear_rv,), _ = rvs_to_value_vars(
-        (logp_linear_rv,),
-        apply_transforms=kwargs.get("transformed", True),
+    (var_logp,), _ = rvs_to_value_vars(
+        (var_logp,),
+        apply_transforms=transformed,
         initial_replacements=None,
     )
 
-    logp_linear_rv.name = f"__logp_{var.name}"
-    return logp_linear_rv
+    var_logp.name = f"__logp_{var.name}"
+    return var_logp
 
 
 def convert_indices(indices, entry):
@@ -405,8 +397,7 @@ def subtensor_logp(op, var, rvs_to_values, indexed_rv_var, *indices, **kwargs):
         # subset of variables per the index.
         var_copy = var.owner.clone().default_output()
         fgraph = FunctionGraph(
-            [i for i in graph_inputs((indexed_rv_var,)) if not isinstance(i, Constant)],
-            [var_copy],
+            outputs=[var_copy],
             clone=False,
         )
 
