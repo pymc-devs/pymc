@@ -28,7 +28,7 @@ class BaseBART(NoDistribution):
         self,
         X,
         Y,
-        m=200,
+        m=50,
         alpha=0.25,
         split_prior=None,
         inv_link=None,
@@ -67,11 +67,12 @@ class BaseBART(NoDistribution):
         if inv_link is None:
             self.inv_link = self.link = lambda x: x
         elif isinstance(inv_link, str):
-            # The link function is just a rough approximation in order to allow the PGBART sampler
-            # to propose reasonable values for the leaf nodes.
             if inv_link == "logistic":
                 self.inv_link = expit
-                self.link = lambda x: (x - 0.5) * 10
+                # The link function is just a rough approximation in order to allow the PGBART
+                # sampler to propose reasonable values for the leaf nodes. The regularizing term
+                # 2 * self.m ** 0.5 is inspired by Chipman's DOI: 10.1214/09-AOAS285
+                self.link = lambda x: (x - 0.5) * 2 * self.m ** 0.5
             elif inv_link == "exp":
                 self.inv_link = np.exp
                 self.link = np.log
@@ -302,8 +303,8 @@ class BART(BaseBART):
     m : int
         Number of trees
     alpha : float
-        Control the prior probability over the depth of the trees. Must be in the interval (0, 1),
-        altought it is recomenned to be in the interval (0, 0.5].
+        Control the prior probability over the depth of the trees. Even when it can takes values in
+        the interval (0, 1), it is recommended to be in the interval (0, 0.5].
     split_prior : array-like
         Each element of split_prior should be in the [0, 1] interval and the elements should sum
         to 1. Otherwise they will be normalized.
@@ -317,7 +318,7 @@ class BART(BaseBART):
         otherwise it does not have any effect.
     """
 
-    def __init__(self, X, Y, m=200, alpha=0.25, split_prior=None, inv_link=None, jitter=False):
+    def __init__(self, X, Y, m=50, alpha=0.25, split_prior=None, inv_link=None, jitter=False):
         super().__init__(X, Y, m, alpha, split_prior, inv_link)
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):

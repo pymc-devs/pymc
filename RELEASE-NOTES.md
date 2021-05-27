@@ -7,7 +7,8 @@
 + Fix bug in the computation of the log pseudolikelihood values (SMC-ABC). (see [#4672](https://github.com/pymc-devs/pymc3/pull/4672)).
 
 ### New Features
-+ BART with non-gaussian likelihoods (see [#4675](https://github.com/pymc-devs/pymc3/pull/4675) and [#4709](https://github.com/pymc-devs/pymc3/pull/4709)).
++ Generalized BART, bounded distributions like Binomial and Poisson can now be used as likelihoods (see [#4675](https://github.com/pymc-devs/pymc3/pull/4675), [#4709](https://github.com/pymc-devs/pymc3/pull/4709) and
+[#4720](https://github.com/pymc-devs/pymc3/pull/4720)).
 
 ## PyMC3 3.11.2 (14 March 2021)
 
