@@ -40,6 +40,7 @@ from aesara.tensor.subtensor import (
 from aesara.tensor.var import TensorVariable
 
 from pymc3.aesaraf import (
+    change_rv_size,
     extract_rv_and_value_vars,
     floatX,
     rvs_to_value_vars,
@@ -287,7 +288,15 @@ def elemwise_logp(op, *args, **kwargs):
 
 @_logp.register(Add)
 @_logp.register(Mul)
-def linear_logp(op, var, rvs_to_values, *linear_inputs, transformed=True, **kwargs):
+def linear_logp(
+    op,
+    var,
+    rvs_to_values,
+    *linear_inputs,
+    transformed=True,
+    sum=False,
+    **kwargs,
+):
 
     if len(linear_inputs) != 2:
         raise ValueError(f"Expected 2 inputs but got: {len(linear_inputs)}")
@@ -324,7 +333,17 @@ def linear_logp(op, var, rvs_to_values, *linear_inputs, transformed=True, **kwar
         base_value = var_value - constant
     else:
         base_value = var_value / constant
-    var_logp = logpt(base_rv, {base_rv: base_value}, transformed=transformed, **kwargs)
+
+    # Change base rv shape if needed
+    if isinstance(base_rv.owner.op, RandomVariable):
+        ndim_supp = base_rv.owner.op.ndim_supp
+        if ndim_supp > 0:
+            new_size = base_value.shape[:-ndim_supp]
+        else:
+            new_size = base_value.shape
+        base_rv = change_rv_size(base_rv, new_size)
+
+    var_logp = logpt(base_rv, {base_rv: base_value}, transformed=transformed, sum=False, **kwargs)
 
     # Apply product jacobian correction for continuous rvs
     if isinstance(op, Mul) and "float" in base_rv.dtype:
@@ -336,6 +355,9 @@ def linear_logp(op, var, rvs_to_values, *linear_inputs, transformed=True, **kwar
         apply_transforms=transformed,
         initial_replacements=None,
     )
+
+    if sum:
+        var_logp = at.sum(var_logp)
 
     var_logp.name = f"__logp_{var.name}"
     return var_logp
