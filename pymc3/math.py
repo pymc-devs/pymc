@@ -489,8 +489,8 @@ def _linear_training_data():
         Array of output values
 
     """
-    np.random.seed(1234)
-    X = np.random.normal(size=100)
-    y = 1.2 * X + np.random.normal(size=100)
+    rng = np.random.default_rng(1234)
+    X = rng.standard_normal(100)
+    y = 1.2 * X + rng.standard_normal(100)
 
     return X, y
