@@ -2538,11 +2538,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_multidimensional_beta_construction(self):
-        with Model():
-            Beta("beta", alpha=1.0, beta=1.0, size=(10, 20))
-
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Some combinations underflow to -inf in float32 in pymc version",
