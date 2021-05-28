@@ -619,11 +619,13 @@ class TestSamplePPC(SeededTest):
             assert samples["foo"].shape == (40, 200)
 
     def test_model_shared_variable(self):
-        x = np.random.randn(100)
+        rng = np.random.RandomState(9832)
+
+        x = rng.randn(100)
         y = x > 0
         x_shared = aesara.shared(x)
         y_shared = aesara.shared(y)
-        with pm.Model() as model:
+        with pm.Model(rng_seeder=rng) as model:
             coeff = pm.Normal("x", mu=0, sd=1)
             logistic = pm.Deterministic("p", pm.math.sigmoid(coeff * x_shared))
 
@@ -644,12 +646,12 @@ class TestSamplePPC(SeededTest):
         npt.assert_allclose(post_pred["p"], expected_p)
 
     def test_deterministic_of_observed(self):
-        np.random.seed(8442)
+        rng = np.random.RandomState(8442)
 
-        meas_in_1 = pm.aesaraf.floatX(2 + 4 * np.random.randn(10))
-        meas_in_2 = pm.aesaraf.floatX(5 + 4 * np.random.randn(10))
+        meas_in_1 = pm.aesaraf.floatX(2 + 4 * rng.randn(10))
+        meas_in_2 = pm.aesaraf.floatX(5 + 4 * rng.randn(10))
         nchains = 2
-        with pm.Model() as model:
+        with pm.Model(rng_seeder=rng) as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 1)
             sigma_in_1 = pm.HalfNormal("sd_in_1", 1)
             mu_in_2 = pm.Normal("mu_in_2", 0, 1)
@@ -660,7 +662,6 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            model.default_rng.get_value(borrow=True).seed(0)
             trace = pm.sample(
                 100,
                 chains=nchains,
@@ -670,7 +671,6 @@ class TestSamplePPC(SeededTest):
 
             rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-4
 
-            model.default_rng.get_value(borrow=True).seed(0)
             ppc = pm.sample_posterior_predictive(
                 model=model,
                 trace=trace,
@@ -682,11 +682,11 @@ class TestSamplePPC(SeededTest):
             npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_deterministic_of_observed_modified_interface(self):
-        np.random.seed(4982)
+        rng = np.random.RandomState(4982)
 
-        meas_in_1 = pm.aesaraf.floatX(2 + 4 * np.random.randn(100))
-        meas_in_2 = pm.aesaraf.floatX(5 + 4 * np.random.randn(100))
-        with pm.Model() as model:
+        meas_in_1 = pm.aesaraf.floatX(2 + 4 * rng.randn(100))
+        meas_in_2 = pm.aesaraf.floatX(5 + 4 * rng.randn(100))
+        with pm.Model(rng_seeder=rng) as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 1, testval=0)
             sigma_in_1 = pm.HalfNormal("sd_in_1", 1, testval=1)
             mu_in_2 = pm.Normal("mu_in_2", 0, 1, testval=0)
@@ -969,11 +969,9 @@ class TestSamplePriorPredictive(SeededTest):
         assert sim_ppc["obs"].shape == (20,) + mn_data.shape
 
     def test_layers(self):
-        with pm.Model() as model:
+        with pm.Model(rng_seeder=232093) as model:
             a = pm.Uniform("a", lower=0, upper=1, size=10)
             b = pm.Binomial("b", n=1, p=a, size=10)
-
-        model.default_rng.get_value(borrow=True).seed(232093)
 
         b_sampler = aesara.function([], b)
         avg = np.stack([b_sampler() for i in range(10000)]).mean(0)

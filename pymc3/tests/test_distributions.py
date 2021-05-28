@@ -2944,3 +2944,25 @@ def test_serialize_density_dist():
     import pickle
 
     pickle.loads(pickle.dumps(y))
+
+
+def test_distinct_rvs():
+    """Make sure `RandomVariable`s generated using a `Model`'s default RNG state all have distinct states."""
+
+    with pm.Model(rng_seeder=np.random.RandomState(2023532)) as model:
+        X_rv = pm.Normal("x")
+        Y_rv = pm.Normal("y")
+
+        pp_samples = pm.sample_prior_predictive(samples=2)
+
+    assert X_rv.owner.inputs[0] != Y_rv.owner.inputs[0]
+
+    assert len(model.rng_seq) == 2
+
+    with pm.Model(rng_seeder=np.random.RandomState(2023532)):
+        X_rv = pm.Normal("x")
+        Y_rv = pm.Normal("y")
+
+        pp_samples_2 = pm.sample_prior_predictive(samples=2)
+
+    assert np.array_equal(pp_samples["y"], pp_samples_2["y"])

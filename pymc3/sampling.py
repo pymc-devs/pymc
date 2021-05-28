@@ -339,7 +339,8 @@ def sample(
         time until completion ("expected time of arrival"; ETA).
     model : Model (optional if in ``with`` context)
     random_seed : int or list of ints
-        A list is accepted if ``cores`` is greater than one.
+        Random seed(s) used by the sampling steps.  A list is accepted if
+        ``cores`` is greater than one.
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval.
     compute_convergence_checks : bool, default=True
@@ -466,10 +467,6 @@ def sample(
         if random_seed is not None:
             np.random.seed(random_seed)
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
-
-    # TODO: We need to do something about multiple seeds and this single,
-    # shared RNG state.
-    model.default_rng.get_value(borrow=True).seed(random_seed)
 
     if not isinstance(random_seed, abc.Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
@@ -1004,9 +1001,7 @@ def _iter_sample(
     """
     model = modelcontext(model)
     draws = int(draws)
-    if random_seed is not None:
-        # np.random.seed(random_seed)
-        model.default_rng.get_value(borrow=True).seed(random_seed)
+
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
@@ -1273,9 +1268,7 @@ def _prepare_iter_population(
     nchains = len(chains)
     model = modelcontext(model)
     draws = int(draws)
-    if random_seed is not None:
-        # np.random.seed(random_seed)
-        model.default_rng.get_value(borrow=True).seed(random_seed)
+
     if draws < 1:
         raise ValueError("Argument `draws` should be above 0.")
 
@@ -1693,8 +1686,12 @@ def sample_posterior_predictive(
         vars_ = model.observed_RVs + model.auto_deterministics
 
     if random_seed is not None:
-        # np.random.seed(random_seed)
-        model.default_rng.get_value(borrow=True).seed(random_seed)
+        warnings.warn(
+            "In this version, RNG seeding is managed by the Model objects. "
+            "See the `rng_seeder` argument in Model's constructor.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     indices = np.arange(samples)
 
@@ -1816,8 +1813,6 @@ def sample_posterior_predictive_w(
         Dictionary with the variables as keys. The values corresponding to the
         posterior predictive samples from the weighted models.
     """
-    # np.random.seed(random_seed)
-
     if isinstance(traces[0], InferenceData):
         n_samples = [
             trace.posterior.sizes["chain"] * trace.posterior.sizes["draw"] for trace in traces
@@ -1832,9 +1827,15 @@ def sample_posterior_predictive_w(
     if models is None:
         models = [modelcontext(models)] * len(traces)
 
+    if random_seed:
+        warnings.warn(
+            "In this version, RNG seeding is managed by the Model objects. "
+            "See the `rng_seeder` argument in Model's constructor.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     for model in models:
-        if random_seed:
-            model.default_rng.get_value(borrow=True).seed(random_seed)
         if model.potentials:
             warnings.warn(
                 "The effect of Potentials on other parameters is ignored during posterior predictive sampling. "
@@ -1937,6 +1938,7 @@ def sample_prior_predictive(
     model: Optional[Model] = None,
     var_names: Optional[Iterable[str]] = None,
     random_seed=None,
+    mode: Optional[Union[str, Mode]] = None,
 ) -> Dict[str, np.ndarray]:
     """Generate samples from the prior predictive distribution.
 
@@ -1950,6 +1952,8 @@ def sample_prior_predictive(
         samples. Defaults to both observed and unobserved RVs.
     random_seed : int
         Seed for the random number generator.
+    mode:
+        The mode used by ``aesara.function`` to compile the graph.
 
     Returns
     -------
@@ -1977,8 +1981,12 @@ def sample_prior_predictive(
         vars_ = set(var_names)
 
     if random_seed is not None:
-        # np.random.seed(random_seed)
-        model.default_rng.get_value(borrow=True).seed(random_seed)
+        warnings.warn(
+            "In this version, RNG seeding is managed by the Model objects. "
+            "See the `rng_seeder` argument in Model's constructor.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     names = get_default_varnames(vars_, include_transformed=False)
 
@@ -2127,8 +2135,6 @@ def init_nuts(
 
     if random_seed is not None:
         random_seed = int(np.atleast_1d(random_seed)[0])
-        # np.random.seed(random_seed)
-        model.default_rng.get_value(borrow=True).seed(random_seed)
 
     cb = [
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="absolute"),
