@@ -209,8 +209,8 @@ class TestSqueezeCat:
 
 class TestSaveLoad:
     @staticmethod
-    def model():
-        with pm.Model() as model:
+    def model(rng_seeder=None):
+        with pm.Model(rng_seeder=rng_seeder) as model:
             x = pm.Normal("x", 0, 1)
             y = pm.Normal("y", x, 1, observed=2)
             z = pm.Normal("z", x + y, 1)
@@ -267,15 +267,16 @@ class TestSaveLoad:
 
         assert save_dir == directory
 
-        with TestSaveLoad.model() as model:
-            model.default_rng.get_value(borrow=True).seed(10)
+        rng = np.random.RandomState(10)
+
+        with TestSaveLoad.model(rng_seeder=rng):
             ppc = pm.sample_posterior_predictive(self.trace)
 
-        with TestSaveLoad.model() as model:
+        rng = np.random.RandomState(10)
+
+        with TestSaveLoad.model(rng_seeder=rng):
             trace2 = pm.load_trace(directory)
-            model.default_rng.get_value(borrow=True).seed(10)
             ppc2 = pm.sample_posterior_predictive(trace2)
-            ppc2f = pm.sample_posterior_predictive(trace2)
 
         for key, value in ppc.items():
             assert (value == ppc2[key]).all()

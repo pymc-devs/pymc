@@ -42,6 +42,7 @@ from aesara.gradient import grad
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph, MissingInputError
 from aesara.tensor.random.opt import local_subtensor_rv_lift
+from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorVariable
 from pandas import Series
@@ -532,6 +533,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         parameters can only take on valid values you can set this to
         False for increased speed. This should not be used if your model
         contains discrete variables.
+    rng_seeder: int or numpy.random.RandomState
+        The ``numpy.random.RandomState`` used to seed the
+        ``RandomStateSharedVariable`` sequence used by a model
+        ``RandomVariable``s, or an int used to seed a new
+        ``numpy.random.RandomState``.  If ``None``, a
+        ``RandomStateSharedVariable`` will be generated and used.  Incremental
+        access to the state sequence is provided by ``Model.next_rng``.
 
     Examples
     --------
@@ -615,7 +623,15 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         instance._aesara_config = kwargs.get("aesara_config", {})
         return instance
 
-    def __init__(self, name="", model=None, aesara_config=None, coords=None, check_bounds=True):
+    def __init__(
+        self,
+        name="",
+        model=None,
+        aesara_config=None,
+        coords=None,
+        check_bounds=True,
+        rng_seeder: Optional[Union[int, np.random.RandomState]] = None,
+    ):
         self.name = name
         self._coords = {}
         self._RV_dims = {}
@@ -623,9 +639,15 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         self.add_coords(coords)
         self.check_bounds = check_bounds
 
-        self.default_rng = aesara.shared(np.random.RandomState(), name="default_rng", borrow=True)
-        self.default_rng.tag.is_rng = True
-        self.default_rng.default_update = self.default_rng
+        if rng_seeder is None:
+            self.rng_seeder = np.random.RandomState()
+        elif isinstance(rng_seeder, int):
+            self.rng_seeder = np.random.RandomState(rng_seeder)
+        else:
+            self.rng_seeder = rng_seeder
+
+        # The sequence of model-generated RNGs
+        self.rng_seq = []
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -930,6 +952,20 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def cont_vars(self):
         """All the continuous variables in the model"""
         return list(typefilter(self.value_vars, continuous_types))
+
+    def next_rng(self) -> RandomStateSharedVariable:
+        """Generate a new ``RandomStateSharedVariable``.
+
+        The new ``RandomStateSharedVariable`` is also added to
+        ``Model.rng_seq``.
+        """
+        new_seed = self.rng_seeder.randint(2 ** 30, dtype=np.int64)
+        next_rng = aesara.shared(np.random.RandomState(new_seed), borrow=True)
+        next_rng.tag.is_rng = True
+
+        self.rng_seq.append(next_rng)
+
+        return next_rng
 
     def shape_from_dims(self, dims):
         shape = []
