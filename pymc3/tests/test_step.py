@@ -1657,7 +1657,9 @@ class TestMLDA:
                 mout = []
                 coarse_models = []
 
-                with Model() as coarse_model_0:
+                rng = np.random.RandomState(seed)
+
+                with Model(rng_seeder=rng) as coarse_model_0:
                     if aesara.config.floatX == "float32":
                         Q = Data("Q", np.float32(0.0))
                     else:
@@ -1674,9 +1676,9 @@ class TestMLDA:
 
                     coarse_models.append(coarse_model_0)
 
-                coarse_model_0.default_rng.get_value(borrow=True).seed(seed)
+                rng = np.random.RandomState(seed)
 
-                with Model() as coarse_model_1:
+                with Model(rng_seeder=rng) as coarse_model_1:
                     if aesara.config.floatX == "float32":
                         Q = Data("Q", np.float32(0.0))
                     else:
@@ -1693,9 +1695,9 @@ class TestMLDA:
 
                     coarse_models.append(coarse_model_1)
 
-                coarse_model_1.default_rng.get_value(borrow=True).seed(seed)
+                rng = np.random.RandomState(seed)
 
-                with Model() as model:
+                with Model(rng_seeder=rng) as model:
                     if aesara.config.floatX == "float32":
                         Q = Data("Q", np.float32(0.0))
                     else:

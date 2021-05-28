@@ -137,7 +137,7 @@ class Distribution(metaclass=DistributionMeta):
         rng = kwargs.pop("rng", None)
 
         if rng is None:
-            rng = model.default_rng
+            rng = model.next_rng()
 
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
