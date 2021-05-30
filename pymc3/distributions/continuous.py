@@ -2594,6 +2594,39 @@ class ChiSquare(Gamma):
         nu = at.as_tensor_variable(floatX(nu))
         super().__init__(alpha=nu / 2.0, beta=0.5, *args, **kwargs)
 
+    def logp(value, nu):
+        """
+        Calculate log-probability of ChiSquare distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return Gamma.logpdf(value, nu/2, 2)
+
+    def logcdf(value, nu):
+        """
+        Compute the log of the cumulative distribution function for ChiSquare distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or `TensorVariable`
+            Value(s) for which log CDF is calculated. If the log CDF for
+            multiple values are desired the values must be provided in a numpy
+            array or `TensorVariable`.
+        Returns
+        -------
+        TensorVariable
+        """
+        return Gamma.logcdf(value, nu/2, 2)
+
 
 # TODO: Remove this once logpt for multiplication is working!
 class WeibullBetaRV(WeibullRV):
