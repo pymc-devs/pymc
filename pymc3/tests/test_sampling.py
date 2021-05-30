@@ -603,7 +603,6 @@ class TestSamplePPC(SeededTest):
             _, pval = stats.kstest(ppc["b"], stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
-    @pytest.mark.xfail(reason="HalfFlat not refactored for v4")
     def test_model_not_drawable_prior(self):
         data = np.random.poisson(lam=10, size=200)
         model = pm.Model()
@@ -613,7 +612,7 @@ class TestSamplePPC(SeededTest):
             trace = pm.sample(tune=1000)
 
         with model:
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(NotImplementedError) as excinfo:
                 pm.sample_prior_predictive(50)
             assert "Cannot sample" in str(excinfo.value)
             samples = pm.sample_posterior_predictive(trace, 40)

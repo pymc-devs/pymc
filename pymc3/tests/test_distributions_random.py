@@ -360,7 +360,11 @@ class BaseTestDistribution(SeededTest):
             assert actual == expected, f"size={size}, expected={expected}, actual={actual}"
 
         # test multi-parameters sampling for univariate distributions (with univariate inputs)
-        if self.pymc_dist.rv_op.ndim_supp == 0 and sum(self.pymc_dist.rv_op.ndims_params) == 0:
+        if (
+            self.pymc_dist.rv_op.ndim_supp == 0
+            and self.pymc_dist.rv_op.ndims_params
+            and sum(self.pymc_dist.rv_op.ndims_params) == 0
+        ):
             params = {
                 k: p * np.ones(self.repeated_params_shape) for k, p in self.pymc_dist_params.items()
             }
@@ -392,6 +396,36 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
     return lambda self: functools.partial(
         getattr(np.random.RandomState, dist_name), self.get_random_state()
     )
+
+
+class TestFlat(BaseTestDistribution):
+    pymc_dist = pm.Flat
+    pymc_dist_params = {}
+    expected_rv_op_params = {}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_not_implemented",
+    ]
+
+    def check_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            self.pymc_rv.eval()
+
+
+class TestHalfFlat(BaseTestDistribution):
+    pymc_dist = pm.HalfFlat
+    pymc_dist_params = {}
+    expected_rv_op_params = {}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_not_implemented",
+    ]
+
+    def check_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            self.pymc_rv.eval()
 
 
 class TestDiscreteWeibull(BaseTestDistribution):
@@ -1239,20 +1273,6 @@ class TestScalarParameterSamples(SeededTest):
             return nr.normal(mu, sigma, size=size) + nr.exponential(scale=nu, size=size)
 
         pymc3_random(pm.ExGaussian, {"mu": R, "sigma": Rplus, "nu": Rplus}, ref_rand=ref_rand)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_flat(self):
-        with pm.Model():
-            f = pm.Flat("f")
-            with pytest.raises(ValueError):
-                f.random(1)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_half_flat(self):
-        with pm.Model():
-            f = pm.HalfFlat("f")
-            with pytest.raises(ValueError):
-                f.random(1)
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_matrix_normal(self):
