@@ -1402,7 +1402,6 @@ class TestScalarParameterSamples(SeededTest):
                 model_args=evd_args,
             )
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_mv_t(self):
         def ref_rand(size, nu, Sigma, mu):
             normal = st.multivariate_normal.rvs(cov=Sigma, size=size)

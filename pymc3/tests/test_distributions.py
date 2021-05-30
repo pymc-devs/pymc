@@ -2019,7 +2019,6 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.parametrize("n", [1, 2])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_mvt(self, n):
         self.check_logp(
             MvStudentT,
@@ -2032,6 +2031,7 @@ class TestMatchesScipy:
             RealMatrix(2, n),
             {"nu": Rplus, "Sigma": PdMatrix(n), "mu": Vector(R, n)},
             mvt_logpdf,
+            extra_args={"size": 2},
         )
 
     @pytest.mark.parametrize("n", [2, 3, 4])
