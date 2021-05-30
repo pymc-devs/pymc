@@ -961,7 +961,6 @@ class TestMatchesScipy:
             assert logpt(invalid_dist, 0.5).eval() == -np.inf
             assert logcdf(invalid_dist, 2).eval() == -np.inf
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_flat(self):
         self.check_logp(Flat, Runif, {}, lambda value: 0)
         with Model():
@@ -969,10 +968,9 @@ class TestMatchesScipy:
             assert_allclose(x.tag.test_value, 0)
         self.check_logcdf(Flat, R, {}, lambda value: np.log(0.5))
         # Check infinite cases individually.
-        assert 0.0 == logcdf(Flat.dist(), np.inf).tag.test_value
-        assert -np.inf == logcdf(Flat.dist(), -np.inf).tag.test_value
+        assert 0.0 == logcdf(Flat.dist(), np.inf).eval()
+        assert -np.inf == logcdf(Flat.dist(), -np.inf).eval()
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_half_flat(self):
         self.check_logp(HalfFlat, Rplus, {}, lambda value: 0)
         with Model():
@@ -981,8 +979,8 @@ class TestMatchesScipy:
             assert x.tag.test_value.shape == (2,)
         self.check_logcdf(HalfFlat, Rplus, {}, lambda value: -np.inf)
         # Check infinite cases individually.
-        assert 0.0 == logcdf(HalfFlat.dist(), np.inf).tag.test_value
-        assert -np.inf == logcdf(HalfFlat.dist(), -np.inf).tag.test_value
+        assert 0.0 == logcdf(HalfFlat.dist(), np.inf).eval()
+        assert -np.inf == logcdf(HalfFlat.dist(), -np.inf).eval()
 
     def test_normal(self):
         self.check_logp(
@@ -2499,17 +2497,19 @@ class TestMatchesScipy:
             lambda value, mu, kappa: floatX(sp.vonmises.logpdf(value, kappa, loc=mu)),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_gumbel(self):
-        def gumbel(value, mu, beta):
-            return floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta))
-
-        self.check_logp(Gumbel, R, {"mu": R, "beta": Rplusbig}, gumbel)
-
-        def gumbellcdf(value, mu, beta):
-            return floatX(sp.gumbel_r.logcdf(value, loc=mu, scale=beta))
-
-        self.check_logcdf(Gumbel, R, {"mu": R, "beta": Rplusbig}, gumbellcdf)
+        self.check_logp(
+            Gumbel,
+            R,
+            {"mu": R, "beta": Rplusbig},
+            lambda value, mu, beta: sp.gumbel_r.logpdf(value, loc=mu, scale=beta),
+        )
+        self.check_logcdf(
+            Gumbel,
+            R,
+            {"mu": R, "beta": Rplusbig},
+            lambda value, mu, beta: sp.gumbel_r.logcdf(value, loc=mu, scale=beta),
+        )
 
     def test_logistic(self):
         self.check_logp(
@@ -2537,11 +2537,6 @@ class TestMatchesScipy:
             ),
             decimal=select_by_precision(float64=6, float32=1),
         )
-
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_multidimensional_beta_construction(self):
-        with Model():
-            Beta("beta", alpha=1.0, beta=1.0, size=(10, 20))
 
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
