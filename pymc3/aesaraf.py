@@ -31,6 +31,7 @@ import numpy as np
 import scipy.sparse as sps
 
 from aesara import config, scalar
+from aesara.compile.mode import Mode, get_mode
 from aesara.gradient import grad
 from aesara.graph.basic import (
     Apply,
@@ -861,3 +862,16 @@ def take_along_axis(arr, indices, axis=0):
 
     # use the fancy index
     return arr[_make_along_axis_idx(arr_shape, indices, _axis)]
+
+
+def compile_rv_inplace(inputs, outputs, mode=None, **kwargs):
+    """Use ``aesara.function`` with the random_make_inplace optimization always enabled.
+
+    Using this function ensures that compiled functions containing random
+    variables will produce new samples on each call.
+    """
+    mode = get_mode(mode)
+    opt_qry = mode.provided_optimizer.including("random_make_inplace")
+    mode = Mode(linker=mode.linker, optimizer=opt_qry)
+    aesara_function = aesara.function(inputs, outputs, mode=mode, **kwargs)
+    return aesara_function

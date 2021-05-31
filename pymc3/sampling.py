@@ -25,19 +25,19 @@ from collections import defaultdict
 from copy import copy, deepcopy
 from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
 
-import aesara
 import aesara.gradient as tg
 import numpy as np
 import packaging
 import xarray
 
+from aesara.compile.mode import Mode
 from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
 
 import pymc3 as pm
 
-from pymc3.aesaraf import change_rv_size, inputvars, walk_model
+from pymc3.aesaraf import change_rv_size, compile_rv_inplace, inputvars, walk_model
 from pymc3.backends.arviz import _DefaultTrace
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
@@ -1584,6 +1584,7 @@ def sample_posterior_predictive(
     keep_size: Optional[bool] = False,
     random_seed=None,
     progressbar: bool = True,
+    mode: Optional[Union[str, Mode]] = None,
 ) -> Dict[str, np.ndarray]:
     """Generate posterior predictive samples from a model given a trace.
 
@@ -1617,6 +1618,8 @@ def sample_posterior_predictive(
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
+    mode:
+        The mode used by ``aesara.function`` to compile the graph.
 
     Returns
     -------
@@ -1727,12 +1730,13 @@ def sample_posterior_predictive(
     if size is not None:
         vars_to_sample = [change_rv_size(v, size, expand=True) for v in vars_to_sample]
 
-    sampler_fn = aesara.function(
+    sampler_fn = compile_rv_inplace(
         inputs,
         vars_to_sample,
         allow_input_downcast=True,
         accept_inplace=True,
         on_unused_input="ignore",
+        mode=mode,
     )
 
     ppc_trace_t = _DefaultTrace(samples)
@@ -1992,12 +1996,11 @@ def sample_prior_predictive(
 
     vars_to_sample = [model[name] for name in names]
     inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, SharedVariable)]
-    sampler_fn = aesara.function(
-        inputs,
-        vars_to_sample,
-        allow_input_downcast=True,
-        accept_inplace=True,
+
+    sampler_fn = compile_rv_inplace(
+        inputs, vars_to_sample, allow_input_downcast=True, accept_inplace=True, mode=mode
     )
+
     values = zip(*[sampler_fn() for i in range(samples)])
 
     data = {k: np.stack(v) for k, v in zip(names, values)}

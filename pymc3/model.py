@@ -49,6 +49,7 @@ from pandas import Series
 
 from pymc3.aesaraf import (
     change_rv_size,
+    compile_rv_inplace,
     gradient,
     hessian,
     inputvars,
@@ -455,7 +456,7 @@ class ValueGradFunction:
 
         inputs = grad_vars
 
-        self._aesara_function = aesara.function(inputs, outputs, givens=givens, **kwargs)
+        self._aesara_function = compile_rv_inplace(inputs, outputs, givens=givens, **kwargs)
 
     def set_weights(self, values):
         if values.shape != (self._n_costs - 1,):
@@ -1378,7 +1379,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         Compiled Aesara function
         """
         with self:
-            return aesara.function(
+            return compile_rv_inplace(
                 self.value_vars,
                 outs,
                 allow_input_downcast=True,
