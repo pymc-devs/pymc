@@ -19,12 +19,12 @@ import types
 import warnings
 
 from abc import ABCMeta
-from copy import copy
 from typing import TYPE_CHECKING
 
 import dill
 
 from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.random.var import RandomStateSharedVariable
 
 from pymc3.distributions import _logcdf, _logp
 
@@ -77,14 +77,6 @@ class DistributionMeta(ABCMeta):
         rv_type = None
 
         if isinstance(rv_op, RandomVariable):
-            if not rv_op.inplace:
-                # TODO: This is a temporary work-around.
-                # Remove this once we know what we want regarding RNG states
-                # and their propagation.
-                rv_op = copy(rv_op)
-                rv_op.inplace = True
-                clsdict["rv_op"] = rv_op
-
             rv_type = type(rv_op)
 
         new_cls = super().__new__(cls, name, bases, clsdict)
@@ -158,14 +150,30 @@ class Distribution(metaclass=DistributionMeta):
         return model.register_rv(rv_out, name, data, total_size, dims=dims, transform=transform)
 
     @classmethod
-    def dist(cls, dist_params, **kwargs):
+    def dist(cls, dist_params, rng=None, **kwargs):
 
         testval = kwargs.pop("testval", None)
 
-        rv_var = cls.rv_op(*dist_params, **kwargs)
+        rv_var = cls.rv_op(*dist_params, rng=rng, **kwargs)
 
         if testval is not None:
             rv_var.tag.test_value = testval
+
+        if (
+            rv_var.owner
+            and isinstance(rv_var.owner.op, RandomVariable)
+            and isinstance(rng, RandomStateSharedVariable)
+            and not getattr(rng, "default_update", None)
+        ):
+            # This tells `aesara.function` that the shared RNG variable
+            # is mutable, which--in turn--tells the `FunctionGraph`
+            # `Supervisor` feature to allow in-place updates on the variable.
+            # Without it, the `RandomVariable`s could not be optimized to allow
+            # in-place RNG updates, forcing all sample results from compiled
+            # functions to be the same on repeated evaluations.
+            new_rng = rv_var.owner.outputs[0]
+            rv_var.update = (rng, new_rng)
+            rng.default_update = new_rng
 
         return rv_var
 

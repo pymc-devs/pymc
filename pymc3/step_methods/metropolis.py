@@ -13,7 +13,6 @@
 #   limitations under the License.
 from typing import Any, Callable, Dict, List, Tuple
 
-import aesara
 import numpy as np
 import numpy.random as nr
 import scipy.linalg
@@ -23,7 +22,7 @@ from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
 
 import pymc3 as pm
 
-from pymc3.aesaraf import floatX, rvs_to_value_vars
+from pymc3.aesaraf import compile_rv_inplace, floatX, rvs_to_value_vars
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.step_methods.arraystep import (
     ArrayStep,
@@ -985,6 +984,6 @@ def delta_logp(point, logp, vars, shared):
 
     logp1 = pm.CallableTensor(logp0)(inarray1)
 
-    f = aesara.function([inarray1, inarray0], logp1 - logp0)
+    f = compile_rv_inplace([inarray1, inarray0], logp1 - logp0)
     f.trust_input = True
     return f

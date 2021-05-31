@@ -7,7 +7,6 @@ xla_flags = os.getenv("XLA_FLAGS", "").lstrip("--")
 xla_flags = re.sub(r"xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
 os.environ["XLA_FLAGS"] = " ".join(["--xla_force_host_platform_device_count={}".format(100)])
 
-import aesara.graph.fg
 import aesara.tensor as at
 import arviz as az
 import jax
@@ -23,6 +22,7 @@ from aesara.link.jax.dispatch import jax_funcify
 from aesara.tensor.type import TensorType
 
 from pymc3 import modelcontext
+from pymc3.aesaraf import compile_rv_inplace
 
 warnings.warn("This module is experimental.")
 
@@ -209,7 +209,7 @@ def sample_numpyro_nuts(
     print("Compiling...")
 
     tic1 = pd.Timestamp.now()
-    _sample = aesara.function(
+    _sample = compile_rv_inplace(
         [],
         sample_outputs + [numpyro_samples[-1]],
         allow_input_downcast=True,
