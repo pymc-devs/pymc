@@ -2608,7 +2608,7 @@ class ChiSquare(Gamma):
         -------
         TensorVariable
         """
-        return Gamma.logpdf(value, nu/2, 2)
+        return Gamma.logp(value, nu/2, 2)
 
     def logcdf(value, nu):
         """
