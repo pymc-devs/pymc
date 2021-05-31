@@ -132,7 +132,7 @@ class TestShapesBroadcasting:
         shapes = fixture_shapes
         raise_exception = fixture_exception_handling
         try:
-            expected_out = np.broadcast(*[np.empty(s) for s in shapes]).shape
+            expected_out = np.broadcast(*(np.empty(s) for s in shapes)).shape
         except ValueError:
             expected_out = None
         if expected_out is None:
@@ -154,7 +154,7 @@ class TestShapesBroadcasting:
             s if s[: min([len(size_), len(s)])] != size_ else s[len(size_) :] for s in shapes
         ]
         try:
-            expected_out = np.broadcast(*[np.empty(s) for s in shapes_]).shape
+            expected_out = np.broadcast(*(np.empty(s) for s in shapes_)).shape
         except ValueError:
             expected_out = None
         if expected_out is not None and any(
@@ -196,7 +196,7 @@ class TestSamplesBroadcasting:
                 else:
                     expected_shape = ishape
                 assert o.shape == expected_shape
-            assert shapes_broadcasting(*[o.shape for o in outs]) == broadcast_shape
+            assert shapes_broadcasting(*(o.shape for o in outs)) == broadcast_shape
         else:
             with pytest.raises(ValueError):
                 get_broadcastable_dist_samples(samples, size=size)

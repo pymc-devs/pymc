@@ -1900,7 +1900,7 @@ class MultiObservedRV(Factor):
 def _walk_up_rv(rv, formatting="plain"):
     """Walk up aesara graph to get inputs for deterministic RV."""
     all_rvs = []
-    parents = list(itertools.chain(*[j.inputs for j in rv.get_parents()]))
+    parents = list(itertools.chain(*(j.inputs for j in rv.get_parents())))
     if parents:
         for parent in parents:
             all_rvs.extend(_walk_up_rv(parent, formatting=formatting))

@@ -158,7 +158,7 @@ class AR(distribution.Continuous):
         """
         if self.constant:
             x = at.add(
-                *[self.rho[i + 1] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p)]
+                *(self.rho[i + 1] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p))
             )
             eps = value[self.p :] - self.rho[0] - x
         else:
@@ -166,7 +166,7 @@ class AR(distribution.Continuous):
                 x = self.rho * value[:-1]
             else:
                 x = at.add(
-                    *[self.rho[i] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p)]
+                    *(self.rho[i] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p))
                 )
             eps = value[self.p :] - x
 

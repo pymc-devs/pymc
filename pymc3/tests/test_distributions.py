@@ -186,7 +186,7 @@ def product(domains, n_samples=-1):
         names, domains = zip(*domains.items())
     except ValueError:  # domains.items() is empty
         return [{}]
-    all_vals = [zip(names, val) for val in itertools.product(*[d.vals for d in domains])]
+    all_vals = [zip(names, val) for val in itertools.product(*(d.vals for d in domains))]
     if n_samples > 0 and len(all_vals) > n_samples:
         return (all_vals[j] for j in nr.choice(len(all_vals), n_samples, replace=False))
     return all_vals
@@ -306,7 +306,7 @@ def beta_mu_sigma(value, mu, sigma):
 
 class ProductDomain:
     def __init__(self, domains):
-        self.vals = list(itertools.product(*[d.vals for d in domains]))
+        self.vals = list(itertools.product(*(d.vals for d in domains)))
         self.shape = (len(domains),) + domains[0].shape
         self.lower = [d.lower for d in domains]
         self.upper = [d.upper for d in domains]
