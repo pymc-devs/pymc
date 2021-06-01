@@ -30,7 +30,7 @@ def simple_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        Normal("x", mu, tau=tau, size=2, testval=floatX_array([0.1, 0.1]))
+        Normal("x", mu, tau=tau, size=2, initval=floatX_array([0.1, 0.1]))
 
     return model.initial_point, model, (mu, tau ** -0.5)
 
@@ -39,7 +39,7 @@ def simple_categorical():
     p = floatX_array([0.1, 0.2, 0.3, 0.4])
     v = floatX_array([0.0, 1.0, 2.0, 3.0])
     with Model() as model:
-        Categorical("x", p, size=3, testval=[1, 2, 3])
+        Categorical("x", p, size=3, initval=[1, 2, 3])
 
     mu = np.dot(p, v)
     var = np.dot(p, (v - mu) ** 2)
@@ -50,7 +50,7 @@ def multidimensional_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        Normal("x", mu, tau=tau, size=(3, 2), testval=0.1 * np.ones((3, 2)))
+        Normal("x", mu, tau=tau, size=(3, 2), initval=0.1 * np.ones((3, 2)))
 
     return model.initial_point, model, (mu, tau ** -0.5)
 
@@ -81,7 +81,7 @@ def simple_2model():
     tau = 1.3
     p = 0.4
     with Model() as model:
-        x = pm.Normal("x", mu, tau=tau, testval=0.1)
+        x = pm.Normal("x", mu, tau=tau, initval=0.1)
         pm.Deterministic("logx", at.log(x))
         pm.Bernoulli("y", p)
     return model.initial_point, model
@@ -91,7 +91,7 @@ def simple_2model_continuous():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        x = pm.Normal("x", mu, tau=tau, testval=0.1)
+        x = pm.Normal("x", mu, tau=tau, initval=0.1)
         pm.Deterministic("logx", at.log(x))
         pm.Beta("y", alpha=1, beta=1, size=2)
     return model.initial_point, model
@@ -106,7 +106,7 @@ def mv_simple():
             "x",
             at.constant(mu),
             tau=at.constant(tau),
-            testval=floatX_array([0.1, 1.0, 0.8]),
+            initval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
     C = np.linalg.inv(H)
@@ -122,7 +122,7 @@ def mv_simple_coarse():
             "x",
             at.constant(mu),
             tau=at.constant(tau),
-            testval=floatX_array([0.1, 1.0, 0.8]),
+            initval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
     C = np.linalg.inv(H)
@@ -138,7 +138,7 @@ def mv_simple_very_coarse():
             "x",
             at.constant(mu),
             tau=at.constant(tau),
-            testval=floatX_array([0.1, 1.0, 0.8]),
+            initval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
     C = np.linalg.inv(H)
@@ -150,7 +150,7 @@ def mv_simple_discrete():
     n = 5
     p = floatX_array([0.15, 0.85])
     with pm.Model() as model:
-        pm.Multinomial("x", n, at.constant(p), testval=np.array([1, 4]))
+        pm.Multinomial("x", n, at.constant(p), initval=np.array([1, 4]))
         mu = n * p
         # covariance matrix
         C = np.zeros((d, d))

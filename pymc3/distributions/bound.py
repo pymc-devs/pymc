@@ -42,7 +42,7 @@ class _Bounded(Distribution):
         super().__init__(
             shape=self._wrapped.shape,
             dtype=self._wrapped.dtype,
-            testval=self._wrapped.testval,
+            initval=self._wrapped.initval,
             defaults=defaults,
             transform=self._wrapped.transform,
         )
@@ -252,15 +252,15 @@ class Bound:
 
         with pm.Model():
             NegativeNormal = pm.Bound(pm.Normal, upper=0.0)
-            par1 = NegativeNormal('par`', mu=0.0, sigma=1.0, testval=-0.5)
+            par1 = NegativeNormal('par`', mu=0.0, sigma=1.0, initval=-0.5)
             # you can use the Bound object multiple times to
             # create multiple bounded random variables
-            par1_1 = NegativeNormal('par1_1', mu=-1.0, sigma=1.0, testval=-1.5)
+            par1_1 = NegativeNormal('par1_1', mu=-1.0, sigma=1.0, initval=-1.5)
 
             # you can also define a Bound implicitly, while applying
             # it to a random variable
             par2 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)(
-                    'par2', mu=0.0, sigma=1.0, testval=1.0)
+                    'par2', mu=0.0, sigma=1.0, initval=1.0)
     """
 
     def __init__(self, distribution, lower=None, upper=None):
