@@ -15,14 +15,9 @@
 import aesara.tensor as at
 import numpy as np
 
-from aesara import scalar
-from aesara.scalar.basic_scipy import GammaLn, Psi
-from aesara.tensor.elemwise import Elemwise
+from aesara.tensor.math import gammaln, psi
 
 __all__ = ["gammaln", "multigammaln", "psi", "log_i0"]
-
-scalar_gammaln = GammaLn(scalar.upgrade_to_float, name="scalar_gammaln")
-gammaln = Elemwise(scalar_gammaln, name="gammaln")
 
 
 def multigammaln(a, p):
@@ -61,7 +56,3 @@ def log_i0(x):
             + 11025.0 / (98304.0 * x ** 4.0)
         ),
     )
-
-
-scalar_psi = Psi(scalar.upgrade_to_float, name="scalar_psi")
-psi = Elemwise(scalar_psi, name="psi")
