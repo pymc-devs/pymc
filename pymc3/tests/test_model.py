@@ -498,12 +498,30 @@ def test_initial_point():
 
     with pm.Model() as model:
         a = pm.Uniform("a")
-        pm.Normal("x", a)
+        x = pm.Normal("x", a)
 
     with pytest.warns(DeprecationWarning):
         initial_point = model.test_point
 
     assert all(var.name in initial_point for var in model.value_vars)
+
+    b_initval = np.array(0.3, dtype=aesara.config.floatX)
+
+    with pytest.warns(DeprecationWarning), model:
+        b = pm.Uniform("b", testval=b_initval)
+
+    b_value_var = model.rvs_to_values[b]
+    b_initval_trans = b_value_var.tag.transform.forward(b, b_initval).eval()
+
+    y_initval = np.array(-2.4, dtype=aesara.config.floatX)
+
+    with model:
+        y = pm.Normal("y", initval=y_initval)
+
+    assert model.rvs_to_values[a] in model.initial_values
+    assert model.rvs_to_values[x] in model.initial_values
+    assert model.initial_values[b_value_var] == b_initval_trans
+    assert model.initial_values[model.rvs_to_values[y]] == y_initval
 
 
 def test_point_logps():

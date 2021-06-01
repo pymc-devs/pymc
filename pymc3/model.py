@@ -40,7 +40,7 @@ import scipy.sparse as sps
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.gradient import grad
 from aesara.graph.basic import Constant, Variable, graph_inputs
-from aesara.graph.fg import FunctionGraph, MissingInputError
+from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.opt import local_subtensor_rv_lift
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.sharedvar import ScalarSharedVariable
@@ -572,7 +572,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 Normal('v2', mu=mean, sigma=sd)
 
                 # something more complex is allowed, too
-                half_cauchy = HalfCauchy('sd', beta=10, testval=1.)
+                half_cauchy = HalfCauchy('sd', beta=10, initval=1.)
                 Normal('v3', mu=mean, sigma=half_cauchy)
 
                 # Deterministic variables can be used in usual way
@@ -649,6 +649,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         # The sequence of model-generated RNGs
         self.rng_seq = []
+        self.initial_values = {}
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -914,35 +915,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def initial_point(self):
-        points = []
-        for rv_var in self.free_RVs:
-            value_var = rv_var.tag.value_var
-            var_value = getattr(value_var.tag, "test_value", None)
-
-            if var_value is None:
-
-                rv_var_value = getattr(rv_var.tag, "test_value", None)
-
-                if rv_var_value is None:
-                    try:
-                        rv_var_value = rv_var.eval()
-                    except MissingInputError:
-                        raise MissingInputError(f"Couldn't generate an initial value for {rv_var}")
-
-                transform = getattr(value_var.tag, "transform", None)
-
-                if transform:
-                    try:
-                        rv_var_value = transform.forward(rv_var, rv_var_value).eval()
-                    except MissingInputError:
-                        raise MissingInputError(f"Couldn't generate an initial value for {rv_var}")
-
-                var_value = rv_var_value
-                value_var.tag.test_value = var_value
-
-            points.append((value_var, var_value))
-
-        return Point(points, model=self)
+        return Point(list(self.initial_values.items()), model=self)
 
     @property
     def disc_vars(self):
@@ -953,6 +926,37 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def cont_vars(self):
         """All the continuous variables in the model"""
         return list(typefilter(self.value_vars, continuous_types))
+
+    def set_initval(self, rv_var, initval):
+        initval = (
+            rv_var.type.filter(initval)
+            if initval is not None
+            else getattr(rv_var.tag, "test_value", None)
+        )
+
+        rv_value_var = self.rvs_to_values[rv_var]
+        transform = getattr(rv_value_var.tag, "transform", None)
+
+        if initval is None or transform:
+            # Sample/evaluate this using the existing initial values, and
+            # with the least amount of affect on the RNGs involved (i.e. no
+            # in-placing)
+            from aesara.compile.mode import Mode, get_mode
+
+            mode = get_mode(None)
+            opt_qry = mode.provided_optimizer.excluding("random_make_inplace")
+            mode = Mode(linker=mode.linker, optimizer=opt_qry)
+
+            if transform:
+                value = initval if initval is not None else rv_var
+                rv_var = transform.forward(rv_var, value)
+
+            initval_fn = aesara.function(
+                [], rv_var, mode=mode, givens=self.initial_values, on_unused_input="ignore"
+            )
+            initval = initval_fn()
+
+        self.initial_values[rv_value_var] = initval
 
     def next_rng(self) -> RandomStateSharedVariable:
         """Generate a new ``RandomStateSharedVariable``.
@@ -1116,7 +1120,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         shared_object.set_value(values)
 
-    def register_rv(self, rv_var, name, data=None, total_size=None, dims=None, transform=UNSET):
+    def register_rv(
+        self, rv_var, name, data=None, total_size=None, dims=None, transform=UNSET, initval=None
+    ):
         """Register an (un)observed random variable with the model.
 
         Parameters
@@ -1132,6 +1138,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             Dimension names for the variable.
         transform
             A transform for the random variable in log-likelihood space.
+        initval
+            The initial value of the random variable.
 
         Returns
         -------
@@ -1145,6 +1153,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.free_RVs.append(rv_var)
             self.create_value_var(rv_var, transform)
             self.add_random_variable(rv_var, dims)
+            self.set_initval(rv_var, initval)
         else:
             if (
                 isinstance(data, Variable)
