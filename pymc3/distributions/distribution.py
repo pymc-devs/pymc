@@ -35,6 +35,8 @@ from pymc3.distributions.shape_utils import (
     Shape,
     Size,
     convert_dims,
+    convert_shape,
+    convert_size,
     find_size,
     maybe_resize,
     resize_from_dims,
@@ -261,6 +263,9 @@ class Distribution(metaclass=DistributionMeta):
             raise ValueError(
                 f"Passing both `shape` ({shape}) and `size` ({size}) is not supported!"
             )
+
+        shape = convert_shape(shape)
+        size = convert_size(size)
 
         create_size, ndim_expected, ndim_batch, ndim_supp = find_size(
             shape=shape, size=size, ndim_supp=cls.rv_op.ndim_supp

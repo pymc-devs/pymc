@@ -579,9 +579,6 @@ def find_size(shape=None, size=None, ndim_supp=None):
         Number of support dimensions
     """
 
-    shape = convert_shape(shape)
-    size = convert_size(size)
-
     ndim_expected = None
     ndim_batch = None
     create_size = None
