@@ -168,6 +168,30 @@ def resize_from_observed(
 
 
 def find_size(shape=None, size=None, ndim_supp=None):
+    """Determines the size keyword argument for creating a Distribution.
+
+    Parameters
+    ----------
+    shape : tuple
+        A tuple specifying the final shape of a distribution
+    size : tuple
+        A tuple specifying the size of a distribution
+    ndim_supp : int
+        The support dimension of the distribution.
+        0 if a univariate distribution, 1 if a multivariate distribution.
+
+    Returns
+    -------
+    create_size : int
+        The size argument to be passed to the distribution
+    ndim_expected : int
+        Number of dimensions expected after distribution was created
+    ndim_batch : int
+        Number of batch dimensions
+    ndim_supp : int
+        Number of support dimensions
+    """
+
     shape = convert_shape(shape)
     size = convert_size(size)
 
@@ -205,6 +229,33 @@ def maybe_resize(
     shape=None,
     **kwargs,
 ):
+    """Resize a distribution if necessary.
+
+    Parameters
+    ----------
+    rv_out : RandomVariable
+        The RandomVariable to be resized if necessary
+    rv_op : RandomVariable.__class__
+        The RandomVariable class to recreate it
+    dist_params : dict
+        Input parameters to recreate the RandomVariable
+    ndim_expected : int
+        Number of dimensions expected after distribution was created
+    ndim_batch : int
+        Number of batch dimensions
+    ndim_supp : int
+        The support dimension of the distribution.
+        0 if a univariate distribution, 1 if a multivariate distribution.
+    size : tuple
+        A tuple specifying the size of a distribution
+    shape : tuple
+        A tuple specifying the final shape of a distribution
+
+    Returnsfind
+    -------
+    rv_out : int
+        The size argument to be passed to the distribution
+    """
     ndim_actual = rv_out.ndim
     ndims_unexpected = ndim_actual != ndim_expected
 
