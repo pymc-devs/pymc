@@ -30,7 +30,7 @@ from aesara.tensor.random.op import RandomVariable
 
 from pymc3.aesaraf import change_rv_size
 from pymc3.distributions import _logcdf, _logp
-from pymc3.distributions.shape import (
+from pymc3.distributions.shape_utils import (
     Dims,
     Shape,
     Size,

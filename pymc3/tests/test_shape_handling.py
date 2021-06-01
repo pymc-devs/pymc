@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2021 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -20,15 +20,13 @@ from aesara import tensor as at
 
 import pymc3 as pm
 
-from pymc3.distributions.distribution import (
-    _convert_dims,
-    _convert_shape,
-    _convert_size,
-)
 from pymc3.distributions.shape_utils import (
     broadcast_dist_samples_shape,
     broadcast_dist_samples_to,
     broadcast_distribution_samples,
+    convert_dims,
+    convert_shape,
+    convert_size,
     get_broadcastable_dist_samples,
     shapes_broadcasting,
     to_tuple,
@@ -419,25 +417,25 @@ class TestShapeDimsSize:
             assert tuple(rv.shape.eval()) == (5, 4, 5, 4, 3)
 
     def test_convert_dims(self):
-        assert _convert_dims(dims="town") == ("town",)
+        assert convert_dims(dims="town") == ("town",)
         with pytest.raises(ValueError, match="must be a tuple, str or list"):
-            _convert_dims(3)
+            convert_dims(3)
         with pytest.raises(ValueError, match="may only appear in the last position"):
-            _convert_dims(dims=(..., "town"))
+            convert_dims(dims=(..., "town"))
 
     def test_convert_shape(self):
-        assert _convert_shape(5) == (5,)
+        assert convert_shape(5) == (5,)
         with pytest.raises(ValueError, match="tuple, TensorVariable, int or list"):
-            _convert_shape(shape="notashape")
+            convert_shape(shape="notashape")
         with pytest.raises(ValueError, match="may only appear in the last position"):
-            _convert_shape(shape=(3, ..., 2))
+            convert_shape(shape=(3, ..., 2))
 
     def test_convert_size(self):
-        assert _convert_size(7) == (7,)
+        assert convert_size(7) == (7,)
         with pytest.raises(ValueError, match="tuple, TensorVariable, int or list"):
-            _convert_size(size="notasize")
+            convert_size(size="notasize")
         with pytest.raises(ValueError, match="cannot contain"):
-            _convert_size(size=(3, ...))
+            convert_size(size=(3, ...))
 
     def test_lazy_flavors(self):
         assert pm.Uniform.dist(2, [4, 5], size=[3, 2]).eval().shape == (3, 2)
