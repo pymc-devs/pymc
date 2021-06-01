@@ -332,10 +332,12 @@ class Flat(Continuous):
     rv_op = flat
 
     @classmethod
-    def dist(cls, *, size=None, testval=None, **kwargs):
-        if testval is None:
-            testval = np.full(size, floatX(0.0))
-        return super().dist([], size=size, testval=testval, **kwargs)
+    def dist(cls, *, size=None, initval=None, **kwargs):
+        if initval is None:
+            initval = np.full(size, floatX(0.0))
+        res = super().dist([], size=size, **kwargs)
+        res.tag.test_value = initval
+        return res
 
     def logp(value):
         """
@@ -394,10 +396,12 @@ class HalfFlat(PositiveContinuous):
     rv_op = halfflat
 
     @classmethod
-    def dist(cls, *, size=None, testval=None, **kwargs):
-        if testval is None:
-            testval = np.full(size, floatX(1.0))
-        return super().dist([], size=size, testval=testval, **kwargs)
+    def dist(cls, *, size=None, initval=None, **kwargs):
+        if initval is None:
+            initval = np.full(size, floatX(1.0))
+        res = super().dist([], size=size, **kwargs)
+        res.tag.test_value = initval
+        return res
 
     def logp(value):
         """

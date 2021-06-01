@@ -18,7 +18,7 @@ import pytest
 import scipy.stats.distributions as sp
 
 from aesara.gradient import DisconnectedGrad
-from aesara.graph.basic import Constant, graph_inputs
+from aesara.graph.basic import Constant, ancestors, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import (
@@ -36,6 +36,11 @@ from pymc3.distributions.discrete import Bernoulli
 from pymc3.distributions.logp import logpt
 from pymc3.model import Model
 from pymc3.tests.helpers import select_by_precision
+
+
+def assert_no_rvs(var):
+    assert not any(isinstance(v.owner.op, RandomVariable) for v in ancestors([var]) if v.owner)
+    return var
 
 
 def test_logpt_basic():
@@ -171,7 +176,7 @@ def test_logpt_subtensor():
     logp_vals_fn = aesara.function([A_idx_value_var, I_value_var], A_idx_logp)
 
     # The compiled graph should not contain any `RandomVariables`
-    assert not any(isinstance(n.op, RandomVariable) for n in logp_vals_fn.maker.fgraph.apply_nodes)
+    assert_no_rvs(logp_vals_fn.maker.fgraph.outputs[0])
 
     decimals = select_by_precision(float64=6, float32=4)
 
