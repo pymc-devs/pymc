@@ -57,7 +57,7 @@ class DocstringModel(pm.Model):
         super().__init__(name, model)
         self.register_rv(Normal.dist(mu=mean, sigma=sigma), "v1")
         Normal("v2", mu=mean, sigma=sigma)
-        Normal("v3", mu=mean, sigma=Normal("sd", mu=10, sigma=1, testval=1.0))
+        Normal("v3", mu=mean, sigma=Normal("sd", mu=10, sigma=1, initval=1.0))
         Deterministic("v3_sq", self.v3 ** 2)
         Potential("p1", at.constant(1))
 
@@ -462,7 +462,7 @@ def test_make_obs_var():
     fake_model = pm.Model()
     with fake_model:
         fake_distribution = pm.Normal.dist(mu=0, sigma=1)
-        # Create the testval attribute simply for the sake of model testing
+        # Create the initval attribute simply for the sake of model testing
         fake_distribution.name = input_name
 
     # Check function behavior using the various inputs

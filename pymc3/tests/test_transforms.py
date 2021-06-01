@@ -227,7 +227,7 @@ def test_interval_near_boundary():
     x0 = np.nextafter(ub, lb)
 
     with pm.Model() as model:
-        pm.Uniform("x", testval=x0, lower=lb, upper=ub)
+        pm.Uniform("x", initval=x0, lower=lb, upper=ub)
 
     log_prob = model.point_logps()
     np.testing.assert_allclose(log_prob, np.array([-52.68]))
@@ -274,11 +274,11 @@ def test_chain_jacob_det():
 
 
 class TestElementWiseLogp(SeededTest):
-    def build_model(self, distfam, params, size, transform, testval=None):
-        if testval is not None:
-            testval = pm.floatX(testval)
+    def build_model(self, distfam, params, size, transform, initval=None):
+        if initval is not None:
+            initval = pm.floatX(initval)
         with pm.Model() as m:
-            distfam("x", size=size, transform=transform, testval=testval, **params)
+            distfam("x", size=size, transform=transform, initval=initval, **params)
         return m
 
     def check_transform_elementwise_logp(self, model):
@@ -408,7 +408,7 @@ class TestElementWiseLogp(SeededTest):
             pm.Normal,
             {"mu": 0.0, "sd": 1.0},
             size=3,
-            testval=np.asarray([-1.0, 1.0, 4.0]),
+            initval=np.asarray([-1.0, 1.0, 4.0]),
             transform=tr.ordered,
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
@@ -422,24 +422,24 @@ class TestElementWiseLogp(SeededTest):
     )
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_half_normal_ordered(self, sd, size):
-        testval = np.sort(np.abs(np.random.randn(*size)))
+        initval = np.sort(np.abs(np.random.randn(*size)))
         model = self.build_model(
             pm.HalfNormal,
             {"sd": sd},
             size=size,
-            testval=testval,
+            initval=initval,
             transform=tr.Chain([tr.log, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
 
     @pytest.mark.parametrize("lam,size", [(2.5, (2,)), (np.ones(3), (4, 3))])
     def test_exponential_ordered(self, lam, size):
-        testval = np.sort(np.abs(np.random.randn(*size)))
+        initval = np.sort(np.abs(np.random.randn(*size)))
         model = self.build_model(
             pm.Exponential,
             {"lam": lam},
             size=size,
-            testval=testval,
+            initval=initval,
             transform=tr.Chain([tr.log, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
@@ -452,12 +452,12 @@ class TestElementWiseLogp(SeededTest):
         ],
     )
     def test_beta_ordered(self, a, b, size):
-        testval = np.sort(np.abs(np.random.rand(*size)))
+        initval = np.sort(np.abs(np.random.rand(*size)))
         model = self.build_model(
             pm.Beta,
             {"alpha": a, "beta": b},
             size=size,
-            testval=testval,
+            initval=initval,
             transform=tr.Chain([tr.logodds, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
@@ -475,24 +475,24 @@ class TestElementWiseLogp(SeededTest):
 
         interval = tr.Interval(transform_params)
 
-        testval = np.sort(np.abs(np.random.rand(*size)))
+        initval = np.sort(np.abs(np.random.rand(*size)))
         model = self.build_model(
             pm.Uniform,
             {"lower": lower, "upper": upper},
             size=size,
-            testval=testval,
+            initval=initval,
             transform=tr.Chain([interval, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=1)
 
     @pytest.mark.parametrize("mu,kappa,size", [(0.0, 1.0, (2,)), (np.zeros(3), np.ones(3), (4, 3))])
     def test_vonmises_ordered(self, mu, kappa, size):
-        testval = np.sort(np.abs(np.random.rand(*size)))
+        initval = np.sort(np.abs(np.random.rand(*size)))
         model = self.build_model(
             pm.VonMises,
             {"mu": mu, "kappa": kappa},
             size=size,
-            testval=testval,
+            initval=initval,
             transform=tr.Chain([tr.circular, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
@@ -506,12 +506,12 @@ class TestElementWiseLogp(SeededTest):
         ],
     )
     def test_uniform_other(self, lower, upper, size, transform):
-        testval = np.ones(size) / size[-1]
+        initval = np.ones(size) / size[-1]
         model = self.build_model(
             pm.Uniform,
             {"lower": lower, "upper": upper},
             size=size,
-            testval=testval,
+            initval=initval,
             transform=transform,
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=1)
@@ -524,9 +524,9 @@ class TestElementWiseLogp(SeededTest):
         ],
     )
     def test_mvnormal_ordered(self, mu, cov, size, shape):
-        testval = np.sort(np.random.randn(*shape))
+        initval = np.sort(np.random.randn(*shape))
         model = self.build_model(
-            pm.MvNormal, {"mu": mu, "cov": cov}, size=size, testval=testval, transform=tr.ordered
+            pm.MvNormal, {"mu": mu, "cov": cov}, size=size, initval=initval, transform=tr.ordered
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=1)
 

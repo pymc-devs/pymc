@@ -277,14 +277,14 @@ class NoDistribution(Distribution):
         self,
         shape,
         dtype,
-        testval=None,
+        initval=None,
         defaults=(),
         parent_dist=None,
         *args,
         **kwargs,
     ):
         super().__init__(
-            shape=shape, dtype=dtype, testval=testval, defaults=defaults, *args, **kwargs
+            shape=shape, dtype=dtype, initval=initval, defaults=defaults, *args, **kwargs
         )
         self.parent_dist = parent_dist
 
@@ -342,7 +342,7 @@ class DensityDist(Distribution):
         logp,
         shape=(),
         dtype=None,
-        testval=0,
+        initval=0,
         random=None,
         wrap_random_with_dist_shape=True,
         check_shape_in_random=True,
@@ -363,8 +363,8 @@ class DensityDist(Distribution):
             a value here.
         dtype: None, str (Optional)
             The dtype of the distribution.
-        testval: number or array (Optional)
-            The ``testval`` of the RV's tensor that follow the ``DensityDist``
+        initval: number or array (Optional)
+            The ``initval`` of the RV's tensor that follow the ``DensityDist``
             distribution.
         args, kwargs: (Optional)
             These are passed to the parent class' ``__init__``.
@@ -400,7 +400,7 @@ class DensityDist(Distribution):
         """
         if dtype is None:
             dtype = aesara.config.floatX
-        super().__init__(shape, dtype, testval, *args, **kwargs)
+        super().__init__(shape, dtype, initval, *args, **kwargs)
         self.logp = logp
         if type(self.logp) == types.MethodType:
             if PLATFORM != "linux":
