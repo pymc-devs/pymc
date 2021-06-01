@@ -612,8 +612,8 @@ def maybe_resize(
     ndim_expected,
     ndim_batch,
     ndim_supp,
-    size=None,
-    shape=None,
+    shape,
+    size,
     **kwargs,
 ):
     """Resize a distribution if necessary.
@@ -633,10 +633,10 @@ def maybe_resize(
     ndim_supp : int
         The support dimension of the distribution.
         0 if a univariate distribution, 1 if a multivariate distribution.
-    size : tuple
-        A tuple specifying the size of a distribution
     shape : tuple
         A tuple specifying the final shape of a distribution
+    size : tuple
+        A tuple specifying the size of a distribution
 
     Returns
     -------

@@ -275,8 +275,8 @@ class Distribution(metaclass=DistributionMeta):
             ndim_expected,
             ndim_batch,
             ndim_supp,
-            shape=shape,
-            size=size,
+            shape,
+            size,
             **kwargs,
         )
 
