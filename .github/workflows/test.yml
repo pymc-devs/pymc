@@ -1,0 +1,163 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+      - checks
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  changes:
+    name: "Check for changes"
+    runs-on: ubuntu-latest
+    outputs:
+      changes: ${{ steps.changes.outputs.src }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            python: &python
+            - 'aeppl/**/*.py'
+            - 'tests/**/*.py'
+            - 'aeppl/**/*.pyx'
+            - 'tests/**/*.pyx'
+            - '*.py'
+            src:
+            - *python
+            - 'aeppl/**/*.c'
+            - 'tests/**/*.c'
+            - 'aeppl/**/*.h'
+            - 'tests/**/*.h'
+            - '.github/**/*.yml'
+            - 'setup.cfg'
+            - 'requirements.txt'
+            - '.coveragerc'
+
+
+  style:
+    name: Check code style
+    needs: changes
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.changes == 'true' }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+    - uses: pre-commit/action@v2.0.0
+
+  test:
+    name: "Test py${{ matrix.python-version }}: ${{ matrix.part }}"
+    needs:
+      - changes
+      - style
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.changes == 'true' && needs.style.result == 'success' }}
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.6", "3.7"]
+        fast-compile: [0]
+        float32: [0]
+        part:
+          - "tests"
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          mamba-version: "*"
+          channels: conda-forge,defaults
+          channel-priority: true
+          python-version: ${{ matrix.python-version }}
+          auto-update-conda: true
+
+      - name: Create matrix id
+        id: matrix-id
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: |
+          echo $MATRIX_CONTEXT
+          export MATRIX_ID=`echo $MATRIX_CONTEXT | md5sum | cut -c 1-32`
+          echo $MATRIX_ID
+          echo "::set-output name=id::$MATRIX_ID"
+
+      - name: Install dependencies
+        shell: bash -l {0}
+        run: |
+          mamba install --yes -q "python~=${PYTHON_VERSION}=*_cpython" mkl numpy scipy pip mkl-service
+          pip install -q -r requirements.txt
+          mamba list && pip freeze
+          python -c 'import aesara; print(aesara.config.__str__(print_doc=False))'
+          python -c 'import aesara; assert(aesara.config.blas__ldflags != "")'
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+
+      - name: Run tests
+        shell: bash -l {0}
+        run: |
+          if [[ $FAST_COMPILE == "1" ]]; then export AESARA_FLAGS=$AESARA_FLAGS,mode=FAST_COMPILE; fi
+          if [[ $FLOAT32 == "1" ]]; then export AESARA_FLAGS=$AESARA_FLAGS,floatX=float32; fi
+          export AESARA_FLAGS=$AESARA_FLAGS,warn__ignore_bug_before=all,on_opt_error=raise,on_shape_error=raise,gcc__cxxflags=-pipe
+          python -m pytest -x -r A --verbose --runslow --cov=aesara/ --cov-report=xml:coverage/coverage-${MATRIX_ID}.xml --no-cov-on-fail $PART
+        env:
+          MATRIX_ID: ${{ steps.matrix-id.outputs.id }}
+          MKL_THREADING_LAYER: GNU
+          MKL_NUM_THREADS: 1
+          OMP_NUM_THREADS: 1
+          PART: ${{ matrix.part }}
+          FAST_COMPILE: ${{ matrix.fast-compile }}
+          FLOAT32: ${{ matrix.float32 }}
+
+      - name: Upload coverage file
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage
+          path: coverage/coverage-${{ steps.matrix-id.outputs.id }}.xml
+
+  all-checks:
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    name: "All tests"
+    needs: [changes, style, test]
+    steps:
+      - name: Check build matrix status
+        if: ${{ needs.changes.outputs.changes == 'true' && (needs.style.result != 'success' || needs.test.result != 'success') }}
+        run: exit 1
+
+  upload-coverage:
+    runs-on: ubuntu-latest
+    name: "Upload coverage"
+    needs: [changes, all-checks]
+    if: ${{ needs.changes.outputs.changes == 'true' && needs.all-checks.result == 'success' }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U coverage>=5.1 coveralls
+
+      - name: Download coverage file
+        uses: actions/download-artifact@v2
+        with:
+          name: coverage
+          path: coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          directory: ./coverage/
+          fail_ci_if_error: true

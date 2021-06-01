@@ -1,0 +1,51 @@
+name: PyPI
+on:
+  push:
+    branches:
+      - master
+      - auto-release
+  pull_request:
+    branches: [master]
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Build the sdist
+        run: |
+          python setup.py sdist
+      - name: Check the sdist installs and imports
+        run: |
+          mkdir -p test-sdist
+          cd test-sdist
+          python -m venv venv-sdist
+          venv-sdist/bin/python -m pip install ../dist/aeppl-*.tar.gz
+          venv-sdist/bin/python -c "import aeppl;print(aeppl.__version__)"
+      - uses: actions/upload-artifact@v2
+        with:
+          name: artifact
+          path: dist/*
+
+  upload_pypi:
+    name: Upload to PyPI on release
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: artifact
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.pypi_secret }}
