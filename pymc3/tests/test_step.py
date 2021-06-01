@@ -964,7 +964,7 @@ class TestNutsCheckTrace:
 
     def test_bad_init_nonparallel(self):
         with Model():
-            HalfNormal("a", sigma=1, testval=-1, transform=None)
+            HalfNormal("a", sigma=1, initval=-1, transform=None)
             with pytest.raises(SamplingError) as error:
                 sample(init=None, chains=1, random_seed=1)
             error.match("Initial evaluation")
@@ -972,17 +972,17 @@ class TestNutsCheckTrace:
     @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
     def test_bad_init_parallel(self):
         with Model():
-            HalfNormal("a", sigma=1, testval=-1, transform=None)
+            HalfNormal("a", sigma=1, initval=-1, transform=None)
             with pytest.raises(SamplingError) as error:
                 sample(init=None, cores=2, random_seed=1)
             error.match("Initial evaluation")
 
     def test_linalg(self, caplog):
         with Model():
-            a = Normal("a", size=2, testval=floatX(np.zeros(2)))
+            a = Normal("a", size=2, initval=floatX(np.zeros(2)))
             a = at.switch(a > 0, np.inf, a)
             b = at.slinalg.solve(floatX(np.eye(2)), a)
-            Normal("c", mu=b, size=2, testval=floatX(np.r_[0.0, 0.0]))
+            Normal("c", mu=b, size=2, initval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
             trace = sample(20, init=None, tune=5, chains=2)
             warns = [msg.msg for msg in caplog.records]

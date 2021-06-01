@@ -655,7 +655,7 @@ def simple_model_data(use_minibatch):
 def simple_model(simple_model_data):
     with pm.Model() as model:
         mu_ = pm.Normal(
-            "mu", mu=simple_model_data["mu0"], sigma=simple_model_data["sigma0"], testval=0
+            "mu", mu=simple_model_data["mu0"], sigma=simple_model_data["sigma0"], initval=0
         )
         pm.Normal(
             "x",

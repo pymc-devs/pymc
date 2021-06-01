@@ -609,7 +609,7 @@ class NormalMixture(Mixture):
                 10,
                 shape=n_components,
                 transform=pm.transforms.ordered,
-                testval=[1, 2, 3],
+                initval=[1, 2, 3],
             )
             σ = pm.HalfNormal("σ", 10, shape=n_components)
             weights = pm.Dirichlet("w", np.ones(n_components))
@@ -684,7 +684,7 @@ class MixtureSameFamily(Distribution):
         self.mixture_axis = mixture_axis
         kwargs.setdefault("dtype", self.comp_dists.dtype)
 
-        # Compute the mode so we don't always have to pass a testval
+        # Compute the mode so we don't always have to pass a initval
         defaults = kwargs.pop("defaults", [])
         event_shape = self.comp_dists.shape[mixture_axis + 1 :]
         _w = at.shape_padleft(

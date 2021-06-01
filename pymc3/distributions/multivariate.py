@@ -840,7 +840,7 @@ class Wishart(Continuous):
         )
 
 
-def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testval=None):
+def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initval=None):
     R"""
     Bartlett decomposition of the Wishart distribution. As the Wishart
     distribution requires the matrix to be symmetric positive semi-definite
@@ -875,7 +875,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         Input matrix S is already Cholesky decomposed as S.T * S
     return_cholesky: bool (default=False)
         Only return the Cholesky decomposed matrix.
-    testval: ndarray
+    initval: ndarray
         p x p positive definite matrix used to initialize
 
     Notes
@@ -894,21 +894,21 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
     n_diag = len(diag_idx[0])
     n_tril = len(tril_idx[0])
 
-    if testval is not None:
+    if initval is not None:
         # Inverse transform
-        testval = np.dot(np.dot(np.linalg.inv(L), testval), np.linalg.inv(L.T))
-        testval = linalg.cholesky(testval, lower=True)
-        diag_testval = testval[diag_idx] ** 2
-        tril_testval = testval[tril_idx]
+        initval = np.dot(np.dot(np.linalg.inv(L), initval), np.linalg.inv(L.T))
+        initval = linalg.cholesky(initval, lower=True)
+        diag_testval = initval[diag_idx] ** 2
+        tril_testval = initval[tril_idx]
     else:
         diag_testval = None
         tril_testval = None
 
     c = at.sqrt(
-        ChiSquared("%s_c" % name, nu - np.arange(2, 2 + n_diag), shape=n_diag, testval=diag_testval)
+        ChiSquared("%s_c" % name, nu - np.arange(2, 2 + n_diag), shape=n_diag, initval=diag_testval)
     )
     pm._log.info("Added new variable %s_c to model diagonal of Wishart." % name)
-    z = Normal("%s_z" % name, 0.0, 1.0, shape=n_tril, testval=tril_testval)
+    z = Normal("%s_z" % name, 0.0, 1.0, shape=n_tril, initval=tril_testval)
     pm._log.info("Added new variable %s_z to model off-diagonals of Wishart." % name)
     # Construct A matrix
     A = at.zeros(S.shape, dtype=np.float32)
