@@ -327,17 +327,13 @@ class BaseTestDistribution(SeededTest):
 
     def _instantiate_pymc_rv(self, dist_params=None):
         params = dist_params if dist_params else self.pymc_dist_params
-        with pm.Model():
-            self.pymc_rv = self.pymc_dist(
-                **params,
-                size=self.size,
-                rng=aesara.shared(self.get_random_state(reset=True)),
-                name=f"{self.pymc_dist.rv_op.name}_test",
-            )
+        self.pymc_rv = self.pymc_dist.dist(
+            **params, size=self.size, rng=aesara.shared(self.get_random_state(reset=True))
+        )
 
     def check_pymc_draws_match_reference(self):
         # need to re-instantiate it to make sure that the order of drawings match the reference distribution one
-        self._instantiate_pymc_rv()
+        # self._instantiate_pymc_rv()
         assert_array_almost_equal(
             self.pymc_rv.eval(), self.reference_dist_draws, decimal=self.decimal
         )

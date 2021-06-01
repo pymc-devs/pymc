@@ -143,21 +143,44 @@ class Distribution(metaclass=DistributionMeta):
         if "shape" in kwargs:
             raise DeprecationWarning("The `shape` keyword is deprecated; use `size`.")
 
+        testval = kwargs.pop("testval", None)
+
+        if testval is not None:
+            warnings.warn(
+                "The `testval` argument is deprecated; use `initval`.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        initval = kwargs.pop("initval", testval)
+
         transform = kwargs.pop("transform", UNSET)
 
         rv_out = cls.dist(*args, rng=rng, **kwargs)
 
-        return model.register_rv(rv_out, name, data, total_size, dims=dims, transform=transform)
+        if testval is not None:
+            rv_out.tag.test_value = testval
+
+        return model.register_rv(
+            rv_out, name, data, total_size, dims=dims, transform=transform, initval=initval
+        )
 
     @classmethod
     def dist(cls, dist_params, rng=None, **kwargs):
 
         testval = kwargs.pop("testval", None)
 
-        rv_var = cls.rv_op(*dist_params, rng=rng, **kwargs)
-
         if testval is not None:
-            rv_var.tag.test_value = testval
+            warnings.warn(
+                "The `testval` argument is deprecated. "
+                "Use `initval` to set initial values for a `Model`; "
+                "otherwise, set test values on Aesara parameters explicitly "
+                "when attempting to use Aesara's test value debugging features.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        rv_var = cls.rv_op(*dist_params, rng=rng, **kwargs)
 
         if (
             rv_var.owner
