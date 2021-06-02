@@ -1030,12 +1030,18 @@ class TestMatchesScipy:
             lambda value, sigma: sp.halfnorm.logcdf(value, scale=sigma),
         )
 
-    def test_chi_squared(self):
+    def test_chisquare(self):
         self.check_logp(
             ChiSquare,
             Rplus,
-            {"nu": Rplusdunif},
+            {"nu": Rplus},
             lambda value, nu: sp.chi2.logpdf(value, df=nu),
+        )
+        self.check_logcdf(
+            ChiSquare,
+            Rplus,
+            {"nu": Rplus},
+            lambda value, nu: sp.chi2.logcdf(value, df=nu),
         )
 
     @pytest.mark.xfail(reason="Distribution not refactored yet")

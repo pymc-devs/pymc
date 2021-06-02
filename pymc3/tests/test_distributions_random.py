@@ -277,19 +277,6 @@ class TestAsymmetricLaplace(BaseTestCases.BaseTestCase):
     params = {"kappa": 1.0, "b": 1.0, "mu": 0.0}
 
 
-class TestChiSquare(BaseTestCases.BaseTestCase):
-    distribution = pm.ChiSquare
-    params = {"nu": 2.0}
-    expected_rv_op_params = {"nu": 2.0}
-    reference_dist_params = {"df": 2.0}
-    reference_dist = seeded_numpy_distribution_builder("chisquare")
-    tests_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
-    ]
-
-
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestExGaussian(BaseTestCases.BaseTestCase):
     distribution = pm.ExGaussian
@@ -758,6 +745,19 @@ class TestInverseGammaMuSigma(BaseTestDistribution):
     )
     expected_rv_op_params = {"alpha": expected_alpha, "beta": expected_beta}
     tests_to_run = ["check_pymc_params_match_rv_op"]
+
+
+class TestChiSquare(BaseTestDistribution):
+    pymc_dist = pm.ChiSquare
+    pymc_dist_params = {"nu": 2.0}
+    expected_rv_op_params = {"nu": 2.0}
+    reference_dist_params = {"df": 2.0}
+    reference_dist = seeded_numpy_distribution_builder("chisquare")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
 
 
 class TestBinomial(BaseTestDistribution):

@@ -2592,7 +2592,7 @@ class ChiSquare(Gamma):
     @classmethod
     def dist(cls, nu, *args, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
-        super().__init__(alpha=nu / 2.0, beta=0.5, *args, **kwargs)
+        return super().__init__([nu / 2.0, 0.5], *args, **kwargs)
 
     def logp(value, nu):
         """
@@ -2608,7 +2608,7 @@ class ChiSquare(Gamma):
         -------
         TensorVariable
         """
-        return Gamma.logp(value, nu/2, 2)
+        return Gamma.logp(value, nu / 2, 2)
 
     def logcdf(value, nu):
         """
@@ -2625,7 +2625,7 @@ class ChiSquare(Gamma):
         -------
         TensorVariable
         """
-        return Gamma.logcdf(value, nu/2, 2)
+        return Gamma.logcdf(value, nu / 2, 2)
 
 
 # TODO: Remove this once logpt for multiplication is working!
