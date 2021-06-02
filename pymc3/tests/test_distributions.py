@@ -1137,13 +1137,17 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta),
         )
-        self.check_logp(Beta, Unit, {"mu": Unit, "sigma": Rplus}, beta_mu_sigma)
+        self.check_logp(
+            Beta,
+            Unit,
+            {"mu": Unit, "sigma": Rplus},
+            beta_mu_sigma,
+        )
         self.check_logcdf(
             Beta,
             Unit,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.beta.logcdf(value, alpha, beta),
-            n_samples=10,
             decimal=select_by_precision(float64=5, float32=3),
         )
 
@@ -1266,20 +1270,17 @@ class TestMatchesScipy:
             Nat,
             {"mu": Rplus, "alpha": Rplus},
             scipy_mu_alpha_logcdf,
-            n_samples=5,
         )
         self.check_logcdf(
             NegativeBinomial,
             Nat,
             {"p": Unit, "n": Rplus},
             lambda value, p, n: sp.nbinom.logcdf(value, n, p),
-            n_samples=5,
         )
         self.check_selfconsistency_discrete_logcdf(
             NegativeBinomial,
             Nat,
             {"mu": Rplus, "alpha": Rplus},
-            n_samples=10,
         )
 
     @pytest.mark.xfail(reason="Distribution not refactored yet")
@@ -1338,7 +1339,6 @@ class TestMatchesScipy:
             Rplus,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: floatX(sp.lognorm.logpdf(value, sigma, 0, np.exp(mu))),
-            n_samples=5,  # Just testing alternative parametrization
         )
         self.check_logcdf(
             Lognormal,
@@ -1351,7 +1351,6 @@ class TestMatchesScipy:
             Rplus,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: sp.lognorm.logcdf(value, sigma, 0, np.exp(mu)),
-            n_samples=5,  # Just testing alternative parametrization
         )
 
     def test_t(self):
@@ -1366,21 +1365,18 @@ class TestMatchesScipy:
             R,
             {"nu": Rplus, "mu": R, "sigma": Rplus},
             lambda value, nu, mu, sigma: sp.t.logpdf(value, nu, mu, sigma),
-            n_samples=5,  # Just testing alternative parametrization
         )
         self.check_logcdf(
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "lam": Rplus},
             lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam ** -0.5),
-            n_samples=10,  # relies on slow incomplete beta
         )
         self.check_logcdf(
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "sigma": Rplus},
             lambda value, nu, mu, sigma: sp.t.logcdf(value, nu, mu, sigma),
-            n_samples=5,  # Just testing alternative parametrization
         )
 
     def test_cauchy(self):
@@ -1557,13 +1553,11 @@ class TestMatchesScipy:
             Nat,
             {"n": NatSmall, "p": Unit},
             lambda value, n, p: sp.binom.logcdf(value, n, p),
-            n_samples=10,
         )
         self.check_selfconsistency_discrete_logcdf(
             Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
-            n_samples=10,
         )
 
     @pytest.mark.xfail(reason="checkd tests has not been refactored")
@@ -1766,14 +1760,12 @@ class TestMatchesScipy:
             Nat,
             {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
             logcdf_fn,
-            n_samples=10,
         )
 
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedNegativeBinomial,
             Nat,
             {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
-            n_samples=10,
         )
 
     @pytest.mark.xfail(reason="Test not refactored yet")
@@ -1806,14 +1798,12 @@ class TestMatchesScipy:
             Nat,
             {"psi": Unit, "n": NatSmall, "p": Unit},
             logcdf_fn,
-            n_samples=10,
         )
 
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedBinomial,
             Nat,
             {"n": NatSmall, "p": Unit, "psi": Unit},
-            n_samples=10,
         )
 
     @pytest.mark.parametrize("n", [1, 2, 3])
