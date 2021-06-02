@@ -1,0 +1,797 @@
+import contextlib
+
+import aesara.tensor as at
+import numpy as np
+import pytest
+import scipy.stats as stats
+
+from aeppl.logpdf import logpdf
+
+# @pytest.fixture(scope="module", autouse=True)
+# def set_aesara_flags():
+#     with aesara.config.change_flags(cxx=""):
+#         yield
+
+
+def create_aesara_params(dist_params, obs, size):
+    dist_params_at = []
+    for p in dist_params:
+        p_aet = at.as_tensor(p).type()
+        p_aet.tag.test_value = p
+        dist_params_at.append(p_aet)
+
+    size_at = []
+    for s in size:
+        s_aet = at.iscalar()
+        s_aet.tag.test_value = s
+        size_at.append(s_aet)
+
+    obs_at = at.as_tensor(obs).type()
+    obs_at.tag.test_value = obs
+
+    return dist_params_at, obs_at, size_at
+
+
+def scipy_logpdf_tester(rv_var, obs, dist_params, test_fn=None):
+    """Test for correspondence between `RandomVariable` and NumPy shape and
+    broadcast dimensions.
+    """
+    if test_fn is None:
+        name = getattr(rv_var.owner.op, "name", None)
+
+        if name is None:
+            name = rv_var.__name__
+
+        test_fn = getattr(stats, name)
+
+    aesara_res = logpdf(rv_var, at.as_tensor(obs))
+    aesara_res_val = aesara_res.eval(dist_params)
+
+    numpy_res = np.asarray(test_fn(obs, *dist_params.values()))
+
+    assert aesara_res.type.numpy_dtype.kind == numpy_res.dtype.kind
+
+    numpy_shape = np.shape(numpy_res)
+    numpy_bcast = [s == 1 for s in numpy_shape]
+    np.testing.assert_array_equal(aesara_res.type.broadcastable, numpy_bcast)
+
+    np.testing.assert_array_equal(aesara_res_val.shape, numpy_res.shape)
+
+    np.testing.assert_array_almost_equal(aesara_res_val, numpy_res, 4)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size",
+    [
+        ((0, 1), np.array([0, 0.5, 1, -1], dtype=np.float64), ()),
+        ((-2, -1), np.array([0, 0.5, 1, -1, -1.5], dtype=np.float64), ()),
+    ],
+)
+def test_uniform_logpdf(dist_params, obs, size):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.uniform(*dist_params_at, size=size_at)
+
+    def scipy_logpdf(obs, l, u):
+        return stats.uniform.logpdf(obs, loc=l, scale=u - l)
+
+    scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size",
+    [
+        ((0, 1), np.array([0, 0.5, 1, -1], dtype=np.float64), ()),
+        ((-1, 20), np.array([0, 0.5, 1, -1], dtype=np.float64), ()),
+        ((-1, 20), np.array([0, 0.5, 1, -1], dtype=np.float64), (2, 3)),
+    ],
+)
+def test_normal_logpdf(dist_params, obs, size):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.normal(*dist_params_at, size=size_at)
+
+    scipy_logpdf_tester(x, obs, dist_params, test_fn=stats.norm.logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size",
+    [
+        ((0, 1), np.array([0, 0.5, 1, -1], dtype=np.float64), ()),
+        ((-1, 20), np.array([0, 0.5, 1, -1], dtype=np.float64), ()),
+        ((-1, 20), np.array([0, 0.5, 1, -1], dtype=np.float64), (2, 3)),
+    ],
+)
+def test_halfnormal_logpdf(dist_params, obs, size):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.halfnormal(*dist_params_at, size=size_at)
+
+    scipy_logpdf_tester(x, obs, dist_params, test_fn=stats.halfnorm.logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size",
+    [
+        ((0.5, 0.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), ()),
+        ((1.5, 1.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), ()),
+        ((1.5, 1.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3)),
+        ((1.5, 0.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), ()),
+    ],
+)
+def test_beta_logpdf(dist_params, obs, size):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.beta(*dist_params_at, size=size_at)
+
+    scipy_logpdf_tester(x, obs, dist_params, test_fn=stats.beta.logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1,), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), True),
+        ((1.5,), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5,), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10,), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+    ],
+)
+def test_exponential_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.exponential(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, mu):
+        return stats.expon.logpdf(obs, scale=mu)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size",
+    [
+        ((-1, 1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), ()),
+        ((1.5, 1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), ()),
+        ((1.5, 2.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3)),
+        ((10, 3.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), ()),
+    ],
+)
+def test_laplace_logpdf(dist_params, obs, size):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.laplace(*dist_params_at, size=size_at)
+
+    def scipy_logpdf(obs, mu, b):
+        return stats.laplace.logpdf(obs, loc=mu, scale=b)
+
+    scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, -1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), True),
+        ((-1.5, 10.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5, 2.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10, 1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+    ],
+)
+def test_lognormal_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.lognormal(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, mu, sigma):
+        return stats.lognorm.logpdf(obs, s=sigma, scale=np.exp(mu))
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, -1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), True),
+        ((1.5, 10.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5, 2.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10, 1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+    ],
+)
+def test_pareto_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.pareto(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, b, scale):
+        return stats.pareto.logpdf(obs, b, scale=scale)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, -1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), True),
+        ((-1.5, 10.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5, 2.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10, 1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+    ],
+)
+def test_halfcauchy_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.halfcauchy(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, alpha, beta):
+        return stats.halfcauchy.logpdf(obs, loc=alpha, scale=beta)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, -1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), True),
+        ((1.5, 10.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5, 2.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10, 1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+    ],
+)
+def test_gamma_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.gamma(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, alpha, inv_beta):
+        return stats.gamma.logpdf(obs, alpha, scale=1.0 / inv_beta)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, -1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), True),
+        ((1.5, 10.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5, 2.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10, 1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+    ],
+)
+def test_invgamma_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.invgamma(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, alpha, beta):
+        return stats.invgamma.logpdf(obs, alpha, scale=beta)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, -1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), True),
+        ((1.5, 10.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5, 2.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10, 1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+    ],
+)
+def test_weibull_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.weibull(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, alpha, beta):
+        return stats.weibull_min.logpdf(obs, alpha, scale=beta)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, -1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), True),
+        ((1.5, 10.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5, 2.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10, 1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+    ],
+)
+def test_vonmises_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.vonmises(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, mu, kappa):
+        return stats.vonmises.logpdf(obs, kappa, loc=mu)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, -1.5, 0.0), np.array([0, -0.5, 10, -1], dtype=np.float64), (), True),
+        ((1.5, 3.0, 10.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        (
+            (1.5, 1.8, 2.0),
+            np.array([0, 0.5, 1, 10, -1], dtype=np.float64),
+            (2, 3),
+            False,
+        ),
+        ((10, 50, 100.0), np.array([0, 10.1, 80, 103], dtype=np.float64), (), False),
+    ],
+)
+def test_triangular_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.triangular(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, lower, mode, upper):
+        return stats.triang.logpdf(
+            obs, (mode - lower) / (upper - lower), loc=lower, scale=upper - lower
+        )
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, -1.5), np.array([0, -0.5, 10, -1], dtype=np.float64), (), True),
+        ((1.5, 3.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5, 1.8), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10, 50), np.array([0, 10.1, 80, 103], dtype=np.float64), (), False),
+    ],
+)
+def test_gumbel_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.gumbel(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, mu, beta):
+        return stats.gumbel_r.logpdf(obs, loc=mu, scale=beta)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, -1.5), np.array([0, -0.5, 10, -1], dtype=np.float64), (), True),
+        ((1.5, 3.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5, 1.8), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10, 50), np.array([0, 10.1, 80, 103], dtype=np.float64), (), False),
+    ],
+)
+def test_logistic_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.logistic(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, mu, s):
+        return stats.logistic.logpdf(obs, loc=mu, scale=s)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((1, 2.0), np.array([0, 1], dtype=np.int64), (), True),
+        ((1, 1.0), np.array([0, 1], dtype=np.int64), (), False),
+        ((10, 0.0), np.array([0, 1], dtype=np.int64), (), False),
+        ((10, 0.5), np.array([0, 1], dtype=np.int64), (3, 2), False),
+        (
+            (10, np.array([0.0, 0.1, 0.9, 1.0])),
+            np.array([0, 1, 4, 10], dtype=np.int64),
+            (),
+            False,
+        ),
+    ],
+)
+def test_binomial_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.binomial(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, n, p):
+        return stats.binom.logpmf(obs, n, p)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((1, 1.0, -1.0), np.array([0, 1], dtype=np.int64), (), True),
+        ((1, 1.0, 1.0), np.array([0, 1], dtype=np.int64), (), False),
+        ((10, 3.0, 2.0), np.array([0, 1], dtype=np.int64), (3, 2), False),
+        (
+            (10, np.array([0.01, 0.2, 0.9, 1.0]), 2.0),
+            np.array([0, 1, 4, 10], dtype=np.int64),
+            (),
+            False,
+        ),
+    ],
+)
+def test_betabinomial_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.betabinom(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, n, alpha, beta):
+        return stats.betabinom.logpmf(obs, n, alpha, beta)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1,), np.array([0, 1], dtype=np.int64), (), True),
+        ((1.0,), np.array([0, 1], dtype=np.int64), (), False),
+        ((0.5,), np.array([0, 1], dtype=np.int64), (3, 2), False),
+        ((np.array([0.01, 0.2, 0.9]),), np.array([0, 1, 2], dtype=np.int64), (), False),
+    ],
+)
+def test_bernoulli_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.bernoulli(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, p):
+        return stats.bernoulli.logpmf(obs, p)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1,), np.array([0, 1, 100, 10000], dtype=np.int64), (), True),
+        ((1.0,), np.array([0, 1, 100, 10000], dtype=np.int64), (), False),
+        ((0.5,), np.array([0, 1, 100, 10000], dtype=np.int64), (3, 2), False),
+        (
+            (np.array([0.01, 0.2, 200]),),
+            np.array([-1, 1, 84], dtype=np.int64),
+            (),
+            False,
+        ),
+    ],
+)
+def test_poisson_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.poisson(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, mu):
+        return stats.poisson.logpmf(obs, mu)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((10, -1), np.array([0, 1, 100, 10000], dtype=np.int64), (), True),
+        ((0.1, 0.9), np.array([0, 1, 100, 10000], dtype=np.int64), (), False),
+        ((10, 0.5), np.array([0, 1, 100, 10000], dtype=np.int64), (3, 2), False),
+        (
+            (10, np.array([0.01, 0.2, 0.8])),
+            np.array([-1, 1, 84], dtype=np.int64),
+            (),
+            False,
+        ),
+        (
+            (np.array([2e10, 2, 1], dtype=np.int64), 0.5),
+            np.array([-1, 1, 84], dtype=np.int64),
+            (),
+            False,
+        ),
+    ],
+)
+def test_nbinom_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.nbinom(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, n, p):
+        return stats.nbinom.logpmf(obs, n, p)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1,), np.array([0, 1, 100, 10000], dtype=np.int64), (), True),
+        ((0.1,), np.array([0, 1, 100, 10000], dtype=np.int64), (), False),
+        ((1.0,), np.array([0, 1, 100, 10000], dtype=np.int64), (3, 2), False),
+        (
+            (np.array([0.01, 0.2, 0.8]),),
+            np.array([-1, 1, 84], dtype=np.int64),
+            (),
+            False,
+        ),
+    ],
+)
+def test_geometric_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.geometric(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, p):
+        return stats.geom.logpmf(obs, p)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, 0, 1), np.array([0, 1, 100, 10000], dtype=np.int64), (), True),
+        ((1, 0, 1), np.array([0, 1, 100, 10000], dtype=np.int64), (), False),
+        ((10, 2, 4), np.array([0, 1, 100, 10000], dtype=np.int64), (3, 2), False),
+        (
+            (np.array([10, 5, 3], dtype=np.int64), 1, 2),
+            np.array([-1, 1, 84], dtype=np.int64),
+            (),
+            False,
+        ),
+    ],
+)
+def test_hypergeometric_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.hypergeometric(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, good, bad, n):
+        N = n
+        M = good + bad
+        n = good
+        return stats.hypergeom.logpmf(obs, M, n, N)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.xfail(reason="Not finished")
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((np.array([-0.5, 0.5]),), np.array([0, 1], dtype=np.int64), (), True),
+        ((np.array([0.5, 0.5]),), np.array([0, 1, 100], dtype=np.int64), (), False),
+        ((np.array([0.5, 0.5]),), np.array([0, 1, 100], dtype=np.int64), (3, 2), False),
+        (
+            (np.array([[0.3, 0.7], [0.1, 0.8]]),),
+            np.array([1, 0], dtype=np.int64),
+            (),
+            False,
+        ),
+    ],
+)
+def test_categorical_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.categorical(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, p):
+        return stats.categorical.logpmf(obs, p)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((np.array([-0.5, 0.5]), -1.0 * np.eye(2)), np.array([0, 1]), (), True),
+        (
+            (np.array([0.5, 0.5]), np.eye(2)),
+            np.array([[0.0, 0.0], [1.0, -1.0], [100.0, 200.0]]),
+            (),
+            False,
+        ),
+        (
+            (np.array([0.5, 0.5]), 10.0 * np.eye(2)),
+            np.array([[0.0, 0.0], [1.0, -1.0], [100.0, 200.0]]),
+            (3, 2),
+            False,
+        ),
+        pytest.param(
+            (np.array([[0.3, 0.7], [0.1, 0.8]]), np.eye(2)[None, ...]),
+            np.array([[0.0, 0.0], [1.0, -1.0], [100.0, 200.0]]),
+            (),
+            False,
+            marks=pytest.mark.xfail(
+                reason=(
+                    "This won't work until the Cholesky is replaced with something "
+                    "that can handle more than two dimensions."
+                )
+            ),
+        ),
+    ],
+)
+def test_mvnormal_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.multivariate_normal(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, mu, cov):
+        return stats.multivariate_normal.logpdf(obs, mu, cov)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((np.array([-0.5, 0.5]),), np.array([[0.0, 1.0], [1.0, 0.0]]), (), True),
+        ((np.array([0.5, 0.5]),), np.array([[0.1, 0.5], [0.9, 0.5]]), (), False),
+        ((np.array([0.5, 0.5]),), np.array([[0.1, 0.5], [0.9, 0.5]]), (3, 2), False),
+        pytest.param(
+            (np.array([[10.0, 5.7], [0.1, 0.8]]),),
+            np.array([[0.1, 0.5], [0.9, 0.5]]),
+            (),
+            False,
+            marks=pytest.mark.xfail(
+                reason=("SciPy doesn't support parameter broadcasting")
+            ),
+        ),
+    ],
+)
+def test_dirichlet_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.dirichlet(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, alpha):
+        return stats.dirichlet.logpdf(obs, alpha)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((10, np.array([0.8, 0.9])), np.array([0, 10], dtype=np.int64), (), True),
+        ((10, np.array([0.1, 0.9])), np.array([0, 10], dtype=np.int64), (), False),
+        ((10, np.array([0.1, 0.9])), np.array([0, 10], dtype=np.int64), (3, 2), False),
+        (
+            (
+                np.array([10, 3], dtype=np.int64),
+                np.array([[0.1, 0.8], [0.9, 0.2]]).T,
+            ),
+            np.array([[3, 1], [7, 9]], dtype=np.int64),
+            (),
+            False,
+        ),
+    ],
+)
+def test_multinomial_logpdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.multinomial(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logpdf(obs, n, p):
+        return stats.multinomial.logpmf(obs, n, p)
+
+    with cm:
+        scipy_logpdf_tester(x, obs, dist_params, test_fn=scipy_logpdf)
