@@ -36,7 +36,7 @@ from scipy.special import erf, logit
 
 import pymc3 as pm
 
-from pymc3.aesaraf import change_rv_size, floatX, intX
+from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import (
     AR1,
     CAR,
@@ -102,9 +102,10 @@ from pymc3.distributions import (
     continuous,
     logcdf,
     logp,
+    logpt,
     logpt_sum,
 )
-from pymc3.math import kronecker, logsumexp
+from pymc3.math import kronecker
 from pymc3.model import Deterministic, Model, Point
 from pymc3.tests.helpers import select_by_precision
 from pymc3.vartypes import continuous_types
@@ -751,6 +752,10 @@ class TestMatchesScipy:
         if not skip_paramdomain_inside_edge_test:
             domains = paramdomains.copy()
             domains["value"] = domain
+
+            model, param_vars = build_model(pymc3_dist, domain, paramdomains)
+            pymc3_logcdf = model.fastfn(logpt(model["value"], cdf=True))
+
             if decimal is None:
                 decimal = select_by_precision(float64=6, float32=3)
 
@@ -758,18 +763,22 @@ class TestMatchesScipy:
                 params = dict(pt)
                 if skip_params_fn(params):
                     continue
-                scipy_cdf = scipy_logcdf(**params)
+
+                scipy_eval = scipy_logcdf(**params)
+
                 value = params.pop("value")
-                with Model() as m:
-                    dist = pymc3_dist("y", **params)
+                # Update shared parameter variables in pymc3_logcdf function
+                for param_name, param_value in params.items():
+                    param_vars[param_name].set_value(param_value)
+                pymc3_eval = pymc3_logcdf({"value": value})
+
                 params["value"] = value  # for displaying in err_msg
-                with aesara.config.change_flags(on_opt_error="raise", mode=Mode("py")):
-                    assert_almost_equal(
-                        logcdf(dist, value).eval(),
-                        scipy_cdf,
-                        decimal=decimal,
-                        err_msg=str(params),
-                    )
+                assert_almost_equal(
+                    pymc3_eval,
+                    scipy_eval,
+                    decimal=decimal,
+                    err_msg=str(params),
+                )
 
         valid_value = domain.vals[0]
         valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
@@ -849,24 +858,33 @@ class TestMatchesScipy:
         """
         Check that logcdf of discrete distributions matches sum of logps up to value
         """
+        # This test only works for scalar random variables
+        assert distribution.rv_op.ndim_supp == 0
+
         domains = paramdomains.copy()
         domains["value"] = domain
         if decimal is None:
             decimal = select_by_precision(float64=6, float32=3)
+
+        model, param_vars = build_model(distribution, domain, paramdomains)
+        dist_logcdf = model.fastfn(logpt(model["value"], cdf=True))
+        dist_logp = model.fastfn(logpt(model["value"]))
+
         for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
             if skip_params_fn(params):
                 continue
             value = params.pop("value")
             values = np.arange(domain.lower, value + 1)
-            dist = distribution.dist(**params)
-            # This only works for scalar random variables
-            assert dist.owner.op.ndim_supp == 0
-            values_dist = change_rv_size(dist, values.shape)
+
+            # Update shared parameter variables in logp/logcdf function
+            for param_name, param_value in params.items():
+                param_vars[param_name].set_value(param_value)
+
             with aesara.config.change_flags(mode=Mode("py")):
                 assert_almost_equal(
-                    logcdf(dist, value).eval(),
-                    logsumexp(logp(values_dist, values), keepdims=False).eval(),
+                    dist_logcdf({"value": value}),
+                    scipy.special.logsumexp([dist_logp({"value": value}) for value in values]),
                     decimal=decimal,
                     err_msg=str(pt),
                 )
@@ -1140,13 +1158,17 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta),
         )
-        self.check_logp(Beta, Unit, {"mu": Unit, "sigma": Rplus}, beta_mu_sigma)
+        self.check_logp(
+            Beta,
+            Unit,
+            {"mu": Unit, "sigma": Rplus},
+            beta_mu_sigma,
+        )
         self.check_logcdf(
             Beta,
             Unit,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.beta.logcdf(value, alpha, beta),
-            n_samples=10,
             decimal=select_by_precision(float64=5, float32=3),
         )
 
@@ -1269,20 +1291,17 @@ class TestMatchesScipy:
             Nat,
             {"mu": Rplus, "alpha": Rplus},
             scipy_mu_alpha_logcdf,
-            n_samples=5,
         )
         self.check_logcdf(
             NegativeBinomial,
             Nat,
             {"p": Unit, "n": Rplus},
             lambda value, p, n: sp.nbinom.logcdf(value, n, p),
-            n_samples=5,
         )
         self.check_selfconsistency_discrete_logcdf(
             NegativeBinomial,
             Nat,
             {"mu": Rplus, "alpha": Rplus},
-            n_samples=10,
         )
 
     @pytest.mark.parametrize(
@@ -1340,7 +1359,6 @@ class TestMatchesScipy:
             Rplus,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: floatX(sp.lognorm.logpdf(value, sigma, 0, np.exp(mu))),
-            n_samples=5,  # Just testing alternative parametrization
         )
         self.check_logcdf(
             Lognormal,
@@ -1353,7 +1371,6 @@ class TestMatchesScipy:
             Rplus,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: sp.lognorm.logcdf(value, sigma, 0, np.exp(mu)),
-            n_samples=5,  # Just testing alternative parametrization
         )
 
     def test_t(self):
@@ -1368,14 +1385,12 @@ class TestMatchesScipy:
             R,
             {"nu": Rplus, "mu": R, "sigma": Rplus},
             lambda value, nu, mu, sigma: sp.t.logpdf(value, nu, mu, sigma),
-            n_samples=5,  # Just testing alternative parametrization
         )
         self.check_logcdf(
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "lam": Rplus},
             lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam ** -0.5),
-            n_samples=10,  # relies on slow incomplete beta
         )
         # TODO: reenable when PR #4736 is merged
         """
@@ -1384,7 +1399,6 @@ class TestMatchesScipy:
             R,
             {"nu": Rplus, "mu": R, "sigma": Rplus},
             lambda value, nu, mu, sigma: sp.t.logcdf(value, nu, mu, sigma),
-            n_samples=5,  # Just testing alternative parametrization
         )
         """
 
@@ -1561,13 +1575,11 @@ class TestMatchesScipy:
             Nat,
             {"n": NatSmall, "p": Unit},
             lambda value, n, p: sp.binom.logcdf(value, n, p),
-            n_samples=10,
         )
         self.check_selfconsistency_discrete_logcdf(
             Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
-            n_samples=10,
         )
 
     @pytest.mark.xfail(reason="checkd tests has not been refactored")
@@ -1769,14 +1781,12 @@ class TestMatchesScipy:
             Nat,
             {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
             logcdf_fn,
-            n_samples=10,
         )
 
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedNegativeBinomial,
             Nat,
             {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
-            n_samples=10,
         )
 
     @pytest.mark.xfail(reason="Test not refactored yet")
@@ -1809,14 +1819,12 @@ class TestMatchesScipy:
             Nat,
             {"psi": Unit, "n": NatSmall, "p": Unit},
             logcdf_fn,
-            n_samples=10,
         )
 
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedBinomial,
             Nat,
             {"n": NatSmall, "p": Unit, "psi": Unit},
-            n_samples=10,
         )
 
     @pytest.mark.parametrize("n", [1, 2, 3])
