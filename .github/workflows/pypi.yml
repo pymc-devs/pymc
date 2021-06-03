@@ -2,10 +2,10 @@ name: PyPI
 on:
   push:
     branches:
-      - master
+      - main
       - auto-release
   pull_request:
-    branches: [master]
+    branches: [main]
   release:
     types: [published]
 
