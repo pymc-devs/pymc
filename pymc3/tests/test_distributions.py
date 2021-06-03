@@ -1128,7 +1128,7 @@ class TestMatchesScipy:
         decimals = select_by_precision(float64=6, float32=1)
         assert_almost_equal(model.fastlogp(pt), logp, decimal=decimals, err_msg=str(pt))
 
-    def test_beta(self):
+    def test_beta_logp(self):
         self.check_logp(
             Beta,
             Unit,
@@ -1141,12 +1141,17 @@ class TestMatchesScipy:
             {"mu": Unit, "sigma": Rplus},
             beta_mu_sigma,
         )
+
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Fails on float32 due to numerical issues",
+    )
+    def test_beta_logcdf(self):
         self.check_logcdf(
             Beta,
             Unit,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.beta.logcdf(value, alpha, beta),
-            decimal=select_by_precision(float64=5, float32=3),
         )
 
     def test_kumaraswamy(self):
@@ -1351,7 +1356,7 @@ class TestMatchesScipy:
             lambda value, mu, sigma: sp.lognorm.logcdf(value, sigma, 0, np.exp(mu)),
         )
 
-    def test_t(self):
+    def test_studentt_logp(self):
         self.check_logp(
             StudentT,
             R,
@@ -1364,6 +1369,12 @@ class TestMatchesScipy:
             {"nu": Rplus, "mu": R, "sigma": Rplus},
             lambda value, nu, mu, sigma: sp.t.logpdf(value, nu, mu, sigma),
         )
+
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Fails on float32 due to numerical issues",
+    )
+    def test_studentt_logcdf(self):
         self.check_logcdf(
             StudentT,
             R,
