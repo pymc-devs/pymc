@@ -750,6 +750,10 @@ class TestMatchesScipy:
         if not skip_paramdomain_inside_edge_test:
             domains = paramdomains.copy()
             domains["value"] = domain
+
+            model, param_vars = build_model(pymc3_dist, domain, paramdomains)
+            pymc3_logcdf = model.fastfn(logpt(model["value"], cdf=True))
+
             if decimal is None:
                 decimal = select_by_precision(float64=6, float32=3)
 
@@ -758,17 +762,23 @@ class TestMatchesScipy:
                 if skip_params_fn(params):
                     continue
                 scipy_cdf = scipy_logcdf(**params)
+
+                scipy_eval = scipy_logcdf(**params)
                 value = params.pop("value")
-                with Model() as m:
-                    dist = pymc3_dist("y", **params)
+
+                # Update shared parameter variables in pymc3_logcdf function
+                for param_name, param_value in params.items():
+                    param_vars[param_name].set_value(param_value)
+
+                pymc3_eval = pymc3_logcdf({"value": value})
+
                 params["value"] = value  # for displaying in err_msg
-                with aesara.config.change_flags(on_opt_error="raise", mode=Mode("py")):
-                    assert_almost_equal(
-                        logcdf(dist, value).eval(),
-                        scipy_cdf,
-                        decimal=decimal,
-                        err_msg=str(params),
-                    )
+                assert_almost_equal(
+                    pymc3_eval,
+                    scipy_eval,
+                    decimal=decimal,
+                    err_msg=str(params),
+                )
 
         valid_value = domain.vals[0]
         valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
