@@ -103,7 +103,7 @@ from pymc3.distributions import (
     logpt,
     logpt_sum,
 )
-from pymc3.math import kronecker, logsumexp
+from pymc3.math import kronecker
 from pymc3.model import Deterministic, Model, Point
 from pymc3.tests.helpers import select_by_precision
 from pymc3.vartypes import continuous_types
@@ -858,24 +858,33 @@ class TestMatchesScipy:
         """
         Check that logcdf of discrete distributions matches sum of logps up to value
         """
+        # This test only works for scalar random variables
+        assert distribution.rv_op.ndim_supp == 0
+
         domains = paramdomains.copy()
         domains["value"] = domain
         if decimal is None:
             decimal = select_by_precision(float64=6, float32=3)
+
+        model, param_vars = build_model(distribution, domain, paramdomains)
+        dist_logcdf = model.fastfn(logpt(model["value"], cdf=True))
+        dist_logp = model.fastfn(logpt(model["value"]))
+
         for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
             if skip_params_fn(params):
                 continue
             value = params.pop("value")
             values = np.arange(domain.lower, value + 1)
-            dist = distribution.dist(**params)
-            # This only works for scalar random variables
-            assert dist.owner.op.ndim_supp == 0
-            values_dist = change_rv_size(dist, values.shape)
+
+            # Update shared parameter variables in logp/logcdf function
+            for param_name, param_value in params.items():
+                param_vars[param_name].set_value(param_value)
+
             with aesara.config.change_flags(mode=Mode("py")):
                 assert_almost_equal(
-                    logcdf(dist, value).eval(),
-                    logsumexp(logpt(values_dist, values), keepdims=False).eval(),
+                    dist_logcdf({"value": value}),
+                    scipy.special.logsumexp([dist_logp({"value": value}) for value in values]),
                     decimal=decimal,
                     err_msg=str(pt),
                 )
