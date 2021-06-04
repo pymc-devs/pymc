@@ -202,9 +202,9 @@ class Distribution(metaclass=DistributionMeta):
             )
         dims = convert_dims(dims)
 
-        # Create the RV without specifying testval, because the testval may have a shape
+        # Create the RV without specifying initval, because the initval may have a shape
         # that only matches after replicating with a size implied by dims (see below).
-        rv_out = cls.dist(*args, rng=rng, testval=None, **kwargs)
+        rv_out = cls.dist(*args, rng=rng, initval=None, **kwargs)
         ndim_actual = rv_out.ndim
         resize_shape = None
 
