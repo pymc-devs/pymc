@@ -1437,15 +1437,11 @@ class TestMatchesScipy:
         reason="Fails on float32 due to numerical issues",
     )
     def test_gamma_logcdf(self):
-        # pymc-devs/aesara#224: skip_paramdomain_outside_edge_test has to be set
-        # True to avoid triggering a C-level assertion in the Aesara GammaQ function
-        # in gamma.c file. Can be set back to False (default) once that issue is solved
         self.check_logcdf(
             Gamma,
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
             lambda value, alpha, beta: sp.gamma.logcdf(value, alpha, scale=1.0 / beta),
-            skip_paramdomain_outside_edge_test=True,
         )
 
     def test_inverse_gamma_logp(self):
@@ -1455,23 +1451,17 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logpdf(value, alpha, scale=beta),
         )
-        # pymc-devs/aesara#224: skip_paramdomain_outside_edge_test has to be set
-        # True to avoid triggering a C-level assertion in the Aesara GammaQ function
 
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
     def test_inverse_gamma_logcdf(self):
-        # pymc-devs/aesara#224: skip_paramdomain_outside_edge_test has to be set
-        # True to avoid triggering a C-level assertion in the Aesara GammaQ function
-        # in gamma.c file. Can be set back to False (default) once that issue is solved
         self.check_logcdf(
             InverseGamma,
             Rplus,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logcdf(value, alpha, scale=beta),
-            skip_paramdomain_outside_edge_test=True,
         )
 
     @pytest.mark.xfail(
