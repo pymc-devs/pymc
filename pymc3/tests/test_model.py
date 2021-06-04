@@ -632,3 +632,27 @@ class TestCheckStartVals(SeededTest):
         model.update_start_vals(start, model.initial_point)
         with pytest.raises(KeyError):
             model.check_start_vals(start)
+
+
+def test_set_initval():
+    # Make sure the dependencies between variables are maintained when
+    # generating initial values
+    rng = np.random.RandomState(392)
+
+    with pm.Model(rng_seeder=rng) as model:
+        eta = pm.Uniform("eta", 1.0, 2.0, size=(1, 1))
+        mu = pm.Normal("mu", sd=eta, initval=[[100]])
+        alpha = pm.HalfNormal("alpha", initval=100)
+        value = pm.NegativeBinomial("value", mu=mu, alpha=alpha)
+
+    assert np.array_equal(model.initial_values[model.rvs_to_values[mu]], np.array([[100.0]]))
+    np.testing.assert_almost_equal(model.initial_values[model.rvs_to_values[alpha]], np.log(100))
+    assert 50 < model.initial_values[model.rvs_to_values[value]] < 150
+
+    # `Flat` cannot be sampled, so let's make sure that doesn't break initial
+    # value computations
+    with pm.Model() as model:
+        x = pm.Flat("x")
+        y = pm.Normal("y", x, 1)
+
+    assert model.rvs_to_values[y] in model.initial_values
