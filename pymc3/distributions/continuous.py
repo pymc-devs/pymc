@@ -2370,13 +2370,8 @@ class Gamma(PositiveContinuous):
         """
         beta = at.inv(inv_beta)
 
-        # Avoid C-assertion when the gammainc function is called with invalid values (#4340)
-        safe_alpha = at.switch(at.lt(alpha, 0), 0, alpha)
-        safe_beta = at.switch(at.lt(beta, 0), 0, beta)
-        safe_value = at.switch(at.lt(value, 0), 0, value)
-
         return bound(
-            at.log(at.gammainc(safe_alpha, safe_beta * safe_value)),
+            at.log(at.gammainc(alpha, beta * value)),
             0 <= value,
             0 < alpha,
             0 < beta,
@@ -2518,13 +2513,9 @@ class InverseGamma(PositiveContinuous):
         -------
         TensorVariable
         """
-        # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
-        safe_alpha = at.switch(at.lt(alpha, 0), 0, alpha)
-        safe_beta = at.switch(at.lt(beta, 0), 0, beta)
-        safe_value = at.switch(at.lt(value, 0), 0, value)
 
         return bound(
-            at.log(at.gammaincc(safe_alpha, safe_beta / safe_value)),
+            at.log(at.gammaincc(alpha, beta / value)),
             0 <= value,
             0 < alpha,
             0 < beta,
