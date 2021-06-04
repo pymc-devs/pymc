@@ -938,8 +938,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         if initval is None or transform:
             # Sample/evaluate this using the existing initial values, and
-            # with the least amount of affect on the RNGs involved (i.e. no
-            # in-placing)
+            # with the least effect on the RNGs involved (i.e. no in-placing)
             from aesara.compile.mode import Mode, get_mode
 
             mode = get_mode(None)
@@ -950,8 +949,21 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 value = initval if initval is not None else rv_var
                 rv_var = transform.forward(rv_var, value)
 
+            def initval_to_rvval(value_var, value):
+                rv_var = self.values_to_rvs[value_var]
+                initval = value_var.type.make_constant(value)
+                transform = getattr(value_var.tag, "transform", None)
+                if transform:
+                    return transform.backward(rv_var, initval)
+                else:
+                    return initval
+
+            givens = {
+                self.values_to_rvs[k]: initval_to_rvval(k, v)
+                for k, v in self.initial_values.items()
+            }
             initval_fn = aesara.function(
-                [], rv_var, mode=mode, givens=self.initial_values, on_unused_input="ignore"
+                [], rv_var, mode=mode, givens=givens, on_unused_input="ignore"
             )
             initval = initval_fn()
 
