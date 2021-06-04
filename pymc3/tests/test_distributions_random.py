@@ -747,8 +747,8 @@ class TestInverseGammaMuSigma(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestChiSquare(BaseTestDistribution):
-    pymc_dist = pm.ChiSquare
+class TestChiSquared(BaseTestDistribution):
+    pymc_dist = pm.ChiSquared
     pymc_dist_params = {"nu": 2.0}
     expected_rv_op_params = {"nu": 2.0}
     reference_dist_params = {"df": 2.0}

@@ -16,6 +16,7 @@ import itertools
 import sys
 
 import aesara
+aesara.config.floatX = "float32"
 import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
@@ -48,7 +49,7 @@ from pymc3.distributions import (
     Bound,
     Categorical,
     Cauchy,
-    ChiSquare,
+    ChiSquared,
     Constant,
     DensityDist,
     Dirichlet,
@@ -1030,15 +1031,15 @@ class TestMatchesScipy:
             lambda value, sigma: sp.halfnorm.logcdf(value, scale=sigma),
         )
 
-    def test_chisquare(self):
+    def test_chisquared(self):
         self.check_logp(
-            ChiSquare,
+            ChiSquared,
             Rplus,
             {"nu": Rplus},
             lambda value, nu: sp.chi2.logpdf(value, df=nu),
         )
         self.check_logcdf(
-            ChiSquare,
+            ChiSquared,
             Rplus,
             {"nu": Rplus},
             lambda value, nu: sp.chi2.logcdf(value, df=nu),

@@ -88,7 +88,7 @@ __all__ = [
     "Weibull",
     "HalfStudentT",
     "Lognormal",
-    "ChiSquare",
+    "ChiSquared",
     "HalfNormal",
     "Wald",
     "Pareto",
@@ -2549,7 +2549,7 @@ class InverseGamma(PositiveContinuous):
         )
 
 
-class ChiSquare(Gamma):
+class ChiSquared(PositiveContinuous):
     r"""
     :math:`\chi^2` log-likelihood.
 
@@ -2592,11 +2592,11 @@ class ChiSquare(Gamma):
     @classmethod
     def dist(cls, nu, *args, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
-        return super().__init__([nu / 2.0, 0.5], *args, **kwargs)
+        return super().dist([nu], *args, **kwargs)
 
     def logp(value, nu):
         """
-        Calculate log-probability of ChiSquare distribution at specified value.
+        Calculate log-probability of ChiSquared distribution at specified value.
 
         Parameters
         ----------
@@ -2612,7 +2612,7 @@ class ChiSquare(Gamma):
 
     def logcdf(value, nu):
         """
-        Compute the log of the cumulative distribution function for ChiSquare distribution
+        Compute the log of the cumulative distribution function for ChiSquared distribution
         at the specified value.
 
         Parameters
