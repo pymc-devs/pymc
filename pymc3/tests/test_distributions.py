@@ -594,7 +594,6 @@ class TestMatchesScipy:
         n_samples=100,
         extra_args=None,
         scipy_args=None,
-        skip_params_fn=lambda x: False,
     ):
         """
         Generic test for PyMC3 logp methods
@@ -626,9 +625,6 @@ class TestMatchesScipy:
             the pymc3 distribution logp is calculated
         scipy_args : Dictionary with extra arguments needed to call scipy logp method
             Usually the same as extra_args
-        skip_params_fn: Callable
-            A function that takes a ``dict`` of the test points and returns a
-            boolean indicating whether or not to perform the test.
         """
         if decimal is None:
             decimal = select_by_precision(float64=6, float32=3)
@@ -650,8 +646,6 @@ class TestMatchesScipy:
         domains["value"] = domain
         for pt in product(domains, n_samples=n_samples):
             pt = dict(pt)
-            if skip_params_fn(pt):
-                continue
             pt_d = self._model_input_dict(model, param_vars, pt)
             pt_logp = Point(pt_d, model=model)
             pt_ref = Point(pt, filter_model_vars=False, model=model)
@@ -696,7 +690,7 @@ class TestMatchesScipy:
         n_samples=100,
         skip_paramdomain_inside_edge_test=False,
         skip_paramdomain_outside_edge_test=False,
-        skip_params_fn=lambda x: False,
+        skip_nan=False,
     ):
         """
         Generic test for PyMC3 logcdf methods
@@ -737,9 +731,8 @@ class TestMatchesScipy:
         skip_paramdomain_outside_edge_test : Bool
             Whether to run test 2., which checks that pymc3 distribution logcdf
             returns -inf for invalid parameter values outside the supported domain edge
-        skip_params_fn: Callable
-            A function that takes a ``dict`` of the test points and returns a
-            boolean indicating whether or not to perform the test.
+        skip_nan: Bool
+            Whether to skip comparison when pymc3 logcdf method evaluates to nan
 
         Returns
         -------
@@ -759,9 +752,6 @@ class TestMatchesScipy:
 
             for pt in product(domains, n_samples=n_samples):
                 params = dict(pt)
-                if skip_params_fn(params):
-                    continue
-
                 scipy_eval = scipy_logcdf(**params)
 
                 value = params.pop("value")
@@ -769,6 +759,9 @@ class TestMatchesScipy:
                 for param_name, param_value in params.items():
                     param_vars[param_name].set_value(param_value)
                 pymc3_eval = pymc3_logcdf({"value": value})
+
+                if skip_nan and np.isnan(pymc3_eval):
+                    continue
 
                 params["value"] = value  # for displaying in err_msg
                 assert_almost_equal(
@@ -851,7 +844,7 @@ class TestMatchesScipy:
         paramdomains,
         decimal=None,
         n_samples=100,
-        skip_params_fn=lambda x: False,
+        skip_nan=False,
     ):
         """
         Check that logcdf of discrete distributions matches sum of logps up to value
@@ -870,8 +863,6 @@ class TestMatchesScipy:
 
         for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
-            if skip_params_fn(params):
-                continue
             value = params.pop("value")
             values = np.arange(domain.lower, value + 1)
 
@@ -879,10 +870,18 @@ class TestMatchesScipy:
             for param_name, param_value in params.items():
                 param_vars[param_name].set_value(param_value)
 
+            logcdf_eval = dist_logcdf({"value": value})
+            if skip_nan and np.isnan(logcdf_eval):
+                continue
+
+            logp_logsumexp_eval = scipy.special.logsumexp(
+                [dist_logp({"value": value}) for value in values]
+            )
+
             with aesara.config.change_flags(mode=Mode("py")):
                 assert_almost_equal(
-                    dist_logcdf({"value": value}),
-                    scipy.special.logsumexp([dist_logp({"value": value}) for value in values]),
+                    logcdf_eval,
+                    logp_logsumexp_eval,
                     decimal=decimal,
                     err_msg=str(pt),
                 )
@@ -1233,20 +1232,19 @@ class TestMatchesScipy:
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
             modified_scipy_hypergeom_logpmf,
-            skip_params_fn=lambda x: x["N"] < x["n"] or x["N"] < x["k"],
         )
         self.check_logcdf(
             HyperGeometric,
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
             modified_scipy_hypergeom_logcdf,
-            skip_params_fn=lambda x: x["N"] < x["n"] or x["N"] < x["k"],
+            skip_nan=True,  # TODO: Remove once aesara/issues/461 is solved
         )
         self.check_selfconsistency_discrete_logcdf(
             HyperGeometric,
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
-            skip_params_fn=lambda x: x["N"] < x["n"] or x["N"] < x["k"],
+            skip_nan=True,  # TODO: Remove once aesara/issues/461 is solved
         )
 
     def test_negative_binomial(self):
