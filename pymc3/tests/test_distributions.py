@@ -29,8 +29,6 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 from numpy import array, inf, log
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
-from packaging.version import parse
-from scipy import __version__ as scipy_version
 from scipy import integrate
 from scipy.special import erf, logit
 
@@ -109,8 +107,6 @@ from pymc3.math import kronecker
 from pymc3.model import Deterministic, Model, Point
 from pymc3.tests.helpers import select_by_precision
 from pymc3.vartypes import continuous_types
-
-SCIPY_VERSION = parse(scipy_version)
 
 
 def get_lkj_cases():
@@ -1570,29 +1566,19 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
 
-    @pytest.mark.skipif(
-        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
-    )
-    def test_beta_binomial_logp(self):
+    def test_beta_binomial(self):
         self.check_logp(
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
             lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
         )
-
-    @pytest.mark.skipif(
-        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
-    )
-    def test_beta_binomial_logcdf(self):
         self.check_logcdf(
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
             lambda value, alpha, beta, n: sp.betabinom.logcdf(value, a=alpha, b=beta, n=n),
         )
-
-    def test_beta_binomial_selfconsistency(self):
         self.check_selfconsistency_discrete_logcdf(
             BetaBinomial,
             Nat,
