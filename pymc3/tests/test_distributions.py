@@ -596,7 +596,6 @@ class TestMatchesScipy:
         n_samples=100,
         extra_args=None,
         scipy_args=None,
-        skip_params_fn=lambda x: False,
     ):
         """
         Generic test for PyMC3 logp methods
@@ -628,9 +627,6 @@ class TestMatchesScipy:
             the pymc3 distribution logp is calculated
         scipy_args : Dictionary with extra arguments needed to call scipy logp method
             Usually the same as extra_args
-        skip_params_fn: Callable
-            A function that takes a ``dict`` of the test points and returns a
-            boolean indicating whether or not to perform the test.
         """
         if decimal is None:
             decimal = select_by_precision(float64=6, float32=3)
@@ -652,8 +648,6 @@ class TestMatchesScipy:
         domains["value"] = domain
         for pt in product(domains, n_samples=n_samples):
             pt = dict(pt)
-            if skip_params_fn(pt):
-                continue
             pt_d = self._model_input_dict(model, param_vars, pt)
             pt_logp = Point(pt_d, model=model)
             pt_ref = Point(pt, filter_model_vars=False, model=model)
@@ -698,7 +692,6 @@ class TestMatchesScipy:
         n_samples=100,
         skip_paramdomain_inside_edge_test=False,
         skip_paramdomain_outside_edge_test=False,
-        skip_params_fn=lambda x: False,
     ):
         """
         Generic test for PyMC3 logcdf methods
@@ -739,9 +732,6 @@ class TestMatchesScipy:
         skip_paramdomain_outside_edge_test : Bool
             Whether to run test 2., which checks that pymc3 distribution logcdf
             returns -inf for invalid parameter values outside the supported domain edge
-        skip_params_fn: Callable
-            A function that takes a ``dict`` of the test points and returns a
-            boolean indicating whether or not to perform the test.
 
         Returns
         -------
@@ -761,9 +751,6 @@ class TestMatchesScipy:
 
             for pt in product(domains, n_samples=n_samples):
                 params = dict(pt)
-                if skip_params_fn(params):
-                    continue
-
                 scipy_eval = scipy_logcdf(**params)
 
                 value = params.pop("value")
@@ -853,7 +840,6 @@ class TestMatchesScipy:
         paramdomains,
         decimal=None,
         n_samples=100,
-        skip_params_fn=lambda x: False,
     ):
         """
         Check that logcdf of discrete distributions matches sum of logps up to value
@@ -872,8 +858,6 @@ class TestMatchesScipy:
 
         for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
-            if skip_params_fn(params):
-                continue
             value = params.pop("value")
             values = np.arange(domain.lower, value + 1)
 
@@ -1256,20 +1240,17 @@ class TestMatchesScipy:
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
             modified_scipy_hypergeom_logpmf,
-            skip_params_fn=lambda x: x["N"] < x["n"] or x["N"] < x["k"],
         )
         self.check_logcdf(
             HyperGeometric,
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
             modified_scipy_hypergeom_logcdf,
-            skip_params_fn=lambda x: x["N"] < x["n"] or x["N"] < x["k"],
         )
         self.check_selfconsistency_discrete_logcdf(
             HyperGeometric,
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
-            skip_params_fn=lambda x: x["N"] < x["n"] or x["N"] < x["k"],
         )
 
     def test_negative_binomial(self):
