@@ -16,7 +16,6 @@ import itertools
 import sys
 
 import aesara
-aesara.config.floatX = "float32"
 import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
