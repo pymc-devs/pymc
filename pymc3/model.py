@@ -137,7 +137,7 @@ class ContextMeta(type):
     the `with` statement.
     """
 
-    def __new__(cls, name, bases, dct, **kargs):  # pylint: disable=unused-argument
+    def __new__(cls, name, bases, dct, **kwargs):  # pylint: disable=unused-argument
         "Add __enter__ and __exit__ methods to the class."
 
         def __enter__(self):
@@ -160,7 +160,7 @@ class ContextMeta(type):
 
         # We strip off keyword args, per the warning from
         # StackExchange:
-        # DO NOT send "**kargs" to "type.__new__".  It won't catch them and
+        # DO NOT send "**kwargs" to "type.__new__".  It won't catch them and
         # you'll get a "TypeError: type() takes 1 or 3 arguments" exception.
         return super().__new__(cls, name, bases, dct)
 
@@ -1397,7 +1397,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         Parameters
         ----------
         outs: Aesara variable or iterable of Aesara variables
-        mode: Aesara compilation mode
+        mode: Aesara compilation mode, default=None
 
         Returns
         -------
@@ -1721,7 +1721,8 @@ def fn(outs, mode=None, model=None, *args, **kwargs):
     Parameters
     ----------
     outs: Aesara variable or iterable of Aesara variables
-    mode: Aesara compilation mode
+    mode: Aesara compilation mode, default=None
+    model: Model, default=None
 
     Returns
     -------
