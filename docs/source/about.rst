@@ -189,7 +189,7 @@ Sponsors
 
 |NumFOCUS| |Quantopian| |ODSC|
 
-More details about sponsoring PyMC3 can be found `here <https://github.com/pymc-devs/pymc3/blob/master/GOVERNANCE.md#institutional-partners-and-funding>`_.
+More details about sponsoring PyMC3 can be found `here <https://github.com/pymc-devs/pymc3/blob/main/GOVERNANCE.md#institutional-partners-and-funding>`_.
 If you are interested in becoming a sponsor, reach out to `pymc.devs@gmail.com <pymc.devs@gmail.com>`_
 
 **************
@@ -266,9 +266,9 @@ See also
 .. |NumFOCUS| image:: https://numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png
    :target: http://www.numfocus.org/
    :height: 120px
-.. |Quantopian| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg
+.. |Quantopian| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/main/docs/quantopianlogo.jpg
    :target: https://quantopian.com
    :height: 120px
-.. |ODSC| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/odsc_logo.png
+.. |ODSC| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/main/docs/odsc_logo.png
    :target: https://odsc.com
    :height: 120px

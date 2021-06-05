@@ -110,7 +110,7 @@
 
         <div class="ui vertical segment">
             <h2 class="ui dividing header">License</h2>
-            <p>PyMC3 is licensed <a href="https://github.com/pymc-devs/pymc3/blob/master/LICENSE">under the Apache License, V2.</a></p>
+            <p>PyMC3 is licensed <a href="https://github.com/pymc-devs/pymc3/blob/main/LICENSE">under the Apache License, V2.</a></p>
         </div>
 
         <div class="ui vertical segment">
@@ -140,12 +140,12 @@
                 </div>
                 <div class="column">
                     <a href="https://quantopian.com">
-                        <img class="ui image" height="120" src="https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg"/>
+                        <img class="ui image" height="120" src="https://raw.githubusercontent.com/pymc-devs/pymc3/main/docs/quantopianlogo.jpg"/>
                     </a>
                 </div>
                 <div class="column">
                     <a href="https://odsc.com/">
-                        <img class="ui image" height="120" src="https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/odsc_logo.png"/>
+                        <img class="ui image" height="120" src="https://raw.githubusercontent.com/pymc-devs/pymc3/main/docs/odsc_logo.png"/>
                     </a>
                 </div>
             </div>
