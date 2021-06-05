@@ -813,7 +813,7 @@ class TestMarginalVsLatent:
         npt.assert_allclose(latent_logp, self.logp, atol=5)
 
 
-@pytest.mark.xfail(reason="MvNormal was not yet refactored")
+@pytest.mark.xfail(reason="The `gp.predict` method was not yet refactored")
 class TestMarginalVsMarginalSparse:
     R"""
     Compare logp of models Marginal and MarginalSparse.
@@ -1114,7 +1114,7 @@ class TestLatentKron:
             gp.prior("f", Xs=[np.linspace(0, 1, 7)[:, None], np.linspace(0, 1, 5)[:, None]])
 
 
-@pytest.mark.xfail(reason="MvNormal was not yet refactored")
+@pytest.mark.xfail(reason="The `gp.predict` method was not yet refactored")
 class TestMarginalKron:
     """
     Compare gp.MarginalKron to gp.Marginal.

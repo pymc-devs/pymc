@@ -555,6 +555,7 @@ class Marginal(Base):
         mu, cov = self.predictt(Xnew, diag, pred_noise, given)
         # XXX: This needs to be refactored
         # return draw_values([mu, cov], point=point)
+        return None, None
 
     def predictt(self, Xnew, diag=False, pred_noise=False, given=None):
         R"""
@@ -1195,6 +1196,7 @@ class MarginalKron(Base):
         mu, cov = self._build_conditional(Xnew, pred_noise, diag)
         # XXX: This needs to be refactored
         # return draw_values([mu, cov], point=point)
+        return None, None
 
     def predictt(self, Xnew, diag=False, pred_noise=False):
         R"""
