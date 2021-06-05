@@ -26,13 +26,13 @@ def xlogy0(m, x):
     return at.switch(at.eq(x, 0), at.switch(at.eq(m, 0), 0.0, -np.inf), m * at.log(x))
 
 
-def logpdf(rv_var, obs, **kwargs):
-    """Create a graph for the log-density/mass of a ``RandomVariable``."""
-    return _logpdf(rv_var.owner.op, obs, *rv_var.owner.inputs, **kwargs)
+def logprob(rv_var, obs, **kwargs):
+    """Create a graph for the log-probability of a ``RandomVariable``."""
+    return _logprob(rv_var.owner.op, obs, *rv_var.owner.inputs, **kwargs)
 
 
 @singledispatch
-def _logpdf(
+def _logprob(
     op: Op,
     value: TensorVariable,
     *inputs: TensorVariable,
@@ -50,8 +50,8 @@ def _logpdf(
     raise NotImplementedError()
 
 
-@_logpdf.register(arb.UniformRV)
-def uniform_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.UniformRV)
+def uniform_logprob(op, value, *inputs, **kwargs):
     lower, upper = inputs[3:]
     return at.switch(
         at.bitwise_and(at.ge(value, lower), at.le(value, upper)),
@@ -60,8 +60,8 @@ def uniform_logpdf(op, value, *inputs, **kwargs):
     )
 
 
-@_logpdf.register(arb.NormalRV)
-def normal_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.NormalRV)
+def normal_logprob(op, value, *inputs, **kwargs):
     mu, sigma = inputs[3:]
     res = (
         -0.5 * at.pow((value - mu) / sigma, 2)
@@ -72,8 +72,8 @@ def normal_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.HalfNormalRV)
-def halfnormal_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.HalfNormalRV)
+def halfnormal_logprob(op, value, *inputs, **kwargs):
     loc, sigma = inputs[3:]
     res = (
         -0.5 * at.pow((value - loc) / sigma, 2)
@@ -85,8 +85,8 @@ def halfnormal_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.BetaRV)
-def beta_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.BetaRV)
+def beta_logprob(op, value, *inputs, **kwargs):
     alpha, beta = inputs[3:]
     res = (
         at.switch(at.eq(alpha, 1.0), 0.0, (alpha - 1.0) * at.log(value))
@@ -100,8 +100,8 @@ def beta_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.ExponentialRV)
-def exponential_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.ExponentialRV)
+def exponential_logprob(op, value, *inputs, **kwargs):
     (mu,) = inputs[3:]
     res = -at.log(mu) - value / mu
     res = at.switch(at.ge(value, 0.0), res, -np.inf)
@@ -109,14 +109,14 @@ def exponential_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.LaplaceRV)
-def laplace_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.LaplaceRV)
+def laplace_logprob(op, value, *inputs, **kwargs):
     mu, b = inputs[3:]
     return -at.log(2 * b) - at.abs_(value - mu) / b
 
 
-@_logpdf.register(arb.LogNormalRV)
-def lognormal_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.LogNormalRV)
+def lognormal_logprob(op, value, *inputs, **kwargs):
     mu, sigma = inputs[3:]
     res = (
         -0.5 * at.pow((at.log(value) - mu) / sigma, 2)
@@ -129,8 +129,8 @@ def lognormal_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.ParetoRV)
-def pareto_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.ParetoRV)
+def pareto_logprob(op, value, *inputs, **kwargs):
     alpha, m = inputs[3:]
     res = at.log(alpha) + xlogy0(alpha, m) - xlogy0(alpha + 1.0, value)
     res = at.switch(at.ge(value, m), res, -np.inf)
@@ -140,24 +140,24 @@ def pareto_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.CauchyRV)
-def cauchy_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.CauchyRV)
+def cauchy_logprob(op, value, *inputs, **kwargs):
     alpha, beta = inputs[3:]
     res = -at.log(np.pi) - at.log(beta) - at.log1p(at.pow((value - alpha) / beta, 2))
     res = Assert("beta > 0")(res, at.all(at.gt(beta, 0.0)))
     return res
 
 
-@_logpdf.register(arb.HalfCauchyRV)
-def halfcauchy_logpdf(op, value, *inputs, **kwargs):
-    res = at.log(2) + cauchy_logpdf(op, value, *inputs, **kwargs)
+@_logprob.register(arb.HalfCauchyRV)
+def halfcauchy_logprob(op, value, *inputs, **kwargs):
+    res = at.log(2) + cauchy_logprob(op, value, *inputs, **kwargs)
     loc, _ = inputs[3:]
     res = at.switch(at.ge(value, loc), res, -np.inf)
     return res
 
 
-@_logpdf.register(arb.GammaRV)
-def gamma_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.GammaRV)
+def gamma_logprob(op, value, *inputs, **kwargs):
     alpha, inv_beta = inputs[3:]
     beta = at.reciprocal(inv_beta)
     res = (
@@ -173,8 +173,8 @@ def gamma_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.InvGammaRV)
-def invgamma_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.InvGammaRV)
+def invgamma_logprob(op, value, *inputs, **kwargs):
     alpha, beta = inputs[3:]
     res = -(alpha + 1) * np.log(value) - at.gammaln(alpha) - 1.0 / value
     res = (
@@ -190,8 +190,8 @@ def invgamma_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.WeibullRV)
-def weibull_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.WeibullRV)
+def weibull_logprob(op, value, *inputs, **kwargs):
     alpha, beta = inputs[3:]
     res = (
         at.log(alpha)
@@ -206,8 +206,8 @@ def weibull_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.VonMisesRV)
-def vonmises_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.VonMisesRV)
+def vonmises_logprob(op, value, *inputs, **kwargs):
     mu, kappa = inputs[3:]
     res = kappa * at.cos(mu - value) - at.log(2 * np.pi) - at.log(at.i0(kappa))
     # This doesn't match `scipy.stats.vonmises.logpdf`:
@@ -218,8 +218,8 @@ def vonmises_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.TriangularRV)
-def triangular_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.TriangularRV)
+def triangular_logprob(op, value, *inputs, **kwargs):
     lower, c, upper = inputs[3:]
     res = at.switch(
         at.lt(value, c),
@@ -235,8 +235,8 @@ def triangular_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.GumbelRV)
-def gumbel_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.GumbelRV)
+def gumbel_logprob(op, value, *inputs, **kwargs):
     mu, beta = inputs[3:]
     z = (value - mu) / beta
     res = -z - at.exp(-z) - at.log(beta)
@@ -244,8 +244,8 @@ def gumbel_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.LogisticRV)
-def logistic_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.LogisticRV)
+def logistic_logprob(op, value, *inputs, **kwargs):
     mu, s = inputs[3:]
     z = (value - mu) / s
     res = -z - at.log(s) - 2.0 * at.log1p(at.exp(-z))
@@ -253,8 +253,8 @@ def logistic_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.BinomialRV)
-def binomial_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.BinomialRV)
+def binomial_logprob(op, value, *inputs, **kwargs):
     n, p = inputs[3:]
     res = binomln(n, value) + xlogy0(value, p) + xlogy0(n - value, 1.0 - p)
     res = at.switch(at.bitwise_and(at.le(0, value), at.le(value, n)), res, -np.inf)
@@ -262,8 +262,8 @@ def binomial_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.BetaBinomialRV)
-def betabinomial_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.BetaBinomialRV)
+def betabinomial_logprob(op, value, *inputs, **kwargs):
     n, alpha, beta = inputs[3:]
     res = (
         binomln(n, value)
@@ -277,8 +277,8 @@ def betabinomial_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.BernoulliRV)
-def bernoulli_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.BernoulliRV)
+def bernoulli_logprob(op, value, *inputs, **kwargs):
     (p,) = inputs[3:]
     res = at.switch(value, at.log(p), at.log(1.0 - p))
     res = at.switch(at.bitwise_and(at.le(0, value), at.le(value, 1)), res, -np.inf)
@@ -286,8 +286,8 @@ def bernoulli_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.PoissonRV)
-def poisson_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.PoissonRV)
+def poisson_logprob(op, value, *inputs, **kwargs):
     (mu,) = inputs[3:]
     res = xlogy0(value, mu) - at.gammaln(value + 1) - mu
     res = at.switch(at.le(0, value), res, -np.inf)
@@ -296,8 +296,8 @@ def poisson_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.NegBinomialRV)
-def nbinom_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.NegBinomialRV)
+def nbinom_logprob(op, value, *inputs, **kwargs):
     n, p = inputs[3:]
     mu = n * (1 - p) / p
     res = (
@@ -307,12 +307,12 @@ def nbinom_logpdf(op, value, *inputs, **kwargs):
     )
     res = at.switch(at.le(0, value), res, -np.inf)
     res = Assert("0 < mu, 0 < n")(res, at.all(at.lt(0.0, mu)), at.all(at.lt(0.0, n)))
-    res = at.switch(at.gt(n, 1e10), poisson_logpdf(op, value, *inputs[:3], mu), res)
+    res = at.switch(at.gt(n, 1e10), poisson_logprob(op, value, *inputs[:3], mu), res)
     return res
 
 
-@_logpdf.register(arb.GeometricRV)
-def geometric_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.GeometricRV)
+def geometric_logprob(op, value, *inputs, **kwargs):
     (p,) = inputs[3:]
     res = at.log(p) + xlogy0(value - 1, 1 - p)
     res = at.switch(at.le(1, value), res, -np.inf)
@@ -320,8 +320,8 @@ def geometric_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.HyperGeometricRV)
-def hypergeometric_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.HyperGeometricRV)
+def hypergeometric_logprob(op, value, *inputs, **kwargs):
     good, bad, n = inputs[3:]
     total = good + bad
     res = (
@@ -340,8 +340,8 @@ def hypergeometric_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.CategoricalRV)
-def categorical_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.CategoricalRV)
+def categorical_logprob(op, value, *inputs, **kwargs):
     (p,) = inputs[3:]
 
     raise NotImplementedError()
@@ -384,8 +384,8 @@ def categorical_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.MvNormalRV)
-def mvnormal_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.MvNormalRV)
+def mvnormal_logprob(op, value, *inputs, **kwargs):
     mu, cov = inputs[3:]
 
     r = value - mu
@@ -416,8 +416,8 @@ def mvnormal_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.DirichletRV)
-def dirichlet_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.DirichletRV)
+def dirichlet_logprob(op, value, *inputs, **kwargs):
     (alpha,) = inputs[3:]
     res = at.sum(at.gammaln(alpha)) - at.gammaln(at.sum(alpha))
     res = -res + at.sum((xlogy0(alpha - 1, value.T)).T, axis=0)
@@ -435,8 +435,8 @@ def dirichlet_logpdf(op, value, *inputs, **kwargs):
     return res
 
 
-@_logpdf.register(arb.MultinomialRV)
-def multinomial_logpdf(op, value, *inputs, **kwargs):
+@_logprob.register(arb.MultinomialRV)
+def multinomial_logprob(op, value, *inputs, **kwargs):
     n, p = inputs[3:]
     res = at.gammaln(n + 1) + at.sum(-at.gammaln(value + 1) + xlogy0(value, p), axis=-1)
     res = at.switch(

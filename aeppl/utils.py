@@ -88,7 +88,7 @@ def extract_rv_and_value_vars(
     Returns
     =======
     The first value in the tuple is the ``RandomVariable`` and the second is
-    the observations variable or the measure/log-likelihood value variable.
+    the observations variable or the measure/log-probability value variable.
 
     """
     if not var.owner:
@@ -237,11 +237,14 @@ def rvs_to_value_vars(
         rv_var, rv_value_var = extract_rv_and_value_vars(var)
 
         if rv_value_var is None:
-            warnings.warn(
-                f"No value variable found for {rv_var}; "
-                "the random variable will not be replaced."
-            )
-            return []
+            rv_value_var = replacements.get(rv_var, None)
+
+            if rv_value_var is None:
+                warnings.warn(
+                    f"No value variable found for {rv_var}; "
+                    "the random variable will not be replaced."
+                )
+                return []
 
         replacements[var] = rv_value_var
 
