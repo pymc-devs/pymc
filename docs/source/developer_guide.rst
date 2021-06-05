@@ -712,7 +712,7 @@ dictionary with the free\_RVs being sampled now has a new value (if
 accepted, see
 `here <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/step_methods/compound.py#L27>`__
 and
-`here <https://github.com/pymc-devs/pymc3/blob/main/pymc3/step_methods/compound.py#L41>`__).
+`here <https://github.com/pymc-devs/pymc3/blob/main/pymc3/step_methods/compound.py>`__).
 There are some example in the `CompoundStep
 doc <https://docs.pymc.io/notebooks/sampling_compound_step.html#Specify-compound-steps>`__.
 
