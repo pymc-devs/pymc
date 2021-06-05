@@ -43,7 +43,7 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
    $ git checkout -b my-feature
    ```
 
-   Always use a ``feature`` branch. It's good practice to never routinely work on the ``master`` branch of any repository.
+   Always use a ``feature`` branch. It's good practice to never routinely work on the ``main`` branch of any repository.
 
 4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``. The easiest (and recommended) way to set up a development environment is via [miniconda](https://docs.conda.io/en/latest/miniconda.html):
 
@@ -73,7 +73,7 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
    After committing, it is a good idea to sync with the base repository in case there have been any changes:
    ```bash
    $ git fetch upstream
-   $ git rebase upstream/master
+   $ git rebase upstream/main
    ```
 
    Then push the changes to your GitHub account with:

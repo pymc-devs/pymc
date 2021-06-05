@@ -23,9 +23,9 @@ Distribution
 A high-level introduction of ``Distribution`` in PyMC3 can be found in
 the `documentation <https://docs.pymc.io/Probability_Distributions.html>`__. The source
 code of the probability distributions is nested under
-`pymc3/distributions <https://github.com/pymc-devs/pymc3/blob/master/pymc3/distributions/>`__,
+`pymc3/distributions <https://github.com/pymc-devs/pymc3/blob/main/pymc3/distributions/>`__,
 with the ``Distribution`` class defined in `distribution.py
-<https://github.com/pymc-devs/pymc3/blob/master/pymc3/distributions/distribution.py#L23-L44>`__.
+<https://github.com/pymc-devs/pymc3/blob/main/pymc3/distributions/distribution.py#L23-L44>`__.
 A few important points to highlight in the Distribution Class:
 
 .. code:: python
@@ -712,7 +712,7 @@ dictionary with the free\_RVs being sampled now has a new value (if
 accepted, see
 `here <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/step_methods/compound.py#L27>`__
 and
-`here <https://github.com/pymc-devs/pymc3/blob/master/pymc3/step_methods/compound.py#L41>`__).
+`here <https://github.com/pymc-devs/pymc3/blob/main/pymc3/step_methods/compound.py>`__).
 There are some example in the `CompoundStep
 doc <https://docs.pymc.io/notebooks/sampling_compound_step.html#Specify-compound-steps>`__.
 
@@ -720,7 +720,7 @@ Transition kernel
 ^^^^^^^^^^^^^^^^^
 
 The base class for most MCMC sampler (except SMC) is in
-`ArrayStep <https://github.com/pymc-devs/pymc3/blob/master/pymc3/step_methods/arraystep.py>`__.
+`ArrayStep <https://github.com/pymc-devs/pymc3/blob/main/pymc3/step_methods/arraystep.py>`__.
 You can see that the ``step.step()`` is mapping the ``point`` into an
 array, and call ``self.astep()``, which is an array in, array out
 function. A pymc3 model compile a conditional logp/dlogp function that
@@ -764,7 +764,7 @@ The design of the VI module takes a different approach than
 MCMC - it has a functional design, and everything is done within Aesara
 (i.e., Optimization and building the variational objective). The base
 class of variational inference is
-`pymc3.variational.Inference <https://github.com/pymc-devs/pymc3/blob/master/pymc3/variational/inference.py>`__,
+`pymc3.variational.Inference <https://github.com/pymc-devs/pymc3/blob/main/pymc3/variational/inference.py>`__,
 where it builds the objective function by calling:
 
 .. code:: python
@@ -789,7 +789,7 @@ Approximation, and Test functions to combine them into single objective
 function. Currently we do not care too much about the test function, it
 is usually not required (and not implemented). The other primitives are
 defined as base classes in `this
-file <https://github.com/pymc-devs/pymc3/blob/master/pymc3/variational/opvi.py>`__.
+file <https://github.com/pymc-devs/pymc3/blob/main/pymc3/variational/opvi.py>`__.
 We use inheritance to easily implement a broad class of VI methods
 leaving a lot of flexibility for further extensions.
 
@@ -824,7 +824,7 @@ allows you to combine approximation into new approximation, but we will
 skip this for now and only consider ``SingleGroupApproximation`` like
 ``MeanField``): The definition of ``datalogp_norm``, ``logq_norm``,
 ``varlogp_norm`` are in
-`variational/opvi <https://github.com/pymc-devs/pymc3/blob/master/pymc3/variational/opvi.py>`__,
+`variational/opvi <https://github.com/pymc-devs/pymc3/blob/main/pymc3/variational/opvi.py>`__,
 strip away the normalizing term, ``datalogp`` and ``varlogp`` are
 expectation of the variational free\_RVs and data logp - we clone the
 datalogp and varlogp from the model, replace its input with Aesara
@@ -859,10 +859,10 @@ Some challenges and insights from implementing VI.
    on this feature. Internal usages are uncountable:
 
    -  we use this to `vectorize the
-      model <https://github.com/pymc-devs/pymc3/blob/master/pymc3/model.py#L972>`__
+      model <https://github.com/pymc-devs/pymc3/blob/main/pymc3/model.py#L972>`__
       for both MCMC and VI to speed up computations
    -  we use this to `create sampling
-      graph <https://github.com/pymc-devs/pymc3/blob/master/pymc3/variational/opvi.py#L1483>`__
+      graph <https://github.com/pymc-devs/pymc3/blob/main/pymc3/variational/opvi.py#L1483>`__
       for VI. This is the case you want posterior predictive as a part
       of computational graph.
 
