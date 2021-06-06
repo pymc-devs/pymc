@@ -84,7 +84,7 @@ class MeanFieldGroup(Group):
             start = np.tile(start, (self.bdim, 1))
             rho = np.tile(rho, (self.bdim, 1))
         return {
-            "mu": aesara.shared(pm.floatX(start), "mu"),
+            "mu": aesara.shared(pm.floatX(start.data), "mu"),
             "rho": aesara.shared(pm.floatX(rho), "rho"),
         }
 

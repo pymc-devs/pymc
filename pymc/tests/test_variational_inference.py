@@ -40,10 +40,10 @@ from pymc.variational.approximations import (
 from pymc.variational.inference import ADVI, ASVGD, NFVI, SVGD, FullRankADVI, fit
 from pymc.variational.opvi import Approximation, Group
 
-# pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
-pytestmark = pytest.mark.xfail(
-    reason="These tests rely on Group, which hasn't been refactored for v4"
-)
+pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
+# pytestmark = pytest.mark.xfail(
+#     reason="These tests rely on Group, which hasn't been refactored for v4"
+# )
 
 
 @pytest.mark.parametrize("diff", ["relative", "absolute"])

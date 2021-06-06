@@ -851,6 +851,7 @@ class Group(WithMemoization):
         self.group = group
         self.user_params = params
         self._user_params = None
+        self.replacements = dict()
         # save this stuff to use in __init_group__ later
         self._kwargs = kwargs
         if self.group is not None:
@@ -953,16 +954,21 @@ class Group(WithMemoization):
         self.input = self._input_type(self.__class__.__name__ + "_symbolic_input")
         # I do some staff that is not supported by standard __init__
         # so I have to to it by myself
-        self.group = [get_transformed(var) for var in self.group]
 
-        # XXX: This needs to be refactored
-        self.point_map_info = []
-        self.replacements = dict()
+        # 1) we need initial point (transformed space)
+        model_initial_point = self.model.initial_point
+        
+        # 2) we'll work with a single group, a subset of the model
+        # here we need to create a mapping to replace value_vars with slices from the approximation
+        start_idx = 0
         for var in self.group:
             if var.type.numpy_dtype.name in discrete_types:
                 raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
-            begin = self.ddim
+            # 3) This is the way to infer shape and dtype of the variable
+            test_var = model_initial_point[var.tag.value_var.name]
             if self.batched:
+                # Leave a more complicated case for future work
+                raise NotImplementedError("not yet ready")
                 if var.ndim < 1:
                     if self.local:
                         raise LocalGroupError("Local variable should not be scalar")
@@ -977,18 +983,16 @@ class Group(WithMemoization):
                     # XXX: This needs to be refactored
                     shape = var.dshape
             else:
-                # XXX: This needs to be refactored
-                # self.ordering.size += None  # var.dsize
-                # XXX: This needs to be refactored
-                shape = var.dshape
-            # end = self.ordering.size
-            # XXX: This needs to be refactored
-            vmap = (var.name, shape, var.dtype)
-            # self.ordering.vmap.append(vmap)
-            # self.ordering.by_name[vmap.var] = vmap
-            vr = self.input[..., vmap.slc].reshape(shape).astype(vmap.dtyp)
-            vr.name = vmap.var + "_vi_replacement"
-            self.replacements[var] = vr
+                shape = test_var.shape
+                dtype = test_var.dtype
+                size = test_var.size
+            # TODO: There was self.ordering used in other util funcitons
+            vr = self.input[..., start_idx:start_idx+size].reshape(shape).astype(dtype)
+            vr.name = var.tag.value_var.name + "_vi_replacement"
+            self.replacements[var.tag.value_var] = vr
+
+            start_idx += size
+        self._ddim = start_idx
 
     def _finalize_init(self):
         """*Dev* - clean up after init"""
@@ -1054,8 +1058,8 @@ class Group(WithMemoization):
 
     @property
     def ddim(self):
-        # XXX: This needs to be refactored
-        return None  # self.ordering.size
+        # TODO: This needs to be refactored
+        return self._ddim  # self.ordering.size
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         """*Dev* - allocates new initial random generator
@@ -1602,6 +1606,7 @@ class Approximation(WithMemoization):
 
     @node_property
     def sample_dict_fn(self):
+        # TODO: this breaks
         s = at.iscalar()
         names = [v.name for v in self.model.free_RVs]
         sampled = [self.rslice(name) for name in names]
