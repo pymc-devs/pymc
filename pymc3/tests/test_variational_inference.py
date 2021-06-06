@@ -177,7 +177,7 @@ def three_var_approx_single_group_mf(three_var_model):
 @pytest.fixture
 def test_sample_simple(three_var_approx, request):
     backend, name = request.param
-    trace = three_var_approx.sample(100, name=name)
+    trace = three_var_approx.sample(100, name=name, return_inferencedata=False)
     assert set(trace.varnames) == {"one", "one_log__", "three", "two"}
     assert len(trace) == 100
     assert trace[0]["one"].shape == (10, 2)
@@ -236,7 +236,7 @@ def test_sample_aevb(three_var_aevb_approx, aevb_initial):
         1, more_replacements={aevb_initial: np.zeros_like(aevb_initial.get_value())[:1]}
     )
     aevb_initial.set_value(np.random.rand(7, 7).astype("float32"))
-    trace = three_var_aevb_approx.sample(500)
+    trace = three_var_aevb_approx.sample(500, return_inferencedata=False)
     assert set(trace.varnames) == {"one", "one_log__", "two", "three"}
     assert len(trace) == 500
     assert trace[0]["one"].shape == (7, 2)
@@ -244,7 +244,7 @@ def test_sample_aevb(three_var_aevb_approx, aevb_initial):
     assert trace[0]["three"].shape == (10, 1, 2)
 
     aevb_initial.set_value(np.random.rand(13, 7).astype("float32"))
-    trace = three_var_aevb_approx.sample(500)
+    trace = three_var_aevb_approx.sample(500, return_inferencedata=False)
     assert set(trace.varnames) == {"one", "one_log__", "two", "three"}
     assert len(trace) == 500
     assert trace[0]["one"].shape == (13, 2)
@@ -984,10 +984,10 @@ def test_var_replacement():
 def test_empirical_from_trace(another_simple_model):
     with another_simple_model:
         step = pm.Metropolis()
-        trace = pm.sample(100, step=step, chains=1, tune=0)
+        trace = pm.sample(100, step=step, chains=1, tune=0, return_inferencedata=False)
         emp = Empirical(trace)
         assert emp.histogram.shape[0].eval() == 100
-        trace = pm.sample(100, step=step, chains=4, tune=0)
+        trace = pm.sample(100, step=step, chains=4, tune=0, return_inferencedata=False)
         emp = Empirical(trace)
         assert emp.histogram.shape[0].eval() == 400
 

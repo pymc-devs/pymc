@@ -531,11 +531,11 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             y = Normal("y", mu=x, sigma=1, observed=1)
             if step_method.__name__ == "NUTS":
                 step = step_method(scaling=model.initial_point)
-                trace = sample(
+                idata = sample(
                     0, tune=n_steps, discard_tuned_samples=False, step=step, random_seed=1, chains=1
                 )
             else:
-                trace = sample(
+                idata = sample(
                     0,
                     tune=n_steps,
                     discard_tuned_samples=False,
@@ -545,14 +545,18 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 )
 
         assert_array_almost_equal(
-            trace["x"],
+            idata.warmup_posterior["x"],
             self.master_samples[step_method],
             decimal=select_by_precision(float64=6, float32=4),
         )
 
-    def check_stat(self, check, trace, name):
+    def check_stat(self, check, idata, name):
+        if hasattr(idata, "warmup_posterior"):
+            group = idata.warmup_posterior
+        else:
+            group = idata.posterior
         for (var, stat, value, bound) in check:
-            s = stat(trace[var][2000:], axis=0)
+            s = stat(group[var].sel(chain=0, draw=slice(2000, None)), axis=0)
             close_to(s, value, bound)
 
     def test_step_continuous(self):
@@ -582,7 +586,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 ),
             )
         for step in steps:
-            trace = sample(
+            idata = sample(
                 0,
                 tune=8000,
                 chains=1,
@@ -592,7 +596,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 model=model,
                 random_seed=1,
             )
-            self.check_stat(check, trace, step.__class__.__name__)
+            self.check_stat(check, idata, step.__class__.__name__)
 
     def test_step_discrete(self):
         if aesara.config.floatX == "float32":
@@ -603,10 +607,10 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         with model:
             steps = (Metropolis(S=C, proposal_dist=MultivariateNormalProposal),)
         for step in steps:
-            trace = sample(
+            idata = sample(
                 20000, tune=0, step=step, start=start, model=model, random_seed=1, chains=1
             )
-            self.check_stat(check, trace, step.__class__.__name__)
+            self.check_stat(check, idata, step.__class__.__name__)
 
     def test_step_categorical(self):
         start, model, (mu, C) = simple_categorical()
@@ -618,8 +622,8 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 CategoricalGibbsMetropolis(model.x, proposal="proportional"),
             )
         for step in steps:
-            trace = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
-            self.check_stat(check, trace, step.__class__.__name__)
+            idata = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
+            self.check_stat(check, idata, step.__class__.__name__)
 
     @pytest.mark.xfail(reason="EllipticalSlice not refactored for v4")
     def test_step_elliptical_slice(self):
@@ -629,10 +633,10 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         with model:
             steps = (EllipticalSlice(prior_cov=K), EllipticalSlice(prior_chol=L))
         for step in steps:
-            trace = sample(
+            idata = sample(
                 5000, tune=0, step=step, start=start, model=model, random_seed=1, chains=1
             )
-            self.check_stat(check, trace, step.__class__.__name__)
+            self.check_stat(check, idata, step.__class__.__name__)
 
 
 class TestMetropolisProposal:
@@ -792,24 +796,20 @@ class TestPopulationSamplers:
             x = Normal("x", 0, 1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
-                trace = sample(chains=4, cores=1, draws=20, tune=0, step=DEMetropolis())
-                samples = np.array(trace.get_values("x", combine=False))[:, 5]
+                idata = sample(chains=4, cores=1, draws=20, tune=0, step=DEMetropolis())
+                samples = idata.posterior["x"].values[:, 5]
 
-                assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
-                    stepper
-                )
+                assert len(set(samples)) == 4, f"Parallelized {stepper} chains are identical."
 
     def test_parallelized_chains_are_random(self):
         with Model() as model:
             x = Normal("x", 0, 1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
-                trace = sample(chains=4, cores=4, draws=20, tune=0, step=DEMetropolis())
-                samples = np.array(trace.get_values("x", combine=False))[:, 5]
+                idata = sample(chains=4, cores=4, draws=20, tune=0, step=DEMetropolis())
+                samples = idata.posterior["x"].values[:, 5]
 
-                assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
-                    stepper
-                )
+                assert len(set(samples)) == 4, f"Parallelized {stepper} chains are identical."
 
 
 class TestMetropolis:
@@ -818,7 +818,7 @@ class TestMetropolis:
         with Model() as pmodel:
             D = 3
             Normal("n", 0, 2, size=(D,))
-            trace = sample(
+            idata = sample(
                 tune=600,
                 draws=500,
                 step=Metropolis(tune=True, scaling=0.1),
@@ -826,17 +826,19 @@ class TestMetropolis:
                 chains=3,
                 discard_tuned_samples=False,
             )
-        for c in range(trace.nchains):
+        for c in idata.posterior.chain:
             # check that the tuned settings changed and were reset
-            assert trace.get_sampler_stats("scaling", chains=c)[0] == 0.1
-            assert trace.get_sampler_stats("scaling", chains=c)[-1] != 0.1
+            assert idata.warmup_sample_stats["scaling"].sel(chain=c).values[0] == 0.1
+            tuned = idata.warmup_sample_stats["scaling"].sel(chain=c).values[-1]
+            assert tuned != 0.1
+            np.testing.assert_array_equal(idata.sample_stats["scaling"].sel(chain=c).values, tuned)
 
 
 class TestDEMetropolisZ:
     def test_tuning_lambda_sequential(self):
         with Model() as pmodel:
             Normal("n", 0, 2, size=(3,))
-            trace = sample(
+            idata = sample(
                 tune=1000,
                 draws=500,
                 step=DEMetropolisZ(tune="lambda", lamb=0.92),
@@ -844,16 +846,17 @@ class TestDEMetropolisZ:
                 chains=3,
                 discard_tuned_samples=False,
             )
-        for c in range(trace.nchains):
+        for c in idata.posterior.chain:
             # check that the tuned settings changed and were reset
-            assert trace.get_sampler_stats("lambda", chains=c)[0] == 0.92
-            assert trace.get_sampler_stats("lambda", chains=c)[-1] != 0.92
-            assert set(trace.get_sampler_stats("tune", chains=c)) == {True, False}
+            assert idata.warmup_sample_stats["lambda"].sel(chain=c).values[0] == 0.92
+            tuned = idata.warmup_sample_stats["lambda"].sel(chain=c).values[-1]
+            assert tuned != 0.92
+            np.testing.assert_array_equal(idata.sample_stats["lambda"].sel(chain=c).values, tuned)
 
     def test_tuning_epsilon_parallel(self):
         with Model() as pmodel:
             Normal("n", 0, 2, size=(3,))
-            trace = sample(
+            idata = sample(
                 tune=1000,
                 draws=500,
                 step=DEMetropolisZ(tune="scaling", scaling=0.002),
@@ -861,16 +864,17 @@ class TestDEMetropolisZ:
                 chains=2,
                 discard_tuned_samples=False,
             )
-        for c in range(trace.nchains):
+        for c in idata.posterior.chain:
             # check that the tuned settings changed and were reset
-            assert trace.get_sampler_stats("scaling", chains=c)[0] == 0.002
-            assert trace.get_sampler_stats("scaling", chains=c)[-1] != 0.002
-            assert set(trace.get_sampler_stats("tune", chains=c)) == {True, False}
+            assert idata.warmup_sample_stats["scaling"].sel(chain=c).values[0] == 0.002
+            tuned = idata.warmup_sample_stats["scaling"].sel(chain=c).values[-1]
+            assert tuned != 0.002
+            np.testing.assert_array_equal(idata.sample_stats["scaling"].sel(chain=c).values, tuned)
 
     def test_tuning_none(self):
         with Model() as pmodel:
             Normal("n", 0, 2, size=(3,))
-            trace = sample(
+            idata = sample(
                 tune=1000,
                 draws=500,
                 step=DEMetropolisZ(tune=None),
@@ -878,18 +882,17 @@ class TestDEMetropolisZ:
                 chains=2,
                 discard_tuned_samples=False,
             )
-        for c in range(trace.nchains):
+        for c in idata.posterior.chain:
             # check that all tunable parameters remained constant
-            assert len(set(trace.get_sampler_stats("lambda", chains=c))) == 1
-            assert len(set(trace.get_sampler_stats("scaling", chains=c))) == 1
-            assert set(trace.get_sampler_stats("tune", chains=c)) == {True, False}
+            assert len(set(idata.warmup_sample_stats["lambda"].sel(chain=c).values)) == 1
+            assert len(set(idata.warmup_sample_stats["scaling"].sel(chain=c).values)) == 1
 
     def test_tuning_reset(self):
         """Re-use of the step method instance with cores=1 must not leak tuning information between chains."""
         with Model() as pmodel:
             D = 3
             Normal("n", 0, 2, size=(D,))
-            trace = sample(
+            idata = sample(
                 tune=1000,
                 draws=500,
                 step=DEMetropolisZ(tune="scaling", scaling=0.002),
@@ -897,14 +900,16 @@ class TestDEMetropolisZ:
                 chains=3,
                 discard_tuned_samples=False,
             )
-        for c in range(trace.nchains):
+        for c in idata.posterior.chain:
             # check that the tuned settings changed and were reset
-            assert trace.get_sampler_stats("scaling", chains=c)[0] == 0.002
-            assert trace.get_sampler_stats("scaling", chains=c)[-1] != 0.002
+            warmup = idata.warmup_sample_stats["scaling"].sel(chain=c).values
+            assert warmup[0] == 0.002
+            assert warmup[-1] != 0.002
             # check that the variance of the first 50 iterations is much lower than the last 100
+            samples = idata.warmup_posterior["n"].sel(chain=c).values
             for d in range(D):
-                var_start = np.var(trace.get_values("n", chains=c)[:50, d])
-                var_end = np.var(trace.get_values("n", chains=c)[-100:, d])
+                var_start = np.var(samples[:50, d])
+                var_end = np.var(samples[-100:, d])
                 assert var_start < 0.1 * var_end
 
     def test_tune_drop_fraction(self):
@@ -914,10 +919,11 @@ class TestDEMetropolisZ:
         with Model() as pmodel:
             Normal("n", 0, 2, size=(3,))
             step = DEMetropolisZ(tune_drop_fraction=tune_drop_fraction)
-            trace = sample(
+            idata = sample(
                 tune=tune, draws=draws, step=step, cores=1, chains=1, discard_tuned_samples=False
             )
-            assert len(trace) == tune + draws
+            assert len(idata.warmup_posterior.draw) == tune
+            assert len(idata.posterior.draw) == draws
             assert len(step._history) == (tune - tune * tune_drop_fraction) + draws
 
     @pytest.mark.parametrize(
@@ -984,7 +990,7 @@ class TestNutsCheckTrace:
             b = at.slinalg.solve(floatX(np.eye(2)), a)
             Normal("c", mu=b, size=2, initval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
-            trace = sample(20, init=None, tune=5, chains=2)
+            trace = sample(20, init=None, tune=5, chains=2, return_inferencedata=False)
             warns = [msg.msg for msg in caplog.records]
             assert np.any(trace["diverging"])
             assert (
@@ -1002,7 +1008,7 @@ class TestNutsCheckTrace:
     def test_sampler_stats(self):
         with Model() as model:
             Normal("x", mu=0, sigma=1)
-            trace = sample(draws=10, tune=1, chains=1)
+            trace = sample(draws=10, tune=1, chains=1, return_inferencedata=False)
 
         # Assert stats exist and have the correct shape.
         expected_stat_names = {
@@ -1132,11 +1138,9 @@ class TestMLDA:
             Normal("x", 0, 1)
             for stepper in TestMLDA.steppers:
                 step = stepper(coarse_models=[coarse_model])
-                trace = sample(chains=2, cores=1, draws=20, tune=0, step=step, random_seed=1)
-                samples = np.array(trace.get_values("x", combine=False))[:, 5]
-                assert (
-                    len(set(samples)) == 2
-                ), "Non parallelized {} " "chains are identical.".format(stepper)
+                idata = sample(chains=2, cores=1, draws=20, tune=0, step=step, random_seed=1)
+                samples = idata.posterior["x"].values[:, 5]
+                assert len(set(samples)) == 2, f"Non parallelized {stepper} chains are identical."
 
     def test_parallelized_chains_are_random(self):
         """Test that parallel chain are
@@ -1149,11 +1153,9 @@ class TestMLDA:
             Normal("x", 0, 1)
             for stepper in TestMLDA.steppers:
                 step = stepper(coarse_models=[coarse_model])
-                trace = sample(chains=2, cores=2, draws=20, tune=0, step=step, random_seed=1)
-                samples = np.array(trace.get_values("x", combine=False))[:, 5]
-                assert len(set(samples)) == 2, "Parallelized {} " "chains are identical.".format(
-                    stepper
-                )
+                idata = sample(chains=2, cores=2, draws=20, tune=0, step=step, random_seed=1)
+                samples = idata.posterior["x"].values[:, 5]
+                assert len(set(samples)) == 2, f"Parallelized {stepper} chains are identical."
 
     def test_acceptance_rate_against_coarseness(self):
         """Test that the acceptance rate increases
@@ -1175,8 +1177,8 @@ class TestMLDA:
             Normal("x", 5.0, 1.0)
             for coarse_model in possible_coarse_models:
                 step = MLDA(coarse_models=[coarse_model], subsampling_rates=3)
-                trace = sample(chains=1, draws=500, tune=100, step=step, random_seed=1)
-                acc.append(trace.get_sampler_stats("accepted").mean())
+                idata = sample(chains=1, draws=500, tune=100, step=step, random_seed=1)
+                acc.append(idata.sample_stats["accepted"].mean())
             assert acc[0] > acc[1] > acc[2], (
                 "Acceptance rate is not "
                 "strictly increasing when"
@@ -1252,6 +1254,7 @@ class TestMLDA:
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=1234,
+                return_inferencedata=False,
             )
 
             trace_1 = sample(
@@ -1266,6 +1269,7 @@ class TestMLDA:
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=1234,
+                return_inferencedata=False,
             )
 
             trace_2 = sample(
@@ -1275,6 +1279,7 @@ class TestMLDA:
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=1234,
+                return_inferencedata=False,
             )
 
         assert trace_0.get_sampler_stats("tune", chains=0)[0]
@@ -1322,6 +1327,7 @@ class TestMLDA:
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=12345,
+                return_inferencedata=False,
             )
 
         ts_1 = 100
@@ -1339,6 +1345,7 @@ class TestMLDA:
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=12345,
+                return_inferencedata=False,
             )
 
         assert not trace_0.get_sampler_stats("tune", chains=0)[0]
@@ -1374,6 +1381,7 @@ class TestMLDA:
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=12345,
+                return_inferencedata=False,
             )
 
         assert not trace_2.get_sampler_stats("tune", chains=0)[0]
@@ -1395,8 +1403,9 @@ class TestMLDA:
         with Model():
             Normal("n", 0, 2, size=(3,))
             step = MLDA(coarse_models=[coarse_model])
-            trace = sample(tune=tune, draws=draws, step=step, chains=1, discard_tuned_samples=False)
-            assert len(trace) == tune + draws
+            idata = sample(tune=tune, draws=draws, step=step, chains=1, discard_tuned_samples=False)
+            assert len(idata.warmup_posterior.draw) == tune
+            assert len(idata.posterior.draw) == draws
 
     @pytest.mark.parametrize(
         "variable,has_grad,outcome",

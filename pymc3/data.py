@@ -498,12 +498,12 @@ class Data:
     ...     pm.Normal('y', mu=mu, sigma=1, observed=data)
 
     >>> # Generate one trace for each dataset
-    >>> traces = []
+    >>> idatas = []
     >>> for data_vals in observed_data:
     ...     with model:
     ...         # Switch out the observed dataset
     ...         model.set_data('data', data_vals)
-    ...         traces.append(pm.sample())
+    ...         idatas.append(pm.sample())
 
     To set the value of the data container variable, check out
     :func:`pymc3.model.set_data()`.

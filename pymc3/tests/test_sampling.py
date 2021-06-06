@@ -60,13 +60,13 @@ class TestSample(SeededTest):
         for _ in range(2):
             np.random.seed(1)  # seeds in other processes don't effect main process
             with self.model:
-                trace = pm.sample(100, tune=0, cores=cores)
+                idata = pm.sample(100, tune=0, cores=cores)
             # numpy thread mentioned race condition.  might as well check none are equal
             for first, second in combinations(range(cores), 2):
-                first_chain = trace.get_values("x", chains=first)
-                second_chain = trace.get_values("x", chains=second)
-                assert not (first_chain == second_chain).all()
-            draws.append(trace.get_values("x"))
+                first_chain = idata.posterior["x"].sel(chain=first).values
+                second_chain = idata.posterior["x"].sel(chain=second).values
+                assert not np.allclose(first_chain, second_chain)
+            draws.append(idata.posterior["x"].values)
             random_numbers.append(np.random.random())
 
         # Make sure future random processes aren't effected by this
@@ -125,7 +125,7 @@ class TestSample(SeededTest):
 
     def test_parallel_start(self):
         with self.model:
-            tr = pm.sample(
+            idata = pm.sample(
                 0,
                 tune=5,
                 cores=2,
@@ -133,16 +133,18 @@ class TestSample(SeededTest):
                 start=[{"x": [10, 10]}, {"x": [-10, -10]}],
                 random_seed=self.random_seed,
             )
-        assert tr.get_values("x", chains=0)[0][0] > 0
-        assert tr.get_values("x", chains=1)[0][0] < 0
+        assert idata.warmup_posterior["x"].sel(chain=0, draw=0).values[0] > 0
+        assert idata.warmup_posterior["x"].sel(chain=1, draw=0).values[0] < 0
 
     def test_sample_tune_len(self):
         with self.model:
-            trace = pm.sample(draws=100, tune=50, cores=1)
+            trace = pm.sample(draws=100, tune=50, cores=1, return_inferencedata=False)
             assert len(trace) == 100
-            trace = pm.sample(draws=100, tune=50, cores=1, discard_tuned_samples=False)
+            trace = pm.sample(
+                draws=100, tune=50, cores=1, return_inferencedata=False, discard_tuned_samples=False
+            )
             assert len(trace) == 150
-            trace = pm.sample(draws=100, tune=50, cores=4)
+            trace = pm.sample(draws=100, tune=50, cores=4, return_inferencedata=False)
             assert len(trace) == 100
 
     def test_reset_tuning(self):
@@ -183,12 +185,12 @@ class TestSample(SeededTest):
             mu = pm.BART("mu", X, Y, m=20)
             sigma = pm.HalfNormal("sigma", 1)
             y = pm.Normal("y", mu, sigma, observed=Y)
-            trace = pm.sample(500, tune=100, random_seed=3415)
+            trace = pm.sample(500, tune=100, random_seed=3415, return_inferencedata=False)
         var_imp = trace.report.variable_importance
         assert var_imp[0] > var_imp[1:].sum()
         npt.assert_almost_equal(var_imp.sum(), 1)
 
-    def test_return_inferencedata(self, monkeypatch):
+    def test_return_inferencedata(self):
         with self.model:
             kwargs = dict(draws=100, tune=50, cores=1, chains=2, step=pm.Metropolis())
 
@@ -222,16 +224,16 @@ class TestSample(SeededTest):
             assert result.posterior.sizes["chain"] == 2
             assert len(result._groups_warmup) == 0
 
-            # check warning for version 3.10 onwards
-            monkeypatch.setattr("pymc3.__version__", "3.10")
-            with pytest.warns(FutureWarning, match="pass return_inferencedata"):
-                result = pm.sample(**kwargs)
-
     @pytest.mark.parametrize("cores", [1, 2])
     def test_sampler_stat_tune(self, cores):
         with self.model:
             tune_stat = pm.sample(
-                tune=5, draws=7, cores=cores, discard_tuned_samples=False, step=pm.Metropolis()
+                tune=5,
+                draws=7,
+                cores=cores,
+                discard_tuned_samples=False,
+                return_inferencedata=False,
+                step=pm.Metropolis(),
             ).get_sampler_stats("tune", chains=1)
             assert list(tune_stat).count(True) == 5
             assert list(tune_stat).count(False) == 7
@@ -287,13 +289,14 @@ class TestSample(SeededTest):
                 cores=1,
                 random_seed=self.random_seed,
                 callback=callback,
+                return_inferencedata=False,
             )
             assert len(trace) == trace_cancel_length
 
     def test_sequential_backend(self):
         with self.model:
             backend = NDArray()
-            trace = pm.sample(10, cores=1, chains=2, trace=backend)
+            pm.sample(10, cores=1, chains=2, trace=backend)
 
 
 @pytest.mark.xfail(reason="Lognormal not refactored for v4")
@@ -330,8 +333,9 @@ def test_partial_trace_sample():
     with pm.Model() as model:
         a = pm.Normal("a", mu=0, sigma=1)
         b = pm.Normal("b", mu=0, sigma=1)
-        trace = pm.sample(trace=[a])
-        # TODO: Assert something to make this a real test
+        idata = pm.sample(trace=[a])
+        assert "a" in idata.posterior
+        assert "b" not in idata.posterior
 
 
 def test_chain_idx():
@@ -342,11 +346,11 @@ def test_chain_idx():
         # note draws-tune must be >100 AND we need an observed RV for this to properly
         # trigger convergence checks, which is one particular case in which this failed
         # before
-        trace = pm.sample(draws=150, tune=10, chain_idx=1)
+        idata = pm.sample(draws=150, tune=10, chain_idx=1)
 
-        ppc = pm.sample_posterior_predictive(trace)
+        ppc = pm.sample_posterior_predictive(idata)
         # TODO FIXME: Assert something.
-        ppc = pm.sample_posterior_predictive(trace, keep_size=True)
+        ppc = pm.sample_posterior_predictive(idata, keep_size=True)
 
 
 @pytest.mark.parametrize(
@@ -553,14 +557,14 @@ class TestSamplePPC(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
-            trace = pm.sample(idata_kwargs={"log_likelihood": False})
+            idata = pm.sample(idata_kwargs={"log_likelihood": False})
 
         with model:
             with pytest.raises(IncorrectArgumentsError):
-                ppc = pm.sample_posterior_predictive(trace, samples=10, keep_size=True)
+                ppc = pm.sample_posterior_predictive(idata, samples=10, keep_size=True)
 
             with pytest.raises(IncorrectArgumentsError):
-                ppc = pm.sample_posterior_predictive(trace, size=4, keep_size=True)
+                ppc = pm.sample_posterior_predictive(idata, size=4, keep_size=True)
 
             # test wrong type argument
             bad_trace = {"mu": stats.norm.rvs(size=1000)}
@@ -571,19 +575,19 @@ class TestSamplePPC(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", mu=0, sigma=1)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.0, 1.0]))
-            trace = pm.sample(idata_kwargs={"log_likelihood": False})
+            idata = pm.sample(idata_kwargs={"log_likelihood": False})
 
         with model:
             # test list input
             # ppc0 = pm.sample_posterior_predictive([model.initial_point], samples=10)
             # TODO: Assert something about the output
-            # ppc = pm.sample_posterior_predictive(trace, samples=12, var_names=[])
+            # ppc = pm.sample_posterior_predictive(idata, samples=12, var_names=[])
             # assert len(ppc) == 0
-            ppc = pm.sample_posterior_predictive(trace, samples=12, var_names=["a"])
+            ppc = pm.sample_posterior_predictive(idata, samples=12, var_names=["a"])
             assert "a" in ppc
             assert ppc["a"].shape == (12, 2)
 
-            ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"], size=4)
+            ppc = pm.sample_posterior_predictive(idata, samples=10, var_names=["a"], size=4)
             assert "a" in ppc
             assert ppc["a"].shape == (10, 4, 2)
 
@@ -591,13 +595,13 @@ class TestSamplePPC(SeededTest):
         with pm.Model() as model:
             a = pm.Normal("a", sigma=0.2)
             b = pm.Normal("b", mu=a)
-            trace = pm.sample()
+            idata = pm.sample()
 
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive([model.initial_point], samples=10)
             assert ppc0 == {}
-            ppc = pm.sample_posterior_predictive(trace, samples=1000, var_names=["b"])
+            ppc = pm.sample_posterior_predictive(idata, samples=1000, var_names=["b"])
             assert len(ppc) == 1
             assert ppc["b"].shape == (1000,)
             scale = np.sqrt(1 + 0.2 ** 2)
@@ -610,13 +614,13 @@ class TestSamplePPC(SeededTest):
         with model:
             mu = pm.HalfFlat("sigma")
             pm.Poisson("foo", mu=mu, observed=data)
-            trace = pm.sample(tune=1000)
+            idata = pm.sample(tune=1000)
 
         with model:
             with pytest.raises(NotImplementedError) as excinfo:
                 pm.sample_prior_predictive(50)
             assert "Cannot sample" in str(excinfo.value)
-            samples = pm.sample_posterior_predictive(trace, 40)
+            samples = pm.sample_posterior_predictive(idata, 40)
             assert samples["foo"].shape == (40, 200)
 
     def test_model_shared_variable(self):
@@ -909,7 +913,7 @@ def test_init_jitter(initval, jitter_max_retries, expectation):
 def point_list_arg_bug_fixture() -> Tuple[pm.Model, pm.backends.base.MultiTrace]:
     with pm.Model() as pmodel:
         n = pm.Normal("n")
-        trace = pm.sample()
+        trace = pm.sample(return_inferencedata=False)
 
     with pmodel:
         d = pm.Deterministic("d", n * 4)
@@ -1100,6 +1104,6 @@ def test_sample_deterministic():
     with pm.Model() as model:
         x = pm.HalfNormal("x", 1)
         y = pm.Deterministic("y", x + 100)
-        trace = pm.sample(chains=1, draws=50, compute_convergence_checks=False)
+        idata = pm.sample(chains=1, draws=50, compute_convergence_checks=False)
 
-    np.testing.assert_allclose(trace["y"], trace["x"] + 100)
+    np.testing.assert_allclose(idata.posterior["y"], idata.posterior["x"] + 100)

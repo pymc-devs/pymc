@@ -231,7 +231,7 @@ other implementations.  The first block fits the GP prior.  We denote
 
         f = gp.marginal_likelihood("f", X, y, noise)
 
-        trace = pm.sample(1000)
+        idata = pm.sample(1000)
 
 
 To construct the conditional distribution of :code:`gp1` or :code:`gp2`, we

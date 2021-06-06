@@ -49,12 +49,12 @@ class TestData(SeededTest):
             pm.Normal("obs", b * x_shared, np.sqrt(1e-2), observed=y)
 
             prior_trace0 = pm.sample_prior_predictive(1000)
-            trace = pm.sample(1000, init=None, tune=1000, chains=1)
-            pp_trace0 = pm.sample_posterior_predictive(trace, 1000)
+            idata = pm.sample(1000, init=None, tune=1000, chains=1)
+            pp_trace0 = pm.sample_posterior_predictive(idata, 1000)
 
             x_shared.set_value(x_pred)
             prior_trace1 = pm.sample_prior_predictive(1000)
-            pp_trace1 = pm.sample_posterior_predictive(trace, samples=1000)
+            pp_trace1 = pm.sample_posterior_predictive(idata, samples=1000)
 
         assert prior_trace0["b"].shape == (1000,)
         assert prior_trace0["obs"].shape == (1000, 100)
@@ -101,7 +101,6 @@ class TestData(SeededTest):
                 init=None,
                 tune=1000,
                 chains=1,
-                return_inferencedata=False,
                 compute_convergence_checks=False,
             )
         # Predict on new data.
@@ -109,15 +108,14 @@ class TestData(SeededTest):
         new_y = [5.0, 6.0, 9.0]
         with model:
             pm.set_data(new_data={"x": new_x, "y": new_y})
-            new_trace = pm.sample(
+            new_idata = pm.sample(
                 1000,
                 init=None,
                 tune=1000,
                 chains=1,
-                return_inferencedata=False,
                 compute_convergence_checks=False,
             )
-            pp_trace = pm.sample_posterior_predictive(new_trace, 1000)
+            pp_trace = pm.sample_posterior_predictive(new_idata, 1000)
 
         assert pp_trace["obs"].shape == (1000, 3)
         np.testing.assert_allclose(new_y, pp_trace["obs"].mean(axis=0), atol=1e-1)
@@ -134,12 +132,11 @@ class TestData(SeededTest):
             pm.Normal("obs", alpha[index], np.sqrt(1e-2), observed=y)
 
             prior_trace = pm.sample_prior_predictive(1000, var_names=["alpha"])
-            trace = pm.sample(
+            idata = pm.sample(
                 1000,
                 init=None,
                 tune=1000,
                 chains=1,
-                return_inferencedata=False,
                 compute_convergence_checks=False,
             )
 
@@ -148,10 +145,10 @@ class TestData(SeededTest):
         new_y = [5.0, 6.0, 9.0]
         with model:
             pm.set_data(new_data={"index": new_index, "y": new_y})
-            pp_trace = pm.sample_posterior_predictive(trace, 1000, var_names=["alpha", "obs"])
+            pp_trace = pm.sample_posterior_predictive(idata, 1000, var_names=["alpha", "obs"])
 
         assert prior_trace["alpha"].shape == (1000, 3)
-        assert trace["alpha"].shape == (1000, 3)
+        assert idata.posterior["alpha"].shape == (1, 1000, 3)
         assert pp_trace["alpha"].shape == (1000, 3)
         assert pp_trace["obs"].shape == (1000, 3)
 
@@ -233,7 +230,6 @@ class TestData(SeededTest):
                 init=None,
                 tune=1000,
                 chains=1,
-                return_inferencedata=False,
                 compute_convergence_checks=False,
             )
         with pytest.raises(TypeError) as error:
@@ -253,7 +249,6 @@ class TestData(SeededTest):
                 init=None,
                 tune=1000,
                 chains=1,
-                return_inferencedata=False,
                 compute_convergence_checks=False,
             )
 

@@ -1696,7 +1696,7 @@ def set_data(new_data, model=None):
         ...     y = pm.Data('y', [1., 2., 3.])
         ...     beta = pm.Normal('beta', 0, 1)
         ...     obs = pm.Normal('obs', x * beta, 1, observed=y)
-        ...     trace = pm.sample(1000, tune=1000)
+        ...     idata = pm.sample(1000, tune=1000)
 
     Set the value of `x` to predict on new data.
 
@@ -1704,7 +1704,7 @@ def set_data(new_data, model=None):
 
         >>> with model:
         ...     pm.set_data({'x': [5., 6., 9.]})
-        ...     y_test = pm.sample_posterior_predictive(trace)
+        ...     y_test = pm.sample_posterior_predictive(idata)
         >>> y_test['obs'].mean(axis=0)
         array([4.6088569 , 5.54128318, 8.32953844])
     """

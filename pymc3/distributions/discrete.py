@@ -1691,14 +1691,15 @@ class OrderedLogistic(Categorical):
             cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedLogistic("y", cutpoints=cutpoints, eta=x, observed=y)
-            tr = pm.sample(1000)
+            idata = pm.sample(1000)
 
         # Plot the results
         plt.hist(cluster1, 30, alpha=0.5);
         plt.hist(cluster2, 30, alpha=0.5);
         plt.hist(cluster3, 30, alpha=0.5);
-        plt.hist(tr["cutpoints"][:,0], 80, alpha=0.2, color='k');
-        plt.hist(tr["cutpoints"][:,1], 80, alpha=0.2, color='k');
+        posterior = idata.posterior.stack(sample=("chain", "draw"))
+        plt.hist(posterior["cutpoints"][0], 80, alpha=0.2, color='k');
+        plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
 
     """
 
@@ -1782,14 +1783,15 @@ class OrderedProbit(Categorical):
             cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedProbit("y", cutpoints=cutpoints, eta=x, observed=y)
-            tr = pm.sample(1000)
+            idata = pm.sample(1000)
 
         # Plot the results
         plt.hist(cluster1, 30, alpha=0.5);
         plt.hist(cluster2, 30, alpha=0.5);
         plt.hist(cluster3, 30, alpha=0.5);
-        plt.hist(tr["cutpoints"][:,0], 80, alpha=0.2, color='k');
-        plt.hist(tr["cutpoints"][:,1], 80, alpha=0.2, color='k');
+        posterior = idata.posterior.stack(sample=("chain", "draw"))
+        plt.hist(posterior["cutpoints"][0], 80, alpha=0.2, color='k');
+        plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
 
     """
 

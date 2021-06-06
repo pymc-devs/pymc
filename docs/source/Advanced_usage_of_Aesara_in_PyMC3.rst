@@ -40,12 +40,12 @@ be time consuming if the number of datasets is large)::
         pm.Normal('y', mu=mu, sigma=1, observed=data)
 
     # Generate one trace for each dataset
-    traces = []
+    idatas = []
     for data_vals in observed_data:
         # Switch out the observed dataset
         data.set_value(data_vals)
         with model:
-            traces.append(pm.sample())
+            idatas.append(pm.sample())
 
 We can also sometimes use shared variables to work around limitations
 in the current PyMC3 api. A common task in Machine Learning is to predict
@@ -63,7 +63,7 @@ variable for our observations::
       pm.Bernoulli('obs', p=logistic, observed=y)
 
       # fit the model
-      trace = pm.sample()
+      idata = pm.sample()
 
       # Switch out the observations and use `sample_posterior_predictive` to predict
       x_shared.set_value([-1, 0, 1.])
@@ -220,4 +220,4 @@ We can now define our model using this new `Op`::
         mu = pm.Deterministic('mu', at_mu_from_theta(theta))
         pm.Normal('y', mu=mu, sigma=0.1, observed=[0.2, 0.21, 0.3])
 
-        trace = pm.sample()
+        idata = pm.sample()
