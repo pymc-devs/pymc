@@ -27,7 +27,6 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
 
 import aesara.gradient as tg
 import numpy as np
-import packaging
 import xarray
 
 from aesara.compile.mode import Mode
@@ -355,7 +354,7 @@ def sample(
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
         that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
         init methods.
-    return_inferencedata : bool, default=False
+    return_inferencedata : bool, default=True
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
         Defaults to `False`, but we'll switch to `True` in an upcoming release.
     idata_kwargs : dict, optional
@@ -430,9 +429,9 @@ def sample(
         In [2]: with pm.Model() as model: # context management
            ...:     p = pm.Beta("p", alpha=alpha, beta=beta)
            ...:     y = pm.Binomial("y", n=n, p=p, observed=h)
-           ...:     trace = pm.sample()
+           ...:     idata = pm.sample()
 
-        In [3]: az.summary(trace, kind="stats")
+        In [3]: az.summary(idata, kind="stats")
 
         Out[3]:
             mean     sd  hdi_3%  hdi_97%
@@ -471,6 +470,9 @@ def sample(
     if not isinstance(random_seed, abc.Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
 
+    if return_inferencedata is None:
+        return_inferencedata = True
+
     if not discard_tuned_samples and not return_inferencedata:
         warnings.warn(
             "Tuning samples will be included in the returned `MultiTrace` object, which can lead to"
@@ -479,18 +481,6 @@ def sample(
             UserWarning,
             stacklevel=2,
         )
-
-    if return_inferencedata is None:
-        v = packaging.version.parse(pm.__version__)
-        if v.release[0] > 3 or v.release[1] >= 10:  # type: ignore
-            warnings.warn(
-                "In v4.0, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
-                "You can pass return_inferencedata=True or return_inferencedata=False to be safe and silence this warning.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        # set the default
-        return_inferencedata = False
 
     if start is not None:
         for start_vals in start:

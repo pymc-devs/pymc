@@ -56,11 +56,14 @@ def test_leapfrog_reversible():
 
 
 def test_nuts_tuning():
-    model = pymc3.Model()
-    with model:
+    with pymc3.Model():
         pymc3.Normal("mu", mu=0, sigma=1)
         step = pymc3.NUTS()
-        trace = pymc3.sample(10, step=step, tune=5, progressbar=False, chains=1)
+        idata = pymc3.sample(
+            10, step=step, tune=5, discard_tuned_samples=False, progressbar=False, chains=1
+        )
 
     assert not step.tune
-    assert np.all(trace["step_size"][5:] == trace["step_size"][5])
+    ss_tuned = idata.warmup_sample_stats["step_size"][0, -1]
+    ss_posterior = idata.sample_stats["step_size"][0, :]
+    np.testing.assert_array_equal(ss_posterior, ss_tuned)

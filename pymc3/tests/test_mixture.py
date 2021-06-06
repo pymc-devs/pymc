@@ -375,11 +375,11 @@ class TestMixture(SeededTest):
 
             pm.Mixture("x_obs", pi, comp_dist, observed=X)
         with model:
-            trace = pm.sample(30, tune=10, chains=1)
+            idata = pm.sample(30, tune=10, chains=1)
 
         n_samples = 20
         with model:
-            ppc = pm.sample_posterior_predictive(trace, n_samples)
+            ppc = pm.sample_posterior_predictive(idata, n_samples)
             prior = pm.sample_prior_predictive(samples=n_samples)
         assert ppc["x_obs"].shape == (n_samples,) + X.shape
         assert prior["x_obs"].shape == (n_samples,) + X.shape

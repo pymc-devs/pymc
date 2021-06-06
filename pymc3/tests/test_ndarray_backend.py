@@ -219,7 +219,7 @@ class TestSaveLoad:
     @classmethod
     def setup_class(cls):
         with TestSaveLoad.model():
-            cls.trace = pm.sample()
+            cls.trace = pm.sample(return_inferencedata=False)
 
     def test_save_new_model(self, tmpdir_factory):
         directory = str(tmpdir_factory.mktemp("data"))
@@ -228,7 +228,7 @@ class TestSaveLoad:
         assert save_dir == directory
         with pm.Model() as model:
             w = pm.Normal("w", 0, 1)
-            new_trace = pm.sample()
+            new_trace = pm.sample(return_inferencedata=False)
 
         with pytest.raises(OSError):
             _ = pm.save_trace(new_trace, directory)

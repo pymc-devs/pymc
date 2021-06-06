@@ -237,9 +237,9 @@ Save this file, then from a python shell (or another file in the same directory)
     with bioassay_model:
 
         # Draw samples
-        trace = pm.sample(1000, tune=2000, cores=2)
+        idata = pm.sample(1000, tune=2000, cores=2)
         # Plot two parameters
-        az.plot_forest(trace, var_names=['alpha', 'beta'], r_hat=True)
+        az.plot_forest(idata, var_names=['alpha', 'beta'], r_hat=True)
 
 This example will generate 1000 posterior samples on each of two cores using the NUTS algorithm, preceded by 2000 tuning samples (these are good default numbers for most models).
 

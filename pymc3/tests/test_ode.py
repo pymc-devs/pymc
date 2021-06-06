@@ -265,7 +265,7 @@ class TestDiffEqModel:
         assert op_1 != op_other
         return
 
-    @pytest.mark.xfail(reason="HalfCauchy was not yet refactored")
+    @pytest.mark.xfail(reason="https://github.com/pymc-devs/aesara/issues/390")
     def test_scalar_ode_1_param(self):
         """Test running model for a scalar ODE with 1 parameter"""
 
@@ -288,13 +288,13 @@ class TestDiffEqModel:
             sigma = pm.HalfCauchy("sigma", 1)
             forward = ode_model(theta=[alpha], y0=[y0])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
-            trace = pm.sample(100, tune=0, chains=1)
+            idata = pm.sample(100, tune=0, chains=1)
 
-        assert trace["alpha"].size > 0
-        assert trace["y0"].size > 0
-        assert trace["sigma"].size > 0
+        assert idata.posterior["alpha"].shape == (1, 100)
+        assert idata.posterior["y0"].shape == (1, 100)
+        assert idata.posterior["sigma"].shape == (1, 100)
 
-    @pytest.mark.xfail(reason="HalfCauchy was not yet refactored")
+    @pytest.mark.xfail(reason="https://github.com/pymc-devs/aesara/issues/390")
     def test_scalar_ode_2_param(self):
         """Test running model for a scalar ODE with 2 parameters"""
 
@@ -319,14 +319,14 @@ class TestDiffEqModel:
             forward = ode_model(theta=[alpha, beta], y0=[y0])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-            trace = pm.sample(100, tune=0, chains=1)
+            idata = pm.sample(100, tune=0, chains=1)
 
-        assert trace["alpha"].size > 0
-        assert trace["beta"].size > 0
-        assert trace["y0"].size > 0
-        assert trace["sigma"].size > 0
+        assert idata.posterior["alpha"].shape == (1, 100)
+        assert idata.posterior["beta"].shape == (1, 100)
+        assert idata.posterior["y0"].shape == (1, 100)
+        assert idata.posterior["sigma"].shape == (1, 100)
 
-    @pytest.mark.xfail(reason="HalfCauchy was not yet refactored")
+    @pytest.mark.xfail(reason="https://github.com/pymc-devs/aesara/issues/390")
     def test_vector_ode_1_param(self):
         """Test running model for a vector ODE with 1 parameter"""
 
@@ -361,12 +361,11 @@ class TestDiffEqModel:
             forward = ode_model(theta=[R], y0=[0.99, 0.01])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-            trace = pm.sample(100, tune=0, chains=1)
+            idata = pm.sample(100, tune=0, chains=1)
 
-        assert trace["R"].size > 0
-        assert trace["sigma"].size > 0
+        assert idata.posterior["R"].shape == (1, 100)
+        assert idata.posterior["sigma"].shape == (1, 100, 2)
 
-    @pytest.mark.xfail(reason="HalfCauchy was not yet refactored")
     def test_vector_ode_2_param(self):
         """Test running model for a vector ODE with 2 parameters"""
 
@@ -402,8 +401,8 @@ class TestDiffEqModel:
             forward = ode_model(theta=[beta, gamma], y0=[0.99, 0.01])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-            trace = pm.sample(100, tune=0, chains=1)
+            idata = pm.sample(100, tune=0, chains=1)
 
-        assert trace["beta"].size > 0
-        assert trace["gamma"].size > 0
-        assert trace["sigma"].size > 0
+        assert idata.posterior["beta"].shape == (1, 100)
+        assert idata.posterior["gamma"].shape == (1, 100)
+        assert idata.posterior["sigma"].shape == (1, 100, 2)

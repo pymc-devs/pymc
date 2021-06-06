@@ -334,11 +334,11 @@ class MLDA(ArrayStepShared):
         ...     y = pm.Normal("y", mu=x, sigma=1, observed=datum)
         ...     step_method = pm.MLDA(coarse_models=[coarse_model],
         ...                           subsampling_rates=5)
-        ...     trace = pm.sample(500, chains=2,
+        ...     idata = pm.sample(500, chains=2,
         ...                       tune=100, step=step_method,
         ...                       random_seed=123)
         ...
-        ... az.summary(trace, kind="stats")
+        ... az.summary(idata, kind="stats")
            mean     sd  hdi_3%  hdi_97%
         x  0.99  0.987  -0.734    2.992
 

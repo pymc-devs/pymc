@@ -56,7 +56,7 @@ class TestDataPyMC3:
                 sd=eight_schools_params["sigma"],
                 observed=eight_schools_params["y"],
             )
-            trace = pm.sample(draws, chains=chains)
+            trace = pm.sample(draws, chains=chains, return_inferencedata=False)
 
         return self.Data(model, trace)
 
@@ -224,7 +224,6 @@ class TestDataPyMC3:
         assert len(records) == 1
         assert records[0].levelname == "WARNING"
 
-    @pytest.mark.xfail(reason="Dims option is not supported yet")
     @pytest.mark.parametrize("use_context", [True, False])
     def test_autodetect_coords_from_model(self, use_context):
         df_data = pd.DataFrame(columns=["date"]).set_index("date")
@@ -268,7 +267,6 @@ class TestDataPyMC3:
         np.testing.assert_array_equal(idata.observed_data.coords["date"], coords["date"])
         np.testing.assert_array_equal(idata.observed_data.coords["city"], coords["city"])
 
-    @pytest.mark.xfail(reason="Dims option is not supported yet")
     def test_ovewrite_model_coords_dims(self):
         """Check coords and dims from model object can be partially overwrited."""
         dim1 = ["a", "b"]
@@ -280,7 +278,7 @@ class TestDataPyMC3:
             x = pm.Data("x", x_data, dims=("dim1", "dim2"))
             beta = pm.Normal("beta", 0, 1, dims="dim1")
             _ = pm.Normal("obs", x * beta, 1, observed=y, dims=("dim1", "dim2"))
-            trace = pm.sample(100, tune=100)
+            trace = pm.sample(100, tune=100, return_inferencedata=False)
             idata1 = to_inference_data(trace)
             idata2 = to_inference_data(trace, coords={"dim1": new_dim1}, dims={"beta": ["dim2"]})
 
@@ -449,7 +447,7 @@ class TestDataPyMC3:
             y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
-            trace = pm.sample(100, tune=100)
+            trace = pm.sample(100, tune=100, return_inferencedata=False)
             if use_context:
                 inference_data = to_inference_data(trace=trace)
 
@@ -465,7 +463,7 @@ class TestDataPyMC3:
             y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
-            trace = pm.sample(100, tune=100)
+            trace = pm.sample(100, tune=100, return_inferencedata=False)
             inference_data = to_inference_data(trace)
 
         test_dict = {"posterior": ["beta"], "observed_data": ["obs"], "constant_data": ["x"]}
@@ -499,9 +497,9 @@ class TestDataPyMC3:
             y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
-            trace = pm.sample(100, tune=100)
+            idata = pm.sample(100, tune=100)
             prior = pm.sample_prior_predictive()
-            posterior_predictive = pm.sample_posterior_predictive(trace)
+            posterior_predictive = pm.sample_posterior_predictive(idata)
 
         # Only prior
         inference_data = to_inference_data(prior=prior, model=model)
@@ -548,7 +546,6 @@ class TestDataPyMC3:
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
 
-    @pytest.mark.xfail(reason="Dims option is not supported yet")
     def test_multivariate_observations(self):
         coords = {"direction": ["x", "y", "z"], "experiment": np.arange(20)}
         data = np.random.multinomial(20, [0.2, 0.3, 0.5], size=20)
@@ -616,6 +613,7 @@ class TestPyMC3WarmupHandling:
                 cores=1,
                 step=pm.Metropolis(),
                 discard_tuned_samples=False,
+                return_inferencedata=False,
             )
             assert isinstance(trace, pm.backends.base.MultiTrace)
             assert len(trace) == 300

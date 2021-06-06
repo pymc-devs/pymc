@@ -495,7 +495,7 @@ class DensityDist(Distribution):
                         normal_dist.logp,
                         observed=np.random.randn(100),
                     )
-                    trace = pm.sample(100)
+                    idata = pm.sample(100)
 
             .. code-block:: python
 

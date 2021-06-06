@@ -193,10 +193,6 @@ def build_disaster_model(masked=False):
     return model
 
 
-@pytest.mark.xfail(
-    reason="Arviz summary fails"
-    # condition=(aesara.config.floatX == "float32"), reason="Fails on float32"
-)
 class TestDisasterModel(SeededTest):
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     # Time series of recorded coal mining disasters in the UK from 1851 to 1962
@@ -207,8 +203,8 @@ class TestDisasterModel(SeededTest):
             start = {"early_mean": 2, "late_mean": 3.0}
             # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model["early_mean_log__"], model["late_mean_log__"]])
-            tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
-            az.summary(tr)
+            idata = pm.sample(500, tune=50, start=start, step=step, chains=2)
+            az.summary(idata)
 
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_disaster_model_missing(self):
@@ -218,8 +214,8 @@ class TestDisasterModel(SeededTest):
             start = {"early_mean": 2.0, "late_mean": 3.0}
             # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model["early_mean_log__"], model["late_mean_log__"]])
-            tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
-            az.summary(tr)
+            idata = pm.sample(500, tune=50, start=start, step=step, chains=2)
+            az.summary(idata)
 
 
 class TestLatentOccupancy(SeededTest):
