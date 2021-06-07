@@ -1048,13 +1048,24 @@ class TestMatchesScipy:
             lambda value, sigma: sp.halfnorm.logcdf(value, scale=sigma),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_chi_squared(self):
+    def test_chisquared_logp(self):
         self.check_logp(
             ChiSquared,
             Rplus,
-            {"nu": Rplusdunif},
+            {"nu": Rplus},
             lambda value, nu: sp.chi2.logpdf(value, df=nu),
+        )
+
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Fails on float32 due to numerical issues",
+    )
+    def test_chisquared_logcdf(self):
+        self.check_logcdf(
+            ChiSquared,
+            Rplus,
+            {"nu": Rplus},
+            lambda value, nu: sp.chi2.logcdf(value, df=nu),
         )
 
     @pytest.mark.xfail(reason="Distribution not refactored yet")
