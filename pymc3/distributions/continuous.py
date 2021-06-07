@@ -28,6 +28,7 @@ from aesara.tensor.random.basic import (
     BetaRV,
     WeibullRV,
     cauchy,
+    chisquare,
     exponential,
     gamma,
     gumbel,
@@ -2562,7 +2563,7 @@ class InverseGamma(PositiveContinuous):
         )
 
 
-class ChiSquared(Gamma):
+class ChiSquared(PositiveContinuous):
     r"""
     :math:`\chi^2` log-likelihood.
 
@@ -2597,13 +2598,48 @@ class ChiSquared(Gamma):
 
     Parameters
     ----------
-    nu: int
+    nu: float
         Degrees of freedom (nu > 0).
     """
+    rv_op = chisquare
 
-    def __init__(self, nu, *args, **kwargs):
-        self.nu = nu = at.as_tensor_variable(floatX(nu))
-        super().__init__(alpha=nu / 2.0, beta=0.5, *args, **kwargs)
+    @classmethod
+    def dist(cls, nu, *args, **kwargs):
+        nu = at.as_tensor_variable(floatX(nu))
+        return super().dist([nu], *args, **kwargs)
+
+    def logp(value, nu):
+        """
+        Calculate log-probability of ChiSquared distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return Gamma.logp(value, nu / 2, 2)
+
+    def logcdf(value, nu):
+        """
+        Compute the log of the cumulative distribution function for ChiSquared distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or `TensorVariable`
+            Value(s) for which log CDF is calculated. If the log CDF for
+            multiple values are desired the values must be provided in a numpy
+            array or `TensorVariable`.
+        Returns
+        -------
+        TensorVariable
+        """
+        return Gamma.logcdf(value, nu / 2, 2)
 
 
 # TODO: Remove this once logpt for multiplication is working!
