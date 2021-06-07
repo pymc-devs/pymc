@@ -18,7 +18,7 @@ If you have questions about a specific use case, or you are not sure whether thi
 ## Versions and main components
 
 * PyMC3 Version:
-* Aesara Version:
+* Aesara/Theano Version:
 * Python Version:
 * Operating system:
 * How did you install PyMC3: (conda/pip)
