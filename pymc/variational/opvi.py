@@ -852,6 +852,7 @@ class Group(WithMemoization):
         self.user_params = params
         self._user_params = None
         self.replacements = dict()
+        self.ordering = dict()
         # save this stuff to use in __init_group__ later
         self._kwargs = kwargs
         if self.group is not None:
@@ -990,7 +991,12 @@ class Group(WithMemoization):
             vr = self.input[..., start_idx:start_idx+size].reshape(shape).astype(dtype)
             vr.name = var.tag.value_var.name + "_vi_replacement"
             self.replacements[var.tag.value_var] = vr
-
+            self.ordering[var.tag.value_var.name] = (
+                var.tag.value_var.name,
+                slice(start_idx, start_idx+size),
+                shape,
+                dtype
+            )
             start_idx += size
         self._ddim = start_idx
 
@@ -1590,7 +1596,7 @@ class Approximation(WithMemoization):
         """
 
         def vars_names(vs):
-            return {v.name for v in vs}
+            return {v.tag.value_var.name for v in vs}
 
         for vars_, random, ordering in zip(
             self.collect("group"), self.symbolic_randoms, self.collect("ordering")
@@ -1608,43 +1614,37 @@ class Approximation(WithMemoization):
     def sample_dict_fn(self):
         # TODO: this breaks
         s = at.iscalar()
-        names = [v.name for v in self.model.free_RVs]
+        names = [v.tag.value_var.name for v in self.model.free_RVs]
         sampled = [self.rslice(name) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
         sample_fn = aesara.function([s], sampled)
 
         def inner(draws=100):
             _samples = sample_fn(draws)
-            return {v_.name: s_ for v_, s_ in zip(self.model.free_RVs, _samples)}
+            return {v_: s_ for v_, s_ in zip(names, _samples)}
 
         return inner
 
-    def sample(self, draws=500, include_transformed=True):
+    def sample(self, draws=500):
         """Draw samples from variational posterior.
 
         Parameters
         ----------
         draws: `int`
             Number of random samples.
-        include_transformed: `bool`
-            If True, transformed variables are also sampled. Default is False.
 
         Returns
         -------
         trace: :class:`pymc.backends.base.MultiTrace`
             Samples drawn from variational posterior.
         """
-        vars_sampled = get_default_varnames(
-            [v.tag.value_var for v in self.model.unobserved_RVs],
-            include_transformed=include_transformed,
-        )
+        # TODO: check for include_transformed case
+
         samples = self.sample_dict_fn(draws)  # type: dict
         points = ({name: records[i] for name, records in samples.items()} for i in range(draws))
 
         trace = NDArray(
             model=self.model,
-            vars=vars_sampled,
-            test_point={name: records[0] for name, records in samples.items()},
         )
         try:
             trace.setup(draws=draws, chain=0)
