@@ -2584,7 +2584,7 @@ class ChiSquared(PositiveContinuous):
 
     Parameters
     ----------
-    nu: int
+    nu: float
         Degrees of freedom (nu > 0).
     """
     rv_op = chisquare
