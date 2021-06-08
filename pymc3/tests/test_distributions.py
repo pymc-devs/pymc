@@ -2937,16 +2937,11 @@ def test_car_logp(size):
 
 
 class TestBugfixes:
-    @pytest.mark.parametrize(
-        "dist_cls,kwargs", [(MvNormal, dict(mu=0)), (MvStudentT, dict(mu=0, nu=2))]
-    )
+    @pytest.mark.parametrize("dist_cls,kwargs", [(MvNormal, dict()), (MvStudentT, dict(nu=2))])
     @pytest.mark.parametrize("dims", [1, 2, 4])
     def test_issue_3051(self, dims, dist_cls, kwargs):
-        mu = np.repeat(kwargs["mu"], dims)
-        if "nu" in kwargs:
-            d = dist_cls.dist(nu=kwargs["nu"], mu=mu, cov=np.eye(dims), size=(20))
-        else:
-            d = dist_cls.dist(mu=mu, cov=np.eye(dims), size=(20))
+        mu = np.repeat(0, dims)
+        d = dist_cls.dist(mu=mu, cov=np.eye(dims), **kwargs, size=(20))
 
         X = np.random.normal(size=(20, dims))
         actual_t = logpt(d, X)
