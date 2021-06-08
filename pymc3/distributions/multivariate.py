@@ -531,7 +531,7 @@ class DirichletMultinomial(Discrete):
 
     .. math::
 
-    f(x \mid n, a) = \frac{\Gamma(n + 1)\Gamma(\sum a_k)}
+        f(x \mid n, a) = \frac{\Gamma(n + 1)\Gamma(\sum a_k)}
                               {\Gamma(\n + \sum a_k)}
                          \prod_{k=1}^K
                          \frac{\Gamma(x_k +  a_k)}
