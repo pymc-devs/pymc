@@ -37,14 +37,13 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
-    "nbsphinx",
     "numpydoc",
     "IPython.sphinxext.ipython_console_highlighting",
     "IPython.sphinxext.ipython_directive",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.napoleon",
     "gallery_generator",
-    "recommonmark",
+    "myst_nb",
 ]
 
 # Don't auto-generate summary for class members.
@@ -72,8 +71,8 @@ master_doc = "index"
 
 # General information about the project.
 project = "PyMC3"
-copyright = "2018, The PyMC Development Team"
-author = "PyMC developers"
+copyright = "2021, The PyMC Development Team"
+author = "PyMC contributors"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -101,7 +100,7 @@ language = None
 # directories to ignore when looking for source files.
 exclude_patterns = ["_build", "**.ipynb_checkpoints"]
 
-nbsphinx_execute = "never"
+jupyter_execute_notebooks = "off"
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
