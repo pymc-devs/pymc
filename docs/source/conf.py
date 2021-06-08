@@ -39,6 +39,7 @@ extensions = [
     "matplotlib.sphinxext.plot_directive",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "numpydoc",
@@ -143,8 +144,7 @@ intersphinx_mapping = {
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme_path = ["."]
-html_theme = "semantic_sphinx"
+html_theme = "pydata_sphinx_theme"
 
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -152,14 +152,14 @@ html_theme = "semantic_sphinx"
 # documentation.
 
 html_theme_options = {
-    "navbar_links": [
-        ("Tutorials", "nb_tutorials/index"),
-        ("Examples", "nb_examples/index"),
-        ("Books + Videos", "learn"),
-        ("API", "api"),
-        ("Developer Guide", "developer_guide"),
-        ("About PyMC3", "about"),
-    ],
+    # "navbar_links": [
+    #     ("Tutorials", "nb_tutorials/index"),
+    #     ("Examples", "nb_examples/index"),
+    #     ("Books + Videos", "learn"),
+    #     ("API", "api"),
+    #     ("Developer Guide", "developer_guide"),
+    #     ("About PyMC3", "about"),
+    # ],
     #     "fixed_sidebar": "false",
     #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Aesara"
 }
@@ -202,7 +202,7 @@ html_static_path = ["_static", "nb_tutorials/_images", "nb_examples/_images"]
 # html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {"**": ["about.html", "navigation.html", "searchbox.html"]}
+# html_sidebars = {"**": ["about.html", "navigation.html", "searchbox.html"]}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
