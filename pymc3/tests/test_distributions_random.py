@@ -14,7 +14,6 @@
 import functools
 import itertools
 
-from contextlib import ExitStack as does_not_raise
 from typing import Callable, List, Optional
 
 import aesara
@@ -37,16 +36,13 @@ from pymc3.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.multivariate import _OrderedMultinomial, quaddist_matrix
 from pymc3.distributions.shape_utils import to_tuple
-from pymc3.exceptions import ShapeError
 from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.tests.test_distributions import (
     Domain,
-    Nat,
     R,
     RandomPdMatrix,
     Rplus,
     Simplex,
-    Vector,
     build_model,
     product,
 )
@@ -1179,6 +1175,45 @@ class TestMultinomial(BaseTestDistribution):
     ]
 
 
+class TestDirichletMultinomial(BaseTestDistribution):
+    pymc_dist = pm.DirichletMultinomial
+
+    pymc_dist_params = {"n": 85, "a": np.array([1.0, 2.0, 1.5, 1.5])}
+    expected_rv_op_params = {"n": 85, "a": np.array([1.0, 2.0, 1.5, 1.5])}
+
+    sizes_to_check = [None, 1, (4,), (3, 4)]
+    sizes_expected = [(4,), (1, 4), (4, 4), (3, 4, 4)]
+
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "test_random_draws",
+        "check_rv_size",
+    ]
+
+    def test_random_draws(self):
+        draws = pm.DirichletMultinomial.dist(
+            n=np.array([5, 100]),
+            a=np.array([[0.001, 0.001, 0.001, 1000], [1000, 1000, 0.001, 0.001]]),
+            size=(2, 3),
+        ).eval()
+        assert np.all(draws.sum(-1) == np.array([5, 100]))
+        assert np.all((draws.sum(-2)[:, :, 0] > 30) & (draws.sum(-2)[:, :, 0] <= 70))
+        assert np.all((draws.sum(-2)[:, :, 1] > 30) & (draws.sum(-2)[:, :, 1] <= 70))
+        assert np.all((draws.sum(-2)[:, :, 2] >= 0) & (draws.sum(-2)[:, :, 2] <= 2))
+        assert np.all((draws.sum(-2)[:, :, 3] > 3) & (draws.sum(-2)[:, :, 3] <= 5))
+
+
+class TestDirichletMultinomial_1d_n_2d_a(BaseTestDistribution):
+    pymc_dist = pm.DirichletMultinomial
+    pymc_dist_params = {
+        "n": np.array([23, 29]),
+        "a": np.array([[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]]),
+    }
+    sizes_to_check = [None, 1, (4,), (3, 4)]
+    sizes_expected = [(2, 4), (1, 2, 4), (4, 2, 4), (3, 4, 2, 4)]
+    tests_to_run = ["check_rv_size"]
+
+
 class TestCategorical(BaseTestDistribution):
     pymc_dist = pm.Categorical
     pymc_dist_params = {"p": np.array([0.28, 0.62, 0.10])}
@@ -1630,73 +1665,6 @@ class TestScalarParameterSamples(SeededTest):
             return st.skewnorm.rvs(size=size, a=alpha, loc=mu, scale=sigma)
 
         pymc3_random(pm.SkewNormal, {"mu": R, "sigma": Rplus, "alpha": R}, ref_rand=ref_rand)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_dirichlet_multinomial(self):
-        def ref_rand(size, a, n):
-            k = a.shape[-1]
-            out = np.empty((size, k), dtype=int)
-            for i in range(size):
-                p = nr.dirichlet(a)
-                x = nr.multinomial(n=n, pvals=p)
-                out[i, :] = x
-            return out
-
-        for n in [2, 3]:
-            pymc3_random_discrete(
-                pm.DirichletMultinomial,
-                {"a": Vector(Rplus, n), "n": Nat},
-                valuedomain=Vector(Nat, n),
-                size=1000,
-                ref_rand=ref_rand,
-            )
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    @pytest.mark.parametrize(
-        "a, shape, n",
-        [
-            [[0.25, 0.25, 0.25, 0.25], 4, 2],
-            [[0.25, 0.25, 0.25, 0.25], (1, 4), 3],
-            [[0.25, 0.25, 0.25, 0.25], (10, 4), [2] * 10],
-            [[0.25, 0.25, 0.25, 0.25], (10, 1, 4), 5],
-            [[[0.25, 0.25, 0.25, 0.25]], (2, 4), [7, 11]],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), 13],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (1, 2, 4), [23, 29]],
-            [
-                [[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]],
-                (10, 2, 4),
-                [31, 37],
-            ],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), [17, 19]],
-        ],
-    )
-    def test_dirichlet_multinomial_shape(self, a, shape, n):
-        a = np.asarray(a)
-        with pm.Model() as model:
-            m = pm.DirichletMultinomial("m", n=n, a=a, shape=shape)
-        samp0 = m.random()
-        samp1 = m.random(size=1)
-        samp2 = m.random(size=2)
-
-        shape_ = to_tuple(shape)
-        assert to_tuple(samp0.shape) == shape_
-        assert to_tuple(samp1.shape) == (1, *shape_)
-        assert to_tuple(samp2.shape) == (2, *shape_)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    @pytest.mark.parametrize(
-        "n, a, shape, expectation",
-        [
-            ([5], [[1000, 1, 1], [1, 1, 1000]], (2, 3), does_not_raise()),
-            ([5, 3], [[1000, 1, 1], [1, 1, 1000]], (2, 3), does_not_raise()),
-            ([[5]], [[1000, 1, 1], [1, 1, 1000]], (2, 3), pytest.raises(ShapeError)),
-            ([[5], [3]], [[1000, 1, 1], [1, 1, 1000]], (2, 3), pytest.raises(ShapeError)),
-        ],
-    )
-    def test_dirichlet_multinomial_dist_ShapeError(self, n, a, shape, expectation):
-        m = pm.DirichletMultinomial.dist(n=n, a=a, shape=shape)
-        with expectation:
-            m.random()
 
     def test_logitnormal(self):
         def ref_rand(size, mu, sigma):

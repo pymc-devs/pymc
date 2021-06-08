@@ -393,7 +393,6 @@ class Dirichlet(Continuous):
     a: array
         Concentration parameters (a > 0).
     """
-
     rv_op = dirichlet
 
     def __new__(cls, name, *args, **kwargs):
@@ -501,11 +500,6 @@ class Multinomial(Discrete):
         n = at.as_tensor_variable(n)
         p = at.as_tensor_variable(p)
 
-        # mean = n * p
-        # mode = at.cast(at.round(mean), "int32")
-        # diff = n - at.sum(mode, axis=-1, keepdims=True)
-        # inc_bool_arr = at.abs_(diff) > 0
-        # mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         return super().dist([n, p], *args, **kwargs)
 
     def logp(value, n, p):
@@ -515,7 +509,7 @@ class Multinomial(Discrete):
 
         Parameters
         ----------
-        x: numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -531,6 +525,46 @@ class Multinomial(Discrete):
             at.all(at.ge(n, 0)),
             broadcast_conditions=False,
         )
+
+
+class DirichletMultinomialRV(RandomVariable):
+    name = "dirichlet_multinomial"
+    ndim_supp = 1
+    ndims_params = [0, 1]
+    dtype = "int64"
+    _print_name = ("DirichletMN", "\\operatorname{DirichletMN}")
+
+    def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
+        return default_shape_from_params(self.ndim_supp, dist_params, rep_param_idx, param_shapes)
+
+    @classmethod
+    def rng_fn(cls, rng, n, a, size):
+
+        if n.ndim > 0 or a.ndim > 1:
+            n, a = broadcast_params([n, a], cls.ndims_params)
+            size = tuple(size or ())
+
+            if size:
+                n = np.broadcast_to(n, size + n.shape)
+                a = np.broadcast_to(a, size + a.shape)
+
+            res = np.empty(a.shape)
+            for idx in np.ndindex(a.shape[:-1]):
+                p = rng.dirichlet(a[idx])
+                res[idx] = rng.multinomial(n[idx], p)
+            return res
+        else:
+            # n is a scalar, a is a 1d array
+            p = rng.dirichlet(a, size=size)  # (size, a.shape)
+
+            res = np.empty(p.shape)
+            for idx in np.ndindex(p.shape[:-1]):
+                res[idx] = rng.multinomial(n, p[idx])
+
+            return res
+
+
+dirichlet_multinomial = DirichletMultinomialRV()
 
 
 class DirichletMultinomial(Discrete):
@@ -566,92 +600,16 @@ class DirichletMultinomial(Discrete):
         Describes shape of distribution. For example if n=array([5, 10]), and
         a=array([1, 1, 1]), shape should be (2, 3).
     """
+    rv_op = dirichlet_multinomial
 
-    def __init__(self, n, a, shape, *args, **kwargs):
-
-        super().__init__(shape=shape, defaults=("_defaultval",), *args, **kwargs)
-
+    @classmethod
+    def dist(cls, n, a, *args, **kwargs):
         n = intX(n)
         a = floatX(a)
-        if len(self.shape) > 1:
-            self.n = at.shape_padright(n)
-            self.a = at.as_tensor_variable(a) if a.ndim > 1 else at.shape_padleft(a)
-        else:
-            # n is a scalar, p is a 1d array
-            self.n = at.as_tensor_variable(n)
-            self.a = at.as_tensor_variable(a)
 
-        p = self.a / self.a.sum(-1, keepdims=True)
+        return super().dist([n, a], **kwargs)
 
-        self.mean = self.n * p
-        # Mode is only an approximation. Exact computation requires a complex
-        # iterative algorithm as described in https://doi.org/10.1016/j.spl.2009.09.013
-        mode = at.cast(at.round(self.mean), "int32")
-        diff = self.n - at.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = at.abs_(diff) > 0
-        mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
-        self._defaultval = mode
-
-    def _random(self, n, a, size=None):
-        # numpy will cast dirichlet and multinomial samples to float64 by default
-        original_dtype = a.dtype
-
-        # Thanks to the default shape handling done in generate_values, the last
-        # axis of n is a dummy axis that allows it to broadcast well with `a`
-        n = np.broadcast_to(n, size)
-        a = np.broadcast_to(a, size)
-        n = n[..., 0]
-
-        # np.random.multinomial needs `n` to be a scalar int and `a` a
-        # sequence so we semi flatten them and iterate over them
-        n_ = n.reshape([-1])
-        a_ = a.reshape([-1, a.shape[-1]])
-        p_ = np.array([np.random.dirichlet(aa) for aa in a_])
-        samples = np.array([np.random.multinomial(nn, pp) for nn, pp in zip(n_, p_)])
-        samples = samples.reshape(a.shape)
-
-        # We cast back to the original dtype
-        return samples.astype(original_dtype)
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Dirichlet-Multinomial distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # n, a = draw_values([self.n, self.a], point=point, size=size)
-        # samples = generate_samples(
-        #     self._random,
-        #     n,
-        #     a,
-        #     dist_shape=self.shape,
-        #     size=size,
-        # )
-        #
-        # # If distribution is initialized with .dist(), valid init shape is not asserted.
-        # # Under normal use in a model context valid init shape is asserted at start.
-        # expected_shape = to_tuple(size) + to_tuple(self.shape)
-        # sample_shape = tuple(samples.shape)
-        # if sample_shape != expected_shape:
-        #     raise ShapeError(
-        #         f"Expected sample shape was {expected_shape} but got {sample_shape}. "
-        #         "This may reflect an invalid initialization shape."
-        #     )
-        #
-        # return samples
-
-    def logp(self, value):
+    def logp(value, n, a):
         """
         Calculate log-probability of DirichletMultinomial distribution
         at specified value.
@@ -665,13 +623,16 @@ class DirichletMultinomial(Discrete):
         -------
         TensorVariable
         """
-        a = self.a
-        n = self.n
-        sum_a = a.sum(axis=-1, keepdims=True)
+        if value.ndim >= 1:
+            n = at.shape_padright(n)
+            if a.ndim > 1:
+                a = at.shape_padleft(a)
 
+        sum_a = a.sum(axis=-1, keepdims=True)
         const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
         series = gammaln(value + a) - (gammaln(value + 1) + gammaln(a))
         result = const + series.sum(axis=-1, keepdims=True)
+
         # Bounds checking to confirm parameters and data meet all constraints
         # and that each observation value_i sums to n_i.
         return bound(
@@ -968,7 +929,7 @@ class Wishart(Continuous):
 
 
 def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initval=None):
-    R"""
+    r"""
     Bartlett decomposition of the Wishart distribution. As the Wishart
     distribution requires the matrix to be symmetric positive semi-definite
     it is impossible for MCMC to ever propose acceptable matrices.
