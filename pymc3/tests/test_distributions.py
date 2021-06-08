@@ -2273,7 +2273,6 @@ class TestMatchesScipy:
         assert_allclose(sample, np.stack([vals, vals], axis=0))
 
     @pytest.mark.parametrize("n", [2, 3])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_dirichlet_multinomial(self, n):
         self.check_logp(
             DirichletMultinomial,
@@ -2282,43 +2281,47 @@ class TestMatchesScipy:
             dirichlet_multinomial_logpmf,
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_dirichlet_multinomial_matches_beta_binomial(self):
         a, b, n = 2, 1, 5
         ns = np.arange(n + 1)
-        ns_dm = np.vstack((ns, n - ns)).T  # covert ns=1 to ns_dm=[1, 4], for all ns...
-        bb_logp = logpt(pm.BetaBinomial.dist(n=n, alpha=a, beta=b), ns).tag.test_value
-        dm_logp = logpt(
-            pm.DirichletMultinomial.dist(n=n, a=[a, b], size=(1, 2)), ns_dm
-        ).tag.test_value
-        dm_logp = dm_logp.ravel()
+        ns_dm = np.vstack((ns, n - ns)).T  # convert ns=1 to ns_dm=[1, 4], for all ns...
+
+        bb = pm.BetaBinomial.dist(n=n, alpha=a, beta=b, size=2)
+        bb_value = bb.type()
+        bb.tag.value_var = bb_value
+        bb_logp = logpt(var=bb, rv_values={bb: bb_value}).eval({bb_value: ns})
+
+        dm = pm.DirichletMultinomial.dist(n=n, a=[a, b], size=2)
+        dm_value = dm.type()
+        dm.tag.value_var = dm_value
+        dm_logp = logpt(var=dm, rv_values={dm: dm_value}).eval({dm_value: ns_dm}).ravel()
+
         assert_almost_equal(
             dm_logp,
             bb_logp,
             decimal=select_by_precision(float64=6, float32=3),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_dirichlet_multinomial_vec(self):
         vals = np.array([[2, 4, 4], [3, 3, 4]])
         a = np.array([0.2, 0.3, 0.5])
         n = 10
 
         with Model() as model_single:
-            DirichletMultinomial("m", n=n, a=a, size=len(a))
+            DirichletMultinomial("m", n=n, a=a)
 
         with Model() as model_many:
-            DirichletMultinomial("m", n=n, a=a, size=vals.shape)
+            DirichletMultinomial("m", n=n, a=a, size=2)
 
         assert_almost_equal(
-            np.asarray([dirichlet_multinomial_logpmf(v, n, a) for v in vals]),
+            np.asarray([dirichlet_multinomial_logpmf(val, n, a) for val in vals]),
             np.asarray([model_single.fastlogp({"m": val}) for val in vals]),
             decimal=4,
         )
 
         assert_almost_equal(
-            np.asarray([dirichlet_multinomial_logpmf(v, n, a) for v in vals]),
-            model_many.free_RVs[0].logp_elemwise({"m": vals}).squeeze(),
+            np.asarray([dirichlet_multinomial_logpmf(val, n, a) for val in vals]),
+            logpt(model_many.m, vals).eval().squeeze(),
             decimal=4,
         )
 
@@ -2328,14 +2331,13 @@ class TestMatchesScipy:
             decimal=4,
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_dirichlet_multinomial_vec_1d_n(self):
         vals = np.array([[2, 4, 4], [4, 3, 4]])
         a = np.array([0.2, 0.3, 0.5])
         ns = np.array([10, 11])
 
         with Model() as model:
-            DirichletMultinomial("m", n=ns, a=a, size=vals.shape)
+            DirichletMultinomial("m", n=ns, a=a)
 
         assert_almost_equal(
             sum(dirichlet_multinomial_logpmf(val, n, a) for val, n in zip(vals, ns)),
@@ -2343,14 +2345,13 @@ class TestMatchesScipy:
             decimal=4,
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_dirichlet_multinomial_vec_1d_n_2d_a(self):
         vals = np.array([[2, 4, 4], [4, 3, 4]])
         as_ = np.array([[0.2, 0.3, 0.5], [0.9, 0.09, 0.01]])
         ns = np.array([10, 11])
 
         with Model() as model:
-            DirichletMultinomial("m", n=ns, a=as_, size=vals.shape)
+            DirichletMultinomial("m", n=ns, a=as_)
 
         assert_almost_equal(
             sum(dirichlet_multinomial_logpmf(val, n, a) for val, n, a in zip(vals, ns, as_)),
@@ -2358,14 +2359,13 @@ class TestMatchesScipy:
             decimal=4,
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_dirichlet_multinomial_vec_2d_a(self):
         vals = np.array([[2, 4, 4], [3, 3, 4]])
         as_ = np.array([[0.2, 0.3, 0.5], [0.3, 0.3, 0.4]])
         n = 10
 
         with Model() as model:
-            DirichletMultinomial("m", n=n, a=as_, size=vals.shape)
+            DirichletMultinomial("m", n=n, a=as_)
 
         assert_almost_equal(
             sum(dirichlet_multinomial_logpmf(val, n, a) for val, a in zip(vals, as_)),
@@ -2373,11 +2373,10 @@ class TestMatchesScipy:
             decimal=4,
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_batch_dirichlet_multinomial(self):
         # Test that DM can handle a 3d array for `a`
 
-        # Create an almost deterministic DM by setting a to 0.001, everywehere
+        # Create an almost deterministic DM by setting a to 0.001, everywhere
         # except for one category / dimension which is given the value of 1000
         n = 5
         vals = np.zeros((4, 5, 3), dtype="int32")
@@ -2386,19 +2385,23 @@ class TestMatchesScipy:
         np.put_along_axis(vals, inds, n, axis=-1)
         np.put_along_axis(a, inds, 1000, axis=-1)
 
-        dist = DirichletMultinomial.dist(n=n, a=a, size=vals.shape)
+        dist = DirichletMultinomial.dist(n=n, a=a)
 
-        # Logp should be approx -9.924431e-06
-        dist_logp = logpt(dist, vals).tag.test_value
-        expected_logp = np.full(shape=vals.shape[:-1] + (1,), fill_value=-9.924431e-06)
+        # Logp should be approx -9.98004998e-06
+        value = at.tensor3(dtype="int32")
+        value.tag.test_value = np.zeros_like(vals, dtype="int32")
+        logp = logpt(dist, value)
+        f = aesara.function(inputs=[value], outputs=logp)
+        expected_logp = np.full(shape=f(vals).shape, fill_value=-9.98004998e-06)
         assert_almost_equal(
-            dist_logp,
+            f(vals),
             expected_logp,
             decimal=select_by_precision(float64=6, float32=3),
         )
 
         # Samples should be equal given the almost deterministic DM
-        sample = dist.random(size=2)
+        dist = DirichletMultinomial.dist(n=n, a=a, size=2)
+        sample = dist.eval()
         assert_allclose(sample, np.stack([vals, vals], axis=0))
 
     @aesara.config.change_flags(compute_test_value="raise")
