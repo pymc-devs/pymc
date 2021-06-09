@@ -42,7 +42,6 @@ from pymc3.tests.checks import close_to
 from pymc3.tests.helpers import verify_grad
 
 
-
 def test_bound():
     logp = at.ones((10, 10))
     cond = at.ones((10, 10))
@@ -243,6 +242,7 @@ def test_clipped_beta_rvs(dtype):
     # equal to zero or one (issue #3898)
     values = clipped_beta_rvs(0.01, 0.01, size=1000000, dtype=dtype)
     assert not (np.any(values == 0) or np.any(values == 1))
+
 
 def check_vals(fn1, fn2, *args):
     v = fn1(*args)
