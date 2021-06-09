@@ -1,3 +1,7 @@
+""" Sphinx configuration file.
+
+   isort:skip_file
+"""
 #!/usr/bin/env python3
 #
 # pymc3 documentation build configuration file, created by
@@ -15,13 +19,13 @@
 import os
 import sys
 
-import pymc3
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 sys.path.insert(0, os.path.abspath("sphinxext"))
+import pymc3  # isort:skip
 
 # -- General configuration ------------------------------------------------
 
