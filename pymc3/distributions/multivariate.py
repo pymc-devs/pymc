@@ -41,9 +41,8 @@ import pymc3 as pm
 from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import transforms
 from pymc3.distributions.continuous import ChiSquared, Normal
-from pymc3.distributions.dist_math import bound, factln, logpow
+from pymc3.distributions.dist_math import bound, factln, logpow, gammaln, multigammaln
 from pymc3.distributions.distribution import Continuous, Discrete
-from pymc3.distributions.special import gammaln, multigammaln
 from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
 
 __all__ = [

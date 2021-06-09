@@ -17,8 +17,10 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
+from aesara import config, function
 from aesara.tensor.random.basic import multinomial
 from scipy import interpolate, stats
+import scipy.special as ss
 
 import pymc3 as pm
 
@@ -32,8 +34,10 @@ from pymc3.distributions.dist_math import (
     clipped_beta_rvs,
     factln,
     i0e,
+    multigammaln
 )
 from pymc3.tests.helpers import verify_grad
+from pymc3.tests.checks import close_to
 
 
 def test_bound():
@@ -236,3 +240,24 @@ def test_clipped_beta_rvs(dtype):
     # equal to zero or one (issue #3898)
     values = clipped_beta_rvs(0.01, 0.01, size=1000000, dtype=dtype)
     assert not (np.any(values == 0) or np.any(values == 1))
+
+def check_vals(fn1, fn2, *args):
+    v = fn1(*args)
+    close_to(v, fn2(*args), 1e-6 if v.dtype == np.float64 else 1e-4)
+
+
+def test_multigamma():
+    x = at.vector("x")
+    p = at.scalar("p")
+
+    xvals = [np.array([v], dtype=config.floatX) for v in [0.1, 2, 5, 10, 50, 100]]
+
+    multigammaln_ = function([x, p], multigammaln(x, p), mode="FAST_COMPILE")
+
+    def ssmultigammaln(a, b):
+        return np.array(ss.multigammaln(a[0], b), config.floatX)
+
+    for p in [0, 1, 2, 3, 4, 100]:
+        for x in xvals:
+            if np.all(x > 0.5 * (p - 1)):
+                check_vals(multigammaln_, ssmultigammaln, x, p)

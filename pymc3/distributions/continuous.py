@@ -61,12 +61,12 @@ from pymc3.distributions.dist_math import (
     incomplete_beta,
     log_normal,
     logpow,
+    log_i0,
     normal_lccdf,
     normal_lcdf,
     zvalue,
 )
 from pymc3.distributions.distribution import Continuous
-from pymc3.distributions.special import log_i0
 from pymc3.math import log1mexp, log1pexp, logdiffexp, logit
 from pymc3.util import UNSET
 
