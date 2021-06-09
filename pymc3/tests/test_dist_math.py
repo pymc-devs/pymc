@@ -16,11 +16,12 @@ import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
+import scipy.special as ss
 
 from aesara import config, function
 from aesara.tensor.random.basic import multinomial
 from scipy import interpolate, stats
-import scipy.special as ss
+
 
 import pymc3 as pm
 
@@ -34,10 +35,12 @@ from pymc3.distributions.dist_math import (
     clipped_beta_rvs,
     factln,
     i0e,
-    multigammaln
+    multigammaln,
 )
-from pymc3.tests.helpers import verify_grad
+
 from pymc3.tests.checks import close_to
+from pymc3.tests.helpers import verify_grad
+
 
 
 def test_bound():

@@ -30,7 +30,7 @@ from aesara.graph.op import Op
 from aesara.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from aesara.scan import until
 from aesara.tensor.elemwise import Elemwise
-from aesara.tensor.math import gammaln, psi
+from aesara.tensor.math import gammaln
 from aesara.tensor.slinalg import Cholesky, Solve
 
 from pymc3.aesaraf import floatX
