@@ -1366,7 +1366,6 @@ class TestMatchesScipy:
             n_samples=5,  # Just testing alternative parametrization
         )
         """
-        
 
     def test_cauchy(self):
         self.check_logp(
