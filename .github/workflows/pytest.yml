@@ -47,7 +47,6 @@ jobs:
             --ignore=pymc3/tests/test_minibatches.py
             --ignore=pymc3/tests/test_pickling.py
             --ignore=pymc3/tests/test_plots.py
-            --ignore=pymc3/tests/test_special_functions.py
             --ignore=pymc3/tests/test_updates.py
             --ignore=pymc3/tests/test_examples.py
             --ignore=pymc3/tests/test_gp.py
@@ -67,7 +66,6 @@ jobs:
             pymc3/tests/test_minibatches.py
             pymc3/tests/test_pickling.py
             pymc3/tests/test_plots.py
-            pymc3/tests/test_special_functions.py
             pymc3/tests/test_updates.py
 
           - |
