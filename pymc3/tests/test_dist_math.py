@@ -22,7 +22,6 @@ from aesara import config, function
 from aesara.tensor.random.basic import multinomial
 from scipy import interpolate, stats
 
-
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX
@@ -37,7 +36,6 @@ from pymc3.distributions.dist_math import (
     i0e,
     multigammaln,
 )
-
 from pymc3.tests.checks import close_to
 from pymc3.tests.helpers import verify_grad
 
