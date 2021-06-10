@@ -270,7 +270,6 @@ class TestWald(BaseTestCases.BaseTestCase):
     params = {"mu": 1.0, "lam": 1.0, "alpha": 0.0}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestAsymmetricLaplace(BaseTestCases.BaseTestCase):
     distribution = pm.AsymmetricLaplace
     params = {"kappa": 1.0, "b": 1.0, "mu": 0.0}
@@ -1257,7 +1256,6 @@ class TestScalarParameterSamples(SeededTest):
             ref_rand=ref_rand,
         )
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_laplace_asymmetric(self):
         def ref_rand(size, kappa, b, mu):
             u = np.random.uniform(size=size)
@@ -1269,7 +1267,6 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.AsymmetricLaplace, {"b": Rplus, "kappa": Rplus, "mu": R}, ref_rand=ref_rand)
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_ex_gaussian(self):
         def ref_rand(size, mu, sigma, nu):
             return nr.normal(mu, sigma, size=size) + nr.exponential(scale=nu, size=size)
@@ -1497,7 +1494,6 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.Moyal, {"mu": R, "sigma": Rplus}, ref_rand=ref_rand)
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
@@ -1506,11 +1502,16 @@ class TestScalarParameterSamples(SeededTest):
                 def ref_rand(size):
                     return st.norm.rvs(loc=mu, scale=sigma, size=size)
 
+                from pymc3.distributions.continuous import interpolated
+
                 class TestedInterpolated(pm.Interpolated):
-                    def __init__(self, **kwargs):
+                    rv_op = interpolated
+
+                    @classmethod
+                    def dist(cls, **kwargs):
                         x_points = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 100)
                         pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
-                        super().__init__(x_points=x_points, pdf_points=pdf_points, **kwargs)
+                        return super().dist(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
                 pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
 
