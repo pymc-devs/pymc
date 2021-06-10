@@ -27,9 +27,9 @@ from aesara import scan
 from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Apply
 from aesara.graph.op import Op
-from aesara.tensor import gammaln
 from aesara.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from aesara.scan import until
+from aesara.tensor import gammaln
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.slinalg import Cholesky, Solve
 
