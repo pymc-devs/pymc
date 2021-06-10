@@ -23,8 +23,8 @@ from typing import Union
 import aesara.tensor as at
 import numpy as np
 
-from aesara.tensor import gammaln
 from aesara.assert_op import Assert
+from aesara.tensor import gammaln
 from aesara.tensor.random.basic import (
     BetaRV,
     WeibullRV,

@@ -22,9 +22,9 @@ import aesara.tensor as at
 import numpy as np
 import scipy
 
-from aesara.tensor import gammaln
 from aesara.graph.basic import Apply
 from aesara.graph.op import Op
+from aesara.tensor import gammaln
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
 from aesara.tensor.random.utils import broadcast_params
