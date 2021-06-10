@@ -3,11 +3,13 @@
 ..
     _"learn" is referenced in html_theme_options docs/source/conf.py
 
-.. title:: Learning Resources
+#########################
+Learn Bayesian statistics
+#########################
+
 
 .. raw:: html
 
-    <h1 class="ui header">Learn Bayesian statistics</h1>
 
     <h2 class="ui header">...with others!</h2>
     <div class="ui celled list">

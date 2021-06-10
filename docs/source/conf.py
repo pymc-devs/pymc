@@ -49,6 +49,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "gallery_generator",
     "myst_nb",
+    # "sphinx_panels", # TODO: use static notebook gallery generated from rst file with panels
 ]
 
 # Don't auto-generate summary for class members.
@@ -106,6 +107,7 @@ language = None
 exclude_patterns = ["_build", "**.ipynb_checkpoints"]
 
 jupyter_execute_notebooks = "off"
+myst_heading_anchors = 3
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -152,17 +154,32 @@ html_theme = "pydata_sphinx_theme"
 # documentation.
 
 html_theme_options = {
-    # "navbar_links": [
-    #     ("Tutorials", "nb_tutorials/index"),
-    #     ("Examples", "nb_examples/index"),
-    #     ("Books + Videos", "learn"),
-    #     ("API", "api"),
-    #     ("Developer Guide", "developer_guide"),
-    #     ("About PyMC3", "about"),
-    # ],
-    #     "fixed_sidebar": "false",
-    #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Aesara"
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/pymc-devs/pymc3",
+            "icon": "fab fa-github-square",
+        },
+        {
+            "name": "Twitter",
+            "url": "https://twitter.com/pymc_devs",
+            "icon": "fab fa-twitter-square",
+        },
+    ],
+    "show_prev_next": False,
+    "navbar_start": ["navbar-logo", "navbar-version"],
+    "navbar_end": ["search-field.html", "navbar-icon-links.html"],
+    "search_bar_text": "Search...",
+    "use_edit_page_button": False,  # TODO: see how to skip of fix for generated pages
+    "google_analytics_id": "UA-176578023-1",
 }
+html_context = {
+    "github_user": "pymc-devs",
+    "github_repo": "pymc3",
+    "github_version": "main",
+    "doc_path": "docs/source/",
+}
+html_sidebars = {"index": [], "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -330,6 +347,6 @@ texinfo_documents = [
 # texinfo_no_detailmenu = False
 
 
-def setup(app):
-    app.add_css_file("https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css")
-    app.add_css_file("default.css")
+# def setup(app):
+#     app.add_css_file("https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css")
+#     app.add_css_file("default.css")

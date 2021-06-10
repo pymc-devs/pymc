@@ -6,6 +6,7 @@ ipython>=7.16
 myst-nb
 numpydoc>=0.9
 pre-commit>=2.8.0
+pydata-sphinx-theme
 pytest-cov>=2.5
 pytest>=3.0
 sphinx-autobuild>=0.7
