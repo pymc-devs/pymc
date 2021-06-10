@@ -84,7 +84,7 @@ The latest release of ``aeppl`` can be installed from PyPI using ``pip``:
 
 ::
 
-    pip install aesara
+    pip install aeppl
 
 
 
