@@ -30,7 +30,6 @@ from aesara.graph.op import Op
 from aesara.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from aesara.scan import until
 from aesara.tensor.elemwise import Elemwise
-from aesara.tensor.math import gammaln
 from aesara.tensor.slinalg import Cholesky, Solve
 
 from pymc3.aesaraf import floatX
@@ -110,7 +109,7 @@ def logpow(x, m):
 
 
 def factln(n):
-    return gammaln(n + 1)
+    return at.gammaln(n + 1)
 
 
 def binomln(n, k):
@@ -118,7 +117,7 @@ def binomln(n, k):
 
 
 def betaln(x, y):
-    return gammaln(x) + gammaln(y) - gammaln(x + y)
+    return at.gammaln(x) + at.gammaln(y) - at.gammaln(x + y)
 
 
 def std_cdf(x):
@@ -553,7 +552,7 @@ def incomplete_beta_ps(a, b, value):
 
     s = s[-1] + t1 + ai
 
-    t = gammaln(a + b) - gammaln(a) - gammaln(b) + a * at.log(value) + at.log(s)
+    t = at.gammaln(a + b) - at.gammaln(a) - at.gammaln(b) + a * at.log(value) + at.log(s)
     return at.exp(t)
 
 
@@ -585,7 +584,7 @@ def incomplete_beta(a, b, value):
 
     # Direct incomplete beta accounting for flipped a, b.
     t = at.exp(
-        a * at.log(x) + b * at.log(xc) + gammaln(a + b) - gammaln(a) - gammaln(b) + at.log(w / a)
+        a * at.log(x) + b * at.log(xc) + at.gammaln(a + b) - at.gammaln(a) - at.gammaln(b) + at.log(w / a)
     )
 
     t = at.switch(flip, at.switch(at.le(t, machep), one - machep, one - t), t)
@@ -646,7 +645,7 @@ def multigammaln(a, p):
        degrees of freedom. p > 0
     """
     i = at.arange(1, p + 1)
-    return p * (p - 1) * at.log(np.pi) / 4.0 + at.sum(gammaln(a + (1.0 - i) / 2.0), axis=0)
+    return p * (p - 1) * at.log(np.pi) / 4.0 + at.sum(at.gammaln(a + (1.0 - i) / 2.0), axis=0)
 
 
 def log_i0(x):

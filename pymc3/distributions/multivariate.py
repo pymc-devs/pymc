@@ -22,6 +22,7 @@ import aesara.tensor as at
 import numpy as np
 import scipy
 
+from aesara.tensor import gammaln
 from aesara.graph.basic import Apply
 from aesara.graph.op import Op
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
@@ -41,7 +42,7 @@ import pymc3 as pm
 from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import transforms
 from pymc3.distributions.continuous import ChiSquared, Normal
-from pymc3.distributions.dist_math import bound, factln, gammaln, logpow, multigammaln
+from pymc3.distributions.dist_math import bound, factln, logpow, multigammaln
 from pymc3.distributions.distribution import Continuous, Discrete
 from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
 
@@ -153,7 +154,7 @@ def quaddist_tau(delta, chol_mat):
 
 
 class MvNormal(Continuous):
-    R"""
+    r"""
     Multivariate normal log-likelihood.
 
     .. math::
@@ -248,7 +249,7 @@ class MvNormal(Continuous):
 
 
 class MvStudentT(Continuous):
-    R"""
+    r"""
     Multivariate Student-T log-likelihood.
 
     .. math::
@@ -361,7 +362,7 @@ class MvStudentT(Continuous):
 
 
 class Dirichlet(Continuous):
-    R"""
+    r"""
     Dirichlet log-likelihood.
 
     .. math::
@@ -451,7 +452,7 @@ multinomial = MultinomialRV()
 
 
 class Multinomial(Discrete):
-    R"""
+    r"""
     Multinomial log-likelihood.
 
     Generalizes binomial distribution, but instead of each trial resulting
@@ -524,7 +525,7 @@ class Multinomial(Discrete):
 
 
 class DirichletMultinomial(Discrete):
-    R"""Dirichlet Multinomial log-likelihood.
+    r"""Dirichlet Multinomial log-likelihood.
 
     Dirichlet mixture of Multinomials distribution, with a marginalized PMF.
 
@@ -728,7 +729,7 @@ matrix_pos_def = PosDefMatrix()
 
 
 class Wishart(Continuous):
-    R"""
+    r"""
     Wishart log-likelihood.
 
     The Wishart distribution is the probability distribution of the
@@ -945,7 +946,7 @@ def _lkj_normalizing_constant(eta, n):
 
 
 class _LKJCholeskyCov(Continuous):
-    R"""Underlying class for covariance matrix with LKJ distributed correlations.
+    r"""Underlying class for covariance matrix with LKJ distributed correlations.
     See docs for LKJCholeskyCov function for more details on how to use it in models.
     """
 
@@ -1125,7 +1126,7 @@ class _LKJCholeskyCov(Continuous):
 
 
 def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=True, *args, **kwargs):
-    R"""Wrapper function for covariance matrix with LKJ distributed correlations.
+    r"""Wrapper function for covariance matrix with LKJ distributed correlations.
 
     This defines a distribution over Cholesky decomposed covariance
     matrices, such that the underlying correlation matrices follow an
@@ -1278,7 +1279,7 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
 
 
 class LKJCorr(Continuous):
-    R"""
+    r"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
 
     The LKJ distribution is a prior distribution for correlation matrices.
@@ -1434,7 +1435,7 @@ class LKJCorr(Continuous):
 
 
 class MatrixNormal(Continuous):
-    R"""
+    r"""
     Matrix-valued normal log-likelihood.
 
     .. math::
@@ -1693,7 +1694,7 @@ class MatrixNormal(Continuous):
 
 
 class KroneckerNormal(Continuous):
-    R"""
+    r"""
     Multivariate normal log-likelihood with Kronecker-structured covariance.
 
     .. math::
@@ -1940,7 +1941,7 @@ class KroneckerNormal(Continuous):
 
 
 class CAR(Continuous):
-    R"""
+    r"""
     Likelihood for a conditional autoregression. This is a special case of the
     multivariate normal with an adjacency-structured covariance matrix.
 

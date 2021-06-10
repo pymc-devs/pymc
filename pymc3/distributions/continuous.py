@@ -23,6 +23,7 @@ from typing import Union
 import aesara.tensor as at
 import numpy as np
 
+from aesara.tensor import gammaln
 from aesara.assert_op import Assert
 from aesara.tensor.random.basic import (
     BetaRV,
@@ -56,7 +57,6 @@ from pymc3.distributions.dist_math import (
     betaln,
     bound,
     clipped_beta_rvs,
-    gammaln,
     i0e,
     incomplete_beta,
     log_i0,

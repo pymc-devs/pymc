@@ -16,7 +16,7 @@ import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
-import scipy.special as ss
+import scipy.special as st
 
 from aesara import config, function
 from aesara.tensor.random.basic import multinomial
@@ -256,7 +256,7 @@ def test_multigamma():
     multigammaln_ = function([x, p], multigammaln(x, p), mode="FAST_COMPILE")
 
     def ssmultigammaln(a, b):
-        return np.array(ss.multigammaln(a[0], b), config.floatX)
+        return np.array(st.multigammaln(a[0], b), config.floatX)
 
     for p in [0, 1, 2, 3, 4, 100]:
         for x in xvals:
