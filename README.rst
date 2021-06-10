@@ -6,8 +6,8 @@
 
 Features
 ========
-- Convert graphs containing Aesara ``RandomVariable`` into joint log-probability graphs
-- Tools for traversing and transforming graphs containing ``RandomVariable``
+- Convert graphs containing Aesara ``RandomVariable``\s into joint log-probability graphs
+- Tools for traversing and transforming graphs containing ``RandomVariable``\s
 - ``RandomVariable``-aware pretty printing and LaTeX output
 
 
@@ -54,8 +54,7 @@ Examples
   #  ((-0.9189385332046727 + (-0.5 * ((y / sqrt(s)) ** 2))) - log(sqrt(s))))
 
 
-  # Create a finite mixture model with a Bernoulli distributed
-  # mixing distribution
+  # Create a switching model from a Bernoulli distributed index
   Z_rv = at.random.normal([-100, 100], 1.0, name="Z")
   I_rv = at.random.bernoulli(0.5, name="I")
 
@@ -76,6 +75,25 @@ Examples
   # (switch((0 <= i and i <= 1), -0.6931472, -inf) +
   #  ((-0.9189385332046727 + (-0.5 * (((m - [-100  100][a]) / [1. 1.][a]) ** 2))) -
   #   log([1. 1.][a])))
+
+
+Installation
+============
+
+The latest release of ``aeppl`` can be installed from PyPI using ``pip``:
+
+::
+
+    pip install aesara
+
+
+
+The current development branch of ``aeppl`` can be installed from GitHub, also using ``pip``:
+
+::
+
+    pip install git+https://github.com/aesara-devs/aeppl
+
 
 
 .. |Tests Status| image:: https://github.com/aesara-devs/aeppl/actions/workflows/test.yml/badge.svg?branch=main
