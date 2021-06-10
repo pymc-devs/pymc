@@ -12,7 +12,16 @@ from aesara.tensor.random.opt import (
     local_rv_size_lift,
     local_subtensor_rv_lift,
 )
+from aesara.tensor.subtensor import (
+    AdvancedIncSubtensor,
+    AdvancedIncSubtensor1,
+    IncSubtensor,
+)
 from aesara.tensor.var import TensorVariable
+
+from aeppl.utils import indices_from_subtensor
+
+inc_subtensor_ops = (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
 
 
 class PreserveRVMappings(Feature):
@@ -33,6 +42,14 @@ class PreserveRVMappings(Feature):
         """
         self.rv_values = rv_values
 
+    def on_attach(self, fgraph):
+        if hasattr(fgraph, "preserve_rv_mappings"):
+            raise ValueError(
+                f"{fgraph} already has the `PreserveRVMappings` feature attached."
+            )
+
+        fgraph.preserve_rv_mappings = self
+
     def on_change_input(self, fgraph, node, i, r, new_r, reason=None):
         r_value_var = self.rv_values.pop(r, None)
         if r_value_var is not None:
@@ -40,7 +57,12 @@ class PreserveRVMappings(Feature):
 
 
 class RVSinker(EquilibriumOptimizer):
-    """Sink `RandomVariable` `Op`s so that log-probabilities can be determined."""
+    """Sink `RandomVariable` `Op`s so that log-probabilities can be determined.
+
+    This optimizer is essentially a collection of `RandomVariable`-based rewrites
+    that are needed in order to compute log-probabilities for non-`RandomVariable`
+    graphs.
+    """
 
     def __init__(self):
         super().__init__(
@@ -48,11 +70,62 @@ class RVSinker(EquilibriumOptimizer):
                 local_dimshuffle_rv_lift,
                 local_subtensor_rv_lift,
                 naive_bcast_rv_lift,
+                incsubtensor_rv_replace,
             ],
             ignore_newtrees=False,
             tracks_on_change_inputs=True,
             max_use_ratio=10000,
         )
+
+    # If we wanted to support the `.tag.value_var` approach,
+    # something like the following would be reasonable:
+    # def add_requirements(self, fgraph):
+    #     if not hasattr(fgraph, "preserve_rv_mappings"):
+    #         fgraph.attach_feature(PreserveRVMappings({}))
+
+
+@local_optimizer(inc_subtensor_ops)
+def incsubtensor_rv_replace(fgraph, node):
+    r"""Replace `*IncSubtensor*` `Op`\s and their value variables for log-probability calculations.
+
+    This is used to derive the log-probability graph for ``Y[idx] = data``, where
+    ``Y`` is a `RandomVariable`, ``idx`` indices, and ``data`` some arbitrary data.
+
+    To compute the log-probability of a statement like ``Y[idx] = data``, we must
+    first realize that our objective is equivalent to computing ``logprob(Y, z)``,
+    where ``z = at.set_subtensor(y[idx], data)`` and ``y`` is the value variable
+    for ``Y``.
+
+    In other words, the log-probability for an `*IncSubtensor*` is the log-probability
+    of the underlying `RandomVariable` evaluated at ``data`` for the indices
+    given by ``idx`` and at the value variable for ``~idx``.
+
+    This provides a means of specifying "missing data", for instance.
+    """
+    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+
+    if rv_map_feature is None:
+        return
+
+    if not isinstance(node.op, inc_subtensor_ops):
+        return
+
+    rv_var = node.inputs[0]
+
+    if not (rv_var.owner and isinstance(rv_var.owner.op, RandomVariable)):
+        return
+
+    data = node.inputs[1]
+    idx = indices_from_subtensor(getattr(node.op, "idx_list", None), node.inputs[2:])
+
+    # Create a new value variable with the indices `idx` set to `data`
+    z = at.set_subtensor(rv_map_feature.rv_values[rv_var][idx], data)
+
+    # Replace `rv_var`'s value variable with the new one
+    rv_map_feature.rv_values[rv_var] = z
+
+    # Return the `RandomVariable` being indexed
+    return [rv_var]
 
 
 @local_optimizer([BroadcastTo])

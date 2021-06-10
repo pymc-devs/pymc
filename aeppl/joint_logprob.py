@@ -1,27 +1,19 @@
 import warnings
 from collections import deque
-from functools import singledispatch
 from typing import Dict, Optional
 
-import aesara.tensor as at
 from aesara import config
-from aesara.gradient import disconnected_grad
-from aesara.graph.basic import Constant, clone, graph_inputs, io_toposort
+from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.graph.fg import FunctionGraph
-from aesara.graph.op import Op, compute_test_value
+from aesara.graph.op import compute_test_value
 from aesara.graph.opt_utils import optimize_graph
 from aesara.tensor.basic_opt import ShapeFeature
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.subtensor import (
-    AdvancedIncSubtensor,
-    AdvancedIncSubtensor1,
-    IncSubtensor,
-)
 from aesara.tensor.var import TensorVariable
 
 from aeppl.logprob import _logprob
 from aeppl.opt import PreserveRVMappings, RVSinker
-from aeppl.utils import indices_from_subtensor, rvs_to_value_vars
+from aeppl.utils import rvs_to_value_vars
 
 
 def joint_logprob(
@@ -166,57 +158,3 @@ def joint_logprob(
             compute_test_value(node)
 
     return logprob_var
-
-
-@singledispatch
-def _joint_logprob(
-    op: Op,
-    var: TensorVariable,
-    rvs_to_values: Dict[TensorVariable, TensorVariable],
-    *inputs: TensorVariable,
-    **kwargs,
-):
-    raise NotImplementedError()
-
-
-@_joint_logprob.register(IncSubtensor)
-@_joint_logprob.register(AdvancedIncSubtensor)
-@_joint_logprob.register(AdvancedIncSubtensor1)
-def incsubtensor_logprob(
-    op, var, rvs_to_values, indexed_rv_var, rv_values, *indices, **kwargs
-):
-    """Derive the log-probability graph for ``Y[idx] = data``.
-
-    The result should be ``logprob(Y, y_new)`` where ``y_new =
-    at.set_subtensor(y[idx], data)`` and ``y`` is the value variable for ``Y``.
-    In other words, the probability is evaluated at ``data`` for all matching
-    indices in ``idx``, and at ``y`` for ``~idx``.
-
-    This provides a means of implementing "missing data", since .
-    """
-
-    index = indices_from_subtensor(getattr(op, "idx_list", None), indices)
-
-    if indexed_rv_var.owner and isinstance(indexed_rv_var.owner.op, RandomVariable):
-
-        _, (new_rv_var,) = clone(
-            tuple(
-                v
-                for v in graph_inputs((indexed_rv_var,))
-                if not isinstance(v, Constant)
-            ),
-            (indexed_rv_var,),
-            copy_inputs=False,
-            copy_orphans=False,
-        )
-        new_value = at.set_subtensor(disconnected_grad(new_rv_var)[index], rv_values)
-
-        logp_var = _logprob(
-            indexed_rv_var.owner.op, new_value, *indexed_rv_var.owner.inputs, **kwargs
-        )
-
-        return logp_var
-    else:
-        raise NotImplementedError(
-            f"`IncSubtensor` log-probability not implemented for {indexed_rv_var.owner}"
-        )

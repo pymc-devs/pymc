@@ -3,10 +3,7 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 import scipy.stats.distributions as sp
-from aesara.gradient import DisconnectedGrad
-from aesara.graph.basic import Constant, equal_computations, graph_inputs
-from aesara.graph.fg import FunctionGraph
-from aesara.tensor.random.op import RandomVariable
+from aesara.graph.basic import equal_computations
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -76,9 +73,9 @@ def test_joint_logprob_basic():
     assert a_value_var in res_ancestors
 
 
-@pytest.mark.xfail(
-    reason="This transform currently introduces duplicate log-probability terms"
-)
+# @pytest.mark.xfail(
+#     reason="This transform currently introduces duplicate log-probability terms"
+# )
 @pytest.mark.parametrize(
     "indices, size",
     [
@@ -91,69 +88,32 @@ def test_joint_logprob_basic():
 def test_joint_logprob_incsubtensor(indices, size):
     """Make sure we can compute a joint log-probability for ``Y[idx] = data`` where ``Y`` is univariate."""
 
+    rng = np.random.RandomState(232)
     mu = np.power(10, np.arange(np.prod(size))).reshape(size)
-    data = at.as_tensor(mu[indices], name="data")
-
     sigma = 0.001
-    rng = aesara.shared(np.random.RandomState(232), borrow=True)
+    data = rng.normal(mu[indices], 1.0)
+    y_val = rng.normal(mu, sigma, size=size)
 
-    Y_rv = at.random.normal(mu, sigma, size=size, rng=rng)
+    Y_rv = at.random.normal(mu, sigma, size=size)
     Y_rv.name = "Y"
     y_value_var = Y_rv.clone()
     y_value_var.name = "y"
 
-    idx = at.set_subtensor(Y_rv[indices], data)
+    Y_sst = at.set_subtensor(Y_rv[indices], data)
 
     assert isinstance(
-        idx.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
+        Y_sst.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
     )
 
-    a_idx_value_var = idx.type()
-    a_idx_value_var.name = "a_idx_value"
+    Y_sst_logp = joint_logprob(Y_sst, {Y_rv: y_value_var})
 
-    a_idx_logp = joint_logprob(idx, {idx: a_idx_value_var, Y_rv: y_value_var})
+    obs_logps = Y_sst_logp.eval({y_value_var: y_val})
 
-    logp_vals = a_idx_logp.eval()
+    y_val_idx = y_val.copy()
+    y_val_idx[indices] = data
+    exp_obs_logps = sp.norm.logpdf(y_val_idx, mu, sigma)
 
-    # The indices that were set should all have the same joint log-probability
-    # values, because the values they were set to correspond to the unique
-    # means along that dimension.  This helps us confirm that the joint
-    # log-probability is associating the assigned values with their correct
-    # parameters.
-    exp_obs_logps = sp.norm.logpdf(mu, mu, sigma)[indices]
-    np.testing.assert_almost_equal(logp_vals[indices], exp_obs_logps)
-
-    # Next, we need to confirm that the unset indices are being sampled
-    # from the original random variable in the correct locations.
-    # rng.get_value(borrow=True).seed(232)
-
-    res_ancestors = list(walk_model((a_idx_logp,), walk_past_rvs=True))
-    res_rv_ancestors = tuple(
-        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
-    )
-
-    # The imputed missing values are drawn from the original distribution
-    (a_new,) = res_rv_ancestors
-    assert a_new is not Y_rv
-    assert a_new.owner.op == Y_rv.owner.op
-
-    fg = FunctionGraph(
-        [v for v in graph_inputs((a_idx_logp,)) if not isinstance(v, Constant)],
-        [a_idx_logp],
-        clone=False,
-    )
-
-    ((a_client, _),) = fg.clients[a_new]
-    # The imputed values should be treated as constants when gradients are
-    # taken
-    assert isinstance(a_client.op, DisconnectedGrad)
-
-    ((a_client, _),) = fg.clients[a_client.outputs[0]]
-    assert isinstance(
-        a_client.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
-    )
-    indices = tuple(i.eval() for i in a_client.inputs[2:])
-    np.testing.assert_almost_equal(indices, indices)
+    np.testing.assert_almost_equal(obs_logps, exp_obs_logps)
 
 
 def test_joint_logprob_subtensor():
