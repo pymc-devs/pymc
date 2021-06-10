@@ -24,6 +24,7 @@ import aesara.tensor as at
 import numpy as np
 
 from aesara.assert_op import Assert
+from aesara.tensor import gammaln
 from aesara.tensor.random.basic import (
     BetaRV,
     WeibullRV,
@@ -57,9 +58,9 @@ from pymc3.distributions.dist_math import (
     betaln,
     bound,
     clipped_beta_rvs,
-    gammaln,
     i0e,
     incomplete_beta,
+    log_i0,
     log_normal,
     logpow,
     normal_lccdf,
@@ -67,7 +68,6 @@ from pymc3.distributions.dist_math import (
     zvalue,
 )
 from pymc3.distributions.distribution import Continuous
-from pymc3.distributions.special import log_i0
 from pymc3.math import log1mexp, log1pexp, logdiffexp, logit
 from pymc3.util import UNSET
 

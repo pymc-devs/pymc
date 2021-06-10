@@ -395,9 +395,9 @@ class TestDiffEqModel:
         ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=2, n_theta=2)
 
         with pm.Model() as model:
-            beta = pm.HalfCauchy("beta", 1)
-            gamma = pm.HalfCauchy("gamma", 1)
-            sigma = pm.HalfCauchy("sigma", 1, shape=2)
+            beta = pm.HalfCauchy("beta", 1, initval=1)
+            gamma = pm.HalfCauchy("gamma", 1, initval=1)
+            sigma = pm.HalfCauchy("sigma", 1, shape=2, initval=[1, 1])
             forward = ode_model(theta=[beta, gamma], y0=[0.99, 0.01])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 

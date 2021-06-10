@@ -1367,6 +1367,8 @@ class TestMatchesScipy:
             lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam ** -0.5),
             n_samples=10,  # relies on slow incomplete beta
         )
+        # TODO: reenable when PR #4736 is merged
+        """
         self.check_logcdf(
             StudentT,
             R,
@@ -1374,6 +1376,7 @@ class TestMatchesScipy:
             lambda value, nu, mu, sigma: sp.t.logcdf(value, nu, mu, sigma),
             n_samples=5,  # Just testing alternative parametrization
         )
+        """
 
     def test_cauchy(self):
         self.check_logp(
