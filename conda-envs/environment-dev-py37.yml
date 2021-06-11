@@ -19,5 +19,6 @@ dependencies:
 - python=3.7
 - scipy=1.2
 - sphinx-autobuild>=0.7
+- sphinx-panels
 - sphinx>=1.5
 - watermark

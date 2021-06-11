@@ -1,146 +1,103 @@
-:orphan:
+# Learn Bayesian statistics
 
-..
-    _"learn" is referenced in html_theme_options docs/source/conf.py
+## ...with others!
 
-#########################
-Learn Bayesian statistics
-#########################
+:::{list-table}
+:header-rows: 0
+:widths: 10 150
 
+* - {fa}`discourse,fa-2x,style=fab`
+  - [Discourse Forum](https://discourse.pymc.io/)
 
-.. raw:: html
+    The PyMC3 discourse forum is a great place to ask general questions about Bayesian statistics, or more specific ones about PyMC3 usage.
+* - {fa}`meetup,fa-2x,style=fab`
+  - Conferences
 
+    PyMC3 talks have been given at a number of conferences, including [PyCon](https://us.pycon.org/),
+    [PyData](https://pydata.org/events/), and [ODSC](https://odsc.com/) events.
+* - {fa}`python,fa-2x,style=fab`
+  - [Meetup Groups](https://www.meetup.com/)
 
-    <h2 class="ui header">...with others!</h2>
-    <div class="ui celled list">
+    Many areas have an local Bayesian, PyData, or Stan meetup.
+:::
 
-        <div class="item">
-            <i class="large discourse middle aligned icon"></i>
-            <div class="content">
-                <a href="https://discourse.pymc.io/" class="header">Discourse Forum</a>
-                <div class="description">
-                    The PyMC3 discourse forum is a great place to ask general questions about Bayesian statistics, or more specific ones about PyMC3 usage.
-                </div>
-            </div>
-        </div>
+## ...with a video!
 
-        <div class="item">
-            <i class="large python middle aligned icon"></i>
-            <div class="content">
-                <div class="header">Conferences</div>
-                <div class="description">
-                    PyMC3 talks have been given at a number of conferences, including <a href="https://us.pycon.org/">PyCon</a>, <a href="https://pydata.org/events/">PyData</a>, and <a href="https://odsc.com/">ODSC</a> events.
-                </div>
-            </div>
-        </div>
+:::{list-table}
+:header-rows: 0
+:widths: 10 150
 
-        <div class="item">
-            <i class="large meetup middle aligned icon"></i>
-            <div class="content">
-                <a href="https://www.meetup.com/" class="header">Meetup Groups</a>
-                <div class="description">
-                    Many areas have an local Bayesian, PyData, or Stan meetup.
-                </div>
-            </div>
-        </div>
+* - {fa}`youtube,fa-2x,style=fab`
+  - [YouTube Playlist](https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy)
 
-    </div>
+    There is an actively curated playlist of PyMC3 talks on YouTube.
+* - {fa}`youtube,fa-2x,style=fab`
+  - [Advance Bayesian Modelling with PyMC3](https://github.com/junpenglao/advance-bayesian-modelling-with-PyMC3)
 
-    <h2 class="ui header">...with a video!</h2>
-    <div class="ui celled list">
+    A two days advance workshop in May 2018 @CEAi in the Czech Republic.
+:::
 
-        <div class="item">
-            <i class="large youtube middle aligned icon"></i>
-            <div class="content">
-                <a href="https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy" class="header"> YouTube Playlist</a>
-                <div class="description">
-                    There is an actively curated playlist of PyMC3 talks on YouTube.
-                </div>
-            </div>
-        </div>
+## ...with a book!
 
-        <div class="item">
-            <i class="large youtube middle aligned icon"></i>
-            <div class="content">
-                <a href="https://github.com/junpenglao/advance-bayesian-modelling-with-PyMC3" class="header"> Advance Bayesian Modelling with PyMC3</a>
-                <div class="description">
-                    A two days advance workshop in May 2018 @CEAi in the Czech Republic.
-                </div>
-            </div>
-        </div>
-    </div>
+::::{panels}
+---
+container: container-lg pb-3
+column: col-lg-3 col-md-3
+img-top-cls: pl-5 pr-5
 
-    <h2 class="ui header">...with a book!</h2>
-    <div class="ui link four stackable cards">
+---
+:img-top: https://camo.githubusercontent.com/4a0aca82ca82efab71747d00db30f3a68de98e82/687474703a2f2f692e696d6775722e636f6d2f36444b596250622e706e673f31
 
-        <div class="card">
-            <div class="image">
-                <img src="https://camo.githubusercontent.com/4a0aca82ca82efab71747d00db30f3a68de98e82/687474703a2f2f692e696d6775722e636f6d2f36444b596250622e706e673f31">
-            </div>
-            <div class="content">
-                <div class="header">Bayesian Methods for Hackers</div>
-                <div class="meta">Cameron Davidson-Pilon</div>
-                <div class="description">
-                Fantastic book with many applied code examples.
-                </div>
-            </div>
-            <table class="ui table">
-                <tbody>
-                    <tr>
-                        <td>
-                            <a href="https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers">
-                                <i class="linkify icon"></i> Github Repo
-                            </a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <a href="http://camdavidsonpilon.github.io/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers/">
-                                <i class="linkify icon"></i> Project homepage
-                            </a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+Bayesian Methods for Hackers
 
-        <div class="card">
-            <div class="image">
-                <img src="https://lh5.googleusercontent.com/Ms2ssellxl7cM6OEL_kpiKRojcj2E4ZaUWDXOa8zEwi-v9orJGYuhjczbwFSDJNsEb_ruiwtCJONNjoo7T1c7qorZm3LsAnroMAm4S5WzNT_PVqWz9aE=w1280">
-            </div>
-            <div class="content">
-                <div class="header">Doing Bayesian Data Analysis</div>
-                <div class="meta">John Kruschke</div>
-                <div class="description">
-                Principled introduction to Bayesian data analysis.
-                </div>
-            </div>
-            <table class="ui table">
-                <tbody>
-                    <tr>
-                        <td>
-                            <a href="https://sites.google.com/site/doingbayesiandataanalysis/home">
-                                <i class="linkify icon"></i> Book website
-                            </a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <a href="https://github.com/aloctavodia/Doing_bayesian_data_analysis">
-                                <i class="linkify icon"></i> PyMC3 notebooks for <em>first edition</em>
-                            </a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <a href="https://github.com/JWarmenhoven/DBDA-python">
-                                <i class="linkify icon"></i> PyMC3 notebooks for <em>second edition</em>
-                            </a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+:::{div} text-muted
+Cameron Davidson-Pilon
+:::
+^^^^^^^^
+
+Fantastic book with many applied code examples.
+
+:::{list-table}
+:header-rows: 0
+:widths: 10 90
+
+* - [{fa}`link`][hackers source]
+  - [Github Repo][hackers source]
+* - [{fa}`link`][hackers homepage]
+  - [Project Homepage][hackers homepage]
+:::
+
+---
+:img-top: https://lh3.googleusercontent.com/qU5yWpiVSkujyCnRZhQo8cBUrW_3e_7Cx4jEs5yfpmMbEEuDnxTGOELhy2x7F7qkwFwQJ4pFYNszZhNpN1jCSdrdHsVUHtf1Mg6F8qwb3SQe1TDE=w1280
+
+Doing Bayesian Data Analysis
+
+:::{div} text-muted
+John Kruschke
+:::
+^^^^^^^^
+
+Principled introduction to Bayesian data analysis.
+
+:::{list-table}
+:header-rows: 0
+:widths: 10 90
+
+* - [{fa}`link`][dbda website]
+  - [Book Website][dbda website]
+* - [{fa}`link`][dbda 1st ed nb]
+  - [PyMC3 notebooks for *first edition*][dbda 1st ed nb]
+* - [{fa}`link`][dbda 2nd ed nb]
+  - [PyMC3 notebooks for *second edition*][dbda 2nd ed nb]
+:::
+::::
+
+[hackers source]: https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers
+[hackers homepage]: http://camdavidsonpilon.github.io/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers/
+[dbda website]: https://sites.google.com/site/doingbayesiandataanalysis/home
+[dbda 1st ed nb]: https://github.com/aloctavodia/Doing_bayesian_data_analysis
+[dbda 2nd ed nb]: https://github.com/JWarmenhoven/DBDA-python
+
 
         <div class="card">
             <div class="image">

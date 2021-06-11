@@ -16,5 +16,6 @@ dependencies:
 - python-graphviz
 - python=3.9
 - sphinx-autobuild>=0.7
+- sphinx-panels
 - sphinx>=1.5
 - watermark
