@@ -37,17 +37,6 @@ def infer_shape(X, n_points=None):
     return n_points
 
 
-def infer_n_outputs(y, n_outputs=None):
-    if n_outputs is None:
-        try:
-            n_outputs = np.int(y.shape[0])
-        except TypeError as e:
-            raise TypeError(
-                "Cannot infer 'n_outputs', it must be provided as an argument"
-            ) from e
-    return n_outputs
-
-
 def stabilize(K):
     """ adds small diagonal to a covariance matrix """
     return K + 1e-6 * at.identity_like(K)

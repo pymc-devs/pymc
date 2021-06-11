@@ -28,7 +28,6 @@ from pymc3.gp.mean import Zero
 from pymc3.gp.util import (
     cholesky,
     conditioned_vars,
-    infer_n_outputs,
     infer_shape,
     solve_lower,
     solve_upper,
@@ -449,7 +448,7 @@ class Marginal(Base):
         self.X = X
         self.y = y
         self.noise = noise
-        self.n_outputs = infer_n_outputs(y, kwargs.pop("n_outputs", None))
+        self.n_outputs = shape(y, kwargs.pop("n_outputs", None))
         if is_observed:
             return pm.MvNormal(name, mu=mu, cov=cov, observed=y, **kwargs)
         else:
@@ -478,7 +477,7 @@ class Marginal(Base):
         Kxx = cov_total(X)
         Kxs = self.cov_func(X, Xnew)
         Knx = noise(X)
-        rxx = y.T - mean_total(X)
+        rxx = y - mean_total(X)
         L = cholesky(stabilize(Kxx) + Knx)
         A = solve_lower(L, Kxs)
         v = solve_lower(L, rxx.T)
@@ -531,15 +530,14 @@ class Marginal(Base):
 
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
-        
-        if n_outputs is not None and n_outputs > 1:
-            n_points = infer_shape(Xnew, kwargs.pop("shape", None))
-            return pm.MatrixNormal(
-                name, mu=mu, rowcov=np.eye(n_outputs), colcov=cov, shape=(n_outputs, n_points)
-            )            
-        else:
+        try:
             shape = infer_shape(Xnew, kwargs.pop("shape", None))
             return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
+        except TypeError as e:
+            n_points = infer_shape(Xnew, kwargs.pop("shape", None))
+            return pm.MatrixNormal(
+                name, mu=mu, rowcov=np.eye(self.n_outputs), colcov=cov, shape=(self.n_outputs, n_points)
+            )            
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
         R"""
