@@ -32,11 +32,7 @@ from scipy.special import expit
 import pymc3 as pm
 
 from pymc3.aesaraf import change_rv_size, floatX, intX
-from pymc3.distributions.continuous import (
-    _interpolated_argcdf,
-    get_tau_sigma,
-    interpolated,
-)
+from pymc3.distributions.continuous import get_tau_sigma, interpolated
 from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.multivariate import quaddist_matrix
 from pymc3.distributions.shape_utils import to_tuple
