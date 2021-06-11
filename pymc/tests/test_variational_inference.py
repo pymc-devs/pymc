@@ -129,7 +129,8 @@ def test_init_groups(three_var_model, raises, grouping):
             else:
                 assert {pm.util.get_transformed(z) for z in g} == set(ig.group)
         else:
-            assert approx.ndim == three_var_model.ndim
+            model_dim = sum(v.size for v in three_var_model.initial_point.values())
+            assert approx.ndim == model_dim
 
 
 @pytest.fixture(

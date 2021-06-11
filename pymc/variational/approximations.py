@@ -100,7 +100,7 @@ class MeanFieldGroup(Group):
         z0 = self.symbolic_initial
         std = rho2sigma(self.rho)
         logdet = at.log(std)
-        logq = pm.Normal.dist().logp(z0) - logdet
+        logq = pm.Normal.logp(z0, 0, 1) - logdet
         return logq.sum(range(1, logq.ndim))
 
 
@@ -150,6 +150,8 @@ class FullRankGroup(Group):
         else:
             L = at.zeros((self.ddim, self.ddim))
             L = at.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"])
+        Ld = L[..., np.arange(self.ddim), np.arange(self.ddim)]
+        L = at.set_subtensor(Ld, rho2sigma(Ld))
         return L
 
     @node_property
@@ -159,7 +161,7 @@ class FullRankGroup(Group):
     @node_property
     def cov(self):
         L = self.L
-        if self.batched:
+        if self.batched: 
             return at.batched_dot(L, L.swapaxes(-1, -2))
         else:
             return L.dot(L.T)
@@ -182,9 +184,9 @@ class FullRankGroup(Group):
 
     @node_property
     def symbolic_logq_not_scaled(self):
-        z = self.symbolic_random
+        z0 = self.symbolic_initial
         if self.batched:
-
+            raise NotImplementedError
             def logq(z_b, mu_b, L_b):
                 return pm.MvNormal.dist(mu=mu_b, chol=L_b).logp(z_b)
 
@@ -193,7 +195,11 @@ class FullRankGroup(Group):
             # output shape is (batch, samples)
             return aesara.scan(logq, [z.swapaxes(0, 1), self.mean, self.L])[0].sum(0)
         else:
-            return pm.MvNormal.dist(mu=self.mean, chol=self.L).logp(z)
+            # return pm.MvNormal.dist(mu=self.mean, chol=self.L).logp(z)
+            logdet = at.sum(at.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1), axis=-1)
+            logq = pm.Normal.logp(z0, 0, 1) - logdet
+            return logq.sum(range(1, logq.ndim))
+            
 
     @node_property
     def symbolic_random(self):
@@ -483,7 +489,7 @@ class NormalizingFlowGroup(Group):
     @node_property
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
-        q0 = pm.Normal.dist().logp(z0).sum(range(1, z0.ndim))
+        q0 = pm.Normal.logp(z0, 0, 1).sum(range(1, z0.ndim))
         return q0 - self.flow.sum_logdets
 
     @property

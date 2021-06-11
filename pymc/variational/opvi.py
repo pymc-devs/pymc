@@ -998,7 +998,6 @@ class Group(WithMemoization):
                 dtype
             )
             start_idx += size
-        self._ddim = start_idx
 
     def _finalize_init(self):
         """*Dev* - clean up after init"""
@@ -1060,12 +1059,17 @@ class Group(WithMemoization):
     @node_property
     def ndim(self):
         # XXX: This needs to be refactored
-        return None  # self.ordering.size * self.bdim
+        if self.batched:
+            # return None  # self.ordering.size * self.bdim
+            # TODO: add support for batching
+            raise NotImplementedError("not implemented for batching")
+        else:
+            return self.ddim
 
     @property
     def ddim(self):
         # TODO: This needs to be refactored
-        return self._ddim  # self.ordering.size
+        return sum(s.stop - s.start for _, s, _, _ in self.ordering.values())
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         """*Dev* - allocates new initial random generator
