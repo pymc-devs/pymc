@@ -40,7 +40,7 @@ def infer_shape(X, n_points=None):
 def infer_n_outputs(y, n_outputs=None):
     if n_outputs is None:
         try:
-            n_outputs = np.int(y.shape[1])
+            n_outputs = np.int(y.shape[0])
         except TypeError as e:
             raise TypeError(
                 "Cannot infer 'n_outputs', it must be provided as an argument"
