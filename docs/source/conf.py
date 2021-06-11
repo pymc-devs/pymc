@@ -106,8 +106,13 @@ language = None
 # directories to ignore when looking for source files.
 exclude_patterns = ["_build", "**.ipynb_checkpoints"]
 
+# myst and panels config
 jupyter_execute_notebooks = "off"
 myst_heading_anchors = 3
+myst_enable_extensions = [
+    "colon_fence",
+]
+panels_add_bootstrap_css = False
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -179,7 +184,7 @@ html_context = {
     "github_version": "main",
     "doc_path": "docs/source/",
 }
-html_sidebars = {"**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
+html_sidebars = {"learn": [], "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
