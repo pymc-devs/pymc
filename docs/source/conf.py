@@ -49,7 +49,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "gallery_generator",
     "myst_nb",
-    # "sphinx_panels", # TODO: use static notebook gallery generated from rst file with panels
+    "sphinx_panels",
 ]
 
 # Don't auto-generate summary for class members.
@@ -179,7 +179,7 @@ html_context = {
     "github_version": "main",
     "doc_path": "docs/source/",
 }
-html_sidebars = {"index": [], "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
+html_sidebars = {"**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
