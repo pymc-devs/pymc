@@ -133,7 +133,7 @@ class FullRankGroup(Group):
         if self.batched:
             start = start[self.group[0].name][0]
         else:
-            start = DictToArrayBijection.map(start)
+            start = DictToArrayBijection.map(start).data
         n = self.ddim
         L_tril = np.eye(n)[np.tril_indices(n)].astype(aesara.config.floatX)
         if self.batched:
@@ -250,7 +250,7 @@ class EmpiricalGroup(Group):
                     start_ = self.model.initial_point.copy()
                     self.model.update_start_vals(start_, start)
                     start = start_
-                start = pm.floatX(DictToArrayBijection.map(start))
+                start = pm.floatX(DictToArrayBijection.map(start).data)
                 # Initialize particles
                 histogram = np.tile(start, (size, 1))
                 histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
@@ -260,7 +260,7 @@ class EmpiricalGroup(Group):
             i = 0
             for t in trace.chains:
                 for j in range(len(trace)):
-                    histogram[i] = DictToArrayBijection.map(trace.point(j, t))
+                    histogram[i] = DictToArrayBijection.map(trace.point(j, t)).data
                     i += 1
         return dict(histogram=aesara.shared(pm.floatX(histogram), "histogram"))
 

@@ -1537,11 +1537,10 @@ class Approximation(WithMemoization):
         """
         node = self.to_flat_input(node)
 
-        def sample(*post, node, inputs):
-            node, inputs = post[-2:]
-            return aesara.clone_replace(node, dict(zip(inputs, post)))
+        def sample(*post):
+            return aesara.clone_replace(node, dict(zip(self.inputs, post)))
 
-        nodes, _ = aesara.scan(sample, self.symbolic_randoms, non_sequences=[node, inputs])
+        nodes, _ = aesara.scan(sample, self.symbolic_randoms)
         return nodes
 
     def symbolic_single_sample(self, node):
