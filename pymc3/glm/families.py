@@ -36,7 +36,7 @@ class Identity:
 
 
 identity = Identity()
-logit = at.nnet.sigmoid
+logit = at.sigmoid
 inverse = at.inv
 exp = at.exp
 
