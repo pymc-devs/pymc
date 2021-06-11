@@ -30,9 +30,22 @@ def infer_shape(X, n_points=None):
     if n_points is None:
         try:
             n_points = np.int(X.shape[0])
-        except TypeError:
-            raise TypeError("Cannot infer 'shape', provide as an argument")
+        except TypeError as e:
+            raise TypeError(
+                "Cannot infer 'shape', it must be provided as an argument"
+            ) from e
     return n_points
+
+
+def infer_n_outputs(y, n_outputs=None):
+    if n_outputs is None:
+        try:
+            n_outputs = np.int(y.shape[1])
+        except TypeError as e:
+            raise TypeError(
+                "Cannot infer 'n_outputs', it must be provided as an argument"
+            ) from e
+    return n_outputs
 
 
 def stabilize(K):
