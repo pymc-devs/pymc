@@ -32,7 +32,11 @@ from scipy.special import expit
 import pymc3 as pm
 
 from pymc3.aesaraf import change_rv_size, floatX, intX
-from pymc3.distributions.continuous import get_tau_sigma, interpolated
+from pymc3.distributions.continuous import (
+    _interpolated_argcdf,
+    get_tau_sigma,
+    interpolated,
+)
 from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.multivariate import quaddist_matrix
 from pymc3.distributions.shape_utils import to_tuple
@@ -1242,7 +1246,28 @@ class TestOrderedProbit(BaseTestDistribution):
     ]
 
 
-class TestInterpolated(SeededTest):
+class TestInterpolated(BaseTestDistribution):
+    def interpolated_rng_fn(self, size, mu, sigma, rng):
+        return st.norm.rvs(loc=mu, scale=sigma, size=size)
+
+    pymc_dist = pm.Interpolated
+
+    # Dummy values for RV size testing
+    mu = sigma = 1
+    x_points = pdf_points = np.linspace(1, 100, 100)
+
+    pymc_dist_params = {"x_points": x_points, "pdf_points": pdf_points}
+    reference_dist_params = {"mu": mu, "sigma": sigma}
+
+    reference_dist = lambda self: functools.partial(
+        self.interpolated_rng_fn, rng=self.get_random_state()
+    )
+    tests_to_run = [
+        "check_rv_size",
+    ]
+
+
+class TestInterpolatedSeeded(SeededTest):
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
