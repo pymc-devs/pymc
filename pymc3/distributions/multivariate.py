@@ -275,7 +275,7 @@ class MvStudentTRV(RandomVariable):
         # Don't reassign broadcasted cov, since MvNormal expects two dimensional cov only.
         mu, _ = broadcast_params([mu, cov], cls.ndims_params[1:])
 
-        chi2_samples = rng.chisquare(nu, size=size)
+        chi2_samples = np.sqrt(rng.chisquare(nu, size=size) / nu)
         # Add distribution shape to chi2 samples
         chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(mu.shape))
 
@@ -287,7 +287,7 @@ class MvStudentTRV(RandomVariable):
         if size:
             mu = np.broadcast_to(mu, size + mu.shape)
 
-        return (mv_samples / np.sqrt(chi2_samples / nu)) + mu
+        return (mv_samples / chi2_samples) + mu
 
 
 mv_studentt = MvStudentTRV()
