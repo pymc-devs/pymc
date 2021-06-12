@@ -249,19 +249,6 @@ class MvNormal(Continuous):
         return ["mu", "cov"]
 
 
-def safe_multivariate_t(nu, mu, cov, size=None, rng=None):
-    res = np.atleast_1d(
-        stats.multivariate_t(loc=mu, shape=cov, df=nu, allow_singular=True).rvs(
-            size=size, random_state=rng
-        )
-    )
-
-    if size is not None:
-        res = res.reshape(list(size) + [-1])
-
-    return res
-
-
 class MvStudentTRV(RandomVariable):
     name = "multivariate_studentt"
     ndim_supp = 1
@@ -285,25 +272,22 @@ class MvStudentTRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, nu, mu, cov, size):
 
-        if mu.ndim > 1 or cov.ndim > 2:
-            # Neither SciPy nor NumPy implement parameter broadcasting for
-            # multivariate normals (or many other multivariate distributions),
-            # so we have implement a quick and dirty one here
-            mu, cov = broadcast_params([mu, cov], cls.ndims_params[1:])
-            size = tuple(size or ())
+        # Don't reassign broadcasted cov, since MvNormal expects two dimensional cov only.
+        mu, _ = broadcast_params([mu, cov], cls.ndims_params[1:])
 
-            if size:
-                mu = np.broadcast_to(mu, size + mu.shape)
-                cov = np.broadcast_to(cov, size + cov.shape)
+        chi2_samples = rng.chisquare(nu, size=size)
+        # Add distribution shape to chi2 samples
+        chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(mu.shape))
 
-            res = np.empty(mu.shape)
-            for idx in np.ndindex(mu.shape[:-1]):
-                m = mu[idx]
-                c = cov[idx]
-                res[idx] = safe_multivariate_t(nu, m, c, rng=rng)
-            return res
-        else:
-            return safe_multivariate_t(nu, mu, cov, size=size, rng=rng)
+        mv_samples = pm.MvNormal.dist(
+            mu=np.zeros_like(mu), cov=cov, size=size, rng=aesara.shared(rng)
+        ).eval()
+
+        size = tuple(size or ())
+        if size:
+            mu = np.broadcast_to(mu, size + mu.shape)
+
+        return (mv_samples / np.sqrt(chi2_samples / nu)) + mu
 
 
 mv_studentt = MvStudentTRV()

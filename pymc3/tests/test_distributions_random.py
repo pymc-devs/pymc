@@ -894,6 +894,11 @@ class TestMvNormalTau(BaseTestDistribution):
 
 
 class TestMvStudentTCov(BaseTestDistribution):
+    def mvstudentt_rng_fn(self, size, nu, mu, cov, rng):
+        chi2_samples = rng.chisquare(nu, size=size)
+        mv_samples = rng.multivariate_normal(np.zeros_like(mu), cov, size=size)
+        return (mv_samples / np.sqrt(chi2_samples[:, None] / nu)) + mu
+
     pymc_dist = pm.MvStudentT
     pymc_dist_params = {
         "nu": 5,
@@ -908,11 +913,13 @@ class TestMvStudentTCov(BaseTestDistribution):
     sizes_to_check = [None, (1), (2, 3)]
     sizes_expected = [(2,), (1, 2), (2, 3, 2)]
     reference_dist_params = {
-        "df": 5,
-        "loc": np.array([1.0, 2.0]),
-        "shape": np.array([[2.0, 0.0], [0.0, 3.5]]),
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
-    reference_dist = seeded_scipy_distribution_builder("multivariate_t")
+    reference_dist = lambda self: functools.partial(
+        self.mvstudentt_rng_fn, rng=self.get_random_state()
+    )
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
