@@ -3873,9 +3873,10 @@ class Interpolated(BoundedContinuous):
     Parameters
     ----------
     x_points: array-like
-        A monotonically growing list of values
+        A monotonically growing list of values. Must be non-symbolic
     pdf_points: array-like
-        Probability density function evaluated on lattice ``x_points``
+        Probability density function evaluated on lattice ``x_points``. Must
+        be non-symbolic
     """
 
     rv_op = interpolated
@@ -3889,9 +3890,9 @@ class Interpolated(BoundedContinuous):
         cdf_points = interp.antiderivative()(x_points) / Z
         pdf_points = pdf_points / Z
 
-        x_points = at.as_tensor_variable(floatX(x_points))
-        pdf_points = at.as_tensor_variable(floatX(pdf_points))
-        cdf_points = at.as_tensor_variable(floatX(cdf_points))
+        x_points = at.constant(floatX(x_points))
+        pdf_points = at.constant(floatX(pdf_points))
+        cdf_points = at.constant(floatX(cdf_points))
 
         # lower = at.as_tensor_variable(x_points[0])
         # upper = at.as_tensor_variable(x_points[-1])
@@ -3913,11 +3914,14 @@ class Interpolated(BoundedContinuous):
         -------
         TensorVariable
         """
+        # x_points and pdf_points are expected to be non-symbolic arrays wrapped
+        # within a tensor.constant. We use the .data method to retrieve them
         interp = InterpolatedUnivariateSpline(x_points.data, pdf_points.data, k=1, ext="zeros")
-        interp_op = SplineWrapper(interp)
-
         Z = interp.integral(x_points.data[0], x_points.data[-1])
-        Z = at.as_tensor_variable(Z)
+
+        # interp and Z are converted to symbolic variables here
+        interp_op = SplineWrapper(interp)
+        Z = at.constant(Z)
 
         return at.log(interp_op(value) / Z)
 
