@@ -316,8 +316,8 @@ class MvStudentT(Continuous):
 
     Parameters
     ----------
-    nu: int
-        Degrees of freedom.
+    nu: float
+        Degrees of freedom, should be a positive scalar.
     Sigma: matrix
         Covariance matrix. Use `cov` in new code.
     mu: array
@@ -339,8 +339,8 @@ class MvStudentT(Continuous):
             if cov is not None:
                 raise ValueError("Specify only one of cov and Sigma")
             cov = Sigma
-        nu = at.as_tensor_variable(nu)
-        mu = at.as_tensor_variable(mu)
+        nu = at.as_tensor_variable(floatX(nu))
+        mu = at.as_tensor_variable(floatX(mu))
         cov = quaddist_matrix(cov, chol, tau, lower)
         return super().dist([nu, mu, cov], **kwargs)
 
@@ -361,7 +361,7 @@ class MvStudentT(Continuous):
         quaddist, logdet, ok = quaddist_parse(value, mu, cov)
         k = floatX(value.shape[-1])
 
-        norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * floatX(np.log(nu * np.pi))
+        norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * at.log(nu * np.pi)
         inner = -(nu + k) / 2.0 * at.log1p(quaddist / nu)
         return bound(norm + inner - logdet, ok)
 
