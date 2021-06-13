@@ -42,7 +42,7 @@ import pymc3 as pm
 
 from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import transforms
-from pymc3.distributions.continuous import ChiSquared, Normal
+from pymc3.distributions.continuous import ChiSquared, Normal, assert_negative_support
 from pymc3.distributions.dist_math import bound, factln, logpow, multigammaln
 from pymc3.distributions.distribution import Continuous, Discrete
 from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
@@ -342,6 +342,7 @@ class MvStudentT(Continuous):
         nu = at.as_tensor_variable(floatX(nu))
         mu = at.as_tensor_variable(floatX(mu))
         cov = quaddist_matrix(cov, chol, tau, lower)
+        assert_negative_support(nu, "nu", "MvStudentT")
         return super().dist([nu, mu, cov], **kwargs)
 
     def logp(value, nu, mu, cov):
