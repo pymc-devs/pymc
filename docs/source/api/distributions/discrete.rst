@@ -11,6 +11,7 @@ Discrete
    Bernoulli
    DiscreteWeibull
    Poisson
+   GeneralizedPoisson
    NegativeBinomial
    Constant
    ZeroInflatedPoisson

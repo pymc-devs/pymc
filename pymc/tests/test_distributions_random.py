@@ -972,6 +972,36 @@ class TestPoisson(BaseTestDistributionRandom):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
+class TestGeneralizedPoisson(BaseTestDistributionRandom):
+    pymc_dist = pm.GeneralizedPoisson
+    pymc_dist_params = {"mu": 4.0, "lam": 1.0}
+    expected_rv_op_params = {"mu": 4.0, "lam": 1.0}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+    ]
+
+    def test_random(self):
+        pymc_random_discrete(
+            dist=self.pymc_dist,
+            paramdomains={"mu": Rplus, "lam": Domain([0], edges=(None, None))},
+            ref_rand=lambda mu, lam, size: st.poisson.rvs(mu, size=size),
+        )
+
+    def test_random_lam_expected_moments(self):
+        mu = 50
+        lam = np.array([-0.9, -0.7, -0.2, 0, 0.2, 0.7, 0.9])
+
+        dist = self.pymc_dist.dist(mu=mu, lam=lam, size=(10_000, len(lam)))
+        draws = dist.eval()
+
+        expected_mean = mu / (1 - lam)
+        np.testing.assert_allclose(draws.mean(0), expected_mean, rtol=1e-1)
+
+        expected_std = np.sqrt(mu / (1 - lam) ** 3)
+        np.testing.assert_allclose(draws.std(0), expected_std, rtol=1e-1)
+
+
 class TestMvNormalCov(BaseTestDistributionRandom):
     pymc_dist = pm.MvNormal
     pymc_dist_params = {

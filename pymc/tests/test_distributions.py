@@ -81,6 +81,7 @@ from pymc.distributions import (
     Exponential,
     Flat,
     Gamma,
+    GeneralizedPoisson,
     Geometric,
     Gumbel,
     HalfCauchy,
@@ -1741,6 +1742,53 @@ class TestMatchesScipy:
             Nat,
             {"mu": Rplus},
         )
+
+    def test_generalized_poisson(self):
+        # We are only checking this distribution for lambda=0 where it's equivalent to Poisson.
+        self.check_logp(
+            GeneralizedPoisson,
+            Nat,
+            {"mu": Rplus, "lam": Domain([0], edges=(None, None))},
+            lambda value, mu, lam: sp.poisson.logpmf(value, mu),
+            skip_paramdomain_outside_edge_test=True,
+        )
+
+        value = at.scalar("value")
+        mu = at.scalar("mu")
+        lam = at.scalar("lam")
+        logp = pm.logp(GeneralizedPoisson.dist(mu, lam), value)
+        logp_fn = aesara.function([value, mu, lam], logp)
+
+        # Check out-of-bounds values
+        logp_fn(-1, mu=5, lam=0) == -np.inf
+        logp_fn(9, mu=5, lam=-1) == -np.inf
+
+        # Check mu/lam restrictions
+        with pytest.raises(ParameterValueError):
+            logp_fn(1, mu=1, lam=2)
+
+        with pytest.raises(ParameterValueError):
+            logp_fn(1, mu=0, lam=0)
+
+        with pytest.raises(ParameterValueError):
+            logp_fn(1, mu=1, lam=-1)
+
+    def test_generalized_poisson_lam_expected_moments(self):
+        # TODO: This is a costly test, we should find alternative to test logp
+        mu = 30
+        lam = np.array([-0.9, -0.7, -0.2, 0, 0.2, 0.7, 0.9])
+        with Model():
+            # We create separate dists, because the Metropolis sampler cannot find
+            # a good single step size to accomodate all lambda values
+            dist = [pm.GeneralizedPoisson(f"x_{l}", mu=mu, lam=l) for l in lam]
+            pm.Deterministic("x", at.stack(dist))
+            trace = pm.sample(return_inferencedata=False, chains=1, draws=10_000)
+
+        expected_mean = mu / (1 - lam)
+        np.testing.assert_allclose(trace["x"].mean(0), expected_mean, rtol=1e-1)
+
+        expected_std = np.sqrt(mu / (1 - lam) ** 3)
+        np.testing.assert_allclose(trace["x"].std(0), expected_std, rtol=1e-1)
 
     def test_constantdist(self):
         self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))

@@ -28,6 +28,7 @@ from pymc.distributions import (
     Exponential,
     Flat,
     Gamma,
+    GeneralizedPoisson,
     Geometric,
     Gumbel,
     HalfCauchy,
@@ -589,6 +590,19 @@ def test_binomial_moment(n, p, size, expected):
 def test_poisson_moment(mu, size, expected):
     with Model() as model:
         Poisson("x", mu=mu, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, lam, size, expected",
+    [
+        (50, [-0.6, 0, 0.6], None, np.floor(50 / (1 - np.array([-0.6, 0, 0.6])))),
+        ([5, 50], -0.1, (4, 2), np.full((4, 2), np.floor(np.array([5, 50]) / 1.1))),
+    ],
+)
+def test_generalized_poisson_moment(mu, lam, size, expected):
+    with Model() as model:
+        GeneralizedPoisson("x", mu=mu, lam=lam, size=size)
     assert_moment_is_expected(model, expected)
 
 

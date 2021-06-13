@@ -46,7 +46,7 @@ from pymc.distributions.distribution import Discrete
 from pymc.distributions.logprob import logp
 from pymc.distributions.mixture import Mixture
 from pymc.distributions.shape_utils import rv_size_is_none
-from pymc.math import sigmoid
+from pymc.math import log1mexp_numpy, sigmoid
 from pymc.vartypes import continuous_types
 
 __all__ = [
@@ -55,6 +55,7 @@ __all__ = [
     "Bernoulli",
     "DiscreteWeibull",
     "Poisson",
+    "GeneralizedPoisson",
     "NegativeBinomial",
     "Constant",
     "ZeroInflatedPoisson",
@@ -662,6 +663,158 @@ class Poisson(Discrete):
         )
 
         return check_parameters(res, 0 <= mu, msg="mu >= 0")
+
+
+class GeneralizedPoissonRV(RandomVariable):
+    name = "generalized_poisson"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "int64"
+    _print_name = ("GeneralizedPoisson", "\\operatorname{GeneralizedPoisson}")
+
+    @classmethod
+    def rng_fn(cls, rng, theta, lam, size):
+
+        theta = np.asarray(theta)
+        lam = np.asarray(lam)
+
+        if size is not None:
+            dist_size = size
+        else:
+            dist_size = np.broadcast_shapes(theta.shape, lam.shape)
+
+        # Inversion algorithm described by Famoye (1997), computed on the log scale for
+        # numerical stability.
+        # TODO: Authors recommend mixing this method with the "branching" algorgithm,
+        #  but that one is only valid for positive lambdas. They also mention the normal
+        #  approximation for lambda < 0 and mu >= 10 or 0 < lambda < 0.2 and mu >= 30.
+        #  This could be done by splitting the values depending on lambda and then
+        #  recombining them.
+
+        log_u = np.log(rng.uniform(size=dist_size))
+
+        pos_lam = lam > 0
+        with np.errstate(divide="ignore", invalid="ignore"):
+            mixed_log_lam = np.where(pos_lam, np.log(lam), np.log(-lam))
+        theta_m_lam = theta - lam
+
+        log_s = -theta
+        log_p = log_s.copy()
+        x_ = 0
+        x = np.zeros(dist_size)
+        below_cutpoint = log_s < log_u
+        with np.errstate(divide="ignore", invalid="ignore"):
+            while np.any(below_cutpoint):
+                x_ += 1
+                x[below_cutpoint] += 1
+                log_c = np.log(theta_m_lam + lam * x_)
+                # Compute log(1 + lam / C)
+                log1p_lam_m_C = np.where(
+                    pos_lam,
+                    np.log1p(np.exp(mixed_log_lam - log_c)),
+                    log1mexp_numpy(mixed_log_lam - log_c, negative_input=True),
+                )
+                log_p = log_c + log1p_lam_m_C * (x_ - 1) + log_p - np.log(x_) - lam
+                log_s = np.logaddexp(log_s, log_p)
+                below_cutpoint = log_s < log_u
+        return x
+
+
+generalized_poisson = GeneralizedPoissonRV()
+
+
+class GeneralizedPoisson(Discrete):
+    R"""
+    Generalized Poisson log-likelihood.
+
+    Used to model count data that can be either overdispersed or underdispersed.
+    Offers greater flexibility than the standard Poisson which assumes equidispersion,
+    where the mean is equal to the variance.
+
+    The pmf of this distribution is
+
+    .. math:: f(x \mid \mu, \lambda) =
+                  \frac{\mu (\mu + \lambda x)^{x-1} e^{-\mu - \lambda x}}{x!}
+
+    ========  ======================================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\frac{\mu}{1 - \lambda}`
+    Variance  :math:`\frac{\mu}{(1 - \lambda)^3}`
+    ========  ======================================
+
+    Parameters
+    ----------
+    mu : tensor_like of float
+        Mean parameter (mu > 0).
+    lam : tensor_like of float
+        Dispersion parameter (max(-1, -mu/4) <= lam <= 1).
+
+    Notes
+    -----
+    When lam = 0, the Generalized Poisson reduces to the standard Poisson with the same mu.
+    When lam < 0, the mean is greater than the variance (underdispersion).
+    When lam > 0, the mean is less than the variance (overdispersion).
+
+    References
+    ----------
+    The PMF is taken from [1] and the random generator function is adapted from [2].
+
+    .. [1] Consul, PoC, and Felix Famoye. "Generalized Poisson regression model."
+       Communications in Statistics-Theory and Methods 21.1 (1992): 89-109.
+
+    .. [2] Famoye, Felix. "Generalized Poisson random variate generation." American
+       Journal of Mathematical and Management Sciences 17.3-4 (1997): 219-237.
+
+    """
+    rv_op = generalized_poisson
+
+    @classmethod
+    def dist(cls, mu, lam, **kwargs):
+        mu = at.as_tensor_variable(floatX(mu))
+        lam = at.as_tensor_variable(floatX(lam))
+        return super().dist([mu, lam], **kwargs)
+
+    def moment(rv, size, mu, lam):
+        mean = at.floor(mu / (1 - lam))
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
+    def logp(value, mu, lam):
+        r"""
+        Calculate log-probability of Generalized Poisson distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        mu_lam_value = mu + lam * value
+        logprob = np.log(mu) + logpow(mu_lam_value, value - 1) - mu_lam_value - factln(value)
+
+        # Probability is 0 when value > m, where m is the largest positive integer for
+        # which mu + m * lam > 0 (when lam < 0).
+        logprob = at.switch(
+            at.or_(
+                mu_lam_value < 0,
+                value < 0,
+            ),
+            -np.inf,
+            logprob,
+        )
+
+        return check_parameters(
+            logprob,
+            0 < mu,
+            at.abs(lam) <= 1,
+            (-mu / 4) <= lam,
+            msg="0 < mu, max(-1, -mu/4)) <= lam <= 1",
+        )
 
 
 class NegativeBinomial(Discrete):
