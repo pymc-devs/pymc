@@ -279,9 +279,7 @@ class MvStudentTRV(RandomVariable):
         # Add distribution shape to chi2 samples
         chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(mu.shape))
 
-        mv_samples = pm.MvNormal.dist(
-            mu=np.zeros_like(mu), cov=cov, size=size, rng=aesara.shared(rng)
-        ).eval()
+        mv_samples = multivariate_normal.rng_fn(rng=rng, mean=np.zeros_like(mu), cov=cov, size=size)
 
         size = tuple(size or ())
         if size:
