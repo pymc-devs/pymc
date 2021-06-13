@@ -1068,7 +1068,6 @@ class TestMatchesScipy:
             lambda value, nu: sp.chi2.logcdf(value, df=nu),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_wald_logp(self):
         self.check_logp(
             Wald,
@@ -1078,7 +1077,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
@@ -1091,7 +1089,6 @@ class TestMatchesScipy:
             lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.parametrize(
         "value,mu,lam,phi,alpha,logp",
         [
@@ -1111,7 +1108,6 @@ class TestMatchesScipy:
             (50.0, 15.0, None, 0.666666, 10.0, -5.6481874),
         ],
     )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_wald_logp_custom_points(self, value, mu, lam, phi, alpha, logp):
         # Log probabilities calculated using the dIG function from the R package gamlss.
         # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or

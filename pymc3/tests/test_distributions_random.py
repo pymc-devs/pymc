@@ -676,6 +676,78 @@ class TestTruncatedNormalUpperTau(BaseTestDistribution):
     ]
 
 
+class BaseTestWald(BaseTestDistribution):
+    def wald_rng_fn(self, size, mu, lam, alpha, uniform_rng_fct, normal_rng_fct):
+        v = normal_rng_fct(size=size) ** 2
+        z = uniform_rng_fct(size=size)
+        value = (
+            mu
+            + (mu ** 2) * v / (2.0 * lam)
+            - mu / (2.0 * lam) * np.sqrt(4.0 * mu * lam * v + (mu * v) ** 2)
+        )
+        i = np.floor(z - mu / (mu + value)) * 2 + 1
+        value = (value ** -i) * (mu ** (i + 1))
+        return value + alpha
+
+    def seeded_wald_rng_fn(self):
+        uniform_rng_fct = functools.partial(
+            getattr(np.random.RandomState, "uniform"), self.get_random_state()
+        )
+        normal_rng_fct = functools.partial(
+            getattr(np.random.RandomState, "normal"), self.get_random_state()
+        )
+        return functools.partial(
+            self.wald_rng_fn, uniform_rng_fct=uniform_rng_fct, normal_rng_fct=normal_rng_fct
+        )
+
+    pymc_dist = pm.Wald
+    reference_dist = seeded_wald_rng_fn
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestWaldPureScipy(BaseTestDistribution):
+    pymc_dist = pm.Wald
+    mu, lam, alpha = 1.0, 1.0, 2.0
+    mu_rv, lam_rv, phi_rv = pm.Wald.get_mu_lam_phi(mu=mu, lam=lam, phi=None)
+    pymc_dist_params = {"mu": mu, "lam": lam, "alpha": alpha}
+    expected_rv_op_params = {"mu": mu_rv, "lam": lam_rv, "alpha": alpha}
+    reference_dist_params = {"loc": alpha}
+    reference_dist = seeded_scipy_distribution_builder("wald")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestWaldMuLam(BaseTestWald):
+    mu, lam, alpha = 1.0, 3.0, 0.0
+    mu_rv, lam_rv, phi_rv = pm.Wald.get_mu_lam_phi(mu=mu, lam=lam, phi=None)
+    pymc_dist_params = {"mu": mu, "lam": lam}
+    expected_rv_op_params = {"mu": mu_rv, "lam": lam_rv, "alpha": 0.0}
+    reference_dist_params = {"mu": mu_rv, "lam": lam_rv, "alpha": 0.0}
+
+
+class TestWaldMuLamShifted(BaseTestWald):
+    mu, lam, alpha = 1.0, 3.0, 2.0
+    mu_rv, lam_rv, phi_rv = pm.Wald.get_mu_lam_phi(mu=mu, lam=lam, phi=None)
+    pymc_dist_params = {"mu": mu, "lam": lam, "alpha": alpha}
+    expected_rv_op_params = {"mu": mu_rv, "lam": lam_rv, "alpha": 2.0}
+    reference_dist_params = {"mu": mu_rv, "lam": lam_rv, "alpha": 2.0}
+
+
+class TestWaldMuPhi(BaseTestWald):
+    mu, phi, alpha = 1.0, 3.0, 0.0
+    mu_rv, lam_rv, phi_rv = pm.Wald.get_mu_lam_phi(mu=mu, lam=None, phi=phi)
+    pymc_dist_params = {"mu": mu, "phi": phi, "alpha": alpha}
+    expected_rv_op_params = {"mu": mu_rv, "lam": phi_rv, "alpha": 0.0}
+    reference_dist_params = {"mu": mu_rv, "lam": lam_rv, "alpha": 0.0}
+
+
 class TestSkewNormal(BaseTestDistribution):
     pymc_dist = pm.SkewNormal
     pymc_dist_params = {"mu": 0.0, "sigma": 1.0, "alpha": 5.0}

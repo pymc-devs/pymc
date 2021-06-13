@@ -18,7 +18,7 @@ A collection of common probability distributions for stochastic
 nodes in PyMC.
 """
 
-from typing import Union
+from typing import List, Optional, Tuple, Union
 
 import aesara.tensor as at
 import numpy as np
@@ -891,6 +891,37 @@ class HalfNormal(PositiveContinuous):
         return ["sigma"]
 
 
+class WaldRV(RandomVariable):
+    name = "wald"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("Wald", "\\operatorname{Wald}")
+
+    @classmethod
+    def rng_fn(
+        cls,
+        rng: np.random.RandomState,
+        mu: Union[np.ndarray, float],
+        lam: Union[np.ndarray, float],
+        alpha: Union[np.ndarray, float],
+        size: Optional[Union[List[int], int]],
+    ) -> np.ndarray:
+        v = rng.normal(size=size) ** 2
+        z = rng.uniform(size=size)
+        value = (
+            mu
+            + (mu ** 2) * v / (2.0 * lam)
+            - mu / (2.0 * lam) * np.sqrt(4.0 * mu * lam * v + (mu * v) ** 2)
+        )
+        i = np.floor(z - mu / (mu + value)) * 2 + 1
+        value = (value ** -i) * (mu ** (i + 1))
+        return value + alpha
+
+
+wald = WaldRV()
+
+
 class Wald(PositiveContinuous):
     r"""
     Wald log-likelihood.
@@ -969,27 +1000,33 @@ class Wald(PositiveContinuous):
     .. [Giner2016] Göknur Giner, Gordon K. Smyth (2016)
        statmod: Probability Calculations for the Inverse Gaussian Distribution
     """
+    rv_op = wald
 
-    def __init__(self, mu=None, lam=None, phi=None, alpha=0.0, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        mu, lam, phi = self.get_mu_lam_phi(mu, lam, phi)
-        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
-        self.mu = mu = at.as_tensor_variable(floatX(mu))
-        self.lam = lam = at.as_tensor_variable(floatX(lam))
-        self.phi = phi = at.as_tensor_variable(floatX(phi))
-
-        self.mean = self.mu + self.alpha
-        self.mode = (
-            self.mu * (at.sqrt(1.0 + (1.5 * self.mu / self.lam) ** 2) - 1.5 * self.mu / self.lam)
-            + self.alpha
-        )
-        self.variance = (self.mu ** 3) / self.lam
+    @classmethod
+    def dist(
+        cls,
+        mu: Optional[Union[float, np.ndarray]] = None,
+        lam: Optional[Union[float, np.ndarray]] = None,
+        phi: Optional[Union[float, np.ndarray]] = None,
+        alpha: Union[float, np.ndarray] = 0.0,
+        *args,
+        **kwargs,
+    ) -> RandomVariable:
+        mu, lam, phi = cls.get_mu_lam_phi(mu, lam, phi)
+        alpha = at.as_tensor_variable(floatX(alpha))
+        mu = at.as_tensor_variable(floatX(mu))
+        lam = at.as_tensor_variable(floatX(lam))
 
         assert_negative_support(phi, "phi", "Wald")
         assert_negative_support(mu, "mu", "Wald")
         assert_negative_support(lam, "lam", "Wald")
 
-    def get_mu_lam_phi(self, mu, lam, phi):
+        return super().dist([mu, lam, alpha], **kwargs)
+
+    @staticmethod
+    def get_mu_lam_phi(
+        mu: Optional[float], lam: Optional[float], phi: Optional[float]
+    ) -> Tuple[Union[float, np.ndarray], Union[float, np.ndarray], Union[float, np.ndarray]]:
         if mu is None:
             if lam is not None and phi is not None:
                 return lam / phi, lam, phi
@@ -1008,39 +1045,12 @@ class Wald(PositiveContinuous):
             "mu and lam, mu and phi, or lam and phi."
         )
 
-    def _random(self, mu, lam, alpha, size=None):
-        v = np.random.normal(size=size) ** 2
-        value = (
-            mu
-            + (mu ** 2) * v / (2.0 * lam)
-            - mu / (2.0 * lam) * np.sqrt(4.0 * mu * lam * v + (mu * v) ** 2)
-        )
-        z = np.random.uniform(size=size)
-        i = np.floor(z - mu / (mu + value)) * 2 + 1
-        value = (value ** -i) * (mu ** (i + 1))
-        return value + alpha
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Wald distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha], point=point, size=size)
-        # return generate_samples(self._random, mu, lam, alpha, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(
+        value,
+        mu: Union[float, np.ndarray, TensorVariable],
+        lam: Union[float, np.ndarray, TensorVariable],
+        alpha: Union[float, np.ndarray, TensorVariable],
+    ) -> RandomVariable:
         """
         Calculate log-probability of Wald distribution at specified value.
 
@@ -1049,14 +1059,17 @@ class Wald(PositiveContinuous):
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor
+        mu: float or TensorVariable
+            Mean of the distribution (mu > 0).
+        lam: float or TensorVariable
+            Relative precision (lam > 0).
+        alpha: float or TensorVariable
+            Shift/location parameter (alpha >= 0).
 
         Returns
         -------
         TensorVariable
         """
-        mu = self.mu
-        lam = self.lam
-        alpha = self.alpha
         centered_value = value - alpha
         # value *must* be iid. Otherwise this is wrong.
         return bound(
@@ -1072,7 +1085,12 @@ class Wald(PositiveContinuous):
     def _distr_parameters_for_repr(self):
         return ["mu", "lam", "alpha"]
 
-    def logcdf(self, value):
+    def logcdf(
+        value,
+        mu: Union[float, np.ndarray, TensorVariable],
+        lam: Union[float, np.ndarray, TensorVariable],
+        alpha: Union[float, np.ndarray, TensorVariable],
+    ) -> RandomVariable:
         """
         Compute the log of the cumulative distribution function for Wald distribution
         at the specified value.
@@ -1082,16 +1100,17 @@ class Wald(PositiveContinuous):
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
+        mu: float or TensorVariable
+            Mean of the distribution (mu > 0).
+        lam: float or TensorVariable
+            Relative precision (lam > 0).
+        alpha: float or TensorVariable
+            Shift/location parameter (alpha >= 0).
 
         Returns
         -------
         TensorVariable
         """
-        # Distribution parameters
-        mu = self.mu
-        lam = self.lam
-        alpha = self.alpha
-
         value -= alpha
         q = value / mu
         l = lam * mu
