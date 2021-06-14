@@ -1113,6 +1113,29 @@ class TestSamplePriorPredictive(SeededTest):
         assert np.allclose(prior["ub_log__"], prior_transformed_only["ub_log__"])
         assert np.allclose(prior["x_interval__"], prior_transformed_only["x_interval__"])
 
+    def test_issue_4490(self):
+        # Test that samples do not depend on var_name order or, more fundamentally,
+        # that they do not depend on the set order used inside `sample_prior_predictive`
+        seed = 4490
+        with pm.Model(rng_seeder=seed) as m1:
+            a = pm.Normal("a")
+            b = pm.Normal("b")
+            c = pm.Normal("c")
+            d = pm.Normal("d")
+            prior1 = pm.sample_prior_predictive(samples=1, var_names=["a", "b", "c", "d"])
+
+        with pm.Model(rng_seeder=seed) as m2:
+            a = pm.Normal("a")
+            b = pm.Normal("b")
+            c = pm.Normal("c")
+            d = pm.Normal("d")
+            prior2 = pm.sample_prior_predictive(samples=1, var_names=["b", "a", "d", "c"])
+
+        assert prior1["a"] == prior2["a"]
+        assert prior1["b"] == prior2["b"]
+        assert prior1["c"] == prior2["c"]
+        assert prior1["d"] == prior2["d"]
+
 
 class TestSamplePosteriorPredictive:
     def test_point_list_arg_bug_spp(self, point_list_arg_bug_fixture):
