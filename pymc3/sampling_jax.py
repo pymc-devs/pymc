@@ -5,7 +5,7 @@ import warnings
 
 xla_flags = os.getenv("XLA_FLAGS", "").lstrip("--")
 xla_flags = re.sub(r"xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
-os.environ["XLA_FLAGS"] = " ".join(["--xla_force_host_platform_device_count={}".format(100)])
+os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"])
 
 import aesara.tensor as at
 import arviz as az
@@ -47,8 +47,8 @@ class NumPyroNUTS(Op):
         self.seed = seed
 
         self.inputs, self.outputs = clone(inputs, outputs, copy_inputs=False)
-        self.inputs_type = tuple([input.type for input in inputs])
-        self.outputs_type = tuple([output.type for output in outputs])
+        self.inputs_type = tuple(input.type for input in inputs)
+        self.outputs_type = tuple(output.type for output in outputs)
         self.nin = len(inputs)
         self.nout = len(outputs)
         self.nshared = len([v for v in inputs if isinstance(v, SharedVariable)])
@@ -174,7 +174,7 @@ def sample_numpyro_nuts(
     init_state_batched_at = [at.as_tensor(v) for v in init_state_batched]
 
     nuts_inputs = sorted(
-        [v for v in graph_inputs([model.logpt]) if not isinstance(v, Constant)],
+        (v for v in graph_inputs([model.logpt]) if not isinstance(v, Constant)),
         key=lambda x: isinstance(x, SharedVariable),
     )
     map_seed = jax.random.split(seed, chains)

@@ -187,7 +187,7 @@ class Mixture(Distribution):
             # All component distributions must broadcast with each other
             try:
                 self._broadcast_shape = np.broadcast(
-                    *[np.empty(shape) for shape in self._comp_dist_shapes]
+                    *(np.empty(shape) for shape in self._comp_dist_shapes)
                 ).shape
             except Exception:
                 raise TypeError(

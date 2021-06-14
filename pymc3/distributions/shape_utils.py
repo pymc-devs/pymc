@@ -426,7 +426,7 @@ StrongSize = Union[TensorVariable, Tuple[Union[int, TensorVariable], ...]]
 
 
 def convert_dims(dims: Dims) -> Optional[WeakDims]:
-    """ Process a user-provided dims variable into None or a valid dims tuple. """
+    """Process a user-provided dims variable into None or a valid dims tuple."""
     if dims is None:
         return None
 
@@ -444,7 +444,7 @@ def convert_dims(dims: Dims) -> Optional[WeakDims]:
 
 
 def convert_shape(shape: Shape) -> Optional[WeakShape]:
-    """ Process a user-provided shape variable into None or a valid shape object. """
+    """Process a user-provided shape variable into None or a valid shape object."""
     if shape is None:
         return None
 
@@ -466,7 +466,7 @@ def convert_shape(shape: Shape) -> Optional[WeakShape]:
 
 
 def convert_size(size: Size) -> Optional[StrongSize]:
-    """ Process a user-provided size variable into None or a valid size object. """
+    """Process a user-provided size variable into None or a valid size object."""
     if size is None:
         return None
 

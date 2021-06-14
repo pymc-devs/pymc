@@ -187,7 +187,7 @@ class BaseTestCases:
 
         @staticmethod
         def sample_random_variable(random_variable, size):
-            """ Draws samples from a RandomVariable. """
+            """Draws samples from a RandomVariable."""
             if size:
                 random_variable = change_rv_size(random_variable, size, expand=True)
             return random_variable.eval()
