@@ -43,7 +43,7 @@ class ImputationWarning(UserWarning):
 
 
 class ShapeWarning(UserWarning):
-    """ Something that could lead to shape problems down the line. """
+    """Something that could lead to shape problems down the line."""
 
     pass
 

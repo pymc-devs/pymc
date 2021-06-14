@@ -2010,7 +2010,7 @@ def sample_prior_predictive(
         inputs, vars_to_sample, allow_input_downcast=True, accept_inplace=True, mode=mode
     )
 
-    values = zip(*[sampler_fn() for i in range(samples)])
+    values = zip(*(sampler_fn() for i in range(samples)))
 
     data = {k: np.stack(v) for k, v in zip(names, values)}
     if data is None:

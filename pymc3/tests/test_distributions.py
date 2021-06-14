@@ -191,7 +191,7 @@ def product(domains, n_samples=-1):
         names, domains = zip(*domains.items())
     except ValueError:  # domains.items() is empty
         return [{}]
-    all_vals = [zip(names, val) for val in itertools.product(*[d.vals for d in domains])]
+    all_vals = [zip(names, val) for val in itertools.product(*(d.vals for d in domains))]
     if n_samples > 0 and len(all_vals) > n_samples:
         return (all_vals[j] for j in nr.choice(len(all_vals), n_samples, replace=False))
     return all_vals
@@ -294,7 +294,7 @@ def multinomial_logpdf(value, n, p):
 
 
 def dirichlet_multinomial_logpmf(value, n, a):
-    value, n, a = [np.asarray(x) for x in [value, n, a]]
+    value, n, a = (np.asarray(x) for x in [value, n, a])
     assert value.ndim == 1
     assert n.ndim == 0
     assert a.shape == value.shape
@@ -318,7 +318,7 @@ def beta_mu_sigma(value, mu, sigma):
 
 class ProductDomain:
     def __init__(self, domains):
-        self.vals = list(itertools.product(*[d.vals for d in domains]))
+        self.vals = list(itertools.product(*(d.vals for d in domains)))
         self.shape = (len(domains),) + domains[0].shape
         self.lower = [d.lower for d in domains]
         self.upper = [d.upper for d in domains]
@@ -2187,7 +2187,7 @@ class TestMatchesScipy:
         )
 
         assert_almost_equal(
-            sum([model_single.fastlogp({"m": val}) for val in vals]),
+            sum(model_single.fastlogp({"m": val}) for val in vals),
             model_many.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2201,7 +2201,7 @@ class TestMatchesScipy:
             Multinomial("m", n=ns, p=p)
 
         assert_almost_equal(
-            sum([multinomial_logpdf(val, n, p) for val, n in zip(vals, ns)]),
+            sum(multinomial_logpdf(val, n, p) for val, n in zip(vals, ns)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2215,7 +2215,7 @@ class TestMatchesScipy:
             Multinomial("m", n=ns, p=ps)
 
         assert_almost_equal(
-            sum([multinomial_logpdf(val, n, p) for val, n, p in zip(vals, ns, ps)]),
+            sum(multinomial_logpdf(val, n, p) for val, n, p in zip(vals, ns, ps)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2229,7 +2229,7 @@ class TestMatchesScipy:
             Multinomial("m", n=n, p=ps)
 
         assert_almost_equal(
-            sum([multinomial_logpdf(val, n, p) for val, p in zip(vals, ps)]),
+            sum(multinomial_logpdf(val, n, p) for val, p in zip(vals, ps)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2309,7 +2309,7 @@ class TestMatchesScipy:
         )
 
         assert_almost_equal(
-            sum([model_single.fastlogp({"m": val}) for val in vals]),
+            sum(model_single.fastlogp({"m": val}) for val in vals),
             model_many.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2324,7 +2324,7 @@ class TestMatchesScipy:
             DirichletMultinomial("m", n=ns, a=a, size=vals.shape)
 
         assert_almost_equal(
-            sum([dirichlet_multinomial_logpmf(val, n, a) for val, n in zip(vals, ns)]),
+            sum(dirichlet_multinomial_logpmf(val, n, a) for val, n in zip(vals, ns)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2339,7 +2339,7 @@ class TestMatchesScipy:
             DirichletMultinomial("m", n=ns, a=as_, size=vals.shape)
 
         assert_almost_equal(
-            sum([dirichlet_multinomial_logpmf(val, n, a) for val, n, a in zip(vals, ns, as_)]),
+            sum(dirichlet_multinomial_logpmf(val, n, a) for val, n, a in zip(vals, ns, as_)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2354,7 +2354,7 @@ class TestMatchesScipy:
             DirichletMultinomial("m", n=n, a=as_, size=vals.shape)
 
         assert_almost_equal(
-            sum([dirichlet_multinomial_logpmf(val, n, a) for val, a in zip(vals, as_)]),
+            sum(dirichlet_multinomial_logpmf(val, n, a) for val, a in zip(vals, as_)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
