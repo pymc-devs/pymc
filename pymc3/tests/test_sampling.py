@@ -1076,6 +1076,43 @@ class TestSamplePriorPredictive(SeededTest):
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_prior_predictive(samples=5)
 
+    def test_transformed_vars(self):
+        # Test that prior predictive returns transformation of RVs when these are
+        # passed explicitly in `var_names`
+
+        def ub_interval_forward(x, ub):
+            # Interval transform assuming lower bound is zero
+            return np.log(x - 0) - np.log(ub - x)
+
+        with pm.Model(rng_seeder=123) as model:
+            ub = pm.HalfNormal("ub", 10)
+            x = pm.Uniform("x", 0, ub)
+
+            prior = pm.sample_prior_predictive(
+                var_names=["ub", "ub_log__", "x", "x_interval__"],
+                samples=10,
+            )
+
+        # Check values are correct
+        assert np.allclose(prior["ub_log__"], np.log(prior["ub"]))
+        assert np.allclose(
+            prior["x_interval__"],
+            ub_interval_forward(prior["x"], prior["ub"]),
+        )
+
+        # Check that it works when the original RVs are not mentioned in var_names
+        with pm.Model(rng_seeder=123) as model_transformed_only:
+            ub = pm.HalfNormal("ub", 10)
+            x = pm.Uniform("x", 0, ub)
+
+            prior_transformed_only = pm.sample_prior_predictive(
+                var_names=["ub_log__", "x_interval__"],
+                samples=10,
+            )
+        assert "ub" not in prior_transformed_only and "x" not in prior_transformed_only
+        assert np.allclose(prior["ub_log__"], prior_transformed_only["ub_log__"])
+        assert np.allclose(prior["x_interval__"], prior_transformed_only["x_interval__"])
+
 
 class TestSamplePosteriorPredictive:
     def test_point_list_arg_bug_spp(self, point_list_arg_bug_fixture):

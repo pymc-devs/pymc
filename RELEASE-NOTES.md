@@ -7,7 +7,8 @@
 - The GLM submodule has been removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
 - The `Distribution` keyword argument `testval` has been deprecated in favor of `initval`.
 - `pm.sample` now returns results as `InferenceData` instead of `MultiTrace` by default (see [#4744](https://github.com/pymc-devs/pymc3/pull/4744)).
-- ...
+- `pm.sample_prior_predictive` no longer returns transformed variable values by default. Pass them by name in `var_names` if you want to obtain these draws (see [4769](https://github.com/pymc-devs/pymc3/pull/4769)).
+...
 
 ### New Features
 - The `CAR` distribution has been added to allow for use of conditional autoregressions which often are used in spatial and network models.
