@@ -98,6 +98,7 @@ class TestSMC(SeededTest):
             trace = pm.sample_smc(500, start=start)
 
 
+@pytest.mark.xfail(reason="SMC-ABC not refactored yet")
 class TestSMCABC(SeededTest):
     def setup_class(self):
         super().setup_class()

@@ -87,7 +87,7 @@ class SMC:
         if self.start is None:
             init_rnd = sample_prior_predictive(
                 self.draws,
-                var_names=[v.name for v in self.model.unobserved_RVs],
+                var_names=[v.name for v in self.model.unobserved_value_vars],
                 model=self.model,
             )
         else:

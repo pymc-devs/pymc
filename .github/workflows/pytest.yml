@@ -30,7 +30,6 @@ jobs:
             --ignore=pymc3/tests/test_modelcontext.py
             --ignore=pymc3/tests/test_parallel_sampling.py
             --ignore=pymc3/tests/test_profile.py
-            --ignore=pymc3/tests/test_smc.py
             --ignore=pymc3/tests/test_step.py
             --ignore=pymc3/tests/test_tuning.py
             --ignore=pymc3/tests/test_types.py
