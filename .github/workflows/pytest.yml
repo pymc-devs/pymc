@@ -27,18 +27,13 @@ jobs:
         # 6th block: These have some XFAILs
           - |
             --ignore=pymc3/tests/test_distributions_timeseries.py
-            --ignore=pymc3/tests/test_missing.py
             --ignore=pymc3/tests/test_mixture.py
             --ignore=pymc3/tests/test_model_graph.py
             --ignore=pymc3/tests/test_modelcontext.py
             --ignore=pymc3/tests/test_parallel_sampling.py
             --ignore=pymc3/tests/test_profile.py
-            --ignore=pymc3/tests/test_random.py
-            --ignore=pymc3/tests/test_shared.py
             --ignore=pymc3/tests/test_smc.py
-            --ignore=pymc3/tests/test_starting.py
             --ignore=pymc3/tests/test_step.py
-            --ignore=pymc3/tests/test_tracetab.py
             --ignore=pymc3/tests/test_tuning.py
             --ignore=pymc3/tests/test_types.py
             --ignore=pymc3/tests/test_variational_inference.py
