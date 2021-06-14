@@ -2017,7 +2017,6 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.parametrize("n", [1, 2])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_mvt(self, n):
         self.check_logp(
             MvStudentT,
@@ -2030,6 +2029,7 @@ class TestMatchesScipy:
             RealMatrix(2, n),
             {"nu": Rplus, "Sigma": PdMatrix(n), "mu": Vector(R, n)},
             mvt_logpdf,
+            extra_args={"size": 2},
         )
 
     @pytest.mark.parametrize("n", [2, 3, 4])
@@ -2936,13 +2936,11 @@ def test_car_logp(size):
 
 
 class TestBugfixes:
-    @pytest.mark.parametrize(
-        "dist_cls,kwargs", [(MvNormal, dict(mu=0)), (MvStudentT, dict(mu=0, nu=2))]
-    )
+    @pytest.mark.parametrize("dist_cls,kwargs", [(MvNormal, dict()), (MvStudentT, dict(nu=2))])
     @pytest.mark.parametrize("dims", [1, 2, 4])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_issue_3051(self, dims, dist_cls, kwargs):
-        d = dist_cls.dist(**kwargs, cov=np.eye(dims), size=(dims,))
+        mu = np.repeat(0, dims)
+        d = dist_cls.dist(mu=mu, cov=np.eye(dims), **kwargs, size=(20))
 
         X = np.random.normal(size=(20, dims))
         actual_t = logpt(d, X)

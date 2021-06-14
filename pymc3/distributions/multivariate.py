@@ -27,6 +27,7 @@ from aesara.graph.op import Op
 from aesara.tensor import gammaln
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
+from aesara.tensor.random.op import RandomVariable, default_shape_from_params
 from aesara.tensor.random.utils import broadcast_params
 from aesara.tensor.slinalg import (
     Cholesky,
@@ -41,7 +42,7 @@ import pymc3 as pm
 
 from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import transforms
-from pymc3.distributions.continuous import ChiSquared, Normal
+from pymc3.distributions.continuous import ChiSquared, Normal, assert_negative_support
 from pymc3.distributions.dist_math import bound, factln, logpow, multigammaln
 from pymc3.distributions.distribution import Continuous, Discrete
 from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
@@ -248,6 +249,48 @@ class MvNormal(Continuous):
         return ["mu", "cov"]
 
 
+class MvStudentTRV(RandomVariable):
+    name = "multivariate_studentt"
+    ndim_supp = 1
+    ndims_params = [0, 1, 2]
+    dtype = "floatX"
+    _print_name = ("MvStudentT", "\\operatorname{MvStudentT}")
+
+    def __call__(self, nu, mu=None, cov=None, size=None, **kwargs):
+
+        dtype = aesara.config.floatX if self.dtype == "floatX" else self.dtype
+
+        if mu is None:
+            mu = np.array([0.0], dtype=dtype)
+        if cov is None:
+            cov = np.array([[1.0]], dtype=dtype)
+        return super().__call__(nu, mu, cov, size=size, **kwargs)
+
+    def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
+        return default_shape_from_params(self.ndim_supp, dist_params, rep_param_idx, param_shapes)
+
+    @classmethod
+    def rng_fn(cls, rng, nu, mu, cov, size):
+
+        # Don't reassign broadcasted cov, since MvNormal expects two dimensional cov only.
+        mu, _ = broadcast_params([mu, cov], cls.ndims_params[1:])
+
+        chi2_samples = np.sqrt(rng.chisquare(nu, size=size) / nu)
+        # Add distribution shape to chi2 samples
+        chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(mu.shape))
+
+        mv_samples = multivariate_normal.rng_fn(rng=rng, mean=np.zeros_like(mu), cov=cov, size=size)
+
+        size = tuple(size or ())
+        if size:
+            mu = np.broadcast_to(mu, size + mu.shape)
+
+        return (mv_samples / chi2_samples) + mu
+
+
+mv_studentt = MvStudentTRV()
+
+
 class MvStudentT(Continuous):
     r"""
     Multivariate Student-T log-likelihood.
@@ -273,8 +316,8 @@ class MvStudentT(Continuous):
 
     Parameters
     ----------
-    nu: int
-        Degrees of freedom.
+    nu: float
+        Degrees of freedom, should be a positive scalar.
     Sigma: matrix
         Covariance matrix. Use `cov` in new code.
     mu: array
@@ -288,55 +331,21 @@ class MvStudentT(Continuous):
     lower: bool, default=True
         Whether the cholesky fatcor is given as a lower triangular matrix.
     """
+    rv_op = mv_studentt
 
-    def __init__(
-        self, nu, Sigma=None, mu=None, cov=None, tau=None, chol=None, lower=True, *args, **kwargs
-    ):
+    @classmethod
+    def dist(cls, nu, Sigma=None, mu=None, cov=None, tau=None, chol=None, lower=True, **kwargs):
         if Sigma is not None:
             if cov is not None:
                 raise ValueError("Specify only one of cov and Sigma")
             cov = Sigma
-        super().__init__(mu=mu, cov=cov, tau=tau, chol=chol, lower=lower, *args, **kwargs)
-        self.nu = nu = at.as_tensor_variable(nu)
-        self.mean = self.median = self.mode = self.mu = self.mu
+        nu = at.as_tensor_variable(floatX(nu))
+        mu = at.as_tensor_variable(floatX(mu))
+        cov = quaddist_matrix(cov, chol, tau, lower)
+        assert_negative_support(nu, "nu", "MvStudentT")
+        return super().dist([nu, mu, cov], **kwargs)
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Multivariate Student's T distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # with _DrawValuesContext():
-        #     nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
-        #     if self._cov_type == "cov":
-        #         (cov,) = draw_values([self.cov], point=point, size=size)
-        #         dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov, shape=self.shape)
-        #     elif self._cov_type == "tau":
-        #         (tau,) = draw_values([self.tau], point=point, size=size)
-        #         dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau, shape=self.shape)
-        #     else:
-        #         (chol,) = draw_values([self.chol_cov], point=point, size=size)
-        #         dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol, shape=self.shape)
-        #
-        #     samples = dist.random(point, size)
-        #
-        # chi2_samples = np.random.chisquare(nu, size)
-        # # Add distribution shape to chi2 samples
-        # chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(self.shape))
-        # return (samples / np.sqrt(chi2_samples / nu)) + mu
-
-    def logp(value, nu, cov):
+    def logp(value, nu, mu, cov):
         """
         Calculate log-probability of Multivariate Student's T distribution
         at specified value.
@@ -350,15 +359,15 @@ class MvStudentT(Continuous):
         -------
         TensorVariable
         """
-        quaddist, logdet, ok = quaddist_parse(value, nu, cov)
+        quaddist, logdet, ok = quaddist_parse(value, mu, cov)
         k = floatX(value.shape[-1])
 
-        norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * floatX(np.log(nu * np.pi))
+        norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * at.log(nu * np.pi)
         inner = -(nu + k) / 2.0 * at.log1p(quaddist / nu)
         return bound(norm + inner - logdet, ok)
 
     def _distr_parameters_for_repr(self):
-        return ["mu", "nu", "cov"]
+        return ["nu", "mu", "cov"]
 
 
 class Dirichlet(Continuous):

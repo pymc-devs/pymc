@@ -889,7 +889,7 @@ class TestPoisson(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestMvNormal(BaseTestDistribution):
+class TestMvNormalCov(BaseTestDistribution):
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -933,6 +933,70 @@ class TestMvNormalTau(BaseTestDistribution):
         "tau": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
     expected_rv_op_params = {
+        "mu": np.array([1.0, 2.0]),
+        "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(),
+    }
+    tests_to_run = ["check_pymc_params_match_rv_op"]
+
+
+class TestMvStudentTCov(BaseTestDistribution):
+    def mvstudentt_rng_fn(self, size, nu, mu, cov, rng):
+        chi2_samples = rng.chisquare(nu, size=size)
+        mv_samples = rng.multivariate_normal(np.zeros_like(mu), cov, size=size)
+        return (mv_samples / np.sqrt(chi2_samples[:, None] / nu)) + mu
+
+    pymc_dist = pm.MvStudentT
+    pymc_dist_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    expected_rv_op_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    sizes_to_check = [None, (1), (2, 3)]
+    sizes_expected = [(2,), (1, 2), (2, 3, 2)]
+    reference_dist_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    reference_dist = lambda self: functools.partial(
+        self.mvstudentt_rng_fn, rng=self.get_random_state()
+    )
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestMvStudentTChol(BaseTestDistribution):
+    pymc_dist = pm.MvStudentT
+    pymc_dist_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "chol": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    expected_rv_op_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "cov": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(),
+    }
+    tests_to_run = ["check_pymc_params_match_rv_op"]
+
+
+class TestMvStudentTTau(BaseTestDistribution):
+    pymc_dist = pm.MvStudentT
+    pymc_dist_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "tau": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    expected_rv_op_params = {
+        "nu": 5,
         "mu": np.array([1.0, 2.0]),
         "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(),
     }
@@ -1469,22 +1533,6 @@ class TestScalarParameterSamples(SeededTest):
                 ref_rand=ref_rand_evd,
                 extra_args=evd_args,
                 model_args=evd_args,
-            )
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_mv_t(self):
-        def ref_rand(size, nu, Sigma, mu):
-            normal = st.multivariate_normal.rvs(cov=Sigma, size=size)
-            chi2 = st.chi2.rvs(df=nu, size=size)[..., None]
-            return mu + (normal / np.sqrt(chi2 / nu))
-
-        for n in [2, 3]:
-            pymc3_random(
-                pm.MvStudentT,
-                {"nu": Domain([5, 10, 25, 50]), "Sigma": PdMatrix(n), "mu": Vector(R, n)},
-                size=100,
-                valuedomain=Vector(R, n),
-                ref_rand=ref_rand,
             )
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
