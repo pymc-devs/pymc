@@ -32,7 +32,7 @@ from scipy.special import expit
 import pymc3 as pm
 
 from pymc3.aesaraf import change_rv_size, floatX, intX
-from pymc3.distributions.continuous import get_tau_sigma
+from pymc3.distributions.continuous import get_tau_sigma, interpolated
 from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.multivariate import quaddist_matrix
 from pymc3.distributions.shape_utils import to_tuple
@@ -271,18 +271,6 @@ class TestWald(BaseTestCases.BaseTestCase):
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestAsymmetricLaplace(BaseTestCases.BaseTestCase):
-    distribution = pm.AsymmetricLaplace
-    params = {"kappa": 1.0, "b": 1.0, "mu": 0.0}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestExGaussian(BaseTestCases.BaseTestCase):
-    distribution = pm.ExGaussian
-    params = {"mu": 0.0, "sigma": 1.0, "nu": 1.0}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestZeroInflatedNegativeBinomial(BaseTestCases.BaseTestCase):
     distribution = pm.ZeroInflatedNegativeBinomial
     params = {"mu": 1.0, "alpha": 1.0, "psi": 0.3}
@@ -458,6 +446,64 @@ class TestLaplace(BaseTestDistribution):
     expected_rv_op_params = {"mu": 0.0, "b": 1.0}
     reference_dist_params = {"loc": 0.0, "scale": 1.0}
     reference_dist = seeded_scipy_distribution_builder("laplace")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestAsymmetricLaplace(BaseTestDistribution):
+    def asymmetriclaplace_rng_fn(self, b, kappa, mu, size, uniform_rng_fct):
+        u = uniform_rng_fct(size=size)
+        switch = kappa ** 2 / (1 + kappa ** 2)
+        non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
+        positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+        draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
+        return draws
+
+    def seeded_asymmetriclaplace_rng_fn(self):
+        uniform_rng_fct = functools.partial(
+            getattr(np.random.RandomState, "uniform"), self.get_random_state()
+        )
+        return functools.partial(self.asymmetriclaplace_rng_fn, uniform_rng_fct=uniform_rng_fct)
+
+    pymc_dist = pm.AsymmetricLaplace
+
+    pymc_dist_params = {"b": 1.0, "kappa": 1.0, "mu": 0.0}
+    expected_rv_op_params = {"b": 1.0, "kappa": 1.0, "mu": 0.0}
+    reference_dist_params = {"b": 1.0, "kappa": 1.0, "mu": 0.0}
+    reference_dist = seeded_asymmetriclaplace_rng_fn
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestExGaussian(BaseTestDistribution):
+    def exgaussian_rng_fn(self, mu, sigma, nu, size, normal_rng_fct, exponential_rng_fct):
+        return normal_rng_fct(mu, sigma, size=size) + exponential_rng_fct(scale=nu, size=size)
+
+    def seeded_exgaussian_rng_fn(self):
+        normal_rng_fct = functools.partial(
+            getattr(np.random.RandomState, "normal"), self.get_random_state()
+        )
+        exponential_rng_fct = functools.partial(
+            getattr(np.random.RandomState, "exponential"), self.get_random_state()
+        )
+        return functools.partial(
+            self.exgaussian_rng_fn,
+            normal_rng_fct=normal_rng_fct,
+            exponential_rng_fct=exponential_rng_fct,
+        )
+
+    pymc_dist = pm.ExGaussian
+
+    pymc_dist_params = {"mu": 1.0, "sigma": 1.0, "nu": 1.0}
+    expected_rv_op_params = {"mu": 1.0, "sigma": 1.0, "nu": 1.0}
+    reference_dist_params = {"mu": 1.0, "sigma": 1.0, "nu": 1.0}
+    reference_dist = seeded_exgaussian_rng_fn
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -1196,6 +1242,48 @@ class TestOrderedProbit(BaseTestDistribution):
     ]
 
 
+class TestInterpolated(BaseTestDistribution):
+    def interpolated_rng_fn(self, size, mu, sigma, rng):
+        return st.norm.rvs(loc=mu, scale=sigma, size=size)
+
+    pymc_dist = pm.Interpolated
+
+    # Dummy values for RV size testing
+    mu = sigma = 1
+    x_points = pdf_points = np.linspace(1, 100, 100)
+
+    pymc_dist_params = {"x_points": x_points, "pdf_points": pdf_points}
+    reference_dist_params = {"mu": mu, "sigma": sigma}
+
+    reference_dist = lambda self: functools.partial(
+        self.interpolated_rng_fn, rng=self.get_random_state()
+    )
+    tests_to_run = [
+        "check_rv_size",
+    ]
+
+
+class TestInterpolatedSeeded(SeededTest):
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    def test_interpolated(self):
+        for mu in R.vals:
+            for sigma in Rplus.vals:
+                # pylint: disable=cell-var-from-loop
+                def ref_rand(size):
+                    return st.norm.rvs(loc=mu, scale=sigma, size=size)
+
+                class TestedInterpolated(pm.Interpolated):
+                    rv_op = interpolated
+
+                    @classmethod
+                    def dist(cls, **kwargs):
+                        x_points = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 100)
+                        pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
+                        return super().dist(x_points=x_points, pdf_points=pdf_points, **kwargs)
+
+                pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
+
+
 class TestScalarParameterSamples(SeededTest):
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_bounded(self):
@@ -1256,25 +1344,6 @@ class TestScalarParameterSamples(SeededTest):
             {"mu": Domain([1.0, 1.0, 1.0]), "lam": Domain([1.0, 1.0, 1.0]), "alpha": Rplus},
             ref_rand=ref_rand,
         )
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_laplace_asymmetric(self):
-        def ref_rand(size, kappa, b, mu):
-            u = np.random.uniform(size=size)
-            switch = kappa ** 2 / (1 + kappa ** 2)
-            non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
-            positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
-            draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
-            return draws
-
-        pymc3_random(pm.AsymmetricLaplace, {"b": Rplus, "kappa": Rplus, "mu": R}, ref_rand=ref_rand)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_ex_gaussian(self):
-        def ref_rand(size, mu, sigma, nu):
-            return nr.normal(mu, sigma, size=size) + nr.exponential(scale=nu, size=size)
-
-        pymc3_random(pm.ExGaussian, {"mu": R, "sigma": Rplus, "nu": Rplus}, ref_rand=ref_rand)
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_matrix_normal(self):
@@ -1496,23 +1565,6 @@ class TestScalarParameterSamples(SeededTest):
             return st.moyal.rvs(loc=mu, scale=sigma, size=size)
 
         pymc3_random(pm.Moyal, {"mu": R, "sigma": Rplus}, ref_rand=ref_rand)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    def test_interpolated(self):
-        for mu in R.vals:
-            for sigma in Rplus.vals:
-                # pylint: disable=cell-var-from-loop
-                def ref_rand(size):
-                    return st.norm.rvs(loc=mu, scale=sigma, size=size)
-
-                class TestedInterpolated(pm.Interpolated):
-                    def __init__(self, **kwargs):
-                        x_points = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 100)
-                        pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
-                        super().__init__(x_points=x_points, pdf_points=pdf_points, **kwargs)
-
-                pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     @pytest.mark.skip(

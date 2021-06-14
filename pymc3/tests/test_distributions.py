@@ -1309,7 +1309,6 @@ class TestMatchesScipy:
             lambda value, mu, b: sp.laplace.logcdf(value, mu, b),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_laplace_asymmetric(self):
         self.check_logp(
             AsymmetricLaplace,
@@ -1521,7 +1520,6 @@ class TestMatchesScipy:
             lambda value, alpha, beta: sp.exponweib.logcdf(value, 1, alpha, scale=beta),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_half_studentt(self):
         # this is only testing for nu=1 (halfcauchy)
         self.check_logp(
@@ -2474,7 +2472,6 @@ class TestMatchesScipy:
             (-1.0, 0.0, 0.1, 0.1, -51.022349),  # Fails in previous pymc3 version
         ],
     )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_ex_gaussian(self, value, mu, sigma, nu, logp):
         """Log probabilities calculated using the dexGAUS function from the R package gamlss.
         See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/."""
@@ -2489,7 +2486,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.parametrize(
-        "value,mu,sigma,nu,logcdf",
+        "value,mu,sigma,nu,logcdf_val",
         [
             (0.5, -50.000, 0.500, 0.500, 0.0000000),
             (1.0, -1.000, 0.001, 0.001, 0.0000000),
@@ -2504,18 +2501,16 @@ class TestMatchesScipy:
             (-0.72402009, 0.0, 0.1, 0.1, -31.26571842),  # Previous 64-bit version failed here
         ],
     )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_ex_gaussian_cdf(self, value, mu, sigma, nu, logcdf):
+    def test_ex_gaussian_cdf(self, value, mu, sigma, nu, logcdf_val):
         """Log probabilities calculated using the pexGAUS function from the R package gamlss.
         See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/."""
         assert_almost_equal(
-            logcdf(ExGaussian.dist(mu=mu, sigma=sigma, nu=nu), value).tag.test_value,
-            logcdf,
+            logcdf(ExGaussian.dist(mu=mu, sigma=sigma, nu=nu), value).eval(),
+            logcdf_val,
             decimal=select_by_precision(float64=6, float32=2),
-            err_msg=str((value, mu, sigma, nu, logcdf)),
+            err_msg=str((value, mu, sigma, nu, logcdf_val)),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_ex_gaussian_cdf_outside_edges(self):
         self.check_logcdf(
             ExGaussian,
@@ -2618,7 +2613,6 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
@@ -2626,11 +2620,16 @@ class TestMatchesScipy:
                 xmin = mu - 5 * sigma
                 xmax = mu + 5 * sigma
 
+                from pymc3.distributions.continuous import interpolated
+
                 class TestedInterpolated(Interpolated):
-                    def __init__(self, **kwargs):
+                    rv_op = interpolated
+
+                    @classmethod
+                    def dist(cls, **kwargs):
                         x_points = np.linspace(xmin, xmax, 100000)
                         pdf_points = sp.norm.pdf(x_points, loc=mu, scale=sigma)
-                        super().__init__(x_points=x_points, pdf_points=pdf_points, **kwargs)
+                        return super().dist(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
                 def ref_pdf(value):
                     return np.where(
