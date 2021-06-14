@@ -15,13 +15,13 @@
 from collections import deque
 from typing import Dict, Iterator, NewType, Optional, Set
 
-from aesara.compile import SharedVariable
+from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import walk
+from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 
 import pymc3 as pm
 
-from pymc3.model import ObservedRV
 from pymc3.util import get_default_varnames, get_var_name
 
 VarName = NewType("VarName", str)
@@ -112,9 +112,9 @@ class ModelGraph:
         for var_name in self.var_names:
             var = self.model[var_name]
             update_input_map(var_name, self.get_parents(var))
-            if isinstance(var, ObservedRV):
+            if hasattr(var.tag, "observations"):
                 try:
-                    obs_name = var.observations.name
+                    obs_name = var.tag.observations.name
                     if obs_name:
                         input_map[var_name] = input_map[var_name].difference({obs_name})
                         update_input_map(obs_name, {var_name})
@@ -128,7 +128,7 @@ class ModelGraph:
 
         # styling for node
         attrs = {}
-        if isinstance(v, pm.model.ObservedRV):
+        if v.owner and isinstance(v.owner.op, RandomVariable) and hasattr(v.tag, "observations"):
             attrs["style"] = "filled"
 
         # make Data be roundtangle, instead of rectangle
@@ -171,8 +171,9 @@ class ModelGraph:
                     shape = tuple(v.observations.shape.eval())
                 except AttributeError:
                     shape = v.observations.shape
-            elif hasattr(v, "dshape"):
-                shape = v.dshape
+            # XXX: This needs to be refactored
+            # elif hasattr(v, "dshape"):
+            #     shape = v.dshape
             else:
                 shape = v.tag.test_value.shape
             if shape == (1,):

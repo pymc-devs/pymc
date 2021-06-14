@@ -29,13 +29,12 @@ from aesara.graph.basic import Apply
 from aesara.graph.op import Op
 from aesara.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from aesara.scan import until
+from aesara.tensor import gammaln
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.slinalg import Cholesky, Solve
 
 from pymc3.aesaraf import floatX
 from pymc3.distributions.shape_utils import to_tuple
-from pymc3.distributions.special import gammaln
-from pymc3.model import modelcontext
 
 f = floatX
 c = -0.5 * np.log(2.0 * np.pi)
@@ -73,6 +72,8 @@ def bound(logp, *conditions, **kwargs):
 
     # If called inside a model context, see if bounds check is disabled
     try:
+        from pymc3.model import modelcontext
+
         model = modelcontext(kwargs.get("model"))
         if not model.check_bounds:
             return logp
@@ -188,16 +189,16 @@ def log_diff_normal_cdf(mu, sigma, x, y):
 
 def sigma2rho(sigma):
     """
-    `sigma -> rho` aesara converter
+    `sigma -> rho` Aesara converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
     return at.log(at.exp(at.abs_(sigma)) - 1.0)
 
 
 def rho2sigma(rho):
     """
-    `rho -> sigma` aesara converter
+    `rho -> sigma` Aesara converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
-    return at.nnet.softplus(rho)
+    return at.softplus(rho)
 
 
 rho2sd = rho2sigma
@@ -316,7 +317,7 @@ def MvNormalLogp():
 
 class SplineWrapper(Op):
     """
-    Creates a aesara operation from scipy.interpolate.UnivariateSpline
+    Creates an Aesara operation from scipy.interpolate.UnivariateSpline
     """
 
     __props__ = ("spline",)
@@ -464,7 +465,7 @@ def incomplete_beta_cfe(a, b, x, small):
     qkm1 = one
     r = one
 
-    def _step(i, pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r):
+    def _step(i, pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r, a, b, x, small):
         xk = -(x * k1 * k2) / (k3 * k4)
         pk = pkm1 + pkm2 * xk
         qk = qkm1 + qkm2 * xk
@@ -518,6 +519,7 @@ def incomplete_beta_cfe(a, b, x, small):
             e
             for e in at.cast((pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r), "float64")
         ],
+        non_sequences=[a, b, x, small],
     )
 
     return r[-1]
@@ -536,14 +538,17 @@ def incomplete_beta_ps(a, b, value):
     threshold = np.MachAr().eps * ai
     s = at.constant(0, dtype="float64")
 
-    def _step(i, t, s):
+    def _step(i, t, s, a, b, value):
         t *= (i - b) * value / i
         step = t / (a + i)
         s += step
         return ((t, s), until(at.abs_(step) < threshold))
 
     (t, s), _ = scan(
-        _step, sequences=[at.arange(2, 302)], outputs_info=[e for e in at.cast((t, s), "float64")]
+        _step,
+        sequences=[at.arange(2, 302)],
+        outputs_info=[e for e in at.cast((t, s), "float64")],
+        non_sequences=[a, b, value],
     )
 
     s = s[-1] + t1 + ai
@@ -591,7 +596,7 @@ def incomplete_beta(a, b, value):
     )
 
 
-def clipped_beta_rvs(a, b, size=None, dtype="float64"):
+def clipped_beta_rvs(a, b, size=None, random_state=None, dtype="float64"):
     """Draw beta distributed random samples in the open :math:`(0, 1)` interval.
 
     The samples are generated with ``scipy.stats.beta.rvs``, but any value that
@@ -626,6 +631,44 @@ def clipped_beta_rvs(a, b, size=None, dtype="float64"):
         is shifted to ``np.nextafter(1, 0, dtype=dtype)``.
 
     """
-    out = scipy.stats.beta.rvs(a, b, size=size).astype(dtype)
+    out = scipy.stats.beta.rvs(a, b, size=size, random_state=random_state).astype(dtype)
     lower, upper = _beta_clip_values[dtype]
     return np.maximum(np.minimum(out, upper), lower)
+
+
+def multigammaln(a, p):
+    """Multivariate Log Gamma
+
+    Parameters
+    ----------
+    a: tensor like
+    p: int
+       degrees of freedom. p > 0
+    """
+    i = at.arange(1, p + 1)
+    return p * (p - 1) * at.log(np.pi) / 4.0 + at.sum(gammaln(a + (1.0 - i) / 2.0), axis=0)
+
+
+def log_i0(x):
+    """
+    Calculates the logarithm of the 0 order modified Bessel function of the first kind""
+    """
+    return at.switch(
+        at.lt(x, 5),
+        at.log1p(
+            x ** 2.0 / 4.0
+            + x ** 4.0 / 64.0
+            + x ** 6.0 / 2304.0
+            + x ** 8.0 / 147456.0
+            + x ** 10.0 / 14745600.0
+            + x ** 12.0 / 2123366400.0
+        ),
+        x
+        - 0.5 * at.log(2.0 * np.pi * x)
+        + at.log1p(
+            1.0 / (8.0 * x)
+            + 9.0 / (128.0 * x ** 2.0)
+            + 225.0 / (3072.0 * x ** 3.0)
+            + 11025.0 / (98304.0 * x ** 4.0)
+        ),
+    )

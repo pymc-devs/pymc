@@ -12,20 +12,23 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from abc import ABC, abstractmethod
 from enum import IntEnum, unique
-from typing import Dict, List
+from typing import Dict, List, Tuple, TypeVar, Union
 
 import numpy as np
 
+from aesara.graph.basic import Variable
 from numpy.random import uniform
 
-from pymc3.aesaraf import inputvars
-from pymc3.blocking import ArrayOrdering, DictToArrayBijection
-from pymc3.model import PyMC3Variable, modelcontext
+from pymc3.blocking import DictToArrayBijection, PointType, RaveledVars
+from pymc3.model import modelcontext
 from pymc3.step_methods.compound import CompoundStep
 from pymc3.util import get_var_name
 
 __all__ = ["ArrayStep", "ArrayStepShared", "metrop_select", "Competence"]
+
+StatsType = TypeVar("StatsType")
 
 
 @unique
@@ -44,11 +47,11 @@ class Competence(IntEnum):
     IDEAL = 3
 
 
-class BlockedStep:
+class BlockedStep(ABC):
 
     generates_stats = False
     stats_dtypes: List[Dict[str, np.dtype]] = []
-    vars: List[PyMC3Variable] = []
+    vars: List[Variable] = []
 
     def __new__(cls, *args, **kwargs):
         blocked = kwargs.get("blocked")
@@ -67,10 +70,10 @@ class BlockedStep:
         elif "vars" in kwargs:
             vars = kwargs.pop("vars")
         else:  # Assume all model variables
-            vars = model.vars
+            vars = model.value_vars
 
-        # get the actual inputs from the vars
-        vars = inputvars(vars)
+        if not isinstance(vars, (tuple, list)):
+            vars = [vars]
 
         if len(vars) == 0:
             raise ValueError("No free random variables to sample.")
@@ -99,6 +102,10 @@ class BlockedStep:
     def __getnewargs_ex__(self):
         return self.__newargs
 
+    @abstractmethod
+    def step(point: PointType, *args, **kwargs) -> Union[PointType, Tuple[PointType, StatsType]]:
+        """Perform a single step of the sampler."""
+
     @staticmethod
     def competence(var, has_grad):
         return Competence.INCOMPATIBLE
@@ -115,15 +122,6 @@ class BlockedStep:
                 competences.append(cls.competence(var))
         return competences
 
-    @property
-    def vars_shape_dtype(self):
-        shape_dtypes = {}
-        for var in self.vars:
-            dtype = np.dtype(var.dtype)
-            shape = var.dshape
-            shape_dtypes[var.name] = (shape, dtype)
-        return shape_dtypes
-
     def stop_tuning(self):
         if hasattr(self, "tune"):
             self.tune = False
@@ -137,31 +135,47 @@ class ArrayStep(BlockedStep):
     ----------
     vars: list
         List of variables for sampler.
-    fs: list of logp aesara functions
+    fs: list of logp Aesara functions
     allvars: Boolean (default False)
     blocked: Boolean (default True)
     """
 
     def __init__(self, vars, fs, allvars=False, blocked=True):
         self.vars = vars
-        self.ordering = ArrayOrdering(vars)
         self.fs = fs
         self.allvars = allvars
         self.blocked = blocked
 
-    def step(self, point):
-        bij = DictToArrayBijection(self.ordering, point)
+    def step(self, point: PointType):
 
-        inputs = [bij.mapf(x) for x in self.fs]
+        partial_funcs_and_point = [DictToArrayBijection.mapf(x, start_point=point) for x in self.fs]
         if self.allvars:
-            inputs.append(point)
+            partial_funcs_and_point.append(point)
+
+        apoint = DictToArrayBijection.map({v.name: point[v.name] for v in self.vars})
+        step_res = self.astep(apoint, *partial_funcs_and_point)
 
         if self.generates_stats:
-            apoint, stats = self.astep(bij.map(point), *inputs)
-            return bij.rmap(apoint), stats
+            apoint_new, stats = step_res
         else:
-            apoint = self.astep(bij.map(point), *inputs)
-            return bij.rmap(apoint)
+            apoint_new = step_res
+
+        if not isinstance(apoint_new, RaveledVars):
+            # We assume that the mapping has stayed the same
+            apoint_new = RaveledVars(apoint_new, apoint.point_map_info)
+
+        point_new = DictToArrayBijection.rmap(apoint_new, start_point=point)
+
+        if self.generates_stats:
+            return point_new, stats
+
+        return point_new
+
+    @abstractmethod
+    def astep(
+        self, apoint: RaveledVars, point: PointType, *args
+    ) -> Union[RaveledVars, Tuple[RaveledVars, StatsType]]:
+        """Perform a single sample step in a raveled and concatenated parameter space."""
 
 
 class ArrayStepShared(BlockedStep):
@@ -177,27 +191,37 @@ class ArrayStepShared(BlockedStep):
         Parameters
         ----------
         vars: list of sampling variables
-        shared: dict of aesara variable -> shared variable
+        shared: dict of Aesara variable -> shared variable
         blocked: Boolean (default True)
         """
         self.vars = vars
-        self.ordering = ArrayOrdering(vars)
         self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
-        self.bij = None
 
     def step(self, point):
-        for var, share in self.shared.items():
-            share.set_value(point[var])
 
-        self.bij = DictToArrayBijection(self.ordering, point)
+        for name, shared_var in self.shared.items():
+            shared_var.set_value(point[name])
+
+        q = DictToArrayBijection.map({v.name: point[v.name] for v in self.vars})
+
+        step_res = self.astep(q)
 
         if self.generates_stats:
-            apoint, stats = self.astep(self.bij.map(point))
-            return self.bij.rmap(apoint), stats
+            apoint, stats = step_res
         else:
-            apoint = self.astep(self.bij.map(point))
-            return self.bij.rmap(apoint)
+            apoint = step_res
+
+        if not isinstance(apoint, RaveledVars):
+            # We assume that the mapping has stayed the same
+            apoint = RaveledVars(apoint, q.point_map_info)
+
+        new_point = DictToArrayBijection.rmap(apoint, start_point=point)
+
+        if self.generates_stats:
+            return new_point, stats
+
+        return new_point
 
 
 class PopulationArrayStepShared(ArrayStepShared):
@@ -212,7 +236,7 @@ class PopulationArrayStepShared(ArrayStepShared):
         Parameters
         ----------
         vars: list of sampling variables
-        shared: dict of aesara variable -> shared variable
+        shared: dict of Aesara variable -> shared variable
         blocked: Boolean (default True)
         """
         self.population = None
@@ -242,44 +266,24 @@ class PopulationArrayStepShared(ArrayStepShared):
         return
 
 
-class GradientSharedStep(BlockedStep):
+class GradientSharedStep(ArrayStepShared):
     def __init__(
         self, vars, model=None, blocked=True, dtype=None, logp_dlogp_func=None, **aesara_kwargs
     ):
         model = modelcontext(model)
-        self.vars = vars
-        self.blocked = blocked
 
         if logp_dlogp_func is None:
             func = model.logp_dlogp_function(vars, dtype=dtype, **aesara_kwargs)
         else:
             func = logp_dlogp_func
 
-        # handle edge case discovered in #2948
-        try:
-            func.set_extra_values(model.test_point)
-            q = func.dict_to_array(model.test_point)
-            logp, dlogp = func(q)
-        except ValueError:
-            if logp_dlogp_func is not None:
-                raise
-            aesara_kwargs.update(mode="FAST_COMPILE")
-            func = model.logp_dlogp_function(vars, dtype=dtype, **aesara_kwargs)
-
         self._logp_dlogp_func = func
 
-    def step(self, point):
-        self._logp_dlogp_func.set_extra_values(point)
-        array = self._logp_dlogp_func.dict_to_array(point)
+        super().__init__(vars, func._extra_vars_shared, blocked)
 
-        if self.generates_stats:
-            apoint, stats = self.astep(array)
-            point = self._logp_dlogp_func.array_to_full_dict(apoint)
-            return point, stats
-        else:
-            apoint = self.astep(array)
-            point = self._logp_dlogp_func.array_to_full_dict(apoint)
-            return point
+    def step(self, point):
+        self._logp_dlogp_func._extra_are_set = True
+        return super().step(point)
 
 
 def metrop_select(mr, q, q0):
@@ -300,6 +304,8 @@ def metrop_select(mr, q, q0):
     q or q0
     """
     # Compare acceptance ratio to uniform random number
+    # TODO XXX: This `uniform` is not given a model-specific RNG state, which
+    # means that sampler runs that use it will not be reproducible.
     if np.isfinite(mr) and np.log(uniform()) < mr:
         return q, True
     else:

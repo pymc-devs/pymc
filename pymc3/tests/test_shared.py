@@ -26,7 +26,7 @@ class TestShared(SeededTest):
             data_values = np.array([0.5, 0.4, 5, 2])
             X = aesara.shared(np.asarray(data_values, dtype=aesara.config.floatX), borrow=True)
             pm.Normal("y", 0, 1, observed=X)
-            model.logp(model.test_point)
+            model.logp(model.initial_point)
 
     def test_sample(self):
         x = np.random.normal(size=100)
@@ -41,21 +41,17 @@ class TestShared(SeededTest):
             pm.Normal("obs", b * x_shared, np.sqrt(1e-2), observed=y)
             prior_trace0 = pm.sample_prior_predictive(1000)
 
-            trace = pm.sample(1000, init=None, tune=1000, chains=1)
-            pp_trace0 = pm.sample_posterior_predictive(trace, 1000)
-            pp_trace01 = pm.fast_sample_posterior_predictive(trace, 1000)
+            idata = pm.sample(1000, init=None, tune=1000, chains=1)
+            pp_trace0 = pm.sample_posterior_predictive(idata, 1000)
 
             x_shared.set_value(x_pred)
             prior_trace1 = pm.sample_prior_predictive(1000)
-            pp_trace1 = pm.sample_posterior_predictive(trace, 1000)
-            pp_trace11 = pm.fast_sample_posterior_predictive(trace, 1000)
+            pp_trace1 = pm.sample_posterior_predictive(idata, 1000)
 
         assert prior_trace0["b"].shape == (1000,)
         assert prior_trace0["obs"].shape == (1000, 100)
         np.testing.assert_allclose(x, pp_trace0["obs"].mean(axis=0), atol=1e-1)
-        np.testing.assert_allclose(x, pp_trace01["obs"].mean(axis=0), atol=1e-1)
 
         assert prior_trace1["b"].shape == (1000,)
         assert prior_trace1["obs"].shape == (1000, 200)
         np.testing.assert_allclose(x_pred, pp_trace1["obs"].mean(axis=0), atol=1e-1)
-        np.testing.assert_allclose(x_pred, pp_trace11["obs"].mean(axis=0), atol=1e-1)

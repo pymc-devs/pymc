@@ -64,8 +64,9 @@ def elemwise_dlogL(vars, model, flat_view):
     terms = []
     for var in vars:
         output, _ = aesara.scan(
-            lambda i, logX=logL, v=var: aesara.grad(logX[i], v).flatten(),
+            lambda i, logX, v: aesara.grad(logX[i], v).flatten(),
             sequences=[at.arange(logL.shape[0])],
+            non_sequences=[logL, var],
         )
         terms.append(output)
     dlogL = aesara.clone_replace(
@@ -98,9 +99,9 @@ class BaseStochasticGradient(ArrayStepShared):
     random_seed: int
         The seed to initialize the Random Stream
     minibatches: iterator
-        If the ObservedRV.observed is not a GeneratorOp then this parameter must not be None
+        If the observed RV is not a GeneratorOp then this parameter must not be None
     minibatch_tensor: list of tensors
-        If the ObservedRV.observed is not a GeneratorOp then this parameter must not be None
+        If the observed RV is not a GeneratorOp then this parameter must not be None
         The length of this tensor should be the same as the next(minibatches)
 
     Notes
@@ -108,7 +109,7 @@ class BaseStochasticGradient(ArrayStepShared):
     Defining a BaseStochasticGradient needs
     custom implementation of the following methods:
         - :code: `.mk_training_fn()`
-            Returns a aesara function which is called for each sampling step
+            Returns an Aesara function which is called for each sampling step
         - :code: `._initialize_values()`
             Returns None it creates class variables which are required for the training fn
     """
@@ -130,7 +131,7 @@ class BaseStochasticGradient(ArrayStepShared):
         model = modelcontext(model)
 
         if vars is None:
-            vars = model.vars
+            vars = model.value_vars
 
         vars = inputvars(vars)
 
@@ -156,16 +157,23 @@ class BaseStochasticGradient(ArrayStepShared):
         shared = make_shared_replacements(vars, model)
 
         self.updates = OrderedDict()
-        self.q_size = int(sum(v.dsize for v in self.vars))
+        # XXX: This needs to be refactored
+        self.q_size = None  # int(sum(v.dsize for v in self.vars))
+
+        # This seems to be the only place that `Model.flatten` is used.
+        # TODO: Why not _actually_ flatten the variables?
+        # E.g. `flat_vars = at.concatenate([var.ravel() for var in vars])`
+        # or `set_subtensor` the `vars` into a `at.vector`?
 
         flat_view = model.flatten(vars)
         self.inarray = [flat_view.input]
 
         self.dlog_prior = prior_dlogp(vars, model, flat_view)
         self.dlogp_elemwise = elemwise_dlogL(vars, model, flat_view)
-        self.q_size = int(sum(v.dsize for v in self.vars))
+        # XXX: This needs to be refactored
+        self.q_size = None  # int(sum(v.dsize for v in self.vars))
 
-        if minibatch_tensors != None:
+        if minibatch_tensors is not None:
             _check_minibatches(minibatch_tensors, minibatches)
             self.minibatches = minibatches
 

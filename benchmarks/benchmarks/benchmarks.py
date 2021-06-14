@@ -181,7 +181,7 @@ class NUTSInitSuite:
                 init=init, chains=self.chains, progressbar=False, random_seed=123
             )
             t0 = time.time()
-            trace = pm.sample(
+            idata = pm.sample(
                 draws=self.draws,
                 step=step,
                 cores=4,
@@ -192,7 +192,7 @@ class NUTSInitSuite:
                 compute_convergence_checks=False,
             )
             tot = time.time() - t0
-        ess = float(az.ess(trace, var_names=["mu_a"])["mu_a"].values)
+        ess = float(az.ess(idata, var_names=["mu_a"])["mu_a"].values)
         return ess / tot
 
     def track_marginal_mixture_model_ess(self, init):
@@ -203,7 +203,7 @@ class NUTSInitSuite:
             )
             start = [{k: v for k, v in start.items()} for _ in range(self.chains)]
             t0 = time.time()
-            trace = pm.sample(
+            idata = pm.sample(
                 draws=self.draws,
                 step=step,
                 cores=4,
@@ -214,7 +214,7 @@ class NUTSInitSuite:
                 compute_convergence_checks=False,
             )
             tot = time.time() - t0
-        ess = az.ess(trace, var_names=["mu"])["mu"].values.min()  # worst case
+        ess = az.ess(idata, var_names=["mu"])["mu"].values.min()  # worst case
         return ess / tot
 
 
@@ -235,7 +235,7 @@ class CompareMetropolisNUTSSuite:
             if step is not None:
                 step = step()
             t0 = time.time()
-            trace = pm.sample(
+            idata = pm.sample(
                 draws=self.draws,
                 step=step,
                 cores=4,
@@ -245,7 +245,7 @@ class CompareMetropolisNUTSSuite:
                 compute_convergence_checks=False,
             )
             tot = time.time() - t0
-        ess = float(az.ess(trace, var_names=["mu_a"])["mu_a"].values)
+        ess = float(az.ess(idata, var_names=["mu_a"])["mu_a"].values)
         return ess / tot
 
 
@@ -302,9 +302,9 @@ class DifferentialEquationSuite:
             Y = pm.Normal("Y", mu=ode_solution, sd=sigma, observed=y)
 
             t0 = time.time()
-            trace = pm.sample(500, tune=1000, chains=2, cores=2, random_seed=0)
+            idata = pm.sample(500, tune=1000, chains=2, cores=2, random_seed=0)
             tot = time.time() - t0
-        ess = az.ess(trace)
+        ess = az.ess(idata)
         return np.mean([ess.sigma, ess.gamma]) / tot
 
 

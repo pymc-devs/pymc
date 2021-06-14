@@ -767,6 +767,7 @@ class TestCoregion:
                 B = pm.gp.cov.Coregion(1)
 
 
+@pytest.mark.xfail(reason="MvNormal was not yet refactored")
 class TestMarginalVsLatent:
     R"""
     Compare the logp of models Marginal, noise=0 and Latent.
@@ -812,6 +813,7 @@ class TestMarginalVsLatent:
         npt.assert_allclose(latent_logp, self.logp, atol=5)
 
 
+@pytest.mark.xfail(reason="The `gp.predict` method was not yet refactored")
 class TestMarginalVsMarginalSparse:
     R"""
     Compare logp of models Marginal and MarginalSparse.
@@ -886,6 +888,7 @@ class TestGPAdditive:
         )
         self.means = (pm.gp.mean.Constant(0.5), pm.gp.mean.Constant(0.5), pm.gp.mean.Constant(0.5))
 
+    @pytest.mark.xfail(reason="MvNormal was not yet refactored")
     def testAdditiveMarginal(self):
         with pm.Model() as model1:
             gp1 = pm.gp.Marginal(self.means[0], self.covs[0])
@@ -912,6 +915,7 @@ class TestGPAdditive:
         fp = np.random.randn(self.Xnew.shape[0])
         npt.assert_allclose(fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2)
 
+    @pytest.mark.xfail(reason="DensityDist was not yet refactored")
     @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
     def testAdditiveMarginalSparse(self, approx):
         Xu = np.random.randn(10, 3)
@@ -945,6 +949,7 @@ class TestGPAdditive:
         fp = np.random.randn(self.Xnew.shape[0])
         npt.assert_allclose(fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2)
 
+    @pytest.mark.xfail(reason="MvNormal was not yet refactored")
     def testAdditiveLatent(self):
         with pm.Model() as model1:
             gp1 = pm.gp.Latent(self.means[0], self.covs[0])
@@ -1000,6 +1005,7 @@ class TestGPAdditive:
                 gp1 + gp2
 
 
+@pytest.mark.xfail(reason="MvNormal was not yet refactored")
 class TestTP:
     R"""
     Compare TP with high degress of freedom to GP
@@ -1052,6 +1058,7 @@ class TestTP:
                 gp1 + gp2
 
 
+@pytest.mark.xfail(reason="MvNormal was not yet refactored")
 class TestLatentKron:
     """
     Compare gp.LatentKron to gp.Latent, both with Gaussian noise.
@@ -1107,6 +1114,7 @@ class TestLatentKron:
             gp.prior("f", Xs=[np.linspace(0, 1, 7)[:, None], np.linspace(0, 1, 5)[:, None]])
 
 
+@pytest.mark.xfail(reason="The `gp.predict` method was not yet refactored")
 class TestMarginalKron:
     """
     Compare gp.MarginalKron to gp.Marginal.

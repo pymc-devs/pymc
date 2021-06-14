@@ -25,7 +25,8 @@ from aesara.tensor.sharedvar import TensorSharedVariable
 
 import pymc3 as pm
 
-from pymc3.model import Model
+from pymc3.blocking import DictToArrayBijection
+from pymc3.model import Model, Point
 from pymc3.step_methods.arraystep import ArrayStepShared, Competence, metrop_select
 from pymc3.step_methods.compound import CompoundStep
 from pymc3.step_methods.metropolis import (
@@ -56,6 +57,8 @@ class MetropolisMLDA(Metropolis):
         Initialise MetropolisMLDA. This is a mix of the parent's class' initialisation
         and some extra code specific for MLDA.
         """
+        model = pm.modelcontext(kwargs.get("model", None))
+        initial_values = model.initial_point
 
         # flag to that variance reduction is activated - forces MetropolisMLDA
         # to store quantities of interest in a register if True
@@ -68,19 +71,18 @@ class MetropolisMLDA(Metropolis):
             self.Q_reg = [np.nan] * self.mlda_subsampling_rate_above
 
             # extract some necessary variables
-            model = pm.modelcontext(kwargs.get("model", None))
-            vars = kwargs.get("vars", None)
-            if vars is None:
-                vars = model.vars
-            vars = pm.inputvars(vars)
-            shared = pm.make_shared_replacements(vars, model)
+            value_vars = kwargs.get("vars", None)
+            if value_vars is None:
+                value_vars = model.value_vars
+            value_vars = pm.inputvars(value_vars)
+            shared = pm.make_shared_replacements(initial_values, value_vars, model)
 
         # call parent class __init__
         super().__init__(*args, **kwargs)
 
         # modify the delta function and point to model if VR is used
         if self.mlda_variance_reduction:
-            self.delta_logp = delta_logp_inverse(model.logpt, vars, shared)
+            self.delta_logp = delta_logp_inverse(initial_values, model.logpt, value_vars, shared)
             self.model = model
 
     def reset_tuning(self):
@@ -123,6 +125,9 @@ class DEMetropolisZMLDA(DEMetropolisZ):
         # flag used for signaling the end of tuning
         self.tuning_end_trigger = False
 
+        model = pm.modelcontext(kwargs.get("model", None))
+        initial_values = model.initial_point
+
         # flag to that variance reduction is activated - forces DEMetropolisZMLDA
         # to store quantities of interest in a register if True
         self.mlda_variance_reduction = kwargs.pop("mlda_variance_reduction", False)
@@ -134,19 +139,18 @@ class DEMetropolisZMLDA(DEMetropolisZ):
             self.Q_reg = [np.nan] * self.mlda_subsampling_rate_above
 
             # extract some necessary variables
-            model = pm.modelcontext(kwargs.get("model", None))
-            vars = kwargs.get("vars", None)
-            if vars is None:
-                vars = model.vars
-            vars = pm.inputvars(vars)
-            shared = pm.make_shared_replacements(vars, model)
+            value_vars = kwargs.get("vars", None)
+            if value_vars is None:
+                value_vars = model.value_vars
+            value_vars = pm.inputvars(value_vars)
+            shared = pm.make_shared_replacements(initial_values, value_vars, model)
 
         # call parent class __init__
         super().__init__(*args, **kwargs)
 
         # modify the delta function and point to model if VR is used
         if self.mlda_variance_reduction:
-            self.delta_logp = delta_logp_inverse(model.logpt, vars, shared)
+            self.delta_logp = delta_logp_inverse(initial_values, model.logpt, value_vars, shared)
             self.model = model
 
     def reset_tuning(self):
@@ -276,7 +280,7 @@ class MLDA(ArrayStepShared):
         the PyMC3 model (also demonstrated in the example notebook):
             - Include a `pm.Data()` variable with the name `Q` in the
             model description of all levels.
-            - Use a Aesara Op to calculate the forward model (or the
+            - Use an Aesara Op to calculate the forward model (or the
             combination of a forward model and a likelihood). This Op
             should have a `perform()` method which (in addition to all
             the other calculations), calculates the quantity of interest
@@ -301,7 +305,7 @@ class MLDA(ArrayStepShared):
             extra variables mu_B and Sigma_B, which will capture
             the bias between different levels. All these variables
             should be instantiated using the pm.Data method.
-            - Use a Aesara Op to define the forward model (and
+            - Use an Aesara Op to define the forward model (and
             optionally the likelihood) for all levels. The Op needs
             to store the result of each forward model calculation
             to the variable model_output of the PyMC3 model,
@@ -330,11 +334,11 @@ class MLDA(ArrayStepShared):
         ...     y = pm.Normal("y", mu=x, sigma=1, observed=datum)
         ...     step_method = pm.MLDA(coarse_models=[coarse_model],
         ...                           subsampling_rates=5)
-        ...     trace = pm.sample(500, chains=2,
+        ...     idata = pm.sample(500, chains=2,
         ...                       tune=100, step=step_method,
         ...                       random_seed=123)
         ...
-        ... az.summary(trace, kind="stats")
+        ... az.summary(idata, kind="stats")
            mean     sd  hdi_3%  hdi_97%
         x  0.99  0.987  -0.734    2.992
 
@@ -360,7 +364,7 @@ class MLDA(ArrayStepShared):
     def __init__(
         self,
         coarse_models: List[Model],
-        vars: Optional[list] = None,
+        value_vars: Optional[list] = None,
         base_sampler="DEMetropolisZ",
         base_S: Optional = None,
         base_proposal_dist: Optional[Type[Proposal]] = None,
@@ -399,6 +403,7 @@ class MLDA(ArrayStepShared):
 
         # assign internal state
         model = pm.modelcontext(model)
+        initial_values = model.initial_point
         self.model = model
         self.coarse_models = coarse_models
         self.model_below = self.coarse_models[-1]
@@ -542,34 +547,38 @@ class MLDA(ArrayStepShared):
         self.mode = mode
 
         # Process model variables
-        if vars is None:
-            vars = model.vars
-        vars = pm.inputvars(vars)
-        self.vars = vars
+        if value_vars is None:
+            value_vars = model.value_vars
+        value_vars = pm.inputvars(value_vars)
+        self.vars = value_vars
         self.var_names = [var.name for var in self.vars]
 
         self.accepted = 0
 
-        # Construct aesara function for current-level model likelihood
+        # Construct Aesara function for current-level model likelihood
         # (for use in acceptance)
-        shared = pm.make_shared_replacements(vars, model)
-        self.delta_logp = delta_logp_inverse(model.logpt, vars, shared)
+        shared = pm.make_shared_replacements(initial_values, value_vars, model)
+        self.delta_logp = delta_logp_inverse(initial_values, model.logpt, value_vars, shared)
 
-        # Construct aesara function for below-level model likelihood
+        # Construct Aesara function for below-level model likelihood
         # (for use in acceptance)
         model_below = pm.modelcontext(self.model_below)
-        vars_below = [var for var in model_below.vars if var.name in self.var_names]
+        vars_below = [var for var in model_below.value_vars if var.name in self.var_names]
         vars_below = pm.inputvars(vars_below)
-        shared_below = pm.make_shared_replacements(vars_below, model_below)
-        self.delta_logp_below = delta_logp(model_below.logpt, vars_below, shared_below)
+        shared_below = pm.make_shared_replacements(initial_values, vars_below, model_below)
+        self.delta_logp_below = delta_logp(
+            initial_values, model_below.logpt, vars_below, shared_below
+        )
 
-        super().__init__(vars, shared)
+        super().__init__(value_vars, shared)
 
         # initialise complete step method hierarchy
         if self.num_levels == 2:
             with self.model_below:
                 # make sure the correct variables are selected from model_below
-                vars_below = [var for var in self.model_below.vars if var.name in self.var_names]
+                vars_below = [
+                    var for var in self.model_below.value_vars if var.name in self.var_names
+                ]
 
                 # create kwargs
                 if self.variance_reduction:
@@ -616,7 +625,9 @@ class MLDA(ArrayStepShared):
 
             with self.model_below:
                 # make sure the correct variables are selected from model_below
-                vars_below = [var for var in self.model_below.vars if var.name in self.var_names]
+                vars_below = [
+                    var for var in self.model_below.value_vars if var.name in self.var_names
+                ]
 
                 # create kwargs
                 if self.variance_reduction:
@@ -631,7 +642,7 @@ class MLDA(ArrayStepShared):
 
                 # MLDA sampler in some intermediate level, targeting self.model_below
                 self.step_method_below = pm.MLDA(
-                    vars=vars_below,
+                    value_vars=vars_below,
                     base_S=self.base_S,
                     base_sampler=self.base_sampler,
                     base_proposal_dist=self.base_proposal_dist,
@@ -668,7 +679,7 @@ class MLDA(ArrayStepShared):
 
         else:
             # otherwise, set it up from scratch.
-            self.stats_dtypes = [{"accept": np.float64, "accepted": np.bool, "tune": np.bool}]
+            self.stats_dtypes = [{"accept": np.float64, "accepted": bool, "tune": bool}]
 
             if isinstance(self.step_method_below, MetropolisMLDA):
                 self.stats_dtypes.append({"base_scaling": np.float64})
@@ -720,7 +731,7 @@ class MLDA(ArrayStepShared):
 
         # Convert current sample from numpy array ->
         # dict before feeding to proposal
-        q0_dict = self.bij.rmap(q0)
+        q0_dict = DictToArrayBijection.rmap(q0)
 
         # Set subchain_selection (which sample from the coarse chain
         # is passed as a proposal to the fine chain). If variance
@@ -735,16 +746,17 @@ class MLDA(ArrayStepShared):
 
         # Call the recursive DA proposal to get proposed sample
         # and convert dict -> numpy array
-        q = self.bij.map(self.proposal_dist(q0_dict))
+        pre_q = self.proposal_dist(q0_dict)
+        q = DictToArrayBijection.map(pre_q)
 
         # Evaluate MLDA acceptance log-ratio
         # If proposed sample from lower levels is the same as current one,
         # do not calculate likelihood, just set accept to 0.0
-        if (q == q0).all():
+        if (q.data == q0.data).all():
             accept = np.float(0.0)
             skipped_logp = True
         else:
-            accept = self.delta_logp(q, q0) + self.delta_logp_below(q0, q)
+            accept = self.delta_logp(q.data, q0.data) + self.delta_logp_below(q0.data, q.data)
             skipped_logp = False
 
         # Accept/reject sample - next sample is stored in q_new
@@ -957,8 +969,8 @@ class RecursiveSampleMoments:
         self.t += 1
 
 
-def delta_logp_inverse(logp, vars, shared):
-    [logp0], inarray0 = pm.join_nonshared_inputs([logp], vars, shared)
+def delta_logp_inverse(point, logp, vars, shared):
+    [logp0], inarray0 = pm.join_nonshared_inputs(point, [logp], vars, shared)
 
     tensor_type = inarray0.type
     inarray1 = tensor_type("inarray1")
@@ -1130,4 +1142,7 @@ class RecursiveDAProposal(Proposal):
         # return sample with index self.subchain_selection from the generated
         # sequence of length self.subsampling_rate. The index is set within
         # MLDA's astep() function
-        return self.trace.point(-self.subsampling_rate + self.subchain_selection)
+        new_point = self.trace.point(-self.subsampling_rate + self.subchain_selection)
+        new_point = Point(new_point, model=self.model_below, filter_model_vars=True)
+
+        return new_point

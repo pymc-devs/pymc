@@ -29,14 +29,9 @@ from scipy.optimize import minimize
 import pymc3 as pm
 
 from pymc3.aesaraf import inputvars
-from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.model import Point, modelcontext
-from pymc3.util import (
-    check_start_vals,
-    get_default_varnames,
-    get_var_name,
-    update_start_vals,
-)
+from pymc3.util import get_default_varnames, get_var_name
 from pymc3.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
@@ -54,14 +49,15 @@ def find_MAP(
     *args,
     **kwargs
 ):
-    """
-    Finds the local maximum a posteriori point given a model.
+    """Finds the local maximum a posteriori point given a model.
 
-    find_MAP should not be used to initialize the NUTS sampler. Simply call pymc3.sample() and it will automatically initialize NUTS in a better way.
+    `find_MAP` should not be used to initialize the NUTS sampler. Simply call
+    ``pymc3.sample()`` and it will automatically initialize NUTS in a better
+    way.
 
     Parameters
     ----------
-    start: `dict` of parameter values (Defaults to `model.test_point`)
+    start: `dict` of parameter values (Defaults to `model.initial_point`)
     vars: list
         List of variables to optimize and set to optimum (Defaults to all continuous).
     method: string or callable
@@ -84,10 +80,10 @@ def find_MAP(
 
     Notes
     -----
-    Older code examples used find_MAP() to initialize the NUTS sampler,
+    Older code examples used `find_MAP` to initialize the NUTS sampler,
     but this is not an effective way of choosing starting values for sampling.
     As a result, we have greatly enhanced the initialization of NUTS and
-    wrapped it inside pymc3.sample() and you should thus avoid this method.
+    wrapped it inside ``pymc3.sample()`` and you should thus avoid this method.
     """
     model = modelcontext(model)
 
@@ -100,18 +96,29 @@ def find_MAP(
     allinmodel(vars, model)
     start = copy.deepcopy(start)
     if start is None:
-        start = model.test_point
+        start = model.initial_point
     else:
-        update_start_vals(start, model.test_point, model)
-    check_start_vals(start, model)
+        model.update_start_vals(start, model.initial_point)
+    model.check_start_vals(start)
 
     start = Point(start, model=model)
-    bij = DictToArrayBijection(ArrayOrdering(vars), start)
-    logp_func = bij.mapf(model.fastlogp_nojac)
-    x0 = bij.map(start)
+
+    x0 = DictToArrayBijection.map(start)
+
+    # TODO: If the mapping is fixed, we can simply create graphs for the
+    # mapping and avoid all this bijection overhead
+    def logp_func(x):
+        return DictToArrayBijection.mapf(model.fastlogp_nojac)(RaveledVars(x, x0.point_map_info))
 
     try:
-        dlogp_func = bij.mapf(model.fastdlogp_nojac(vars))
+        # This might be needed for calls to `dlogp_func`
+        # start_map_info = tuple((v.name, v.shape, v.dtype) for v in vars)
+
+        def dlogp_func(x):
+            return DictToArrayBijection.mapf(model.fastdlogp_nojac(vars))(
+                RaveledVars(x, x0.point_map_info)
+            )
+
         compute_gradient = True
     except (AttributeError, NotImplementedError, tg.NullTypeGradError):
         compute_gradient = False
@@ -132,7 +139,9 @@ def find_MAP(
         cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
 
     try:
-        opt_result = minimize(cost_func, x0, method=method, jac=compute_gradient, *args, **kwargs)
+        opt_result = minimize(
+            cost_func, x0.data, method=method, jac=compute_gradient, *args, **kwargs
+        )
         mx0 = opt_result["x"]  # r -> opt_result
     except (KeyboardInterrupt, StopIteration) as e:
         mx0, opt_result = cost_func.previous_x, None
@@ -146,8 +155,13 @@ def find_MAP(
             cost_func.progress.update(last_v)
             print()
 
-    vars = get_default_varnames(model.unobserved_RVs, include_transformed)
-    mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))}
+    mx0 = RaveledVars(mx0, x0.point_map_info)
+
+    vars = get_default_varnames(model.unobserved_value_vars, include_transformed)
+    mx = {
+        var.name: value
+        for var, value in zip(vars, model.fastfn(vars)(DictToArrayBijection.rmap(mx0)))
+    }
 
     if return_raw:
         return mx, opt_result
@@ -164,7 +178,7 @@ def nan_to_high(x):
 
 
 def allinmodel(vars, model):
-    notin = [v for v in vars if v not in model.vars]
+    notin = [v for v in vars if v not in model.value_vars]
     if notin:
         notin = list(map(get_var_name, notin))
         raise ValueError("Some variables not in the model: " + str(notin))

@@ -23,7 +23,7 @@ class TestProfile:
         assert self.model.profile(self.model.logpt).fct_call_time > 0
 
     def test_profile_variable(self):
-        assert self.model.profile(self.model.vars[0].logpt).fct_call_time > 0
+        assert self.model.profile(self.model.value_vars[0].logpt).fct_call_time > 0
 
     def test_profile_count(self):
         count = 1005

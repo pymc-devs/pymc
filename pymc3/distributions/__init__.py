@@ -12,7 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc3.distributions import shape_utils, timeseries, transforms
+from pymc3.distributions.logp import (  # isort:skip
+    _logcdf,
+    _logp,
+    logcdf,
+    logp_transform,
+    logpt,
+    logpt_sum,
+)
+
 from pymc3.distributions.bart import BART
 from pymc3.distributions.bound import Bound
 from pymc3.distributions.continuous import (
@@ -55,7 +63,6 @@ from pymc3.distributions.discrete import (
     Binomial,
     Categorical,
     Constant,
-    ConstantDist,
     DiscreteUniform,
     DiscreteWeibull,
     Geometric,
@@ -74,9 +81,6 @@ from pymc3.distributions.distribution import (
     Discrete,
     Distribution,
     NoDistribution,
-    TensorType,
-    draw_values,
-    generate_samples,
 )
 from pymc3.distributions.mixture import Mixture, MixtureSameFamily, NormalMixture
 from pymc3.distributions.multivariate import (
@@ -93,7 +97,6 @@ from pymc3.distributions.multivariate import (
     Wishart,
     WishartBartlett,
 )
-from pymc3.distributions.posterior_predictive import fast_sample_posterior_predictive
 from pymc3.distributions.simulator import Simulator
 from pymc3.distributions.timeseries import (
     AR,
@@ -134,7 +137,6 @@ __all__ = [
     "Bernoulli",
     "Poisson",
     "NegativeBinomial",
-    "ConstantDist",
     "Constant",
     "ZeroInflatedPoisson",
     "ZeroInflatedNegativeBinomial",
@@ -150,7 +152,6 @@ __all__ = [
     "Continuous",
     "Discrete",
     "NoDistribution",
-    "TensorType",
     "MvNormal",
     "MatrixNormal",
     "KroneckerNormal",
@@ -183,7 +184,12 @@ __all__ = [
     "Rice",
     "Moyal",
     "Simulator",
-    "fast_sample_posterior_predictive",
     "BART",
     "CAR",
+    "logpt",
+    "_logp",
+    "logp_transform",
+    "logcdf",
+    "_logcdf",
+    "logpt_sum",
 ]

@@ -21,9 +21,9 @@ from aesara.tensor.var import TensorVariable
 
 import pymc3 as pm
 
+from pymc3.blocking import DictToArrayBijection
 from pymc3.distributions.dist_math import rho2sigma
 from pymc3.math import batched_diag
-from pymc3.util import update_start_vals
 from pymc3.variational import flows, opvi
 from pymc3.variational.opvi import Approximation, Group, node_property
 
@@ -70,15 +70,15 @@ class MeanFieldGroup(Group):
 
     def create_shared_params(self, start=None):
         if start is None:
-            start = self.model.test_point
+            start = self.model.initial_point
         else:
             start_ = start.copy()
-            update_start_vals(start_, self.model.test_point, self.model)
+            self.model.update_start_vals(start_, self.model.initial_point)
             start = start_
         if self.batched:
             start = start[self.group[0].name][0]
         else:
-            start = self.bij.map(start)
+            start = DictToArrayBijection.map(start)
         rho = np.zeros((self.ddim,))
         if self.batched:
             start = np.tile(start, (self.bdim, 1))
@@ -125,15 +125,15 @@ class FullRankGroup(Group):
 
     def create_shared_params(self, start=None):
         if start is None:
-            start = self.model.test_point
+            start = self.model.initial_point
         else:
             start_ = start.copy()
-            update_start_vals(start_, self.model.test_point, self.model)
+            self.model.update_start_vals(start_, self.model.initial_point)
             start = start_
         if self.batched:
             start = start[self.group[0].name][0]
         else:
-            start = self.bij.map(start)
+            start = DictToArrayBijection.map(start)
         n = self.ddim
         L_tril = np.eye(n)[np.tril_indices(n)].astype(aesara.config.floatX)
         if self.batched:
@@ -239,12 +239,12 @@ class EmpiricalGroup(Group):
                 raise opvi.ParametrizationError("Need `trace` or `size` to initialize")
             else:
                 if start is None:
-                    start = self.model.test_point
+                    start = self.model.initial_point
                 else:
-                    start_ = self.model.test_point.copy()
-                    update_start_vals(start_, start, self.model)
+                    start_ = self.model.initial_point.copy()
+                    self.model.update_start_vals(start_, start)
                     start = start_
-                start = pm.floatX(self.bij.map(start))
+                start = pm.floatX(DictToArrayBijection.map(start))
                 # Initialize particles
                 histogram = np.tile(start, (size, 1))
                 histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
@@ -254,14 +254,14 @@ class EmpiricalGroup(Group):
             i = 0
             for t in trace.chains:
                 for j in range(len(trace)):
-                    histogram[i] = self.bij.map(trace.point(j, t))
+                    histogram[i] = DictToArrayBijection.map(trace.point(j, t))
                     i += 1
         return dict(histogram=aesara.shared(pm.floatX(histogram), "histogram"))
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
         if trace is not None and not all([var.name in trace.varnames for var in self.group]):
-            raise ValueError("trace has not all FreeRV in the group")
+            raise ValueError("trace has not all free RVs in the group")
 
     def randidx(self, size=None):
         if size is None:
@@ -594,10 +594,10 @@ class Empirical(SingleGroupApproximation):
         """
         node = self.to_flat_input(node)
 
-        def sample(post):
+        def sample(post, node):
             return aesara.clone_replace(node, {self.input: post})
 
-        nodes, _ = aesara.scan(sample, self.histogram)
+        nodes, _ = aesara.scan(sample, self.histogram, non_sequences=[node])
         return nodes
 
 

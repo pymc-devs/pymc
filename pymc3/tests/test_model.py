@@ -11,23 +11,33 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import pickle
 import unittest
 
+from functools import reduce
+
 import aesara
+import aesara.sparse as sparse
 import aesara.tensor as at
 import numpy as np
+import numpy.ma as ma
 import numpy.testing as npt
 import pandas as pd
 import pytest
+import scipy.sparse as sps
+
+from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.var import TensorConstant
+from numpy.testing import assert_almost_equal
 
 import pymc3 as pm
 
 from pymc3 import Deterministic, Potential
-from pymc3.distributions import HalfCauchy, Normal, transforms
-from pymc3.model import ValueGradFunction
-from pymc3.tests.helpers import select_by_precision
+from pymc3.blocking import DictToArrayBijection, RaveledVars
+from pymc3.distributions import Normal, logpt_sum, transforms
+from pymc3.exceptions import ShapeError
+from pymc3.model import Point, ValueGradFunction
+from pymc3.tests.helpers import SeededTest
 
 
 class NewModel(pm.Model):
@@ -35,7 +45,7 @@ class NewModel(pm.Model):
         super().__init__(name, model)
         assert pm.modelcontext(None) is self
         # 1) init variables with Var method
-        self.Var("v1", pm.Normal.dist())
+        self.register_rv(pm.Normal.dist(), "v1")
         self.v2 = pm.Normal("v2", mu=0, sigma=1)
         # 2) Potentials and Deterministic variables with method too
         # be sure that names will not overlap with other same models
@@ -46,9 +56,9 @@ class NewModel(pm.Model):
 class DocstringModel(pm.Model):
     def __init__(self, mean=0, sigma=1, name="", model=None):
         super().__init__(name, model)
-        self.Var("v1", Normal.dist(mu=mean, sigma=sigma))
+        self.register_rv(Normal.dist(mu=mean, sigma=sigma), "v1")
         Normal("v2", mu=mean, sigma=sigma)
-        Normal("v3", mu=mean, sigma=HalfCauchy("sd", beta=10, testval=1.0))
+        Normal("v3", mu=mean, sigma=Normal("sd", mu=10, sigma=1, initval=1.0))
         Deterministic("v3_sq", self.v3 ** 2)
         Potential("p1", at.constant(1))
 
@@ -57,17 +67,17 @@ class TestBaseModel:
     def test_setattr_properly_works(self):
         with pm.Model() as model:
             pm.Normal("v1")
-            assert len(model.vars) == 1
+            assert len(model.value_vars) == 1
             with pm.Model("sub") as submodel:
-                submodel.Var("v1", pm.Normal.dist())
+                submodel.register_rv(pm.Normal.dist(), "v1")
                 assert hasattr(submodel, "v1")
-                assert len(submodel.vars) == 1
-            assert len(model.vars) == 2
+                assert len(submodel.value_vars) == 1
+            assert len(model.value_vars) == 2
             with submodel:
-                submodel.Var("v2", pm.Normal.dist())
+                submodel.register_rv(pm.Normal.dist(), "v2")
                 assert hasattr(submodel, "v2")
-                assert len(submodel.vars) == 2
-            assert len(model.vars) == 3
+                assert len(submodel.value_vars) == 2
+            assert len(model.value_vars) == 3
 
     def test_context_passes_vars_to_parent_model(self):
         with pm.Model() as model:
@@ -82,7 +92,7 @@ class TestBaseModel:
             assert usermodel2._parent == model
             # you can enter in a context with submodel
             with usermodel2:
-                usermodel2.Var("v3", pm.Normal.dist())
+                usermodel2.register_rv(pm.Normal.dist(), "v3")
                 pm.Normal("v4")
                 # this variable is created in parent model too
         assert "another_v2" in model.named_vars
@@ -155,7 +165,7 @@ class TestObserved:
                 Normal("n", observed=x)
 
     def test_observed_type(self):
-        X_ = np.random.randn(100, 5)
+        X_ = pm.floatX(np.random.randn(100, 5))
         X = pm.floatX(aesara.shared(X_))
         with pm.Model():
             x1 = pm.Normal("x1", observed=X_)
@@ -163,65 +173,6 @@ class TestObserved:
 
         assert x1.type == X.type
         assert x2.type == X.type
-
-
-class TestAesaraConfig:
-    def test_set_testval_raise(self):
-        with aesara.config.change_flags(compute_test_value="off"):
-            with pm.Model():
-                assert aesara.config.compute_test_value == "raise"
-            assert aesara.config.compute_test_value == "off"
-
-    def test_nested(self):
-        with aesara.config.change_flags(compute_test_value="off"):
-            with pm.Model(aesara_config={"compute_test_value": "ignore"}):
-                assert aesara.config.compute_test_value == "ignore"
-                with pm.Model(aesara_config={"compute_test_value": "warn"}):
-                    assert aesara.config.compute_test_value == "warn"
-                assert aesara.config.compute_test_value == "ignore"
-            assert aesara.config.compute_test_value == "off"
-
-
-def test_matrix_multiplication():
-    # Check matrix multiplication works between RVs, transformed RVs,
-    # Deterministics, and numpy arrays
-    with pm.Model() as linear_model:
-        matrix = pm.Normal("matrix", shape=(2, 2))
-        transformed = pm.Gamma("transformed", alpha=2, beta=1, shape=2)
-        rv_rv = pm.Deterministic("rv_rv", matrix @ transformed)
-        np_rv = pm.Deterministic("np_rv", np.ones((2, 2)) @ transformed)
-        rv_np = pm.Deterministic("rv_np", matrix @ np.ones(2))
-        rv_det = pm.Deterministic("rv_det", matrix @ rv_rv)
-        det_rv = pm.Deterministic("det_rv", rv_rv @ transformed)
-
-        posterior = pm.sample(10, tune=0, compute_convergence_checks=False, progressbar=False)
-        decimal = select_by_precision(7, 5)
-        for point in posterior.points():
-            npt.assert_almost_equal(
-                point["matrix"] @ point["transformed"],
-                point["rv_rv"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                np.ones((2, 2)) @ point["transformed"],
-                point["np_rv"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                point["matrix"] @ np.ones(2),
-                point["rv_np"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                point["matrix"] @ point["rv_rv"],
-                point["rv_det"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                point["rv_rv"] @ point["transformed"],
-                point["det_rv"],
-                decimal=decimal,
-            )
 
 
 def test_duplicate_vars():
@@ -255,19 +206,15 @@ def test_empty_observed():
     data.values[:] = np.nan
     with pm.Model():
         a = pm.Normal("a", observed=data)
-        npt.assert_allclose(a.tag.test_value, np.zeros((2, 3)))
-        b = pm.Beta("b", alpha=1, beta=1, observed=data)
-        npt.assert_allclose(b.tag.test_value, np.ones((2, 3)) / 2)
+        assert not hasattr(a.tag, "observations")
 
 
 class TestValueGradFunction(unittest.TestCase):
     def test_no_extra(self):
         a = at.vector("a")
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
-        a.dshape = (3,)
-        a.dsize = 3
-        f_grad = ValueGradFunction([a.sum()], [a], [], mode="FAST_COMPILE")
-        assert f_grad.size == 3
+        f_grad = ValueGradFunction([a.sum()], [a], {}, mode="FAST_COMPILE")
+        assert f_grad._extra_vars == []
 
     def test_invalid_type(self):
         a = at.ivector("a")
@@ -275,25 +222,22 @@ class TestValueGradFunction(unittest.TestCase):
         a.dshape = (3,)
         a.dsize = 3
         with pytest.raises(TypeError) as err:
-            ValueGradFunction([a.sum()], [a], [], mode="FAST_COMPILE")
+            ValueGradFunction([a.sum()], [a], {}, mode="FAST_COMPILE")
         err.match("Invalid dtype")
 
     def setUp(self):
         extra1 = at.iscalar("extra1")
         extra1_ = np.array(0, dtype=extra1.dtype)
-        extra1.tag.test_value = extra1_
         extra1.dshape = tuple()
         extra1.dsize = 1
 
         val1 = at.vector("val1")
         val1_ = np.zeros(3, dtype=val1.dtype)
-        val1.tag.test_value = val1_
         val1.dshape = (3,)
         val1.dsize = 3
 
         val2 = at.matrix("val2")
         val2_ = np.zeros((2, 3), dtype=val2.dtype)
-        val2.tag.test_value = val2_
         val2.dshape = (2, 3)
         val2.dsize = 6
 
@@ -303,7 +247,9 @@ class TestValueGradFunction(unittest.TestCase):
 
         self.cost = extra1 * val1.sum() + val2.sum()
 
-        self.f_grad = ValueGradFunction([self.cost], [val1, val2], [extra1], mode="FAST_COMPILE")
+        self.f_grad = ValueGradFunction(
+            [self.cost], [val1, val2], {extra1: extra1_}, mode="FAST_COMPILE"
+        )
 
     def test_extra_not_set(self):
         with pytest.raises(ValueError) as err:
@@ -311,30 +257,25 @@ class TestValueGradFunction(unittest.TestCase):
         err.match("Extra values are not set")
 
         with pytest.raises(ValueError) as err:
-            self.f_grad(np.zeros(self.f_grad.size, dtype=self.f_grad.dtype))
+            size = self.val1_.size + self.val2_.size
+            self.f_grad(np.zeros(size, dtype=self.f_grad.dtype))
         err.match("Extra values are not set")
 
     def test_grad(self):
         self.f_grad.set_extra_values({"extra1": 5})
-        array = np.ones(self.f_grad.size, dtype=self.f_grad.dtype)
+        size = self.val1_.size + self.val2_.size
+        array = RaveledVars(
+            np.ones(size, dtype=self.f_grad.dtype),
+            (
+                ("val1", self.val1_.shape, self.val1_.dtype),
+                ("val2", self.val2_.shape, self.val2_.dtype),
+            ),
+        )
         val, grad = self.f_grad(array)
         assert val == 21
         npt.assert_allclose(grad, [5, 5, 5, 1, 1, 1, 1, 1, 1])
 
-    def test_bij(self):
-        self.f_grad.set_extra_values({"extra1": 5})
-        array = np.ones(self.f_grad.size, dtype=self.f_grad.dtype)
-        point = self.f_grad.array_to_dict(array)
-        assert len(point) == 2
-        npt.assert_allclose(point["val1"], 1)
-        npt.assert_allclose(point["val2"], 1)
-
-        array2 = self.f_grad.dict_to_array(point)
-        npt.assert_allclose(array2, array)
-        point_ = self.f_grad.array_to_full_dict(array)
-        assert len(point_) == 3
-        assert point_["extra1"] == 5
-
+    @pytest.mark.xfail(reason="Test not refactored for v4")
     def test_edge_case(self):
         # Edge case discovered in #2948
         ndim = 3
@@ -346,15 +287,15 @@ class TestValueGradFunction(unittest.TestCase):
             step = pm.NUTS()
 
         func = step._logp_dlogp_func
-        func.set_extra_values(m.test_point)
-        q = func.dict_to_array(m.test_point)
+        func.set_extra_values(m.initial_point)
+        q = func.dict_to_array(m.initial_point)
         logp, dlogp = func(q)
         assert logp.size == 1
         assert dlogp.size == 4
         npt.assert_allclose(dlogp, 0.0, atol=1e-5)
 
-    def test_tensor_type_conversion(self):
-        # case described in #3122
+    def test_missing_data(self):
+        # Originally from a case described in #3122
         X = np.random.binomial(1, 0.5, 10)
         X[0] = -1  # masked a single value
         X = np.ma.masked_values(X, value=-1)
@@ -363,24 +304,35 @@ class TestValueGradFunction(unittest.TestCase):
             x2 = pm.Bernoulli("x2", x1, observed=X)
 
         gf = m.logp_dlogp_function()
+        gf._extra_are_set = True
 
         assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
 
-    def test_aesara_switch_broadcast_edge_cases(self):
-        # Tests against two subtle issues related to a previous bug in Aesara where at.switch would not
-        # always broadcast tensors with single values https://github.com/pymc-devs/aesara/issues/270
+        pnt = m.test_point.copy()
+        del pnt["x2_missing"]
+
+        res = [gf(DictToArrayBijection.map(Point(pnt, model=m))) for i in range(5)]
+
+        assert reduce(lambda x, y: np.array_equal(x, y) and y, res) is not False
+
+    def test_aesara_switch_broadcast_edge_cases_1(self):
+        # Tests against two subtle issues related to a previous bug in Theano
+        # where `tt.switch` would not always broadcast tensors with single
+        # values https://github.com/pymc-devs/aesara/issues/270
 
         # Known issue 1: https://github.com/pymc-devs/pymc3/issues/4389
-        data = np.zeros(10)
+        data = pm.floatX(np.zeros(10))
         with pm.Model() as m:
             p = pm.Beta("p", 1, 1)
             obs = pm.Bernoulli("obs", p=p, observed=data)
-        # Assert logp is correct
+
         npt.assert_allclose(
-            obs.logp(m.test_point),
+            logpt_sum(obs).eval({p.tag.value_var: pm.floatX(np.array(0.0))}),
             np.log(0.5) * 10,
         )
 
+    @pytest.mark.xfail(reason="TruncatedNormal not refactored for v4")
+    def test_aesara_switch_broadcast_edge_cases_2(self):
         # Known issue 2: https://github.com/pymc-devs/pymc3/issues/4417
         # fmt: off
         data = np.array([
@@ -391,12 +343,13 @@ class TestValueGradFunction(unittest.TestCase):
         with pm.Model() as m:
             mu = pm.Normal("mu", 0, 5)
             obs = pm.TruncatedNormal("obs", mu=mu, sigma=1, lower=-1, upper=2, observed=data)
-        # Assert dlogp is correct
+
         npt.assert_allclose(m.dlogp([mu])({"mu": 0}), 2.499424682024436, rtol=1e-5)
 
 
+@pytest.mark.xfail(reason="DensityDist not refactored for v4")
 def test_multiple_observed_rv():
-    "Test previously buggy MultiObservedRV comparison code."
+    "Test previously buggy multi-observed RV comparison code."
     y1_data = np.random.randn(10)
     y2_data = np.random.randn(100)
     with pm.Model() as model:
@@ -407,7 +360,7 @@ def test_multiple_observed_rv():
     assert not model["x"] == model["mu"]
     assert model["x"] == model["x"]
     assert model["x"] in model.observed_RVs
-    assert not model["x"] in model.vars
+    assert not model["x"] in model.value_vars
 
 
 def test_tempered_logp_dlogp():
@@ -427,7 +380,7 @@ def test_tempered_logp_dlogp():
     func_temp_nograd = model.logp_dlogp_function(tempered=True, compute_grads=False)
     func_temp_nograd.set_extra_values({})
 
-    x = np.ones(func.size, dtype=func.dtype)
+    x = np.ones(1, dtype=func.dtype)
     assert func(x) == func_temp(x)
     assert func_nograd(x) == func(x)[0]
     assert func_temp_nograd(x) == func(x)[0]
@@ -471,3 +424,235 @@ def test_model_pickle_deterministic(tmpdir):
     file_path = tmpdir.join("model.p")
     with open(file_path, "wb") as buff:
         pickle.dump(model, buff)
+
+
+def test_model_vars():
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        pm.Normal("x", a)
+
+    with pytest.warns(DeprecationWarning):
+        old_vars = model.vars
+
+    assert old_vars == model.value_vars
+
+
+def test_model_var_maps():
+    with pm.Model() as model:
+        a = pm.Uniform("a")
+        x = pm.Normal("x", a)
+
+    assert model.rvs_to_values == {a: a.tag.value_var, x: x.tag.value_var}
+    assert model.values_to_rvs == {a.tag.value_var: a, x.tag.value_var: x}
+
+
+def test_make_obs_var():
+    """
+    Check returned values for `data` given known inputs to `as_tensor()`.
+
+    Note that ndarrays should return a TensorConstant and sparse inputs
+    should return a Sparse Aesara object.
+    """
+    # Create the various inputs to the function
+    input_name = "testing_inputs"
+    sparse_input = sps.csr_matrix(np.eye(3))
+    dense_input = np.arange(9).reshape((3, 3))
+    masked_array_input = ma.array(dense_input, mask=(np.mod(dense_input, 2) == 0))
+
+    # Create a fake model and fake distribution to be used for the test
+    fake_model = pm.Model()
+    with fake_model:
+        fake_distribution = pm.Normal.dist(mu=0, sigma=1, size=(3, 3))
+        # Create the testval attribute simply for the sake of model testing
+        fake_distribution.name = input_name
+
+    # The function requires data and RV dimensionality to be compatible
+    with pytest.raises(ShapeError, match="Dimensionality of data and RV don't match."):
+        fake_model.make_obs_var(fake_distribution, np.ones((3, 3, 1)), None, None)
+
+    # Check function behavior using the various inputs
+    # dense, sparse: Ensure that the missing values are appropriately set to None
+    # masked: a deterministic variable is returned
+
+    dense_output = fake_model.make_obs_var(fake_distribution, dense_input, None, None)
+    assert dense_output == fake_distribution
+    assert isinstance(dense_output.tag.observations, TensorConstant)
+    del fake_model.named_vars[fake_distribution.name]
+
+    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None)
+    assert sparse_output == fake_distribution
+    assert sparse.basic._is_sparse_variable(sparse_output.tag.observations)
+    del fake_model.named_vars[fake_distribution.name]
+
+    # Here the RandomVariable is split into observed/imputed and a Deterministic is returned
+    masked_output = fake_model.make_obs_var(fake_distribution, masked_array_input, None, None)
+    assert masked_output != fake_distribution
+    assert not isinstance(masked_output, RandomVariable)
+    # Ensure it has missing values
+    assert {"testing_inputs_missing"} == {v.name for v in fake_model.vars}
+    assert {"testing_inputs", "testing_inputs_observed"} == {
+        v.name for v in fake_model.observed_RVs
+    }
+
+
+def test_initial_point():
+
+    with pm.Model() as model:
+        a = pm.Uniform("a")
+        x = pm.Normal("x", a)
+
+    with pytest.warns(DeprecationWarning):
+        initial_point = model.test_point
+
+    assert all(var.name in initial_point for var in model.value_vars)
+
+    b_initval = np.array(0.3, dtype=aesara.config.floatX)
+
+    with pytest.warns(DeprecationWarning), model:
+        b = pm.Uniform("b", testval=b_initval)
+
+    b_value_var = model.rvs_to_values[b]
+    b_initval_trans = b_value_var.tag.transform.forward(b, b_initval).eval()
+
+    y_initval = np.array(-2.4, dtype=aesara.config.floatX)
+
+    with model:
+        y = pm.Normal("y", initval=y_initval)
+
+    assert model.rvs_to_values[a] in model.initial_values
+    assert model.rvs_to_values[x] in model.initial_values
+    assert model.initial_values[b_value_var] == b_initval_trans
+    assert model.initial_values[model.rvs_to_values[y]] == y_initval
+
+
+def test_point_logps():
+
+    with pm.Model() as model:
+        a = pm.Uniform("a")
+        pm.Normal("x", a)
+
+    with pytest.warns(DeprecationWarning):
+        logp_vals = model.check_test_point()
+
+    assert "x" in logp_vals.keys()
+    assert "a" in logp_vals.keys()
+
+
+class TestUpdateStartVals(SeededTest):
+    def setup_method(self):
+        super().setup_method()
+
+    def test_soft_update_all_present(self):
+        model = pm.Model()
+        start = {"a": 1, "b": 2}
+        test_point = {"a": 3, "b": 4}
+        model.update_start_vals(start, test_point)
+        assert start == {"a": 1, "b": 2}
+
+    def test_soft_update_one_missing(self):
+        model = pm.Model()
+        start = {
+            "a": 1,
+        }
+        test_point = {"a": 3, "b": 4}
+        model.update_start_vals(start, test_point)
+        assert start == {"a": 1, "b": 4}
+
+    def test_soft_update_empty(self):
+        model = pm.Model()
+        start = {}
+        test_point = {"a": 3, "b": 4}
+        model.update_start_vals(start, test_point)
+        assert start == test_point
+
+    def test_soft_update_transformed(self):
+        with pm.Model() as model:
+            pm.Exponential("a", 1)
+        start = {"a": 2.0}
+        test_point = {"a_log__": 0}
+        model.update_start_vals(start, test_point)
+        assert_almost_equal(np.exp(start["a_log__"]), start["a"])
+
+    def test_soft_update_parent(self):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+            pm.Uniform("lower", lower=a, upper=3.0)
+            pm.Uniform("upper", lower=0.0, upper=b)
+            pm.Uniform("interv", lower=a, upper=b)
+
+        initial_point = {
+            "a_interval__": np.array(0.0, dtype=aesara.config.floatX),
+            "b_interval__": np.array(0.0, dtype=aesara.config.floatX),
+            "lower_interval__": np.array(0.0, dtype=aesara.config.floatX),
+            "upper_interval__": np.array(0.0, dtype=aesara.config.floatX),
+            "interv_interval__": np.array(0.0, dtype=aesara.config.floatX),
+        }
+        start = {"a": 0.3, "b": 2.1, "lower": 1.4, "upper": 1.4, "interv": 1.4}
+        test_point = {
+            "lower_interval__": -0.3746934494414109,
+            "upper_interval__": 0.693147180559945,
+            "interv_interval__": 0.4519851237430569,
+        }
+        model.update_start_vals(start, initial_point)
+        assert_almost_equal(start["lower_interval__"], test_point["lower_interval__"])
+        assert_almost_equal(start["upper_interval__"], test_point["upper_interval__"])
+        assert_almost_equal(start["interv_interval__"], test_point["interv_interval__"])
+
+
+class TestCheckStartVals(SeededTest):
+    def setup_method(self):
+        super().setup_method()
+
+    def test_valid_start_point(self):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+
+        start = {"a": 0.3, "b": 2.1}
+        model.update_start_vals(start, model.initial_point)
+        model.check_start_vals(start)
+
+    def test_invalid_start_point(self):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+
+        start = {"a": np.nan, "b": np.nan}
+        model.update_start_vals(start, model.initial_point)
+        with pytest.raises(pm.exceptions.SamplingError):
+            model.check_start_vals(start)
+
+    def test_invalid_variable_name(self):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+
+        start = {"a": 0.3, "b": 2.1, "c": 1.0}
+        model.update_start_vals(start, model.initial_point)
+        with pytest.raises(KeyError):
+            model.check_start_vals(start)
+
+
+def test_set_initval():
+    # Make sure the dependencies between variables are maintained when
+    # generating initial values
+    rng = np.random.RandomState(392)
+
+    with pm.Model(rng_seeder=rng) as model:
+        eta = pm.Uniform("eta", 1.0, 2.0, size=(1, 1))
+        mu = pm.Normal("mu", sd=eta, initval=[[100]])
+        alpha = pm.HalfNormal("alpha", initval=100)
+        value = pm.NegativeBinomial("value", mu=mu, alpha=alpha)
+
+    assert np.array_equal(model.initial_values[model.rvs_to_values[mu]], np.array([[100.0]]))
+    np.testing.assert_almost_equal(model.initial_values[model.rvs_to_values[alpha]], np.log(100))
+    assert 50 < model.initial_values[model.rvs_to_values[value]] < 150
+
+    # `Flat` cannot be sampled, so let's make sure that doesn't break initial
+    # value computations
+    with pm.Model() as model:
+        x = pm.Flat("x")
+        y = pm.Normal("y", x, 1)
+
+    assert model.rvs_to_values[y] in model.initial_values

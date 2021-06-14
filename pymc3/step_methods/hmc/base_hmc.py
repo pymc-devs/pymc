@@ -15,15 +15,18 @@
 import logging
 import time
 
+from abc import abstractmethod
 from collections import namedtuple
 
 import numpy as np
 
-from pymc3.aesaraf import floatX, inputvars
+from pymc3.aesaraf import floatX
 from pymc3.backends.report import SamplerWarning, WarningType
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.exceptions import SamplingError
 from pymc3.model import Point, modelcontext
-from pymc3.step_methods import arraystep, step_sizes
+from pymc3.step_methods import step_sizes
+from pymc3.step_methods.arraystep import GradientSharedStep
 from pymc3.step_methods.hmc import integration
 from pymc3.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
 from pymc3.tuning import guess_scaling
@@ -35,7 +38,7 @@ HMCStepData = namedtuple("HMCStepData", "end, accept_stat, divergence_info, stat
 DivergenceInfo = namedtuple("DivergenceInfo", "message, exec_info, state, state_div")
 
 
-class BaseHMC(arraystep.GradientSharedStep):
+class BaseHMC(GradientSharedStep):
     """Superclass to implement Hamiltonian/hybrid monte carlo."""
 
     default_blocked = True
@@ -63,7 +66,7 @@ class BaseHMC(arraystep.GradientSharedStep):
 
         Parameters
         ----------
-        vars: list of aesara variables
+        vars: list of Aesara variables
         scaling: array_like, ndim = {1,2}
             Scaling for momentum distribution. 1d arrays interpreted matrix
             diagonal.
@@ -77,20 +80,26 @@ class BaseHMC(arraystep.GradientSharedStep):
         potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods.
-        **aesara_kwargs: passed to aesara functions
+        **aesara_kwargs: passed to Aesara functions
         """
         self._model = modelcontext(model)
 
         if vars is None:
             vars = self._model.cont_vars
-        vars = inputvars(vars)
 
-        super().__init__(vars, blocked=blocked, model=model, dtype=dtype, **aesara_kwargs)
+        super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **aesara_kwargs)
 
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax
         self.iter_count = 0
-        size = self._logp_dlogp_func.size
+
+        # We're using the initial/test point to determine the (initial) step
+        # size.
+        # XXX: If the dimensions of these terms change, the step size
+        # dimension-scaling should change as well, no?
+        test_point = self._model.initial_point
+        continuous_vars = [test_point[v.name] for v in self._model.cont_vars]
+        size = sum(v.size for v in continuous_vars)
 
         self.step_size = step_scale / (size ** 0.25)
         self.step_adapt = step_sizes.DualAverageAdaptation(
@@ -105,8 +114,8 @@ class BaseHMC(arraystep.GradientSharedStep):
             potential = QuadPotentialDiagAdapt(size, mean, var, 10)
 
         if isinstance(scaling, dict):
-            point = Point(scaling, model=model)
-            scaling = guess_scaling(point, model=model, vars=vars)
+            point = Point(scaling, model=self._model)
+            scaling = guess_scaling(point, model=self._model, vars=vars)
 
         if scaling is not None and potential is not None:
             raise ValueError("Can not specify both potential and scaling.")
@@ -123,12 +132,12 @@ class BaseHMC(arraystep.GradientSharedStep):
         self._samples_after_tune = 0
         self._num_divs_sample = 0
 
+    @abstractmethod
     def _hamiltonian_step(self, start, p0, step_size):
         """Compute one hamiltonian trajectory and return the next state.
 
         Subclasses must overwrite this method and return a `HMCStepData`.
         """
-        raise NotImplementedError("Abstract method")
 
     def astep(self, q0):
         """Perform a single HMC iteration."""
@@ -136,15 +145,17 @@ class BaseHMC(arraystep.GradientSharedStep):
         process_start = time.process_time()
 
         p0 = self.potential.random()
+        p0 = RaveledVars(p0, q0.point_map_info)
+
         start = self.integrator.compute_state(q0, p0)
 
         if not np.isfinite(start.energy):
             model = self._model
-            check_test_point = model.check_test_point()
+            check_test_point = model.point_logps()
             error_logp = check_test_point.loc[
                 (np.abs(check_test_point) >= 1e20) | np.isnan(check_test_point)
             ]
-            self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
+            self.potential.raise_ok(q0.point_map_info)
             message_energy = (
                 "Bad initial energy, check any log probabilities that "
                 "are inf or -inf, nan or very small:\n{}".format(error_logp.to_string())
@@ -165,7 +176,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         if self._step_rand is not None:
             step_size = self._step_rand(step_size)
 
-        hmc_step = self._hamiltonian_step(start, p0, step_size)
+        hmc_step = self._hamiltonian_step(start, p0.data, step_size)
 
         perf_end = time.perf_counter()
         process_end = time.process_time()
@@ -184,9 +195,11 @@ class BaseHMC(arraystep.GradientSharedStep):
                 self._num_divs_sample += 1
                 # We don't want to fill up all memory with divergence info
                 if self._num_divs_sample < 100 and info.state is not None:
-                    point = self._logp_dlogp_func.array_to_dict(info.state.q)
+                    point = DictToArrayBijection.rmap(info.state.q)
+
                 if self._num_divs_sample < 100 and info.state_div is not None:
-                    point_dest = self._logp_dlogp_func.array_to_dict(info.state_div.q)
+                    point = DictToArrayBijection.rmap(info.state_div.q)
+
                 if self._num_divs_sample < 100:
                     info_store = info
             warning = SamplerWarning(

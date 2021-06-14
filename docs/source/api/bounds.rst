@@ -66,7 +66,7 @@ Caveats
 
 * Bounds cannot be given to variables that are ``observed``.  To model
   truncated data, use a :func:`~pymc3.model.Potential` in combination with a cumulative
-  probability function.  See `this example notebook <https://github.com/pymc-devs/pymc3/blob/master/docs/source/notebooks/weibull_aft.ipynb>`_.
+  probability function.  See `this example notebook <https://docs.pymc.io/pymc-examples/examples/survival_analysis/weibull_aft.html>`_.
 
 * The automatic transformation applied to continuous distributions results in
   an unnormalized probability distribution.  This doesn't effect inference

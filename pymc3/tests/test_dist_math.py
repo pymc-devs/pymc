@@ -16,7 +16,10 @@ import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
+import scipy.special
 
+from aesara import config, function
+from aesara.tensor.random.basic import multinomial
 from scipy import interpolate, stats
 
 import pymc3 as pm
@@ -31,7 +34,9 @@ from pymc3.distributions.dist_math import (
     clipped_beta_rvs,
     factln,
     i0e,
+    multigammaln,
 )
+from pymc3.tests.checks import close_to
 from pymc3.tests.helpers import verify_grad
 
 
@@ -89,16 +94,13 @@ def test_alltrue_shape():
 
 
 class MultinomialA(Discrete):
-    def __init__(self, n, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    rv_op = multinomial
 
-        self.n = n
-        self.p = p
+    @classmethod
+    def dist(cls, n, p, *args, **kwargs):
+        return super().dist([n, p], **kwargs)
 
-    def logp(self, value):
-        n = self.n
-        p = self.p
-
+    def logp(value, n, p):
         return bound(
             factln(n) - factln(value).sum() + (value * at.log(p)).sum(),
             value >= 0,
@@ -110,16 +112,13 @@ class MultinomialA(Discrete):
 
 
 class MultinomialB(Discrete):
-    def __init__(self, n, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    rv_op = multinomial
 
-        self.n = n
-        self.p = p
+    @classmethod
+    def dist(cls, n, p, *args, **kwargs):
+        return super().dist([n, p], **kwargs)
 
-    def logp(self, value):
-        n = self.n
-        p = self.p
-
+    def logp(value, n, p):
         return bound(
             factln(n) - factln(value).sum() + (value * at.log(p)).sum(),
             at.all(value >= 0),
@@ -136,11 +135,11 @@ def test_multinomial_bound():
     n = x.sum()
 
     with pm.Model() as modelA:
-        p_a = pm.Dirichlet("p", floatX(np.ones(2)), shape=(2,))
+        p_a = pm.Dirichlet("p", floatX(np.ones(2)))
         MultinomialA("x", n, p_a, observed=x)
 
     with pm.Model() as modelB:
-        p_b = pm.Dirichlet("p", floatX(np.ones(2)), shape=(2,))
+        p_b = pm.Dirichlet("p", floatX(np.ones(2)))
         MultinomialB("x", n, p_b, observed=x)
 
     assert np.isclose(
@@ -188,11 +187,10 @@ class TestMvNormalLogp:
         delta_val = floatX(np.random.randn(5, 2))
         verify_grad(func, [chol_vec_val, delta_val])
 
-    @pytest.mark.skip(reason="Fix in aesara not released yet: Theano#5908")
     @aesara.config.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         chol_vec = at.vector("chol_vec")
-        chol_vec.tag.test_value = np.array([0.1, 2, 3])
+        chol_vec.tag.test_value = floatX(np.array([0.1, 2, 3]))
         chol = at.stack(
             [
                 at.stack([at.exp(0.1 * chol_vec[0]), 0]),
@@ -201,9 +199,10 @@ class TestMvNormalLogp:
         )
         cov = at.dot(chol, chol.T)
         delta = at.matrix("delta")
-        delta.tag.test_value = np.ones((5, 2))
+        delta.tag.test_value = floatX(np.ones((5, 2)))
         logp = MvNormalLogp()(cov, delta)
         g_cov, g_delta = at.grad(logp, [cov, delta])
+        # TODO: What's the test?  Something needs to be asserted.
         at.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 
 
@@ -241,3 +240,25 @@ def test_clipped_beta_rvs(dtype):
     # equal to zero or one (issue #3898)
     values = clipped_beta_rvs(0.01, 0.01, size=1000000, dtype=dtype)
     assert not (np.any(values == 0) or np.any(values == 1))
+
+
+def check_vals(fn1, fn2, *args):
+    v = fn1(*args)
+    close_to(v, fn2(*args), 1e-6 if v.dtype == np.float64 else 1e-4)
+
+
+def test_multigamma():
+    x = at.vector("x")
+    p = at.scalar("p")
+
+    xvals = [np.array([v], dtype=config.floatX) for v in [0.1, 2, 5, 10, 50, 100]]
+
+    multigammaln_ = function([x, p], multigammaln(x, p), mode="FAST_COMPILE")
+
+    def ref_multigammaln(a, b):
+        return np.array(scipy.special.multigammaln(a[0], b), config.floatX)
+
+    for p in [0, 1, 2, 3, 4, 100]:
+        for x in xvals:
+            if np.all(x > 0.5 * (p - 1)):
+                check_vals(multigammaln_, ref_multigammaln, x, p)

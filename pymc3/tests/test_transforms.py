@@ -23,6 +23,7 @@ import pymc3 as pm
 import pymc3.distributions.transforms as tr
 
 from pymc3.aesaraf import jacobian
+from pymc3.distributions import logpt
 from pymc3.tests.checks import close_to, close_to_logical
 from pymc3.tests.helpers import SeededTest
 from pymc3.tests.test_distributions import (
@@ -43,36 +44,49 @@ from pymc3.tests.test_distributions import (
 tol = 1e-7 if aesara.config.floatX == "float64" else 1e-6
 
 
-def check_transform(transform, domain, constructor=at.dscalar, test=0):
+def check_transform(transform, domain, constructor=at.dscalar, test=0, rv_var=None):
     x = constructor("x")
     x.tag.test_value = test
+    if rv_var is None:
+        rv_var = x
     # test forward and forward_val
-    forward_f = aesara.function([x], transform.forward(x))
+    # FIXME: What's being tested here?  That the transformed graph can compile?
+    forward_f = aesara.function([x], transform.forward(rv_var, x))
     # test transform identity
-    identity_f = aesara.function([x], transform.backward(transform.forward(x)))
+    identity_f = aesara.function([x], transform.backward(rv_var, transform.forward(rv_var, x)))
     for val in domain.vals:
         close_to(val, identity_f(val), tol)
-        close_to(transform.forward_val(val), forward_f(val), tol)
 
 
-def check_vector_transform(transform, domain):
-    return check_transform(transform, domain, at.dvector, test=np.array([0, 0]))
+def check_vector_transform(transform, domain, rv_var=None):
+    return check_transform(transform, domain, at.dvector, test=np.array([0, 0]), rv_var=rv_var)
 
 
-def get_values(transform, domain=R, constructor=at.dscalar, test=0):
+def get_values(transform, domain=R, constructor=at.dscalar, test=0, rv_var=None):
     x = constructor("x")
     x.tag.test_value = test
-    f = aesara.function([x], transform.backward(x))
+    if rv_var is None:
+        rv_var = x
+    f = aesara.function([x], transform.backward(rv_var, x))
     return np.array([f(val) for val in domain.vals])
 
 
 def check_jacobian_det(
-    transform, domain, constructor=at.dscalar, test=0, make_comparable=None, elemwise=False
+    transform,
+    domain,
+    constructor=at.dscalar,
+    test=0,
+    make_comparable=None,
+    elemwise=False,
+    rv_var=None,
 ):
     y = constructor("y")
     y.tag.test_value = test
 
-    x = transform.backward(y)
+    if rv_var is None:
+        rv_var = y
+
+    x = transform.backward(rv_var, y)
     if make_comparable:
         x = make_comparable(x)
 
@@ -85,7 +99,7 @@ def check_jacobian_det(
     actual_ljd = aesara.function([y], jac)
 
     computed_ljd = aesara.function(
-        [y], at.as_tensor_variable(transform.jacobian_det(y)), on_unused_input="ignore"
+        [y], at.as_tensor_variable(transform.jacobian_det(rv_var, y)), on_unused_input="ignore"
     )
 
     for yval in domain.vals:
@@ -93,10 +107,6 @@ def check_jacobian_det(
 
 
 def test_stickbreaking():
-    with pytest.warns(
-        DeprecationWarning, match="The argument `eps` is deprecated and will not be used."
-    ):
-        tr.StickBreaking(eps=1e-9)
     check_vector_transform(tr.stick_breaking, Simplex(2))
     check_vector_transform(tr.stick_breaking, Simplex(4))
 
@@ -121,7 +131,9 @@ def test_stickbreaking_accuracy():
     val = np.array([-30])
     x = at.dvector("x")
     x.tag.test_value = val
-    identity_f = aesara.function([x], tr.stick_breaking.forward(tr.stick_breaking.backward(x)))
+    identity_f = aesara.function(
+        [x], tr.stick_breaking.forward(x, tr.stick_breaking.backward(x, x))
+    )
     close_to(val, identity_f(val), tol)
 
 
@@ -164,7 +176,10 @@ def test_logodds():
 
 
 def test_lowerbound():
-    trans = tr.lowerbound(0.0)
+    def transform_params(rv_var):
+        return 0.0, None
+
+    trans = tr.interval(transform_params)
     check_transform(trans, Rplusbig)
 
     check_jacobian_det(trans, Rplusbig, elemwise=True)
@@ -175,7 +190,10 @@ def test_lowerbound():
 
 
 def test_upperbound():
-    trans = tr.upperbound(0.0)
+    def transform_params(rv_var):
+        return None, 0.0
+
+    trans = tr.interval(transform_params)
     check_transform(trans, Rminusbig)
 
     check_jacobian_det(trans, Rminusbig, elemwise=True)
@@ -188,7 +206,11 @@ def test_upperbound():
 def test_interval():
     for a, b in [(-4, 5.5), (0.1, 0.7), (-10, 4.3)]:
         domain = Unit * np.float64(b - a) + np.float64(a)
-        trans = tr.interval(a, b)
+
+        def transform_params(x, z=a, y=b):
+            return z, y
+
+        trans = tr.interval(transform_params)
         check_transform(trans, domain)
 
         check_jacobian_det(trans, domain, elemwise=True)
@@ -205,10 +227,10 @@ def test_interval_near_boundary():
     x0 = np.nextafter(ub, lb)
 
     with pm.Model() as model:
-        pm.Uniform("x", testval=x0, lower=lb, upper=ub)
+        pm.Uniform("x", initval=x0, lower=lb, upper=ub)
 
-    log_prob = model.check_test_point()
-    np.testing.assert_allclose(log_prob.values, np.array([-52.68]))
+    log_prob = model.point_logps()
+    np.testing.assert_allclose(log_prob, np.array([-52.68]))
 
 
 def test_circular():
@@ -221,7 +243,7 @@ def test_circular():
     close_to_logical(vals > -np.pi, True, tol)
     close_to_logical(vals < np.pi, True, tol)
 
-    assert isinstance(trans.forward(1), TensorConstant)
+    assert isinstance(trans.forward(None, 1), TensorConstant)
 
 
 def test_ordered():
@@ -252,233 +274,267 @@ def test_chain_jacob_det():
 
 
 class TestElementWiseLogp(SeededTest):
-    def build_model(self, distfam, params, shape, transform, testval=None):
-        if testval is not None:
-            testval = pm.floatX(testval)
+    def build_model(self, distfam, params, size, transform, initval=None):
+        if initval is not None:
+            initval = pm.floatX(initval)
         with pm.Model() as m:
-            distfam("x", shape=shape, transform=transform, testval=testval, **params)
+            distfam("x", size=size, transform=transform, initval=initval, **params)
         return m
 
     def check_transform_elementwise_logp(self, model):
-        x0 = model.deterministics[0]
         x = model.free_RVs[0]
-        assert x.ndim == x.logp_elemwiset.ndim
+        x0 = x.tag.value_var
+        assert x.ndim == logpt(x).ndim
 
-        pt = model.test_point
-        array = np.random.randn(*pt[x.name].shape)
-        pt[x.name] = array
-        dist = x.distribution
-        logp_nojac = x0.distribution.logp(dist.transform_used.backward(array))
-        jacob_det = dist.transform_used.jacobian_det(aesara.shared(array))
-        assert x.logp_elemwiset.ndim == jacob_det.ndim
+        pt = model.initial_point
+        array = np.random.randn(*pt[x0.name].shape)
+        transform = x0.tag.transform
+        logp_notrans = logpt(x, transform.backward(x, array), transformed=False)
 
-        elementwiselogp = logp_nojac + jacob_det
+        jacob_det = transform.jacobian_det(x, aesara.shared(array))
+        assert logpt(x).ndim == jacob_det.ndim
 
-        close_to(x.logp_elemwise(pt), elementwiselogp.eval(), tol)
+        v1 = logpt(x, array, jacobian=False).eval()
+        v2 = logp_notrans.eval()
+        close_to(v1, v2, tol)
 
     def check_vectortransform_elementwise_logp(self, model, vect_opt=0):
-        x0 = model.deterministics[0]
         x = model.free_RVs[0]
-        assert (x.ndim - 1) == x.logp_elemwiset.ndim
+        x0 = x.tag.value_var
+        assert (x.ndim - 1) == logpt(x).ndim
 
-        pt = model.test_point
-        array = np.random.randn(*pt[x.name].shape)
-        pt[x.name] = array
-        dist = x.distribution
-        logp_nojac = x0.distribution.logp(dist.transform_used.backward(array))
-        jacob_det = dist.transform_used.jacobian_det(aesara.shared(array))
-        assert x.logp_elemwiset.ndim == jacob_det.ndim
+        pt = model.initial_point
+        array = np.random.randn(*pt[x0.name].shape)
+        transform = x0.tag.transform
+        logp_nojac = logpt(x, transform.backward(x, array), transformed=False)
 
-        if vect_opt == 0:
-            # the original distribution is univariate
-            elementwiselogp = logp_nojac.sum(axis=-1) + jacob_det
-        else:
-            elementwiselogp = logp_nojac + jacob_det
+        jacob_det = transform.jacobian_det(x, aesara.shared(array))
+        assert logpt(x).ndim == jacob_det.ndim
+
         # Hack to get relative tolerance
-        a = x.logp_elemwise(pt)
-        b = elementwiselogp.eval()
+        a = logpt(x, array.astype(aesara.config.floatX), jacobian=False).eval()
+        b = logp_nojac.eval()
         close_to(a, b, np.abs(0.5 * (a + b) * tol))
 
     @pytest.mark.parametrize(
-        "sd,shape",
+        "sd,size",
         [
             (2.5, 2),
             (5.0, (2, 3)),
             (np.ones(3) * 10.0, (4, 3)),
         ],
     )
-    def test_half_normal(self, sd, shape):
-        model = self.build_model(pm.HalfNormal, {"sd": sd}, shape=shape, transform=tr.log)
+    def test_half_normal(self, sd, size):
+        model = self.build_model(pm.HalfNormal, {"sd": sd}, size=size, transform=tr.log)
         self.check_transform_elementwise_logp(model)
 
-    @pytest.mark.parametrize("lam,shape", [(2.5, 2), (5.0, (2, 3)), (np.ones(3), (4, 3))])
-    def test_exponential(self, lam, shape):
-        model = self.build_model(pm.Exponential, {"lam": lam}, shape=shape, transform=tr.log)
+    @pytest.mark.parametrize("lam,size", [(2.5, 2), (5.0, (2, 3)), (np.ones(3), (4, 3))])
+    def test_exponential(self, lam, size):
+        model = self.build_model(pm.Exponential, {"lam": lam}, size=size, transform=tr.log)
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
-        "a,b,shape",
+        "a,b,size",
         [
             (1.0, 1.0, 2),
             (0.5, 0.5, (2, 3)),
             (np.ones(3), np.ones(3), (4, 3)),
         ],
     )
-    def test_beta(self, a, b, shape):
-        model = self.build_model(
-            pm.Beta, {"alpha": a, "beta": b}, shape=shape, transform=tr.logodds
-        )
+    def test_beta(self, a, b, size):
+        model = self.build_model(pm.Beta, {"alpha": a, "beta": b}, size=size, transform=tr.logodds)
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
-        "lower,upper,shape",
+        "lower,upper,size",
         [
             (0.0, 1.0, 2),
             (0.5, 5.5, (2, 3)),
             (pm.floatX(np.zeros(3)), pm.floatX(np.ones(3)), (4, 3)),
         ],
     )
-    def test_uniform(self, lower, upper, shape):
-        interval = tr.Interval(lower, upper)
+    def test_uniform(self, lower, upper, size):
+        def transform_params(rv_var):
+            _, _, _, lower, upper = rv_var.owner.inputs
+            lower = at.as_tensor_variable(lower) if lower is not None else None
+            upper = at.as_tensor_variable(upper) if upper is not None else None
+            return lower, upper
+
+        interval = tr.Interval(transform_params)
         model = self.build_model(
-            pm.Uniform, {"lower": lower, "upper": upper}, shape=shape, transform=interval
+            pm.Uniform, {"lower": lower, "upper": upper}, size=size, transform=interval
         )
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
-        "mu,kappa,shape", [(0.0, 1.0, 2), (-0.5, 5.5, (2, 3)), (np.zeros(3), np.ones(3), (4, 3))]
+        "lower, c, upper, size",
+        [
+            (0.0, 1.0, 2.0, 2),
+            (-10, 0, 200, (2, 3)),
+            (np.zeros(3), np.ones(3), np.ones(3), (4, 3)),
+        ],
     )
-    def test_vonmises(self, mu, kappa, shape):
+    def test_triangular(self, lower, c, upper, size):
+        def transform_params(rv_var):
+            _, _, _, lower, _, upper = rv_var.owner.inputs
+            lower = at.as_tensor_variable(lower) if lower is not None else None
+            upper = at.as_tensor_variable(upper) if upper is not None else None
+            return lower, upper
+
+        interval = tr.Interval(transform_params)
         model = self.build_model(
-            pm.VonMises, {"mu": mu, "kappa": kappa}, shape=shape, transform=tr.circular
+            pm.Triangular, {"lower": lower, "c": c, "upper": upper}, size=size, transform=interval
         )
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
-        "a,shape", [(np.ones(2), 2), (np.ones((2, 3)) * 0.5, (2, 3)), (np.ones(3), (4, 3))]
+        "mu,kappa,size", [(0.0, 1.0, 2), (-0.5, 5.5, (2, 3)), (np.zeros(3), np.ones(3), (4, 3))]
     )
-    def test_dirichlet(self, a, shape):
-        model = self.build_model(pm.Dirichlet, {"a": a}, shape=shape, transform=tr.stick_breaking)
+    def test_vonmises(self, mu, kappa, size):
+        model = self.build_model(
+            pm.VonMises, {"mu": mu, "kappa": kappa}, size=size, transform=tr.circular
+        )
+        self.check_transform_elementwise_logp(model)
+
+    @pytest.mark.parametrize(
+        "a,size", [(np.ones(2), None), (np.ones((2, 3)) * 0.5, None), (np.ones(3), (4,))]
+    )
+    def test_dirichlet(self, a, size):
+        model = self.build_model(pm.Dirichlet, {"a": a}, size=size, transform=tr.stick_breaking)
         self.check_vectortransform_elementwise_logp(model, vect_opt=1)
 
     def test_normal_ordered(self):
         model = self.build_model(
             pm.Normal,
             {"mu": 0.0, "sd": 1.0},
-            shape=3,
-            testval=np.asarray([-1.0, 1.0, 4.0]),
+            size=3,
+            initval=np.asarray([-1.0, 1.0, 4.0]),
             transform=tr.ordered,
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
 
     @pytest.mark.parametrize(
-        "sd,shape",
+        "sd,size",
         [
             (2.5, (2,)),
             (np.ones(3), (4, 3)),
         ],
     )
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    def test_half_normal_ordered(self, sd, shape):
-        testval = np.sort(np.abs(np.random.randn(*shape)))
+    def test_half_normal_ordered(self, sd, size):
+        initval = np.sort(np.abs(np.random.randn(*size)))
         model = self.build_model(
             pm.HalfNormal,
             {"sd": sd},
-            shape=shape,
-            testval=testval,
+            size=size,
+            initval=initval,
             transform=tr.Chain([tr.log, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
 
-    @pytest.mark.parametrize("lam,shape", [(2.5, (2,)), (np.ones(3), (4, 3))])
-    def test_exponential_ordered(self, lam, shape):
-        testval = np.sort(np.abs(np.random.randn(*shape)))
+    @pytest.mark.parametrize("lam,size", [(2.5, (2,)), (np.ones(3), (4, 3))])
+    def test_exponential_ordered(self, lam, size):
+        initval = np.sort(np.abs(np.random.randn(*size)))
         model = self.build_model(
             pm.Exponential,
             {"lam": lam},
-            shape=shape,
-            testval=testval,
+            size=size,
+            initval=initval,
             transform=tr.Chain([tr.log, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
 
     @pytest.mark.parametrize(
-        "a,b,shape",
+        "a,b,size",
         [
             (1.0, 1.0, (2,)),
             (np.ones(3), np.ones(3), (4, 3)),
         ],
     )
-    def test_beta_ordered(self, a, b, shape):
-        testval = np.sort(np.abs(np.random.rand(*shape)))
+    def test_beta_ordered(self, a, b, size):
+        initval = np.sort(np.abs(np.random.rand(*size)))
         model = self.build_model(
             pm.Beta,
             {"alpha": a, "beta": b},
-            shape=shape,
-            testval=testval,
+            size=size,
+            initval=initval,
             transform=tr.Chain([tr.logodds, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
 
     @pytest.mark.parametrize(
-        "lower,upper,shape",
+        "lower,upper,size",
         [(0.0, 1.0, (2,)), (pm.floatX(np.zeros(3)), pm.floatX(np.ones(3)), (4, 3))],
     )
-    def test_uniform_ordered(self, lower, upper, shape):
-        interval = tr.Interval(lower, upper)
-        testval = np.sort(np.abs(np.random.rand(*shape)))
+    def test_uniform_ordered(self, lower, upper, size):
+        def transform_params(rv_var):
+            _, _, _, lower, upper = rv_var.owner.inputs
+            lower = at.as_tensor_variable(lower) if lower is not None else None
+            upper = at.as_tensor_variable(upper) if upper is not None else None
+            return lower, upper
+
+        interval = tr.Interval(transform_params)
+
+        initval = np.sort(np.abs(np.random.rand(*size)))
         model = self.build_model(
             pm.Uniform,
             {"lower": lower, "upper": upper},
-            shape=shape,
-            testval=testval,
+            size=size,
+            initval=initval,
             transform=tr.Chain([interval, tr.ordered]),
         )
-        self.check_vectortransform_elementwise_logp(model, vect_opt=0)
+        self.check_vectortransform_elementwise_logp(model, vect_opt=1)
 
-    @pytest.mark.parametrize(
-        "mu,kappa,shape", [(0.0, 1.0, (2,)), (np.zeros(3), np.ones(3), (4, 3))]
-    )
-    def test_vonmises_ordered(self, mu, kappa, shape):
-        testval = np.sort(np.abs(np.random.rand(*shape)))
+    @pytest.mark.parametrize("mu,kappa,size", [(0.0, 1.0, (2,)), (np.zeros(3), np.ones(3), (4, 3))])
+    def test_vonmises_ordered(self, mu, kappa, size):
+        initval = np.sort(np.abs(np.random.rand(*size)))
         model = self.build_model(
             pm.VonMises,
             {"mu": mu, "kappa": kappa},
-            shape=shape,
-            testval=testval,
+            size=size,
+            initval=initval,
             transform=tr.Chain([tr.circular, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
 
     @pytest.mark.parametrize(
-        "lower,upper,shape,transform",
+        "lower,upper,size,transform",
         [
             (0.0, 1.0, (2,), tr.stick_breaking),
             (0.5, 5.5, (2, 3), tr.stick_breaking),
             (np.zeros(3), np.ones(3), (4, 3), tr.Chain([tr.sum_to_1, tr.logodds])),
         ],
     )
-    def test_uniform_other(self, lower, upper, shape, transform):
-        testval = np.ones(shape) / shape[-1]
+    def test_uniform_other(self, lower, upper, size, transform):
+        initval = np.ones(size) / size[-1]
         model = self.build_model(
             pm.Uniform,
             {"lower": lower, "upper": upper},
-            shape=shape,
-            testval=testval,
+            size=size,
+            initval=initval,
             transform=transform,
         )
-        self.check_vectortransform_elementwise_logp(model, vect_opt=0)
+        self.check_vectortransform_elementwise_logp(model, vect_opt=1)
 
     @pytest.mark.parametrize(
-        "mu,cov,shape",
+        "mu,cov,size,shape",
         [
-            (np.zeros(2), np.diag(np.ones(2)), (2,)),
-            (np.zeros(3), np.diag(np.ones(3)), (4, 3)),
+            (np.zeros(2), np.diag(np.ones(2)), None, (2,)),
+            (np.zeros(3), np.diag(np.ones(3)), (4,), (4, 3)),
         ],
     )
-    def test_mvnormal_ordered(self, mu, cov, shape):
-        testval = np.sort(np.random.randn(*shape))
+    def test_mvnormal_ordered(self, mu, cov, size, shape):
+        initval = np.sort(np.random.randn(*shape))
         model = self.build_model(
-            pm.MvNormal, {"mu": mu, "cov": cov}, shape=shape, testval=testval, transform=tr.ordered
+            pm.MvNormal, {"mu": mu, "cov": cov}, size=size, initval=initval, transform=tr.ordered
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=1)
+
+
+def test_triangular_transform():
+    with pm.Model() as m:
+        x = pm.Triangular("x", lower=0, c=1, upper=2)
+
+    transform = x.tag.value_var.tag.transform
+    assert np.isclose(transform.backward(x, -np.inf).eval(), 0)
+    assert np.isclose(transform.backward(x, np.inf).eval(), 2)

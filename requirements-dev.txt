@@ -3,12 +3,11 @@
 
 h5py>=2.7
 ipython>=7.16
-nbsphinx>=0.4
+myst-nb
 numpydoc>=0.9
 pre-commit>=2.8.0
 pytest-cov>=2.5
 pytest>=3.0
-recommonmark>=0.4
 sphinx-autobuild>=0.7
 sphinx>=1.5
 watermark

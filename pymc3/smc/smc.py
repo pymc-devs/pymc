@@ -28,6 +28,7 @@ from pymc3.aesaraf import (
     make_shared_replacements,
 )
 from pymc3.backends.ndarray import NDArray
+from pymc3.blocking import DictToArrayBijection
 from pymc3.model import Point, modelcontext
 from pymc3.sampling import sample_prior_predictive
 
@@ -73,7 +74,7 @@ class SMC:
         self.max_steps = n_steps
         self.proposed = draws * n_steps
         self.acc_rate = 1
-        self.variables = inputvars(self.model.vars)
+        self.variables = inputvars(self.model.value_vars)
         self.weights = np.ones(self.draws) / self.draws
         self.log_marginal_likelihood = 0
         self.sim_data = []
@@ -92,7 +93,7 @@ class SMC:
         else:
             init_rnd = self.start
 
-        init = self.model.test_point
+        init = self.model.initial_point
 
         for v in self.variables:
             var_info[v.name] = (init[v.name].shape, init[v.name].size)
@@ -100,19 +101,22 @@ class SMC:
         for i in range(self.draws):
 
             point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
-            population.append(self.model.dict_to_array(point))
+            population.append(DictToArrayBijection.map(point).data)
 
         self.posterior = np.array(floatX(population))
         self.var_info = var_info
 
     def setup_kernel(self):
         """Set up the likelihood logp function based on the chosen kernel."""
-        shared = make_shared_replacements(self.variables, self.model)
+        initial_values = self.model.initial_point
+        shared = make_shared_replacements(initial_values, self.variables, self.model)
 
         if self.kernel == "abc":
             factors = [var.logpt for var in self.model.free_RVs]
             factors += [at.sum(factor) for factor in self.model.potentials]
-            self.prior_logp_func = logp_forw([at.sum(factors)], self.variables, shared)
+            self.prior_logp_func = logp_forw(
+                initial_values, [at.sum(factors)], self.variables, shared
+            )
             simulator = self.model.observed_RVs[0]
             distance = simulator.distribution.distance
             sum_stat = simulator.distribution.sum_stat
@@ -131,8 +135,12 @@ class SMC:
                 self.save_log_pseudolikelihood,
             )
         elif self.kernel == "metropolis":
-            self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
-            self.likelihood_logp_func = logp_forw([self.model.datalogpt], self.variables, shared)
+            self.prior_logp_func = logp_forw(
+                initial_values, [self.model.varlogpt], self.variables, shared
+            )
+            self.likelihood_logp_func = logp_forw(
+                initial_values, [self.model.datalogpt], self.variables, shared
+            )
 
     def initialize_logp(self):
         """Initialize the prior and likelihood log probabilities."""
@@ -270,7 +278,7 @@ class SMC:
         return strace
 
 
-def logp_forw(out_vars, vars, shared):
+def logp_forw(point, out_vars, vars, shared):
     """Compile Aesara function of the model and the input and output variables.
 
     Parameters
@@ -282,7 +290,7 @@ def logp_forw(out_vars, vars, shared):
     shared: List
         containing :class:`aesara.tensor.Tensor` for depended shared data
     """
-    out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
+    out_list, inarray0 = join_nonshared_inputs(point, out_vars, vars, shared)
     f = aesara_function([inarray0], out_list[0])
     f.trust_input = True
     return f
@@ -343,7 +351,9 @@ class PseudoLikelihood:
         self.distance = distance
         self.sum_stat = sum_stat
         self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
-        self.get_unobserved_fn = self.model.fastfn(self.model.unobserved_RVs)
+        self.get_unobserved_fn = self.model.fastfn(
+            [v.tag.value_var for v in self.model.unobserved_RVs]
+        )
         self.size = size
         self.save_sim_data = save_sim_data
         self.save_log_pseudolikelihood = save_log_pseudolikelihood

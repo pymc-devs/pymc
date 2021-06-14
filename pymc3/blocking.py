@@ -18,245 +18,88 @@ pymc3.blocking
 Classes for working with subsets of parameters.
 """
 import collections
-import copy
+
+from functools import partial
+from typing import Callable, Dict, Optional, TypeVar
 
 import numpy as np
 
-from pymc3.util import get_var_name
-
-__all__ = ["ArrayOrdering", "DictToArrayBijection", "DictToVarBijection"]
-
-VarMap = collections.namedtuple("VarMap", "var, slc, shp, dtyp")
-DataMap = collections.namedtuple("DataMap", "list_ind, slc, shp, dtype, name")
+__all__ = ["DictToArrayBijection"]
 
 
-# TODO Classes and methods need to be fully documented.
+T = TypeVar("T")
+PointType = Dict[str, np.ndarray]
 
-
-class ArrayOrdering:
-    """
-    An ordering for an array space
-    """
-
-    def __init__(self, vars):
-        self.vmap = []
-        self.by_name = {}
-        self.size = 0
-
-        for var in vars:
-            name = var.name
-            if name is None:
-                raise ValueError("Unnamed variable in ArrayOrdering.")
-            if name in self.by_name:
-                raise ValueError("Name of variable not unique: %s." % name)
-            if not hasattr(var, "dshape") or not hasattr(var, "dsize"):
-                raise ValueError("Shape of variable not known %s" % name)
-
-            slc = slice(self.size, self.size + var.dsize)
-            varmap = VarMap(name, slc, var.dshape, var.dtype)
-            self.vmap.append(varmap)
-            self.by_name[name] = varmap
-            self.size += var.dsize
-
-    def __getitem__(self, key):
-        return self.by_name[key]
+# `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
+# each of the raveled variables.
+RaveledVars = collections.namedtuple("RaveledVars", "data, point_map_info")
 
 
 class DictToArrayBijection:
-    """
-    A mapping between a dict space and an array space
+    """Map between a `dict`s of variables to an array space.
+
+    Said array space consists of all the vars raveled and then concatenated.
+
     """
 
-    def __init__(self, ordering, dpoint):
-        self.ordering = ordering
-        self.dpt = dpoint
-
-        # determine smallest float dtype that will fit all data
-        if all([x.dtyp == "float16" for x in ordering.vmap]):
-            self.array_dtype = "float16"
-        elif all([x.dtyp == "float32" for x in ordering.vmap]):
-            self.array_dtype = "float32"
+    @staticmethod
+    def map(var_dict: PointType) -> RaveledVars:
+        """Map a dictionary of names and variables to a concatenated 1D array space."""
+        vars_info = tuple((v, k, v.shape, v.dtype) for k, v in var_dict.items())
+        raveled_vars = [v[0].ravel() for v in vars_info]
+        if raveled_vars:
+            res = np.concatenate(raveled_vars)
         else:
-            self.array_dtype = "float64"
+            res = np.array([])
+        return RaveledVars(res, tuple(v[1:] for v in vars_info))
 
-    def map(self, dpt):
+    @staticmethod
+    def rmap(
+        array: RaveledVars,
+        start_point: Optional[PointType] = None,
+    ) -> PointType:
+        """Map 1D concatenated array to a dictionary of variables in their original spaces.
+
+        Parameters
+        ==========
+        array
+            The array to map.
+        start_point
+            An optional dictionary of initial values.
+
         """
-        Maps value from dict space to array space
+        if start_point:
+            res = dict(start_point)
+        else:
+            res = {}
+
+        if not isinstance(array, RaveledVars):
+            raise TypeError("`array` must be a `RaveledVars` type")
+
+        last_idx = 0
+        for name, shape, dtype in array.point_map_info:
+            arr_len = np.prod(shape, dtype=int)
+            var = array.data[last_idx : last_idx + arr_len].reshape(shape).astype(dtype)
+            res[name] = var
+            last_idx += arr_len
+
+        return res
+
+    @classmethod
+    def mapf(cls, f: Callable[[PointType], T], start_point: Optional[PointType] = None) -> T:
+        """Create a callable that first maps back to ``dict`` inputs and then applies a function.
+
+        function f: DictSpace -> T to ArraySpace -> T
 
         Parameters
         ----------
-        dpt: dict
-        """
-        apt = np.empty(self.ordering.size, dtype=self.array_dtype)
-        for var, slc, _, _ in self.ordering.vmap:
-            apt[slc] = dpt[var].ravel()
-        return apt
-
-    def rmap(self, apt):
-        """
-        Maps value from array space to dict space
-
-        Parameters
-        ----------
-        apt: array
-        """
-        dpt = self.dpt.copy()
-
-        for var, slc, shp, dtyp in self.ordering.vmap:
-            dpt[var] = np.atleast_1d(apt)[slc].reshape(shp).astype(dtyp)
-
-        return dpt
-
-    def mapf(self, f):
-        """
-         function f: DictSpace -> T to ArraySpace -> T
-
-        Parameters
-        ----------
-
         f: dict -> T
 
         Returns
         -------
         f: array -> T
         """
-        return Compose(f, self.rmap)
-
-
-class ListArrayOrdering:
-    """
-    An ordering for a list to an array space. Takes also non aesara.tensors.
-    Modified from pymc3 blocking.
-
-    Parameters
-    ----------
-    list_arrays: list
-        :class:`numpy.ndarray` or :class:`aesara.tensor.Tensor`
-    intype: str
-        defining the input type 'tensor' or 'numpy'
-    """
-
-    def __init__(self, list_arrays, intype="numpy"):
-        if intype not in {"tensor", "numpy"}:
-            raise ValueError("intype not in {'tensor', 'numpy'}")
-        self.vmap = []
-        self.intype = intype
-        self.size = 0
-        for array in list_arrays:
-            if self.intype == "tensor":
-                name = array.name
-                array = array.tag.test_value
-            else:
-                name = "numpy"
-
-            slc = slice(self.size, self.size + array.size)
-            self.vmap.append(DataMap(len(self.vmap), slc, array.shape, array.dtype, name))
-            self.size += array.size
-
-
-class ListToArrayBijection:
-    """
-    A mapping between a List of arrays and an array space
-
-    Parameters
-    ----------
-    ordering: :class:`ListArrayOrdering`
-    list_arrays: list
-        of :class:`numpy.ndarray`
-    """
-
-    def __init__(self, ordering, list_arrays):
-        self.ordering = ordering
-        self.list_arrays = list_arrays
-
-    def fmap(self, list_arrays):
-        """
-        Maps values from List space to array space
-
-        Parameters
-        ----------
-        list_arrays: list
-            of :class:`numpy.ndarray`
-
-        Returns
-        -------
-        array: :class:`numpy.ndarray`
-            single array comprising all the input arrays
-        """
-
-        array = np.empty(self.ordering.size)
-        for list_ind, slc, _, _, _ in self.ordering.vmap:
-            array[slc] = list_arrays[list_ind].ravel()
-        return array
-
-    def dmap(self, dpt):
-        """
-        Maps values from dict space to List space
-
-        Parameters
-        ----------
-        list_arrays: list
-            of :class:`numpy.ndarray`
-
-        Returns
-        -------
-        point
-        """
-        a_list = copy.copy(self.list_arrays)
-
-        for list_ind, _, _, _, var in self.ordering.vmap:
-            a_list[list_ind] = dpt[var].ravel()
-
-        return a_list
-
-    def rmap(self, array):
-        """
-        Maps value from array space to List space
-        Inverse operation of fmap.
-
-        Parameters
-        ----------
-        array: :class:`numpy.ndarray`
-
-        Returns
-        -------
-        a_list: list
-            of :class:`numpy.ndarray`
-        """
-
-        a_list = copy.copy(self.list_arrays)
-
-        for list_ind, slc, shp, dtype, _ in self.ordering.vmap:
-            a_list[list_ind] = np.atleast_1d(array)[slc].reshape(shp).astype(dtype)
-
-        return a_list
-
-
-class DictToVarBijection:
-    """
-    A mapping between a dict space and the array space for one element within the dict space
-    """
-
-    def __init__(self, var, idx, dpoint):
-        self.var = get_var_name(var)
-        self.idx = idx
-        self.dpt = dpoint
-
-    def map(self, dpt):
-        return dpt[self.var][self.idx]
-
-    def rmap(self, apt):
-        dpt = self.dpt.copy()
-
-        dvar = dpt[self.var].copy()
-        dvar[self.idx] = apt
-
-        dpt[self.var] = dvar
-
-        return dpt
-
-    def mapf(self, f):
-        return Compose(f, self.rmap)
+        return Compose(f, partial(cls.rmap, start_point=start_point))
 
 
 class Compose:

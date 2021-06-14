@@ -19,7 +19,7 @@ import pkgutil
 import urllib.request
 
 from copy import copy
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 
 import aesara
 import aesara.tensor as at
@@ -31,6 +31,8 @@ from aesara.tensor.type import TensorType
 from aesara.tensor.var import TensorVariable
 
 import pymc3 as pm
+
+from pymc3.aesaraf import pandas_to_array
 
 __all__ = [
     "get_data",
@@ -462,7 +464,7 @@ def align_minibatches(batches=None):
 
 
 class Data:
-    """Data container class that wraps the aesara ``SharedVariable`` class
+    """Data container class that wraps the Aesara ``SharedVariable`` class
     and lets the model be aware of its inputs and outputs.
 
     Parameters
@@ -496,12 +498,12 @@ class Data:
     ...     pm.Normal('y', mu=mu, sigma=1, observed=data)
 
     >>> # Generate one trace for each dataset
-    >>> traces = []
+    >>> idatas = []
     >>> for data_vals in observed_data:
     ...     with model:
     ...         # Switch out the observed dataset
-    ...         pm.set_data({'data': data_vals})
-    ...         traces.append(pm.sample())
+    ...         model.set_data('data', data_vals)
+    ...         idatas.append(pm.sample())
 
     To set the value of the data container variable, check out
     :func:`pymc3.model.set_data()`.
@@ -524,9 +526,9 @@ class Data:
             )
         name = model.name_for(name)
 
-        # `pm.model.pandas_to_array` takes care of parameter `value` and
+        # `pandas_to_array` takes care of parameter `value` and
         # transforms it to something digestible for pymc3
-        shared_object = aesara.shared(pm.model.pandas_to_array(value), name)
+        shared_object = aesara.shared(pandas_to_array(value), name)
 
         if isinstance(dims, str):
             dims = (dims,)
@@ -541,25 +543,31 @@ class Data:
 
         if export_index_as_coords:
             model.add_coords(coords)
+        elif dims:
+            # Register new dimension lengths
+            for d, dname in enumerate(dims):
+                if not dname in model.dim_lengths:
+                    model.add_coord(dname, values=None, length=shared_object.shape[d])
 
         # To draw the node for this variable in the graphviz Digraph we need
         # its shape.
-        shared_object.dshape = tuple(shared_object.shape.eval())
-        if dims is not None:
-            shape_dims = model.shape_from_dims(dims)
-            if shared_object.dshape != shape_dims:
-                raise pm.exceptions.ShapeError(
-                    "Data shape does not match with specified `dims`.",
-                    actual=shared_object.dshape,
-                    expected=shape_dims,
-                )
+        # XXX: This needs to be refactored
+        # shared_object.dshape = tuple(shared_object.shape.eval())
+        # if dims is not None:
+        #     shape_dims = model.shape_from_dims(dims)
+        #     if shared_object.dshape != shape_dims:
+        #         raise pm.exceptions.ShapeError(
+        #             "Data shape does not match with specified `dims`.",
+        #             actual=shared_object.dshape,
+        #             expected=shape_dims,
+        #         )
 
         model.add_random_variable(shared_object, dims=dims)
 
         return shared_object
 
     @staticmethod
-    def set_coords(model, value, dims=None):
+    def set_coords(model, value, dims=None) -> Dict[str, Sequence]:
         coords = {}
 
         # If value is a df or a series, we interpret the index as coords:

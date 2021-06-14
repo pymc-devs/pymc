@@ -17,7 +17,7 @@ import numpy as np
 from numpy import exp, log, sqrt
 
 from pymc3.aesaraf import hessian_diag, inputvars
-from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.blocking import DictToArrayBijection
 from pymc3.model import Point, modelcontext
 from pymc3.util import get_var_name
 
@@ -43,8 +43,7 @@ def fixed_hessian(point, vars=None, model=None):
 
     point = Point(point, model=model)
 
-    bij = DictToArrayBijection(ArrayOrdering(vars), point)
-    rval = np.ones(bij.map(point).size) / 10
+    rval = np.ones(DictToArrayBijection.map(point).size) / 10
     return rval
 
 
@@ -61,7 +60,7 @@ def find_hessian(point, vars=None, model=None):
     """
     model = modelcontext(model)
     H = model.fastd2logp(vars)
-    return H(Point(point, model=model))
+    return H(Point(point, filter_model_vars=True, model=model))
 
 
 def find_hessian_diag(point, vars=None, model=None):

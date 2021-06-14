@@ -11,22 +11,53 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
+from typing import (
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 import aesara
+import aesara.tensor as at
 import numpy as np
+import scipy.sparse as sps
 
-from aesara import scalar
-from aesara import tensor as at
+from aesara import config, scalar
+from aesara.compile.mode import Mode, get_mode
 from aesara.gradient import grad
-from aesara.graph.basic import Apply, graph_inputs
-from aesara.graph.op import Op
+from aesara.graph.basic import (
+    Apply,
+    Constant,
+    Variable,
+    clone_get_equiv,
+    graph_inputs,
+    walk,
+)
+from aesara.graph.fg import FunctionGraph
+from aesara.graph.op import Op, compute_test_value
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.tensor.elemwise import Elemwise
+from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.shape import SpecifyShape
+from aesara.tensor.sharedvar import SharedVariable
+from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorVariable
 
-from pymc3.blocking import ArrayOrdering
-from pymc3.data import GeneratorAdapter
-from pymc3.vartypes import continuous_types, int_types, typefilter
+from pymc3.exceptions import ShapeError
+from pymc3.vartypes import continuous_types, int_types, isgenerator, typefilter
+
+PotentialShapeType = Union[
+    int, np.ndarray, Tuple[Union[int, Variable], ...], List[Union[int, Variable]], Variable
+]
+
 
 __all__ = [
     "gradient",
@@ -45,16 +76,314 @@ __all__ = [
     "set_at_rng",
     "at_rng",
     "take_along_axis",
+    "pandas_to_array",
 ]
+
+
+def pandas_to_array(data):
+    """Convert a pandas object to a NumPy array.
+
+    XXX: When `data` is a generator, this will return an Aesara tensor!
+
+    """
+    if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
+        # typically, but not limited to pandas objects
+        vals = data.to_numpy()
+        null_data = data.isnull()
+        if hasattr(null_data, "to_numpy"):
+            # pandas Series
+            mask = null_data.to_numpy()
+        else:
+            # pandas Index
+            mask = null_data
+        if mask.any():
+            # there are missing values
+            ret = np.ma.MaskedArray(vals, mask)
+        else:
+            ret = vals
+    elif isinstance(data, np.ndarray):
+        if isinstance(data, np.ma.MaskedArray):
+            if not data.mask.any():
+                # empty mask
+                ret = data.filled()
+            else:
+                # already masked and rightly so
+                ret = data
+        else:
+            # already a ndarray, but not masked
+            mask = np.isnan(data)
+            if np.any(mask):
+                ret = np.ma.MaskedArray(data, mask)
+            else:
+                # no masking required
+                ret = data
+    elif isinstance(data, Variable):
+        ret = data
+    elif sps.issparse(data):
+        ret = data
+    elif isgenerator(data):
+        ret = generator(data)
+    else:
+        ret = np.asarray(data)
+
+    # type handling to enable index variables when data is int:
+    if hasattr(data, "dtype"):
+        if "int" in str(data.dtype):
+            return intX(ret)
+        # otherwise, assume float:
+        else:
+            return floatX(ret)
+    # needed for uses of this function other than with pm.Data:
+    else:
+        return floatX(ret)
+
+
+def change_rv_size(
+    rv_var: TensorVariable,
+    new_size: PotentialShapeType,
+    expand: Optional[bool] = False,
+) -> TensorVariable:
+    """Change or expand the size of a `RandomVariable`.
+
+    Parameters
+    ==========
+    rv_var
+        The `RandomVariable` output.
+    new_size
+        The new size.
+    expand:
+        Expand the existing size by `new_size`.
+
+    """
+    # Check the dimensionality of the `new_size` kwarg
+    new_size_ndim = np.ndim(new_size)
+    if new_size_ndim > 1:
+        raise ShapeError("The `new_size` must be ≤1-dimensional.", actual=new_size_ndim)
+    elif new_size_ndim == 0:
+        new_size = (new_size,)
+
+    # Extract the RV node that is to be resized, together with its inputs, name and tag
+    if isinstance(rv_var.owner.op, SpecifyShape):
+        rv_var = rv_var.owner.inputs[0]
+    rv_node = rv_var.owner
+    rng, size, dtype, *dist_params = rv_node.inputs
+    name = rv_var.name
+    tag = rv_var.tag
+
+    if expand:
+        if rv_node.op.ndim_supp == 0 and at.get_vector_length(size) == 0:
+            size = rv_node.op._infer_shape(size, dist_params)
+        new_size = tuple(new_size) + tuple(size)
+
+    # Make sure the new size is a tensor. This dtype-aware conversion helps
+    # to not unnecessarily pick up a `Cast` in some cases (see #4652).
+    new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
+
+    new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
+    rv_var = new_rv_node.outputs[-1]
+    rv_var.name = name
+    for k, v in tag.__dict__.items():
+        rv_var.tag.__dict__.setdefault(k, v)
+
+    if config.compute_test_value != "off":
+        compute_test_value(new_rv_node)
+
+    return rv_var
+
+
+def extract_rv_and_value_vars(
+    var: TensorVariable,
+) -> Tuple[TensorVariable, TensorVariable]:
+    """Return a random variable and it's observations or value variable, or ``None``.
+
+    Parameters
+    ==========
+    var
+        A variable corresponding to a ``RandomVariable``.
+
+    Returns
+    =======
+    The first value in the tuple is the ``RandomVariable``, and the second is the
+    measure/log-likelihood value variable that corresponds with the latter.
+
+    """
+    if not var.owner:
+        return None, None
+
+    if isinstance(var.owner.op, RandomVariable):
+        rv_value = getattr(var.tag, "observations", getattr(var.tag, "value_var", None))
+        return var, rv_value
+
+    return None, None
+
+
+def extract_obs_data(x: TensorVariable) -> np.ndarray:
+    """Extract data from observed symbolic variables.
+
+    Raises
+    ------
+    TypeError
+
+    """
+    if isinstance(x, Constant):
+        return x.data
+    if isinstance(x, SharedVariable):
+        return x.get_value()
+    if x.owner and isinstance(x.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1)):
+        array_data = extract_obs_data(x.owner.inputs[0])
+        mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
+        mask = np.zeros_like(array_data)
+        mask[mask_idx] = 1
+        return np.ma.MaskedArray(array_data, mask)
+
+    raise TypeError(f"Data cannot be extracted from {x}")
+
+
+def walk_model(
+    graphs: Iterable[TensorVariable],
+    walk_past_rvs: bool = False,
+    stop_at_vars: Optional[Set[TensorVariable]] = None,
+    expand_fn: Callable[[TensorVariable], Iterable[TensorVariable]] = lambda var: [],
+) -> Generator[TensorVariable, None, None]:
+    """Walk model graphs and yield their nodes.
+
+    By default, these walks will not go past ``RandomVariable`` nodes.
+
+    Parameters
+    ==========
+    graphs
+        The graphs to walk.
+    walk_past_rvs
+        If ``True``, the walk will not terminate at ``RandomVariable``s.
+    stop_at_vars
+        A list of variables at which the walk will terminate.
+    expand_fn
+        A function that returns the next variable(s) to be traversed.
+    """
+    if stop_at_vars is None:
+        stop_at_vars = set()
+
+    def expand(var):
+        new_vars = expand_fn(var)
+
+        if (
+            var.owner
+            and (walk_past_rvs or not isinstance(var.owner.op, RandomVariable))
+            and (var not in stop_at_vars)
+        ):
+            new_vars.extend(reversed(var.owner.inputs))
+
+        return new_vars
+
+    yield from walk(graphs, expand, False)
+
+
+def replace_rvs_in_graphs(
+    graphs: Iterable[TensorVariable],
+    replacement_fn: Callable[[TensorVariable], Dict[TensorVariable, TensorVariable]],
+    initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
+    **kwargs,
+) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
+    """Replace random variables in graphs
+
+    This will *not* recompute test values.
+
+    Parameters
+    ==========
+    graphs
+        The graphs in which random variables are to be replaced.
+
+    Returns
+    =======
+    Tuple containing the transformed graphs and a ``dict`` of the replacements
+    that were made.
+    """
+    replacements = {}
+    if initial_replacements:
+        replacements.update(initial_replacements)
+
+    def expand_replace(var):
+        new_nodes = []
+        if var.owner and isinstance(var.owner.op, RandomVariable):
+            new_nodes.extend(replacement_fn(var, replacements))
+        return new_nodes
+
+    for var in walk_model(graphs, expand_fn=expand_replace, **kwargs):
+        pass
+
+    if replacements:
+        inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
+        equiv = {k: k for k in replacements.keys()}
+        equiv = clone_get_equiv(inputs, graphs, False, False, equiv)
+
+        fg = FunctionGraph(
+            [equiv[i] for i in inputs],
+            [equiv[o] for o in graphs],
+            clone=False,
+        )
+
+        fg.replace_all(replacements.items(), import_missing=True)
+
+        graphs = list(fg.outputs)
+
+    return graphs, replacements
+
+
+def rvs_to_value_vars(
+    graphs: Iterable[TensorVariable],
+    apply_transforms: bool = False,
+    initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
+    **kwargs,
+) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
+    """Replace random variables in graphs with their value variables.
+
+    This will *not* recompute test values in the resulting graphs.
+
+    Parameters
+    ==========
+    graphs
+        The graphs in which to perform the replacements.
+    apply_transforms
+        If ``True``, apply each value variable's transform.
+    initial_replacements
+        A ``dict`` containing the initial replacements to be made.
+
+    """
+
+    def transform_replacements(var, replacements):
+        rv_var, rv_value_var = extract_rv_and_value_vars(var)
+
+        if rv_value_var is None:
+            warnings.warn(
+                f"No value variable found for {rv_var}; "
+                "the random variable will not be replaced."
+            )
+            return []
+
+        transform = getattr(rv_value_var.tag, "transform", None)
+
+        if transform is None or not apply_transforms:
+            replacements[var] = rv_value_var
+            # In case the value variable is itself a graph, we walk it for
+            # potential replacements
+            return [rv_value_var]
+
+        trans_rv_value = transform.backward(rv_var, rv_value_var)
+        replacements[var] = trans_rv_value
+
+        # Walk the transformed variable and make replacements
+        return [trans_rv_value]
+
+    return replace_rvs_in_graphs(graphs, transform_replacements, initial_replacements, **kwargs)
 
 
 def inputvars(a):
     """
-    Get the inputs into a aesara variables
+    Get the inputs into Aesara variables
 
     Parameters
     ----------
-        a: aesara variable
+        a: Aesara variable
 
     Returns
     -------
@@ -63,24 +392,24 @@ def inputvars(a):
     return [v for v in graph_inputs(makeiter(a)) if isinstance(v, TensorVariable)]
 
 
-def cont_inputs(f):
+def cont_inputs(a):
     """
-    Get the continuous inputs into a aesara variables
+    Get the continuous inputs into Aesara variables
 
     Parameters
     ----------
-        a: aesara variable
+        a: Aesara variable
 
     Returns
     -------
         r: list of tensor variables that are continuous inputs
     """
-    return typefilter(inputvars(f), continuous_types)
+    return typefilter(inputvars(a), continuous_types)
 
 
 def floatX(X):
     """
-    Convert a aesara tensor or numpy array to aesara.config.floatX type.
+    Convert an Aesara tensor or numpy array to aesara.config.floatX type.
     """
     try:
         return X.astype(aesara.config.floatX)
@@ -160,10 +489,12 @@ def jacobian(f, vars=None):
 def jacobian_diag(f, x):
     idx = at.arange(f.shape[0], dtype="int32")
 
-    def grad_ii(i):
+    def grad_ii(i, f, x):
         return grad(f[i], x)[i]
 
-    return aesara.scan(grad_ii, sequences=[idx], n_steps=f.shape[0], name="jacobian_diag")[0]
+    return aesara.scan(
+        grad_ii, sequences=[idx], n_steps=f.shape[0], non_sequences=[f, x], name="jacobian_diag"
+    )[0]
 
 
 @aesara.config.change_flags(compute_test_value="ignore")
@@ -221,7 +552,7 @@ class IdentityOp(scalar.UnaryScalarOp):
         return hash(type(self))
 
 
-def make_shared_replacements(vars, model):
+def make_shared_replacements(point, vars, model):
     """
     Makes shared replacements for all *other* variables than the ones passed.
 
@@ -230,6 +561,7 @@ def make_shared_replacements(vars, model):
 
     Parameters
     ----------
+    point: dictionary mapping variable names to sample values
     vars: list of variables not to make shared
     model: model
 
@@ -237,22 +569,27 @@ def make_shared_replacements(vars, model):
     -------
     Dict of variable -> new shared variable
     """
-    othervars = set(model.vars) - set(vars)
+    othervars = set(model.value_vars) - set(vars)
     return {
-        var: aesara.shared(
-            var.tag.test_value, var.name + "_shared", broadcastable=var.broadcastable
-        )
+        var: aesara.shared(point[var.name], var.name + "_shared", broadcastable=var.broadcastable)
         for var in othervars
     }
 
 
-def join_nonshared_inputs(xs, vars, shared, make_shared=False):
+def join_nonshared_inputs(
+    point: Dict[str, np.ndarray],
+    xs: List[TensorVariable],
+    vars: List[TensorVariable],
+    shared,
+    make_shared: bool = False,
+):
     """
-    Takes a list of aesara Variables and joins their non shared inputs into a single input.
+    Takes a list of Aesara Variables and joins their non shared inputs into a single input.
 
     Parameters
     ----------
-    xs: list of aesara tensors
+    point: a sample point
+    xs: list of Aesara tensors
     vars: list of variables to join
 
     Returns
@@ -270,16 +607,21 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
         tensor_type = joined.type
         inarray = tensor_type("inarray")
     else:
-        inarray = aesara.shared(joined.tag.test_value, "inarray")
+        if point is None:
+            raise ValueError("A point is required when `make_shared` is True")
+        joined_values = np.concatenate([point[var.name].ravel() for var in vars])
+        inarray = aesara.shared(joined_values, "inarray")
 
-    ordering = ArrayOrdering(vars)
-    inarray.tag.test_value = joined.tag.test_value
+    if aesara.config.compute_test_value != "off":
+        inarray.tag.test_value = joined.tag.test_value
 
-    get_var = {var.name: var for var in vars}
-    replace = {
-        get_var[var]: reshape_t(inarray[slc], shp).astype(dtyp)
-        for var, slc, shp, dtyp in ordering.vmap
-    }
+    replace = {}
+    last_idx = 0
+    for var in vars:
+        shape = point[var.name].shape
+        arr_len = np.prod(shape, dtype=int)
+        replace[var] = reshape_t(inarray[last_idx : last_idx + arr_len], shape).astype(var.dtype)
+        last_idx += arr_len
 
     replace.update(shared)
 
@@ -340,6 +682,8 @@ class GeneratorOp(Op):
     __props__ = ("generator",)
 
     def __init__(self, gen, default=None):
+        from pymc3.data import GeneratorAdapter
+
         super().__init__()
         if not isinstance(gen, GeneratorAdapter):
             gen = GeneratorAdapter(gen)
@@ -362,6 +706,8 @@ class GeneratorOp(Op):
     __call__ = aesara.config.change_flags(compute_test_value="off")(Op.__call__)
 
     def set_gen(self, gen):
+        from pymc3.data import GeneratorAdapter
+
         if not isinstance(gen, GeneratorAdapter):
             gen = GeneratorAdapter(gen)
         if not gen.tensortype == self.generator.tensortype:
@@ -528,3 +874,16 @@ def take_along_axis(arr, indices, axis=0):
 
     # use the fancy index
     return arr[_make_along_axis_idx(arr_shape, indices, _axis)]
+
+
+def compile_rv_inplace(inputs, outputs, mode=None, **kwargs):
+    """Use ``aesara.function`` with the random_make_inplace optimization always enabled.
+
+    Using this function ensures that compiled functions containing random
+    variables will produce new samples on each call.
+    """
+    mode = get_mode(mode)
+    opt_qry = mode.provided_optimizer.including("random_make_inplace")
+    mode = Mode(linker=mode.linker, optimizer=opt_qry)
+    aesara_function = aesara.function(inputs, outputs, mode=mode, **kwargs)
+    return aesara_function

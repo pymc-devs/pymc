@@ -20,13 +20,7 @@ import numpy as np
 from pymc3.aesaraf import floatX
 from pymc3.distributions import transforms
 from pymc3.distributions.dist_math import bound
-from pymc3.distributions.distribution import (
-    Continuous,
-    Discrete,
-    Distribution,
-    draw_values,
-    generate_samples,
-)
+from pymc3.distributions.distribution import Continuous, Discrete, Distribution
 
 __all__ = ["Bound"]
 
@@ -48,7 +42,7 @@ class _Bounded(Distribution):
         super().__init__(
             shape=self._wrapped.shape,
             dtype=self._wrapped.dtype,
-            testval=self._wrapped.testval,
+            initval=self._wrapped.initval,
             defaults=defaults,
             transform=self._wrapped.transform,
         )
@@ -115,38 +109,39 @@ class _Bounded(Distribution):
         -------
         array
         """
-        if self.lower is None and self.upper is None:
-            return self._wrapped.random(point=point, size=size)
-        elif self.lower is not None and self.upper is not None:
-            lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
-            return generate_samples(
-                self._random,
-                lower,
-                upper,
-                dist_shape=self.shape,
-                size=size,
-                not_broadcast_kwargs={"point": point},
-            )
-        elif self.lower is not None:
-            lower = draw_values([self.lower], point=point, size=size)
-            return generate_samples(
-                self._random,
-                lower,
-                np.inf,
-                dist_shape=self.shape,
-                size=size,
-                not_broadcast_kwargs={"point": point},
-            )
-        else:
-            upper = draw_values([self.upper], point=point, size=size)
-            return generate_samples(
-                self._random,
-                -np.inf,
-                upper,
-                dist_shape=self.shape,
-                size=size,
-                not_broadcast_kwargs={"point": point},
-            )
+        # if self.lower is None and self.upper is None:
+        #     return self._wrapped.random(point=point, size=size)
+        # elif self.lower is not None and self.upper is not None:
+        #     lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
+        #     return generate_samples(
+        #         self._random,
+        #         lower,
+        #         upper,
+        #         dist_shape=self.shape,
+        #         size=size,
+        #         not_broadcast_kwargs={"point": point},
+        #     )
+        # elif self.lower is not None:
+        #     lower = draw_values([self.lower], point=point, size=size)
+        #     return generate_samples(
+        #         self._random,
+        #         lower,
+        #         np.inf,
+        #         dist_shape=self.shape,
+        #         size=size,
+        #         not_broadcast_kwargs={"point": point},
+        #     )
+        # else:
+        #     upper = draw_values([self.upper], point=point, size=size)
+        #     return generate_samples(
+        #         self._random,
+        #         -np.inf,
+        #         upper,
+        #         dist_shape=self.shape,
+        #         size=size,
+        #         not_broadcast_kwargs={"point": point},
+        #     )
+        pass
 
     def _distr_parameters_for_repr(self):
         return ["lower", "upper"]
@@ -257,15 +252,15 @@ class Bound:
 
         with pm.Model():
             NegativeNormal = pm.Bound(pm.Normal, upper=0.0)
-            par1 = NegativeNormal('par`', mu=0.0, sigma=1.0, testval=-0.5)
+            par1 = NegativeNormal('par`', mu=0.0, sigma=1.0, initval=-0.5)
             # you can use the Bound object multiple times to
             # create multiple bounded random variables
-            par1_1 = NegativeNormal('par1_1', mu=-1.0, sigma=1.0, testval=-1.5)
+            par1_1 = NegativeNormal('par1_1', mu=-1.0, sigma=1.0, initval=-1.5)
 
             # you can also define a Bound implicitly, while applying
             # it to a random variable
             par2 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)(
-                    'par2', mu=0.0, sigma=1.0, testval=1.0)
+                    'par2', mu=0.0, sigma=1.0, initval=1.0)
     """
 
     def __init__(self, distribution, lower=None, upper=None):

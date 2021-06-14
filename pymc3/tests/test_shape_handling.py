@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2021 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import numpy as np
 import pytest
 
@@ -23,10 +24,14 @@ from pymc3.distributions.shape_utils import (
     broadcast_dist_samples_shape,
     broadcast_dist_samples_to,
     broadcast_distribution_samples,
+    convert_dims,
+    convert_shape,
+    convert_size,
     get_broadcastable_dist_samples,
     shapes_broadcasting,
     to_tuple,
 )
+from pymc3.exceptions import ShapeWarning
 
 test_shapes = [
     (tuple(), (1,), (4,), (5, 4)),
@@ -211,6 +216,7 @@ class TestSamplesBroadcasting:
                 broadcast_dist_samples_to(to_shape, samples, size=size)
 
 
+@pytest.mark.xfail(reason="InverseGamma was not yet refactored")
 def test_sample_generate_values(fixture_model, fixture_sizes):
     model, RVs = fixture_model
     size = to_tuple(fixture_sizes)
@@ -218,3 +224,232 @@ def test_sample_generate_values(fixture_model, fixture_sizes):
         prior = pm.sample_prior_predictive(samples=fixture_sizes)
         for rv in RVs:
             assert prior[rv.name].shape == size + tuple(rv.distribution.shape)
+
+
+class TestShapeDimsSize:
+    @pytest.mark.parametrize("param_shape", [(), (3,)])
+    @pytest.mark.parametrize("batch_shape", [(), (3,)])
+    @pytest.mark.parametrize(
+        "parametrization",
+        [
+            "implicit",
+            "shape",
+            "shape...",
+            "dims",
+            "dims...",
+            "size",
+        ],
+    )
+    def test_param_and_batch_shape_combos(
+        self, param_shape: tuple, batch_shape: tuple, parametrization: str
+    ):
+        coords = {}
+        param_dims = []
+        batch_dims = []
+
+        # Create coordinates corresponding to the parameter shape
+        for d in param_shape:
+            dname = f"param_dim_{d}"
+            coords[dname] = [f"c_{i}" for i in range(d)]
+            param_dims.append(dname)
+        assert len(param_dims) == len(param_shape)
+        # Create coordinates corresponding to the batch shape
+        for d in batch_shape:
+            dname = f"batch_dim_{d}"
+            coords[dname] = [f"c_{i}" for i in range(d)]
+            batch_dims.append(dname)
+        assert len(batch_dims) == len(batch_shape)
+
+        with pm.Model(coords=coords) as pmodel:
+            mu = aesara.shared(np.random.normal(size=param_shape))
+
+            with pytest.warns(None):
+                if parametrization == "implicit":
+                    rv = pm.Normal("rv", mu=mu).shape == param_shape
+                else:
+                    expected_shape = batch_shape + param_shape
+                    if parametrization == "shape":
+                        rv = pm.Normal("rv", mu=mu, shape=batch_shape + param_shape)
+                        assert rv.eval().shape == expected_shape
+                    elif parametrization == "shape...":
+                        rv = pm.Normal("rv", mu=mu, shape=(*batch_shape, ...))
+                        assert rv.eval().shape == batch_shape + param_shape
+                    elif parametrization == "dims":
+                        rv = pm.Normal("rv", mu=mu, dims=batch_dims + param_dims)
+                        assert rv.eval().shape == expected_shape
+                    elif parametrization == "dims...":
+                        rv = pm.Normal("rv", mu=mu, dims=(*batch_dims, ...))
+                        n_size = len(batch_shape)
+                        n_implied = len(param_shape)
+                        ndim = n_size + n_implied
+                        assert len(pmodel.RV_dims["rv"]) == ndim, pmodel.RV_dims
+                        assert len(pmodel.RV_dims["rv"][:n_size]) == len(batch_dims)
+                        assert len(pmodel.RV_dims["rv"][n_size:]) == len(param_dims)
+                        if n_implied > 0:
+                            assert pmodel.RV_dims["rv"][-1] is None
+                    elif parametrization == "size":
+                        rv = pm.Normal("rv", mu=mu, size=batch_shape + param_shape)
+                        assert rv.eval().shape == expected_shape
+                    else:
+                        raise NotImplementedError("Invalid test case parametrization.")
+
+    def test_define_dims_on_the_fly(self):
+        with pm.Model() as pmodel:
+            agedata = aesara.shared(np.array([10, 20, 30]))
+
+            # Associate the "patient" dim with an implied dimension
+            age = pm.Normal("age", agedata, dims=("patient",))
+            assert "patient" in pmodel.dim_lengths
+            assert pmodel.dim_lengths["patient"].eval() == 3
+
+            # Use the dim to replicate a new RV
+            effect = pm.Normal("effect", 0, dims=("patient",))
+            assert effect.ndim == 1
+            assert effect.eval().shape == (3,)
+
+            # Now change the length of the implied dimension
+            agedata.set_value([1, 2, 3, 4])
+            # The change should propagate all the way through
+            assert effect.eval().shape == (4,)
+
+    @pytest.mark.xfail(reason="Simultaneous use of size and dims is not implemented")
+    def test_data_defined_size_dimension_can_register_dimname(self):
+        with pm.Model() as pmodel:
+            x = pm.Data("x", [[1, 2, 3, 4]], dims=("first", "second"))
+            assert "first" in pmodel.dim_lengths
+            assert "second" in pmodel.dim_lengths
+            # two dimensions are implied; a "third" dimension is created
+            y = pm.Normal("y", mu=x, size=2, dims=("third", "first", "second"))
+            assert "third" in pmodel.dim_lengths
+            assert y.eval().shape() == (2, 1, 4)
+
+    def test_can_resize_data_defined_size(self):
+        with pm.Model() as pmodel:
+            x = pm.Data("x", [[1, 2, 3, 4]], dims=("first", "second"))
+            y = pm.Normal("y", mu=0, dims=("first", "second"))
+            z = pm.Normal("z", mu=y, observed=np.ones((1, 4)))
+            assert x.eval().shape == (1, 4)
+            assert y.eval().shape == (1, 4)
+            assert z.eval().shape == (1, 4)
+            assert "first" in pmodel.dim_lengths
+            assert "second" in pmodel.dim_lengths
+            pmodel.set_data("x", [[1, 2], [3, 4], [5, 6]])
+            assert x.eval().shape == (3, 2)
+            assert y.eval().shape == (3, 2)
+            assert z.eval().shape == (3, 2)
+
+    @pytest.mark.xfail(reason="https://github.com/pymc-devs/aesara/issues/390")
+    def test_size32_doesnt_break_broadcasting():
+        size32 = at.constant([1, 10], dtype="int32")
+        rv = pm.Normal.dist(0, 1, size=size32)
+        assert rv.broadcastable == (True, False)
+
+    @pytest.mark.xfail(reason="https://github.com/pymc-devs/aesara/issues/390")
+    def test_observed_with_column_vector(self):
+        """This test is related to https://github.com/pymc-devs/aesara/issues/390 which breaks
+        broadcastability of column-vector RVs. This unexpected change in type can lead to
+        incompatibilities during graph rewriting for model.logp evaluation.
+        """
+        with pm.Model() as model:
+            # The `observed` is a broadcastable column vector
+            obs = at.as_tensor_variable(np.ones((3, 1), dtype=aesara.config.floatX))
+            assert obs.broadcastable == (False, True)
+
+            # Both shapes describe broadcastable volumn vectors
+            size64 = at.constant([3, 1], dtype="int64")
+            # But the second shape is upcasted from an int32 vector
+            cast64 = at.cast(at.constant([3, 1], dtype="int32"), dtype="int64")
+
+            pm.Normal("size64", mu=0, sd=1, size=size64, observed=obs)
+            pm.Normal("shape64", mu=0, sd=1, shape=size64, observed=obs)
+            model.logp()
+
+            pm.Normal("size_cast64", mu=0, sd=1, size=cast64, observed=obs)
+            pm.Normal("shape_cast64", mu=0, sd=1, shape=cast64, observed=obs)
+            model.logp()
+
+    def test_dist_api_works(self):
+        mu = aesara.shared(np.array([1, 2, 3]))
+        with pytest.raises(NotImplementedError, match="API is not supported"):
+            pm.Normal.dist(mu=mu, dims=("town",))
+        assert pm.Normal.dist(mu=mu, shape=(3,)).eval().shape == (3,)
+        assert pm.Normal.dist(mu=mu, shape=(5, 3)).eval().shape == (5, 3)
+        assert pm.Normal.dist(mu=mu, shape=(7, ...)).eval().shape == (7, 3)
+        assert pm.Normal.dist(mu=mu, size=(3,)).eval().shape == (3,)
+        assert pm.Normal.dist(mu=mu, size=(4, 3)).eval().shape == (4, 3)
+
+    def test_mvnormal_shape_size_difference(self):
+        # Parameters add one batch dimension (4), shape is what you'd expect.
+        # Under the hood the shape(4, 3) becomes size=(4,) and the RV is initially
+        # created as (4, 4, 3). The internal ndim-check then recreates it with size=None.
+        rv = pm.MvNormal.dist(mu=np.ones((4, 3)), cov=np.eye(3), shape=(4, 3))
+        assert rv.ndim == 2
+        assert tuple(rv.shape.eval()) == (4, 3)
+
+        # shape adds two dimensions (5, 4)
+        # Under the hood the shape=(5, 4, 3) becomes size=(5, 4).
+        # The RV is created as (5, 4, 3) right away.
+        rv = pm.MvNormal.dist(mu=[1, 2, 3], cov=np.eye(3), shape=(5, 4, 3))
+        assert rv.ndim == 3
+        assert tuple(rv.shape.eval()) == (5, 4, 3)
+
+        # parameters add 1 batch dimension (4), shape adds another (5)
+        # Under the hood the shape=(5, 4, 3) becomes size=(5, 4)
+        # The RV is initially created as (5, 4, 3, 4, 3) and then recreated and resized.
+        rv = pm.MvNormal.dist(mu=np.ones((4, 3)), cov=np.eye(3), shape=(5, 4, 3))
+        assert rv.ndim == 3
+        assert tuple(rv.shape.eval()) == (5, 4, 3)
+
+        rv = pm.MvNormal.dist(mu=np.ones((4, 3, 2)), cov=np.eye(2), shape=(6, 5, ...))
+        assert rv.ndim == 5
+        assert tuple(rv.shape.eval()) == (6, 5, 4, 3, 2)
+
+        with pytest.warns(None):
+            rv = pm.MvNormal.dist(mu=[1, 2, 3], cov=np.eye(3), size=(5, 4))
+            assert tuple(rv.shape.eval()) == (5, 4, 3)
+
+        # When using `size` the API behaves like Aesara/NumPy
+        with pytest.warns(
+            ShapeWarning,
+            match=r"You may have expected a \(2\+1\)-dimensional RV, but the resulting RV will be 5-dimensional",
+        ):
+            rv = pm.MvNormal.dist(mu=np.ones((5, 4, 3)), cov=np.eye(3), size=(5, 4))
+            assert tuple(rv.shape.eval()) == (5, 4, 5, 4, 3)
+
+    def test_convert_dims(self):
+        assert convert_dims(dims="town") == ("town",)
+        with pytest.raises(ValueError, match="must be a tuple, str or list"):
+            convert_dims(3)
+        with pytest.raises(ValueError, match="may only appear in the last position"):
+            convert_dims(dims=(..., "town"))
+
+    def test_convert_shape(self):
+        assert convert_shape(5) == (5,)
+        with pytest.raises(ValueError, match="tuple, TensorVariable, int or list"):
+            convert_shape(shape="notashape")
+        with pytest.raises(ValueError, match="may only appear in the last position"):
+            convert_shape(shape=(3, ..., 2))
+
+    def test_convert_size(self):
+        assert convert_size(7) == (7,)
+        with pytest.raises(ValueError, match="tuple, TensorVariable, int or list"):
+            convert_size(size="notasize")
+        with pytest.raises(ValueError, match="cannot contain"):
+            convert_size(size=(3, ...))
+
+    def test_lazy_flavors(self):
+        assert pm.Uniform.dist(2, [4, 5], size=[3, 2]).eval().shape == (3, 2)
+        assert pm.Uniform.dist(2, [4, 5], shape=[3, 2]).eval().shape == (3, 2)
+        with pm.Model(coords=dict(town=["Greifswald", "Madrid"])):
+            assert pm.Normal("n1", mu=[1, 2], dims="town").eval().shape == (2,)
+            assert pm.Normal("n2", mu=[1, 2], dims=["town"]).eval().shape == (2,)
+
+    def test_invalid_flavors(self):
+        with pytest.raises(ValueError, match="Passing both"):
+            pm.Normal.dist(0, 1, shape=(3,), size=(3,))
+
+        with pm.Model():
+            with pytest.raises(ValueError, match="Passing both"):
+                pm.Normal("n", shape=(2,), dims=("town",))
+            with pytest.raises(ValueError, match="Passing both"):
+                pm.Normal("n", dims=("town",), size=(2,))

@@ -21,6 +21,7 @@ from scipy import stats
 
 import pymc3 as pm
 
+from pymc3.backends.arviz import to_inference_data
 from pymc3.tests.helpers import SeededTest
 from pymc3.util import get_var_name
 
@@ -81,7 +82,7 @@ class NormalFixture(KnownMean, KnownVariance, KnownCDF):
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
-            a = pm.Normal("a", mu=2, sigma=np.sqrt(3), shape=10)
+            a = pm.Normal("a", mu=2, sigma=np.sqrt(3), size=10)
         return model
 
 
@@ -91,7 +92,7 @@ class BetaBinomialFixture(KnownCDF):
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
-            p = pm.Beta("p", [0.5, 0.5, 1.0], [0.5, 0.5, 1.0], shape=3)
+            p = pm.Beta("p", [0.5, 0.5, 1.0], [0.5, 0.5, 1.0], size=3)
             pm.Binomial("y", p=p, n=[4, 12, 9], observed=[1, 2, 9])
         return model
 
@@ -121,7 +122,7 @@ class LKJCholeskyCovFixture(KnownCDF):
     def make_model(cls):
         with pm.Model() as model:
             sd_mu = np.array([1, 2, 3, 4, 5])
-            sd_dist = pm.Lognormal.dist(mu=sd_mu, sigma=sd_mu / 10.0, shape=5)
+            sd_dist = pm.Lognormal.dist(mu=sd_mu, sigma=sd_mu / 10.0, size=5)
             chol_packed = pm.LKJCholeskyCov("chol_packed", eta=3, n=5, sd_dist=sd_dist)
             chol = pm.expand_packed_triangular(5, chol_packed, lower=True)
             cov = at.dot(chol, chol.T)
@@ -140,19 +141,30 @@ class BaseSampler(SeededTest):
         cls.model = cls.make_model()
         with cls.model:
             cls.step = cls.make_step()
-            cls.trace = pm.sample(cls.n_samples, tune=cls.tune, step=cls.step, cores=cls.chains)
+            cls.trace = pm.sample(
+                cls.n_samples,
+                tune=cls.tune,
+                step=cls.step,
+                cores=cls.chains,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
         cls.samples = {}
         for var in cls.model.unobserved_RVs:
             cls.samples[get_var_name(var)] = cls.trace.get_values(var, burn=cls.burn)
 
     def test_neff(self):
         if hasattr(self, "min_n_eff"):
-            n_eff = az.ess(self.trace[self.burn :])
+            with self.model:
+                idata = to_inference_data(self.trace[self.burn :])
+            n_eff = az.ess(idata)
             for var in n_eff:
                 npt.assert_array_less(self.min_n_eff, n_eff[var])
 
     def test_Rhat(self):
-        rhat = az.rhat(self.trace[self.burn :])
+        with self.model:
+            idata = to_inference_data(self.trace[self.burn :])
+        rhat = az.rhat(idata)
         for var in rhat:
             npt.assert_allclose(rhat[var], 1, rtol=0.01)
 

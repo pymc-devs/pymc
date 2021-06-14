@@ -229,7 +229,7 @@ def log1pexp(x):
 
     This function is numerically more stable than the naive approach.
     """
-    return at.nnet.softplus(x)
+    return at.softplus(x)
 
 
 def log1mexp(x):
@@ -241,10 +241,9 @@ def log1mexp(x):
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
 
     References
-        ----------
-        .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr
-            package"
+    ----------
+    .. [Machler2012] Martin Mächler (2012).
+       "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr package"
 
     """
     return at.switch(at.lt(x, 0.6931471805599453), at.log(-at.expm1(-x)), at.log1p(-at.exp(-x)))
@@ -319,7 +318,7 @@ def invprobit(x):
 def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
     r"""Convert a packed triangular matrix into a two dimensional array.
 
-    Triangular matrices can be stored with better space efficiancy by
+    Triangular matrices can be stored with better space efficiency by
     storing the non-zero values in a one-dimensional array. We number
     the elements by row like this (for lower or upper triangular matrices):
 
@@ -340,7 +339,7 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
         If true, return only the diagonal of the matrix.
     """
     if packed.ndim != 1:
-        raise ValueError("Packed triagular is not one dimensional.")
+        raise ValueError("Packed triangular is not one dimensional.")
     if not isinstance(n, int):
         raise TypeError("n must be an integer")
 

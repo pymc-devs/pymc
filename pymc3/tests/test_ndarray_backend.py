@@ -21,7 +21,7 @@ import pymc3 as pm
 from pymc3.backends import base, ndarray
 from pymc3.tests import backend_fixtures as bf
 
-STATS1 = [{"a": np.float64, "b": np.bool}]
+STATS1 = [{"a": np.float64, "b": bool}]
 
 STATS2 = [
     {"a": np.float64},
@@ -209,8 +209,8 @@ class TestSqueezeCat:
 
 class TestSaveLoad:
     @staticmethod
-    def model():
-        with pm.Model() as model:
+    def model(rng_seeder=None):
+        with pm.Model(rng_seeder=rng_seeder) as model:
             x = pm.Normal("x", 0, 1)
             y = pm.Normal("y", x, 1, observed=2)
             z = pm.Normal("z", x + y, 1)
@@ -219,7 +219,7 @@ class TestSaveLoad:
     @classmethod
     def setup_class(cls):
         with TestSaveLoad.model():
-            cls.trace = pm.sample()
+            cls.trace = pm.sample(return_inferencedata=False)
 
     def test_save_new_model(self, tmpdir_factory):
         directory = str(tmpdir_factory.mktemp("data"))
@@ -228,7 +228,7 @@ class TestSaveLoad:
         assert save_dir == directory
         with pm.Model() as model:
             w = pm.Normal("w", 0, 1)
-            new_trace = pm.sample()
+            new_trace = pm.sample(return_inferencedata=False)
 
         with pytest.raises(OSError):
             _ = pm.save_trace(new_trace, directory)
@@ -267,21 +267,16 @@ class TestSaveLoad:
 
         assert save_dir == directory
 
-        seed = 10
-        np.random.seed(seed)
-        with TestSaveLoad.model():
-            ppc = pm.sample_posterior_predictive(self.trace)
-            ppcf = pm.fast_sample_posterior_predictive(self.trace)
+        rng = np.random.RandomState(10)
 
-        seed = 10
-        np.random.seed(seed)
-        with TestSaveLoad.model():
+        with TestSaveLoad.model(rng_seeder=rng):
+            ppc = pm.sample_posterior_predictive(self.trace)
+
+        rng = np.random.RandomState(10)
+
+        with TestSaveLoad.model(rng_seeder=rng):
             trace2 = pm.load_trace(directory)
             ppc2 = pm.sample_posterior_predictive(trace2)
-            ppc2f = pm.sample_posterior_predictive(trace2)
 
         for key, value in ppc.items():
             assert (value == ppc2[key]).all()
-
-        for key, value in ppcf.items():
-            assert (value == ppc2f[key]).all()

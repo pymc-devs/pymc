@@ -27,7 +27,7 @@ class BaseBART(NoDistribution):
 
         self.X, self.Y, self.missing_data = self.preprocess_XY(X, Y)
 
-        super().__init__(shape=X.shape[0], dtype="float64", testval=0, *args, **kwargs)
+        super().__init__(shape=X.shape[0], dtype="float64", initval=0, *args, **kwargs)
 
         if self.X.ndim != 2:
             raise ValueError("The design matrix X must have two dimensions")

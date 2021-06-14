@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2021 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 # pylint: disable=wildcard-import
-__version__ = "3.11.1"
+__version__ = "4.0"
 
 import logging
 import multiprocessing as mp
@@ -26,6 +26,10 @@ if not logging.root.handlers:
     if len(_log.handlers) == 0:
         handler = logging.StreamHandler()
         _log.addHandler(handler)
+
+_log.info(
+    "You are running the v4 development version of PyMC3 which currently still lacks key features. You probably want to use the stable v3 instead which you can either install via conda or find on the v3 GitHub branch: https://github.com/pymc-devs/pymc3/tree/v3"
+)
 
 
 def __set_compiler_flags():
@@ -40,14 +44,18 @@ __set_compiler_flags()
 
 from pymc3 import gp, ode, sampling
 from pymc3.aesaraf import *
-from pymc3.backends import load_trace, save_trace
+from pymc3.backends import (
+    load_trace,
+    predictions_to_inference_data,
+    save_trace,
+    to_inference_data,
+)
 from pymc3.backends.tracetab import *
 from pymc3.blocking import *
 from pymc3.data import *
 from pymc3.distributions import *
 from pymc3.distributions import transforms
 from pymc3.exceptions import *
-from pymc3.glm import *
 from pymc3.math import (
     expand_packed_triangular,
     invlogit,

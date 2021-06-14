@@ -117,20 +117,15 @@ For example, the gamma distribution is positive-valued. If we define one for a m
     with pm.Model() as model:
         g = pm.Gamma('g', 1, 1)
 
-We notice a modified variable inside the model ``vars`` attribute, which holds the free variables in the model.
+We notice a modified variable inside the model ``value_vars`` attribute.  These variables represent the values of each random variable in the model's log-likelihood.
 
 ::
 
-    >>> model.vars
+    >>> model.value_vars
     [g_log__]
 
-As the name suggests, the variable ``g`` has been log-transformed, and this is the space over which sampling takes place.
+As the name suggests, the variable ``g`` has been log-transformed, and this is the space over which posterior sampling takes place.
 
-The original variable is simply treated as a deterministic variable, since the value of the transformed variable is simply back-transformed when a sample is drawn in order to recover the original variable. Hence, ``g`` resides in the ``model.deterministics`` list.
-
-::
-
-    >>> model.deterministics
-    [g]
+The value of the transformed variable is simply back-transformed when a sample is drawn in order to recover the original variable.
 
 By default, auto-transformed variables are ignored when summarizing and plotting model output.

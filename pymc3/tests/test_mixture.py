@@ -190,7 +190,7 @@ class TestMixture(SeededTest):
             else:
                 obs2 = NormalMixture("obs", w=ws, mu=mus, tau=taus, shape=nd, observed=observed)
 
-        testpoint = model0.test_point
+        testpoint = model0.initial_point
         testpoint["mus"] = test_mus
         testpoint["taus"] = test_taus
         assert_allclose(model0.logp(testpoint), model1.logp(testpoint))
@@ -252,7 +252,7 @@ class TestMixture(SeededTest):
         assert_allclose(complogp, complogp_st)
 
         # check logp of mixture
-        testpoint = model.test_point
+        testpoint = model.initial_point
         mixlogp_st = logsumexp(np.log(testpoint["w"]) + complogp_st, axis=-1, keepdims=False)
         assert_allclose(y.logp_elemwise(testpoint), mixlogp_st)
 
@@ -287,7 +287,7 @@ class TestMixture(SeededTest):
             mix_w = Dirichlet("mix_w", a=floatX(np.ones(2)), transform=None, shape=(2,))
             mix = Mixture("mix", w=mix_w, comp_dists=[g_mix, l_mix], observed=np.exp(self.norm_x))
 
-        test_point = model.test_point
+        test_point = model.initial_point
 
         def mixmixlogp(value, point):
             floatX = aesara.config.floatX
@@ -375,11 +375,11 @@ class TestMixture(SeededTest):
 
             pm.Mixture("x_obs", pi, comp_dist, observed=X)
         with model:
-            trace = pm.sample(30, tune=10, chains=1)
+            idata = pm.sample(30, tune=10, chains=1)
 
         n_samples = 20
         with model:
-            ppc = pm.sample_posterior_predictive(trace, n_samples)
+            ppc = pm.sample_posterior_predictive(idata, n_samples)
             prior = pm.sample_prior_predictive(samples=n_samples)
         assert ppc["x_obs"].shape == (n_samples,) + X.shape
         assert prior["x_obs"].shape == (n_samples,) + X.shape
@@ -474,7 +474,7 @@ class TestMixtureVsLatent(SeededTest):
             rtol = 1e-4
         else:
             rtol = 1e-7
-        test_point = model.test_point
+        test_point = model.initial_point
         test_point["latent_m"] = test_point["m"]
         mix_logp = mixture.logp(test_point)
         logps = []
@@ -528,12 +528,12 @@ class TestMixtureSameFamily(SeededTest):
         else:
             rtol = 1e-7
 
-        comp_logp = comp_dists.logp(model.test_point["mixture"].reshape(*batch_shape, 1, 3))
+        comp_logp = comp_dists.logp(model.initial_point["mixture"].reshape(*batch_shape, 1, 3))
         log_sum_exp = logsumexp(
             comp_logp.eval() + np.log(w)[..., None], axis=mixture_axis, keepdims=True
         ).sum()
         assert_allclose(
-            model.logp(model.test_point),
+            model.logp(model.initial_point),
             log_sum_exp,
             rtol,
         )
@@ -563,12 +563,12 @@ class TestMixtureSameFamily(SeededTest):
         else:
             rtol = 1e-7
 
-        comp_logp = comp_dists.logp(model.test_point["mixture"].reshape(1, 3))
+        comp_logp = comp_dists.logp(model.initial_point["mixture"].reshape(1, 3))
         log_sum_exp = logsumexp(
             comp_logp.eval() + np.log(w)[..., None], axis=0, keepdims=True
         ).sum()
         assert_allclose(
-            model.logp(model.test_point),
+            model.logp(model.initial_point),
             log_sum_exp,
             rtol,
         )

@@ -3,10 +3,11 @@ name: windows
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [main]
 
 jobs:
   pytest:
+    if: false
     strategy:
       matrix:
         os: [windows-latest]
