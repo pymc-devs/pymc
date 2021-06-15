@@ -1942,6 +1942,10 @@ class CARRV(RandomVariable):
 
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
+    def _infer_shape(self, size, dist_params, param_shapes=None):
+        shape = tuple(size) + tuple(dist_params[0].shape)
+        return shape
+
     @classmethod
     def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
         """
@@ -1950,9 +1954,10 @@ class CARRV(RandomVariable):
         Journal of the Royal Statistical Society Series B, Royal Statistical Society,
         vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
         """
-        D = scipy.sparse.diags(W.sum(axis=0))
         if not scipy.sparse.issparse(W):
             W = scipy.sparse.csr_matrix(W)
+        s = np.asarray(W.sum(axis=0))[0]
+        D = scipy.sparse.diags(s)
         tau = scipy.sparse.csr_matrix(tau)
         alpha = scipy.sparse.csr_matrix(alpha)
 
@@ -2049,13 +2054,15 @@ class CAR(Continuous):
         TensorVariable
         """
 
-        D = W.sum(axis=0)
         sparse = isinstance(W, aesara.sparse.SparseType)
 
-        Dinv_sqrt = at.diag(1 / at.sqrt(D))
         if sparse:
+            D = W.sum(axis=0)
+            Dinv_sqrt = at.diag(1 / at.sqrt(D))
             DWD = at.dot(aesara.sparse.dot(Dinv_sqrt, W), Dinv_sqrt)
         else:
+            D = W.sum(axis=0)
+            Dinv_sqrt = at.diag(1 / at.sqrt(D))
             DWD = at.dot(at.dot(Dinv_sqrt, W), Dinv_sqrt)
         lam = at.slinalg.eigvalsh(DWD, at.eye(DWD.shape[0]))
 

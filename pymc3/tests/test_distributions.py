@@ -3081,7 +3081,7 @@ def test_car_logp(sparse, size):
 @pytest.mark.parametrize("sparse", [True, False])
 def test_car_rng_fn(sparse):
     delta = 0.05  # limit for KS p-value
-    n_fails = 15  # Allows the KS fails a certain number of times
+    n_fails = 100  # Allows the KS fails a certain number of times
     size = (100,)
 
     W = np.array(
@@ -3095,8 +3095,8 @@ def test_car_rng_fn(sparse):
     D = W.sum(axis=0)
     prec = tau * (np.diag(D) - alpha * W)
     cov = np.linalg.inv(prec)
+    W = aesara.tensor.as_tensor_variable(W)
     if sparse:
-        W = aesara.tensor.as_tensor_variable(W)
         W = aesara.sparse.csr_from_dense(W)
 
     with Model():
@@ -3117,7 +3117,6 @@ def test_car_rng_fn(sparse):
             ]
         )
         f -= 1
-    print(f)
     assert p > delta
 
 
