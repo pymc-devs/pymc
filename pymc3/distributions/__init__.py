@@ -92,9 +92,9 @@ from pymc3.distributions.multivariate import (
     LKJCorr,
     MatrixNormal,
     Multinomial,
-    OrderedMultinomial,
     MvNormal,
     MvStudentT,
+    OrderedMultinomial,
     Wishart,
     WishartBartlett,
 )
