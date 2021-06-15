@@ -53,6 +53,7 @@ __all__ = [
     "Dirichlet",
     "Multinomial",
     "DirichletMultinomial",
+    "OrderedMultinomial",
     "Wishart",
     "WishartBartlett",
     "LKJCorr",
@@ -685,6 +686,32 @@ class DirichletMultinomial(Discrete):
 
     def _distr_parameters_for_repr(self):
         return ["n", "a"]
+
+
+class OrderedMultinomial(Multinomial):
+    rv_op = multinomial
+
+    @classmethod
+    def dist(cls, eta, cutpoints, n, compute_p=True, *args, **kwargs):
+        eta = at.as_tensor_variable(floatX(eta))
+        cutpoints = at.as_tensor_variable(cutpoints)
+        n = at.as_tensor_variable(n)
+
+        pa = sigmoid(cutpoints - at.shape_padright(eta))
+        p_cum = at.concatenate(
+            [
+                at.zeros_like(at.shape_padright(pa[..., 0])),
+                pa,
+                at.ones_like(at.shape_padright(pa[..., 0])),
+            ],
+            axis=-1,
+        )
+        if compute_p:
+            p = pm.Deterministic("complete_p", p_cum[..., 1:] - p_cum[..., :-1])
+        else:
+            p = p_cum[..., 1:] - p_cum[..., :-1]
+
+        return super().dist(n, p, *args, **kwargs)
 
 
 def posdef(AA):
