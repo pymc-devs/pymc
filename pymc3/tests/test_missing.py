@@ -121,7 +121,12 @@ def test_interval_missing_observations():
 
         assert {"theta1", "theta2"} <= set(prior_trace.keys())
 
-        trace = sample(chains=1, draws=50, compute_convergence_checks=False)
+        trace = sample(
+            chains=1,
+            draws=50,
+            compute_convergence_checks=False,
+            return_inferencedata=False,
+        )
 
         assert np.all(0 < trace["theta1_missing"].mean(0))
         assert np.all(0 < trace["theta2_missing"].mean(0))

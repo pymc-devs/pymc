@@ -486,6 +486,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
         Examples
         -------
+
         .. code-block:: python
 
             with pm.Model():
@@ -502,6 +503,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
                 # draw four samples from a 2-dimensional Gaussian random walk with 10 timesteps,
                 # indexed with a (2, 2) array
                 sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=(2, 2))
+
         """
 
         # for each draw specified by the size input, we need to draw time_steps many

@@ -24,10 +24,12 @@ import aesara.tensor as at
 import numpy as np
 
 from aesara.assert_op import Assert
+from aesara.tensor import gammaln
 from aesara.tensor.random.basic import (
     BetaRV,
     WeibullRV,
     cauchy,
+    chisquare,
     exponential,
     gamma,
     gumbel,
@@ -56,9 +58,9 @@ from pymc3.distributions.dist_math import (
     betaln,
     bound,
     clipped_beta_rvs,
-    gammaln,
     i0e,
     incomplete_beta,
+    log_i0,
     log_normal,
     logpow,
     normal_lccdf,
@@ -66,7 +68,6 @@ from pymc3.distributions.dist_math import (
     zvalue,
 )
 from pymc3.distributions.distribution import Continuous
-from pymc3.distributions.special import log_i0
 from pymc3.math import log1mexp, log1pexp, logdiffexp, logit
 from pymc3.util import UNSET
 
@@ -1586,6 +1587,26 @@ class Laplace(Continuous):
         )
 
 
+class AsymmetricLaplaceRV(RandomVariable):
+    name = "asymmetriclaplace"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("AsymmetricLaplace", "\\operatorname{AsymmetricLaplace}")
+
+    @classmethod
+    def rng_fn(cls, rng, b, kappa, mu, size=None):
+        u = rng.uniform(size=size)
+        switch = kappa ** 2 / (1 + kappa ** 2)
+        non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
+        positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+        draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
+        return draws
+
+
+asymmetriclaplace = AsymmetricLaplaceRV()
+
+
 class AsymmetricLaplace(Continuous):
     r"""
     Asymmetric-Laplace log-likelihood.
@@ -1621,49 +1642,23 @@ class AsymmetricLaplace(Continuous):
     --------
     `Reference <https://en.wikipedia.org/wiki/Asymmetric_Laplace_distribution>`_
     """
+    rv_op = asymmetriclaplace
 
-    def __init__(self, b, kappa, mu=0, *args, **kwargs):
-        self.b = at.as_tensor_variable(floatX(b))
-        self.kappa = at.as_tensor_variable(floatX(kappa))
-        self.mu = mu = at.as_tensor_variable(floatX(mu))
+    @classmethod
+    def dist(cls, b, kappa, mu=0, *args, **kwargs):
+        b = at.as_tensor_variable(floatX(b))
+        kappa = at.as_tensor_variable(floatX(kappa))
+        mu = mu = at.as_tensor_variable(floatX(mu))
 
-        self.mean = self.mu - (self.kappa - 1 / self.kappa) / b
-        self.variance = (1 + self.kappa ** 4) / (self.kappa ** 2 * self.b ** 2)
+        # mean = mu - (kappa - 1 / kappa) / b
+        # variance = (1 + kappa ** 4) / (kappa ** 2 * b ** 2)
 
         assert_negative_support(kappa, "kappa", "AsymmetricLaplace")
         assert_negative_support(b, "b", "AsymmetricLaplace")
 
-        super().__init__(*args, **kwargs)
+        return super().dist([b, kappa, mu], *args, **kwargs)
 
-    def _random(self, b, kappa, mu, size=None):
-        u = np.random.uniform(size=size)
-        switch = kappa ** 2 / (1 + kappa ** 2)
-        non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
-        positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
-        draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
-        return draws
-
-    def random(self, point=None, size=None):
-        """
-        Draw random samples from this distribution, using the inverse CDF method.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size:int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # b, kappa, mu = draw_values([self.b, self.kappa, self.mu], point=point, size=size)
-        # return generate_samples(self._random, b, kappa, mu, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, b, kappa, mu):
         """
         Calculate log-probability of Asymmetric-Laplace distribution at specified value.
 
@@ -1677,12 +1672,12 @@ class AsymmetricLaplace(Continuous):
         -------
         TensorVariable
         """
-        value = value - self.mu
+        value = value - mu
         return bound(
-            at.log(self.b / (self.kappa + (self.kappa ** -1)))
-            + (-value * self.b * at.sgn(value) * (self.kappa ** at.sgn(value))),
-            0 < self.b,
-            0 < self.kappa,
+            at.log(b / (kappa + (kappa ** -1)))
+            + (-value * b * at.sgn(value) * (kappa ** at.sgn(value))),
+            0 < b,
+            0 < kappa,
         )
 
 
@@ -2562,7 +2557,7 @@ class InverseGamma(PositiveContinuous):
         )
 
 
-class ChiSquared(Gamma):
+class ChiSquared(PositiveContinuous):
     r"""
     :math:`\chi^2` log-likelihood.
 
@@ -2597,13 +2592,48 @@ class ChiSquared(Gamma):
 
     Parameters
     ----------
-    nu: int
+    nu: float
         Degrees of freedom (nu > 0).
     """
+    rv_op = chisquare
 
-    def __init__(self, nu, *args, **kwargs):
-        self.nu = nu = at.as_tensor_variable(floatX(nu))
-        super().__init__(alpha=nu / 2.0, beta=0.5, *args, **kwargs)
+    @classmethod
+    def dist(cls, nu, *args, **kwargs):
+        nu = at.as_tensor_variable(floatX(nu))
+        return super().dist([nu], *args, **kwargs)
+
+    def logp(value, nu):
+        """
+        Calculate log-probability of ChiSquared distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return Gamma.logp(value, nu / 2, 2)
+
+    def logcdf(value, nu):
+        """
+        Compute the log of the cumulative distribution function for ChiSquared distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or `TensorVariable`
+            Value(s) for which log CDF is calculated. If the log CDF for
+            multiple values are desired the values must be provided in a numpy
+            array or `TensorVariable`.
+        Returns
+        -------
+        TensorVariable
+        """
+        return Gamma.logcdf(value, nu / 2, 2)
 
 
 # TODO: Remove this once logpt for multiplication is working!
@@ -2723,6 +2753,21 @@ class Weibull(PositiveContinuous):
         )
 
 
+class HalfStudentTRV(RandomVariable):
+    name = "halfstudentt"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("HalfStudentT", "\\operatorname{HalfStudentT}")
+
+    @classmethod
+    def rng_fn(cls, rng, nu, sigma, size=None):
+        return np.abs(stats.t.rvs(nu, sigma, size=size, random_state=rng))
+
+
+halfstudentt = HalfStudentTRV()
+
+
 class HalfStudentT(PositiveContinuous):
     r"""
     Half Student's T log-likelihood
@@ -2780,46 +2825,29 @@ class HalfStudentT(PositiveContinuous):
         with pm.Model():
             x = pm.HalfStudentT('x', lam=4, nu=10)
     """
+    rv_op = halfstudentt
 
-    def __init__(self, nu=1, sigma=None, lam=None, sd=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @classmethod
+    def dist(cls, nu=1, sigma=None, lam=None, sd=None, *args, **kwargs):
+
         if sd is not None:
             sigma = sd
 
-        self.mode = at.as_tensor_variable(0)
+        nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(lam, sigma)
-        self.median = at.as_tensor_variable(sigma)
-        self.sigma = self.sd = at.as_tensor_variable(sigma)
-        self.lam = at.as_tensor_variable(lam)
-        self.nu = nu = at.as_tensor_variable(floatX(nu))
+        sigma = at.as_tensor_variable(sigma)
 
-        assert_negative_support(sigma, "sigma", "HalfStudentT")
-        assert_negative_support(lam, "lam", "HalfStudentT")
+        # mode = at.as_tensor_variable(0)
+        # median = at.as_tensor_variable(sigma)
+        # sd = at.as_tensor_variable(sigma)
+
         assert_negative_support(nu, "nu", "HalfStudentT")
+        assert_negative_support(lam, "lam", "HalfStudentT")
+        assert_negative_support(sigma, "sigma", "HalfStudentT")
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from HalfStudentT distribution.
+        return super().dist([nu, sigma], *args, **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # nu, sigma = draw_values([self.nu, self.sigma], point=point, size=size)
-        # return np.abs(
-        #     generate_samples(stats.t.rvs, nu, loc=0, scale=sigma, dist_shape=self.shape, size=size)
-        # )
-
-    def logp(self, value):
+    def logp(value, nu, sigma):
         """
         Calculate log-probability of HalfStudentT distribution at specified value.
 
@@ -2833,9 +2861,8 @@ class HalfStudentT(PositiveContinuous):
         -------
         TensorVariable
         """
-        nu = self.nu
-        sigma = self.sigma
-        lam = self.lam
+
+        lam, sigma = get_tau_sigma(None, sigma)
 
         return bound(
             at.log(2)
@@ -2851,6 +2878,21 @@ class HalfStudentT(PositiveContinuous):
 
     def _distr_parameters_for_repr(self):
         return ["nu", "lam"]
+
+
+class ExGaussianRV(RandomVariable):
+    name = "exgaussian"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("ExGaussian", "\\operatorname{ExGaussian}")
+
+    @classmethod
+    def rng_fn(cls, rng, mu, sigma, nu, size=None):
+        return rng.normal(mu, sigma, size=size) + rng.exponential(scale=nu, size=size)
+
+
+exgaussian = ExGaussianRV()
 
 
 class ExGaussian(Continuous):
@@ -2918,49 +2960,28 @@ class ExGaussian(Continuous):
         Tutorials in Quantitative Methods for Psychology,
         Vol. 4, No. 1, pp 35-45.
     """
+    rv_op = exgaussian
 
-    def __init__(self, mu=0.0, sigma=None, nu=None, sd=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @classmethod
+    def dist(cls, mu=0.0, sigma=None, nu=None, sd=None, *args, **kwargs):
 
         if sd is not None:
             sigma = sd
 
-        self.mu = mu = at.as_tensor_variable(floatX(mu))
-        self.sigma = self.sd = sigma = at.as_tensor_variable(floatX(sigma))
-        self.nu = nu = at.as_tensor_variable(floatX(nu))
-        self.mean = mu + nu
-        self.variance = (sigma ** 2) + (nu ** 2)
+        mu = at.as_tensor_variable(floatX(mu))
+        sigma = at.as_tensor_variable(floatX(sigma))
+        nu = at.as_tensor_variable(floatX(nu))
+
+        # sd = sigma
+        # mean = mu + nu
+        # variance = (sigma ** 2) + (nu ** 2)
 
         assert_negative_support(sigma, "sigma", "ExGaussian")
         assert_negative_support(nu, "nu", "ExGaussian")
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from ExGaussian distribution.
+        return super().dist([mu, sigma, nu], *args, **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu], point=point, size=size)
-        #
-        # def _random(mu, sigma, nu, size=None):
-        #     return np.random.normal(mu, sigma, size=size) + np.random.exponential(
-        #         scale=nu, size=size
-        #     )
-        #
-        # return generate_samples(_random, mu, sigma, nu, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, mu, sigma, nu):
         """
         Calculate log-probability of ExGaussian distribution at specified value.
 
@@ -2974,9 +2995,6 @@ class ExGaussian(Continuous):
         -------
         TensorVariable
         """
-        mu = self.mu
-        sigma = self.sigma
-        nu = self.nu
 
         # Alogithm is adapted from dexGAUS.R from gamlss
         return bound(
@@ -2994,7 +3012,7 @@ class ExGaussian(Continuous):
             0 < nu,
         )
 
-    def logcdf(self, value):
+    def logcdf(value, mu, sigma, nu):
         """
         Compute the log of the cumulative distribution function for ExGaussian distribution
         at the specified value.
@@ -3015,9 +3033,6 @@ class ExGaussian(Continuous):
         -------
         TensorVariable
         """
-        mu = self.mu
-        sigma = self.sigma
-        nu = self.nu
 
         # Alogithm is adapted from pexGAUS.R from gamlss
         return bound(
@@ -3786,6 +3801,33 @@ class LogitNormal(UnitContinuous):
         )
 
 
+def _interpolated_argcdf(p, pdf, cdf, x):
+    index = np.searchsorted(cdf, p) - 1
+    slope = (pdf[index + 1] - pdf[index]) / (x[index + 1] - x[index])
+
+    return x[index] + np.where(
+        np.abs(slope) <= 1e-8,
+        np.where(np.abs(pdf[index]) <= 1e-8, np.zeros(index.shape), (p - cdf[index]) / pdf[index]),
+        (-pdf[index] + np.sqrt(pdf[index] ** 2 + 2 * slope * (p - cdf[index]))) / slope,
+    )
+
+
+class InterpolatedRV(RandomVariable):
+    name = "interpolated"
+    ndim_supp = 0
+    ndims_params = [1, 1, 1]
+    dtype = "floatX"
+    _print_name = ("Interpolated", "\\operatorname{Interpolated}")
+
+    @classmethod
+    def rng_fn(cls, rng, x, pdf, cdf, size=None):
+        p = rng.uniform(size=size)
+        return _interpolated_argcdf(p, pdf, cdf, x)
+
+
+interpolated = InterpolatedRV()
+
+
 class Interpolated(BoundedContinuous):
     r"""
     Univariate probability distribution defined as a linear interpolation
@@ -3831,64 +3873,34 @@ class Interpolated(BoundedContinuous):
     Parameters
     ----------
     x_points: array-like
-        A monotonically growing list of values
+        A monotonically growing list of values. Must be non-symbolic
     pdf_points: array-like
-        Probability density function evaluated on lattice ``x_points``
+        Probability density function evaluated on lattice ``x_points``. Must
+        be non-symbolic
     """
 
-    def __init__(self, x_points, pdf_points, *args, **kwargs):
-        self.lower = lower = at.as_tensor_variable(x_points[0])
-        self.upper = upper = at.as_tensor_variable(x_points[-1])
+    rv_op = interpolated
 
-        super().__init__(lower=lower, upper=upper, *args, **kwargs)
+    @classmethod
+    def dist(cls, x_points, pdf_points, *args, **kwargs):
 
         interp = InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext="zeros")
+
         Z = interp.integral(x_points[0], x_points[-1])
+        cdf_points = interp.antiderivative()(x_points) / Z
+        pdf_points = pdf_points / Z
 
-        self.Z = at.as_tensor_variable(Z)
-        self.interp_op = SplineWrapper(interp)
-        self.x_points = x_points
-        self.pdf_points = pdf_points / Z
-        self.cdf_points = interp.antiderivative()(x_points) / Z
+        x_points = at.constant(floatX(x_points))
+        pdf_points = at.constant(floatX(pdf_points))
+        cdf_points = at.constant(floatX(cdf_points))
 
-        self.median = self._argcdf(0.5)
+        # lower = at.as_tensor_variable(x_points[0])
+        # upper = at.as_tensor_variable(x_points[-1])
+        # median = _interpolated_argcdf(0.5, pdf_points, cdf_points, x_points)
 
-    def _argcdf(self, p):
-        pdf = self.pdf_points
-        cdf = self.cdf_points
-        x = self.x_points
+        return super().dist([x_points, pdf_points, cdf_points], **kwargs)
 
-        index = np.searchsorted(cdf, p) - 1
-        slope = (pdf[index + 1] - pdf[index]) / (x[index + 1] - x[index])
-
-        return x[index] + np.where(
-            np.abs(slope) <= 1e-8,
-            np.where(
-                np.abs(pdf[index]) <= 1e-8, np.zeros(index.shape), (p - cdf[index]) / pdf[index]
-            ),
-            (-pdf[index] + np.sqrt(pdf[index] ** 2 + 2 * slope * (p - cdf[index]))) / slope,
-        )
-
-    def _random(self, size=None):
-        return self._argcdf(np.random.uniform(size=size))
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Interpolated distribution.
-
-        Parameters
-        ----------
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # return generate_samples(self._random, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, x_points, pdf_points, cdf_points):
         """
         Calculate log-probability of Interpolated distribution at specified value.
 
@@ -3902,7 +3914,16 @@ class Interpolated(BoundedContinuous):
         -------
         TensorVariable
         """
-        return at.log(self.interp_op(value) / self.Z)
+        # x_points and pdf_points are expected to be non-symbolic arrays wrapped
+        # within a tensor.constant. We use the .data method to retrieve them
+        interp = InterpolatedUnivariateSpline(x_points.data, pdf_points.data, k=1, ext="zeros")
+        Z = interp.integral(x_points.data[0], x_points.data[-1])
+
+        # interp and Z are converted to symbolic variables here
+        interp_op = SplineWrapper(interp)
+        Z = at.constant(Z)
+
+        return at.log(interp_op(value) / Z)
 
     def _distr_parameters_for_repr(self):
         return []

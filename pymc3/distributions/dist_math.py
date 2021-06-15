@@ -29,12 +29,12 @@ from aesara.graph.basic import Apply
 from aesara.graph.op import Op
 from aesara.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from aesara.scan import until
+from aesara.tensor import gammaln
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.slinalg import Cholesky, Solve
 
 from pymc3.aesaraf import floatX
 from pymc3.distributions.shape_utils import to_tuple
-from pymc3.distributions.special import gammaln
 
 f = floatX
 c = -0.5 * np.log(2.0 * np.pi)
@@ -634,3 +634,41 @@ def clipped_beta_rvs(a, b, size=None, random_state=None, dtype="float64"):
     out = scipy.stats.beta.rvs(a, b, size=size, random_state=random_state).astype(dtype)
     lower, upper = _beta_clip_values[dtype]
     return np.maximum(np.minimum(out, upper), lower)
+
+
+def multigammaln(a, p):
+    """Multivariate Log Gamma
+
+    Parameters
+    ----------
+    a: tensor like
+    p: int
+       degrees of freedom. p > 0
+    """
+    i = at.arange(1, p + 1)
+    return p * (p - 1) * at.log(np.pi) / 4.0 + at.sum(gammaln(a + (1.0 - i) / 2.0), axis=0)
+
+
+def log_i0(x):
+    """
+    Calculates the logarithm of the 0 order modified Bessel function of the first kind""
+    """
+    return at.switch(
+        at.lt(x, 5),
+        at.log1p(
+            x ** 2.0 / 4.0
+            + x ** 4.0 / 64.0
+            + x ** 6.0 / 2304.0
+            + x ** 8.0 / 147456.0
+            + x ** 10.0 / 14745600.0
+            + x ** 12.0 / 2123366400.0
+        ),
+        x
+        - 0.5 * at.log(2.0 * np.pi * x)
+        + at.log1p(
+            1.0 / (8.0 * x)
+            + 9.0 / (128.0 * x ** 2.0)
+            + 225.0 / (3072.0 * x ** 3.0)
+            + 11025.0 / (98304.0 * x ** 4.0)
+        ),
+    )
