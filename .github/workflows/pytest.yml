@@ -13,32 +13,25 @@ jobs:
         floatx: [float32, float64]
         test-subset:
         # Tests are split into multiple jobs to accelerate the CI.
-        # The first job (starting in the next block) shouldn't run any tests, but
-        # just ignores tests because that don't work at all, or run in other jobs.'
+        #
+        # How this works:
+        # 1st block: Only passes --ignore parameters to pytest.
+        # → pytest will run all test_*.py files that are NOT ignored.
+        # Other blocks: Only pass paths to test files.
+        # → pytest will run only these files
+        #
         # Any test that was not ignored runs in the first job.
-        # A pre-commit hook (scripts/check_all_tests_are_covered.py) enforces that
-        # test run just once.
-
-        # Because YAML doesn't allow comments in the blocks below, here they are..
-        # 1st block: These tests are temporarily disabled, because they are _very_ broken
-        # 2nd block: The JAX tests run through their own workflow: jaxtests.yml
-        # 3nd & 4rd: These tests are covered by other matrix jobs
-        # 5th block: These tests PASS without a single XFAIL
-        # 6th block: These have some XFAILs
+        # A pre-commit hook (scripts/check_all_tests_are_covered.py)
+        # enforces that test run just once.
           - |
             --ignore=pymc3/tests/test_distributions_timeseries.py
-            --ignore=pymc3/tests/test_missing.py
             --ignore=pymc3/tests/test_mixture.py
             --ignore=pymc3/tests/test_model_graph.py
             --ignore=pymc3/tests/test_modelcontext.py
             --ignore=pymc3/tests/test_parallel_sampling.py
             --ignore=pymc3/tests/test_profile.py
-            --ignore=pymc3/tests/test_random.py
-            --ignore=pymc3/tests/test_shared.py
             --ignore=pymc3/tests/test_smc.py
-            --ignore=pymc3/tests/test_starting.py
             --ignore=pymc3/tests/test_step.py
-            --ignore=pymc3/tests/test_tracetab.py
             --ignore=pymc3/tests/test_tuning.py
             --ignore=pymc3/tests/test_types.py
             --ignore=pymc3/tests/test_variational_inference.py
