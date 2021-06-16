@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import aesara.tensor as at
 import numpy as np
 import pytest
@@ -96,6 +97,14 @@ class TestSMC(SeededTest):
                 "b_log__": np.abs(np.random.normal(0, 10, size=500)),
             }
             trace = pm.sample_smc(500, start=start)
+
+    def test_slowdown_warning(self):
+        with aesara.config.change_flags(floatX="float32"):
+            with pytest.warns(UserWarning, match="SMC sampling may run slower due to"):
+                with pm.Model() as model:
+                    a = pm.Poisson("a", 5)
+                    y = pm.Normal("y", a, 5, observed=[1, 2, 3, 4])
+                    trace = pm.sample_smc()
 
 
 @pytest.mark.xfail(reason="SMC-ABC not refactored yet")
