@@ -13,11 +13,13 @@ jobs:
         floatx: [float32, float64]
         test-subset:
         # Tests are split into multiple jobs to accelerate the CI.
+        # Different jobs should be organized to take approximately the same
+        # time to complete (and not be prohibitely slow)
         #
         # How this works:
         # 1st block: Only passes --ignore parameters to pytest.
         # → pytest will run all test_*.py files that are NOT ignored.
-        # Other blocks: Only pass paths to test files.
+        # Subsequent blocks: Only pass paths to test files.
         # → pytest will run only these files
         #
         # Any test that was not ignored runs in the first job.
@@ -30,7 +32,6 @@ jobs:
             --ignore=pymc3/tests/test_modelcontext.py
             --ignore=pymc3/tests/test_parallel_sampling.py
             --ignore=pymc3/tests/test_profile.py
-            --ignore=pymc3/tests/test_smc.py
             --ignore=pymc3/tests/test_step.py
             --ignore=pymc3/tests/test_tuning.py
             --ignore=pymc3/tests/test_types.py
