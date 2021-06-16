@@ -73,9 +73,6 @@ def test_joint_logprob_basic():
     assert a_value_var in res_ancestors
 
 
-# @pytest.mark.xfail(
-#     reason="This transform currently introduces duplicate log-probability terms"
-# )
 @pytest.mark.parametrize(
     "indices, size",
     [

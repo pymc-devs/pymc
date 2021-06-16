@@ -1,25 +1,27 @@
 import warnings
 from collections import deque
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from aesara import config
 from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import compute_test_value
-from aesara.graph.opt_utils import optimize_graph
+from aesara.graph.opt import GlobalOptimizer, LocalOptimizer
+from aesara.graph.optdb import OptimizationQuery
 from aesara.tensor.basic_opt import ShapeFeature
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 
 from aeppl.logprob import _logprob
-from aeppl.opt import PreserveRVMappings, RVSinker
+from aeppl.opt import PreserveRVMappings, logprob_canonicalize
 from aeppl.utils import rvs_to_value_vars
 
 
 def joint_logprob(
     var: TensorVariable,
     rv_values: Optional[Dict[TensorVariable, TensorVariable]] = None,
-    warn_missing_rvs=True,
+    warn_missing_rvs: bool = True,
+    extra_rewrites: Optional[Union[GlobalOptimizer, LocalOptimizer]] = None,
     **kwargs,
 ) -> TensorVariable:
     r"""Create a graph representing the joint log-probability/measure of a graph.
@@ -70,6 +72,9 @@ def joint_logprob(
         When ``True``, issue a warning when a `RandomVariable` is found in
         the graph and doesn't have a corresponding value variable specified in
         `rv_values`.
+    extra_rewrites
+        Extra rewrites to be applied (e.g. reparameterizations, transforms,
+        etc.)
 
     """
     # Since we're going to clone the entire graph, we need to keep a map from
@@ -81,7 +86,7 @@ def joint_logprob(
 
     # We add `ShapeFeature` because it will get rid of references to the old
     # `RandomVariable`s that have been lifted; otherwise, it will be difficult
-    # to give good warnings when an unaccounted for `RandomVairiable` is
+    # to give good warnings when an unaccounted for `RandomVariable` is
     # encountered
     fgraph = FunctionGraph(
         outputs=[var],
@@ -101,7 +106,10 @@ def joint_logprob(
 
     fgraph.attach_feature(rv_remapper)
 
-    _ = optimize_graph(fgraph, custom_opt=RVSinker())
+    logprob_canonicalize.query(OptimizationQuery(include=["basic"])).optimize(fgraph)
+
+    if extra_rewrites is not None:
+        extra_rewrites.optimize(fgraph)
 
     # This is the updated random-to-value-vars map with the
     # lifted variables

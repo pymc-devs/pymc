@@ -51,8 +51,6 @@ def _logprob(
     of ``RandomVariable``.  If you want to implement new density/mass graphs
     for a ``RandomVariable``, register a new function on this dispatcher.
 
-    The default returns a graph producing only zeros.
-
     """
     raise NotImplementedError()
 

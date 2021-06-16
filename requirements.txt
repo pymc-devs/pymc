@@ -10,3 +10,4 @@ black==20.8b1; platform.python_implementation!='PyPy'
 diff-cover
 autoflake
 pre-commit
+numdifftools

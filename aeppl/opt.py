@@ -2,9 +2,11 @@ from typing import Dict
 
 import aesara
 import aesara.tensor as at
+from aesara.compile.mode import optdb
 from aesara.graph.features import Feature
 from aesara.graph.op import compute_test_value
 from aesara.graph.opt import EquilibriumOptimizer, local_optimizer
+from aesara.graph.optdb import SequenceDB
 from aesara.tensor.extra_ops import BroadcastTo
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.opt import (
@@ -174,3 +176,10 @@ def naive_bcast_rv_lift(fgraph, node):
         compute_test_value(bcasted_node)
 
     return [bcasted_node.outputs[1]]
+
+
+logprob_canonicalize = SequenceDB()
+
+
+logprob_canonicalize.register("canonicalize", optdb["canonicalize"], -10, "basic")
+logprob_canonicalize.register("rvsinker", RVSinker(), -1, "basic")
