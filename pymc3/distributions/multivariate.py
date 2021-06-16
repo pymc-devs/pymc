@@ -45,7 +45,7 @@ from pymc3.distributions import transforms
 from pymc3.distributions.continuous import ChiSquared, Normal, assert_negative_support
 from pymc3.distributions.dist_math import bound, factln, logpow, multigammaln
 from pymc3.distributions.distribution import Continuous, Discrete
-from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
+from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker, sigmoid
 
 __all__ = [
     "MvNormal",
@@ -695,7 +695,7 @@ class OrderedMultinomial(Multinomial):
     def dist(cls, eta, cutpoints, n, compute_p=True, *args, **kwargs):
         eta = at.as_tensor_variable(floatX(eta))
         cutpoints = at.as_tensor_variable(cutpoints)
-        n = at.as_tensor_variable(n)
+        n = at.as_tensor_variable(intX(n))
 
         pa = sigmoid(cutpoints - at.shape_padright(eta))
         p_cum = at.concatenate(
@@ -706,7 +706,7 @@ class OrderedMultinomial(Multinomial):
             ],
             axis=-1,
         )
-        if compute_p:
+        if compute_p and pm.modelcontext(None):
             p = pm.Deterministic("complete_p", p_cum[..., 1:] - p_cum[..., :-1])
         else:
             p = p_cum[..., 1:] - p_cum[..., :-1]
