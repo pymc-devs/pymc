@@ -27,6 +27,8 @@ from aesara.tensor.random.basic import (
 )
 from scipy import stats
 
+import pymc3 as pm
+
 from pymc3.aesaraf import floatX, intX, take_along_axis
 from pymc3.distributions.dist_math import (
     betaln,
@@ -59,6 +61,7 @@ __all__ = [
     "HyperGeometric",
     "Categorical",
     "OrderedLogistic",
+    "OrderedProbit",
 ]
 
 
@@ -1643,8 +1646,8 @@ class OrderedLogistic(Categorical):
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
-    mapped to which of the K observed dependent variables.  The number
-    of cutpoints is K - 1.  It is recommended that the cutpoints are
+    mapped to which of the K observed dependent variables. The number
+    of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
 
     .. math::
@@ -1667,8 +1670,12 @@ class OrderedLogistic(Categorical):
         The predictor.
     c: array
         The length K - 1 array of cutpoints which break :math:`\eta` into
-        ranges.  Do not explicitly set the first and last elements of
+        ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
+    compute_p: boolean, default True
+        Whether to compute and store in the trace the inferred probabilities of each categories,
+        based on the cutpoints values. Defaults to True.
+        Might be useful to disable it if memory usage is of interest.
 
     Examples
     --------
@@ -1691,7 +1698,7 @@ class OrderedLogistic(Categorical):
             cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedLogistic("y", cutpoints=cutpoints, eta=x, observed=y)
-            idata = pm.sample(1000)
+            idata = pm.sample()
 
         # Plot the results
         plt.hist(cluster1, 30, alpha=0.5);
@@ -1706,7 +1713,7 @@ class OrderedLogistic(Categorical):
     rv_op = categorical
 
     @classmethod
-    def dist(cls, eta, cutpoints, *args, **kwargs):
+    def dist(cls, eta, cutpoints, compute_p=True, *args, **kwargs):
         eta = at.as_tensor_variable(floatX(eta))
         cutpoints = at.as_tensor_variable(cutpoints)
 
@@ -1719,7 +1726,10 @@ class OrderedLogistic(Categorical):
             ],
             axis=-1,
         )
-        p = p_cum[..., 1:] - p_cum[..., :-1]
+        if compute_p and pm.modelcontext(None):
+            p = pm.Deterministic("complete_p", p_cum[..., 1:] - p_cum[..., :-1])
+        else:
+            p = p_cum[..., 1:] - p_cum[..., :-1]
 
         return super().dist(p, **kwargs)
 
@@ -1731,8 +1741,8 @@ class OrderedProbit(Categorical):
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
-    mapped to which of the K observed dependent variables.  The number
-    of cutpoints is K - 1.  It is recommended that the cutpoints are
+    mapped to which of the K observed dependent variables. The number
+    of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
 
     In order to stabilize the computation, log-likelihood is computed
@@ -1758,9 +1768,12 @@ class OrderedProbit(Categorical):
         The predictor.
     c : array
         The length K - 1 array of cutpoints which break :math:`\eta` into
-        ranges.  Do not explicitly set the first and last elements of
+        ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
-
+    compute_p: boolean, default True
+        Whether to compute and store in the trace the inferred probabilities of each categories,
+        based on the cutpoints' values. Defaults to True.
+        Might be useful to disable it if memory usage is of interest.
     sigma: float
          The standard deviation of probit function.
     Example
@@ -1783,7 +1796,7 @@ class OrderedProbit(Categorical):
             cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedProbit("y", cutpoints=cutpoints, eta=x, observed=y)
-            idata = pm.sample(1000)
+            idata = pm.sample()
 
         # Plot the results
         plt.hist(cluster1, 30, alpha=0.5);
@@ -1798,7 +1811,7 @@ class OrderedProbit(Categorical):
     rv_op = categorical
 
     @classmethod
-    def dist(cls, eta, cutpoints, *args, **kwargs):
+    def dist(cls, eta, cutpoints, compute_p=True, *args, **kwargs):
         eta = at.as_tensor_variable(floatX(eta))
         cutpoints = at.as_tensor_variable(cutpoints)
 
@@ -1812,6 +1825,9 @@ class OrderedProbit(Categorical):
             axis=-1,
         )
         _log_p = at.as_tensor_variable(floatX(_log_p))
-        p = at.exp(_log_p)
+        if compute_p and pm.modelcontext(None):
+            p = pm.Deterministic("complete_p", at.exp(_log_p))
+        else:
+            p = at.exp(_log_p)
 
         return super().dist(p, **kwargs)
