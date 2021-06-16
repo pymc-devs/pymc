@@ -1668,13 +1668,13 @@ class OrderedLogistic(Categorical):
     ----------
     eta: float
         The predictor.
-    c: array
+    cutpoints: array
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
     compute_p: boolean, default True
         Whether to compute and store in the trace the inferred probabilities of each categories,
-        based on the cutpoints values. Defaults to True.
+        based on the cutpoints' values. Defaults to True.
         Might be useful to disable it if memory usage is of interest.
 
     Examples
@@ -1707,7 +1707,6 @@ class OrderedLogistic(Categorical):
         posterior = idata.posterior.stack(sample=("chain", "draw"))
         plt.hist(posterior["cutpoints"][0], 80, alpha=0.2, color='k');
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
-
     """
 
     rv_op = categorical
@@ -1764,9 +1763,9 @@ class OrderedProbit(Categorical):
 
     Parameters
     ----------
-    eta : float
+    eta: float
         The predictor.
-    c : array
+    cutpoints: array
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
@@ -1805,7 +1804,6 @@ class OrderedProbit(Categorical):
         posterior = idata.posterior.stack(sample=("chain", "draw"))
         plt.hist(posterior["cutpoints"][0], 80, alpha=0.2, color='k');
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
-
     """
 
     rv_op = categorical
