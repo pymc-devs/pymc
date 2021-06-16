@@ -2054,10 +2054,14 @@ class CAR(Continuous):
         TensorVariable
         """
 
-        sparse = isinstance(W, aesara.sparse.SparseType)
+        sparse = isinstance(W, aesara.sparse.SparseVariable)
 
         if sparse:
-            D = W.sum(axis=0)
+            D = [
+                aesara.sparse.basic.csm_data(W[i : i + 1, :]).eval().sum()
+                for i in range(int(W.shape[0].eval()))
+            ]
+            D = at.as_tensor_variable(D)
             Dinv_sqrt = at.diag(1 / at.sqrt(D))
             DWD = at.dot(aesara.sparse.dot(Dinv_sqrt, W), Dinv_sqrt)
         else:

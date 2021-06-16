@@ -3062,8 +3062,8 @@ def test_car_logp(sparse, size):
     cov = np.linalg.inv(prec)
     scipy_logp = scipy.stats.multivariate_normal.logpdf(xs, mu, cov)
 
+    W = aesara.tensor.as_tensor_variable(W)
     if sparse:
-        W = aesara.tensor.as_tensor_variable(W)
         W = aesara.sparse.csr_from_dense(W)
 
     car_dist = CAR.dist(mu, W, alpha, tau, size=size)
@@ -3099,10 +3099,10 @@ def test_car_rng_fn(sparse):
     if sparse:
         W = aesara.sparse.csr_from_dense(W)
 
-    with Model():
+    with Model(rng_seeder=1):
         car = pm.CAR("car", mu, W, alpha, tau, size=size)
         mn = pm.MvNormal("mn", mu, cov, size=size)
-        check = pm.sample_prior_predictive(n_fails, random_seed=1)
+        check = pm.sample_prior_predictive(n_fails)
 
     p, f = delta, n_fails
     while p <= delta and f > 0:
