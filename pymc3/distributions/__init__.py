@@ -100,7 +100,7 @@ from pymc3.distributions.multivariate import (
     Wishart,
     WishartBartlett,
 )
-from pymc3.distributions.simulator import Simulator
+from pymc3.distributions.simulator import Simulator, SimulatorRV
 from pymc3.distributions.timeseries import (
     AR,
     AR1,
@@ -188,6 +188,7 @@ __all__ = [
     "Rice",
     "Moyal",
     "Simulator",
+    "SimulatorRV",
     "BART",
     "CAR",
     "PolyaGamma",

@@ -350,15 +350,26 @@ def rvs_to_value_vars(
 
     """
 
+    # Avoid circular dependency
+    from pymc3.distributions.simulator import SimulatorRV
+
     def transform_replacements(var, replacements):
         rv_var, rv_value_var = extract_rv_and_value_vars(var)
 
         if rv_value_var is None:
-            warnings.warn(
-                f"No value variable found for {rv_var}; "
-                "the random variable will not be replaced."
-            )
-            return []
+            # If RandomVariable does not have a value_var and corresponds to
+            # a SimulatorRV, we allow further replacements in upstream graph
+            if isinstance(rv_var.owner.op, SimulatorRV):
+                # First 3 inputs are just rng, dtype, and size, which don't
+                # need to be replaced.
+                return var.owner.inputs[3:]
+
+            else:
+                warnings.warn(
+                    f"No value variable found for {rv_var}; "
+                    "the random variable will not be replaced."
+                )
+                return []
 
         transform = getattr(rv_value_var.tag, "transform", None)
 

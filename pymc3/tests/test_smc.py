@@ -19,6 +19,9 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 
+from aesara.graph.basic import ancestors
+from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.sort import SortOp
 from arviz.data.inference_data import InferenceData
 
 import pymc3 as pm
@@ -182,82 +185,278 @@ class TestSMC(SeededTest):
                 pm.sample_smc(draws=10, chains=1, parallel=False)
 
 
-@pytest.mark.xfail(reason="SMC-ABC not refactored yet")
-class TestSMCABC(SeededTest):
+def normal_sim(rng, a, b, size):
+    return rng.normal(a, b, size=size)
+
+
+class NormalSimBaseRV(pm.SimulatorRV):
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    fn = normal_sim
+
+
+class NormalSimRV1(NormalSimBaseRV):
+    distance = "gaussian"
+    sum_stat = "sort"
+
+
+class NormalSimRV2(NormalSimBaseRV):
+    distance = "laplace"
+    sum_stat = "mean"
+    epsilon = 0.1
+
+
+class NormalSimRV3(NormalSimBaseRV):
+    distance = "gaussian"
+    sum_stat = "mean"
+    epsilon = 0.5
+
+
+def abs_diff(eps, obs_data, sim_data):
+    return np.mean(np.abs((obs_data - sim_data) / eps))
+
+
+def quantiles(x):
+    return np.quantile(x, [0.25, 0.5, 0.75])
+
+
+class NormalSimCustomRV1(NormalSimBaseRV):
+    distance = abs_diff
+    sum_stat = quantiles
+
+
+class NormalSimCustomRV2(NormalSimBaseRV):
+    distance = abs_diff
+    sum_stat = "mean"
+
+
+class TestSimulator(SeededTest):
+    """
+    Tests for pm.Simulator. They are included in this file because Simulator was
+    designed primarily to be used with SMC sampling.
+    """
+
+    @staticmethod
+    def count_rvs(end_node):
+        return len(
+            [
+                node
+                for node in ancestors([end_node])
+                if node.owner is not None and isinstance(node.owner.op, RandomVariable)
+            ]
+        )
+
     def setup_class(self):
         super().setup_class()
         self.data = np.random.normal(loc=0, scale=1, size=1000)
 
-        def normal_sim(a, b):
-            return np.random.normal(a, b, 1000)
-
         with pm.Model() as self.SMABC_test:
             a = pm.Normal("a", mu=0, sigma=1)
             b = pm.HalfNormal("b", sigma=1)
-            s = pm.Simulator(
-                "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
-            )
+            s = pm.Simulator("s", NormalSimRV1(), a, b, observed=self.data)
             self.s = s
 
-        def quantiles(x):
-            return np.quantile(x, [0.25, 0.5, 0.75])
-
-        def abs_diff(eps, obs_data, sim_data):
-            return np.mean(np.abs((obs_data - sim_data) / eps))
-
-        with pm.Model() as self.SMABC_test2:
-            a = pm.Normal("a", mu=0, sigma=1)
-            b = pm.HalfNormal("b", sigma=1)
-            s = pm.Simulator(
-                "s",
-                normal_sim,
-                params=(a, b),
-                distance=abs_diff,
-                sum_stat=quantiles,
-                epsilon=1,
-                observed=self.data,
-            )
-
         with pm.Model() as self.SMABC_potential:
-            a = pm.Normal("a", mu=0, sigma=1)
+            a = pm.Normal("a", mu=0, sigma=1, initval=0.5)
             b = pm.HalfNormal("b", sigma=1)
             c = pm.Potential("c", pm.math.switch(a > 0, 0, -np.inf))
-            s = pm.Simulator(
-                "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
-            )
+            s = pm.Simulator("s", NormalSimRV1(), a, b, observed=self.data)
 
     def test_one_gaussian(self):
-        with self.SMABC_test:
-            trace = pm.sample_smc(draws=1000, kernel="ABC")
+        assert self.count_rvs(self.SMABC_test.logpt) == 1
 
-        np.testing.assert_almost_equal(self.data.mean(), trace["a"].mean(), decimal=2)
-        np.testing.assert_almost_equal(self.data.std(), trace["b"].mean(), decimal=1)
-
-    def test_sim_data_ppc(self):
         with self.SMABC_test:
-            trace, sim_data = pm.sample_smc(draws=1000, kernel="ABC", chains=2, save_sim_data=True)
+            trace = pm.sample_smc(draws=1000, return_inferencedata=False)
             pr_p = pm.sample_prior_predictive(1000)
             po_p = pm.sample_posterior_predictive(trace, 1000)
 
-        assert sim_data["s"].shape == (2, 1000, 1000)
-        np.testing.assert_almost_equal(self.data.mean(), sim_data["s"].mean(), decimal=2)
-        np.testing.assert_almost_equal(self.data.std(), sim_data["s"].std(), decimal=1)
+        assert abs(self.data.mean() - trace["a"].mean()) < 0.05
+        assert abs(self.data.std() - trace["b"].mean()) < 0.05
+
         assert pr_p["s"].shape == (1000, 1000)
-        np.testing.assert_almost_equal(0, pr_p["s"].mean(), decimal=1)
-        np.testing.assert_almost_equal(1.4, pr_p["s"].std(), decimal=1)
+        assert abs(0 - pr_p["s"].mean()) < 0.10
+        assert abs(1.4 - pr_p["s"].std()) < 0.10
+
         assert po_p["s"].shape == (1000, 1000)
-        np.testing.assert_almost_equal(0, po_p["s"].mean(), decimal=2)
-        np.testing.assert_almost_equal(1, po_p["s"].std(), decimal=1)
+        assert abs(self.data.mean() - po_p["s"].mean()) < 0.10
+        assert abs(self.data.std() - po_p["s"].std()) < 0.10
 
-    def test_custom_dist_sum(self):
-        with self.SMABC_test2:
-            trace = pm.sample_smc(draws=1000, kernel="ABC")
+    def test_custom_dist_sum_stat(self):
+        with pm.Model() as m:
+            a = pm.Normal("a", mu=0, sigma=1)
+            b = pm.HalfNormal("b", sigma=1)
+            s = pm.Simulator("s", NormalSimCustomRV1(), a, b, observed=self.data)
 
-    def test_potential(self):
+        assert self.count_rvs(m.logpt) == 1
+
+        with m:
+            pm.sample_smc(draws=100, chains=2)
+
+    def test_custom_dist_sum_stat_scalar(self):
+        """
+        Test that automatically wrapped functions cope well with scalar inputs
+        """
+        scalar_data = 5
+
+        with pm.Model() as m:
+            s = pm.Simulator("s", NormalSimCustomRV1(), 0, 1, observed=scalar_data)
+        assert self.count_rvs(m.logpt) == 1
+
+        with pm.Model() as m:
+            s = pm.Simulator("s", NormalSimCustomRV2(), 0, 1, observed=scalar_data)
+        assert self.count_rvs(m.logpt) == 1
+
+    def test_model_with_potential(self):
+        assert self.count_rvs(self.SMABC_potential.logpt) == 1
+
         with self.SMABC_potential:
-            trace = pm.sample_smc(draws=1000, kernel="ABC")
+            trace = pm.sample_smc(draws=100, chains=1, return_inferencedata=False)
             assert np.all(trace["a"] >= 0)
 
+    def test_simulator_metropolis_mcmc(self):
+        with self.SMABC_test as m:
+            step = pm.Metropolis([m.rvs_to_values[m["a"]], m.rvs_to_values[m["b"]]])
+            trace = pm.sample(step=step, return_inferencedata=False)
+
+        assert abs(self.data.mean() - trace["a"].mean()) < 0.05
+        assert abs(self.data.std() - trace["b"].mean()) < 0.05
+
+    def test_multiple_simulators(self):
+        true_a = 2
+        true_b = -2
+
+        data1 = np.random.normal(true_a, 0.1, size=1000)
+        data2 = np.random.normal(true_b, 0.1, size=1000)
+
+        with pm.Model() as m:
+            a = pm.Normal("a", mu=0, sigma=3)
+            b = pm.Normal("b", mu=0, sigma=3)
+            sim1 = pm.Simulator("sim1", NormalSimRV1(), a, 0.1, observed=data1)
+            sim2 = pm.Simulator("sim2", NormalSimRV2(), b, 0.1, observed=data2)
+
+        assert self.count_rvs(m.logpt) == 2
+
+        # Check that the logps use the correct methods
+        a_val = m.rvs_to_values[a]
+        sim1_val = m.rvs_to_values[sim1]
+        logp_sim1 = pm.logp(sim1, sim1_val)
+        logp_sim1_fn = aesara.function([sim1_val, a_val], logp_sim1)
+
+        b_val = m.rvs_to_values[b]
+        sim2_val = m.rvs_to_values[sim2]
+        logp_sim2 = pm.logp(sim2, sim2_val)
+        logp_sim2_fn = aesara.function([sim2_val, b_val], logp_sim2)
+
+        assert any(
+            node for node in logp_sim1_fn.maker.fgraph.toposort() if isinstance(node.op, SortOp)
+        )
+
+        assert not any(
+            node for node in logp_sim2_fn.maker.fgraph.toposort() if isinstance(node.op, SortOp)
+        )
+
+        with m:
+            trace = pm.sample_smc(return_inferencedata=False)
+        assert abs(true_a - trace["a"].mean()) < 0.05
+        assert abs(true_b - trace["b"].mean()) < 0.05
+
+    def test_nested_simulators(self):
+        true_a = 2
+        data = np.random.normal(true_a, 0.1, size=1000)
+
+        with pm.Model() as m:
+            sim1 = pm.Simulator("sim1", NormalSimRV3(), 0, 4)
+            sim2 = pm.Simulator("sim2", NormalSimRV3(), sim1, 0.1, observed=data)
+
+        assert self.count_rvs(m.logpt) == 2
+
+        with m:
+            trace = pm.sample_smc(return_inferencedata=False)
+
+        assert (true_a - trace["sim1"].mean()) < 0.1
+
+    def test_simulator_rv_error_msg(self):
+        class RV(pm.SimulatorRV):
+            pass
+
+        msg = "SimulatorRV fn was not specified"
+        with pytest.raises(ValueError, match=msg):
+            RV()
+
+        class RV(pm.SimulatorRV):
+            fn = lambda: None
+
+        msg = "SimulatorRV must specify `ndim_supp`"
+        with pytest.raises(ValueError, match=msg):
+            RV()
+
+        class RV(pm.SimulatorRV):
+            fn = lambda: None
+            ndim_supp = 0
+
+        msg = "Simulator RV must specify `ndims_params`"
+        with pytest.raises(ValueError, match=msg):
+            RV()
+
+        class RV(pm.SimulatorRV):
+            fn = lambda: None
+            ndim_supp = 0
+            ndims_params = [0, 0, 0]
+            distance = "not_real"
+
+        msg = "The distance metric not_real is not implemented"
+        with pytest.raises(ValueError, match=msg):
+            RV()
+
+        class RV(pm.SimulatorRV):
+            fn = lambda: None
+            ndim_supp = 0
+            ndims_params = [0, 0, 0]
+            distance = "gaussian"
+            sum_stat = "not_real"
+
+        msg = "The summary statistic not_real is not implemented"
+        with pytest.raises(ValueError, match=msg):
+            RV()
+
+    def test_simulator_error_msg(self):
+        msg = "does not seem to be an instantiated"
+        with pm.Model() as m:
+            with pytest.raises(ValueError, match=msg):
+                pm.Simulator("sim", NormalSimRV1, 0, 1)
+
+        msg = "should be a subclass instance of"
+        with pm.Model() as m:
+            with pytest.raises(ValueError, match=msg):
+                pm.Simulator("sim", lambda: None, 0, 1)
+
+        msg = "`Simulator` expected 2 parameters"
+        with pm.Model() as m:
+            with pytest.raises(ValueError, match=msg):
+                pm.Simulator("sim", NormalSimRV1(), 0)
+
+        msg = "distance is no longer defined when calling `pm.Simulator`"
+        with pm.Model() as m:
+            with pytest.raises(ValueError, match=msg):
+                pm.Simulator("sim", NormalSimRV1(), 0, 1, distance="gaussian")
+
+        msg = "sum_stat is no longer defined when calling `pm.Simulator`"
+        with pm.Model() as m:
+            with pytest.raises(ValueError, match=msg):
+                pm.Simulator("sim", NormalSimRV1(), 0, 1, sum_stat="sort")
+
+        msg = "epsilon is no longer defined when calling `pm.Simulator`"
+        with pm.Model() as m:
+            with pytest.raises(ValueError, match=msg):
+                pm.Simulator("sim", NormalSimRV1(), 0, 1, epsilon=1.0)
+
+    def test_params_kwarg_deprecation(self):
+        msg = "The kwarg ``params`` will be deprecated."
+        with pm.Model() as m:
+            with pytest.warns(DeprecationWarning, match=msg):
+                pm.Simulator("sim", NormalSimRV1(), params=(0, 1))
+
+    @pytest.mark.xfail(reason="KL not refactored")
     def test_automatic_use_of_sort(self):
         with pm.Model() as model:
             s_k = pm.Simulator(
@@ -270,28 +469,18 @@ class TestSMCABC(SeededTest):
             )
         assert s_k.distribution.sum_stat is pm.distributions.simulator.identity
 
-    def test_repr_latex(self):
-        expected = "$\\text{s} \\sim  \\text{Simulator}(\\text{normal_sim}(a, b), \\text{gaussian}, \\text{sort})$"
-        assert expected == self.s._repr_latex_()
-        assert self.s._repr_latex_() == self.s.__latex__()
-        assert self.SMABC_test.model._repr_latex_() == self.SMABC_test.model.__latex__()
-
     def test_name_is_string_type(self):
         with self.SMABC_potential:
             assert not self.SMABC_potential.name
-            trace = pm.sample_smc(draws=10, kernel="ABC")
+            trace = pm.sample_smc(draws=10, cores=1, return_inferencedata=False)
             assert isinstance(trace._straces[0].name, str)
 
     def test_named_models_are_unsupported(self):
-        def normal_sim(a, b):
-            return np.random.normal(a, b, 1000)
-
         with pm.Model(name="NamedModel"):
             a = pm.Normal("a", mu=0, sigma=1)
             b = pm.HalfNormal("b", sigma=1)
-            c = pm.Potential("c", pm.math.switch(a > 0, 0, -np.inf))
-            s = pm.Simulator(
-                "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
-            )
+            s = pm.Simulator("s", NormalSimRV1(), a, b, observed=self.data)
+
+            # TODO: Why is this?
             with pytest.raises(NotImplementedError, match="named models"):
-                pm.sample_smc(draws=10, kernel="ABC")
+                pm.sample_smc(draws=10, chains=1)

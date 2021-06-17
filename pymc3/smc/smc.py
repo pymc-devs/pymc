@@ -25,6 +25,7 @@ from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
 from pymc3.aesaraf import (
+    compile_rv_inplace,
     floatX,
     inputvars,
     join_nonshared_inputs,
@@ -304,9 +305,9 @@ def logp_forw(point, out_vars, vars, shared):
             "together with aesara.config.floatX == `float32`",
             UserWarning,
         )
-        f = aesara_function([inarray0], out_list[0], allow_input_downcast=True)
+        f = compile_rv_inplace([inarray0], out_list[0], allow_input_downcast=True)
     else:
-        f = aesara_function([inarray0], out_list[0])
+        f = compile_rv_inplace([inarray0], out_list[0])
         f.trust_input = True
     return f
 
