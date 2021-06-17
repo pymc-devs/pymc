@@ -14,112 +14,248 @@
 
 import logging
 
+import aesara
+import aesara.tensor as at
 import numpy as np
 
+from aesara.graph.op import Apply, Op
+from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.var import TensorVariable
 from scipy.spatial import cKDTree
 
+from pymc3.aesaraf import floatX
 from pymc3.distributions.distribution import NoDistribution
+from pymc3.distributions.logprob import _logp
 
 __all__ = ["Simulator"]
 
 _log = logging.getLogger("pymc3")
 
 
+class SimulatorRV(RandomVariable):
+    """
+    Base class for SimulatorRVs
+
+    This should be subclassed when defining custom Simulator objects.
+    """
+
+    name = "SimulatorRV"
+    ndim_supp = None
+    ndims_params = None
+    dtype = "floatX"
+    _print_name = ("Simulator", "\\operatorname{Simulator}")
+
+    fn = None
+    _distance = None
+    _sum_stat = None
+    epsilon = None
+
+    @classmethod
+    def rng_fn(cls, *args, **kwargs):
+        return cls.fn(*args, **kwargs)
+
+    @classmethod
+    def distance(cls, *args, **kwargs):
+        return cls._distance(*args, **kwargs)
+
+    @classmethod
+    def sum_stat(cls, *args, **kwargs):
+        return cls._sum_stat(*args, **kwargs)
+
+
 class Simulator(NoDistribution):
     r"""
-    Define a simulator, from a Python function, to be used in ABC methods.
+    Simulator distribution, used for Approximate Bayesian Inference (ABC)
+    with Sequential Monte Carlo (SMC) sampling via ``pm.sample_smc``.
+
+    Simulator distributions have a stochastic pseudo-loglikelihood defined by
+    a distance metric between the observed and simulated data, and tweaked
+    by a hyper-parameter ``epsilon``.
 
     Parameters
     ----------
-    function: callable
-        Python function defined by the user.
+    fn: callable
+        Python random simulator function. Should expect the following signature
+        ``(rng, arg1, arg2, ... argn, size)``, where rng is a ``numpy.random.RandomStream()``
+        and ``size`` defines the size of the desired sample.
     params: list
-        Parameters passed to function.
-    distance: str or callable
-        Distance functions. Available options are "gaussian" (default), "laplacian",
-        "kullback_leibler" or a user defined function that takes epsilon, the summary statistics of
-        observed_data and the summary statistics of simulated_data as input.
-        ``gaussian`` :math: `-0.5 \left(\left(\frac{xo - xs}{\epsilon}\right)^2\right)`
-        ``laplace`` :math: `{\left(\frac{|xo - xs|}{\epsilon}\right)}`
-        ``kullback_leibler`` `:math: d \sum(-\log(\frac{\nu_d} {\rho_d}) / \epsilon) + log_r`
-        gaussian + ``sum_stat="sort"`` is equivalent to the 1D 2-wasserstein distance
-        laplace + ``sum_stat="sort"`` is equivalent to the the 1D 1-wasserstein distance
-    sum_stat: str or callable
-        Summary statistics. Available options are ``indentity``, ``sort``, ``mean``, ``median``.
-        If a callable is based it should return a number or a 1d numpy array.
+        Parameters used by the Simulator random function. Parameters can also
+        be passed by order, in which case the keyword argument ``params`` is
+        ignored. Alternatively, each parameter can be passed by order after fn,
+        ``param1, param2, ..., paramN``
+    distance : Aesara Op, callable or str
+        Distance function. Available options are ``"gaussian"`` (default), ``"laplace"``,
+        ``"kullback_leibler"`` or a user defined function (or Aesara Op) that takes
+        ``epsilon``, the summary statistics of observed_data and the summary statistics
+        of simulated_data as input.
+
+        ``gaussian``: :math:`-0.5 \left(\left(\frac{xo - xs}{\epsilon}\right)^2\right)`
+
+        ``laplace``: :math:`-{\left(\frac{|xo - xs|}{\epsilon}\right)}`
+
+        ``kullback_leibler``: :math:`\frac{d}{n} \frac{1}{\epsilon} \sum_i^n -\log \left( \frac{{\nu_d}_i}{{\rho_d}_i} \right) + \log_r` [1]_
+
+        ``distance="gaussian"`` + ``sum_stat="sort"`` is equivalent to the 1D 2-wasserstein distance
+
+        ``distance="laplace"`` + ``sum_stat="sort"`` is equivalent to the the 1D 1-wasserstein distance
+    sum_stat: Aesara Op, callable or str
+        Summary statistic function. Available options are ``"indentity"`` (default),
+        ``"sort"``, ``"mean"``, ``"median"``. If a callable (or Aesara Op) is defined,
+        it should return a 1d numpy array (or Aesara vector).
     epsilon: float or array
-        Scaling parameter for the distance functions. It should be a float or an array of the
-        same size of the output of ``sum_stat``.
-    *args and **kwargs:
-        Arguments and keywords arguments that the function takes.
+        Scaling parameter for the distance functions. It should be a float or
+        an array of the same size of the output of ``sum_stat``. Defaults to ``1.0``
+    ndim_supp : int
+        Number of dimensions of the SimulatorRV (0 for scalar, 1 for vector, etc.)
+        Defaults to ``0``.
+    ndims_params: list[int]
+        Number of minimum dimensions of each parameter of the RV. For example,
+        if the Simulator accepts two scalar inputs, it should be ``[0, 0]``.
+        Defaults to ``0`` for each parameter.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        def my_simulator_fn(rng, loc, scale, size):
+            return rng.normal(loc, scale, size=size)
+
+        with pm.Model() as m:
+            loc = pm.Normal("loc", 0, 1)
+            scale = pm.HalfNormal("scale", 1)
+            simulator = pm.Simulator("sim", my_simulator, loc, scale, observed=data)
+            idata = pm.sample_smc()
+
+    References
+    ----------
+    .. [1] Pérez-Cruz, F. (2008, July). Kullback-Leibler divergence
+        estimation of continuous distributions. In 2008 IEEE international
+        symposium on information theory (pp. 1666-1670). IEEE.
+        `link <https://ieeexplore.ieee.org/document/4595271>`__
+
     """
 
-    def __init__(
-        self,
-        function,
-        *args,
+    def __new__(
+        cls,
+        name,
+        fn,
+        *unnamed_params,
         params=None,
         distance="gaussian",
         sum_stat="identity",
         epsilon=1,
+        ndim_supp=0,
+        ndims_params=None,
+        dtype="floatX",
         **kwargs,
     ):
-        self.function = function
-        self.params = params
-        observed = self.data
-        self.epsilon = epsilon
 
-        if distance == "gaussian":
-            self.distance = gaussian
-        elif distance == "laplace":
-            self.distance = laplace
-        elif distance == "kullback_leibler":
-            self.distance = KullbackLiebler(observed)
-            if sum_stat != "identity":
-                _log.info(f"Automatically setting sum_stat to identity as expected by {distance}")
-                sum_stat = "identity"
-        elif hasattr(distance, "__call__"):
-            self.distance = distance
+        if not isinstance(distance, Op):
+            if distance == "gaussian":
+                distance = gaussian
+            elif distance == "laplace":
+                distance = laplace
+            elif distance == "kullback_leibler":
+                raise NotImplementedError("KL not refactored yet")
+                # TODO: Wrap KL in aesara OP
+                # distance = KullbackLiebler(observed)
+                # if sum_stat != "identity":
+                #     _log.info(f"Automatically setting sum_stat to identity as expected by {distance}")
+                #     sum_stat = "identity"
+            elif callable(distance):
+                distance = create_distance_op_from_fn(distance)
+            else:
+                raise ValueError(f"The distance metric {distance} is not implemented")
+
+        if not isinstance(sum_stat, Op):
+            if sum_stat == "identity":
+                sum_stat = identity
+            elif sum_stat == "sort":
+                sum_stat = at.sort
+            elif sum_stat == "mean":
+                sum_stat = at.mean
+            elif sum_stat == "median":
+                # Missing in Aesara, see aesara/issues/525
+                sum_stat = create_sum_stat_op_from_fn(np.median)
+            elif callable(sum_stat):
+                sum_stat = create_sum_stat_op_from_fn(sum_stat)
+            else:
+                raise ValueError(f"The summary statistic {sum_stat} is not implemented")
+
+        epsilon = at.as_tensor_variable(floatX(epsilon))
+
+        if params is None:
+            params = unnamed_params
         else:
-            raise ValueError(f"The distance metric {distance} is not implemented")
+            if unnamed_params:
+                raise ValueError("Cannot pass both unnamed parameters and `params`")
 
-        if sum_stat == "identity":
-            self.sum_stat = identity
-        elif sum_stat == "sort":
-            self.sum_stat = np.sort
-        elif sum_stat == "mean":
-            self.sum_stat = np.mean
-        elif sum_stat == "median":
-            self.sum_stat = np.median
-        elif hasattr(sum_stat, "__call__"):
-            self.sum_stat = sum_stat
-        else:
-            raise ValueError(f"The summary statistics {sum_stat} is not implemented")
+        # Assume scalar ndims_params
+        if ndims_params is None:
+            ndims_params = [0] * len(params)
 
-        super().__init__(shape=np.prod(observed.shape), dtype=observed.dtype, *args, **kwargs)
+        sim_op = type(
+            f"Simulator_{name}",
+            (SimulatorRV,),
+            dict(
+                name="Simulator",
+                ndim_supp=ndim_supp,
+                ndims_params=ndims_params,
+                dtype=dtype,
+                inplace=False,
+                fn=fn,
+                _distance=distance,
+                _sum_stat=sum_stat,
+                epsilon=epsilon,
+            ),
+        )()
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Simulator.
+        # The logp function is registered to the more general SimulatorRV,
+        # in order to avoid issues with multiprocessing / pickling
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be conditioned (uses default
-            point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not specified).
+        # rv_type = type(sim_op)
+        # NoDistribution.register(rv_type)
+        NoDistribution.register(SimulatorRV)
 
-        Returns
-        -------
-        array
-        """
-        # size = to_tuple(size)
-        # params = draw_values([*self.params], point=point, size=size)
-        # if len(size) == 0:
-        #     return self.function(*params)
-        # else:
-        #     return np.array([self.function(*params) for _ in range(size[0])])
+        # @_logp.register(rv_type)
+        @_logp.register(SimulatorRV)
+        def logp(op, sim_rv, rvs_to_values, *sim_params, **kwargs):
+            value_var = rvs_to_values.get(sim_rv, sim_rv)
+            return cls.logp(
+                value_var,
+                sim_rv,
+            )
+
+        cls.rv_op = sim_op
+        return super().__new__(cls, name, *params, **kwargs)
+
+    @classmethod
+    def dist(cls, *params, **kwargs):
+        return super().dist(params, **kwargs)
+
+    @classmethod
+    def logp(cls, value, sim_rv):
+        # Use a new rng to avoid non-randomness in parallel sampling
+        # TODO: Model rngs should be updated prior to multiprocessing split,
+        #  in which case this would not be needed. However, that would have to be
+        #  done for every sampler that may accomodate Simulators
+        rng = aesara.shared(np.random.default_rng())
+        rng.tag.is_rng = True
+
+        # Create a new simulatorRV with identical inputs as the original one
+        sim_op = sim_rv.owner.op
+        new_rng, sim_value = sim_op.make_node(rng, *sim_rv.owner.inputs[1:]).outputs
+        sim_value.name = "sim_value"
+
+        # Automatically update rng when expression is evaluated
+        sim_value.update = (rng, new_rng)
+        rng.default_update = new_rng
+
+        return sim_op.distance(
+            sim_op.epsilon,
+            sim_op.sum_stat(value),
+            sim_op.sum_stat(sim_value),
+        )
 
 
 def identity(x):
@@ -134,7 +270,7 @@ def gaussian(epsilon, obs_data, sim_data):
 
 def laplace(epsilon, obs_data, sim_data):
     """Laplace kernel."""
-    return -np.abs((obs_data - sim_data) / epsilon)
+    return -at.abs_((obs_data - sim_data) / epsilon)
 
 
 class KullbackLiebler:
@@ -155,3 +291,53 @@ class KullbackLiebler:
             sim_data = sim_data[:, None]
         nu_d, _ = cKDTree(sim_data).query(self.obs_data, 1)
         return self.d_n * np.sum(-np.log(nu_d / self.rho_d) / epsilon) + self.log_r
+
+
+scalarX = at.dscalar if aesara.config.floatX == "float64" else at.fscalar
+vectorX = at.dvector if aesara.config.floatX == "float64" else at.fvector
+
+
+def create_sum_stat_op_from_fn(fn):
+    # Check if callable returns TensorVariable with dummy inputs
+    try:
+        res = fn(vectorX())
+        if isinstance(res, TensorVariable):
+            return fn
+    except Exception:
+        pass
+
+    # Otherwise, automatically wrap in Aesara Op
+    class SumStat(Op):
+        def make_node(self, x):
+            x = at.as_tensor_variable(x)
+            return Apply(self, [x], [vectorX()])
+
+        def perform(self, node, inputs, outputs):
+            (x,) = inputs
+            outputs[0][0] = np.atleast_1d(fn(x)).astype(aesara.config.floatX)
+
+    return SumStat()
+
+
+def create_distance_op_from_fn(fn):
+    # Check if callable returns TensorVariable with dummy inputs
+    try:
+        res = fn(scalarX(), vectorX(), vectorX())
+        if isinstance(res, TensorVariable):
+            return fn
+    except Exception:
+        pass
+
+    # Otherwise, automatically wrap in Aesara Op
+    class Distance(Op):
+        def make_node(self, epsilon, obs_data, sim_data):
+            epsilon = at.as_tensor_variable(epsilon)
+            obs_data = at.as_tensor_variable(obs_data)
+            sim_data = at.as_tensor_variable(sim_data)
+            return Apply(self, [epsilon, obs_data, sim_data], [vectorX()])
+
+        def perform(self, node, inputs, outputs):
+            eps, obs_data, sim_data = inputs
+            outputs[0][0] = np.atleast_1d(fn(eps, obs_data, sim_data)).astype(aesara.config.floatX)
+
+    return Distance()
