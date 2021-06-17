@@ -32,7 +32,7 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-dev-py38.yml') }}
+            hashFiles('conda-envs/windows-environment-dev-py38.yml') }}
       - name: Cache multiple paths
         uses: actions/cache@v2
         env:
@@ -49,7 +49,7 @@ jobs:
         with:
           activate-environment: pymc3-dev-py38
           channel-priority: strict
-          environment-file: conda-envs/environment-dev-py38.yml
+          environment-file: conda-envs/windows-environment-dev-py38.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install-pymc3
         run: |
