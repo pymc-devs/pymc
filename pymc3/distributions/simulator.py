@@ -14,15 +14,29 @@
 
 import logging
 
+import aesara.tensor as at
 import numpy as np
 
+from aesara.tensor.random.op import RandomVariable
 from scipy.spatial import cKDTree
 
 from pymc3.distributions.distribution import NoDistribution
+from pymc3.distributions.logp import _logp
 
 __all__ = ["Simulator"]
 
 _log = logging.getLogger("pymc3")
+
+
+class SimulatorRV(RandomVariable):
+    """A placeholder for Simulator RVs"""
+
+    _print_name = ("Simulator", "\\operatorname{Simulator}")
+    fn = None
+
+    @classmethod
+    def rng_fn(cls, *args, **kwargs):
+        return cls.fn(*args, **kwargs)
 
 
 class Simulator(NoDistribution):
@@ -54,86 +68,102 @@ class Simulator(NoDistribution):
         Arguments and keywords arguments that the function takes.
     """
 
-    def __init__(
-        self,
-        function,
-        *args,
+    def __new__(
+        cls,
+        name,
+        fn,
+        *,
         params=None,
         distance="gaussian",
         sum_stat="identity",
         epsilon=1,
+        observed=None,
+        ndim_supp=0,
+        ndims_params=None,
+        dtype="floatX",
         **kwargs,
     ):
-        self.function = function
-        self.params = params
-        observed = self.data
-        self.epsilon = epsilon
 
         if distance == "gaussian":
-            self.distance = gaussian
+            distance = gaussian
         elif distance == "laplace":
-            self.distance = laplace
+            distance = laplace
         elif distance == "kullback_leibler":
-            self.distance = KullbackLiebler(observed)
-            if sum_stat != "identity":
-                _log.info(f"Automatically setting sum_stat to identity as expected by {distance}")
-                sum_stat = "identity"
+            raise NotImplementedError("KL not refactored yet")
+            # TODO: Wrap KL in aesara OP
+            # distance = KullbackLiebler(observed)
+            # if sum_stat != "identity":
+            #     _log.info(f"Automatically setting sum_stat to identity as expected by {distance}")
+            #     sum_stat = "identity"
         elif hasattr(distance, "__call__"):
-            self.distance = distance
+            # TODO: Wrap (optionally) non symbolic distance in Aesara OP
+            distance = distance
         else:
             raise ValueError(f"The distance metric {distance} is not implemented")
 
         if sum_stat == "identity":
-            self.sum_stat = identity
+            sum_stat = identity
         elif sum_stat == "sort":
-            self.sum_stat = np.sort
+            sum_stat = at.sort
         elif sum_stat == "mean":
-            self.sum_stat = np.mean
+            sum_stat = at.mean
         elif sum_stat == "median":
-            self.sum_stat = np.median
+            sum_stat = at.median
         elif hasattr(sum_stat, "__call__"):
-            self.sum_stat = sum_stat
+            # TODO: Wrap (optionally) non symbolic sum_stat in Aesara OP
+            sum_stat = sum_stat
         else:
             raise ValueError(f"The summary statistics {sum_stat} is not implemented")
 
-        super().__init__(shape=np.prod(observed.shape), dtype=observed.dtype, *args, **kwargs)
+        if params is None:
+            params = []
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Simulator.
+        # Assume scalar ndims_params
+        if ndims_params is None:
+            ndims_params = [0] * len(params)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be conditioned (uses default
-            point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not specified).
+        sim_op = type(
+            f"Simulator_{name}",
+            (SimulatorRV,),
+            dict(
+                name="Simulator",
+                ndim_supp=ndim_supp,
+                ndims_params=ndims_params,
+                dtype=dtype,
+                inplace=False,
+                # Specifc to Simulator
+                fn=fn,
+                # distance=distance,
+                # sum_stat=sum_stat,
+                # epsilon=epsilon,
+            ),
+        )()
 
-        Returns
-        -------
-        array
-        """
-        # size = to_tuple(size)
-        # params = draw_values([*self.params], point=point, size=size)
-        # if len(size) == 0:
-        #     return self.function(*params)
-        # else:
-        #     return np.array([self.function(*params) for _ in range(size[0])])
+        # Register custom logp
+        rv_type = type(sim_op)
 
-    def _str_repr(self, name=None, dist=None, formatting="plain"):
-        if dist is None:
-            dist = self
-        name = name
-        function = dist.function.__name__
-        params = ", ".join([var.name for var in dist.params])
-        sum_stat = self.sum_stat.__name__ if hasattr(self.sum_stat, "__call__") else self.sum_stat
-        distance = getattr(self.distance, "__name__", self.distance.__class__.__name__)
+        @_logp.register(rv_type)
+        def logp(op, sim_rv, rvs_to_values, *sim_params, **kwargs):
+            value_var = rvs_to_values.get(sim_rv, sim_rv)
+            return cls.logp(
+                value_var,
+                sim_rv,
+                distance,
+                sum_stat,
+                epsilon,
+            )
 
-        if "latex" in formatting:
-            return f"$\\text{{{name}}} \\sim  \\text{{Simulator}}(\\text{{{function}}}({params}), \\text{{{distance}}}, \\text{{{sum_stat}}})$"
-        else:
-            return f"{name} ~ Simulator({function}({params}), {distance}, {sum_stat})"
+        cls.rv_op = sim_op
+        return super().__new__(cls, name, params, observed=observed, **kwargs)
+
+    @classmethod
+    def logp(cls, value, sim_rv, distance, sum_stat, epsilon):
+        # Create a new simulatorRV identically to the original one
+        sim_op = sim_rv.owner.op
+        sim_data = at.as_tensor_variable(sim_op.make_node(*sim_rv.owner.inputs))
+        sim_data.name = "sim_data"
+
+        return distance(epsilon, sum_stat(value), sum_stat(sim_data))
 
 
 def identity(x):
@@ -148,7 +178,7 @@ def gaussian(epsilon, obs_data, sim_data):
 
 def laplace(epsilon, obs_data, sim_data):
     """Laplace kernel."""
-    return -np.abs((obs_data - sim_data) / epsilon)
+    return -at.abs_((obs_data - sim_data) / epsilon)
 
 
 class KullbackLiebler:

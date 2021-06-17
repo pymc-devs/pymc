@@ -182,14 +182,13 @@ class TestSMC(SeededTest):
                 pm.sample_smc(draws=10, chains=1, parallel=False)
 
 
-@pytest.mark.xfail(reason="SMC-ABC not refactored yet")
 class TestSMCABC(SeededTest):
     def setup_class(self):
         super().setup_class()
         self.data = np.random.normal(loc=0, scale=1, size=1000)
 
-        def normal_sim(a, b):
-            return np.random.normal(a, b, 1000)
+        def normal_sim(rng, a, b, size):
+            return rng.normal(a, b, size=size)
 
         with pm.Model() as self.SMABC_test:
             a = pm.Normal("a", mu=0, sigma=1)
@@ -203,7 +202,8 @@ class TestSMCABC(SeededTest):
             return np.quantile(x, [0.25, 0.5, 0.75])
 
         def abs_diff(eps, obs_data, sim_data):
-            return np.mean(np.abs((obs_data - sim_data) / eps))
+            at.mean(at.abs_((obs_data - sim_data) / eps))
+            # return np.mean(np.abs((obs_data - sim_data) / eps))
 
         with pm.Model() as self.SMABC_test2:
             a = pm.Normal("a", mu=0, sigma=1)
@@ -219,7 +219,7 @@ class TestSMCABC(SeededTest):
             )
 
         with pm.Model() as self.SMABC_potential:
-            a = pm.Normal("a", mu=0, sigma=1)
+            a = pm.Normal("a", mu=0, sigma=1, initval=0.5)
             b = pm.HalfNormal("b", sigma=1)
             c = pm.Potential("c", pm.math.switch(a > 0, 0, -np.inf))
             s = pm.Simulator(
@@ -228,36 +228,36 @@ class TestSMCABC(SeededTest):
 
     def test_one_gaussian(self):
         with self.SMABC_test:
-            trace = pm.sample_smc(draws=1000, kernel="ABC")
+            trace = pm.sample_smc(draws=1000)
 
-        np.testing.assert_almost_equal(self.data.mean(), trace["a"].mean(), decimal=2)
-        np.testing.assert_almost_equal(self.data.std(), trace["b"].mean(), decimal=1)
+        assert abs(self.data.mean() - trace["a"].mean()) < 0.05
+        assert abs(self.data.std() - trace["b"].mean()) < 0.05
 
     def test_sim_data_ppc(self):
         with self.SMABC_test:
-            trace, sim_data = pm.sample_smc(draws=1000, kernel="ABC", chains=2, save_sim_data=True)
+            trace = pm.sample_smc(draws=1000, chains=1)
             pr_p = pm.sample_prior_predictive(1000)
             po_p = pm.sample_posterior_predictive(trace, 1000)
 
-        assert sim_data["s"].shape == (2, 1000, 1000)
-        np.testing.assert_almost_equal(self.data.mean(), sim_data["s"].mean(), decimal=2)
-        np.testing.assert_almost_equal(self.data.std(), sim_data["s"].std(), decimal=1)
         assert pr_p["s"].shape == (1000, 1000)
-        np.testing.assert_almost_equal(0, pr_p["s"].mean(), decimal=1)
-        np.testing.assert_almost_equal(1.4, pr_p["s"].std(), decimal=1)
+        assert abs(0 - pr_p["s"].mean()) < 0.05
+        assert abs(1.4 - pr_p["s"].std()) < 0.05
         assert po_p["s"].shape == (1000, 1000)
-        np.testing.assert_almost_equal(0, po_p["s"].mean(), decimal=2)
-        np.testing.assert_almost_equal(1, po_p["s"].std(), decimal=1)
+        assert abs(0 - po_p["s"].mean()) < 0.05
+        assert abs(1 - po_p["s"].std()) < 0.05
 
+    @pytest.mark.xfail(reason="Custom implementation not refactored yet")
     def test_custom_dist_sum(self):
         with self.SMABC_test2:
             trace = pm.sample_smc(draws=1000, kernel="ABC")
 
+    @pytest.mark.xfail(reason="standard SMC is failing with Potentials")
     def test_potential(self):
         with self.SMABC_potential:
-            trace = pm.sample_smc(draws=1000, kernel="ABC")
+            trace = pm.sample_smc(draws=1000)
             assert np.all(trace["a"] >= 0)
 
+    @pytest.mark.xfail(reason="KL not refactored")
     def test_automatic_use_of_sort(self):
         with pm.Model() as model:
             s_k = pm.Simulator(
@@ -270,16 +270,18 @@ class TestSMCABC(SeededTest):
             )
         assert s_k.distribution.sum_stat is pm.distributions.simulator.identity
 
+    @pytest.mark.xfail(reason="Latex not refactored")
     def test_repr_latex(self):
         expected = "$\\text{s} \\sim  \\text{Simulator}(\\text{normal_sim}(a, b), \\text{gaussian}, \\text{sort})$"
         assert expected == self.s._repr_latex_()
         assert self.s._repr_latex_() == self.s.__latex__()
         assert self.SMABC_test.model._repr_latex_() == self.SMABC_test.model.__latex__()
 
+    @pytest.mark.xfail(reason="Potential is failing in SMC")
     def test_name_is_string_type(self):
         with self.SMABC_potential:
             assert not self.SMABC_potential.name
-            trace = pm.sample_smc(draws=10, kernel="ABC")
+            trace = pm.sample_smc(draws=10, kernel="SMC")
             assert isinstance(trace._straces[0].name, str)
 
     def test_named_models_are_unsupported(self):
@@ -295,3 +297,11 @@ class TestSMCABC(SeededTest):
             )
             with pytest.raises(NotImplementedError, match="named models"):
                 pm.sample_smc(draws=10, kernel="ABC")
+
+    def test_simulator_metropolis_mcmc(self):
+        with self.SMABC_potential as m:
+            step = pm.Metropolis([m.rvs_to_values[m["a"]], m.rvs_to_values[m["b"]]])
+            trace = pm.sample(step=step, return_inferencedata=False)
+
+        assert abs(self.data.mean() - trace["a"].mean()) < 0.05
+        assert abs(self.data.std() - trace["b"].mean()) < 0.05

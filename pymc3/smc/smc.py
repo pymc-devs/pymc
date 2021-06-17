@@ -16,7 +16,6 @@ import warnings
 
 from collections import OrderedDict
 
-import aesara.tensor as at
 import numpy as np
 
 from aesara import config
@@ -114,36 +113,36 @@ class SMC:
         initial_values = self.model.initial_point
         shared = make_shared_replacements(initial_values, self.variables, self.model)
 
-        if self.kernel == "abc":
-            factors = [var.logpt for var in self.model.free_RVs]
-            factors += [at.sum(factor) for factor in self.model.potentials]
-            self.prior_logp_func = logp_forw(
-                initial_values, [at.sum(factors)], self.variables, shared
-            )
-            simulator = self.model.observed_RVs[0]
-            distance = simulator.distribution.distance
-            sum_stat = simulator.distribution.sum_stat
-            self.likelihood_logp_func = PseudoLikelihood(
-                simulator.distribution.epsilon,
-                simulator.observations,
-                simulator.distribution.function,
-                [v.name for v in simulator.distribution.params],
-                self.model,
-                self.var_info,
-                self.variables,
-                distance,
-                sum_stat,
-                self.draws,
-                self.save_sim_data,
-                self.save_log_pseudolikelihood,
-            )
-        elif self.kernel == "metropolis":
-            self.prior_logp_func = logp_forw(
-                initial_values, [self.model.varlogpt], self.variables, shared
-            )
-            self.likelihood_logp_func = logp_forw(
-                initial_values, [self.model.datalogpt], self.variables, shared
-            )
+        # if self.kernel == "abc":
+        #     factors = [var.logpt for var in self.model.free_RVs]
+        #     factors += [at.sum(factor) for factor in self.model.potentials]
+        #     self.prior_logp_func = logp_forw(
+        #         initial_values, [at.sum(factors)], self.variables, shared
+        #     )
+        #     simulator = self.model.observed_RVs[0]
+        #     distance = simulator.distribution.distance
+        #     sum_stat = simulator.distribution.sum_stat
+        #     self.likelihood_logp_func = PseudoLikelihood(
+        #         simulator.distribution.epsilon,
+        #         simulator.observations,
+        #         simulator.distribution.function,
+        #         [v.name for v in simulator.distribution.params],
+        #         self.model,
+        #         self.var_info,
+        #         self.variables,
+        #         distance,
+        #         sum_stat,
+        #         self.draws,
+        #         self.save_sim_data,
+        #         self.save_log_pseudolikelihood,
+        #     )
+        # elif self.kernel == "metropolis":
+        self.prior_logp_func = logp_forw(
+            initial_values, [self.model.varlogpt], self.variables, shared
+        )
+        self.likelihood_logp_func = logp_forw(
+            initial_values, [self.model.datalogpt], self.variables, shared
+        )
 
     def initialize_logp(self):
         """Initialize the prior and likelihood log probabilities."""

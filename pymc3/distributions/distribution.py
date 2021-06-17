@@ -22,7 +22,6 @@ from abc import ABCMeta
 from typing import Optional
 
 import aesara
-import aesara.tensor as at
 import dill
 
 from aesara.tensor.random.op import RandomVariable
@@ -386,47 +385,6 @@ class Distribution(metaclass=DistributionMeta):
     __latex__ = _repr_latex_
 
 
-class NoDistribution(Distribution):
-    def __init__(
-        self,
-        shape,
-        dtype,
-        initval=None,
-        defaults=(),
-        parent_dist=None,
-        *args,
-        **kwargs,
-    ):
-        super().__init__(
-            shape=shape, dtype=dtype, initval=initval, defaults=defaults, *args, **kwargs
-        )
-        self.parent_dist = parent_dist
-
-    def __getattr__(self, name):
-        # Do not use __getstate__ and __setstate__ from parent_dist
-        # to avoid infinite recursion during unpickling
-        if name.startswith("__"):
-            raise AttributeError("'NoDistribution' has no attribute '%s'" % name)
-        return getattr(self.parent_dist, name)
-
-    def logp(self, x):
-        """Calculate log probability.
-
-        Parameters
-        ----------
-        x: numeric
-            Value for which log-probability is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        return at.zeros_like(x)
-
-    def _distr_parameters_for_repr(self):
-        return []
-
-
 class Discrete(Distribution):
     """Base class for discrete distributions"""
 
@@ -440,6 +398,10 @@ class Discrete(Distribution):
 
 class Continuous(Distribution):
     """Base class for continuous distributions"""
+
+
+class NoDistribution(Distribution):
+    """Base class for artifical distributions"""
 
 
 class DensityDist(Distribution):

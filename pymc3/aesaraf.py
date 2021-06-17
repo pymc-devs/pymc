@@ -354,11 +354,21 @@ def rvs_to_value_vars(
         rv_var, rv_value_var = extract_rv_and_value_vars(var)
 
         if rv_value_var is None:
-            warnings.warn(
-                f"No value variable found for {rv_var}; "
-                "the random variable will not be replaced."
-            )
-            return []
+
+            # TODO: Importing at top is creating a circular dependency
+            from pymc3.distributions.simulator import SimulatorRV
+
+            # If orphan RandomVariable is a SimulatorRV, we allow for further
+            # replacements in upstream graph
+            if isinstance(rv_var.owner.op, SimulatorRV):
+                return var.owner.inputs[3:]
+
+            else:
+                warnings.warn(
+                    f"No value variable found for {rv_var}; "
+                    "the random variable will not be replaced."
+                )
+                return []
 
         transform = getattr(rv_value_var.tag, "transform", None)
 
