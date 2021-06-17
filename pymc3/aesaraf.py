@@ -350,15 +350,24 @@ def rvs_to_value_vars(
 
     """
 
+    # Avoid circular dependency
+    from pymc3.distributions import NoDistribution
+
     def transform_replacements(var, replacements):
         rv_var, rv_value_var = extract_rv_and_value_vars(var)
 
         if rv_value_var is None:
-            warnings.warn(
-                f"No value variable found for {rv_var}; "
-                "the random variable will not be replaced."
-            )
-            return []
+            # If RandomVariable does not have a value_var and corresponds to
+            # a NoDistribution, we allow further replacements in upstream graph
+            if isinstance(rv_var.owner.op, NoDistribution):
+                return rv_var.owner.inputs
+
+            else:
+                warnings.warn(
+                    f"No value variable found for {rv_var}; "
+                    "the random variable will not be replaced."
+                )
+                return []
 
         transform = getattr(rv_value_var.tag, "transform", None)
 

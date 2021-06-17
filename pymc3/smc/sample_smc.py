@@ -182,15 +182,6 @@ def sample_smc(
         if parallel is False:
             cores = 1
 
-    _log = logging.getLogger("pymc3")
-    _log.info("Initializing SMC sampler...")
-
-    model = modelcontext(model)
-    if model.name:
-        raise NotImplementedError(
-            "The SMC implementation currently does not support named models. "
-            "See https://github.com/pymc-devs/pymc3/pull/4365."
-        )
     if cores is None:
         cores = _cpu_count()
 
@@ -198,11 +189,6 @@ def sample_smc(
         chains = max(2, cores)
     else:
         cores = min(chains, cores)
-
-    _log.info(
-        f"Sampling {chains} chain{'s' if chains > 1 else ''} "
-        f"in {cores} job{'s' if cores > 1 else ''}"
-    )
 
     if random_seed == -1:
         random_seed = None
@@ -214,6 +200,15 @@ def sample_smc(
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
     if not isinstance(random_seed, Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
+
+    model = modelcontext(model)
+
+    _log = logging.getLogger("pymc3")
+    _log.info("Initializing SMC sampler...")
+    _log.info(
+        f"Sampling {chains} chain{'s' if chains > 1 else ''} "
+        f"in {cores} job{'s' if cores > 1 else ''}"
+    )
 
     params = (
         draws,
