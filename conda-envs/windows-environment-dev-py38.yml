@@ -1,0 +1,26 @@
+name: pymc3-dev-py38
+channels:
+- conda-forge
+- defaults
+dependencies:
+ # base dependencies (see install guide for Windows)
+- h5py>=2.7
+- libpython
+- mkl-service
+- m2w64-toolchain
+- numba
+- pip
+- python=3.8
+- python-graphviz
+- scipy
+# Extra stuff for dev, testing and docs build
+- ipython>=7.16
+- nbsphinx>=0.4
+- numpydoc>=0.9
+- pre-commit>=2.8.0
+- pytest-cov>=2.5
+- pytest>=3.0
+- recommonmark>=0.4
+- sphinx-autobuild>=0.7
+- sphinx>=1.5
+- watermark
