@@ -1823,6 +1823,21 @@ def test_matrix_normal_random_with_random_variables():
     assert prior["mu"].shape == (2, D, K)
 
 
+@pytest.mark.parametrize("n", [2, 5])
+def test_lkj_corr_with_prior_predictive(n):
+    """
+    This test checks for shape correctness when using pm.sample_prior_predictive
+    on LKJCorr distribution.
+    Originally reported - https://github.com/pymc-devs/pymc3/issues/4778
+    """
+    with pm.Model():
+        lkj = pm.LKJCorr("lkj", eta=1, n=n)
+        prior = pm.sample_prior_predictive(500)
+
+    upper_triangular_shape = n * (n - 1) // 2
+    assert prior["lkj"].shape == (500, upper_triangular_shape)
+
+
 class TestMvGaussianRandomWalk(SeededTest):
     @pytest.mark.parametrize(
         ["sample_shape", "dist_shape", "mu_shape", "param"],

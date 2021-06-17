@@ -1541,7 +1541,7 @@ class LKJCorr(Continuous):
         """
         n, eta = draw_values([self.n, self.eta], point=point, size=size)
         size = 1 if size is None else size
-        samples = generate_samples(self._random, n, eta, broadcast_shape=(size,))
+        samples = generate_samples(self._random, n, eta, broadcast_shape=to_tuple(size))
         return samples
 
     def logp(self, x):
