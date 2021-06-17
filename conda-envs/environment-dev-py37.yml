@@ -3,6 +3,11 @@ channels:
 - conda-forge
 - defaults
 dependencies:
+- aesara>=2.0.9
+- arviz>=0.11.2
+- cachetools>=4.2.1
+- dill
+- fastprogress>=0.2.0
 - h5py>=2.7
 - ipython>=7.16
 - libblas=*=*mkl
@@ -16,7 +21,9 @@ dependencies:
 - pytest>=3.0
 - python-graphviz
 - python=3.7
-- scipy=1.2
+- recommonmark>=0.4
+- scipy>1.4.1
 - sphinx-autobuild>=0.7
 - sphinx>=1.5
+- typing-extensions
 - watermark
