@@ -41,7 +41,17 @@ import re
 
 import yaml
 
-EXCLUDE = {"python", "libblas", "mkl-service", "python-graphviz"}
+EXCLUDE = {
+    "pip",
+    "python",
+    "libblas",
+    "libpython",
+    "m2w64-toolchain",
+    "mkl-service",
+    "numba",
+    "scipy",
+    "python-graphviz",
+}
 RENAME = {}
 
 
