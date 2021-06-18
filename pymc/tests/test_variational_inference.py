@@ -922,6 +922,8 @@ def test_replacements(binomial_model_inference):
         assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
     sampled = [p_s.eval() for _ in range(100)]
     assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
+    p_z = approx.sample_node(p_t, deterministic=True, size=10)
+    assert p_z.shape.eval() == (10, )
 
     p_d = approx.sample_node(p_t, deterministic=True)
     sampled = [p_d.eval() for _ in range(100)]
