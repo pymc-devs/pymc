@@ -1217,7 +1217,7 @@ class Group(WithMemoization):
     @node_property
     def symbolic_normalizing_constant(self):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`"""
-        t = self.to_flat_input(at.max([v.scaling for v in self.group]))
+        t = self.to_flat_input(at.max([v.tag.scaling for v in self.group]))
         t = self.symbolic_single_sample(t)
         return pm.floatX(t)
 
@@ -1370,7 +1370,7 @@ class Approximation(WithMemoization):
         """
         t = at.max(
             self.collect("symbolic_normalizing_constant")
-            + [var.scaling for var in self.model.observed_RVs]
+            + [var.tag.scaling for var in self.model.observed_RVs]
         )
         t = at.switch(self._scale_cost_to_minibatch, t, at.constant(1, dtype=t.dtype))
         return pm.floatX(t)

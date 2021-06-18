@@ -1223,6 +1223,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         name = self.name_for(name)
         rv_var.name = name
         rv_var.tag.total_size = total_size
+        rv_var.tag.scaling = _get_scaling(total_size, shape=rv_var.shape, ndim=rv_var.ndim)
 
         # Associate previously unknown dimension names with
         # the length of the corresponding RV dimension.
@@ -1860,6 +1861,68 @@ def Deterministic(name, var, model=None, dims=None, auto=False):
     return var
 
 
+def _get_scaling(total_size, shape, ndim):
+    """
+    Gets scaling constant for logp
+    Parameters
+    ----------
+    total_size: int or list[int]
+    shape: shape
+        shape to scale
+    ndim: int
+        ndim hint
+    Returns
+    -------
+    scalar
+    """
+    if total_size is None:
+        coef = 1.
+    elif isinstance(total_size, int):
+        if ndim >= 1:
+            denom = shape[0]
+        else:
+            denom = 1
+        coef = total_size / denom
+    elif isinstance(total_size, (list, tuple)):
+        if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis and i is not None)):
+            raise TypeError(
+                "Unrecognized `total_size` type, expected "
+                "int or list of ints, got %r" % total_size
+            )
+        if Ellipsis in total_size:
+            sep = total_size.index(Ellipsis)
+            begin = total_size[:sep]
+            end = total_size[sep + 1 :]
+            if Ellipsis in end:
+                raise ValueError(
+                    "Double Ellipsis in `total_size` is restricted, got %r" % total_size
+                )
+        else:
+            begin = total_size
+            end = []
+        if (len(begin) + len(end)) > ndim:
+            raise ValueError(
+                "Length of `total_size` is too big, "
+                "number of scalings is bigger that ndim, got %r" % total_size
+            )
+        elif (len(begin) + len(end)) == 0:
+            coef = 1.
+        if len(end) > 0:
+            shp_end = shape[-len(end) :]
+        else:
+            shp_end = np.asarray([])
+        shp_begin = shape[: len(begin)]
+        begin_coef = [t / shp_begin[i] for i, t in enumerate(begin) if t is not None]
+        end_coef = [t / shp_end[i] for i, t in enumerate(end) if t is not None]
+        coefs = begin_coef + end_coef
+        coef = at.prod(coefs)
+    else:
+        raise TypeError(
+            "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
+        )
+    return at.as_tensor(coef, dtype=aesara.config.floatX)
+
+
 def Potential(name, var, model=None):
     """Add an arbitrary factor potential to the model likelihood
 
@@ -1874,7 +1937,7 @@ def Potential(name, var, model=None):
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
-    var.tag.scaling = None
+    var.tag.scaling = 1.
     model.potentials.append(var)
     model.add_random_variable(var)
 
