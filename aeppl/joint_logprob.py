@@ -138,8 +138,11 @@ def joint_logprob(
             )
 
             q_logprob_var = _logprob(
-                node.op, q_rv_value_var, *value_var_inputs, **kwargs
+                node.op, q_rv_value_var, *value_var_inputs, name=q_rv_var.name, **kwargs
             )
+
+            if q_rv_var.name:
+                q_logprob_var.name = f"{q_rv_var.name}_logprob"
 
         else:
             raise NotImplementedError(

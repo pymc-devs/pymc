@@ -28,7 +28,9 @@ def xlogy0(m, x):
 
 def logprob(rv_var, rv_value, **kwargs):
     """Create a graph for the log-probability of a ``RandomVariable``."""
-    logprob = _logprob(rv_var.owner.op, rv_value, *rv_var.owner.inputs, **kwargs)
+    logprob = _logprob(
+        rv_var.owner.op, rv_value, *rv_var.owner.inputs, name=rv_var.name, **kwargs
+    )
 
     if rv_var.name:
         logprob.name = f"{rv_var.name}_logprob"
