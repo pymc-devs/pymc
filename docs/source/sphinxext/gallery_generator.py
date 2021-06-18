@@ -30,11 +30,12 @@ INDEX_TEMPLATE = """
 
 .. _{sphinx_tag}:
 
-.. title:: {gallery}_notebooks
+#################################
+{Gallery} Notebooks
+#################################
 
 .. raw:: html
 
-    <h1 class="ui header">{Gallery} Notebooks</h1>
     <div id="gallery" class="ui vertical segment">
     </div>
 """

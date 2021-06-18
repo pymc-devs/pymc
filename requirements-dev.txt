@@ -14,11 +14,13 @@ numpy>=1.15.0
 numpydoc>=0.9
 pandas>=0.24.0
 pre-commit>=2.8.0
+pydata-sphinx-theme
 pytest-cov>=2.5
 pytest>=3.0
 recommonmark>=0.4
 scipy>1.4.1
 sphinx-autobuild>=0.7
+sphinx-panels
 sphinx>=1.5
 typing-extensions>=3.7.4
 watermark

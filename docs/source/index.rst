@@ -17,6 +17,17 @@
                 </div>
                 <div class="eight wide right floated column">
 
+.. toctree::
+  :maxdepth: 1
+  :hidden:
+
+  Tutorials<nb_tutorials/index>
+  Examples<nb_examples/index>
+  Books + Videos<learn>
+  API<api>
+  Developer Guide<developer_guide>
+  About PyMC3<about>
+
 .. code-block:: python
 
     import pymc3 as pm
