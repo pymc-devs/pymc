@@ -26,9 +26,14 @@ def xlogy0(m, x):
     return at.switch(at.eq(x, 0), at.switch(at.eq(m, 0), 0.0, -np.inf), m * at.log(x))
 
 
-def logprob(rv_var, obs, **kwargs):
+def logprob(rv_var, rv_value, **kwargs):
     """Create a graph for the log-probability of a ``RandomVariable``."""
-    return _logprob(rv_var.owner.op, obs, *rv_var.owner.inputs, **kwargs)
+    logprob = _logprob(rv_var.owner.op, rv_value, *rv_var.owner.inputs, **kwargs)
+
+    if rv_var.name:
+        logprob.name = f"{rv_var.name}_logprob"
+
+    return logprob
 
 
 @singledispatch
