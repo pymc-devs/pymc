@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 from collections.abc import Iterable
+from typing import List, Optional, Union
 
 import aesara
 import aesara.tensor as at
@@ -36,6 +37,32 @@ def all_discrete(comp_dists):
         return isinstance(comp_dists, Discrete)
     else:
         return all(isinstance(comp_dist, Discrete) for comp_dist in comp_dists)
+
+
+class MixtureRV(Distribution):
+    name = "mixture"
+    ndims_supp = 0
+    ndims_params = [1, 1]
+    _print_name = ("Mixture", "\\operatorname{Mixture")
+
+    def __call__(self, w, comp_dist, *args, **kwargs):
+        return super().__call__(w, comp_dist, size=size, **kwargs)
+
+    @classmethod
+    def rng_fn(
+        cls,
+        rng: np.random.RandomState,
+        w: Union[np.ndarray, float],
+        comp_dist: Union[Distribution, Iterable[Distribution]],
+        size: Optional[Union[List[int], int]] = None,
+    ) -> np.ndarray:
+
+        component = rng.multinomial(n=1, pvals=w)
+
+        return comp_dist[component].rv_op.rng_fn(rng)
+    
+
+mixture = MixtureRV()
 
 
 class Mixture(Distribution):
@@ -111,8 +138,10 @@ class Mixture(Distribution):
             # Each can be thought of as an independent scalar mixture of 5 components
             like = pm.Mixture('like', w=w, comp_dists = components, observed=data, shape=3)
     """
+    rv_op = mixture
 
-    def __init__(self, w, comp_dists, *args, **kwargs):
+    @classmethod
+    def dist(cls, w, comp_dists, *args, **kwargs):
         # comp_dists type checking
         if not (
             isinstance(comp_dists, Distribution)
@@ -165,7 +194,7 @@ class Mixture(Distribution):
         except (AttributeError, ValueError, IndexError):
             pass
 
-        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
+        return super().__dist__(shape, dtype, defaults=defaults, *args, **kwargs)
 
     @property
     def comp_dists(self):
@@ -400,7 +429,9 @@ class Mixture(Distribution):
         #         )
         # return comp_dist_shapes, broadcast_shape
 
-    def logp(self, value):
+    def logp(
+        value: Union[float, np.ndarray, TensorVariable],
+        ):
         """
         Calculate log-probability of defined Mixture distribution at specified value.
 
@@ -617,6 +648,7 @@ class NormalMixture(Mixture):
             pm.NormalMixture("y", w=weights, mu=μ, sigma=σ, observed=data)
     """
 
+    @classmethod
     def __init__(self, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):
         if sd is not None:
             sigma = sd
@@ -625,7 +657,7 @@ class NormalMixture(Mixture):
         self.mu = mu = at.as_tensor_variable(mu)
         self.sigma = self.sd = sigma = at.as_tensor_variable(sigma)
 
-        super().__init__(w, Normal.dist(mu, sigma=sigma, shape=comp_shape), *args, **kwargs)
+        super().dist([w, Normal.dist(mu, sigma=sigma, shape=comp_shape)], *args, **kwargs)
 
     def _distr_parameters_for_repr(self):
         return ["w", "mu", "sigma"]
