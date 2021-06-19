@@ -3,7 +3,7 @@ name: arviz-compatibility
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [v3]
 
 jobs:
   pytest:
