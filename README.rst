@@ -6,13 +6,20 @@
 
 Features
 ========
-- Convert graphs containing Aesara ``RandomVariable``\s into joint log-probability graphs
+- Convert graphs containing Aesara ``RandomVariable``\s into joint
+  log-probability graphs
+- Transforms for ``RandomVariable``\s that map constrained support spaces to
+  unconstrained spaces (e.g. the extended real numbers), and a rewrite that
+  automatically applies these transformations throughout a graph
 - Tools for traversing and transforming graphs containing ``RandomVariable``\s
 - ``RandomVariable``-aware pretty printing and LaTeX output
 
 
 Examples
 ========
+
+Using ``aeppl``, one can create a joint log-probability graph from a graph
+containing Aesara ``RandomVariable``\s:
 
 .. code-block:: python
 
@@ -26,16 +33,45 @@ Examples
   S_rv = at.random.invgamma(0.5, 0.5)
   Y_rv = at.random.normal(0.0, at.sqrt(S_rv))
 
-  pprint(Y_rv)
-  # S ~ invgamma(0.5, 0.5) in R, Y ~ N(0.0, sqrt(S)**2) in R
-  # Y
-
-
   # Compute the joint log-probability
   y = at.scalar("y")
   s = at.scalar("s")
   logprob = joint_logprob(Y_rv, {Y_rv: y, S_rv: s})
 
+
+Log-probability graphs are standard Aesara graphs, so we can compute
+values with them:
+
+.. code-block:: python
+
+  logprob_fn = aesara.function([y, s], logprob)
+
+  logprob_fn(-0.5, 1.0)
+  # array(-2.46287705)
+
+
+Graphs can also be pretty printed:
+
+.. code-block:: python
+
+  from aeppl import pprint, latex_pprint
+
+
+  # Print the original graph
+  print(pprint(Y_rv))
+  # b ~ invgamma(0.5, 0.5) in R, a ~ N(0.0, sqrt(b)**2) in R
+  # a
+
+  print(latex_pprint(Y_rv))
+  # \begin{equation}
+  #   \begin{gathered}
+  #     b \sim \operatorname{invgamma}\left(0.5, 0.5\right)\,  \in \mathbb{R}
+  #     \\
+  #     a \sim \operatorname{N}\left(0.0, {\sqrt{b}}^{2}\right)\,  \in \mathbb{R}
+  #   \end{gathered}
+  #   \\
+  #   a
+  # \end{equation}
 
   # Simplify the graph so that it's easier to read
   from aesara.graph.opt_utils import optimize_graph
@@ -53,6 +89,11 @@ Examples
   #         -inf) +
   #  ((-0.9189385332046727 + (-0.5 * ((y / sqrt(s)) ** 2))) - log(sqrt(s))))
 
+
+Joint log-probabilities can be computed for some terms that are *derived* from
+``RandomVariable``\s, as well:
+
+.. code-block:: python
 
   # Create a switching model from a Bernoulli distributed index
   Z_rv = at.random.normal([-100, 100], 1.0, name="Z")
@@ -80,7 +121,7 @@ Examples
 Installation
 ============
 
-The latest release of ``aeppl`` can be installed from PyPI using ``pip``:
+The latest release of ```aeppl`` can be installed from PyPI using ``pip``:
 
 ::
 
