@@ -2595,7 +2595,7 @@ class ChiSquared(PositiveContinuous):
     nu: float
         Degrees of freedom (nu > 0).
     """
-    rv_op = chisquare
+    rv_op = chisquared
 
     @classmethod
     def dist(cls, nu, *args, **kwargs):
