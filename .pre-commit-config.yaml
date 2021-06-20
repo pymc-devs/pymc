@@ -36,6 +36,7 @@ repos:
 - repo: local
   hooks:
     - id: check-no-tests-are-ignored
+      additional_dependencies: [pandas,pyyaml]
       entry: python scripts/check_all_tests_are_covered.py
       files: ^\.github/workflows/pytest\.yml$
       language: python
