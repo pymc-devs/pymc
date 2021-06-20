@@ -510,15 +510,20 @@ class PreamblePPrinter(PPrinter):
 
         comma_str = ", \\," if latex_out else ", "
         newline_str = "\n\\\\\n" if latex_out else "\n"
+        indent_str = "  "
 
         # Let's join all the preamble categories, but split within
         # categories when the joined line is too long.
         preamble_lines = []
         for v in pstate.preamble_dict.values():
+
             if isinstance(v, Mapping):
                 v = list(v.values())
 
             assert isinstance(v, list)
+
+            if not v:
+                continue
 
             v_new = []
             c_len = l_idx = 0
@@ -535,15 +540,14 @@ class PreamblePPrinter(PPrinter):
 
         if preamble_lines and latex_out:
             preamble_body = newline_str.join(preamble_lines)
-            preamble_str = "\\begin{gathered}\n%s\n\\end{gathered}"
-            preamble_str = preamble_str % (preamble_body)
+            preamble_str = f"\\begin{{gathered}}\n{textwrap.indent(preamble_body, indent_str)}\n\\end{{gathered}}"
             res = newline_str.join([preamble_str] + body_strs)
         else:
             res = newline_str.join(preamble_lines + body_strs)
 
         if latex_out and latex_env:
             label_out = f"\\label{{{latex_label}}}\n" if latex_label else ""
-            res = textwrap.indent(res, "  ")
+            res = textwrap.indent(res, indent_str)
             res = (
                 f"\\begin{{{latex_env}}}\n"
                 f"{res}\n"
@@ -624,10 +628,22 @@ pprint.assign(at.eq, PatternPrinter(("%(0)s == %(1)s", -1000)))
 
 latex_pprint = PreamblePPrinter(pstate_defaults={"latex": True})
 latex_pprint.assign(Assert, IgnorePrinter())
+latex_pprint.assign(RandomStateSharedVariable, IgnorePrinter())
 latex_pprint.printers = copy(pprint.printers)
 latex_pprint.printers_dict = dict(pprint.printers_dict)
+
+latex_pprint.assign(at.ge, PatternPrinter(("%(0)s \\ge %(1)s", -1000)))
+latex_pprint.assign(at.gt, PatternPrinter(("%(0)s \\gt %(1)s", -1000)))
+latex_pprint.assign(at.le, PatternPrinter(("%(0)s \\le %(1)s", -1000)))
+latex_pprint.assign(at.lt, PatternPrinter(("%(0)s \\lt %(1)s", -1000)))
+latex_pprint.assign(at.eq, PatternPrinter(("%(0)s = %(1)s", -1000)))
+
+latex_pprint.assign(at.and_, OperatorPrinter("\\land", -1, "left"))
+latex_pprint.assign(at.or_, OperatorPrinter("\\lor", -1, "left"))
+latex_pprint.assign(at.invert, PatternPrinter(("\\lnot %(0)s", -1000)))
 
 latex_pprint.assign(_dot, OperatorPrinter("\\;", -1, "left"))
 latex_pprint.assign(at.mul, OperatorPrinter("\\odot", -1, "either"))
 latex_pprint.assign(at.true_div, PatternPrinter(("\\frac{%(0)s}{%(1)s}", -1000)))
+latex_pprint.assign(at.sqrt, PatternPrinter(("\\sqrt{%(0)s}", -1000)))
 latex_pprint.assign(at.pow, PatternPrinter(("{%(0)s}^{%(1)s}", -1000)))

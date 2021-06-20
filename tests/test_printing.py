@@ -108,9 +108,9 @@ def test_tex_print():
         r"""
     \begin{equation}
       \begin{gathered}
-      b \in \mathbb{R}, \,\mu \in \mathbb{R}, \,\sigma \in \mathbb{R}
-      \\
-      a \sim \operatorname{N}\left(\mu, {\sigma}^{2}\right)\,  \in \mathbb{R}
+        b \in \mathbb{R}, \,\mu \in \mathbb{R}, \,\sigma \in \mathbb{R}
+        \\
+        a \sim \operatorname{N}\left(\mu, {\sigma}^{2}\right)\,  \in \mathbb{R}
       \end{gathered}
       \\
       (b \odot a)
@@ -126,9 +126,9 @@ def test_tex_print():
         r"""
     \begin{equation}
       \begin{gathered}
-      b \in \mathbb{R}, \,\mu \in \mathbb{R}, \,\sigma \in \mathbb{R}
-      \\
-      X \sim \operatorname{N}\left(\mu, {\sigma}^{2}\right)\,  \in \mathbb{R}^{2 \times 1}
+        b \in \mathbb{R}, \,\mu \in \mathbb{R}, \,\sigma \in \mathbb{R}
+        \\
+        X \sim \operatorname{N}\left(\mu, {\sigma}^{2}\right)\,  \in \mathbb{R}^{2 \times 1}
       \end{gathered}
       \\
       (b \odot X)
@@ -147,15 +147,15 @@ def test_tex_print():
         r"""
     \begin{equation}
       \begin{gathered}
-      M \in \mathbb{R}^{N^{M}_{0} \times N^{M}_{1}}
-      \\
-      \mu_2 \in \mathbb{R}, \,\sigma_2 \in \mathbb{R}
-      \\
-      b \in \mathbb{R}, \,\sigma \in \mathbb{R}, \,c \in \mathbb{R}
-      \\
-      a \sim \operatorname{N}\left(\mu_2, {\sigma_2}^{2}\right)\,  \in \mathbb{R}
-      \\
-      d \sim \operatorname{N}\left((M \odot a), {\sigma}^{2}\right)\,  \in \mathbb{R}^{N^{d}_{0} \times N^{d}_{1}}
+        M \in \mathbb{R}^{N^{M}_{0} \times N^{M}_{1}}
+        \\
+        \mu_2 \in \mathbb{R}, \,\sigma_2 \in \mathbb{R}
+        \\
+        b \in \mathbb{R}, \,\sigma \in \mathbb{R}, \,c \in \mathbb{R}
+        \\
+        a \sim \operatorname{N}\left(\mu_2, {\sigma_2}^{2}\right)\,  \in \mathbb{R}
+        \\
+        d \sim \operatorname{N}\left((M \odot a), {\sigma}^{2}\right)\,  \in \mathbb{R}^{N^{d}_{0} \times N^{d}_{1}}
       \end{gathered}
       \\
       ((M \odot a) \odot ((b \odot d) + c))
@@ -168,7 +168,7 @@ def test_tex_print():
         r"""
     \begin{equation}
       \begin{gathered}
-      b \in \mathbb{Z}, \,c \in \mathbb{Z}, \,M \in \mathbb{R}^{N^{M}_{0} \times N^{M}_{1}}
+        b \in \mathbb{Z}, \,c \in \mathbb{Z}, \,M \in \mathbb{R}^{N^{M}_{0} \times N^{M}_{1}}
       \end{gathered}
       \\
       M\left[b, \,c\right]
@@ -185,7 +185,7 @@ def test_tex_print():
         r"""
     \begin{equation}
       \begin{gathered}
-      M \in \mathbb{R}^{N^{M}_{0} \times N^{M}_{1}}
+        M \in \mathbb{R}^{N^{M}_{0} \times N^{M}_{1}}
       \end{gathered}
       \\
       M\left[1\right]
@@ -198,7 +198,7 @@ def test_tex_print():
         r"""
     \begin{equation}
       \begin{gathered}
-      M \in \mathbb{N}^{N^{M}_{0}}
+        M \in \mathbb{N}^{N^{M}_{0}}
       \end{gathered}
       \\
       M\left[2:4:0\right]
@@ -206,3 +206,21 @@ def test_tex_print():
     """
     )
     assert latex_pprint(at.vector("M", dtype="uint32")[0:4:2]) == expected.strip()
+
+    S_rv = at.random.invgamma(0.5, 0.5, name="S")
+    Y_rv = at.random.normal(0.0, at.sqrt(S_rv), name="Y")
+
+    expected = textwrap.dedent(
+        r"""
+    \begin{equation}
+      \begin{gathered}
+        S \sim \operatorname{invgamma}\left(0.5, 0.5\right)\,  \in \mathbb{R}
+        \\
+        Y \sim \operatorname{N}\left(0.0, {\sqrt{S}}^{2}\right)\,  \in \mathbb{R}
+      \end{gathered}
+      \\
+      Y
+    \end{equation}
+    """
+    )
+    assert latex_pprint(Y_rv) == expected.strip()
