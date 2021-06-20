@@ -197,6 +197,29 @@ def invgamma_logprob(op, value, *inputs, **kwargs):
     return res
 
 
+@_logprob.register(arb.ChiSquareRV)
+def chisquare_logprob(op, value, *inputs, **kwargs):
+    (nu,) = inputs[3:]
+    res = gamma_logprob(op, value, *(*inputs[:3], nu / 2, 2))
+    return res
+
+
+@_logprob.register(arb.WaldRV)
+def wald_logprob(op, value, *inputs, **kwargs):
+    mu, scale = inputs[3:]
+    res = (
+        0.5 * at.log(scale / (2.0 * np.pi))
+        - 1.5 * at.log(value)
+        - 0.5 * scale / value * ((value - mu) / mu) ** 2
+    )
+
+    res = at.switch(at.gt(value, 0.0), res, -np.inf)
+    res = Assert("mu > 0, scale > 0")(
+        res, at.all(at.gt(mu, 0.0)), at.all(at.gt(scale, 0.0))
+    )
+    return res
+
+
 @_logprob.register(arb.WeibullRV)
 def weibull_logprob(op, value, *inputs, **kwargs):
     alpha, beta = inputs[3:]

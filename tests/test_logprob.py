@@ -310,6 +310,58 @@ def test_invgamma_logprob(dist_params, obs, size, error):
 @pytest.mark.parametrize(
     "dist_params, obs, size, error",
     [
+        # XXX: SciPy returns `inf` for `stats.chi2.logpdf(0, 1.5)`; we
+        # return `-inf`
+        ((-1,), np.array([0.5, 1, 10, -1], dtype=np.float64), (), True),
+        ((1.5,), np.array([0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5,), np.array([0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10,), np.array([0.5, 1, 10, -1], dtype=np.float64), (), False),
+    ],
+)
+def test_chisquare_logprob(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.chisquare(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logprob(obs, df):
+        return stats.chi2.logpdf(obs, df)
+
+    with cm:
+        scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logprob)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1, -1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), True),
+        ((1.5, 10.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((1.5, 2.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
+        ((10, 1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+    ],
+)
+def test_wald_logprob(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.wald(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logprob(obs, mean, scale):
+        return stats.invgauss.logpdf(obs, mean / scale, scale=scale)
+
+    with cm:
+        scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logprob)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
         ((-1, -1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), True),
         ((1.5, 10.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
         ((1.5, 2.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
