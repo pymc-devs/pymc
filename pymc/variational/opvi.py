@@ -966,7 +966,8 @@ class Group(WithMemoization):
             if var.type.numpy_dtype.name in discrete_types:
                 raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
             # 3) This is the way to infer shape and dtype of the variable
-            test_var = model_initial_point[var.tag.value_var.name]
+            value_var = self.model.rvs_to_values[var]
+            test_var = model_initial_point[value_var.name]
             if self.batched:
                 # Leave a more complicated case for future work
                 raise NotImplementedError("not yet ready")
@@ -989,10 +990,10 @@ class Group(WithMemoization):
                 size = test_var.size
             # TODO: There was self.ordering used in other util funcitons
             vr = self.input[..., start_idx:start_idx+size].reshape(shape).astype(dtype)
-            vr.name = var.tag.value_var.name + "_vi_replacement"
-            self.replacements[var.tag.value_var] = vr
-            self.ordering[var.tag.value_var.name] = (
-                var.tag.value_var.name,
+            vr.name = value_var.name + "_vi_replacement"
+            self.replacements[value_var] = vr
+            self.ordering[value_var.name] = (
+                value_var.name,
                 slice(start_idx, start_idx+size),
                 shape,
                 dtype
@@ -1599,7 +1600,7 @@ class Approximation(WithMemoization):
         """
 
         def vars_names(vs):
-            return {v.tag.value_var.name for v in vs}
+            return {self.model.rvs_to_values[v].name for v in vs}
 
         for vars_, random, ordering in zip(
             self.collect("group"), self.symbolic_randoms, self.collect("ordering")
@@ -1617,7 +1618,7 @@ class Approximation(WithMemoization):
     def sample_dict_fn(self):
         # TODO: this breaks
         s = at.iscalar()
-        names = [v.tag.value_var.name for v in self.model.free_RVs]
+        names = [self.model.rvs_to_values[v].name for v in self.model.free_RVs]
         sampled = [self.rslice(name) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
         sample_fn = aesara.function([s], sampled)
