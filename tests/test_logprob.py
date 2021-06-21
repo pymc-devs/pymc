@@ -32,7 +32,9 @@ def create_aesara_params(dist_params, obs, size):
     return dist_params_at, obs_at, size_at
 
 
-def scipy_logprob_tester(rv_var, obs, dist_params, test_fn=None):
+def scipy_logprob_tester(
+    rv_var, obs, dist_params, test_fn=None, check_broadcastable=True
+):
     """Test for correspondence between `RandomVariable` and NumPy shape and
     broadcast dimensions.
     """
@@ -51,9 +53,10 @@ def scipy_logprob_tester(rv_var, obs, dist_params, test_fn=None):
 
     assert aesara_res.type.numpy_dtype.kind == numpy_res.dtype.kind
 
-    numpy_shape = np.shape(numpy_res)
-    numpy_bcast = [s == 1 for s in numpy_shape]
-    np.testing.assert_array_equal(aesara_res.type.broadcastable, numpy_bcast)
+    if check_broadcastable:
+        numpy_shape = np.shape(numpy_res)
+        numpy_bcast = [s == 1 for s in numpy_shape]
+        np.testing.assert_array_equal(aesara_res.type.broadcastable, numpy_bcast)
 
     np.testing.assert_array_equal(aesara_res_val.shape, numpy_res.shape)
 
@@ -706,35 +709,106 @@ def test_hypergeometric_logprob(dist_params, obs, size, error):
         scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logprob)
 
 
-@pytest.mark.xfail(reason="Not finished")
 @pytest.mark.parametrize(
-    "dist_params, obs, size, error",
+    "dist_params, obs, size, exc_type, chk_bcast",
     [
-        ((np.array([-0.5, 0.5]),), np.array([0, 1], dtype=np.int64), (), True),
-        ((np.array([0.5, 0.5]),), np.array([0, 1, 100], dtype=np.int64), (), False),
-        ((np.array([0.5, 0.5]),), np.array([0, 1, 100], dtype=np.int64), (3, 2), False),
         (
-            (np.array([[0.3, 0.7], [0.1, 0.8]]),),
-            np.array([1, 0], dtype=np.int64),
+            (np.array([-0.5, 0.5]),),
+            np.array([0, 1], dtype=np.int64),
+            (),
+            AssertionError,
+            True,
+        ),
+        (
+            (np.array([0.5, 0.5]),),
+            np.array([0, 1, 100], dtype=np.int64),
+            (),
+            IndexError,
+            True,
+        ),
+        (
+            (np.array([0.1, 0.9]),),
+            np.array([0, 1, 0, 1], dtype=np.int64),
             (),
             False,
+            True,
+        ),
+        (
+            (np.array([0.1, 0.9]),),
+            np.array([0, 1, 0, 1], dtype=np.int64),
+            (1,),
+            False,
+            True,
+        ),
+        (
+            (np.array([0.1, 0.9]),),
+            np.array([0, 1, 0, 1], dtype=np.int64),
+            (3, 2),
+            False,
+            True,
+        ),
+        (
+            (np.array([0.1, 0.9]),),
+            np.array([[0, 1, 0, 1], [0, 1, 0, 1]], dtype=np.int64).T,
+            (),
+            False,
+            True,
+        ),
+        (
+            (np.array([[0.1, 0.9], [0.9, 0.1]]),),
+            np.array([[[0], [1], [1], [1]], [[1], [1], [0], [1]]], dtype=np.int64).T,
+            (),
+            False,
+            False,
+        ),
+        (
+            (np.array([[[0.1, 0.9]]]),),
+            np.array([0, 1, 1], dtype=np.int64),
+            (),
+            False,
+            False,
+        ),
+        (
+            (np.array([[0.1, 0.9], [0.9, 0.1]]),),
+            np.array([[0, 1, 0, 1], [0, 1, 0, 1]], dtype=np.int64).T,
+            (),
+            False,
+            True,
+        ),
+        (
+            (np.array([[0.1, 0.9], [0.9, 0.1]]),),
+            np.array([[0, 1, 0, 1], [0, 1, 0, 1]], dtype=np.int64).T,
+            (3, 2),
+            False,
+            True,
         ),
     ],
 )
-def test_categorical_logprob(dist_params, obs, size, error):
+def test_categorical_logprob(dist_params, obs, size, exc_type, chk_bcast):
 
     dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
     dist_params = dict(zip(dist_params_at, dist_params))
 
     x = at.random.categorical(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not exc_type else pytest.raises(exc_type)
 
     def scipy_logprob(obs, p):
-        return stats.categorical.logpmf(obs, p)
+        if p.ndim > 1:
+            if p.ndim > obs.ndim:
+                obs = obs[((None,) * (p.ndim - obs.ndim) + (Ellipsis,))]
+            elif p.ndim < obs.ndim:
+                p = p[((None,) * (obs.ndim - p.ndim) + (Ellipsis,))]
+
+            pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
+            return np.log(np.take_along_axis(p.transpose(pattern), obs, 0))
+        else:
+            return np.log(p[obs])
 
     with cm:
-        scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logprob)
+        scipy_logprob_tester(
+            x, obs, dist_params, test_fn=scipy_logprob, check_broadcastable=chk_bcast
+        )
 
 
 @pytest.mark.parametrize(

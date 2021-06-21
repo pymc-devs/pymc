@@ -18,7 +18,7 @@ setup(
         "numpy>=1.18.1",
         "scipy>=1.4.0",
         "numba",
-        "aesara",
+        "aesara >= 2.0.12",
     ],
     tests_require=["pytest"],
     long_description=open("README.md").read() if exists("README.md") else "",

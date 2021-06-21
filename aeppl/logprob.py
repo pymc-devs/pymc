@@ -372,43 +372,30 @@ def hypergeometric_logprob(op, value, *inputs, **kwargs):
 def categorical_logprob(op, value, *inputs, **kwargs):
     (p,) = inputs[3:]
 
-    raise NotImplementedError()
-
-    p_ = p
-    p = p_ / at.sum(p_, axis=-1, keepdims=True)
-
-    # FIXME: Why waste a `clip` on these?  If they're out of range, that's
-    # simply an error/invalid inputs.  Use `Assert` instead.
-    k = at.shape(p)[-1]
-    value_clip = at.clip(value, 0, k - 1)
+    p = p / at.sum(p, axis=-1, keepdims=True)
 
     if p.ndim > 1:
-        # FIXME: This could probably be done much easier with something like `at.ogrid`.
-        # E.g. something like
-        # ind_slices = tuple(at.ogrid[[slice(None, d) for d in tuple(p.shape)[:-1]]])
-        # However, if that produces an `AdvancedSubtensor*` and this approach doesn't,
-        # then this one is probably better.
-        pass
+        if p.ndim > value.ndim:
+            value = at.shape_padleft(value, p.ndim - value.ndim)
+        elif p.ndim < value.ndim:
+            p = at.shape_padleft(p, value.ndim - p.ndim)
 
-        # if p.ndim > value_clip.ndim:
-        #     value_clip = at.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
-        # elif p.ndim < value_clip.ndim:
-        #     p = at.shape_padleft(p, value_clip.ndim - p_.ndim)
-        # pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
-        #
-        # res = at.log(
-        #     take_along_axis(
-        #         p.dimshuffle(pattern),
-        #         value_clip,
-        #     )
-        # )
+        pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
+        res = at.log(
+            at.take_along_axis(
+                p.dimshuffle(pattern),
+                value,
+            )
+        )
+        # FIXME: `take_along_axis` drops a broadcastable dimension
+        # when `value.broadcastable == p.broadcastable == (True, True, False)`.
     else:
-        res = at.log(p[value_clip])
+        res = at.log(p[value])
 
-    res = at.switch(at.bitwise_and(at.le(0, value), at.le(value, k - 1)), res, -np.inf)
-    res = Assert("0 <= p <= 1")(
-        res, at.all(at.ge(p_, 0.0), axis=-1), at.all(at.le(p, 1.0), axis=-1)
+    res = at.switch(
+        at.bitwise_and(at.le(0, value), at.lt(value, at.shape(p)[-1])), res, -np.inf
     )
+    res = Assert("0 <= p <= 1")(res, at.all(at.ge(p, 0.0)), at.all(at.le(p, 1.0)))
     return res
 
 
