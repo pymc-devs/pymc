@@ -14,7 +14,7 @@ repos:
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
 - repo: https://github.com/PyCQA/isort
-  rev: 5.8.0
+  rev: 5.9.0
   hooks:
     - id: isort
       name: isort
