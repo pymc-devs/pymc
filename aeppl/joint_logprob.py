@@ -93,6 +93,7 @@ def joint_logprob(
         clone=True,
         memo=memo,
         copy_orphans=False,
+        copy_inputs=False,
         features=[ShapeFeature()],
     )
 

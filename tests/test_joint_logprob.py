@@ -3,7 +3,7 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 import scipy.stats.distributions as sp
-from aesara.graph.basic import equal_computations
+from aesara.graph.basic import ancestors, equal_computations
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -167,3 +167,17 @@ def test_joint_logprob_subtensor():
         logp_vals = logp_vals_fn(A_idx_value, I_value)
 
         np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
+
+
+def test_persist_inputs():
+    """Make sure we don't unnecessarily clone variables."""
+    x = at.scalar("x")
+    beta_rv = at.random.normal(0, 1, name="beta")
+    y_rv = at.random.normal(beta_rv * x, 1, name="y")
+
+    beta = beta_rv.type()
+    y = y_rv.type()
+
+    logp = joint_logprob(y_rv, {beta_rv: beta, y_rv: y})
+
+    assert x in ancestors([logp])
