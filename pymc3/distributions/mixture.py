@@ -161,8 +161,7 @@ class Mixture(Distribution):
             )
         shape = kwargs.pop("shape", ())
 
-        self.w = w = at.as_tensor_variable(w)
-        self.comp_dists = comp_dists
+        w = at.as_tensor_variable(w)
 
         defaults = kwargs.pop("defaults", [])
 
@@ -194,7 +193,7 @@ class Mixture(Distribution):
         except (AttributeError, ValueError, IndexError):
             pass
 
-        return super().__dist__([w, comp_dists], *args, **kwargs)
+        return super().dist([w, comp_dists], *args, **kwargs)
 
     @property
     def comp_dists(self):
@@ -513,7 +512,7 @@ class NormalMixture(Mixture):
     """
 
     @classmethod
-    def dist(w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):
+    def dist(cls, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):
         if sd is not None:
             sigma = sd
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
