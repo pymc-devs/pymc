@@ -45,8 +45,6 @@ jobs:
             - '.github/**/*.yml'
             - 'setup.cfg'
             - 'requirements.txt'
-            - '.coveragerc'
-
 
   style:
     name: Check code style
