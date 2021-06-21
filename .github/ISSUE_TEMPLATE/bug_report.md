@@ -1,4 +1,8 @@
-If you have questions about a specific use case, or you are not sure whether this is a bug or not, please post it to our discourse channel: https://discourse.pymc.io
+---
+name: 'Bug Report'
+about: Inform about bugs in the PyMC3 library
+
+---
 
 ## Description of your problem
 
@@ -8,9 +12,14 @@ If you have questions about a specific use case, or you are not sure whether thi
 ```
 
 **Please provide the full traceback.**
+
+<details><summary>Complete error traceback</summary>
+
 ```python
-[The error output here]
+[The complete error output here]
 ```
+
+</details>
 
 **Please provide any additional information below.**
 
