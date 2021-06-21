@@ -161,7 +161,7 @@ class FullRankGroup(Group):
     @node_property
     def cov(self):
         L = self.L
-        if self.batched: 
+        if self.batched:
             return at.batched_dot(L, L.swapaxes(-1, -2))
         else:
             return L.dot(L.T)
@@ -187,6 +187,7 @@ class FullRankGroup(Group):
         z0 = self.symbolic_initial
         if self.batched:
             raise NotImplementedError
+
             def logq(z_b, mu_b, L_b):
                 return pm.MvNormal.dist(mu=mu_b, chol=L_b).logp(z_b)
 
@@ -199,7 +200,6 @@ class FullRankGroup(Group):
             logdet = at.sum(at.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1), axis=-1)
             logq = pm.Normal.logp(z0, 0, 1) - logdet
             return logq.sum(range(1, logq.ndim))
-            
 
     @node_property
     def symbolic_random(self):

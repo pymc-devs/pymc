@@ -851,8 +851,9 @@ class Group(WithMemoization):
         self.group = group
         self.user_params = params
         self._user_params = None
-        self.replacements = dict()
-        self.ordering = dict()
+        self.replacements = collections.OrderedDict()
+        self.value_replacements = collections.OrderedDict()
+        self.ordering = collections.OrderedDict()
         # save this stuff to use in __init_group__ later
         self._kwargs = kwargs
         if self.group is not None:
@@ -958,7 +959,8 @@ class Group(WithMemoization):
 
         # 1) we need initial point (transformed space)
         model_initial_point = self.model.initial_point
-        
+        _, replace_to_value_vars = rvs_to_value_vars(self.group, apply_transforms=True)
+        self.value_replacements.update(replace_to_value_vars)
         # 2) we'll work with a single group, a subset of the model
         # here we need to create a mapping to replace value_vars with slices from the approximation
         start_idx = 0
@@ -989,14 +991,14 @@ class Group(WithMemoization):
                 dtype = test_var.dtype
                 size = test_var.size
             # TODO: There was self.ordering used in other util funcitons
-            vr = self.input[..., start_idx:start_idx+size].reshape(shape).astype(dtype)
+            vr = self.input[..., start_idx : start_idx + size].reshape(shape).astype(dtype)
             vr.name = value_var.name + "_vi_replacement"
             self.replacements[value_var] = vr
             self.ordering[value_var.name] = (
                 value_var.name,
-                slice(start_idx, start_idx+size),
+                slice(start_idx, start_idx + size),
                 shape,
-                dtype
+                dtype,
             )
             start_idx += size
 
@@ -1166,6 +1168,7 @@ class Group(WithMemoization):
 
     def to_flat_input(self, node):
         """*Dev* - replace vars with flattened view stored in `self.inputs`"""
+        node = aesara.clone_replace(node, self.value_replacements)
         return aesara.clone_replace(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node):
@@ -1469,6 +1472,13 @@ class Approximation(WithMemoization):
         return self.datalogp / self.symbolic_normalizing_constant
 
     @property
+    def value_replacements(self):
+        """*Dev* - all replacements from groups to replace PyMC random variables with approximation"""
+        return collections.OrderedDict(
+            itertools.chain.from_iterable(g.value_replacements.items() for g in self.groups)
+        )
+
+    @property
     def replacements(self):
         """*Dev* - all replacements from groups to replace PyMC random variables with approximation"""
         return collections.OrderedDict(
@@ -1528,15 +1538,17 @@ class Approximation(WithMemoization):
         try_to_set_test_value(_node, node, s)
         return node
 
-    def to_flat_input(self, node):
+    def to_flat_input(self, node, more_replacements=None):
         """*Dev* - replace vars with flattened view stored in `self.inputs`"""
+        more_replacements = more_replacements or {}
+        node = aesara.clone_replace(node, {**self.value_replacements, **more_replacements})
         return aesara.clone_replace(node, self.replacements)
 
-    def symbolic_sample_over_posterior(self, node):
+    def symbolic_sample_over_posterior(self, node, more_replacements=None):
         """*Dev* - performs sampling of node applying independent samples from posterior each time.
         Note that it is done symbolically and this node needs :func:`set_size_and_deterministic` call
         """
-        node = self.to_flat_input(node)
+        node = self.to_flat_input(node, more_replacements=more_replacements)
 
         def sample(*post):
             return aesara.clone_replace(node, dict(zip(self.inputs, post)))
@@ -1544,12 +1556,12 @@ class Approximation(WithMemoization):
         nodes, _ = aesara.scan(sample, self.symbolic_randoms)
         return nodes
 
-    def symbolic_single_sample(self, node):
+    def symbolic_single_sample(self, node, more_replacements=None):
         """*Dev* - performs sampling of node applying single sample from posterior.
         Note that it is done symbolically and this node needs
         :func:`set_size_and_deterministic` call with `size=1`
         """
-        node = self.to_flat_input(node)
+        node = self.to_flat_input(node, more_replacements=more_replacements)
         post = [v[0] for v in self.symbolic_randoms]
         inp = self.inputs
         return aesara.clone_replace(node, dict(zip(inp, post)))
@@ -1585,12 +1597,13 @@ class Approximation(WithMemoization):
         sampled node(s) with replacements
         """
         node_in = node
-        node = aesara.clone_replace(node, more_replacements)
         if size is None:
-            node_out = self.symbolic_single_sample(node)
+            node_out = self.symbolic_single_sample(node, more_replacements=more_replacements)
         else:
-            node_out = self.symbolic_sample_over_posterior(node)
-        node_out = self.set_size_and_deterministic(node_out, size, deterministic, more_replacements)
+            node_out = self.symbolic_sample_over_posterior(
+                node, more_replacements=more_replacements
+            )
+        node_out = self.set_size_and_deterministic(node_out, size, deterministic)
         try_to_set_test_value(node_in, node_out, size)
         return node_out
 
