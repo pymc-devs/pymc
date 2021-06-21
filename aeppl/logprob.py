@@ -449,9 +449,6 @@ def dirichlet_logprob(op, value, *inputs, **kwargs):
     (alpha,) = inputs[3:]
     res = at.sum(at.gammaln(alpha)) - at.gammaln(at.sum(alpha))
     res = -res + at.sum((xlogy0(alpha - 1, value.T)).T, axis=0)
-    # res = at.sum(logpow(value, alpha - 1) - at.gammaln(alpha), axis=-1) + at.gammaln(
-    #     at.sum(alpha, axis=-1)
-    # )
     res = at.switch(
         at.bitwise_and(
             at.all(at.le(0.0, value), axis=-1), at.all(at.le(value, 1.0), axis=-1)
