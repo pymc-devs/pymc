@@ -121,7 +121,7 @@ Joint log-probabilities can be computed for some terms that are *derived* from
 Installation
 ============
 
-The latest release of ```aeppl`` can be installed from PyPI using ``pip``:
+The latest release of ``aeppl`` can be installed from PyPI using ``pip``:
 
 ::
 
