@@ -1,4 +1,4 @@
-|Tests Status| |Coverage|
+|Tests Status| |Coverage| |Gitter|
 
 
 ``aeppl`` provides tools for a[e]PPL written in `Aesara <https://github.com/pymc-devs/aesara>`_.
@@ -141,3 +141,6 @@ The current development branch of ``aeppl`` can be installed from GitHub, also u
   :target: https://github.com/aesara-devs/aeppl/actions/workflows/test.yml
 .. |Coverage| image:: https://codecov.io/gh/aesara-devs/aeppl/branch/main/graph/badge.svg?token=L2i59LsFc0
   :target: https://codecov.io/gh/aesara-devs/aeppl
+.. |Gitter| image:: https://badges.gitter.im/aesara-devs/aeppl.svg
+   :alt: Join the chat at https://gitter.im/aesara-devs/aeppl
+   :target: https://gitter.im/aesara-devs/aeppl?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
