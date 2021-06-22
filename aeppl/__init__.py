@@ -14,5 +14,6 @@ from aeppl.printing import latex_pprint, pprint
 import aeppl.cumsum
 import aeppl.mixture
 import aeppl.scan
+import aeppl.truncation
 
 # isort: on
