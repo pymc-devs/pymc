@@ -798,7 +798,7 @@ def draw_values(params, point=None, size=None):
                     stack.extend(
                         [
                             node
-                            for node in named_nodes_parents[next_]
+                            for node in named_nodes_descendents[next_]
                             if node is not None and getattr(node, "name", None) not in givens
                         ]
                     )
