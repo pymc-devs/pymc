@@ -17,13 +17,17 @@ from aesara.tensor.random.opt import (
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
+    AdvancedSubtensor,
+    AdvancedSubtensor1,
     IncSubtensor,
+    Subtensor,
 )
 from aesara.tensor.var import TensorVariable
 
 from aeppl.utils import indices_from_subtensor
 
 inc_subtensor_ops = (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
+subtensor_ops = (AdvancedSubtensor, AdvancedSubtensor1, Subtensor)
 
 
 class PreserveRVMappings(Feature):
@@ -141,7 +145,15 @@ def naive_bcast_rv_lift(fgraph, node):
 
     rng, size, dtype, *dist_params = lifted_node.inputs
 
-    new_dist_params = [at.broadcast_to(param, bcast_shape) for param in dist_params]
+    new_dist_params = [
+        at.broadcast_to(
+            param,
+            at.broadcast_shape(
+                tuple(param.shape), tuple(bcast_shape), arrays_are_shapes=True
+            ),
+        )
+        for param in dist_params
+    ]
     bcasted_node = lifted_node.op.make_node(rng, size, dtype, *new_dist_params)
 
     if aesara.config.compute_test_value != "off":

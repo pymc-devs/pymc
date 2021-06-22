@@ -4,7 +4,13 @@ __version__ = get_versions()["version"]
 del get_versions
 
 
-from .logprob import logprob  # isort: split
+from aeppl.logprob import logprob  # isort: split
 
-from .joint_logprob import joint_logprob
-from .printing import latex_pprint, pprint
+from aeppl.joint_logprob import joint_logprob
+from aeppl.printing import latex_pprint, pprint
+
+# isort: off
+# Add optimizations to the DBs
+import aeppl.mixture
+
+# isort: on
