@@ -684,7 +684,7 @@ class DirichletMultinomial(Discrete):
         return ["n", "a"]
 
 
-class OrderedMultinomial(Multinomial):
+class _OrderedMultinomial(Multinomial):
     R"""
         Ordered Multinomial log-likelihood.
 
@@ -763,7 +763,7 @@ class OrderedMultinomial(Multinomial):
     rv_op = multinomial
 
     @classmethod
-    def dist(cls, eta, cutpoints, n, compute_p=True, *args, **kwargs):
+    def dist(cls, eta, cutpoints, n, *args, **kwargs):
         eta = at.as_tensor_variable(floatX(eta))
         cutpoints = at.as_tensor_variable(cutpoints)
         n = at.as_tensor_variable(intX(n))
@@ -777,12 +777,16 @@ class OrderedMultinomial(Multinomial):
             ],
             axis=-1,
         )
-        if compute_p and pm.modelcontext(None):
-            p = pm.Deterministic("complete_p", p_cum[..., 1:] - p_cum[..., :-1])
-        else:
-            p = p_cum[..., 1:] - p_cum[..., :-1]
+        p = p_cum[..., 1:] - p_cum[..., :-1]
 
         return super().dist(n, p, *args, **kwargs)
+
+
+def OrderedMultinomial(name, *args, compute_p=True, **kwargs):
+    out_rv = _OrderedMultinomial(name, *args, **kwargs)
+    if compute_p:
+        pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[4])
+    return out_rv
 
 
 def posdef(AA):
