@@ -38,6 +38,18 @@ def logprob(rv_var, *rv_values, **kwargs):
     return logprob
 
 
+def logcdf(rv_var, rv_value, **kwargs):
+    """Create a graph for the logcdf of a ``RandomVariable``."""
+    logcdf = _logcdf(
+        rv_var.owner.op, rv_value, *rv_var.owner.inputs, name=rv_var.name, **kwargs
+    )
+
+    if rv_var.name:
+        logcdf.name = f"{rv_var.name}_logcdf"
+
+    return logcdf
+
+
 @singledispatch
 def _logprob(
     op: Op,
@@ -52,7 +64,23 @@ def _logprob(
     for a ``RandomVariable``, register a new function on this dispatcher.
 
     """
-    raise NotImplementedError()
+    raise NotImplementedError(f"Logprob method not implemented for {op}")
+
+
+@singledispatch
+def _logcdf(
+    op: Op,
+    value: TensorVariable,
+    *inputs: TensorVariable,
+    **kwargs,
+):
+    """Create a graph for the logcdf of a ``RandomVariable``.
+
+    This function dispatches on the type of ``op``, which should be a subclass
+    of ``RandomVariable``.  If you want to implement new logcdf graphs
+    for a ``RandomVariable``, register a new function on this dispatcher.
+    """
+    raise NotImplementedError(f"Logcdf method not implemented for {op}")
 
 
 @_logprob.register(arb.UniformRV)
@@ -66,6 +94,24 @@ def uniform_logprob(op, values, *inputs, **kwargs):
     )
 
 
+@_logcdf.register(arb.UniformRV)
+def uniform_logcdf(op, value, *inputs, **kwargs):
+    lower, upper = inputs[3:]
+
+    res = at.switch(
+        at.lt(value, lower),
+        -np.inf,
+        at.switch(
+            at.lt(value, upper),
+            at.log(value - lower) - at.log(upper - lower),
+            0,
+        ),
+    )
+
+    res = Assert("lower <= upper")(res, at.all(at.le(lower, upper)))
+    return res
+
+
 @_logprob.register(arb.NormalRV)
 def normal_logprob(op, values, *inputs, **kwargs):
     (value,) = values
@@ -75,6 +121,21 @@ def normal_logprob(op, values, *inputs, **kwargs):
         - at.log(at.sqrt(2.0 * np.pi))
         - at.log(sigma)
     )
+    res = Assert("sigma > 0")(res, at.all(at.gt(sigma, 0.0)))
+    return res
+
+
+@_logcdf.register(arb.NormalRV)
+def normal_logcdf(op, value, *inputs, **kwargs):
+    mu, sigma = inputs[3:]
+
+    z = (value - mu) / sigma
+    res = at.switch(
+        at.lt(z, -1.0),
+        at.log(at.erfcx(-z / at.sqrt(2.0)) / 2.0) - at.sqr(z) / 2.0,
+        at.log1p(-at.erfc(z / at.sqrt(2.0)) / 2.0),
+    )
+
     res = Assert("sigma > 0")(res, at.all(at.gt(sigma, 0.0)))
     return res
 
@@ -343,6 +404,16 @@ def poisson_logprob(op, values, *inputs, **kwargs):
     res = at.switch(at.le(0, value), res, -np.inf)
     res = Assert("0 <= mu")(res, at.all(at.le(0.0, mu)))
     res = at.switch(at.bitwise_and(at.eq(mu, 0.0), at.eq(value, 0.0)), 0.0, res)
+    return res
+
+
+@_logcdf.register(arb.PoissonRV)
+def poisson_logcdf(op, value, *inputs, **kwargs):
+    (mu,) = inputs[3:]
+    value = at.floor(value)
+    res = at.log(at.gammaincc(value + 1, mu))
+    res = at.switch(at.le(0, value), res, -np.inf)
+    res = Assert("0 <= mu")(res, at.all(at.le(0.0, mu)))
     return res
 
 

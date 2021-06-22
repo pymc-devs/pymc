@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import scipy.stats as stats
 
-from aeppl.logprob import logprob
+from aeppl.logprob import logcdf, logprob
 
 # @pytest.fixture(scope="module", autouse=True)
 # def set_aesara_flags():
@@ -33,7 +33,7 @@ def create_aesara_params(dist_params, obs, size):
 
 
 def scipy_logprob_tester(
-    rv_var, obs, dist_params, test_fn=None, check_broadcastable=True
+    rv_var, obs, dist_params, test_fn=None, check_broadcastable=True, test_logcdf=False
 ):
     """Test for correspondence between `RandomVariable` and NumPy shape and
     broadcast dimensions.
@@ -46,7 +46,10 @@ def scipy_logprob_tester(
 
         test_fn = getattr(stats, name)
 
-    aesara_res = logprob(rv_var, at.as_tensor(obs))
+    if not test_logcdf:
+        aesara_res = logprob(rv_var, at.as_tensor(obs))
+    else:
+        aesara_res = logcdf(rv_var, at.as_tensor(obs))
     aesara_res_val = aesara_res.eval(dist_params)
 
     numpy_res = np.asarray(test_fn(obs, *dist_params.values()))
@@ -86,6 +89,26 @@ def test_uniform_logprob(dist_params, obs, size):
 @pytest.mark.parametrize(
     "dist_params, obs, size",
     [
+        ((0, 1), np.array([-1, 0, 0.5, 1, 2], dtype=np.float64), ()),
+        ((-2, -1), np.array([-3, -2, -0.5, -1, 0], dtype=np.float64), ()),
+    ],
+)
+def test_uniform_logcdf(dist_params, obs, size):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.uniform(*dist_params_at, size=size_at)
+
+    def scipy_logcdf(obs, l, u):
+        return stats.uniform.logcdf(obs, loc=l, scale=u - l)
+
+    scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logcdf, test_logcdf=True)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size",
+    [
         ((0, 1), np.array([0, 0.5, 1, -1], dtype=np.float64), ()),
         ((-1, 20), np.array([0, 0.5, 1, -1], dtype=np.float64), ()),
         ((-1, 20), np.array([0, 0.5, 1, -1], dtype=np.float64), (2, 3)),
@@ -99,6 +122,26 @@ def test_normal_logprob(dist_params, obs, size):
     x = at.random.normal(*dist_params_at, size=size_at)
 
     scipy_logprob_tester(x, obs, dist_params, test_fn=stats.norm.logpdf)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size",
+    [
+        ((0, 1), np.array([0, 0.5, 1, -1], dtype=np.float64), ()),
+        ((-1, 20), np.array([0, 0.5, 1, -1], dtype=np.float64), ()),
+        ((-1, 20), np.array([0, 0.5, 1, -1], dtype=np.float64), (2, 3)),
+    ],
+)
+def test_normal_logcdf(dist_params, obs, size):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.normal(*dist_params_at, size=size_at)
+
+    scipy_logprob_tester(
+        x, obs, dist_params, test_fn=stats.norm.logcdf, test_logcdf=True
+    )
 
 
 @pytest.mark.parametrize(
@@ -618,6 +661,38 @@ def test_poisson_logprob(dist_params, obs, size, error):
 
     with cm:
         scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logprob)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
+        ((-1,), np.array([-1, 0, 1, 100, 10000], dtype=np.int64), (), True),
+        ((1.0,), np.array([-1, 0, 1, 100, 10000], dtype=np.int64), (), False),
+        ((0.5,), np.array([-1, 0, 1, 100, 10000], dtype=np.int64), (3, 2), False),
+        (
+            (np.array([0.01, 0.2, 200]),),
+            np.array([-1, 1, 84], dtype=np.int64),
+            (),
+            False,
+        ),
+    ],
+)
+def test_poisson_logcdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.poisson(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+
+    def scipy_logcdf(obs, mu):
+        return stats.poisson.logcdf(obs, mu)
+
+    with cm:
+        scipy_logprob_tester(
+            x, obs, dist_params, test_fn=scipy_logcdf, test_logcdf=True
+        )
 
 
 @pytest.mark.parametrize(
