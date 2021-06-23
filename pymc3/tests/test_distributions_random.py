@@ -283,6 +283,64 @@ class TestZeroInflatedBinomial(BaseTestCases.BaseTestCase):
 
 
 class BaseTestDistribution(SeededTest):
+    """
+    This class provides a base for tests that new RandomVariables are correctly
+    implemented, and that the mapping of parameters between the PyMC3
+    Distribution and the respective RandomVariable is correct.
+
+    Three default tests are provided which check:
+    1. Expected inputs are passed to the `rv_op` by the `dist` `classmethod`,
+    via `check_pymc_params_match_rv_op`
+    2. Expected (exact) draws are being returned, via
+    `check_pymc_draws_match_reference`
+    3. Shape variable inference is correct, via `check_rv_size`
+
+    Each desired test must be referenced by name in `tests_to_run`, when
+    subclassing this distribution. Custom tests can be added to each class as
+    well. See `TestFlat` for an example.
+
+    Additional tests should be added for each optional parametrization of the
+    distribution. In this case it's enough to include the test
+    `check_pymc_params_match_rv_op` since only this differs.
+
+    Note on `check_rv_size` test:
+        Custom input sizes (and expected output shapes) can be defined for the
+        `check_rv_size` test, by adding the optional class attributes
+        `sizes_to_check` and `sizes_expected`:
+
+        ```python
+        sizes_to_check = [None, (1), (2, 3)]
+        sizes_expected = [(3,), (1, 3), (2, 3, 3)]
+        tests_to_run = ["check_rv_size"]
+        ```
+
+        This is usually needed for Multivariate distributions. You can see an
+        example in `TestDirichlet`
+
+
+    Notes on `check_pymcs_draws_match_reference` test:
+
+        The `check_pymcs_draws_match_reference` is a very simple test for the
+        equality of draws from the `RandomVariable` and the exact same python
+        function, given the  same inputs and random seed. A small number
+        (`size=15`) is checked. This is not supposed to be a test for the
+        correctness of the random generator. The latter kind of test
+        (if warranted) can be performed with the aid of `pymc3_random` and
+        `pymc3_random_discrete` methods in this file, which will perform an
+        expensive statistical comparison between the RandomVariable `rng_fn`
+        and a reference Python function. This kind of test only makes sense if
+        there is a good independent generator reference (i.e., not just the same
+        composition of numpy / scipy python calls that is done inside `rng_fn`).
+
+        Finally, when your `rng_fn` is doing something more than just calling a
+        `numpy` or `scipy` method, you will need to setup an equivalent seeded
+        function with which to compare for the exact draws (instead of relying on
+        `seeded_[scipy|numpy]_distribution_builder`). You can find an example
+        in the `TestWeibull`, whose `rng_fn` returns
+        `beta * np.random.weibull(alpha, size=size)`.
+
+    """
+
     pymc_dist: Optional[Callable] = None
     pymc_dist_params = dict()
     reference_dist: Optional[Callable] = None
