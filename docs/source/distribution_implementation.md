@@ -14,7 +14,7 @@ default `transforms`.
 Here is a summary check-list of the steps needed to implement a new distribution.
 Each section will be expanded below:
 
-1. Creating a new `RandomVariable` `op`
+1. Creating a new `RandomVariable` `Op`
 1. Implementing the corresponding `Distribution` class
 1. Adding tests for the new `RandomVariable`
 1. Adding tests for the `logp` / `logcdf` methods
@@ -24,7 +24,7 @@ This guide does not attempt to explain the rationale behind the `Distributions`
 current implementation, and details are provided only insofar as they help
 to implement new "standard" distributions.
 
-## 1. Creating a new `RandomVariable` `op`
+## 1. Creating a new `RandomVariable` `Op`
 
 {`RandomVariables`}`aesara.tensor.random.op.RandomVariable` are responsible for
 implementing the random sampling methods, which in version 3 of PyMC3 used to be
@@ -33,7 +33,7 @@ one of the standard `Distribution` methods, alongside `logp` and `logcdf`. The
 inference.
 
 Before creating a new `RandomVariable` make sure that it is not offered in the
-[Numpy library](https://numpy.org/doc/stable/reference/random/generator.html#distributions)
+[Numpy library](https://numpy.org/doc/stable/reference/random/generator.html#distributions).
 If it is, it should be added to the [Aesara library](https://github.com/aesara-devs/aesara)
 first and then imported into the PyMC3 library.
 
@@ -54,7 +54,7 @@ from aesara.tensor.random.op import RandomVariable
 class BlahRV(RandomVariable):
     name: str = "blah"
 
-    # Provide the number of (output) dimensions for this RV
+    # Provide the minimum number of (output) dimensions for this RV
     # (e.g. `0` for a scalar, `1` for a vector, etc.)
     ndim_supp: int = 0
 
@@ -152,11 +152,12 @@ blah([0, 0], [1, 2], size=(10, 2)).eval()
 
 ## 2. Inheriting from a PyMC3 base `Distribution` class
 
-After implementing the new `RandomVariable` `op`, it's time to make use of it
+After implementing the new `RandomVariable` `Op`, it's time to make use of it
 in a new PyMC3 {`Distribution`}`pymc3.distributions.Distribution`. PyMC3 works
 in a very {functional}`Functional_Programming` way, and the `distribution`
 classes are there mostly to facilitate porting the `v3` code to the new `v4`
-version, and to keep related methods organized together. In practice, they take
+version, add PyMC3 API features and keep related methods organized together.
+In practice, they take
 care of:
 
 1. Linking ({dispatching}`Dispatching`) a rv_op class with the corresponding
@@ -242,9 +243,9 @@ Some notes:
    In this case it will be necessary to provide a standard `initval` by
    overriding `__new__`.
 1. As mentioned above, `v4` works in a very {functional}`Functional_Programming`
-   way, and all the   information that is needed in the `logp` and `logcdf`
+   way, and all the information that is needed in the `logp` and `logcdf`
    methods is expected to be "carried" via the `RandomVariable` inputs. You may
-   pass numerical arguments that are not strictly needed for the `random` method
+   pass numerical arguments that are not strictly needed for the `rng_fn` method
    but are used in the `logp` and `logcdf` methods. Just keep in mind whether
    this affects the correct shape inference behavior of the `RandomVariable`.
    If specialized non-numeric information is needed you might need to define
@@ -440,7 +441,7 @@ functions match. There are a couple of details worth keeping in mind:
    parameters are randomly tested.
 1. On Github all tests are run twice, under the `aesara.config.floatX` flags of
    `"float64"` and `"float32"`. However, the reference Python functions will
-   run in a pure "float64" environment, which means the reference and the `Pymc3`
+   run in a pure "float64" environment, which means the reference and the `PyMC3`
    results can diverge quite a lot (e.g., underflowing to `-np.inf` for extreme
    parameters). You should therefore make sure you test locally in both regimes.
    A quick and dirty way of doing this is to temporariliy add
@@ -492,7 +493,6 @@ this:
      import numpy as np
      import scipy.stats as st
      import arviz as az
-     plt.style.use('arviz-darkgrid')
      x = np.linspace(-5, 5, 1000)
      params1 = [0., 0., 0., -2.]
      params2 = [0.4, 1., 2., 0.4]
