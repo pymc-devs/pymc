@@ -474,23 +474,3 @@ def block_diagonal(matrices, sparse=False, format="csr"):
     if len(matrices) == 1:  # graph optimization
         return matrices[0]
     return BlockDiagonalMatrix(sparse=sparse, format=format)(*matrices)
-
-
-def _linear_training_data():
-    r"""Create a simple linear model training dataset
-    for use in the documentation
-
-    Returns
-    -------
-    X: np.ndarray()
-        Array of input values
-
-    y: np.ndarray()
-        Array of output values
-
-    """
-    rng = np.random.default_rng(1234)
-    X = rng.standard_normal(100)
-    y = 1.2 * X + rng.standard_normal(100)
-
-    return X, y

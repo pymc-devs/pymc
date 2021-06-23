@@ -21,7 +21,8 @@
 
     import pymc3 as pm
 
-    X, y = pm.math._linear_training_data()
+    X = np.random.normal(size=100)
+    y = np.random.normal(X) * 1.2
 
     with pm.Model() as linear_model:
         weights = pm.Normal("weights", mu=0, sigma=1)
