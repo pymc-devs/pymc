@@ -782,11 +782,16 @@ class _OrderedMultinomial(Multinomial):
         return super().dist(n, p, *args, **kwargs)
 
 
-def OrderedMultinomial(name, *args, compute_p=True, **kwargs):
-    out_rv = _OrderedMultinomial(name, *args, **kwargs)
-    if compute_p:
-        pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[4])
-    return out_rv
+class OrderedMultinomial:
+    def __new__(cls, name, *args, compute_p=True, **kwargs):
+        out_rv = _OrderedMultinomial(name, *args, **kwargs)
+        if compute_p:
+            pm.Deterministic(f"{name}_p", out_rv.owner.inputs[4])
+        return out_rv
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        return _OrderedMultinomial.dist(*args, **kwargs)
 
 
 def posdef(AA):

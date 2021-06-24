@@ -1306,6 +1306,18 @@ class TestOrderedProbit(BaseTestDistribution):
     ]
 
 
+class TestOrderedMultinomial(BaseTestDistribution):
+    pymc_dist = pm.OrderedMultinomial
+    pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2]), "n": 1000}
+    sizes_to_check = [None, (1), (4,), (3, 2)]
+    sizes_expected = [(4,), (1, 4), (4, 4), (3, 2, 4)]
+    expected_rv_op_params = {"p": np.array([0.11920292, 0.38079708, 0.38079708, 0.11920292])}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+    ]
+
+
 class TestInterpolated(BaseTestDistribution):
     def interpolated_rng_fn(self, size, mu, sigma, rng):
         return st.norm.rvs(loc=mu, scale=sigma, size=size)
