@@ -194,7 +194,13 @@ def test_matrix_multiplication():
         rv_det = pm.Deterministic("rv_det", matrix @ rv_rv)
         det_rv = pm.Deterministic("det_rv", rv_rv @ transformed)
 
-        posterior = pm.sample(10, tune=0, compute_convergence_checks=False, progressbar=False)
+        posterior = pm.sample(
+            10,
+            tune=0,
+            compute_convergence_checks=False,
+            progressbar=False,
+            return_inferencedata=False,
+        )
         decimal = select_by_precision(7, 5)
         for point in posterior.points():
             npt.assert_almost_equal(

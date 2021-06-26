@@ -75,7 +75,7 @@ class TestARM5_4(SeededTest):
     def test_run(self):
         model = self.build_model()
         with model:
-            pm.sample(50, tune=50)
+            pm.sample(50, tune=50, return_inferencedata=False)
 
 
 class TestARM12_6(SeededTest):
@@ -112,7 +112,7 @@ class TestARM12_6(SeededTest):
                 vars=[model["groupmean"], model["sd_interval__"], model["floor_m"]],
             )
             step = pm.NUTS(model.vars, scaling=start)
-            pm.sample(50, step=step, start=start)
+            pm.sample(50, step=step, start=start, return_inferencedata=False)
 
 
 class TestARM12_6Uranium(SeededTest):
@@ -159,7 +159,7 @@ class TestARM12_6Uranium(SeededTest):
             h = np.diag(H(start))
 
             step = pm.HamiltonianMC(model.vars, h)
-            pm.sample(50, step=step, start=start)
+            pm.sample(50, step=step, start=start, return_inferencedata=False)
 
 
 def build_disaster_model(masked=False):
@@ -202,7 +202,9 @@ class TestDisasterModel(SeededTest):
             start = {"early_mean": 2.0, "late_mean": 3.0}
             # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
-            tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
+            tr = pm.sample(
+                500, tune=50, start=start, step=step, chains=2, return_inferencedata=False
+            )
             az.summary(tr)
 
     def test_disaster_model_missing(self):
@@ -212,7 +214,9 @@ class TestDisasterModel(SeededTest):
             start = {"early_mean": 2.0, "late_mean": 3.0}
             # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
-            tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
+            tr = pm.sample(
+                500, tune=50, start=start, step=step, chains=2, return_inferencedata=False
+            )
             az.summary(tr)
 
 
@@ -231,7 +235,7 @@ class TestGLMLinear(SeededTest):
     def test_run(self):
         with self.build_model():
             start = pm.find_MAP(method="Powell")
-            pm.sample(50, pm.Slice(), start=start)
+            pm.sample(50, pm.Slice(), start=start, return_inferencedata=False)
 
 
 class TestLatentOccupancy(SeededTest):
@@ -290,7 +294,9 @@ class TestLatentOccupancy(SeededTest):
             }
             step_one = pm.Metropolis([model.theta_interval__, model.psi_logodds__])
             step_two = pm.BinaryMetropolis([model.z])
-            pm.sample(50, step=[step_one, step_two], start=start, chains=1)
+            pm.sample(
+                50, step=[step_one, step_two], start=start, chains=1, return_inferencedata=False
+            )
 
 
 @pytest.mark.xfail(
@@ -332,7 +338,7 @@ class TestRSV(SeededTest):
 
     def test_run(self):
         with self.build_model():
-            pm.sample(50, step=[pm.NUTS(), pm.Metropolis()])
+            pm.sample(50, step=[pm.NUTS(), pm.Metropolis()], return_inferencedata=False)
 
 
 class TestMultilevelNormal(SeededTest):
@@ -375,9 +381,9 @@ class TestMultilevelNormal(SeededTest):
 
         with model:
             step = pm.MLDA(subsampling_rates=2, coarse_models=coarse_models)
-            pm.sample(draws=50, chains=2, tune=50, step=step)
+            pm.sample(draws=50, chains=2, tune=50, step=step, return_inferencedata=False)
 
             step = pm.MLDA(
                 subsampling_rates=2, coarse_models=coarse_models, base_sampler="Metropolis"
             )
-            pm.sample(draws=50, chains=2, tune=50, step=step)
+            pm.sample(draws=50, chains=2, tune=50, step=step, return_inferencedata=False)

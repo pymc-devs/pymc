@@ -286,7 +286,7 @@ class TestDiffEqModel:
             sigma = pm.HalfCauchy("sigma", 1)
             forward = ode_model(theta=[alpha], y0=[y0])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
-            trace = pm.sample(100, tune=0, chains=1)
+            trace = pm.sample(100, tune=0, chains=1, return_inferencedata=False)
 
         assert trace["alpha"].size > 0
         assert trace["y0"].size > 0
@@ -316,7 +316,7 @@ class TestDiffEqModel:
             forward = ode_model(theta=[alpha, beta], y0=[y0])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-            trace = pm.sample(100, tune=0, chains=1)
+            trace = pm.sample(100, tune=0, chains=1, return_inferencedata=False)
 
         assert trace["alpha"].size > 0
         assert trace["beta"].size > 0
@@ -357,7 +357,7 @@ class TestDiffEqModel:
             forward = ode_model(theta=[R], y0=[0.99, 0.01])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-            trace = pm.sample(100, tune=0, chains=1)
+            trace = pm.sample(100, tune=0, chains=1, return_inferencedata=False)
 
         assert trace["R"].size > 0
         assert trace["sigma"].size > 0
@@ -397,7 +397,7 @@ class TestDiffEqModel:
             forward = ode_model(theta=[beta, gamma], y0=[0.99, 0.01])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-            trace = pm.sample(100, tune=0, chains=1)
+            trace = pm.sample(100, tune=0, chains=1, return_inferencedata=False)
 
         assert trace["beta"].size > 0
         assert trace["gamma"].size > 0

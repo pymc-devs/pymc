@@ -98,6 +98,7 @@ class OverheadSuite:
                 random_seed=1,
                 progressbar=False,
                 compute_convergence_checks=False,
+                return_inferencedata=False,
             )
 
 
@@ -150,13 +151,23 @@ class ExampleSuite:
                 "effect size", diff_of_means / np.sqrt((group1_std ** 2 + group2_std ** 2) / 2)
             )
             pm.sample(
-                draws=20000, cores=4, chains=4, progressbar=False, compute_convergence_checks=False
+                draws=20000,
+                cores=4,
+                chains=4,
+                progressbar=False,
+                compute_convergence_checks=False,
+                return_inferencedata=False,
             )
 
     def time_glm_hierarchical(self):
         with glm_hierarchical_model():
             pm.sample(
-                draws=20000, cores=4, chains=4, progressbar=False, compute_convergence_checks=False
+                draws=20000,
+                cores=4,
+                chains=4,
+                progressbar=False,
+                compute_convergence_checks=False,
+                return_inferencedata=False,
             )
 
 
@@ -190,6 +201,7 @@ class NUTSInitSuite:
                 random_seed=100,
                 progressbar=False,
                 compute_convergence_checks=False,
+                return_inferencedata=False,
             )
             tot = time.time() - t0
         ess = float(az.ess(trace, var_names=["mu_a"])["mu_a"].values)
@@ -212,6 +224,7 @@ class NUTSInitSuite:
                 random_seed=100,
                 progressbar=False,
                 compute_convergence_checks=False,
+                return_inferencedata=False,
             )
             tot = time.time() - t0
         ess = az.ess(trace, var_names=["mu"])["mu"].values.min()  # worst case
@@ -243,6 +256,7 @@ class CompareMetropolisNUTSSuite:
                 random_seed=100,
                 progressbar=False,
                 compute_convergence_checks=False,
+                return_inferencedata=False,
             )
             tot = time.time() - t0
         ess = float(az.ess(trace, var_names=["mu_a"])["mu_a"].values)
@@ -302,7 +316,9 @@ class DifferentialEquationSuite:
             Y = pm.Normal("Y", mu=ode_solution, sd=sigma, observed=y)
 
             t0 = time.time()
-            trace = pm.sample(500, tune=1000, chains=2, cores=2, random_seed=0)
+            trace = pm.sample(
+                500, tune=1000, chains=2, cores=2, random_seed=0, return_inferencedata=False
+            )
             tot = time.time() - t0
         ess = az.ess(trace)
         return np.mean([ess.sigma, ess.gamma]) / tot

@@ -140,7 +140,13 @@ class BaseSampler(SeededTest):
         cls.model = cls.make_model()
         with cls.model:
             cls.step = cls.make_step()
-            cls.trace = pm.sample(cls.n_samples, tune=cls.tune, step=cls.step, cores=cls.chains)
+            cls.trace = pm.sample(
+                cls.n_samples,
+                tune=cls.tune,
+                step=cls.step,
+                cores=cls.chains,
+                return_inferencedata=False,
+            )
         cls.samples = {}
         for var in cls.model.unobserved_RVs:
             cls.samples[get_var_name(var)] = cls.trace.get_values(var, burn=cls.burn)

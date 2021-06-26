@@ -375,7 +375,7 @@ class TestMixture(SeededTest):
 
             pm.Mixture("x_obs", pi, comp_dist, observed=X)
         with model:
-            trace = pm.sample(30, tune=10, chains=1)
+            trace = pm.sample(30, tune=10, chains=1, return_inferencedata=False)
 
         n_samples = 20
         with model:

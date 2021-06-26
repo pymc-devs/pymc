@@ -98,7 +98,7 @@ def test_model():
         sigma = pm.HalfNormal("sigma", 1)
         mu = pm.BART("mu", X, Y, m=50)
         y = pm.Normal("y", mu, sigma, observed=Y)
-        trace = pm.sample(1000, random_seed=212480)
+        trace = pm.sample(1000, random_seed=212480, return_inferencedata=False)
 
     np.testing.assert_allclose(trace[mu].mean(0), Y, 0.5)
 
@@ -106,6 +106,6 @@ def test_model():
     with pm.Model() as model:
         mu = pm.BART("mu", X, Y, m=50, inv_link="logistic")
         y = pm.Bernoulli("y", mu, observed=Y)
-        trace = pm.sample(1000, random_seed=212480)
+        trace = pm.sample(1000, random_seed=212480, return_inferencedata=False)
 
     np.testing.assert_allclose(trace[mu].mean(0), Y, atol=0.5)

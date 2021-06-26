@@ -20,7 +20,7 @@ def test_build_TraceDict():
     with pm.Model() as model:
         mu = pm.Normal("mu", 0.0, 1.0)
         a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
-        trace = pm.sample(chains=2, draws=500)
+        trace = pm.sample(chains=2, draws=500, return_inferencedata=False)
         dict = _TraceDict(multi_trace=trace)
         assert isinstance(dict, _TraceDict)
         assert len(dict) == 1000

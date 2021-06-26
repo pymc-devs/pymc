@@ -53,7 +53,9 @@ def test_nuts_tuning():
     with model:
         pymc3.Normal("mu", mu=0, sigma=1)
         step = pymc3.NUTS()
-        trace = pymc3.sample(10, step=step, tune=5, progressbar=False, chains=1)
+        trace = pymc3.sample(
+            10, step=step, tune=5, progressbar=False, chains=1, return_inferencedata=False
+        )
 
     assert not step.tune
     assert np.all(trace["step_size"][5:] == trace["step_size"][5])

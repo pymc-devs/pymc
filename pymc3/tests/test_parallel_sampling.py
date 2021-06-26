@@ -29,7 +29,7 @@ def test_context():
     with pm.Model():
         pm.Normal("x")
         ctx = multiprocessing.get_context("spawn")
-        pm.sample(tune=2, draws=2, chains=2, cores=2, mp_ctx=ctx)
+        pm.sample(tune=2, draws=2, chains=2, cores=2, mp_ctx=ctx, return_inferencedata=False)
 
 
 class NoUnpickle:
@@ -56,6 +56,7 @@ def test_bad_unpickle():
                 cores=2,
                 chains=2,
                 compute_convergence_checks=False,
+                return_inferencedata=False,
             )
         assert "could not be unpickled" in str(exc_info.getrepr(style="short"))
 
@@ -73,7 +74,15 @@ def _crash_remote_process(a, master_pid):
 def test_dill():
     with pm.Model():
         pm.Normal("x")
-        pm.sample(tune=1, draws=1, chains=2, cores=2, pickle_backend="dill", mp_ctx="spawn")
+        pm.sample(
+            tune=1,
+            draws=1,
+            chains=2,
+            cores=2,
+            pickle_backend="dill",
+            mp_ctx="spawn",
+            return_inferencedata=False,
+        )
 
 
 def test_remote_pipe_closed():
@@ -85,7 +94,15 @@ def test_remote_pipe_closed():
 
         step = pm.Metropolis()
         with pytest.raises(RuntimeError, match="Chain [0-9] failed"):
-            pm.sample(step=step, mp_ctx="spawn", tune=2, draws=2, cores=2, chains=2)
+            pm.sample(
+                step=step,
+                mp_ctx="spawn",
+                tune=2,
+                draws=2,
+                cores=2,
+                chains=2,
+                return_inferencedata=False,
+            )
 
 
 def test_abort():
@@ -172,7 +189,14 @@ def test_spawn_densitydist_function():
             return -2 * (x ** 2).sum()
 
         obs = pm.DensityDist("density_dist", func, observed=np.random.randn(100))
-        trace = pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
+        trace = pm.sample(
+            draws=10,
+            tune=10,
+            step=pm.Metropolis(),
+            cores=2,
+            mp_ctx="spawn",
+            return_inferencedata=False,
+        )
 
 
 def test_spawn_densitydist_bound_method():
@@ -182,7 +206,14 @@ def test_spawn_densitydist_bound_method():
         obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
         msg = "logp for DensityDist is a bound method, leading to RecursionError while serializing"
         with pytest.raises(ValueError, match=msg):
-            trace = pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
+            trace = pm.sample(
+                draws=10,
+                tune=10,
+                step=pm.Metropolis(),
+                cores=2,
+                mp_ctx="spawn",
+                return_inferencedata=False,
+            )
 
 
 def test_spawn_densitydist_syswarning(monkeypatch):
