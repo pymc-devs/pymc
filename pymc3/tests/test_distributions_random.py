@@ -1322,12 +1322,8 @@ class TestInterpolated(BaseTestDistribution):
     reference_dist = lambda self: functools.partial(
         self.interpolated_rng_fn, rng=self.get_random_state()
     )
-    tests_to_run = [
-        "check_rv_size",
-    ]
+    tests_to_run = ["check_rv_size", "test_interpolated"]
 
-
-class TestInterpolatedSeeded(SeededTest):
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
@@ -1346,6 +1342,35 @@ class TestInterpolatedSeeded(SeededTest):
                         return super().dist(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
                 pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
+
+
+class TestKroneckerNormal(BaseTestDistribution):
+    def kronecker_rng_fn(self, size, mu, covs=None, sigma=None, rng=None):
+        cov = pm.math.kronecker(covs[0], covs[1]).eval()
+        cov += sigma ** 2 * np.identity(cov.shape[0])
+        return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
+
+    pymc_dist = pm.KroneckerNormal
+
+    n = 3
+    N = n ** 2
+    covs = [RandomPdMatrix(n), RandomPdMatrix(n)]
+    mu = np.random.random(N) * 0.1
+    sigma = 1
+
+    pymc_dist_params = {"mu": mu, "covs": covs, "sigma": sigma}
+    expected_rv_op_params = {"mu": mu, "covs": covs, "sigma": sigma}
+    reference_dist_params = {"mu": mu, "covs": covs, "sigma": sigma}
+    sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+    sizes_expected = [(N,), (N,), (1, N), (1, N), (5, N), (4, 5, N), (2, 4, 2, N)]
+
+    reference_dist = lambda self: functools.partial(
+        self.kronecker_rng_fn, rng=self.get_random_state()
+    )
+    tests_to_run = [
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
 
 
 class TestScalarParameterSamples(SeededTest):
@@ -1472,68 +1497,6 @@ class TestScalarParameterSamples(SeededTest):
                     valuedomain=RealMatrix(n, n),
                     ref_rand=ref_rand_chol_transpose,
                 )
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_kronecker_normal(self):
-        def ref_rand(size, mu, covs, sigma):
-            cov = pm.math.kronecker(covs[0], covs[1]).eval()
-            cov += sigma ** 2 * np.identity(cov.shape[0])
-            return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
-
-        def ref_rand_chol(size, mu, chols, sigma):
-            covs = [np.dot(chol, chol.T) for chol in chols]
-            return ref_rand(size, mu, covs, sigma)
-
-        def ref_rand_evd(size, mu, evds, sigma):
-            covs = []
-            for eigs, Q in evds:
-                covs.append(np.dot(Q, np.dot(np.diag(eigs), Q.T)))
-            return ref_rand(size, mu, covs, sigma)
-
-        sizes = [2, 3]
-        sigmas = [0, 1]
-        for n, sigma in zip(sizes, sigmas):
-            N = n ** 2
-            covs = [RandomPdMatrix(n), RandomPdMatrix(n)]
-            chols = list(map(np.linalg.cholesky, covs))
-            evds = list(map(np.linalg.eigh, covs))
-            dom = Domain([np.random.randn(N) * 0.1], edges=(None, None), shape=N)
-            mu = Domain([np.random.randn(N) * 0.1], edges=(None, None), shape=N)
-
-            std_args = {"mu": mu}
-            cov_args = {"covs": covs}
-            chol_args = {"chols": chols}
-            evd_args = {"evds": evds}
-            if sigma is not None and sigma != 0:
-                std_args["sigma"] = Domain([sigma], edges=(None, None))
-            else:
-                for args in [cov_args, chol_args, evd_args]:
-                    args["sigma"] = sigma
-
-            pymc3_random(
-                pm.KroneckerNormal,
-                std_args,
-                valuedomain=dom,
-                ref_rand=ref_rand,
-                extra_args=cov_args,
-                model_args=cov_args,
-            )
-            pymc3_random(
-                pm.KroneckerNormal,
-                std_args,
-                valuedomain=dom,
-                ref_rand=ref_rand_chol,
-                extra_args=chol_args,
-                model_args=chol_args,
-            )
-            pymc3_random(
-                pm.KroneckerNormal,
-                std_args,
-                valuedomain=dom,
-                ref_rand=ref_rand_evd,
-                extra_args=evd_args,
-                model_args=evd_args,
-            )
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_dirichlet_multinomial(self):

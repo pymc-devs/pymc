@@ -388,19 +388,19 @@ def matrix_normal_logpdf_chol(value, mu, rowchol, colchol):
     )
 
 
-def kron_normal_logpdf_cov(value, mu, covs, sigma):
+def kron_normal_logpdf_cov(value, mu, covs, sigma, size=None):
     cov = kronecker(*covs).eval()
     if sigma is not None:
         cov += sigma ** 2 * np.eye(*cov.shape)
     return scipy.stats.multivariate_normal.logpdf(value, mu, cov).sum()
 
 
-def kron_normal_logpdf_chol(value, mu, chols, sigma):
+def kron_normal_logpdf_chol(value, mu, chols, sigma, size=None):
     covs = [np.dot(chol, chol.T) for chol in chols]
     return kron_normal_logpdf_cov(value, mu, covs, sigma=sigma)
 
 
-def kron_normal_logpdf_evd(value, mu, evds, sigma):
+def kron_normal_logpdf_evd(value, mu, evds, sigma, size=None):
     covs = []
     for eigs, Q in evds:
         try:
@@ -1943,8 +1943,7 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3])
     @pytest.mark.parametrize("m", [3])
-    @pytest.mark.parametrize("sigma", [None, 1.0])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.parametrize("sigma", [None, 1])
     def test_kroneckernormal(self, n, m, sigma):
         np.random.seed(5)
         N = n * m
@@ -1990,6 +1989,9 @@ class TestMatchesScipy:
         )
 
         dom = Domain([np.random.randn(2, N) * 0.1], edges=(None, None), shape=(2, N))
+        cov_args["size"] = 2
+        chol_args["size"] = 2
+        evd_args["size"] = 2
 
         self.check_logp(
             KroneckerNormal,
