@@ -905,24 +905,8 @@ class WaldRV(RandomVariable):
     _print_name = ("Wald", "\\operatorname{Wald}")
 
     @classmethod
-    def rng_fn(
-        cls,
-        rng: np.random.RandomState,
-        mu: Union[np.ndarray, float],
-        lam: Union[np.ndarray, float],
-        alpha: Union[np.ndarray, float],
-        size: Optional[Union[List[int], int]],
-    ) -> np.ndarray:
-        v = rng.normal(size=size) ** 2
-        z = rng.uniform(size=size)
-        value = (
-            mu
-            + (mu ** 2) * v / (2.0 * lam)
-            - mu / (2.0 * lam) * np.sqrt(4.0 * mu * lam * v + (mu * v) ** 2)
-        )
-        i = np.floor(z - mu / (mu + value)) * 2 + 1
-        value = (value ** -i) * (mu ** (i + 1))
-        return value + alpha
+    def rng_fn(cls, rng, mu, lam, alpha, size):
+        return getattr(np.random.RandomState, cls.name)(rng, mu, lam, size) + alpha
 
 
 wald = WaldRV()
