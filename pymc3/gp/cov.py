@@ -61,7 +61,7 @@ class Covariance:
         if active_dims is None:
             self.active_dims = np.arange(input_dim)
         else:
-            self.active_dims = np.asarray(active_dims, np.int)
+            self.active_dims = np.asarray(active_dims, int)
 
     def __call__(self, X, Xs=None, diag=False):
         r"""

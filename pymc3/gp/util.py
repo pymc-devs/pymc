@@ -29,7 +29,7 @@ solve = tt.slinalg.Solve(A_structure="general")
 def infer_shape(X, n_points=None):
     if n_points is None:
         try:
-            n_points = np.int(X.shape[0])
+            n_points = int(X.shape[0])
         except TypeError:
             raise TypeError("Cannot infer 'shape', provide as an argument")
     return n_points

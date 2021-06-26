@@ -84,7 +84,7 @@ class _Bounded(Distribution):
             raise ValueError(
                 "Drawing samples from distributions with array-valued bounds is not supported."
             )
-        total_size = np.prod(size).astype(np.int)
+        total_size = np.prod(size).astype(int)
         samples = []
         s = 0
         while s < total_size:
