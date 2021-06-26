@@ -343,7 +343,7 @@ class TestMixture(SeededTest):
             mus = [[1, 1, 1], [-1, -1, -1], [2, -2, 0]]
             stds = [[0.1, 0.1, 0.1], [0.1, 0.2, 0.2], [0.2, 0.3, 0.3]]
             x = np.zeros((N, 3), dtype=np.float32)
-            y = np.zeros((N,), dtype=np.int)
+            y = np.zeros((N,), dtype=int)
             for n in range(N):
                 k = np.argmax(np.random.multinomial(1, pi))
                 x[n, :] = np.random.multivariate_normal(mus[k], np.diag(stds[k]))
