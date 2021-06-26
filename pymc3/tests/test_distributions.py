@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
+import functools
 import itertools
 import sys
 
@@ -1030,6 +1030,22 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig, "upper": Rplusbig},
             scipy_logp,
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+
+        self.check_logp(
+            TruncatedNormal,
+            R,
+            {"mu": R, "sigma": Rplusbig, "upper": Rplusbig},
+            functools.partial(scipy_logp, lower=-np.inf),
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+
+        self.check_logp(
+            TruncatedNormal,
+            R,
+            {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig},
+            functools.partial(scipy_logp, upper=np.inf),
             decimal=select_by_precision(float64=6, float32=1),
         )
 
@@ -2711,6 +2727,67 @@ def test_bound():
     with Model():
         BoundPoissonNamedArgs = Bound(Poisson, upper=6)("y", mu=2.0)
         BoundPoissonPositionalArgs = Bound(Poisson, upper=6)("x", 2.0)
+
+
+class TestBoundedContinuous:
+    def get_dist_params_and_interval_bounds(self, model, rv_name):
+        interval_rv = model.named_vars[f"{rv_name}_interval__"]
+        rv = model.named_vars[rv_name]
+        dist_params = rv.owner.inputs[3:]
+        lower_interval, upper_interval = interval_rv.tag.transform.param_extract_fn(rv)
+        return (
+            dist_params,
+            lower_interval,
+            upper_interval,
+        )
+
+    def test_missing_lower_bound(self):
+        bounded_rv_name = "lower_bounded"
+        with Model() as model:
+            TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=None, upper=3)
+        dist_params, lower, upper = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+        assert dist_params[2].value == -np.inf
+        assert dist_params[3].value == 3
+        assert lower is None
+        assert upper.value == 3
+
+    def test_missing_upper_bound(self):
+        bounded_rv_name = "upper_bounded"
+        with Model() as model:
+            TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=-2, upper=None)
+        dist_params, lower, upper = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+        assert dist_params[2].value == -2
+        assert dist_params[3].value == np.inf
+        assert lower.value == -2
+        assert upper is None
+
+    def test_missing_upper_bound_array(self):
+        bounded_rv_name = "upper_bounded"
+        with Model() as model:
+            TruncatedNormal(
+                bounded_rv_name,
+                mu=np.array([1, 1]),
+                sigma=np.array([2, 3]),
+                lower=np.array([-1.0, 0]),
+                upper=None,
+            )
+        dist_params, lower, upper = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+
+        assert all(a == b for a, b in zip(dist_params[2].value, np.array([-1, 0])))
+        assert all(a == b for a, b in zip(dist_params[3].value, np.array([np.inf, np.inf])))
+        assert all(a == b for a, b in zip(lower.value, np.array([-1, 0])))
+        assert upper is None
+
+    def test_missing_upper_bound_with_richer_context(self):
+        with Model() as model:
+            sigma = TruncatedNormal("lower_bounded", mu=2, sigma=1.5, lower=0, upper=None)
+            mu = TruncatedNormal("upper_bounded", mu=0, sigma=2, lower=None, upper=3)
+            Normal("normal", mu=mu, sigma=sigma, observed=[1.3, -1.4, 2.0])
+        dist_params, lower, upper = self.get_dist_params_and_interval_bounds(model, "upper_bounded")
+        assert dist_params[2].value == -np.inf
+        assert dist_params[3].value == 3
+        assert lower is None
+        assert upper.value == 3
 
 
 @pytest.mark.xfail(reason="LaTeX repr and str no longer applicable")

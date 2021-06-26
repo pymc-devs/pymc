@@ -163,14 +163,16 @@ class BoundedContinuous(Continuous):
                 upper = args[cls.bound_args_indices[1]]
 
             lower = (
-                None
-                if lower is None or (isinstance(lower, TensorConstant) and lower.value == -np.inf)
-                else at.as_tensor_variable(lower)
+                at.as_tensor_variable(lower)
+                if lower is not None
+                and (isinstance(lower, TensorConstant) and not np.all(lower.value == -np.inf))
+                else None
             )
             upper = (
-                None
-                if upper is None or (isinstance(upper, TensorConstant) and upper.value == np.inf)
-                else at.as_tensor_variable(upper)
+                at.as_tensor_variable(upper)
+                if upper is not None
+                and (isinstance(upper, TensorConstant) and not np.all(upper.value == np.inf))
+                else None
             )
 
             return lower, upper
@@ -689,6 +691,7 @@ class TruncatedNormal(BoundedContinuous):
     ) -> RandomVariable:
         sigma = sd if sd is not None else sigma
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
+        single_param_length = 0 if not sigma.shape else sigma.shape[0]
         sigma = at.as_tensor_variable(sigma)
         tau = at.as_tensor_variable(tau)
         mu = at.as_tensor_variable(floatX(mu))
@@ -704,16 +707,19 @@ class TruncatedNormal(BoundedContinuous):
         else:
             initval = (lower + upper) / 2
 
-        lower = (
-            at.as_tensor_variable(floatX(lower))
-            if lower is not None
-            else at.as_tensor_variable(-np.inf)
-        )
-        upper = (
-            at.as_tensor_variable(floatX(upper))
-            if upper is not None
-            else at.as_tensor_variable(np.inf)
-        )
+        def _handle_missing_bound(bound_value, expected_input_length, replacement_value):
+            if bound_value is not None:
+                return at.as_tensor_variable(floatX(bound_value))
+            elif expected_input_length == 0:
+                return at.as_tensor_variable(floatX(replacement_value))
+            else:
+                return at.as_tensor_variable(
+                    floatX(np.repeat(replacement_value, expected_input_length))
+                )
+
+        lower = _handle_missing_bound(lower, single_param_length, -np.inf)
+        upper = _handle_missing_bound(upper, single_param_length, np.inf)
+
         res = super().dist([mu, sigma, lower, upper], testval=initval, **kwargs)
         return res
 
