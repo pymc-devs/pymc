@@ -48,7 +48,14 @@ class TestBroadcasting:
 
             step = pm.Metropolis()
             # This should fail immediately if broadcasting does not work.
-            pm.sample(tune=5, draws=7, cores=1, step=step, compute_convergence_checks=False)
+            pm.sample(
+                tune=5,
+                draws=7,
+                cores=1,
+                step=step,
+                compute_convergence_checks=False,
+                return_inferencedata=False,
+            )
 
 
 def _make_along_axis_idx(arr_shape, indices, axis):

@@ -47,7 +47,7 @@ class TestSample(SeededTest):
         for _ in range(2):
             np.random.seed(1)
             with self.model:
-                pm.sample(1, tune=0, chains=1)
+                pm.sample(1, tune=0, chains=1, return_inferencedata=False)
                 random_numbers.append(np.random.random())
         assert random_numbers[0] == random_numbers[1]
 
@@ -58,7 +58,7 @@ class TestSample(SeededTest):
         for _ in range(2):
             np.random.seed(1)  # seeds in other processes don't effect main process
             with self.model:
-                trace = pm.sample(100, tune=0, cores=cores)
+                trace = pm.sample(100, tune=0, cores=cores, return_inferencedata=False)
             # numpy thread mentioned race condition.  might as well check none are equal
             for first, second in combinations(range(cores), 2):
                 first_chain = trace.get_values("x", chains=first)
@@ -82,6 +82,7 @@ class TestSample(SeededTest):
                         step=self.step,
                         cores=cores,
                         random_seed=self.random_seed,
+                        return_inferencedata=False,
                     )
 
     def test_sample_init(self):
@@ -93,20 +94,21 @@ class TestSample(SeededTest):
                     n_init=1000,
                     draws=50,
                     random_seed=self.random_seed,
+                    return_inferencedata=False,
                 )
 
     def test_sample_args(self):
         with self.model:
             with pytest.raises(ValueError) as excinfo:
-                pm.sample(50, tune=0, init=None, foo=1)
+                pm.sample(50, tune=0, init=None, foo=1, return_inferencedata=False)
             assert "'foo'" in str(excinfo.value)
 
             with pytest.raises(ValueError) as excinfo:
-                pm.sample(50, tune=0, init=None, foo={})
+                pm.sample(50, tune=0, init=None, foo={}, return_inferencedata=False)
             assert "foo" in str(excinfo.value)
 
             with pytest.raises(ValueError) as excinfo:
-                pm.sample(10, tune=0, init=None, target_accept=0.9)
+                pm.sample(10, tune=0, init=None, target_accept=0.9, return_inferencedata=False)
             assert "target_accept" in str(excinfo.value)
 
     def test_iter_sample(self):
@@ -136,11 +138,13 @@ class TestSample(SeededTest):
 
     def test_sample_tune_len(self):
         with self.model:
-            trace = pm.sample(draws=100, tune=50, cores=1)
+            trace = pm.sample(draws=100, tune=50, cores=1, return_inferencedata=False)
             assert len(trace) == 100
-            trace = pm.sample(draws=100, tune=50, cores=1, discard_tuned_samples=False)
+            trace = pm.sample(
+                draws=100, tune=50, cores=1, discard_tuned_samples=False, return_inferencedata=False
+            )
             assert len(trace) == 150
-            trace = pm.sample(draws=100, tune=50, cores=4)
+            trace = pm.sample(draws=100, tune=50, cores=4, return_inferencedata=False)
             assert len(trace) == 100
 
     def test_reset_tuning(self):
@@ -148,7 +152,15 @@ class TestSample(SeededTest):
             tune = 50
             chains = 2
             start, step = pm.sampling.init_nuts(chains=chains)
-            pm.sample(draws=2, tune=tune, chains=chains, step=step, start=start, cores=1)
+            pm.sample(
+                draws=2,
+                tune=tune,
+                chains=chains,
+                step=step,
+                start=start,
+                cores=1,
+                return_inferencedata=False,
+            )
             assert step.potential._n_samples == tune
             assert step.step_adapt._count == tune + 1
 
@@ -159,7 +171,12 @@ class TestSample(SeededTest):
             # add more variables, because stats are 2D with CompoundStep!
             pm.Uniform("uni")
             trace = pm.sample(
-                draws=100, tune=50, cores=1, discard_tuned_samples=discard, step=step_cls()
+                draws=100,
+                tune=50,
+                cores=1,
+                discard_tuned_samples=discard,
+                step=step_cls(),
+                return_inferencedata=False,
             )
             assert trace.report.n_tune == 50
             assert trace.report.n_draws == 100
@@ -175,7 +192,7 @@ class TestSample(SeededTest):
             mu = pm.BART("mu", X, Y, m=20)
             sigma = pm.HalfNormal("sigma", 1)
             y = pm.Normal("y", mu, sigma, observed=Y)
-            trace = pm.sample(500, tune=100, random_seed=3415)
+            trace = pm.sample(500, tune=100, random_seed=3415, return_inferencedata=False)
         var_imp = trace.report.variable_importance
         assert var_imp[0] > var_imp[1:].sum()
         npt.assert_almost_equal(var_imp.sum(), 1)
@@ -224,7 +241,12 @@ class TestSample(SeededTest):
     def test_sampler_stat_tune(self, cores):
         with self.model:
             tune_stat = pm.sample(
-                tune=5, draws=7, cores=cores, discard_tuned_samples=False, step=pm.Metropolis()
+                tune=5,
+                draws=7,
+                cores=cores,
+                discard_tuned_samples=False,
+                step=pm.Metropolis(),
+                return_inferencedata=False,
             ).get_sampler_stats("tune", chains=1)
             assert list(tune_stat).count(True) == 5
             assert list(tune_stat).count(False) == 7
@@ -262,6 +284,7 @@ class TestSample(SeededTest):
                         cores=cores,
                         random_seed=self.random_seed,
                         callback=callback,
+                        return_inferencedata=False,
                     )
                     assert callback.called
 
@@ -281,6 +304,7 @@ class TestSample(SeededTest):
                 cores=1,
                 random_seed=self.random_seed,
                 callback=callback,
+                return_inferencedata=False,
             )
             assert len(trace) == trace_cancel_length
 
@@ -297,12 +321,26 @@ def test_sample_find_MAP_does_not_modify_start():
 
         # make sure sample does not modify the start dict
         start = {"untransformed": 0.2}
-        pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=3)
+        pm.sample(
+            draws=10,
+            step=pm.Metropolis(),
+            tune=5,
+            start=start,
+            chains=3,
+            return_inferencedata=False,
+        )
         assert start == {"untransformed": 0.2}
 
         # make sure sample does not modify the start when passes as list of dict
         start = [{"untransformed": 2}, {"untransformed": 0.2}]
-        pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=2)
+        pm.sample(
+            draws=10,
+            step=pm.Metropolis(),
+            tune=5,
+            start=start,
+            chains=2,
+            return_inferencedata=False,
+        )
         assert start == [{"untransformed": 2}, {"untransformed": 0.2}]
 
 
@@ -310,7 +348,7 @@ def test_empty_model():
     with pm.Model():
         pm.Normal("a", observed=1)
         with pytest.raises(ValueError) as error:
-            pm.sample()
+            pm.sample(return_inferencedata=False)
         error.match("any free variables")
 
 
@@ -318,7 +356,7 @@ def test_partial_trace_sample():
     with pm.Model() as model:
         a = pm.Normal("a", mu=0, sigma=1)
         b = pm.Normal("b", mu=0, sigma=1)
-        trace = pm.sample(trace=[a])
+        trace = pm.sample(trace=[a], return_inferencedata=False)
 
 
 @pytest.mark.parametrize(
@@ -420,7 +458,7 @@ class TestSamplePPC(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=0.0)
-            trace = pm.sample(draws=ndraws, chains=nchains)
+            trace = pm.sample(draws=ndraws, chains=nchains, return_inferencedata=False)
 
         with model:
             # test list input
@@ -472,7 +510,7 @@ class TestSamplePPC(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
-            trace = pm.sample()
+            trace = pm.sample(return_inferencedata=False)
 
         with model:
             # test list input
@@ -527,7 +565,7 @@ class TestSamplePPC(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
-            trace = pm.sample()
+            trace = pm.sample(return_inferencedata=False)
 
         with model:
             with pytest.raises(IncorrectArgumentsError):
@@ -549,7 +587,7 @@ class TestSamplePPC(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", mu=0, sigma=1)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.0, 1.0]))
-            trace = pm.sample()
+            trace = pm.sample(return_inferencedata=False)
 
         with model:
             # test list input
@@ -577,7 +615,7 @@ class TestSamplePPC(SeededTest):
         with pm.Model() as model:
             a = pm.Normal("a", sigma=0.2)
             b = pm.Normal("b", mu=a)
-            trace = pm.sample()
+            trace = pm.sample(return_inferencedata=False)
 
         with model:
             # test list input
@@ -606,7 +644,7 @@ class TestSamplePPC(SeededTest):
         with model:
             mu = pm.HalfFlat("sigma")
             pm.Poisson("foo", mu=mu, observed=data)
-            trace = pm.sample(tune=1000)
+            trace = pm.sample(tune=1000, return_inferencedata=False)
 
         with model:
             with pytest.raises(ValueError) as excinfo:
@@ -628,7 +666,7 @@ class TestSamplePPC(SeededTest):
             logistic = pm.Deterministic("p", pm.math.sigmoid(coeff * x_shared))
 
             obs = pm.Bernoulli("obs", p=logistic, observed=y_shared)
-            trace = pm.sample(100)
+            trace = pm.sample(100, return_inferencedata=False)
 
         x_shared.set_value([-1, 0, 1.0])
         y_shared.set_value([0, 0, 0])
@@ -669,7 +707,7 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            trace = pm.sample(100, chains=nchains)
+            trace = pm.sample(100, chains=nchains, return_inferencedata=False)
             np.random.seed(0)
             rtol = 1e-5 if theano.config.floatX == "float64" else 1e-4
 
@@ -707,7 +745,7 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            trace = pm.sample(100)
+            trace = pm.sample(100, return_inferencedata=False)
             ppc_trace = pm.trace_to_dataframe(
                 trace, varnames=[n for n in trace.varnames if n != "out"]
             ).to_dict("records")
@@ -736,7 +774,7 @@ class TestSamplePPC(SeededTest):
             mu = pm.HalfNormal("mu", 1)
             a = pm.Normal("a", mu=mu, sigma=2, observed=np.array([1, 2]))
             b = pm.Poisson("b", mu, observed=np.array([1, 2]))
-            trace = pm.sample()
+            trace = pm.sample(return_inferencedata=False)
 
         with model:
             ppc = pm.sample_posterior_predictive(trace, samples=1)
@@ -878,7 +916,7 @@ def test_default_sample_nuts_jitter(init, start, expectation, monkeypatch):
     with pm.Model() as m:
         x = pm.HalfNormal("x", transform=None)
         with expectation:
-            pm.sample(tune=1, draws=0, chains=1, init=init, start=start)
+            pm.sample(tune=1, draws=0, chains=1, init=init, start=start, return_inferencedata=False)
 
 
 @pytest.mark.parametrize(
@@ -907,7 +945,7 @@ def test_init_jitter(testval, jitter_max_retries, expectation):
 def point_list_arg_bug_fixture() -> Tuple[pm.Model, pm.backends.base.MultiTrace]:
     with pm.Model() as pmodel:
         n = pm.Normal("n")
-        trace = pm.sample()
+        trace = pm.sample(return_inferencedata=False)
 
     with pmodel:
         d = pm.Deterministic("d", n * 4)
@@ -959,7 +997,7 @@ class TestSamplePriorPredictive(SeededTest):
         with pm.Model() as dm_model:
             probs = pm.Dirichlet("probs", a=np.ones(6), shape=6)
             obs = pm.Multinomial("obs", n=100, p=probs, observed=mn_data)
-            burned_trace = pm.sample(20, tune=10, cores=1)
+            burned_trace = pm.sample(20, tune=10, cores=1, return_inferencedata=False)
         sim_priors = pm.sample_prior_predictive(samples=20, model=dm_model)
         sim_ppc = pm.sample_posterior_predictive(burned_trace, samples=20, model=dm_model)
         assert sim_priors["probs"].shape == (20, 6)

@@ -150,7 +150,7 @@ def test_user_potential():
     pot = Potential(floatX([1]))
     with model:
         step = pymc3.NUTS(potential=pot)
-        pymc3.sample(10, init=None, step=step, chains=1)
+        pymc3.sample(10, init=None, step=step, chains=1, return_inferencedata=False)
     assert called
 
 
@@ -275,10 +275,20 @@ def test_full_adapt_sampling(seed=289586):
 
         pot = quadpotential.QuadPotentialFullAdapt(model.ndim, np.zeros(model.ndim))
         step = pymc3.NUTS(model=model, potential=pot)
-        pymc3.sample(draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1)
+        pymc3.sample(
+            draws=10,
+            tune=1000,
+            random_seed=seed,
+            step=step,
+            cores=1,
+            chains=1,
+            return_inferencedata=False,
+        )
 
 
 def test_issue_3965():
     with pymc3.Model():
         pymc3.Normal("n")
-        pymc3.sample(100, tune=300, chains=1, init="advi+adapt_diag_grad")
+        pymc3.sample(
+            100, tune=300, chains=1, init="advi+adapt_diag_grad", return_inferencedata=False
+        )
