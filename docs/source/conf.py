@@ -15,6 +15,8 @@
 import os
 import sys
 
+from pathlib import Path
+
 import pymc3
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -22,6 +24,8 @@ import pymc3
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 sys.path.insert(0, os.path.abspath("sphinxext"))
+
+from gallery_generator import build_gallery
 
 # -- General configuration ------------------------------------------------
 
@@ -43,7 +47,6 @@ extensions = [
     "IPython.sphinxext.ipython_directive",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.napoleon",
-    "gallery_generator",
     "recommonmark",
 ]
 
@@ -330,3 +333,5 @@ texinfo_documents = [
 def setup(app):
     app.add_css_file("https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css")
     app.add_css_file("default.css")
+    for gallery in ("tutorials", "examples"):
+        build_gallery(Path(__file__).parent, gallery)
