@@ -27,6 +27,12 @@ solve = Solve(A_structure="general")
 
 
 def infer_shape(X, n_points=None):
+    R"""
+    Maybe attempt to infer the shape of a Gaussian process input matrix.
+
+    If a specific shape cannot be inferred, for instance if X is symbolic, then an
+    error is raised.
+    """
     if n_points is None:
         try:
             n_points = np.int(X.shape[0])
@@ -35,12 +41,22 @@ def infer_shape(X, n_points=None):
     return n_points
 
 
-def stabilize(K):
-    """adds small diagonal to a covariance matrix"""
-    return K + 1e-6 * at.identity_like(K)
+def stabilize(K, c=1e-6):
+    R"""
+    Adds small diagonal to a covariance matrix.  
+
+    Often the matrices calculated from covariance functions, `K = cov_func(X)`
+    do not appear numerically to be positive semi-definite.  Adding a small 
+    correction, `c`, to the diagonal is usually enough to fix this.
+    """
+    return K + c * at.identity_like(K)
 
 
 def kmeans_inducing_points(n_inducing, X):
+    R"""
+    Use the K-means algorithm to initialize the locations `X` for the inducing
+    points `fu`.
+    """
     # first whiten X
     if isinstance(X, TensorConstant):
         X = X.value
