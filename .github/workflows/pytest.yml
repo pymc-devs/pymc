@@ -73,6 +73,7 @@ jobs:
             pymc3/tests/test_gp.py
             pymc3/tests/test_model.py
             pymc3/tests/test_model_func.py
+            pymc3/tests/test_model_graph.py
             pymc3/tests/test_ode.py
             pymc3/tests/test_posdef_sym.py
             pymc3/tests/test_quadpotential.py
@@ -149,6 +150,7 @@ jobs:
             pymc3/tests/test_model.py
             pymc3/tests/test_model_func.py
             pymc3/tests/test_modelcontext.py
+            pymc3/tests/test_model_graph.py
             pymc3/tests/test_pickling.py
 
       fail-fast: false
