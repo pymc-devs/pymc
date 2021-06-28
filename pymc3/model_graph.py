@@ -169,13 +169,17 @@ class ModelGraph:
         -------
         dict: str -> set[str]
         """
-        plates = {}
+        plates = defaultdict(set)
         for var_name in self.var_names:
             v = self.model[var_name]
-            shape = tuple(v.shape.eval())
-            if shape not in plates:
-                plates[shape] = set()
-            plates[shape].add(var_name)
+            if var_name in self.model.RV_dims:
+                plate_label = " x ".join(
+                    f"{d} ({self.model.dim_lengths[d].eval()})"
+                    for d in self.model.RV_dims[var_name]
+                )
+            else:
+                plate_label = " x ".join(map(str, v.shape.eval()))
+            plates[plate_label].add(var_name)
         return plates
 
     def make_graph(self, formatting: str = "plain"):
@@ -194,17 +198,14 @@ class ModelGraph:
                 "\tconda install -c conda-forge python-graphviz"
             )
         graph = graphviz.Digraph(self.model.name)
-        for shape, var_names in self.get_plates().items():
-            if isinstance(shape, SharedVariable):
-                shape = shape.eval()
-            label = " x ".join(map("{:,d}".format, shape))
-            if label:
+        for plate_label, var_names in self.get_plates().items():
+            if plate_label:
                 # must be preceded by 'cluster' to get a box around it
-                with graph.subgraph(name="cluster" + label) as sub:
+                with graph.subgraph(name="cluster" + plate_label) as sub:
                     for var_name in var_names:
                         self._make_node(var_name, sub, formatting=formatting)
                     # plate label goes bottom right
-                    sub.attr(label=label, labeljust="r", labelloc="b", style="rounded")
+                    sub.attr(label=plate_label, labeljust="r", labelloc="b", style="rounded")
             else:
                 for var_name in var_names:
                     self._make_node(var_name, graph, formatting=formatting)
