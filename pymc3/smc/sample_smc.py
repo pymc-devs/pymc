@@ -21,7 +21,11 @@ from collections.abc import Iterable
 
 import numpy as np
 
-from pymc3.backends.arviz import to_inference_data
+from arviz import InferenceData
+
+import pymc3
+
+from pymc3.backends.arviz import dict_to_dataset, to_inference_data
 from pymc3.backends.base import MultiTrace
 from pymc3.model import modelcontext
 from pymc3.parallel_sampling import _cpu_count
@@ -32,6 +36,7 @@ def sample_smc(
     draws=2000,
     kernel="metropolis",
     n_steps=25,
+    *,
     start=None,
     tune_steps=True,
     p_acc_rate=0.85,
@@ -45,6 +50,7 @@ def sample_smc(
     cores=None,
     compute_convergence_checks=True,
     return_inferencedata=True,
+    idata_kwargs=None,
 ):
     r"""
     Sequential Monte Carlo based sampling.
@@ -100,6 +106,8 @@ def sample_smc(
     return_inferencedata : bool, default=True
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
         Defaults to ``True``.
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc3.to_inference_data`
     Notes
     -----
     SMC works by moving through successive stages. At each stage the inverse temperature
@@ -221,19 +229,54 @@ def sample_smc(
         accept_ratios,
         nsteps,
     ) = zip(*results)
-    trace = MultiTrace(traces)
-    trace.report._n_draws = draws
-    trace.report._n_tune = 0
-    trace.report.log_marginal_likelihood = np.array(log_marginal_likelihoods)
-    trace.report.log_pseudolikelihood = log_pseudolikelihood
-    trace.report.betas = betas
-    trace.report.accept_ratios = accept_ratios
-    trace.report.nsteps = nsteps
-    trace.report._t_sampling = time.time() - t1
 
-    if compute_convergence_checks or return_inferencedata:
+    trace = MultiTrace(traces)
+    idata = None
+
+    # Save sample_stats
+    _n_tune = 0
+    _t_sampling = time.time() - t1
+    if not return_inferencedata:
+        trace.report._n_draws = draws
+        trace.report._n_tune = _n_tune
+        trace.report.log_marginal_likelihood = log_marginal_likelihoods
+        trace.report.log_pseudolikelihood = log_pseudolikelihood
+        trace.report.betas = betas
+        trace.report.accept_ratios = accept_ratios
+        trace.report.nsteps = nsteps
+        trace.report._t_sampling = _t_sampling
+    else:
+        # There is only one log_marginal_likelihood per chain, here we broadcast
+        # it to the number of draws in each chain (to avoid InferenceData
+        # warning) and fill the non-final draws with nans
+        _log_marginal_likelihoods = []
+        for chain in range(chains):
+            row = np.full(len(np.atleast_1d(betas)[chain]), np.nan)
+            row[-1] = np.atleast_1d(log_marginal_likelihoods)[chain]
+            _log_marginal_likelihoods.append(row)
+
+        # Different chains might have more iteration steps, leading to a
+        # non-square `sample_stats` dataset, we cast as `object` to avoid
+        # numpy ragged array deprecation warning
+        sample_stats = dict_to_dataset(
+            dict(
+                accept_ratios=np.array(accept_ratios, dtype=object),
+                betas=np.array(betas, dtype=object),
+                log_marginal_likelihoods=np.array(_log_marginal_likelihoods, dtype=object),
+                nsteps=np.array(nsteps, dtype=object),
+            ),
+            attrs=dict(
+                _n_tune=_n_tune,
+                _t_sampling=_t_sampling,
+            ),
+            library=pymc3,
+        )
+
         ikwargs = dict(model=model)
+        if idata_kwargs is not None:
+            ikwargs.update(idata_kwargs)
         idata = to_inference_data(trace, **ikwargs)
+        idata = InferenceData(**idata, sample_stats=sample_stats)
 
     if compute_convergence_checks:
         if draws < 100:
@@ -242,6 +285,8 @@ def sample_smc(
                 stacklevel=2,
             )
         else:
+            if idata is None:
+                idata = to_inference_data(trace, log_likelihood=False)
             trace.report._run_convergence_checks(idata, model)
     trace.report._log_summary()
 

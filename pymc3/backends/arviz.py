@@ -119,7 +119,12 @@ def dict_to_dataset(
     """
     if default_dims is None:
         return _dict_to_dataset(
-            data, library=library, coords=coords, dims=dims, skip_event_dims=skip_event_dims
+            data,
+            attrs=attrs,
+            library=library,
+            coords=coords,
+            dims=dims,
+            skip_event_dims=skip_event_dims,
         )
     else:
         out_data = {}
@@ -129,7 +134,7 @@ def dict_to_dataset(
             val_dims, coords = generate_dims_coords(vals.shape, name, dims=val_dims, coords=coords)
             coords = {key: xr.IndexVariable((key,), data=coords[key]) for key in val_dims}
             out_data[name] = xr.DataArray(vals, dims=val_dims, coords=coords)
-        return xr.Dataset(data_vars=out_data, attrs=make_attrs(library=library))
+        return xr.Dataset(data_vars=out_data, attrs=make_attrs(attrs=attrs, library=library))
 
 
 class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
