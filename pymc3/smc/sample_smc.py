@@ -21,6 +21,7 @@ from collections.abc import Iterable
 
 import numpy as np
 
+from pymc3.backends.arviz import to_inference_data
 from pymc3.backends.base import MultiTrace
 from pymc3.model import modelcontext
 from pymc3.parallel_sampling import _cpu_count
@@ -42,6 +43,8 @@ def sample_smc(
     parallel=False,
     chains=None,
     cores=None,
+    compute_convergence_checks=True,
+    return_inferencedata=True,
 ):
     r"""
     Sequential Monte Carlo based sampling.
@@ -91,7 +94,12 @@ def sample_smc(
         The number of chains to sample. Running independent chains is important for some
         convergence statistics. If ``None`` (default), then set to either ``cores`` or 2, whichever
         is larger.
-
+    compute_convergence_checks : bool
+        Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
+        Defaults to ``True``.
+    return_inferencedata : bool, default=True
+        Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
+        Defaults to ``True``.
     Notes
     -----
     SMC works by moving through successive stages. At each stage the inverse temperature
@@ -223,10 +231,25 @@ def sample_smc(
     trace.report.nsteps = nsteps
     trace.report._t_sampling = time.time() - t1
 
+    if compute_convergence_checks or return_inferencedata:
+        ikwargs = dict(model=model)
+        idata = to_inference_data(trace, **ikwargs)
+
+    if compute_convergence_checks:
+        if draws < 100:
+            warnings.warn(
+                "The number of samples is too small to check convergence reliably.",
+                stacklevel=2,
+            )
+        else:
+            trace.report._run_convergence_checks(idata, model)
+    trace.report._log_summary()
+
+    posterior = idata if return_inferencedata else trace
     if save_sim_data:
-        return trace, {modelcontext(model).observed_RVs[0].name: np.array(sim_data)}
+        return posterior, {modelcontext(model).observed_RVs[0].name: np.array(sim_data)}
     else:
-        return trace
+        return posterior
 
 
 def sample_smc_int(

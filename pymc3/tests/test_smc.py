@@ -17,8 +17,11 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 
+from arviz.data.inference_data import InferenceData
+
 import pymc3 as pm
 
+from pymc3.backends.base import MultiTrace
 from pymc3.tests.helpers import SeededTest
 
 
@@ -105,6 +108,36 @@ class TestSMC(SeededTest):
                     a = pm.Poisson("a", 5)
                     y = pm.Normal("y", a, 5, observed=[1, 2, 3, 4])
                     trace = pm.sample_smc()
+
+    def test_return_datatype(self):
+        chains = 2
+        draws = 10
+
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1)
+            y = pm.Normal("y", x, 1, observed=5)
+
+            idata = pm.sample_smc(chains=chains, draws=draws)
+            mt = pm.sample_smc(chains=chains, draws=draws, return_inferencedata=False)
+
+        assert isinstance(idata, InferenceData)
+        assert len(idata.posterior.chain) == chains
+        assert len(idata.posterior.draw) == draws
+
+        assert isinstance(mt, MultiTrace)
+        assert mt.nchains == chains
+        assert mt["x"].size == chains * draws
+
+    def test_convergence_checks(self):
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1)
+            y = pm.Normal("y", x, 1, observed=5)
+
+            with pytest.warns(
+                UserWarning,
+                match="The number of samples is too small",
+            ):
+                pm.sample_smc(draws=99)
 
 
 @pytest.mark.xfail(reason="SMC-ABC not refactored yet")
