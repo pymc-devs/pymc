@@ -65,10 +65,10 @@ def radon_model():
         "log_radon": {"y_like"},
     }
     plates = {
-        (): {"b", "sigma_a", "sigma_y", "floor_measure_offset"},
-        (3,): {"gamma"},
-        (85,): {"eps_a"},
-        (919,): {"a", "mu_a", "y_like", "log_radon"},
+        "": {"b", "sigma_a", "sigma_y", "floor_measure_offset"},
+        "3": {"gamma"},
+        "85": {"eps_a"},
+        "919": {"a", "mu_a", "y_like", "log_radon"},
     }
     return model, compute_graph, plates
 
@@ -90,12 +90,46 @@ def model_with_imputations():
         "L": {"L_missing", "L_observed"},
     }
     plates = {
-        (): {"a"},
-        (2,): {"L_missing"},
-        (10,): {"L_observed"},
-        (12,): {"L"},
+        "": {"a"},
+        "2": {"L_missing"},
+        "10": {"L_observed"},
+        "12": {"L"},
     }
     return model, compute_graph, plates
+
+
+def model_with_dims():
+    with pm.Model(coords={"city": ["Aachen", "Maastricht", "London", "Bergheim"]}) as pmodel:
+        economics = pm.Uniform("economics", lower=-1, upper=1, shape=(1,))
+
+        population = pm.HalfNormal("population", sd=5, dims=("city"))
+
+        time = pm.Data("year", [2014, 2015, 2016], dims="year")
+
+        n = pm.Deterministic(
+            "tax revenue", economics * population[None, :] * time[:, None], dims=("year", "city")
+        )
+
+        yobs = pm.Data("observed", np.ones((3, 4)))
+        L = pm.Normal("L", n, observed=yobs)
+
+    compute_graph = {
+        "economics": set(),
+        "population": set(),
+        "year": set(),
+        "tax revenue": {"economics", "population", "year"},
+        "L": {"tax revenue"},
+        "observed": {"L"},
+    }
+    plates = {
+        "1": {"economics"},
+        "city (4)": {"population"},
+        "year (3)": {"year"},
+        "year (3) x city (4)": {"tax revenue"},
+        "3 x 4": {"L", "observed"},
+    }
+
+    return pmodel, compute_graph, plates
 
 
 class BaseModelGraphTest(SeededTest):
@@ -151,3 +185,7 @@ class TestRadonModel(BaseModelGraphTest):
 
 class TestImputationModel(BaseModelGraphTest):
     model_func = model_with_imputations
+
+
+class TestModelWithDims(BaseModelGraphTest):
+    model_func = model_with_dims
