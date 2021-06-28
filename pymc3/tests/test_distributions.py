@@ -1315,6 +1315,7 @@ class TestMatchesScipy:
             R,
             {"b": Rplus, "kappa": Rplus, "mu": R},
             laplace_asymmetric_logpdf,
+            decimal=select_by_precision(float64=6, float32=2),
         )
 
     def test_lognormal(self):
