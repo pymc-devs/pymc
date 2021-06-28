@@ -73,6 +73,31 @@ def radon_model():
     return model, compute_graph, plates
 
 
+def model_with_imputations():
+    """The example from https://github.com/pymc-devs/pymc3/issues/4043"""
+    x = np.random.randn(10) + 10.0
+    x = np.concatenate([x, [np.nan], [np.nan]])
+    x = np.ma.masked_array(x, np.isnan(x))
+
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        pm.Normal("L", a, 1.0, observed=x)
+
+    compute_graph = {
+        "a": set(),
+        "L_missing": {"a"},
+        "L_observed": {"a"},
+        "L": {"L_missing", "L_observed"},
+    }
+    plates = {
+        (): {"a"},
+        (2,): {"L_missing"},
+        (10,): {"L_observed"},
+        (12,): {"L"},
+    }
+    return model, compute_graph, plates
+
+
 class BaseModelGraphTest(SeededTest):
     model_func = None
 
@@ -122,3 +147,7 @@ class TestRadonModel(BaseModelGraphTest):
             model_to_graphviz(self.model, formatting="latex")
         with pytest.warns(UserWarning, match="currently not supported"):
             model_to_graphviz(self.model, formatting="plain_with_params")
+
+
+class TestImputationModel(BaseModelGraphTest):
+    model_func = model_with_imputations
