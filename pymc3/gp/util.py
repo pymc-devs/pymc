@@ -38,7 +38,7 @@ def infer_shape(X, n_points=None):
     X: array-like
         Gaussian process input matrix.
     n_points: None or int
-        The number of rows of `X`.  If `None`, the number of rows of `X` is 
+        The number of rows of `X`.  If `None`, the number of rows of `X` is
         calculated from `X` if possible.
     """
     if n_points is None:
@@ -51,10 +51,10 @@ def infer_shape(X, n_points=None):
 
 def stabilize(K, c=1e-6):
     R"""
-    Adds small diagonal to a covariance matrix.  
+    Adds small diagonal to a covariance matrix.
 
     Often the matrices calculated from covariance functions, `K = cov_func(X)`
-    do not appear numerically to be positive semi-definite.  Adding a small 
+    do not appear numerically to be positive semi-definite.  Adding a small
     correction, `c`, to the diagonal is usually enough to fix this.
 
     Parameters
