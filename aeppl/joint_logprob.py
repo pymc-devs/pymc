@@ -13,7 +13,7 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 
 from aeppl.logprob import _logprob
-from aeppl.opt import PreserveRVMappings, logprob_canonicalize
+from aeppl.opt import PreserveRVMappings, logprob_rewrites_db
 from aeppl.utils import rvs_to_value_vars
 
 
@@ -107,7 +107,7 @@ def joint_logprob(
 
     fgraph.attach_feature(rv_remapper)
 
-    logprob_canonicalize.query(OptimizationQuery(include=["basic"])).optimize(fgraph)
+    logprob_rewrites_db.query(OptimizationQuery(include=["basic"])).optimize(fgraph)
 
     if extra_rewrites is not None:
         extra_rewrites.optimize(fgraph)

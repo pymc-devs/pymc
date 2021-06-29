@@ -5,8 +5,8 @@ import aesara.tensor as at
 from aesara.compile.mode import optdb
 from aesara.graph.features import Feature
 from aesara.graph.op import compute_test_value
-from aesara.graph.opt import EquilibriumOptimizer, local_optimizer
-from aesara.graph.optdb import SequenceDB
+from aesara.graph.opt import local_optimizer
+from aesara.graph.optdb import EquilibriumDB, SequenceDB
 from aesara.tensor.extra_ops import BroadcastTo
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.opt import (
@@ -56,34 +56,6 @@ class PreserveRVMappings(Feature):
         r_value_var = self.rv_values.pop(r, None)
         if r_value_var is not None:
             self.rv_values[new_r] = r_value_var
-
-
-class RVSinker(EquilibriumOptimizer):
-    """Sink `RandomVariable` `Op`s so that log-probabilities can be determined.
-
-    This optimizer is essentially a collection of `RandomVariable`-based rewrites
-    that are needed in order to compute log-probabilities for non-`RandomVariable`
-    graphs.
-    """
-
-    def __init__(self):
-        super().__init__(
-            [
-                local_dimshuffle_rv_lift,
-                local_subtensor_rv_lift,
-                naive_bcast_rv_lift,
-                incsubtensor_rv_replace,
-            ],
-            ignore_newtrees=False,
-            tracks_on_change_inputs=True,
-            max_use_ratio=10000,
-        )
-
-    # If we wanted to support the `.tag.value_var` approach,
-    # something like the following would be reasonable:
-    # def add_requirements(self, fgraph):
-    #     if not hasattr(fgraph, "preserve_rv_mappings"):
-    #         fgraph.attach_feature(PreserveRVMappings({}))
 
 
 @local_optimizer(inc_subtensor_ops)
@@ -178,8 +150,11 @@ def naive_bcast_rv_lift(fgraph, node):
     return [bcasted_node.outputs[1]]
 
 
-logprob_canonicalize = SequenceDB()
-
-
-logprob_canonicalize.register("canonicalize", optdb["canonicalize"], -10, "basic")
-logprob_canonicalize.register("rvsinker", RVSinker(), -1, "basic")
+logprob_rewrites_db = SequenceDB()
+logprob_rewrites_db.register("canonicalize", optdb["canonicalize"], -10, "basic")
+rv_sinking_db = EquilibriumDB()
+rv_sinking_db.register("dimshuffle_lift", local_dimshuffle_rv_lift, -5, "basic")
+rv_sinking_db.register("subtensor_lift", local_subtensor_rv_lift, -5, "basic")
+rv_sinking_db.register("broadcast_to_lift", naive_bcast_rv_lift, -5, "basic")
+rv_sinking_db.register("incsubtensor_lift", incsubtensor_rv_replace, -5, "basic")
+logprob_rewrites_db.register("sinking", rv_sinking_db, -10, "basic")
