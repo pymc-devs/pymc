@@ -35,9 +35,10 @@ from pymc3 import (
     Normal,
     NormalMixture,
     Poisson,
+    logpt,
     sample,
 )
-from pymc3.aesaraf import floatX
+from pymc3.aesaraf import change_rv_size, floatX
 from pymc3.distributions.shape_utils import to_tuple
 from pymc3.tests.helpers import SeededTest
 
@@ -583,3 +584,17 @@ class TestMixtureSameFamily(SeededTest):
             prior = pm.sample_prior_predictive(samples=self.n_samples)
 
         assert prior["mix"].shape == (self.n_samples, 1000)
+
+
+def test_mixture():
+    with pm.Model() as model:
+        components = [pm.Poisson.dist(mu=3), pm.Poisson.dist(mu=3)]
+
+        # w = pm.Dirichlet("w", a=np.array([1, 1]))  # two mixture component weights.
+
+        like = pm.Mixture("like", w=[0.5, 0.5], comp_dists=components)
+        a = logpt(like, [0.5, 0.6, 0.7]).eval()
+
+    model_dist = change_rv_size(model.named_vars["like"], 1000, expand=True)
+    pymc_rand = aesara.function([], model_dist)
+    s0 = pymc_rand()
