@@ -2773,9 +2773,26 @@ class TestBoundedContinuous:
             )
         dist_params, lower, upper = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
 
-        assert all(a == b for a, b in zip(dist_params[2].value, np.array([-1, 0])))
-        assert all(a == b for a, b in zip(dist_params[3].value, np.array([np.inf, np.inf])))
-        assert all(a == b for a, b in zip(lower.value, np.array([-1, 0])))
+        assert np.array_equal(dist_params[2].value, [-1, 0])
+        assert dist_params[3].value == np.inf
+        assert np.array_equal(lower.value, [-1, 0])
+        assert upper is None
+
+    def test_missing_partial_upper_bound_array(self):
+        bounded_rv_name = "upper_bounded"
+        with Model() as model:
+            TruncatedNormal(
+                bounded_rv_name,
+                mu=np.array([1, 1]),
+                sigma=np.array([2, 3]),
+                lower=np.array([-1.0, -np.inf]),
+                upper=None,
+            )
+        dist_params, lower, upper = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+
+        assert np.array_equal(dist_params[2].value, [-1, -np.inf])
+        assert dist_params[3].value == np.inf
+        assert np.array_equal(lower.value, [-1, -np.inf])
         assert upper is None
 
     def test_missing_upper_bound_with_richer_context(self):
