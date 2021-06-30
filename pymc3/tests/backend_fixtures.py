@@ -250,7 +250,6 @@ class SamplingTestCase(ModelBackendSetupTestCase):
         else:
             self.strace.record(point=point)
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_standard_close(self):
         for idx in range(self.draws):
             self.record_point(idx)
@@ -293,14 +292,12 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     - shape
     """
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_get_values_default(self):
         for varname in self.test_point.keys():
             expected = np.concatenate([self.expected[chain][varname] for chain in [0, 1]])
             result = self.mtrace.get_values(varname)
             npt.assert_equal(result, expected)
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_get_values_nocombine_burn_keyword(self):
         burn = 2
         for varname in self.test_point.keys():
@@ -311,7 +308,6 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     def test_len(self):
         assert len(self.mtrace) == self.draws
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_dtypes(self):
         for varname in self.test_point.keys():
             assert (
