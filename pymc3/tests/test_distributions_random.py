@@ -736,6 +736,31 @@ class TestWaldMuPhi(TestWald):
     ]
 
 
+class TestTruncatedNormalUpperArray(BaseTestDistribution):
+    pymc_dist = pm.TruncatedNormal
+    lower, upper, mu, tau = (
+        np.array([-np.inf, -np.inf]),
+        np.array([3, 2]),
+        np.array([0, 0]),
+        np.array(
+            [
+                1,
+                1,
+            ]
+        ),
+    )
+    size = (15, 2)
+    tau, sigma = get_tau_sigma(tau=tau, sigma=None)
+    pymc_dist_params = {"mu": mu, "tau": tau, "upper": upper}
+    expected_rv_op_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
+    reference_dist_params = {"loc": mu, "scale": sigma, "a": lower, "b": (upper - mu) / sigma}
+    reference_dist = seeded_scipy_distribution_builder("truncnorm")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+    ]
+
+
 class TestSkewNormal(BaseTestDistribution):
     pymc_dist = pm.SkewNormal
     pymc_dist_params = {"mu": 0.0, "sigma": 1.0, "alpha": 5.0}

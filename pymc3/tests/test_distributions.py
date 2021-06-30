@@ -2811,21 +2811,6 @@ class TestBoundedContinuous:
         assert lower_interval.value == -1
         assert upper_interval is None
 
-    def test_rich_context(self):
-        with Model() as model:
-            sigma = TruncatedNormal("lower_bounded", mu=2, sigma=1.5, lower=0, upper=None)
-            mu = TruncatedNormal("upper_bounded", mu=0, sigma=2, lower=None, upper=3)
-            Normal("normal", mu=mu, sigma=sigma, observed=[1.3, -1.4, 2.0])
-        (
-            (_, _, lower, upper),
-            lower_interval,
-            upper_interval,
-        ) = self.get_dist_params_and_interval_bounds(model, "upper_bounded")
-        assert lower.value == -np.inf
-        assert upper.value == 3
-        assert lower_interval is None
-        assert upper_interval.value == 3
-
 
 @pytest.mark.xfail(reason="LaTeX repr and str no longer applicable")
 class TestStrAndLatexRepr:

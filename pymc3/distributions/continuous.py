@@ -891,7 +891,7 @@ class WaldRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, mu, lam, alpha, size):
-        return getattr(np.random.RandomState, cls.name)(rng, mu, lam, size) + alpha
+        return rng.wald(mu, lam, size=size) + alpha
 
 
 wald = WaldRV()
