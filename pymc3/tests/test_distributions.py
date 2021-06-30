@@ -2898,7 +2898,7 @@ def test_orderedlogistic_dimensions(shape):
     assert np.allclose(ologp, expected)
 
 
-def test_ordered_multi_probs():
+def test_ordered_multinomial_probs():
     with pm.Model() as m:
         pm.OrderedMultinomial("om_p", n=1000, cutpoints=np.array([-2, 0, 2]), eta=0)
         pm.OrderedMultinomial(
@@ -2913,7 +2913,7 @@ def test_ordered_multi_probs():
 def test_ordered_logistic_probs():
     with pm.Model() as m:
         pm.OrderedLogistic("ol_p", cutpoints=np.array([-2, 0, 2]), eta=0)
-        pm.OrderedMultinomial("ol_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, compute_p=False)
+        pm.OrderedLogistic("ol_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, compute_p=False)
     assert len(m.deterministics) == 1
 
     x = pm.OrderedLogistic.dist(cutpoints=np.array([-2, 0, 2]), eta=0)
