@@ -38,7 +38,6 @@ from pymc3.tests.helpers import SeededTest
 from pymc3.tests.models import simple_init
 
 
-@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
         super().setup_method()

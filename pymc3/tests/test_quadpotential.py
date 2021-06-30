@@ -281,7 +281,6 @@ def test_full_adapt_sampling(seed=289586):
         pymc3.sample(draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1)
 
 
-@pytest.mark.xfail(reason="ADVI has not been refactored for v4")
 def test_issue_3965():
     with pymc3.Model():
         pymc3.Normal("n")

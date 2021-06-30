@@ -1324,7 +1324,6 @@ class TestInterpolated(BaseTestDistribution):
     )
     tests_to_run = ["check_rv_size", "test_interpolated"]
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
@@ -1821,7 +1820,6 @@ class TestDensityDist:
             pm.sample_posterior_predictive(idata, samples=samples, model=model, size=100)
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestNestedRandom(SeededTest):
     def build_model(self, distribution, shape, nested_rvs_info):
         with pm.Model() as model:
@@ -2045,6 +2043,7 @@ class TestNestedRandom(SeededTest):
         ],
         ids=str,
     )
+    @pytest.mark.xfail(reason="TruncatedNormal not yet refactored for v4")
     def test_TruncatedNormal(
         self,
         prior_samples,

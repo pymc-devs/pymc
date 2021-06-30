@@ -12,13 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
 import pytest
 
 from pymc3.tests import sampler_fixtures as sf
 
 
-@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestNUTSUniform(sf.NutsFixture, sf.UniformFixture):
     n_samples = 10000
     tune = 1000

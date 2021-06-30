@@ -1274,7 +1274,6 @@ class TestMatchesScipy:
             n_samples=10,
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.parametrize(
         "mu, p, alpha, n, expected",
         [
@@ -1580,7 +1579,6 @@ class TestMatchesScipy:
             lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
         )
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     @pytest.mark.skipif(
         condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
     )
@@ -2051,7 +2049,7 @@ class TestMatchesScipy:
         #
         # self.checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]), 'V': PdMatrix(n)},
         #             checks=[self.check_dlogp])
-        pass
+        raise NotImplementedError("Test is not implemented because of numerical issues.")
 
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
     @pytest.mark.xfail(reason="Distribution not refactored yet")
@@ -2584,6 +2582,8 @@ class TestMatchesScipy:
             {"b": Rplus, "sigma": Rplusbig},
             lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma),
         )
+        if aesara.config.floatX == "float32":
+            raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
     def test_rice_nu(self):
         self.check_logp(
@@ -2614,6 +2614,8 @@ class TestMatchesScipy:
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: floatX(sp.moyal.logcdf(value, mu, sigma)),
         )
+        if aesara.config.floatX == "float32":
+            raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
