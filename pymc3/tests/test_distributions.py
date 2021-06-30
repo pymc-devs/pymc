@@ -2272,6 +2272,16 @@ class TestMatchesScipy:
         sample = dist.eval()
         assert_allclose(sample, np.stack([vals, vals], axis=0))
 
+    def test_multinomial_zero_probs(self):
+        # test multinomial accepts 0 probabilities / observations:
+        value = aesara.shared(np.array([0, 0, 100], dtype=int))
+        logp = pm.Multinomial.logp(value=value, n=100, p=at.constant([0.0, 0.0, 1.0]))
+        logp_fn = aesara.function(inputs=[], outputs=logp)
+        assert logp_fn() >= 0
+
+        value.set_value(np.array([50, 50, 0], dtype=int))
+        assert np.isneginf(logp_fn())
+
     @pytest.mark.parametrize("n", [2, 3])
     def test_dirichlet_multinomial(self, n):
         self.check_logp(
