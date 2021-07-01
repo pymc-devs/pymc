@@ -71,6 +71,7 @@ jobs:
           - |
             pymc3/tests/test_parallel_sampling.py
             pymc3/tests/test_sampling.py
+            pymc3/tests/test_tuning.py
 
           - |
             pymc3/tests/test_idata_conversion.py
@@ -152,6 +153,7 @@ jobs:
           - |
             pymc3/tests/test_parallel_sampling.py
             pymc3/tests/test_sampling.py
+            pymc3/tests/test_tuning.py
             pymc3/tests/test_shared.py
           - |
             pymc3/tests/test_gp.py
