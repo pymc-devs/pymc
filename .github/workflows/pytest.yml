@@ -34,10 +34,12 @@ jobs:
             --ignore=pymc3/tests/test_model_graph.py
             --ignore=pymc3/tests/test_modelcontext.py
             --ignore=pymc3/tests/test_parallel_sampling.py
+            --ignore=pymc3/tests/test_posteriors.py
             --ignore=pymc3/tests/test_sampling.py
             --ignore=pymc3/tests/test_profile.py
             --ignore=pymc3/tests/test_step.py
             --ignore=pymc3/tests/test_tuning.py
+            --ignore=pymc3/tests/test_transforms.py
             --ignore=pymc3/tests/test_types.py
             --ignore=pymc3/tests/test_variational_inference.py
             --ignore=pymc3/tests/test_sampling_jax.py
@@ -67,11 +69,13 @@ jobs:
             pymc3/tests/test_pickling.py
             pymc3/tests/test_plots.py
             pymc3/tests/test_updates.py
+            pymc3/tests/test_transforms.py
 
           - |
             pymc3/tests/test_parallel_sampling.py
             pymc3/tests/test_sampling.py
             pymc3/tests/test_tuning.py
+            pymc3/tests/test_posteriors.py
 
           - |
             pymc3/tests/test_idata_conversion.py
