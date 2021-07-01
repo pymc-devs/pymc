@@ -331,9 +331,6 @@ class TestDiffEqModel:
         assert idata.posterior["y0"].shape == (1, 100)
         assert idata.posterior["sigma"].shape == (1, 100)
 
-    @pytest.mark.xfail(
-        condition=IS_WINDOWS, reason="https://github.com/pymc-devs/aesara/issues/390"
-    )
     def test_vector_ode_1_param(self):
         """Test running model for a vector ODE with 1 parameter"""
 
@@ -363,8 +360,8 @@ class TestDiffEqModel:
         ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=2, n_theta=1)
 
         with pm.Model() as model:
-            R = pm.Lognormal("R", 1, 5)
-            sigma = pm.HalfCauchy("sigma", 1, shape=2)
+            R = pm.Lognormal("R", 1, 5, initval=1)
+            sigma = pm.HalfCauchy("sigma", 1, shape=2, initval=[0.5, 0.5])
             forward = ode_model(theta=[R], y0=[0.99, 0.01])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
