@@ -34,6 +34,7 @@ jobs:
             --ignore=pymc3/tests/test_model_graph.py
             --ignore=pymc3/tests/test_modelcontext.py
             --ignore=pymc3/tests/test_parallel_sampling.py
+            --ignore=pymc3/tests/test_sampling.py
             --ignore=pymc3/tests/test_profile.py
             --ignore=pymc3/tests/test_step.py
             --ignore=pymc3/tests/test_tuning.py
@@ -68,6 +69,10 @@ jobs:
             pymc3/tests/test_updates.py
 
           - |
+            pymc3/tests/test_parallel_sampling.py
+            pymc3/tests/test_sampling.py
+
+          - |
             pymc3/tests/test_idata_conversion.py
             pymc3/tests/test_distributions_random.py
             pymc3/tests/test_distributions_timeseries.py
@@ -78,6 +83,7 @@ jobs:
             pymc3/tests/test_model_graph.py
             pymc3/tests/test_ode.py
             pymc3/tests/test_posdef_sym.py
+            pymc3/tests/test_profile.py
             pymc3/tests/test_quadpotential.py
             pymc3/tests/test_shape_handling.py
             pymc3/tests/test_step.py
@@ -144,6 +150,7 @@ jobs:
             pymc3/tests/test_distributions_random.py
             pymc3/tests/test_distributions_timeseries.py
           - |
+            pymc3/tests/test_parallel_sampling.py
             pymc3/tests/test_sampling.py
             pymc3/tests/test_shared.py
           - |
@@ -155,6 +162,7 @@ jobs:
             pymc3/tests/test_modelcontext.py
             pymc3/tests/test_model_graph.py
             pymc3/tests/test_pickling.py
+            pymc3/tests/test_profile.py
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
