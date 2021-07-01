@@ -127,7 +127,11 @@ def joint_logprob(
         node = q.popleft()
 
         if not any(o in lifted_rv_values for o in node.outputs):
-            if isinstance(node.op, RandomVariable) and warn_missing_rvs:
+            if (
+                isinstance(node.op, RandomVariable)
+                and not getattr(node.default_output().tag, "ignore_logprob", False)
+                and warn_missing_rvs
+            ):
                 warnings.warn(
                     "Found a random variable that was neither among the observations "
                     f"nor the conditioned variables: {node}"
@@ -135,7 +139,11 @@ def joint_logprob(
             continue
 
         if isinstance(node.op, RandomVariable):
-            q_rv_var = node.outputs[1]
+            q_rv_var = node.default_output()
+
+            if getattr(node.default_output().tag, "ignore_logprob", False):
+                continue
+
             q_rv_value_var = replacements[q_rv_var]
 
             # Replace `RandomVariable`s in the inputs with value variables.

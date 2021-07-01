@@ -181,3 +181,20 @@ def test_persist_inputs():
     logp = joint_logprob(y_rv, {beta_rv: beta, y_rv: y})
 
     assert x in ancestors([logp])
+
+
+def test_ignore_logprob():
+    x = at.scalar("x")
+    beta_rv = at.random.normal(0, 1, name="beta")
+    beta_rv.tag.ignore_logprob = True
+    y_rv = at.random.normal(beta_rv * x, 1, name="y")
+
+    beta = beta_rv.type()
+    y = y_rv.type()
+
+    logp = joint_logprob(y_rv, {beta_rv: beta, y_rv: y})
+
+    y_rv_2 = at.random.normal(beta * x, 1, name="y")
+    logp_exp = joint_logprob(y_rv_2, {y_rv_2: y})
+
+    assert equal_computations([logp], [logp_exp])
