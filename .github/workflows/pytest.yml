@@ -57,6 +57,8 @@ jobs:
             --ignore=pymc3/tests/test_distributions_random.py
             --ignore=pymc3/tests/test_idata_conversion.py
 
+          - pymc3/tests/test_distributions.py
+
           - |
             pymc3/tests/test_modelcontext.py
             pymc3/tests/test_dist_math.py
@@ -67,7 +69,6 @@ jobs:
 
           - |
             pymc3/tests/test_idata_conversion.py
-            pymc3/tests/test_distributions.py
             pymc3/tests/test_distributions_random.py
             pymc3/tests/test_examples.py
             pymc3/tests/test_gp.py
