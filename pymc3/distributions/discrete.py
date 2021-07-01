@@ -1639,7 +1639,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         )
 
 
-class OrderedLogistic(Categorical):
+class _OrderedLogistic(Categorical):
     R"""
     Ordered Logistic log-likelihood.
 
@@ -1712,7 +1712,7 @@ class OrderedLogistic(Categorical):
     rv_op = categorical
 
     @classmethod
-    def dist(cls, eta, cutpoints, compute_p=True, *args, **kwargs):
+    def dist(cls, eta, cutpoints, *args, **kwargs):
         eta = at.as_tensor_variable(floatX(eta))
         cutpoints = at.as_tensor_variable(cutpoints)
 
@@ -1725,15 +1725,24 @@ class OrderedLogistic(Categorical):
             ],
             axis=-1,
         )
-        if compute_p and pm.modelcontext(None):
-            p = pm.Deterministic("complete_p", p_cum[..., 1:] - p_cum[..., :-1])
-        else:
-            p = p_cum[..., 1:] - p_cum[..., :-1]
+        p = p_cum[..., 1:] - p_cum[..., :-1]
 
-        return super().dist(p, **kwargs)
+        return super().dist(p, *args, **kwargs)
 
 
-class OrderedProbit(Categorical):
+class OrderedLogistic:
+    def __new__(cls, name, *args, compute_p=True, **kwargs):
+        out_rv = _OrderedLogistic(name, *args, **kwargs)
+        if compute_p:
+            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3])
+        return out_rv
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        return _OrderedLogistic.dist(*args, **kwargs)
+
+
+class _OrderedProbit(Categorical):
     R"""
     Ordered Probit log-likelihood.
 
@@ -1809,7 +1818,7 @@ class OrderedProbit(Categorical):
     rv_op = categorical
 
     @classmethod
-    def dist(cls, eta, cutpoints, compute_p=True, *args, **kwargs):
+    def dist(cls, eta, cutpoints, *args, **kwargs):
         eta = at.as_tensor_variable(floatX(eta))
         cutpoints = at.as_tensor_variable(cutpoints)
 
@@ -1823,9 +1832,18 @@ class OrderedProbit(Categorical):
             axis=-1,
         )
         _log_p = at.as_tensor_variable(floatX(_log_p))
-        if compute_p and pm.modelcontext(None):
-            p = pm.Deterministic("complete_p", at.exp(_log_p))
-        else:
-            p = at.exp(_log_p)
+        p = at.exp(_log_p)
 
-        return super().dist(p, **kwargs)
+        return super().dist(p, *args, **kwargs)
+
+
+class OrderedProbit:
+    def __new__(cls, name, *args, compute_p=True, **kwargs):
+        out_rv = _OrderedProbit(name, *args, **kwargs)
+        if compute_p:
+            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3])
+        return out_rv
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        return _OrderedProbit.dist(*args, **kwargs)
