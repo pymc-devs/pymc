@@ -20,7 +20,7 @@ from aesara.tensor.random.op import RandomVariable
 from pymc3.aesaraf import take_along_axis
 from pymc3.distributions import _logp
 from pymc3.distributions.continuous import Normal, get_tau_sigma
-from pymc3.distributions.dist_math import bound
+from pymc3.distributions.dist_math import bound, random_choice
 from pymc3.distributions.distribution import Distribution
 from pymc3.distributions.shape_utils import to_tuple
 from pymc3.math import logsumexp
@@ -29,7 +29,7 @@ __all__ = ["Mixture", "NormalMixture", "MixtureSameFamily"]
 
 
 class MixtureRV(RandomVariable):
-    def __init__(self, w, comp_dist):
+    def __init__(self, w=None, comp_dist=None):
         self.name = "mixture"
         self.comp_dist = comp_dist
         self.w = w
@@ -42,13 +42,45 @@ class MixtureRV(RandomVariable):
 
     def rng_fn(self, rng, *args):
         size = args[-1]
+        # The last dimension is of number of componenets so we trim it off
+        size = size[:-1] if size else None
+        orig_size = size
+        # Flatten the size to a one dimensional one
+        size = np.prod(size)
 
-        # Use this somehow
         comp_dist = self.comp_dist
         w = self.w
 
-        # Return nonsense values for now
-        return np.random.random(size)
+        if isinstance(w, (list, tuple)):
+            w = np.array(w)
+        # Take care of case when w is a distribution
+
+        _size = size if size else 1
+        w_samples = random_choice(p=w, size=_size)
+
+        # Draw samples from each component
+        _samples = []
+        for dist in comp_dist:
+            curr_op = dist.owner.op
+            curr_inputs = dist.owner.inputs
+
+            if size is not None:
+                curr_inputs[1] = at.as_tensor_variable(size)
+
+            curr_op_random = at.as_tensor_variable(curr_op.make_node(*curr_inputs))
+            curr_op_random = curr_op_random.eval()
+            _samples.append(curr_op_random)
+
+        samples = []
+        for i in range(0, _size):
+            curr_component = _samples[w_samples[i]]
+            if curr_component.shape == ():
+                samples.append(curr_component)  # None Case
+            else:
+                samples.append(curr_component[i])
+
+        # reshape flattened array to original size
+        return np.reshape(np.array(samples), orig_size)
 
 
 class Mixture(Distribution):
