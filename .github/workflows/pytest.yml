@@ -70,6 +70,7 @@ jobs:
           - |
             pymc3/tests/test_idata_conversion.py
             pymc3/tests/test_distributions_random.py
+            pymc3/tests/test_distributions_timeseries.py
             pymc3/tests/test_examples.py
             pymc3/tests/test_gp.py
             pymc3/tests/test_model.py
@@ -141,6 +142,7 @@ jobs:
         test-subset:
           - |
             pymc3/tests/test_distributions_random.py
+            pymc3/tests/test_distributions_timeseries.py
           - |
             pymc3/tests/test_sampling.py
             pymc3/tests/test_shared.py
