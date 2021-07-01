@@ -1056,7 +1056,7 @@ class TestMatchesScipy:
             lambda value, nu: sp.chi2.logpdf(value, df=nu),
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
@@ -1423,7 +1423,7 @@ class TestMatchesScipy:
             test_fun,
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
@@ -1449,7 +1449,7 @@ class TestMatchesScipy:
         # pymc-devs/aesara#224: skip_paramdomain_outside_edge_test has to be set
         # True to avoid triggering a C-level assertion in the Aesara GammaQ function
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
@@ -1465,7 +1465,7 @@ class TestMatchesScipy:
             skip_paramdomain_outside_edge_test=True,
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to scaling issues",
     )
@@ -1496,7 +1496,7 @@ class TestMatchesScipy:
             lambda value, alpha, m: sp.pareto.logcdf(value, alpha, scale=m),
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
@@ -1508,7 +1508,7 @@ class TestMatchesScipy:
             lambda value, alpha, beta: sp.exponweib.logpdf(value, 1, alpha, scale=beta),
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
@@ -1560,7 +1560,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.xfail(reason="checkd tests has not been refactored")
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.skipif(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_beta_binomial_distribution(self):
         self.checkd(
             BetaBinomial,
@@ -1681,7 +1681,7 @@ class TestMatchesScipy:
         self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
 
     @pytest.mark.xfail(reason="Test has not been refactored")
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
@@ -1723,7 +1723,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.xfail(reason="Test not refactored yet")
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
@@ -1860,7 +1860,7 @@ class TestMatchesScipy:
             extra_args={"lower": False},
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
@@ -2521,7 +2521,7 @@ class TestMatchesScipy:
             skip_paramdomain_inside_edge_test=True,  # Valid values are tested above
         )
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.skipif(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_vonmises(self):
         self.check_logp(
             VonMises,
@@ -2571,7 +2571,7 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Some combinations underflow to -inf in float32 in pymc version",
     )
@@ -2603,7 +2603,7 @@ class TestMatchesScipy:
             lambda value, mu, sigma: floatX(sp.moyal.logpdf(value, mu, sigma)),
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Pymc3 underflows earlier than scipy on float32",
     )
@@ -2617,7 +2617,7 @@ class TestMatchesScipy:
         if aesara.config.floatX == "float32":
             raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.skipif(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
