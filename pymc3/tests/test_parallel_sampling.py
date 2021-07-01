@@ -89,39 +89,51 @@ def test_remote_pipe_closed():
             pm.sample(step=step, mp_ctx="spawn", tune=2, draws=2, cores=2, chains=2)
 
 
+@pytest.mark.xfail(
+    reason="Possibly the same issue described in https://github.com/pymc-devs/pymc3/pull/4701"
+)
 def test_abort():
     with pm.Model() as model:
         a = pm.Normal("a", shape=1)
         pm.HalfNormal("b")
         step1 = pm.NUTS([a])
-        step2 = pm.Metropolis([model.b_log__])
+        step2 = pm.Metropolis([model["b_log__"]])
 
     step = pm.CompoundStep([step1, step2])
 
-    ctx = multiprocessing.get_context()
-    proc = ps.ProcessAdapter(
-        10,
-        10,
-        step,
-        chain=3,
-        seed=1,
-        mp_ctx=ctx,
-        start={"a": 1.0, "b_log__": 2.0},
-        step_method_pickled=None,
-        pickle_backend="pickle",
-    )
-    proc.start()
-    proc.write_next()
-    proc.abort()
-    proc.join()
+    for abort in [False, True]:
+        ctx = multiprocessing.get_context()
+        proc = ps.ProcessAdapter(
+            10,
+            10,
+            step,
+            chain=3,
+            seed=1,
+            mp_ctx=ctx,
+            start={"a": np.array([1.0]), "b_log__": np.array(2.0)},
+            step_method_pickled=None,
+            pickle_backend="pickle",
+        )
+        proc.start()
+        while True:
+            proc.write_next()
+            out = ps.ProcessAdapter.recv_draw([proc])
+            if out[1]:
+                break
+        if abort:
+            proc.abort()
+        proc.join()
 
 
+@pytest.mark.xfail(
+    reason="Possibly the same issue described in https://github.com/pymc-devs/pymc3/pull/4701"
+)
 def test_explicit_sample():
     with pm.Model() as model:
         a = pm.Normal("a", shape=1)
         pm.HalfNormal("b")
         step1 = pm.NUTS([a])
-        step2 = pm.Metropolis([model.b_log__])
+        step2 = pm.Metropolis([model["b_log__"]])
 
     step = pm.CompoundStep([step1, step2])
 
@@ -133,7 +145,7 @@ def test_explicit_sample():
         chain=3,
         seed=1,
         mp_ctx=ctx,
-        start={"a": 1.0, "b_log__": 2.0},
+        start={"a": np.array([1.0]), "b_log__": np.array(2.0)},
         step_method_pickled=None,
         pickle_backend="pickle",
     )
@@ -149,22 +161,26 @@ def test_explicit_sample():
     proc.join()
 
 
+@pytest.mark.xfail(
+    reason="Possibly the same issue described in https://github.com/pymc-devs/pymc3/pull/4701"
+)
 def test_iterator():
     with pm.Model() as model:
         a = pm.Normal("a", shape=1)
         pm.HalfNormal("b")
         step1 = pm.NUTS([a])
-        step2 = pm.Metropolis([model.b_log__])
+        step2 = pm.Metropolis([model["b_log__"]])
 
     step = pm.CompoundStep([step1, step2])
 
-    start = {"a": 1.0, "b_log__": 2.0}
+    start = {"a": np.array([1.0]), "b_log__": np.array(2.0)}
     sampler = ps.ParallelSampler(10, 10, 3, 2, [2, 3, 4], [start] * 3, step, 0, False)
     with sampler:
         for draw in sampler:
             pass
 
 
+@pytest.mark.xfail(reason="DensityDist was not yet refactored for v4")
 def test_spawn_densitydist_function():
     with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
@@ -176,16 +192,19 @@ def test_spawn_densitydist_function():
         pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
 
 
+@pytest.mark.xfail(reason="DensityDist was not yet refactored for v4")
 def test_spawn_densitydist_bound_method():
     with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
         normal_dist = pm.Normal.dist(mu, 1)
-        obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
+        logp = lambda x: pm.logp(normal_dist, x, transformed=False)
+        obs = pm.DensityDist("density_dist", logp, observed=np.random.randn(100))
         msg = "logp for DensityDist is a bound method, leading to RecursionError while serializing"
         with pytest.raises(ValueError, match=msg):
             pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
 
 
+@pytest.mark.xfail(reason="DensityDist was not yet refactored for v4")
 def test_spawn_densitydist_syswarning(monkeypatch):
     monkeypatch.setattr("pymc3.distributions.distribution.PLATFORM", "win32")
     with pm.Model() as model:
@@ -195,6 +214,7 @@ def test_spawn_densitydist_syswarning(monkeypatch):
             obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
 
 
+@pytest.mark.xfail(reason="DensityDist was not yet refactored for v4")
 def test_spawn_densitydist_mpctxwarning(monkeypatch):
     ctx = multiprocessing.get_context("spawn")
     monkeypatch.setattr(multiprocessing, "get_context", lambda: ctx)
