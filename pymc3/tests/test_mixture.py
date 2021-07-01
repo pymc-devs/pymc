@@ -590,11 +590,14 @@ def test_mixture():
     with pm.Model() as model:
         components = [pm.Poisson.dist(mu=3), pm.Poisson.dist(mu=3)]
 
-        # w = pm.Dirichlet("w", a=np.array([1, 1]))  # two mixture component weights.
+        w = pm.Dirichlet("w", a=np.array([1, 1]), observed=[0.5, 0.5])
+        like = pm.Mixture("like", w=w, comp_dists=components)
 
-        like = pm.Mixture("like", w=[0.5, 0.5], comp_dists=components)
-        a = logpt(like, [0.5, 0.6, 0.7]).eval()
+        log_val = logpt(like, [0.5, 0.6, 0.7]).eval()
 
     model_dist = change_rv_size(model.named_vars["like"], 1000, expand=True)
     pymc_rand = aesara.function([], model_dist)
-    s0 = pymc_rand()
+    rand_val = pymc_rand()
+
+    assert rand_val.shape == (1000,)
+    assert log_val.shape == (3,)

@@ -29,18 +29,12 @@ __all__ = ["Mixture", "NormalMixture", "MixtureSameFamily"]
 
 
 class MixtureRV(RandomVariable):
-    def __init__(self, w=None, comp_dist=None):
-        self.name = "mixture"
-        self.comp_dist = comp_dist
-        self.w = w
-        self.ndim_supp = 0
-        # Needs to be a tuple fails hashing when a list. Needs investigation
-        self.ndims_params = (0,)
-        self.dtype = "floatX"
-        self.inplace = False
+    def __init__(self, *args, comp_dists=None, **kwargs):
+        self.comp_dists = comp_dists
         self._print_name = ("Mixture", "\\operatorname{Mixture}")
+        super().__init__(*args, **kwargs)
 
-    def rng_fn(self, rng, *args):
+    def rng_fn(self, rng, w, *args):
         size = args[-1]
         # The last dimension is of number of componenets so we trim it off
         size = size[:-1] if size else None
@@ -48,28 +42,26 @@ class MixtureRV(RandomVariable):
         # Flatten the size to a one dimensional one
         size = np.prod(size)
 
-        comp_dist = self.comp_dist
-        w = self.w
-
-        if isinstance(w, (list, tuple)):
-            w = np.array(w)
-        # Take care of case when w is a distribution
+        comp_dists = self.comp_dists
+        w = np.array(w)
 
         _size = size if size else 1
         w_samples = random_choice(p=w, size=_size)
 
         # Draw samples from each component
         _samples = []
-        for dist in comp_dist:
+        for dist in comp_dists:
             curr_op = dist.owner.op
             curr_inputs = dist.owner.inputs
+            curr_rng = curr_inputs[0].container.data
 
-            if size is not None:
-                curr_inputs[1] = at.as_tensor_variable(size)
+            rv_inputs = []
+            rv_inputs.append(curr_rng)
+            rv_inputs.append([_var.value for _var in curr_inputs[3:]])
+            rv_inputs.append(size)
 
-            curr_op_random = at.as_tensor_variable(curr_op.make_node(*curr_inputs))
-            curr_op_random = curr_op_random.eval()
-            _samples.append(curr_op_random)
+            curr_op_random = at.as_tensor_variable(curr_op.rng_fn(*rv_inputs))
+            _samples.append(curr_op_random.value)
 
         samples = []
         for i in range(0, _size):
@@ -161,7 +153,14 @@ class Mixture(Distribution):
     def dist(cls, w, comp_dists, *args, **kwargs):
         if not isinstance(comp_dists, (list, tuple)):
             comp_dists = (comp_dists,)
-        cls.rv_op = MixtureRV(w, comp_dists)
+        cls.rv_op = MixtureRV(
+            "mixture",
+            0,
+            (0,),
+            "floatX",
+            comp_dists=comp_dists,
+            inplace=False,
+        )
         w = at.as_tensor_variable(w)
 
         return super().dist([w, *comp_dists], *args, **kwargs)
