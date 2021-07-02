@@ -191,7 +191,7 @@ def product(domains, n_samples=-1):
         names, domains = zip(*domains.items())
     except ValueError:  # domains.items() is empty
         return [{}]
-    all_vals = [zip(names, val) for val in itertools.product(*[d.vals for d in domains])]
+    all_vals = [zip(names, val) for val in itertools.product(*(d.vals for d in domains))]
     if n_samples > 0 and len(all_vals) > n_samples:
         return (all_vals[j] for j in nr.choice(len(all_vals), n_samples, replace=False))
     return all_vals
@@ -294,7 +294,7 @@ def multinomial_logpdf(value, n, p):
 
 
 def dirichlet_multinomial_logpmf(value, n, a):
-    value, n, a = [np.asarray(x) for x in [value, n, a]]
+    value, n, a = (np.asarray(x) for x in [value, n, a])
     assert value.ndim == 1
     assert n.ndim == 0
     assert a.shape == value.shape
@@ -318,7 +318,7 @@ def beta_mu_sigma(value, mu, sigma):
 
 class ProductDomain:
     def __init__(self, domains):
-        self.vals = list(itertools.product(*[d.vals for d in domains]))
+        self.vals = list(itertools.product(*(d.vals for d in domains)))
         self.shape = (len(domains),) + domains[0].shape
         self.lower = [d.lower for d in domains]
         self.upper = [d.upper for d in domains]
@@ -388,19 +388,19 @@ def matrix_normal_logpdf_chol(value, mu, rowchol, colchol):
     )
 
 
-def kron_normal_logpdf_cov(value, mu, covs, sigma):
+def kron_normal_logpdf_cov(value, mu, covs, sigma, size=None):
     cov = kronecker(*covs).eval()
     if sigma is not None:
         cov += sigma ** 2 * np.eye(*cov.shape)
     return scipy.stats.multivariate_normal.logpdf(value, mu, cov).sum()
 
 
-def kron_normal_logpdf_chol(value, mu, chols, sigma):
+def kron_normal_logpdf_chol(value, mu, chols, sigma, size=None):
     covs = [np.dot(chol, chol.T) for chol in chols]
     return kron_normal_logpdf_cov(value, mu, covs, sigma=sigma)
 
 
-def kron_normal_logpdf_evd(value, mu, evds, sigma):
+def kron_normal_logpdf_evd(value, mu, evds, sigma, size=None):
     covs = []
     for eigs, Q in evds:
         try:
@@ -1274,7 +1274,6 @@ class TestMatchesScipy:
             n_samples=10,
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.parametrize(
         "mu, p, alpha, n, expected",
         [
@@ -1315,6 +1314,7 @@ class TestMatchesScipy:
             R,
             {"b": Rplus, "kappa": Rplus, "mu": R},
             laplace_asymmetric_logpdf,
+            decimal=select_by_precision(float64=6, float32=2),
         )
 
     def test_lognormal(self):
@@ -1579,7 +1579,6 @@ class TestMatchesScipy:
             lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
         )
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     @pytest.mark.skipif(
         condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
     )
@@ -1943,8 +1942,7 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3])
     @pytest.mark.parametrize("m", [3])
-    @pytest.mark.parametrize("sigma", [None, 1.0])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.parametrize("sigma", [None, 1])
     def test_kroneckernormal(self, n, m, sigma):
         np.random.seed(5)
         N = n * m
@@ -1990,6 +1988,9 @@ class TestMatchesScipy:
         )
 
         dom = Domain([np.random.randn(2, N) * 0.1], edges=(None, None), shape=(2, N))
+        cov_args["size"] = 2
+        chol_args["size"] = 2
+        evd_args["size"] = 2
 
         self.check_logp(
             KroneckerNormal,
@@ -2048,7 +2049,7 @@ class TestMatchesScipy:
         #
         # self.checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]), 'V': PdMatrix(n)},
         #             checks=[self.check_dlogp])
-        pass
+        raise NotImplementedError("Test is not implemented because of numerical issues.")
 
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
     @pytest.mark.xfail(reason="Distribution not refactored yet")
@@ -2187,7 +2188,7 @@ class TestMatchesScipy:
         )
 
         assert_almost_equal(
-            sum([model_single.fastlogp({"m": val}) for val in vals]),
+            sum(model_single.fastlogp({"m": val}) for val in vals),
             model_many.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2201,7 +2202,7 @@ class TestMatchesScipy:
             Multinomial("m", n=ns, p=p)
 
         assert_almost_equal(
-            sum([multinomial_logpdf(val, n, p) for val, n in zip(vals, ns)]),
+            sum(multinomial_logpdf(val, n, p) for val, n in zip(vals, ns)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2215,7 +2216,7 @@ class TestMatchesScipy:
             Multinomial("m", n=ns, p=ps)
 
         assert_almost_equal(
-            sum([multinomial_logpdf(val, n, p) for val, n, p in zip(vals, ns, ps)]),
+            sum(multinomial_logpdf(val, n, p) for val, n, p in zip(vals, ns, ps)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2229,7 +2230,7 @@ class TestMatchesScipy:
             Multinomial("m", n=n, p=ps)
 
         assert_almost_equal(
-            sum([multinomial_logpdf(val, n, p) for val, p in zip(vals, ps)]),
+            sum(multinomial_logpdf(val, n, p) for val, p in zip(vals, ps)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2309,7 +2310,7 @@ class TestMatchesScipy:
         )
 
         assert_almost_equal(
-            sum([model_single.fastlogp({"m": val}) for val in vals]),
+            sum(model_single.fastlogp({"m": val}) for val in vals),
             model_many.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2324,7 +2325,7 @@ class TestMatchesScipy:
             DirichletMultinomial("m", n=ns, a=a, size=vals.shape)
 
         assert_almost_equal(
-            sum([dirichlet_multinomial_logpmf(val, n, a) for val, n in zip(vals, ns)]),
+            sum(dirichlet_multinomial_logpmf(val, n, a) for val, n in zip(vals, ns)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2339,7 +2340,7 @@ class TestMatchesScipy:
             DirichletMultinomial("m", n=ns, a=as_, size=vals.shape)
 
         assert_almost_equal(
-            sum([dirichlet_multinomial_logpmf(val, n, a) for val, n, a in zip(vals, ns, as_)]),
+            sum(dirichlet_multinomial_logpmf(val, n, a) for val, n, a in zip(vals, ns, as_)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2354,7 +2355,7 @@ class TestMatchesScipy:
             DirichletMultinomial("m", n=n, a=as_, size=vals.shape)
 
         assert_almost_equal(
-            sum([dirichlet_multinomial_logpmf(val, n, a) for val, a in zip(vals, as_)]),
+            sum(dirichlet_multinomial_logpmf(val, n, a) for val, a in zip(vals, as_)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2581,6 +2582,8 @@ class TestMatchesScipy:
             {"b": Rplus, "sigma": Rplusbig},
             lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma),
         )
+        if aesara.config.floatX == "float32":
+            raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
     def test_rice_nu(self):
         self.check_logp(
@@ -2611,6 +2614,8 @@ class TestMatchesScipy:
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: floatX(sp.moyal.logcdf(value, mu, sigma)),
         )
+        if aesara.config.floatX == "float32":
+            raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):

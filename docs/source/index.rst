@@ -17,11 +17,24 @@
                 </div>
                 <div class="eight wide right floated column">
 
+.. toctree::
+  :maxdepth: 1
+  :hidden:
+
+  Tutorials<nb_tutorials/index>
+  Examples<nb_examples/index>
+  Books + Videos<learn>
+  API<api>
+  Developer Guide<developer_guide>
+  About PyMC3<about>
+
 .. code-block:: python
 
     import pymc3 as pm
 
-    X, y = linear_training_data()
+    X = np.random.normal(size=100)
+    y = np.random.normal(X) * 1.2
+
     with pm.Model() as linear_model:
         weights = pm.Normal("weights", mu=0, sigma=1)
         noise = pm.Gamma("noise", alpha=2, beta=1)

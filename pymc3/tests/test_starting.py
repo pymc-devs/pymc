@@ -109,7 +109,7 @@ def test_find_MAP_issue_4488():
         map_estimate = find_MAP()
 
     assert not set.difference({"x_missing", "x_missing_log__", "y"}, set(map_estimate.keys()))
-    np.testing.assert_allclose(map_estimate["x_missing"], 0.2, rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(map_estimate["x_missing"], 0.2, rtol=1e-4, atol=1e-4)
     np.testing.assert_allclose(map_estimate["y"], [2.0, map_estimate["x_missing"][0] + 1])
 
 

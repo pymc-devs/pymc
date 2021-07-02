@@ -38,7 +38,6 @@ from pymc3.tests.helpers import SeededTest
 from pymc3.tests.models import simple_init
 
 
-@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
         super().setup_method()
@@ -1011,9 +1010,11 @@ class TestSamplePriorPredictive(SeededTest):
         with pm.Model() as m:
             p = pm.Beta("p", 1.0, 1.0)
             y = pm.Bernoulli("y", p, observed=obs)
+            o = pm.Deterministic("o", obs)
             gen1 = pm.sample_prior_predictive(draws)
 
         assert gen1["y"].shape == (draws, n1)
+        assert gen1["o"].shape == (draws, n1)
 
         n2 = 20
         obs.set_value(np.random.rand(n2) < 0.5)
@@ -1021,6 +1022,7 @@ class TestSamplePriorPredictive(SeededTest):
             gen2 = pm.sample_prior_predictive(draws)
 
         assert gen2["y"].shape == (draws, n2)
+        assert gen2["o"].shape == (draws, n2)
 
     @pytest.mark.xfail(reason="DensityDist not refactored for v4")
     def test_density_dist(self):
@@ -1075,6 +1077,66 @@ class TestSamplePriorPredictive(SeededTest):
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_prior_predictive(samples=5)
+
+    def test_transformed_vars(self):
+        # Test that prior predictive returns transformation of RVs when these are
+        # passed explicitly in `var_names`
+
+        def ub_interval_forward(x, ub):
+            # Interval transform assuming lower bound is zero
+            return np.log(x - 0) - np.log(ub - x)
+
+        with pm.Model(rng_seeder=123) as model:
+            ub = pm.HalfNormal("ub", 10)
+            x = pm.Uniform("x", 0, ub)
+
+            prior = pm.sample_prior_predictive(
+                var_names=["ub", "ub_log__", "x", "x_interval__"],
+                samples=10,
+            )
+
+        # Check values are correct
+        assert np.allclose(prior["ub_log__"], np.log(prior["ub"]))
+        assert np.allclose(
+            prior["x_interval__"],
+            ub_interval_forward(prior["x"], prior["ub"]),
+        )
+
+        # Check that it works when the original RVs are not mentioned in var_names
+        with pm.Model(rng_seeder=123) as model_transformed_only:
+            ub = pm.HalfNormal("ub", 10)
+            x = pm.Uniform("x", 0, ub)
+
+            prior_transformed_only = pm.sample_prior_predictive(
+                var_names=["ub_log__", "x_interval__"],
+                samples=10,
+            )
+        assert "ub" not in prior_transformed_only and "x" not in prior_transformed_only
+        assert np.allclose(prior["ub_log__"], prior_transformed_only["ub_log__"])
+        assert np.allclose(prior["x_interval__"], prior_transformed_only["x_interval__"])
+
+    def test_issue_4490(self):
+        # Test that samples do not depend on var_name order or, more fundamentally,
+        # that they do not depend on the set order used inside `sample_prior_predictive`
+        seed = 4490
+        with pm.Model(rng_seeder=seed) as m1:
+            a = pm.Normal("a")
+            b = pm.Normal("b")
+            c = pm.Normal("c")
+            d = pm.Normal("d")
+            prior1 = pm.sample_prior_predictive(samples=1, var_names=["a", "b", "c", "d"])
+
+        with pm.Model(rng_seeder=seed) as m2:
+            a = pm.Normal("a")
+            b = pm.Normal("b")
+            c = pm.Normal("c")
+            d = pm.Normal("d")
+            prior2 = pm.sample_prior_predictive(samples=1, var_names=["b", "a", "d", "c"])
+
+        assert prior1["a"] == prior2["a"]
+        assert prior1["b"] == prior2["b"]
+        assert prior1["c"] == prior2["c"]
+        assert prior1["d"] == prior2["d"]
 
 
 class TestSamplePosteriorPredictive:

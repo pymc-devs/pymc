@@ -261,7 +261,6 @@ def test_chain_values():
     close_to_logical(np.diff(vals) >= 0, True, tol)
 
 
-@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 def test_chain_vector_transform():
     chain_tranf = tr.Chain([tr.logodds, tr.ordered])
     check_vector_transform(chain_tranf, UnitSortedVector(3))
@@ -420,7 +419,6 @@ class TestElementWiseLogp(SeededTest):
             (np.ones(3), (4, 3)),
         ],
     )
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_half_normal_ordered(self, sd, size):
         initval = np.sort(np.abs(np.random.randn(*size)))
         model = self.build_model(

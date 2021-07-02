@@ -187,7 +187,7 @@ class BaseTestCases:
 
         @staticmethod
         def sample_random_variable(random_variable, size):
-            """ Draws samples from a RandomVariable. """
+            """Draws samples from a RandomVariable."""
             if size:
                 random_variable = change_rv_size(random_variable, size, expand=True)
             return random_variable.eval()
@@ -283,6 +283,64 @@ class TestZeroInflatedBinomial(BaseTestCases.BaseTestCase):
 
 
 class BaseTestDistribution(SeededTest):
+    """
+    This class provides a base for tests that new RandomVariables are correctly
+    implemented, and that the mapping of parameters between the PyMC3
+    Distribution and the respective RandomVariable is correct.
+
+    Three default tests are provided which check:
+    1. Expected inputs are passed to the `rv_op` by the `dist` `classmethod`,
+    via `check_pymc_params_match_rv_op`
+    2. Expected (exact) draws are being returned, via
+    `check_pymc_draws_match_reference`
+    3. Shape variable inference is correct, via `check_rv_size`
+
+    Each desired test must be referenced by name in `tests_to_run`, when
+    subclassing this distribution. Custom tests can be added to each class as
+    well. See `TestFlat` for an example.
+
+    Additional tests should be added for each optional parametrization of the
+    distribution. In this case it's enough to include the test
+    `check_pymc_params_match_rv_op` since only this differs.
+
+    Note on `check_rv_size` test:
+        Custom input sizes (and expected output shapes) can be defined for the
+        `check_rv_size` test, by adding the optional class attributes
+        `sizes_to_check` and `sizes_expected`:
+
+        ```python
+        sizes_to_check = [None, (1), (2, 3)]
+        sizes_expected = [(3,), (1, 3), (2, 3, 3)]
+        tests_to_run = ["check_rv_size"]
+        ```
+
+        This is usually needed for Multivariate distributions. You can see an
+        example in `TestDirichlet`
+
+
+    Notes on `check_pymcs_draws_match_reference` test:
+
+        The `check_pymcs_draws_match_reference` is a very simple test for the
+        equality of draws from the `RandomVariable` and the exact same python
+        function, given the  same inputs and random seed. A small number
+        (`size=15`) is checked. This is not supposed to be a test for the
+        correctness of the random generator. The latter kind of test
+        (if warranted) can be performed with the aid of `pymc3_random` and
+        `pymc3_random_discrete` methods in this file, which will perform an
+        expensive statistical comparison between the RandomVariable `rng_fn`
+        and a reference Python function. This kind of test only makes sense if
+        there is a good independent generator reference (i.e., not just the same
+        composition of numpy / scipy python calls that is done inside `rng_fn`).
+
+        Finally, when your `rng_fn` is doing something more than just calling a
+        `numpy` or `scipy` method, you will need to setup an equivalent seeded
+        function with which to compare for the exact draws (instead of relying on
+        `seeded_[scipy|numpy]_distribution_builder`). You can find an example
+        in the `TestWeibull`, whose `rng_fn` returns
+        `beta * np.random.weibull(alpha, size=size)`.
+
+    """
+
     pymc_dist: Optional[Callable] = None
     pymc_dist_params = dict()
     reference_dist: Optional[Callable] = None
@@ -1334,13 +1392,8 @@ class TestInterpolated(BaseTestDistribution):
     reference_dist = lambda self: functools.partial(
         self.interpolated_rng_fn, rng=self.get_random_state()
     )
-    tests_to_run = [
-        "check_rv_size",
-    ]
+    tests_to_run = ["check_rv_size", "test_interpolated"]
 
-
-class TestInterpolatedSeeded(SeededTest):
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
@@ -1358,6 +1411,35 @@ class TestInterpolatedSeeded(SeededTest):
                         return super().dist(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
                 pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
+
+
+class TestKroneckerNormal(BaseTestDistribution):
+    def kronecker_rng_fn(self, size, mu, covs=None, sigma=None, rng=None):
+        cov = pm.math.kronecker(covs[0], covs[1]).eval()
+        cov += sigma ** 2 * np.identity(cov.shape[0])
+        return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
+
+    pymc_dist = pm.KroneckerNormal
+
+    n = 3
+    N = n ** 2
+    covs = [RandomPdMatrix(n), RandomPdMatrix(n)]
+    mu = np.random.random(N) * 0.1
+    sigma = 1
+
+    pymc_dist_params = {"mu": mu, "covs": covs, "sigma": sigma}
+    expected_rv_op_params = {"mu": mu, "covs": covs, "sigma": sigma}
+    reference_dist_params = {"mu": mu, "covs": covs, "sigma": sigma}
+    sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+    sizes_expected = [(N,), (N,), (1, N), (1, N), (5, N), (4, 5, N), (2, 4, 2, N)]
+
+    reference_dist = lambda self: functools.partial(
+        self.kronecker_rng_fn, rng=self.get_random_state()
+    )
+    tests_to_run = [
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
 
 
 class TestScalarParameterSamples(SeededTest):
@@ -1484,68 +1566,6 @@ class TestScalarParameterSamples(SeededTest):
                     valuedomain=RealMatrix(n, n),
                     ref_rand=ref_rand_chol_transpose,
                 )
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_kronecker_normal(self):
-        def ref_rand(size, mu, covs, sigma):
-            cov = pm.math.kronecker(covs[0], covs[1]).eval()
-            cov += sigma ** 2 * np.identity(cov.shape[0])
-            return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
-
-        def ref_rand_chol(size, mu, chols, sigma):
-            covs = [np.dot(chol, chol.T) for chol in chols]
-            return ref_rand(size, mu, covs, sigma)
-
-        def ref_rand_evd(size, mu, evds, sigma):
-            covs = []
-            for eigs, Q in evds:
-                covs.append(np.dot(Q, np.dot(np.diag(eigs), Q.T)))
-            return ref_rand(size, mu, covs, sigma)
-
-        sizes = [2, 3]
-        sigmas = [0, 1]
-        for n, sigma in zip(sizes, sigmas):
-            N = n ** 2
-            covs = [RandomPdMatrix(n), RandomPdMatrix(n)]
-            chols = list(map(np.linalg.cholesky, covs))
-            evds = list(map(np.linalg.eigh, covs))
-            dom = Domain([np.random.randn(N) * 0.1], edges=(None, None), shape=N)
-            mu = Domain([np.random.randn(N) * 0.1], edges=(None, None), shape=N)
-
-            std_args = {"mu": mu}
-            cov_args = {"covs": covs}
-            chol_args = {"chols": chols}
-            evd_args = {"evds": evds}
-            if sigma is not None and sigma != 0:
-                std_args["sigma"] = Domain([sigma], edges=(None, None))
-            else:
-                for args in [cov_args, chol_args, evd_args]:
-                    args["sigma"] = sigma
-
-            pymc3_random(
-                pm.KroneckerNormal,
-                std_args,
-                valuedomain=dom,
-                ref_rand=ref_rand,
-                extra_args=cov_args,
-                model_args=cov_args,
-            )
-            pymc3_random(
-                pm.KroneckerNormal,
-                std_args,
-                valuedomain=dom,
-                ref_rand=ref_rand_chol,
-                extra_args=chol_args,
-                model_args=chol_args,
-            )
-            pymc3_random(
-                pm.KroneckerNormal,
-                std_args,
-                valuedomain=dom,
-                ref_rand=ref_rand_evd,
-                extra_args=evd_args,
-                model_args=evd_args,
-            )
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_dirichlet_multinomial(self):
@@ -1870,7 +1890,6 @@ class TestDensityDist:
             pm.sample_posterior_predictive(idata, samples=samples, model=model, size=100)
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestNestedRandom(SeededTest):
     def build_model(self, distribution, shape, nested_rvs_info):
         with pm.Model() as model:
@@ -2094,6 +2113,7 @@ class TestNestedRandom(SeededTest):
         ],
         ids=str,
     )
+    @pytest.mark.xfail(reason="TruncatedNormal not yet refactored for v4")
     def test_TruncatedNormal(
         self,
         prior_samples,

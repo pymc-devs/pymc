@@ -462,10 +462,10 @@ class TestMixtureVsLatent(SeededTest):
 
     def samples_from_same_distribution(self, *args):
         # Test if flattened samples distributions match (marginals match)
-        _, p_marginal = st.ks_2samp(*[s.flatten() for s in args])
+        _, p_marginal = st.ks_2samp(*(s.flatten() for s in args))
         # Test if correlations within non independent draws match
         _, p_correlation = st.ks_2samp(
-            *[np.array([np.corrcoef(ss) for ss in s]).flatten() for s in args]
+            *(np.array([np.corrcoef(ss) for ss in s]).flatten() for s in args)
         )
         assert p_marginal >= 0.05 and p_correlation >= 0.05
 

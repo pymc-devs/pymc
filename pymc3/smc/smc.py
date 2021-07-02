@@ -12,11 +12,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from collections import OrderedDict
 
 import aesara.tensor as at
 import numpy as np
 
+from aesara import config
 from aesara import function as aesara_function
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
@@ -87,7 +90,7 @@ class SMC:
         if self.start is None:
             init_rnd = sample_prior_predictive(
                 self.draws,
-                var_names=[v.name for v in self.model.unobserved_RVs],
+                var_names=[v.name for v in self.model.unobserved_value_vars],
                 model=self.model,
             )
         else:
@@ -290,9 +293,21 @@ def logp_forw(point, out_vars, vars, shared):
     shared: List
         containing :class:`aesara.tensor.Tensor` for depended shared data
     """
+
     out_list, inarray0 = join_nonshared_inputs(point, out_vars, vars, shared)
-    f = aesara_function([inarray0], out_list[0])
-    f.trust_input = True
+    # TODO: Figure out how to safely accept float32 (floatX) input when there are
+    # discrete variables of int64 dtype in `vars`.
+    # See https://github.com/pymc-devs/pymc3/pull/4769#issuecomment-861494080
+    if config.floatX == "float32" and any(var.dtype == "int64" for var in vars):
+        warnings.warn(
+            "SMC sampling may run slower due to the presence of discrete variables "
+            "together with aesara.config.floatX == `float32`",
+            UserWarning,
+        )
+        f = aesara_function([inarray0], out_list[0], allow_input_downcast=True)
+    else:
+        f = aesara_function([inarray0], out_list[0])
+        f.trust_input = False
     return f
 
 

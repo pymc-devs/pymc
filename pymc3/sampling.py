@@ -1943,7 +1943,8 @@ def sample_prior_predictive(
     model : Model (optional if in ``with`` context)
     var_names : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
-        samples. Defaults to both observed and unobserved RVs.
+        samples. Defaults to both observed and unobserved RVs. Transformed values
+        are not included unless explicitly defined in var_names.
     random_seed : int
         Seed for the random number generator.
     mode:
@@ -1983,15 +1984,33 @@ def sample_prior_predictive(
         )
 
     names = get_default_varnames(vars_, include_transformed=False)
-
     vars_to_sample = [model[name] for name in names]
+
+    # Any variables from var_names that are missing must be transformed variables.
+    # Misspelled variables would have raised a KeyError above.
+    missing_names = vars_.difference(names)
+    for name in missing_names:
+        transformed_value_var = model[name]
+        rv_var = model.values_to_rvs[transformed_value_var]
+        transform = transformed_value_var.tag.transform
+        transformed_rv_var = transform.forward(rv_var, rv_var)
+
+        names.append(name)
+        vars_to_sample.append(transformed_rv_var)
+
+        # If the user asked for the transformed variable in var_names, but not the
+        # original RV, we add it manually here
+        if rv_var.name not in names:
+            names.append(rv_var.name)
+            vars_to_sample.append(rv_var)
+
     inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, SharedVariable)]
 
     sampler_fn = compile_rv_inplace(
         inputs, vars_to_sample, allow_input_downcast=True, accept_inplace=True, mode=mode
     )
 
-    values = zip(*[sampler_fn() for i in range(samples)])
+    values = zip(*(sampler_fn() for i in range(samples)))
 
     data = {k: np.stack(v) for k, v in zip(names, values)}
     if data is None:

@@ -194,7 +194,6 @@ def build_disaster_model(masked=False):
 
 
 class TestDisasterModel(SeededTest):
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     # Time series of recorded coal mining disasters in the UK from 1851 to 1962
     def test_disaster_model(self):
         model = build_disaster_model(masked=False)
@@ -206,7 +205,6 @@ class TestDisasterModel(SeededTest):
             idata = pm.sample(500, tune=50, start=start, step=step, chains=2)
             az.summary(idata)
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_disaster_model_missing(self):
         model = build_disaster_model(masked=True)
         with model:
@@ -319,7 +317,6 @@ class TestRSV(SeededTest):
             pm.sample(50, step=[pm.NUTS(), pm.Metropolis()])
 
 
-@pytest.mark.xfail(reason="MLDA hasn't been refactored")
 class TestMultilevelNormal(SeededTest):
     """
     Toy three-level normal model sampled using MLDA. The finest model is a

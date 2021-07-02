@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import sys
+
 import aesara
 import numpy as np
 import pytest
@@ -23,6 +25,9 @@ import pymc3 as pm
 
 from pymc3.ode import DifferentialEquation
 from pymc3.ode.utils import augment_system
+
+IS_FLOAT32 = aesara.config.floatX == "float32"
+IS_WINDOWS = sys.platform == "win32"
 
 
 def test_gradients():
@@ -211,22 +216,22 @@ class TestErrors:
 
     ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=1, n_theta=1)
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_many_params(self):
         with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[1, 1], y0=[0])
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_many_y0(self):
         with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[1], y0=[0, 0])
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_few_params(self):
         with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[], y0=[1])
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_few_y0(self):
         with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[1], y0=[])
@@ -326,7 +331,6 @@ class TestDiffEqModel:
         assert idata.posterior["y0"].shape == (1, 100)
         assert idata.posterior["sigma"].shape == (1, 100)
 
-    @pytest.mark.xfail(reason="https://github.com/pymc-devs/aesara/issues/390")
     def test_vector_ode_1_param(self):
         """Test running model for a vector ODE with 1 parameter"""
 
@@ -356,8 +360,8 @@ class TestDiffEqModel:
         ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=2, n_theta=1)
 
         with pm.Model() as model:
-            R = pm.Lognormal("R", 1, 5)
-            sigma = pm.HalfCauchy("sigma", 1, shape=2)
+            R = pm.Lognormal("R", 1, 5, initval=1)
+            sigma = pm.HalfCauchy("sigma", 1, shape=2, initval=[0.5, 0.5])
             forward = ode_model(theta=[R], y0=[0.99, 0.01])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 

@@ -164,7 +164,7 @@ class BaseBART(NoDistribution):
         return R_j
 
     def draw_leaf_value(self, idx_data_points):
-        """ Draw the residual mean."""
+        """Draw the residual mean."""
         R_j = self.get_residuals()[idx_data_points]
         draw = self.mean(R_j)
         return draw
