@@ -75,7 +75,7 @@ class TestSMC(SeededTest):
 
             mtrace = pm.sample_smc(
                 draws=self.samples,
-                cores=1,  # Fails in pallel due to #4799
+                cores=1,  # Fails in parallel due to #4799
                 return_inferencedata=False,
             )
 
