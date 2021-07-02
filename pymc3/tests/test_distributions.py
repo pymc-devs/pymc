@@ -95,6 +95,7 @@ from pymc3.distributions import (
     VonMises,
     Wald,
     Weibull,
+    Wishart,
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
@@ -1892,8 +1893,7 @@ class TestMatchesScipy:
             with pytest.raises(ValueError):
                 x = MvNormal("x", mu=np.zeros(3), cov=np.eye(3), tau=np.eye(3), size=3)
 
-    @pytest.mark.parametrize("n", [1, 2, 3])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.parametrize("n", [2, 3])
     def test_matrixnormal(self, n):
         mat_scale = 1e3  # To reduce logp magnitude
         mean_scale = 0.1
@@ -1906,6 +1906,8 @@ class TestMatchesScipy:
                 "colcov": PdMatrix(n) * mat_scale,
             },
             matrix_normal_logpdf_cov,
+            extra_args={"size": n},
+            decimal=select_by_precision(float64=5, float32=3),
         )
         self.check_logp(
             MatrixNormal,
@@ -1916,6 +1918,8 @@ class TestMatchesScipy:
                 "colcov": PdMatrix(n) * mat_scale,
             },
             matrix_normal_logpdf_cov,
+            extra_args={"size": n},
+            decimal=select_by_precision(float64=5, float32=3),
         )
         self.check_logp(
             MatrixNormal,
@@ -1926,7 +1930,8 @@ class TestMatchesScipy:
                 "colchol": PdMatrixChol(n) * mat_scale,
             },
             matrix_normal_logpdf_chol,
-            decimal=select_by_precision(float64=6, float32=-1),
+            extra_args={"size": n},
+            decimal=select_by_precision(float64=5, float32=3),
         )
         self.check_logp(
             MatrixNormal,
@@ -1937,7 +1942,8 @@ class TestMatchesScipy:
                 "colchol": PdMatrixChol(3) * mat_scale,
             },
             matrix_normal_logpdf_chol,
-            decimal=select_by_precision(float64=6, float32=0),
+            extra_args={"size": n},
+            decimal=select_by_precision(float64=5, float32=3),
         )
 
     @pytest.mark.parametrize("n", [2, 3])
@@ -2039,17 +2045,13 @@ class TestMatchesScipy:
         self.check_logp(AR1, Vector(R, n), {"k": Unit, "tau_e": Rplus}, AR1_logpdf)
 
     @pytest.mark.parametrize("n", [2, 3])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_wishart(self, n):
-        # This check compares the autodiff gradient to the numdiff gradient.
-        # However, due to the strict constraints of the wishart,
-        # it is impossible to numerically determine the gradient as a small
-        # pertubation breaks the symmetry. Thus disabling. Also, numdifftools was
-        # removed in June 2019, so an alternative would be needed.
-        #
-        # self.checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]), 'V': PdMatrix(n)},
-        #             checks=[self.check_dlogp])
-        raise NotImplementedError("Test is not implemented because of numerical issues.")
+        self.check_logp(
+            Wishart,
+            PdMatrix(n),
+            {"nu": Domain([3, 4, 2000]), "V": PdMatrix(n)},
+            lambda value, nu, V: scipy.stats.wishart.logpdf(value, np.int(nu), V),
+        )
 
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
     @pytest.mark.xfail(reason="Distribution not refactored yet")

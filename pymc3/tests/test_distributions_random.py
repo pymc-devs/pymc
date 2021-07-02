@@ -41,11 +41,8 @@ from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.tests.test_distributions import (
     Domain,
     Nat,
-    PdMatrix,
-    PdMatrixChol,
     R,
     RandomPdMatrix,
-    RealMatrix,
     Rplus,
     Rplusbig,
     Simplex,
@@ -1364,6 +1361,87 @@ class TestOrderedProbit(BaseTestDistribution):
     ]
 
 
+class TestWishart(BaseTestDistribution):
+    def wishart_rng_fn(self, size, nu, V, rng):
+        return st.wishart.rvs(np.int(nu), V, size=size, random_state=rng)
+
+    pymc_dist = pm.Wishart
+
+    V = np.eye(3)
+    pymc_dist_params = {"nu": 4, "V": V}
+    reference_dist_params = {"nu": 4, "V": V}
+    expected_rv_op_params = {"nu": 4, "V": V}
+    sizes_to_check = [None, 1, (4, 5)]
+    sizes_expected = [
+        (3, 3),
+        (1, 3, 3),
+        (4, 5, 3, 3),
+    ]
+    reference_dist = lambda self: functools.partial(
+        self.wishart_rng_fn, rng=self.get_random_state()
+    )
+    tests_to_run = [
+        "check_rv_size",
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+    ]
+
+
+class TestMatrixNormal(BaseTestDistribution):
+
+    pymc_dist = pm.MatrixNormal
+
+    mu = np.random.random((3, 3))
+    row_cov = np.eye(3)
+    col_cov = np.eye(3)
+
+    pymc_dist_params = {"mu": mu, "rowcov": row_cov, "colcov": col_cov}
+    expected_rv_op_params = {"mu": mu, "rowcov": row_cov, "colcov": col_cov}
+
+    sizes_to_check = [None, 1, (2, 3)]
+    sizes_expected = [(3,), (1, 3), (2, 3, 3)]
+
+    tests_to_run = ["check_rv_size", "check_pymc_params_match_rv_op", "test_matrix_normal"]
+
+    def test_matrix_normal(self):
+        delta = 0.05  # limit for KS p-value
+        n_fails = 10  # Allows the KS fails a certain number of times
+        size = (100,)
+
+        def ref_rand(size, mu, rowcov, colcov):
+            return st.matrix_normal.rvs(mean=mu, rowcov=rowcov, colcov=colcov, size=size)
+
+        with pm.Model(rng_seeder=1):
+            matrixnormal = pm.MatrixNormal(
+                "mvnormal",
+                mu=np.random.random((3, 3)),
+                rowcov=np.eye(3),
+                colcov=np.eye(3),
+                size=size,
+            )
+            check = pm.sample_prior_predictive(n_fails)
+
+        ref_smp = ref_rand(size[0], mu=np.random.random((3, 3)), rowcov=np.eye(3), colcov=np.eye(3))
+
+        p, f = delta, n_fails
+        while p <= delta and f > 0:
+            matrixnormal_smp = check["mvnormal"][f - 1, :, :]
+            curr_ref_smp = ref_smp[f - 1, :, :]
+
+            p = np.min(
+                [
+                    st.ks_2samp(
+                        np.atleast_1d(matrixnormal_smp[..., idx]).flatten(),
+                        np.atleast_1d(curr_ref_smp[..., idx]).flatten(),
+                    )[1]
+                    for idx in range(matrixnormal_smp.shape[-1])
+                ]
+            )
+            f -= 1
+
+        assert p > delta
+
+
 class TestInterpolated(BaseTestDistribution):
     def interpolated_rng_fn(self, size, mu, sigma, rng):
         return st.norm.rvs(loc=mu, scale=sigma, size=size)
@@ -1492,70 +1570,6 @@ class TestScalarParameterSamples(SeededTest):
         )
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_matrix_normal(self):
-        def ref_rand(size, mu, rowcov, colcov):
-            return st.matrix_normal.rvs(mean=mu, rowcov=rowcov, colcov=colcov, size=size)
-
-        # def ref_rand_tau(size, mu, tau):
-        #     return ref_rand(size, mu, linalg.inv(tau))
-
-        def ref_rand_chol(size, mu, rowchol, colchol):
-            return ref_rand(
-                size, mu, rowcov=np.dot(rowchol, rowchol.T), colcov=np.dot(colchol, colchol.T)
-            )
-
-        def ref_rand_chol_transpose(size, mu, rowchol, colchol):
-            colchol = colchol.T
-            return ref_rand(
-                size, mu, rowcov=np.dot(rowchol, rowchol.T), colcov=np.dot(colchol, colchol.T)
-            )
-
-        def ref_rand_uchol(size, mu, rowchol, colchol):
-            return ref_rand(
-                size, mu, rowcov=np.dot(rowchol.T, rowchol), colcov=np.dot(colchol.T, colchol)
-            )
-
-        for n in [2, 3]:
-            pymc3_random(
-                pm.MatrixNormal,
-                {"mu": RealMatrix(n, n), "rowcov": PdMatrix(n), "colcov": PdMatrix(n)},
-                size=100,
-                valuedomain=RealMatrix(n, n),
-                ref_rand=ref_rand,
-            )
-            # pymc3_random(pm.MatrixNormal, {'mu': RealMatrix(n, n), 'tau': PdMatrix(n)},
-            #              size=n, valuedomain=RealMatrix(n, n), ref_rand=ref_rand_tau)
-            pymc3_random(
-                pm.MatrixNormal,
-                {"mu": RealMatrix(n, n), "rowchol": PdMatrixChol(n), "colchol": PdMatrixChol(n)},
-                size=100,
-                valuedomain=RealMatrix(n, n),
-                ref_rand=ref_rand_chol,
-            )
-            # pymc3_random(
-            #     pm.MvNormal,
-            #     {'mu': RealMatrix(n, n), 'rowchol': PdMatrixCholUpper(n), 'colchol': PdMatrixCholUpper(n)},
-            #     size=n, valuedomain=RealMatrix(n, n), ref_rand=ref_rand_uchol,
-            #     extra_args={'lower': False}
-            # )
-
-            # 2 sample test fails because cov becomes different if chol is transposed beforehand.
-            # This implicity means we need transpose of chol after drawing values in
-            # MatrixNormal.random method to match stats.matrix_normal.rvs method
-            with pytest.raises(AssertionError):
-                pymc3_random(
-                    pm.MatrixNormal,
-                    {
-                        "mu": RealMatrix(n, n),
-                        "rowchol": PdMatrixChol(n),
-                        "colchol": PdMatrixChol(n),
-                    },
-                    size=100,
-                    valuedomain=RealMatrix(n, n),
-                    ref_rand=ref_rand_chol_transpose,
-                )
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_dirichlet_multinomial(self):
         def ref_rand(size, a, n):
             k = a.shape[-1]
@@ -1633,22 +1647,6 @@ class TestScalarParameterSamples(SeededTest):
             return st.moyal.rvs(loc=mu, scale=sigma, size=size)
 
         pymc3_random(pm.Moyal, {"mu": R, "sigma": Rplus}, ref_rand=ref_rand)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    @pytest.mark.skip(
-        "Wishart random sampling not implemented.\n"
-        "See https://github.com/pymc-devs/pymc3/issues/538"
-    )
-    def test_wishart(self):
-        # Wishart non current recommended for use:
-        # https://github.com/pymc-devs/pymc3/issues/538
-        # for n in [2, 3]:
-        #     pymc3_random_discrete(Wisvaluedomainhart,
-        #                           {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix(n) },
-        #                           valuedomain=PdMatrix(n),
-        #                           ref_rand=lambda n=None, V=None, size=None: \
-        #                           st.wishart(V, df=n, size=size))
-        pass
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_lkj(self):
