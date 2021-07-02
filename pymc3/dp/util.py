@@ -11,16 +11,20 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import sys
+
+sys.path.insert(0, "../../../pymc3")
+
 import numpy as np
-
-import pymc3 as pm
-
-from pymc3.distributions.distribution import Distribution
-from pymc3.distributions.dist_math import bound
-from pymc3.distributions.continuous import assert_negative_support
 
 from aesara import tensor as at
 from aesara.tensor.random.op import RandomVariable
+
+import pymc3 as pm
+
+from pymc3.distributions.continuous import assert_negative_support
+from pymc3.distributions.dist_math import bound
+from pymc3.distributions.distribution import Continuous
 
 __all__ = [
     "StickBreakingWeights",
@@ -30,15 +34,12 @@ __all__ = [
 class StickBreakingWeightsRV(RandomVariable):
     name = "stick_breaking_weights"
     ndim_supp = 1
-    ndims_params = [0, 0, 0]
+    ndims_params = [0]
     dtype = "floatX"
-    _print_name = (
-        "Stick-Breaking weights",
-        "\\operatorname{StickBreakingWeights}"
-    )
+    _print_name = ("Stick-Breaking weights", "\\operatorname{StickBreakingWeights}")
 
     @classmethod
-    def rng_fn(cls, rng, alpha, size=None):
+    def rng_fn(cls, rng, alpha, size):
         betas = rng.beta(1, alpha, size=size)
         sticks = np.concatenate(
             [
@@ -47,54 +48,41 @@ class StickBreakingWeightsRV(RandomVariable):
             ]
         )
 
-        return betas*sticks
+        return betas * sticks
 
 
 stickbreakingweights = StickBreakingWeightsRV()
 
 
-class StickBreakingWeights(Distribution):
-
+class StickBreakingWeights(Continuous):
     rv_op = stickbreakingweights
 
-    # def __init__(self, alpha=1, K=30, **kwargs):
-    #     self.alpha = alpha
-    #     self.K = K
-    #
-    #     self._initialize_weights()
-    #
-    #     return self.weights
-    #
-    # def _initialize_weights(self):
-    #     betas = pm.Beta(
-    #         "beta-for-weights",
-    #         alpha=1,
-    #         beta=self.alpha,
-    #         shape=(self.K,),
-    #     )
-    #     sticks = at.concatenate([[1], (1 - betas[:-1])])
-    #
-    #     self.betas = betas
-    #     self.weights = pm.Deterministic(
-    #         name="stick-breaking-weights",
-    #         var=at.mul(betas, at.cumprod(sticks)),
-    #     )
-    #
-    # @property
-    # def weights(self):
-    #     self._initialize_weights()
-
     @classmethod
-    def dist(cls, alpha=1, K=30, *args, **kwargs):
+    def dist(cls, alpha, *args, **kwargs):
         alpha = at.as_tensor_variable(alpha)
 
         assert_negative_support(alpha, "alpha", "StickBreakingWeights")
 
-        return super().dist([alpha, K], **kwargs)
+        return super().dist([alpha], **kwargs)
 
     def logp(value, alpha):
         return bound(
             at.sum(pm.Beta.logp(value, alpha=1, beta=alpha)),
             alpha > 0,
-            broadcast_conditions=False,
         )
+
+    def _distr_parameters_for_repr(self):
+        return ["alpha"]
+
+
+if __name__ == "__main__":
+
+    with pm.Model() as model:
+        # sbw = StickBreakingWeights("test-sticks", alpha=1)
+        sbw = pm.Dirichlet(
+            name="sticks",
+            a=np.ones(
+                20,
+            ),
+        )
+        trace = pm.sample(1000)
