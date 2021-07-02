@@ -585,7 +585,7 @@ class TruncatedNormalRV(RandomVariable):
         upper: Union[np.ndarray, float],
         size: Optional[Union[List[int], int]],
     ) -> np.ndarray:
-        vals = stats.truncnorm.rvs(
+        return stats.truncnorm.rvs(
             a=(lower - mu) / sigma,
             b=(upper - mu) / sigma,
             loc=mu,
@@ -593,7 +593,6 @@ class TruncatedNormalRV(RandomVariable):
             size=size,
             random_state=rng,
         )
-        return vals
 
 
 truncated_normal = TruncatedNormalRV()
