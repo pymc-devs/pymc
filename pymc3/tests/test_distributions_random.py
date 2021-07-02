@@ -243,12 +243,6 @@ class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestWald(BaseTestCases.BaseTestCase):
-    distribution = pm.Wald
-    params = {"mu": 1.0, "lam": 1.0, "alpha": 0.0}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestZeroInflatedNegativeBinomial(BaseTestCases.BaseTestCase):
     distribution = pm.ZeroInflatedNegativeBinomial
     params = {"mu": 1.0, "alpha": 1.0, "psi": 0.3}
@@ -632,17 +626,8 @@ class TestTruncatedNormalTau(BaseTestDistribution):
     tau, sigma = get_tau_sigma(tau=tau, sigma=None)
     pymc_dist_params = {"mu": mu, "tau": tau, "lower": lower, "upper": upper}
     expected_rv_op_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
-    reference_dist_params = {
-        "loc": mu,
-        "scale": sigma,
-        "a": (lower - mu) / sigma,
-        "b": (upper - mu) / sigma,
-    }
-    reference_dist = seeded_scipy_distribution_builder("truncnorm")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
     ]
 
 
@@ -652,12 +637,8 @@ class TestTruncatedNormalLowerTau(BaseTestDistribution):
     tau, sigma = get_tau_sigma(tau=tau, sigma=None)
     pymc_dist_params = {"mu": mu, "tau": tau, "lower": lower}
     expected_rv_op_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
-    reference_dist_params = {"loc": mu, "scale": sigma, "a": (lower - mu) / sigma, "b": upper}
-    reference_dist = seeded_scipy_distribution_builder("truncnorm")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
     ]
 
 
@@ -667,12 +648,30 @@ class TestTruncatedNormalUpperTau(BaseTestDistribution):
     tau, sigma = get_tau_sigma(tau=tau, sigma=None)
     pymc_dist_params = {"mu": mu, "tau": tau, "upper": upper}
     expected_rv_op_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
-    reference_dist_params = {"loc": mu, "scale": sigma, "a": lower, "b": (upper - mu) / sigma}
-    reference_dist = seeded_scipy_distribution_builder("truncnorm")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
+    ]
+
+
+class TestTruncatedNormalUpperArray(BaseTestDistribution):
+    pymc_dist = pm.TruncatedNormal
+    lower, upper, mu, tau = (
+        np.array([-np.inf, -np.inf]),
+        np.array([3, 2]),
+        np.array([0, 0]),
+        np.array(
+            [
+                1,
+                1,
+            ]
+        ),
+    )
+    size = (15, 2)
+    tau, sigma = get_tau_sigma(tau=tau, sigma=None)
+    pymc_dist_params = {"mu": mu, "tau": tau, "upper": upper}
+    expected_rv_op_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
     ]
 
 
@@ -706,58 +705,14 @@ class TestWald(BaseTestDistribution):
         )
 
 
-class TestWaldAlpha(TestWald):
-    pymc_dist = pm.Wald
-    mu, lam, alpha = 1.0, 1.0, 2.0
-    mu_rv, lam_rv, phi_rv = pm.Wald.get_mu_lam_phi(mu=mu, lam=lam, phi=None)
-    pymc_dist_params = {"mu": mu, "lam": lam, "alpha": alpha}
-    expected_rv_op_params = {"mu": mu_rv, "lam": lam_rv, "alpha": alpha}
-    reference_dist_params = [mu, lam_rv]
-    reference_dist = seeded_numpy_distribution_builder("wald")
-    tests_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
-    ]
-
-
-class TestWaldMuPhi(TestWald):
+class TestWaldMuPhi(BaseTestDistribution):
     pymc_dist = pm.Wald
     mu, phi, alpha = 1.0, 3.0, 0.0
     mu_rv, lam_rv, phi_rv = pm.Wald.get_mu_lam_phi(mu=mu, lam=None, phi=phi)
     pymc_dist_params = {"mu": mu, "phi": phi, "alpha": alpha}
     expected_rv_op_params = {"mu": mu_rv, "lam": lam_rv, "alpha": alpha}
-    reference_dist_params = [mu, lam_rv]
-    reference_dist = seeded_numpy_distribution_builder("wald")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
-    ]
-
-
-class TestTruncatedNormalUpperArray(BaseTestDistribution):
-    pymc_dist = pm.TruncatedNormal
-    lower, upper, mu, tau = (
-        np.array([-np.inf, -np.inf]),
-        np.array([3, 2]),
-        np.array([0, 0]),
-        np.array(
-            [
-                1,
-                1,
-            ]
-        ),
-    )
-    size = (15, 2)
-    tau, sigma = get_tau_sigma(tau=tau, sigma=None)
-    pymc_dist_params = {"mu": mu, "tau": tau, "upper": upper}
-    expected_rv_op_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
-    reference_dist_params = {"loc": mu, "scale": sigma, "a": lower, "b": (upper - mu) / sigma}
-    reference_dist = seeded_scipy_distribution_builder("truncnorm")
-    tests_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
     ]
 
 
@@ -1659,19 +1614,6 @@ class TestScalarParameterSamples(SeededTest):
             return st.skewnorm.rvs(size=size, a=alpha, loc=mu, scale=sigma)
 
         pymc3_random(pm.SkewNormal, {"mu": R, "sigma": Rplus, "alpha": R}, ref_rand=ref_rand)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_wald(self):
-        # Cannot do anything too exciting as scipy wald is a
-        # location-scale model of the *standard* wald with mu=1 and lam=1
-        def ref_rand(size, mu, lam, alpha):
-            return st.wald.rvs(size=size, loc=alpha)
-
-        pymc3_random(
-            pm.Wald,
-            {"mu": Domain([1.0, 1.0, 1.0]), "lam": Domain([1.0, 1.0, 1.0]), "alpha": Rplus},
-            ref_rand=ref_rand,
-        )
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_dirichlet_multinomial(self):
