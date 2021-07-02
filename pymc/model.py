@@ -1876,7 +1876,7 @@ def _get_scaling(total_size, shape, ndim):
     scalar
     """
     if total_size is None:
-        coef = 1.
+        coef = 1.0
     elif isinstance(total_size, int):
         if ndim >= 1:
             denom = shape[0]
@@ -1906,7 +1906,7 @@ def _get_scaling(total_size, shape, ndim):
                 "number of scalings is bigger that ndim, got %r" % total_size
             )
         elif (len(begin) + len(end)) == 0:
-            coef = 1.
+            coef = 1.0
         if len(end) > 0:
             shp_end = shape[-len(end) :]
         else:
@@ -1937,7 +1937,7 @@ def Potential(name, var, model=None):
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
-    var.tag.scaling = 1.
+    var.tag.scaling = 1.0
     model.potentials.append(var)
     model.add_random_variable(var)
 
