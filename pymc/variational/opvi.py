@@ -57,13 +57,11 @@ from aesara.graph.basic import Variable
 
 import pymc as pm
 
-from pymc.aesaraf import at_rng, identity
+from pymc.aesaraf import at_rng, identity, rvs_to_value_vars
 from pymc.backends import NDArray
 from pymc.model import modelcontext
 from pymc.util import (
     WithMemoization,
-    get_default_varnames,
-    get_transformed,
     locally_cachedmethod,
 )
 from pymc.variational.updates import adagrad_window
