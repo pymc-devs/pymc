@@ -42,7 +42,7 @@ from pymc3.distributions.dist_math import (
     normal_lcdf,
 )
 from pymc3.distributions.distribution import Discrete
-from pymc3.distributions.logp import _logcdf, _logp
+from pymc3.distributions.logprob import _logcdf, _logp
 from pymc3.math import log1mexp, logaddexp, logsumexp, sigmoid
 
 __all__ = [

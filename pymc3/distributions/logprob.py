@@ -342,9 +342,24 @@ def subtensor_logp(op, var, rvs_to_values, indexed_rv_var, *indices, **kwargs):
     return logp_var
 
 
-def logcdf(*args, **kwargs):
+def logp(var, rv_values, **kwargs):
+    """Create a log-probability graph."""
+
+    # Attach the value_var to the tag of var when it does not have one
+    if not hasattr(var.tag, "value_var"):
+        if isinstance(rv_values, Mapping):
+            value_var = rv_values[var]
+        else:
+            value_var = rv_values
+        var.tag.value_var = at.as_tensor_variable(value_var, dtype=var.dtype)
+
+    return logpt(var, rv_values, **kwargs)
+
+
+def logcdf(var, rv_values, **kwargs):
     """Create a log-CDF graph."""
-    return logpt(*args, cdf=True, **kwargs)
+
+    return logp(var, rv_values, cdf=True, **kwargs)
 
 
 @singledispatch
