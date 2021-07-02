@@ -38,7 +38,6 @@ from pymc3.tests.helpers import SeededTest
 from pymc3.tests.models import simple_init
 
 
-@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
         super().setup_method()
@@ -1011,9 +1010,11 @@ class TestSamplePriorPredictive(SeededTest):
         with pm.Model() as m:
             p = pm.Beta("p", 1.0, 1.0)
             y = pm.Bernoulli("y", p, observed=obs)
+            o = pm.Deterministic("o", obs)
             gen1 = pm.sample_prior_predictive(draws)
 
         assert gen1["y"].shape == (draws, n1)
+        assert gen1["o"].shape == (draws, n1)
 
         n2 = 20
         obs.set_value(np.random.rand(n2) < 0.5)
@@ -1021,6 +1022,7 @@ class TestSamplePriorPredictive(SeededTest):
             gen2 = pm.sample_prior_predictive(draws)
 
         assert gen2["y"].shape == (draws, n2)
+        assert gen2["o"].shape == (draws, n2)
 
     @pytest.mark.xfail(reason="DensityDist not refactored for v4")
     def test_density_dist(self):

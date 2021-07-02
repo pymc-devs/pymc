@@ -11,8 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
-from collections import deque
+from collections import defaultdict, deque
 from typing import Dict, Iterator, NewType, Optional, Set
 
 from aesara.compile.sharedvalue import SharedVariable
@@ -101,23 +102,20 @@ class ModelGraph:
 
     def make_compute_graph(self) -> Dict[str, Set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
-        input_map = {}  # type: Dict[str, Set[VarName]]
-
-        def update_input_map(key: str, val: Set[VarName]):
-            if key in input_map:
-                input_map[key] = input_map[key].union(val)
-            else:
-                input_map[key] = val
+        input_map = defaultdict(set)  # type: Dict[str, Set[VarName]]
 
         for var_name in self.var_names:
             var = self.model[var_name]
-            update_input_map(var_name, self.get_parents(var))
+            key = var_name
+            val = self.get_parents(var)
+            input_map[key] = input_map[key].union(val)
+
             if hasattr(var.tag, "observations"):
                 try:
                     obs_name = var.tag.observations.name
                     if obs_name:
                         input_map[var_name] = input_map[var_name].difference({obs_name})
-                        update_input_map(obs_name, {var_name})
+                        input_map[obs_name] = input_map[obs_name].union({var_name})
                 except AttributeError:
                     pass
         return input_map
@@ -126,30 +124,40 @@ class ModelGraph:
         """Attaches the given variable to a graphviz Digraph"""
         v = self.model[var_name]
 
-        # styling for node
-        attrs = {}
-        if v.owner and isinstance(v.owner.op, RandomVariable) and hasattr(v.tag, "observations"):
-            attrs["style"] = "filled"
-
-        # make Data be roundtangle, instead of rectangle
-        if isinstance(v, SharedVariable):
-            attrs["style"] = "rounded, filled"
-
-        # determine the shape for this node (default (Distribution) is ellipse)
-        if v in self.model.potentials:
-            attrs["shape"] = "octagon"
-        elif isinstance(v, SharedVariable) or not hasattr(v, "distribution"):
-            # shared variables and Deterministic represented by a box
-            attrs["shape"] = "box"
+        shape = None
+        style = None
+        label = str(v)
 
         if v in self.model.potentials:
+            shape = "octagon"
+            style = "filled"
             label = f"{var_name}\n~\nPotential"
         elif isinstance(v, SharedVariable):
+            shape = "box"
+            style = "rounded, filled"
             label = f"{var_name}\n~\nData"
+        elif v.owner and isinstance(v.owner.op, RandomVariable):
+            shape = "ellipse"
+            if hasattr(v.tag, "observations"):
+                # observed RV
+                style = "filled"
+            else:
+                shape = "ellipse"
+                syle = None
+            symbol = v.owner.op.__class__.__name__.strip("RV")
+            label = f"{var_name}\n~\n{symbol}"
         else:
-            label = v._str_repr(formatting=formatting).replace(" ~ ", "\n~\n")
+            shape = "box"
+            style = None
+            label = f"{var_name}\n~\nDeterministic"
 
-        graph.node(var_name.replace(":", "&"), label, **attrs)
+        kwargs = {
+            "shape": shape,
+            "style": style,
+            "label": label,
+        }
+
+        graph.node(var_name.replace(":", "&"), **kwargs)
 
     def get_plates(self):
         """Rough but surprisingly accurate plate detection.
@@ -161,26 +169,17 @@ class ModelGraph:
         -------
         dict: str -> set[str]
         """
-        plates = {}
+        plates = defaultdict(set)
         for var_name in self.var_names:
             v = self.model[var_name]
-            if hasattr(v, "observations"):
-                try:
-                    # To get shape of _observed_ data container `pm.Data`
-                    # (wrapper for aesara.SharedVariable) we evaluate it.
-                    shape = tuple(v.observations.shape.eval())
-                except AttributeError:
-                    shape = v.observations.shape
-            # XXX: This needs to be refactored
-            # elif hasattr(v, "dshape"):
-            #     shape = v.dshape
+            if var_name in self.model.RV_dims:
+                plate_label = " x ".join(
+                    f"{d} ({self.model.dim_lengths[d].eval()})"
+                    for d in self.model.RV_dims[var_name]
+                )
             else:
-                shape = v.tag.test_value.shape
-            if shape == (1,):
-                shape = tuple()
-            if shape not in plates:
-                plates[shape] = set()
-            plates[shape].add(var_name)
+                plate_label = " x ".join(map(str, v.shape.eval()))
+            plates[plate_label].add(var_name)
         return plates
 
     def make_graph(self, formatting: str = "plain"):
@@ -199,17 +198,14 @@ class ModelGraph:
                 "\tconda install -c conda-forge python-graphviz"
             )
         graph = graphviz.Digraph(self.model.name)
-        for shape, var_names in self.get_plates().items():
-            if isinstance(shape, SharedVariable):
-                shape = shape.eval()
-            label = " x ".join(map("{:,d}".format, shape))
-            if label:
+        for plate_label, var_names in self.get_plates().items():
+            if plate_label:
                 # must be preceded by 'cluster' to get a box around it
-                with graph.subgraph(name="cluster" + label) as sub:
+                with graph.subgraph(name="cluster" + plate_label) as sub:
                     for var_name in var_names:
                         self._make_node(var_name, sub, formatting=formatting)
                     # plate label goes bottom right
-                    sub.attr(label=label, labeljust="r", labelloc="b", style="rounded")
+                    sub.attr(label=plate_label, labeljust="r", labelloc="b", style="rounded")
             else:
                 for var_name in var_names:
                     self._make_node(var_name, graph, formatting=formatting)
@@ -236,9 +232,13 @@ def model_to_graphviz(model=None, *, formatting: str = "plain"):
     model : pm.Model
         The model to plot. Not required when called from inside a modelcontext.
     formatting : str
-        one of { "plain", "plain_with_params" }
+        one of { "plain" }
     """
     if not "plain" in formatting:
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
+    if formatting != "plain":
+        warnings.warn(
+            "Formattings other than 'plain' are currently not supported.", UserWarning, stacklevel=2
+        )
     model = pm.modelcontext(model)
     return ModelGraph(model).make_graph(formatting=formatting)

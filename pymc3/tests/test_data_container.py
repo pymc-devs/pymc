@@ -36,7 +36,6 @@ class TestData(SeededTest):
             pm.Normal("y", 0, 1, observed=X)
             model.logp(model.initial_point)
 
-    @pytest.mark.xfail(reason="Competence hasn't been updated")
     def test_sample(self):
         x = np.random.normal(size=100)
         y = x + np.random.normal(scale=1e-2, size=100)
