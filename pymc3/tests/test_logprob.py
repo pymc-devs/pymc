@@ -33,7 +33,7 @@ from aesara.tensor.subtensor import (
 from pymc3.aesaraf import floatX, walk_model
 from pymc3.distributions.continuous import Normal, Uniform
 from pymc3.distributions.discrete import Bernoulli
-from pymc3.distributions.logp import logpt
+from pymc3.distributions.logprob import logcdf, logp, logpt
 from pymc3.model import Model
 from pymc3.tests.helpers import select_by_precision
 
@@ -193,3 +193,25 @@ def test_logpt_subtensor():
         logp_vals = logp_vals_fn(A_idx_value, I_value)
 
         np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
+
+
+def test_logp_helper():
+    value = at.vector("value")
+    x = Normal.dist(0, 1, size=2)
+
+    x_logp = logp(x, value)
+    np.testing.assert_almost_equal(x_logp.eval({value: [0, 1]}), sp.norm(0, 1).logpdf([0, 1]))
+
+    x_logp = logp(x, [0, 1])
+    np.testing.assert_almost_equal(x_logp.eval(), sp.norm(0, 1).logpdf([0, 1]))
+
+
+def test_logcdf_helper():
+    value = at.vector("value")
+    x = Normal.dist(0, 1, size=2)
+
+    x_logp = logcdf(x, value)
+    np.testing.assert_almost_equal(x_logp.eval({value: [0, 1]}), sp.norm(0, 1).logcdf([0, 1]))
+
+    x_logp = logcdf(x, [0, 1])
+    np.testing.assert_almost_equal(x_logp.eval(), sp.norm(0, 1).logcdf([0, 1]))

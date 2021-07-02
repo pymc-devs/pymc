@@ -12,10 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc3.distributions.logp import (  # isort:skip
+from pymc3.distributions.logprob import (  # isort:skip
     _logcdf,
     _logp,
     logcdf,
+    logp,
     logp_transform,
     logpt,
     logpt_sum,
@@ -189,6 +190,7 @@ __all__ = [
     "BART",
     "CAR",
     "logpt",
+    "logp",
     "_logp",
     "logp_transform",
     "logcdf",
