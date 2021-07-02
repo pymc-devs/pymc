@@ -44,7 +44,6 @@ from pymc3.tests.test_distributions import (
     R,
     RandomPdMatrix,
     Rplus,
-    Rplusbig,
     Simplex,
     Vector,
     build_model,
@@ -241,30 +240,6 @@ class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
     distribution = pm.GaussianRandomWalk
     params = {"mu": 1.0, "sigma": 1.0}
     default_shape = (1,)
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestTruncatedNormal(BaseTestCases.BaseTestCase):
-    distribution = pm.TruncatedNormal
-    params = {"mu": 0.0, "tau": 1.0, "lower": -0.5, "upper": 0.5}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestTruncatedNormalLower(BaseTestCases.BaseTestCase):
-    distribution = pm.TruncatedNormal
-    params = {"mu": 0.0, "tau": 1.0, "lower": -0.5}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestTruncatedNormalUpper(BaseTestCases.BaseTestCase):
-    distribution = pm.TruncatedNormal
-    params = {"mu": 0.0, "tau": 1.0, "upper": 0.5}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestWald(BaseTestCases.BaseTestCase):
-    distribution = pm.Wald
-    params = {"mu": 1.0, "lam": 1.0, "alpha": 0.0}
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
@@ -623,6 +598,121 @@ class TestKumaraswamy(BaseTestDistribution):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
         "check_rv_size",
+    ]
+
+
+class TestTruncatedNormal(BaseTestDistribution):
+    pymc_dist = pm.TruncatedNormal
+    lower, upper, mu, sigma = -2.0, 2.0, 0, 1.0
+    pymc_dist_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
+    expected_rv_op_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
+    reference_dist_params = {
+        "loc": mu,
+        "scale": sigma,
+        "a": (lower - mu) / sigma,
+        "b": (upper - mu) / sigma,
+    }
+    reference_dist = seeded_scipy_distribution_builder("truncnorm")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestTruncatedNormalTau(BaseTestDistribution):
+    pymc_dist = pm.TruncatedNormal
+    lower, upper, mu, tau = -2.0, 2.0, 0, 1.0
+    tau, sigma = get_tau_sigma(tau=tau, sigma=None)
+    pymc_dist_params = {"mu": mu, "tau": tau, "lower": lower, "upper": upper}
+    expected_rv_op_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+    ]
+
+
+class TestTruncatedNormalLowerTau(BaseTestDistribution):
+    pymc_dist = pm.TruncatedNormal
+    lower, upper, mu, tau = -2.0, np.inf, 0, 1.0
+    tau, sigma = get_tau_sigma(tau=tau, sigma=None)
+    pymc_dist_params = {"mu": mu, "tau": tau, "lower": lower}
+    expected_rv_op_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+    ]
+
+
+class TestTruncatedNormalUpperTau(BaseTestDistribution):
+    pymc_dist = pm.TruncatedNormal
+    lower, upper, mu, tau = -np.inf, 2.0, 0, 1.0
+    tau, sigma = get_tau_sigma(tau=tau, sigma=None)
+    pymc_dist_params = {"mu": mu, "tau": tau, "upper": upper}
+    expected_rv_op_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+    ]
+
+
+class TestTruncatedNormalUpperArray(BaseTestDistribution):
+    pymc_dist = pm.TruncatedNormal
+    lower, upper, mu, tau = (
+        np.array([-np.inf, -np.inf]),
+        np.array([3, 2]),
+        np.array([0, 0]),
+        np.array(
+            [
+                1,
+                1,
+            ]
+        ),
+    )
+    size = (15, 2)
+    tau, sigma = get_tau_sigma(tau=tau, sigma=None)
+    pymc_dist_params = {"mu": mu, "tau": tau, "upper": upper}
+    expected_rv_op_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+    ]
+
+
+class TestWald(BaseTestDistribution):
+    pymc_dist = pm.Wald
+    mu, lam, alpha = 1.0, 1.0, 0.0
+    mu_rv, lam_rv, phi_rv = pm.Wald.get_mu_lam_phi(mu=mu, lam=lam, phi=None)
+    pymc_dist_params = {"mu": mu, "lam": lam, "alpha": alpha}
+    expected_rv_op_params = {"mu": mu_rv, "lam": lam_rv, "alpha": alpha}
+    reference_dist_params = [mu, lam_rv]
+    reference_dist = seeded_numpy_distribution_builder("wald")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+    def test_distribution(self):
+        self.validate_tests_list()
+        self._instantiate_pymc_rv()
+        if self.reference_dist is not None:
+            self.reference_dist_draws = self.reference_dist()(
+                *self.reference_dist_params, self.size
+            )
+        for check_name in self.tests_to_run:
+            getattr(self, check_name)()
+
+    def check_pymc_draws_match_reference(self):
+        assert_array_almost_equal(
+            self.pymc_rv.eval(), self.reference_dist_draws + self.alpha, decimal=self.decimal
+        )
+
+
+class TestWaldMuPhi(BaseTestDistribution):
+    pymc_dist = pm.Wald
+    mu, phi, alpha = 1.0, 3.0, 0.0
+    mu_rv, lam_rv, phi_rv = pm.Wald.get_mu_lam_phi(mu=mu, lam=None, phi=phi)
+    pymc_dist_params = {"mu": mu, "phi": phi, "alpha": alpha}
+    expected_rv_op_params = {"mu": mu_rv, "lam": lam_rv, "alpha": alpha}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
     ]
 
 
@@ -1519,55 +1609,11 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(BoundedNormal, {"tau": Rplus}, ref_rand=ref_rand)
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_truncated_normal(self):
-        def ref_rand(size, mu, sigma, lower, upper):
-            return st.truncnorm.rvs(
-                (lower - mu) / sigma, (upper - mu) / sigma, size=size, loc=mu, scale=sigma
-            )
-
-        pymc3_random(
-            pm.TruncatedNormal,
-            {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig, "upper": Rplusbig},
-            ref_rand=ref_rand,
-        )
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_truncated_normal_lower(self):
-        def ref_rand(size, mu, sigma, lower):
-            return st.truncnorm.rvs((lower - mu) / sigma, np.inf, size=size, loc=mu, scale=sigma)
-
-        pymc3_random(
-            pm.TruncatedNormal, {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig}, ref_rand=ref_rand
-        )
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_truncated_normal_upper(self):
-        def ref_rand(size, mu, sigma, upper):
-            return st.truncnorm.rvs(-np.inf, (upper - mu) / sigma, size=size, loc=mu, scale=sigma)
-
-        pymc3_random(
-            pm.TruncatedNormal, {"mu": R, "sigma": Rplusbig, "upper": Rplusbig}, ref_rand=ref_rand
-        )
-
     def test_skew_normal(self):
         def ref_rand(size, alpha, mu, sigma):
             return st.skewnorm.rvs(size=size, a=alpha, loc=mu, scale=sigma)
 
         pymc3_random(pm.SkewNormal, {"mu": R, "sigma": Rplus, "alpha": R}, ref_rand=ref_rand)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_wald(self):
-        # Cannot do anything too exciting as scipy wald is a
-        # location-scale model of the *standard* wald with mu=1 and lam=1
-        def ref_rand(size, mu, lam, alpha):
-            return st.wald.rvs(size=size, loc=alpha)
-
-        pymc3_random(
-            pm.Wald,
-            {"mu": Domain([1.0, 1.0, 1.0]), "lam": Domain([1.0, 1.0, 1.0]), "alpha": Rplus},
-            ref_rand=ref_rand,
-        )
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_dirichlet_multinomial(self):
@@ -2099,7 +2145,6 @@ class TestNestedRandom(SeededTest):
         ],
         ids=str,
     )
-    @pytest.mark.xfail(reason="TruncatedNormal not yet refactored for v4")
     def test_TruncatedNormal(
         self,
         prior_samples,

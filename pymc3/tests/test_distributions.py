@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
+import functools
 import itertools
 import sys
 
@@ -1019,7 +1019,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_truncated_normal(self):
         def scipy_logp(value, mu, sigma, lower, upper):
             return sp.truncnorm.logpdf(
@@ -1031,6 +1030,22 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig, "upper": Rplusbig},
             scipy_logp,
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+
+        self.check_logp(
+            TruncatedNormal,
+            R,
+            {"mu": R, "sigma": Rplusbig, "upper": Rplusbig},
+            functools.partial(scipy_logp, lower=-np.inf),
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+
+        self.check_logp(
+            TruncatedNormal,
+            R,
+            {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig},
+            functools.partial(scipy_logp, upper=np.inf),
             decimal=select_by_precision(float64=6, float32=1),
         )
 
@@ -1069,7 +1084,6 @@ class TestMatchesScipy:
             lambda value, nu: sp.chi2.logcdf(value, df=nu),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_wald_logp(self):
         self.check_logp(
             Wald,
@@ -1079,7 +1093,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
@@ -1092,7 +1105,6 @@ class TestMatchesScipy:
             lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.parametrize(
         "value,mu,lam,phi,alpha,logp",
         [
@@ -1112,7 +1124,6 @@ class TestMatchesScipy:
             (50.0, 15.0, None, 0.666666, 10.0, -5.6481874),
         ],
     )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_wald_logp_custom_points(self, value, mu, lam, phi, alpha, logp):
         # Log probabilities calculated using the dIG function from the R package gamlss.
         # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
@@ -2716,6 +2727,89 @@ def test_bound():
     with Model():
         BoundPoissonNamedArgs = Bound(Poisson, upper=6)("y", mu=2.0)
         BoundPoissonPositionalArgs = Bound(Poisson, upper=6)("x", 2.0)
+
+
+class TestBoundedContinuous:
+    def get_dist_params_and_interval_bounds(self, model, rv_name):
+        interval_rv = model.named_vars[f"{rv_name}_interval__"]
+        rv = model.named_vars[rv_name]
+        dist_params = rv.owner.inputs[3:]
+        lower_interval, upper_interval = interval_rv.tag.transform.param_extract_fn(rv)
+        return (
+            dist_params,
+            lower_interval,
+            upper_interval,
+        )
+
+    def test_upper_bounded(self):
+        bounded_rv_name = "lower_bounded"
+        with Model() as model:
+            TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=None, upper=3)
+        (
+            (_, _, lower, upper),
+            lower_interval,
+            upper_interval,
+        ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+        assert lower.value == -np.inf
+        assert upper.value == 3
+        assert lower_interval is None
+        assert upper_interval.value == 3
+
+    def test_lower_bounded(self):
+        bounded_rv_name = "upper_bounded"
+        with Model() as model:
+            TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=-2, upper=None)
+        (
+            (_, _, lower, upper),
+            lower_interval,
+            upper_interval,
+        ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+        assert lower.value == -2
+        assert upper.value == np.inf
+        assert lower_interval.value == -2
+        assert upper_interval is None
+
+    def test_lower_bounded_vector(self):
+        bounded_rv_name = "upper_bounded"
+        with Model() as model:
+            TruncatedNormal(
+                bounded_rv_name,
+                mu=np.array([1, 1]),
+                sigma=np.array([2, 3]),
+                lower=np.array([-1.0, 0]),
+                upper=None,
+            )
+        (
+            (_, _, lower, upper),
+            lower_interval,
+            upper_interval,
+        ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+
+        assert np.array_equal(lower.value, [-1, 0])
+        assert upper.value == np.inf
+        assert np.array_equal(lower_interval.value, [-1, 0])
+        assert upper_interval is None
+
+    def test_lower_bounded_broadcasted(self):
+        bounded_rv_name = "upper_bounded"
+        with Model() as model:
+            TruncatedNormal(
+                bounded_rv_name,
+                mu=np.array([1, 1]),
+                sigma=np.array([2, 3]),
+                lower=-1,
+                upper=np.array([np.inf, np.inf]),
+            )
+        (
+            (_, _, lower, upper),
+            lower_interval,
+            upper_interval,
+        ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+
+        assert lower.value == -1
+        assert np.array_equal(upper.value, [np.inf, np.inf])
+        assert lower_interval.value == -1
+        assert upper_interval is None
 
 
 @pytest.mark.xfail(reason="LaTeX repr and str no longer applicable")
