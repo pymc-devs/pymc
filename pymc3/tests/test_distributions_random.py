@@ -2145,7 +2145,6 @@ class TestNestedRandom(SeededTest):
         ],
         ids=str,
     )
-    @pytest.mark.xfail(reason="TruncatedNormal not yet refactored for v4")
     def test_TruncatedNormal(
         self,
         prior_samples,
