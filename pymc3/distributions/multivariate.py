@@ -685,81 +685,10 @@ class DirichletMultinomial(Discrete):
 
 
 class _OrderedMultinomial(Multinomial):
-    R"""
-        Ordered Multinomial log-likelihood.
-
-        Useful for regression on ordinal data values whose values range
-        from 1 to K as a function of some predictor, :math:`\eta`, but
-         which are _aggregated_ by trial, like multinomial observations (in
-         contrast to `pm.OrderedLogistic`, which only accepts ordinal data
-         in a _disaggregated_ format, like categorical observations).
-         The cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
-        mapped to which of the K observed dependent variables. The number
-        of cutpoints is K - 1. It is recommended that the cutpoints are
-        constrained to be ordered.
-
-        .. math::
-
-           f(k \mid \eta, c) = \left\{
-             \begin{array}{l}
-               1 - \text{logit}^{-1}(\eta - c_1)
-                 \,, \text{if } k = 0 \\
-               \text{logit}^{-1}(\eta - c_{k - 1}) -
-               \text{logit}^{-1}(\eta - c_{k})
-                 \,, \text{if } 0 < k < K \\
-               \text{logit}^{-1}(\eta - c_{K - 1})
-                 \,, \text{if } k = K \\
-             \end{array}
-           \right.
-
-        Parameters
-        ----------
-        eta: float
-            The predictor.
-        cutpoints: array
-            The length K - 1 array of cutpoints which break :math:`\eta` into
-            ranges. Do not explicitly set the first and last elements of
-            :math:`c` to negative and positive infinity.
-        n: int
-            The total number of multinomial trials.
-        compute_p: boolean, default True
-            Whether to compute and store in the trace the inferred probabilities of each categories,
-            based on the cutpoints' values. Defaults to True.
-            Might be useful to disable it if memory usage is of interest.
-
-        Examples
-        --------
-
-        .. code-block:: python
-
-            # Generate data for a simple 1 dimensional example problem
-            true_cum_p = np.array([0.1, 0.15, 0.25, 0.50, 0.65, 0.90, 1.0])
-            true_p = np.hstack([true_cum_p[0], true_cum_p[1:] - true_cum_p[:-1]])
-            fake_elections = np.random.multinomial(n=1_000, pvals=true_p, size=60)
-
-            # Ordered multinomial regression
-            with pm.Model() as model:
-                cutpoints = pm.Normal(
-                    "cutpoints",
-                    mu=np.arange(6) - 2.5,
-                    sigma=1.5,
-                    initval=np.arange(6) - 2.5,
-                    transform=pm.distributions.transforms.ordered,
-                )
-
-                pm.OrderedMultinomial(
-                    "results",
-                    eta=0.0,
-                    cutpoints=cutpoints,
-                    n=fake_elections.sum(1),
-                    observed=fake_elections,
-                )
-
-                trace = pm.sample()
-
-            # Plot the results
-            arviz.plot_posterior(trace_12_4, var_names=["complete_p"], ref_val=list(true_p));
-        """
+    r"""
+    Underlying class for ordered multinomial distributions.
+    See docs for the OrderedMultinomial wrapper class for more details on how to use it in models.
+    """
     rv_op = multinomial
 
     @classmethod
@@ -783,6 +712,83 @@ class _OrderedMultinomial(Multinomial):
 
 
 class OrderedMultinomial:
+    R"""
+    Wrapper class for Ordered Multinomial distributions.
+
+    Useful for regression on ordinal data values whose values range
+    from 1 to K as a function of some predictor, :math:`\eta`, but
+     which are _aggregated_ by trial, like multinomial observations (in
+     contrast to `pm.OrderedLogistic`, which only accepts ordinal data
+     in a _disaggregated_ format, like categorical observations).
+     The cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
+    mapped to which of the K observed dependent variables. The number
+    of cutpoints is K - 1. It is recommended that the cutpoints are
+    constrained to be ordered.
+
+    .. math::
+
+       f(k \mid \eta, c) = \left\{
+         \begin{array}{l}
+           1 - \text{logit}^{-1}(\eta - c_1)
+             \,, \text{if } k = 0 \\
+           \text{logit}^{-1}(\eta - c_{k - 1}) -
+           \text{logit}^{-1}(\eta - c_{k})
+             \,, \text{if } 0 < k < K \\
+           \text{logit}^{-1}(\eta - c_{K - 1})
+             \,, \text{if } k = K \\
+         \end{array}
+       \right.
+
+    Parameters
+    ----------
+    eta: float
+        The predictor.
+    cutpoints: array
+        The length K - 1 array of cutpoints which break :math:`\eta` into
+        ranges. Do not explicitly set the first and last elements of
+        :math:`c` to negative and positive infinity.
+    n: int
+        The total number of multinomial trials.
+    compute_p: boolean, default True
+        Whether to compute and store in the trace the inferred probabilities of each
+        categories,
+        based on the cutpoints' values. Defaults to True.
+        Might be useful to disable it if memory usage is of interest.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Generate data for a simple 1 dimensional example problem
+        true_cum_p = np.array([0.1, 0.15, 0.25, 0.50, 0.65, 0.90, 1.0])
+        true_p = np.hstack([true_cum_p[0], true_cum_p[1:] - true_cum_p[:-1]])
+        fake_elections = np.random.multinomial(n=1_000, pvals=true_p, size=60)
+
+        # Ordered multinomial regression
+        with pm.Model() as model:
+            cutpoints = pm.Normal(
+                "cutpoints",
+                mu=np.arange(6) - 2.5,
+                sigma=1.5,
+                initval=np.arange(6) - 2.5,
+                transform=pm.distributions.transforms.ordered,
+            )
+
+            pm.OrderedMultinomial(
+                "results",
+                eta=0.0,
+                cutpoints=cutpoints,
+                n=fake_elections.sum(1),
+                observed=fake_elections,
+            )
+
+            trace = pm.sample()
+
+        # Plot the results
+        arviz.plot_posterior(trace_12_4, var_names=["complete_p"], ref_val=list(true_p));
+    """
+
     def __new__(cls, name, *args, compute_p=True, **kwargs):
         out_rv = _OrderedMultinomial(name, *args, **kwargs)
         if compute_p:

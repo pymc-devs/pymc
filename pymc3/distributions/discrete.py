@@ -1640,8 +1640,34 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
 
 class _OrderedLogistic(Categorical):
+    r"""
+    Underlying class for ordered logistic distributions.
+    See docs for the OrderedLogistic wrapper class for more details on how to use it in models.
+    """
+    rv_op = categorical
+
+    @classmethod
+    def dist(cls, eta, cutpoints, *args, **kwargs):
+        eta = at.as_tensor_variable(floatX(eta))
+        cutpoints = at.as_tensor_variable(cutpoints)
+
+        pa = sigmoid(cutpoints - at.shape_padright(eta))
+        p_cum = at.concatenate(
+            [
+                at.zeros_like(at.shape_padright(pa[..., 0])),
+                pa,
+                at.ones_like(at.shape_padright(pa[..., 0])),
+            ],
+            axis=-1,
+        )
+        p = p_cum[..., 1:] - p_cum[..., :-1]
+
+        return super().dist(p, *args, **kwargs)
+
+
+class OrderedLogistic:
     R"""
-    Ordered Logistic log-likelihood.
+    Wrapper class for Ordered Logistic distributions.
 
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
@@ -1709,28 +1735,6 @@ class _OrderedLogistic(Categorical):
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
     """
 
-    rv_op = categorical
-
-    @classmethod
-    def dist(cls, eta, cutpoints, *args, **kwargs):
-        eta = at.as_tensor_variable(floatX(eta))
-        cutpoints = at.as_tensor_variable(cutpoints)
-
-        pa = sigmoid(cutpoints - at.shape_padright(eta))
-        p_cum = at.concatenate(
-            [
-                at.zeros_like(at.shape_padright(pa[..., 0])),
-                pa,
-                at.ones_like(at.shape_padright(pa[..., 0])),
-            ],
-            axis=-1,
-        )
-        p = p_cum[..., 1:] - p_cum[..., :-1]
-
-        return super().dist(p, *args, **kwargs)
-
-
-class OrderedLogistic:
     def __new__(cls, name, *args, compute_p=True, **kwargs):
         out_rv = _OrderedLogistic(name, *args, **kwargs)
         if compute_p:
@@ -1743,8 +1747,35 @@ class OrderedLogistic:
 
 
 class _OrderedProbit(Categorical):
+    r"""
+    Underlying class for ordered probit distributions.
+    See docs for the OrderedProbit wrapper class for more details on how to use it in models.
+    """
+    rv_op = categorical
+
+    @classmethod
+    def dist(cls, eta, cutpoints, *args, **kwargs):
+        eta = at.as_tensor_variable(floatX(eta))
+        cutpoints = at.as_tensor_variable(cutpoints)
+
+        probits = at.shape_padright(eta) - cutpoints
+        _log_p = at.concatenate(
+            [
+                at.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
+                log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
+                at.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
+            ],
+            axis=-1,
+        )
+        _log_p = at.as_tensor_variable(floatX(_log_p))
+        p = at.exp(_log_p)
+
+        return super().dist(p, *args, **kwargs)
+
+
+class OrderedProbit:
     R"""
-    Ordered Probit log-likelihood.
+    Wrapper class for Ordered Probit distributions.
 
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
@@ -1815,29 +1846,6 @@ class _OrderedProbit(Categorical):
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
     """
 
-    rv_op = categorical
-
-    @classmethod
-    def dist(cls, eta, cutpoints, *args, **kwargs):
-        eta = at.as_tensor_variable(floatX(eta))
-        cutpoints = at.as_tensor_variable(cutpoints)
-
-        probits = at.shape_padright(eta) - cutpoints
-        _log_p = at.concatenate(
-            [
-                at.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
-                log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
-                at.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
-            ],
-            axis=-1,
-        )
-        _log_p = at.as_tensor_variable(floatX(_log_p))
-        p = at.exp(_log_p)
-
-        return super().dist(p, *args, **kwargs)
-
-
-class OrderedProbit:
     def __new__(cls, name, *args, compute_p=True, **kwargs):
         out_rv = _OrderedProbit(name, *args, **kwargs)
         if compute_p:
