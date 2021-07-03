@@ -44,28 +44,28 @@
 
         <div class="ui container">
 
-        <h2 class="ui dividing header">Installation</h2>
+        <div class="ui vertical segment">
+            <h2 class="ui dividing header">Installation</h2>
+            <div class="ui three stackable cards">
 
-            <div class="row">
-                <div class="ui text container">
-                    <h3 class="ui header">Via conda-forge:</h3>
+                <a class="ui link card" href="https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(Linux)">
+                    <div class="content">
+                        <div class="header">Instructions for Linux</div>
+                    </div>
+                </a>
 
-.. code-block:: bash
+                <a class="ui link card" href="https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(MacOS)">
+                    <div class="content">
+                        <div class="header">Instructions for MacOS</div>
+                    </div>
+                </a>
 
-    conda install -c conda-forge pymc3
+                <a class="ui link card" href="https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(Windows)">
+                    <div class="content">
+                        <div class="header">Instructions for Windows</div>
+                    </div>
+                </a>
 
-
-.. raw:: html
-
-                    <h3 class="ui header">Latest (unstable):</h3>
-
-.. code-block:: bash
-
-    pip install git+https://github.com/pymc-devs/pymc3
-
-.. raw:: html
-
-                </div>
             </div>
         </div>
 
