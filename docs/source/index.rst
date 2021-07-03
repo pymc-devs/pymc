@@ -44,28 +44,28 @@
 
         <div class="ui container">
 
-        <h2 class="ui dividing header">Installation</h2>
+        <div class="ui vertical segment">
+            <h2 class="ui dividing header">Installation</h2>
+            <div class="ui three stackable cards">
 
-            <div class="row">
-                <div class="ui text container">
-                    <h3 class="ui header">Via conda-forge:</h3>
+                <a class="ui link card" href="https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(Linux)">
+                    <div class="content">
+                        <div class="header">Instructions for Linux</div>
+                    </div>
+                </a>
 
-.. code-block:: bash
+                <a class="ui link card" href="https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(MacOS)">
+                    <div class="content">
+                        <div class="header">Instructions for MacOS</div>
+                    </div>
+                </a>
 
-    conda install -c conda-forge pymc3
+                <a class="ui link card" href="https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(Windows)">
+                    <div class="content">
+                        <div class="header">Instructions for Windows</div>
+                    </div>
+                </a>
 
-
-.. raw:: html
-
-                    <h3 class="ui header">Latest (unstable):</h3>
-
-.. code-block:: bash
-
-    pip install git+https://github.com/pymc-devs/pymc3
-
-.. raw:: html
-
-                </div>
             </div>
         </div>
 
@@ -73,7 +73,7 @@
             <h2 class="ui dividing header">In-Depth Guides</h2>
             <div class="ui four stackable cards">
 
-                <a class="ui link card" href="/Probability_Distributions.html">
+                <a class="ui link card" href="Probability_Distributions.html">
                     <div class="content">
                         <div class="header">Probability Distributions</div>
                         <div class="description">PyMC3 includes a comprehensive set of pre-defined statistical distributions that can be used as model building blocks.
@@ -81,7 +81,7 @@
                     </div>
                 </a>
 
-                <a class="ui link card" href="/Gaussian_Processes.html">
+                <a class="ui link card" href="Gaussian_Processes.html">
                     <div class="content">
                         <div class="header">Gaussian Processes</div>
                         <div class="description">Sometimes an unknown parameter or variable in a model is not a scalar value or a fixed-length vector, but a function. A Gaussian process (GP) can be used as a prior probability distribution whose support is over the space of continuous functions. PyMC3 provides rich support for defining and using GPs.
@@ -89,7 +89,7 @@
                     </div>
                 </a>
 
-                <a class="ui link card" href="/pymc-examples/examples/variational_inference/variational_api_quickstart.html">
+                <a class="ui link card" href="pymc-examples/examples/variational_inference/variational_api_quickstart.html">
                     <div class="content">
                         <div class="header">Variational Inference</div>
                         <div class="description">Variational inference saves computational cost by turning a problem of integration into one of optimization. PyMC3's variational API supports a number of cutting edge algorithms, as well as minibatch for scaling to large datasets.
@@ -97,7 +97,7 @@
                     </div>
                 </a>
 
-                <a class="ui link card" href="/PyMC3_and_Theano.html">
+                <a class="ui link card" href="PyMC3_and_Theano.html">
                     <div class="content">
                         <div class="header">PyMC3 and Theano</div>
                         <div class="description">Theano is the deep-learning library PyMC3 uses to construct probability distributions and then access the gradient in order to implement cutting edge inference algorithms. More advanced models may be built by understanding this layer.

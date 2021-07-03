@@ -170,16 +170,23 @@ def build_gallery(srcdir, gallery):
         if basename.find(".rst") < 1:
             filename = os.path.join(source_dir, basename + ".ipynb")
             ex = NotebookGenerator(filename, target_dir)
+            url = Path(os.path.join(os.sep, gallery, ex.output_html))
+            # Need to chop off "/${gallery}/../" so as redirection works in multi versioned docs.
+            url = str(Path("..", *url.parts[3:]))
             data[basename] = {
                 "title": ex.pagetitle,
-                "url": os.path.join(os.sep, gallery, ex.output_html),
+                "url": url,
                 "thumb": os.path.basename(ex.png_path),
             }
+
         else:
             filename = basename.split(".")[0]
+            url = Path(os.path.join(os.sep, gallery, "../" + filename + ".html"))
+            # Need to chop off "/${gallery}/../" so as redirection works in multi versioned docs.
+            url = str(Path("..", *url.parts[3:]))
             data[basename] = {
                 "title": " ".join(filename.split("_")),
-                "url": os.path.join(os.sep, gallery, "../" + filename + ".html"),
+                "url": url,
                 "thumb": os.path.basename(default_png_path),
             }
 
