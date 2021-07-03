@@ -1,7 +1,7 @@
 name: arviz-compatibility
 
 on:
-  pull_request:
+  # pull_request:
   push:
     branches: [v3]
 

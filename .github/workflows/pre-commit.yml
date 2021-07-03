@@ -1,7 +1,7 @@
 name: pre-commit
 
 on:
-  pull_request:
+  # pull_request:
   push:
     branches: [v3]
 
