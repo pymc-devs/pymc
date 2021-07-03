@@ -333,5 +333,5 @@ def setup(app):
     app.add_css_file("https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css")
     app.add_css_file("default.css")
     dir_root = Path(__file__).parent
-    for directory in ["_static", "nb_tutorials/_images", "nb_examples/_images"]:
-        os.makedirs(str(dir_root / directory))
+    for directory in html_static_path:
+        os.makedirs(str(dir_root / directory), exist_ok=True)
