@@ -109,9 +109,10 @@ def pymc3_random_discrete(
             e = np.atleast_1d(e).flatten()
             observed = dict(zip(*np.unique(o, return_counts=True)))
             expected = dict(zip(*np.unique(e, return_counts=True)))
-            for e in expected.keys():
-                expected[e] = (observed.get(e, 0), expected[e])
-            k = np.array([v for v in expected.values()])
+            obs_exp = {
+                i: (observed.get(i, 0), expected.get(i, 0)) for i in set().union(observed, expected)
+            }
+            k = np.array([v for v in obs_exp.values()])
             if np.all(k[:, 0] == k[:, 1]):
                 p = 1.0
             else:
