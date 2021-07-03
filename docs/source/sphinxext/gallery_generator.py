@@ -204,3 +204,12 @@ def build_gallery(srcdir, gallery):
         )
 
     os.chdir(working_dir)
+
+
+def main(app):
+    for gallery in ("tutorials", "examples"):
+        build_gallery(app.builder.srcdir, gallery)
+
+
+def setup(app):
+    app.connect("builder-inited", main)
