@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
+import functools
 import itertools
 import sys
 
@@ -95,6 +95,7 @@ from pymc3.distributions import (
     VonMises,
     Wald,
     Weibull,
+    Wishart,
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
@@ -1018,7 +1019,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_truncated_normal(self):
         def scipy_logp(value, mu, sigma, lower, upper):
             return sp.truncnorm.logpdf(
@@ -1030,6 +1030,22 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig, "upper": Rplusbig},
             scipy_logp,
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+
+        self.check_logp(
+            TruncatedNormal,
+            R,
+            {"mu": R, "sigma": Rplusbig, "upper": Rplusbig},
+            functools.partial(scipy_logp, lower=-np.inf),
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+
+        self.check_logp(
+            TruncatedNormal,
+            R,
+            {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig},
+            functools.partial(scipy_logp, upper=np.inf),
             decimal=select_by_precision(float64=6, float32=1),
         )
 
@@ -1056,7 +1072,7 @@ class TestMatchesScipy:
             lambda value, nu: sp.chi2.logpdf(value, df=nu),
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
@@ -1068,7 +1084,6 @@ class TestMatchesScipy:
             lambda value, nu: sp.chi2.logcdf(value, df=nu),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_wald_logp(self):
         self.check_logp(
             Wald,
@@ -1078,7 +1093,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
@@ -1091,7 +1105,6 @@ class TestMatchesScipy:
             lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.parametrize(
         "value,mu,lam,phi,alpha,logp",
         [
@@ -1111,7 +1124,6 @@ class TestMatchesScipy:
             (50.0, 15.0, None, 0.666666, 10.0, -5.6481874),
         ],
     )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_wald_logp_custom_points(self, value, mu, lam, phi, alpha, logp):
         # Log probabilities calculated using the dIG function from the R package gamlss.
         # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
@@ -1423,7 +1435,7 @@ class TestMatchesScipy:
             test_fun,
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
@@ -1449,7 +1461,7 @@ class TestMatchesScipy:
         # pymc-devs/aesara#224: skip_paramdomain_outside_edge_test has to be set
         # True to avoid triggering a C-level assertion in the Aesara GammaQ function
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
@@ -1465,7 +1477,7 @@ class TestMatchesScipy:
             skip_paramdomain_outside_edge_test=True,
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to scaling issues",
     )
@@ -1496,7 +1508,7 @@ class TestMatchesScipy:
             lambda value, alpha, m: sp.pareto.logcdf(value, alpha, scale=m),
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
@@ -1508,7 +1520,7 @@ class TestMatchesScipy:
             lambda value, alpha, beta: sp.exponweib.logpdf(value, 1, alpha, scale=beta),
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
@@ -1560,7 +1572,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.xfail(reason="checkd tests has not been refactored")
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.skipif(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_beta_binomial_distribution(self):
         self.checkd(
             BetaBinomial,
@@ -1681,7 +1693,7 @@ class TestMatchesScipy:
         self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
 
     @pytest.mark.xfail(reason="Test has not been refactored")
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
@@ -1723,7 +1735,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.xfail(reason="Test not refactored yet")
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
@@ -1860,7 +1872,7 @@ class TestMatchesScipy:
             extra_args={"lower": False},
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
@@ -1892,8 +1904,7 @@ class TestMatchesScipy:
             with pytest.raises(ValueError):
                 x = MvNormal("x", mu=np.zeros(3), cov=np.eye(3), tau=np.eye(3), size=3)
 
-    @pytest.mark.parametrize("n", [1, 2, 3])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.parametrize("n", [2, 3])
     def test_matrixnormal(self, n):
         mat_scale = 1e3  # To reduce logp magnitude
         mean_scale = 0.1
@@ -1906,6 +1917,8 @@ class TestMatchesScipy:
                 "colcov": PdMatrix(n) * mat_scale,
             },
             matrix_normal_logpdf_cov,
+            extra_args={"size": n},
+            decimal=select_by_precision(float64=5, float32=3),
         )
         self.check_logp(
             MatrixNormal,
@@ -1916,6 +1929,8 @@ class TestMatchesScipy:
                 "colcov": PdMatrix(n) * mat_scale,
             },
             matrix_normal_logpdf_cov,
+            extra_args={"size": n},
+            decimal=select_by_precision(float64=5, float32=3),
         )
         self.check_logp(
             MatrixNormal,
@@ -1926,7 +1941,8 @@ class TestMatchesScipy:
                 "colchol": PdMatrixChol(n) * mat_scale,
             },
             matrix_normal_logpdf_chol,
-            decimal=select_by_precision(float64=6, float32=-1),
+            extra_args={"size": n},
+            decimal=select_by_precision(float64=5, float32=3),
         )
         self.check_logp(
             MatrixNormal,
@@ -1937,7 +1953,8 @@ class TestMatchesScipy:
                 "colchol": PdMatrixChol(3) * mat_scale,
             },
             matrix_normal_logpdf_chol,
-            decimal=select_by_precision(float64=6, float32=0),
+            extra_args={"size": n},
+            decimal=select_by_precision(float64=5, float32=3),
         )
 
     @pytest.mark.parametrize("n", [2, 3])
@@ -2039,17 +2056,13 @@ class TestMatchesScipy:
         self.check_logp(AR1, Vector(R, n), {"k": Unit, "tau_e": Rplus}, AR1_logpdf)
 
     @pytest.mark.parametrize("n", [2, 3])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_wishart(self, n):
-        # This check compares the autodiff gradient to the numdiff gradient.
-        # However, due to the strict constraints of the wishart,
-        # it is impossible to numerically determine the gradient as a small
-        # pertubation breaks the symmetry. Thus disabling. Also, numdifftools was
-        # removed in June 2019, so an alternative would be needed.
-        #
-        # self.checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]), 'V': PdMatrix(n)},
-        #             checks=[self.check_dlogp])
-        raise NotImplementedError("Test is not implemented because of numerical issues.")
+        self.check_logp(
+            Wishart,
+            PdMatrix(n),
+            {"nu": Domain([3, 4, 2000]), "V": PdMatrix(n)},
+            lambda value, nu, V: scipy.stats.wishart.logpdf(value, np.int(nu), V),
+        )
 
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
     @pytest.mark.xfail(reason="Distribution not refactored yet")
@@ -2521,7 +2534,7 @@ class TestMatchesScipy:
             skip_paramdomain_inside_edge_test=True,  # Valid values are tested above
         )
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.skipif(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_vonmises(self):
         self.check_logp(
             VonMises,
@@ -2571,7 +2584,7 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Some combinations underflow to -inf in float32 in pymc version",
     )
@@ -2603,7 +2616,7 @@ class TestMatchesScipy:
             lambda value, mu, sigma: floatX(sp.moyal.logpdf(value, mu, sigma)),
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
         reason="Pymc3 underflows earlier than scipy on float32",
     )
@@ -2617,7 +2630,7 @@ class TestMatchesScipy:
         if aesara.config.floatX == "float32":
             raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.skipif(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
@@ -2714,6 +2727,89 @@ def test_bound():
     with Model():
         BoundPoissonNamedArgs = Bound(Poisson, upper=6)("y", mu=2.0)
         BoundPoissonPositionalArgs = Bound(Poisson, upper=6)("x", 2.0)
+
+
+class TestBoundedContinuous:
+    def get_dist_params_and_interval_bounds(self, model, rv_name):
+        interval_rv = model.named_vars[f"{rv_name}_interval__"]
+        rv = model.named_vars[rv_name]
+        dist_params = rv.owner.inputs[3:]
+        lower_interval, upper_interval = interval_rv.tag.transform.param_extract_fn(rv)
+        return (
+            dist_params,
+            lower_interval,
+            upper_interval,
+        )
+
+    def test_upper_bounded(self):
+        bounded_rv_name = "lower_bounded"
+        with Model() as model:
+            TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=None, upper=3)
+        (
+            (_, _, lower, upper),
+            lower_interval,
+            upper_interval,
+        ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+        assert lower.value == -np.inf
+        assert upper.value == 3
+        assert lower_interval is None
+        assert upper_interval.value == 3
+
+    def test_lower_bounded(self):
+        bounded_rv_name = "upper_bounded"
+        with Model() as model:
+            TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=-2, upper=None)
+        (
+            (_, _, lower, upper),
+            lower_interval,
+            upper_interval,
+        ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+        assert lower.value == -2
+        assert upper.value == np.inf
+        assert lower_interval.value == -2
+        assert upper_interval is None
+
+    def test_lower_bounded_vector(self):
+        bounded_rv_name = "upper_bounded"
+        with Model() as model:
+            TruncatedNormal(
+                bounded_rv_name,
+                mu=np.array([1, 1]),
+                sigma=np.array([2, 3]),
+                lower=np.array([-1.0, 0]),
+                upper=None,
+            )
+        (
+            (_, _, lower, upper),
+            lower_interval,
+            upper_interval,
+        ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+
+        assert np.array_equal(lower.value, [-1, 0])
+        assert upper.value == np.inf
+        assert np.array_equal(lower_interval.value, [-1, 0])
+        assert upper_interval is None
+
+    def test_lower_bounded_broadcasted(self):
+        bounded_rv_name = "upper_bounded"
+        with Model() as model:
+            TruncatedNormal(
+                bounded_rv_name,
+                mu=np.array([1, 1]),
+                sigma=np.array([2, 3]),
+                lower=-1,
+                upper=np.array([np.inf, np.inf]),
+            )
+        (
+            (_, _, lower, upper),
+            lower_interval,
+            upper_interval,
+        ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
+
+        assert lower.value == -1
+        assert np.array_equal(upper.value, [np.inf, np.inf])
+        assert lower_interval.value == -1
+        assert upper_interval is None
 
 
 @pytest.mark.xfail(reason="LaTeX repr and str no longer applicable")

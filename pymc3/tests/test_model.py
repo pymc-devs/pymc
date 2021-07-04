@@ -331,7 +331,6 @@ class TestValueGradFunction(unittest.TestCase):
             np.log(0.5) * 10,
         )
 
-    @pytest.mark.xfail(reason="TruncatedNormal not refactored for v4")
     def test_aesara_switch_broadcast_edge_cases_2(self):
         # Known issue 2: https://github.com/pymc-devs/pymc3/issues/4417
         # fmt: off
@@ -344,7 +343,7 @@ class TestValueGradFunction(unittest.TestCase):
             mu = pm.Normal("mu", 0, 5)
             obs = pm.TruncatedNormal("obs", mu=mu, sigma=1, lower=-1, upper=2, observed=data)
 
-        npt.assert_allclose(m.dlogp([mu])({"mu": 0}), 2.499424682024436, rtol=1e-5)
+        npt.assert_allclose(m.dlogp([m.rvs_to_values[mu]])({"mu": 0}), 2.499424682024436, rtol=1e-5)
 
 
 @pytest.mark.xfail(reason="DensityDist not refactored for v4")
