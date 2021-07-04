@@ -112,7 +112,7 @@ def pymc3_random_discrete(
             if np.all(observed == expected):
                 p = 1.0
             else:
-                _, p = st.chisquare(observed+1, expected+1)
+                _, p = st.chisquare(observed + 1, expected + 1)
             f -= 1
         assert p > alpha, str(pt)
 
