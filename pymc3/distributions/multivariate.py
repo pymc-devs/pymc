@@ -791,7 +791,6 @@ class OrderedMultinomial:
         # Plot the results
         arviz.plot_posterior(trace_12_4, var_names=["complete_p"], ref_val=list(true_p));
     """
-    rv_op = multinomial
 
     def __new__(cls, name, *args, compute_p=True, **kwargs):
         out_rv = _OrderedMultinomial(name, *args, **kwargs)
