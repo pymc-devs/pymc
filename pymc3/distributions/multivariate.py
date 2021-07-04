@@ -718,7 +718,7 @@ class OrderedMultinomial:
     R"""
     Wrapper class for Ordered Multinomial distributions.
 
-    Useful for regression on ordinal data values whose values range
+    Useful for regression on ordinal data whose values range
     from 1 to K as a function of some predictor, :math:`\eta`, but
      which are _aggregated_ by trial, like multinomial observations (in
      contrast to `pm.OrderedLogistic`, which only accepts ordinal data
