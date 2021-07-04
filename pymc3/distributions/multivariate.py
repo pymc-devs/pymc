@@ -26,7 +26,7 @@ import scipy
 
 from aesara.graph.basic import Apply
 from aesara.graph.op import Op
-from aesara.tensor import gammaln
+from aesara.tensor import gammaln, sigmoid
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
@@ -791,6 +791,7 @@ class OrderedMultinomial:
         # Plot the results
         arviz.plot_posterior(trace_12_4, var_names=["complete_p"], ref_val=list(true_p));
     """
+    rv_op = multinomial
 
     def __new__(cls, name, *args, compute_p=True, **kwargs):
         out_rv = _OrderedMultinomial(name, *args, **kwargs)

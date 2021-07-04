@@ -1734,6 +1734,7 @@ class OrderedLogistic:
         plt.hist(posterior["cutpoints"][0], 80, alpha=0.2, color='k');
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
     """
+    rv_op = categorical
 
     def __new__(cls, name, *args, compute_p=True, **kwargs):
         out_rv = _OrderedLogistic(name, *args, **kwargs)
@@ -1845,6 +1846,7 @@ class OrderedProbit:
         plt.hist(posterior["cutpoints"][0], 80, alpha=0.2, color='k');
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
     """
+    rv_op = categorical
 
     def __new__(cls, name, *args, compute_p=True, **kwargs):
         out_rv = _OrderedProbit(name, *args, **kwargs)
