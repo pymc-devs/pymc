@@ -1660,24 +1660,6 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(BoundedNormal, {"tau": Rplus}, ref_rand=ref_rand)
 
-    def test_skew_normal(self):
-        def ref_rand(size, alpha, mu, sigma):
-            return st.skewnorm.rvs(size=size, a=alpha, loc=mu, scale=sigma)
-
-        pymc3_random(pm.SkewNormal, {"mu": R, "sigma": Rplus, "alpha": R}, ref_rand=ref_rand)
-
-    def test_logitnormal(self):
-        def ref_rand(size, mu, sigma):
-            return expit(st.norm.rvs(loc=mu, scale=sigma, size=size))
-
-        pymc3_random(pm.LogitNormal, {"mu": R, "sigma": Rplus}, ref_rand=ref_rand)
-
-    def test_moyal(self):
-        def ref_rand(size, mu, sigma):
-            return st.moyal.rvs(loc=mu, scale=sigma, size=size)
-
-        pymc3_random(pm.Moyal, {"mu": R, "sigma": Rplus}, ref_rand=ref_rand)
-
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_lkj(self):
         for n in [2, 10, 50]:
