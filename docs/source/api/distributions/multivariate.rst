@@ -13,6 +13,7 @@ Multivariate
    LKJCholeskyCov
    LKJCorr
    Multinomial
+   OrderedMultinomial
    Dirichlet
    DirichletMultinomial
    CAR

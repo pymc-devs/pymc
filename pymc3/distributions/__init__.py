@@ -94,6 +94,7 @@ from pymc3.distributions.multivariate import (
     Multinomial,
     MvNormal,
     MvStudentT,
+    OrderedMultinomial,
     Wishart,
     WishartBartlett,
 )
@@ -159,6 +160,7 @@ __all__ = [
     "Dirichlet",
     "Multinomial",
     "DirichletMultinomial",
+    "OrderedMultinomial",
     "Wishart",
     "WishartBartlett",
     "LKJCholeskyCov",

@@ -27,6 +27,8 @@ from aesara.tensor.random.basic import (
 )
 from scipy import stats
 
+import pymc3 as pm
+
 from pymc3.aesaraf import floatX, intX, take_along_axis
 from pymc3.distributions.dist_math import (
     betaln,
@@ -59,6 +61,7 @@ __all__ = [
     "HyperGeometric",
     "Categorical",
     "OrderedLogistic",
+    "OrderedProbit",
 ]
 
 
@@ -1636,15 +1639,41 @@ class ZeroInflatedNegativeBinomial(Discrete):
         )
 
 
-class OrderedLogistic(Categorical):
+class _OrderedLogistic(Categorical):
+    r"""
+    Underlying class for ordered logistic distributions.
+    See docs for the OrderedLogistic wrapper class for more details on how to use it in models.
+    """
+    rv_op = categorical
+
+    @classmethod
+    def dist(cls, eta, cutpoints, *args, **kwargs):
+        eta = at.as_tensor_variable(floatX(eta))
+        cutpoints = at.as_tensor_variable(cutpoints)
+
+        pa = sigmoid(cutpoints - at.shape_padright(eta))
+        p_cum = at.concatenate(
+            [
+                at.zeros_like(at.shape_padright(pa[..., 0])),
+                pa,
+                at.ones_like(at.shape_padright(pa[..., 0])),
+            ],
+            axis=-1,
+        )
+        p = p_cum[..., 1:] - p_cum[..., :-1]
+
+        return super().dist(p, *args, **kwargs)
+
+
+class OrderedLogistic:
     R"""
-    Ordered Logistic log-likelihood.
+    Wrapper class for Ordered Logistic distributions.
 
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
-    mapped to which of the K observed dependent variables.  The number
-    of cutpoints is K - 1.  It is recommended that the cutpoints are
+    mapped to which of the K observed dependent variables. The number
+    of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
 
     .. math::
@@ -1665,10 +1694,14 @@ class OrderedLogistic(Categorical):
     ----------
     eta: float
         The predictor.
-    c: array
+    cutpoints: array
         The length K - 1 array of cutpoints which break :math:`\eta` into
-        ranges.  Do not explicitly set the first and last elements of
+        ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
+    compute_p: boolean, default True
+        Whether to compute and store in the trace the inferred probabilities of each categories,
+        based on the cutpoints' values. Defaults to True.
+        Might be useful to disable it if memory usage is of interest.
 
     Examples
     --------
@@ -1691,7 +1724,7 @@ class OrderedLogistic(Categorical):
             cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedLogistic("y", cutpoints=cutpoints, eta=x, observed=y)
-            idata = pm.sample(1000)
+            idata = pm.sample()
 
         # Plot the results
         plt.hist(cluster1, 30, alpha=0.5);
@@ -1700,9 +1733,24 @@ class OrderedLogistic(Categorical):
         posterior = idata.posterior.stack(sample=("chain", "draw"))
         plt.hist(posterior["cutpoints"][0], 80, alpha=0.2, color='k');
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
-
     """
 
+    def __new__(cls, name, *args, compute_p=True, **kwargs):
+        out_rv = _OrderedLogistic(name, *args, **kwargs)
+        if compute_p:
+            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3])
+        return out_rv
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        return _OrderedLogistic.dist(*args, **kwargs)
+
+
+class _OrderedProbit(Categorical):
+    r"""
+    Underlying class for ordered probit distributions.
+    See docs for the OrderedProbit wrapper class for more details on how to use it in models.
+    """
     rv_op = categorical
 
     @classmethod
@@ -1710,29 +1758,30 @@ class OrderedLogistic(Categorical):
         eta = at.as_tensor_variable(floatX(eta))
         cutpoints = at.as_tensor_variable(cutpoints)
 
-        pa = sigmoid(cutpoints - at.shape_padright(eta))
-        p_cum = at.concatenate(
+        probits = at.shape_padright(eta) - cutpoints
+        _log_p = at.concatenate(
             [
-                at.zeros_like(at.shape_padright(pa[..., 0])),
-                pa,
-                at.ones_like(at.shape_padright(pa[..., 0])),
+                at.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
+                log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
+                at.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
             ],
             axis=-1,
         )
-        p = p_cum[..., 1:] - p_cum[..., :-1]
+        _log_p = at.as_tensor_variable(floatX(_log_p))
+        p = at.exp(_log_p)
 
-        return super().dist(p, **kwargs)
+        return super().dist(p, *args, **kwargs)
 
 
-class OrderedProbit(Categorical):
+class OrderedProbit:
     R"""
-    Ordered Probit log-likelihood.
+    Wrapper class for Ordered Probit distributions.
 
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
-    mapped to which of the K observed dependent variables.  The number
-    of cutpoints is K - 1.  It is recommended that the cutpoints are
+    mapped to which of the K observed dependent variables. The number
+    of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
 
     In order to stabilize the computation, log-likelihood is computed
@@ -1754,13 +1803,16 @@ class OrderedProbit(Categorical):
 
     Parameters
     ----------
-    eta : float
+    eta: float
         The predictor.
-    c : array
+    cutpoints: array
         The length K - 1 array of cutpoints which break :math:`\eta` into
-        ranges.  Do not explicitly set the first and last elements of
+        ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
-
+    compute_p: boolean, default True
+        Whether to compute and store in the trace the inferred probabilities of each categories,
+        based on the cutpoints' values. Defaults to True.
+        Might be useful to disable it if memory usage is of interest.
     sigma: float
          The standard deviation of probit function.
     Example
@@ -1783,7 +1835,7 @@ class OrderedProbit(Categorical):
             cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedProbit("y", cutpoints=cutpoints, eta=x, observed=y)
-            idata = pm.sample(1000)
+            idata = pm.sample()
 
         # Plot the results
         plt.hist(cluster1, 30, alpha=0.5);
@@ -1792,26 +1844,14 @@ class OrderedProbit(Categorical):
         posterior = idata.posterior.stack(sample=("chain", "draw"))
         plt.hist(posterior["cutpoints"][0], 80, alpha=0.2, color='k');
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
-
     """
 
-    rv_op = categorical
+    def __new__(cls, name, *args, compute_p=True, **kwargs):
+        out_rv = _OrderedProbit(name, *args, **kwargs)
+        if compute_p:
+            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3])
+        return out_rv
 
     @classmethod
-    def dist(cls, eta, cutpoints, *args, **kwargs):
-        eta = at.as_tensor_variable(floatX(eta))
-        cutpoints = at.as_tensor_variable(cutpoints)
-
-        probits = at.shape_padright(eta) - cutpoints
-        _log_p = at.concatenate(
-            [
-                at.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
-                log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
-                at.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
-            ],
-            axis=-1,
-        )
-        _log_p = at.as_tensor_variable(floatX(_log_p))
-        p = at.exp(_log_p)
-
-        return super().dist(p, **kwargs)
+    def dist(cls, *args, **kwargs):
+        return _OrderedProbit.dist(*args, **kwargs)

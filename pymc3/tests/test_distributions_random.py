@@ -33,8 +33,9 @@ import pymc3 as pm
 
 from pymc3.aesaraf import change_rv_size, floatX, intX
 from pymc3.distributions.continuous import get_tau_sigma, interpolated
+from pymc3.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc3.distributions.dist_math import clipped_beta_rvs
-from pymc3.distributions.multivariate import quaddist_matrix
+from pymc3.distributions.multivariate import _OrderedMultinomial, quaddist_matrix
 from pymc3.distributions.shape_utils import to_tuple
 from pymc3.exceptions import ShapeError
 from pymc3.tests.helpers import SeededTest, select_by_precision
@@ -1432,7 +1433,7 @@ class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
 
 
 class TestOrderedLogistic(BaseTestDistribution):
-    pymc_dist = pm.OrderedLogistic
+    pymc_dist = _OrderedLogistic
     pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2])}
     expected_rv_op_params = {"p": np.array([0.11920292, 0.38079708, 0.38079708, 0.11920292])}
     tests_to_run = [
@@ -1442,9 +1443,24 @@ class TestOrderedLogistic(BaseTestDistribution):
 
 
 class TestOrderedProbit(BaseTestDistribution):
-    pymc_dist = pm.OrderedProbit
+    pymc_dist = _OrderedProbit
     pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2])}
     expected_rv_op_params = {"p": np.array([0.02275013, 0.47724987, 0.47724987, 0.02275013])}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+    ]
+
+
+class TestOrderedMultinomial(BaseTestDistribution):
+    pymc_dist = _OrderedMultinomial
+    pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2]), "n": 1000}
+    sizes_to_check = [None, (1), (4,), (3, 2)]
+    sizes_expected = [(4,), (1, 4), (4, 4), (3, 2, 4)]
+    expected_rv_op_params = {
+        "n": 1000,
+        "p": np.array([0.11920292, 0.38079708, 0.38079708, 0.11920292]),
+    }
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",

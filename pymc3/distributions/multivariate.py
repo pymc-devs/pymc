@@ -26,7 +26,7 @@ import scipy
 
 from aesara.graph.basic import Apply
 from aesara.graph.op import Op
-from aesara.tensor import gammaln
+from aesara.tensor import gammaln, sigmoid
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
@@ -56,6 +56,7 @@ __all__ = [
     "Dirichlet",
     "Multinomial",
     "DirichletMultinomial",
+    "OrderedMultinomial",
     "Wishart",
     "WishartBartlett",
     "LKJCorr",
@@ -112,17 +113,13 @@ def quaddist_parse(value, mu, cov, mat_type="cov"):
         onedim = False
 
     delta = value - mu
-
-    if mat_type == "cov":
-        # Use this when Theano#5908 is released.
-        # return MvNormalLogp()(self.cov, delta)
-        chol_cov = cholesky(cov)
+    # Use this when Theano#5908 is released.
+    # return MvNormalLogp()(self.cov, delta)
+    chol_cov = cholesky(cov)
+    if mat_type != "tau":
         dist, logdet, ok = quaddist_chol(delta, chol_cov)
-    elif mat_type == "tau":
-        dist, logdet, ok = quaddist_tau(delta, chol_cov)
     else:
-        dist, logdet, ok = quaddist_chol(delta, chol_cov)
-
+        dist, logdet, ok = quaddist_tau(delta, chol_cov)
     if onedim:
         return dist[0], logdet, ok
 
@@ -688,6 +685,122 @@ class DirichletMultinomial(Discrete):
 
     def _distr_parameters_for_repr(self):
         return ["n", "a"]
+
+
+class _OrderedMultinomial(Multinomial):
+    r"""
+    Underlying class for ordered multinomial distributions.
+    See docs for the OrderedMultinomial wrapper class for more details on how to use it in models.
+    """
+    rv_op = multinomial
+
+    @classmethod
+    def dist(cls, eta, cutpoints, n, *args, **kwargs):
+        eta = at.as_tensor_variable(floatX(eta))
+        cutpoints = at.as_tensor_variable(cutpoints)
+        n = at.as_tensor_variable(intX(n))
+
+        pa = sigmoid(cutpoints - at.shape_padright(eta))
+        p_cum = at.concatenate(
+            [
+                at.zeros_like(at.shape_padright(pa[..., 0])),
+                pa,
+                at.ones_like(at.shape_padright(pa[..., 0])),
+            ],
+            axis=-1,
+        )
+        p = p_cum[..., 1:] - p_cum[..., :-1]
+
+        return super().dist(n, p, *args, **kwargs)
+
+
+class OrderedMultinomial:
+    R"""
+    Wrapper class for Ordered Multinomial distributions.
+
+    Useful for regression on ordinal data whose values range
+    from 1 to K as a function of some predictor, :math:`\eta`, but
+     which are _aggregated_ by trial, like multinomial observations (in
+     contrast to `pm.OrderedLogistic`, which only accepts ordinal data
+     in a _disaggregated_ format, like categorical observations).
+     The cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
+    mapped to which of the K observed dependent variables. The number
+    of cutpoints is K - 1. It is recommended that the cutpoints are
+    constrained to be ordered.
+
+    .. math::
+
+       f(k \mid \eta, c) = \left\{
+         \begin{array}{l}
+           1 - \text{logit}^{-1}(\eta - c_1)
+             \,, \text{if } k = 0 \\
+           \text{logit}^{-1}(\eta - c_{k - 1}) -
+           \text{logit}^{-1}(\eta - c_{k})
+             \,, \text{if } 0 < k < K \\
+           \text{logit}^{-1}(\eta - c_{K - 1})
+             \,, \text{if } k = K \\
+         \end{array}
+       \right.
+
+    Parameters
+    ----------
+    eta: float
+        The predictor.
+    cutpoints: array
+        The length K - 1 array of cutpoints which break :math:`\eta` into
+        ranges. Do not explicitly set the first and last elements of
+        :math:`c` to negative and positive infinity.
+    n: int
+        The total number of multinomial trials.
+    compute_p: boolean, default True
+        Whether to compute and store in the trace the inferred probabilities of each
+        categories,
+        based on the cutpoints' values. Defaults to True.
+        Might be useful to disable it if memory usage is of interest.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Generate data for a simple 1 dimensional example problem
+        true_cum_p = np.array([0.1, 0.15, 0.25, 0.50, 0.65, 0.90, 1.0])
+        true_p = np.hstack([true_cum_p[0], true_cum_p[1:] - true_cum_p[:-1]])
+        fake_elections = np.random.multinomial(n=1_000, pvals=true_p, size=60)
+
+        # Ordered multinomial regression
+        with pm.Model() as model:
+            cutpoints = pm.Normal(
+                "cutpoints",
+                mu=np.arange(6) - 2.5,
+                sigma=1.5,
+                initval=np.arange(6) - 2.5,
+                transform=pm.distributions.transforms.ordered,
+            )
+
+            pm.OrderedMultinomial(
+                "results",
+                eta=0.0,
+                cutpoints=cutpoints,
+                n=fake_elections.sum(1),
+                observed=fake_elections,
+            )
+
+            trace = pm.sample()
+
+        # Plot the results
+        arviz.plot_posterior(trace_12_4, var_names=["complete_p"], ref_val=list(true_p));
+    """
+
+    def __new__(cls, name, *args, compute_p=True, **kwargs):
+        out_rv = _OrderedMultinomial(name, *args, **kwargs)
+        if compute_p:
+            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[4])
+        return out_rv
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        return _OrderedMultinomial.dist(*args, **kwargs)
 
 
 def posdef(AA):
