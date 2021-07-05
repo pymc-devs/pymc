@@ -204,8 +204,7 @@ class TestSMCABC(SeededTest):
             return np.quantile(x, [0.25, 0.5, 0.75])
 
         def abs_diff(eps, obs_data, sim_data):
-            at.mean(at.abs_((obs_data - sim_data) / eps))
-            # return np.mean(np.abs((obs_data - sim_data) / eps))
+            return np.mean(np.abs((obs_data - sim_data) / eps))
 
         with pm.Model() as self.SMABC_test2:
             a = pm.Normal("a", mu=0, sigma=1)
@@ -248,10 +247,9 @@ class TestSMCABC(SeededTest):
         assert abs(0 - po_p["s"].mean()) < 0.05
         assert abs(1 - po_p["s"].std()) < 0.05
 
-    @pytest.mark.xfail(reason="Custom implementation not refactored yet")
     def test_custom_dist_sum(self):
         with self.SMABC_test2:
-            trace = pm.sample_smc(draws=1000, kernel="ABC")
+            trace = pm.sample_smc(draws=100)
 
     @pytest.mark.xfail(reason="standard SMC is failing with Potentials")
     def test_potential(self):

@@ -14,12 +14,15 @@
 
 import logging
 
+import aesara
 import aesara.tensor as at
 import numpy as np
 
+from aesara.graph.op import Op
 from aesara.tensor.random.op import RandomVariable
 from scipy.spatial import cKDTree
 
+from pymc3.aesaraf import floatX
 from pymc3.distributions.distribution import NoDistribution
 from pymc3.distributions.logp import _logp
 
@@ -84,36 +87,38 @@ class Simulator(NoDistribution):
         **kwargs,
     ):
 
-        if distance == "gaussian":
-            distance = gaussian
-        elif distance == "laplace":
-            distance = laplace
-        elif distance == "kullback_leibler":
-            raise NotImplementedError("KL not refactored yet")
-            # TODO: Wrap KL in aesara OP
-            # distance = KullbackLiebler(observed)
-            # if sum_stat != "identity":
-            #     _log.info(f"Automatically setting sum_stat to identity as expected by {distance}")
-            #     sum_stat = "identity"
-        elif hasattr(distance, "__call__"):
-            # TODO: Wrap (optionally) non symbolic distance in Aesara OP
-            distance = distance
-        else:
-            raise ValueError(f"The distance metric {distance} is not implemented")
+        if not isinstance(distance, Op):
+            if distance == "gaussian":
+                distance = gaussian
+            elif distance == "laplace":
+                distance = laplace
+            elif distance == "kullback_leibler":
+                raise NotImplementedError("KL not refactored yet")
+                # TODO: Wrap KL in aesara OP
+                # distance = KullbackLiebler(observed)
+                # if sum_stat != "identity":
+                #     _log.info(f"Automatically setting sum_stat to identity as expected by {distance}")
+                #     sum_stat = "identity"
+            elif callable(distance):
+                distance = create_distance_op_from_fn(distance)
+            else:
+                raise ValueError(f"The distance metric {distance} is not implemented")
 
-        if sum_stat == "identity":
-            sum_stat = identity
-        elif sum_stat == "sort":
-            sum_stat = at.sort
-        elif sum_stat == "mean":
-            sum_stat = at.mean
-        elif sum_stat == "median":
-            sum_stat = at.median
-        elif hasattr(sum_stat, "__call__"):
-            # TODO: Wrap (optionally) non symbolic sum_stat in Aesara OP
-            sum_stat = sum_stat
-        else:
-            raise ValueError(f"The summary statistics {sum_stat} is not implemented")
+        if not isinstance(sum_stat, Op):
+            if sum_stat == "identity":
+                sum_stat = identity
+            elif sum_stat == "sort":
+                sum_stat = at.sort
+            elif sum_stat == "mean":
+                sum_stat = at.mean
+            elif sum_stat == "median":
+                sum_stat = at.median
+            elif callable(sum_stat):
+                sum_stat = create_sum_stat_op_from_fn(sum_stat)
+            else:
+                raise ValueError(f"The summary statistics {sum_stat} is not implemented")
+
+        epsilon = at.as_tensor_variable(floatX(epsilon))
 
         if params is None:
             params = []
@@ -162,7 +167,6 @@ class Simulator(NoDistribution):
         sim_op = sim_rv.owner.op
         sim_data = at.as_tensor_variable(sim_op.make_node(*sim_rv.owner.inputs))
         sim_data.name = "sim_data"
-
         return distance(epsilon, sum_stat(value), sum_stat(sim_data))
 
 
@@ -199,3 +203,35 @@ class KullbackLiebler:
             sim_data = sim_data[:, None]
         nu_d, _ = cKDTree(sim_data).query(self.obs_data, 1)
         return self.d_n * np.sum(-np.log(nu_d / self.rho_d) / epsilon) + self.log_r
+
+
+def create_sum_stat_op_from_fn(fn):
+    class SumStat(Op):
+        if aesara.config.floatX == "float64":
+            itypes = [at.dvector]
+            otypes = [at.dvector]
+        else:
+            itypes = [at.fvector]
+            otypes = [at.fvector]
+
+        def perform(self, node, inputs, outputs):
+            (x,) = inputs
+            outputs[0][0] = np.atleast_1d(fn(x)).astype(aesara.config.floatX)
+
+    return SumStat()
+
+
+def create_distance_op_from_fn(fn):
+    class Distance(Op):
+        if aesara.config.floatX == "float64":
+            itypes = [at.dscalar, at.dvector, at.dvector]
+            otypes = [at.dvector]
+        else:
+            itypes = [at.fscalar, at.fvector, at.fvector]
+            otypes = [at.fvector]
+
+        def perform(self, node, inputs, outputs):
+            eps, obs_data, sim_data = inputs
+            outputs[0][0] = np.atleast_1d(fn(eps, obs_data, sim_data)).astype(aesara.config.floatX)
+
+    return Distance()
