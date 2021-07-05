@@ -144,15 +144,12 @@ def pymc_random_discrete(
             e = intX(ref_rand(size=size, **pt))
             o = np.atleast_1d(o).flatten()
             e = np.atleast_1d(e).flatten()
-            observed = dict(zip(*np.unique(o, return_counts=True)))
-            expected = dict(zip(*np.unique(e, return_counts=True)))
-            for e in expected.keys():
-                expected[e] = (observed.get(e, 0), expected[e])
-            k = np.array([v for v in expected.values()])
-            if np.all(k[:, 0] == k[:, 1]):
+            observed, _ = np.histogram(o, bins=min(7, len(set(o))))
+            expected, _ = np.histogram(e, bins=min(7, len(set(o))))
+            if np.all(observed == expected):
                 p = 1.0
             else:
-                _, p = st.chisquare(k[:, 0], k[:, 1])
+                _, p = st.chisquare(observed + 1, expected + 1)
             f -= 1
         assert p > alpha, str(pt)
 
