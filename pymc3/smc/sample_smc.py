@@ -35,15 +35,15 @@ from pymc3.smc.smc import SMC
 
 def sample_smc(
     draws=2000,
-    kernel="metropolis",
+    kernel=None,
     n_steps=25,
     *,
     start=None,
     tune_steps=True,
     p_acc_rate=0.85,
     threshold=0.5,
-    save_sim_data=False,
-    save_log_pseudolikelihood=True,
+    save_sim_data=None,
+    save_log_pseudolikelihood=None,
     model=None,
     random_seed=-1,
     parallel=None,
@@ -62,9 +62,6 @@ def sample_smc(
     draws: int
         The number of samples to draw from the posterior (i.e. last stage). And also the number of
         independent chains. Defaults to 2000.
-    kernel: str
-        Kernel method for the SMC sampler. Available option are ``metropolis`` (default) and `ABC`.
-        Use `ABC` for likelihood free inference together with a ``pm.Simulator``.
     n_steps: int
         The number of steps of each Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
         for the first stage and for the others it will be determined automatically based on the
@@ -82,13 +79,6 @@ def sample_smc(
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
         the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
-    save_sim_data : bool
-        Whether or not to save the simulated data. This parameter only works with the ABC kernel.
-        The stored data corresponds to a samples from the posterior predictive distribution.
-    save_log_pseudolikelihood : bool
-        Whether or not to save the log pseudolikelihood values. This parameter only works with the
-        ABC kernel. The stored data can be used to compute LOO or WAIC values. Computing LOO/WAIC
-        values from log pseudolikelihood values is experimental.
     model: Model (optional if in ``with`` context)).
     random_seed: int
         random seed
@@ -156,6 +146,29 @@ def sample_smc(
         %282007%29133:7%28816%29>`__
     """
 
+    if kernel is not None:
+        warnings.warn(
+            "The argument kernel in sample_smc has been deprecated. It is no "
+            "longer needed to specify it.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    if save_sim_data is not None:
+        warnings.warn(
+            "save_sim_data has been deprecated. Use pm.sample_posterior_predictive "
+            "to obtain the same type of samples.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+    if save_log_pseudolikelihood is not None:
+        warnings.warn(
+            "save_log_pseudolikelihood has been deprecated. This information is "
+            "now saved as log_likelihood in models with Simulator distributions.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     if parallel is not None:
         warnings.warn(
             "The argument parallel is deprecated, use the argument cores instead.",
@@ -198,22 +211,13 @@ def sample_smc(
     if not isinstance(random_seed, Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
 
-    if kernel.lower() == "abc":
-        if len(model.observed_RVs) != 1:
-            warnings.warn("SMC-ABC only works properly with models with one observed variable")
-        if model.potentials:
-            _log.info("Potentials will be added to the prior term")
-
     params = (
         draws,
-        kernel,
         n_steps,
         start,
         tune_steps,
         p_acc_rate,
         threshold,
-        save_sim_data,
-        save_log_pseudolikelihood,
         model,
     )
 
@@ -241,9 +245,7 @@ def sample_smc(
 
     (
         traces,
-        sim_data,
         log_marginal_likelihoods,
-        log_pseudolikelihood,
         betas,
         accept_ratios,
         nsteps,
@@ -259,7 +261,6 @@ def sample_smc(
         trace.report._n_draws = draws
         trace.report._n_tune = _n_tune
         trace.report.log_marginal_likelihood = log_marginal_likelihoods
-        trace.report.log_pseudolikelihood = log_pseudolikelihood
         trace.report.betas = betas
         trace.report.accept_ratios = accept_ratios
         trace.report.nsteps = nsteps
@@ -309,23 +310,16 @@ def sample_smc(
             trace.report._run_convergence_checks(idata, model)
     trace.report._log_summary()
 
-    posterior = idata if return_inferencedata else trace
-    if save_sim_data:
-        return posterior, {modelcontext(model).observed_RVs[0].name: np.array(sim_data)}
-    else:
-        return posterior
+    return idata if return_inferencedata else trace
 
 
 def sample_smc_int(
     draws,
-    kernel,
     n_steps,
     start,
     tune_steps,
     p_acc_rate,
     threshold,
-    save_sim_data,
-    save_log_pseudolikelihood,
     model,
     random_seed,
     chain,
@@ -334,14 +328,11 @@ def sample_smc_int(
     """Run one SMC instance."""
     smc = SMC(
         draws=draws,
-        kernel=kernel,
         n_steps=n_steps,
         start=start,
         tune_steps=tune_steps,
         p_acc_rate=p_acc_rate,
         threshold=threshold,
-        save_sim_data=save_sim_data,
-        save_log_pseudolikelihood=save_log_pseudolikelihood,
         model=model,
         random_seed=random_seed,
         chain=chain,
@@ -377,9 +368,7 @@ def sample_smc_int(
 
     return (
         smc.posterior_to_trace(),
-        smc.sim_data,
         smc.log_marginal_likelihood,
-        smc.log_pseudolikelihood,
         betas,
         accept_ratios,
         nsteps,

@@ -362,3 +362,23 @@ class TestSMCABC(SeededTest):
         assert not any(
             node for node in logp_sim2_fn.maker.fgraph.toposort() if isinstance(node.op, SortOp)
         )
+
+    def test_depracated_abc_args(self):
+        with self.SMABC_test:
+            with pytest.warns(
+                DeprecationWarning,
+                match="The argument kernel in sample_smc has been deprecated",
+            ):
+                pm.sample_smc(draws=10, chains=1, kernel="ABC")
+
+            with pytest.warns(
+                DeprecationWarning,
+                match="save_sim_data has been deprecated",
+            ):
+                pm.sample_smc(draws=10, chains=1, save_sim_data=True)
+
+            with pytest.warns(
+                DeprecationWarning,
+                match="save_log_pseudolikelihood has been deprecated",
+            ):
+                pm.sample_smc(draws=10, chains=1, save_log_pseudolikelihood=True)
