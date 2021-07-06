@@ -34,12 +34,30 @@ _log = logging.getLogger("pymc3")
 class SimulatorRV(RandomVariable):
     """A placeholder for Simulator RVs"""
 
+    name = "SimulatorRV"
     _print_name = ("Simulator", "\\operatorname{Simulator}")
     fn = None
+    epsilon = None
+    distance = None
+    sum_stat = None
 
     @classmethod
     def rng_fn(cls, *args, **kwargs):
+        if cls.fn is None:
+            raise ValueError(f"fn was not defined for {cls}")
         return cls.fn(*args, **kwargs)
+
+    @classmethod
+    def _distance(cls, epsilon, value, sim_value):
+        if cls.distance is None:
+            raise ValueError(f"distance function was not defined for {cls}")
+        return cls.distance(epsilon, value, sim_value)
+
+    @classmethod
+    def _sum_stat(cls, value):
+        if cls.sum_stat is None:
+            raise ValueError(f"sum_stat function was not defined for {cls}")
+        return cls.sum_stat(value)
 
 
 class Simulator(NoDistribution):
@@ -138,9 +156,9 @@ class Simulator(NoDistribution):
                 inplace=False,
                 # Specifc to Simulator
                 fn=fn,
-                # distance=distance,
-                # sum_stat=sum_stat,
-                # epsilon=epsilon,
+                distance=distance,
+                sum_stat=sum_stat,
+                epsilon=epsilon,
             ),
         )()
 
@@ -150,24 +168,25 @@ class Simulator(NoDistribution):
         @_logp.register(rv_type)
         def logp(op, sim_rv, rvs_to_values, *sim_params, **kwargs):
             value_var = rvs_to_values.get(sim_rv, sim_rv)
-            return cls.logp(
+            return Simulator.logp(
                 value_var,
                 sim_rv,
-                distance,
-                sum_stat,
-                epsilon,
             )
 
         cls.rv_op = sim_op
         return super().__new__(cls, name, params, observed=observed, **kwargs)
 
     @classmethod
-    def logp(cls, value, sim_rv, distance, sum_stat, epsilon):
+    def logp(cls, value, sim_rv):
         # Create a new simulatorRV identically to the original one
         sim_op = sim_rv.owner.op
         sim_data = at.as_tensor_variable(sim_op.make_node(*sim_rv.owner.inputs))
         sim_data.name = "sim_data"
-        return distance(epsilon, sum_stat(value), sum_stat(sim_data))
+        return sim_op._distance(
+            sim_op.epsilon,
+            sim_op._sum_stat(value),
+            sim_op._sum_stat(sim_data),
+        )
 
 
 def identity(x):

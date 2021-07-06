@@ -19,6 +19,8 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 
+from aesara.graph.basic import ancestors
+from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.sort import SortOp
 from arviz.data.inference_data import InferenceData
 
@@ -336,11 +338,6 @@ class TestSMCABC(SeededTest):
                 observed=data2,
             )
 
-            trace = pm.sample_smc(chains=1, return_inferencedata=False)
-
-        assert abs(true_a - trace["a"].mean()) < 0.05
-        assert abs(true_b - trace["b"].mean()) < 0.05
-
         # Check that the logps use the correct methods
         sim1_val = m.rvs_to_values[sim1]
         logp_sim1 = _logp(sim1.owner.op, sim1, {sim1: sim1_val})
@@ -357,6 +354,19 @@ class TestSMCABC(SeededTest):
         assert not any(
             node for node in logp_sim2_fn.maker.fgraph.toposort() if isinstance(node.op, SortOp)
         )
+
+        # Check that there are two RandomVariables in the graph
+        rvs = [
+            node
+            for node in ancestors([m.logpt])
+            if node.owner and isinstance(node.owner.op, RandomVariable)
+        ]
+        assert len(rvs) == 2
+
+        with m:
+            trace = pm.sample_smc(chains=1, return_inferencedata=False)
+        assert abs(true_a - trace["a"].mean()) < 0.05
+        assert abs(true_b - trace["b"].mean()) < 0.05
 
     def test_depracated_abc_args(self):
         with self.SMABC_test:
