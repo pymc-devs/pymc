@@ -809,7 +809,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     @property
     def datalogpt(self):
         with self:
-            factors = [logpt(obs, obs.tag.observations) for obs in self.observed_RVs]
+            factors = [logpt_sum(obs, obs.tag.observations) for obs in self.observed_RVs]
 
             # Convert random variables into their log-likelihood inputs and
             # apply their transforms, if any

@@ -651,3 +651,17 @@ def test_set_initval():
         y = pm.Normal("y", x, 1)
 
     assert model.rvs_to_values[y] in model.initial_values
+
+
+def test_datalogpt_multiple_shapes():
+    with pm.Model() as m:
+        x = pm.Normal("x", 0, 1)
+        z1 = pm.Potential("z1", x)
+        z2 = pm.Potential("z2", at.full((1, 3), x))
+        y1 = pm.Normal("y1", x, 1, observed=np.array([1]))
+        y2 = pm.Normal("y2", x, 1, observed=np.array([1, 2]))
+        y3 = pm.Normal("y3", x, 1, observed=np.array([1, 2, 3]))
+
+    # This would raise a TypeError, see #4803 and #4804
+    x_val = m.rvs_to_values[x]
+    m.datalogpt.eval({x_val: 0})
