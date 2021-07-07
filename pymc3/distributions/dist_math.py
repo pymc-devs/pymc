@@ -31,7 +31,9 @@ from aesara.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from aesara.scan import until
 from aesara.tensor import gammaln
 from aesara.tensor.elemwise import Elemwise
-from aesara.tensor.slinalg import Cholesky, Solve
+from aesara.tensor.slinalg import Cholesky
+from aesara.tensor.slinalg import solve_lower_triangular as solve_lower
+from aesara.tensor.slinalg import solve_upper_triangular as solve_upper
 
 from pymc3.aesaraf import floatX
 from pymc3.distributions.shape_utils import to_tuple
@@ -267,8 +269,6 @@ def MvNormalLogp():
     delta = at.matrix("delta")
     delta.tag.test_value = floatX(np.zeros((2, 3)))
 
-    solve_lower = Solve(A_structure="lower_triangular")
-    solve_upper = Solve(A_structure="upper_triangular")
     cholesky = Cholesky(lower=True, on_error="nan")
 
     n, k = delta.shape
