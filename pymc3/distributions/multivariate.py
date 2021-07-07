@@ -31,12 +31,9 @@ from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
 from aesara.tensor.random.utils import broadcast_params
-from aesara.tensor.slinalg import (
-    Cholesky,
-    Solve,
-    solve_lower_triangular,
-    solve_upper_triangular,
-)
+from aesara.tensor.slinalg import Cholesky
+from aesara.tensor.slinalg import solve_lower_triangular as solve_lower
+from aesara.tensor.slinalg import solve_upper_triangular as solve_upper
 from aesara.tensor.type import TensorType
 from scipy import linalg, stats
 
@@ -66,7 +63,6 @@ __all__ = [
     "CAR",
 ]
 
-solve_lower = Solve(A_structure="lower_triangular")
 # Step methods and advi do not catch LinAlgErrors at the
 # moment. We work around that by using a cholesky op
 # that returns a nan as first entry instead of raising
@@ -1716,10 +1712,10 @@ class MatrixNormal(Continuous):
         delta = value - mu
 
         # Find exponent piece by piece
-        right_quaddist = solve_lower_triangular(rowchol, delta)
+        right_quaddist = solve_lower(rowchol, delta)
         quaddist = at.nlinalg.matrix_dot(right_quaddist.T, right_quaddist)
-        quaddist = solve_lower_triangular(colchol, quaddist)
-        quaddist = solve_upper_triangular(colchol.T, quaddist)
+        quaddist = solve_lower(colchol, quaddist)
+        quaddist = solve_upper(colchol.T, quaddist)
         trquaddist = at.nlinalg.trace(quaddist)
 
         coldiag = at.diag(colchol)
