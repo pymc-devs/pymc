@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import collections
+import functools
 import threading
 import types
 import warnings
@@ -671,6 +672,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         from pymc3.printing import str_repr
 
         self.str_repr = types.MethodType(str_repr, self)
+        self._repr_latex_ = types.MethodType(functools.partial(str_repr, formatting="latex"), self)
 
     @property
     def model(self):

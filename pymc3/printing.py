@@ -144,16 +144,25 @@ def _latex_escape(text: str) -> str:
 
 
 def _default_repr_pretty(obj: Union[TensorVariable, Model], p, cycle):
-    """Handy plug-in method to instruct IPython-like REPLs to use our str_repr below."""
+    """Handy plug-in method to instruct IPython-like REPLs to use our str_repr above."""
     # we know that our str_repr does not recurse, so we can ignore cycle
     try:
-        p.text(obj.str_repr())
+        output = obj.str_repr()
+        # Find newlines and replace them with p.break_()
+        # (see IPython.lib.pretty._repr_pprint)
+        lines = output.splitlines()
+        with p.group():
+            for idx, output_line in enumerate(lines):
+                if idx:
+                    p.break_()
+                p.text(output_line)
     except AttributeError:
-        # the default fallback option
+        # the default fallback option (no str_repr method)
         IPython.lib.pretty._repr_pprint(obj, p, cycle)
 
 
 try:
+    # register our custom pretty printer in ipython shells
     import IPython
 
     IPython.lib.pretty.for_type(TensorVariable, _default_repr_pretty)
