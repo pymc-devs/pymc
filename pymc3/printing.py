@@ -88,9 +88,9 @@ def str_for_deterministic(
     if "latex" in formatting:
         print_name = r"\text{" + _latex_escape(print_name) + "}"
         if include_params:
-            return fr"${print_name} \sim Deterministic[{_str_for_expression(var, formatting=formatting)}]$"
+            return fr"${print_name} \sim \operatorname{{Deterministic}}[{_str_for_expression(var, formatting=formatting)}]$"
         else:
-            return fr"${print_name} \sim Deterministic$"
+            return fr"${print_name} \sim \operatorname{{Deterministic}}$"
     else:  # plain
         if include_params:
             return (
@@ -107,11 +107,9 @@ def str_for_potential(
     if "latex" in formatting:
         print_name = r"\text{" + _latex_escape(print_name) + "}"
         if include_params:
-            return (
-                fr"${print_name} \sim Potential[{_str_for_expression(var, formatting=formatting)}]$"
-            )
+            return fr"${print_name} \sim \operatorname{{Potential}}[{_str_for_expression(var, formatting=formatting)}]$"
         else:
-            return fr"${print_name} \sim Potential$"
+            return fr"${print_name} \sim \operatorname{{Potential}}$"
     else:  # plain
         if include_params:
             return fr"{print_name} ~ Potential[{_str_for_expression(var, formatting=formatting)}]"
