@@ -41,7 +41,7 @@ from pymc3.distributions.shape_utils import (
     resize_from_dims,
     resize_from_observed,
 )
-from pymc3.printing import str_repr
+from pymc3.printing import str_for_dist
 from pymc3.util import UNSET
 from pymc3.vartypes import string_types
 
@@ -228,9 +228,9 @@ class Distribution(metaclass=DistributionMeta):
         )
 
         # add in pretty-printing support
-        rv_out.str_repr = types.MethodType(str_repr, rv_out)
+        rv_out.str_repr = types.MethodType(str_for_dist, rv_out)
         rv_out._repr_latex_ = types.MethodType(
-            functools.partial(str_repr, formatting="latex"), rv_out
+            functools.partial(str_for_dist, formatting="latex"), rv_out
         )
 
         return rv_out

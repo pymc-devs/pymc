@@ -14,7 +14,6 @@
 
 import itertools
 
-from functools import singledispatch
 from typing import Union
 
 from aesara.graph.basic import walk
@@ -26,8 +25,7 @@ from aesara.tensor.var import TensorConstant
 from pymc3.model import Model
 
 
-@singledispatch
-def str_repr(rv: TensorVariable, formatting: str = "plain", include_params: bool = True) -> str:
+def str_for_dist(rv: TensorVariable, formatting: str = "plain", include_params: bool = True) -> str:
     """Make a human-readable string representation of a RandomVariable in a model, either
     LaTeX or plain, optionally with distribution parameter values included."""
 
@@ -51,11 +49,10 @@ def str_repr(rv: TensorVariable, formatting: str = "plain", include_params: bool
             return fr"{print_name} ~ {dist_name}"
 
 
-@str_repr.register
-def _(model: Model, formatting: str = "plain", include_params: bool = True) -> str:
+def str_for_model(model: Model, formatting: str = "plain", include_params: bool = True) -> str:
     """Make a human-readable string representation of Model, listing all random variables
     and their distributions, optionally including parameter values."""
-    all_rv = itertools.chain(model.unobserved_RVs, model.observed_RVs)
+    all_rv = itertools.chain(model.unobserved_RVs, model.observed_RVs, model.potentials)
 
     rv_reprs = [rv.str_repr(formatting=formatting, include_params=include_params) for rv in all_rv]
     rv_reprs = [rv_repr for rv_repr in rv_reprs if "TransformedDistribution()" not in rv_repr]
@@ -84,6 +81,44 @@ def _(model: Model, formatting: str = "plain", include_params: bool = True) -> s
         return "\n".join(rv_reprs)
 
 
+def str_for_deterministic(
+    var: TensorVariable, formatting: str = "plain", include_params: bool = True
+) -> str:
+    print_name = var.name if var.name is not None else "<unnamed>"
+    if "latex" in formatting:
+        print_name = r"\text{" + _latex_escape(print_name) + "}"
+        if include_params:
+            return fr"${print_name} \sim Deterministic[{_str_for_expression(var, formatting=formatting)}]$"
+        else:
+            return fr"${print_name} \sim Deterministic$"
+    else:  # plain
+        if include_params:
+            return (
+                fr"{print_name} ~ Deterministic[{_str_for_expression(var, formatting=formatting)}]"
+            )
+        else:
+            return fr"{print_name} ~ Deterministic"
+
+
+def str_for_potential(
+    var: TensorVariable, formatting: str = "plain", include_params: bool = True
+) -> str:
+    print_name = var.name if var.name is not None else "<unnamed>"
+    if "latex" in formatting:
+        print_name = r"\text{" + _latex_escape(print_name) + "}"
+        if include_params:
+            return (
+                fr"${print_name} \sim Potential[{_str_for_expression(var, formatting=formatting)}]$"
+            )
+        else:
+            return fr"${print_name} \sim Potential$"
+    else:  # plain
+        if include_params:
+            return fr"{print_name} ~ Potential[{_str_for_expression(var, formatting=formatting)}]"
+        else:
+            return fr"{print_name} ~ Potential"
+
+
 def _str_for_input_var(var: Variable, formatting: str) -> str:
     # note we're dispatching both on type(var) and on type(var.owner.op) so cannot
     # use the standard functools.singledispatch
@@ -93,6 +128,11 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
         return _str_for_input_rv(var, formatting)
     elif isinstance(var.owner.op, DimShuffle):
         return _str_for_input_var(var.owner.inputs[0], formatting)
+    elif hasattr(var, "str_repr") and (
+        var.str_repr.__func__ is str_for_deterministic or var.str_repr.__func__ is str_for_potential
+    ):
+        # display the name for a Deterministic or Potential, rather than the full expression
+        return var.name
     else:
         return _str_for_expression(var, formatting)
 

@@ -669,10 +669,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.deterministics = treelist()
             self.potentials = treelist()
 
-        from pymc3.printing import str_repr
+        from pymc3.printing import str_for_model
 
-        self.str_repr = types.MethodType(str_repr, self)
-        self._repr_latex_ = types.MethodType(functools.partial(str_repr, formatting="latex"), self)
+        self.str_repr = types.MethodType(str_for_model, self)
+        self._repr_latex_ = types.MethodType(
+            functools.partial(str_for_model, formatting="latex"), self
+        )
 
     @property
     def model(self):
@@ -1787,6 +1789,13 @@ def Deterministic(name, var, model=None, dims=None, auto=False):
         model.deterministics.append(var)
     model.add_random_variable(var, dims)
 
+    from pymc3.printing import str_for_deterministic
+
+    var.str_repr = types.MethodType(str_for_deterministic, var)
+    var._repr_latex_ = types.MethodType(
+        functools.partial(str_for_deterministic, formatting="latex"), var
+    )
+
     return var
 
 
@@ -1807,4 +1816,12 @@ def Potential(name, var, model=None):
     var.tag.scaling = None
     model.potentials.append(var)
     model.add_random_variable(var)
+
+    from pymc3.printing import str_for_potential
+
+    var.str_repr = types.MethodType(str_for_potential, var)
+    var._repr_latex_ = types.MethodType(
+        functools.partial(str_for_potential, formatting="latex"), var
+    )
+
     return var
