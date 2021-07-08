@@ -76,3 +76,4 @@ from pymc3.tests import test
 from pymc3.tuning import *
 from pymc3.variational import *
 from pymc3.vartypes import *
+from pymc3.quadratic_approximation import *
