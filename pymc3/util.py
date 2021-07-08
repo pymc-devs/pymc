@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import functools
-import re
 import warnings
 
 from typing import Dict, List, Tuple, Union
@@ -24,8 +23,6 @@ import numpy as np
 import xarray
 
 from cachetools import LRUCache, cachedmethod
-
-LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 
 UNSET = object()
 
@@ -116,30 +113,6 @@ class treedict(dict):
             return dict.__contains__(self, item) or self.parent.__contains__(item)
         else:
             return dict.__contains__(self, item)
-
-
-def escape_latex(strng):
-    r"""Consistently escape LaTeX special characters for _repr_latex_ in IPython
-
-    Implementation taken from the IPython magic `format_latex`
-
-    Examples
-    --------
-        escape_latex('disease_rate')  # 'disease\_rate'
-
-    Parameters
-    ----------
-    strng: str
-        string to escape LaTeX characters
-
-    Returns
-    -------
-    str
-        A string with LaTeX escaped
-    """
-    if strng is None:
-        return "None"
-    return LATEX_ESCAPE_RE.sub(r"\\\1", strng)
 
 
 def get_transformed_name(name, transform):
