@@ -27,7 +27,7 @@ from pymc3.model import Model
 
 
 @singledispatch
-def str_repr(rv: RandomVariable, formatting: str = "plain", include_params: bool = True) -> str:
+def str_repr(rv: TensorVariable, formatting: str = "plain", include_params: bool = True) -> str:
     """Make a human-readable string representation of a RandomVariable in a model, either
     LaTeX or plain, optionally with distribution parameter values included."""
 
