@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import collections
-import itertools
 import threading
 import types
 import warnings
@@ -1632,46 +1631,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             },
             name="Log-probability of test_point",
         )
-
-    def _str_repr(self, formatting="plain", **kwargs):
-        all_rv = itertools.chain(self.unobserved_RVs, self.observed_RVs)
-
-        if "latex" in formatting:
-            rv_reprs = [rv.__latex__(formatting=formatting) for rv in all_rv]
-            rv_reprs = [
-                rv_repr.replace(r"\sim", r"&\sim &").strip("$")
-                for rv_repr in rv_reprs
-                if rv_repr is not None
-            ]
-            return r"""$$
-                \begin{{array}}{{rcl}}
-                {}
-                \end{{array}}
-                $$""".format(
-                "\\\\".join(rv_reprs)
-            )
-        else:
-            rv_reprs = [rv.__str__() for rv in all_rv]
-            rv_reprs = [
-                rv_repr for rv_repr in rv_reprs if "TransformedDistribution()" not in rv_repr
-            ]
-            # align vars on their ~
-            names = [s[: s.index("~") - 1] for s in rv_reprs]
-            distrs = [s[s.index("~") + 2 :] for s in rv_reprs]
-            maxlen = str(max(len(x) for x in names))
-            rv_reprs = [
-                ("{name:>" + maxlen + "} ~ {distr}").format(name=n, distr=d)
-                for n, d in zip(names, distrs)
-            ]
-            return "\n".join(rv_reprs)
-
-    def __str__(self, **kwargs):
-        return self._str_repr(formatting="plain", **kwargs)
-
-    def _repr_latex_(self, *, formatting="latex", **kwargs):
-        return self._str_repr(formatting=formatting, **kwargs)
-
-    __latex__ = _repr_latex_
 
 
 # this is really disgusting, but it breaks a self-loop: I can't pass Model
