@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import contextvars
+import functools
 import inspect
 import multiprocessing
 import sys
@@ -41,6 +42,7 @@ from pymc3.distributions.shape_utils import (
     resize_from_dims,
     resize_from_observed,
 )
+from pymc3.printing import str_repr
 from pymc3.util import UNSET, get_repr_for_variable
 from pymc3.vartypes import string_types
 
@@ -222,7 +224,17 @@ class Distribution(metaclass=DistributionMeta):
             # Assigning the testval earlier causes trouble because the RV may not be created with the final shape already.
             rv_out.tag.test_value = initval
 
-        return model.register_rv(rv_out, name, observed, total_size, dims=dims, transform=transform)
+        rv_out = model.register_rv(
+            rv_out, name, observed, total_size, dims=dims, transform=transform
+        )
+
+        # add in pretty-printing support
+        rv_out.str_repr = types.MethodType(str_repr, rv_out)
+        rv_out._repr_latex_ = types.MethodType(
+            functools.partial(str_repr, formatting="latex"), rv_out
+        )
+
+        return rv_out
 
     @classmethod
     def dist(

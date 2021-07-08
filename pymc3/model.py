@@ -15,6 +15,7 @@
 import collections
 import itertools
 import threading
+import types
 import warnings
 
 from sys import modules
@@ -667,6 +668,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.auto_deterministics = treelist()
             self.deterministics = treelist()
             self.potentials = treelist()
+
+        from pymc3.printing import str_repr
+
+        self.str_repr = types.MethodType(str_repr, self)
 
     @property
     def model(self):
