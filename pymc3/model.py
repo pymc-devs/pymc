@@ -1789,11 +1789,16 @@ def Deterministic(name, var, model=None, dims=None, auto=False):
         model.deterministics.append(var)
     model.add_random_variable(var, dims)
 
-    from pymc3.printing import str_for_deterministic
+    from pymc3.printing import str_for_potential_or_deterministic
 
-    var.str_repr = types.MethodType(str_for_deterministic, var)
+    var.str_repr = types.MethodType(
+        functools.partial(str_for_potential_or_deterministic, dist_name="Deterministic"), var
+    )
     var._repr_latex_ = types.MethodType(
-        functools.partial(str_for_deterministic, formatting="latex"), var
+        functools.partial(
+            str_for_potential_or_deterministic, dist_name="Deterministic", formatting="latex"
+        ),
+        var,
     )
 
     return var
@@ -1817,11 +1822,16 @@ def Potential(name, var, model=None):
     model.potentials.append(var)
     model.add_random_variable(var)
 
-    from pymc3.printing import str_for_potential
+    from pymc3.printing import str_for_potential_or_deterministic
 
-    var.str_repr = types.MethodType(str_for_potential, var)
+    var.str_repr = types.MethodType(
+        functools.partial(str_for_potential_or_deterministic, dist_name="Potential"), var
+    )
     var._repr_latex_ = types.MethodType(
-        functools.partial(str_for_potential, formatting="latex"), var
+        functools.partial(
+            str_for_potential_or_deterministic, dist_name="Potential", formatting="latex"
+        ),
+        var,
     )
 
     return var

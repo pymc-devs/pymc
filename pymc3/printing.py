@@ -81,54 +81,36 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
         return "\n".join(rv_reprs)
 
 
-def str_for_deterministic(
-    var: TensorVariable, formatting: str = "plain", include_params: bool = True
+def str_for_potential_or_deterministic(
+    var: TensorVariable, dist_name: str, formatting: str = "plain", include_params: bool = True
 ) -> str:
     print_name = var.name if var.name is not None else "<unnamed>"
     if "latex" in formatting:
         print_name = r"\text{" + _latex_escape(print_name) + "}"
         if include_params:
-            return fr"${print_name} \sim \operatorname{{Deterministic}}[{_str_for_expression(var, formatting=formatting)}]$"
+            return fr"${print_name} \sim \operatorname{{{dist_name}}}({_str_for_expression(var, formatting=formatting)})$"
         else:
-            return fr"${print_name} \sim \operatorname{{Deterministic}}$"
+            return fr"${print_name} \sim \operatorname{{{dist_name}}}$"
     else:  # plain
         if include_params:
-            return (
-                fr"{print_name} ~ Deterministic[{_str_for_expression(var, formatting=formatting)}]"
-            )
+            return fr"{print_name} ~ {dist_name}({_str_for_expression(var, formatting=formatting)})"
         else:
-            return fr"{print_name} ~ Deterministic"
-
-
-def str_for_potential(
-    var: TensorVariable, formatting: str = "plain", include_params: bool = True
-) -> str:
-    print_name = var.name if var.name is not None else "<unnamed>"
-    if "latex" in formatting:
-        print_name = r"\text{" + _latex_escape(print_name) + "}"
-        if include_params:
-            return fr"${print_name} \sim \operatorname{{Potential}}[{_str_for_expression(var, formatting=formatting)}]$"
-        else:
-            return fr"${print_name} \sim \operatorname{{Potential}}$"
-    else:  # plain
-        if include_params:
-            return fr"{print_name} ~ Potential[{_str_for_expression(var, formatting=formatting)}]"
-        else:
-            return fr"{print_name} ~ Potential"
+            return fr"{print_name} ~ {dist_name}"
 
 
 def _str_for_input_var(var: Variable, formatting: str) -> str:
     # note we're dispatching both on type(var) and on type(var.owner.op) so cannot
     # use the standard functools.singledispatch
+
+    def _is_potential_or_determinstic(var: Variable) -> bool:
+        return (
+            hasattr(var, "str_repr")
+            and var.str_repr.__func__.func is str_for_potential_or_deterministic
+        )
+
     if isinstance(var, TensorConstant):
         return _str_for_constant(var, formatting)
-    elif isinstance(var.owner.op, RandomVariable) or (
-        hasattr(var, "str_repr")
-        and (
-            var.str_repr.__func__ is str_for_deterministic
-            or var.str_repr.__func__ is str_for_potential
-        )
-    ):
+    elif isinstance(var.owner.op, RandomVariable) or _is_potential_or_determinstic(var):
         # show the names for RandomVariables, Deterministics, and Potentials, rather
         # than the full expression
         return _str_for_input_rv(var, formatting)
