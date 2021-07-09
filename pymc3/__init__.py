@@ -68,6 +68,7 @@ from pymc3.math import (
 from pymc3.model import *
 from pymc3.model_graph import model_to_graphviz
 from pymc3.plots import *
+from pymc3.printing import *
 from pymc3.sampling import *
 from pymc3.smc import *
 from pymc3.stats import *
