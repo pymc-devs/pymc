@@ -122,15 +122,18 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
     # use the standard functools.singledispatch
     if isinstance(var, TensorConstant):
         return _str_for_constant(var, formatting)
-    elif isinstance(var.owner.op, RandomVariable):
+    elif isinstance(var.owner.op, RandomVariable) or (
+        hasattr(var, "str_repr")
+        and (
+            var.str_repr.__func__ is str_for_deterministic
+            or var.str_repr.__func__ is str_for_potential
+        )
+    ):
+        # show the names for RandomVariables, Deterministics, and Potentials, rather
+        # than the full expression
         return _str_for_input_rv(var, formatting)
     elif isinstance(var.owner.op, DimShuffle):
         return _str_for_input_var(var.owner.inputs[0], formatting)
-    elif hasattr(var, "str_repr") and (
-        var.str_repr.__func__ is str_for_deterministic or var.str_repr.__func__ is str_for_potential
-    ):
-        # display the name for a Deterministic or Potential, rather than the full expression
-        return var.name
     else:
         return _str_for_expression(var, formatting)
 
