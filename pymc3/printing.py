@@ -99,14 +99,12 @@ def str_for_potential_or_deterministic(
 
 
 def _str_for_input_var(var: Variable, formatting: str) -> str:
-    # note we're dispatching both on type(var) and on type(var.owner.op) so cannot
-    # use the standard functools.singledispatch
-
     def _is_potential_or_determinstic(var: Variable) -> bool:
-        return (
-            hasattr(var, "str_repr")
-            and var.str_repr.__func__.func is str_for_potential_or_deterministic
-        )
+        try:
+            return var.str_repr.__func__.func is str_for_potential_or_deterministic
+        except AttributeError:
+            # in case other code overrides str_repr, fallback
+            return False
 
     if isinstance(var, TensorConstant):
         return _str_for_constant(var, formatting)
