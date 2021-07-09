@@ -104,7 +104,7 @@ from pymc3.distributions import (
     logpt_sum,
 )
 from pymc3.math import kronecker
-from pymc3.model import Deterministic, Model, Point
+from pymc3.model import Deterministic, Model, Point, Potential
 from pymc3.tests.helpers import select_by_precision
 from pymc3.vartypes import continuous_types
 
@@ -2786,7 +2786,6 @@ class TestBoundedContinuous:
         assert upper_interval is None
 
 
-@pytest.mark.xfail(reason="LaTeX repr and str no longer applicable")
 class TestStrAndLatexRepr:
     def setup_class(self):
         # True parameter values
@@ -2802,6 +2801,9 @@ class TestStrAndLatexRepr:
         # Simulate outcome variable
         Y = alpha + X.dot(beta) + np.random.randn(size) * sigma
         with Model() as self.model:
+            # TODO: some variables commented out here as they're not working properly
+            # in v4 yet (9-jul-2021), so doesn't make sense to test str/latex for them
+
             # Priors for unknown model parameters
             alpha = Normal("alpha", mu=0, sigma=10)
             b = Normal("beta", mu=0, sigma=10, size=(2,), observed=beta)
@@ -2811,16 +2813,16 @@ class TestStrAndLatexRepr:
             Z = MvNormal("Z", mu=np.zeros(2), chol=np.eye(2), size=(2,))
 
             # NegativeBinomial representations to test issue 4186
-            nb1 = pm.NegativeBinomial(
-                "nb_with_mu_alpha", mu=pm.Normal("nbmu"), alpha=pm.Gamma("nbalpha", mu=6, sigma=1)
-            )
+            # nb1 = pm.NegativeBinomial(
+            #     "nb_with_mu_alpha", mu=pm.Normal("nbmu"), alpha=pm.Gamma("nbalpha", mu=6, sigma=1)
+            # )
             nb2 = pm.NegativeBinomial("nb_with_p_n", p=pm.Uniform("nbp"), n=10)
 
             # Expected value of outcome
             mu = Deterministic("mu", floatX(alpha + at.dot(X, b)))
 
             # add a bounded variable as well
-            bound_var = Bound(Normal, lower=1.0)("bound_var", mu=0, sigma=10)
+            # bound_var = Bound(Normal, lower=1.0)("bound_var", mu=0, sigma=10)
 
             # KroneckerNormal
             n, m = 3, 4
@@ -2828,13 +2830,13 @@ class TestStrAndLatexRepr:
             kron_normal = KroneckerNormal("kron_normal", mu=np.zeros(n * m), covs=covs, size=n * m)
 
             # MatrixNormal
-            matrix_normal = MatrixNormal(
-                "mat_normal",
-                mu=np.random.normal(size=n),
-                rowcov=np.eye(n),
-                colchol=np.linalg.cholesky(np.eye(n)),
-                size=(n, n),
-            )
+            # matrix_normal = MatrixNormal(
+            #     "mat_normal",
+            #     mu=np.random.normal(size=n),
+            #     rowcov=np.eye(n),
+            #     colchol=np.linalg.cholesky(np.eye(n)),
+            #     size=(n, n),
+            # )
 
             # DirichletMultinomial
             dm = DirichletMultinomial("dm", n=5, a=[1, 1, 1], size=(2, 3))
@@ -2842,97 +2844,79 @@ class TestStrAndLatexRepr:
             # Likelihood (sampling distribution) of observations
             Y_obs = Normal("Y_obs", mu=mu, sigma=sigma, observed=Y)
 
-        self.distributions = [alpha, sigma, mu, b, Z, nb1, nb2, Y_obs, bound_var]
+            # add a potential as well
+            pot = Potential("pot", mu ** 2)
+
+        self.distributions = [alpha, sigma, mu, b, Z, nb2, Y_obs, pot]
+        self.deterministics_or_potentials = [mu, pot]
+        # tuples of (formatting, include_params
+        self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
         self.expected = {
-            "latex": (
-                r"$\text{alpha} \sim \text{Normal}$",
-                r"$\text{sigma} \sim \text{HalfNormal}$",
-                r"$\text{mu} \sim \text{Deterministic}$",
-                r"$\text{beta} \sim \text{Normal}$",
-                r"$\text{Z} \sim \text{MvNormal}$",
-                r"$\text{nb_with_mu_alpha} \sim \text{NegativeBinomial}$",
-                r"$\text{nb_with_p_n} \sim \text{NegativeBinomial}$",
-                r"$\text{Y_obs} \sim \text{Normal}$",
-                r"$\text{bound_var} \sim \text{Bound}$ -- \text{Normal}$",
-                r"$\text{kron_normal} \sim \text{KroneckerNormal}$",
-                r"$\text{mat_normal} \sim \text{MatrixNormal}$",
-                r"$\text{dm} \sim \text{DirichletMultinomial}$",
-            ),
-            "plain": (
-                r"alpha ~ Normal",
-                r"sigma ~ HalfNormal",
+            ("plain", True): [
+                r"alpha ~ N(0, 10)",
+                r"sigma ~ N**+(0, 1)",
+                r"mu ~ Deterministic(f(beta, alpha))",
+                r"beta ~ N(0, 10)",
+                r"Z ~ N(<constant>, f())",
+                r"nb_with_p_n ~ NB(10, nbp)",
+                r"Y_obs ~ N(mu, sigma)",
+                r"pot ~ Potential(f(beta, alpha))",
+            ],
+            ("plain", False): [
+                r"alpha ~ N",
+                r"sigma ~ N**+",
                 r"mu ~ Deterministic",
-                r"beta ~ Normal",
-                r"Z ~ MvNormal",
-                r"nb_with_mu_alpha ~ NegativeBinomial",
-                r"nb_with_p_n ~ NegativeBinomial",
-                r"Y_obs ~ Normal",
-                r"bound_var ~ Bound-Normal",
-                r"kron_normal ~ KroneckerNormal",
-                r"mat_normal ~ MatrixNormal",
-                r"dm ~ DirichletMultinomial",
-            ),
-            "latex_with_params": (
-                r"$\text{alpha} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
-                r"$\text{sigma} \sim \text{HalfNormal}(\mathit{sigma}=1.0)$",
-                r"$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$",
-                r"$\text{beta} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
-                r"$\text{Z} \sim \text{MvNormal}(\mathit{mu}=array,~\mathit{chol_cov}=array)$",
-                r"$\text{nb_with_mu_alpha} \sim \text{NegativeBinomial}(\mathit{mu}=\text{nbmu},~\mathit{alpha}=\text{nbalpha})$",
-                r"$\text{nb_with_p_n} \sim \text{NegativeBinomial}(\mathit{p}=\text{nbp},~\mathit{n}=10)$",
-                r"$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sigma}=f(\text{sigma}))$",
-                r"$\text{bound_var} \sim \text{Bound}(\mathit{lower}=1.0,~\mathit{upper}=\text{None})$ -- \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
-                r"$\text{kron_normal} \sim \text{KroneckerNormal}(\mathit{mu}=array)$",
-                r"$\text{mat_normal} \sim \text{MatrixNormal}(\mathit{mu}=array,~\mathit{rowcov}=array,~\mathit{colchol_cov}=array)$",
-                r"$\text{dm} \sim \text{DirichletMultinomial}(\mathit{n}=5,~\mathit{a}=array)$",
-            ),
-            "plain_with_params": (
-                r"alpha ~ Normal(mu=0.0, sigma=10.0)",
-                r"sigma ~ HalfNormal(sigma=1.0)",
-                r"mu ~ Deterministic(alpha, Constant, beta)",
-                r"beta ~ Normal(mu=0.0, sigma=10.0)",
-                r"Z ~ MvNormal(mu=array, chol_cov=array)",
-                r"nb_with_mu_alpha ~ NegativeBinomial(mu=nbmu, alpha=nbalpha)",
-                r"nb_with_p_n ~ NegativeBinomial(p=nbp, n=10)",
-                r"Y_obs ~ Normal(mu=mu, sigma=f(sigma))",
-                r"bound_var ~ Bound(lower=1.0, upper=None)-Normal(mu=0.0, sigma=10.0)",
-                r"kron_normal ~ KroneckerNormal(mu=array)",
-                r"mat_normal ~ MatrixNormal(mu=array, rowcov=array, colchol_cov=array)",
-                r"dm∼DirichletMultinomial(n=5, a=array)",
-            ),
+                r"beta ~ N",
+                r"Z ~ N",
+                r"nb_with_p_n ~ NB",
+                r"Y_obs ~ N",
+                r"pot ~ Potential",
+            ],
+            ("latex", True): [
+                r"$\text{alpha} \sim \operatorname{N}(0,~10)$",
+                r"$\text{sigma} \sim \operatorname{N^{+}}(0,~1)$",
+                r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{beta},~\text{alpha}))$",
+                r"$\text{beta} \sim \operatorname{N}(0,~10)$",
+                r"$\text{Z} \sim \operatorname{N}(\text{<constant>},~f())$",
+                r"$\text{nb_with_p_n} \sim \operatorname{NB}(10,~\text{nbp})$",
+                r"$\text{Y_obs} \sim \operatorname{N}(\text{mu},~\text{sigma})$",
+                r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
+            ],
+            ("latex", False): [
+                r"$\text{alpha} \sim \operatorname{N}$",
+                r"$\text{sigma} \sim \operatorname{N^{+}}$",
+                r"$\text{mu} \sim \operatorname{Deterministic}$",
+                r"$\text{beta} \sim \operatorname{N}$",
+                r"$\text{Z} \sim \operatorname{N}$",
+                r"$\text{nb_with_p_n} \sim \operatorname{NB}$",
+                r"$\text{Y_obs} \sim \operatorname{N}$",
+                r"$\text{pot} \sim \operatorname{Potential}$",
+            ],
         }
 
     def test__repr_latex_(self):
-        for distribution, tex in zip(self.distributions, self.expected["latex_with_params"]):
+        for distribution, tex in zip(self.distributions, self.expected[("latex", True)]):
             assert distribution._repr_latex_() == tex
 
         model_tex = self.model._repr_latex_()
 
         # make sure each variable is in the model
-        for tex in self.expected["latex"]:
+        for tex in self.expected[("latex", True)]:
             for segment in tex.strip("$").split(r"\sim"):
                 assert segment in model_tex
 
-    def test___latex__(self):
-        for distribution, tex in zip(self.distributions, self.expected["latex_with_params"]):
-            assert distribution._repr_latex_() == distribution.__latex__()
-        assert self.model._repr_latex_() == self.model.__latex__()
+    def test_str_repr(self):
+        for str_format in self.formats:
+            for dist, text in zip(self.distributions, self.expected[str_format]):
+                assert dist.str_repr(*str_format) == text
 
-    def test___str__(self):
-        for distribution, str_repr in zip(self.distributions, self.expected["plain"]):
-            assert distribution.__str__() == str_repr
-
-        model_str = self.model.__str__()
-        for str_repr in self.expected["plain"]:
-            assert str_repr in model_str
-
-    def test_str(self):
-        for distribution, str_repr in zip(self.distributions, self.expected["plain"]):
-            assert str(distribution) == str_repr
-
-        model_str = str(self.model)
-        for str_repr in self.expected["plain"]:
-            assert str_repr in model_str
+            model_text = self.model.str_repr(*str_format)
+            for text in self.expected[str_format]:
+                if str_format[0] == "latex":
+                    for segment in text.strip("$").split(r"\sim"):
+                        assert segment in model_text
+                else:
+                    assert text in model_text
 
 
 def test_discrete_trafo():

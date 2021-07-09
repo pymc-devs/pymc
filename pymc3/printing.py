@@ -24,6 +24,12 @@ from aesara.tensor.var import TensorConstant
 
 from pymc3.model import Model
 
+__all__ = [
+    "str_for_dist",
+    "str_for_model",
+    "str_for_potential_or_deterministic",
+]
+
 
 def str_for_dist(rv: TensorVariable, formatting: str = "plain", include_params: bool = True) -> str:
     """Make a human-readable string representation of a RandomVariable in a model, either
@@ -82,8 +88,13 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
 
 
 def str_for_potential_or_deterministic(
-    var: TensorVariable, dist_name: str, formatting: str = "plain", include_params: bool = True
+    var: TensorVariable,
+    formatting: str = "plain",
+    include_params: bool = True,
+    dist_name: str = "Deterministic",
 ) -> str:
+    """Make a human-readable string representation of a Deterministic or Potential in a model, either
+    LaTeX or plain, optionally with distribution parameter values included."""
     print_name = var.name if var.name is not None else "<unnamed>"
     if "latex" in formatting:
         print_name = r"\text{" + _latex_escape(print_name) + "}"
