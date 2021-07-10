@@ -20,6 +20,7 @@
 - Add `logcdf` method to Kumaraswamy distribution (see [#4706](https://github.com/pymc-devs/pymc3/pull/4706)).
 - The `OrderedMultinomial` distribution has been added for use on ordinal data which are _aggregated_ by trial, like multinomial observations, whereas `OrderedLogistic` only accepts ordinal data in a _disaggregated_ format, like categorical
   observations (see [#4773](https://github.com/pymc-devs/pymc3/pull/4773)).
+- Adds Quadratic Approximation (see [#4847](https://github.com/pymc-devs/pymc3/pull/4847)). A very fast method to approximate the posterior with a Multivariate Normal. Only works well if the posterior is unimodal and roughly symmetrical.  
 
 ### Maintenance
 - Remove float128 dtype support (see [#4514](https://github.com/pymc-devs/pymc3/pull/4514)).

@@ -49,9 +49,10 @@ def quadratic_approximation(vars, n_chains=2, n_samples=10_000):
 
     Returns
     -------
-    (arviz.InferenceData, scipy.stats.multivariate_normal):
-        InferenceData with samples from the approximate posterior, multivariate normal posterior approximation
-
+    arviz.InferenceData:
+        InferenceData with samples from the approximate posterior
+    scipy.stats.multivariate_normal:
+        Multivariate normal posterior approximation
     """
     map = find_MAP(vars=vars)
     H = find_hessian(map, vars=vars)
