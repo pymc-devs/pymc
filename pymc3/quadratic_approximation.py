@@ -26,7 +26,7 @@ from pymc3.tuning import find_MAP, find_hessian
 
 
 def quadratic_approximation(vars, n_chains=2, n_samples=10_000):
-    """ Finds the quadratic approximation to the posterior, also known as the laplace approximation.
+    """ Finds the quadratic approximation to the posterior, also known as the Laplace approximation.
 
     NOTE: The quadratic approximation only works well for unimodal and roughly symmetrical posteriors of continuous variables.
     The usual MCMC convergence and mixing statistics (e.g. R-hat, ESS) will NOT tell you anything about how well this approximation fits your actual (unknown) posterior, indeed they'll always be extremely nice since all "chains" are sampling from exactly the same distribution, the posterior quadratic approximation.
