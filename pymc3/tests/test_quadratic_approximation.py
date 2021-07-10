@@ -1,6 +1,7 @@
-import numpy as np
-import pymc3 as pm
 import arviz as az
+import numpy as np
+
+import pymc3 as pm
 
 from pymc3.tests.helpers import SeededTest
 
@@ -38,12 +39,7 @@ class TestQuadraticApproximation(SeededTest):
         with pm.Model() as lm:
             weights = pm.Normal("weights", mu=0, sigma=1, shape=M)
             noise = pm.Exponential("noise", lam=1)
-            y_observed = pm.Normal(
-                "y_observed",
-                mu=X @ weights,
-                sigma=noise,
-                observed=y
-            )
+            y_observed = pm.Normal("y_observed", mu=X @ weights, sigma=noise, observed=y)
 
             idata, _ = pm.quadratic_approximation([weights, noise])
 

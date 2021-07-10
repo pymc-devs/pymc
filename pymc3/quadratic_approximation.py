@@ -14,19 +14,17 @@
 
 """Functions for Quadratic Approximation."""
 
+import arviz as az
 import numpy as np
 import scipy
-import arviz as az
 
-__all__ = [
-    "quadratic_approximation"
-]
+__all__ = ["quadratic_approximation"]
 
-from pymc3.tuning import find_MAP, find_hessian
+from pymc3.tuning import find_hessian, find_MAP
 
 
 def quadratic_approximation(vars, n_chains=2, n_samples=10_000):
-    """ Finds the quadratic approximation to the posterior, also known as the Laplace approximation.
+    """Finds the quadratic approximation to the posterior, also known as the Laplace approximation.
 
     NOTE: The quadratic approximation only works well for unimodal and roughly symmetrical posteriors of continuous variables.
     The usual MCMC convergence and mixing statistics (e.g. R-hat, ESS) will NOT tell you anything about how well this approximation fits your actual (unknown) posterior, indeed they'll always be extremely nice since all "chains" are sampling from exactly the same distribution, the posterior quadratic approximation.
@@ -64,6 +62,6 @@ def quadratic_approximation(vars, n_chains=2, n_samples=10_000):
     i = 0
     for v in vars:
         var_size = map[v.name].size
-        samples[v.name] = draws[:, :, i:i + var_size].squeeze()
+        samples[v.name] = draws[:, :, i : i + var_size].squeeze()
         i += var_size
     return az.convert_to_inference_data(samples), posterior
