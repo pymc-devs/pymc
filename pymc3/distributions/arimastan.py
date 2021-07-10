@@ -105,176 +105,97 @@ class SARIMA:
         self.transformation(qq, stheta, ttheta0, prior_sma)
 
     def priorint(self, prior, x, target, n, dist):
-        if prior[4] == n:
+        if prior == n:
             target += dist.logp(x)
 
-    def target_hyperparam(self, target, prior_x0, x0):
+    def target_hyperparam(self, target, prior_x0, prior_x01, prior_x02, prior_x03, x0):
         # prior mu
-        self.priorint(prior_x0, x0, target, 1, pm.Normal.dist(mu=prior_x0[1], sigma=prior_x0[2]))
-        self.priorint(prior_x0, x0, target, 2, pm.Beta.dist(alpha=prior_x0[1], beta=prior_x0[2]))
-        self.priorint(
-            prior_x0, x0, target, 3, pm.Uniform.dist(lower=prior_x0[1], upper=prior_x0[2])
-        )
+        self.priorint(prior_x0, x0, target, 1, pm.Normal.dist(mu=prior_x01, sigma=prior_x02))
+        self.priorint(prior_x0, x0, target, 2, pm.Beta.dist(alpha=prior_x01, beta=prior_x02))
+        self.priorint(prior_x0, x0, target, 3, pm.Uniform.dist(lower=prior_x01, upper=prior_x02))
         self.priorint(
             prior_x0,
             x0,
             target,
             4,
-            pm.StudentT.dist(mu=prior_x0[1], sigma=prior_x0[2], nu=prior_x0[3]),
+            pm.StudentT.dist(mu=prior_x01, sigma=prior_x02, nu=prior_x03),
         )
-        self.priorint(prior_x0, x0, target, 5, pm.Cauchy.dist(alpha=prior_x0[1], beta=prior_x0[2]))
+        self.priorint(prior_x0, x0, target, 5, pm.Cauchy.dist(alpha=prior_x01, beta=prior_x02))
         self.priorint(
-            prior_x0, x0, target, 7, pm.InverseGamma.dist(alpha=prior_x0[1], beta=prior_x0[2])
+            prior_x0, x0, target, 7, pm.InverseGamma.dist(alpha=prior_x01, beta=prior_x02)
         )
-        if self.prior_mu0[4] == 7:
-            target += invchi(x0, pm.ChiSquared.dist(nu=prior_x0[3]))  # inverse chi square
-        if self.prior_mu0[4] == 8:
+        if self.prior_x0 == 7:
+            target += invchi(x0, pm.ChiSquared.dist(nu=prior_x03))  # inverse chi square
+        if self.prior_x0 == 8:
             target += -np.log(self.sigma0)
-        self.priorint(prior_x0, x0, target, 9, pm.Gamma.dist(alpha=prior_x0[1], beta=prior_x0[2]))
-        self.priorint(prior_x0, x0, target, 10, pm.Exponential.dist(lam=prior_x0[2]))
-        self.priorint(prior_x0, x0, target, 11, pm.ChiSquared.dist(nu=prior_x0[3]))
-        self.priorint(prior_x0, x0, target, 12, pm.Laplace.dist(mu=prior_x0[1], b=prior_x0[2]))
+        self.priorint(prior_x0, x0, target, 9, pm.Gamma.dist(alpha=prior_x01, beta=prior_x03))
+        self.priorint(prior_x0, x0, target, 10, pm.Exponential.dist(lam=prior_x02))
+        self.priorint(prior_x0, x0, target, 11, pm.ChiSquared.dist(nu=prior_x03))
+        self.priorint(prior_x0, x0, target, 12, pm.Laplace.dist(mu=prior_x01, b=prior_x02))
 
     def prior_for_sigma0(self, target, prior_sigma0, sigma0):
-        return self.target_hyperparam(target, prior_sigma0, sigma0)
+        self.target_hyperparam(
+            target, prior_sigma0[4], prior_sigma0[1], prior_sigma0[2], prior_sigma0[3], sigma0
+        )
+        return target
 
     def prior_for_mu0(self, target, prior_mu0, mu0):
-        return self.target_hyperparam(target, prior_mu0, mu0)
+        self.target_hyperparam(target, prior_mu0[4], prior_mu0[1], prior_mu0[2], prior_mu0[3], mu0)
+        return target
 
+    def prior_for_breg(self, target, prior_breg, breg):
+        if self.d1 > 0:
+            for i in range(self.d1):
+                self.target_hyperparam(
+                    target,
+                    prior_breg[i, 4],
+                    prior_breg[i, 1],
+                    prior_breg[i, 2],
+                    prior_breg[i, 3],
+                    breg[i],
+                )
+        return target
 
-# -----------------------------------------------------------------------------------------------------------
-#
-# everything beyond this is commented and WIP
-#
-#     def idkmanstillfiguringitout(self):
-#
-#         # prior breg
-#         if self.d1 > 0:
-#             for i in range(self.d1):
-#                 if self.prior_breg[i, 4] == 1:
-#                     target += pm.Normal(mu=self.prior_breg[i, 1], sigma=self.prior_breg[i, 2]).logp(
-#                         self.breg[i]
-#                     )
-#                 if self.prior_breg[i, 4] == 2:
-#                     target += pm.Beta(alpha=self.prior_breg[i, 1], beta=self.prior_breg[i, 2]).logp(
-#                         self.breg[i]
-#                     )
-#                 if self.prior_breg[i, 4] == 3:
-#                     target += pm.Uniform(
-#                         lower=self.prior_breg[i, 1], upper=self.prior_breg[i, 2]
-#                     ).logp(self.breg[i])
-#                 if self.prior_breg[i, 4] == 4:
-#                     target += pm.StudentT(
-#                         nu=self.prior_breg[i, 3],
-#                         mu=self.prior_breg[i, 1],
-#                         sigma=self.prior_breg[i, 2],
-#                     ).logp(self.breg[i])
-#                 if self.prior_breg[i, 4] == 5:
-#                     target += pm.Cauchy(
-#                         alpha=self.prior_breg[i, 1], beta=self.prior_breg[i, 2]
-#                     ).logp(self.breg[i])
-#                 if self.prior_breg[i, 4] == 6:
-#                     target += pm.InverseGamma(
-#                         alpha=self.prior_breg[i, 1], beta=self.prior_breg[i, 2]
-#                     ).logp(self.breg[i])
-#                 if self.prior_breg[i, 4] == 7:
-#                     target += invchi(
-#                         self.breg[i], pm.ChiSquared(nu=self.prior_breg[i, 3])
-#                     )  # inverse chisquared
-#                 if self.prior_breg[i, 4] == 8:
-#                     target += np.log(self.sigma0)
-#                 if self.prior_breg[i, 4] == 9:
-#                     target += pm.Gamma(
-#                         alpha=self.prior_breg[i, 1], beta=self.prior_breg[i, 2]
-#                     ).logp(self.breg[i])
-#                 if self.prior_breg[i, 4] == 10:
-#                     target += pm.Normal(lam=self.prior_breg[i, 2]).logp(self.breg[i])
-#                 if self.prior_breg[i, 4] == 11:
-#                     target += pm.ChiSquared(nu=self.prior_breg[i, 3]).logp(self.breg[i])
-#                 if self.prior_breg[i, 4] == 12:
-#                     target += pm.Laplace(mu=self.prior_breg[i, 1], b=self.prior_breg[i, 2]).logp(
-#                         self.breg[i]
-#                     )
-#
-#                 # prior ar
-#                 if self.p > 0:
-#                     for i in range(self.p):
-#                         if self.prior_ar[i, 4] == 1:
-#                             target += pm.Normal(
-#                                 mu=self.prior_ar[i, 1], sigma=self.prior_ar[i, 2]
-#                             ).logp(self.phi0[i])
-#                         if self.prior_ar[i, 4] == 2:
-#                             target += pm.Beta(
-#                                 alpha=self.prior_ar[i, 1], beta=self.prior_ar[i, 2]
-#                             ).logp(self.phi0[i])
-#                         if self.prior_ar[i, 4] == 3:
-#                             target += pm.Uniform(
-#                                 lower=self.prior_ar[i, 1], upper=self.prior_ar[i, 2]
-#                             ).logp(self.phi0[i])
-#                 # prior ma
-#                 if self.q > 0:
-#                     for i in range(self.q):
-#                         if self.prior_ma[i, 4] == 1:
-#                             target += pm.Normal(
-#                                 mu=self.prior_ma[i, 1], sigma=self.prior_ma[i, 2]
-#                             ).logp(self.theta0[i])
-#                         if self.prior_ma[i, 4] == 2:
-#                             target += pm.Beta(
-#                                 alpha=self.prior_ma[i, 1], beta=self.prior_ma[i, 2]
-#                             ).logp(self.theta0[i])
-#                         if self.prior_ma[i, 4] == 3:
-#                             target += pm.Uniform(
-#                                 lower=self.prior_ma[i, 1], upper=self.prior_ma[i, 2]
-#                             ).logp(self.theta0[i])
-#
-#                 # prior sar
-#                 if self.pp > 0:
-#                     for i in range(self.pp):
-#                         if self.prior_sar[i, 4] == 1:
-#                             target += pm.Normal(
-#                                 mu=self.prior_sar[i, 1], sigma=self.prior_sar[i, 2]
-#                             ).logp(self.pphi0[i])
-#                         if self.prior_sar[i, 4] == 2:
-#                             target += pm.Beta(
-#                                 alpha=self.prior_sar[i, 1], beta=self.prior_sar[i, 2]
-#                             ).logp(self.pphi0[i])
-#                         if self.prior_sar[i, 4] == 3:
-#                             target += pm.Uniform(
-#                                 lower=self.prior_sar[i, 1], upper=self.prior_sar[i, 2]
-#                             ).logp(self.pphi0[i])
-#                 # prior sma
-#                 if self.qq > 0:
-#                     for i in range(self.qq):
-#                         if self.prior_sma[i, 4] == 1:
-#                             target += pm.Normal(
-#                                 mu=self.prior_sma[i, 1], sigma=self.prior_sma[i, 2]
-#                             ).logp(self.ttheta0[i])
-#                         if self.prior_sma[i, 4] == 2:
-#                             target += pm.Beta(
-#                                 alpha=self.prior_sma[i, 1], beta=self.prior_sma[i, 2]
-#                             ).logp(abs(self.ttheta0[i]))
-#                         if self.prior_sma[i, 4] == 3:
-#                             target += pm.Uniform(
-#                                 lower=self.prior_sma[i, 1], upper=self.prior_sma[i, 2]
-#                             ).logp(self.ttheta0[i])
-#
-#                 # likelihood
-#                 target += pm.Normal(mu=0, sigma=self.sigma0).logp(self.epsilon)
-#
-#                 # generated quantities
-#                 loglik = 0
-#                 log_lik = np.array(self.n1)
-#                 fit = np.array(self.n)
-#                 residuals = np.array(self.n)
-#
-#                 for i in range(self.n):
-#                     if i <= self.dinits:
-#                         residuals[i] = pm.Normal(mu=0, sigma=self.sigma0)
-#                     else:
-#                         residuals[i] = pm.Normal(
-#                             mu=self.epsilon[i - self.dinits], sigma=self.sigma0
-#                         )
-#                     fit[i] = self.yreal[i] - residuals[i]
-#                     if i <= self.n1:
-#                         log_lik[i] = pm.Normal(mu=self.mu[i], sigma=self.sigma0).logp(self.y[i])
-#                         loglik += log_lik[i]
+    def target_hyperparam3(self, target, prior_x0, prior_x01, prior_x02, x0):
+        # prior mu
+        self.priorint(prior_x0, x0, target, 1, pm.Normal.dist(mu=prior_x01, sigma=prior_x02))
+        self.priorint(prior_x0, x0, target, 2, pm.Beta.dist(alpha=prior_x01, beta=prior_x02))
+        self.priorint(prior_x0, x0, target, 3, pm.Uniform.dist(lower=prior_x01, upper=prior_x02))
+
+    def ar_ma_priors(self, x, target, prior_ar_ma, ar_ma):
+        if x > 0:
+            for i in range(x):
+                self.target_hyperparam3(
+                    target, prior_ar_ma[i, 4], prior_ar_ma[i, 1], prior_ar_ma[i, 2], ar_ma[i]
+                )
+
+    def prior_ar(self, p, target, prior_ar, phi0):
+        return self.ar_ma_priors(p, target, prior_ar, phi0)
+
+    def prior_ma(self, q, target, prior_ma, theta0):
+        return self.ar_ma_priors(q, target, prior_ma, theta0)
+
+    def prior_sar(self, pp, target, prior_sar, pphi0):
+        return self.ar_ma_priors(pp, target, prior_sar, pphi0)
+
+    def prior_sma(self, qq, target, prior_sma, ttheta0):
+        return self.ar_ma_priors(qq, target, prior_sma, ttheta0)
+
+    def likelihood(self, target):
+        target += pm.Normal(mu=0, sigma=self.sigma0).logp(self.epsilon)
+
+    def generated_quantities(self):
+        loglik = 0
+        log_lik = np.array(self.n1)
+        fit = np.array(self.n)
+        residuals = np.array(self.n)
+
+        for i in range(self.n):
+            if i <= self.dinits:
+                residuals[i] = pm.Normal(mu=0, sigma=self.sigma0)
+            else:
+                residuals[i] = pm.Normal(mu=self.epsilon[i - self.dinits], sigma=self.sigma0)
+            fit[i] = self.yreal[i] - residuals[i]
+            if i <= self.n1:
+                log_lik[i] = pm.Normal(mu=self.mu[i], sigma=self.sigma0).logp(self.y[i])
+                loglik += log_lik[i]
