@@ -33,7 +33,7 @@ from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
 from aesara.tensor.random.utils import broadcast_params
-from aesara.tensor.slinalg import Cholesky
+from aesara.tensor.slinalg import Cholesky, eigvalsh
 from aesara.tensor.slinalg import solve_lower_triangular as solve_lower
 from aesara.tensor.slinalg import solve_upper_triangular as solve_upper
 from aesara.tensor.type import TensorType
@@ -63,6 +63,7 @@ __all__ = [
     "MatrixNormal",
     "KroneckerNormal",
     "CAR",
+    "ICAR",
 ]
 
 # Step methods and advi do not catch LinAlgErrors at the
@@ -2098,3 +2099,51 @@ class CAR(Continuous):
             at.all(alpha >= -1),
             tau > 0,
         )
+
+
+class ICARRV(RandomVariable):
+    name = "icar"
+    ndim_supp = 1
+    ndims_params = [2, 0]
+    dtype = "floatX"
+    _print_name = ("ICAR", "\\operatorname{ICAR}")
+
+    @classmethod
+    def rng_fn(cls, rng, A, tau, size):
+        n = A.shape[0]
+        mu = np.zeros(n)
+        if A.ndim != 2 or n != A.shape[1] or np.linalg.norm(A - A.T, np.inf) > 1e-06:
+            raise ValueError("The adjacency matrix `A` needs to be a square and symmetric")
+        W = np.diag(A.sum(axis=0)) - A
+        cov = np.linalg.pinv(W) / tau
+        return multivariate_normal.rng_fn(rng=rng, mean=mu, cov=cov, size=size)
+
+
+icar = ICARRV()
+
+
+class ICAR(Continuous):
+    r"""
+    The zero-sum constrained Intrinsic Conditional Autoregressive Model.
+    """
+    rv_op = icar
+
+    @classmethod
+    def dist(cls, A, tau, *args, **kwargs):
+        return super().dist([A, tau], **kwargs)
+
+    def logp(value, A, tau):
+        A = at.as_tensor_variable(A, ndim=2)
+        tau = at.as_tensor_variable(tau, ndim=0)
+        n = A.shape[0]
+        W = at.diag(A.sum(axis=0)) - A
+        d = eigvalsh(W, at.eye(W.shape[0]))[1:]
+        out = (
+            0.5 * (n - 1) * at.log(2 * np.pi * tau)
+            + 0.5 * at.log(d).sum()
+            - 0.5 * tau * at.dot(value, at.dot(W, value))
+        )
+        return bound(out, at.math.abs_(at.sum(value)) < 1e-06)
+
+    def logcdf(value, tau, cov):
+        raise NotImplementedError()
