@@ -7,7 +7,7 @@ def invchi(x, chisquare):
     return (1.0 / x ** 2) * chisquare.logp(1 / x)
 
 
-class Sarima:
+class SARIMA:
     def __init__(
         self,
         n,
