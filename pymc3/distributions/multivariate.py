@@ -2130,11 +2130,11 @@ class ICAR(Continuous):
 
     @classmethod
     def dist(cls, A, tau, *args, **kwargs):
+        A = at.as_tensor_variable(floatX(A), ndim=2)
+        tau = at.as_tensor_variable(floatX(tau), ndim=0)
         return super().dist([A, tau], **kwargs)
 
     def logp(value, A, tau):
-        A = at.as_tensor_variable(A, ndim=2)
-        tau = at.as_tensor_variable(tau, ndim=0)
         n = A.shape[0]
         W = at.diag(A.sum(axis=0)) - A
         d = eigvalsh(W, at.eye(W.shape[0]))[1:]
@@ -2144,6 +2144,3 @@ class ICAR(Continuous):
             - 0.5 * tau * at.dot(value, at.dot(W, value))
         )
         return bound(out, at.math.abs_(at.sum(value)) < 1e-06)
-
-    def logcdf(value, tau, cov):
-        raise NotImplementedError()
