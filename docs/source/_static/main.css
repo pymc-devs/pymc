@@ -1,0 +1,5 @@
+.classifier:before {
+    font-style: normal;
+    margin: 0.5em;
+    content: ":";
+}
