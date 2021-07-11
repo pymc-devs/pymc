@@ -17,7 +17,9 @@ from aesara import config
 from aesara.graph.basic import Constant, Variable, clone_get_equiv, graph_inputs, walk
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import compute_test_value
+from aesara.graph.opt_utils import optimize_graph
 from aesara.graph.type import CType
+from aesara.tensor.basic_opt import ShapeFeature, topo_constant_folding
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -281,3 +283,16 @@ def indices_from_subtensor(idx_list, indices):
         if idx_list
         else indices
     )
+
+
+def get_constant_value(x):
+    """Use constant folding to get a constant value."""
+
+    axis_fg = FunctionGraph(outputs=[x], features=[ShapeFeature()], clone=True)
+
+    (folded_axis,) = optimize_graph(axis_fg, custom_opt=topo_constant_folding).outputs
+
+    if not isinstance(folded_axis, Constant):
+        raise ValueError("Could not obtain a constant from constant folding")
+
+    return folded_axis.data
