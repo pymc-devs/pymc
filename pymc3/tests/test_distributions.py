@@ -3067,7 +3067,6 @@ def test_car_logp(sparse, size):
         W = aesara.sparse.csr_from_dense(W)
 
     car_dist = CAR.dist(mu, W, alpha, tau, size=size)
-    # xs = np.broadcast_to(xs, size + mu.shape)
     car_logp = logpt(car_dist, xs).eval()
 
     # Check to make sure that the CAR and MVN log PDFs are equivalent
