@@ -2125,6 +2125,52 @@ icar = ICARRV()
 class ICAR(Continuous):
     r"""
     The zero-sum constrained Intrinsic Conditional Autoregressive Model.
+
+    .. math::
+
+        f(x \mid \tau, A) =
+            (2 \pi \tau)^{(n - 1)/2}\sqrt{\prod_{i=1}^{n-1}d_i}
+            \exp\Big\{-\frac{\tau}{2}x^T H x\Big\}
+
+    where :math:`d_1 \geq d_2 \geq d_{n-1} \gt d_n = 0` are eigenvalues of
+    :math:`H` in decreasing order. :math:`H` is specified as a known matrix determined
+    by the neighborhood structure of the region of interest, such that
+
+    .. math::
+
+        (H)_{ij} = \left\{
+            \begin{array}{c l}
+                h_i & \text{if } \hspace{2mm} i = j\\
+                -g_{ij} & \text{if } \hspace{2mm} i \in N_{j}\\
+                0 & \text{otherwise},
+            \end{array}\right.
+
+    where :math:`g_{ij} \geq 0` is a measure of how similar subregions ``i`` and
+    ``j`` are, :math:`\{N_j;j=1,\dots,n\}` denotes the set of subregions that are
+    neighbors of subregion ``j``, :math:`g_{ij}=g_{ji}, and :math:`h_i=\sum_{i
+    \neq j}g_{ij}`.
+
+    ======== ================================================================================
+    Support   :math:`x \in \mathbb{R}^k`
+    Mean      :math:`0 \in \mathbb{R}^k`
+    Variance  :math:`\tau^{-1} H^{+}` where :math:`H^{+}` is the Moore–Penrose pseudoinverse.
+    ======== ================================================================================
+
+    Parameters
+    ----------
+    A: Numpy matrix
+        Symmetric adjacency matrix of 1s and 0s indicating
+        adjacency between elements.
+    tau: float or 1-element array
+        Positive precision variable controlling the scale of the underlying normal variates.
+
+    References
+    ----------
+    .. Keefe, M. J., Ferreira, M. A. R., and Franck, C. T. (2018). “On the formal
+       specificationof sum-zero constrained intrinsic conditional autoregressive
+       models.” Spatial Statistics, 24: 54–65.
+       doi:https://doi.org/10.1016/j.spasta.2018.03.007.186,205
+
     """
     rv_op = icar
 
@@ -2135,6 +2181,22 @@ class ICAR(Continuous):
         return super().dist([A, tau], **kwargs)
 
     def logp(value, A, tau):
+        """
+        Calculate the log-probability of the ICAR variable at a specified value.
+
+        Parameters
+        ----------
+        A: Numpy matrix
+            Symmetric adjacency matrix of 1s and 0s indicating
+            adjacency between elements.
+        tau: float or 1-element array
+            Positive precision variable controlling the scale of the underlying
+            normal variates.
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = A.shape[0]
         W = at.diag(A.sum(axis=0)) - A
         d = eigvalsh(W, at.eye(W.shape[0]))[1:]
