@@ -42,7 +42,7 @@ from pymc3.distributions.dist_math import (
 )
 from pymc3.distributions.distribution import Discrete
 from pymc3.distributions.logprob import _logcdf, _logp
-from pymc3.math import log1mexp, logaddexp, logsumexp, sigmoid
+from pymc3.math import sigmoid
 
 __all__ = [
     "Binomial",
@@ -279,7 +279,7 @@ class BetaBinomial(Discrete):
         return bound(
             at.switch(
                 at.lt(value, n),
-                logsumexp(
+                at.logsumexp(
                     BetaBinomial.logp(at.arange(safe_lower, value + 1), n, alpha, beta),
                     keepdims=False,
                 ),
@@ -826,7 +826,7 @@ class Geometric(Discrete):
         """
 
         return bound(
-            log1mexp(-at.log1p(-p) * value),
+            at.log1mexp(at.log1p(-p) * value),
             0 <= value,
             0 <= p,
             p <= 1,
@@ -945,7 +945,7 @@ class HyperGeometric(Discrete):
         return bound(
             at.switch(
                 at.lt(value, n),
-                logsumexp(
+                at.logsumexp(
                     HyperGeometric.logp(at.arange(safe_lower, value + 1), good, bad, n),
                     keepdims=False,
                 ),
@@ -1300,7 +1300,7 @@ class ZeroInflatedPoisson(Discrete):
         logp_val = at.switch(
             at.gt(value, 0),
             at.log(psi) + _logp(poisson, value, {}, theta),
-            logaddexp(at.log1p(-psi), at.log(psi) - theta),
+            at.logaddexp(at.log1p(-psi), at.log(psi) - theta),
         )
 
         return bound(
@@ -1328,7 +1328,7 @@ class ZeroInflatedPoisson(Discrete):
         """
 
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(poisson, value, {}, theta)),
+            at.logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(poisson, value, {}, theta)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1430,7 +1430,7 @@ class ZeroInflatedBinomial(Discrete):
         logp_val = at.switch(
             at.gt(value, 0),
             at.log(psi) + _logp(binomial, value, {}, n, p),
-            logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
+            at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
         )
 
         return bound(
@@ -1460,7 +1460,7 @@ class ZeroInflatedBinomial(Discrete):
         """
 
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(binomial, value, {}, n, p)),
+            at.logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(binomial, value, {}, n, p)),
             0 <= value,
             value <= n,
             0 <= psi,
@@ -1583,7 +1583,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
             at.switch(
                 at.gt(value, 0),
                 at.log(psi) + _logp(nbinom, value, {}, n, p),
-                logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
+                at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
             ),
             0 <= value,
             0 <= psi,
@@ -1609,7 +1609,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         TensorVariable
         """
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(nbinom, value, {}, n, p)),
+            at.logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(nbinom, value, {}, n, p)),
             0 <= value,
             0 <= psi,
             psi <= 1,

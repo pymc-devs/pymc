@@ -30,6 +30,7 @@
 - The length of `dims` in the model is now tracked symbolically through `Model.dim_lengths` (see [#4625](https://github.com/pymc-devs/pymc3/pull/4625)).
 - We now include `cloudpickle` as a required dependency, and no longer depend on `dill` (see [#4858](https://github.com/pymc-devs/pymc3/pull/4858)).
 - The `incomplete_beta` function in `pymc3.distributions.dist_math` was replaced by `aesara.tensor.betainc` (see [4857](https://github.com/pymc-devs/pymc3/pull/4857)).
+- `math.log1mexp` and `math.log1mexp_numpy` will expect negative inputs in the future. A `FutureWarning` is now raised unless `negative_input=True` is set (see [#4860](https://github.com/pymc-devs/pymc3/pull/4860)).
 - ...
 
 ## PyMC3 3.11.2 (14 March 2021)

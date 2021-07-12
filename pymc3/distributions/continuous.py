@@ -67,7 +67,7 @@ from pymc3.distributions.dist_math import (
     zvalue,
 )
 from pymc3.distributions.distribution import Continuous
-from pymc3.math import log1mexp, log1pexp, logdiffexp, logit
+from pymc3.math import logdiffexp, logit
 from pymc3.util import UNSET
 
 __all__ = [
@@ -1095,7 +1095,7 @@ class Wald(PositiveContinuous):
         return bound(
             at.switch(
                 at.lt(value, np.inf),
-                a + log1pexp(b - a),
+                a + at.log1pexp(b - a),
                 0,
             ),
             0 < value,
@@ -1370,7 +1370,7 @@ class Kumaraswamy(UnitContinuous):
         -------
         TensorVariable
         """
-        logcdf = log1mexp(-(b * at.log1p(-(value ** a))))
+        logcdf = at.log1mexp(b * at.log1p(-(value ** a)))
         return bound(at.switch(value < 1, logcdf, 0), value >= 0, a > 0, b > 0)
 
 
@@ -1462,7 +1462,7 @@ class Exponential(PositiveContinuous):
         """
         lam = at.inv(mu)
         return bound(
-            log1mexp(lam * value),
+            at.log1mexp(-lam * value),
             0 <= value,
             0 <= lam,
         )
@@ -2711,7 +2711,7 @@ class Weibull(PositiveContinuous):
         """
         a = (value / beta) ** alpha
         return bound(
-            log1mexp(a),
+            at.log1mexp(-a),
             0 <= value,
             0 < alpha,
             0 < beta,
@@ -3662,7 +3662,7 @@ class Logistic(Continuous):
         """
 
         return bound(
-            -log1pexp(-(value - mu) / s),
+            -at.log1pexp(-(value - mu) / s),
             0 < s,
         )
 
