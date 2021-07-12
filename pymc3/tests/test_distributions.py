@@ -1165,7 +1165,7 @@ class TestMatchesScipy:
             )
 
         def scipy_log_cdf(value, a, b):
-            return pm.math.log1mexp_numpy(-(b * np.log1p(-(value ** a))))
+            return pm.math.log1mexp_numpy(b * np.log1p(-(value ** a)), negative_input=True)
 
         self.check_logp(
             Kumaraswamy,

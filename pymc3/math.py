@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import sys
+import warnings
 
 from functools import partial, reduce
 
@@ -50,6 +51,9 @@ from aesara.tensor import (
     gt,
     le,
     log,
+    log1pexp,
+    logaddexp,
+    logsumexp,
     lt,
     maximum,
     minimum,
@@ -186,27 +190,14 @@ def tround(*args, **kwargs):
     return at.round(*args, **kwargs)
 
 
-def logsumexp(x, axis=None, keepdims=True):
-    # Adapted from https://github.com/Theano/Theano/issues/1563
-    x_max = at.max(x, axis=axis, keepdims=True)
-    x_max = at.switch(at.isinf(x_max), 0, x_max)
-    res = at.log(at.sum(at.exp(x - x_max), axis=axis, keepdims=True)) + x_max
-    return res if keepdims else res.squeeze()
-
-
-def logaddexp(a, b):
-    diff = b - a
-    return at.switch(diff > 0, b + at.log1p(at.exp(-diff)), a + at.log1p(at.exp(diff)))
-
-
 def logdiffexp(a, b):
     """log(exp(a) - exp(b))"""
-    return a + log1mexp(a - b)
+    return a + at.log1mexp(b - a)
 
 
 def logdiffexp_numpy(a, b):
     """log(exp(a) - exp(b))"""
-    return a + log1mexp_numpy(a - b)
+    return a + log1mexp_numpy(b - a, negative_input=True)
 
 
 def invlogit(x, eps=sys.float_info.epsilon):
@@ -224,15 +215,7 @@ def logit(p):
     return at.log(p / (floatX(1) - p))
 
 
-def log1pexp(x):
-    """Return log(1 + exp(x)), also called softplus.
-
-    This function is numerically more stable than the naive approach.
-    """
-    return at.softplus(x)
-
-
-def log1mexp(x):
+def log1mexp(x, *, negative_input=False):
     r"""Return log(1 - exp(-x)).
 
     This function is numerically more stable than the naive approach.
@@ -246,21 +229,40 @@ def log1mexp(x):
        "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr package"
 
     """
-    return at.switch(at.lt(x, 0.6931471805599453), at.log(-at.expm1(-x)), at.log1p(-at.exp(-x)))
+    if not negative_input:
+        warnings.warn(
+            "pymc3.math.log1mexp will expect a negative input in a future "
+            "version of PyMC3.\n To suppress this warning set `negative_input=True`",
+            FutureWarning,
+            stacklevel=2,
+        )
+        x = -x
+
+    return at.log1mexp(x)
 
 
-def log1mexp_numpy(x):
-    """Return log(1 - exp(-x)).
+def log1mexp_numpy(x, *, negative_input=False):
+    """Return log(1 - exp(x)).
     This function is numerically more stable than the naive approach.
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
     """
-    x = np.asarray(x)
+    x = np.asarray(x, dtype="float")
+
+    if not negative_input:
+        warnings.warn(
+            "pymc3.math.log1mexp_numpy will expect a negative input in a future "
+            "version of PyMC3.\n To suppress this warning set `negative_input=True`",
+            FutureWarning,
+            stacklevel=2,
+        )
+        x = -x
+
     out = np.empty_like(x)
-    mask = x < 0.6931471805599453  # log(2)
-    out[mask] = np.log(-np.expm1(-x[mask]))
+    mask = x < -0.6931471805599453  # log(1/2)
+    out[mask] = np.log1p(-np.exp(x[mask]))
     mask = ~mask
-    out[mask] = np.log1p(-np.exp(-x[mask]))
+    out[mask] = np.log(-np.expm1(x[mask]))
     return out
 
 
