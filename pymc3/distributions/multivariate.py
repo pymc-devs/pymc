@@ -26,6 +26,7 @@ import scipy
 
 from aesara.graph.basic import Apply
 from aesara.graph.op import Op
+from aesara.sparse.basic import sp_sum
 from aesara.tensor import gammaln, sigmoid
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
@@ -2057,11 +2058,7 @@ class CAR(Continuous):
         sparse = isinstance(W, aesara.sparse.SparseVariable)
 
         if sparse:
-            D = [
-                aesara.sparse.basic.csm_data(W[i : i + 1, :]).eval().sum()
-                for i in range(int(W.shape[0].eval()))
-            ]
-            D = at.as_tensor_variable(D)
+            D = sp_sum(W, axis=0)
             Dinv_sqrt = at.diag(1 / at.sqrt(D))
             DWD = at.dot(aesara.sparse.dot(Dinv_sqrt, W), Dinv_sqrt)
         else:
