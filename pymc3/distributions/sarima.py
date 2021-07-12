@@ -16,6 +16,11 @@
 import numpy as np
 import pandas as pd
 
+# from aesara import scan
+# from scipy import stats
+#
+import pymc3 as pm
+
 from pymc3.distributions import distribution
 from pymc3.distributions.continuous import (
     Beta,
@@ -30,14 +35,8 @@ from pymc3.distributions.continuous import (
     Uniform,
 )
 
-# from aesara import scan
-# from scipy import stats
-#
-# import pymc3 as pm
-
 
 class SARIMA(distribution.Continuous):
-
     """
     .. math::
         SARIMA_{(p, d, q) \times (P, D, Q)_s} can be represented as
@@ -54,6 +53,8 @@ class SARIMA(distribution.Continuous):
     ):
         super().__init__()
 
+        self.sigma0 = None
+        self.mu0 = None
         if ts is not None:
             self.y = np.array(ts).astype(float)
             self.yreal = pd.TimeSeries(ts)
@@ -160,13 +161,17 @@ class SARIMA(distribution.Continuous):
             else:
                 parameter[i] = 2 * abs(parameter0[i]) - 1
 
-        return
+        return parameter
 
     def transform(self):
-        self.phi = self.transformation(self.p, self.phi, self.phi0, self.prior_ar)
-        self.theta = self.transformation(self.q, self.theta, self.theta0, self.prior_ma)
-        self.sphi = self.transformation(self.sp, self.sphi, self.sphi0, self.prior_sar)
-        self.stheta = self.transformation(self.sq, self.stheta, self.stheta0, self.prior_sma)
+        self.phi = self.transformation_coefficients(self.p, self.phi, self.phi0, self.prior_ar)
+        self.theta = self.transformation_coefficients(
+            self.q, self.theta, self.theta0, self.prior_ma
+        )
+        self.sphi = self.transformation_coefficients(self.sp, self.sphi, self.sphi0, self.prior_sar)
+        self.stheta = self.transformation_coefficients(
+            self.sq, self.stheta, self.stheta0, self.prior_sma
+        )
 
     def arma_estimation(self):
         if self.d1 > 0:
@@ -196,16 +201,18 @@ class SARIMA(distribution.Continuous):
     def invchi(self, x, chisquare):
         return (1.0 / x ** 2) * chisquare.logp(1 / x)
 
-    def specify_priors(self):
-        def priorint(self, prior, x, target, n, dist):
-            if prior == n:
-                target += dist.logp(x)
+    def priorint(self, prior, x, target, n, dist):
+        if prior == n:
+            target += dist.logp(x)
 
-        def target_hyperparam(self, target, prior_x0, prior_x01, prior_x02, prior_x03, x0):
-            # prior mu
-            self.priorint(prior_x0, x0, target, 1, Normal.dist(mu=prior_x01, sigma=prior_x02))
-            self.priorint(prior_x0, x0, target, 2, Beta.dist(alpha=prior_x01, beta=prior_x02))
-            self.priorint(prior_x0, x0, target, 3, Uniform.dist(lower=prior_x01, upper=prior_x02))
+    def target_hyperparam(self, target, prior_x0, prior_x01, prior_x02, prior_x03, x0, three=False):
+        # prior mu
+        self.priorint(prior_x0, x0, target, 1, Normal.dist(mu=prior_x01, sigma=prior_x02))
+        self.priorint(prior_x0, x0, target, 2, Beta.dist(alpha=prior_x01, beta=prior_x02))
+        self.priorint(prior_x0, x0, target, 3, Uniform.dist(lower=prior_x01, upper=prior_x02))
+        if three:
+            return target
+        else:
             self.priorint(
                 prior_x0,
                 x0,
@@ -217,64 +224,74 @@ class SARIMA(distribution.Continuous):
             self.priorint(
                 prior_x0, x0, target, 7, InverseGamma.dist(alpha=prior_x01, beta=prior_x02)
             )
-            if self.prior_x0 == 7:
-                target += self.invchi(x0, ChiSquared.dist(nu=prior_x03))  # inverse chi square
-            if self.prior_x0 == 8:
+            if prior_x0 == 7:
+                target += self.invchi(
+                    x0, pm.ChiSquared("target", nu=prior_x03)
+                )  # inverse chi square
+            if prior_x0 == 8:
                 target += -np.log(self.sigma0)
             self.priorint(prior_x0, x0, target, 9, Gamma.dist(alpha=prior_x01, beta=prior_x03))
             self.priorint(prior_x0, x0, target, 10, Exponential.dist(lam=prior_x02))
             self.priorint(prior_x0, x0, target, 11, ChiSquared.dist(nu=prior_x03))
             self.priorint(prior_x0, x0, target, 12, Laplace.dist(mu=prior_x01, b=prior_x02))
 
-        def prior_for_sigma0(self, target, prior_sigma0, sigma0):
-            self.target_hyperparam(
-                target, prior_sigma0[4], prior_sigma0[1], prior_sigma0[2], prior_sigma0[3], sigma0
-            )
             return target
 
-        def prior_for_mu0(self, target, prior_mu0, mu0):
-            self.target_hyperparam(
-                target, prior_mu0[4], prior_mu0[1], prior_mu0[2], prior_mu0[3], mu0
-            )
-            return target
+    def prior_for_sigma0(self, target, prior_sigma0, sigma0):
+        self.target_hyperparam(
+            target,
+            prior_sigma0[4],
+            prior_sigma0[1],
+            prior_sigma0[2],
+            prior_sigma0[3],
+            sigma0,
+            three=False,
+        )
+        return target
 
-        def prior_for_breg(self, target, prior_breg, breg):
-            if self.d1 > 0:
-                for i in range(self.d1):
-                    self.target_hyperparam(
-                        target,
-                        prior_breg[i, 4],
-                        prior_breg[i, 1],
-                        prior_breg[i, 2],
-                        prior_breg[i, 3],
-                        breg[i],
-                    )
-            return target
+    def prior_for_mu0(self, target, prior_mu0, mu0):
+        self.target_hyperparam(
+            target, prior_mu0[4], prior_mu0[1], prior_mu0[2], prior_mu0[3], mu0, three=False
+        )
+        return target
 
-        def target_hyperparam3(self, target, prior_x0, prior_x01, prior_x02, x0):
-            # prior mu
-            self.priorint(prior_x0, x0, target, 1, Normal.dist(mu=prior_x01, sigma=prior_x02))
-            self.priorint(prior_x0, x0, target, 2, Beta.dist(alpha=prior_x01, beta=prior_x02))
-            self.priorint(prior_x0, x0, target, 3, Uniform.dist(lower=prior_x01, upper=prior_x02))
+    def prior_for_breg(self, target, prior_breg, breg):
+        if self.d1 > 0:
+            for i in range(self.d1):
+                self.target_hyperparam(
+                    target,
+                    prior_breg[i, 4],
+                    prior_breg[i, 1],
+                    prior_breg[i, 2],
+                    prior_breg[i, 3],
+                    breg[i],
+                    three=True,
+                )
+        return target
 
-        def ar_ma_priors(self, x, target, prior_ar_ma, ar_ma):
-            if x > 0:
-                for i in range(x):
-                    self.target_hyperparam3(
-                        target, prior_ar_ma[i, 4], prior_ar_ma[i, 1], prior_ar_ma[i, 2], ar_ma[i]
-                    )
+    def ar_ma_priors(self, x, target, prior_ar_ma, ar_ma):
+        if x > 0:
+            for i in range(x):
+                self.target_hyperparam(
+                    target,
+                    prior_ar_ma[i, 4],
+                    prior_ar_ma[i, 1],
+                    prior_ar_ma[i, 2],
+                    ar_ma[i],
+                    three=True,
+                )
 
-        def prior_ar(self, p, target, prior_ar, phi0):
-            return self.ar_ma_priors(p, target, prior_ar, phi0)
+    def prior_ar(self, p, target, prior_ar, phi0):
+        return self.ar_ma_priors(p, target, prior_ar, phi0)
 
-        def prior_ma(self, q, target, prior_ma, theta0):
-            return self.ar_ma_priors(q, target, prior_ma, theta0)
+    def prior_ma(self, q, target, prior_ma, theta0):
+        return self.ar_ma_priors(q, target, prior_ma, theta0)
 
-        def prior_sar(self, sp, target, prior_sar, sphi0):
-            return self.ar_ma_priors(sp, target, prior_sar, sphi0)
+    def prior_sar(self, sp, target, prior_sar, sphi0):
+        return self.ar_ma_priors(sp, target, prior_sar, sphi0)
 
-        def prior_sma(self, sq, target, prior_sma, stheta0):
-            return self.ar_ma_priors(sq, target, prior_sma, stheta0)
+    def prior_sma(self, sq, target, prior_sma, stheta0):
+        return self.ar_ma_priors(sq, target, prior_sma, stheta0)
 
     def get_order_arima(self):
         return dict(
@@ -294,7 +311,7 @@ class SARIMA(distribution.Continuous):
         return max(self.p, self.q, self.period, self.sp, self.period * self.sq)
 
     def likelihood(self, target):
-        target += Normal(mu=0, sigma=self.sigma0).logp(self.epsilon)
+        target += Normal("target", mu=0, sigma=self.sigma0).logp(self.epsilon)
 
     def generated_quantities(self):
         loglik = 0
@@ -304,10 +321,10 @@ class SARIMA(distribution.Continuous):
 
         for i in range(self.n):
             if i <= self.dinits:
-                residuals[i] = Normal(mu=0, sigma=self.sigma0)
+                residuals[i] = Normal.dist(mu=0, sigma=self.sigma0)
             else:
-                residuals[i] = Normal(mu=self.epsilon[i - self.dinits], sigma=self.sigma0)
+                residuals[i] = Normal.dist(mu=self.epsilon[i - self.dinits], sigma=self.sigma0)
             fit[i] = self.yreal[i] - residuals[i]
             if i <= self.n1:
-                log_lik[i] = Normal(mu=self.mu[i], sigma=self.sigma0).logp(self.y[i])
+                log_lik[i] = Normal.dist(mu=self.mu[i], sigma=self.sigma0).logp(self.y[i])
                 loglik += log_lik[i]
