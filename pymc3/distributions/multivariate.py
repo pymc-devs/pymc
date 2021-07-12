@@ -1931,14 +1931,14 @@ class CARRV(RandomVariable):
     _print_name = ("CAR", "\\operatorname{CAR}")
 
     def make_node(self, rng, size, dtype, mu, W, alpha, tau):
-        mu = at.as_tensor_variable(mu)
+        mu = at.as_tensor_variable(floatX(mu))
 
-        W = aesara.sparse.as_sparse_or_tensor_variable(W)
+        W = aesara.sparse.as_sparse_or_tensor_variable(floatX(W))
         if not W.ndim == 2:
             raise ValueError("W must be a symmetric adjacency matrix.")
 
-        tau = at.as_tensor_variable(tau)
-        alpha = at.as_tensor_variable(alpha)
+        tau = at.as_tensor_variable(floatX(tau))
+        alpha = at.as_tensor_variable(floatX(alpha))
 
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
