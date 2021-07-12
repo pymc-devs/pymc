@@ -23,7 +23,7 @@ from aesara.tensor.random.op import RandomVariable
 import pymc3 as pm
 
 from pymc3.distributions.continuous import assert_negative_support
-from pymc3.distributions.dist_math import bound
+from pymc3.distributions.dist_math import bound, normal_lcdf
 from pymc3.distributions.distribution import Continuous
 
 __all__ = [
@@ -38,6 +38,9 @@ class StickBreakingWeightsRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("Stick-Breaking weights", "\\operatorname{StickBreakingWeights}")
 
+    def __call__(self, alpha, size=None, **kwargs):
+        return super().__call__(alpha, size=size, **kwargs)
+
     @classmethod
     def rng_fn(cls, rng, alpha, size):
         betas = rng.beta(1, alpha, size=size)
@@ -47,6 +50,7 @@ class StickBreakingWeightsRV(RandomVariable):
                 np.cumprod(1 - betas[:-1]),
             ]
         )
+        print(betas.shape)
 
         return betas * sticks
 
@@ -75,14 +79,46 @@ class StickBreakingWeights(Continuous):
         return ["alpha"]
 
 
+class LarryNormalRV(RandomVariable):
+    name = "normal"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("Larry's normal", "\\operatorname{LarryNormal}")
+
+    # @classmethod
+    # def rng_fn(cls, rng, loc, scale, size):
+    #     return np.random.normal(loc=loc, scale=scale, rng=rng, size=size)
+
+    def __call__(self, loc=0.0, scale=1.0, size=None, **kwargs):
+        return super().__call__(loc, scale, size=size, **kwargs)
+
+
+larrynormal = LarryNormalRV()
+
+
+class LarryNormal(Continuous):
+    rv_op = larrynormal
+
+    @classmethod
+    def dist(cls, mu, sigma, **kwargs):
+        return super().dist([mu, sigma], **kwargs)
+
+    def logp(value, mu, sigma):
+        return (-at.log(2*np.pi*sigma**2) - (value - mu)**2/sigma**2)/2
+
+    def logcdf(value, mu, sigma):
+        return bound(
+            normal_lcdf(mu, sigma, value),
+            0 < sigma,
+        )
+
+
 if __name__ == "__main__":
 
     with pm.Model() as model:
-        # sbw = StickBreakingWeights("test-sticks", alpha=1)
-        sbw = pm.Dirichlet(
-            name="sticks",
-            a=np.ones(
-                20,
-            ),
-        )
+        sbw = StickBreakingWeights("test-sticks", alpha=1)
+        # larry_norm = LarryNormal(name="larrynormal", mu=1, sigma=2)
+
         trace = pm.sample(1000)
+        print(trace.to_dict()["posterior"]["test-sticks"][0].mean())
