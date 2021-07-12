@@ -18,7 +18,6 @@ from numpy import inf
 
 from pymc3.step_methods.metropolis import tune
 from pymc3.tests import models
-from pymc3.tests.helpers import select_by_precision
 from pymc3.tuning import find_MAP, scaling
 
 
@@ -37,7 +36,7 @@ def test_guess_scaling():
 def test_mle_jacobian():
     """Test MAP / MLE estimation for distributions with flat priors."""
     truth = 10.0  # Simple normal model should give mu=10.0
-    rtol = select_by_precision(float64=1e-6, float32=1e-4)
+    rtol = 1e-5  # this rtol should work on both floatX precisions
 
     start, model, _ = models.simple_normal(bounded_prior=False)
     with model:
