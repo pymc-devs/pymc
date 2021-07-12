@@ -10,7 +10,9 @@ class TestQuadraticApproximation(SeededTest):
     def setup_method(self):
         super().setup_method()
 
-    def test_recovers_analytical_quadratic_approximation_in_normal_with_unknown_mean_and_variance():
+    def test_recovers_analytical_quadratic_approximation_in_normal_with_unknown_mean_and_variance(
+        self,
+    ):
         y = np.array([2642, 3503, 4358])
         n = y.size
 
@@ -27,7 +29,7 @@ class TestQuadraticApproximation(SeededTest):
         assert np.allclose(posterior.mean, bda_map)
         assert np.allclose(posterior.cov, bda_cov, atol=1e-4)
 
-    def test_hdi_contains_parameters_in_linear_regression():
+    def test_hdi_contains_parameters_in_linear_regression(self):
         N = 100
         M = 2
         sigma = 0.2

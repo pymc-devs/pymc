@@ -23,16 +23,16 @@ __all__ = ["quadratic_approximation"]
 from pymc3.tuning import find_hessian, find_MAP
 
 
-def quadratic_approximation(vars, n_chains=2, n_samples=10_000):
+def quadratic_approximation(vars, n_samples=10_000):
     """Finds the quadratic approximation to the posterior, also known as the Laplace approximation.
 
     NOTE: The quadratic approximation only works well for unimodal and roughly symmetrical posteriors of continuous variables.
-    The usual MCMC convergence and mixing statistics (e.g. R-hat, ESS) will NOT tell you anything about how well this approximation fits your actual (unknown) posterior, indeed they'll always be extremely nice since all "chains" are sampling from exactly the same distribution, the posterior quadratic approximation.
+    The usual MCMC convergence and mixing statistics (e.g. R-hat, ESS) will NOT tell you anything about how well this approximation fits your actual (unknown) posterior, indeed they'll always be extremely nice since all samples are from exactly the same distribution, the posterior quadratic approximation.
     Use at your own risk.
 
     See Chapter 4 of "Bayesian Data Analysis" 3rd edition for background.
 
-    Returns an arviz.InferenceData object for compatibility by sampling from the approximated quadratic posterior. Note these are NOT MCMC samples, so the notion of chains is meaningless, and is only included for downstream compatibility with Arviz.
+    Returns an arviz.InferenceData object for compatibility by sampling from the approximated quadratic posterior. Note these are NOT MCMC samples.
 
     Also returns the exact posterior approximation as a scipy.stats.multivariate_normal distribution.
 
@@ -40,10 +40,8 @@ def quadratic_approximation(vars, n_chains=2, n_samples=10_000):
     ----------
     vars: list
         List of variables to approximate the posterior for.
-    n_chains: int
-        How many chains to simulate.
     n_samples: int
-        How many samples to sample from the approximate posterior for each chain.
+        How many samples to sample from the approximate posterior.
 
     Returns
     -------
@@ -57,7 +55,7 @@ def quadratic_approximation(vars, n_chains=2, n_samples=10_000):
     cov = np.linalg.inv(H)
     mean = np.concatenate([np.atleast_1d(map[v.name]) for v in vars])
     posterior = scipy.stats.multivariate_normal(mean=mean, cov=cov)
-    draws = posterior.rvs((n_chains, n_samples))
+    draws = posterior.rvs(n_samples)[np.newaxis, ...]
     samples = {}
     i = 0
     for v in vars:
