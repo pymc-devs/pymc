@@ -73,6 +73,17 @@ class CompoundStep:
                 method.reset_tuning()
 
     @property
+    def tune(self):
+        do_tune = any(method.tune for method in self.methods if hasattr(method, "tune"))
+        return any(do_tune)
+    
+    @tune.setter
+    def tune(self, value):
+        for method in self.methods:
+            if hasattr(method, "tune"):
+                method.tune = value
+
+    @property
     def vars_shape_dtype(self):
         dtype_shapes = {}
         for method in self.methods:
