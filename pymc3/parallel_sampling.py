@@ -16,13 +16,13 @@ import ctypes
 import logging
 import multiprocessing
 import multiprocessing.sharedctypes
-import pickle
 import platform
 import time
 import traceback
 
 from collections import namedtuple
 
+import cloudpickle
 import numpy as np
 
 from fastprogress.fastprogress import progress_bar
@@ -93,7 +93,6 @@ class _Process:
         draws: int,
         tune: int,
         seed,
-        pickle_backend,
     ):
         self._msg_pipe = msg_pipe
         self._step_method = step_method
@@ -103,7 +102,6 @@ class _Process:
         self._at_seed = seed + 1
         self._draws = draws
         self._tune = tune
-        self._pickle_backend = pickle_backend
 
     def _unpickle_step_method(self):
         unpickle_error = (
@@ -112,22 +110,10 @@ class _Process:
             "or forkserver."
         )
         if self._step_method_is_pickled:
-            if self._pickle_backend == "pickle":
-                try:
-                    self._step_method = pickle.loads(self._step_method)
-                except Exception:
-                    raise ValueError(unpickle_error)
-            elif self._pickle_backend == "dill":
-                try:
-                    import dill
-                except ImportError:
-                    raise ValueError("dill must be installed for pickle_backend='dill'.")
-                try:
-                    self._step_method = dill.loads(self._step_method)
-                except Exception:
-                    raise ValueError(unpickle_error)
-            else:
-                raise ValueError("Unknown pickle backend")
+            try:
+                self._step_method = cloudpickle.loads(self._step_method)
+            except Exception:
+                raise ValueError(unpickle_error)
 
     def run(self):
         try:
@@ -243,7 +229,6 @@ class ProcessAdapter:
         seed,
         start,
         mp_ctx,
-        pickle_backend,
     ):
         self.chain = chain
         process_name = "worker_chain_%s" % chain
@@ -287,7 +272,6 @@ class ProcessAdapter:
                 draws,
                 tune,
                 seed,
-                pickle_backend,
             ),
         )
         self._process.start()
@@ -406,7 +390,6 @@ class ParallelSampler:
         start_chain_num: int = 0,
         progressbar: bool = True,
         mp_ctx=None,
-        pickle_backend: str = "pickle",
     ):
 
         if any(len(arg) != chains for arg in [seeds, start_points]):
@@ -420,14 +403,7 @@ class ParallelSampler:
 
         step_method_pickled = None
         if mp_ctx.get_start_method() != "fork":
-            if pickle_backend == "pickle":
-                step_method_pickled = pickle.dumps(step_method, protocol=-1)
-            elif pickle_backend == "dill":
-                try:
-                    import dill
-                except ImportError:
-                    raise ValueError("dill must be installed for pickle_backend='dill'.")
-                step_method_pickled = dill.dumps(step_method, protocol=-1)
+            step_method_pickled = cloudpickle.dumps(step_method, protocol=-1)
 
         self._samplers = [
             ProcessAdapter(
@@ -439,7 +415,6 @@ class ParallelSampler:
                 seed,
                 start,
                 mp_ctx,
-                pickle_backend,
             )
             for chain, seed, start in zip(range(chains), seeds, start_points)
         ]
