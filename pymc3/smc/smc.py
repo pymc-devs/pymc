@@ -307,7 +307,7 @@ def logp_forw(point, out_vars, vars, shared):
         f = aesara_function([inarray0], out_list[0], allow_input_downcast=True)
     else:
         f = aesara_function([inarray0], out_list[0])
-        f.trust_input = False
+        f.trust_input = True
     return f
 
 
