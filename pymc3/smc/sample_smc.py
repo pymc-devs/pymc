@@ -19,6 +19,7 @@ import warnings
 
 from collections.abc import Iterable
 
+import cloudpickle
 import numpy as np
 
 from arviz import InferenceData
@@ -224,9 +225,12 @@ def sample_smc(
         pbars = [pbar] + [None] * (chains - 1)
 
         pool = mp.Pool(cores)
+        # "manually" (de)serialize params before/after multiprocessing
+        params = tuple(cloudpickle.dumps(p) for p in params)
         results = pool.starmap(
-            sample_smc_int, [(*params, random_seed[i], i, pbars[i]) for i in range(chains)]
+            _sample_smc_int, [(*params, random_seed[i], i, pbars[i]) for i in range(chains)]
         )
+        results = tuple(cloudpickle.loads(r) for r in results)
         pool.close()
         pool.join()
 
@@ -237,7 +241,7 @@ def sample_smc(
         for i in range(chains):
             pbar.offset = 100 * i
             pbar.base_comment = f"Chain: {i+1}/{chains}"
-            results.append(sample_smc_int(*params, random_seed[i], i, pbar))
+            results.append(_sample_smc_int(*params, random_seed[i], i, pbar))
 
     (
         traces,
@@ -316,7 +320,7 @@ def sample_smc(
         return posterior
 
 
-def sample_smc_int(
+def _sample_smc_int(
     draws,
     kernel,
     n_steps,
@@ -332,6 +336,36 @@ def sample_smc_int(
     progressbar=None,
 ):
     """Run one SMC instance."""
+    in_out_pickled = type(model) == bytes
+    if in_out_pickled:
+        # function was called in multiprocessing context, deserialize first
+        (
+            draws,
+            kernel,
+            n_steps,
+            start,
+            tune_steps,
+            p_acc_rate,
+            threshold,
+            save_sim_data,
+            save_log_pseudolikelihood,
+            model,
+        ) = map(
+            cloudpickle.loads,
+            (
+                draws,
+                kernel,
+                n_steps,
+                start,
+                tune_steps,
+                p_acc_rate,
+                threshold,
+                save_sim_data,
+                save_log_pseudolikelihood,
+                model,
+            ),
+        )
+
     smc = SMC(
         draws=draws,
         kernel=kernel,
@@ -375,7 +409,7 @@ def sample_smc_int(
         accept_ratios.append(smc.acc_rate)
         nsteps.append(smc.n_steps)
 
-    return (
+    results = (
         smc.posterior_to_trace(),
         smc.sim_data,
         smc.log_marginal_likelihood,
@@ -384,3 +418,8 @@ def sample_smc_int(
         accept_ratios,
         nsteps,
     )
+
+    if in_out_pickled:
+        results = cloudpickle.dumps(results)
+
+    return results
