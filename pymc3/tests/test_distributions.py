@@ -3074,7 +3074,10 @@ def test_car_logp(sparse, size):
     delta_logp = scipy_logp - car_logp
 
     # Check to make sure all the delta values are identical.
-    assert np.allclose(delta_logp - delta_logp[0], 0.0)
+    tol = 1e-08
+    if aesara.config.floatX == "float32":
+        tol = 1e-5
+    assert np.allclose(delta_logp - delta_logp[0], 0.0, atol=tol)
 
 
 class TestBugfixes:
