@@ -67,7 +67,7 @@ class TestARM5_4(SeededTest):
         P -= P.mean()
         P["1"] = 1
 
-        with pm.Model() as model:
+        with pm.Model(rng_seeder=self.get_random_state()) as model:
             effects = pm.Normal("effects", mu=0, sigma=100, size=len(P.columns))
             logit_p = at.dot(floatX(np.array(P)), effects)
             pm.Bernoulli("s", logit_p=logit_p, observed=floatX(data.switch.values))
@@ -89,7 +89,7 @@ class TestARM12_6(SeededTest):
         floor = data.floor.to_numpy()
         group = data.group.to_numpy()
 
-        with pm.Model() as model:
+        with pm.Model(rng_seeder=self.get_random_state()) as model:
             groupmean = pm.Normal("groupmean", 0, 10.0 ** -2.0)
             groupsd = pm.Uniform("groupsd", 0, 10.0)
             sd = pm.Uniform("sd", 0, 10.0)
@@ -126,7 +126,7 @@ class TestARM12_6Uranium(SeededTest):
         group = data.group.to_numpy()
         ufull = data.Uppm.to_numpy()
 
-        with pm.Model() as model:
+        with pm.Model(rng_seeder=self.get_random_state()) as model:
             groupmean = pm.Normal("groupmean", 0, 10.0 ** -2.0)
             groupsd = pm.Uniform("groupsd", 0, 10.0)
             sd = pm.Uniform("sd", 0, 10.0)
@@ -163,40 +163,39 @@ class TestARM12_6Uranium(SeededTest):
             pm.sample(50, step=step, start=start)
 
 
-def build_disaster_model(masked=False):
-    # fmt: off
-    disasters_data = np.array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
-                               3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-                               2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
-                               1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
-                               0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-                               3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-                               0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
-    # fmt: on
-    if masked:
-        disasters_data[[23, 68]] = -1
-        disasters_data = np.ma.masked_values(disasters_data, value=-1)
-    years = len(disasters_data)
-
-    with pm.Model() as model:
-        # Prior for distribution of switchpoint location
-        switchpoint = pm.DiscreteUniform("switchpoint", lower=0, upper=years)
-        # Priors for pre- and post-switch mean number of disasters
-        early_mean = pm.Exponential("early_mean", lam=1.0)
-        late_mean = pm.Exponential("late_mean", lam=1.0)
-        # Allocate appropriate Poisson rates to years before and after current
-        # switchpoint location
-        idx = np.arange(years)
-        rate = at.switch(switchpoint >= idx, early_mean, late_mean)
-        # Data likelihood
-        pm.Poisson("disasters", rate, observed=disasters_data)
-    return model
-
-
 class TestDisasterModel(SeededTest):
+    def build_model(self, masked=False):
+        # fmt: off
+        disasters_data = np.array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+                                   3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
+                                   2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
+                                   1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+                                   0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+                                   3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+                                   0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+        # fmt: on
+        if masked:
+            disasters_data[[23, 68]] = -1
+            disasters_data = np.ma.masked_values(disasters_data, value=-1)
+        years = len(disasters_data)
+
+        with pm.Model(rng_seeder=self.get_random_state()) as model:
+            # Prior for distribution of switchpoint location
+            switchpoint = pm.DiscreteUniform("switchpoint", lower=0, upper=years)
+            # Priors for pre- and post-switch mean number of disasters
+            early_mean = pm.Exponential("early_mean", lam=1.0)
+            late_mean = pm.Exponential("late_mean", lam=1.0)
+            # Allocate appropriate Poisson rates to years before and after current
+            # switchpoint location
+            idx = np.arange(years)
+            rate = at.switch(switchpoint >= idx, early_mean, late_mean)
+            # Data likelihood
+            pm.Poisson("disasters", rate, observed=disasters_data)
+        return model
+
     # Time series of recorded coal mining disasters in the UK from 1851 to 1962
     def test_disaster_model(self):
-        model = build_disaster_model(masked=False)
+        model = self.build_model(masked=False)
         with model:
             # Initial values for stochastic nodes
             start = {"early_mean": 2, "late_mean": 3.0}
@@ -206,7 +205,7 @@ class TestDisasterModel(SeededTest):
             az.summary(idata)
 
     def test_disaster_model_missing(self):
-        model = build_disaster_model(masked=True)
+        model = self.build_model(masked=True)
         with model:
             # Initial values for stochastic nodes
             start = {"early_mean": 2.0, "late_mean": 3.0}
@@ -251,7 +250,7 @@ class TestLatentOccupancy(SeededTest):
         self.y = ((np.random.random(n) < pi) * np.random.poisson(lam=theta, size=n)).astype("int16")
 
     def build_model(self):
-        with pm.Model() as model:
+        with pm.Model(rng_seeder=self.get_random_state()) as model:
             # Estimated occupancy
             psi = pm.Beta("psi", 1, 1)
             # Latent variable for occupancy
@@ -299,7 +298,7 @@ class TestRSV(SeededTest):
         amman_prop = 0.35
         # infant RSV cases in Al Bashir hostpital
         rsv_cases = np.array([40, 59, 65])
-        with pm.Model() as model:
+        with pm.Model(rng_seeder=self.get_random_state()) as model:
             # Al Bashir hospital market share
             market_share = pm.Uniform("market_share", 0.5, 0.6)
             # Number of 1 y.o. in Amman
@@ -333,19 +332,19 @@ class TestMultilevelNormal(SeededTest):
         true_mean = 11.0
         y = np.array([true_mean])
 
-        with pm.Model() as model_coarse_0:
+        with pm.Model(rng_seeder=self.get_random_state()) as model_coarse_0:
             sigma = 1.0
             x_coeff = pm.Normal("x", true_mean, sigma=10.0)
             pm.Normal("y", mu=x_coeff, sigma=sigma, observed=y + 1.0)
 
-        with pm.Model() as model_coarse_1:
+        with pm.Model(rng_seeder=self.get_random_state()) as model_coarse_1:
             sigma = 1.0
             x_coeff = pm.Normal("x", true_mean, sigma=10.0)
             pm.Normal("y", mu=x_coeff, sigma=sigma, observed=y + 0.5)
 
         coarse_models = [model_coarse_0, model_coarse_1]
 
-        with pm.Model() as model:
+        with pm.Model(rng_seeder=self.get_random_state()) as model:
             sigma = 1.0
             x_coeff = pm.Normal("x", true_mean, sigma=10.0)
             pm.Normal("y", mu=x_coeff, sigma=sigma, observed=y)
