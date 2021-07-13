@@ -2385,13 +2385,11 @@ def test_car_rng_fn(sparse):
     while p <= delta and f > 0:
         car_smp, mn_smp = check["car"][f - 1, :, :], check["mn"][f - 1, :, :]
         p = min(
-            [
-                st.ks_2samp(
-                    np.atleast_1d(car_smp[..., idx]).flatten(),
-                    np.atleast_1d(mn_smp[..., idx]).flatten(),
-                )[1]
-                for idx in range(car_smp.shape[-1])
-            ]
+            st.ks_2samp(
+                np.atleast_1d(car_smp[..., idx]).flatten(),
+                np.atleast_1d(mn_smp[..., idx]).flatten(),
+            )[1]
+            for idx in range(car_smp.shape[-1])
         )
         f -= 1
     assert p > delta
