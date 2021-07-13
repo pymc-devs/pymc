@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import pickle
 import unittest
 
 from functools import reduce
@@ -19,6 +18,7 @@ from functools import reduce
 import aesara
 import aesara.sparse as sparse
 import aesara.tensor as at
+import cloudpickle
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
@@ -407,9 +407,7 @@ def test_model_pickle(tmpdir):
         x = pm.Normal("x")
         pm.Normal("y", observed=1)
 
-    file_path = tmpdir.join("model.p")
-    with open(file_path, "wb") as buff:
-        pickle.dump(model, buff)
+    cloudpickle.loads(cloudpickle.dumps(model))
 
 
 def test_model_pickle_deterministic(tmpdir):
@@ -420,9 +418,7 @@ def test_model_pickle_deterministic(tmpdir):
         pm.Deterministic("w", x / z)
         pm.Normal("y", observed=1)
 
-    file_path = tmpdir.join("model.p")
-    with open(file_path, "wb") as buff:
-        pickle.dump(model, buff)
+    cloudpickle.loads(cloudpickle.dumps(model))
 
 
 def test_model_vars():
