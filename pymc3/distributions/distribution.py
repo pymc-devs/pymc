@@ -23,7 +23,6 @@ from typing import Optional
 
 import aesara
 import aesara.tensor as at
-import dill
 
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
@@ -532,27 +531,6 @@ class DensityDist(Distribution):
         self.rand = random
         self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
         self.check_shape_in_random = check_shape_in_random
-
-    def __getstate__(self):
-        # We use dill to serialize the logp function, as this is almost
-        # always defined in the notebook and won't be pickled correctly.
-        # Fix https://github.com/pymc-devs/pymc3/issues/3844
-        try:
-            logp = dill.dumps(self.logp)
-        except RecursionError as err:
-            if type(self.logp) == types.MethodType:
-                raise ValueError(
-                    "logp for DensityDist is a bound method, leading to RecursionError while serializing"
-                ) from err
-            else:
-                raise err
-        vals = self.__dict__.copy()
-        vals["logp"] = logp
-        return vals
-
-    def __setstate__(self, vals):
-        vals["logp"] = dill.loads(vals["logp"])
-        self.__dict__ = vals
 
     def _distr_parameters_for_repr(self):
         return []
