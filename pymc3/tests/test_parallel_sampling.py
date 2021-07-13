@@ -71,12 +71,6 @@ def _crash_remote_process(a, master_pid):
     return 2 * np.array(a)
 
 
-def test_dill():
-    with pm.Model():
-        pm.Normal("x")
-        pm.sample(tune=1, draws=1, chains=2, cores=2, pickle_backend="dill", mp_ctx="spawn")
-
-
 def test_remote_pipe_closed():
     master_pid = os.getpid()
     with pm.Model():
@@ -112,7 +106,6 @@ def test_abort():
             mp_ctx=ctx,
             start={"a": np.array([1.0]), "b_log__": np.array(2.0)},
             step_method_pickled=None,
-            pickle_backend="pickle",
         )
         proc.start()
         while True:
@@ -147,7 +140,6 @@ def test_explicit_sample():
         mp_ctx=ctx,
         start={"a": np.array([1.0]), "b_log__": np.array(2.0)},
         step_method_pickled=None,
-        pickle_backend="pickle",
     )
     proc.start()
     while True:

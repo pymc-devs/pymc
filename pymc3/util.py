@@ -19,7 +19,7 @@ import warnings
 from typing import Dict, List, Tuple, Union
 
 import arviz
-import dill
+import cloudpickle
 import numpy as np
 import xarray
 
@@ -347,7 +347,7 @@ def hashable(a=None) -> int:
         pass
     # Not hashable >>>
     try:
-        return hash(dill.dumps(a))
+        return hash(cloudpickle.dumps(a))
     except Exception:
         if hasattr(a, "__dict__"):
             return hashable(a.__dict__)

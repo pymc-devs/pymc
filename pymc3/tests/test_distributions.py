@@ -3109,9 +3109,9 @@ def test_serialize_density_dist():
         y = pm.DensityDist("y", func)
         pm.sample(draws=5, tune=1, mp_ctx="spawn")
 
-    import pickle
+    import cloudpickle
 
-    pickle.loads(pickle.dumps(y))
+    cloudpickle.loads(cloudpickle.dumps(y))
 
 
 def test_distinct_rvs():
