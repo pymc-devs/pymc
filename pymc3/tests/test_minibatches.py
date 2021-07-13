@@ -134,7 +134,7 @@ class TestGenerator:
         gen = generator(datagen)
         cloudpickle.loads(cloudpickle.dumps(gen))
         bad_gen = generator(integers())
-        with pytest.raises(TypeError, match="cannot pickle 'generator' object"):
+        with pytest.raises(TypeError):
             cloudpickle.dumps(bad_gen)
 
     def test_gen_cloning_with_shape_change(self, datagen):
