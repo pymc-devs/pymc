@@ -24,6 +24,7 @@ import aesara.tensor as at
 import numpy as np
 import scipy
 
+from aesara.assert_op import Assert
 from aesara.graph.basic import Apply
 from aesara.graph.op import Op
 from aesara.sparse.basic import sp_sum
@@ -1939,12 +1940,12 @@ class CARRV(RandomVariable):
             raise ValueError("W must be a matrix (ndim=2).")
 
         sparse = isinstance(W, aesara.sparse.SparseVariable)
+        msg = "W must be a symmetric adjacency matrix."
         if sparse:
-            if not at.isclose(aesara.sparse.basic.sp_sum(W - W.T), 0):
-                raise ValueError("W must be a symmetric adjacency matrix.")
+            abs_diff = aesara.sparse.basic.mul(aesara.sparse.basic.sgn(W - W.T), W - W.T)
+            W = Assert(msg)(W, at.isclose(aesara.sparse.basic.sp_sum(abs_diff), 0))
         else:
-            if not at.allclose(W, W.T):
-                raise ValueError("W must be a symmetric adjacency matrix.")
+            W = Assert(msg)(W, at.allclose(W, W.T))
 
         tau = at.as_tensor_variable(floatX(tau))
         alpha = at.as_tensor_variable(floatX(alpha))

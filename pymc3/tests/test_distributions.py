@@ -3093,6 +3093,7 @@ def test_car_symmetry_check(sparse):
     tau = 2
     alpha = 0.5
     mu = np.zeros(4)
+    xs = np.random.randn(*mu.shape)
 
     # non-symmetric matrix
     W = np.array(
@@ -3102,8 +3103,9 @@ def test_car_symmetry_check(sparse):
     if sparse:
         W = aesara.sparse.csr_from_dense(W)
 
-    with pytest.raises(ValueError):
-        car_dist = CAR.dist(mu, W, alpha, tau)
+    car_dist = CAR.dist(mu, W, alpha, tau)
+    with pytest.raises(AssertionError):
+        logp(car_dist, xs).eval()
 
 
 class TestBugfixes:
