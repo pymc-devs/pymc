@@ -1936,7 +1936,15 @@ class CARRV(RandomVariable):
 
         W = aesara.sparse.as_sparse_or_tensor_variable(floatX(W))
         if not W.ndim == 2:
-            raise ValueError("W must be a symmetric adjacency matrix.")
+            raise ValueError("W must be a matrix (ndim=2).")
+
+        sparse = isinstance(W, aesara.sparse.SparseVariable)
+        if sparse:
+            if not at.isclose(aesara.sparse.basic.sp_sum(W - W.T), 0):
+                raise ValueError("W must be a symmetric adjacency matrix.")
+        else:
+            if not at.allclose(W, W.T):
+                raise ValueError("W must be a symmetric adjacency matrix.")
 
         tau = at.as_tensor_variable(floatX(tau))
         alpha = at.as_tensor_variable(floatX(alpha))

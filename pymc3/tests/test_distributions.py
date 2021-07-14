@@ -3080,6 +3080,32 @@ def test_car_logp(sparse, size):
     assert np.allclose(delta_logp - delta_logp[0], 0.0, atol=tol)
 
 
+@pytest.mark.parametrize(
+    "sparse",
+    [False, True],
+    ids=str,
+)
+def test_car_symmetry_check(sparse):
+    """
+    Tests the check of W matrix symmetry in CARRV.make_node.
+    """
+    np.random.seed(1)
+    tau = 2
+    alpha = 0.5
+    mu = np.zeros(4)
+
+    # non-symmetric matrix
+    W = np.array(
+        [[0.0, 1.0, 2.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
+    )
+    W = aesara.tensor.as_tensor_variable(W)
+    if sparse:
+        W = aesara.sparse.csr_from_dense(W)
+
+    with pytest.raises(ValueError):
+        car_dist = CAR.dist(mu, W, alpha, tau)
+
+
 class TestBugfixes:
     @pytest.mark.parametrize("dist_cls,kwargs", [(MvNormal, dict()), (MvStudentT, dict(nu=2))])
     @pytest.mark.parametrize("dims", [1, 2, 4])
