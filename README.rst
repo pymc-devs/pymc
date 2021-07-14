@@ -23,7 +23,7 @@ stopped getting developed by the original authors, and we started experiments wi
 
 Since then many things changed and we are happy to announce that PyMC3 will continue to rely on Theano,
 or rather its successors Theano-PyMC (`pymc3 <4)` and Aesara (`pymc3 >=4`).
-Check out <https://github.com/pymc-devs/Aesara>`__) and specifically the latest developments on the `PyMC3 `main` branch <https://github.com/pymc-devs/pymc3/>`.
+Check out <https://github.com/aesara-devs/aesara>`__) and specifically the latest developments on the `PyMC3 `main` branch <https://github.com/pymc-devs/pymc3/>`.
 
 Features
 ========
