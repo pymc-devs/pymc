@@ -19,13 +19,11 @@ The future of PyMC3 & Theano
 ============================
 
 There have been many questions and uncertainty around the future of PyMC3 since Theano
-stopped getting developed by the original authors, and we started experiments with PyMC4.
+stopped getting developed by the original authors, and we started experiments with a PyMC version based on tensorflow probability.
 
-We are happy to announce that PyMC3 on Theano (which we are `developing further <https://github.com/pymc-devs/Theano-PyMC>`__)
-with a new JAX backend is the future. PyMC4 will not be developed further.
-
-See the `full announcement <https://pymc-devs.medium.com/the-future-of-pymc3-or-theano-is-dead-long-live-theano-d8005f8a0e9b>`__
-for more details.
+Since then many things changed and we are happy to announce that PyMC3 will continue to rely on Theano,
+or rather its successors Theano-PyMC (`pymc3 <4)` and Aesara (`pymc3 >=4`).
+Check out <https://github.com/pymc-devs/Aesara>`__) and specifically the latest developments on the `PyMC3 `main` branch <https://github.com/pymc-devs/pymc3/>`.
 
 Features
 ========

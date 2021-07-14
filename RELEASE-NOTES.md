@@ -13,6 +13,7 @@
 + Generalized BART, bounded distributions like Binomial and Poisson can now be used as likelihoods (see [#4675](https://github.com/pymc-devs/pymc3/pull/4675), [#4709](https://github.com/pymc-devs/pymc3/pull/4709) and
 [#4720](https://github.com/pymc-devs/pymc3/pull/4720)).
 + `plot_gp_dist` is now available at the package level: `pm.plot_gp_dist` ([see #4835](https://github.com/pymc-devs/pymc3/pull/4835)).
++ The experimental JAX sampling was removed in favor of the upcoming `v4` release ([see #4866](https://github.com/pymc-devs/pymc3/pull/4866)).
 
 ## PyMC3 3.11.2 (14 March 2021)
 
