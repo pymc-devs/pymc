@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 if __name__ == "__main__":
-    testing_workflows = ["jaxtests.yml", "pytest.yml"]
+    testing_workflows = ["pytest.yml"]
     ignored = set()
     non_ignored = set()
     for wfyml in testing_workflows:
