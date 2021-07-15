@@ -18,6 +18,7 @@ import warnings
 sys.path.insert(0, "../../../pymc3")
 
 import numpy as np
+import pandas as pd
 
 from aesara import tensor as at
 
@@ -25,15 +26,21 @@ import pymc3 as pm
 
 import aesara
 from aesara.tensor.random.op import RandomVariable
-aesara.config.exception_verbosity="high"
 
-# from pymc3.distributions.dist_math import bound
-from pymc3.distributions.distribution import Distribution
-# from pymc3.dp.util import StickBreakingWeights
+aesara.config.exception_verbosity = "high"
+
+from pymc3.math import logsumexp
+
+import argparse
 
 __all__ = [
     "DirichletProcess",
 ]
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--dp", action="store_true")
+parser.add_argument("--dpmix", action="store_true")
+args = parser.parse_args()
 
 
 def stick_breaking(betas):
@@ -48,13 +55,32 @@ def stick_breaking(betas):
     #     )
 
     sticks = at.concatenate(
-            [
-                [1],
-                at.cumprod(1 - betas[:-1]),
-            ]
-        )
+        [
+            [1],
+            at.cumprod(1 - betas[:-1]),
+        ]
+    )
 
-    return betas*sticks
+    return betas * sticks
+
+
+def mixture_logp(weights, comp_dist, atoms, obs):
+    # comp_dist is something like lambda obs, atoms: pm.Normal.logp(obs, atoms, 1).eval()
+
+    atoms_shape = atoms.shape.eval()
+    obs_shape = obs.shape.eval()
+
+    # assert atoms.shape == weights.shape
+
+    weights = at.broadcast_to(weights, shape=obs_shape + atoms_shape)
+    log_weights = (at.log(weights)).T
+    atoms_logp = comp_dist(
+        at.broadcast_to(obs, atoms_shape + obs_shape),
+        at.broadcast_to(atoms, obs_shape + atoms_shape).T,
+    )
+
+    return logsumexp(log_weights + atoms_logp)
+
 
 class DirichletProcess:
     R"""
@@ -74,16 +100,14 @@ class DirichletProcess:
         """
         if isinstance(alpha, (int, float)):
             self.alpha = np.tile(alpha, reps=(K,))
+        elif isinstance(alpha, (np.ndarray, aesara.graph.basic.Variable)):
+            self.alpha = alpha
         else:
-            # at this point, self.alpha can be of length different than K, which is not okay
-            if isinstance(alpha, (np.ndarray, aesara.graph.basic.Variable)):
-                self.alpha = alpha
-            else:
-                raise ValueError(
-                    "alpha parameter must be of type float, numpy.ndarray or "
-                    f"pymc3.distributions.Distribution, but got {type(alpha)}"
-                    "instead."
-                )
+            raise ValueError(
+                "alpha parameter must be of type float, numpy.ndarray or "
+                f"pymc3.distributions.Distribution, but got {type(alpha)}"
+                "instead."
+            )
 
         if not isinstance(base_dist, aesara.graph.basic.Variable):
             raise ValueError(
@@ -135,28 +159,89 @@ class DirichletProcess:
     def __str__(self):
         return self.name
 
-    @property
-    def atoms(self):
-        # to be overwritten in extensions of DirichletProcess?
-        return self.base_dist
+    def prior(self, name, Xs, **kwargs):
+        G0 = self._build_prior(name, Xs, **kwargs)
 
-    def dp(self):
-        pass
+        return G0
+
+    def _build_prior(self, name, Xs, *args, **kwargs):
+        """
+        Estimates CDF for specific Xs
+        """
+        self.Xs = Xs
+
+        dirac = at.lt(self.base_dist, self.Xs)
+        linear_comb = at.sum(at.mul(self.weights, dirac), axis=1)
+
+        prior_atoms = pm.Deterministic(
+            name=name,
+            var=linear_comb,
+        )
+
+        return prior_atoms
+
+    def prior(self, name, Xs, **kwargs):
+        # insert some checks for errors
+
+        G0 = self._build_prior(name, Xs, **kwargs)
+
+        return G0
+
+    def _build_posterior(self, name, Xs, Xnew, *args, **kwargs):
+
+        Xs = at.atleast_2d(Xs).T
+        Xnew = at.atleast_2d(Xnew).T
+
+        N = Xs.shape.eval()[0]
+
+        dirac = at.sum(at.ge(Xnew, Xs.T), axis=1)  # shape = (N',)
+        dirac = at.as_tensor_variable(dirac)  # shape = (N',)
+
+        base_dist = pm.Normal("G0", 0, 3, shape=(K, 1))  # K draws
+        weights = pm.Dirichlet(
+            name="sticks",
+            a=np.ones(shape=(K,)),
+        )
+
+        empirical_base_cdf = at.le(base_dist, Xnew.T)
+        empirical_base_cdf = at.sum(at.mul(empirical_base_cdf.T, weights), axis=1)
+
+        posterior_atoms = pm.Deterministic(
+            name="posterior-dp",
+            var=empirical_base_cdf / (1 + N) + dirac / (1 + N),
+        )
+
+        return posterior_atoms
+
+    def posterior(self, name, Xs, Xnew, **kwargs):
+
+        Gn = self._build_posterior(name, Xs, Xnew, **kwargs)
+
+        return Gn
 
 
 class DirichletProcessMixture(DirichletProcess):
 
-    def __init__(self, name, alpha, base_dist, K):
-        super().__init__(name, alpha, base_dist, K)
+    def __init__(self, name, alpha, atoms, base_dist_class, K, **kwargs):
+        # base_dist_class is temporary
+        # should atoms be a dict?
+        super().__init__(name, alpha, base_dist_class("base-dist", atoms), K)
 
+        # what if atom is not 1-D
+        kernel = lambda obs, atom: base_dist_class.logp(obs, atom)
 
-class DependentDensityRegression(DirichletProcess):
+        logp = lambda x: mixture_logp(
+            weights=self.weights,
+            comp_dist=kernel,
+            atoms=self.base_dist,
+            observed=x,
+        )
 
-    def __init__(self, name, covariates, alpha=1, K=30, *args, **kwargs):
-        # gaussian process for covariates?
-
-        coeffs = pm.Normal("coeffs", 0, 10)
-        super().__init__(name, alpha, pm.Normal, K)
+        self.mixture = pm.Potential(
+            name="mixture",
+            var=logp,
+            **kwargs,
+        )
 
 
 if __name__ == "__main__":
@@ -165,28 +250,48 @@ if __name__ == "__main__":
     Xnew = np.array([-3, -1, 0.5, 3.2, 4])
     K = 19
 
-    with pm.Model() as model:
-        try:
-            Xs.shape[1]
-        except IndexError as e:
-            Xs = Xs[..., np.newaxis]
+    sunspot_df = pd.read_csv(
+        pm.get_data("sunspot.csv"), sep=";", names=["time", "sunspot.year"], usecols=[0, 1]
+    )
 
-        try:
-            Xnew.shape[1]
-        except IndexError as e:
-            Xnew = Xnew[..., np.newaxis]
+    if args.dp:
+        with pm.Model() as model:
+            try:
+                Xs.shape[1]
+            except IndexError as e:
+                Xs = Xs[..., np.newaxis]
 
-        base_dist = pm.Normal("G0", 0, 3, shape=(K,))
-        dp = DirichletProcess(
-            name="dp",
-            alpha=1.,
-            base_dist=base_dist,
-            K=K,
-        )
+            try:
+                Xnew.shape[1]
+            except IndexError as e:
+                Xnew = Xnew[..., np.newaxis]
 
-        trace = pm.sample(
-            draws=1000,
-            chains=1,
-        )
+            base_dist = pm.Normal("G0", 0, 3, shape=(K,))
+            dp = DirichletProcess(
+                name="dp",
+                alpha=1.,
+                base_dist=base_dist,
+                K=K,
+            )
 
-        print(trace.to_dict()["posterior"]["weights"][0].mean(axis=0))
+            trace = pm.sample(
+                draws=1000,
+                chains=1,
+            )
+
+            print(trace.to_dict()["posterior"]["weights"][0].mean(axis=0))
+
+    if args.dpmix:
+        # not ready yet
+        with pm.Model() as dp_mixture_model:
+            base_dist = pm.Normal("G0", 0, 3, shape=(K,))
+            dp_mix = DirichletProcessMixture(
+                name="dp-mix",
+                alpha=1,
+                atoms=pm.Gamma("lambda_", 300.0, 2.0, shape=K),
+                base_dist_class=pm.Poisson,
+                K=K,
+                observed=sunspot_df["sunspot.year"],
+            )
+            pm.sample(1000)
+            print("GREAT CODING")

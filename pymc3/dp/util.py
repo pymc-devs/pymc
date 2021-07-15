@@ -50,7 +50,6 @@ class StickBreakingWeightsRV(RandomVariable):
                 np.cumprod(1 - betas[:-1]),
             ]
         )
-        print(betas.shape)
 
         return betas * sticks
 
