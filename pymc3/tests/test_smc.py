@@ -171,6 +171,32 @@ class TestSMC(SeededTest):
             ):
                 pm.sample_smc(draws=10, chains=1, parallel=False)
 
+    def test_deprecated_abc_args(self):
+        with self.fast_model:
+            with pytest.warns(
+                DeprecationWarning,
+                match='The kernel string argument "ABC" in sample_smc has been deprecated',
+            ):
+                pm.sample_smc(draws=10, chains=1, kernel="ABC")
+
+            with pytest.warns(
+                DeprecationWarning,
+                match='The kernel string argument "Metropolis" in sample_smc has been deprecated',
+            ):
+                pm.sample_smc(draws=10, chains=1, kernel="Metropolis")
+
+            with pytest.warns(
+                DeprecationWarning,
+                match="save_sim_data has been deprecated",
+            ):
+                pm.sample_smc(draws=10, chains=1, save_sim_data=True)
+
+            with pytest.warns(
+                DeprecationWarning,
+                match="save_log_pseudolikelihood has been deprecated",
+            ):
+                pm.sample_smc(draws=10, chains=1, save_log_pseudolikelihood=True)
+
 
 @pytest.mark.xfail(reason="SMC-ABC not refactored yet")
 class TestSMCABC(SeededTest):
