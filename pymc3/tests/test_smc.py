@@ -157,7 +157,7 @@ class TestSMC(SeededTest):
         with self.slow_model:
             _ = pm.sample_smc(draws=10, chains=1, cores=1, return_inferencedata=False)
 
-        chains = 4
+        chains = 8
         draws = 100
 
         t0 = time.time()
@@ -484,3 +484,23 @@ class TestSimulator(SeededTest):
             # TODO: Why is this?
             with pytest.raises(NotImplementedError, match="named models"):
                 pm.sample_smc(draws=10, chains=1)
+
+    def test_deprecated_abc_args(self):
+        with self.SMABC_test:
+            with pytest.warns(
+                DeprecationWarning,
+                match='The kernel "ABC" in sample_smc has been deprecated',
+            ):
+                pm.sample_smc(draws=10, chains=1, kernel="ABC")
+
+            with pytest.warns(
+                DeprecationWarning,
+                match="save_sim_data has been deprecated",
+            ):
+                pm.sample_smc(draws=10, chains=1, save_sim_data=True)
+
+            with pytest.warns(
+                DeprecationWarning,
+                match="save_log_pseudolikelihood has been deprecated",
+            ):
+                pm.sample_smc(draws=10, chains=1, save_log_pseudolikelihood=True)
