@@ -72,12 +72,7 @@ class TestSMC(SeededTest):
 
     def test_sample(self):
         with self.SMC_test:
-
-            mtrace = pm.sample_smc(
-                draws=self.samples,
-                cores=1,  # Fails in parallel due to #4799
-                return_inferencedata=False,
-            )
+            mtrace = pm.sample_smc(draws=self.samples, return_inferencedata=False)
 
         x = mtrace["X"]
         mu1d = np.abs(x).mean(axis=0)
