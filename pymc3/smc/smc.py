@@ -41,28 +41,22 @@ class SMC:
     def __init__(
         self,
         draws=2000,
-        kernel="metropolis",
         n_steps=25,
         start=None,
         tune_steps=True,
         p_acc_rate=0.85,
         threshold=0.5,
-        save_sim_data=False,
-        save_log_pseudolikelihood=True,
         model=None,
         random_seed=-1,
         chain=0,
     ):
 
         self.draws = draws
-        self.kernel = kernel.lower()
         self.n_steps = n_steps
         self.start = start
         self.tune_steps = tune_steps
         self.p_acc_rate = p_acc_rate
         self.threshold = threshold
-        self.save_sim_data = save_sim_data
-        self.save_log_pseudolikelihood = save_log_pseudolikelihood
         self.model = model
         self.random_seed = random_seed
         self.chain = chain
@@ -72,15 +66,22 @@ class SMC:
         if self.random_seed != -1:
             np.random.seed(self.random_seed)
 
+        self.var_info = None
+        self.posterior = None
+        self.prior_logp = None
+        self.likelihood_logp = None
+        self.posterior_logp = None
+        self.prior_logp_func = None
+        self.likelihood_logp_func = None
+        self.log_marginal_likelihood = 0
+
         self.beta = 0
         self.max_steps = n_steps
         self.proposed = draws * n_steps
         self.acc_rate = 1
         self.variables = inputvars(self.model.value_vars)
         self.weights = np.ones(self.draws) / self.draws
-        self.log_marginal_likelihood = 0
-        self.sim_data = []
-        self.log_pseudolikelihood = []
+        self.cov = None
 
     def initialize_population(self):
         """Create an initial population from the prior distribution."""
@@ -101,7 +102,6 @@ class SMC:
             var_info[v.name] = (init[v.name].shape, init[v.name].size)
 
         for i in range(self.draws):
-
             point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
             population.append(DictToArrayBijection.map(point).data)
 
@@ -113,36 +113,12 @@ class SMC:
         initial_values = self.model.initial_point
         shared = make_shared_replacements(initial_values, self.variables, self.model)
 
-        if self.kernel == "abc":
-            factors = [var.logpt for var in self.model.free_RVs]
-            factors += [at.sum(factor) for factor in self.model.potentials]
-            self.prior_logp_func = logp_forw(
-                initial_values, [at.sum(factors)], self.variables, shared
-            )
-            simulator = self.model.observed_RVs[0]
-            distance = simulator.distribution.distance
-            sum_stat = simulator.distribution.sum_stat
-            self.likelihood_logp_func = PseudoLikelihood(
-                simulator.distribution.epsilon,
-                simulator.observations,
-                simulator.distribution.function,
-                [v.name for v in simulator.distribution.params],
-                self.model,
-                self.var_info,
-                self.variables,
-                distance,
-                sum_stat,
-                self.draws,
-                self.save_sim_data,
-                self.save_log_pseudolikelihood,
-            )
-        elif self.kernel == "metropolis":
-            self.prior_logp_func = logp_forw(
-                initial_values, [self.model.varlogpt], self.variables, shared
-            )
-            self.likelihood_logp_func = logp_forw(
-                initial_values, [self.model.datalogpt], self.variables, shared
-            )
+        self.prior_logp_func = logp_forw(
+            initial_values, [self.model.varlogpt], self.variables, shared
+        )
+        self.likelihood_logp_func = logp_forw(
+            initial_values, [self.model.datalogpt], self.variables, shared
+        )
 
     def initialize_logp(self):
         """Initialize the prior and likelihood log probabilities."""
@@ -151,12 +127,6 @@ class SMC:
 
         self.prior_logp = np.array(priors).squeeze()
         self.likelihood_logp = np.array(likelihoods).squeeze()
-
-        if self.kernel == "abc" and self.save_sim_data:
-            self.sim_data = self.likelihood_logp_func.get_data()
-
-        if self.kernel == "abc" and self.save_log_pseudolikelihood:
-            self.log_pseudolikelihood = self.likelihood_logp_func.get_lpl()
 
     def update_weights_beta(self):
         """Calculate the next inverse temperature (beta).
@@ -200,8 +170,6 @@ class SMC:
         self.prior_logp = self.prior_logp[resampling_indexes]
         self.likelihood_logp = self.likelihood_logp[resampling_indexes]
         self.posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
-        if self.save_sim_data:
-            self.sim_data = self.sim_data[resampling_indexes]
 
     def update_proposal(self):
         """Update proposal based on the covariance matrix from tempered posterior."""
@@ -252,12 +220,6 @@ class SMC:
             self.posterior_logp[accepted] = proposal_logp[accepted]
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
-
-            if self.kernel == "abc" and self.save_sim_data:
-                self.sim_data[accepted] = self.likelihood_logp_func.get_data()[accepted]
-
-            if self.kernel == "abc" and self.save_log_pseudolikelihood:
-                self.log_pseudolikelihood[accepted] = self.likelihood_logp_func.get_lpl()[accepted]
 
         self.acc_rate = np.mean(ac_)
 
@@ -326,119 +288,3 @@ def logp_forw(point, out_vars, vars, shared):
     f = aesara_function([inarray0], out_list[0])
     f.trust_input = True
     return f
-
-
-class PseudoLikelihood:
-    """
-    Pseudo Likelihood.
-
-    epsilon: float
-        Standard deviation of the gaussian pseudo likelihood.
-    observations: array-like
-        observed data
-    function: python function
-        data simulator
-    params: list
-        names of the variables parameterizing the simulator.
-    model: PyMC3 model
-    var_info: dict
-        generated by ``SMC.initialize_population``
-    variables: list
-        Model variables.
-    distance : str or callable
-        Distance function.
-    sum_stat: str or callable
-        Summary statistics.
-    size : int
-        Number of simulated datasets to save. When this number is exceeded the counter will be
-        restored to zero and it will start saving again.
-    save_sim_data : bool
-        whether to save or not the simulated data.
-    save_log_pseudolikelihood : bool
-        whether to save or not the log pseudolikelihood values.
-    """
-
-    def __init__(
-        self,
-        epsilon,
-        observations,
-        function,
-        params,
-        model,
-        var_info,
-        variables,
-        distance,
-        sum_stat,
-        size,
-        save_sim_data,
-        save_log_pseudolikelihood,
-    ):
-        self.epsilon = epsilon
-        self.function = function
-        self.params = params
-        self.model = model
-        self.var_info = var_info
-        self.variables = variables
-        self.varnames = [v.name for v in self.variables]
-        self.distance = distance
-        self.sum_stat = sum_stat
-        self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
-        self.get_unobserved_fn = self.model.fastfn(
-            [v.tag.value_var for v in self.model.unobserved_RVs]
-        )
-        self.size = size
-        self.save_sim_data = save_sim_data
-        self.save_log_pseudolikelihood = save_log_pseudolikelihood
-        self.sim_data_l = []
-        self.lpl_l = []
-
-        self.observations = self.sum_stat(observations)
-
-    def posterior_to_function(self, posterior):
-        """Turn posterior samples into function parameters to feed the simulator."""
-        model = self.model
-        var_info = self.var_info
-
-        varvalues = []
-        samples = {}
-        size = 0
-        for var in self.variables:
-            shape, new_size = var_info[var.name]
-            varvalues.append(posterior[size : size + new_size].reshape(shape))
-            size += new_size
-        point = {k: v for k, v in zip(self.varnames, varvalues)}
-        for varname, value in zip(self.unobserved_RVs, self.get_unobserved_fn(point)):
-            if varname in self.params:
-                samples[varname] = value
-        return samples
-
-    def save_data(self, sim_data):
-        """Save simulated data."""
-        if len(self.sim_data_l) == self.size:
-            self.sim_data_l = []
-        self.sim_data_l.append(sim_data)
-
-    def get_data(self):
-        """Get simulated data."""
-        return np.array(self.sim_data_l)
-
-    def save_lpl(self, elemwise):
-        """Save log pseudolikelihood values."""
-        if len(self.lpl_l) == self.size:
-            self.lpl_l = []
-        self.lpl_l.append(elemwise)
-
-    def get_lpl(self):
-        """Get log pseudolikelihood values."""
-        return np.array(self.lpl_l)
-
-    def __call__(self, posterior):
-        """Compute the pseudolikelihood."""
-        func_parameters = self.posterior_to_function(posterior)
-        sim_data = self.function(**func_parameters)
-        if self.save_sim_data:
-            self.save_data(sim_data)
-        elemwise = self.distance(self.epsilon, self.observations, self.sum_stat(sim_data))
-        if self.save_log_pseudolikelihood:
-            self.save_lpl(elemwise)
-        return elemwise.sum()
