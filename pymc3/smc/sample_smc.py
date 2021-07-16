@@ -180,8 +180,8 @@ def sample_smc(
 
     if chains is None:
         chains = max(2, cores)
-    elif chains == 1:
-        cores = 1
+    else:
+        cores = min(chains, cores)
 
     _log.info(
         f"Sampling {chains} chain{'s' if chains > 1 else ''} "
