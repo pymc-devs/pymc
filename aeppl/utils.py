@@ -20,10 +20,11 @@ from aesara.graph.op import compute_test_value
 from aesara.graph.opt_utils import optimize_graph
 from aesara.graph.type import CType
 from aesara.tensor.basic_opt import ShapeFeature, topo_constant_folding
-from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorVariable
+
+from aeppl.abstract import MeasurableVariable
 
 PotentialShapeType = Union[
     int,
@@ -90,18 +91,18 @@ def extract_rv_and_value_vars(
     Parameters
     ==========
     var
-        A variable corresponding to a ``RandomVariable``.
+        A variable corresponding to a ``MeasurableVariable``.
 
     Returns
     =======
-    The first value in the tuple is the ``RandomVariable`` and the second is
+    The first value in the tuple is the ``MeasurableVariable`` and the second is
     the observations variable or the measure/log-probability value variable.
 
     """
     if not var.owner:
         return None, None
 
-    if isinstance(var.owner.op, RandomVariable):
+    if isinstance(var.owner.op, MeasurableVariable):
         rv_value = getattr(var.tag, "observations", getattr(var.tag, "value_var", None))
         return var, rv_value
 
@@ -140,14 +141,14 @@ def walk_model(
 ) -> Generator[TensorVariable, None, None]:
     """Walk model graphs and yield their nodes.
 
-    By default, these walks will not go past ``RandomVariable`` nodes.
+    By default, these walks will not go past ``MeasurableVariable`` nodes.
 
     Parameters
     ==========
     graphs
         The graphs to walk.
     walk_past_rvs
-        If ``True``, the walk will not terminate at ``RandomVariable``s.
+        If ``True``, the walk will not terminate at ``MeasurableVariable``s.
     stop_at_vars
         A list of variables at which the walk will terminate.
     expand_fn
@@ -161,7 +162,7 @@ def walk_model(
 
         if (
             var.owner
-            and (walk_past_rvs or not isinstance(var.owner.op, RandomVariable))
+            and (walk_past_rvs or not isinstance(var.owner.op, MeasurableVariable))
             and (var not in stop_at_vars)
         ):
             new_vars.extend(reversed(var.owner.inputs))
@@ -197,7 +198,7 @@ def replace_rvs_in_graphs(
 
     def expand_replace(var):
         new_nodes = []
-        if var.owner and isinstance(var.owner.op, RandomVariable):
+        if var.owner and isinstance(var.owner.op, MeasurableVariable):
             new_nodes.extend(replacement_fn(var, replacements))
         return new_nodes
 

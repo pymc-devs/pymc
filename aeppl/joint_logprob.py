@@ -9,9 +9,9 @@ from aesara.graph.op import compute_test_value
 from aesara.graph.opt import GlobalOptimizer, LocalOptimizer
 from aesara.graph.optdb import OptimizationQuery
 from aesara.tensor.basic_opt import ShapeFeature
-from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 
+from aeppl.abstract import MeasurableVariable, get_measurable_outputs
 from aeppl.logprob import _logprob
 from aeppl.opt import PreserveRVMappings, logprob_rewrites_db
 from aeppl.utils import rvs_to_value_vars
@@ -128,7 +128,7 @@ def joint_logprob(
 
         if not any(o in lifted_rv_values for o in node.outputs):
             if (
-                isinstance(node.op, RandomVariable)
+                isinstance(node.op, MeasurableVariable)
                 and not getattr(node.default_output().tag, "ignore_logprob", False)
                 and warn_missing_rvs
             ):
@@ -138,38 +138,45 @@ def joint_logprob(
                 )
             continue
 
-        if isinstance(node.op, RandomVariable):
-            q_rv_var = node.default_output()
+        if isinstance(node.op, MeasurableVariable):
 
-            if getattr(node.default_output().tag, "ignore_logprob", False):
-                continue
+            outputs = get_measurable_outputs(node.op, node)
 
-            q_rv_value_var = replacements[q_rv_var]
+            for q_rv_var in outputs:
 
-            # Replace `RandomVariable`s in the inputs with value variables.
-            # Also, store the results in the `replacements` map so that we
-            # don't need to redo these replacements.
-            value_var_inputs, _ = rvs_to_value_vars(
-                node.inputs,
-                initial_replacements=replacements,
-            )
+                if getattr(node.default_output().tag, "ignore_logprob", False):
+                    continue
 
-            q_logprob_var = _logprob(
-                node.op, q_rv_value_var, *value_var_inputs, name=q_rv_var.name, **kwargs
-            )
+                q_rv_value_var = replacements[q_rv_var]
 
-            if q_rv_var.name:
-                q_logprob_var.name = f"{q_rv_var.name}_logprob"
+                # Replace `RandomVariable`s in the inputs with value variables.
+                # Also, store the results in the `replacements` map so that we
+                # don't need to redo these replacements.
+                value_var_inputs, _ = rvs_to_value_vars(
+                    node.inputs,
+                    initial_replacements=replacements,
+                )
+
+                q_logprob_var = _logprob(
+                    node.op,
+                    q_rv_value_var,
+                    *value_var_inputs,
+                    name=q_rv_var.name,
+                    **kwargs,
+                )
+
+                if q_rv_var.name:
+                    q_logprob_var.name = f"{q_rv_var.name}_logprob"
+
+                if logprob_var is None:
+                    logprob_var = q_logprob_var
+                else:
+                    logprob_var += q_logprob_var
 
         else:
             raise NotImplementedError(
                 f"A measure/probability could not be derived for {node}"
             )
-
-        if logprob_var is None:
-            logprob_var = q_logprob_var
-        else:
-            logprob_var += q_logprob_var
 
     # Recompute test values for the changes introduced by the replacements
     # above.

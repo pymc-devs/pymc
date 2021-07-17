@@ -11,9 +11,9 @@ from aesara.tensor.basic import Join, MakeVector
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.opt import local_dimshuffle_rv_lift, local_subtensor_rv_lift
 from aesara.tensor.shape import shape_tuple
-from aesara.tensor.type_other import NoneConst
 from aesara.tensor.var import TensorVariable
 
+from aeppl.abstract import MeasurableVariable
 from aeppl.logprob import _logprob, logprob
 from aeppl.opt import naive_bcast_rv_lift, rv_sinking_db, subtensor_ops
 from aeppl.utils import get_constant_value, indices_from_subtensor
@@ -37,10 +37,6 @@ def rv_pull_down(x: TensorVariable, dont_touch_vars=None) -> TensorVariable:
 class MixtureRV(OpFromGraph):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
-    default_output = 1
-    # FIXME: This is just to appease `random_make_inplace`
-    inplace = True
-
     @classmethod
     def create_node(cls, node, indices, mixture_rvs):
         out_var = node.default_output()
@@ -48,40 +44,24 @@ class MixtureRV(OpFromGraph):
         inputs = list(indices) + list(mixture_rvs)
 
         mixture_op = cls(
-            # The first and third parameters are simply placeholders so that the
-            # arguments signature matches `RandomVariable`'s
             inputs,
-            [NoneConst, out_var],
+            [out_var],
             inline=True,
             on_unused_input="ignore",
         )
 
-        # Give this composite `Op` a `RandomVariable`-like interface
         mixture_op.name = f"{out_var.name if out_var.name else ''}-mixture"
-        mixture_op.ndim_supp = out_var.ndim
-        mixture_op.dtype = out_var.dtype
-        mixture_op.ndims_params = [inp.ndim for inp in inputs]
 
         # new_node = mixture_op.make_node(None, None, None, *inputs)
         new_node = mixture_op(*inputs)
 
         return new_node.owner
 
-    def make_node(self, *inputs):
-        # Make the `make_node` signature consistent with the node inputs
-        # TODO: This is a hack; make it less so.
-        num_expected_inps = len(self.local_inputs) - len(self.shared_inputs)
-        return super().make_node(*inputs[:num_expected_inps])
-
-    def rng_fn(self, rng, *args, **kwargs):
-        raise NotImplementedError()
-
     def get_non_shared_inputs(self, inputs):
         return inputs[: len(self.shared_inputs)]
 
 
-# Allow `MixtureRV`s to be typed as `RandomVariable`s
-RandomVariable.register(MixtureRV)
+MeasurableVariable.register(MixtureRV)
 
 
 def get_stack_mixture_vars(
@@ -178,7 +158,7 @@ def mixture_replace(fgraph, node):
 def logprob_MixtureRV(op, value, *inputs, name=None, **kwargs):
     inputs = op.get_non_shared_inputs(inputs)
 
-    subtensor_node = op.outputs[1].owner
+    subtensor_node = op.outputs[0].owner
     num_indices = len(subtensor_node.inputs) - 1
     indices = inputs[:num_indices]
     indices = indices_from_subtensor(
