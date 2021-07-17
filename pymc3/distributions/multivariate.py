@@ -2176,7 +2176,10 @@ class ICAR(Continuous):
 
     @classmethod
     def dist(cls, A, tau, *args, **kwargs):
-        A = at.as_tensor_variable(floatX(A), ndim=2)
+        if aesara.sparse._is_sparse(A):
+            A = aesara.sparse.dense_from_sparse(floatX(A))
+        else:
+            A = at.as_tensor_variable(floatX(A), ndim=2)
         tau = at.as_tensor_variable(floatX(tau), ndim=0)
         return super().dist([A, tau], **kwargs)
 
