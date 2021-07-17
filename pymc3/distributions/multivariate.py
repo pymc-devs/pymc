@@ -2179,8 +2179,10 @@ class ICAR(Continuous):
         if aesara.sparse._is_sparse(A):
             A = aesara.sparse.dense_from_sparse(floatX(A))
         else:
-            A = at.as_tensor_variable(floatX(A), ndim=2)
-        tau = at.as_tensor_variable(floatX(tau), ndim=0)
+            A = at.as_tensor_variable(floatX(A))
+        tau = at.as_tensor_variable(floatX(tau))
+        Assert("`A` needs to be a 2D tensor")(at.eq(A.ndim, 2))
+        Assert("`tau` needs to be a 0D tensor")(at.eq(tau.ndim, 0))
         return super().dist([A, tau], **kwargs)
 
     def logp(value, A, tau):
