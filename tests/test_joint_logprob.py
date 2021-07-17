@@ -3,7 +3,8 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 import scipy.stats.distributions as sp
-from aesara.graph.basic import ancestors, equal_computations
+from aesara.graph.basic import Apply, ancestors, equal_computations
+from aesara.graph.op import Op
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -13,8 +14,9 @@ from aesara.tensor.subtensor import (
     Subtensor,
 )
 
+from aeppl.abstract import MeasurableVariable
 from aeppl.joint_logprob import joint_logprob
-from aeppl.logprob import logprob
+from aeppl.logprob import _logprob, logprob
 from aeppl.utils import rvs_to_value_vars, walk_model
 from tests.utils import assert_no_rvs
 
@@ -198,3 +200,38 @@ def test_ignore_logprob():
     logp_exp = joint_logprob(y_rv_2, {y_rv_2: y})
 
     assert equal_computations([logp], [logp_exp])
+
+
+def test_ignore_logprob_multiout():
+    class MyMultiOut(Op):
+        @staticmethod
+        def impl(a, b):
+            res1 = 2 * a
+            res2 = 2 * b
+            return [res1, res2]
+
+        def make_node(self, a, b):
+            return Apply(self, [a, b], [a.type(), b.type()])
+
+        def perform(self, node, inputs, outputs):
+            res1, res2 = self.impl(inputs[0], inputs[1])
+            outputs[0][0] = res1
+            outputs[1][0] = res2
+
+    MeasurableVariable.register(MyMultiOut)
+
+    @_logprob.register(MyMultiOut)
+    def logprob_MyMultiOut(op, value, *inputs, name=None, **kwargs):
+        return at.zeros_like(value)
+
+    Y_1_rv, Y_2_rv = MyMultiOut()(at.vector(), at.vector())
+
+    Y_1_rv.tag.ignore_logprob = True
+    Y_2_rv.tag.ignore_logprob = True
+
+    y_1_vv = Y_1_rv.clone()
+    y_2_vv = Y_2_rv.clone()
+
+    logp_exp = joint_logprob(Y_1_rv, {Y_1_rv: y_1_vv, Y_2_rv: y_2_vv})
+
+    assert logp_exp is None

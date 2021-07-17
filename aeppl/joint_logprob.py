@@ -144,7 +144,7 @@ def joint_logprob(
 
             for q_rv_var in outputs:
 
-                if getattr(node.default_output().tag, "ignore_logprob", False):
+                if getattr(q_rv_var.tag, "ignore_logprob", False):
                     continue
 
                 q_rv_value_var = replacements[q_rv_var]
