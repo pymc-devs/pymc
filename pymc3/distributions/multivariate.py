@@ -2115,7 +2115,7 @@ class ICARRV(RandomVariable):
         if A.ndim != 2 or n != A.shape[1] or np.linalg.norm(A - A.T, np.inf) > 1e-06:
             raise ValueError("The adjacency matrix `A` needs to be a square and symmetric")
         W = np.diag(A.sum(axis=0)) - A
-        cov = np.linalg.pinv(W) / tau
+        cov = scipy.linalg.pinvh(W) / tau
         return multivariate_normal.rng_fn(rng=rng, mean=mu, cov=cov, size=size)
 
 
