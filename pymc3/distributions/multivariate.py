@@ -2158,10 +2158,10 @@ class ICAR(Continuous):
 
     Parameters
     ----------
-    A: Numpy matrix
+    A: 2-d array/Tensor
         Symmetric adjacency matrix of 1s and 0s indicating
         adjacency between elements.
-    tau: float or 1-element array
+    tau: float or 1-element array/tensor
         Positive precision variable controlling the scale of the underlying normal variates.
 
     References
@@ -2181,22 +2181,6 @@ class ICAR(Continuous):
         return super().dist([A, tau], **kwargs)
 
     def logp(value, A, tau):
-        """
-        Calculate the log-probability of the ICAR variable at a specified value.
-
-        Parameters
-        ----------
-        A: Numpy matrix
-            Symmetric adjacency matrix of 1s and 0s indicating
-            adjacency between elements.
-        tau: float or 1-element array
-            Positive precision variable controlling the scale of the underlying
-            normal variates.
-
-        Returns
-        -------
-        TensorVariable
-        """
         n = A.shape[0]
         W = at.diag(A.sum(axis=0)) - A
         d = eigvalsh(W, at.eye(W.shape[0]))[1:]
