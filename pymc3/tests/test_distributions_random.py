@@ -21,6 +21,7 @@ import numpy as np
 import numpy.random as nr
 import numpy.testing as npt
 import pytest
+import scipy
 import scipy.stats as st
 
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
@@ -1674,6 +1675,61 @@ class TestKroneckerNormal(BaseTestDistribution):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
+
+
+class TestICAR(BaseTestDistribution):
+    tau = 0.1
+    adj_mat = np.array(
+        [
+            [0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
+            [1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0],
+            [0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0],
+            [0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0],
+            [0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1],
+            [1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0],
+            [0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0],
+            [0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0],
+            [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1],
+            [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0],
+        ]
+    )
+
+    pymc_dist = pm.ICAR
+    pymc_dist_params = {"A": adj_mat, "tau": tau}
+    reference_dist_params = {"A": adj_mat, "tau": tau}
+    expected_rv_op_params = {"A": adj_mat, "tau": tau}
+    sizes_to_check = [None, (1), (2, 3)]
+    sizes_expected = [(12,), (1, 12), (2, 3, 12)]
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "test_samples_sum_to_zero",
+        "check_rv_size",
+    ]
+
+    reference_dist = lambda self: functools.partial(self.icar_rng_fn, rng=self.get_random_state())
+
+    def icar_rng_fn(self, size, A, tau, rng):
+        W = np.diag(A.sum(axis=0)) - A
+        cov = scipy.linalg.pinvh(W) / tau
+        return rng.multivariate_normal(np.zeros(W.shape[0]), cov, size=size)
+
+    def test_samples_sum_to_zero(self):
+        # NOTE: The test suite won't allow pytest.mark.parametrize.
+        for array_type in [np.asarray, scipy.sparse.csr_matrix]:
+            pymc_rv = self.pymc_dist.dist(
+                array_type(self.adj_mat),
+                self.tau,
+                size=self.size,
+                rng=aesara.shared(self.get_random_state()),
+            )
+            np.testing.assert_almost_equal(
+                pymc_rv.eval().sum(),
+                0.0,
+                decimal=self.decimal,
+            )
 
 
 class TestScalarParameterSamples(SeededTest):
