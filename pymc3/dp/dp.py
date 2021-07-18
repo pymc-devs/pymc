@@ -65,7 +65,7 @@ def stick_breaking(betas):
 
 
 def mixture_logp(weights, comp_dist, atoms, obs):
-    # comp_dist is something like lambda obs, atoms: pm.Normal.logp(obs, atoms, 1).eval()
+    # comp_dist is something like lambda obs, atoms: pm.Normal.logp(obs, atoms, 1)
 
     atoms_shape = atoms.shape.eval()
     obs_shape = obs.shape.eval()
@@ -150,7 +150,7 @@ class DirichletProcess:
         self.base_dist = base_dist
         self.K = K
 
-        betas = pm.Beta("betas", 1., self.alpha)
+        betas = pm.Beta("betas", 1., self.alpha, shape=(self.K,))
         self.weights = pm.Deterministic("weights", stick_breaking(betas))
 
     def __add__(self, other):
