@@ -343,7 +343,7 @@ def test_extract_obs_data():
     constant = at.as_tensor(data_m.filled())
     z_at = at.set_subtensor(constant[mask.nonzero()], missing_values)
 
-    assert isinstance(z_at.owner.op, AdvancedIncSubtensor)
+    assert isinstance(z_at.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1))
 
     res = extract_obs_data(z_at)
 
@@ -360,7 +360,7 @@ def test_extract_obs_data():
     constant = at.as_tensor(data_m.filled())
     z_at = at.set_subtensor(constant[mask.nonzero()], missing_values)
 
-    assert isinstance(z_at.owner.op, AdvancedIncSubtensor1)
+    assert isinstance(z_at.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1))
 
     res = extract_obs_data(z_at)
 
