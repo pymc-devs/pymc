@@ -1767,6 +1767,10 @@ compilef = fastfn
 
 def Deterministic(name, var, model=None, dims=None, auto=False):
     """Create a named deterministic variable
+    
+    Notes
+    -----
+    Deterministic nodes are ones that given all the inputs are not random variables
 
     Parameters
     ----------
