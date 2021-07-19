@@ -54,6 +54,7 @@ from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import (
     AR1,
     CAR,
+    ICAR,
     AsymmetricLaplace,
     Bernoulli,
     Beta,
@@ -2040,6 +2041,55 @@ class TestMatchesScipy:
             kron_normal_logpdf_evd,
             extra_args=evd_args,
             scipy_args=evd_args,
+        )
+
+    @pytest.mark.parametrize("n", [3, 20, 100, 500])
+    def test_icar(self, n):
+        rng = np.random.RandomState(54321)
+
+        def generate_vals(num, rng):
+            """Generate test values that sum to 0."""
+            vals = rng.standard_normal(num)
+            return vals - vals.mean()
+
+        def random_adjacency_matrix(mat_size, rng, max_neighbors=8):
+            """
+            Generate a random adjacency matrix of size n x n where each site has a
+            maximum of ``max_neighbors``.
+            """
+            out = np.zeros((mat_size, mat_size))
+            for indx, row in enumerate(out):
+                has_neighbors = False
+                while not has_neighbors:
+                    nn = rng.randint(1, min(max_neighbors, mat_size))
+                    neighbor_index = rng.randint(0, mat_size, size=nn)
+                    row[neighbor_index] = 1
+                    row[indx] = 0.0
+                    if any(row):
+                        has_neighbors = True
+            tril_indices = np.tril_indices(n, -1)
+            out[tril_indices] = out.T[tril_indices]
+            return out
+
+        def ref_icar_logp(value, A, tau):
+            size = A.shape[0]
+            W = np.diag(A.sum(axis=0)) - A
+            d = np.linalg.eigvalsh(W)[1:]
+            return (
+                0.5 * (size - 1) * np.log(2 * np.pi * tau)
+                + 0.5 * np.log(d).sum()
+                - 0.5 * tau * np.dot(value, np.dot(W, value))
+            )
+
+        adj_mat = Domain([random_adjacency_matrix(n, rng) for _ in range(5)])
+        dom = Domain([generate_vals(n, rng) for _ in range(5)])
+        tau = Domain([0.1, 0.25, 1.0, 1.5, 2.0])
+
+        self.check_logp(
+            ICAR,
+            dom,
+            {"A": adj_mat, "tau": tau},
+            ref_icar_logp,
         )
 
     @pytest.mark.parametrize("n", [1, 2])
