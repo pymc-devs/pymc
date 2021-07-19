@@ -19,7 +19,7 @@ import xarray as xr
 
 from aesara.graph.basic import Constant
 from aesara.tensor.sharedvar import SharedVariable
-from aesara.tensor.subtensor import AdvancedIncSubtensor
+from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from arviz import InferenceData, concat, rcParams
 from arviz.data.base import CoordSpec, DimSpec
 from arviz.data.base import dict_to_dataset as _dict_to_dataset
@@ -283,7 +283,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         point = {i.name: point[i.name] for i in log_like_fun.f.maker.inputs if i.name in point}
         log_like_val = np.atleast_1d(log_like_fun(point))
 
-        if isinstance(var.owner.op, AdvancedIncSubtensor):
+        if isinstance(var.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1)):
             try:
                 obs_data = extract_obs_data(var.tag.observations)
             except TypeError:
