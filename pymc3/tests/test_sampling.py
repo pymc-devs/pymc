@@ -1058,16 +1058,6 @@ class TestSamplePriorPredictive(SeededTest):
             assert gen_data["psi"].shape == (5000,)
             assert gen_data["suppliers"].shape == (5000, 20)
 
-    @pytest.mark.xfail(reason="Bound not refactored for v4")
-    def test_bounded_dist(self):
-        with pm.Model() as model:
-            BoundedNormal = pm.Bound(pm.Normal, lower=0.0)
-            x = BoundedNormal("x", mu=at.zeros((3, 1)), sd=1 * at.ones((3, 1)), size=(3, 1))
-
-        with model:
-            prior_trace = pm.sample_prior_predictive(5)
-            assert prior_trace["x"].shape == (5, 3, 1)
-
     def test_potentials_warning(self):
         warning_msg = "The effect of Potentials on other parameters is ignored during"
         with pm.Model() as m:
