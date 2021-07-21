@@ -13,11 +13,10 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 
 from aeppl.logprob import _logprob
-from aeppl.utils import logsumexp
 
 
 @singledispatch
-def _transformed_rv(
+def _default_transformed_rv(
     op: Op,
     node: Node,
 ) -> Optional[TensorVariable]:
@@ -38,8 +37,7 @@ class DistributionMeta(MetaType):
 
         if base_op is not None:
             # Create dispatch functions
-
-            @_transformed_rv.register(type(base_op))
+            @_default_transformed_rv.register(type(base_op))
             def class_transformed_rv(op, node):
                 new_op = cls_res()
                 res = new_op.make_node(*node.inputs)
@@ -73,11 +71,16 @@ class TransformedRV(RandomVariable, metaclass=DistributionMeta):
 
 
 @_logprob.register(TransformedRV)
-def trans_logprob(op, value, *inputs, name=None, **kwargs):
+def transformed_logprob(op, value, *inputs, name=None, **kwargs):
+    """
+    Compute logp graph for a value variable that was back-transformed to be on
+    the natural support of the respective random variable.
+    """
 
     logprob = _logprob(op.base_op, value, *inputs, name=name, **kwargs)
 
-    jacobian = op.transform.log_jac_det(value, *inputs)
+    original_forward_value = op.transform.forward(value, *inputs)
+    jacobian = op.transform.log_jac_det(original_forward_value, *inputs)
 
     if name:
         logprob.name = f"{name}_logprob"
@@ -87,7 +90,15 @@ def trans_logprob(op, value, *inputs, name=None, **kwargs):
 
 
 @local_optimizer(tracks=None)
-def transform_logprob(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
+def default_transform(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
+    """
+    Apply default transform to value variables. It is assumed that the input
+    value variables correspond to forward transformations, usually chosen in
+    such a way that the values are unconstrained on the real line.
+
+    e.g., if Y ~ HalfNormal, we assume the respective value variable is specified
+    on the log scale and back-transform it to obtain Y on the natural scale.
+    """
 
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
 
@@ -97,7 +108,7 @@ def transform_logprob(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]
     if not isinstance(node.op, RandomVariable):
         return
 
-    trans_node = _transformed_rv(node.op, node)
+    trans_node = _default_transformed_rv(node.op, node)
 
     if trans_node is not None:
         # Get the old value variable and remove it from our value variables map
@@ -202,7 +213,7 @@ class StickBreaking(RVTransform):
         value_sum_expanded = at.concatenate(
             [value_sum_expanded, at.zeros(sum_value.shape)], -1
         )
-        logsumexp_value_expanded = logsumexp(value_sum_expanded, -1, keepdims=True)
+        logsumexp_value_expanded = at.logsumexp(value_sum_expanded, -1, keepdims=True)
         res = at.log(N) + (N * sum_value) - (N * logsumexp_value_expanded)
         return at.sum(res, -1)
 
@@ -220,16 +231,18 @@ class CircularTransform(RVTransform):
         return at.zeros(value.shape)
 
 
-def create_transformed_rv_op(
-    rv_op: Op, transform: RVTransform, cls_dict_extra: Optional[Dict] = None
+def create_default_transformed_rv_op(
+    rv_op: Op,
+    transform: RVTransform,
+    cls_dict_extra: Optional[Dict] = None,
 ) -> TransformedRV:
 
-    trans_name = getattr(transform, "name", "")
+    trans_name = getattr(transform, "name", "transformed")
     rv_type_name = type(rv_op).__name__
     cls_dict = type(rv_op).__dict__.copy()
     rv_name = cls_dict.get("name", "")
     if rv_name:
-        cls_dict["name"] = (f"{rv_name}_{trans_name}",)
+        cls_dict["name"] = f"{rv_name}_{trans_name}"
     cls_dict["base_op"] = rv_op
 
     if cls_dict_extra is not None:
@@ -241,28 +254,63 @@ def create_transformed_rv_op(
     return new_op_type
 
 
-TransformedUniformRV = create_transformed_rv_op(
-    at.random.uniform, IntervalTransform(lambda *inputs: inputs[3:])
+TransformedUniformRV = create_default_transformed_rv_op(
+    at.random.uniform,
+    IntervalTransform(lambda *inputs: inputs[3:]),
 )
-TransformedParetoRV = create_transformed_rv_op(
-    at.random.pareto, IntervalTransform(lambda *inputs: (inputs[3], None))
+TransformedParetoRV = create_default_transformed_rv_op(
+    at.random.pareto,
+    IntervalTransform(lambda *inputs: (inputs[3], None)),
 )
-TransformedTriangularRV = create_transformed_rv_op(
-    at.random.triangular, IntervalTransform(lambda *inputs: (inputs[3], inputs[5]))
+TransformedTriangularRV = create_default_transformed_rv_op(
+    at.random.triangular,
+    IntervalTransform(lambda *inputs: (inputs[3], inputs[5])),
 )
-TransformedHalfNormalRV = create_transformed_rv_op(at.random.halfnormal, LogTransform())
-TransformedWaldRV = create_transformed_rv_op(at.random.wald, LogTransform())
-TransformedExponentialRV = create_transformed_rv_op(
-    at.random.exponential, LogTransform()
+TransformedHalfNormalRV = create_default_transformed_rv_op(
+    at.random.halfnormal,
+    LogTransform(),
 )
-TransformedLognormalRV = create_transformed_rv_op(at.random.lognormal, LogTransform())
-TransformedHalfCauchyRV = create_transformed_rv_op(at.random.halfcauchy, LogTransform())
-TransformedGammaRV = create_transformed_rv_op(at.random.gamma, LogTransform())
-TransformedInvGammaRV = create_transformed_rv_op(at.random.invgamma, LogTransform())
-TransformedChiSquareRV = create_transformed_rv_op(at.random.chisquare, LogTransform())
-TransformedWeibullRV = create_transformed_rv_op(at.random.weibull, LogTransform())
-TransformedBetaRV = create_transformed_rv_op(at.random.beta, LogOddsTransform())
-TransformedVonMisesRV = create_transformed_rv_op(
-    at.random.vonmises, CircularTransform()
+TransformedWaldRV = create_default_transformed_rv_op(
+    at.random.wald,
+    LogTransform(),
 )
-TransformedDirichletRV = create_transformed_rv_op(at.random.dirichlet, StickBreaking())
+TransformedExponentialRV = create_default_transformed_rv_op(
+    at.random.exponential,
+    LogTransform(),
+)
+TransformedLognormalRV = create_default_transformed_rv_op(
+    at.random.lognormal,
+    LogTransform(),
+)
+TransformedHalfCauchyRV = create_default_transformed_rv_op(
+    at.random.halfcauchy,
+    LogTransform(),
+)
+TransformedGammaRV = create_default_transformed_rv_op(
+    at.random.gamma,
+    LogTransform(),
+)
+TransformedInvGammaRV = create_default_transformed_rv_op(
+    at.random.invgamma,
+    LogTransform(),
+)
+TransformedChiSquareRV = create_default_transformed_rv_op(
+    at.random.chisquare,
+    LogTransform(),
+)
+TransformedWeibullRV = create_default_transformed_rv_op(
+    at.random.weibull,
+    LogTransform(),
+)
+TransformedBetaRV = create_default_transformed_rv_op(
+    at.random.beta,
+    LogOddsTransform(),
+)
+TransformedVonMisesRV = create_default_transformed_rv_op(
+    at.random.vonmises,
+    CircularTransform(),
+)
+TransformedDirichletRV = create_default_transformed_rv_op(
+    at.random.dirichlet,
+    StickBreaking(),
+)
