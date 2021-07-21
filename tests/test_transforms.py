@@ -7,7 +7,7 @@ from aesara.graph.opt import in2out
 from numdifftools import Jacobian
 
 from aeppl.joint_logprob import joint_logprob
-from aeppl.transforms import _default_transformed_rv, default_transform
+from aeppl.transforms import RVTransform, _default_transformed_rv, default_transform
 
 
 @pytest.mark.parametrize(
@@ -197,3 +197,27 @@ def test_simple_transformed_logprob():
         tr_logp.eval({x: np.log(2.5)}),
         sp.stats.halfnorm(0, 3).logpdf(2.5) + np.log(2.5),
     )
+
+
+def test_fallback_log_jac_det():
+    """
+    Test fallback log_jac_det in RVTransform produces correct the graph for a
+    simple transformation: x**2 -> -log(2*x)
+    """
+
+    class SquareTransform(RVTransform):
+        name = "square"
+
+        def forward(self, value, *inputs):
+            return at.power(value, 2)
+
+        def backward(self, value, *inputs):
+            return at.sqrt(value)
+
+    square_tr = SquareTransform()
+
+    value = at.scalar("value")
+    value_tr = square_tr.forward(value)
+    log_jac_det = square_tr.log_jac_det(value_tr)
+
+    assert np.isclose(log_jac_det.eval({value: 3}), -np.log(6))

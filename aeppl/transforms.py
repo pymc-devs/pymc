@@ -192,6 +192,10 @@ class LogOddsTransform(RVTransform):
     def forward(self, value, *inputs):
         return at.log(value / (1 - value))
 
+    def log_jac_det(self, value, *inputs):
+        sigmoid_value = at.sigmoid(value)
+        return at.log(sigmoid_value) + at.log1p(-sigmoid_value)
+
 
 class StickBreaking(RVTransform):
     name = "stickbreaking"
