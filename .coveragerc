@@ -2,4 +2,3 @@
 omit =
     # exclude tests files from coverage calculation
     pymc3/tests/test_*.py
-    pymc3/examples/*

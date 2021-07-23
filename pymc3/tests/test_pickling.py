@@ -15,6 +15,8 @@
 import pickle
 import traceback
 
+import cloudpickle
+
 from pymc3.tests.models import simple_model
 
 
@@ -26,8 +28,8 @@ class TestPickling:
         m = self.model
         for proto in range(pickle.HIGHEST_PROTOCOL + 1):
             try:
-                s = pickle.dumps(m, proto)
-                pickle.loads(s)
+                s = cloudpickle.dumps(m, proto)
+                cloudpickle.loads(s)
             except Exception:
                 raise AssertionError(
                     "Exception while trying roundtrip with pickle protocol %d:\n" % proto

@@ -3,10 +3,10 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- aesara>=2.0.9
+- aesara>=2.1.0
 - arviz>=0.11.2
 - cachetools>=4.2.1
-- dill
+- cloudpickle
 - fastprogress>=0.2.0
 - h5py>=2.7
 - ipython>=7.16

@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import pymc3 as pm
+
 from pymc3.tests.models import simple_model
 
 
@@ -23,7 +25,8 @@ class TestProfile:
         assert self.model.profile(self.model.logpt).fct_call_time > 0
 
     def test_profile_variable(self):
-        assert self.model.profile(self.model.value_vars[0].logpt).fct_call_time > 0
+        rv = self.model.basic_RVs[0]
+        assert self.model.profile(pm.logpt(rv, self.model.rvs_to_values[rv])).fct_call_time
 
     def test_profile_count(self):
         count = 1005

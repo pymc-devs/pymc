@@ -13,19 +13,16 @@
 #   limitations under the License.
 
 import functools
-import re
 import warnings
 
 from typing import Dict, List, Tuple, Union
 
 import arviz
-import dill
+import cloudpickle
 import numpy as np
 import xarray
 
 from cachetools import LRUCache, cachedmethod
-
-LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 
 UNSET = object()
 
@@ -118,30 +115,6 @@ class treedict(dict):
             return dict.__contains__(self, item)
 
 
-def escape_latex(strng):
-    r"""Consistently escape LaTeX special characters for _repr_latex_ in IPython
-
-    Implementation taken from the IPython magic `format_latex`
-
-    Examples
-    --------
-        escape_latex('disease_rate')  # 'disease\_rate'
-
-    Parameters
-    ----------
-    strng: str
-        string to escape LaTeX characters
-
-    Returns
-    -------
-    str
-        A string with LaTeX escaped
-    """
-    if strng is None:
-        return "None"
-    return LATEX_ESCAPE_RE.sub(r"\\\1", strng)
-
-
 def get_transformed_name(name, transform):
     r"""
     Consistent way of transforming names
@@ -216,44 +189,6 @@ def get_default_varnames(var_iterator, include_transformed):
         return list(var_iterator)
     else:
         return [var for var in var_iterator if not is_transformed_name(get_var_name(var))]
-
-
-def get_repr_for_variable(variable, formatting="plain"):
-    """Build a human-readable string representation for a variable."""
-    if variable is not None and hasattr(variable, "name"):
-        name = variable.name
-    elif type(variable) in [float, int, str]:
-        name = str(variable)
-    else:
-        name = None
-
-    if name is None and variable is not None:
-        if hasattr(variable, "get_parents"):
-            try:
-                names = [
-                    get_repr_for_variable(item, formatting=formatting)
-                    for item in variable.get_parents()[0].inputs
-                ]
-                # do not escape_latex these, since it is not idempotent
-                if "latex" in formatting:
-                    return "f({args})".format(
-                        args=",~".join([n for n in names if isinstance(n, str)])
-                    )
-                else:
-                    return "f({args})".format(
-                        args=", ".join([n for n in names if isinstance(n, str)])
-                    )
-            except IndexError:
-                pass
-        value = variable.eval()
-        if not value.shape or value.shape == (1,):
-            return value.item()
-        return "array"
-
-    if "latex" in formatting:
-        return fr"\text{{{name}}}"
-    else:
-        return name
 
 
 def get_var_name(var):
@@ -347,7 +282,7 @@ def hashable(a=None) -> int:
         pass
     # Not hashable >>>
     try:
-        return hash(dill.dumps(a))
+        return hash(cloudpickle.dumps(a))
     except Exception:
         if hasattr(a, "__dict__"):
             return hashable(a.__dict__)

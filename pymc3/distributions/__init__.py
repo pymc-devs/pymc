@@ -12,10 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc3.distributions.logp import (  # isort:skip
+from pymc3.distributions.logprob import (  # isort:skip
     _logcdf,
     _logp,
     logcdf,
+    logp,
     logp_transform,
     logpt,
     logpt_sum,
@@ -47,6 +48,7 @@ from pymc3.distributions.continuous import (
     Moyal,
     Normal,
     Pareto,
+    PolyaGamma,
     Rice,
     SkewNormal,
     StudentT,
@@ -94,6 +96,7 @@ from pymc3.distributions.multivariate import (
     Multinomial,
     MvNormal,
     MvStudentT,
+    OrderedMultinomial,
     Wishart,
     WishartBartlett,
 )
@@ -159,6 +162,7 @@ __all__ = [
     "Dirichlet",
     "Multinomial",
     "DirichletMultinomial",
+    "OrderedMultinomial",
     "Wishart",
     "WishartBartlett",
     "LKJCholeskyCov",
@@ -186,7 +190,9 @@ __all__ = [
     "Simulator",
     "BART",
     "CAR",
+    "PolyaGamma",
     "logpt",
+    "logp",
     "_logp",
     "logp_transform",
     "logcdf",

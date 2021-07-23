@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import pickle
 import unittest
 
 from functools import reduce
@@ -19,6 +18,7 @@ from functools import reduce
 import aesara
 import aesara.sparse as sparse
 import aesara.tensor as at
+import cloudpickle
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
@@ -331,7 +331,6 @@ class TestValueGradFunction(unittest.TestCase):
             np.log(0.5) * 10,
         )
 
-    @pytest.mark.xfail(reason="TruncatedNormal not refactored for v4")
     def test_aesara_switch_broadcast_edge_cases_2(self):
         # Known issue 2: https://github.com/pymc-devs/pymc3/issues/4417
         # fmt: off
@@ -344,7 +343,7 @@ class TestValueGradFunction(unittest.TestCase):
             mu = pm.Normal("mu", 0, 5)
             obs = pm.TruncatedNormal("obs", mu=mu, sigma=1, lower=-1, upper=2, observed=data)
 
-        npt.assert_allclose(m.dlogp([mu])({"mu": 0}), 2.499424682024436, rtol=1e-5)
+        npt.assert_allclose(m.dlogp([m.rvs_to_values[mu]])({"mu": 0}), 2.499424682024436, rtol=1e-5)
 
 
 @pytest.mark.xfail(reason="DensityDist not refactored for v4")
@@ -408,9 +407,7 @@ def test_model_pickle(tmpdir):
         x = pm.Normal("x")
         pm.Normal("y", observed=1)
 
-    file_path = tmpdir.join("model.p")
-    with open(file_path, "wb") as buff:
-        pickle.dump(model, buff)
+    cloudpickle.loads(cloudpickle.dumps(model))
 
 
 def test_model_pickle_deterministic(tmpdir):
@@ -421,9 +418,7 @@ def test_model_pickle_deterministic(tmpdir):
         pm.Deterministic("w", x / z)
         pm.Normal("y", observed=1)
 
-    file_path = tmpdir.join("model.p")
-    with open(file_path, "wb") as buff:
-        pickle.dump(model, buff)
+    cloudpickle.loads(cloudpickle.dumps(model))
 
 
 def test_model_vars():
@@ -656,3 +651,17 @@ def test_set_initval():
         y = pm.Normal("y", x, 1)
 
     assert model.rvs_to_values[y] in model.initial_values
+
+
+def test_datalogpt_multiple_shapes():
+    with pm.Model() as m:
+        x = pm.Normal("x", 0, 1)
+        z1 = pm.Potential("z1", x)
+        z2 = pm.Potential("z2", at.full((1, 3), x))
+        y1 = pm.Normal("y1", x, 1, observed=np.array([1]))
+        y2 = pm.Normal("y2", x, 1, observed=np.array([1, 2]))
+        y3 = pm.Normal("y3", x, 1, observed=np.array([1, 2, 3]))
+
+    # This would raise a TypeError, see #4803 and #4804
+    x_val = m.rvs_to_values[x]
+    m.datalogpt.eval({x_val: 0})

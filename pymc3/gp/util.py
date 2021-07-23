@@ -17,13 +17,18 @@ import warnings
 import aesara.tensor as at
 import numpy as np
 
-from aesara.tensor.slinalg import Solve, cholesky  # pylint: disable=unused-import
+from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
+    cholesky,
+    solve,
+)
+from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
+    solve_lower_triangular as solve_lower,
+)
+from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
+    solve_upper_triangular as solve_upper,
+)
 from aesara.tensor.var import TensorConstant
 from scipy.cluster.vq import kmeans
-
-solve_lower = Solve(A_structure="lower_triangular")
-solve_upper = Solve(A_structure="upper_triangular")
-solve = Solve(A_structure="general")
 
 
 def infer_shape(X, n_points=None):

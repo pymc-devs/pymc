@@ -27,21 +27,22 @@ from aesara.tensor.random.basic import (
 )
 from scipy import stats
 
+import pymc3 as pm
+
 from pymc3.aesaraf import floatX, intX, take_along_axis
 from pymc3.distributions.dist_math import (
     betaln,
     binomln,
     bound,
     factln,
-    incomplete_beta,
     log_diff_normal_cdf,
     logpow,
     normal_lccdf,
     normal_lcdf,
 )
 from pymc3.distributions.distribution import Discrete
-from pymc3.distributions.logp import _logcdf, _logp
-from pymc3.math import log1mexp, logaddexp, logsumexp, sigmoid
+from pymc3.distributions.logprob import _logcdf, _logp
+from pymc3.math import sigmoid
 
 __all__ = [
     "Binomial",
@@ -59,6 +60,7 @@ __all__ = [
     "HyperGeometric",
     "Categorical",
     "OrderedLogistic",
+    "OrderedProbit",
 ]
 
 
@@ -142,25 +144,20 @@ class Binomial(Discrete):
 
         Parameters
         ----------
-        value: numeric
-            Value for which log CDF is calculated.
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
-        # incomplete_beta function can only handle scalar values (see #4342)
-        if np.ndim(value):
-            raise TypeError(
-                f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
         value = at.floor(value)
 
         return bound(
             at.switch(
                 at.lt(value, n),
-                at.log(incomplete_beta(n - value, value + 1, 1 - p)),
+                at.log(at.betainc(n - value, value + 1, 1 - p)),
                 0,
             ),
             0 <= value,
@@ -282,7 +279,7 @@ class BetaBinomial(Discrete):
         return bound(
             at.switch(
                 at.lt(value, n),
-                logsumexp(
+                at.logsumexp(
                     BetaBinomial.logp(at.arange(safe_lower, value + 1), n, alpha, beta),
                     keepdims=False,
                 ),
@@ -729,21 +726,16 @@ class NegativeBinomial(Discrete):
 
         Parameters
         ----------
-        value: numeric
-            Value for which log CDF is calculated.
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
-        # incomplete_beta function can only handle scalar values (see #4342)
-        if np.ndim(value):
-            raise TypeError(
-                f"NegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
         return bound(
-            at.log(incomplete_beta(n, at.floor(value) + 1, p)),
+            at.log(at.betainc(n, at.floor(value) + 1, p)),
             0 <= value,
             0 < n,
             0 <= p,
@@ -834,7 +826,7 @@ class Geometric(Discrete):
         """
 
         return bound(
-            log1mexp(-at.log1p(-p) * value),
+            at.log1mexp(at.log1p(-p) * value),
             0 <= value,
             0 <= p,
             p <= 1,
@@ -953,7 +945,7 @@ class HyperGeometric(Discrete):
         return bound(
             at.switch(
                 at.lt(value, n),
-                logsumexp(
+                at.logsumexp(
                     HyperGeometric.logp(at.arange(safe_lower, value + 1), good, bad, n),
                     keepdims=False,
                 ),
@@ -1308,7 +1300,7 @@ class ZeroInflatedPoisson(Discrete):
         logp_val = at.switch(
             at.gt(value, 0),
             at.log(psi) + _logp(poisson, value, {}, theta),
-            logaddexp(at.log1p(-psi), at.log(psi) - theta),
+            at.logaddexp(at.log1p(-psi), at.log(psi) - theta),
         )
 
         return bound(
@@ -1336,7 +1328,7 @@ class ZeroInflatedPoisson(Discrete):
         """
 
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(poisson, value, {}, theta)),
+            at.logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(poisson, value, {}, theta)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1438,7 +1430,7 @@ class ZeroInflatedBinomial(Discrete):
         logp_val = at.switch(
             at.gt(value, 0),
             at.log(psi) + _logp(binomial, value, {}, n, p),
-            logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
+            at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
         )
 
         return bound(
@@ -1458,22 +1450,17 @@ class ZeroInflatedBinomial(Discrete):
 
         Parameters
         ----------
-        value: numeric
-            Value for which log CDF is calculated.
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
 
-        # logcdf can only handle scalar values due to limitation in Binomial.logcdf
-        if np.ndim(value):
-            raise TypeError(
-                f"ZeroInflatedBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(binomial, value, {}, n, p)),
+            at.logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(binomial, value, {}, n, p)),
             0 <= value,
             value <= n,
             0 <= psi,
@@ -1596,7 +1583,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
             at.switch(
                 at.gt(value, 0),
                 at.log(psi) + _logp(nbinom, value, {}, n, p),
-                logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
+                at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
             ),
             0 <= value,
             0 <= psi,
@@ -1613,21 +1600,16 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
         Parameters
         ----------
-        value: numeric
-            Value for which log CDF is calculated.
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
-        # logcdf can only handle scalar values due to limitation in NegativeBinomial.logcdf
-        if np.ndim(value):
-            raise TypeError(
-                f"ZeroInflatedNegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(nbinom, value, {}, n, p)),
+            at.logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(nbinom, value, {}, n, p)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1636,15 +1618,41 @@ class ZeroInflatedNegativeBinomial(Discrete):
         )
 
 
-class OrderedLogistic(Categorical):
+class _OrderedLogistic(Categorical):
+    r"""
+    Underlying class for ordered logistic distributions.
+    See docs for the OrderedLogistic wrapper class for more details on how to use it in models.
+    """
+    rv_op = categorical
+
+    @classmethod
+    def dist(cls, eta, cutpoints, *args, **kwargs):
+        eta = at.as_tensor_variable(floatX(eta))
+        cutpoints = at.as_tensor_variable(cutpoints)
+
+        pa = sigmoid(cutpoints - at.shape_padright(eta))
+        p_cum = at.concatenate(
+            [
+                at.zeros_like(at.shape_padright(pa[..., 0])),
+                pa,
+                at.ones_like(at.shape_padright(pa[..., 0])),
+            ],
+            axis=-1,
+        )
+        p = p_cum[..., 1:] - p_cum[..., :-1]
+
+        return super().dist(p, *args, **kwargs)
+
+
+class OrderedLogistic:
     R"""
-    Ordered Logistic log-likelihood.
+    Wrapper class for Ordered Logistic distributions.
 
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
-    mapped to which of the K observed dependent variables.  The number
-    of cutpoints is K - 1.  It is recommended that the cutpoints are
+    mapped to which of the K observed dependent variables. The number
+    of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
 
     .. math::
@@ -1665,10 +1673,14 @@ class OrderedLogistic(Categorical):
     ----------
     eta: float
         The predictor.
-    c: array
+    cutpoints: array
         The length K - 1 array of cutpoints which break :math:`\eta` into
-        ranges.  Do not explicitly set the first and last elements of
+        ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
+    compute_p: boolean, default True
+        Whether to compute and store in the trace the inferred probabilities of each categories,
+        based on the cutpoints' values. Defaults to True.
+        Might be useful to disable it if memory usage is of interest.
 
     Examples
     --------
@@ -1691,7 +1703,7 @@ class OrderedLogistic(Categorical):
             cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedLogistic("y", cutpoints=cutpoints, eta=x, observed=y)
-            idata = pm.sample(1000)
+            idata = pm.sample()
 
         # Plot the results
         plt.hist(cluster1, 30, alpha=0.5);
@@ -1700,9 +1712,24 @@ class OrderedLogistic(Categorical):
         posterior = idata.posterior.stack(sample=("chain", "draw"))
         plt.hist(posterior["cutpoints"][0], 80, alpha=0.2, color='k');
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
-
     """
 
+    def __new__(cls, name, *args, compute_p=True, **kwargs):
+        out_rv = _OrderedLogistic(name, *args, **kwargs)
+        if compute_p:
+            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3])
+        return out_rv
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        return _OrderedLogistic.dist(*args, **kwargs)
+
+
+class _OrderedProbit(Categorical):
+    r"""
+    Underlying class for ordered probit distributions.
+    See docs for the OrderedProbit wrapper class for more details on how to use it in models.
+    """
     rv_op = categorical
 
     @classmethod
@@ -1710,29 +1737,30 @@ class OrderedLogistic(Categorical):
         eta = at.as_tensor_variable(floatX(eta))
         cutpoints = at.as_tensor_variable(cutpoints)
 
-        pa = sigmoid(cutpoints - at.shape_padright(eta))
-        p_cum = at.concatenate(
+        probits = at.shape_padright(eta) - cutpoints
+        _log_p = at.concatenate(
             [
-                at.zeros_like(at.shape_padright(pa[..., 0])),
-                pa,
-                at.ones_like(at.shape_padright(pa[..., 0])),
+                at.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
+                log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
+                at.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
             ],
             axis=-1,
         )
-        p = p_cum[..., 1:] - p_cum[..., :-1]
+        _log_p = at.as_tensor_variable(floatX(_log_p))
+        p = at.exp(_log_p)
 
-        return super().dist(p, **kwargs)
+        return super().dist(p, *args, **kwargs)
 
 
-class OrderedProbit(Categorical):
+class OrderedProbit:
     R"""
-    Ordered Probit log-likelihood.
+    Wrapper class for Ordered Probit distributions.
 
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
-    mapped to which of the K observed dependent variables.  The number
-    of cutpoints is K - 1.  It is recommended that the cutpoints are
+    mapped to which of the K observed dependent variables. The number
+    of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
 
     In order to stabilize the computation, log-likelihood is computed
@@ -1754,13 +1782,16 @@ class OrderedProbit(Categorical):
 
     Parameters
     ----------
-    eta : float
+    eta: float
         The predictor.
-    c : array
+    cutpoints: array
         The length K - 1 array of cutpoints which break :math:`\eta` into
-        ranges.  Do not explicitly set the first and last elements of
+        ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
-
+    compute_p: boolean, default True
+        Whether to compute and store in the trace the inferred probabilities of each categories,
+        based on the cutpoints' values. Defaults to True.
+        Might be useful to disable it if memory usage is of interest.
     sigma: float
          The standard deviation of probit function.
     Example
@@ -1783,7 +1814,7 @@ class OrderedProbit(Categorical):
             cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedProbit("y", cutpoints=cutpoints, eta=x, observed=y)
-            idata = pm.sample(1000)
+            idata = pm.sample()
 
         # Plot the results
         plt.hist(cluster1, 30, alpha=0.5);
@@ -1792,26 +1823,14 @@ class OrderedProbit(Categorical):
         posterior = idata.posterior.stack(sample=("chain", "draw"))
         plt.hist(posterior["cutpoints"][0], 80, alpha=0.2, color='k');
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
-
     """
 
-    rv_op = categorical
+    def __new__(cls, name, *args, compute_p=True, **kwargs):
+        out_rv = _OrderedProbit(name, *args, **kwargs)
+        if compute_p:
+            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3])
+        return out_rv
 
     @classmethod
-    def dist(cls, eta, cutpoints, *args, **kwargs):
-        eta = at.as_tensor_variable(floatX(eta))
-        cutpoints = at.as_tensor_variable(cutpoints)
-
-        probits = at.shape_padright(eta) - cutpoints
-        _log_p = at.concatenate(
-            [
-                at.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
-                log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
-                at.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
-            ],
-            axis=-1,
-        )
-        _log_p = at.as_tensor_variable(floatX(_log_p))
-        p = at.exp(_log_p)
-
-        return super().dist(p, **kwargs)
+    def dist(cls, *args, **kwargs):
+        return _OrderedProbit.dist(*args, **kwargs)

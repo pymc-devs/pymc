@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from aesara.tensor.subtensor import AdvancedIncSubtensor
+from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from arviz import InferenceData
 from arviz.tests.helpers import check_multiple_attrs
 from numpy import ma
@@ -327,7 +327,7 @@ class TestDataPyMC3:
             inference_data = pm.sample(100, chains=2, return_inferencedata=True)
 
         # make sure that data is really missing
-        assert isinstance(y.owner.op, AdvancedIncSubtensor)
+        assert isinstance(y.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1))
 
         test_dict = {
             "posterior": ["mu", "chol_cov"],

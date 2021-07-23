@@ -13,9 +13,9 @@
 #   limitations under the License.
 
 import itertools
-import pickle
 
 import aesara
+import cloudpickle
 import numpy as np
 import pytest
 
@@ -132,10 +132,10 @@ class TestGenerator:
 
     def test_pickling(self, datagen):
         gen = generator(datagen)
-        pickle.loads(pickle.dumps(gen))
+        cloudpickle.loads(cloudpickle.dumps(gen))
         bad_gen = generator(integers())
-        with pytest.raises(Exception):
-            pickle.dumps(bad_gen)
+        with pytest.raises(TypeError):
+            cloudpickle.dumps(bad_gen)
 
     def test_gen_cloning_with_shape_change(self, datagen):
         gen = generator(datagen)

@@ -757,7 +757,7 @@ def test_remove_scan_op():
 
 
 def test_clear_cache():
-    import pickle
+    import cloudpickle
 
     with pm.Model():
         pm.Normal("n", 0, 1)
@@ -767,7 +767,7 @@ def test_clear_cache():
         inference.approx._cache.clear()
         # should not be cleared at this call
         assert all(len(c) == 0 for c in inference.approx._cache.values())
-        new_a = pickle.loads(pickle.dumps(inference.approx))
+        new_a = cloudpickle.loads(cloudpickle.dumps(inference.approx))
         assert not hasattr(new_a, "_cache")
         inference_new = pm.KLqp(new_a)
         inference_new.fit(n=10)
@@ -871,26 +871,26 @@ def test_rowwise_approx(three_var_model, parametric_grouped_approxes):
 
 
 def test_pickle_approx(three_var_approx):
-    import pickle
+    import cloudpickle
 
-    dump = pickle.dumps(three_var_approx)
-    new = pickle.loads(dump)
+    dump = cloudpickle.dumps(three_var_approx)
+    new = cloudpickle.loads(dump)
     assert new.sample(1)
 
 
 def test_pickle_single_group(three_var_approx_single_group_mf):
-    import pickle
+    import cloudpickle
 
-    dump = pickle.dumps(three_var_approx_single_group_mf)
-    new = pickle.loads(dump)
+    dump = cloudpickle.dumps(three_var_approx_single_group_mf)
+    new = cloudpickle.loads(dump)
     assert new.sample(1)
 
 
 def test_pickle_approx_aevb(three_var_aevb_approx):
-    import pickle
+    import cloudpickle
 
-    dump = pickle.dumps(three_var_aevb_approx)
-    new = pickle.loads(dump)
+    dump = cloudpickle.dumps(three_var_aevb_approx)
+    new = cloudpickle.loads(dump)
     assert new.sample(1000)
 
 

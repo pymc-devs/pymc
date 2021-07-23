@@ -18,13 +18,17 @@ A collection of common probability distributions for stochastic
 nodes in PyMC.
 """
 
-from typing import Union
+from typing import List, Optional, Tuple, Union
 
+import aesara
 import aesara.tensor as at
 import numpy as np
 
 from aesara.assert_op import Assert
+from aesara.graph.basic import Apply
+from aesara.graph.op import Op
 from aesara.tensor import gammaln
+from aesara.tensor.extra_ops import broadcast_shape
 from aesara.tensor.random.basic import (
     BetaRV,
     WeibullRV,
@@ -46,7 +50,22 @@ from aesara.tensor.random.basic import (
     vonmises,
 )
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.var import TensorVariable
+from aesara.tensor.var import TensorConstant, TensorVariable
+
+try:
+    from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
+except ImportError:  # pragma: no cover
+
+    def random_polyagamma(*args, **kwargs):
+        raise RuntimeError("polyagamma package is not installed!")
+
+    def polyagamma_pdf(*args, **kwargs):
+        raise RuntimeError("polyagamma package is not installed!")
+
+    def polyagamma_cdf(*args, **kwargs):
+        raise RuntimeError("polyagamma package is not installed!")
+
+
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
@@ -59,7 +78,6 @@ from pymc3.distributions.dist_math import (
     bound,
     clipped_beta_rvs,
     i0e,
-    incomplete_beta,
     log_i0,
     log_normal,
     logpow,
@@ -68,7 +86,7 @@ from pymc3.distributions.dist_math import (
     zvalue,
 )
 from pymc3.distributions.distribution import Continuous
-from pymc3.math import log1mexp, log1pexp, logdiffexp, logit
+from pymc3.math import logdiffexp, logit
 from pymc3.util import UNSET
 
 __all__ = [
@@ -104,6 +122,7 @@ __all__ = [
     "Rice",
     "Moyal",
     "AsymmetricLaplace",
+    "PolyaGamma",
 ]
 
 
@@ -162,8 +181,17 @@ class BoundedContinuous(Continuous):
             if cls.bound_args_indices[1] is not None:
                 upper = args[cls.bound_args_indices[1]]
 
-            lower = at.as_tensor_variable(lower) if lower is not None else None
-            upper = at.as_tensor_variable(upper) if upper is not None else None
+            if lower is not None:
+                if isinstance(lower, TensorConstant) and np.all(lower.value == -np.inf):
+                    lower = None
+                else:
+                    lower = at.as_tensor_variable(lower)
+
+            if upper is not None:
+                if isinstance(upper, TensorConstant) and np.all(upper.value == np.inf):
+                    upper = None
+                else:
+                    upper = at.as_tensor_variable(upper)
 
             return lower, upper
 
@@ -559,6 +587,36 @@ class Normal(Continuous):
         )
 
 
+class TruncatedNormalRV(RandomVariable):
+    name = "truncated_normal"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("TruncatedNormal", "\\operatorname{TruncatedNormal}")
+
+    @classmethod
+    def rng_fn(
+        cls,
+        rng: np.random.RandomState,
+        mu: Union[np.ndarray, float],
+        sigma: Union[np.ndarray, float],
+        lower: Union[np.ndarray, float],
+        upper: Union[np.ndarray, float],
+        size: Optional[Union[List[int], int]],
+    ) -> np.ndarray:
+        return stats.truncnorm.rvs(
+            a=(lower - mu) / sigma,
+            b=(upper - mu) / sigma,
+            loc=mu,
+            scale=sigma,
+            size=size,
+            random_state=rng,
+        )
+
+
+truncated_normal = TruncatedNormalRV()
+
+
 class TruncatedNormal(BoundedContinuous):
     r"""
     Univariate truncated normal log-likelihood.
@@ -632,99 +690,50 @@ class TruncatedNormal(BoundedContinuous):
 
     """
 
-    def __init__(
-        self,
-        mu=0,
-        sigma=None,
-        tau=None,
-        lower=None,
-        upper=None,
-        transform="auto",
-        sd=None,
+    rv_op = truncated_normal
+    bound_args_indices = (2, 3)  # indexes for lower and upper args
+
+    @classmethod
+    def dist(
+        cls,
+        mu: Optional[Union[float, np.ndarray]] = None,
+        sigma: Optional[Union[float, np.ndarray]] = None,
+        tau: Optional[Union[float, np.ndarray]] = None,
+        sd: Optional[Union[float, np.ndarray]] = None,
+        lower: Optional[Union[float, np.ndarray]] = None,
+        upper: Optional[Union[float, np.ndarray]] = None,
+        transform: str = "auto",
         *args,
         **kwargs,
-    ):
-        if sd is not None:
-            sigma = sd
+    ) -> RandomVariable:
+        sigma = sd if sd is not None else sigma
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = at.as_tensor_variable(sigma)
-        self.tau = at.as_tensor_variable(tau)
-        self.lower_check = at.as_tensor_variable(floatX(lower)) if lower is not None else lower
-        self.upper_check = at.as_tensor_variable(floatX(upper)) if upper is not None else upper
-        self.lower = (
-            at.as_tensor_variable(floatX(lower))
-            if lower is not None
-            else at.as_tensor_variable(-np.inf)
-        )
-        self.upper = (
-            at.as_tensor_variable(floatX(upper))
-            if upper is not None
-            else at.as_tensor_variable(np.inf)
-        )
-        self.mu = at.as_tensor_variable(floatX(mu))
-
-        if self.lower_check is None and self.upper_check is None:
-            self._defaultval = mu
-        elif self.lower_check is None and self.upper_check is not None:
-            self._defaultval = self.upper - 1.0
-        elif self.lower_check is not None and self.upper_check is None:
-            self._defaultval = self.lower + 1.0
-        else:
-            self._defaultval = (self.lower + self.upper) / 2
-
+        sigma = at.as_tensor_variable(sigma)
+        tau = at.as_tensor_variable(tau)
+        mu = at.as_tensor_variable(floatX(mu))
         assert_negative_support(sigma, "sigma", "TruncatedNormal")
         assert_negative_support(tau, "tau", "TruncatedNormal")
 
-        super().__init__(
-            defaults=("_defaultval",),
-            transform=transform,
-            lower=lower,
-            upper=upper,
-            *args,
-            **kwargs,
-        )
+        # if lower is None and upper is None:
+        #     initval = mu
+        # elif lower is None and upper is not None:
+        #     initval = upper - 1.0
+        # elif lower is not None and upper is None:
+        #     initval = lower + 1.0
+        # else:
+        #     initval = (lower + upper) / 2
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from TruncatedNormal distribution.
+        lower = at.as_tensor_variable(floatX(lower)) if lower is not None else at.constant(-np.inf)
+        upper = at.as_tensor_variable(floatX(upper)) if upper is not None else at.constant(np.inf)
+        return super().dist([mu, sigma, lower, upper], **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, sigma, lower, upper = draw_values(
-        #     [self.mu, self.sigma, self.lower, self.upper], point=point, size=size
-        # )
-        # return generate_samples(
-        #     self._random,
-        #     mu=mu,
-        #     sigma=sigma,
-        #     lower=lower,
-        #     upper=upper,
-        #     dist_shape=self.shape,
-        #     size=size,
-        # )
-
-    def _random(self, mu, sigma, lower, upper, size):
-        """Wrapper around stats.truncnorm.rvs that converts TruncatedNormal's
-        parametrization to scipy.truncnorm. All parameter arrays should have
-        been broadcasted properly by generate_samples at this point and size is
-        the scipy.rvs representation.
-        """
-        return stats.truncnorm.rvs(
-            a=(lower - mu) / sigma, b=(upper - mu) / sigma, loc=mu, scale=sigma, size=size
-        )
-
-    def logp(self, value):
+    def logp(
+        value,
+        mu: Union[float, np.ndarray, TensorVariable],
+        sigma: Union[float, np.ndarray, TensorVariable],
+        lower: Union[float, np.ndarray, TensorVariable],
+        upper: Union[float, np.ndarray, TensorVariable],
+    ) -> RandomVariable:
         """
         Calculate log-probability of TruncatedNormal distribution at specified value.
 
@@ -738,40 +747,31 @@ class TruncatedNormal(BoundedContinuous):
         -------
         TensorVariable
         """
-        mu = self.mu
-        sigma = self.sigma
+        unbounded_lower = isinstance(lower, TensorConstant) and np.all(lower.value == -np.inf)
+        unbounded_upper = isinstance(upper, TensorConstant) and np.all(upper.value == np.inf)
 
-        norm = self._normalization()
-        logp = Normal.dist(mu=mu, sigma=sigma).logp(value) - norm
-
-        bounds = [sigma > 0]
-        if self.lower_check is not None:
-            bounds.append(value >= self.lower)
-        if self.upper_check is not None:
-            bounds.append(value <= self.upper)
-        return bound(logp, *bounds)
-
-    def _normalization(self):
-        mu, sigma = self.mu, self.sigma
-
-        if self.lower_check is None and self.upper_check is None:
-            return 0.0
-
-        if self.lower_check is not None and self.upper_check is not None:
-            lcdf_a = normal_lcdf(mu, sigma, self.lower)
-            lcdf_b = normal_lcdf(mu, sigma, self.upper)
-            lsf_a = normal_lccdf(mu, sigma, self.lower)
-            lsf_b = normal_lccdf(mu, sigma, self.upper)
-
-            return at.switch(self.lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a))
-
-        if self.lower_check is not None:
-            return normal_lccdf(mu, sigma, self.lower)
+        if not unbounded_lower and not unbounded_upper:
+            lcdf_a = normal_lcdf(mu, sigma, lower)
+            lcdf_b = normal_lcdf(mu, sigma, upper)
+            lsf_a = normal_lccdf(mu, sigma, lower)
+            lsf_b = normal_lccdf(mu, sigma, upper)
+            norm = at.switch(lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a))
+        elif not unbounded_lower:
+            norm = normal_lccdf(mu, sigma, lower)
+        elif not unbounded_upper:
+            norm = normal_lcdf(mu, sigma, upper)
         else:
-            return normal_lcdf(mu, sigma, self.upper)
+            norm = 0.0
 
-    def _distr_parameters_for_repr(self):
-        return ["mu", "sigma", "lower", "upper"]
+        logp = Normal.logp(value, mu=mu, sigma=sigma) - norm
+        bounds = []
+        if not unbounded_lower:
+            bounds.append(value >= lower)
+        if not unbounded_upper:
+            bounds.append(value <= upper)
+        if not unbounded_lower and not unbounded_upper:
+            bounds.append(lower <= upper)
+        return bound(logp, *bounds)
 
 
 class HalfNormal(PositiveContinuous):
@@ -900,6 +900,21 @@ class HalfNormal(PositiveContinuous):
         return ["sigma"]
 
 
+class WaldRV(RandomVariable):
+    name = "wald"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("Wald", "\\operatorname{Wald}")
+
+    @classmethod
+    def rng_fn(cls, rng, mu, lam, alpha, size):
+        return rng.wald(mu, lam, size=size) + alpha
+
+
+wald = WaldRV()
+
+
 class Wald(PositiveContinuous):
     r"""
     Wald log-likelihood.
@@ -978,27 +993,33 @@ class Wald(PositiveContinuous):
     .. [Giner2016] Göknur Giner, Gordon K. Smyth (2016)
        statmod: Probability Calculations for the Inverse Gaussian Distribution
     """
+    rv_op = wald
 
-    def __init__(self, mu=None, lam=None, phi=None, alpha=0.0, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        mu, lam, phi = self.get_mu_lam_phi(mu, lam, phi)
-        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
-        self.mu = mu = at.as_tensor_variable(floatX(mu))
-        self.lam = lam = at.as_tensor_variable(floatX(lam))
-        self.phi = phi = at.as_tensor_variable(floatX(phi))
-
-        self.mean = self.mu + self.alpha
-        self.mode = (
-            self.mu * (at.sqrt(1.0 + (1.5 * self.mu / self.lam) ** 2) - 1.5 * self.mu / self.lam)
-            + self.alpha
-        )
-        self.variance = (self.mu ** 3) / self.lam
+    @classmethod
+    def dist(
+        cls,
+        mu: Optional[Union[float, np.ndarray]] = None,
+        lam: Optional[Union[float, np.ndarray]] = None,
+        phi: Optional[Union[float, np.ndarray]] = None,
+        alpha: Union[float, np.ndarray] = 0.0,
+        *args,
+        **kwargs,
+    ) -> RandomVariable:
+        mu, lam, phi = cls.get_mu_lam_phi(mu, lam, phi)
+        alpha = at.as_tensor_variable(floatX(alpha))
+        mu = at.as_tensor_variable(floatX(mu))
+        lam = at.as_tensor_variable(floatX(lam))
 
         assert_negative_support(phi, "phi", "Wald")
         assert_negative_support(mu, "mu", "Wald")
         assert_negative_support(lam, "lam", "Wald")
 
-    def get_mu_lam_phi(self, mu, lam, phi):
+        return super().dist([mu, lam, alpha], **kwargs)
+
+    @staticmethod
+    def get_mu_lam_phi(
+        mu: Optional[float], lam: Optional[float], phi: Optional[float]
+    ) -> Tuple[Union[float, np.ndarray], Union[float, np.ndarray], Union[float, np.ndarray]]:
         if mu is None:
             if lam is not None and phi is not None:
                 return lam / phi, lam, phi
@@ -1017,39 +1038,12 @@ class Wald(PositiveContinuous):
             "mu and lam, mu and phi, or lam and phi."
         )
 
-    def _random(self, mu, lam, alpha, size=None):
-        v = np.random.normal(size=size) ** 2
-        value = (
-            mu
-            + (mu ** 2) * v / (2.0 * lam)
-            - mu / (2.0 * lam) * np.sqrt(4.0 * mu * lam * v + (mu * v) ** 2)
-        )
-        z = np.random.uniform(size=size)
-        i = np.floor(z - mu / (mu + value)) * 2 + 1
-        value = (value ** -i) * (mu ** (i + 1))
-        return value + alpha
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Wald distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha], point=point, size=size)
-        # return generate_samples(self._random, mu, lam, alpha, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(
+        value,
+        mu: Union[float, np.ndarray, TensorVariable],
+        lam: Union[float, np.ndarray, TensorVariable],
+        alpha: Union[float, np.ndarray, TensorVariable],
+    ) -> RandomVariable:
         """
         Calculate log-probability of Wald distribution at specified value.
 
@@ -1058,14 +1052,17 @@ class Wald(PositiveContinuous):
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor
+        mu: float or TensorVariable
+            Mean of the distribution (mu > 0).
+        lam: float or TensorVariable
+            Relative precision (lam > 0).
+        alpha: float or TensorVariable
+            Shift/location parameter (alpha >= 0).
 
         Returns
         -------
         TensorVariable
         """
-        mu = self.mu
-        lam = self.lam
-        alpha = self.alpha
         centered_value = value - alpha
         # value *must* be iid. Otherwise this is wrong.
         return bound(
@@ -1081,7 +1078,12 @@ class Wald(PositiveContinuous):
     def _distr_parameters_for_repr(self):
         return ["mu", "lam", "alpha"]
 
-    def logcdf(self, value):
+    def logcdf(
+        value,
+        mu: Union[float, np.ndarray, TensorVariable],
+        lam: Union[float, np.ndarray, TensorVariable],
+        alpha: Union[float, np.ndarray, TensorVariable],
+    ) -> RandomVariable:
         """
         Compute the log of the cumulative distribution function for Wald distribution
         at the specified value.
@@ -1091,16 +1093,17 @@ class Wald(PositiveContinuous):
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
+        mu: float or TensorVariable
+            Mean of the distribution (mu > 0).
+        lam: float or TensorVariable
+            Relative precision (lam > 0).
+        alpha: float or TensorVariable
+            Shift/location parameter (alpha >= 0).
 
         Returns
         -------
         TensorVariable
         """
-        # Distribution parameters
-        mu = self.mu
-        lam = self.lam
-        alpha = self.alpha
-
         value -= alpha
         q = value / mu
         l = lam * mu
@@ -1112,7 +1115,7 @@ class Wald(PositiveContinuous):
         return bound(
             at.switch(
                 at.lt(value, np.inf),
-                a + log1pexp(b - a),
+                a + at.log1pexp(b - a),
                 0,
             ),
             0 < value,
@@ -1262,23 +1265,19 @@ class Beta(UnitContinuous):
 
         Parameters
         ----------
-        value: numeric
-            Value(s) for which log CDF is calculated.
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
-        # incomplete_beta function can only handle scalar values (see #4342)
-        if np.ndim(value):
-            raise TypeError(
-                f"Beta.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
 
         return bound(
             at.switch(
                 at.lt(value, 1),
-                at.log(incomplete_beta(alpha, beta, value)),
+                at.log(at.betainc(alpha, beta, value)),
                 0,
             ),
             0 <= value,
@@ -1391,7 +1390,7 @@ class Kumaraswamy(UnitContinuous):
         -------
         TensorVariable
         """
-        logcdf = log1mexp(-(b * at.log1p(-(value ** a))))
+        logcdf = at.log1mexp(b * at.log1p(-(value ** a)))
         return bound(at.switch(value < 1, logcdf, 0), value >= 0, a > 0, b > 0)
 
 
@@ -1483,7 +1482,7 @@ class Exponential(PositiveContinuous):
         """
         lam = at.inv(mu)
         return bound(
-            log1mexp(lam * value),
+            at.log1mexp(-lam * value),
             0 <= value,
             0 <= lam,
         )
@@ -1931,19 +1930,14 @@ class StudentT(Continuous):
 
         Parameters
         ----------
-        value: numeric
-            Value(s) for which log CDF is calculated.
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
-        # incomplete_beta function can only handle scalar values (see #4342)
-        if np.ndim(value):
-            raise TypeError(
-                f"StudentT.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
         lam, sigma = get_tau_sigma(sigma=sigma)
 
         t = (value - mu) / sigma
@@ -1951,7 +1945,7 @@ class StudentT(Continuous):
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
 
         return bound(
-            at.log(incomplete_beta(nu / 2.0, nu / 2.0, x)),
+            at.log(at.betainc(nu / 2.0, nu / 2.0, x)),
             0 < nu,
             0 < sigma,
             0 < lam,
@@ -2396,13 +2390,8 @@ class Gamma(PositiveContinuous):
         """
         beta = at.inv(inv_beta)
 
-        # Avoid C-assertion when the gammainc function is called with invalid values (#4340)
-        safe_alpha = at.switch(at.lt(alpha, 0), 0, alpha)
-        safe_beta = at.switch(at.lt(beta, 0), 0, beta)
-        safe_value = at.switch(at.lt(value, 0), 0, value)
-
         return bound(
-            at.log(at.gammainc(safe_alpha, safe_beta * safe_value)),
+            at.log(at.gammainc(alpha, beta * value)),
             0 <= value,
             0 < alpha,
             0 < beta,
@@ -2544,13 +2533,9 @@ class InverseGamma(PositiveContinuous):
         -------
         TensorVariable
         """
-        # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
-        safe_alpha = at.switch(at.lt(alpha, 0), 0, alpha)
-        safe_beta = at.switch(at.lt(beta, 0), 0, beta)
-        safe_value = at.switch(at.lt(value, 0), 0, value)
 
         return bound(
-            at.log(at.gammaincc(safe_alpha, safe_beta / safe_value)),
+            at.log(at.gammaincc(alpha, beta / value)),
             0 <= value,
             0 < alpha,
             0 < beta,
@@ -2746,7 +2731,7 @@ class Weibull(PositiveContinuous):
         """
         a = (value / beta) ** alpha
         return bound(
-            log1mexp(a),
+            at.log1mexp(-a),
             0 <= value,
             0 < alpha,
             0 < beta,
@@ -3697,7 +3682,7 @@ class Logistic(Continuous):
         """
 
         return bound(
-            -log1pexp(-(value - mu) / s),
+            -at.log1pexp(-(value - mu) / s),
             0 < s,
         )
 
@@ -4042,3 +4027,201 @@ class Moyal(Continuous):
             at.log(at.erfc(at.exp(-scaled / 2) * (2 ** -0.5))),
             0 < sigma,
         )
+
+
+class PolyaGammaRV(RandomVariable):
+    """Polya-Gamma random variable."""
+
+    name = "polyagamma"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("PG", "\\operatorname{PG}")
+
+    def __call__(self, h=1.0, z=0.0, size=None, **kwargs):
+        return super().__call__(h, z, size=size, **kwargs)
+
+    @classmethod
+    def rng_fn(cls, rng, h, z, size=None):
+        """
+        Generate a random sample from the distribution with the given parameters
+
+        Parameters
+        ----------
+        rng : {None, int, array_like[ints], SeedSequence, BitGenerator, Generator}
+            A seed to initialize the random number generator. If None, then fresh,
+            unpredictable entropy will be pulled from the OS. If an ``int`` or
+            ``array_like[ints]`` is passed, then it will be passed to
+            `SeedSequence` to derive the initial `BitGenerator` state. One may also
+            pass in a `SeedSequence` instance.
+            Additionally, when passed a `BitGenerator`, it will be wrapped by
+            `Generator`. If passed a `Generator`, it will be returned unaltered.
+        h : scalar or sequence
+            The shape parameter of the distribution.
+        z : scalar or sequence
+            The exponential tilting parameter.
+        size : int or tuple of ints, optional
+            The number of elements to draw from the distribution. If size is
+            ``None`` (default) then a single value is returned. If a tuple of
+            integers is passed, the returned array will have the same shape.
+            If the element(s) of size is not an integer type, it will be truncated
+            to the largest integer smaller than its value (e.g (2.1, 1) -> (2, 1)).
+            This parameter only applies if `h` and `z` are scalars.
+        """
+        # handle the kind of rng passed to the sampler
+        bg = rng._bit_generator if isinstance(rng, np.random.RandomState) else rng
+        return random_polyagamma(h, z, size=size, random_state=bg).astype(aesara.config.floatX)
+
+
+polyagamma = PolyaGammaRV()
+
+
+class _PolyaGammaLogDistFunc(Op):
+    __props__ = ("get_pdf",)
+
+    def __init__(self, get_pdf=False):
+        self.get_pdf = get_pdf
+
+    def make_node(self, x, h, z):
+        x = at.as_tensor_variable(floatX(x))
+        h = at.as_tensor_variable(floatX(h))
+        z = at.as_tensor_variable(floatX(z))
+        shape = broadcast_shape(x, h, z)
+        broadcastable = [] if not shape else [False] * len(shape)
+        return Apply(self, [x, h, z], [at.TensorType(aesara.config.floatX, broadcastable)()])
+
+    def perform(self, node, ins, outs):
+        x, h, z = ins[0], ins[1], ins[2]
+        outs[0][0] = (
+            polyagamma_pdf(x, h, z, return_log=True)
+            if self.get_pdf
+            else polyagamma_cdf(x, h, z, return_log=True)
+        ).astype(aesara.config.floatX)
+
+
+class PolyaGamma(PositiveContinuous):
+    r"""
+    The Polya-Gamma distribution.
+
+    The distribution is parametrized by ``h`` (shape parameter) and ``z``
+    (exponential tilting parameter). The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid h, z) = cosh^h(\frac{z}{2})e^{-\frac{1}{2}xz^2}f(x \mid h, 0),
+    where :math:`f(x \mid h, 0)` is the pdf of a :math:`PG(h, 0)` variable.
+    Notice that the pdf of this distribution is expressed as an alternating-sign
+    sum of inverse-Gaussian densities.
+
+    .. math::
+
+        X = \Sigma_{k=1}^{\infty}\frac{Ga(h, 1)}{d_k},
+
+    where :math:`d_k = 2(k - 0.5)^2\pi^2 + z^2/2`, :math:`Ga(h, 1)` is a gamma
+    random variable with shape  parameter ``h`` and scale parameter ``1``.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        from polyagamma import polyagamma_pdf
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0.01, 5, 500);x.sort()
+        hs = [1., 5., 10., 15.]
+        zs = [0.] * 4
+        for h, z in zip(hs, zs):
+            pdf = polyagamma_pdf(x, h=h, z=z)
+            plt.plot(x, pdf, label=r'$h$ = {}, $z$ = {}'.format(h, z))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  =============================
+    Support   :math:`x \in (0, \infty)`
+    Mean      :math:`dfrac{h}{4} if :math:`z=0`, :math:`\dfrac{tanh(z/2)h}{2z}` otherwise.
+    Variance  :math:`0.041666688h` if :math:`z=0`, :math:`\dfrac{h(sinh(z) - z)(1 - tanh^2(z/2))}{4z^3}` otherwise.
+    ========  =============================
+
+    Parameters
+    ----------
+    h: float, optional
+        The shape parameter of the distribution (h > 0).
+    z: float, optional
+        The exponential tilting parameter of the distribution.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        rng = np.random.default_rng()
+        with pm.Model():
+            x = pm.PolyaGamma('x', h=1, z=5.5)
+        with pm.Model():
+            x = pm.PolyaGamma('x', h=25, z=-2.3, rng=rng, size=(100, 5))
+
+    References
+    ----------
+    .. [1] Polson, Nicholas G., James G. Scott, and Jesse Windle.
+           "Bayesian inference for logistic models using Pólya–Gamma latent
+           variables." Journal of the American statistical Association
+           108.504 (2013): 1339-1349.
+    .. [2] Windle, Jesse, Nicholas G. Polson, and James G. Scott.
+           "Sampling Polya-Gamma random variates: alternate and approximate
+           techniques." arXiv preprint arXiv:1405.0506 (2014)
+    .. [3] Luc Devroye. "On exact simulation algorithms for some distributions
+           related to Jacobi theta functions." Statistics & Probability Letters,
+           Volume 79, Issue 21, (2009): 2251-2259.
+    .. [4] Windle, J. (2013). Forecasting high-dimensional, time-varying
+           variance-covariance matrices with high-frequency data and sampling
+           Pólya-Gamma random variates for posterior distributions derived
+           from logistic likelihoods.(PhD thesis). Retrieved from
+           http://hdl.handle.net/2152/21842
+    """
+    rv_op = polyagamma
+
+    @classmethod
+    def dist(cls, h=1.0, z=0.0, **kwargs):
+        h = at.as_tensor_variable(floatX(h))
+        z = at.as_tensor_variable(floatX(z))
+
+        msg = f"The variable {h} specified for PolyaGamma has non-positive "
+        msg += "values, making it unsuitable for this parameter."
+        Assert(msg)(h, at.all(at.gt(h, 0.0)))
+
+        return super().dist([h, z], **kwargs)
+
+    def logp(value, h, z):
+        """
+        Calculate log-probability of Polya-Gamma distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log
+            probabilities for multiple values are desired the values must be
+            provided in a numpy array.
+
+        Returns
+        -------
+        TensorVariable
+        """
+
+        return bound(_PolyaGammaLogDistFunc(True)(value, h, z), h > 0, value > 0)
+
+    def logcdf(value, h, z):
+        """
+        Compute the log of the cumulative distribution function for the
+        Polya-Gamma distribution at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or `TensorVariable`
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return bound(_PolyaGammaLogDistFunc(False)(value, h, z), h > 0, value > 0)

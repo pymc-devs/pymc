@@ -188,33 +188,25 @@ Some notes:
 1. As mentioned above, `v4` works in a very {functional}`Functional_Programming` way, and all the information that is needed in the `logp` and `logcdf` methods is expected to be "carried" via the `RandomVariable` inputs. You may pass numerical arguments that are not strictly needed for the `rng_fn` method but are used in the `logp` and `logcdf` methods. Just keep in mind whether this affects the correct shape inference behavior of the `RandomVariable`. If specialized non-numeric information is needed you might need to define your custom`_logp` and `_logcdf` {dispatch}`Dispatching` functions, but this should be done as a last resort.
 1. The `logcdf` method is not a requirement, but it's a nice plus!
 
-For a quick check that things are working you can try to create the new distribution in a model context:
+For a quick check that things are working you can try the following:
 
 ```python
 
 import pymc3 as pm
-from pymc3.distributions.logp import logpt
 
-with pm.Model() as model:
-   # pm.blah = pm.Uniform in this example
-   blah = pm.Blah('blah', [0, 0], [1, 2])
+# pm.blah = pm.Uniform in this example
+blah = pm.Blah.dist([0, 0], [1, 2])
 
 # Test that the returned blah_op is still working fine
 blah.eval()
 # array([0.62778803, 1.95165513])
 
-# logpt will replace the blah RandomVariable with the corresponding logp
-# expression, which takes as input the `blah_value` `TensorVariable` and
-# `blah.owner.inputs`. We pass `transformed=False` to return the original
-# `logp` expression just for simplicity of the example.
-blah_value = model.rvs_to_values[blah]
-blah_logp = logpt(blah, {blah: blah_value}, transformed=False)
-blah_logp.eval({blah_value: [1.5, 1.5]})
+# Test the logp
+pm.logp(blah, [1.5, 1.5]).eval()
 # array([       -inf, -0.69314718])
 
-# It will instead introduce the `logcdf` expression if we pass `cdf=True`
-blah_logcdf = logpt(blah, {blah: blah_value}, cdf=True)
-blah_logcdf.eval({blah_value: [1.5, 1.5]})
+# Test the logcdf
+pm.logcdf(blah, [1.5, 1.5]).eval()
 # array([ 0.        , -0.28768207])
 ```
 

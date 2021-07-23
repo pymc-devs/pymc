@@ -18,8 +18,6 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from scipy.special import logsumexp as scipy_logsumexp
-
 from pymc3.aesaraf import floatX
 from pymc3.math import (
     LogDet,
@@ -31,9 +29,9 @@ from pymc3.math import (
     kronecker,
     log1mexp,
     log1mexp_numpy,
-    log1pexp,
     logdet,
-    logsumexp,
+    logdiffexp,
+    logdiffexp_numpy,
     probit,
 )
 from pymc3.tests.helpers import SeededTest, verify_grad
@@ -126,28 +124,6 @@ def test_probit():
     np.testing.assert_allclose(invprobit(probit(p)).eval(), p, atol=1e-5)
 
 
-def test_log1pexp():
-    vals = np.array([-1e20, -100, -10, -1e-4, 0, 1e-4, 10, 100, 1e20])
-    # import mpmath
-    # mpmath.mp.dps = 1000
-    # [float(mpmath.log(1 + mpmath.exp(x))) for x in vals]
-    expected = np.array(
-        [
-            0.0,
-            3.720075976020836e-44,
-            4.539889921686465e-05,
-            0.6930971818099453,
-            0.6931471805599453,
-            0.6931971818099453,
-            10.000045398899218,
-            100.0,
-            1e20,
-        ]
-    )
-    actual = log1pexp(vals).eval()
-    npt.assert_allclose(actual, expected)
-
-
 def test_log1mexp():
     vals = np.array([-1, 0, 1e-20, 1e-4, 10, 100, 1e20])
     vals_ = vals.copy()
@@ -165,9 +141,9 @@ def test_log1mexp():
             0.0,
         ]
     )
-    actual = log1mexp(vals).eval()
+    actual = at.log1mexp(-vals).eval()
     npt.assert_allclose(actual, expected)
-    actual_ = log1mexp_numpy(vals)
+    actual_ = log1mexp_numpy(-vals, negative_input=True)
     npt.assert_allclose(actual_, expected)
     # Check that input was not changed in place
     npt.assert_allclose(vals, vals_)
@@ -176,8 +152,45 @@ def test_log1mexp():
 def test_log1mexp_numpy_no_warning():
     """Assert RuntimeWarning is not raised for very small numbers"""
     with pytest.warns(None) as record:
-        log1mexp_numpy(1e-25)
+        log1mexp_numpy(-1e-25, negative_input=True)
     assert not record
+
+
+def test_log1mexp_numpy_integer_input():
+    assert np.isclose(log1mexp_numpy(-2, negative_input=True), at.log1mexp(-2).eval())
+
+
+def test_log1mexp_deprecation_warnings():
+    with pytest.warns(
+        FutureWarning,
+        match="pymc3.math.log1mexp_numpy will expect a negative input",
+    ):
+        res_pos = log1mexp_numpy(2)
+
+    with pytest.warns(None) as record:
+        res_neg = log1mexp_numpy(-2, negative_input=True)
+    assert not record
+
+    with pytest.warns(
+        FutureWarning,
+        match="pymc3.math.log1mexp will expect a negative input",
+    ):
+        res_pos_at = log1mexp(2).eval()
+
+    with pytest.warns(None):
+        res_neg_at = log1mexp(-2, negative_input=True).eval()
+
+    assert np.isclose(res_pos, res_neg)
+    assert np.isclose(res_pos_at, res_neg)
+    assert np.isclose(res_neg_at, res_neg)
+
+
+def test_logdiffexp():
+    a = np.log([1, 2, 3, 4])
+    b = np.log([0, 1, 2, 3])
+
+    assert np.allclose(logdiffexp_numpy(a, b), 0)
+    assert np.allclose(logdiffexp(a, b).eval(), 0)
 
 
 class TestLogDet(SeededTest):
@@ -237,27 +250,3 @@ def test_expand_packed_triangular():
     assert np.all(expand_upper.eval({packed: upper_packed}) == upper)
     assert np.all(expand_diag_lower.eval({packed: lower_packed}) == floatX(np.diag(vals)))
     assert np.all(expand_diag_upper.eval({packed: upper_packed}) == floatX(np.diag(vals)))
-
-
-@pytest.mark.parametrize(
-    "values, axis, keepdims",
-    [
-        (np.array([-4, -2]), None, True),
-        (np.array([-np.inf, -2]), None, True),
-        (np.array([-2, np.inf]), None, True),
-        (np.array([-np.inf, -np.inf]), None, True),
-        (np.array([np.inf, np.inf]), None, True),
-        (np.array([-np.inf, np.inf]), None, True),
-        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), None, True),
-        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 0, True),
-        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 1, True),
-        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 0, False),
-        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 1, False),
-        (np.array([[-2, np.inf], [-np.inf, -np.inf]]), 0, True),
-    ],
-)
-def test_logsumexp(values, axis, keepdims):
-    npt.assert_almost_equal(
-        logsumexp(values, axis=axis, keepdims=keepdims).eval(),
-        scipy_logsumexp(values, axis=axis, keepdims=keepdims),
-    )

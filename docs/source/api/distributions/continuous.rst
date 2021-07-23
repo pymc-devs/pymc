@@ -36,6 +36,7 @@ Continuous
    Logistic
    LogitNormal
    Interpolated
+   PolyaGamma
 
 .. automodule:: pymc3.distributions.continuous
    :members:

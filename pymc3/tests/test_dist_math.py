@@ -34,6 +34,7 @@ from pymc3.distributions.dist_math import (
     clipped_beta_rvs,
     factln,
     i0e,
+    incomplete_beta,
     multigammaln,
 )
 from pymc3.tests.checks import close_to
@@ -262,3 +263,9 @@ def test_multigamma():
         for x in xvals:
             if np.all(x > 0.5 * (p - 1)):
                 check_vals(multigammaln_, ref_multigammaln, x, p)
+
+
+def test_incomplete_beta_deprecation():
+    with pytest.warns(DeprecationWarning, match="incomplete_beta has been deprecated"):
+        res = incomplete_beta(3, 5, 0.5).eval()
+    assert np.isclose(res, at.betainc(3, 5, 0.5).eval())

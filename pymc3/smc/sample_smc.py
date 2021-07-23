@@ -19,9 +19,11 @@ import warnings
 
 from collections.abc import Iterable
 
+import cloudpickle
 import numpy as np
 
 from arviz import InferenceData
+from fastprogress.fastprogress import progress_bar
 
 import pymc3
 
@@ -45,12 +47,13 @@ def sample_smc(
     save_log_pseudolikelihood=True,
     model=None,
     random_seed=-1,
-    parallel=False,
+    parallel=None,
     chains=None,
     cores=None,
     compute_convergence_checks=True,
     return_inferencedata=True,
     idata_kwargs=None,
+    progressbar=True,
 ):
     r"""
     Sequential Monte Carlo based sampling.
@@ -90,12 +93,9 @@ def sample_smc(
     model: Model (optional if in ``with`` context)).
     random_seed: int
         random seed
-    parallel: bool
-        Distribute computations across cores if the number of cores is larger than 1.
-        Defaults to False.
     cores : int
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
-        system, but at most 4.
+        system.
     chains : int
         The number of chains to sample. Running independent chains is important for some
         convergence statistics. If ``None`` (default), then set to either ``cores`` or 2, whichever
@@ -108,6 +108,9 @@ def sample_smc(
         Defaults to ``True``.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc3.to_inference_data`
+    progressbar : bool, optional default=True
+        Whether or not to display a progress bar in the command line.
+
     Notes
     -----
     SMC works by moving through successive stages. At each stage the inverse temperature
@@ -153,6 +156,16 @@ def sample_smc(
         816-832. `link <http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399
         %282007%29133:7%28816%29>`__
     """
+
+    if parallel is not None:
+        warnings.warn(
+            "The argument parallel is deprecated, use the argument cores instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if parallel is False:
+            cores = 1
+
     _log = logging.getLogger("pymc3")
     _log.info("Initializing SMC sampler...")
 
@@ -206,19 +219,29 @@ def sample_smc(
     )
 
     t1 = time.time()
-    if parallel and chains > 1:
-        loggers = [_log] + [None] * (chains - 1)
-        pool = mp.Pool(cores)
-        results = pool.starmap(
-            sample_smc_int, [(*params, random_seed[i], i, loggers[i]) for i in range(chains)]
-        )
+    if cores > 1:
+        pbar = progress_bar((), total=100, display=progressbar)
+        pbar.update(0)
+        pbars = [pbar] + [None] * (chains - 1)
 
+        pool = mp.Pool(cores)
+        # "manually" (de)serialize params before/after multiprocessing
+        params = tuple(cloudpickle.dumps(p) for p in params)
+        results = pool.starmap(
+            _sample_smc_int, [(*params, random_seed[i], i, pbars[i]) for i in range(chains)]
+        )
+        results = tuple(cloudpickle.loads(r) for r in results)
         pool.close()
         pool.join()
+
     else:
         results = []
+        pbar = progress_bar((), total=100 * chains, display=progressbar)
+        pbar.update(0)
         for i in range(chains):
-            results.append(sample_smc_int(*params, random_seed[i], i, _log))
+            pbar.offset = 100 * i
+            pbar.base_comment = f"Chain: {i+1}/{chains}"
+            results.append(_sample_smc_int(*params, random_seed[i], i, pbar))
 
     (
         traces,
@@ -297,7 +320,7 @@ def sample_smc(
         return posterior
 
 
-def sample_smc_int(
+def _sample_smc_int(
     draws,
     kernel,
     n_steps,
@@ -310,9 +333,39 @@ def sample_smc_int(
     model,
     random_seed,
     chain,
-    _log,
+    progressbar=None,
 ):
     """Run one SMC instance."""
+    in_out_pickled = type(model) == bytes
+    if in_out_pickled:
+        # function was called in multiprocessing context, deserialize first
+        (
+            draws,
+            kernel,
+            n_steps,
+            start,
+            tune_steps,
+            p_acc_rate,
+            threshold,
+            save_sim_data,
+            save_log_pseudolikelihood,
+            model,
+        ) = map(
+            cloudpickle.loads,
+            (
+                draws,
+                kernel,
+                n_steps,
+                start,
+                tune_steps,
+                p_acc_rate,
+                threshold,
+                save_sim_data,
+                save_log_pseudolikelihood,
+                model,
+            ),
+        )
+
     smc = SMC(
         draws=draws,
         kernel=kernel,
@@ -331,14 +384,22 @@ def sample_smc_int(
     betas = []
     accept_ratios = []
     nsteps = []
+
+    if progressbar:
+        progressbar.comment = f"{getattr(progressbar, 'base_comment', '')} Stage: 0 Beta: 0"
+        progressbar.update_bar(getattr(progressbar, "offset", 0) + 0)
+
     smc.initialize_population()
     smc.setup_kernel()
     smc.initialize_logp()
 
     while smc.beta < 1:
         smc.update_weights_beta()
-        if _log is not None:
-            _log.info(f"Stage: {stage:3d} Beta: {smc.beta:.3f}")
+        if progressbar:
+            progressbar.comment = (
+                f"{getattr(progressbar, 'base_comment', '')} Stage: {stage} Beta: {smc.beta:.3f}"
+            )
+            progressbar.update_bar(getattr(progressbar, "offset", 0) + int(smc.beta * 100))
         smc.update_proposal()
         smc.resample()
         smc.mutate()
@@ -348,7 +409,7 @@ def sample_smc_int(
         accept_ratios.append(smc.acc_rate)
         nsteps.append(smc.n_steps)
 
-    return (
+    results = (
         smc.posterior_to_trace(),
         smc.sim_data,
         smc.log_marginal_likelihood,
@@ -357,3 +418,8 @@ def sample_smc_int(
         accept_ratios,
         nsteps,
     )
+
+    if in_out_pickled:
+        results = cloudpickle.dumps(results)
+
+    return results

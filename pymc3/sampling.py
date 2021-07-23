@@ -26,6 +26,7 @@ from copy import copy, deepcopy
 from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
 
 import aesara.gradient as tg
+import cloudpickle
 import numpy as np
 import xarray
 
@@ -268,7 +269,6 @@ def sample(
     return_inferencedata=None,
     idata_kwargs: dict = None,
     mp_ctx=None,
-    pickle_backend: str = "pickle",
     **kwargs,
 ):
     r"""Draw samples from the posterior using the given step methods.
@@ -362,10 +362,6 @@ def sample(
     mp_ctx : multiprocessing.context.BaseContent
         A multiprocessing context for parallel sampling. See multiprocessing
         documentation for details.
-    pickle_backend : str
-        One of `'pickle'` or `'dill'`. The library used to pickle models
-        in parallel sampling if the multiprocessing context is not of type
-        `fork`.
 
     Returns
     -------
@@ -548,7 +544,6 @@ def sample(
         "discard_tuned_samples": discard_tuned_samples,
     }
     parallel_args = {
-        "pickle_backend": pickle_backend,
         "mp_ctx": mp_ctx,
     }
 
@@ -1100,7 +1095,7 @@ class PopulationStepper:
                     enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers)
                 ):
                     secondary_end, primary_end = multiprocessing.Pipe()
-                    stepper_dumps = pickle.dumps(stepper, protocol=4)
+                    stepper_dumps = cloudpickle.dumps(stepper, protocol=4)
                     process = multiprocessing.Process(
                         target=self.__class__._run_secondary,
                         args=(c, stepper_dumps, secondary_end),
@@ -1159,7 +1154,7 @@ class PopulationStepper:
         # re-seed each child process to make them unique
         np.random.seed(None)
         try:
-            stepper = pickle.loads(stepper_dumps)
+            stepper = cloudpickle.loads(stepper_dumps)
             # the stepper is not necessarily a PopulationArraySharedStep itself,
             # but rather a CompoundStep. PopulationArrayStepShared.population
             # has to be updated, therefore we identify the substeppers first.
@@ -1418,7 +1413,6 @@ def _mp_sample(
     callback=None,
     discard_tuned_samples=True,
     mp_ctx=None,
-    pickle_backend="pickle",
     **kwargs,
 ):
     """Main iteration for multiprocess sampling.
@@ -1491,7 +1485,6 @@ def _mp_sample(
         chain,
         progressbar,
         mp_ctx=mp_ctx,
-        pickle_backend=pickle_backend,
     )
     try:
         try:

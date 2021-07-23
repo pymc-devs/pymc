@@ -3,12 +3,13 @@
 ## PyMC3 vNext (4.0.0)
 ### Breaking Changes
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc3.aesaraf` (see [4471](https://github.com/pymc-devs/pymc3/pull/4471)).
+- ⚠ PyMC3 now requires Scipy version `>= 1.4.1` (see [4857](https://github.com/pymc-devs/pymc3/pull/4857)).
 - ArviZ `plots` and `stats` *wrappers* were removed. The functions are now just available by their original names (see [#4549](https://github.com/pymc-devs/pymc3/pull/4471) and `3.11.2` release notes).
 - The GLM submodule has been removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
 - The `Distribution` keyword argument `testval` has been deprecated in favor of `initval`.
 - `pm.sample` now returns results as `InferenceData` instead of `MultiTrace` by default (see [#4744](https://github.com/pymc-devs/pymc3/pull/4744)).
 - `pm.sample_prior_predictive` no longer returns transformed variable values by default. Pass them by name in `var_names` if you want to obtain these draws (see [4769](https://github.com/pymc-devs/pymc3/pull/4769)).
-...
+- ...
 
 ### New Features
 - The `CAR` distribution has been added to allow for use of conditional autoregressions which often are used in spatial and network models.
@@ -18,6 +19,9 @@
   - The `size` kwarg behaves like it does in Aesara/NumPy. For univariate RVs it is the same as `shape`, but for multivariate RVs it depends on how the RV implements broadcasting to dimensionality greater than `RVOp.ndim_supp`.
   - An `Ellipsis` (`...`) in the last position of `shape` or `dims` can be used as short-hand notation for implied dimensions.
 - Add `logcdf` method to Kumaraswamy distribution (see [#4706](https://github.com/pymc-devs/pymc3/pull/4706)).
+- The `OrderedMultinomial` distribution has been added for use on ordinal data which are _aggregated_ by trial, like multinomial observations, whereas `OrderedLogistic` only accepts ordinal data in a _disaggregated_ format, like categorical
+  observations (see [#4773](https://github.com/pymc-devs/pymc3/pull/4773)).
+- The `Polya-Gamma` distribution has been added (see [#4531](https://github.com/pymc-devs/pymc3/pull/4531)). To make use of this distribution, the [`polyagamma>=1.3.1`](https://pypi.org/project/polyagamma/) library must be installed and available in the user's environment.
 - ...
 
 ### Maintenance
@@ -25,6 +29,9 @@
 - Logp method of `Uniform` and `DiscreteUniform` no longer depends on `pymc3.distributions.dist_math.bound` for proper evaluation (see [#4541](https://github.com/pymc-devs/pymc3/pull/4541)).
 - `Model.RV_dims` and `Model.coords` are now read-only properties. To modify the `coords` dictionary use `Model.add_coord`. Also `dims` or coordinate values that are `None` will be auto-completed (see [#4625](https://github.com/pymc-devs/pymc3/pull/4625)).
 - The length of `dims` in the model is now tracked symbolically through `Model.dim_lengths` (see [#4625](https://github.com/pymc-devs/pymc3/pull/4625)).
+- We now include `cloudpickle` as a required dependency, and no longer depend on `dill` (see [#4858](https://github.com/pymc-devs/pymc3/pull/4858)).
+- The `incomplete_beta` function in `pymc3.distributions.dist_math` was replaced by `aesara.tensor.betainc` (see [4857](https://github.com/pymc-devs/pymc3/pull/4857)).
+- `math.log1mexp` and `math.log1mexp_numpy` will expect negative inputs in the future. A `FutureWarning` is now raised unless `negative_input=True` is set (see [#4860](https://github.com/pymc-devs/pymc3/pull/4860)).
 - ...
 
 ## PyMC3 3.11.2 (14 March 2021)
