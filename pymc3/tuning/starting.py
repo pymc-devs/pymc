@@ -18,6 +18,7 @@ Created on Mar 12, 2011
 @author: johnsalvatier
 """
 import copy
+import sys
 
 import aesara.gradient as tg
 import numpy as np
@@ -153,7 +154,7 @@ def find_MAP(
             assert isinstance(cost_func.progress, ProgressBar)
             cost_func.progress.total = last_v
             cost_func.progress.update(last_v)
-            print()
+            print(file=sys.stdout)
 
     mx0 = RaveledVars(mx0, x0.point_map_info)
 

@@ -33,6 +33,11 @@ repos:
     - id: pylint
       args: [--rcfile=.pylintrc]
       files: ^pymc3/
+- repo: https://github.com/MarcoGorelli/madforhooks
+  rev: 0.2.1
+  hooks:
+    - id: no-print-statements
+      files: ^pymc3/
 - repo: local
   hooks:
     - id: check-no-tests-are-ignored

@@ -294,7 +294,7 @@ class LogDet(Op):
             log_det = np.sum(np.log(np.abs(s)))
             z[0] = np.asarray(log_det, dtype=x.dtype)
         except Exception:
-            print(f"Failed to compute logdet of {x}.")
+            print(f"Failed to compute logdet of {x}.", file=sys.stdout)
             raise
 
     def grad(self, inputs, g_outputs):

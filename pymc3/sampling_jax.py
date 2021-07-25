@@ -1,6 +1,7 @@
 # pylint: skip-file
 import os
 import re
+import sys
 import warnings
 
 xla_flags = os.getenv("XLA_FLAGS", "").lstrip("--")
@@ -206,7 +207,7 @@ def sample_numpyro_nuts(
             rv_samples.name = rv.name
             sample_outputs.append(rv_samples)
 
-    print("Compiling...")
+    print("Compiling...", file=sys.stdout)
 
     tic1 = pd.Timestamp.now()
     _sample = compile_rv_inplace(
@@ -219,14 +220,14 @@ def sample_numpyro_nuts(
     )
     tic2 = pd.Timestamp.now()
 
-    print("Compilation time = ", tic2 - tic1)
+    print("Compilation time = ", tic2 - tic1, file=sys.stdout)
 
-    print("Sampling...")
+    print("Sampling...", file=sys.stdout)
 
     *mcmc_samples, leapfrogs_taken = _sample()
     tic3 = pd.Timestamp.now()
 
-    print("Sampling time = ", tic3 - tic2)
+    print("Sampling time = ", tic3 - tic2, file=sys.stdout)
 
     posterior = {k.name: v for k, v in zip(sample_outputs, mcmc_samples)}
 
