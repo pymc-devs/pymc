@@ -15,7 +15,7 @@ However there are numerous
 other useful sets of functionality, from prior and posterior predictive sampling,
 GraphviZ model, as well as various helper functions.
 
-PyMC3 includes a couple of posterior estimation techniqes in particular
+PyMC3 includes a few inference techniques, in particular:
 * MCMC
 * Variational Inference
 * Sequential Monte Carlo
