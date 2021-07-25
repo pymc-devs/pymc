@@ -45,8 +45,8 @@ of the topics below refer to that specific library
 
 
 # Modules
-The codebase of PyMC3 is split among single python file modules at the root
-level, as well as directories with python code for logical groups of functionality.
+The codebase of PyMC3 is split among single Python file modules at the root
+level, as well as directories with Python code for logical groups of functionality.
 Admittedly the split is a slightly arbitrary. For this guide modules are 
 detailed in the order that a normal user would typically encounter them during
 a nominal workflow
