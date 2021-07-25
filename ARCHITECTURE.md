@@ -10,7 +10,7 @@ If you want to familiarize yourself with the code base, you are just in the righ
 
 On the highest level, PyMC3 lets you define probabilistic graphs or models
 that can be easily used to compute log probabilities for posterior inference
-or to draw random samples for prior and posterior prediction. 
+or to draw random samples from priors or posteriors. 
 However there are numerous
 other useful sets of functionality, from prior and posterior predictive sampling,
 GraphviZ model, as well as various helper functions.
