@@ -16,7 +16,7 @@ other useful sets of functionality, from prior and posterior predictive sampling
 GraphviZ model, as well as various helper functions.
 
 PyMC3 includes a few inference techniques, in particular:
-* MCMC
+* Markov chain Monte Carlo 
 * Variational Inference
 * Sequential Monte Carlo
 
