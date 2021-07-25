@@ -38,8 +38,9 @@ of the topics below refer to that specific library
 * Low level operation graphs
 
 ### ArviZ
-* Plotting e.g. Traceplot, rankplots, posterior plots
-* Diagnostics e.g. Rhat, Effective Sample Size, Leave One Out comparison
+* Plotting e.g. Trace plots, rank plots, posterior plots
+* MCMC sampling diagnostics e.g. Rhat, Effective Sample Size.
+* Model comparison, particularly efficient leave-one-out cross-validation approximation
 * Inference Data structure
 
 
