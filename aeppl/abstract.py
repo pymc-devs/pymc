@@ -18,5 +18,5 @@ def get_measurable_outputs(op, node):
 
 
 @get_measurable_outputs.register(RandomVariable)
-def randomvariable_moutputs(op, node):
+def randomvariable_outputs(op, node):
     return node.outputs[1:]
