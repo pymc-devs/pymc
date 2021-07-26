@@ -49,37 +49,31 @@ of the topics below refer to that specific library
 The codebase of PyMC3 is split among single Python file modules at the root
 level, as well as directories with Python code for logical groups of functionality.
 Admittedly the split between single `.py` module or directory is not defined by a strict
-criteria but tends to occur when single `.py` files would be "too big"
-In this guide modules we'll start by explaining the modules relevant a "standard MCMC" model
-before detailing the remaining modules, such as VI, SMC or BART
+criteria but tends to occur when single `.py` files would be "too big".
+We will with the modules needed for a "simple MCMC" model
+before detailing the remaining modules, such as Variational Inference, Ordinary Differential Equations,
+or Sequential Monte Carlo.
 
-## Example model
+## [model.py](https://docs.pymc.io/api/model.html#module-pymc3.model)
+This module contains pieces of code related to model definition and evaluation of the model.
+In no particular order they are
 
-```python
-import pymc3 as pm
-
-with pm.Model() as linear_model:
-    weights = pm.Normal("weights", mu=0, sigma=1)
-    noise = pm.Gamma("noise", alpha=2, beta=1)
-    y_observed = pm.Normal(
-        "y_observed",
-        mu=X @ weights,
-        sigma=noise,
-        observed=y,
-    )
-    prior = pm.sample_prior_predictive()
-    posterior = pm.sample()
-    posterior_pred = pm.sample_posterior_predictive(posterior)
-```
-
-## model.py
+* `ContextMeta`: The context manager that enables the `with pm.Model() as model` syntax
+* `Factor`: Defines the methods for the various logprobs for models
+* `ValueGrad` which handles the value and gradient and is the main connection point to Aesara
+* `Deterministic` and `Potential`: Definitions for two pieces of functionality useful in some model definitions
 
 ## distributions/
+This module contains multiple submodules that define distributions supported in PyMC3, 
+various pieces of logic that aid in distributions usage, as well functionality that enables
+specific model architectures such as BART and Time Series. Important modules to note are
+
+* `logprob.py`: This contains the log probability logic for the distributions themselves. The calculation
+  of the actual log probability is deferred to Aesara
+* `dist_math.py`: Various convenience operators for distributions
+
 
 ## /sampling.py
-
-There are a couple of APIs that let you do this with the `pm.Model` context manager API
-being the most common.
 
 ## step_methods/
 
