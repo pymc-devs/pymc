@@ -3085,7 +3085,7 @@ def test_car_logp(sparse, size):
     [False, True],
     ids=str,
 )
-def test_car_symmetry_check(sparse):
+def test_car_matrix_check(sparse):
     """
     Tests the check of W matrix symmetry in CARRV.make_node.
     """
@@ -3104,8 +3104,15 @@ def test_car_symmetry_check(sparse):
         W = aesara.sparse.csr_from_dense(W)
 
     car_dist = CAR.dist(mu, W, alpha, tau)
-    with pytest.raises(AssertionError):
+    with pytest.raises(AssertionError, match="W must be a symmetric adjacency matrix"):
         logp(car_dist, xs).eval()
+
+    # W.ndim != 2
+    if not sparse:
+        W = np.array([0.0, 1.0, 2.0, 0.0])
+        W = aesara.tensor.as_tensor_variable(W)
+        with pytest.raises(ValueError, match="W must be a matrix"):
+            car_dist = CAR.dist(mu, W, alpha, tau)
 
 
 class TestBugfixes:
