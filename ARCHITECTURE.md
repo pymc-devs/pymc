@@ -6,6 +6,7 @@ If you want to familiarize yourself with the code base, you are just in the righ
 
 # Bird's Eye View
 
+TODO: Update diagram to include SMC
 ![Architecture](docs/Architecture.png)
 
 On the highest level, PyMC3 lets you define probabilistic graphs or models
@@ -27,7 +28,7 @@ deprecation
 
 
 ## Functionality not in PyMC3
-It it easier to start with functionality that is not present in PyMC3 but
+It is easier to start with functionality that is not present in PyMC3 but
 rather deferred to outside libraries. If seeking to understand any 
 of the topics below refer to that specific library
 
@@ -47,9 +48,29 @@ of the topics below refer to that specific library
 # Modules
 The codebase of PyMC3 is split among single Python file modules at the root
 level, as well as directories with Python code for logical groups of functionality.
-Admittedly the split is a slightly arbitrary. For this guide modules are 
-detailed in the order that a normal user would typically encounter them during
-a nominal workflow
+Admittedly the split between single `.py` module or directory is not defined by a strict
+criteria but tends to occur when single `.py` files would be "too big"
+In this guide modules we'll start by explaining the modules relevant a "standard MCMC" model
+before detailing the remaining modules, such as VI, SMC or BART
+
+## Example model
+
+```python
+import pymc3 as pm
+
+with pm.Model() as linear_model:
+    weights = pm.Normal("weights", mu=0, sigma=1)
+    noise = pm.Gamma("noise", alpha=2, beta=1)
+    y_observed = pm.Normal(
+        "y_observed",
+        mu=X @ weights,
+        sigma=noise,
+        observed=y,
+    )
+    prior = pm.sample_prior_predictive()
+    posterior = pm.sample()
+    posterior_pred = pm.sample_posterior_predictive(posterior)
+```
 
 ## model.py
 
@@ -63,6 +84,8 @@ being the most common.
 ## step_methods/
 
 ## tests/
+
+# All stuff below is from the exampel guide
 *TODO* 
 
 Note also which crates are **API Boundaries**.
