@@ -277,7 +277,7 @@ def convert_indices(indices, entry):
 
 
 def indices_from_subtensor(idx_list, indices):
-    """Compute a useable index tuple from the inputs of a ``*Subtensor**`` ``Op``."""
+    """Compute a usable index tuple from the inputs of a ``*Subtensor**`` ``Op``."""
     return tuple(
         tuple(convert_indices(list(indices), idx) for idx in idx_list) if idx_list else indices
     )
