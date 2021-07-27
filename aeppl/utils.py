@@ -35,11 +35,6 @@ PotentialShapeType = Union[
 ]
 
 
-def logsumexp(x, axis=None, keepdims=True):
-    res = at.log(at.sum(at.exp(x), axis=axis, keepdims=True))
-    return res if keepdims else res.squeeze()
-
-
 def change_rv_size(
     rv_var: TensorVariable,
     new_size: PotentialShapeType,
