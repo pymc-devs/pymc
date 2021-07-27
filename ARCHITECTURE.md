@@ -54,7 +54,7 @@ We will with the modules needed for a "simple MCMC" model
 before detailing the remaining modules, such as Variational Inference, Ordinary Differential Equations,
 or Sequential Monte Carlo.
 
-## [model.py](https://docs.pymc.io/api/model.html#module-pymc3.model)
+## {mod}`pymc3.model`
 This module contains pieces of code related to model definition and evaluation of the model.
 In no particular order they are
 
