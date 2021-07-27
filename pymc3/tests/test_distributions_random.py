@@ -2380,3 +2380,43 @@ class TestMvGaussianRandomWalk(SeededTest):
             prior = pm.sample_prior_predictive(samples=sample_shape)
 
         assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
+
+
+@pytest.mark.parametrize("sparse", [True, False])
+def test_car_rng_fn(sparse):
+    delta = 0.05  # limit for KS p-value
+    n_fails = 20  # Allows the KS fails a certain number of times
+    size = (100,)
+
+    W = np.array(
+        [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
+    )
+
+    tau = 2
+    alpha = 0.5
+    mu = np.array([1, 1, 1, 1])
+
+    D = W.sum(axis=0)
+    prec = tau * (np.diag(D) - alpha * W)
+    cov = np.linalg.inv(prec)
+    W = aesara.tensor.as_tensor_variable(W)
+    if sparse:
+        W = aesara.sparse.csr_from_dense(W)
+
+    with pm.Model(rng_seeder=1):
+        car = pm.CAR("car", mu, W, alpha, tau, size=size)
+        mn = pm.MvNormal("mn", mu, cov, size=size)
+        check = pm.sample_prior_predictive(n_fails)
+
+    p, f = delta, n_fails
+    while p <= delta and f > 0:
+        car_smp, mn_smp = check["car"][f - 1, :, :], check["mn"][f - 1, :, :]
+        p = min(
+            st.ks_2samp(
+                np.atleast_1d(car_smp[..., idx]).flatten(),
+                np.atleast_1d(mn_smp[..., idx]).flatten(),
+            )[1]
+            for idx in range(car_smp.shape[-1])
+        )
+        f -= 1
+    assert p > delta

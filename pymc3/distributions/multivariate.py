@@ -24,8 +24,10 @@ import aesara.tensor as at
 import numpy as np
 import scipy
 
+from aesara.assert_op import Assert
 from aesara.graph.basic import Apply
 from aesara.graph.op import Op
+from aesara.sparse.basic import sp_sum
 from aesara.tensor import gammaln, sigmoid
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
@@ -397,7 +399,6 @@ class Dirichlet(Continuous):
 
     @classmethod
     def dist(cls, a, **kwargs):
-
         a = at.as_tensor_variable(a)
         # mean = a / at.sum(a)
         # mode = at.switch(at.all(a > 1), (a - 1) / at.sum(a - 1), np.nan)
@@ -491,7 +492,6 @@ class Multinomial(Discrete):
 
     @classmethod
     def dist(cls, n, p, *args, **kwargs):
-
         p = p / at.sum(p, axis=-1, keepdims=True)
         n = at.as_tensor_variable(n)
         p = at.as_tensor_variable(p)
@@ -1925,6 +1925,81 @@ class KroneckerNormal(Continuous):
         return ["mu"]
 
 
+class CARRV(RandomVariable):
+    name = "car"
+    ndim_supp = 1
+    ndims_params = [1, 2, 0, 0]
+    dtype = "floatX"
+    _print_name = ("CAR", "\\operatorname{CAR}")
+
+    def make_node(self, rng, size, dtype, mu, W, alpha, tau):
+        mu = at.as_tensor_variable(floatX(mu))
+
+        W = aesara.sparse.as_sparse_or_tensor_variable(floatX(W))
+        if not W.ndim == 2:
+            raise ValueError("W must be a matrix (ndim=2).")
+
+        sparse = isinstance(W, aesara.sparse.SparseVariable)
+        msg = "W must be a symmetric adjacency matrix."
+        if sparse:
+            abs_diff = aesara.sparse.basic.mul(aesara.sparse.basic.sgn(W - W.T), W - W.T)
+            W = Assert(msg)(W, at.isclose(aesara.sparse.basic.sp_sum(abs_diff), 0))
+        else:
+            W = Assert(msg)(W, at.allclose(W, W.T))
+
+        tau = at.as_tensor_variable(floatX(tau))
+        alpha = at.as_tensor_variable(floatX(alpha))
+
+        return super().make_node(rng, size, dtype, mu, W, alpha, tau)
+
+    def _infer_shape(self, size, dist_params, param_shapes=None):
+        shape = tuple(size) + tuple(dist_params[0].shape)
+        return shape
+
+    @classmethod
+    def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
+        """
+        Implementation of algorithm from paper
+        Havard Rue, 2001. "Fast sampling of Gaussian Markov random fields,"
+        Journal of the Royal Statistical Society Series B, Royal Statistical Society,
+        vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
+        """
+        if not scipy.sparse.issparse(W):
+            W = scipy.sparse.csr_matrix(W)
+        s = np.asarray(W.sum(axis=0))[0]
+        D = scipy.sparse.diags(s)
+        tau = scipy.sparse.csr_matrix(tau)
+        alpha = scipy.sparse.csr_matrix(alpha)
+
+        Q = tau.multiply(D - alpha.multiply(W))
+
+        perm_array = scipy.sparse.csgraph.reverse_cuthill_mckee(Q, symmetric_mode=True)
+        inv_perm = np.argsort(perm_array)
+
+        Q = Q[perm_array, :][:, perm_array]
+
+        Qb = Q.diagonal()
+        u = 1
+        while np.count_nonzero(Q.diagonal(u)) > 0:
+            Qb = np.vstack((np.pad(Q.diagonal(u), (u, 0), constant_values=(0, 0)), Qb))
+            u += 1
+
+        L = scipy.linalg.cholesky_banded(Qb, lower=False)
+
+        size = tuple(size or ())
+        if size:
+            mu = np.broadcast_to(mu, size + mu.shape)
+        z = rng.normal(size=mu.shape)
+        samples = np.empty(z.shape)
+        for idx in np.ndindex(mu.shape[:-1]):
+            samples[idx] = scipy.linalg.cho_solve_banded((L, False), z[idx]) + mu[idx][perm_array]
+        samples = samples[..., inv_perm]
+        return samples
+
+
+car = CARRV()
+
+
 class CAR(Continuous):
     r"""
     Likelihood for a conditional autoregression. This is a special case of the
@@ -1966,45 +2041,13 @@ class CAR(Continuous):
         "Generalized Hierarchical Multivariate CAR Models for Areal Data"
         Biometrics, Vol. 61, No. 4 (Dec., 2005), pp. 950-961
     """
+    rv_op = car
 
-    def __init__(self, mu, W, alpha, tau, sparse=False, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @classmethod
+    def dist(cls, mu, W, alpha, tau, *args, **kwargs):
+        return super().dist([mu, W, alpha, tau], **kwargs)
 
-        D = W.sum(axis=0)
-        d, _ = W.shape
-
-        self.d = d
-        self.median = self.mode = self.mean = self.mu = at.as_tensor_variable(mu)
-        self.sparse = sparse
-
-        if not W.ndim == 2 or not np.allclose(W, W.T):
-            raise ValueError("W must be a symmetric adjacency matrix.")
-
-        if sparse:
-            W_sparse = scipy.sparse.csr_matrix(W)
-            self.W = aesara.sparse.as_sparse_variable(W_sparse)
-        else:
-            self.W = at.as_tensor_variable(W)
-
-        # eigenvalues of D^−1/2 * W * D^−1/2
-        Dinv_sqrt = np.diag(1 / np.sqrt(D))
-        DWD = np.matmul(np.matmul(Dinv_sqrt, W), Dinv_sqrt)
-        self.lam = scipy.linalg.eigvalsh(DWD)
-        self.D = at.as_tensor_variable(D)
-
-        tau = at.as_tensor_variable(tau)
-        if tau.ndim > 0:
-            self.tau = tau[:, None]
-        else:
-            self.tau = tau
-
-        alpha = at.as_tensor_variable(alpha)
-        if alpha.ndim > 0:
-            self.alpha = alpha[:, None]
-        else:
-            self.alpha = alpha
-
-    def logp(self, value):
+    def logp(value, mu, W, alpha, tau):
         """
         Calculate log-probability of a CAR-distributed vector
         at specified value. This log probability function differs from
@@ -2021,30 +2064,37 @@ class CAR(Continuous):
         TensorVariable
         """
 
+        sparse = isinstance(W, aesara.sparse.SparseVariable)
+
+        if sparse:
+            D = sp_sum(W, axis=0)
+            Dinv_sqrt = at.diag(1 / at.sqrt(D))
+            DWD = at.dot(aesara.sparse.dot(Dinv_sqrt, W), Dinv_sqrt)
+        else:
+            D = W.sum(axis=0)
+            Dinv_sqrt = at.diag(1 / at.sqrt(D))
+            DWD = at.dot(at.dot(Dinv_sqrt, W), Dinv_sqrt)
+        lam = at.slinalg.eigvalsh(DWD, at.eye(DWD.shape[0]))
+
+        d, _ = W.shape
+
         if value.ndim == 1:
             value = value[None, :]
 
-        logtau = self.d * at.log(self.tau).sum()
-        logdet = at.log(1 - self.alpha.T * self.lam[:, None]).sum()
-        delta = value - self.mu
+        logtau = d * at.log(tau).sum()
+        logdet = at.log(1 - alpha.T * lam[:, None]).sum()
+        delta = value - mu
 
-        if self.sparse:
-            Wdelta = aesara.sparse.dot(delta, self.W)
+        if sparse:
+            Wdelta = aesara.sparse.dot(delta, W)
         else:
-            Wdelta = at.dot(delta, self.W)
+            Wdelta = at.dot(delta, W)
 
-        tau_dot_delta = self.D[None, :] * delta - self.alpha * Wdelta
-        logquad = (self.tau * delta * tau_dot_delta).sum(axis=-1)
+        tau_dot_delta = D[None, :] * delta - alpha * Wdelta
+        logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
         return bound(
             0.5 * (logtau + logdet - logquad),
-            self.alpha >= -1,
-            self.alpha <= 1,
-            self.tau > 0,
-            broadcast_conditions=False,
+            at.all(alpha <= 1),
+            at.all(alpha >= -1),
+            tau > 0,
         )
-
-    def random(self, point=None, size=None):
-        raise NotImplementedError("Sampling from a CAR distribution is not supported.")
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "W", "alpha", "tau"]

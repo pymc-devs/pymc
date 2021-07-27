@@ -3025,9 +3025,12 @@ def test_ordered_probit_probs():
     assert isinstance(x, TensorVariable)
 
 
-@pytest.mark.xfail(reason="Distribution not refactored yet")
-@pytest.mark.parametrize("size", [(1,), (4,)], ids=str)
-def test_car_logp(size):
+@pytest.mark.parametrize(
+    "sparse, size",
+    [(False, ()), (False, (1,)), (False, (4,)), (False, (4, 4, 4)), (True, ()), (True, (4,))],
+    ids=str,
+)
+def test_car_logp(sparse, size):
     """
     Tests the log probability function for the CAR distribution by checking
     against Scipy's multivariate normal logpdf, up to an additive constant.
@@ -3035,16 +3038,16 @@ def test_car_logp(size):
     """
     np.random.seed(1)
 
-    xs = np.random.randn(*size)
-
     # d x d adjacency matrix for a square (d=4) of rook-adjacent sites
     W = np.array(
         [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
     )
 
-    tau = 2.0
+    tau = 2
     alpha = 0.5
     mu = np.zeros(4)
+
+    xs = np.random.randn(*(size + mu.shape))
 
     # Compute CAR covariance matrix and resulting MVN logp
     D = W.sum(axis=0)
@@ -3052,14 +3055,57 @@ def test_car_logp(size):
     cov = np.linalg.inv(prec)
     scipy_logp = scipy.stats.multivariate_normal.logpdf(xs, mu, cov)
 
-    car_logp = logp(CAR.dist(mu, W, alpha, tau, size=size), xs).eval()
+    W = aesara.tensor.as_tensor_variable(W)
+    if sparse:
+        W = aesara.sparse.csr_from_dense(W)
+
+    car_dist = CAR.dist(mu, W, alpha, tau, size=size)
+    car_logp = logp(car_dist, xs).eval()
 
     # Check to make sure that the CAR and MVN log PDFs are equivalent
     # up to an additive constant which is independent of the CAR parameters
     delta_logp = scipy_logp - car_logp
 
     # Check to make sure all the delta values are identical.
-    assert np.allclose(delta_logp - delta_logp[0], 0.0)
+    tol = 1e-08
+    if aesara.config.floatX == "float32":
+        tol = 1e-5
+    assert np.allclose(delta_logp - delta_logp[0], 0.0, atol=tol)
+
+
+@pytest.mark.parametrize(
+    "sparse",
+    [False, True],
+    ids=str,
+)
+def test_car_matrix_check(sparse):
+    """
+    Tests the check of W matrix symmetry in CARRV.make_node.
+    """
+    np.random.seed(1)
+    tau = 2
+    alpha = 0.5
+    mu = np.zeros(4)
+    xs = np.random.randn(*mu.shape)
+
+    # non-symmetric matrix
+    W = np.array(
+        [[0.0, 1.0, 2.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
+    )
+    W = aesara.tensor.as_tensor_variable(W)
+    if sparse:
+        W = aesara.sparse.csr_from_dense(W)
+
+    car_dist = CAR.dist(mu, W, alpha, tau)
+    with pytest.raises(AssertionError, match="W must be a symmetric adjacency matrix"):
+        logp(car_dist, xs).eval()
+
+    # W.ndim != 2
+    if not sparse:
+        W = np.array([0.0, 1.0, 2.0, 0.0])
+        W = aesara.tensor.as_tensor_variable(W)
+        with pytest.raises(ValueError, match="W must be a matrix"):
+            car_dist = CAR.dist(mu, W, alpha, tau)
 
 
 class TestBugfixes:
