@@ -260,19 +260,23 @@ def create_default_transformed_rv_op(
 
 TransformedUniformRV = create_default_transformed_rv_op(
     at.random.uniform,
-    IntervalTransform(lambda *inputs: inputs[3:]),
+    # inputs[3] = lower; inputs[4] = upper
+    IntervalTransform(lambda *inputs: (inputs[3], inputs[4])),
 )
 TransformedParetoRV = create_default_transformed_rv_op(
     at.random.pareto,
+    # inputs[3] = alpha
     IntervalTransform(lambda *inputs: (inputs[3], None)),
 )
 TransformedTriangularRV = create_default_transformed_rv_op(
     at.random.triangular,
+    # inputs[3] = lower; inputs[5] = upper
     IntervalTransform(lambda *inputs: (inputs[3], inputs[5])),
 )
 TransformedHalfNormalRV = create_default_transformed_rv_op(
     at.random.halfnormal,
-    LogTransform(),
+    # inputs[3] = loc
+    IntervalTransform(lambda *inputs: (inputs[3], None)),
 )
 TransformedWaldRV = create_default_transformed_rv_op(
     at.random.wald,
