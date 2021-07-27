@@ -238,10 +238,9 @@ def weibull_logprob(op, value, *inputs, **kwargs):
 def vonmises_logprob(op, value, *inputs, **kwargs):
     mu, kappa = inputs[3:]
     res = kappa * at.cos(mu - value) - at.log(2 * np.pi) - at.log(at.i0(kappa))
-    # This doesn't match `scipy.stats.vonmises.logpdf`:
-    # res = at.switch(
-    #     at.bitwise_and(at.ge(value, -np.pi), at.le(value, np.pi)), res, -np.inf
-    # )
+    res = at.switch(
+        at.bitwise_and(at.ge(value, -np.pi), at.le(value, np.pi)), res, -np.inf
+    )
     res = Assert("kappa > 0")(res, at.all(at.gt(kappa, 0.0)))
     return res
 

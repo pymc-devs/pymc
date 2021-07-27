@@ -390,10 +390,20 @@ def test_weibull_logprob(dist_params, obs, size, error):
 @pytest.mark.parametrize(
     "dist_params, obs, size, error",
     [
-        ((-1, -1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), True),
-        ((1.5, 10.5), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
-        ((1.5, 2.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (2, 3), False),
-        ((10, 1.0), np.array([0, 0.5, 1, 10, -1], dtype=np.float64), (), False),
+        ((-1, -1.0), np.array([-np.pi, -0.5, 0, 1, np.pi], dtype=np.float64), (), True),
+        (
+            (1.5, 10.5),
+            np.array([-np.pi, -0.5, 0, 1, np.pi], dtype=np.float64),
+            (),
+            False,
+        ),
+        (
+            (1.5, 2.0),
+            np.array([-np.pi, -0.5, 0, 1, np.pi], dtype=np.float64),
+            (2, 3),
+            False,
+        ),
+        ((10, 1.0), np.array([-np.pi, -0.5, 0, 1, np.pi], dtype=np.float64), (), False),
     ],
 )
 def test_vonmises_logprob(dist_params, obs, size, error):
