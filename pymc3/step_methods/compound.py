@@ -75,8 +75,8 @@ class CompoundStep:
     @property
     def tune(self):
         do_tune = any(method.tune for method in self.methods if hasattr(method, "tune"))
-        return any(do_tune)
-    
+        return do_tune
+
     @tune.setter
     def tune(self, value):
         for method in self.methods:
