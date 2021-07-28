@@ -59,7 +59,7 @@ This module contains pieces of code related to model definition and evaluation o
 In no particular order they are
 
 * `ContextMeta`: The context manager that enables the `with pm.Model() as model` syntax
-* `Factor`: Defines the methods for the various logprobs for models
+* {class}`~pymc3.Factor`: Defines the methods for the various logprobs for models
 * `ValueGrad` which handles the value and gradient and is the main connection point to Aesara
 * `Deterministic` and `Potential`: Definitions for two pieces of functionality useful in some model definitions
 
