@@ -225,12 +225,6 @@ class AbstractFlow(WithMemoization):
     @aesara.config.change_flags(compute_test_value="off")
     def forward_pass(self, z0):
         ret = aesara.clone_replace(self.forward, {self.root.z0: z0})
-        try:
-            ret.tag.test_value = np.random.normal(size=z0.tag.test_value.shape).astype(
-                self.z0.dtype
-            )
-        except AttributeError:
-            ret.tag.test_value = self.root.z0.tag.test_value
         return ret
 
     __call__ = forward_pass

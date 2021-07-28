@@ -73,6 +73,8 @@ __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximat
 class VariationalInferenceError(Exception):
     """Exception for VI specific cases"""
 
+class NotImplementedInference(VariationalInferenceError, NotImplementedError):
+    """Marking non functional parts of code"""
 
 class ExplicitInferenceError(VariationalInferenceError, TypeError):
     """Exception for bad explicit inference"""
@@ -96,6 +98,7 @@ class BatchedGroupError(GroupError):
 
 class LocalGroupError(BatchedGroupError, AEVBInferenceError):
     """Error raised in case of bad local_rv usage"""
+
 
 
 def append_name(name):
@@ -855,6 +858,7 @@ class Group(WithMemoization):
         # save this stuff to use in __init_group__ later
         self._kwargs = kwargs
         if self.group is not None:
+            raise NotImplementedInference("Grouped Inference is not yet supported, open an issue once you need it https://github.com/pymc-devs/pymc3/issues")
             # init can be delayed
             self.__init_group__(self.group)
 
@@ -970,25 +974,21 @@ class Group(WithMemoization):
             test_var = model_initial_point[value_var.name]
             if self.batched:
                 # Leave a more complicated case for future work
-                raise NotImplementedError("not yet ready")
                 if var.ndim < 1:
                     if self.local:
                         raise LocalGroupError("Local variable should not be scalar")
                     else:
                         raise BatchedGroupError("Batched variable should not be scalar")
-                # XXX: This needs to be refactored
-                # self.ordering.size += None  # (np.prod(var.dshape[1:])).astype(int)
+                size = test_var[0].size
                 if self.local:
-                    # XXX: This needs to be refactored
-                    shape = (-1,) + var.dshape[1:]
+                    shape = (-1,) + test_var.shape[1:]
                 else:
-                    # XXX: This needs to be refactored
-                    shape = var.dshape
+                    shape = test_var.shape
             else:
                 shape = test_var.shape
-                dtype = test_var.dtype
                 size = test_var.size
             # TODO: There was self.ordering used in other util funcitons
+            dtype = test_var.dtype
             vr = self.input[..., start_idx : start_idx + size].reshape(shape).astype(dtype)
             vr.name = value_var.name + "_vi_replacement"
             self.replacements[value_var] = vr
@@ -1050,8 +1050,7 @@ class Group(WithMemoization):
     def bdim(self):
         if not self.local:
             if self.batched:
-                # XXX: This needs to be refactored
-                return None  # self.ordering.vmap[0].shp[0]
+                return next(iter(self.ordering.values()))[1][0]
             else:
                 return 1
         else:
@@ -1061,9 +1060,7 @@ class Group(WithMemoization):
     def ndim(self):
         # XXX: This needs to be refactored
         if self.batched:
-            # return None  # self.ordering.size * self.bdim
-            # TODO: add support for batching
-            raise NotImplementedError("not implemented for batching")
+            return self.ordering.size * self.bdim
         else:
             return self.ddim
 
@@ -1235,7 +1232,7 @@ class Group(WithMemoization):
     def symbolic_logq(self):
         """*Dev* - correctly scaled `self.symbolic_logq_not_scaled`"""
         if self.local:
-            s = self.group[0].scaling
+            s = self.group[0].tag.scaling
             s = self.to_flat_input(s)
             s = self.symbolic_single_sample(s)
             return self.symbolic_logq_not_scaled * s

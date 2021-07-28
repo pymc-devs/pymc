@@ -233,7 +233,8 @@ def three_var_aevb_approx(three_var_model, three_var_aevb_groups):
 
 
 def test_sample_aevb(three_var_aevb_approx, aevb_initial):
-    pm.KLqp(three_var_aevb_approx).fit(
+    inf = pm.KLqp(three_var_aevb_approx)
+    inf.fit(
         1, more_replacements={aevb_initial: np.zeros_like(aevb_initial.get_value())[:1]}
     )
     aevb_initial.set_value(np.random.rand(7, 7).astype("float32"))
