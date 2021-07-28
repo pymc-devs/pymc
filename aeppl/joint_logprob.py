@@ -152,8 +152,8 @@ def joint_logprob(
                 # Replace `RandomVariable`s in the inputs with value variables.
                 # Also, store the results in the `replacements` map so that we
                 # don't need to redo these replacements.
-                value_var_inputs, _ = rvs_to_value_vars(
-                    node.inputs,
+                (q_rv_value_var, *value_var_inputs), _ = rvs_to_value_vars(
+                    [q_rv_value_var, *node.inputs],
                     initial_replacements=replacements,
                 )
 

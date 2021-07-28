@@ -8,6 +8,7 @@ from numdifftools import Jacobian
 
 from aeppl.joint_logprob import joint_logprob
 from aeppl.transforms import RVTransform, _default_transformed_rv, default_transform
+from tests.utils import assert_no_rvs
 
 
 @pytest.mark.parametrize(
@@ -221,3 +222,28 @@ def test_fallback_log_jac_det():
     log_jac_det = square_tr.log_jac_det(value_tr)
 
     assert np.isclose(log_jac_det.eval({value: 3}), -np.log(6))
+
+
+def test_hierarchical_uniform_transform():
+    """
+    This model requires rv-value replacements in the backward transformation of
+    the value var `x`
+    """
+
+    lower_rv = at.random.uniform(0, 1, name="lower")
+    upper_rv = at.random.uniform(9, 10, name="upper")
+    x_rv = at.random.uniform(lower_rv, upper_rv, name="x")
+
+    lower = lower_rv.clone()
+    upper = upper_rv.clone()
+    x = x_rv.clone()
+
+    transform_opt = in2out(default_transform, ignore_newtrees=True)
+    logp = joint_logprob(
+        x_rv,
+        {lower_rv: lower, upper_rv: upper, x_rv: x},
+        extra_rewrites=transform_opt,
+    )
+
+    assert_no_rvs(logp)
+    assert not np.isinf(logp.eval({lower: -10, upper: 20, x: -20}))
