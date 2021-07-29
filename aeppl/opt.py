@@ -83,15 +83,15 @@ def incsubtensor_rv_replace(fgraph, node):
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
-        return
+        return None  # pragma: no cover
 
     if not isinstance(node.op, inc_subtensor_ops):
-        return
+        return None  # pragma: no cover
 
     rv_var = node.inputs[0]
 
     if not (rv_var.owner and isinstance(rv_var.owner.op, RandomVariable)):
-        return
+        return None  # pragma: no cover
 
     data = node.inputs[1]
     idx = indices_from_subtensor(getattr(node.op, "idx_list", None), node.inputs[2:])
@@ -124,7 +124,7 @@ def naive_bcast_rv_lift(fgraph, node):
         and node.inputs[0].owner
         and isinstance(node.inputs[0].owner.op, RandomVariable)
     ):
-        return
+        return None  # pragma: no cover
 
     bcast_shape = node.inputs[1:]
 
@@ -134,7 +134,7 @@ def naive_bcast_rv_lift(fgraph, node):
     rv_node = rv_var.owner
 
     if hasattr(fgraph, "dont_touch_vars") and rv_var in fgraph.dont_touch_vars:
-        return
+        return None  # pragma: no cover
 
     size_lift_res = local_rv_size_lift.transform(fgraph, rv_node)
     if size_lift_res is None:

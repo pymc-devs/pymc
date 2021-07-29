@@ -69,14 +69,14 @@ def get_stack_mixture_vars(
 ) -> Optional[List[TensorVariable]]:
     r"""Extract the mixture terms from a `*Subtensor*` applied to stacked `RandomVariable`\s."""
     if not isinstance(node.op, subtensor_ops):
-        return None  # noqa
+        return None  # pragma: no cover
 
     joined_rvs = node.inputs[0]
 
     # First, make sure that it's some sort of concatenation
     if not (joined_rvs.owner and isinstance(joined_rvs.owner.op, (MakeVector, Join))):
         # Node is not a compatible join `Op`
-        return None  # noqa
+        return None  # pragma: no cover
 
     if isinstance(joined_rvs.owner.op, MakeVector):
         mixture_rvs = joined_rvs.owner.inputs
@@ -118,17 +118,17 @@ def mixture_replace(fgraph, node):
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
-        return  # noqa
+        return None  # pragma: no cover
 
     out_var = node.default_output()
 
     if out_var not in rv_map_feature.rv_values:
-        return
+        return None  # pragma: no cover
 
     mixture_res = get_stack_mixture_vars(node)
 
     if mixture_res is None:
-        return
+        return None  # pragma: no cover
 
     mixture_rvs = mixture_res
 

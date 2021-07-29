@@ -103,15 +103,15 @@ def default_transform(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
-        return None
+        return None  # pragma: no cover
 
     if not isinstance(node.op, RandomVariable):
-        return None
+        return None  # pragma: no cover
 
     trans_node = _default_transformed_rv(node.op, node)
 
     if trans_node is None:
-        return None
+        return None  # pragma: no cover
 
     # Get the old value variable and remove it from our value variables map
     rv_var = node.outputs[1]
