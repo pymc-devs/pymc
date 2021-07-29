@@ -12,4 +12,8 @@ Second term
   Definitions can have as many lines as desired, and should be written in markdown. Definitions
   can contain any markdown formatting for MyST to parse, this includes basic markdown like **bold**
   as well as MyST directives and roles like {fa}`fort awesome,style=fab`
+Functional Programming
+  Functional programming is writing pure functions
+Dispatching
+  Choosing which implementation of an operation is used
 :::::
