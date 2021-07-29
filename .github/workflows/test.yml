@@ -70,7 +70,8 @@ jobs:
         fast-compile: [0]
         float32: [0]
         part:
-          - "tests"
+          - "tests/test_logprob.py"
+          - "tests --ignore=tests/test_logprob.py"
 
     steps:
       - uses: actions/checkout@v2
