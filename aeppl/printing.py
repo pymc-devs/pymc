@@ -1,8 +1,9 @@
 import string
 import textwrap
 from collections import OrderedDict
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from copy import copy
+from typing import Optional, Union
 
 import aesara
 import aesara.tensor as at
@@ -44,6 +45,9 @@ except ImportError:  # pragma: no cover
         return data
 
 
+PrinterStateType = Union[MutableMapping, PrinterState]
+
+
 class RandomVariablePrinter:
     r"""Pretty print random variables.
 
@@ -56,7 +60,7 @@ class RandomVariablePrinter:
 
     """
 
-    def __init__(self, name=None):
+    def __init__(self, name: Optional[str] = None):
         """Create a `RandomVariablePrinter`.
 
         Parameters
@@ -68,7 +72,7 @@ class RandomVariablePrinter:
         """
         self.name = name
 
-    def process_param(self, idx, sform, pstate):
+    def process_param(self, idx: int, sform: str, pstate: Optional[PrinterStateType]):
         """Perform special per-parameter post-formatting.
 
         This can be used, for instance, to change a std. dev. into a variance.
@@ -85,8 +89,8 @@ class RandomVariablePrinter:
         """
         return sform  # pragma: no cover
 
-    def process(self, output, pstate):
-        if output in pstate.memo:
+    def process(self, output, pstate: Optional[PrinterStateType]):
+        if hasattr(pstate, "memo") and output in pstate.memo:
             return pstate.memo[output]
 
         pprinter = pstate.pprinter
@@ -170,7 +174,7 @@ class RandomVariablePrinter:
 
 
 class GenericSubtensorPrinter:
-    def process(self, r, pstate):
+    def process(self, r: Variable, pstate: Optional[PrinterStateType]):
         if getattr(r, "owner", None) is None:  # pragma: no cover
             raise TypeError("Can only print `*Subtensor*`s.")
 
@@ -235,7 +239,7 @@ class VariableWithShapePrinter:
     max_line_height = 20
 
     @classmethod
-    def process(cls, output, pstate):
+    def process(cls, output: Variable, pstate: Optional[PrinterStateType]):
         if output in pstate.memo:
             return pstate.memo[output]
 
@@ -288,7 +292,9 @@ class VariableWithShapePrinter:
         return out_name
 
     @classmethod
-    def process_variable_name(cls, output, pstate):
+    def process_variable_name(
+        cls, output: Variable, pstate: Optional[PrinterStateType]
+    ):
         """Take a variable name from the available ones.
 
         This function also initializes the available names by removing
@@ -320,7 +326,7 @@ class VariableWithShapePrinter:
         return out_name
 
     @classmethod
-    def process_shape_info(cls, output, pstate):
+    def process_shape_info(cls, output: Variable, pstate: Optional[PrinterStateType]):
         using_latex = getattr(pstate, "latex", False)
 
         if output.dtype in int_dtypes:
@@ -374,14 +380,14 @@ class VariableWithShapePrinter:
         shape_info = cls.process_variable_name(output, pstate)
         if using_latex:
             shape_info += " \\in \\mathbb{%s}" % sspace_char
-            shape_dims = " \\times ".join(shape_dims)
-            if shape_dims:
-                shape_info += "^{%s}" % shape_dims
+            shape_dims_str = " \\times ".join(shape_dims)
+            if shape_dims_str:
+                shape_info += "^{%s}" % shape_dims_str
         else:
             shape_info += " in %s" % sspace_char
-            shape_dims = " x ".join(shape_dims)
+            shape_dims_str = " x ".join(shape_dims)
             if shape_dims:
-                shape_info += "**(%s)" % shape_dims
+                shape_info += "**(%s)" % shape_dims_str
 
         return shape_info
 
@@ -414,7 +420,13 @@ class PreamblePPrinter(PPrinter):
 
     max_preamble_width = 40
 
-    def __init__(self, *args, pstate_defaults=None, preamble_dict=None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        pstate_defaults: Optional[PrinterStateType] = None,
+        preamble_dict: Optional[Mapping] = None,
+        **kwargs,
+    ):
         """Create a `PreamblePPrinter`.
 
         Parameters
@@ -426,7 +438,7 @@ class PreamblePPrinter(PPrinter):
             ordering of preamble categories/keys.
         """
         super().__init__(*args, **kwargs)
-        self.pstate_defaults = pstate_defaults or {}
+        self.pstate_defaults: PrinterStateType = pstate_defaults or {}
         self.pstate_defaults.setdefault(
             "preamble_dict", OrderedDict() if preamble_dict is None else preamble_dict
         )
@@ -434,14 +446,14 @@ class PreamblePPrinter(PPrinter):
         self.printers = copy(at_pprint.printers)
         self._pstate = None
 
-    def create_state(self, pstate):
+    def create_state(self, pstate: Optional[PrinterStateType]):
         if pstate is None:
-            pstate = aesara.printing.PrinterState(
+            pstate = PrinterState(
                 pprinter=self, **{k: copy(v) for k, v in self.pstate_defaults.items()}
             )
         elif isinstance(pstate, Mapping):
             pstate.update({k: copy(v) for k, v in self.pstate_defaults.items()})
-            pstate = aesara.printing.PrinterState(pprinter=self, **pstate)
+            pstate = PrinterState(pprinter=self, **pstate)
 
         # FIXME: Good old fashioned circular references...
         # We're doing this so that `self.process` will be called correctly
@@ -451,7 +463,7 @@ class PreamblePPrinter(PPrinter):
 
         return pstate
 
-    def process(self, r, pstate=None):
+    def process(self, r: Variable, pstate: Optional[PrinterStateType] = None):
         pstate = self._pstate
         assert pstate
         return super().process(r, pstate)
@@ -459,11 +471,11 @@ class PreamblePPrinter(PPrinter):
     def process_graph(self, inputs, outputs, updates=None, display_inputs=False):
         raise NotImplementedError()  # pragma: no cover
 
-    def __call__(self, *args, latex_env="equation", latex_label=None):
+    def __call__(self, *args, latex_env="equation", latex_label: str = None):
         in_vars = args[0]
 
         pstate = next(iter(args[1:]), None)
-        if isinstance(pstate, (PrinterState, Mapping)):
+        if isinstance(pstate, (MutableMapping, PrinterState)):
             pstate = self.create_state(args[1])
         elif pstate is None:
             pstate = self.create_state(None)

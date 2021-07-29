@@ -19,7 +19,7 @@ from aeppl.utils import rvs_to_value_vars
 
 def joint_logprob(
     var: TensorVariable,
-    rv_values: Optional[Dict[TensorVariable, TensorVariable]] = None,
+    rv_values: Dict[TensorVariable, TensorVariable],
     warn_missing_rvs: bool = True,
     extra_rewrites: Optional[Union[GlobalOptimizer, LocalOptimizer]] = None,
     **kwargs,

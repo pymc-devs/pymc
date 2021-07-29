@@ -132,7 +132,7 @@ def walk_model(
     graphs: Iterable[TensorVariable],
     walk_past_rvs: bool = False,
     stop_at_vars: Optional[Set[TensorVariable]] = None,
-    expand_fn: Callable[[TensorVariable], Iterable[TensorVariable]] = lambda var: [],
+    expand_fn: Callable[[TensorVariable], List[TensorVariable]] = lambda var: [],
 ) -> Generator[TensorVariable, None, None]:
     """Walk model graphs and yield their nodes.
 
@@ -152,7 +152,7 @@ def walk_model(
     if stop_at_vars is None:
         stop_at_vars = set()
 
-    def expand(var):
+    def expand(var: TensorVariable, stop_at_vars=stop_at_vars) -> List[TensorVariable]:
         new_vars = expand_fn(var)
 
         if (
@@ -169,7 +169,10 @@ def walk_model(
 
 def replace_rvs_in_graphs(
     graphs: Iterable[TensorVariable],
-    replacement_fn: Callable[[TensorVariable], Dict[TensorVariable, TensorVariable]],
+    replacement_fn: Callable[
+        [TensorVariable, Dict[TensorVariable, TensorVariable]],
+        Dict[TensorVariable, TensorVariable],
+    ],
     initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
     **kwargs,
 ) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
@@ -191,8 +194,8 @@ def replace_rvs_in_graphs(
     if initial_replacements:
         replacements.update(initial_replacements)
 
-    def expand_replace(var):
-        new_nodes = []
+    def expand_replace(var: TensorVariable) -> List[TensorVariable]:
+        new_nodes: List[TensorVariable] = []
         if var.owner and isinstance(var.owner.op, MeasurableVariable):
             new_nodes.extend(replacement_fn(var, replacements))
         return new_nodes

@@ -1,6 +1,6 @@
 import abc
 from functools import singledispatch
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 import aesara.tensor as at
 from aesara.gradient import jacobian
@@ -103,34 +103,36 @@ def default_transform(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
-        return
+        return None
 
     if not isinstance(node.op, RandomVariable):
-        return
+        return None
 
     trans_node = _default_transformed_rv(node.op, node)
 
-    if trans_node is not None:
-        # Get the old value variable and remove it from our value variables map
-        rv_var = node.outputs[1]
-        old_value_var = rv_map_feature.rv_values.pop(rv_var)
+    if trans_node is None:
+        return None
 
-        transform = trans_node.op.transform
+    # Get the old value variable and remove it from our value variables map
+    rv_var = node.outputs[1]
+    old_value_var = rv_map_feature.rv_values.pop(rv_var)
 
-        # We now assume that the old value variable represents the *transformed space*.
-        # This means that we need to replace all instance of the old value variable
-        # with "inversely/un-" transformed versions of itself.
-        new_value_var = transform.backward(old_value_var, *trans_node.inputs)
-        rv_map_feature.rv_values[rv_var] = new_value_var
+    transform = trans_node.op.transform
 
-        new_rv_var = trans_node.outputs[1]
+    # We now assume that the old value variable represents the *transformed space*.
+    # This means that we need to replace all instance of the old value variable
+    # with "inversely/un-" transformed versions of itself.
+    new_value_var = transform.backward(old_value_var, *trans_node.inputs)
+    rv_map_feature.rv_values[rv_var] = new_value_var
 
-        if old_value_var.name and getattr(transform, "name", None):
-            new_value_var.name = f"{old_value_var.name}_{transform.name}"
+    new_rv_var = trans_node.outputs[1]
 
-        rv_map_feature.rv_values[new_rv_var] = new_value_var
+    if old_value_var.name and getattr(transform, "name", None):
+        new_value_var.name = f"{old_value_var.name}_{transform.name}"
 
-        return trans_node.outputs
+    rv_map_feature.rv_values[new_rv_var] = new_value_var
+
+    return trans_node.outputs
 
 
 class LogTransform(RVTransform):
@@ -239,7 +241,7 @@ def create_default_transformed_rv_op(
     rv_op: Op,
     transform: RVTransform,
     cls_dict_extra: Optional[Dict] = None,
-) -> TransformedRV:
+) -> Type[TransformedRV]:
 
     trans_name = getattr(transform, "name", "transformed")
     rv_type_name = type(rv_op).__name__
@@ -248,12 +250,12 @@ def create_default_transformed_rv_op(
     if rv_name:
         cls_dict["name"] = f"{rv_name}_{trans_name}"
     cls_dict["base_op"] = rv_op
+    cls_dict["transform"] = transform
 
     if cls_dict_extra is not None:
         cls_dict.update(cls_dict_extra)
 
     new_op_type = type(f"Transformed{rv_type_name}", (TransformedRV,), cls_dict)
-    new_op_type.transform = transform
 
     return new_op_type
 

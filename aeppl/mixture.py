@@ -69,14 +69,14 @@ def get_stack_mixture_vars(
 ) -> Optional[List[TensorVariable]]:
     r"""Extract the mixture terms from a `*Subtensor*` applied to stacked `RandomVariable`\s."""
     if not isinstance(node.op, subtensor_ops):
-        return  # noqa
+        return None  # noqa
 
     joined_rvs = node.inputs[0]
 
     # First, make sure that it's some sort of concatenation
     if not (joined_rvs.owner and isinstance(joined_rvs.owner.op, (MakeVector, Join))):
         # Node is not a compatible join `Op`
-        return  # noqa
+        return None  # noqa
 
     if isinstance(joined_rvs.owner.op, MakeVector):
         mixture_rvs = joined_rvs.owner.inputs
@@ -88,18 +88,18 @@ def get_stack_mixture_vars(
             join_axis = int(get_constant_value(join_axis))
         except ValueError:
             # TODO: Support symbolic join axes
-            return
+            return None
 
         if join_axis != 0:
             # TODO: Support other join axes
-            return
+            return None
 
     if not all(
         rv.owner and isinstance(rv.owner.op, RandomVariable) for rv in mixture_rvs
     ):
         # Currently, all mixture components must be `RandomVariable` outputs
         # TODO: Allow constants and make them Dirac-deltas
-        return
+        return None
 
     return mixture_rvs
 
