@@ -388,7 +388,7 @@ i0e = Elemwise(i0e_scalar, name="Elemwise{i0e,no_inplace}")
 
 
 def random_choice(*args, **kwargs):
-    """Return draws from a categorial probability functions
+    """Return draws from a categorical probability functions
 
     Args:
         p: array
