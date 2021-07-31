@@ -1,13 +1,14 @@
 import abc
 from functools import singledispatch
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Union
 
 import aesara.tensor as at
 from aesara.gradient import jacobian
 from aesara.graph.basic import Node, Variable
+from aesara.graph.features import AlreadyThere, Feature
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op
-from aesara.graph.opt import local_optimizer
+from aesara.graph.opt import GlobalOptimizer, in2out, local_optimizer
 from aesara.graph.utils import MetaType
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
@@ -35,7 +36,7 @@ class DistributionMeta(MetaType):
         cls_res = super().__new__(cls, name, bases, clsdict)
         base_op = clsdict.get("base_op", None)
 
-        if base_op is not None:
+        if base_op is not None and clsdict.get("default", False):
             # Create dispatch functions
             @_default_transformed_rv.register(type(base_op))
             def class_transformed_rv(op, node):
@@ -89,6 +90,13 @@ def transformed_logprob(op, value, *inputs, name=None, **kwargs):
     return logprob + jacobian
 
 
+class DefaultTransformSentinel:
+    pass
+
+
+DEFAULT_TRANSFORM = DefaultTransformSentinel()
+
+
 @local_optimizer(tracks=None)
 def default_transform(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """
@@ -101,38 +109,92 @@ def default_transform(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]
     """
 
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+    values_to_transforms = getattr(fgraph, "values_to_transforms", None)
 
-    if rv_map_feature is None:
+    if rv_map_feature is None or values_to_transforms is None:
         return None  # pragma: no cover
 
-    if not isinstance(node.op, RandomVariable):
-        return None  # pragma: no cover
+    try:
+        rv_var = node.default_output()
+    except ValueError:
+        return None
 
-    trans_node = _default_transformed_rv(node.op, node)
+    value_var = rv_map_feature.rv_values.get(rv_var, None)
+    if value_var is None:
+        return None
 
-    if trans_node is None:
-        return None  # pragma: no cover
+    transform = values_to_transforms.get(value_var, None)
 
-    # Get the old value variable and remove it from our value variables map
-    rv_var = node.outputs[1]
-    old_value_var = rv_map_feature.rv_values.pop(rv_var)
-
-    transform = trans_node.op.transform
+    if transform is None:
+        return None
+    elif transform is DEFAULT_TRANSFORM:
+        trans_node = _default_transformed_rv(node.op, node)
+        if trans_node is None:
+            return None
+        transform = trans_node.op.transform
+    else:
+        new_op = create_default_transformed_rv_op(node.op, transform, default=False)()
+        trans_node = new_op.make_node(*node.inputs)
+        trans_node.outputs[1].name = node.outputs[1].name
 
     # We now assume that the old value variable represents the *transformed space*.
     # This means that we need to replace all instance of the old value variable
     # with "inversely/un-" transformed versions of itself.
-    new_value_var = transform.backward(old_value_var, *trans_node.inputs)
-    rv_map_feature.rv_values[rv_var] = new_value_var
+    new_value_var = transform.backward(value_var, *trans_node.inputs)
+    if value_var.name and getattr(transform, "name", None):
+        new_value_var.name = f"{value_var.name}_{transform.name}"
 
+    # Map TransformedRV to new value var and delete old mapping
     new_rv_var = trans_node.outputs[1]
-
-    if old_value_var.name and getattr(transform, "name", None):
-        new_value_var.name = f"{old_value_var.name}_{transform.name}"
-
     rv_map_feature.rv_values[new_rv_var] = new_value_var
+    del rv_map_feature.rv_values[rv_var]
 
     return trans_node.outputs
+
+
+class TransformValuesMapping(Feature):
+    r"""A `Feature` that maintains a map between value variables and their transforms."""
+
+    def __init__(self, values_to_transforms):
+        self.values_to_transforms = values_to_transforms
+
+    def on_attach(self, fgraph):
+        if hasattr(fgraph, "values_to_transforms"):
+            raise AlreadyThere()
+
+        fgraph.values_to_transforms = self.values_to_transforms
+
+
+class TransformValuesOpt(GlobalOptimizer):
+    r"""Transforms value variables according to a map and/or per-`RandomVariable` defaults."""
+
+    default_transform_opt = in2out(default_transform, ignore_newtrees=True)
+
+    def __init__(
+        self,
+        values_to_transforms: Dict[
+            TensorVariable, Union[RVTransform, DefaultTransformSentinel, None]
+        ],
+    ):
+        """
+        Parameters
+        ==========
+        values_to_transforms
+            Mapping between value variables and their transformations.  Each
+            value variable can be assigned one of `RVTransform`,
+            ``DEFAULT_TRANSFORM``, or ``None``. If a transform is not specified
+            for a specific value variable it will not be transformed.
+
+        """
+
+        self.values_to_transforms = values_to_transforms
+
+    def add_requirements(self, fgraph):
+        values_transforms_feature = TransformValuesMapping(self.values_to_transforms)
+        fgraph.attach_feature(values_transforms_feature)
+
+    def apply(self, fgraph: FunctionGraph):
+        return self.default_transform_opt.optimize(fgraph)
 
 
 class LogTransform(RVTransform):
@@ -240,8 +302,24 @@ class CircularTransform(RVTransform):
 def create_default_transformed_rv_op(
     rv_op: Op,
     transform: RVTransform,
+    *,
+    default: bool = True,
     cls_dict_extra: Optional[Dict] = None,
 ) -> Type[TransformedRV]:
+    """Create a new `TransformedRV` given a base `RandomVariable` `Op`
+
+    Parameters
+    ==========
+    rv_op
+        The `RandomVariable` for which we want to construct a `TransformedRV`.
+    transform
+        The `RVTransform` for `rv_op`.
+    default
+        If ``False`` do not make `transform` the default transform for `rv_op`.
+    cls_dict_extra
+        Additional class members to add to the constructed `TransformedRV`.
+
+    """
 
     trans_name = getattr(transform, "name", "transformed")
     rv_type_name = type(rv_op).__name__
@@ -251,6 +329,7 @@ def create_default_transformed_rv_op(
         cls_dict["name"] = f"{rv_name}_{trans_name}"
     cls_dict["base_op"] = rv_op
     cls_dict["transform"] = transform
+    cls_dict["default"] = default
 
     if cls_dict_extra is not None:
         cls_dict.update(cls_dict_extra)
