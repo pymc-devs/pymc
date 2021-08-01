@@ -35,6 +35,7 @@ The following snippet illustrates how to create a new `RandomVariable`:
 
 from aesara.tensor.var import TensorVariable
 from aesara.tensor.random.op import RandomVariable
+from typing import List, Tuple
 
 # Create your own `RandomVariable`...
 class BlahRV(RandomVariable):
