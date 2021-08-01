@@ -2052,5 +2052,3 @@ def _init_jitter(model, point, chains, jitter_max_retries):
 
         start.append(mean)
     return start
-
-
