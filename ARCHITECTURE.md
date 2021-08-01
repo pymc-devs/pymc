@@ -8,7 +8,7 @@ Lets you define probabilistic graphs or models that can be easily used to comput
 inference or to draw random samples for prior and posterior prediction.
 
 PyMC3 includes a few inference techniques, in particular:
-* Markov chain Monte Carlo 
+* Markov chain Monte Carlo
 * Variational Inference
 * Sequential Monte Carlo
 
@@ -22,7 +22,7 @@ deprecation
 
 ## Functionality not in PyMC3
 It is easier to start with functionality that is not present in PyMC3 but
-rather deferred to outside libraries. If seeking to understand any 
+rather deferred to outside libraries. If seeking to understand any
 of the topics below refer to that specific library
 
 ### Aesara
@@ -66,21 +66,21 @@ In no particular order they are
 * `Deterministic` and `Potential`: Definitions for two pieces of functionality useful in some model definitions
 
 ## distributions/
-Contains multiple submodules that define distributions,  as well as logic that aids in distributions usage. 
+Contains multiple submodules that define distributions,  as well as logic that aids in distributions usage.
 Currently this module also contains functionality that enables specific model architectures such as BART and Time Series.
 Important modules to note are
 
-* `distribution.py`: This contains parent class for all PyMC3 distributions. 
+* `distribution.py`: This contains parent class for all PyMC3 distributions.
   Notably the `distribution.distribution` class contains the `observed` argument which in PyMC3 differentiates
   a random variable distribution from a likelihood distribution.
-  
+
 * `logprob.py`: This contains the log probability logic for the distributions themselves.
   The log probability calculation is deferred to Aesara
-  
-* `dist_math.py`: Various convenience operators for distributions. 
-  This includes mathematical operators such as `logpower` or `all_true`methods. 
+
+* `dist_math.py`: Various convenience operators for distributions.
+  This includes mathematical operators such as `logpower` or `all_true`methods.
   It also contains a suite of lognormal methods and transformation methods
-  
+
 ## /sampling.py
 Interface to posterior, prior predictive, and posterior sampling as well as various methods to identify and initialize
 stepper methods. Also contains logic to check for "all continuous" variables and initialize NUTS
