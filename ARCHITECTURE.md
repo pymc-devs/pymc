@@ -1,8 +1,5 @@
 # Architecture
-
 This document describes the high-level architecture of PyMC3.
-If you want to familiarize yourself with the code base, you are just in the right place!
-
 
 # Bird's Eye View
 [comment]: <> (https://drive.google.com/file/d/1lfEzokkNUJr_JIeSDQfha5a57pokz0qI)
@@ -95,4 +92,3 @@ the Hamiltonian Monte Carlo sampling methods as well as helper functions such as
 ## tests/
 All tests for testing functionality of codebase. All modules prefixed with `test_` are tests themselves, whereas all
 other modules contain various supporting code such as fixtures, configurations, etc
-
