@@ -17,13 +17,13 @@ from collections import namedtuple
 import numpy as np
 
 import pymc3 as pm
-from pymc3 import modelcontext, DictToArrayBijection
 
+from pymc3 import DictToArrayBijection, modelcontext
 from pymc3.aesaraf import floatX
 from pymc3.backends.report import SamplerWarning, WarningType
 from pymc3.distributions import BART
 from pymc3.math import logbern, logdiffexp_numpy
-from pymc3.sampling import all_continuous, _log, _init_jitter
+from pymc3.sampling import _init_jitter, _log, all_continuous
 from pymc3.step_methods.arraystep import Competence
 from pymc3.step_methods.hmc import quadpotential
 from pymc3.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
