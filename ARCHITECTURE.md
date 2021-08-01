@@ -5,27 +5,23 @@ If you want to familiarize yourself with the code base, you are just in the righ
 
 
 # Bird's Eye View
-
-TODO: Update diagram to include SMC
+[comment]: <> (https://drive.google.com/file/d/1lfEzokkNUJr_JIeSDQfha5a57pokz0qI)
 ![Architecture](docs/Architecture.png)
-
-On the highest level, PyMC3 lets you define probabilistic graphs or models
-that can be easily used to compute log probabilities for posterior inference
-or to draw random samples from priors or posteriors. 
-However there are numerous
-other useful sets of functionality, from prior and posterior predictive sampling,
-GraphviZ model, as well as various helper functions.
+Lets you define probabilistic graphs or models that can be easily used to compute log probabilities for posterior
+inference or to draw random samples for prior and posterior prediction.
 
 PyMC3 includes a few inference techniques, in particular:
 * Markov chain Monte Carlo 
 * Variational Inference
 * Sequential Monte Carlo
 
-The most relevant modules of PyMC3 are shown visually below, as well as their
+It also contains numerous others pieces of functionality such as GraphviZ model visualization tools
+as well as various mathematical helper functions.
+
+The most central pieces functionality of PyMC3 are shown visually below, as well as their
 relation to other major packages. Not all modules are shown, either because
 they are smaller or self explanatory in scope, or they're pending
 deprecation
-
 
 ## Functionality not in PyMC3
 It is easier to start with functionality that is not present in PyMC3 but
