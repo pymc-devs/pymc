@@ -3,6 +3,7 @@
 
 aesara>=2.1.0
 arviz>=0.11.2
+black
 cachetools>=4.2.1
 cloudpickle
 fastprogress>=0.2.0
