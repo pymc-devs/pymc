@@ -41,7 +41,6 @@ from pymc3.aesaraf import change_rv_size, compile_rv_inplace, inputvars, walk_mo
 from pymc3.backends.arviz import _DefaultTrace
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
-from pymc3.blocking import DictToArrayBijection
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
 from pymc3.model import Model, Point, modelcontext
 from pymc3.parallel_sampling import Draw, _cpu_count
@@ -58,7 +57,7 @@ from pymc3.step_methods import (
     Slice,
 )
 from pymc3.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
-from pymc3.step_methods.hmc import quadpotential
+from pymc3.step_methods.hmc.nuts import init_nuts
 from pymc3.util import (
     chains_and_samples,
     dataset_to_point_list,
@@ -75,7 +74,6 @@ __all__ = [
     "iter_sample",
     "sample_posterior_predictive",
     "sample_posterior_predictive_w",
-    "init_nuts",
     "sample_prior_predictive",
 ]
 
@@ -2056,197 +2054,3 @@ def _init_jitter(model, point, chains, jitter_max_retries):
     return start
 
 
-def init_nuts(
-    init="auto",
-    chains=1,
-    n_init=500000,
-    model=None,
-    random_seed=None,
-    progressbar=True,
-    jitter_max_retries=10,
-    **kwargs,
-):
-    """Set up the mass matrix initialization for NUTS.
-
-    NUTS convergence and sampling speed is extremely dependent on the
-    choice of mass/scaling matrix. This function implements different
-    methods for choosing or adapting the mass matrix.
-
-    Parameters
-    ----------
-    init : str
-        Initialization method to use.
-
-        * auto: Choose a default initialization method automatically.
-          Currently, this is ``jitter+adapt_diag``, but this can change in the future. If you
-          depend on the exact behaviour, choose an initialization method explicitly.
-        * adapt_diag: Start with a identity mass matrix and then adapt a diagonal based on the
-          variance of the tuning samples. All chains use the test value (usually the prior mean)
-          as starting point.
-        * jitter+adapt_diag: Same as ``adapt_diag``, but use test value plus a uniform jitter in
-          [-1, 1] as starting point in each chain.
-        * advi+adapt_diag: Run ADVI and then adapt the resulting diagonal mass matrix based on the
-          sample variance of the tuning samples.
-        * advi+adapt_diag_grad: Run ADVI and then adapt the resulting diagonal mass matrix based
-          on the variance of the gradients during tuning. This is **experimental** and might be
-          removed in a future release.
-        * advi: Run ADVI to estimate posterior mean and diagonal mass matrix.
-        * advi_map: Initialize ADVI with MAP and use MAP as starting point.
-        * map: Use the MAP as starting point. This is discouraged.
-        * adapt_full: Adapt a dense mass matrix using the sample covariances. All chains use the
-          test value (usually the prior mean) as starting point.
-        * jitter+adapt_full: Same as ``adapt_full``, but use test value plus a uniform jitter in
-          [-1, 1] as starting point in each chain.
-
-    chains : int
-        Number of jobs to start.
-    n_init : int
-        Number of iterations of initializer. Only works for 'ADVI' init methods.
-    model : Model (optional if in ``with`` context)
-    progressbar : bool
-        Whether or not to display a progressbar for advi sampling.
-    jitter_max_retries : int
-        Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
-        that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
-        init methods.
-    **kwargs : keyword arguments
-        Extra keyword arguments are forwarded to pymc3.NUTS.
-
-    Returns
-    -------
-    start : ``pymc3.model.Point``
-        Starting point for sampler
-    nuts_sampler : ``pymc3.step_methods.NUTS``
-        Instantiated and initialized NUTS sampler object
-    """
-    model = modelcontext(model)
-
-    vars = kwargs.get("vars", model.value_vars)
-    if set(vars) != set(model.value_vars):
-        raise ValueError("Must use init_nuts on all variables of a model.")
-    if not all_continuous(vars):
-        raise ValueError("init_nuts can only be used for models with only " "continuous variables.")
-
-    if not isinstance(init, str):
-        raise TypeError("init must be a string.")
-
-    if init is not None:
-        init = init.lower()
-
-    if init == "auto":
-        init = "jitter+adapt_diag"
-
-    _log.info(f"Initializing NUTS using {init}...")
-
-    if random_seed is not None:
-        random_seed = int(np.atleast_1d(random_seed)[0])
-
-    cb = [
-        pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="absolute"),
-        pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
-    ]
-
-    apoint = DictToArrayBijection.map(model.initial_point)
-
-    if init == "adapt_diag":
-        start = [model.initial_point] * chains
-        mean = np.mean([apoint.data] * chains, axis=0)
-        var = np.ones_like(mean)
-        n = len(var)
-        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
-    elif init == "jitter+adapt_diag":
-        start = _init_jitter(model, model.initial_point, chains, jitter_max_retries)
-        mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
-        var = np.ones_like(mean)
-        n = len(var)
-        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
-    elif init == "advi+adapt_diag_grad":
-        approx: pm.MeanField = pm.fit(
-            random_seed=random_seed,
-            n=n_init,
-            method="advi",
-            model=model,
-            callbacks=cb,
-            progressbar=progressbar,
-            obj_optimizer=pm.adagrad_window,
-        )
-        start = approx.sample(draws=chains)
-        start = list(start)
-        std_apoint = approx.std.eval()
-        cov = std_apoint ** 2
-        mean = approx.mean.get_value()
-        weight = 50
-        n = len(cov)
-        potential = quadpotential.QuadPotentialDiagAdaptGrad(n, mean, cov, weight)
-    elif init == "advi+adapt_diag":
-        approx = pm.fit(
-            random_seed=random_seed,
-            n=n_init,
-            method="advi",
-            model=model,
-            callbacks=cb,
-            progressbar=progressbar,
-            obj_optimizer=pm.adagrad_window,
-        )
-        start = approx.sample(draws=chains)
-        start = list(start)
-        std_apoint = approx.std.eval()
-        cov = std_apoint ** 2
-        mean = approx.mean.get_value()
-        weight = 50
-        n = len(cov)
-        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, cov, weight)
-    elif init == "advi":
-        approx = pm.fit(
-            random_seed=random_seed,
-            n=n_init,
-            method="advi",
-            model=model,
-            callbacks=cb,
-            progressbar=progressbar,
-            obj_optimizer=pm.adagrad_window,
-        )
-        start = approx.sample(draws=chains)
-        start = list(start)
-        cov = approx.std.eval() ** 2
-        potential = quadpotential.QuadPotentialDiag(cov)
-    elif init == "advi_map":
-        start = pm.find_MAP(include_transformed=True)
-        approx = pm.MeanField(model=model, start=start)
-        pm.fit(
-            random_seed=random_seed,
-            n=n_init,
-            method=pm.KLqp(approx),
-            callbacks=cb,
-            progressbar=progressbar,
-            obj_optimizer=pm.adagrad_window,
-        )
-        start = approx.sample(draws=chains)
-        start = list(start)
-        cov = approx.std.eval() ** 2
-        potential = quadpotential.QuadPotentialDiag(cov)
-    elif init == "map":
-        start = pm.find_MAP(include_transformed=True)
-        cov = pm.find_hessian(point=start)
-        start = [start] * chains
-        potential = quadpotential.QuadPotentialFull(cov)
-    elif init == "adapt_full":
-        initial_point = model.initial_point
-        start = [initial_point] * chains
-        mean = np.mean([apoint.data] * chains, axis=0)
-        initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
-        cov = np.eye(initial_point_model_size)
-        potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
-    elif init == "jitter+adapt_full":
-        initial_point = model.initial_point
-        start = _init_jitter(model, initial_point, chains, jitter_max_retries)
-        mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
-        initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
-        cov = np.eye(initial_point_model_size)
-        potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
-    else:
-        raise ValueError(f"Unknown initializer: {init}.")
-
-    step = pm.NUTS(potential=potential, model=model, **kwargs)
-
-    return start, step

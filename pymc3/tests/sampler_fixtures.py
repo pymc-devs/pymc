@@ -20,6 +20,7 @@ import numpy.testing as npt
 from scipy import stats
 
 import pymc3 as pm
+import pymc3.step_methods.hmc.nuts
 
 from pymc3.backends.arviz import to_inference_data
 from pymc3.tests.helpers import SeededTest
@@ -176,7 +177,7 @@ class NutsFixture(BaseSampler):
         if hasattr(cls, "step_args"):
             args.update(cls.step_args)
         if "scaling" not in args:
-            _, step = pm.sampling.init_nuts(n_init=10000, **args)
+            _, step = pymc3.step_methods.hmc.nuts.init_nuts(n_init=10000, **args)
         else:
             step = pm.NUTS(**args)
         return step

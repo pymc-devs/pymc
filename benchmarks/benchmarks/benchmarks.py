@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 
 import pymc3 as pm
+import pymc3.step_methods.hmc.nuts
 
 
 def glm_hierarchical_model(random_seed=123):
@@ -173,11 +174,11 @@ class NUTSInitSuite:
     def time_glm_hierarchical_init(self, init):
         """How long does it take to run the initialization."""
         with glm_hierarchical_model():
-            pm.init_nuts(init=init, chains=self.chains, progressbar=False)
+            pymc3.step_methods.hmc.nuts.init_nuts(init=init, chains=self.chains, progressbar=False)
 
     def track_glm_hierarchical_ess(self, init):
         with glm_hierarchical_model():
-            start, step = pm.init_nuts(
+            start, step = pymc3.step_methods.hmc.nuts.init_nuts(
                 init=init, chains=self.chains, progressbar=False, random_seed=123
             )
             t0 = time.time()
@@ -198,7 +199,7 @@ class NUTSInitSuite:
     def track_marginal_mixture_model_ess(self, init):
         model, start = mixture_model()
         with model:
-            _, step = pm.init_nuts(
+            _, step = pymc3.step_methods.hmc.nuts.init_nuts(
                 init=init, chains=self.chains, progressbar=False, random_seed=123
             )
             start = [{k: v for k, v in start.items()} for _ in range(self.chains)]

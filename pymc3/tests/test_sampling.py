@@ -30,6 +30,7 @@ from arviz import from_dict as az_from_dict
 from scipy import stats
 
 import pymc3 as pm
+import pymc3.step_methods.hmc.nuts
 
 from pymc3.aesaraf import compile_rv_inplace
 from pymc3.backends.ndarray import NDArray
@@ -150,7 +151,7 @@ class TestSample(SeededTest):
         with self.model:
             tune = 50
             chains = 2
-            start, step = pm.sampling.init_nuts(chains=chains)
+            start, step = pymc3.step_methods.hmc.nuts.init_nuts(chains=chains)
             pm.sample(draws=2, tune=tune, chains=chains, step=step, start=start, cores=1)
             assert step.potential._n_samples == tune
             assert step.step_adapt._count == tune + 1
@@ -813,13 +814,13 @@ def check_exec_nuts_init(method):
         pm.Normal("a", mu=0, sigma=1, size=2)
         pm.HalfNormal("b", sigma=1)
     with model:
-        start, _ = pm.init_nuts(init=method, n_init=10)
+        start, _ = pymc3.step_methods.hmc.nuts.init_nuts(init=method, n_init=10)
         assert isinstance(start, list)
         assert len(start) == 1
         assert isinstance(start[0], dict)
         assert model.a.tag.value_var.name in start[0]
         assert model.b.tag.value_var.name in start[0]
-        start, _ = pm.init_nuts(init=method, n_init=10, chains=2)
+        start, _ = pymc3.step_methods.hmc.nuts.init_nuts(init=method, n_init=10, chains=2)
         assert isinstance(start, list)
         assert len(start) == 2
         assert isinstance(start[0], dict)
@@ -874,7 +875,7 @@ def test_default_sample_nuts_jitter(init, start, expectation, monkeypatch):
             start_ = [{"x": np.array(0.79788456)}]
         else:
             start_ = [{"x": np.array(-0.04949886)}]
-        _, step = pm.init_nuts(*args, **kwargs)
+        _, step = pymc3.step_methods.hmc.nuts.init_nuts(*args, **kwargs)
         return start_, step
 
     monkeypatch.setattr("pymc3.sampling.init_nuts", _mocked_init_nuts)
