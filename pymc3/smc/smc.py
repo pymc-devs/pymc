@@ -12,15 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import warnings
-
 from collections import OrderedDict
 
 import aesara.tensor as at
 import numpy as np
 
-from aesara import config
 from aesara import function as aesara_function
+from aesara.graph.basic import clone_replace
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
@@ -34,6 +32,7 @@ from pymc3.backends.ndarray import NDArray
 from pymc3.blocking import DictToArrayBijection
 from pymc3.model import Point, modelcontext
 from pymc3.sampling import sample_prior_predictive
+from pymc3.vartypes import discrete_types
 
 
 class SMC:
@@ -273,9 +272,15 @@ class SMC:
         for i in range(lenght_pos):
             value = []
             size = 0
-            for var in varnames:
-                shape, new_size = self.var_info[var]
-                value.append(self.posterior[i][size : size + new_size].reshape(shape))
+            for varname in varnames:
+                shape, new_size = self.var_info[varname]
+                var_samples = self.posterior[i][size : size + new_size]
+                # Round discrete variable samples. The rounded values were the ones
+                # actually used in the logp evaluations (see logp_forw)
+                var = self.model[varname]
+                if var.dtype in discrete_types:
+                    var_samples = np.round(var_samples).astype(var.dtype)
+                value.append(var_samples.reshape(shape))
                 size += new_size
             strace.record(point={k: v for k, v in zip(varnames, value)})
         return strace
@@ -294,20 +299,32 @@ def logp_forw(point, out_vars, vars, shared):
         containing :class:`aesara.tensor.Tensor` for depended shared data
     """
 
+    # Convert expected input of discrete variables to (rounded) floats
+    if any(var.dtype in discrete_types for var in vars):
+        replace_int_to_float = {}
+        replace_float_to_round = {}
+        new_vars = []
+        for var in vars:
+            if var.dtype in discrete_types:
+                float_var = at.TensorType("floatX", var.broadcastable)(var.name)
+                replace_int_to_float[var] = float_var
+                new_vars.append(float_var)
+
+                round_float_var = at.round(float_var)
+                round_float_var.name = var.name
+                replace_float_to_round[float_var] = round_float_var
+            else:
+                new_vars.append(var)
+
+        replace_int_to_float.update(shared)
+        replace_float_to_round.update(shared)
+        out_vars = clone_replace(out_vars, replace_int_to_float, strict=False)
+        out_vars = clone_replace(out_vars, replace_float_to_round)
+        vars = new_vars
+
     out_list, inarray0 = join_nonshared_inputs(point, out_vars, vars, shared)
-    # TODO: Figure out how to safely accept float32 (floatX) input when there are
-    # discrete variables of int64 dtype in `vars`.
-    # See https://github.com/pymc-devs/pymc3/pull/4769#issuecomment-861494080
-    if config.floatX == "float32" and any(var.dtype == "int64" for var in vars):
-        warnings.warn(
-            "SMC sampling may run slower due to the presence of discrete variables "
-            "together with aesara.config.floatX == `float32`",
-            UserWarning,
-        )
-        f = aesara_function([inarray0], out_list[0], allow_input_downcast=True)
-    else:
-        f = aesara_function([inarray0], out_list[0])
-        f.trust_input = True
+    f = aesara_function([inarray0], out_list[0])
+    f.trust_input = True
     return f
 
 
