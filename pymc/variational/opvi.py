@@ -1673,6 +1673,7 @@ class Approximation(WithMemoization):
 
         trace = NDArray(
             model=self.model,
+            test_point={name: records[1] for name, records in samples.items()},
         )
         try:
             trace.setup(draws=draws, chain=0)
