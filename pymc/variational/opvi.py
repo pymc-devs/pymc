@@ -60,12 +60,10 @@ import pymc as pm
 from pymc.aesaraf import at_rng, identity, rvs_to_value_vars
 from pymc.backends import NDArray
 from pymc.model import modelcontext
-from pymc.util import (
-    WithMemoization,
-    locally_cachedmethod,
-)
+from pymc.util import WithMemoization, locally_cachedmethod
 from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
+from pymc.blocking import DictToArrayBijection
 
 __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
 
@@ -73,8 +71,10 @@ __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximat
 class VariationalInferenceError(Exception):
     """Exception for VI specific cases"""
 
+
 class NotImplementedInference(VariationalInferenceError, NotImplementedError):
     """Marking non functional parts of code"""
+
 
 class ExplicitInferenceError(VariationalInferenceError, TypeError):
     """Exception for bad explicit inference"""
@@ -98,7 +98,6 @@ class BatchedGroupError(GroupError):
 
 class LocalGroupError(BatchedGroupError, AEVBInferenceError):
     """Error raised in case of bad local_rv usage"""
-
 
 
 def append_name(name):
@@ -861,6 +860,21 @@ class Group(WithMemoization):
             # init can be delayed
             self.__init_group__(self.group)
 
+    def _prepare_start(self, start=None):
+        if start is None:
+            start = self.model.initial_point
+        else:
+            start_ = start.copy()
+            self.model.update_start_vals(start_, self.model.initial_point)
+            start = start_
+        group_vars = {self.model.rvs_to_values[v].name for v in self.group}
+        start = {k: v for k, v in start.items() if k in group_vars}
+        if self.batched:
+            start = start[self.model.rvs_to_values[self.group[0]].name][0]
+        else:
+            start = DictToArrayBijection.map(start).data
+        return start
+
     @classmethod
     def get_param_spec_for(cls, **kwargs):
         res = dict()
@@ -946,7 +960,9 @@ class Group(WithMemoization):
             self.group = group
         if self.batched and len(group) > 1:
             if self.local:  # better error message
-                raise NotImplementedInference("Grouped Inference is not yet supported, open an issue once you need it https://github.com/pymc-devs/pymc3/issues")
+                raise NotImplementedInference(
+                    "Grouped Inference is not yet supported, open an issue once you need it https://github.com/pymc-devs/pymc3/issues"
+                )
                 raise LocalGroupError("Local groups with more than 1 variable are not supported")
             else:
                 raise BatchedGroupError(

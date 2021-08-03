@@ -69,22 +69,13 @@ class MeanFieldGroup(Group):
         self._finalize_init()
 
     def create_shared_params(self, start=None):
-        if start is None:
-            start = self.model.initial_point
-        else:
-            start_ = start.copy()
-            self.model.update_start_vals(start_, self.model.initial_point)
-            start = start_
-        if self.batched:
-            start = start[self.group[0].name][0]
-        else:
-            start = DictToArrayBijection.map(start)
+        start = self._prepare_start(start)
         rho = np.zeros((self.ddim,))
         if self.batched:
             start = np.tile(start, (self.bdim, 1))
             rho = np.tile(rho, (self.bdim, 1))
         return {
-            "mu": aesara.shared(pm.floatX(start.data), "mu"),
+            "mu": aesara.shared(pm.floatX(start), "mu"),
             "rho": aesara.shared(pm.floatX(rho), "rho"),
         }
 
@@ -124,16 +115,7 @@ class FullRankGroup(Group):
         self._finalize_init()
 
     def create_shared_params(self, start=None):
-        if start is None:
-            start = self.model.initial_point
-        else:
-            start_ = start.copy()
-            self.model.update_start_vals(start_, self.model.initial_point)
-            start = start_
-        if self.batched:
-            start = start[self.group[0].name][0]
-        else:
-            start = DictToArrayBijection.map(start).data
+        start = self._prepare_start(start)
         n = self.ddim
         L_tril = np.eye(n)[np.tril_indices(n)].astype(aesara.config.floatX)
         if self.batched:
@@ -244,13 +226,7 @@ class EmpiricalGroup(Group):
             if size is None:
                 raise opvi.ParametrizationError("Need `trace` or `size` to initialize")
             else:
-                if start is None:
-                    start = self.model.initial_point
-                else:
-                    start_ = self.model.initial_point.copy()
-                    self.model.update_start_vals(start_, start)
-                    start = start_
-                start = pm.floatX(DictToArrayBijection.map(start).data)
+                start = self._prepare_start(start)
                 # Initialize particles
                 histogram = np.tile(start, (size, 1))
                 histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
@@ -266,7 +242,9 @@ class EmpiricalGroup(Group):
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
-        if trace is not None and not all([var.name in trace.varnames for var in self.group]):
+        if trace is not None and not all(
+            [self.model.rvs_to_values[var].name in trace.varnames for var in self.group]
+        ):
             raise ValueError("trace has not all free RVs in the group")
 
     def randidx(self, size=None):
