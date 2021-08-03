@@ -131,6 +131,7 @@ def test_init_groups(three_var_model, raises, grouping):
         else:
             model_dim = sum(v.size for v in three_var_model.initial_point.values())
             assert approx.ndim == model_dim
+    trace = approx.sample(100)
 
 
 @pytest.fixture(

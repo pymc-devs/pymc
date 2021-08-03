@@ -858,7 +858,6 @@ class Group(WithMemoization):
         # save this stuff to use in __init_group__ later
         self._kwargs = kwargs
         if self.group is not None:
-            raise NotImplementedInference("Grouped Inference is not yet supported, open an issue once you need it https://github.com/pymc-devs/pymc3/issues")
             # init can be delayed
             self.__init_group__(self.group)
 
@@ -947,6 +946,7 @@ class Group(WithMemoization):
             self.group = group
         if self.batched and len(group) > 1:
             if self.local:  # better error message
+                raise NotImplementedInference("Grouped Inference is not yet supported, open an issue once you need it https://github.com/pymc-devs/pymc3/issues")
                 raise LocalGroupError("Local groups with more than 1 variable are not supported")
             else:
                 raise BatchedGroupError(
