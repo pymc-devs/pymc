@@ -12,8 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import time
-
 import aesara
 import aesara.tensor as at
 import numpy as np
@@ -144,31 +142,7 @@ class TestSMC(SeededTest):
             ):
                 pm.sample_smc(draws=99)
 
-    def test_parallel_sampling(self):
-        # Cache graph
-        with self.slow_model:
-            _ = pm.sample_smc(draws=10, chains=1, cores=1, return_inferencedata=False)
-
-        chains = 4
-        draws = 100
-
-        t0 = time.time()
-        with self.slow_model:
-            idata = pm.sample_smc(draws=draws, chains=chains, cores=4)
-        t_mp = time.time() - t0
-        assert idata.posterior.dims["chain"] == chains
-        assert idata.posterior.dims["draw"] == draws
-
-        t0 = time.time()
-        with self.slow_model:
-            idata = pm.sample_smc(draws=draws, chains=chains, cores=1)
-        t_seq = time.time() - t0
-        assert idata.posterior.dims["chain"] == chains
-        assert idata.posterior.dims["draw"] == draws
-
-        assert t_mp < t_seq
-
-    def test_depracated_parallel_arg(self):
+    def test_deprecated_parallel_arg(self):
         with self.fast_model:
             with pytest.warns(
                 DeprecationWarning,
