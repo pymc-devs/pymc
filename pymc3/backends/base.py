@@ -541,8 +541,7 @@ class MultiTrace:
             If a chain is not given, the highest chain number is used.
         """
         if chain is None:
-            chain = self.chains[-1]
-        return self._straces[chain].point(idx)
+            raise NotImplementedError
 
     def points(self, chains=None):
         """Return an iterator over all or some of the sample points
