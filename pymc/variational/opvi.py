@@ -960,9 +960,6 @@ class Group(WithMemoization):
             self.group = group
         if self.batched and len(group) > 1:
             if self.local:  # better error message
-                raise NotImplementedInference(
-                    "Grouped Inference is not yet supported, open an issue once you need it https://github.com/pymc-devs/pymc3/issues"
-                )
                 raise LocalGroupError("Local groups with more than 1 variable are not supported")
             else:
                 raise BatchedGroupError(
