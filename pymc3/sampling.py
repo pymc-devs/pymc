@@ -1002,8 +1002,6 @@ def _iter_sample(
             stats = None
             diverging = False
 
-            if i == 0 and hasattr(step, "iter_count"):
-                step.iter_count = 0
             if i == tune:
                 step = stop_tuning(step)
             if step.generates_stats:
