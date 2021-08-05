@@ -15,6 +15,7 @@
 import numpy as np
 
 from pandas import DataFrame, Series
+from scipy.special import expit
 
 from pymc3.distributions.distribution import NoDistribution
 from pymc3.distributions.tree import LeafNode, SplitNode, Tree
@@ -23,11 +24,23 @@ __all__ = ["BART"]
 
 
 class BaseBART(NoDistribution):
-    def __init__(self, X, Y, m=200, alpha=0.25, split_prior=None, *args, **kwargs):
+    def __init__(
+        self,
+        X,
+        Y,
+        m=50,
+        alpha=0.25,
+        k=2,
+        split_prior=None,
+        jitter=False,
+        *args,
+        **kwargs,
+    ):
 
+        self.jitter = jitter
         self.X, self.Y, self.missing_data = self.preprocess_XY(X, Y)
 
-        super().__init__(shape=X.shape[0], dtype="float64", initval=0, *args, **kwargs)
+        super().__init__(shape=X.shape[0], dtype="float64", testval=self.Y.mean(), *args, **kwargs)
 
         if self.X.ndim != 2:
             raise ValueError("The design matrix X must have two dimensions")
@@ -48,16 +61,26 @@ class BaseBART(NoDistribution):
                 "The value for the alpha parameter for the tree structure "
                 "must be in the interval (0, 1)"
             )
+        self.m = m
+        self.alpha = alpha
+
+        self.init_mean = self.Y.mean()
+        # if data is binary
+        if np.all(np.unique(self.Y) == [0, 1]):
+            self.mu_std = 6 / (k * self.m ** 0.5)
+        # maybe we need to check for count data
+        else:
+            self.mu_std = self.Y.std() / (k * self.m ** 0.5)
 
         self.num_observations = X.shape[0]
         self.num_variates = X.shape[1]
         self.available_predictors = list(range(self.num_variates))
         self.ssv = SampleSplittingVariable(split_prior, self.num_variates)
-        self.m = m
-        self.alpha = alpha
+        self.initial_value_leaf_nodes = self.init_mean / self.m
         self.trees = self.init_list_of_trees()
         self.all_trees = []
         self.mean = fast_mean()
+        self.normal = NormalSampler()
         self.prior_prob_leaf_node = compute_prior_probability(alpha)
 
     def preprocess_XY(self, X, Y):
@@ -66,11 +89,13 @@ class BaseBART(NoDistribution):
         if isinstance(X, (Series, DataFrame)):
             X = X.to_numpy()
         missing_data = np.any(np.isnan(X))
-        X = np.random.normal(X, np.std(X, 0) / 100)
+        if self.jitter:
+            X = np.random.normal(X, np.nanstd(X, 0) / 100000)
+        Y = Y.astype(float)
         return X, Y, missing_data
 
     def init_list_of_trees(self):
-        initial_value_leaf_nodes = self.Y.mean() / self.m
+        initial_value_leaf_nodes = self.initial_value_leaf_nodes
         initial_idx_data_points_leaf_nodes = np.array(range(self.num_observations), dtype="int32")
         list_of_trees = []
         for i in range(self.m):
@@ -84,7 +109,7 @@ class BaseBART(NoDistribution):
         # bartMachine: A Powerful Tool for Machine Learning in R. ArXiv e-prints, 2013
         # The sum_trees_output will contain the sum of the predicted output for all trees.
         # When R_j is needed we subtract the current predicted output for tree T_j.
-        self.sum_trees_output = np.full_like(self.Y, self.Y.mean())
+        self.sum_trees_output = np.full_like(self.Y, self.init_mean)
 
         return list_of_trees
 
@@ -153,20 +178,13 @@ class BaseBART(NoDistribution):
 
         return left_node_idx_data_points, right_node_idx_data_points
 
-    def get_residuals(self):
-        """Compute the residuals."""
-        R_j = self.Y - self.sum_trees_output
-        return R_j
-
-    def get_residuals_loo(self, tree):
-        """Compute the residuals without leaving the passed tree out."""
-        R_j = self.Y - (self.sum_trees_output - tree.predict_output(self.num_observations))
-        return R_j
-
     def draw_leaf_value(self, idx_data_points):
         """Draw the residual mean."""
-        R_j = self.get_residuals()[idx_data_points]
-        draw = self.mean(R_j)
+        Y_pred_idx = self.sum_trees_output[idx_data_points]
+        mu_mean = self.mean(Y_pred_idx) / self.m
+        # add cache of precomputed normal values
+        draw = self.normal.random() * self.mu_std + mu_mean
+
         return draw
 
     def predict(self, X_new):
@@ -174,7 +192,6 @@ class BaseBART(NoDistribution):
         trees = self.all_trees
         num_observations = X_new.shape[0]
         pred = np.zeros((len(trees), num_observations))
-        np.random.randint(len(trees))
         for draw, trees_to_sum in enumerate(trees):
             new_Y = np.zeros(num_observations)
             for tree in trees_to_sum:
@@ -232,6 +249,20 @@ def discrete_uniform_sampler(upper_value):
     return int(np.random.random() * upper_value)
 
 
+class NormalSampler:
+    def __init__(self):
+        self.size = 1000
+        self.cache = []
+
+    def random(self):
+        if not self.cache:
+            self.update()
+        return self.cache.pop()
+
+    def update(self):
+        self.cache = np.random.normal(loc=0.0, scale=1, size=self.size).tolist()
+
+
 class SampleSplittingVariable:
     def __init__(self, prior, num_variates):
         self.prior = prior
@@ -272,13 +303,32 @@ class BART(BaseBART):
     m : int
         Number of trees
     alpha : float
-        Control the prior probability over the depth of the trees. Must be in the interval (0, 1),
-        altought it is recomenned to be in the interval (0, 0.5].
+        Control the prior probability over the depth of the trees. Even when it can takes values in
+        the interval (0, 1), it is recommended to be in the interval (0, 0.5].
+    k : int
+        LALALA. Recomended to be between 1 and 3
     split_prior : array-like
         Each element of split_prior should be in the [0, 1] interval and the elements should sum
         to 1. Otherwise they will be normalized.
         Defaults to None, all variable have the same a prior probability
+    jitter : bool
+        Whether to jitter the X values or not. Defaults to False. When values of X are repeated,
+        jittering X has the effect of increasing the number of effective spliting variables,
+        otherwise it does not have any effect.
     """
 
-    def __init__(self, X, Y, m=200, alpha=0.25, split_prior=None):
-        super().__init__(X, Y, m, alpha, split_prior)
+    def __init__(self, X, Y, m=50, alpha=0.25, k=2, split_prior=None, jitter=False):
+        super().__init__(X, Y, m, alpha, k, split_prior, jitter)
+
+    def _str_repr(self, name=None, dist=None, formatting="plain"):
+        if dist is None:
+            dist = self
+        X = (type(self.X),)
+        Y = (type(self.Y),)
+        alpha = self.alpha
+        m = self.m
+
+        if "latex" in formatting:
+            return f"$\\text{{{name}}} \\sim  \\text{{BART}}(\\text{{alpha = }}\\text{{{alpha}}}, \\text{{m = }}\\text{{{m}}})$"
+        else:
+            return f"{name} ~ BART(alpha = {alpha}, m = {m})"
