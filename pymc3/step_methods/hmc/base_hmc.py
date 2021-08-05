@@ -225,6 +225,7 @@ class BaseHMC(arraystep.GradientSharedStep):
 
     def reset(self, start=None):
         self.tune = True
+        self.iter_count = 0
         self.potential.reset()
 
     def warnings(self):
