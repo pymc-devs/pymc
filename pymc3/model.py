@@ -1224,9 +1224,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         name = rv_var.name
         data = pandas_to_array(data).astype(rv_var.dtype)
 
-        if data.ndim != rv_var.ndim:
+        if data.ndim != rv_var.ndim_supp:
             raise ShapeError(
-                "Dimensionality of data and RV don't match.", actual=data.ndim, expected=rv_var.ndim
+                "Dimensionality of data and RV don't match.", actual=data.ndim, expected=rv_var.ndim_supp
             )
 
         if aesara.config.compute_test_value != "off":
