@@ -178,7 +178,10 @@ class Metropolis(ArrayStepShared):
 
         # remember initial settings before tuning so they can be reset
         self._untuned_settings = dict(
-            scaling=self.scaling, steps_until_tune=tune_interval, accepted=self.accepted
+            scaling=self.scaling,
+            steps_until_tune=tune_interval,
+            accepted=self.accepted,
+            tune=self.tune,
         )
 
         self.mode = mode
