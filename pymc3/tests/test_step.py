@@ -41,7 +41,7 @@ from pymc3.distributions import (
 )
 from pymc3.exceptions import SamplingError
 from pymc3.model import Model, Potential, set_data
-from pymc3.sampling import assign_step_methods, sample
+from pymc3.sampling import assign_step_methods, sample, _iter_sample
 from pymc3.step_methods import (
     MLDA,
     NUTS,
@@ -676,6 +676,22 @@ class TestCompoundStep:
                 sampler_instance = sampler(blocked=True)
                 assert not isinstance(sampler_instance, CompoundStep)
                 assert isinstance(sampler_instance, sampler)
+
+    def test_tune_parameter_in_sequential_chain_sampling(self):
+        __, model = simple_2model_continuous()
+        with model:
+            for sampler in (Metropolis, HamiltonianMC, NUTS):
+                sampler_instance = sampler(blocked=False)
+                assert isinstance(sampler_instance, CompoundStep)
+                for __ in range(2):
+                    sampling = _iter_sample(draws=3, step=sampler_instance, tune=1)
+                    tune_sampler = []
+                    tune_method = []
+                    for __ in sampling:
+                        tune_sampler.append(sampler_instance.tune)
+                        tune_method.append([method.tune for method in sampler_instance.methods])
+                    assert [True, False, False] == tune_sampler
+                    assert [[True, True], [False, False], [False, False]] == tune_method
 
 
 class TestAssignStepMethods:
