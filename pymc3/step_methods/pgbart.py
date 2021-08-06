@@ -15,15 +15,17 @@
 import logging
 
 import numpy as np
-from scipy.stats import triang
+from pandas import DataFrame, Series
 
-from theano import function as theano_function
+from aesara import function as aesara_function
 
-from pymc3.distributions import BART
-from pymc3.distributions.tree import Tree
+from pymc3.aesaraf import inputvars, join_nonshared_inputs, make_shared_replacements
+from pymc3.distributions.bart import BARTRV
+from pymc3.distributions.tree import LeafNode, SplitNode, Tree
 from pymc3.model import modelcontext
 from pymc3.step_methods.arraystep import ArrayStepShared, Competence
-from pymc3.aesaraf import inputvars, join_nonshared_inputs, make_shared_replacements
+from pymc3.blocking import RaveledVars
+
 
 _log = logging.getLogger("pymc3")
 
@@ -60,8 +62,35 @@ class PGBART(ArrayStepShared):
     def __init__(self, vars=None, num_particles=10, max_stages=5000, chunk="auto", model=None):
         _log.warning("The BART model is experimental. Use with caution.")
         model = modelcontext(model)
-        vars = inputvars(vars)
-        self.bart = vars[0].distribution
+        initial_values = model.initial_point
+        value_bart = inputvars(vars)[0]
+        self.bart = model.values_to_rvs[value_bart].owner.op
+
+        self.X, self.Y, self.missing_data = preprocess_XY(self.bart.X, self.bart.Y)
+        self.m = self.bart.m
+        self.alpha = self.bart.alpha
+        self.k = self.bart.k
+
+        self.init_mean = self.Y.mean()
+        # if data is binary
+        if np.all(np.unique(self.Y) == [0, 1]):
+            self.mu_std = 6 / (self.k * self.m ** 0.5)
+        # maybe we need to check for count data
+        else:
+            self.mu_std = self.Y.std() / (self.k * self.m ** 0.5)
+
+        self.num_observations = self.X.shape[0]
+        self.num_variates = self.X.shape[1]
+        self.available_predictors = list(range(self.num_variates))
+        self.ssv = SampleSplittingVariable(None, self.num_variates)
+        self.initial_value_leaf_nodes = self.init_mean / self.m
+
+        self.trees, self.sum_trees_output = init_list_of_trees(
+            self.initial_value_leaf_nodes, self.num_observations, self.m, self.Y, self.init_mean
+        )
+        self.mean = fast_mean()
+        self.normal = NormalSampler()
+        self.prior_prob_leaf_node = compute_prior_probability(self.alpha)
 
         self.tune = True
         self.idx = 0
@@ -70,43 +99,43 @@ class PGBART(ArrayStepShared):
         self.chunk = chunk
 
         if chunk == "auto":
-            self.chunk = max(1, int(self.bart.m * 0.1))
-        self.bart.chunk = self.chunk
+            self.chunk = max(1, int(self.m * 0.1))
+        # self.bart.chunk = self.chunk
         self.num_particles = num_particles
         self.log_num_particles = np.log(num_particles)
         self.indices = list(range(1, num_particles))
         self.max_stages = max_stages
 
-        shared = make_shared_replacements(vars, model)
-        self.likelihood_logp = logp([model.datalogpt], vars, shared)
-        self.init_leaf_nodes = self.bart.initial_value_leaf_nodes
-        self.init_likelihood = self.likelihood_logp(self.bart.sum_trees_output)
+        shared = make_shared_replacements(initial_values, vars, model)
+        self.likelihood_logp = logp(initial_values, [model.datalogpt], vars, shared)
+        self.init_leaf_nodes = self.initial_value_leaf_nodes
+        self.init_likelihood = self.likelihood_logp(self.sum_trees_output)
         self.init_log_weight = self.init_likelihood - self.log_num_particles
         self.old_trees_particles_list = []
-        for i in range(self.bart.m):
+        for i in range(self.m):
             p = ParticleTree(
-                self.bart.trees[i],
-                self.bart.prior_prob_leaf_node,
+                self.trees[i],
+                self.prior_prob_leaf_node,
                 self.init_log_weight,
                 self.init_likelihood,
             )
             self.old_trees_particles_list.append(p)
         super().__init__(vars, shared)
 
-    def astep(self, _):
-        bart = self.bart
+    def astep(self, q):
+        point_map_info = q.point_map_info
 
-        variable_inclusion = np.zeros(bart.num_variates, dtype="int")
+        variable_inclusion = np.zeros(self.num_variates, dtype="int")
 
-        if self.idx == bart.m:
+        if self.idx == self.m:
             self.idx = 0
 
         for idx in range(self.idx, self.idx + self.chunk):
-            if idx >= bart.m:
+            if idx >= self.m:
                 break
             self.idx += 1
-            tree = bart.trees[idx]
-            sum_trees_output_noi = bart.sum_trees_output - tree.predict_output()
+            tree = self.trees[idx]
+            sum_trees_output_noi = self.sum_trees_output - tree.predict_output()
             # Generate an initial set of SMC particles
             # at the end of the algorithm we return one of these particles as the new tree
             particles = self.init_particles(tree.tree_id)
@@ -116,7 +145,17 @@ class PGBART(ArrayStepShared):
                 particles[0] = self.get_old_tree_particle(tree.tree_id, t)
                 # sample each particle (try to grow each tree)
                 for c in range(1, self.num_particles):
-                    particles[c].sample_tree_sequential(bart)
+                    particles[c].sample_tree_sequential(
+                        self.ssv,
+                        self.available_predictors,
+                        self.X,
+                        self.missing_data,
+                        self.sum_trees_output,
+                        self.mean,
+                        self.m,
+                        self.normal,
+                        self.mu_std,
+                    )
                 # Update weights. Since the prior is used as the proposal,the weights
                 # are updated additively as the ratio of the new and old log_likelihoods
                 for p in particles:
@@ -150,27 +189,31 @@ class PGBART(ArrayStepShared):
             # Get the new tree and update
             new_tree = np.random.choice(particles, p=normalized_weights)
             self.old_trees_particles_list[tree.tree_id] = new_tree
-            bart.trees[idx] = new_tree.tree
-            bart.sum_trees_output = sum_trees_output_noi + new_tree.tree.predict_output()
+            self.trees[idx] = new_tree.tree
+            self.sum_trees_output = sum_trees_output_noi + new_tree.tree.predict_output()
 
             if not self.tune:
                 self.iter += 1
                 self.sum_trees.append(new_tree.tree)
-                if not self.iter % bart.m:
-                    bart.all_trees.append(self.sum_trees)
+                if not self.iter % self.m:
+                    # update the all_trees variable in BARTRV to be used in the rng_fn method
+                    # fails for chains > 1
+                    self.bart.all_trees.append(self.sum_trees)
                     self.sum_trees = []
                 for index in new_tree.used_variates:
                     variable_inclusion[index] += 1
 
         stats = {"variable_inclusion": variable_inclusion}
-        return bart.sum_trees_output, [stats]
+        sum_trees_output = RaveledVars(self.sum_trees_output, point_map_info)
+        return sum_trees_output, [stats]
 
     @staticmethod
     def competence(var, has_grad):
         """
         PGBART is only suitable for BART distributions
         """
-        if isinstance(var.distribution, BART):
+        dist = getattr(var.owner, "op", None)
+        if isinstance(dist, BARTRV):
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
@@ -205,14 +248,14 @@ class PGBART(ArrayStepShared):
         prev_tree.log_weight = likelihood - self.log_num_particles
         particles = [prev_tree]
 
-        initial_idx_data_points_leaf_nodes = np.arange(self.bart.num_observations, dtype="int32")
+        initial_idx_data_points_leaf_nodes = np.arange(self.num_observations, dtype="int32")
         new_tree = Tree.init_tree(
             tree_id=tree_id,
             leaf_node_value=self.init_leaf_nodes,
             idx_data_points=initial_idx_data_points_leaf_nodes,
         )
 
-        prior_prob = self.bart.prior_prob_leaf_node
+        prior_prob = self.prior_prob_leaf_node
         for _ in range(1, self.num_particles):
             particles.append(
                 ParticleTree(new_tree, prior_prob, self.init_log_weight, self.init_likelihood)
@@ -243,16 +286,27 @@ class ParticleTree:
         self.old_likelihood_logp = likelihood
         self.used_variates = []
 
-    def sample_tree_sequential(self, bart):
+    def sample_tree_sequential(
+        self, ssv, available_predictors, X, missing_data, sum_trees_output, mean, m, normal, mu_std
+    ):
         if self.expansion_nodes:
             index_leaf_node = self.expansion_nodes.pop(0)
             # Probability that this node will remain a leaf node
             prob_leaf = self.prior_prob_leaf_node[self.tree[index_leaf_node].depth]
 
             if prob_leaf < np.random.random():
-                grow_successful, index_selected_predictor = bart.grow_tree(
+                grow_successful, index_selected_predictor = grow_tree(
                     self.tree,
                     index_leaf_node,
+                    ssv,
+                    available_predictors,
+                    X,
+                    missing_data,
+                    sum_trees_output,
+                    mean,
+                    m,
+                    normal,
+                    mu_std,
                 )
                 if grow_successful:
                     # Add new leaf nodes indexes
@@ -272,8 +326,208 @@ class ParticleTree:
             self.expansion_nodes = self.expansion_nodes_history[t]
 
 
-def logp(out_vars, vars, shared):
-    """Compile Theano function of the model and the input and output variables.
+def preprocess_XY(X, Y):
+    if isinstance(Y, (Series, DataFrame)):
+        Y = Y.to_numpy()
+    if isinstance(X, (Series, DataFrame)):
+        X = X.to_numpy()
+    missing_data = np.any(np.isnan(X))
+    Y = Y.astype(float)
+    return X, Y, missing_data
+
+
+class SampleSplittingVariable:
+    def __init__(self, prior, num_variates):
+        self.prior = prior
+        self.num_variates = num_variates
+
+        if self.prior is not None:
+            self.prior = np.asarray(self.prior)
+            self.prior = self.prior / self.prior.sum()
+            if self.prior.size != self.num_variates:
+                raise ValueError(
+                    f"The size of split_prior ({self.prior.size}) should be the "
+                    f"same as the number of covariates ({self.num_variates})"
+                )
+            self.enu = list(enumerate(np.cumsum(self.prior)))
+
+    def rvs(self):
+        if self.prior is None:
+            return int(np.random.random() * self.num_variates)
+        else:
+            r = np.random.random()
+            for i, v in self.enu:
+                if r <= v:
+                    return i
+
+
+def init_list_of_trees(initial_value_leaf_nodes, num_observations, m, Y, init_mean):
+    initial_value_leaf_nodes = initial_value_leaf_nodes
+    initial_idx_data_points_leaf_nodes = np.array(range(num_observations), dtype="int32")
+    list_of_trees = []
+    for i in range(m):
+        new_tree = Tree.init_tree(
+            tree_id=i,
+            leaf_node_value=initial_value_leaf_nodes,
+            idx_data_points=initial_idx_data_points_leaf_nodes,
+        )
+        list_of_trees.append(new_tree)
+    sum_trees_output = np.full_like(Y, init_mean)
+
+    return list_of_trees, sum_trees_output
+
+
+def compute_prior_probability(alpha):
+    """
+    Calculate the probability of the node being a LeafNode (1 - p(being SplitNode)).
+    Taken from equation 19 in [Rockova2018].
+
+    Parameters
+    ----------
+    alpha : float
+
+    Returns
+    -------
+    list with probabilities for leaf nodes
+
+    References
+    ----------
+    .. [Rockova2018] Veronika Rockova, Enakshi Saha (2018). On the theory of BART.
+    arXiv, `link <https://arxiv.org/abs/1810.00787>`__
+    """
+    prior_leaf_prob = [0]
+    depth = 1
+    while prior_leaf_prob[-1] < 1:
+        prior_leaf_prob.append(1 - alpha ** depth)
+        depth += 1
+    return prior_leaf_prob
+
+
+def grow_tree(
+    tree,
+    index_leaf_node,
+    ssv,
+    available_predictors,
+    X,
+    missing_data,
+    sum_trees_output,
+    mean,
+    m,
+    normal,
+    mu_std,
+):
+    current_node = tree.get_node(index_leaf_node)
+
+    index_selected_predictor = ssv.rvs()
+    selected_predictor = available_predictors[index_selected_predictor]
+    available_splitting_rules = get_available_splitting_rules(
+        X[current_node.idx_data_points, selected_predictor],
+        missing_data,
+    )
+    # This can be unsuccessful when there are not available splitting rules
+    if available_splitting_rules.size == 0:
+        return False, None
+
+    index_selected_splitting_rule = discrete_uniform_sampler(len(available_splitting_rules))
+    selected_splitting_rule = available_splitting_rules[index_selected_splitting_rule]
+    new_split_node = SplitNode(
+        index=index_leaf_node,
+        idx_split_variable=selected_predictor,
+        split_value=selected_splitting_rule,
+    )
+
+    left_node_idx_data_points, right_node_idx_data_points = get_new_idx_data_points(
+        new_split_node, current_node.idx_data_points, X
+    )
+
+    left_node_value = draw_leaf_value(
+        sum_trees_output[left_node_idx_data_points], mean, m, normal, mu_std
+    )
+    right_node_value = draw_leaf_value(
+        sum_trees_output[right_node_idx_data_points], mean, m, normal, mu_std
+    )
+
+    new_left_node = LeafNode(
+        index=current_node.get_idx_left_child(),
+        value=left_node_value,
+        idx_data_points=left_node_idx_data_points,
+    )
+    new_right_node = LeafNode(
+        index=current_node.get_idx_right_child(),
+        value=right_node_value,
+        idx_data_points=right_node_idx_data_points,
+    )
+    tree.grow_tree(index_leaf_node, new_split_node, new_left_node, new_right_node)
+
+    return True, index_selected_predictor
+
+
+def get_available_splitting_rules(X_j, missing_data):
+    if missing_data:
+        X_j = X_j[~np.isnan(X_j)]
+    values = np.unique(X_j)
+    # The last value is never available as it would leave the right subtree empty.
+    return values[:-1]
+
+
+def get_new_idx_data_points(current_split_node, idx_data_points, X):
+    idx_split_variable = current_split_node.idx_split_variable
+    split_value = current_split_node.split_value
+
+    left_idx = X[idx_data_points, idx_split_variable] <= split_value
+    left_node_idx_data_points = idx_data_points[left_idx]
+    right_node_idx_data_points = idx_data_points[~left_idx]
+
+    return left_node_idx_data_points, right_node_idx_data_points
+
+
+def draw_leaf_value(sum_trees_output_idx, mean, m, normal, mu_std):
+    """Draw Gaussian distributed leaf values"""
+    mu_mean = mean(sum_trees_output_idx) / m
+    # add cache of precomputed normal values
+    draw = normal.random() * mu_std + mu_mean
+    return draw
+
+
+def fast_mean():
+    """If available use Numba to speed up the computation of the mean."""
+    try:
+        from numba import jit
+    except ImportError:
+        return np.mean
+
+    @jit
+    def mean(a):
+        count = a.shape[0]
+        suma = 0
+        for i in range(count):
+            suma += a[i]
+        return suma / count
+
+    return mean
+
+
+def discrete_uniform_sampler(upper_value):
+    """Draw from the uniform distribution with bounds [0, upper_value)."""
+    return int(np.random.random() * upper_value)
+
+
+class NormalSampler:
+    def __init__(self):
+        self.size = 1000
+        self.cache = []
+
+    def random(self):
+        if not self.cache:
+            self.update()
+        return self.cache.pop()
+
+    def update(self):
+        self.cache = np.random.normal(loc=0.0, scale=1, size=self.size).tolist()
+
+
+def logp(point, out_vars, vars, shared):
+    """Compile Aesara function of the model and the input and output variables.
 
     Parameters
     ----------
@@ -282,9 +536,9 @@ def logp(out_vars, vars, shared):
     vars: List
         containing :class:`pymc3.Distribution` for the input variables
     shared: List
-        containing :class:`theano.tensor.Tensor` for depended shared data
+        containing :class:`aesara.tensor.Tensor` for depended shared data
     """
-    out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
-    f = theano_function([inarray0], out_list[0])
+    out_list, inarray0 = join_nonshared_inputs(point, out_vars, vars, shared)
+    f = aesara_function([inarray0], out_list[0])
     f.trust_input = True
     return f
