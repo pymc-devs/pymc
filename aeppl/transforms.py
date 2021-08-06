@@ -73,9 +73,10 @@ class TransformedRV(RandomVariable, metaclass=DistributionMeta):
 
 @_logprob.register(TransformedRV)
 def transformed_logprob(op, value, *inputs, name=None, **kwargs):
-    """
-    Compute logp graph for a value variable that was back-transformed to be on
-    the natural support of the respective random variable.
+    """Compute the log-likelihood graph for a `TransformedRV`.
+
+    We assume that the value variable was back-transformed to be on the natural
+    support of the respective random variable.
     """
 
     logprob = _logprob(op.base_op, value, *inputs, name=name, **kwargs)
