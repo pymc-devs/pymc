@@ -1,5 +1,5 @@
 import abc
-from functools import singledispatch
+from functools import partial, singledispatch
 from typing import Dict, List, Optional, Type, Union
 
 import aesara.tensor as at
@@ -98,14 +98,16 @@ DEFAULT_TRANSFORM = DefaultTransformSentinel()
 
 
 @local_optimizer(tracks=None)
-def default_transform(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
-    """
-    Apply default transform to value variables. It is assumed that the input
-    value variables correspond to forward transformations, usually chosen in
-    such a way that the values are unconstrained on the real line.
+def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
+    """Apply transforms to value variables.
 
-    e.g., if Y ~ HalfNormal, we assume the respective value variable is specified
-    on the log scale and back-transform it to obtain Y on the natural scale.
+    It is assumed that the input value variables correspond to forward
+    transformations, usually chosen in such a way that the values are
+    unconstrained on the real line.
+
+    For example, if ``Y = halfnormal(...)``, we assume the respective value
+    variable is specified on the log scale and back-transform it to obtain
+    ``Y`` on the natural scale.
     """
 
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
@@ -133,7 +135,7 @@ def default_transform(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]
             return None
         transform = trans_node.op.transform
     else:
-        new_op = create_default_transformed_rv_op(node.op, transform, default=False)()
+        new_op = _create_transformed_rv_op(node.op, transform)()
         trans_node = new_op.make_node(*node.inputs)
         trans_node.outputs[1].name = node.outputs[1].name
 
@@ -168,7 +170,7 @@ class TransformValuesMapping(Feature):
 class TransformValuesOpt(GlobalOptimizer):
     r"""Transforms value variables according to a map and/or per-`RandomVariable` defaults."""
 
-    default_transform_opt = in2out(default_transform, ignore_newtrees=True)
+    default_transform_opt = in2out(transform_values, ignore_newtrees=True)
 
     def __init__(
         self,
@@ -299,11 +301,11 @@ class CircularTransform(RVTransform):
         return at.zeros(value.shape)
 
 
-def create_default_transformed_rv_op(
+def _create_transformed_rv_op(
     rv_op: Op,
     transform: RVTransform,
     *,
-    default: bool = True,
+    default: bool = False,
     cls_dict_extra: Optional[Dict] = None,
 ) -> Type[TransformedRV]:
     """Create a new `TransformedRV` given a base `RandomVariable` `Op`
@@ -337,6 +339,9 @@ def create_default_transformed_rv_op(
     new_op_type = type(f"Transformed{rv_type_name}", (TransformedRV,), cls_dict)
 
     return new_op_type
+
+
+create_default_transformed_rv_op = partial(_create_transformed_rv_op, default=True)
 
 
 TransformedUniformRV = create_default_transformed_rv_op(
