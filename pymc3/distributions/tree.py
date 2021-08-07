@@ -21,15 +21,18 @@ import numpy as np
 
 class Tree:
     """Full binary tree
+
     A full binary tree is a tree where each node has exactly zero or two children.
     This structure is used as the basic component of the Bayesian Additive Regression Tree (BART)
+
     Attributes
     ----------
     tree_structure : dict
-        A dictionary that represents the nodes stored in breadth-first order, based in the array method
-        for storing binary trees (https://en.wikipedia.org/wiki/Binary_tree#Arrays).
+        A dictionary that represents the nodes stored in breadth-first order, based in the array
+        method for storing binary trees (https://en.wikipedia.org/wiki/Binary_tree#Arrays).
         The dictionary's keys are integers that represent the nodes position.
-        The dictionary's values are objects of type SplitNode or LeafNode that represent the nodes of the tree itself.
+        The dictionary's values are objects of type SplitNode or LeafNode that represent the nodes
+        of the tree itself.
     num_nodes : int
         Total number of nodes.
     idx_leaf_nodes : list
@@ -39,10 +42,14 @@ class Tree:
         its children are leaf nodes.
     tree_id : int
         Identifier used to get the previous tree in the ParticleGibbs algorithm used in BART.
+    num_observations : int
+        Number of observations used to fit BART.
+
 
     Parameters
     ----------
     tree_id : int, optional
+    num_observations : int, optional
     """
 
     def __init__(self, tree_id=0, num_observations=0):

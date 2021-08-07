@@ -22,9 +22,13 @@ __all__ = ["BART"]
 
 
 class BARTRV(RandomVariable):
+    """
+    Base class for BART
+    """
+
     name = "bart"
     ndim_supp = 1
-    ndims_params = [2, 1, 0, 0, 0]
+    ndims_params = [2, 1, 0, 0, 0, 1]
     dtype = "floatX"
     _print_name = ("BART", "\\operatorname{BART}")
     all_trees = None
@@ -37,8 +41,6 @@ class BARTRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, X_new=None, *args, **kwargs):
-        # in old version X_new could be passed by the user to get out-of-sample predictions
-
         all_trees = cls.all_trees
         if all_trees:
             pred = 0
@@ -67,7 +69,30 @@ bart = BARTRV()
 
 
 class BART(NoDistribution):
-    """Improper flat prior over the positive reals."""
+    """
+    BART distribution.
+
+    Distribution representing a sum over trees
+
+    Parameters
+    ----------
+    X : array-like
+        The covariate matrix.
+    Y : array-like
+        The response vector.
+    m : int
+        Number of trees
+    alpha : float
+        Control the prior probability over the depth of the trees. Even when it can takes values in
+        the interval (0, 1), it is recommended to be in the interval (0, 0.5].
+    k : int
+        Scale parameter for the values of the leaf nodes. Defaults to 2. Recomended to be between 1
+        and 3.
+    split_prior : array-like
+        Each element of split_prior should be in the [0, 1] interval and the elements should sum
+        to 1. Otherwise they will be normalized.
+        Defaults to None, i.e. all covariate have the same prior probability to be selected.
+    """
 
     def __new__(
         cls,
@@ -77,23 +102,24 @@ class BART(NoDistribution):
         m=50,
         alpha=0.25,
         k=2,
+        split_prior=None,
         ndim_supp=1,
-        ndims_params=[2, 1, 0, 0, 0],
+        ndims_params=[2, 1, 0, 0, 0, 1],
         dtype="floatX",
         **kwargs,
     ):
 
         if X.ndim != 2:
-            raise ValueError("The design matrix X must have two dimensions")
+            raise ValueError("The covariate matrix X must have two dimensions")
 
         if Y.ndim != 1:
-            raise ValueError("The response matrix Y must have one dimension")
+            raise ValueError("The response vector Y must have one dimension")
         if X.shape[0] != Y.shape[0]:
             raise ValueError(
-                "The design matrix X and the response matrix Y must have the same number of elements"
+                "The covariate matrix X and the response vector Y must have the same number of elements"
             )
         if not isinstance(m, int):
-            raise ValueError("The number of trees m type must be int")
+            raise ValueError("The number of trees m type must be an integer")
         if m < 1:
             raise ValueError("The number of trees m must be greater than zero")
 
@@ -103,6 +129,8 @@ class BART(NoDistribution):
                 "must be in the interval (0, 1)"
             )
 
+        if split_prior is None:
+            split_prior = np.ones(X.shape[1])
         cls.all_trees = []
         bart_op = type(
             f"BART_{name}",
@@ -114,11 +142,13 @@ class BART(NoDistribution):
                 ndims_params=ndims_params,
                 dtype=dtype,
                 inplace=False,
+                initval=Y.mean(),
                 X=X,
                 Y=Y,
                 m=m,
                 alpha=alpha,
                 k=k,
+                split_prior=split_prior,
             ),
         )()
 

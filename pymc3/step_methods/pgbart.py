@@ -70,6 +70,7 @@ class PGBART(ArrayStepShared):
         self.m = self.bart.m
         self.alpha = self.bart.alpha
         self.k = self.bart.k
+        self.split_prior = self.bart.split_prior
 
         self.init_mean = self.Y.mean()
         # if data is binary
@@ -82,7 +83,7 @@ class PGBART(ArrayStepShared):
         self.num_observations = self.X.shape[0]
         self.num_variates = self.X.shape[1]
         self.available_predictors = list(range(self.num_variates))
-        self.ssv = SampleSplittingVariable(None, self.num_variates)
+        self.ssv = SampleSplittingVariable(self.split_prior, self.num_variates)
         self.initial_value_leaf_nodes = self.init_mean / self.m
 
         self.trees, self.sum_trees_output = init_list_of_trees(
@@ -100,7 +101,6 @@ class PGBART(ArrayStepShared):
 
         if chunk == "auto":
             self.chunk = max(1, int(self.m * 0.1))
-        # self.bart.chunk = self.chunk
         self.num_particles = num_particles
         self.log_num_particles = np.log(num_particles)
         self.indices = list(range(1, num_particles))
@@ -196,8 +196,8 @@ class PGBART(ArrayStepShared):
                 self.iter += 1
                 self.sum_trees.append(new_tree.tree)
                 if not self.iter % self.m:
-                    # update the all_trees variable in BARTRV to be used in the rng_fn method
-                    # fails for chains > 1
+                    # XXX update the all_trees variable in BARTRV to be used in the rng_fn method
+                    # this fails for chains > 1 as the variable is not shared between proccesses
                     self.bart.all_trees.append(self.sum_trees)
                     self.sum_trees = []
                 for index in new_tree.used_variates:
@@ -265,7 +265,7 @@ class PGBART(ArrayStepShared):
 
     def resample(self, particles, weights):
         """
-        resample a set of particles given its weights
+        Resample a set of particles given its weights
         """
         particles = np.random.choice(particles, size=len(particles), p=weights)
         return particles
