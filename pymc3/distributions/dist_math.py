@@ -46,7 +46,7 @@ _beta_clip_values = {
 }
 
 
-def bound(logp, *conditions, broadcast_conditions, **kwargs):
+def bound(logp, *conditions, broadcast_conditions=True, **kwargs):
     """
     Bounds a log probability density with several conditions.
     When conditions are not met, the logp values are replaced by -inf.
