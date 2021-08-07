@@ -387,7 +387,7 @@ i0e_scalar = I0e(upgrade_to_float_no_complex, name="i0e")
 i0e = Elemwise(i0e_scalar, name="Elemwise{i0e,no_inplace}")
 
 
-def random_choice(*args, **kwargs):
+def random_choice(p, size):
     """Return draws from categorical probability functions
 
     Args:
@@ -403,8 +403,6 @@ def random_choice(*args, **kwargs):
         random sample: array
 
     """
-    p = kwargs.pop("p")
-    size = kwargs.pop("size")
     k = p.shape[-1]
 
     if p.ndim > 1:
