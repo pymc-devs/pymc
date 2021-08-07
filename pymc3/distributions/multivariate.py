@@ -2182,8 +2182,8 @@ class ICAR(Continuous):
         else:
             A = at.as_tensor_variable(floatX(A))
         tau = at.as_tensor_variable(floatX(tau))
-        Assert("`A` needs to be a 2D tensor")(at.eq(A.ndim, 2))
-        Assert("`tau` needs to be a 0D tensor")(at.eq(tau.ndim, 0))
+        A = Assert("`A` needs to be a 2D tensor")(A, at.eq(A.ndim, 2))
+        tau = Assert("`tau` needs to be a 0D tensor")(tau, at.eq(tau.ndim, 0))
         return super().dist([A, tau], **kwargs)
 
     def logp(value, A, tau):
