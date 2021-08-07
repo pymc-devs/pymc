@@ -46,7 +46,7 @@ _beta_clip_values = {
 }
 
 
-def bound(logp, *conditions, **kwargs):
+def bound(logp, *conditions, broadcast_conditions, **kwargs):
     """
     Bounds a log probability density with several conditions.
     When conditions are not met, the logp values are replaced by -inf.
@@ -81,8 +81,6 @@ def bound(logp, *conditions, **kwargs):
             return logp
     except TypeError:  # No model found
         pass
-
-    broadcast_conditions = kwargs.get("broadcast_conditions", True)
 
     if broadcast_conditions:
         alltrue = alltrue_elemwise
