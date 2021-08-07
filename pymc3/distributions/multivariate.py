@@ -2195,4 +2195,4 @@ class ICAR(Continuous):
             + 0.5 * at.log(d).sum()
             - 0.5 * tau * at.dot(value, at.dot(W, value))
         )
-        return bound(out, at.math.abs_(at.sum(value)) < 1e-06)
+        return bound(out, at.abs(at.sum(value)) < 1e-06)
