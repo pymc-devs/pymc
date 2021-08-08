@@ -167,21 +167,9 @@ class FullRankGroup(Group):
     @node_property
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
-        if self.batched:
-            raise NotImplementedError
-
-            def logq(z_b, mu_b, L_b):
-                return pm.MvNormal.dist(mu=mu_b, chol=L_b).logp(z_b)
-
-            # it's gonna be so slow
-            # scan is computed over batch and then summed up
-            # output shape is (batch, samples)
-            return aesara.scan(logq, [z.swapaxes(0, 1), self.mean, self.L])[0].sum(0)
-        else:
-            # return pm.MvNormal.dist(mu=self.mean, chol=self.L).logp(z)
-            logdet = at.sum(at.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1), axis=-1)
-            logq = pm.Normal.logp(z0, 0, 1) - logdet
-            return logq.sum(range(1, logq.ndim))
+        logdet = at.sum(at.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1), axis=-1, keepdims=True)
+        logq = pm.Normal.logp(z0, 0, 1) - logdet
+        return logq.sum(range(1, logq.ndim))
 
     @node_property
     def symbolic_random(self):
