@@ -647,7 +647,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         # The sequence of model-generated RNGs
         self.rng_seq = []
-        self.initial_values = {}
+        self._initial_values = {}
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -911,7 +911,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return inputvars(self.unobserved_RVs)
 
     @property
-    def test_point(self):
+    def test_point(self) -> Dict[str, np.ndarray]:
+        """Deprecated alias for `Model.initial_point`."""
         warnings.warn(
             "`Model.test_point` has been deprecated. Use `Model.initial_point` instead.",
             DeprecationWarning,
@@ -919,8 +920,18 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self.initial_point
 
     @property
-    def initial_point(self):
+    def initial_point(self) -> Dict[str, np.ndarray]:
+        """Maps names of variables to initial values."""
         return Point(list(self.initial_values.items()), model=self)
+
+    @property
+    def initial_values(self) -> Dict[TensorVariable, np.ndarray]:
+        """Maps transformed variables to initial values.
+
+        ⚠ The keys are NOT the objects returned by, `pm.Normal(...)`.
+        For a name-based dictionary use the `initial_point` property.
+        """
+        return self._initial_values
 
     @property
     def disc_vars(self):
@@ -1529,7 +1540,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         r"""Update point `a` with `b`, without overwriting existing keys.
 
         Values specified for transformed variables in `a` will be recomputed
-        conditional on the valures of `b` and stored in `b`.
+        conditional on the values of `b` and stored in `b`.
 
         """
         # TODO FIXME XXX: If we're going to incrementally update transformed
@@ -1716,7 +1727,7 @@ def fastfn(outs, mode=None, model=None):
     return model.fastfn(outs, mode)
 
 
-def Point(*args, filter_model_vars=False, **kwargs):
+def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
     """Build a point. Uses same args as dict() does.
     Filters out variables not in the model. All keys are strings.
 
@@ -1724,6 +1735,8 @@ def Point(*args, filter_model_vars=False, **kwargs):
     ----------
     args, kwargs
         arguments to build a dict
+    filter_model_vars : bool
+        If `True`, only model variables are included in the result.
     """
     model = modelcontext(kwargs.pop("model", None))
     args = list(args)
