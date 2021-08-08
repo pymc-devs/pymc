@@ -35,6 +35,7 @@ class TestInitvalAssignment:
             with pytest.warns(DeprecationWarning, match="`testval` argument is deprecated"):
                 rv = pm.Uniform("u", 0, 1, testval=0.75)
                 assert pmodel.initial_values[rv.tag.value_var] == transform_fwd(rv, 0.75)
+                assert not hasattr(rv.tag, "test_value")
         pass
 
 
