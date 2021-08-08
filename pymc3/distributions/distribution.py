@@ -219,12 +219,14 @@ class Distribution(metaclass=DistributionMeta):
             # A batch size was specified through `dims`, or implied by `observed`.
             rv_out = change_rv_size(rv_var=rv_out, new_size=resize_shape, expand=True)
 
-        if initval is not None:
-            # Assigning the testval earlier causes trouble because the RV may not be created with the final shape already.
-            rv_out.tag.test_value = initval
-
         rv_out = model.register_rv(
-            rv_out, name, observed, total_size, dims=dims, transform=transform
+            rv_out,
+            name,
+            observed,
+            total_size,
+            dims=dims,
+            transform=transform,
+            initval=initval,
         )
 
         # add in pretty-printing support

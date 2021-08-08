@@ -6,7 +6,7 @@
 - ⚠ PyMC3 now requires Scipy version `>= 1.4.1` (see [4857](https://github.com/pymc-devs/pymc3/pull/4857)).
 - ArviZ `plots` and `stats` *wrappers* were removed. The functions are now just available by their original names (see [#4549](https://github.com/pymc-devs/pymc3/pull/4471) and `3.11.2` release notes).
 - The GLM submodule has been removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
-- The `Distribution` keyword argument `testval` has been deprecated in favor of `initval`.
+- The `Distribution` keyword argument `testval` has been deprecated in favor of `initval`. Furthermore `initval` no longer assigns a `tag.test_value` on tensors since the initial values are now kept track of by the model object ([see #4913](https://github.com/pymc-devs/pymc3/pull/4913)).
 - `pm.sample` now returns results as `InferenceData` instead of `MultiTrace` by default (see [#4744](https://github.com/pymc-devs/pymc3/pull/4744)).
 - `pm.sample_prior_predictive` no longer returns transformed variable values by default. Pass them by name in `var_names` if you want to obtain these draws (see [4769](https://github.com/pymc-devs/pymc3/pull/4769)).
 - ...
