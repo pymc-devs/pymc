@@ -87,7 +87,7 @@ from pymc3.distributions.dist_math import (
 )
 from pymc3.distributions.distribution import Continuous
 from pymc3.math import logdiffexp, logit
-from pymc3.util import UNSET
+from pymc3.util import UNSET, select_initval
 
 __all__ = [
     "Uniform",
@@ -366,6 +366,18 @@ class Flat(Continuous):
         res.tag.test_value = np.full(size, floatX(0.0))
         return res
 
+    @classmethod
+    def pick_initval(cls, *, size=None, initval=UNSET, **kwargs) -> np.ndarray:
+        initval = select_initval(
+            candidate=initval,
+            default=np.full(size, floatX(0.0)),
+        )
+        if initval is None:
+            raise NotImplementedError(
+                "The `Flat` distribution does not support random initval sampling (`initval=None`)."
+            )
+        return initval
+
     def logp(value):
         """
         Calculate log-probability of Flat distribution at specified value.
@@ -427,6 +439,18 @@ class HalfFlat(PositiveContinuous):
         res = super().dist([], size=size, **kwargs)
         res.tag.test_value = np.full(size, floatX(1.0))
         return res
+
+    @classmethod
+    def pick_initval(cls, *, size=None, initval=UNSET, **kwargs) -> np.ndarray:
+        initval = select_initval(
+            candidate=initval,
+            default=np.full(size, floatX(1.0)),
+        )
+        if initval is None:
+            raise NotImplementedError(
+                "The `HalfFlat` distribution does not support random initval sampling (`initval=None`)."
+            )
+        return initval
 
     def logp(value):
         """

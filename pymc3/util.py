@@ -15,13 +15,14 @@
 import functools
 import warnings
 
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import arviz
 import cloudpickle
 import numpy as np
 import xarray
 
+from aesara.graph.basic import Variable
 from cachetools import LRUCache, cachedmethod
 
 
@@ -36,6 +37,36 @@ class _UnsetType:
 
 
 UNSET = _UnsetType()
+
+
+def select_initval(
+    candidate: Any,
+    default: Any,
+) -> Union[int, float, None, np.ndarray, _UnsetType, Variable]:
+    """Picks a compatible initial value such that it's either numeric, UNSET, a Variable, or None.
+
+    Parameters
+    ----------
+    candidate
+        A potential initval value.
+        If this incompatible or UNSET the default will be considered.
+        Typical values are UNSET, None or instances of ndarray, int, float or Variable.
+    default
+        A fallback initval value.
+        If this and the candidate incompatible `None` will be returned instead.
+        Typical values are UNSET, None or instances of ndarray, int, float or Variable.
+    """
+    valid_types = (int, float, np.ndarray, list, tuple, type(None), Variable)
+    valid_candidate = isinstance(candidate, valid_types) or candidate is UNSET
+    valid_default = isinstance(default, valid_types) or default is UNSET
+    if isinstance(candidate, valid_types) or (valid_candidate and not valid_default):
+        return candidate
+    elif valid_default:
+        # The candidate is UNSET or incompatible, but a compatible default is available.
+        return default
+    # Neither candidate nor default can be used.
+    # With initval=None the Model with draw an initval randomly.
+    return None
 
 
 def withparent(meth):

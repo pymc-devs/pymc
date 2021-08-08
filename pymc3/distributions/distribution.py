@@ -19,11 +19,13 @@ import types
 import warnings
 
 from abc import ABCMeta
-from typing import Optional
+from typing import Optional, Union
 
 import aesara
 import aesara.tensor as at
+import numpy as np
 
+from aesara.graph.basic import Constant, Variable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
 
@@ -42,7 +44,7 @@ from pymc3.distributions.shape_utils import (
     resize_from_observed,
 )
 from pymc3.printing import str_for_dist
-from pymc3.util import UNSET
+from pymc3.util import UNSET, select_initval
 from pymc3.vartypes import string_types
 
 __all__ = [
@@ -126,7 +128,7 @@ class Distribution(metaclass=DistributionMeta):
         *args,
         rng=None,
         dims: Optional[Dims] = None,
-        initval=None,
+        initval=UNSET,
         observed=None,
         total_size=None,
         transform=UNSET,
@@ -149,6 +151,9 @@ class Distribution(metaclass=DistributionMeta):
         initval : optional
             Test value to be attached to the output RV.
             Must match its shape exactly.
+            If set to `None`, an initial value will be drawn randomly.
+            With a value of `UNSET`, or not passing `initval` the `cls` distribution
+            may provide a default initial value at its own discretion.
         observed : optional
             Observed data to be passed when registering the random variable in the model.
             See ``Model.register_rv``.
@@ -219,6 +224,10 @@ class Distribution(metaclass=DistributionMeta):
             # A batch size was specified through `dims`, or implied by `observed`.
             rv_out = change_rv_size(rv_var=rv_out, new_size=resize_shape, expand=True)
 
+        initval = select_initval(
+            candidate=initval,
+            default=cls.pick_initval(*args, rng=rng, **kwargs),
+        )
         rv_out = model.register_rv(
             rv_out,
             name,
@@ -326,6 +335,14 @@ class Distribution(metaclass=DistributionMeta):
             rng.default_update = new_rng
 
         return rv_out
+
+    @classmethod
+    def pick_initval(cls, *args, **kwargs) -> Union[int, float, np.ndarray, Constant, Variable]:
+        """Fallback method for creating an initial value for a random variable.
+
+        Parameters are the same as for the `.dist()` method.
+        """
+        return None
 
 
 class NoDistribution(Distribution):

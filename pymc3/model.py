@@ -944,15 +944,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return list(typefilter(self.value_vars, continuous_types))
 
     def set_initval(self, rv_var, initval):
-        if initval is not None:
+        if not isinstance(initval, (type(None), TensorVariable)):
             initval = rv_var.type.filter(initval)
-
-        test_value = getattr(rv_var.tag, "test_value", None)
 
         rv_value_var = self.rvs_to_values[rv_var]
         transform = getattr(rv_value_var.tag, "transform", None)
 
-        if initval is None or transform:
+        if transform or isinstance(initval, (type(None), TensorVariable)):
             # Sample/evaluate this using the existing initial values, and
             # with the least effect on the RNGs involved (i.e. no in-placing)
             from aesara.compile.mode import Mode, get_mode
@@ -981,17 +979,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             initval_fn = aesara.function(
                 [], rv_var, mode=mode, givens=givens, on_unused_input="ignore"
             )
-            try:
-                initval = initval_fn()
-            except NotImplementedError as ex:
-                if "Cannot sample from" in ex.args[0]:
-                    # The RV does not have a random number generator.
-                    # Our last chance is to take the test_value.
-                    # Note that this is a workaround for Flat and HalfFlat
-                    # until an initval default mechanism is implemented (#4752).
-                    initval = test_value
-                else:
-                    raise
+            initval = initval_fn()
 
         self.initial_values[rv_value_var] = initval
 
