@@ -202,9 +202,9 @@ class Distribution(metaclass=DistributionMeta):
             )
         dims = convert_dims(dims)
 
-        # Create the RV without specifying initval, because the initval may have a shape
-        # that only matches after replicating with a size implied by dims (see below).
-        rv_out = cls.dist(*args, rng=rng, initval=None, **kwargs)
+        # Create the RV without dims information, because that's not something tracked at the Aesara level.
+        # If necessary we'll later replicate to a different size implied by already known dims.
+        rv_out = cls.dist(*args, rng=rng, **kwargs)
         ndim_actual = rv_out.ndim
         resize_shape = None
 
@@ -242,7 +242,6 @@ class Distribution(metaclass=DistributionMeta):
         *,
         shape: Optional[Shape] = None,
         size: Optional[Size] = None,
-        initval=None,
         **kwargs,
     ) -> RandomVariable:
         """Creates a RandomVariable corresponding to the `cls` distribution.
@@ -258,9 +257,6 @@ class Distribution(metaclass=DistributionMeta):
             all the dimensions that the RV would get if no shape/size/dims were passed at all.
         size : int, tuple, Variable, optional
             For creating the RV like in Aesara/NumPy.
-        initival : optional
-            Test value to be attached to the output RV.
-            Must match its shape exactly.
 
         Returns
         -------
@@ -268,15 +264,20 @@ class Distribution(metaclass=DistributionMeta):
             The created RV.
         """
         if "testval" in kwargs:
-            initval = kwargs.pop("testval")
+            kwargs.pop("testval")
             warnings.warn(
-                "The `testval` argument is deprecated. "
-                "Use `initval` to set initial values for a `Model`; "
-                "otherwise, set test values on Aesara parameters explicitly "
-                "when attempting to use Aesara's test value debugging features.",
+                "The `.dist(testval=...)` argument is deprecated and has no effect. "
+                "Initial values for sampling/optimization can be specified with `initval` in a modelcontext. "
+                "For using Aesara's test value features, you must assign the `.tag.test_value` yourself.",
                 DeprecationWarning,
                 stacklevel=2,
             )
+        if "initval" in kwargs:
+            raise TypeError(
+                "Unexpected keyword argument `initval`. "
+                "This argument is not available for the `.dist()` API."
+            )
+
         if "dims" in kwargs:
             raise NotImplementedError("The use of a `.dist(dims=...)` API is not supported.")
         if shape is not None and size is not None:
