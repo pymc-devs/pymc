@@ -835,8 +835,9 @@ def aevb_model():
         pm.Normal("y", size=(2,))
     x = model.x
     y = model.y
-    mu = aesara.shared(x.init_value)
-    rho = aesara.shared(np.zeros_like(x.init_value))
+    xr = model.initial_values[model.rvs_to_values[x]]
+    mu = aesara.shared(xr)
+    rho = aesara.shared(np.zeros_like(xr))
     return {"model": model, "y": y, "x": x, "replace": dict(mu=mu, rho=rho)}
 
 

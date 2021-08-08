@@ -955,6 +955,8 @@ class Group(WithMemoization):
     def __init_group__(self, group):
         if not group:
             raise GroupError("Got empty group")
+        if self.local:
+            raise NotImplementedInference("Local inferene aka AEVB is not fully supported in v4")
         if self.group is None:
             # delayed init
             self.group = group

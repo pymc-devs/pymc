@@ -346,6 +346,7 @@ class NormalizingFlowGroup(Group):
 
     @aesara.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
+        raise NotImplementedInference("Normalizing flows are not yet ported to v4")
         super().__init_group__(group)
         # objects to be resolved
         # 1. string formula
