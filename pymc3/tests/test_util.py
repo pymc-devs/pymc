@@ -20,7 +20,7 @@ from cachetools import cached
 import pymc3 as pm
 
 from pymc3.distributions.transforms import Transform
-from pymc3.util import hash_key, hashable, locally_cachedmethod
+from pymc3.util import UNSET, hash_key, hashable, locally_cachedmethod
 
 
 class TestTransformName:
@@ -127,3 +127,12 @@ def test_hash_key():
 
     tc = TestClass()
     assert tc.some_method(b1) != tc.some_method(b2)
+
+
+def test_unset_repr(capsys):
+    def fn(a=UNSET):
+        return
+
+    help(fn)
+    captured = capsys.readouterr()
+    assert "a=UNSET" in captured.out

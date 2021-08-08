@@ -24,7 +24,18 @@ import xarray
 
 from cachetools import LRUCache, cachedmethod
 
-UNSET = object()
+
+class _UnsetType:
+    """Type for the `UNSET` object to make it look nice in `help(...)` outputs."""
+
+    def __str__(self):
+        return "UNSET"
+
+    def __repr__(self):
+        return str(self)
+
+
+UNSET = _UnsetType()
 
 
 def withparent(meth):
