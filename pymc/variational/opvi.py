@@ -1650,13 +1650,15 @@ class Approximation(WithMemoization):
 
         return inner
 
-    def sample(self, draws=500):
+    def sample(self, draws=500, return_inferencedata=True):
         """Draw samples from variational posterior.
 
         Parameters
         ----------
         draws: `int`
             Number of random samples.
+        return_inferencedata: `bool`
+            Return trace in Arviz format
 
         Returns
         -------
@@ -1678,7 +1680,13 @@ class Approximation(WithMemoization):
                 trace.record(point)
         finally:
             trace.close()
-        return pm.sampling.MultiTrace([trace])
+        
+        trace = pm.sampling.MultiTrace([trace])
+        if not return_inferencedata:
+            return trace
+        else:
+            import arviz as az
+            return az.from_pymc3(trace)
 
     @property
     def ndim(self):
