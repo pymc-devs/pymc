@@ -39,7 +39,6 @@ import numpy as np
 import scipy.sparse as sps
 
 from aesara.compile.sharedvalue import SharedVariable
-from aesara.gradient import grad
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.opt import local_subtensor_rv_lift
@@ -446,7 +445,7 @@ class ValueGradFunction:
             givens.append((var, shared))
 
         if compute_grads:
-            grads = grad(cost, grad_vars, disconnected_inputs="ignore")
+            grads = aesara.grad(cost, grad_vars, disconnected_inputs="ignore")
             for grad_wrt, var in zip(grads, grad_vars):
                 grad_wrt.name = f"{var.name}_grad"
             outputs = [cost] + grads
