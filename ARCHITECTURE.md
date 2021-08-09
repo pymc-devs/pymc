@@ -67,7 +67,6 @@ In no particular order they are
 
 ## distributions/
 Contains multiple submodules that define distributions,  as well as logic that aids in distributions usage.
-Currently this module also contains functionality that enables specific model architectures such as BART and Time Series.
 Important modules to note are
 
 * `distribution.py`: This contains parent class for all PyMC3 distributions.
