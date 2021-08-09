@@ -60,7 +60,7 @@ class PGBART(ArrayStepShared):
     stats_dtypes = [{"variable_inclusion": np.ndarray}]
 
     def __init__(self, vars=None, num_particles=10, max_stages=5000, chunk="auto", model=None):
-        _log.warning("The BART model is experimental. Use with caution.")
+        _log.warning("BART is experimental. Use with caution.")
         model = modelcontext(model)
         initial_values = model.initial_point
         value_bart = inputvars(vars)[0]
@@ -166,17 +166,17 @@ class PGBART(ArrayStepShared):
                     p.old_likelihood_logp = new_likelihood
 
                 # Normalize weights
-                W, normalized_weights = self.normalize(particles)
+                W_t, normalized_weights = self.normalize(particles)
+
+                # Set the new weights
+                for p in particles:
+                    p.log_weight = W_t
+
                 # Resample all but first particle
                 re_n_w = normalized_weights[1:] / normalized_weights[1:].sum()
 
                 new_indices = np.random.choice(self.indices, size=len(self.indices), p=re_n_w)
                 particles[1:] = particles[new_indices]
-
-                # Set the new weights
-                w_t = W - self.log_num_particles
-                for p in particles:
-                    p.log_weight = w_t
 
                 # Check if particles can keep growing, otherwise stop iterating
                 non_available_nodes_for_expansion = np.ones(self.num_particles - 1)
@@ -219,19 +219,19 @@ class PGBART(ArrayStepShared):
 
     def normalize(self, particles):
         """
-        Use logsumexp trick to get W and softmax to get normalized_weights
+        Use logsumexp trick to get W_t and softmax to get normalized_weights
         """
         log_w = np.array([p.log_weight for p in particles])
         log_w_max = log_w.max()
         log_w_ = log_w - log_w_max
         w_ = np.exp(log_w_)
         w_sum = w_.sum()
-        W = log_w_max + np.log(w_sum)
+        W_t = log_w_max + np.log(w_sum) - self.log_num_particles
         normalized_weights = w_ / w_sum
         # stabilize weights to avoid assigning exactly zero probability to a particle
         normalized_weights += 1e-12
 
-        return W, normalized_weights
+        return W_t, normalized_weights
 
     def get_old_tree_particle(self, tree_id, t):
         old_tree_particle = self.old_trees_particles_list[tree_id]
@@ -513,6 +513,10 @@ def discrete_uniform_sampler(upper_value):
 
 
 class NormalSampler:
+    """
+    Cache samples from a standard normal distribution
+    """
+
     def __init__(self):
         self.size = 1000
         self.cache = []

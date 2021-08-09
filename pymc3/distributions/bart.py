@@ -70,7 +70,7 @@ bart = BARTRV()
 
 class BART(NoDistribution):
     """
-    BART distribution.
+    Bayesian Additive Regression Tree distribution.
 
     Distribution representing a sum over trees
 
@@ -85,13 +85,13 @@ class BART(NoDistribution):
     alpha : float
         Control the prior probability over the depth of the trees. Even when it can takes values in
         the interval (0, 1), it is recommended to be in the interval (0, 0.5].
-    k : int
+    k : float
         Scale parameter for the values of the leaf nodes. Defaults to 2. Recomended to be between 1
         and 3.
     split_prior : array-like
-        Each element of split_prior should be in the [0, 1] interval and the elements should sum
-        to 1. Otherwise they will be normalized.
-        Defaults to None, i.e. all covariate have the same prior probability to be selected.
+        Each element of split_prior should be in the [0, 1] interval and the elements should sum to
+        1. Otherwise they will be normalized.
+        Defaults to None, i.e. all covariates have the same prior probability to be selected.
     """
 
     def __new__(
@@ -109,29 +109,10 @@ class BART(NoDistribution):
         **kwargs,
     ):
 
-        if X.ndim != 2:
-            raise ValueError("The covariate matrix X must have two dimensions")
-
-        if Y.ndim != 1:
-            raise ValueError("The response vector Y must have one dimension")
-        if X.shape[0] != Y.shape[0]:
-            raise ValueError(
-                "The covariate matrix X and the response vector Y must have the same number of elements"
-            )
-        if not isinstance(m, int):
-            raise ValueError("The number of trees m type must be an integer")
-        if m < 1:
-            raise ValueError("The number of trees m must be greater than zero")
-
-        if alpha <= 0 or 1 <= alpha:
-            raise ValueError(
-                "The value for the alpha parameter for the tree structure "
-                "must be in the interval (0, 1)"
-            )
-
         if split_prior is None:
             split_prior = np.ones(X.shape[1])
         cls.all_trees = []
+
         bart_op = type(
             f"BART_{name}",
             (BARTRV,),

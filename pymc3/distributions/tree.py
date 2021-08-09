@@ -38,8 +38,8 @@ class Tree:
     idx_leaf_nodes : list
         List with the index of the leaf nodes of the tree.
     idx_prunable_split_nodes : list
-        List with the index of the prunable splitting nodes of the tree. A splitting node is prunable if both
-        its children are leaf nodes.
+        List with the index of the prunable splitting nodes of the tree. A splitting node is
+        prunable if both its children are leaf nodes.
     tree_id : int
         Identifier used to get the previous tree in the ParticleGibbs algorithm used in BART.
     num_observations : int
