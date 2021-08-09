@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import logging
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -99,7 +100,7 @@ class PGBART(ArrayStepShared):
         self.sum_trees = []
         self.chunk = chunk
 
-        if chunk == "auto":
+        if self.chunk == "auto":
             self.chunk = max(1, int(self.m * 0.1))
         self.num_particles = num_particles
         self.log_num_particles = np.log(num_particles)
@@ -122,7 +123,7 @@ class PGBART(ArrayStepShared):
             self.old_trees_particles_list.append(p)
         super().__init__(vars, shared)
 
-    def astep(self, q):
+    def astep(self, q: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
         point_map_info = q.point_map_info
 
         variable_inclusion = np.zeros(self.num_variates, dtype="int")
