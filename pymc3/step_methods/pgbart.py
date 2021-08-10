@@ -13,20 +13,20 @@
 #   limitations under the License.
 
 import logging
+
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
-from pandas import DataFrame, Series
 
 from aesara import function as aesara_function
+from pandas import DataFrame, Series
 
 from pymc3.aesaraf import inputvars, join_nonshared_inputs, make_shared_replacements
+from pymc3.blocking import RaveledVars
 from pymc3.distributions.bart import BARTRV
 from pymc3.distributions.tree import LeafNode, SplitNode, Tree
 from pymc3.model import modelcontext
 from pymc3.step_methods.arraystep import ArrayStepShared, Competence
-from pymc3.blocking import RaveledVars
-
 
 _log = logging.getLogger("pymc3")
 
@@ -66,6 +66,7 @@ class PGBART(ArrayStepShared):
         initial_values = model.initial_point
         value_bart = inputvars(vars)[0]
         self.bart = model.values_to_rvs[value_bart].owner.op
+        self.bart.all_trees = []
 
         self.X, self.Y, self.missing_data = preprocess_XY(self.bart.X, self.bart.Y)
         self.m = self.bart.m

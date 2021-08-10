@@ -15,8 +15,8 @@
 import numpy as np
 
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
-from pymc3.distributions.distribution import NoDistribution
 
+from pymc3.distributions.distribution import NoDistribution
 
 __all__ = ["BART"]
 
@@ -26,7 +26,7 @@ class BARTRV(RandomVariable):
     Base class for BART
     """
 
-    name = "bart"
+    name = "BART"
     ndim_supp = 1
     ndims_params = [2, 1, 0, 0, 0, 1]
     dtype = "floatX"
@@ -103,15 +103,12 @@ class BART(NoDistribution):
         alpha=0.25,
         k=2,
         split_prior=None,
-        ndim_supp=1,
-        ndims_params=[2, 1, 0, 0, 0, 1],
-        dtype="floatX",
         **kwargs,
     ):
 
         if split_prior is None:
             split_prior = np.ones(X.shape[1])
-        cls.all_trees = all_trees
+        cls.all_trees = []
 
         bart_op = type(
             f"BART_{name}",
@@ -119,9 +116,6 @@ class BART(NoDistribution):
             dict(
                 name="BART",
                 all_trees=cls.all_trees,
-                ndim_supp=ndim_supp,
-                ndims_params=ndims_params,
-                dtype=dtype,
                 inplace=False,
                 initval=Y.mean(),
                 X=X,
