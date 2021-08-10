@@ -40,11 +40,11 @@ class BARTRV(RandomVariable):
         return super().__new__(cls)
 
     @classmethod
-    def rng_fn(cls, X_new=None, *args, **kwargs):
+    def rng_fn(cls, rng, X_new=None, *args, **kwargs):
         all_trees = cls.all_trees
         if all_trees:
             pred = 0
-            idx = np.random.randint(len(all_trees))
+            idx = rng.randint(len(all_trees))
             trees = all_trees[idx]
             if X_new is None:
                 for tree in trees:
@@ -111,7 +111,7 @@ class BART(NoDistribution):
 
         if split_prior is None:
             split_prior = np.ones(X.shape[1])
-        cls.all_trees = []
+        cls.all_trees = all_trees
 
         bart_op = type(
             f"BART_{name}",

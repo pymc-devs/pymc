@@ -87,7 +87,7 @@ class PGBART(ArrayStepShared):
         self.ssv = SampleSplittingVariable(self.split_prior, self.num_variates)
         self.initial_value_leaf_nodes = self.init_mean / self.m
 
-        self.trees, self.sum_trees_output = init_list_of_trees(
+        self.trees, sum_trees_output = init_list_of_trees(
             self.initial_value_leaf_nodes, self.num_observations, self.m, self.Y, self.init_mean
         )
         self.mean = fast_mean()
@@ -110,7 +110,7 @@ class PGBART(ArrayStepShared):
         shared = make_shared_replacements(initial_values, vars, model)
         self.likelihood_logp = logp(initial_values, [model.datalogpt], vars, shared)
         self.init_leaf_nodes = self.initial_value_leaf_nodes
-        self.init_likelihood = self.likelihood_logp(self.sum_trees_output)
+        self.init_likelihood = self.likelihood_logp(sum_trees_output)
         self.init_log_weight = self.init_likelihood - self.log_num_particles
         self.old_trees_particles_list = []
         for i in range(self.m):
@@ -125,6 +125,7 @@ class PGBART(ArrayStepShared):
 
     def astep(self, q: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
         point_map_info = q.point_map_info
+        sum_trees_output = q.data
 
         variable_inclusion = np.zeros(self.num_variates, dtype="int")
 
@@ -136,7 +137,7 @@ class PGBART(ArrayStepShared):
                 break
             self.idx += 1
             tree = self.trees[idx]
-            sum_trees_output_noi = self.sum_trees_output - tree.predict_output()
+            sum_trees_output_noi = sum_trees_output - tree.predict_output()
             # Generate an initial set of SMC particles
             # at the end of the algorithm we return one of these particles as the new tree
             particles = self.init_particles(tree.tree_id)
@@ -151,7 +152,7 @@ class PGBART(ArrayStepShared):
                         self.available_predictors,
                         self.X,
                         self.missing_data,
-                        self.sum_trees_output,
+                        sum_trees_output,
                         self.mean,
                         self.m,
                         self.normal,
@@ -191,7 +192,7 @@ class PGBART(ArrayStepShared):
             new_tree = np.random.choice(particles, p=normalized_weights)
             self.old_trees_particles_list[tree.tree_id] = new_tree
             self.trees[idx] = new_tree.tree
-            self.sum_trees_output = sum_trees_output_noi + new_tree.tree.predict_output()
+            sum_trees_output = sum_trees_output_noi + new_tree.tree.predict_output()
 
             if not self.tune:
                 self.iter += 1
@@ -205,7 +206,7 @@ class PGBART(ArrayStepShared):
                     variable_inclusion[index] += 1
 
         stats = {"variable_inclusion": variable_inclusion}
-        sum_trees_output = RaveledVars(self.sum_trees_output, point_map_info)
+        sum_trees_output = RaveledVars(sum_trees_output, point_map_info)
         return sum_trees_output, [stats]
 
     @staticmethod
@@ -509,7 +510,10 @@ def fast_mean():
 
 
 def discrete_uniform_sampler(upper_value):
-    """Draw from the uniform distribution with bounds [0, upper_value)."""
+    """Draw from the uniform distribution with bounds [0, upper_value).
+
+    This is the same and np.random.randit(upper_value) but faster.
+    """
     return int(np.random.random() * upper_value)
 
 
