@@ -23,11 +23,13 @@ import pymc3 as pm
 
 from pymc3.aesaraf import floatX
 from pymc3.backends.base import MultiTrace
-from pymc3.smc.smc import SMC
+from pymc3.smc.smc import IMH
 from pymc3.tests.helpers import SeededTest
 
 
 class TestSMC(SeededTest):
+    """Tests for the default SMC kernel"""
+
     def setup_class(self):
         super().setup_class()
         self.samples = 1000
@@ -84,10 +86,9 @@ class TestSMC(SeededTest):
             z = pm.Bernoulli("z", p=0.7)
             like = pm.Potential("like", z * 1.0)
 
-        smc = SMC(model=m)
+        smc = IMH(model=m)
         smc.initialize_population()
-        smc.setup_kernel()
-        smc.initialize_logp()
+        smc._initialize_kernel()
 
         assert smc.prior_logp_func(floatX(np.array([-0.51]))) == -np.inf
         assert np.isclose(smc.prior_logp_func(floatX(np.array([-0.49]))), np.log(0.3))
@@ -112,7 +113,7 @@ class TestSMC(SeededTest):
 
         assert np.all(np.median(trace["z"], axis=0) == z_true)
 
-    def test_ml(self):
+    def test_marginal_likelihood(self):
         data = np.repeat([1, 0], [50, 50])
         marginals = []
         a_prior_0, b_prior_0 = 1.0, 1.0
@@ -125,7 +126,7 @@ class TestSMC(SeededTest):
                 trace = pm.sample_smc(2000, return_inferencedata=False)
                 marginals.append(trace.report.log_marginal_likelihood)
         # compare to the analytical result
-        assert abs(np.exp(np.mean(marginals[1]) - np.mean(marginals[0])) - 4.0) <= 1
+        assert abs(np.exp(np.nanmean(marginals[1]) - np.nanmean(marginals[0])) - 4.0) <= 1
 
     def test_start(self):
         with pm.Model() as model:
@@ -137,6 +138,23 @@ class TestSMC(SeededTest):
                 "b_log__": np.abs(np.random.normal(0, 10, size=500)),
             }
             trace = pm.sample_smc(500, chains=1, start=start)
+
+    def test_kernel_kwargs(self):
+        with self.fast_model:
+            trace = pm.sample_smc(
+                draws=10,
+                chains=1,
+                threshold=0.7,
+                n_steps=15,
+                tune_steps=False,
+                p_acc_rate=0.5,
+                return_inferencedata=False,
+            )
+            assert trace.report.threshold == 0.7
+            assert trace.report.n_draws == 10
+            assert trace.report.n_tune == 15
+            assert trace.report.tune_steps is False
+            assert trace.report.p_acc_rate == 0.5
 
     @pytest.mark.parametrize("chains", (1, 2))
     def test_return_datatype(self, chains):
