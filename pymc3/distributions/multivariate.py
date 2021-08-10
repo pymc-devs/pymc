@@ -1662,7 +1662,7 @@ class MatrixNormal(Continuous):
         if "shape" in kwargs:
             kwargs.pop("shape")
             warnings.warn(
-                "Passing shape to MatrixNormal is now depricated."
+                "The shape argument in MatrixNormal is deprecated and will be ignored."
                 "MatrixNormal automatically derives the shape"
                 "from row and column matrix dimensions.",
                 DeprecationWarning,
