@@ -41,7 +41,7 @@ from pymc3.distributions import (
 )
 from pymc3.exceptions import SamplingError
 from pymc3.model import Model, Potential, set_data
-from pymc3.sampling import assign_step_methods, sample, _iter_sample
+from pymc3.sampling import _iter_sample, assign_step_methods, sample
 from pymc3.step_methods import (
     MLDA,
     NUTS,
