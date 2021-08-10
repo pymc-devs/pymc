@@ -191,7 +191,7 @@ class ARMARV(RandomVariable):
     dtype = "floatX"
     _print_name = ("ARMA", "\\operatorname{ARMA}")
 
-    def __call__(self, phi=[], theta=[], loc=[0.0], scale=[1.0], size=100, **kwargs) -> TensorVariable:
+    def __call__(self, phi=[], theta=[], loc=[0.0], scale=[1.0], size=None, **kwargs) -> TensorVariable:
         return super().__call__(phi, theta, loc, scale, size=size, **kwargs)
 
     @classmethod
@@ -204,52 +204,61 @@ class ARMARV(RandomVariable):
             scale: np.ndarray,
             size: Tuple[int, ...],
     ) -> np.ndarray:
+
         phi = np.r_[1, -phi]
         theta = np.r_[1, theta]
-        x = rng.normal(loc=loc, scale=scale, size=size)
-        return signal.lfilter(theta, phi, x, axis=0)
+        if size:
+            x = rng.normal(loc=loc, scale=scale, size=size)
+        else:
+            x = rng.normal(loc=loc, scale=scale, size=100)
+        return signal.lfilter(theta, phi, x, axis=-1)
 
 
 ARMArv = ARMARV()
+
 
 class ARMA(Continuous):
     rv_op = ARMArv
 
     @classmethod
-    def dist(cls, P=None, Q=None, phi=None, theta=None, loc=0.0, scale=1.0,size=100, **kwargs):
+    def dist(cls, P=None, Q=None, phi=None, theta=None, loc=None, scale=None, *args, **kwargs):
         if (phi is None and P is None) or (theta is None and Q is None):
             raise ValueError('Specify (phi or P) and (theta or Q)')
 
         if phi is not None:
             phi = at.as_tensor_variable(floatX(phi))
         if phi is None:
-            phi = Uniform("phi",-0.99, 0.99,shape=P)
+            phi = Uniform("phi", -0.99, 0.99, shape=P)
         if theta is not None:
             theta = at.as_tensor_variable(floatX(theta))
         if theta is None:
-            theta = Uniform("theta",-0.99, 0.99, size=Q)
-        return super().dist([phi, theta], loc=loc, scale=scale,size=size, **kwargs)
-    
-    def logp(Y,phi=None, theta=None, loc=None, scale=None):
+            theta = Uniform("theta", -0.99, 0.99, size=Q)
+        if scale is None:
+            scale = pm.HalfNormal("scale", 5.0)
+        if loc is None:
+            loc = pm.Normal("loc", 0, 10.0)
+        return super().dist([phi, theta], loc=loc, scale=scale, *args, **kwargs)
+
+    def logp(Y, phi=None, theta=None, loc=None, scale=None):
         T = Y.shape[0]
         P = phi.shape[0]
         Q = theta.shape[0]
-        Y_lagged = at.zeros(shape=(T,P))
+        Y_lagged = at.zeros(shape=(T, P))
         for i in range(P.eval()):
-            Y_lagged = at.set_subtensor(Y_lagged[(i+1):,i], Y[:-(i+1)])
+            Y_lagged = at.set_subtensor(Y_lagged[(i + 1):, i], Y[:-(i + 1)])
 
         mu = at.fill(Y, loc) + at.dot(Y_lagged, at.transpose(phi))
-        eps = at.sub(Y,mu)
+        eps = at.sub(Y, mu)
 
-        epsilon_lagged = at.zeros(shape=(T,Q))
+        epsilon_lagged = at.zeros(shape=(T, Q))
         for j in range(Q.eval()):
-            epsilon_lagged = at.set_subtensor(epsilon_lagged[(j+1):,j], eps[:-(j+1)])
+            epsilon_lagged = at.set_subtensor(epsilon_lagged[(j + 1):, j], eps[:-(j + 1)])
 
         mu = mu + at.dot(epsilon_lagged, at.transpose(theta))
 
-        epsilon = at.sub(Y,mu)
+        epsilon = at.sub(Y, mu)
 
-        logp = at.sum(pm.logp(Normal.dist(mu=0.0, sigma=scale,size=T), epsilon))
+        logp = at.sum(pm.logp(Normal.dist(mu=0.0, sigma=scale, size=T), epsilon))
 
         return logp
     
