@@ -106,8 +106,6 @@ class BART(NoDistribution):
         **kwargs,
     ):
 
-        if split_prior is None:
-            split_prior = np.ones(X.shape[1])
         cls.all_trees = []
 
         bart_op = type(

@@ -74,6 +74,8 @@ class PGBART(ArrayStepShared):
         self.alpha = self.bart.alpha
         self.k = self.bart.k
         self.split_prior = self.bart.split_prior
+        if self.split_prior is None:
+            self.split_prior = np.ones(self.X.shape[1])
 
         self.init_mean = self.Y.mean()
         # if data is binary
@@ -86,7 +88,6 @@ class PGBART(ArrayStepShared):
         self.num_observations = self.X.shape[0]
         self.num_variates = self.X.shape[1]
         self.available_predictors = list(range(self.num_variates))
-        self.ssv = SampleSplittingVariable(self.split_prior, self.num_variates)
         self.initial_value_leaf_nodes = self.init_mean / self.m
 
         self.trees, sum_trees_output = init_list_of_trees(
@@ -130,6 +131,7 @@ class PGBART(ArrayStepShared):
         sum_trees_output = q.data
 
         variable_inclusion = np.zeros(self.num_variates, dtype="int")
+        self.ssv = SampleSplittingVariable(self.split_prior)
 
         if self.idx == self.m:
             self.idx = 0
@@ -195,6 +197,8 @@ class PGBART(ArrayStepShared):
             self.old_trees_particles_list[tree.tree_id] = new_tree
             self.trees[idx] = new_tree.tree
             sum_trees_output = sum_trees_output_noi + new_tree.tree.predict_output()
+            for index in new_tree.used_variates:
+                self.split_prior[index] += 1
 
             if not self.tune:
                 self.iter += 1
@@ -341,28 +345,21 @@ def preprocess_XY(X, Y):
 
 
 class SampleSplittingVariable:
-    def __init__(self, prior, num_variates):
-        self.prior = prior
-        self.num_variates = num_variates
+    def __init__(self, alpha_prior):
+        """
+        Sample splitting variables proportional to `alpha_prior`.
 
-        if self.prior is not None:
-            self.prior = np.asarray(self.prior)
-            self.prior = self.prior / self.prior.sum()
-            if self.prior.size != self.num_variates:
-                raise ValueError(
-                    f"The size of split_prior ({self.prior.size}) should be the "
-                    f"same as the number of covariates ({self.num_variates})"
-                )
-            self.enu = list(enumerate(np.cumsum(self.prior)))
+        This is equivalent as sampling weights from a Dirichlet distribution with `alpha_prior`
+        parameter and then using those weights to sample from the available spliting variables.
+        This enforce sparsity.
+        """
+        self.enu = list(enumerate(np.cumsum(alpha_prior / alpha_prior.sum())))
 
     def rvs(self):
-        if self.prior is None:
-            return int(np.random.random() * self.num_variates)
-        else:
-            r = np.random.random()
-            for i, v in self.enu:
-                if r <= v:
-                    return i
+        r = np.random.random()
+        for i, v in self.enu:
+            if r <= v:
+                return i
 
 
 def init_list_of_trees(initial_value_leaf_nodes, num_observations, m, Y, init_mean):
