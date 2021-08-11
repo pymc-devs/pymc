@@ -74,12 +74,15 @@ def bound(logp, *conditions, broadcast_conditions=True, model=None):
     """
 
     # If called inside a model context, see if bounds check is disabled
-    if model!=None:
-        from pymc3.model import modelcontext
+    if model is not None:
+        try:
+            from pymc3.model import modelcontext
 
-        model = modelcontext(model)
-        if not model.check_bounds:
-            return logp
+            model = modelcontext(model)
+            if not model.check_bounds:
+                return logp
+        except TypeError:
+            pass # no model found
 
     if broadcast_conditions:
         alltrue = alltrue_elemwise
