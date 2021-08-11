@@ -16,6 +16,7 @@ import logging
 
 from typing import Any, Dict, List, Tuple
 
+import aesara
 import numpy as np
 
 from aesara import function as aesara_function
@@ -375,7 +376,7 @@ def init_list_of_trees(initial_value_leaf_nodes, num_observations, m, Y, init_me
             idx_data_points=initial_idx_data_points_leaf_nodes,
         )
         list_of_trees.append(new_tree)
-    sum_trees_output = np.full_like(Y, init_mean)
+    sum_trees_output = np.full_like(Y, init_mean).astype(aesara.config.floatX)
 
     return list_of_trees, sum_trees_output
 

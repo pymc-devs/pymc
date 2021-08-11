@@ -16,6 +16,7 @@ import math
 
 from copy import deepcopy
 
+import aesara
 import numpy as np
 
 
@@ -91,7 +92,7 @@ class Tree:
             current_node = self.get_node(node_index)
             output[current_node.idx_data_points] = current_node.value
 
-        return output
+        return output.astype(aesara.config.floatX)
 
     def predict_out_of_sample(self, x):
         """
