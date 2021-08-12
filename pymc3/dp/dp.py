@@ -170,8 +170,7 @@ class DirichletProcess:
         """
         self.Xs = Xs
 
-        dirac = at.lt(self.base_dist, self.Xs)
-        linear_comb = at.sum(at.mul(self.weights, dirac), axis=1)
+
 
         prior_atoms = pm.Deterministic(
             name=name,
