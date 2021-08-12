@@ -171,7 +171,7 @@ def test_explicit_sample(mp_start_method):
 
 
 @pytest.mark.xfail(
-    condition=(IS_WINDOWS or IS_FLOAT32),
+    condition=(IS_FLOAT32),
     reason="Possibly the same issue described in https://github.com/pymc-devs/pymc3/pull/4701",
 )
 def test_iterator():
