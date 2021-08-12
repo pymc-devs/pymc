@@ -301,6 +301,9 @@ class TestDiffEqModel:
         assert idata.posterior["y0"].shape == (1, 100)
         assert idata.posterior["sigma"].shape == (1, 100)
 
+    @pytest.mark.xfail(
+        condition=IS_WINDOWS, reason="https://github.com/pymc-devs/aesara/issues/390"
+    )
     def test_scalar_ode_2_param(self):
         """Test running model for a scalar ODE with 2 parameters"""
 
