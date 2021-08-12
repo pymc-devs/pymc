@@ -24,7 +24,18 @@ import xarray
 
 from cachetools import LRUCache, cachedmethod
 
-UNSET = object()
+
+class _UnsetType:
+    """Type for the `UNSET` object to make it look nice in `help(...)` outputs."""
+
+    def __str__(self):
+        return "UNSET"
+
+    def __repr__(self):
+        return str(self)
+
+
+UNSET = _UnsetType()
 
 
 def withparent(meth):
@@ -191,9 +202,9 @@ def get_default_varnames(var_iterator, include_transformed):
         return [var for var in var_iterator if not is_transformed_name(get_var_name(var))]
 
 
-def get_var_name(var):
+def get_var_name(var) -> str:
     """Get an appropriate, plain variable name for a variable."""
-    return getattr(var, "name", str(var))
+    return str(getattr(var, "name", var))
 
 
 def get_transformed(z):

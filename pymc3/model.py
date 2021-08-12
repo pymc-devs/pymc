@@ -39,7 +39,6 @@ import numpy as np
 import scipy.sparse as sps
 
 from aesara.compile.sharedvalue import SharedVariable
-from aesara.gradient import grad
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.opt import local_subtensor_rv_lift
@@ -446,7 +445,7 @@ class ValueGradFunction:
             givens.append((var, shared))
 
         if compute_grads:
-            grads = grad(cost, grad_vars, disconnected_inputs="ignore")
+            grads = aesara.grad(cost, grad_vars, disconnected_inputs="ignore")
             for grad_wrt, var in zip(grads, grad_vars):
                 grad_wrt.name = f"{var.name}_grad"
             outputs = [cost] + grads
@@ -648,7 +647,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         # The sequence of model-generated RNGs
         self.rng_seq = []
-        self.initial_values = {}
+        self._initial_values = {}
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -912,7 +911,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return inputvars(self.unobserved_RVs)
 
     @property
-    def test_point(self):
+    def test_point(self) -> Dict[str, np.ndarray]:
+        """Deprecated alias for `Model.initial_point`."""
         warnings.warn(
             "`Model.test_point` has been deprecated. Use `Model.initial_point` instead.",
             DeprecationWarning,
@@ -920,8 +920,18 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self.initial_point
 
     @property
-    def initial_point(self):
+    def initial_point(self) -> Dict[str, np.ndarray]:
+        """Maps names of variables to initial values."""
         return Point(list(self.initial_values.items()), model=self)
+
+    @property
+    def initial_values(self) -> Dict[TensorVariable, np.ndarray]:
+        """Maps transformed variables to initial values.
+
+        ⚠ The keys are NOT the objects returned by, `pm.Normal(...)`.
+        For a name-based dictionary use the `initial_point` property.
+        """
+        return self._initial_values
 
     @property
     def disc_vars(self):
@@ -934,11 +944,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return list(typefilter(self.value_vars, continuous_types))
 
     def set_initval(self, rv_var, initval):
-        initval = (
-            rv_var.type.filter(initval)
-            if initval is not None
-            else getattr(rv_var.tag, "test_value", None)
-        )
+        if initval is not None:
+            initval = rv_var.type.filter(initval)
+
+        test_value = getattr(rv_var.tag, "test_value", None)
 
         rv_value_var = self.rvs_to_values[rv_var]
         transform = getattr(rv_value_var.tag, "transform", None)
@@ -972,7 +981,17 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             initval_fn = aesara.function(
                 [], rv_var, mode=mode, givens=givens, on_unused_input="ignore"
             )
-            initval = initval_fn()
+            try:
+                initval = initval_fn()
+            except NotImplementedError as ex:
+                if "Cannot sample from" in ex.args[0]:
+                    # The RV does not have a random number generator.
+                    # Our last chance is to take the test_value.
+                    # Note that this is a workaround for Flat and HalfFlat
+                    # until an initval default mechanism is implemented (#4752).
+                    initval = test_value
+                else:
+                    raise
 
         self.initial_values[rv_value_var] = initval
 
@@ -1530,7 +1549,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         r"""Update point `a` with `b`, without overwriting existing keys.
 
         Values specified for transformed variables in `a` will be recomputed
-        conditional on the valures of `b` and stored in `b`.
+        conditional on the values of `b` and stored in `b`.
 
         """
         # TODO FIXME XXX: If we're going to incrementally update transformed
@@ -1717,7 +1736,7 @@ def fastfn(outs, mode=None, model=None):
     return model.fastfn(outs, mode)
 
 
-def Point(*args, filter_model_vars=False, **kwargs):
+def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
     """Build a point. Uses same args as dict() does.
     Filters out variables not in the model. All keys are strings.
 
@@ -1725,6 +1744,8 @@ def Point(*args, filter_model_vars=False, **kwargs):
     ----------
     args, kwargs
         arguments to build a dict
+    filter_model_vars : bool
+        If `True`, only model variables are included in the result.
     """
     model = modelcontext(kwargs.pop("model", None))
     args = list(args)
@@ -1767,6 +1788,10 @@ compilef = fastfn
 
 def Deterministic(name, var, model=None, dims=None, auto=False):
     """Create a named deterministic variable
+
+    Notes
+    -----
+    Deterministic nodes are ones that given all the inputs are not random variables
 
     Parameters
     ----------

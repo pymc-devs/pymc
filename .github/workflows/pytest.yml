@@ -30,6 +30,7 @@ jobs:
         # → pytest will run only these files
           - |
             --ignore=pymc3/tests/test_distributions_timeseries.py
+            --ignore=pymc3/tests/test_initvals.py
             --ignore=pymc3/tests/test_mixture.py
             --ignore=pymc3/tests/test_model_graph.py
             --ignore=pymc3/tests/test_modelcontext.py
@@ -60,7 +61,9 @@ jobs:
             --ignore=pymc3/tests/test_distributions_random.py
             --ignore=pymc3/tests/test_idata_conversion.py
 
-          - pymc3/tests/test_distributions.py
+          - |
+            pymc3/tests/test_initvals.py
+            pymc3/tests/test_distributions.py
 
           - |
             pymc3/tests/test_modelcontext.py
@@ -153,6 +156,7 @@ jobs:
         floatx: [float32, float64]
         test-subset:
           - |
+            pymc3/tests/test_initvals.py
             pymc3/tests/test_distributions_random.py
             pymc3/tests/test_distributions_timeseries.py
           - |
