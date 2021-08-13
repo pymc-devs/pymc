@@ -131,13 +131,13 @@ class HamiltonianMC(BaseHMC):
             div_info = DivergenceInfo("Integration failed.", e, last, None)
         else:
             if not np.isfinite(state.energy):
-                div_info = DivergenceInfo("Divergence encountered: infinite energy.", None, last, state)
+                div_info = DivergenceInfo("Divergence encountered, bad energy.", None, last, state)
             energy_change = start.energy - state.energy
             if np.isnan(energy_change):
                 energy_change = -np.inf
             if np.abs(energy_change) > self.Emax:
                 div_info = DivergenceInfo(
-                    f"Divergence encountered: energy change larger than {self.Emax}.", None, last, state
+                    f"Divergence encountered, energy change larger than {self.Emax}.", None, last, state
                 )
 
         accept_stat = min(1, np.exp(energy_change))
