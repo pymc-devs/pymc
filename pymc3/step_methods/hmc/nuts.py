@@ -114,7 +114,9 @@ class NUTS(BaseHMC):
 
         Parameters
         ----------
-        vars: list of Aesara variables, default all continuous vars
+        vars: list, default=None
+            List of Aesara variables. If None, all continuous RVs from the
+            model are included.
         Emax: float, default 1000
             Maximum energy change allowed during leapfrog steps. Larger
             deviations will abort the integration.
@@ -357,7 +359,7 @@ class _Tree:
                 )
                 return tree, None, False
             else:
-                error_msg = "Energy change in leapfrog step is too large: %s." % energy_change
+                error_msg = f"Energy change in leapfrog step is too large: {energy_change}."
                 error = None
         tree = Subtree(None, None, None, None, -np.inf, -np.inf, 1)
         divergance_info = DivergenceInfo(error_msg, error, left, right)
