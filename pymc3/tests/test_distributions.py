@@ -69,6 +69,7 @@ from pymc3.distributions import (
     DirichletMultinomial,
     DiscreteUniform,
     DiscreteWeibull,
+    Distribution,
     ExGaussian,
     Exponential,
     Flat,
@@ -956,20 +957,6 @@ class TestMatchesScipy:
             assert logp(invalid_dist, 0.5).eval() == -np.inf
             assert logcdf(invalid_dist, 2).eval() == -np.inf
 
-    @pytest.mark.xfail(reason="Bound not refactored yet")
-    def test_bound_normal(self):
-        PositiveNormal = Bound(Normal, lower=0.0)
-        self.check_logp(
-            PositiveNormal,
-            Rplus,
-            {"mu": Rplus, "sigma": Rplus},
-            lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma),
-            decimal=select_by_precision(float64=6, float32=-1),
-        )
-        with Model():
-            x = PositiveNormal("x", mu=0, sigma=1, transform=None)
-        assert np.isinf(logp(x, -1).eval())
-
     @pytest.mark.skipif(
         condition=_polyagamma_not_installed,
         reason="`polyagamma package is not available/installed.",
@@ -1686,20 +1673,6 @@ class TestMatchesScipy:
             Nat,
             {"mu": Rplus},
         )
-
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_bound_poisson(self):
-        NonZeroPoisson = Bound(Poisson, lower=1.0)
-        self.check_logp(
-            NonZeroPoisson,
-            PosNat,
-            {"mu": Rplus},
-            lambda value, mu: sp.poisson.logpmf(value, mu),
-        )
-
-        with Model():
-            x = NonZeroPoisson("x", mu=4)
-        assert np.isinf(logp(x, 0).eval())
 
     def test_constantdist(self):
         self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
@@ -2669,74 +2642,184 @@ class TestMatchesScipy:
                 self.check_logp(TestedInterpolated, R, {}, ref_pdf)
 
 
-@pytest.mark.xfail(reason="Bound not refactored yet")
-def test_bound():
-    np.random.seed(42)
-    UnboundNormal = Bound(Normal)
-    dist = UnboundNormal.dist(mu=0, sigma=1)
-    # assert dist.transform is None
-    assert isinstance(dist.random(), np.ndarray)
+class TestBound:
+    """Tests for pm.Bound distribution"""
 
-    LowerNormal = Bound(Normal, lower=1)
-    dist = LowerNormal.dist(mu=0, sigma=1)
-    assert logp(dist, 0).eval() == -np.inf
-    # assert dist.transform is not None
-    assert np.all(dist.random() > 1)
+    def test_continuous(self):
+        with Model() as model:
+            dist = Normal.dist(mu=0, sigma=1)
+            UnboundedNormal = Bound("unbound", dist, transform=None)
+            InfBoundedNormal = Bound("infbound", dist, lower=-np.inf, upper=np.inf, transform=None)
+            LowerNormal = Bound("lower", dist, lower=0, transform=None)
+            UpperNormal = Bound("upper", dist, upper=0, transform=None)
+            BoundedNormal = Bound("bounded", dist, lower=1, upper=10, transform=None)
+            LowerNormalTransform = Bound("lowertrans", dist, lower=1)
+            UpperNormalTransform = Bound("uppertrans", dist, upper=10)
+            BoundedNormalTransform = Bound("boundedtrans", dist, lower=1, upper=10)
 
-    UpperNormal = Bound(Normal, upper=-1)
-    dist = UpperNormal.dist(mu=0, sigma=1)
-    assert logp(dist, -0.5).eval() == -np.inf
-    # assert dist.transform is not None
-    assert np.all(dist.random() < -1)
+        assert logpt(LowerNormal, -1).eval() == -np.inf
+        assert logpt(UpperNormal, 1).eval() == -np.inf
+        assert logpt(BoundedNormal, 0).eval() == -np.inf
+        assert logpt(BoundedNormal, 11).eval() == -np.inf
 
-    ArrayNormal = Bound(Normal, lower=[1, 2], upper=[2, 3])
-    dist = ArrayNormal.dist(mu=0, sigma=1, size=2)
-    assert_equal(logp(dist, [0.5, 3.5]).eval(), -np.array([np.inf, np.inf]))
-    # assert dist.transform is not None
-    with pytest.raises(ValueError) as err:
-        dist.random()
-    err.match("Drawing samples from distributions with array-valued")
+        assert logpt(UnboundedNormal, 0).eval() != -np.inf
+        assert logpt(UnboundedNormal, 11).eval() != -np.inf
+        assert logpt(InfBoundedNormal, 0).eval() != -np.inf
+        assert logpt(InfBoundedNormal, 11).eval() != -np.inf
 
-    with Model():
-        a = ArrayNormal("c", size=2)
-        assert_equal(a.tag.test_value, np.array([1.5, 2.5]))
+        assert logpt(LowerNormalTransform, -1).eval() != -np.inf
+        assert logpt(UpperNormalTransform, 1).eval() != -np.inf
+        assert logpt(BoundedNormalTransform, 0).eval() != -np.inf
+        assert logpt(BoundedNormalTransform, 11).eval() != -np.inf
 
-    lower = at.vector("lower")
-    lower.tag.test_value = np.array([1, 2]).astype(aesara.config.floatX)
-    upper = 3
-    ArrayNormal = Bound(Normal, lower=lower, upper=upper)
-    dist = ArrayNormal.dist(mu=0, sigma=1, size=2)
-    logp_dist = logp(dist, [0.5, 3.5]).eval({lower: lower.tag.test_value})
-    assert_equal(logp_dist, -np.array([np.inf, np.inf]))
-    assert dist.transform is not None
+        assert np.allclose(
+            logpt(UnboundedNormal, 5).eval(), Normal.logp(value=5, mu=0, sigma=1).eval()
+        )
+        assert np.allclose(logpt(LowerNormal, 5).eval(), Normal.logp(value=5, mu=0, sigma=1).eval())
+        assert np.allclose(
+            logpt(UpperNormal, -5).eval(), Normal.logp(value=-5, mu=0, sigma=1).eval()
+        )
+        assert np.allclose(
+            logpt(BoundedNormal, 5).eval(), Normal.logp(value=5, mu=0, sigma=1).eval()
+        )
 
-    with Model():
-        a = ArrayNormal("c", size=2)
-        assert_equal(a.tag.test_value, np.array([2, 2.5]))
+    def test_discrete(self):
+        with Model() as model:
+            dist = Poisson.dist(mu=4)
+            UnboundedPoisson = Bound("unbound", dist)
+            LowerPoisson = Bound("lower", dist, lower=1)
+            UpperPoisson = Bound("upper", dist, upper=10)
+            BoundedPoisson = Bound("bounded", dist, lower=1, upper=10)
 
-    rand = Bound(Binomial, lower=10).dist(n=20, p=0.3).random()
-    assert rand.dtype in [np.int16, np.int32, np.int64]
-    assert rand >= 10
+        assert logpt(LowerPoisson, 0).eval() == -np.inf
+        assert logpt(UpperPoisson, 11).eval() == -np.inf
+        assert logpt(BoundedPoisson, 0).eval() == -np.inf
+        assert logpt(BoundedPoisson, 11).eval() == -np.inf
 
-    rand = Bound(Binomial, upper=10).dist(n=20, p=0.8).random()
-    assert rand.dtype in [np.int16, np.int32, np.int64]
-    assert rand <= 10
+        assert logpt(UnboundedPoisson, 0).eval() != -np.inf
+        assert logpt(UnboundedPoisson, 11).eval() != -np.inf
 
-    rand = Bound(Binomial, lower=5, upper=8).dist(n=10, p=0.6).random()
-    assert rand.dtype in [np.int16, np.int32, np.int64]
-    assert rand >= 5 and rand <= 8
+        assert np.allclose(logpt(UnboundedPoisson, 5).eval(), Poisson.logp(value=5, mu=4).eval())
+        assert np.allclose(logpt(UnboundedPoisson, 5).eval(), Poisson.logp(value=5, mu=4).eval())
+        assert np.allclose(logpt(UnboundedPoisson, 5).eval(), Poisson.logp(value=5, mu=4).eval())
+        assert np.allclose(logpt(UnboundedPoisson, 5).eval(), Poisson.logp(value=5, mu=4).eval())
 
-    with Model():
-        BoundPoisson = Bound(Poisson, upper=6)
-        BoundPoisson(name="y", mu=1)
+    def create_invalid_distribution(self):
+        class MyNormal(RandomVariable):
+            name = "my_normal"
+            ndim_supp = 0
+            ndims_params = [0, 0]
+            dtype = "floatX"
 
-    with Model():
-        BoundNormalNamedArgs = Bound(Normal, upper=6)("y", mu=2.0, sd=1.0)
-        BoundNormalPositionalArgs = Bound(Normal, upper=6)("x", 2.0, 1.0)
+        my_normal = MyNormal()
 
-    with Model():
-        BoundPoissonNamedArgs = Bound(Poisson, upper=6)("y", mu=2.0)
-        BoundPoissonPositionalArgs = Bound(Poisson, upper=6)("x", 2.0)
+        class InvalidDistribution(Distribution):
+            rv_op = my_normal
+
+            @classmethod
+            def dist(cls, mu=0, sigma=1, **kwargs):
+                return super().dist([mu, sigma], **kwargs)
+
+        return InvalidDistribution
+
+    def test_arguments_checks(self):
+        msg = "Observed Bound distributions are not supported"
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1)
+            with pytest.raises(ValueError, match=msg):
+                pm.Bound("bound", x, observed=5)
+
+        msg = "Cannot transform discrete variable."
+        with pm.Model() as m:
+            x = pm.Poisson.dist(0.5)
+            with pytest.raises(ValueError, match=msg):
+                pm.Bound("bound", x, transform=pm.transforms.interval)
+
+        msg = "Given dims do not exist in model coordinates."
+        with pm.Model() as m:
+            x = pm.Poisson.dist(0.5)
+            with pytest.raises(ValueError, match=msg):
+                pm.Bound("bound", x, dims="random_dims")
+
+        msg = "The distribution passed into `Bound` was already registered"
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1)
+            with pytest.raises(ValueError, match=msg):
+                pm.Bound("bound", x)
+
+        msg = "Passing a distribution class to `Bound` is no longer supported"
+        with pm.Model() as m:
+            with pytest.raises(ValueError, match=msg):
+                pm.Bound("bound", pm.Normal)
+
+        msg = "Bounding of MultiVariate RVs is not yet supported"
+        with pm.Model() as m:
+            x = pm.MvNormal.dist(np.zeros(3), np.eye(3))
+            with pytest.raises(NotImplementedError, match=msg):
+                pm.Bound("bound", x)
+
+        msg = "must be a Discrete or Continuous distribution subclass"
+        with pm.Model() as m:
+            x = self.create_invalid_distribution().dist()
+            with pytest.raises(ValueError, match=msg):
+                pm.Bound("bound", x)
+
+    def test_invalid_sampling(self):
+        msg = "Cannot sample from a bounded variable"
+        with pm.Model() as m:
+            dist = Normal.dist(mu=0, sigma=1)
+            BoundedNormal = Bound("bounded", dist, lower=1, upper=10)
+            with pytest.raises(NotImplementedError, match=msg):
+                pm.sample_prior_predictive()
+
+    def test_bound_shapes(self):
+        with pm.Model(coords={"sample": np.ones((2, 5))}) as m:
+            dist = Normal.dist(mu=0, sigma=1)
+            bound_sized = Bound("boundedsized", dist, lower=1, upper=10, size=(4, 5))
+            bound_shaped = Bound("boundedshaped", dist, lower=1, upper=10, shape=(3, 5))
+            bound_dims = Bound("boundeddims", dist, lower=1, upper=10, dims="sample")
+
+        dist_size = m.initial_point["boundedsized_interval__"].shape
+        dist_shape = m.initial_point["boundedshaped_interval__"].shape
+        dist_dims = m.initial_point["boundeddims_interval__"].shape
+
+        assert dist_size == (4, 5)
+        assert dist_shape == (3, 5)
+        assert dist_dims == (2, 5)
+
+    def test_bound_dist(self):
+        # Continuous
+        bound = pm.Bound.dist(pm.Normal.dist(0, 1), lower=0)
+        assert pm.logp(bound, -1).eval() == -np.inf
+        assert np.isclose(pm.logp(bound, 1).eval(), scipy.stats.norm(0, 1).logpdf(1))
+
+        # Discrete
+        bound = pm.Bound.dist(pm.Poisson.dist(1), lower=2)
+        assert pm.logp(bound, 1).eval() == -np.inf
+        assert np.isclose(pm.logp(bound, 2).eval(), scipy.stats.poisson(1).logpmf(2))
+
+    def test_array_bound(self):
+        with Model() as model:
+            dist = Normal.dist()
+            LowerPoisson = Bound("lower", dist, lower=[1, None], transform=None)
+            UpperPoisson = Bound("upper", dist, upper=[np.inf, 10], transform=None)
+            BoundedPoisson = Bound("bounded", dist, lower=[1, 2], upper=[9, 10], transform=None)
+
+        first, second = logpt(LowerPoisson, [0, 0]).eval()
+        assert first == -np.inf
+        assert second != -np.inf
+
+        first, second = logpt(UpperPoisson, [11, 11]).eval()
+        assert first != -np.inf
+        assert second == -np.inf
+
+        first, second = logpt(BoundedPoisson, [1, 1]).eval()
+        assert first != -np.inf
+        assert second == -np.inf
+
+        first, second = logpt(BoundedPoisson, [10, 10]).eval()
+        assert first == -np.inf
+        assert second != -np.inf
 
 
 class TestBoundedContinuous:

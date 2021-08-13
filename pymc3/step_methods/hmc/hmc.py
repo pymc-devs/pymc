@@ -59,15 +59,19 @@ class HamiltonianMC(BaseHMC):
 
         Parameters
         ----------
-        vars: list of Aesara variables
+        vars: list, default=None
+            List of Aesara variables. If None, all continuous RVs from the
+            model are included.
         path_length: float, default=2
-            total length to travel
+            Total length to travel
         step_rand: function float -> float, default=unif
-            A function which takes the step size and returns an new one used to
-            randomize the step size at each iteration.
+            A function which takes the step size and returns a new one used to
+            randomize the step size at each iteration. The default draws a random
+            new step size from a uniform distribution with +-15% of the given one.
+            If set to None, no randomization is done.
         step_scale: float, default=0.25
-            Initial size of steps to take, automatically scaled down
-            by 1/n**(1/4).
+            Initial size of steps to take, automatically scaled down by 1/n**(1/4)
+            where n is the dimensionality of the parameter space
         scaling: array_like, ndim = {1,2}
             The inverse mass, or precision matrix. One dimensional arrays are
             interpreted as diagonal matrices. If `is_cov` is set to True,
@@ -133,7 +137,10 @@ class HamiltonianMC(BaseHMC):
                 energy_change = -np.inf
             if np.abs(energy_change) > self.Emax:
                 div_info = DivergenceInfo(
-                    "Divergence encountered, large integration error.", None, last, state
+                    f"Divergence encountered, energy change larger than {self.Emax}.",
+                    None,
+                    last,
+                    state,
                 )
 
         accept_stat = min(1, np.exp(energy_change))

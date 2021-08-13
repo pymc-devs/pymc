@@ -381,7 +381,8 @@ def sample(
           work better for problematic posteriors
         * max_treedepth : The maximum depth of the trajectory tree
         * step_scale : float, default 0.25
-          The initial guess for the step size scaled down by :math:`1/n**(1/4)`
+          The initial guess for the step size scaled down by :math:`1/n**(1/4)`,
+          where n is the dimensionality of the parameter space
 
     If your model uses multiple step methods, aka a Compound Step, then you have
     two ways to address arguments to each step method:

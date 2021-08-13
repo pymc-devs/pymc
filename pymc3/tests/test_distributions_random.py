@@ -1678,16 +1678,6 @@ class TestKroneckerNormal(BaseTestDistribution):
 
 class TestScalarParameterSamples(SeededTest):
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_bounded(self):
-        # A bit crude...
-        BoundedNormal = pm.Bound(pm.Normal, upper=0)
-
-        def ref_rand(size, tau):
-            return -st.halfnorm.rvs(size=size, loc=0, scale=tau ** -0.5)
-
-        pymc3_random(BoundedNormal, {"tau": Rplus}, ref_rand=ref_rand)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_lkj(self):
         for n in [2, 10, 50]:
             # pylint: disable=cell-var-from-loop

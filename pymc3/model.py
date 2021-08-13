@@ -963,7 +963,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
             if transform:
                 value = initval if initval is not None else rv_var
-                rv_var = transform.forward(rv_var, value)
+                rv_var = at.as_tensor_variable(transform.forward(rv_var, value))
 
             def initval_to_rvval(value_var, value):
                 rv_var = self.values_to_rvs[value_var]
