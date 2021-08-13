@@ -427,6 +427,92 @@ class IMH(SMC_KERNEL):
         return stats
 
 
+class MH(SMC_KERNEL):
+    """Metropolis-Hastings SMC kernel"""
+
+    def __init__(self, *args, n_steps=25, **kwargs):
+        """
+        Parameters
+        ----------
+        n_steps: int
+            The number of steps of each Markov Chain.
+        """
+        super().__init__(*args, **kwargs)
+        self.n_steps = n_steps
+
+        self.proposal_dist = None
+        self.proposal_scales = None
+        self.chain_acc_rate = None
+
+    def setup_kernel(self):
+        """Proposal dist is just a Multivariate Normal with unit identity covariance.
+        Dimension specific scaling is provided by self.proposal_scales and set in self.tune()
+        """
+        ndim = self.tempered_posterior.shape[1]
+        self.proposal_dist = multivariate_normal(
+            mean=np.zeros(ndim),
+            cov=np.eye(ndim),
+        )
+        self.proposal_scales = np.full(self.draws, min(1, 2.38 ** 2 / ndim))
+
+    def resample(self):
+        super().resample()
+        if self.iteration > 1:
+            self.proposal_scales = self.proposal_scales[self.resampling_indexes]
+            self.chain_acc_rate = self.chain_acc_rate[self.resampling_indexes]
+
+    def tune(self):
+        """Update proposal scales for each particle dimension"""
+        if self.iteration > 1:
+            # Rescale based on distance to 0.234 acceptance rate
+            chain_scales = np.exp(np.log(self.proposal_scales) + (self.chain_acc_rate - 0.234))
+            # Interpolate between individual and population scales
+            self.proposal_scales = 0.5 * chain_scales + 0.5 * chain_scales.mean()
+
+    def mutate(self):
+        """Metropolis-Hastings perturbation."""
+        ac_ = np.empty((self.n_steps, self.draws))
+
+        log_R = np.log(np.random.rand(self.n_steps, self.draws))
+        for n_step in range(self.n_steps):
+            proposal = floatX(
+                self.tempered_posterior
+                + self.proposal_dist.rvs(size=self.draws) * self.proposal_scales[:, None]
+            )
+            ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
+            pl = np.array([self.prior_logp_func(prop) for prop in proposal])
+
+            proposal_logp = pl + ll * self.beta
+            accepted = log_R[n_step] < (proposal_logp - self.tempered_posterior_logp)
+
+            ac_[n_step] = accepted
+            self.tempered_posterior[accepted] = proposal[accepted]
+            self.prior_logp[accepted] = pl[accepted]
+            self.likelihood_logp[accepted] = ll[accepted]
+            self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
+
+        self.chain_acc_rate = np.mean(ac_, axis=0)
+
+    def sample_stats(self):
+        stats = super().sample_stats()
+        stats.update(
+            {
+                "mean_accept_rate": self.chain_acc_rate.mean(),
+                "mean_proposal_scale": self.proposal_scales.mean(),
+            }
+        )
+        return stats
+
+    def sample_settings(self):
+        stats = super().sample_settings()
+        stats.update(
+            {
+                "_n_tune": self.n_steps,  # Default property name used in `SamplerReport`
+            }
+        )
+        return stats
+
+
 def _logp_forw(point, out_vars, vars, shared):
     """Compile Aesara function of the model and the input and output variables.
 
