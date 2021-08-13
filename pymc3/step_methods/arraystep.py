@@ -33,7 +33,7 @@ StatsType = TypeVar("StatsType")
 
 @unique
 class Competence(IntEnum):
-    """Enum for charaterizing competence classes of step methods.
+    """Enum for characterizing competence classes of step methods.
     Values include:
     0: INCOMPATIBLE
     1: COMPATIBLE
