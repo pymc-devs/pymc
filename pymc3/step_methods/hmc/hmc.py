@@ -137,7 +137,10 @@ class HamiltonianMC(BaseHMC):
                 energy_change = -np.inf
             if np.abs(energy_change) > self.Emax:
                 div_info = DivergenceInfo(
-                    f"Divergence encountered, energy change larger than {self.Emax}.", None, last, state
+                    f"Divergence encountered, energy change larger than {self.Emax}.",
+                    None,
+                    last,
+                    state,
                 )
 
         accept_stat = min(1, np.exp(energy_change))
