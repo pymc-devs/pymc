@@ -67,7 +67,6 @@ class PGBART(ArrayStepShared):
         initial_values = model.initial_point
         value_bart = inputvars(vars)[0]
         self.bart = model.values_to_rvs[value_bart].owner.op
-        self.bart.all_trees = []
 
         self.X, self.Y, self.missing_data = preprocess_XY(self.bart.X, self.bart.Y)
         self.m = self.bart.m

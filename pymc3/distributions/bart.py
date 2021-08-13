@@ -40,27 +40,23 @@ class BARTRV(RandomVariable):
         return super().__new__(cls)
 
     @classmethod
-    def rng_fn(cls, rng, X_new=None, *args, **kwargs):
+    def rng_fn(cls, rng=np.random.default_rng(), X_new=None, *args, **kwargs):
         all_trees = cls.all_trees
         if all_trees:
-            pred = 0
-            idx = rng.randint(len(all_trees))
+            # this should be rng.integers() but when sampling from the prior/posterior predictive
+            # I get 'numpy.random.mtrand.RandomState' object has no attribute 'integers'
+            # So I guess those functions need to be updated
+            idx = np.random.randint(len(all_trees))
             trees = all_trees[idx]
             if X_new is None:
+                pred = np.zeros(trees[0].num_observations)
                 for tree in trees:
                     pred += tree.predict_output()
             else:
+                pred = np.zeros(X_new.shape[0])
                 for tree in trees:
                     pred += np.array([tree.predict_out_of_sample(x) for x in X_new])
             return pred
-            # XXX check why I did not make this random
-            # pred = np.zeros((len(trees), num_observations))
-            # for draw, trees_to_sum in enumerate(trees):
-            #    new_Y = np.zeros(num_observations)
-            #    for tree in trees_to_sum:
-            #        new_Y += [tree.predict_out_of_sample(x) for x in X_new]
-            #    pred[draw] = new_Y
-            # return pred
         else:
             return np.full_like(cls.Y, cls.Y.mean())
 
