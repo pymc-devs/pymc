@@ -24,7 +24,7 @@ Continuous
    Gamma
    InverseGamma
    Weibull
-   Lognormal
+   LogNormal
    ChiSquared
    Wald
    Pareto

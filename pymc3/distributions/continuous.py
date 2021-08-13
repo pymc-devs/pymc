@@ -62,7 +62,7 @@ __all__ = [
     "Gamma",
     "Weibull",
     "HalfStudentT",
-    "Lognormal",
+    "LogNormal",
     "ChiSquared",
     "HalfNormal",
     "Wald",
@@ -1776,8 +1776,15 @@ class AsymmetricLaplace(Continuous):
             0 < self.kappa,
         )
 
+class LogNormal(LogNormal):
+    """deprecated, use LogNormal instead!"""
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+          "The class name LogNormal is deprecated, use LogNormal instead!",
+          DeprecationWarning)
+        return super().__init__(*args, **kwargs)
 
-class Lognormal(PositiveContinuous):
+class LogNormal(PositiveContinuous):
     r"""
     Log-normal log-likelihood.
 
@@ -1834,10 +1841,10 @@ class Lognormal(PositiveContinuous):
 
         # Example to show that we pass in only ``sigma`` or ``tau`` but not both.
         with pm.Model():
-            x = pm.Lognormal('x', mu=2, sigma=30)
+            x = pm.LogNormal('x', mu=2, sigma=30)
 
         with pm.Model():
-            x = pm.Lognormal('x', mu=2, tau=1/100)
+            x = pm.LogNormal('x', mu=2, tau=1/100)
     """
 
     def __init__(self, mu=0, sigma=None, tau=None, sd=None, *args, **kwargs):
@@ -1856,8 +1863,8 @@ class Lognormal(PositiveContinuous):
         self.mode = at.exp(self.mu - 1.0 / self.tau)
         self.variance = (at.exp(1.0 / self.tau) - 1) * at.exp(2 * self.mu + 1.0 / self.tau)
 
-        assert_negative_support(tau, "tau", "Lognormal")
-        assert_negative_support(sigma, "sigma", "Lognormal")
+        assert_negative_support(tau, "tau", "LogNormal")
+        assert_negative_support(sigma, "sigma", "LogNormal")
 
     def _random(self, mu, tau, size=None):
         samples = np.random.normal(size=size)
@@ -1865,7 +1872,7 @@ class Lognormal(PositiveContinuous):
 
     def random(self, point=None, size=None):
         """
-        Draw random values from Lognormal distribution.
+        Draw random values from LogNormal distribution.
 
         Parameters
         ----------
@@ -1885,7 +1892,7 @@ class Lognormal(PositiveContinuous):
 
     def logp(self, value):
         """
-        Calculate log-probability of Lognormal distribution at specified value.
+        Calculate log-probability of LogNormal distribution at specified value.
 
         Parameters
         ----------
@@ -1911,7 +1918,7 @@ class Lognormal(PositiveContinuous):
 
     def logcdf(self, value):
         """
-        Compute the log of the cumulative distribution function for Lognormal distribution
+        Compute the log of the cumulative distribution function for LogNormal distribution
         at the specified value.
 
         Parameters

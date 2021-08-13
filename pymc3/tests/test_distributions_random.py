@@ -383,8 +383,8 @@ class TestAsymmetricLaplace(BaseTestCases.BaseTestCase):
     params = {"kappa": 1.0, "b": 1.0, "mu": 0.0}
 
 
-class TestLognormal(BaseTestCases.BaseTestCase):
-    distribution = pm.Lognormal
+class TestLogNormal(BaseTestCases.BaseTestCase):
+    distribution = pm.LogNormal
     params = {"mu": 1.0, "tau": 1.0}
 
 
@@ -667,7 +667,7 @@ class TestScalarParameterSamples(SeededTest):
         def ref_rand(size, mu, tau):
             return np.exp(mu + (tau ** -0.5) * st.norm.rvs(loc=0.0, scale=1.0, size=size))
 
-        pymc3_random(pm.Lognormal, {"mu": R, "tau": Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(pm.LogNormal, {"mu": R, "tau": Rplusbig}, ref_rand=ref_rand)
 
     def test_student_t(self):
         def ref_rand(size, nu, mu, lam):

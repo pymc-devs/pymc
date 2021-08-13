@@ -295,7 +295,7 @@ class DifferentialEquationSuite:
         with pm.Model() as model:
             # Specify prior distributions for some of our model parameters
             sigma = pm.HalfCauchy("sigma", 1)
-            gamma = pm.Lognormal("gamma", 0, 1)
+            gamma = pm.LogNormal("gamma", 0, 1)
             # If we know one of the parameter values, we can simply pass the value.
             ode_solution = ode_model(y0=[0], theta=[gamma, 9.8])
             # The ode_solution has a shape of (n_times, n_states)
