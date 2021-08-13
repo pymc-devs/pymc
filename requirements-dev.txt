@@ -2,8 +2,13 @@
 # See that file for comments about the need/usage of each dependency.
 
 aesara>=2.1.0
+<<<<<<< HEAD
 arviz>=0.11.4
 cachetools>=4.2.1
+=======
+arviz>=0.11.2
+cachetools
+>>>>>>> Remove libblas, mkl and m2w64-toolchain dependencies. As PyMC3 itself does not compile anything, it should not have these dependencies. Instead, it is aesaras job to specify its compile-chain dependencies. Closes #4715.
 cloudpickle
 fastprogress>=0.2.0
 h5py>=2.7
@@ -11,7 +16,7 @@ ipython>=7.16
 myst-nb
 numpy>=1.15.0
 numpydoc>=0.9
-pandas>=0.24.0
+pandas
 pre-commit>=2.8.0
 pydata-sphinx-theme
 pytest-cov>=2.5
