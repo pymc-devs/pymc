@@ -1776,7 +1776,7 @@ class AsymmetricLaplace(Continuous):
             0 < self.kappa,
         )
 
-class LogNormal(LogNormal):
+class Lognormal(LogNormal):
     """deprecated, use LogNormal instead!"""
     def __init__(self, *args, **kwargs):
         warnings.warn(
