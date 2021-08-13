@@ -119,7 +119,7 @@ class HamiltonianMC(BaseHMC):
         n_steps = max(1, int(self.path_length / step_size))
         n_steps = min(self.max_steps, n_steps)
 
-        energy_change = -np.inf
+        energy_change = np.inf
         state = start
         last = state
         div_info = None
@@ -132,9 +132,9 @@ class HamiltonianMC(BaseHMC):
         else:
             if not np.isfinite(state.energy):
                 div_info = DivergenceInfo("Divergence encountered, bad energy.", None, last, state)
-            energy_change = start.energy - state.energy
+            energy_change = state.energy - start.energy
             if np.isnan(energy_change):
-                energy_change = -np.inf
+                energy_change = np.inf
             if np.abs(energy_change) > self.Emax:
                 div_info = DivergenceInfo(
                     f"Divergence encountered, energy change larger than {self.Emax}.",
@@ -143,7 +143,7 @@ class HamiltonianMC(BaseHMC):
                     state,
                 )
 
-        accept_stat = min(1, np.exp(energy_change))
+        accept_stat = min(1, np.exp(-energy_change))
 
         if div_info is not None or np.random.rand() >= accept_stat:
             end = start
