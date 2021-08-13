@@ -329,3 +329,17 @@ class TestSMCABC(SeededTest):
             )
             with pytest.raises(NotImplementedError, match="named models"):
                 pm.sample_smc(draws=10, kernel="ABC")
+
+
+class TestMHKernel(SeededTest):
+    def test_normal_model(self):
+        data = st.norm(10, 0.5).rvs(1000, random_state=self.get_random_state())
+        with pm.Model() as m:
+            mu = pm.Normal("mu", 0, 3)
+            sigma = pm.HalfNormal("sigma", 1)
+            y = pm.Normal("y", mu, sigma, observed=data)
+            idata = pm.sample_smc(draws=2000, kernel=pm.smc.MH)
+
+        post = idata.posterior.stack(sample=("chain", "draw"))
+        assert np.abs(post["mu"].mean() - 10) < 0.1
+        assert np.abs(post["sigma"].mean() - 0.5) < 0.05
