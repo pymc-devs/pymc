@@ -26,6 +26,7 @@ from pymc3.distributions.distribution import (
     is_fast_drawable,
     vectorized_ppc,
 )
+from pymc3.distributions.shape_utils import to_tuple
 from pymc3.exceptions import IncorrectArgumentsError
 from pymc3.model import (
     Model,
@@ -551,7 +552,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
         ) -> np.ndarray:
             val = meth(point=point, size=size)
             try:
-                assert val.shape == (size,) + shape, (
+                assert val.shape == to_tuple(size) + to_tuple(shape), (
                     "Sampling from random of %s yields wrong shape" % param
                 )
             # error-quashing here is *extremely* ugly, but it seems to be what the logic in DensityDist wants.

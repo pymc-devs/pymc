@@ -8,6 +8,7 @@
 + Fix `LKJCorr.random` method to work with `pm.sample_prior_predictive`. (see [#4780](https://github.com/pymc-devs/pymc3/pull/4780)).
 + Enable documentation generation via ReadTheDocs for upcoming v3 releases. (see [#4805](https://github.com/pymc-devs/pymc3/pull/4805)).
 + Remove `float128` dtype support (see [#4834](https://github.com/pymc-devs/pymc3/pull/4834)).
++ Use `to_tuple` function in `pm.fast_sample_posterior_predictive` to pass shape assertions (see [#4927](https://github.com/pymc-devs/pymc3/pull/4927)).
 
 ### New Features
 + Generalized BART, bounded distributions like Binomial and Poisson can now be used as likelihoods (see [#4675](https://github.com/pymc-devs/pymc3/pull/4675), [#4709](https://github.com/pymc-devs/pymc3/pull/4709) and
