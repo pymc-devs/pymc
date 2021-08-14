@@ -75,6 +75,31 @@ def test_joint_logprob_basic():
     assert a_value_var in res_ancestors
 
 
+def test_joint_logprob_multi_obs():
+
+    a = at.random.uniform(0.0, 1.0)
+    b = at.random.normal(0.0, 1.0)
+
+    a_val = a.clone()
+    b_val = b.clone()
+
+    logp = joint_logprob((a, b), {a: a_val, b: b_val})
+    logp_exp = logprob(a, a_val) + logprob(b, b_val)
+
+    assert equal_computations([logp], [logp_exp])
+
+    x = at.random.normal(0, 1)
+    y = at.random.normal(x, 1)
+
+    x_val = x.clone()
+    y_val = y.clone()
+
+    logp = joint_logprob([x, y], {x: x_val, y: y_val})
+    exp_logp = joint_logprob([y], {x: x_val, y: y_val})
+
+    assert equal_computations([logp], [exp_logp])
+
+
 @pytest.mark.parametrize(
     "indices, size",
     [
