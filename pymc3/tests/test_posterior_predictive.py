@@ -46,7 +46,9 @@ def test_fast_sample_posterior_predictive_shape_assertions():
     """
     with pm.Model():
         p = pm.Beta("p", 2, 2)
-        trace = pm.sample(tune=30, draws=50, chains=1, return_inferencedata=True, compute_convergence_checks=False)
+        trace = pm.sample(
+            tune=30, draws=50, chains=1, return_inferencedata=True, compute_convergence_checks=False
+        )
 
     with pm.Model() as m_forward:
         p = pm.Beta("p", 2, 2)
