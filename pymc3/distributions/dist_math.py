@@ -46,7 +46,7 @@ _beta_clip_values = {
 }
 
 
-def bound(logp, *conditions, **kwargs):
+def bound(logp, *conditions, broadcast_conditions=True):
     """
     Bounds a log probability density with several conditions.
     When conditions are not met, the logp values are replaced by -inf.
@@ -76,13 +76,11 @@ def bound(logp, *conditions, **kwargs):
     try:
         from pymc3.model import modelcontext
 
-        model = modelcontext(kwargs.get("model"))
+        model = modelcontext(None)
         if not model.check_bounds:
             return logp
-    except TypeError:  # No model found
-        pass
-
-    broadcast_conditions = kwargs.get("broadcast_conditions", True)
+    except TypeError:
+        pass  # no model found
 
     if broadcast_conditions:
         alltrue = alltrue_elemwise
