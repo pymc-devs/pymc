@@ -286,3 +286,14 @@ def test_ignore_logprob_multiout():
     logp_exp = joint_logprob(Y_1_rv, {Y_1_rv: y_1_vv, Y_2_rv: y_2_vv})
 
     assert logp_exp is None
+
+
+def test_multiple_rvs_to_same_value_raises():
+    x_rv1 = at.random.normal(name="x1")
+    x_rv2 = at.random.normal(name="x2")
+    x = x_rv1.type()
+    x.name = "x"
+
+    msg = "More than one logprob factor was assigned to the value var x"
+    with pytest.raises(ValueError, match=msg):
+        joint_logprob([x_rv1, x_rv2], {x_rv1: x, x_rv2: x})

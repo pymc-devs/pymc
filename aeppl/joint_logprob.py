@@ -2,6 +2,7 @@ import warnings
 from collections import deque
 from typing import Dict, Iterable, Optional, Union
 
+import aesara.tensor as at
 from aesara import config
 from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.graph.fg import FunctionGraph
@@ -17,13 +18,13 @@ from aeppl.opt import PreserveRVMappings, logprob_rewrites_db
 from aeppl.utils import rvs_to_value_vars
 
 
-def joint_logprob(
+def factorized_joint_logprob(
     vars: Union[TensorVariable, Iterable[TensorVariable]],
     rv_values: Dict[TensorVariable, TensorVariable],
     warn_missing_rvs: bool = True,
     extra_rewrites: Optional[Union[GlobalOptimizer, LocalOptimizer]] = None,
     **kwargs,
-) -> TensorVariable:
+) -> Dict[TensorVariable, TensorVariable]:
     r"""Create a graph representing the joint log-probability/measure of a graph.
 
     The input `var` determines which graph is used and `rv_values` specifies
@@ -78,6 +79,11 @@ def joint_logprob(
         Extra rewrites to be applied (e.g. reparameterizations, transforms,
         etc.)
 
+    Returns
+    =======
+    A ``dict`` that maps each value variable to the log-probability factor derived
+    from the respective `RandomVariable`.
+
     """
     if isinstance(vars, TensorVariable):
         vars = [vars]
@@ -126,7 +132,7 @@ def joint_logprob(
     # log-probability
     q = deque(fgraph.toposort())
 
-    logprob_var = None
+    logprob_vars = {}
 
     while q:
         node = q.popleft()
@@ -177,20 +183,42 @@ def joint_logprob(
                 if q_rv_var.name:
                     q_logprob_var.name = f"{q_rv_var.name}_logprob"
 
-                if logprob_var is None:
-                    logprob_var = q_logprob_var.sum()
-                else:
-                    logprob_var += q_logprob_var.sum()
+                # Recompute test values for the changes introduced by the
+                # replacements above.
+                if config.compute_test_value != "off":
+                    for node in io_toposort(
+                        graph_inputs((q_logprob_var,)),
+                        (q_logprob_var,),
+                    ):
+                        compute_test_value(node)
+
+                if q_rv_var in logprob_vars:
+                    raise ValueError(
+                        f"More than one logprob factor was assigned to the value var {q_rv_var}"
+                    )
+
+                logprob_vars[q_rv_var] = q_logprob_var
 
         else:
             raise NotImplementedError(
                 f"A measure/probability could not be derived for {node}"
             )
 
-    # Recompute test values for the changes introduced by the replacements
-    # above.
-    if config.compute_test_value != "off":
-        for node in io_toposort(graph_inputs((logprob_var,)), (logprob_var,)):
-            compute_test_value(node)
+    return logprob_vars
 
-    return logprob_var
+
+def joint_logprob(*args, **kwargs) -> Optional[TensorVariable]:
+    """Create a graph representing the joint log-probability/measure of a graph.
+
+    This function calls `factorized_joint_logprob` and returns the combined
+    log-probability factors as a single graph.
+
+    """
+    logprob = factorized_joint_logprob(*args, **kwargs)
+    if not logprob:
+        return None
+    elif len(logprob) == 1:
+        logprob = tuple(logprob.values())[0]
+        return at.sum(logprob)
+    else:
+        return at.add(*[at.sum(factor) for factor in logprob.values()])
