@@ -1632,7 +1632,7 @@ class TestInterpolated(BaseTestDistribution):
         for mu in R.vals:
             for sigma in Rplus.vals:
                 # pylint: disable=cell-var-from-loop
-                rng = np.random.default_rng(1234)
+                rng = self.get_random_state()
 
                 def ref_rand(size):
                     return st.norm.rvs(loc=mu, scale=sigma, size=size, random_state=rng)
