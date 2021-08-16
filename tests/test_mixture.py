@@ -94,7 +94,7 @@ def test_hetero_mixture_scalar(p_val, size):
     m_vv = M_rv.clone()
     m_vv.name = "m"
 
-    M_logp = joint_logprob(M_rv, {M_rv: m_vv, I_rv: i_vv})
+    M_logp = joint_logprob(M_rv, {M_rv: m_vv, I_rv: i_vv}, sum=False)
 
     M_logp_fn = aesara.function([p_at, m_vv, i_vv], M_logp)
 
@@ -115,11 +115,8 @@ def test_hetero_mixture_scalar(p_val, size):
         y_val = gamma_sp.rvs(size=size, random_state=test_val_rng)
 
         m_val = np.stack([x_val, y_val])[i_val]
-
-        exp_obs_logps = np.stack([norm_sp.logpdf(x_val), gamma_sp.logpdf(y_val)])[
-            i_val
-        ].sum()
-        exp_obs_logps += bern_sp.logpmf(i_val).sum()
+        exp_obs_logps = np.stack([norm_sp.logpdf(x_val), gamma_sp.logpdf(y_val)])[i_val]
+        exp_obs_logps += bern_sp.logpmf(i_val)
 
         logp_vals = M_logp_fn(p_val, m_val, i_val)
 
@@ -163,7 +160,7 @@ def test_hetero_mixture_nonscalar(p_val, size):
     m_vv = M_rv.clone()
     m_vv.name = "m"
 
-    M_logp = joint_logprob(M_rv, {M_rv: m_vv, I_rv: i_vv})
+    M_logp = joint_logprob(M_rv, {M_rv: m_vv, I_rv: i_vv}, sum=False)
 
     M_logp_fn = aesara.function([p_at, m_vv, i_vv], M_logp)
 
@@ -182,10 +179,8 @@ def test_hetero_mixture_nonscalar(p_val, size):
         x_val = norm_sp.rvs(size=size, random_state=test_val_rng)
         y_val = gamma_sp.rvs(size=size, random_state=test_val_rng)
 
-        exp_obs_logps = np.stack([norm_sp.logpdf(x_val), gamma_sp.logpdf(y_val)])[
-            i_val
-        ].sum()
-        exp_obs_logps += bern_sp.logpmf(i_val).sum()
+        exp_obs_logps = np.stack([norm_sp.logpdf(x_val), gamma_sp.logpdf(y_val)])[i_val]
+        exp_obs_logps += bern_sp.logpmf(i_val)
 
         m_val = np.stack([x_val, y_val])[i_val]
         logp_vals = M_logp_fn(p_val, m_val, i_val)

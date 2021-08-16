@@ -28,8 +28,8 @@ def test_joint_logprob_basic():
     a.name = "a"
     a_value_var = a.clone()
 
-    a_logp = joint_logprob(a, {a: a_value_var})
-    a_logp_exp = logprob(a, a_value_var).sum()
+    a_logp = joint_logprob(a, {a: a_value_var}, sum=False)
+    a_logp_exp = logprob(a, a_value_var)
 
     assert equal_computations([a_logp], [a_logp_exp])
 
@@ -40,7 +40,7 @@ def test_joint_logprob_basic():
     sigma_value_var = sigma.clone()
     y_value_var = Y.clone()
 
-    total_ll = joint_logprob(Y, {Y: y_value_var, sigma: sigma_value_var})
+    total_ll = joint_logprob(Y, {Y: y_value_var, sigma: sigma_value_var}, sum=False)
 
     # We need to replace the reference to `sigma` in `Y` with its value
     # variable
@@ -49,7 +49,7 @@ def test_joint_logprob_basic():
         [ll_Y],
         initial_replacements={sigma: sigma_value_var},
     )
-    total_ll_exp = logprob(sigma, sigma_value_var).sum() + ll_Y.sum()
+    total_ll_exp = logprob(sigma, sigma_value_var) + ll_Y
 
     assert equal_computations([total_ll], [total_ll_exp])
 
@@ -83,8 +83,8 @@ def test_joint_logprob_multi_obs():
     a_val = a.clone()
     b_val = b.clone()
 
-    logp = joint_logprob((a, b), {a: a_val, b: b_val})
-    logp_exp = logprob(a, a_val).sum() + logprob(b, b_val).sum()
+    logp = joint_logprob((a, b), {a: a_val, b: b_val}, sum=False)
+    logp_exp = logprob(a, a_val) + logprob(b, b_val)
 
     assert equal_computations([logp], [logp_exp])
 
@@ -155,13 +155,13 @@ def test_joint_logprob_incsubtensor(indices, size):
         Y_sst.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
     )
 
-    Y_sst_logp = joint_logprob(Y_sst, {Y_rv: y_value_var})
+    Y_sst_logp = joint_logprob(Y_sst, {Y_rv: y_value_var}, sum=False)
 
     obs_logps = Y_sst_logp.eval({y_value_var: y_val})
 
     y_val_idx = y_val.copy()
     y_val_idx[indices] = data
-    exp_obs_logps = sp.norm.logpdf(y_val_idx, mu, sigma).sum()
+    exp_obs_logps = sp.norm.logpdf(y_val_idx, mu, sigma)
 
     np.testing.assert_almost_equal(obs_logps, exp_obs_logps)
 
@@ -196,7 +196,9 @@ def test_joint_logprob_subtensor():
     I_value_var = I_rv.type()
     I_value_var.name = "I_value"
 
-    A_idx_logp = joint_logprob(A_idx, {A_idx: A_idx_value_var, I_rv: I_value_var})
+    A_idx_logp = joint_logprob(
+        A_idx, {A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False
+    )
 
     logp_vals_fn = aesara.function([A_idx_value_var, I_value_var], A_idx_logp)
 
@@ -214,8 +216,8 @@ def test_joint_logprob_subtensor():
         norm_sp = sp.norm(mu[I_value, np.ogrid[mu.shape[1] :]], sigma)
         A_idx_value = norm_sp.rvs(random_state=test_val_rng).astype(A_idx.dtype)
 
-        exp_obs_logps = norm_sp.logpdf(A_idx_value).sum()
-        exp_obs_logps += bern_sp.logpmf(I_value).sum()
+        exp_obs_logps = norm_sp.logpdf(A_idx_value)
+        exp_obs_logps += bern_sp.logpmf(I_value)
 
         logp_vals = logp_vals_fn(A_idx_value, I_value)
 
