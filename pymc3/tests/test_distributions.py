@@ -1608,8 +1608,13 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
 
-    @pytest.mark.xfail(reason="Bernoulli logit_p not refactored yet")
-    def test_bernoulli_logit_p(self):
+    def test_bernoulli(self):
+        self.check_logp(
+            Bernoulli,
+            Bool,
+            {"p": Unit},
+            lambda value, p: sp.bernoulli.logpmf(value, p),
+        )
         self.check_logp(
             Bernoulli,
             Bool,
@@ -1619,28 +1624,33 @@ class TestMatchesScipy:
         self.check_logcdf(
             Bernoulli,
             Bool,
-            {"logit_p": R},
-            lambda value, logit_p: sp.bernoulli.logcdf(value, scipy.special.expit(logit_p)),
-        )
-
-    def test_bernoulli(self):
-        self.check_logp(
-            Bernoulli,
-            Bool,
             {"p": Unit},
-            lambda value, p: sp.bernoulli.logpmf(value, p),
+            lambda value, p: sp.bernoulli.logcdf(value, p),
         )
         self.check_logcdf(
             Bernoulli,
             Bool,
-            {"p": Unit},
-            lambda value, p: sp.bernoulli.logcdf(value, p),
+            {"logit_p": R},
+            lambda value, logit_p: sp.bernoulli.logcdf(value, scipy.special.expit(logit_p)),
         )
         self.check_selfconsistency_discrete_logcdf(
             Bernoulli,
             Bool,
             {"p": Unit},
         )
+
+    def test_bernoulli_wrong_arguments(self):
+        m = pm.Model()
+
+        msg = "Incompatible parametrization. Can't specify both p and logit_p"
+        with m:
+            with pytest.raises(ValueError, match=msg):
+                Bernoulli("x", p=0.5, logit_p=0)
+
+        msg = "Incompatible parametrization. Must specify either p or logit_p"
+        with m:
+            with pytest.raises(ValueError, match=msg):
+                Bernoulli("x")
 
     def test_discrete_weibull(self):
         self.check_logp(

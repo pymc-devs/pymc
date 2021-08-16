@@ -1025,11 +1025,10 @@ class TestBernoulli(BaseTestDistribution):
     ]
 
 
-@pytest.mark.skip("Still not implemented")
 class TestBernoulliLogitP(BaseTestDistribution):
     pymc_dist = pm.Bernoulli
     pymc_dist_params = {"logit_p": 1.0}
-    expected_rv_op_params = {"mean": 0, "sigma": 10.0}
+    expected_rv_op_params = {"p": expit(1.0)}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
