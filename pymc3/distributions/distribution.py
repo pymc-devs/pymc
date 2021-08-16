@@ -98,7 +98,7 @@ class Distribution:
             raise TypeError("observed needs to be data but got: {}".format(type(data)))
         total_size = kwargs.pop("total_size", None)
 
-        dims = kwargs.pop("dims", None)
+        dims = kwargs["dims"] if "dims" in kwargs else None
         has_shape = "shape" in kwargs
         shape = kwargs.pop("shape", None)
         if dims is not None:

@@ -242,6 +242,14 @@ def test_chain():
     close_to_logical(np.diff(vals) >= 0, True, tol)
 
 
+def test_zerosum():
+    zerosum_axes = [0]
+    zerosum_transf = tr.ZeroSumTransform(zerosum_axes)
+
+    vals = get_values(zerosum_transf, Vector(R, 5), tt.dvector, np.random.random(5))
+    close_to_logical(np.mean(vals) >= 0, True, tol)
+
+
 class TestElementWiseLogp(SeededTest):
     def build_model(self, distfam, params, shape, transform, testval=None):
         if testval is not None:

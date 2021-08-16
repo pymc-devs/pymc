@@ -48,6 +48,7 @@ from pymc3.distributions.continuous import (
     VonMises,
     Wald,
     Weibull,
+    ZeroSumNormal,
 )
 from pymc3.distributions.discrete import (
     Bernoulli,
@@ -123,6 +124,7 @@ __all__ = [
     "HalfStudentT",
     "ChiSquared",
     "HalfNormal",
+    "ZeroSumNormal",
     "Wald",
     "Pareto",
     "InverseGamma",

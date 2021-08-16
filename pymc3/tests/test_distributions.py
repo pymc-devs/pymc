@@ -93,8 +93,10 @@ from pymc3.distributions import (
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
+    ZeroSumNormal,
     continuous,
 )
+from pymc3.distributions.transforms import zerosum
 from pymc3.math import kronecker, logsumexp
 from pymc3.model import Deterministic, Model, Point
 from pymc3.tests.helpers import select_by_precision
@@ -556,6 +558,7 @@ class TestMatchesScipy:
         n_samples=100,
         extra_args=None,
         scipy_args=None,
+        transform=None,
     ):
         """
         Generic test for PyMC3 logp methods
@@ -599,13 +602,18 @@ class TestMatchesScipy:
 
         def logp_reference(args):
             args.update(scipy_args)
+            if transform:
+                args["value"] = args.pop(f"value_{transform.name}__")
             return scipy_logp(**args)
 
         model = build_model(pymc3_dist, domain, paramdomains, extra_args)
         logp = model.fastlogp
 
         domains = paramdomains.copy()
-        domains["value"] = domain
+        if transform:
+            domains[f"value_{transform.name}__"] = domain
+        else:
+            domains["value"] = domain
         for pt in product(domains, n_samples=n_samples):
             pt = Point(pt, model=model)
             assert_almost_equal(
@@ -930,6 +938,22 @@ class TestMatchesScipy:
             Rplus,
             {"sigma": Rplus},
             lambda value, sigma: sp.halfnorm.logcdf(value, scale=sigma),
+        )
+
+    def test_zerosum_normal(self):
+        zerosum_axes = [-1]
+
+        def ref_fn(value, sigma):
+            mu = 0
+            return sp.norm.logpdf(value, mu, sigma)
+
+        self.check_logp(
+            ZeroSumNormal,
+            R,
+            {"sigma": Rplus},
+            ref_fn,
+            decimal=select_by_precision(float64=6, float32=1),
+            transform=zerosum(zerosum_axes),
         )
 
     def test_chi_squared(self):

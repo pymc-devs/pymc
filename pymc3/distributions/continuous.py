@@ -65,6 +65,7 @@ __all__ = [
     "Lognormal",
     "ChiSquared",
     "HalfNormal",
+    "ZeroSumNormal",
     "Wald",
     "Pareto",
     "InverseGamma",
@@ -922,6 +923,67 @@ class HalfNormal(PositiveContinuous):
             0 <= value,
             0 < sigma,
         )
+
+
+class ZeroSumNormal(Continuous):
+    def __init__(self, sigma=1, zerosum_dims=None, zerosum_axes=None, **kwargs):
+        shape = kwargs.get("shape", ())
+        dims = kwargs.get("dims", None)
+        if isinstance(shape, int):
+            shape = (shape,)
+
+        if isinstance(dims, str):
+            dims = (dims,)
+
+        self.mu = self.median = self.mode = tt.zeros(shape)
+        self.sigma = tt.as_tensor_variable(sigma)
+
+        if zerosum_dims is None and zerosum_axes is None:
+            if shape:
+                zerosum_axes = (-1,)
+            else:
+                zerosum_axes = ()
+
+        if isinstance(zerosum_axes, int):
+            zerosum_axes = (zerosum_axes,)
+
+        if isinstance(zerosum_dims, str):
+            zerosum_dims = (zerosum_dims,)
+
+        if zerosum_axes is not None and zerosum_dims is not None:
+            raise ValueError("Only one of zerosum_axes and zerosum_dims can be specified.")
+
+        if zerosum_dims is not None:
+            if dims is None:
+                raise ValueError("zerosum_dims can only be used with the dims kwargs.")
+            zerosum_axes = []
+            for dim in zerosum_dims:
+                zerosum_axes.append(dims.index(dim))
+        self.zerosum_axes = [a if a >= 0 else len(shape) + a for a in zerosum_axes]
+
+        if "transform" not in kwargs or kwargs["transform"] == None:
+            kwargs["transform"] = transforms.ZeroSumTransform(zerosum_axes)
+
+        super().__init__(**kwargs)
+
+    def logp(self, value):
+        return Normal.dist(sigma=self.sigma).logp(value)
+
+    def _random(self, scale, size):
+        samples = stats.norm.rvs(loc=0, scale=scale, size=size)
+        for axis in self.zerosum_axes:
+            samples -= np.mean(samples, axis=axis, keepdims=True)
+        return samples
+
+    def random(self, point=None, size=None):
+        (sigma,) = draw_values([self.sigma], point=point, size=size)
+        return generate_samples(self._random, scale=sigma, dist_shape=self.shape, size=size)
+
+    def _distr_parameters_for_repr(self):
+        return ["sigma"]
+
+    def logcdf(self, value):
+        raise NotImplementedError()
 
 
 class Wald(PositiveContinuous):

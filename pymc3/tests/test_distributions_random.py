@@ -343,6 +343,11 @@ class TestHalfNormal(BaseTestCases.BaseTestCase):
     params = {"tau": 1.0}
 
 
+class TestZeroSumNormal(BaseTestCases.BaseTestCase):
+    distribution = pm.ZeroSumNormal
+    params = {"sigma": 1.0}
+
+
 class TestUniform(BaseTestCases.BaseTestCase):
     distribution = pm.Uniform
     params = {"lower": 0.0, "upper": 1.0}
@@ -621,6 +626,21 @@ class TestScalarParameterSamples(SeededTest):
             return st.halfnorm.rvs(size=size, loc=0, scale=tau ** -0.5)
 
         pymc3_random(pm.HalfNormal, {"tau": Rplus}, ref_rand=ref_rand)
+
+    def test_zerosum_normal(self):
+        def ref_rand(size, sigma):
+            shape = sigma.shape
+            zerosum_axes = (-1,) if shape else ()
+            zerosum_axes = [a if a >= 0 else len(shape) + a for a in zerosum_axes]
+            n = shape[-1] if shape else 1
+            samples = st.multivariate_normal.rvs(
+                cov=sigma ** 2 * (np.eye(n) - np.ones(n) / n), size=n
+            )
+            for axis in zerosum_axes:
+                samples -= np.mean(samples, axis=axis, keepdims=True)
+            return samples
+
+        pymc3_random(pm.ZeroSumNormal, {"sigma": PdMatrix(3)}, ref_rand=ref_rand)
 
     def test_wald(self):
         # Cannot do anything too exciting as scipy wald is a

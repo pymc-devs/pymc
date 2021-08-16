@@ -14,6 +14,8 @@
 
 import warnings
 
+from typing import List
+
 import numpy as np
 import theano.tensor as tt
 
@@ -565,3 +567,78 @@ class Chain(Transform):
             else:
                 det += det_
         return det
+
+
+def _extend_axis(array, axis):
+    n = array.shape[axis] + 1
+    sum_vals = array.sum(axis, keepdims=True)
+    norm = sum_vals / (np.sqrt(n) + n)
+    fill_val = norm - sum_vals / np.sqrt(n)
+
+    out = tt.concatenate([array, fill_val], axis=axis)
+    return out - norm
+
+
+def _extend_axis_rev(array, axis):
+    if axis < 0:
+        axis = axis % array.ndim
+    assert axis >= 0 and axis < array.ndim
+
+    n = array.shape[axis]
+    last = tt.take(array, [-1], axis=axis)
+
+    sum_vals = -last * np.sqrt(n)
+    norm = sum_vals / (np.sqrt(n) + n)
+    slice_before = (slice(None, None),) * axis
+    return array[slice_before + (slice(None, -1),)] + norm
+
+
+def _extend_axis_val(array, axis):
+    n = array.shape[axis] + 1
+    sum_vals = array.sum(axis, keepdims=True)
+    norm = sum_vals / (np.sqrt(n) + n)
+    fill_val = norm - sum_vals / np.sqrt(n)
+
+    out = np.concatenate([array, fill_val], axis=axis)
+    return out - norm
+
+
+def _extend_axis_rev_val(array, axis):
+    n = array.shape[axis]
+    last = np.take(array, [-1], axis=axis)
+
+    sum_vals = -last * np.sqrt(n)
+    norm = sum_vals / (np.sqrt(n) + n)
+    slice_before = (slice(None, None),) * len(array.shape[:axis])
+    return array[slice_before + (slice(None, -1),)] + norm
+
+
+class ZeroSumTransform(Transform):
+    name = "zerosum"
+
+    _zerosum_axes: List[int]
+
+    def __init__(self, zerosum_axes):
+        self._zerosum_axes = zerosum_axes
+
+    def forward(self, x):
+        for axis in self._zerosum_axes:
+            x = _extend_axis_rev(x, axis=axis)
+        return floatX(x)
+
+    def forward_val(self, x, point):
+        for axis in self._zerosum_axes:
+            x = _extend_axis_rev_val(x, axis=axis)
+        return x
+
+    def backward(self, z):
+        z = tt.as_tensor_variable(z)
+        for axis in self._zerosum_axes:
+            z = _extend_axis(z, axis=axis)
+        return floatX(z)
+
+    def jacobian_det(self, x):
+        return tt.constant(0.0)
+
+
+zerosum = ZeroSumTransform
