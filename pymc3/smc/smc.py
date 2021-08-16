@@ -173,7 +173,7 @@ class SMC:
 
     def update_proposal(self):
         """Update proposal based on the covariance matrix from tempered posterior."""
-        cov = np.cov(self.posterior, ddof=0, aweights=self.weights, rowvar=0)
+        cov = np.cov(self.posterior, ddof=0, rowvar=0)
         cov = np.atleast_2d(cov)
         cov += 1e-6 * np.eye(cov.shape[0])
         if np.isnan(cov).any() or np.isinf(cov).any():
