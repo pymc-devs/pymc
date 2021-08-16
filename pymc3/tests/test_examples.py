@@ -51,7 +51,6 @@ def get_city_data():
     return data.merge(unique, "inner", on="fips")
 
 
-@pytest.mark.xfail(reason="Bernoulli logitp distribution not refactored")
 class TestARM5_4(SeededTest):
     def build_model(self):
         data = pd.read_csv(

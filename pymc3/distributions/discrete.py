@@ -333,8 +333,15 @@ class Bernoulli(Discrete):
 
     @classmethod
     def dist(cls, p=None, logit_p=None, *args, **kwargs):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        elif p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+
+        if logit_p is not None:
+            p = at.sigmoid(logit_p)
+
         p = at.as_tensor_variable(floatX(p))
-        # mode = at.cast(tround(p), "int8")
         return super().dist([p], **kwargs)
 
     def logp(value, p):
@@ -351,12 +358,9 @@ class Bernoulli(Discrete):
         -------
         TensorVariable
         """
-        # if self._is_logit:
-        #     lp = at.switch(value, self._logit_p, -self._logit_p)
-        #     return -log1pexp(-lp)
-        # else:
+
         return bound(
-            at.switch(value, at.log(p), at.log(1 - p)),
+            at.switch(value, at.log(p), at.log1p(-p)),
             value >= 0,
             value <= 1,
             p >= 0,
