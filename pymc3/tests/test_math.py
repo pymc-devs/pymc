@@ -23,6 +23,7 @@ from pymc3.math import (
     LogDet,
     cartesian,
     expand_packed_triangular,
+    invlogit,
     invprobit,
     kron_dot,
     kron_solve_lower,
@@ -250,3 +251,17 @@ def test_expand_packed_triangular():
     assert np.all(expand_upper.eval({packed: upper_packed}) == upper)
     assert np.all(expand_diag_lower.eval({packed: lower_packed}) == floatX(np.diag(vals)))
     assert np.all(expand_diag_upper.eval({packed: upper_packed}) == floatX(np.diag(vals)))
+
+
+def test_invlogit_deprecation_warning():
+    with pytest.warns(
+        DeprecationWarning,
+        match="pymc3.math.invlogit no longer supports the",
+    ):
+        res = invlogit(np.array(-750.0), 1e-5).eval()
+
+    with pytest.warns(None) as record:
+        res_zero_eps = invlogit(np.array(-750.0)).eval()
+    assert not record
+
+    assert np.isclose(res, res_zero_eps)
