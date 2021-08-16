@@ -1632,8 +1632,10 @@ class TestInterpolated(BaseTestDistribution):
         for mu in R.vals:
             for sigma in Rplus.vals:
                 # pylint: disable=cell-var-from-loop
+                rng = self.get_random_state()
+
                 def ref_rand(size):
-                    return st.norm.rvs(loc=mu, scale=sigma, size=size)
+                    return st.norm.rvs(loc=mu, scale=sigma, size=size, random_state=rng)
 
                 class TestedInterpolated(pm.Interpolated):
                     rv_op = interpolated
@@ -1644,7 +1646,12 @@ class TestInterpolated(BaseTestDistribution):
                         pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
                         return super().dist(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
-                pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
+                pymc3_random(
+                    TestedInterpolated,
+                    {},
+                    extra_args={"rng": aesara.shared(rng)},
+                    ref_rand=ref_rand,
+                )
 
 
 class TestKroneckerNormal(BaseTestDistribution):
