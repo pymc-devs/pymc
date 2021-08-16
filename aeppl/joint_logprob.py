@@ -35,15 +35,15 @@ def joint_logprob(
 
         import aesara.tensor as at
 
-        Y_rv = at.random.normal(0, at.sqrt(sigma2_rv))
         sigma2_rv = at.random.invgamma(0.5, 0.5)
+        Y_rv = at.random.normal(0, at.sqrt(sigma2_rv))
 
     This graph for ``Y_rv`` is equivalent to the following hierarchical model:
 
     .. math::
 
-        Y \sim& \operatorname{N}(0, \sigma^2) \\
-        \sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5)
+        \sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5) \\
+        Y \sim& \operatorname{N}(0, \sigma^2)
 
     If we create a value variable for ``Y_rv``, i.e. ``y = at.scalar("y")``,
     the graph of ``joint_logprob(Y_rv, {Y_rv: y})`` is equivalent to the
