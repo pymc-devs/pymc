@@ -377,8 +377,8 @@ def _sample_smc_int(
                 f"{getattr(progressbar, 'base_comment', '')} Stage: {stage} Beta: {smc.beta:.3f}"
             )
             progressbar.update_bar(getattr(progressbar, "offset", 0) + int(smc.beta * 100))
-        smc.update_proposal()
         smc.resample()
+        smc.update_proposal()
         smc.mutate()
         smc.tune()
         stage += 1
