@@ -51,15 +51,6 @@ Hamiltonian Monte Carlo
 .. autoclass:: pymc3.step_methods.hmc.hmc.HamiltonianMC
    :members:
 
-Sequential Monte Carlo
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. currentmodule:: pymc3.step_methods.smc.smc
-
-.. autoclass:: pymc3.smc.smc.SMC
-   :members:
-
-
 MultiTrace
 ^^^^^^^^^^
 
@@ -102,4 +93,21 @@ Operators
 .. currentmodule:: pymc3.variational.operators
 
 .. automodule:: pymc3.variational.operators
+   :members:
+
+
+Sequential Monte Carlo
+----------------------
+
+.. currentmodule:: pymc3.smc.sample_smc
+
+.. automodule:: pymc3.smc.sample_smc
+   :members:
+
+Kernels
+^^^^^^^
+
+.. currentmodule:: pymc3.smc.smc
+
+.. automodule:: pymc3.smc.smc
    :members:
