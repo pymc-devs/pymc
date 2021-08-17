@@ -1779,9 +1779,9 @@ class AsymmetricLaplace(Continuous):
 class Lognormal(LogNormal):
     """deprecated, use LogNormal instead!"""
     def __init__(self, *args, **kwargs):
-        warnings.warn(
-          "The class name LogNormal is deprecated, use LogNormal instead!",
-          DeprecationWarning)
+#         warnings.warn(
+#           "The class name LogNormal is deprecated, use LogNormal instead!",
+#           DeprecationWarning)
         return super().__init__(*args, **kwargs)
 
 class LogNormal(PositiveContinuous):
