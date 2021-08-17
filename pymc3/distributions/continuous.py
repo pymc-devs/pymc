@@ -105,7 +105,7 @@ __all__ = [
     "Gamma",
     "Weibull",
     "HalfStudentT",
-    "Lognormal",
+    "LogNormal",
     "ChiSquared",
     "HalfNormal",
     "Wald",
@@ -1675,8 +1675,12 @@ class AsymmetricLaplace(Continuous):
             0 < kappa,
         )
 
+class Lognormal(LogNormal):
+    """deprecated, use LogNormal instead!"""
+    def __init__(self, *args, **kwargs):
+        return super().__init__(*args, **kwargs)
 
-class Lognormal(PositiveContinuous):
+class LogNormal(PositiveContinuous):
     r"""
     Log-normal log-likelihood.
 
@@ -1733,10 +1737,10 @@ class Lognormal(PositiveContinuous):
 
         # Example to show that we pass in only ``sigma`` or ``tau`` but not both.
         with pm.Model():
-            x = pm.Lognormal('x', mu=2, sigma=30)
+            x = pm.LogNormal('x', mu=2, sigma=30)
 
         with pm.Model():
-            x = pm.Lognormal('x', mu=2, tau=1/100)
+            x = pm.LogNormal('x', mu=2, tau=1/100)
     """
 
     rv_op = lognormal
@@ -1754,11 +1758,42 @@ class Lognormal(PositiveContinuous):
         assert_negative_support(tau, "tau", "LogNormal")
         assert_negative_support(sigma, "sigma", "LogNormal")
 
+<<<<<<< HEAD
         return super().dist([mu, sigma], *args, **kwargs)
 
     def logp(value, mu, sigma):
+=======
+        assert_negative_support(tau, "tau", "LogNormal")
+        assert_negative_support(sigma, "sigma", "LogNormal")
+
+    def _random(self, mu, tau, size=None):
+        samples = np.random.normal(size=size)
+        return np.exp(mu + (tau ** -0.5) * samples)
+
+    def random(self, point=None, size=None):
         """
-        Calculate log-probability of Lognormal distribution at specified value.
+        Draw random values from LogNormal distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
+        return generate_samples(self._random, mu, tau, dist_shape=self.shape, size=size)
+
+    def logp(self, value):
+>>>>>>> 9daf76a8 (Change "Lognormal" to "LogNormal" (camel case) (#4928))
+        """
+        Calculate log-probability of LogNormal distribution at specified value.
 
         Parameters
         ----------
@@ -1780,7 +1815,7 @@ class Lognormal(PositiveContinuous):
 
     def logcdf(value, mu, sigma):
         """
-        Compute the log of the cumulative distribution function for Lognormal distribution
+        Compute the log of the cumulative distribution function for LogNormal distribution
         at the specified value.
 
         Parameters

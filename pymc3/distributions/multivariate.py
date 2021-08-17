@@ -1630,7 +1630,7 @@ class MatrixNormal(Continuous):
             colchol = pm.expand_packed_triangular(3, colchol_packed)
 
             # Setup left covariance matrix
-            scale = pm.Lognormal('scale', mu=np.log(true_scale), sigma=0.5)
+            scale = pm.LogNormal('scale', mu=np.log(true_scale), sigma=0.5)
             rowcov = at.diag([scale**(2*i) for i in range(m)])
 
             vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,

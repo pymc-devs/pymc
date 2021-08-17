@@ -516,6 +516,9 @@ class TestAsymmetricLaplace(BaseTestDistribution):
         "check_rv_size",
     ]
 
+class TestLogNormal(BaseTestCases.BaseTestCase):
+    distribution = pm.LogNormal
+    params = {"mu": 1.0, "tau": 1.0}
 
 class TestExGaussian(BaseTestDistribution):
     def exgaussian_rng_fn(self, mu, sigma, nu, size, normal_rng_fct, exponential_rng_fct):
@@ -1255,11 +1258,15 @@ class TestHyperGeometric(BaseTestDistribution):
     ]
 
 
+<<<<<<< HEAD
 class TestLogistic(BaseTestDistribution):
     pymc_dist = pm.Logistic
     pymc_dist_params = {"mu": 1.0, "s": 2.0}
     expected_rv_op_params = {"mu": 1.0, "s": 2.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
+=======
+        pymc3_random(pm.LogNormal, {"mu": R, "tau": Rplusbig}, ref_rand=ref_rand)
+>>>>>>> 9daf76a8 (Change "Lognormal" to "LogNormal" (camel case) (#4928))
 
 
 class TestLognormal(BaseTestDistribution):

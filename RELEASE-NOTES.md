@@ -28,12 +28,13 @@
 ### Maintenance
 - Remove float128 dtype support (see [#4514](https://github.com/pymc-devs/pymc3/pull/4514)).
 - Logp method of `Uniform` and `DiscreteUniform` no longer depends on `pymc3.distributions.dist_math.bound` for proper evaluation (see [#4541](https://github.com/pymc-devs/pymc3/pull/4541)).
+<<<<<<< HEAD
 - `Model.RV_dims` and `Model.coords` are now read-only properties. To modify the `coords` dictionary use `Model.add_coord`. Also `dims` or coordinate values that are `None` will be auto-completed (see [#4625](https://github.com/pymc-devs/pymc3/pull/4625)).
 - The length of `dims` in the model is now tracked symbolically through `Model.dim_lengths` (see [#4625](https://github.com/pymc-devs/pymc3/pull/4625)).
 - We now include `cloudpickle` as a required dependency, and no longer depend on `dill` (see [#4858](https://github.com/pymc-devs/pymc3/pull/4858)).
 - The `incomplete_beta` function in `pymc3.distributions.dist_math` was replaced by `aesara.tensor.betainc` (see [4857](https://github.com/pymc-devs/pymc3/pull/4857)).
 - `math.log1mexp` and `math.log1mexp_numpy` will expect negative inputs in the future. A `FutureWarning` is now raised unless `negative_input=True` is set (see [#4860](https://github.com/pymc-devs/pymc3/pull/4860)).
-- ...
+- Change name of `Lognormal` distribution to `LogNormal` to harmonize CamelCase usage for distribution names.
 
 ## PyMC3 3.11.2 (14 March 2021)
 
@@ -405,7 +406,7 @@ This will be the last release to support Python 2.
 - Track the model log-likelihood as a sampler stat for NUTS and HMC samplers
   (accessible as `trace.get_sampler_stats('model_logp')`) (#3134)
 - Add Incomplete Beta function `incomplete_beta(a, b, value)`
-- Add log CDF functions to continuous distributions: `Beta`, `Cauchy`, `ExGaussian`, `Exponential`, `Flat`, `Gumbel`, `HalfCauchy`, `HalfFlat`, `HalfNormal`, `Laplace`, `Logistic`, `Lognormal`, `Normal`, `Pareto`, `StudentT`, `Triangular`, `Uniform`, `Wald`, `Weibull`.
+- Add log CDF functions to continuous distributions: `Beta`, `Cauchy`, `ExGaussian`, `Exponential`, `Flat`, `Gumbel`, `HalfCauchy`, `HalfFlat`, `HalfNormal`, `Laplace`, `Logistic`, `LogNormal`, `Normal`, `Pareto`, `StudentT`, `Triangular`, `Uniform`, `Wald`, `Weibull`.
 - Behavior of `sample_posterior_predictive` is now to produce posterior predictive samples, in order, from all values of the `trace`. Previously, by default it would produce 1 chain worth of samples, using a random selection from the `trace` (#3212)
 - Show diagnostics for initial energy errors in HMC and NUTS.
 - PR #3273 has added the `distributions.distribution._DrawValuesContext` context
@@ -735,7 +736,7 @@ Since the beta release last year, the following improvements have been implement
 
 * Argument order of tau and sd was switched for distributions of the normal family:
 - `Normal()`
-- `Lognormal()`
+- `LogNormal()`
 - `HalfNormal()`
 
 Old: `Normal(name, mu, tau)`
