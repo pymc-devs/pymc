@@ -244,12 +244,8 @@ class Simulator(NoDistribution):
 
         # Create a new simulatorRV with identical inputs as the original one
         sim_op = sim_rv.owner.op
-        new_rng, sim_value = sim_op.make_node(rng, *sim_rv.owner.inputs[1:]).outputs
+        sim_value = sim_op.make_node(rng, *sim_rv.owner.inputs[1:]).default_output()
         sim_value.name = "sim_value"
-
-        # Automatically update rng when expression is evaluated
-        sim_value.update = (rng, new_rng)
-        rng.default_update = new_rng
 
         return sim_op.distance(
             sim_op.epsilon,
