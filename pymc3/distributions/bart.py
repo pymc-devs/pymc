@@ -36,27 +36,35 @@ class BARTRV(RandomVariable):
     def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
         return default_shape_from_params(self.ndim_supp, dist_params, rep_param_idx, param_shapes)
 
-    def __new__(cls, *args, **kwargs):
-        return super().__new__(cls)
-
     @classmethod
-    def rng_fn(cls, rng=np.random.default_rng(), X_new=None, *args, **kwargs):
+    def rng_fn(cls, rng=np.random.default_rng(), *args, **kwargs):
+        size = kwargs.pop("size", None)
+        X_new = kwargs.pop("X_new", None)
         all_trees = cls.all_trees
         if all_trees:
-            # this should be rng.integers() but when sampling from the prior/posterior predictive
-            # I get 'numpy.random.mtrand.RandomState' object has no attribute 'integers'
-            # So I guess those functions need to be updated
-            idx = np.random.randint(len(all_trees))
-            trees = all_trees[idx]
+
+            if size is None:
+                size = ()
+            elif isinstance(size, int):
+                size = [size]
+
+            flatten_size = 1
+            for s in size:
+                flatten_size *= s
+
+            idx = rng.randint(len(all_trees), size=flatten_size)
+
             if X_new is None:
-                pred = np.zeros(trees[0].num_observations)
-                for tree in trees:
-                    pred += tree.predict_output()
+                pred = np.zeros((flatten_size, all_trees[0][0].num_observations))
+                for ind, p in enumerate(pred):
+                    for tree in all_trees[idx[ind]]:
+                        p += tree.predict_output()
             else:
-                pred = np.zeros(X_new.shape[0])
-                for tree in trees:
-                    pred += np.array([tree.predict_out_of_sample(x) for x in X_new])
-            return pred
+                pred = np.zeros((flatten_size, X_new.shape[0]))
+                for ind, p in enumerate(pred):
+                    for tree in all_trees[idx[ind]]:
+                        p += np.array([tree.predict_out_of_sample(x) for x in X_new])
+            return pred.reshape((*size, -1))
         else:
             return np.full_like(cls.Y, cls.Y.mean())
 

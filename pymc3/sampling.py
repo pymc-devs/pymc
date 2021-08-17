@@ -42,7 +42,7 @@ from pymc3.backends.arviz import _DefaultTrace
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
 from pymc3.blocking import DictToArrayBijection
-from pymc3.distributions.bart import BARTRV
+from pymc3.distributions import NoDistribution
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
 from pymc3.model import Model, Point, modelcontext
 from pymc3.parallel_sampling import Draw, _cpu_count
@@ -240,7 +240,10 @@ def all_continuous(vars, model):
 
     if any(
         [
-            (var.dtype in discrete_types or isinstance(model.values_to_rvs[var].owner.op, BARTRV))
+            (
+                var.dtype in discrete_types
+                or isinstance(model.values_to_rvs[var].owner.op, NoDistribution)
+            )
             for var in vars_
         ]
     ):
