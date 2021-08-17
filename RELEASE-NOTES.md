@@ -13,7 +13,7 @@
 ### Maintenance
 - Remove float128 dtype support (see [#4514](https://github.com/pymc-devs/pymc3/pull/4514)).
 - Logp method of `Uniform` and `DiscreteUniform` no longer depends on `pymc3.distributions.dist_math.bound` for proper evaluation (see [#4541](https://github.com/pymc-devs/pymc3/pull/4541)).
-- Change name of `Lognormal` distribution to `LogNormal` to synchronize Camel Case usage for distribution names.
+- Change name of `Lognormal` distribution to `LogNormal` to harmonize CamelCase usage for distribution names.
 
 ## PyMC3 3.11.2 (14 March 2021)
 
