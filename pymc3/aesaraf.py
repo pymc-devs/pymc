@@ -895,6 +895,22 @@ def compile_rv_inplace(inputs, outputs, mode=None, **kwargs):
     Using this function ensures that compiled functions containing random
     variables will produce new samples on each call.
     """
+
+    # Avoid circular dependency
+    from pymc3.distributions import NoDistribution
+
+    # Set the default update of a NoDistribution RNG so that it is automatically
+    # updated after every function call
+    output_to_list = outputs if isinstance(outputs, list) else [outputs]
+    for rv in (
+        node
+        for node in walk_model(output_to_list, walk_past_rvs=True)
+        if node.owner and isinstance(node.owner.op, NoDistribution)
+    ):
+        rng = rv.owner.inputs[0]
+        if not hasattr(rng, "default_update"):
+            rng.default_update = rv.owner.outputs[0]
+
     mode = get_mode(mode)
     opt_qry = mode.provided_optimizer.including("random_make_inplace")
     mode = Mode(linker=mode.linker, optimizer=opt_qry)
