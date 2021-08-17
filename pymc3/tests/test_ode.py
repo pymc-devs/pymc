@@ -295,7 +295,7 @@ class TestDiffEqModel:
             sigma = pm.HalfCauchy("sigma", 1)
             forward = ode_model(theta=[alpha], y0=[y0])
             y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
-            trace = pm.sample(100, tune=0, chains=1)
+            idata = pm.sample(100, tune=0, chains=1)
 
         assert idata.posterior["alpha"].shape == (1, 100)
         assert idata.posterior["y0"].shape == (1, 100)
