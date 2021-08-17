@@ -196,10 +196,11 @@ class PGBART(ArrayStepShared):
             self.old_trees_particles_list[tree.tree_id] = new_tree
             self.trees[idx] = new_tree.tree
             sum_trees_output = sum_trees_output_noi + new_tree.tree.predict_output()
-            for index in new_tree.used_variates:
-                self.split_prior[index] += 1
 
-            if not self.tune:
+            if self.tune:
+                for index in new_tree.used_variates:
+                    self.split_prior[index] += 1
+            else:
                 self.iter += 1
                 self.sum_trees.append(new_tree.tree)
                 if not self.iter % self.m:
