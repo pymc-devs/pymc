@@ -1262,23 +1262,23 @@ class TestLogistic(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestLognormal(BaseTestDistribution):
-    pymc_dist = pm.Lognormal
+class TestLogNormal(BaseTestDistribution):
+    pymc_dist = pm.LogNormal
     pymc_dist_params = {"mu": 1.0, "sigma": 5.0}
     expected_rv_op_params = {"mu": 1.0, "sigma": 5.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestLognormalTau(BaseTestDistribution):
-    pymc_dist = pm.Lognormal
+class TestLogNormalTau(BaseTestDistribution):
+    pymc_dist = pm.LogNormal
     tau, sigma = get_tau_sigma(tau=25.0)
     pymc_dist_params = {"mu": 1.0, "tau": 25.0}
     expected_rv_op_params = {"mu": 1.0, "sigma": sigma}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestLognormalSd(BaseTestDistribution):
-    pymc_dist = pm.Lognormal
+class TestLogNormalSd(BaseTestDistribution):
+    pymc_dist = pm.LogNormal
     pymc_dist_params = {"mu": 1.0, "sd": 5.0}
     expected_rv_op_params = {"mu": 1.0, "sigma": 5.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]

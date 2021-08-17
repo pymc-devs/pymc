@@ -291,10 +291,10 @@ class TestDiffEqModel:
 
         with pm.Model() as model:
             alpha = pm.HalfCauchy("alpha", 1)
-            y0 = pm.Lognormal("y0", 0, 1)
+            y0 = pm.LogNormal("y0", 0, 1)
             sigma = pm.HalfCauchy("sigma", 1)
             forward = ode_model(theta=[alpha], y0=[y0])
-            y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
+            y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
             idata = pm.sample(100, tune=0, chains=1)
 
         assert idata.posterior["alpha"].shape == (1, 100)
@@ -323,10 +323,10 @@ class TestDiffEqModel:
         with pm.Model() as model:
             alpha = pm.HalfCauchy("alpha", 1)
             beta = pm.HalfCauchy("beta", 1)
-            y0 = pm.Lognormal("y0", 0, 1)
+            y0 = pm.LogNormal("y0", 0, 1)
             sigma = pm.HalfCauchy("sigma", 1)
             forward = ode_model(theta=[alpha, beta], y0=[y0])
-            y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
+            y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
             idata = pm.sample(100, tune=0, chains=1)
 
@@ -364,10 +364,10 @@ class TestDiffEqModel:
         ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=2, n_theta=1)
 
         with pm.Model() as model:
-            R = pm.Lognormal("R", 1, 5, initval=1)
+            R = pm.LogNormal("R", 1, 5, initval=1)
             sigma = pm.HalfCauchy("sigma", 1, shape=2, initval=[0.5, 0.5])
             forward = ode_model(theta=[R], y0=[0.99, 0.01])
-            y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
+            y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
             idata = pm.sample(100, tune=0, chains=1)
 
@@ -407,7 +407,7 @@ class TestDiffEqModel:
             gamma = pm.HalfCauchy("gamma", 1, initval=1)
             sigma = pm.HalfCauchy("sigma", 1, shape=2, initval=[1, 1])
             forward = ode_model(theta=[beta, gamma], y0=[0.99, 0.01])
-            y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
+            y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
             idata = pm.sample(100, tune=0, chains=1)
 

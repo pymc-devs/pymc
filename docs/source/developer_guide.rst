@@ -381,7 +381,7 @@ cannot be transformed.
 
    .. code:: python
 
-       z = pm.Lognormal.dist(mu=0., sigma=1., transform=tr.Log)
+       z = pm.LogNormal.dist(mu=0., sigma=1., transform=tr.Log)
        z.transform           # ==> pymc3.distributions.transforms.Log
 
 
