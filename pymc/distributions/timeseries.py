@@ -21,6 +21,7 @@ import numpy as np
 from scipy import stats
 from typing import List, Tuple
 
+import pymc as pymc
 from pymc import logp
 from pymc.aesaraf import floatX, intX
 from pymc.distributions import distribution, multivariate
@@ -187,7 +188,7 @@ class ARMARV(RandomVariable):
     dtype = "floatX"
     _print_name = ("ARMA", "\\operatorname{ARMA}")
 
-    def __call__(self, phi, theta, mu=[0.0], sigma=[1.0],**kwargs) -> TensorVariable:
+    def __call__(self, phi, theta, mu=0.0, sigma=1.0,**kwargs) -> TensorVariable:
         return super().__call__(phi, theta, mu, sigma,**kwargs)
 
     @classmethod
@@ -266,7 +267,7 @@ class ARMA(distribution.Continuous):
         mu = mu + at.dot(epsilon_lagged, at.transpose(theta))
 
         epsilon = at.sub(Y,mu)
-        logp = at.sum(logp(Normal.dist(mu=0.0, sigma=sigma,size=t), epsilon))
+        logp = at.sum(pm.logp(Normal.dist(mu=0.0, sigma=sigma,size=t), epsilon))
         return logp
 
 class GaussianRandomWalk(distribution.Continuous):
