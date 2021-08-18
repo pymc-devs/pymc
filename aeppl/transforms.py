@@ -72,14 +72,15 @@ class TransformedRV(RandomVariable, metaclass=DistributionMeta):
 
 
 @_logprob.register(TransformedRV)
-def transformed_logprob(op, value, *inputs, name=None, **kwargs):
+def transformed_logprob(op, values, *inputs, name=None, **kwargs):
     """Compute the log-likelihood graph for a `TransformedRV`.
 
     We assume that the value variable was back-transformed to be on the natural
     support of the respective random variable.
     """
+    (value,) = values
 
-    logprob = _logprob(op.base_op, value, *inputs, name=name, **kwargs)
+    logprob = _logprob(op.base_op, values, *inputs, name=name, **kwargs)
 
     original_forward_value = op.transform.forward(value, *inputs)
     jacobian = op.transform.log_jac_det(original_forward_value, *inputs)

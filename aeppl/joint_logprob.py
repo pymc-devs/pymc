@@ -147,29 +147,33 @@ def joint_logprob(
 
             outputs = get_measurable_outputs(node.op, node)
 
-            for q_rv_var in outputs:
+            q_rv_value_vars = [
+                replacements[q_rv_var]
+                for q_rv_var in outputs
+                if not getattr(q_rv_var.tag, "ignore_logprob", False)
+            ]
 
-                if getattr(q_rv_var.tag, "ignore_logprob", False):
-                    continue
+            if not q_rv_value_vars:
+                continue
 
-                q_rv_value_var = replacements[q_rv_var]
+            # Replace `RandomVariable`s in the inputs with value variables.
+            # Also, store the results in the `replacements` map so that we
+            # don't need to redo these replacements.
+            remapped_vars, _ = rvs_to_value_vars(
+                q_rv_value_vars + list(node.inputs),
+                initial_replacements=replacements,
+            )
+            q_rv_value_vars = remapped_vars[: len(q_rv_value_vars)]
+            value_var_inputs = remapped_vars[len(q_rv_value_vars) :]
 
-                # Replace `RandomVariable`s in the inputs with value variables.
-                # Also, store the results in the `replacements` map so that we
-                # don't need to redo these replacements.
-                (q_rv_value_var, *value_var_inputs), _ = rvs_to_value_vars(
-                    [q_rv_value_var, *node.inputs],
-                    initial_replacements=replacements,
-                )
+            q_logprob_var = _logprob(
+                node.op,
+                q_rv_value_vars,
+                *value_var_inputs,
+                **kwargs,
+            )
 
-                q_logprob_var = _logprob(
-                    node.op,
-                    q_rv_value_var,
-                    *value_var_inputs,
-                    name=q_rv_var.name,
-                    **kwargs,
-                )
-
+            for q_rv_var in q_rv_value_vars:
                 if q_rv_var.name:
                     q_logprob_var.name = f"{q_rv_var.name}_logprob"
 

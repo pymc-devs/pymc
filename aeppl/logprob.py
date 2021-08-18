@@ -1,4 +1,5 @@
 from functools import singledispatch
+from typing import Tuple
 
 import aesara.tensor as at
 import aesara.tensor.random.basic as arb
@@ -26,14 +27,13 @@ def xlogy0(m, x):
     return at.switch(at.eq(x, 0), at.switch(at.eq(m, 0), 0.0, -np.inf), m * at.log(x))
 
 
-def logprob(rv_var, rv_value, **kwargs):
+def logprob(rv_var, *rv_values, **kwargs):
     """Create a graph for the log-probability of a ``RandomVariable``."""
-    logprob = _logprob(
-        rv_var.owner.op, rv_value, *rv_var.owner.inputs, name=rv_var.name, **kwargs
-    )
+    logprob = _logprob(rv_var.owner.op, rv_values, *rv_var.owner.inputs, **kwargs)
 
-    if rv_var.name:
-        logprob.name = f"{rv_var.name}_logprob"
+    for rv_var in rv_values:
+        if rv_var.name:
+            logprob.name = f"{rv_var.name}_logprob"
 
     return logprob
 
@@ -41,7 +41,7 @@ def logprob(rv_var, rv_value, **kwargs):
 @singledispatch
 def _logprob(
     op: Op,
-    value: TensorVariable,
+    values: Tuple[TensorVariable],
     *inputs: TensorVariable,
     **kwargs,
 ):
@@ -56,7 +56,8 @@ def _logprob(
 
 
 @_logprob.register(arb.UniformRV)
-def uniform_logprob(op, value, *inputs, **kwargs):
+def uniform_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     lower, upper = inputs[3:]
     return at.switch(
         at.bitwise_and(at.ge(value, lower), at.le(value, upper)),
@@ -66,7 +67,8 @@ def uniform_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.NormalRV)
-def normal_logprob(op, value, *inputs, **kwargs):
+def normal_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     mu, sigma = inputs[3:]
     res = (
         -0.5 * at.pow((value - mu) / sigma, 2)
@@ -78,7 +80,8 @@ def normal_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.HalfNormalRV)
-def halfnormal_logprob(op, value, *inputs, **kwargs):
+def halfnormal_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     loc, sigma = inputs[3:]
     res = (
         -0.5 * at.pow((value - loc) / sigma, 2)
@@ -91,7 +94,8 @@ def halfnormal_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.BetaRV)
-def beta_logprob(op, value, *inputs, **kwargs):
+def beta_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     alpha, beta = inputs[3:]
     res = (
         at.switch(at.eq(alpha, 1.0), 0.0, (alpha - 1.0) * at.log(value))
@@ -106,7 +110,8 @@ def beta_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.ExponentialRV)
-def exponential_logprob(op, value, *inputs, **kwargs):
+def exponential_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     (mu,) = inputs[3:]
     res = -at.log(mu) - value / mu
     res = at.switch(at.ge(value, 0.0), res, -np.inf)
@@ -115,13 +120,15 @@ def exponential_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.LaplaceRV)
-def laplace_logprob(op, value, *inputs, **kwargs):
+def laplace_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     mu, b = inputs[3:]
     return -at.log(2 * b) - at.abs_(value - mu) / b
 
 
 @_logprob.register(arb.LogNormalRV)
-def lognormal_logprob(op, value, *inputs, **kwargs):
+def lognormal_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     mu, sigma = inputs[3:]
     res = (
         -0.5 * at.pow((at.log(value) - mu) / sigma, 2)
@@ -135,7 +142,8 @@ def lognormal_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.ParetoRV)
-def pareto_logprob(op, value, *inputs, **kwargs):
+def pareto_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     alpha, m = inputs[3:]
     res = at.log(alpha) + xlogy0(alpha, m) - xlogy0(alpha + 1.0, value)
     res = at.switch(at.ge(value, m), res, -np.inf)
@@ -146,7 +154,8 @@ def pareto_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.CauchyRV)
-def cauchy_logprob(op, value, *inputs, **kwargs):
+def cauchy_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     alpha, beta = inputs[3:]
     res = -at.log(np.pi) - at.log(beta) - at.log1p(at.pow((value - alpha) / beta, 2))
     res = Assert("beta > 0")(res, at.all(at.gt(beta, 0.0)))
@@ -154,15 +163,17 @@ def cauchy_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.HalfCauchyRV)
-def halfcauchy_logprob(op, value, *inputs, **kwargs):
-    res = at.log(2) + cauchy_logprob(op, value, *inputs, **kwargs)
+def halfcauchy_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
+    res = at.log(2) + cauchy_logprob(op, values, *inputs, **kwargs)
     loc, _ = inputs[3:]
     res = at.switch(at.ge(value, loc), res, -np.inf)
     return res
 
 
 @_logprob.register(arb.GammaRV)
-def gamma_logprob(op, value, *inputs, **kwargs):
+def gamma_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     alpha, inv_beta = inputs[3:]
     beta = at.reciprocal(inv_beta)
     res = (
@@ -179,7 +190,8 @@ def gamma_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.InvGammaRV)
-def invgamma_logprob(op, value, *inputs, **kwargs):
+def invgamma_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     alpha, beta = inputs[3:]
     res = -(alpha + 1) * np.log(value) - at.gammaln(alpha) - 1.0 / value
     res = (
@@ -196,14 +208,16 @@ def invgamma_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.ChiSquareRV)
-def chisquare_logprob(op, value, *inputs, **kwargs):
+def chisquare_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     (nu,) = inputs[3:]
-    res = gamma_logprob(op, value, *(*inputs[:3], nu / 2, 2))
+    res = gamma_logprob(op, values, *(*inputs[:3], nu / 2, 2))
     return res
 
 
 @_logprob.register(arb.WaldRV)
-def wald_logprob(op, value, *inputs, **kwargs):
+def wald_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     mu, scale = inputs[3:]
     res = (
         0.5 * at.log(scale / (2.0 * np.pi))
@@ -219,7 +233,8 @@ def wald_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.WeibullRV)
-def weibull_logprob(op, value, *inputs, **kwargs):
+def weibull_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     alpha, beta = inputs[3:]
     res = (
         at.log(alpha)
@@ -235,7 +250,8 @@ def weibull_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.VonMisesRV)
-def vonmises_logprob(op, value, *inputs, **kwargs):
+def vonmises_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     mu, kappa = inputs[3:]
     res = kappa * at.cos(mu - value) - at.log(2 * np.pi) - at.log(at.i0(kappa))
     res = at.switch(
@@ -246,7 +262,8 @@ def vonmises_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.TriangularRV)
-def triangular_logprob(op, value, *inputs, **kwargs):
+def triangular_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     lower, c, upper = inputs[3:]
     res = at.switch(
         at.lt(value, c),
@@ -263,7 +280,8 @@ def triangular_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.GumbelRV)
-def gumbel_logprob(op, value, *inputs, **kwargs):
+def gumbel_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     mu, beta = inputs[3:]
     z = (value - mu) / beta
     res = -z - at.exp(-z) - at.log(beta)
@@ -272,7 +290,8 @@ def gumbel_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.LogisticRV)
-def logistic_logprob(op, value, *inputs, **kwargs):
+def logistic_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     mu, s = inputs[3:]
     z = (value - mu) / s
     res = -z - at.log(s) - 2.0 * at.log1p(at.exp(-z))
@@ -281,7 +300,8 @@ def logistic_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.BinomialRV)
-def binomial_logprob(op, value, *inputs, **kwargs):
+def binomial_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     n, p = inputs[3:]
     res = binomln(n, value) + xlogy0(value, p) + xlogy0(n - value, 1.0 - p)
     res = at.switch(at.bitwise_and(at.le(0, value), at.le(value, n)), res, -np.inf)
@@ -290,7 +310,8 @@ def binomial_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.BetaBinomialRV)
-def betabinomial_logprob(op, value, *inputs, **kwargs):
+def betabinomial_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     n, alpha, beta = inputs[3:]
     res = (
         binomln(n, value)
@@ -305,7 +326,8 @@ def betabinomial_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.BernoulliRV)
-def bernoulli_logprob(op, value, *inputs, **kwargs):
+def bernoulli_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     (p,) = inputs[3:]
     res = at.switch(value, at.log(p), at.log(1.0 - p))
     res = at.switch(at.bitwise_and(at.le(0, value), at.le(value, 1)), res, -np.inf)
@@ -314,7 +336,8 @@ def bernoulli_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.PoissonRV)
-def poisson_logprob(op, value, *inputs, **kwargs):
+def poisson_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     (mu,) = inputs[3:]
     res = xlogy0(value, mu) - at.gammaln(value + 1) - mu
     res = at.switch(at.le(0, value), res, -np.inf)
@@ -324,7 +347,8 @@ def poisson_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.NegBinomialRV)
-def nbinom_logprob(op, value, *inputs, **kwargs):
+def nbinom_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     n, p = inputs[3:]
     mu = n * (1 - p) / p
     res = (
@@ -334,12 +358,13 @@ def nbinom_logprob(op, value, *inputs, **kwargs):
     )
     res = at.switch(at.le(0, value), res, -np.inf)
     res = Assert("0 < mu, 0 < n")(res, at.all(at.lt(0.0, mu)), at.all(at.lt(0.0, n)))
-    res = at.switch(at.gt(n, 1e10), poisson_logprob(op, value, *inputs[:3], mu), res)
+    res = at.switch(at.gt(n, 1e10), poisson_logprob(op, values, *inputs[:3], mu), res)
     return res
 
 
 @_logprob.register(arb.GeometricRV)
-def geometric_logprob(op, value, *inputs, **kwargs):
+def geometric_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     (p,) = inputs[3:]
     res = at.log(p) + xlogy0(value - 1, 1 - p)
     res = at.switch(at.le(1, value), res, -np.inf)
@@ -348,7 +373,8 @@ def geometric_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.HyperGeometricRV)
-def hypergeometric_logprob(op, value, *inputs, **kwargs):
+def hypergeometric_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     good, bad, n = inputs[3:]
     total = good + bad
     res = (
@@ -368,7 +394,8 @@ def hypergeometric_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.CategoricalRV)
-def categorical_logprob(op, value, *inputs, **kwargs):
+def categorical_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     (p,) = inputs[3:]
 
     p = p / at.sum(p, axis=-1, keepdims=True)
@@ -399,7 +426,8 @@ def categorical_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.MvNormalRV)
-def mvnormal_logprob(op, value, *inputs, **kwargs):
+def mvnormal_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     mu, cov = inputs[3:]
 
     r = value - mu
@@ -431,7 +459,8 @@ def mvnormal_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.DirichletRV)
-def dirichlet_logprob(op, value, *inputs, **kwargs):
+def dirichlet_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     (alpha,) = inputs[3:]
     res = at.sum(at.gammaln(alpha)) - at.gammaln(at.sum(alpha))
     res = -res + at.sum((xlogy0(alpha - 1, value.T)).T, axis=0)
@@ -447,7 +476,8 @@ def dirichlet_logprob(op, value, *inputs, **kwargs):
 
 
 @_logprob.register(arb.MultinomialRV)
-def multinomial_logprob(op, value, *inputs, **kwargs):
+def multinomial_logprob(op, values, *inputs, **kwargs):
+    (value,) = values
     n, p = inputs[3:]
     res = at.gammaln(n + 1) + at.sum(-at.gammaln(value + 1) + xlogy0(value, p), axis=-1)
     res = at.switch(
