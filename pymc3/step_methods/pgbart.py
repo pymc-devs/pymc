@@ -446,12 +446,6 @@ def grow_tree(
     return index_selected_predictor
 
 
-def get_available_splitting_values(X_j, missing_data):
-    if missing_data:
-        X_j = X_j[~np.isnan(X_j)]
-    return X_j
-
-
 def get_new_idx_data_points(current_split_node, idx_data_points, X):
     idx_split_variable = current_split_node.idx_split_variable
     split_value = current_split_node.split_value
