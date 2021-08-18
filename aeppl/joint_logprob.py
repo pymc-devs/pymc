@@ -94,7 +94,7 @@ def joint_logprob(
     # to give good warnings when an unaccounted for `RandomVariable` is
     # encountered
     fgraph = FunctionGraph(
-        outputs=vars,
+        outputs=list(vars) + [k for k in rv_values.keys() if k not in vars],
         clone=True,
         memo=memo,
         copy_orphans=False,
