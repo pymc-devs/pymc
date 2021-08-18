@@ -11,8 +11,10 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import abc
 
-from collections import OrderedDict
+from abc import ABC
+from typing import Dict
 
 import aesara.tensor as at
 import numpy as np
@@ -35,135 +37,201 @@ from pymc3.sampling import sample_prior_predictive
 from pymc3.vartypes import discrete_types
 
 
-class SMC:
-    """Sequential Monte Carlo with Independent Metropolis-Hastings and ABC kernels."""
+class SMC_KERNEL(ABC):
+    """Base class for the Sequential Monte Carlo kernels
+
+    To creat a new SMC kernel you should subclass from this.
+
+    Before sampling, the following methods are called once in order:
+
+        initialize_population
+            Choose initial population of SMC particles. Should return a dictionary
+            with {var.name : numpy array of size (draws, var.size)}. Defaults
+            to sampling from the prior distribution. This method is only called
+            if `start` is not specified.
+
+        _initialize_kernel: default
+            Creates initial population of particles in the variable
+            `self.tempered_posterior` and populates the `self.var_info` dictionary
+            with information about model variables shape and size as
+            {var.name : (var.shape, var.size)
+
+            The functions self.prior_logp_func and self.likelihood_logp_func are
+            created in this step. These expect a 1D numpy array with the summed
+            sizes of each raveled model variable (in the order specified in
+            model.inial_point).
+
+            Finally, this method computes the log prior and log likelihood for
+            the initial particles, and saves them in self.prior_logp and
+            self.likelihood_logp.
+
+            This method should not be modified.
+
+        setup_kernel: optional
+            May include any logic that should be performed before sampling
+            starts.
+
+    During each sampling stage the following methods are called in order:
+
+        update_beta_and_weights: default
+            The inverse temperature self.beta is updated based on the self.likelihood_logp
+            and `threshold` parameter
+
+            The importance self.weights of each particle are computed from the old and newly
+            selected inverse temperature
+
+            The iteration number stored in `self.iteration` is updated by this method.
+
+            Finally the model log_marginal_likelihood of the tempered posterior
+            is updated from these weights
+
+        resample: default
+            The particles in self.posterior are sampled with replacement based
+            on self.weights, and the used resampling indexes are saved in
+            `self.resampling_indexes`.
+
+            The arrays self.prior_logp, self.likelihood_logp are rearranged according
+            to the order of the resampled particles. self.tempered_posterior_logp
+            is computed from these and the current self.beta
+
+        tune: optional
+            May include logic that should be performed before every mutation step
+
+        mutate: REQUIRED
+            Mutate particles in self.tempered_posterior
+
+            This method is further responsible to update the self.prior_logp,
+            self.likelihod_logp and self.tempered_posterior_logp, corresponding
+            to each mutated particle
+
+        sample_stats: default
+            Returns important sampling_stats at the end of each stage in a dictionary
+            format. This will be saved in the final InferenceData objcet under `sample_stats`.
+
+    Finally, at the end of sampling the following methods are called:
+
+        _posterior_to_trace: default
+            Convert final population of particles to a posterior trace object.
+            This method should not be modified.
+
+        sample_settings: default:
+            Returns important sample_settings at the end of sampling in a dictionary
+            format. This will be saved in the final InferenceData objcet under `sample_stats`.
+
+    """
 
     def __init__(
         self,
         draws=2000,
-        kernel="metropolis",
-        n_steps=25,
         start=None,
-        tune_steps=True,
-        p_acc_rate=0.85,
-        threshold=0.5,
-        save_sim_data=False,
-        save_log_pseudolikelihood=True,
         model=None,
         random_seed=-1,
-        chain=0,
+        threshold=0.5,
     ):
+        """
+
+        Parameters
+        ----------
+        draws: int
+            The number of samples to draw from the posterior (i.e. last stage). And also the number of
+            independent chains. Defaults to 2000.
+        start: dict, or array of dict
+            Starting point in parameter space. It should be a list of dict with length `chains`.
+            When None (default) the starting point is sampled from the prior distribution.
+        model: Model (optional if in ``with`` context)).
+        threshold: float
+            Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
+            the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
+            It should be between 0 and 1.
+
+        """
 
         self.draws = draws
-        self.kernel = kernel.lower()
-        self.n_steps = n_steps
         self.start = start
-        self.tune_steps = tune_steps
-        self.p_acc_rate = p_acc_rate
         self.threshold = threshold
-        self.save_sim_data = save_sim_data
-        self.save_log_pseudolikelihood = save_log_pseudolikelihood
         self.model = model
         self.random_seed = random_seed
-        self.chain = chain
-
-        self.model = modelcontext(model)
 
         if self.random_seed != -1:
             np.random.seed(self.random_seed)
 
-        self.beta = 0
-        self.max_steps = n_steps
-        self.proposed = draws * n_steps
-        self.acc_rate = 1
+        self.model = modelcontext(model)
         self.variables = inputvars(self.model.value_vars)
-        self.weights = np.ones(self.draws) / self.draws
+
+        self.var_info = {}
+        self.tempered_posterior = None
+        self.prior_logp = None
+        self.likelihood_logp = None
+        self.tempered_posterior_logp = None
+        self.prior_logp_func = None
+        self.likelihood_logp_func = None
         self.log_marginal_likelihood = 0
-        self.sim_data = []
-        self.log_pseudolikelihood = []
+        self.beta = 0
+        self.iteration = 0
+        self.resampling_indexes = None
+        self.weights = np.ones(self.draws) / self.draws
 
-    def initialize_population(self):
-        """Create an initial population from the prior distribution."""
-        population = []
-        var_info = OrderedDict()
-        if self.start is None:
-            init_rnd = sample_prior_predictive(
-                self.draws,
-                var_names=[v.name for v in self.model.unobserved_value_vars],
-                model=self.model,
-            )
-        else:
-            init_rnd = self.start
+    def initialize_population(self) -> Dict[str, NDArray]:
+        """Create an initial population from the prior distribution"""
 
-        init = self.model.initial_point
+        return sample_prior_predictive(
+            self.draws,
+            var_names=[v.name for v in self.model.unobserved_value_vars],
+            model=self.model,
+        )
 
+    def _initialize_kernel(self):
+        """Create variables and logp function necessary to run kernel
+
+        This method should not be overwritten. If needed, use `setup_kernel`
+        instead.
+
+        """
+        # Create dictionary that stores original variables shape and size
+        initial_point = self.model.initial_point
         for v in self.variables:
-            var_info[v.name] = (init[v.name].shape, init[v.name].size)
+            self.var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
 
+        # Create particles bijection map
+        if self.start:
+            init_rnd = self.start
+        else:
+            init_rnd = self.initialize_population()
+
+        population = []
         for i in range(self.draws):
-
             point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
             population.append(DictToArrayBijection.map(point).data)
+        self.tempered_posterior = np.array(floatX(population))
 
-        self.posterior = np.array(floatX(population))
-        self.var_info = var_info
+        # Initialize prior and likelihood log probabilities
+        shared = make_shared_replacements(initial_point, self.variables, self.model)
 
-    def setup_kernel(self):
-        """Set up the likelihood logp function based on the chosen kernel."""
-        initial_values = self.model.initial_point
-        shared = make_shared_replacements(initial_values, self.variables, self.model)
+        self.prior_logp_func = _logp_forw(
+            initial_point, [self.model.varlogpt], self.variables, shared
+        )
+        self.likelihood_logp_func = _logp_forw(
+            initial_point, [self.model.datalogpt], self.variables, shared
+        )
 
-        if self.kernel == "abc":
-            factors = [var.logpt for var in self.model.free_RVs]
-            factors += [at.sum(factor) for factor in self.model.potentials]
-            self.prior_logp_func = logp_forw(
-                initial_values, [at.sum(factors)], self.variables, shared
-            )
-            simulator = self.model.observed_RVs[0]
-            distance = simulator.distribution.distance
-            sum_stat = simulator.distribution.sum_stat
-            self.likelihood_logp_func = PseudoLikelihood(
-                simulator.distribution.epsilon,
-                simulator.observations,
-                simulator.distribution.function,
-                [v.name for v in simulator.distribution.params],
-                self.model,
-                self.var_info,
-                self.variables,
-                distance,
-                sum_stat,
-                self.draws,
-                self.save_sim_data,
-                self.save_log_pseudolikelihood,
-            )
-        elif self.kernel == "metropolis":
-            self.prior_logp_func = logp_forw(
-                initial_values, [self.model.varlogpt], self.variables, shared
-            )
-            self.likelihood_logp_func = logp_forw(
-                initial_values, [self.model.datalogpt], self.variables, shared
-            )
-
-    def initialize_logp(self):
-        """Initialize the prior and likelihood log probabilities."""
-        priors = [self.prior_logp_func(sample) for sample in self.posterior]
-        likelihoods = [self.likelihood_logp_func(sample) for sample in self.posterior]
+        priors = [self.prior_logp_func(sample) for sample in self.tempered_posterior]
+        likelihoods = [self.likelihood_logp_func(sample) for sample in self.tempered_posterior]
 
         self.prior_logp = np.array(priors).squeeze()
         self.likelihood_logp = np.array(likelihoods).squeeze()
 
-        if self.kernel == "abc" and self.save_sim_data:
-            self.sim_data = self.likelihood_logp_func.get_data()
+    def setup_kernel(self):
+        """Setup logic performed once before sampling starts"""
+        pass
 
-        if self.kernel == "abc" and self.save_log_pseudolikelihood:
-            self.log_pseudolikelihood = self.likelihood_logp_func.get_lpl()
+    def update_beta_and_weights(self):
+        """Calculate the next inverse temperature (beta)
 
-    def update_weights_beta(self):
-        """Calculate the next inverse temperature (beta).
-
-        The importance weights based on current beta and tempered likelihood and updates the
-        marginal likelihood estimate.
+        The importance weights based on two sucesive tempered likelihoods (i.e.
+        two successive values of beta) and updates the marginal likelihood estimate.
         """
+        self.iteration += 1
+
         low_beta = old_beta = self.beta
         up_beta = 2.0
         rN = int(len(self.likelihood_logp) * self.threshold)
@@ -184,97 +252,70 @@ class SMC:
             log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
 
-        self.log_marginal_likelihood += logsumexp(log_weights_un) - np.log(self.draws)
         self.beta = new_beta
         self.weights = np.exp(log_weights)
         # We normalize again to correct for small numerical errors that might build up
         self.weights /= self.weights.sum()
+        self.log_marginal_likelihood += logsumexp(log_weights_un) - np.log(self.draws)
 
     def resample(self):
-        """Resample particles based on importance weights."""
-        resampling_indexes = np.random.choice(
+        """Resample particles based on importance weights"""
+        self.resampling_indexes = np.random.choice(
             np.arange(self.draws), size=self.draws, p=self.weights
         )
 
-        self.posterior = self.posterior[resampling_indexes]
-        self.prior_logp = self.prior_logp[resampling_indexes]
-        self.likelihood_logp = self.likelihood_logp[resampling_indexes]
-        self.posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
-        if self.save_sim_data:
-            self.sim_data = self.sim_data[resampling_indexes]
-
-    def update_proposal(self):
-        """Update proposal based on the covariance matrix from tempered posterior."""
-        cov = np.cov(self.posterior, ddof=0, aweights=self.weights, rowvar=0)
-        cov = np.atleast_2d(cov)
-        cov += 1e-6 * np.eye(cov.shape[0])
-        if np.isnan(cov).any() or np.isinf(cov).any():
-            raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
-        self.cov = cov
+        self.tempered_posterior = self.tempered_posterior[self.resampling_indexes]
+        self.prior_logp = self.prior_logp[self.resampling_indexes]
+        self.likelihood_logp = self.likelihood_logp[self.resampling_indexes]
+        self.tempered_posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
 
     def tune(self):
-        """Tune n_steps based on the acceptance rate."""
-        if self.tune_steps:
-            acc_rate = max(1.0 / self.proposed, self.acc_rate)
-            self.n_steps = min(
-                self.max_steps,
-                max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate))),
-            )
+        """Tuning logic performed before every mutation step"""
+        pass
 
-        self.proposed = self.draws * self.n_steps
-
+    @abc.abstractmethod
     def mutate(self):
-        """Independent Metropolis-Hastings perturbation."""
-        ac_ = np.empty((self.n_steps, self.draws))
+        """Apply kernel-specific perturbation to the particles once per stage"""
+        pass
 
-        log_R = np.log(np.random.rand(self.n_steps, self.draws))
+    def sample_stats(self) -> Dict:
+        """Stats to be saved at the end of each stage
 
-        # The proposal distribution is a MVNormal, with mean and covariance computed from the previous tempered posterior
-        dist = multivariate_normal(self.posterior.mean(axis=0), self.cov)
+        These stats will be saved under `sample_stats` in the final InferenceData.
+        """
+        return {
+            "log_marginal_likelihood": self.log_marginal_likelihood if self.beta == 1 else np.nan,
+            "beta": self.beta,
+        }
 
-        for n_step in range(self.n_steps):
-            # The proposal is independent from the current point.
-            # We have to take that into account to compute the Metropolis-Hastings acceptance
-            proposal = floatX(dist.rvs(size=self.draws))
-            proposal = proposal.reshape(len(proposal), -1)
-            # To do that we compute the logp of moving to a new point
-            forward = dist.logpdf(proposal)
-            # And to going back from that new point
-            backward = multivariate_normal(proposal.mean(axis=0), self.cov).logpdf(self.posterior)
-            ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
-            pl = np.array([self.prior_logp_func(prop) for prop in proposal])
-            proposal_logp = pl + ll * self.beta
-            accepted = log_R[n_step] < (
-                (proposal_logp + backward) - (self.posterior_logp + forward)
-            )
-            ac_[n_step] = accepted
-            self.posterior[accepted] = proposal[accepted]
-            self.posterior_logp[accepted] = proposal_logp[accepted]
-            self.prior_logp[accepted] = pl[accepted]
-            self.likelihood_logp[accepted] = ll[accepted]
+    def sample_settings(self) -> Dict:
+        """Kernel settings to be saved once at the end of sampling
 
-            if self.kernel == "abc" and self.save_sim_data:
-                self.sim_data[accepted] = self.likelihood_logp_func.get_data()[accepted]
+        These stats will be saved under `sample_stats` in the final InferenceData.
 
-            if self.kernel == "abc" and self.save_log_pseudolikelihood:
-                self.log_pseudolikelihood[accepted] = self.likelihood_logp_func.get_lpl()[accepted]
+        """
+        return {
+            "_n_draws": self.draws,  # Default property name used in `SamplerReport`
+            "threshold": self.threshold,
+        }
 
-        self.acc_rate = np.mean(ac_)
+    def _posterior_to_trace(self, chain=0) -> NDArray:
+        """Save results into a PyMC3 trace
 
-    def posterior_to_trace(self):
-        """Save results into a PyMC3 trace."""
-        lenght_pos = len(self.posterior)
+        This method shoud not be overwritten.
+        """
+        lenght_pos = len(self.tempered_posterior)
         varnames = [v.name for v in self.variables]
 
         with self.model:
             strace = NDArray(name=self.model.name)
-            strace.setup(lenght_pos, self.chain)
+            strace.setup(lenght_pos, chain)
         for i in range(lenght_pos):
             value = []
             size = 0
             for varname in varnames:
                 shape, new_size = self.var_info[varname]
-                var_samples = self.posterior[i][size : size + new_size]
+                var_samples = self.tempered_posterior[i][size : size + new_size]
                 # Round discrete variable samples. The rounded values were the ones
                 # actually used in the logp evaluations (see logp_forw)
                 var = self.model[varname]
@@ -286,7 +327,193 @@ class SMC:
         return strace
 
 
-def logp_forw(point, out_vars, vars, shared):
+class IMH(SMC_KERNEL):
+    """Independent Metropolis-Hastings SMC kernel"""
+
+    def __init__(self, *args, n_steps=25, tune_steps=True, p_acc_rate=0.85, **kwargs):
+        """
+        Parameters
+        ----------
+        n_steps: int
+            The number of steps of each Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
+            for the first stage and for the others it will be determined automatically based on the
+            acceptance rate and `p_acc_rate`, the max number of steps is ``n_steps``.
+        tune_steps: bool
+            Whether to compute the number of steps automatically or not. Defaults to True
+        p_acc_rate: float
+            Used to compute ``n_steps`` when ``tune_steps == True``. The higher the value of
+            ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.85.
+            It should be between 0 and 1.
+        """
+        super().__init__(*args, **kwargs)
+        self.n_steps = n_steps
+        self.tune_steps = tune_steps
+        self.p_acc_rate = p_acc_rate
+
+        self.max_steps = n_steps
+        self.proposed = self.proposed = self.draws * self.n_steps
+        self.proposal_dist = None
+        self.acc_rate = None
+
+    def tune(self):
+        # Tune n_steps based on the acceptance rate (skip in first iteration)
+        if self.tune_steps and self.iteration > 1:
+            acc_rate = max(1.0 / self.proposed, self.acc_rate)
+            self.n_steps = min(
+                self.max_steps,
+                max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate))),
+            )
+            self.proposed = self.draws * self.n_steps
+
+        # Update MVNormal proposal based on the mean and covariance of the
+        # tempered posterior.
+        cov = np.cov(self.tempered_posterior, ddof=0, rowvar=0)
+        cov = np.atleast_2d(cov)
+        cov += 1e-6 * np.eye(cov.shape[0])
+        if np.isnan(cov).any() or np.isinf(cov).any():
+            raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
+        mean = np.average(self.tempered_posterior, axis=0)
+        self.proposal_dist = multivariate_normal(mean, cov)
+
+    def mutate(self):
+        """Independent Metropolis-Hastings perturbation."""
+        ac_ = np.empty((self.n_steps, self.draws))
+
+        cov = self.proposal_dist.cov
+        log_R = np.log(np.random.rand(self.n_steps, self.draws))
+        for n_step in range(self.n_steps):
+            # The proposal is independent from the current point.
+            # We have to take that into account to compute the Metropolis-Hastings acceptance
+            proposal = floatX(self.proposal_dist.rvs(size=self.draws))
+            proposal = proposal.reshape(len(proposal), -1)
+            # To do that we compute the logp of moving to a new point
+            forward = self.proposal_dist.logpdf(proposal)
+            # And to going back from that new point
+            backward = multivariate_normal(proposal.mean(axis=0), cov).logpdf(
+                self.tempered_posterior
+            )
+            ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
+            pl = np.array([self.prior_logp_func(prop) for prop in proposal])
+            proposal_logp = pl + ll * self.beta
+            accepted = log_R[n_step] < (
+                (proposal_logp + backward) - (self.tempered_posterior_logp + forward)
+            )
+            ac_[n_step] = accepted
+            self.tempered_posterior[accepted] = proposal[accepted]
+            self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
+            self.prior_logp[accepted] = pl[accepted]
+            self.likelihood_logp[accepted] = ll[accepted]
+
+        self.acc_rate = np.mean(ac_)
+
+    def sample_stats(self):
+        stats = super().sample_stats()
+        stats.update(
+            {
+                "accept_rate": self.acc_rate,
+            }
+        )
+        return stats
+
+    def sample_settings(self):
+        stats = super().sample_settings()
+        stats.update(
+            {
+                "_n_tune": self.n_steps,  # Default property name used in `SamplerReport`
+                "tune_steps": self.tune_steps,
+                "p_acc_rate": self.p_acc_rate,
+            }
+        )
+        return stats
+
+
+class MH(SMC_KERNEL):
+    """Metropolis-Hastings SMC kernel"""
+
+    def __init__(self, *args, n_steps=25, **kwargs):
+        """
+        Parameters
+        ----------
+        n_steps: int
+            The number of steps of each Markov Chain.
+        """
+        super().__init__(*args, **kwargs)
+        self.n_steps = n_steps
+
+        self.proposal_dist = None
+        self.proposal_scales = None
+        self.chain_acc_rate = None
+
+    def setup_kernel(self):
+        """Proposal dist is just a Multivariate Normal with unit identity covariance.
+        Dimension specific scaling is provided by self.proposal_scales and set in self.tune()
+        """
+        ndim = self.tempered_posterior.shape[1]
+        self.proposal_dist = multivariate_normal(
+            mean=np.zeros(ndim),
+            cov=np.eye(ndim),
+        )
+        self.proposal_scales = np.full(self.draws, min(1, 2.38 ** 2 / ndim))
+
+    def resample(self):
+        super().resample()
+        if self.iteration > 1:
+            self.proposal_scales = self.proposal_scales[self.resampling_indexes]
+            self.chain_acc_rate = self.chain_acc_rate[self.resampling_indexes]
+
+    def tune(self):
+        """Update proposal scales for each particle dimension"""
+        if self.iteration > 1:
+            # Rescale based on distance to 0.234 acceptance rate
+            chain_scales = np.exp(np.log(self.proposal_scales) + (self.chain_acc_rate - 0.234))
+            # Interpolate between individual and population scales
+            self.proposal_scales = 0.5 * chain_scales + 0.5 * chain_scales.mean()
+
+    def mutate(self):
+        """Metropolis-Hastings perturbation."""
+        ac_ = np.empty((self.n_steps, self.draws))
+
+        log_R = np.log(np.random.rand(self.n_steps, self.draws))
+        for n_step in range(self.n_steps):
+            proposal = floatX(
+                self.tempered_posterior
+                + self.proposal_dist.rvs(size=self.draws) * self.proposal_scales[:, None]
+            )
+            ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
+            pl = np.array([self.prior_logp_func(prop) for prop in proposal])
+
+            proposal_logp = pl + ll * self.beta
+            accepted = log_R[n_step] < (proposal_logp - self.tempered_posterior_logp)
+
+            ac_[n_step] = accepted
+            self.tempered_posterior[accepted] = proposal[accepted]
+            self.prior_logp[accepted] = pl[accepted]
+            self.likelihood_logp[accepted] = ll[accepted]
+            self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
+
+        self.chain_acc_rate = np.mean(ac_, axis=0)
+
+    def sample_stats(self):
+        stats = super().sample_stats()
+        stats.update(
+            {
+                "mean_accept_rate": self.chain_acc_rate.mean(),
+                "mean_proposal_scale": self.proposal_scales.mean(),
+            }
+        )
+        return stats
+
+    def sample_settings(self):
+        stats = super().sample_settings()
+        stats.update(
+            {
+                "_n_tune": self.n_steps,  # Default property name used in `SamplerReport`
+            }
+        )
+        return stats
+
+
+def _logp_forw(point, out_vars, vars, shared):
     """Compile Aesara function of the model and the input and output variables.
 
     Parameters
@@ -326,119 +553,3 @@ def logp_forw(point, out_vars, vars, shared):
     f = aesara_function([inarray0], out_list[0])
     f.trust_input = True
     return f
-
-
-class PseudoLikelihood:
-    """
-    Pseudo Likelihood.
-
-    epsilon: float
-        Standard deviation of the gaussian pseudo likelihood.
-    observations: array-like
-        observed data
-    function: python function
-        data simulator
-    params: list
-        names of the variables parameterizing the simulator.
-    model: PyMC3 model
-    var_info: dict
-        generated by ``SMC.initialize_population``
-    variables: list
-        Model variables.
-    distance : str or callable
-        Distance function.
-    sum_stat: str or callable
-        Summary statistics.
-    size : int
-        Number of simulated datasets to save. When this number is exceeded the counter will be
-        restored to zero and it will start saving again.
-    save_sim_data : bool
-        whether to save or not the simulated data.
-    save_log_pseudolikelihood : bool
-        whether to save or not the log pseudolikelihood values.
-    """
-
-    def __init__(
-        self,
-        epsilon,
-        observations,
-        function,
-        params,
-        model,
-        var_info,
-        variables,
-        distance,
-        sum_stat,
-        size,
-        save_sim_data,
-        save_log_pseudolikelihood,
-    ):
-        self.epsilon = epsilon
-        self.function = function
-        self.params = params
-        self.model = model
-        self.var_info = var_info
-        self.variables = variables
-        self.varnames = [v.name for v in self.variables]
-        self.distance = distance
-        self.sum_stat = sum_stat
-        self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
-        self.get_unobserved_fn = self.model.fastfn(
-            [v.tag.value_var for v in self.model.unobserved_RVs]
-        )
-        self.size = size
-        self.save_sim_data = save_sim_data
-        self.save_log_pseudolikelihood = save_log_pseudolikelihood
-        self.sim_data_l = []
-        self.lpl_l = []
-
-        self.observations = self.sum_stat(observations)
-
-    def posterior_to_function(self, posterior):
-        """Turn posterior samples into function parameters to feed the simulator."""
-        model = self.model
-        var_info = self.var_info
-
-        varvalues = []
-        samples = {}
-        size = 0
-        for var in self.variables:
-            shape, new_size = var_info[var.name]
-            varvalues.append(posterior[size : size + new_size].reshape(shape))
-            size += new_size
-        point = {k: v for k, v in zip(self.varnames, varvalues)}
-        for varname, value in zip(self.unobserved_RVs, self.get_unobserved_fn(point)):
-            if varname in self.params:
-                samples[varname] = value
-        return samples
-
-    def save_data(self, sim_data):
-        """Save simulated data."""
-        if len(self.sim_data_l) == self.size:
-            self.sim_data_l = []
-        self.sim_data_l.append(sim_data)
-
-    def get_data(self):
-        """Get simulated data."""
-        return np.array(self.sim_data_l)
-
-    def save_lpl(self, elemwise):
-        """Save log pseudolikelihood values."""
-        if len(self.lpl_l) == self.size:
-            self.lpl_l = []
-        self.lpl_l.append(elemwise)
-
-    def get_lpl(self):
-        """Get log pseudolikelihood values."""
-        return np.array(self.lpl_l)
-
-    def __call__(self, posterior):
-        """Compute the pseudolikelihood."""
-        func_parameters = self.posterior_to_function(posterior)
-        sim_data = self.function(**func_parameters)
-        if self.save_sim_data:
-            self.save_data(sim_data)
-        elemwise = self.distance(self.epsilon, self.observations, self.sum_stat(sim_data))
-        if self.save_log_pseudolikelihood:
-            self.save_lpl(elemwise)
-        return elemwise.sum()

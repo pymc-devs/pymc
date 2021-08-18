@@ -1025,11 +1025,10 @@ class TestBernoulli(BaseTestDistribution):
     ]
 
 
-@pytest.mark.skip("Still not implemented")
 class TestBernoulliLogitP(BaseTestDistribution):
     pymc_dist = pm.Bernoulli
     pymc_dist_params = {"logit_p": 1.0}
-    expected_rv_op_params = {"mean": 0, "sigma": 10.0}
+    expected_rv_op_params = {"p": expit(1.0)}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
@@ -1632,8 +1631,10 @@ class TestInterpolated(BaseTestDistribution):
         for mu in R.vals:
             for sigma in Rplus.vals:
                 # pylint: disable=cell-var-from-loop
+                rng = self.get_random_state()
+
                 def ref_rand(size):
-                    return st.norm.rvs(loc=mu, scale=sigma, size=size)
+                    return st.norm.rvs(loc=mu, scale=sigma, size=size, random_state=rng)
 
                 class TestedInterpolated(pm.Interpolated):
                     rv_op = interpolated
@@ -1644,7 +1645,12 @@ class TestInterpolated(BaseTestDistribution):
                         pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
                         return super().dist(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
-                pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
+                pymc3_random(
+                    TestedInterpolated,
+                    {},
+                    extra_args={"rng": aesara.shared(rng)},
+                    ref_rand=ref_rand,
+                )
 
 
 class TestKroneckerNormal(BaseTestDistribution):
@@ -1677,16 +1683,6 @@ class TestKroneckerNormal(BaseTestDistribution):
 
 
 class TestScalarParameterSamples(SeededTest):
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_bounded(self):
-        # A bit crude...
-        BoundedNormal = pm.Bound(pm.Normal, upper=0)
-
-        def ref_rand(size, tau):
-            return -st.halfnorm.rvs(size=size, loc=0, scale=tau ** -0.5)
-
-        pymc3_random(BoundedNormal, {"tau": Rplus}, ref_rand=ref_rand)
-
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_lkj(self):
         for n in [2, 10, 50]:

@@ -200,9 +200,15 @@ def logdiffexp_numpy(a, b):
     return a + log1mexp_numpy(b - a, negative_input=True)
 
 
-def invlogit(x, eps=sys.float_info.epsilon):
+def invlogit(x, eps=None):
     """The inverse of the logit function, 1 / (1 + exp(-x))."""
-    return (1.0 - 2.0 * eps) / (1.0 + at.exp(-x)) + eps
+    if eps is not None:
+        warnings.warn(
+            "pymc3.math.invlogit no longer supports the ``eps`` argument and it will be ignored.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    return at.sigmoid(x)
 
 
 def logbern(log_p):

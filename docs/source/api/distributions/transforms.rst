@@ -99,10 +99,6 @@ Typically the programmer will not use these directly.
 
 .. autoclass::  Transform
     :members:
-.. autoclass::  transform
-    :members:
-.. autoclass::  TransformedDistribution
-    :members:
 
 
 Transform Composition Classes
@@ -124,10 +120,6 @@ Specific Transform Classes
 .. autoclass::  LogOdds
     :members:
 .. autoclass::  Interval
-    :members:
-.. autoclass::  LowerBound
-    :members:
-.. autoclass::  UpperBound
     :members:
 .. autoclass::  Ordered
     :members:

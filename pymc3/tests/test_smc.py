@@ -23,11 +23,13 @@ import pymc3 as pm
 
 from pymc3.aesaraf import floatX
 from pymc3.backends.base import MultiTrace
-from pymc3.smc.smc import SMC
+from pymc3.smc.smc import IMH
 from pymc3.tests.helpers import SeededTest
 
 
 class TestSMC(SeededTest):
+    """Tests for the default SMC kernel"""
+
     def setup_class(self):
         super().setup_class()
         self.samples = 1000
@@ -84,10 +86,9 @@ class TestSMC(SeededTest):
             z = pm.Bernoulli("z", p=0.7)
             like = pm.Potential("like", z * 1.0)
 
-        smc = SMC(model=m)
+        smc = IMH(model=m)
         smc.initialize_population()
-        smc.setup_kernel()
-        smc.initialize_logp()
+        smc._initialize_kernel()
 
         assert smc.prior_logp_func(floatX(np.array([-0.51]))) == -np.inf
         assert np.isclose(smc.prior_logp_func(floatX(np.array([-0.49]))), np.log(0.3))
@@ -112,7 +113,7 @@ class TestSMC(SeededTest):
 
         assert np.all(np.median(trace["z"], axis=0) == z_true)
 
-    def test_ml(self):
+    def test_marginal_likelihood(self):
         data = np.repeat([1, 0], [50, 50])
         marginals = []
         a_prior_0, b_prior_0 = 1.0, 1.0
@@ -125,7 +126,7 @@ class TestSMC(SeededTest):
                 trace = pm.sample_smc(2000, return_inferencedata=False)
                 marginals.append(trace.report.log_marginal_likelihood)
         # compare to the analytical result
-        assert abs(np.exp(np.mean(marginals[1]) - np.mean(marginals[0])) - 4.0) <= 1
+        assert abs(np.exp(np.nanmean(marginals[1]) - np.nanmean(marginals[0])) - 4.0) <= 1
 
     def test_start(self):
         with pm.Model() as model:
@@ -137,6 +138,23 @@ class TestSMC(SeededTest):
                 "b_log__": np.abs(np.random.normal(0, 10, size=500)),
             }
             trace = pm.sample_smc(500, chains=1, start=start)
+
+    def test_kernel_kwargs(self):
+        with self.fast_model:
+            trace = pm.sample_smc(
+                draws=10,
+                chains=1,
+                threshold=0.7,
+                n_steps=15,
+                tune_steps=False,
+                p_acc_rate=0.5,
+                return_inferencedata=False,
+            )
+            assert trace.report.threshold == 0.7
+            assert trace.report.n_draws == 10
+            assert trace.report.n_tune == 15
+            assert trace.report.tune_steps is False
+            assert trace.report.p_acc_rate == 0.5
 
     @pytest.mark.parametrize("chains", (1, 2))
     def test_return_datatype(self, chains):
@@ -170,6 +188,32 @@ class TestSMC(SeededTest):
                 match="The argument parallel is deprecated",
             ):
                 pm.sample_smc(draws=10, chains=1, parallel=False)
+
+    def test_deprecated_abc_args(self):
+        with self.fast_model:
+            with pytest.warns(
+                DeprecationWarning,
+                match='The kernel string argument "ABC" in sample_smc has been deprecated',
+            ):
+                pm.sample_smc(draws=10, chains=1, kernel="ABC")
+
+            with pytest.warns(
+                DeprecationWarning,
+                match='The kernel string argument "Metropolis" in sample_smc has been deprecated',
+            ):
+                pm.sample_smc(draws=10, chains=1, kernel="Metropolis")
+
+            with pytest.warns(
+                DeprecationWarning,
+                match="save_sim_data has been deprecated",
+            ):
+                pm.sample_smc(draws=10, chains=1, save_sim_data=True)
+
+            with pytest.warns(
+                DeprecationWarning,
+                match="save_log_pseudolikelihood has been deprecated",
+            ):
+                pm.sample_smc(draws=10, chains=1, save_log_pseudolikelihood=True)
 
 
 @pytest.mark.xfail(reason="SMC-ABC not refactored yet")
@@ -285,3 +329,17 @@ class TestSMCABC(SeededTest):
             )
             with pytest.raises(NotImplementedError, match="named models"):
                 pm.sample_smc(draws=10, kernel="ABC")
+
+
+class TestMHKernel(SeededTest):
+    def test_normal_model(self):
+        data = st.norm(10, 0.5).rvs(1000, random_state=self.get_random_state())
+        with pm.Model() as m:
+            mu = pm.Normal("mu", 0, 3)
+            sigma = pm.HalfNormal("sigma", 1)
+            y = pm.Normal("y", mu, sigma, observed=data)
+            idata = pm.sample_smc(draws=2000, kernel=pm.smc.MH)
+
+        post = idata.posterior.stack(sample=("chain", "draw"))
+        assert np.abs(post["mu"].mean() - 10) < 0.1
+        assert np.abs(post["sigma"].mean() - 0.5) < 0.05

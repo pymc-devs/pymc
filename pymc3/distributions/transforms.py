@@ -170,7 +170,7 @@ class LogOdds(ElemwiseTransform):
     name = "logodds"
 
     def backward(self, rv_var, rv_value):
-        return invlogit(rv_value, 0.0)
+        return invlogit(rv_value)
 
     def forward(self, rv_var, rv_value):
         return logit(rv_value)

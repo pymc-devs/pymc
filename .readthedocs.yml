@@ -1,0 +1,16 @@
+version: 2
+
+sphinx:
+    configuration: docs/source/conf.py
+
+python:
+   version: "3.7"
+   install:
+   - requirements: requirements-dev.txt
+   - method: pip
+     path: .
+
+
+submodules:
+    include: all
+    recursive: true

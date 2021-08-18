@@ -10,7 +10,6 @@ Distribution utility classes and functions
   Continuous
   NoDistribution
   DensityDist
-  TensorType
 
 
 .. autoclass:: Distribution
@@ -19,4 +18,3 @@ Distribution utility classes and functions
 .. autoclass:: NoDistribution
 .. autoclass:: DensityDist
     :members:
-.. autofunction:: TensorType
