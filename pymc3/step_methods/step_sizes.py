@@ -67,15 +67,15 @@ class DualAverageAdaptation:
         mean_accept = np.mean(accept)
         target_accept = self._target
         # Try to find a reasonable interval for acceptable acceptance
-        # probabilities. Finding this was mostry trial and error.
+        # probabilities. Finding this was mostly trial and error.
         n_bound = min(100, len(accept))
         n_good, n_bad = mean_accept * n_bound, (1 - mean_accept) * n_bound
         lower, upper = stats.beta(n_good + 1, n_bad + 1).interval(0.95)
         if target_accept < lower or target_accept > upper:
             msg = (
-                "The acceptance probability does not match the target. It "
-                "is %s, but should be close to %s. Try to increase the "
-                "number of tuning steps." % (mean_accept, target_accept)
+                f"The acceptance probability does not match the target. "
+                f"It is {mean_accept:0.4g}, but should be close to {target_accept:0.4g}. "
+                f"Try to increase the number of tuning steps."
             )
             info = {"target": target_accept, "actual": mean_accept}
             warning = SamplerWarning(WarningType.BAD_ACCEPTANCE, msg, "warn", extra=info)
