@@ -174,25 +174,6 @@ class TestSample(SeededTest):
             assert trace.report.n_draws == 100
             assert isinstance(trace.report.t_sampling, float)
 
-    def test_bart_vi(self):
-        X = np.random.normal(0, 1, size=(3, 250)).T
-        Y = np.random.normal(0, 1, size=250)
-        X[:, 0] = np.random.normal(Y, 0.1)
-
-        with pm.Model() as model:
-            mu = pm.BART("mu", X, Y, m=10)
-            sigma = pm.HalfNormal("sigma", 1)
-            y = pm.Normal("y", mu, sigma, observed=Y)
-            idata = pm.sample(random_seed=3415, chains=1)
-            var_imp = (
-                idata.sample_stats["variable_inclusion"]
-                .stack(samples=("chain", "draw"))
-                .mean("samples")
-            )
-            var_imp /= var_imp.sum()
-            assert var_imp[0] > var_imp[1:].sum()
-            npt.assert_almost_equal(var_imp.sum(), 1)
-
     def test_return_inferencedata(self):
         with self.model:
             kwargs = dict(draws=100, tune=50, cores=1, chains=2, step=pm.Metropolis())
