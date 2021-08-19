@@ -101,8 +101,8 @@ class BaseHMC(GradientSharedStep):
         # XXX: If the dimensions of these terms change, the step size
         # dimension-scaling should change as well, no?
         test_point = self._model.initial_point
-        continuous_vars = [test_point[v.name] for v in self._model.cont_vars]
-        size = sum(v.size for v in continuous_vars)
+        nuts_vars = [test_point[v.name] for v in vars]
+        size = sum(v.size for v in nuts_vars)
 
         self.step_size = step_scale / (size ** 0.25)
         self.step_adapt = step_sizes.DualAverageAdaptation(
