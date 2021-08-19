@@ -18,7 +18,8 @@ from aesara.tensor.var import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 import numpy as np
 
-from scipy import stats
+from aesara import scan
+from scipy import stats, signal
 from typing import List, Tuple
 
 import pymc as pymc
@@ -187,10 +188,13 @@ class ARMARV(RandomVariable):
     ndims_params = [1, 1, 0, 0, 0]
     dtype = "floatX"
     _print_name = ("ARMA", "\\operatorname{ARMA}")
+    
+    #set default values for parameters
+    
+    def __call__(self, phi, theta, mu=0.0, sigma=1.0, d=0, **kwargs) -> TensorVariable:
+        return super().__call__(phi, theta, mu, sigma, d, **kwargs)
 
-    def __call__(self, phi, theta, mu=0.0, sigma=1.0,**kwargs) -> TensorVariable:
-        return super().__call__(phi, theta, mu, sigma,**kwargs)
-
+    
     @classmethod
     def rng_fn(
             cls,
@@ -199,77 +203,118 @@ class ARMARV(RandomVariable):
             theta: np.ndarray,
             mu: np.ndarray,
             sigma: np.ndarray,
+            d: np.ndarray,
             size: Tuple[int, ...],
     ) -> np.ndarray:
+            
+            #size parameter *should* be necessary for time series generation
             if size is None:
                 raise ValueError('Specify size')
-            phi = np.r_[1, -phi]
-            theta = np.r_[1, theta]
+                
+            #non stationary data generation can be done in too many ways
+            #for simplicity, and due to lack of utility ARMA rv only generates a stationary time series   
+            if d>0:
+                raise ValueError('Cannot generate Non stationary data. Value of d must be zero for generation.')
+            
+            # sign conventions used in signal.lfilter (or signal processing)
+            phi = np.r_[1, -phi] # add zero-lag and negate
+            theta = np.r_[1, theta] # add zero-lag
+            
+            #ifilter convolutes x with the coefficients theta and phi 
+            #to create a linear recurrence relation and generate the ARMA process
             x = rng.normal(loc=mu, scale=sigma,size=size)
             return signal.lfilter(theta, phi, x, axis=-1)
 
 
 ARMArv = ARMARV()
 
-class ARMA(distribution.Continuous):
+class ARIMA(distribution.Continuous):
     rv_op = ARMArv
-    
     r"""
-    Autoregressive Moving-Average process(p, q).
+    Autoregressive Integrated Moving-Average process(p, d, q).
     .. math::
        x_{t}=c+\phi_{1} x_{t-1}+\phi_{2} x_{t-2}+\ldots+\phi_{p} x_{t-p}+\theta_{1} \epsilon_{t-1}+\theta_{2} \epsilon_{t-2}+\ldots+\theta_{q} \epsilon_{t-q}+\epsilon_{t} ,
        \epsilon_t \sim N(0,\sigma^2)
        
+
     Parameters
     ----------
     phi: tensor
         Tensor of autoregressive coefficients. The first dimension is the p lag.
+    d: integer
+        order of differencing (default: 0)
     theta: tensor
         Tensor of moving-average coefficients. The first dimension is the q lag.
     sigma: float
-        Standard deviation of innovation (sigma > 0).
+        Standard deviation of noise (sigma > 0).
     mu: float
-        Mean or constant (default: 0.0).
+        Mean or constant (default: 0.0)
     size: int
         Number of observations in time series.
+        
+    Examples
+    --------
+    
+    .. code-block:: python
+    
+        #Generate an ARMA time series 
+        Y = ARIMA.dist(phi=[.50, -.25], theta=[.35], size=500)
+        
+        #Note: Default values of mu and sigma are 0.0, 1.0. 
+        #      Only Stationary data can be generated(d=0).
+        
+        #Estimate ARIMA parameters
+        with pm.Model() as arma:
+        
+            #priors
+            phi = Uniform("phi",-0.99,0.99,shape=2)
+            theta = Uniform("theta",-0.99,0.99,shape=1)
+            
+            #sampling and results
+            arma = ARMA("arma", phi=phi, theta=theta, observed = Y)
+            trace = pm.sample(1000, tune=500, target_accept=0.99,return_inferencedata=True)
+            az.summary(trace)
+            
     """
     
     @classmethod
-    def dist(cls, phi, theta, mu=None, sigma=None,size=None,*args,**kwargs):
-        
-        phi = at.as_tensor_variable(floatX(phi))
-      
-        theta = at.as_tensor_variable(floatX(theta))
-
-        if sigma is None:
-            sigma = HalfNormal("sigma",5.0)
-        if mu is None:
-            mu = Normal("mu",0, 10.0)
-        return super().dist([phi, theta],mu=mu, sigma=sigma, size=size,*args,**kwargs)
+    def dist(cls, phi, theta,*args,**kwargs):
+        return super().dist([phi, theta],*args,**kwargs)
     
-    def logp(Y,phi, theta, mu=None, sigma=None,*args,**kwargs):
+    def logp(Y, phi=None, theta=None, mu=0.0, sigma=1.0, d=0, *args,**kwargs):
         
-        t = Y.shape[0]
-        p = phi.shape[0]
-        q = theta.shape[0]
+        if phi is None or theta is None:
+            raise ValueError('Specify Priors for phi and theta')
 
+        # difference the observed data d times
+        for i in range(d.eval()):
+            Y = Y.diff()
+            
+        t = Y.shape[0] #number of observations
+        p = phi.shape[0] #AR lags
+        q = theta.shape[0] #MA lags
+        
+        #create lagged matrix of observed values
+        #Y_lagged[2] = [Y_1, Y_0] for p=2
+        #essentially saving the previous values that every Y_t depends on.
         Y_lagged = at.zeros(shape=(t,p))
         for i in range(p.eval()):
             Y_lagged = at.set_subtensor(Y_lagged[(i+1):,i], Y[:-(i+1)])
-
+        
         mu = at.fill(Y, mu) + at.dot(Y_lagged, at.transpose(phi))
         eps = at.sub(Y,mu)
-
+        
+        #create lagged matrix of epsilon
         epsilon_lagged = at.zeros(shape=(t,q))
         for j in range(q.eval()):
             epsilon_lagged = at.set_subtensor(epsilon_lagged[(j+1):,j], eps[:-(j+1)])
-
+        
         mu = mu + at.dot(epsilon_lagged, at.transpose(theta))
-
         epsilon = at.sub(Y,mu)
+        
+        #esimate by maximizing logp(errors follow a normal distribution with mean zero) 
         logp = at.sum(pm.logp(Normal.dist(mu=0.0, sigma=sigma,size=t), epsilon))
         return logp
-
 class GaussianRandomWalk(distribution.Continuous):
     r"""Random Walk with Normal innovations
 
