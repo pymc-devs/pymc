@@ -33,7 +33,7 @@ def test_model():
         sigma = pm.HalfNormal("sigma", 1)
         mu = pm.BART("mu", X, Y, m=50)
         y = pm.Normal("y", mu, sigma, observed=Y)
-        idata = pm.sample()
+        idata = pm.sample(chains=4)
         mean = idata.posterior["mu"].stack(samples=("chain", "draw")).mean("samples")
 
     np.testing.assert_allclose(mean, Y, 0.5)
@@ -43,7 +43,7 @@ def test_model():
         mu_ = pm.BART("mu_", X, Y, m=50)
         mu = pm.Deterministic("mu", pm.math.invlogit(mu_))
         y = pm.Bernoulli("y", mu, observed=Y)
-        idata = pm.sample()
+        idata = pm.sample(chains=4)
         mean = idata.posterior["mu"].stack(samples=("chain", "draw")).mean("samples")
 
     np.testing.assert_allclose(mean, Y, atol=0.5)
