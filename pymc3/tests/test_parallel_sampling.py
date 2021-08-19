@@ -170,10 +170,6 @@ def test_explicit_sample(mp_start_method):
     proc.join()
 
 
-@pytest.mark.xfail(
-    condition=(IS_FLOAT32),
-    reason="Possibly the same issue described in https://github.com/pymc-devs/pymc3/pull/4701",
-)
 def test_iterator():
     with pm.Model() as model:
         a = pm.Normal("a", shape=1)
