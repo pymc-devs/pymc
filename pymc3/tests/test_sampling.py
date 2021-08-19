@@ -323,7 +323,7 @@ def test_sample_find_MAP_does_not_modify_start():
 def test_empty_model():
     with pm.Model():
         pm.Normal("a", observed=1)
-        with pytest.raises(ValueError) as error:
+        with pytest.raises(SamplingError) as error:
             pm.sample()
         error.match("any free variables")
 
