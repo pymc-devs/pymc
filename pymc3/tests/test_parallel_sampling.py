@@ -25,6 +25,8 @@ from aesara.tensor.type import TensorType
 import pymc3 as pm
 import pymc3.parallel_sampling as ps
 
+from pymc3.aesaraf import floatX
+
 
 def test_context():
     with pm.Model():
@@ -83,15 +85,13 @@ def test_remote_pipe_closed():
             pm.sample(step=step, mp_ctx="spawn", tune=2, draws=2, cores=2, chains=2)
 
 
-@pytest.mark.xfail(
-    reason="Possibly the same issue described in https://github.com/pymc-devs/pymc3/pull/4701"
-)
+@pytest.mark.xfail(reason="Unclear")
 def test_abort():
     with pm.Model() as model:
         a = pm.Normal("a", shape=1)
-        pm.HalfNormal("b")
-        step1 = pm.NUTS([a])
-        step2 = pm.Metropolis([model["b_log__"]])
+        b = pm.HalfNormal("b")
+        step1 = pm.NUTS([model.rvs_to_values[a]])
+        step2 = pm.Metropolis([model.rvs_to_values[b]])
 
     step = pm.CompoundStep([step1, step2])
 
@@ -104,7 +104,7 @@ def test_abort():
             chain=3,
             seed=1,
             mp_ctx=ctx,
-            start={"a": np.array([1.0]), "b_log__": np.array(2.0)},
+            start={"a": floatX(np.array([1.0])), "b_log__": floatX(np.array(2.0))},
             step_method_pickled=None,
         )
         proc.start()
@@ -118,15 +118,12 @@ def test_abort():
         proc.join()
 
 
-@pytest.mark.xfail(
-    reason="Possibly the same issue described in https://github.com/pymc-devs/pymc3/pull/4701"
-)
 def test_explicit_sample():
     with pm.Model() as model:
         a = pm.Normal("a", shape=1)
-        pm.HalfNormal("b")
-        step1 = pm.NUTS([a])
-        step2 = pm.Metropolis([model["b_log__"]])
+        b = pm.HalfNormal("b")
+        step1 = pm.NUTS([model.rvs_to_values[a]])
+        step2 = pm.Metropolis([model.rvs_to_values[b]])
 
     step = pm.CompoundStep([step1, step2])
 
@@ -138,7 +135,7 @@ def test_explicit_sample():
         chain=3,
         seed=1,
         mp_ctx=ctx,
-        start={"a": np.array([1.0]), "b_log__": np.array(2.0)},
+        start={"a": floatX(np.array([1.0])), "b_log__": floatX(np.array(2.0))},
         step_method_pickled=None,
     )
     proc.start()
@@ -153,19 +150,16 @@ def test_explicit_sample():
     proc.join()
 
 
-@pytest.mark.xfail(
-    reason="Possibly the same issue described in https://github.com/pymc-devs/pymc3/pull/4701"
-)
 def test_iterator():
     with pm.Model() as model:
         a = pm.Normal("a", shape=1)
-        pm.HalfNormal("b")
-        step1 = pm.NUTS([a])
-        step2 = pm.Metropolis([model["b_log__"]])
+        b = pm.HalfNormal("b")
+        step1 = pm.NUTS([model.rvs_to_values[a]])
+        step2 = pm.Metropolis([model.rvs_to_values[b]])
 
     step = pm.CompoundStep([step1, step2])
 
-    start = {"a": np.array([1.0]), "b_log__": np.array(2.0)}
+    start = {"a": floatX(np.array([1.0])), "b_log__": floatX(np.array(2.0))}
     sampler = ps.ParallelSampler(10, 10, 3, 2, [2, 3, 4], [start] * 3, step, 0, False)
     with sampler:
         for draw in sampler:
