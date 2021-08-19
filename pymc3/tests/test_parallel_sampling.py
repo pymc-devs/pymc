@@ -13,9 +13,11 @@
 #   limitations under the License.
 import multiprocessing
 import os
+import platform
 
 import aesara
 import aesara.tensor as at
+import cloudpickle
 import numpy as np
 import pytest
 
@@ -86,7 +88,8 @@ def test_remote_pipe_closed():
 
 
 @pytest.mark.xfail(reason="Unclear")
-def test_abort():
+@pytest.mark.parametrize("mp_start_method", ["spawn", "fork"])
+def test_abort(mp_start_method):
     with pm.Model() as model:
         a = pm.Normal("a", shape=1)
         b = pm.HalfNormal("b")
@@ -95,8 +98,16 @@ def test_abort():
 
     step = pm.CompoundStep([step1, step2])
 
+    # on Windows we cannot fork
+    if platform.system() == "Windows" and mp_start_method == "fork":
+        return
+    if mp_start_method == "spawn":
+        step_method_pickled = cloudpickle.dumps(step, protocol=-1)
+    else:
+        step_method_pickled = None
+
     for abort in [False, True]:
-        ctx = multiprocessing.get_context()
+        ctx = multiprocessing.get_context(mp_start_method)
         proc = ps.ProcessAdapter(
             10,
             10,
@@ -105,7 +116,7 @@ def test_abort():
             seed=1,
             mp_ctx=ctx,
             start={"a": floatX(np.array([1.0])), "b_log__": floatX(np.array(2.0))},
-            step_method_pickled=None,
+            step_method_pickled=step_method_pickled,
         )
         proc.start()
         while True:
@@ -118,7 +129,8 @@ def test_abort():
         proc.join()
 
 
-def test_explicit_sample():
+@pytest.mark.parametrize("mp_start_method", ["spawn", "fork"])
+def test_explicit_sample(mp_start_method):
     with pm.Model() as model:
         a = pm.Normal("a", shape=1)
         b = pm.HalfNormal("b")
@@ -127,7 +139,15 @@ def test_explicit_sample():
 
     step = pm.CompoundStep([step1, step2])
 
-    ctx = multiprocessing.get_context()
+    # on Windows we cannot fork
+    if platform.system() == "Windows" and mp_start_method == "fork":
+        return
+    if mp_start_method == "spawn":
+        step_method_pickled = cloudpickle.dumps(step, protocol=-1)
+    else:
+        step_method_pickled = None
+
+    ctx = multiprocessing.get_context(mp_start_method)
     proc = ps.ProcessAdapter(
         10,
         10,
@@ -136,7 +156,7 @@ def test_explicit_sample():
         seed=1,
         mp_ctx=ctx,
         start={"a": floatX(np.array([1.0])), "b_log__": floatX(np.array(2.0))},
-        step_method_pickled=None,
+        step_method_pickled=step_method_pickled,
     )
     proc.start()
     while True:
