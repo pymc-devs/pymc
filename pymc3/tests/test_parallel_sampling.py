@@ -87,7 +87,7 @@ def test_remote_pipe_closed():
             pm.sample(step=step, mp_ctx="spawn", tune=2, draws=2, cores=2, chains=2)
 
 
-@pytest.mark.xfail(reason="Unclear")
+@pytest.mark.skip(reason="Unclear")
 @pytest.mark.parametrize("mp_start_method", ["spawn", "fork"])
 def test_abort(mp_start_method):
     with pm.Model() as model:
