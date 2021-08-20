@@ -115,9 +115,11 @@ def test_hetero_mixture_scalar(p_val, size):
         y_val = gamma_sp.rvs(size=size, random_state=test_val_rng)
 
         m_val = np.stack([x_val, y_val])[i_val]
-        exp_obs_logps = np.stack([norm_sp.logpdf(x_val), gamma_sp.logpdf(y_val)])[i_val]
 
-        exp_obs_logps += bern_sp.logpmf(i_val)
+        exp_obs_logps = np.stack([norm_sp.logpdf(x_val), gamma_sp.logpdf(y_val)])[
+            i_val
+        ].sum()
+        exp_obs_logps += bern_sp.logpmf(i_val).sum()
 
         logp_vals = M_logp_fn(p_val, m_val, i_val)
 
@@ -180,12 +182,12 @@ def test_hetero_mixture_nonscalar(p_val, size):
         x_val = norm_sp.rvs(size=size, random_state=test_val_rng)
         y_val = gamma_sp.rvs(size=size, random_state=test_val_rng)
 
-        exp_obs_logps = np.stack([norm_sp.logpdf(x_val), gamma_sp.logpdf(y_val)])[i_val]
+        exp_obs_logps = np.stack([norm_sp.logpdf(x_val), gamma_sp.logpdf(y_val)])[
+            i_val
+        ].sum()
+        exp_obs_logps += bern_sp.logpmf(i_val).sum()
 
         m_val = np.stack([x_val, y_val])[i_val]
-
-        exp_obs_logps += bern_sp.logpmf(i_val)
-
         logp_vals = M_logp_fn(p_val, m_val, i_val)
 
         np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)

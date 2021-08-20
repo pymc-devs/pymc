@@ -174,9 +174,9 @@ def joint_logprob(
                     q_logprob_var.name = f"{q_rv_var.name}_logprob"
 
                 if logprob_var is None:
-                    logprob_var = q_logprob_var
+                    logprob_var = q_logprob_var.sum()
                 else:
-                    logprob_var += q_logprob_var
+                    logprob_var += q_logprob_var.sum()
 
         else:
             raise NotImplementedError(

@@ -29,7 +29,7 @@ def test_joint_logprob_basic():
     a_value_var = a.clone()
 
     a_logp = joint_logprob(a, {a: a_value_var})
-    a_logp_exp = logprob(a, a_value_var)
+    a_logp_exp = logprob(a, a_value_var).sum()
 
     assert equal_computations([a_logp], [a_logp_exp])
 
@@ -49,7 +49,7 @@ def test_joint_logprob_basic():
         [ll_Y],
         initial_replacements={sigma: sigma_value_var},
     )
-    total_ll_exp = logprob(sigma, sigma_value_var) + ll_Y
+    total_ll_exp = logprob(sigma, sigma_value_var).sum() + ll_Y.sum()
 
     assert equal_computations([total_ll], [total_ll_exp])
 
@@ -84,7 +84,7 @@ def test_joint_logprob_multi_obs():
     b_val = b.clone()
 
     logp = joint_logprob((a, b), {a: a_val, b: b_val})
-    logp_exp = logprob(a, a_val) + logprob(b, b_val)
+    logp_exp = logprob(a, a_val).sum() + logprob(b, b_val).sum()
 
     assert equal_computations([logp], [logp_exp])
 
@@ -98,6 +98,32 @@ def test_joint_logprob_multi_obs():
     exp_logp = joint_logprob([y], {x: x_val, y: y_val})
 
     assert equal_computations([logp], [exp_logp])
+
+
+def test_joint_logprob_diff_dims():
+    M = at.matrix("M")
+    x = at.random.normal(0, 1, size=M.shape[1], name="X")
+    y = at.random.normal(M.dot(x), 1, name="Y")
+
+    x_vv = x.clone()
+    x_vv.name = "x"
+    y_vv = y.clone()
+    y_vv.name = "y"
+
+    logp = joint_logprob([y], {x: x_vv, y: y_vv})
+
+    M_val = np.random.normal(size=(10, 3))
+    x_val = np.random.normal(size=(3,))
+    y_val = np.random.normal(size=(10,))
+
+    point = {M: M_val, x_vv: x_val, y_vv: y_val}
+    logp_val = logp.eval(point)
+
+    exp_logp_val = (
+        sp.norm.logpdf(x_val, 0, 1).sum()
+        + sp.norm.logpdf(y_val, M_val.dot(x_val), 1).sum()
+    )
+    assert exp_logp_val == pytest.approx(logp_val)
 
 
 @pytest.mark.parametrize(
@@ -135,7 +161,7 @@ def test_joint_logprob_incsubtensor(indices, size):
 
     y_val_idx = y_val.copy()
     y_val_idx[indices] = data
-    exp_obs_logps = sp.norm.logpdf(y_val_idx, mu, sigma)
+    exp_obs_logps = sp.norm.logpdf(y_val_idx, mu, sigma).sum()
 
     np.testing.assert_almost_equal(obs_logps, exp_obs_logps)
 
@@ -188,8 +214,8 @@ def test_joint_logprob_subtensor():
         norm_sp = sp.norm(mu[I_value, np.ogrid[mu.shape[1] :]], sigma)
         A_idx_value = norm_sp.rvs(random_state=test_val_rng).astype(A_idx.dtype)
 
-        exp_obs_logps = norm_sp.logpdf(A_idx_value)
-        exp_obs_logps += bern_sp.logpmf(I_value)
+        exp_obs_logps = norm_sp.logpdf(A_idx_value).sum()
+        exp_obs_logps += bern_sp.logpmf(I_value).sum()
 
         logp_vals = logp_vals_fn(A_idx_value, I_value)
 
