@@ -104,7 +104,7 @@
 
         <div class="card">
             <div class="image">
-                <img src="https://lh5.googleusercontent.com/Ms2ssellxl7cM6OEL_kpiKRojcj2E4ZaUWDXOa8zEwi-v9orJGYuhjczbwFSDJNsEb_ruiwtCJONNjoo7T1c7qorZm3LsAnroMAm4S5WzNT_PVqWz9aE=w1280">
+                <img src="https://jkkweb.sitehost.iu.edu/DoingBayesianDataAnalysis/DBDA2Ecover.png">
             </div>
             <div class="content">
                 <div class="header">Doing Bayesian Data Analysis</div>
