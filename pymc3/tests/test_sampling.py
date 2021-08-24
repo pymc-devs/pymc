@@ -304,7 +304,7 @@ class TestSample(SeededTest):
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
             trace = pm.sample(tune=0, draws=10, chains=2, return_inferencedata=False)
             with pytest.raises(NotImplementedError):
-                xvars = [t['mu'] for t in trace]
+                xvars = [t["mu"] for t in trace]
 
 
 @pytest.mark.xfail(reason="Lognormal not refactored for v4")
