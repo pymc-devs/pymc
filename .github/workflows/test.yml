@@ -42,7 +42,7 @@ jobs:
             - 'tests/**/*.c'
             - 'aeppl/**/*.h'
             - 'tests/**/*.h'
-            - '.github/**/*.yml'
+            - '.github/workflows/*.yml'
             - 'setup.cfg'
             - 'requirements.txt'
 
