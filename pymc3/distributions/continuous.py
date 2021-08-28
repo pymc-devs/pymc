@@ -1675,11 +1675,6 @@ class AsymmetricLaplace(Continuous):
             0 < kappa,
         )
 
-class Lognormal(LogNormal):
-    """deprecated, use LogNormal instead!"""
-    def __init__(self, *args, **kwargs):
-        return super().__init__(*args, **kwargs)
-
 class LogNormal(PositiveContinuous):
     r"""
     Log-normal log-likelihood.
@@ -1804,6 +1799,9 @@ class LogNormal(PositiveContinuous):
             0 < sigma,
         )
 
+class Lognormal(LogNormal):
+    """deprecated, use LogNormal instead!"""
+    pass
 
 class StudentTRV(RandomVariable):
     name = "studentt"
