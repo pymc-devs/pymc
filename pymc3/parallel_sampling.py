@@ -257,6 +257,10 @@ class ProcessAdapter:
         if step_method_pickled is not None:
             step_method_send = step_method_pickled
         else:
+            if mp_ctx.get_start_method() == "spawn":
+                raise ValueError(
+                    "please provide a pre-pickled step method when multiprocessing start method is 'spawn'"
+                )
             step_method_send = step_method
 
         self._process = mp_ctx.Process(

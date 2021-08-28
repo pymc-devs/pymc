@@ -144,6 +144,8 @@ todo_include_todos = False
 # intersphinx configuration to ease linking arviz docs
 intersphinx_mapping = {
     "arviz": ("https://arviz-devs.github.io/arviz/", None),
+    "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
 }
 
 

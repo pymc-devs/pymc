@@ -337,6 +337,7 @@ def sample(
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
     model : Model (optional if in ``with`` context)
+        Model to sample from. The model needs to have free random variables.
     random_seed : int or list of ints
         Random seed(s) used by the sampling steps.  A list is accepted if
         ``cores`` is greater than one.
@@ -435,6 +436,11 @@ def sample(
         p  0.609  0.047   0.528    0.699
     """
     model = modelcontext(model)
+    if not model.free_RVs:
+        raise SamplingError(
+            "Cannot sample from the model, since the model does not contain any free variables."
+        )
+
     start = deepcopy(start)
     model_initial_point = model.initial_point
     if start is None:
@@ -492,9 +498,6 @@ def sample(
         _log.warning(msg)
 
     draws += tune
-
-    if not model.free_RVs:
-        raise ValueError("The model does not contain any free variables.")
 
     if step is None and init is not None and all_continuous(model.value_vars):
         try:

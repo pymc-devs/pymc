@@ -297,6 +297,15 @@ class TestSample(SeededTest):
             backend = NDArray()
             pm.sample(10, cores=1, chains=2, trace=backend)
 
+    def test_exceptions(self):
+        # Test iteration over MultiTrace NotImplementedError
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0)
+            a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
+            trace = pm.sample(tune=0, draws=10, chains=2, return_inferencedata=False)
+            with pytest.raises(NotImplementedError):
+                xvars = [t["mu"] for t in trace]
+
 
 @pytest.mark.xfail(reason="Lognormal not refactored for v4")
 def test_sample_find_MAP_does_not_modify_start():
@@ -323,7 +332,7 @@ def test_sample_find_MAP_does_not_modify_start():
 def test_empty_model():
     with pm.Model():
         pm.Normal("a", observed=1)
-        with pytest.raises(ValueError) as error:
+        with pytest.raises(SamplingError) as error:
             pm.sample()
         error.match("any free variables")
 

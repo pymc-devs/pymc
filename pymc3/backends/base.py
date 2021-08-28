@@ -313,6 +313,9 @@ class MultiTrace:
     def report(self):
         return self._report
 
+    def __iter__(self):
+        raise NotImplementedError
+
     def __getitem__(self, idx):
         if isinstance(idx, slice):
             return self._slice(idx)
