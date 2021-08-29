@@ -45,6 +45,7 @@ from pymc3.distributions.continuous import (
     Logistic,
     LogitNormal,
     LogNormal,
+    Lognormal
     Moyal,
     Normal,
     Pareto,
@@ -127,6 +128,7 @@ __all__ = [
     "Weibull",
     "Bound",
     "LogNormal",
+    "Lognormal",
     "HalfStudentT",
     "ChiSquared",
     "HalfNormal",
