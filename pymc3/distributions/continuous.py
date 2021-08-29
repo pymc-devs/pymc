@@ -1802,9 +1802,11 @@ class LogNormal(PositiveContinuous):
 
 
 class Lognormal(LogNormal):
-    """deprecated, use LogNormal instead!"""
+    r"""
+    Lognormal is deprecated, use LogNormal instead!
+    """
 
-    pass
+    rv_op = lognormal
 
 
 class StudentTRV(RandomVariable):
