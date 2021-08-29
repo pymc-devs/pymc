@@ -1678,6 +1678,8 @@ class AsymmetricLaplace(Continuous):
 
 class LogNormal(PositiveContinuous):
     r"""
+    Note: Class name Lognormal is deprecated, use LogNormal now!
+
     Log-normal log-likelihood.
 
     Distribution of any random variable whose logarithm is normally
@@ -1801,12 +1803,7 @@ class LogNormal(PositiveContinuous):
         )
 
 
-class Lognormal(LogNormal):
-    r"""
-    Lognormal is deprecated, use LogNormal instead!
-    """
-
-    rv_op = lognormal
+Lognormal = LogNormal
 
 
 class StudentTRV(RandomVariable):
