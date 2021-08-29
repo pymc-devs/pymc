@@ -2107,15 +2107,15 @@ class StickBreakingWeightsRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
 
-    def __call__(self, alpha, size=None, **kwargs):
-        return super().__call__(alpha, size=size, **kwargs)
+    def __call__(self, alpha, K, size=None, **kwargs):
+        return super().__call__(alpha, K, size=size, **kwargs)
 
     def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
         return default_shape_from_params(self.ndim_supp, dist_params, rep_param_idx, param_shapes)
 
     @classmethod
-    def rng_fn(cls, rng, alpha, size):
-        size = tuple(size or ())
+    def rng_fn(cls, rng, alpha, K, size):
+        size = tuple(size or ()) + (K,)
 
         betas = rng.beta(1, alpha, size=size)
         sticks = np.concatenate(
@@ -2142,14 +2142,17 @@ class StickBreakingWeights(Continuous):
     rv_op = stickbreakingweights
 
     @classmethod
-    def dist(cls, alpha, *args, **kwargs):
+    def dist(cls, alpha, K, *args, **kwargs):
         alpha = at.as_tensor_variable(alpha)
+        K = at.as_tensor_variable(K)
 
         assert_negative_support(alpha, "alpha", "StickBreakingWeights")
+        assert_negative_support(K, "K", "StickBreakingWeights")
 
-        return super().dist([alpha], **kwargs)
+        return super().dist([alpha, K], **kwargs)
 
-    def logp(value, alpha):
+    def logp(value, alpha, K):
+        # K does not affect the log-likelihood value to my understanding...
         return bound(
             at.sum(pm.Beta.logp(value, 1, alpha)),
             alpha > 0,
