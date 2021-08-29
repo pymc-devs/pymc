@@ -45,7 +45,7 @@ from pymc3.distributions.continuous import (
     Logistic,
     LogitNormal,
     LogNormal,
-    Lognormal
+    Lognormal,
     Moyal,
     Normal,
     Pareto,
