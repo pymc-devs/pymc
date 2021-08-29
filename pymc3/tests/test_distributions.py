@@ -1360,7 +1360,7 @@ class TestMatchesScipy:
             lambda value, mu, tau: floatX(sp.lognorm.logpdf(value, tau ** -0.5, 0, np.exp(mu))),
         )
         self.check_logp(
-            Lognormal,
+            LogNormal,
             Rplus,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: floatX(sp.lognorm.logpdf(value, sigma, 0, np.exp(mu))),
@@ -1372,7 +1372,7 @@ class TestMatchesScipy:
             lambda value, mu, tau: sp.lognorm.logcdf(value, tau ** -0.5, 0, np.exp(mu)),
         )
         self.check_logcdf(
-            Lognormal,
+            LogNormal,
             Rplus,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: sp.lognorm.logcdf(value, sigma, 0, np.exp(mu)),
