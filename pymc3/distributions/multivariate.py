@@ -2098,3 +2098,62 @@ class CAR(Continuous):
             at.all(alpha >= -1),
             tau > 0,
         )
+
+
+class StickBreakingWeightsRV(RandomVariable):
+    name = "stick_breaking_weights"
+    ndim_supp = 1
+    ndims_params = [0]
+    dtype = "floatX"
+    _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
+
+    def __call__(self, alpha, size=None, **kwargs):
+        return super().__call__(alpha, size=size, **kwargs)
+
+    def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
+        return default_shape_from_params(self.ndim_supp, dist_params, rep_param_idx, param_shapes)
+
+    @classmethod
+    def rng_fn(cls, rng, alpha, size):
+        size = tuple(size or ())
+
+        betas = rng.beta(1, alpha, size=size)
+        sticks = np.concatenate(
+            (
+                np.ones(shape=(size[:-1] + (1,))),
+                np.cumprod(1 - betas[..., :-1], axis=-1),
+            ),
+            axis=-1,
+        )
+
+        weights = sticks * betas
+        weights = np.concatenate(
+            (weights, 1 - weights.sum(axis=-1)[..., np.newaxis]),
+            axis=-1,
+        )
+
+        return weights
+
+
+stickbreakingweights = StickBreakingWeightsRV()
+
+
+class StickBreakingWeights(Continuous):
+    rv_op = stickbreakingweights
+
+    @classmethod
+    def dist(cls, alpha, *args, **kwargs):
+        alpha = at.as_tensor_variable(alpha)
+
+        assert_negative_support(alpha, "alpha", "StickBreakingWeights")
+
+        return super().dist([alpha], **kwargs)
+
+    def logp(value, alpha):
+        return bound(
+            at.sum(pm.Beta.logp(value, 1, alpha)),
+            alpha > 0,
+        )
+
+    def _distr_parameters_for_repr(self):
+        return ["alpha"]
