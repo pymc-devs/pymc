@@ -1525,6 +1525,10 @@ class MatrixNormalRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("MatrixNormal", "\\operatorname{MatrixNormal}")
 
+    def _infer_shape(self, size, dist_params, param_shapes=None):
+        shape = tuple(size) + tuple(dist_params[0].shape)
+        return shape
+
     @classmethod
     def rng_fn(cls, rng, mu, rowchol, colchol, size=None):
 
@@ -1596,7 +1600,7 @@ class MatrixNormal(Continuous):
         n = colcov.shape[0]
         mu = np.zeros((m, n))
         vals = pm.MatrixNormal('vals', mu=mu, colcov=colcov,
-                               rowcov=rowcov, shape=(m, n))
+                               rowcov=rowcov)
 
     Above, the ith row in vals has a variance that is scaled by 4^i.
     Alternatively, row or column cholesky matrices could be substituted for
@@ -1634,7 +1638,7 @@ class MatrixNormal(Continuous):
             rowcov = at.diag([scale**(2*i) for i in range(m)])
 
             vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
-                                   observed=data, shape=(m, n))
+                                   observed=data)
     """
     rv_op = matrixnormal
 
@@ -1646,16 +1650,22 @@ class MatrixNormal(Continuous):
         rowchol=None,
         colcov=None,
         colchol=None,
-        shape=None,
         *args,
         **kwargs,
     ):
 
         cholesky = Cholesky(lower=True, on_error="raise")
 
-        if mu.ndim == 1:
-            raise ValueError(
-                "1x1 Matrix was provided. Please use Normal distribution for such cases."
+        if kwargs.get("size", None) is not None:
+            raise NotImplementedError("MatrixNormal doesn't support size argument")
+
+        if "shape" in kwargs:
+            kwargs.pop("shape")
+            warnings.warn(
+                "The shape argument in MatrixNormal is deprecated and will be ignored."
+                "MatrixNormal automatically derives the shape"
+                "from row and column matrix dimensions.",
+                DeprecationWarning,
             )
 
         # Among-row matrices
@@ -1687,6 +1697,11 @@ class MatrixNormal(Continuous):
                 raise ValueError("colchol must be two dimensional.")
             colchol_cov = at.as_tensor_variable(colchol)
 
+        dist_shape = (rowchol_cov.shape[0], colchol_cov.shape[0])
+
+        # Broadcasting mu
+        mu = at.extra_ops.broadcast_to(a=mu, shape=dist_shape)
+
         mu = at.as_tensor_variable(floatX(mu))
         # mean = median = mode = mu
 
@@ -1706,6 +1721,9 @@ class MatrixNormal(Continuous):
         -------
         TensorVariable
         """
+
+        if value.ndim != 2:
+            raise ValueError("Value must be two dimensional.")
 
         # Compute Tr[colcov^-1 @ (x - mu).T @ rowcov^-1 @ (x - mu)] and
         # the logdet of colcov and rowcov.

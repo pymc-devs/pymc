@@ -1895,7 +1895,7 @@ class TestMatchesScipy:
             with pytest.raises(ValueError):
                 x = MvNormal("x", mu=np.zeros(3), cov=np.eye(3), tau=np.eye(3), size=3)
 
-    @pytest.mark.parametrize("n", [2, 3])
+    @pytest.mark.parametrize("n", [1, 2, 3])
     def test_matrixnormal(self, n):
         mat_scale = 1e3  # To reduce logp magnitude
         mean_scale = 0.1
@@ -1908,7 +1908,6 @@ class TestMatchesScipy:
                 "colcov": PdMatrix(n) * mat_scale,
             },
             matrix_normal_logpdf_cov,
-            extra_args={"size": n},
             decimal=select_by_precision(float64=5, float32=3),
         )
         self.check_logp(
@@ -1920,7 +1919,6 @@ class TestMatchesScipy:
                 "colcov": PdMatrix(n) * mat_scale,
             },
             matrix_normal_logpdf_cov,
-            extra_args={"size": n},
             decimal=select_by_precision(float64=5, float32=3),
         )
         self.check_logp(
@@ -1932,7 +1930,6 @@ class TestMatchesScipy:
                 "colchol": PdMatrixChol(n) * mat_scale,
             },
             matrix_normal_logpdf_chol,
-            extra_args={"size": n},
             decimal=select_by_precision(float64=5, float32=3),
         )
         self.check_logp(
@@ -1944,7 +1941,6 @@ class TestMatchesScipy:
                 "colchol": PdMatrixChol(3) * mat_scale,
             },
             matrix_normal_logpdf_chol,
-            extra_args={"size": n},
             decimal=select_by_precision(float64=5, float32=3),
         )
 

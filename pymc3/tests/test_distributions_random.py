@@ -42,6 +42,7 @@ from scipy.special import expit
 import pymc3 as pm
 
 from pymc3.aesaraf import change_rv_size, floatX, intX
+from pymc3.distributions import _logp
 from pymc3.distributions.continuous import get_tau_sigma, interpolated
 from pymc3.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc3.distributions.dist_math import clipped_beta_rvs
@@ -1561,52 +1562,85 @@ class TestMatrixNormal(BaseTestDistribution):
     mu = np.random.random((3, 3))
     row_cov = np.eye(3)
     col_cov = np.eye(3)
-
+    shape = None
+    size = None
     pymc_dist_params = {"mu": mu, "rowcov": row_cov, "colcov": col_cov}
     expected_rv_op_params = {"mu": mu, "rowcov": row_cov, "colcov": col_cov}
 
-    sizes_to_check = [None, 1, (2, 3)]
-    sizes_expected = [(3,), (1, 3), (2, 3, 3)]
-
-    tests_to_run = ["check_rv_size", "check_pymc_params_match_rv_op", "test_matrix_normal"]
+    tests_to_run = ["check_pymc_params_match_rv_op", "test_matrix_normal", "test_errors"]
 
     def test_matrix_normal(self):
         delta = 0.05  # limit for KS p-value
         n_fails = 10  # Allows the KS fails a certain number of times
-        size = (100,)
 
-        def ref_rand(size, mu, rowcov, colcov):
-            return st.matrix_normal.rvs(mean=mu, rowcov=rowcov, colcov=colcov, size=size)
+        def ref_rand(mu, rowcov, colcov):
+            return st.matrix_normal.rvs(mean=mu, rowcov=rowcov, colcov=colcov)
 
         with pm.Model(rng_seeder=1):
             matrixnormal = pm.MatrixNormal(
-                "mvnormal",
+                "matnormal",
                 mu=np.random.random((3, 3)),
                 rowcov=np.eye(3),
                 colcov=np.eye(3),
-                size=size,
             )
             check = pm.sample_prior_predictive(n_fails)
 
-        ref_smp = ref_rand(size[0], mu=np.random.random((3, 3)), rowcov=np.eye(3), colcov=np.eye(3))
+        ref_smp = ref_rand(mu=np.random.random((3, 3)), rowcov=np.eye(3), colcov=np.eye(3))
 
         p, f = delta, n_fails
         while p <= delta and f > 0:
-            matrixnormal_smp = check["mvnormal"][f - 1, :, :]
-            curr_ref_smp = ref_smp[f - 1, :, :]
+            matrixnormal_smp = check["matnormal"]
 
             p = np.min(
                 [
                     st.ks_2samp(
-                        np.atleast_1d(matrixnormal_smp[..., idx]).flatten(),
-                        np.atleast_1d(curr_ref_smp[..., idx]).flatten(),
-                    )[1]
-                    for idx in range(matrixnormal_smp.shape[-1])
+                        np.atleast_1d(matrixnormal_smp).flatten(),
+                        np.atleast_1d(ref_smp).flatten(),
+                    )
                 ]
             )
             f -= 1
 
         assert p > delta
+
+    def test_errors(self):
+        msg = "MatrixNormal doesn't support size argument"
+        with pm.Model():
+            with pytest.raises(NotImplementedError, match=msg):
+                matrixnormal = pm.MatrixNormal(
+                    "matnormal",
+                    mu=np.random.random((3, 3)),
+                    rowcov=np.eye(3),
+                    colcov=np.eye(3),
+                    size=15,
+                )
+
+        msg = "Value must be two dimensional."
+        with pm.Model():
+            matrixnormal = pm.MatrixNormal(
+                "matnormal",
+                mu=np.random.random((3, 3)),
+                rowcov=np.eye(3),
+                colcov=np.eye(3),
+            )
+            with pytest.raises(ValueError, match=msg):
+                rvs_to_values = {matrixnormal: aesara.tensor.ones((3, 3, 3))}
+                _logp(
+                    matrixnormal.owner.op,
+                    matrixnormal,
+                    rvs_to_values,
+                    *matrixnormal.owner.inputs[3:],
+                )
+
+        with pm.Model():
+            with pytest.warns(DeprecationWarning):
+                matrixnormal = pm.MatrixNormal(
+                    "matnormal",
+                    mu=np.random.random((3, 3)),
+                    rowcov=np.eye(3),
+                    colcov=np.eye(3),
+                    shape=15,
+                )
 
 
 class TestInterpolated(BaseTestDistribution):
