@@ -286,10 +286,8 @@ def indices_from_subtensor(idx_list, indices):
 @_logp.register(IncSubtensor)
 @_logp.register(AdvancedIncSubtensor)
 @_logp.register(AdvancedIncSubtensor1)
-def incsubtensor_logp(op, indexed_rv_var, rv_values, *indices, **kwargs):
-    """
-    Use the incremented subtensor to create a measure-space (i.e. log-likelihood) graph for a random variable at a given point.
-    """
+def incsubtensor_logp(op, var, rvs_to_values, indexed_rv_var, rv_values, *indices, **kwargs):
+
     index = indices_from_subtensor(getattr(op, "idx_list", None), indices)
 
     _, (new_rv_var,) = clone(
