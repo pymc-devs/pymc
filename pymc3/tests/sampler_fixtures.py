@@ -122,7 +122,7 @@ class LKJCholeskyCovFixture(KnownCDF):
     def make_model(cls):
         with pm.Model() as model:
             sd_mu = np.array([1, 2, 3, 4, 5])
-            sd_dist = pm.Lognormal.dist(mu=sd_mu, sigma=sd_mu / 10.0, size=5)
+            sd_dist = pm.LogNormal.dist(mu=sd_mu, sigma=sd_mu / 10.0, size=5)
             chol_packed = pm.LKJCholeskyCov("chol_packed", eta=3, n=5, sd_dist=sd_dist)
             chol = pm.expand_packed_triangular(5, chol_packed, lower=True)
             cov = at.dot(chol, chol.T)

@@ -89,7 +89,7 @@ from pymc3.distributions import (
     LKJCorr,
     Logistic,
     LogitNormal,
-    Lognormal,
+    LogNormal,
     MatrixNormal,
     Moyal,
     Multinomial,
@@ -1354,25 +1354,25 @@ class TestMatchesScipy:
 
     def test_lognormal(self):
         self.check_logp(
-            Lognormal,
+            LogNormal,
             Rplus,
             {"mu": R, "tau": Rplusbig},
             lambda value, mu, tau: floatX(sp.lognorm.logpdf(value, tau ** -0.5, 0, np.exp(mu))),
         )
         self.check_logp(
-            Lognormal,
+            LogNormal,
             Rplus,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: floatX(sp.lognorm.logpdf(value, sigma, 0, np.exp(mu))),
         )
         self.check_logcdf(
-            Lognormal,
+            LogNormal,
             Rplus,
             {"mu": R, "tau": Rplusbig},
             lambda value, mu, tau: sp.lognorm.logcdf(value, tau ** -0.5, 0, np.exp(mu)),
         )
         self.check_logcdf(
-            Lognormal,
+            LogNormal,
             Rplus,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: sp.lognorm.logcdf(value, sigma, 0, np.exp(mu)),

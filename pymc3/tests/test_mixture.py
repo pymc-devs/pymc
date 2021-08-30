@@ -27,7 +27,7 @@ from pymc3 import (
     Dirichlet,
     Exponential,
     Gamma,
-    Lognormal,
+    LogNormal,
     Metropolis,
     Mixture,
     Model,
@@ -274,7 +274,7 @@ class TestMixture(SeededTest):
             g_comp = Normal.dist(
                 mu=Exponential("mu_g", lam=1.0, shape=nbr, transform=None), sigma=1, shape=nbr
             )
-            l_comp = Lognormal.dist(
+            l_comp = LogNormal.dist(
                 mu=Exponential("mu_l", lam=1.0, shape=nbr, transform=None), sigma=1, shape=nbr
             )
             # weight vector for the mixtures

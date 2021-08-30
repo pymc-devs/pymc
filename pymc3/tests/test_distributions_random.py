@@ -1262,8 +1262,8 @@ class TestLogistic(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestLognormal(BaseTestDistribution):
-    pymc_dist = pm.Lognormal
+class TestLogNormal(BaseTestDistribution):
+    pymc_dist = pm.LogNormal
     pymc_dist_params = {"mu": 1.0, "sigma": 5.0}
     expected_rv_op_params = {"mu": 1.0, "sigma": 5.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]

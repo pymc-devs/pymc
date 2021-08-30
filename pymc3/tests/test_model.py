@@ -280,7 +280,7 @@ class TestValueGradFunction(unittest.TestCase):
         # Edge case discovered in #2948
         ndim = 3
         with pm.Model() as m:
-            pm.Lognormal(
+            pm.LogNormal(
                 "sigma", mu=np.zeros(ndim), tau=np.ones(ndim), shape=ndim
             )  # variance for the correlation matrix
             pm.HalfCauchy("nu", beta=10)

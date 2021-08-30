@@ -105,7 +105,7 @@ __all__ = [
     "Gamma",
     "Weibull",
     "HalfStudentT",
-    "Lognormal",
+    "LogNormal",
     "ChiSquared",
     "HalfNormal",
     "Wald",
@@ -1676,8 +1676,10 @@ class AsymmetricLaplace(Continuous):
         )
 
 
-class Lognormal(PositiveContinuous):
+class LogNormal(PositiveContinuous):
     r"""
+    Note: Class name Lognormal is deprecated, use LogNormal now!
+
     Log-normal log-likelihood.
 
     Distribution of any random variable whose logarithm is normally
@@ -1733,10 +1735,10 @@ class Lognormal(PositiveContinuous):
 
         # Example to show that we pass in only ``sigma`` or ``tau`` but not both.
         with pm.Model():
-            x = pm.Lognormal('x', mu=2, sigma=30)
+            x = pm.LogNormal('x', mu=2, sigma=30)
 
         with pm.Model():
-            x = pm.Lognormal('x', mu=2, tau=1/100)
+            x = pm.LogNormal('x', mu=2, tau=1/100)
     """
 
     rv_op = lognormal
@@ -1758,7 +1760,7 @@ class Lognormal(PositiveContinuous):
 
     def logp(value, mu, sigma):
         """
-        Calculate log-probability of Lognormal distribution at specified value.
+        Calculate log-probability of LogNormal distribution at specified value.
 
         Parameters
         ----------
@@ -1780,7 +1782,7 @@ class Lognormal(PositiveContinuous):
 
     def logcdf(value, mu, sigma):
         """
-        Compute the log of the cumulative distribution function for Lognormal distribution
+        Compute the log of the cumulative distribution function for LogNormal distribution
         at the specified value.
 
         Parameters
@@ -1799,6 +1801,9 @@ class Lognormal(PositiveContinuous):
             0 < value,
             0 < sigma,
         )
+
+
+Lognormal = LogNormal
 
 
 class StudentTRV(RandomVariable):

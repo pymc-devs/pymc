@@ -311,7 +311,7 @@ class TestSample(SeededTest):
 def test_sample_find_MAP_does_not_modify_start():
     # see https://github.com/pymc-devs/pymc3/pull/4458
     with pm.Model():
-        pm.Lognormal("untransformed")
+        pm.LogNormal("untransformed")
 
         # make sure find_Map does not modify the start dict
         start = {"untransformed": 2}
