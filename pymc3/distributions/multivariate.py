@@ -43,7 +43,7 @@ import pymc3 as pm
 
 from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import transforms
-from pymc3.distributions.continuous import ChiSquared, Normal, assert_negative_support, UnitContinuous
+from pymc3.distributions.continuous import ChiSquared, Normal, assert_negative_support
 from pymc3.distributions.dist_math import bound, factln, logpow, multigammaln
 from pymc3.distributions.distribution import Continuous, Discrete
 from pymc3.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
@@ -63,6 +63,7 @@ __all__ = [
     "MatrixNormal",
     "KroneckerNormal",
     "CAR",
+    "StickBreakingWeights"
 ]
 
 # Step methods and advi do not catch LinAlgErrors at the
@@ -2138,7 +2139,7 @@ class StickBreakingWeightsRV(RandomVariable):
 stickbreakingweights = StickBreakingWeightsRV()
 
 
-class StickBreakingWeights(UnitContinuous):
+class StickBreakingWeights(Continuous):
     r"""
     Weights obtained by a (truncated) stick-breaking process
 
@@ -2155,7 +2156,7 @@ class StickBreakingWeights(UnitContinuous):
         return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
-    def dist(cls, alpha, K, *args, **kwargs):
+    def dist(cls, alpha, K, **kwargs):
         alpha = at.as_tensor_variable(floatX(alpha))
         K = at.as_tensor_variable(K)
 
@@ -2186,4 +2187,6 @@ class StickBreakingWeights(UnitContinuous):
         return bound(
             at.sum(pm.Beta.logp(value, 1, alpha)),
             alpha > 0,
+            at.all(value > 0),
+            at.all(value <= 1)
         )
