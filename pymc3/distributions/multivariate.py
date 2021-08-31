@@ -43,7 +43,7 @@ import pymc3 as pm
 
 from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import transforms
-from pymc3.distributions.continuous import ChiSquared, Normal, assert_negative_support
+from pymc3.distributions.continuous import ChiSquared, Normal, assert_negative_support, UnitContinuous
 from pymc3.distributions.dist_math import bound, factln, logpow, multigammaln
 from pymc3.distributions.distribution import Continuous, Discrete
 from pymc3.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
@@ -2103,15 +2103,15 @@ class CAR(Continuous):
 class StickBreakingWeightsRV(RandomVariable):
     name = "stick_breaking_weights"
     ndim_supp = 1
-    ndims_params = [0]
+    ndims_params = [0, 0]
     dtype = "floatX"
     _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
 
-    def __call__(self, alpha, K, size=None, **kwargs):
+    def __call__(self, alpha=1.0, K=10, size=None, **kwargs):
         return super().__call__(alpha, K, size=size, **kwargs)
 
     def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return default_shape_from_params(self.ndim_supp, dist_params, rep_param_idx, param_shapes)
+        return [dist_params[1] + 1,]
 
     @classmethod
     def rng_fn(cls, rng, alpha, K, size):
@@ -2138,12 +2138,25 @@ class StickBreakingWeightsRV(RandomVariable):
 stickbreakingweights = StickBreakingWeightsRV()
 
 
-class StickBreakingWeights(Continuous):
+class StickBreakingWeights(UnitContinuous):
+    r"""
+    Weights obtained by a (truncated) stick-breaking process
+
+    References
+    ----------
+    ..  Ishwaran, H. and James, L.F., 2001. Gibbs sampling methods for
+        stick-breaking priors. Journal of the American Statistical Association,
+        96(453), pp.161-173.
+    """
     rv_op = stickbreakingweights
+
+    def __new__(cls, name, *args, **kwargs):
+        kwargs.setdefault("transform", transform.stick_breaking)
+        return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
     def dist(cls, alpha, K, *args, **kwargs):
-        alpha = at.as_tensor_variable(alpha)
+        alpha = at.as_tensor_variable(floatX(alpha))
         K = at.as_tensor_variable(K)
 
         assert_negative_support(alpha, "alpha", "StickBreakingWeights")
@@ -2153,10 +2166,24 @@ class StickBreakingWeights(Continuous):
 
     def logp(value, alpha, K):
         # K does not affect the log-likelihood value to my understanding...
+        ones = at.ones(
+            shape=at.concatenate([value.shape[:-1], [1,]])
+        )
+        
+        denominator = at.cumsum(
+            at.concatenate(
+                [
+                    ones,
+                    -value,
+                ],
+                axis=-1,
+            ),
+            axis=-1,
+        )
+        
+        recovered_betas = value/(denominator[..., :-1])
+
         return bound(
             at.sum(pm.Beta.logp(value, 1, alpha)),
             alpha > 0,
         )
-
-    def _distr_parameters_for_repr(self):
-        return ["alpha"]
