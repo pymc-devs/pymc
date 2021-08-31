@@ -352,7 +352,7 @@ class IMH(SMC_KERNEL):
         self.p_acc_rate = p_acc_rate
 
         self.max_steps = n_steps
-        self.proposed = self.proposed = self.draws * self.n_steps
+        self.proposed = self.draws * self.n_steps
         self.proposal_dist = None
         self.acc_rate = None
 
@@ -431,16 +431,26 @@ class IMH(SMC_KERNEL):
 class MH(SMC_KERNEL):
     """Metropolis-Hastings SMC kernel"""
 
-    def __init__(self, *args, n_steps=25, **kwargs):
+    def __init__(self, *args, n_steps=25, tune_steps=True, p_acc_rate=0.85, **kwargs):
         """
         Parameters
         ----------
         n_steps: int
             The number of steps of each Markov Chain.
+        tune_steps: bool
+            Whether to compute the number of steps automatically or not. Defaults to True
+        p_acc_rate: float
+            Used to compute ``n_steps`` when ``tune_steps == True``. The higher the value of
+            ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.85.
+            It should be between 0 and 1.
         """
         super().__init__(*args, **kwargs)
         self.n_steps = n_steps
+        self.tune_steps = tune_steps
+        self.p_acc_rate = p_acc_rate
 
+        self.max_steps = n_steps
+        self.proposed = self.draws * self.n_steps
         self.proposal_dist = None
         self.proposal_scales = None
         self.chain_acc_rate = None
@@ -460,12 +470,20 @@ class MH(SMC_KERNEL):
             self.chain_acc_rate = self.chain_acc_rate[self.resampling_indexes]
 
     def tune(self):
-        """Update proposal scales for each particle dimension"""
+        """Update proposal scales for each particle dimension and update number of MH steps"""
         if self.iteration > 1:
             # Rescale based on distance to 0.234 acceptance rate
             chain_scales = np.exp(np.log(self.proposal_scales) + (self.chain_acc_rate - 0.234))
             # Interpolate between individual and population scales
             self.proposal_scales = 0.5 * chain_scales + 0.5 * chain_scales.mean()
+
+            if self.tune_steps:
+                acc_rate = max(1.0 / self.proposed, self.chain_acc_rate.mean())
+                self.n_steps = min(
+                    self.max_steps,
+                    max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate))),
+                )
+            self.proposed = self.draws * self.n_steps
 
     def mutate(self):
         """Metropolis-Hastings perturbation."""
@@ -506,6 +524,8 @@ class MH(SMC_KERNEL):
         stats.update(
             {
                 "_n_tune": self.n_steps,  # Default property name used in `SamplerReport`
+                "tune_steps": self.tune_steps,
+                "p_acc_rate": self.p_acc_rate,
             }
         )
         return stats
