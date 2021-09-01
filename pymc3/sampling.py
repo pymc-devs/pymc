@@ -31,6 +31,7 @@ import numpy as np
 import xarray
 
 from aesara.compile.mode import Mode
+from aesara.graph.basic import Constant
 from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
@@ -2001,7 +2002,7 @@ def sample_prior_predictive(
             names.append(rv_var.name)
             vars_to_sample.append(rv_var)
 
-    inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, SharedVariable)]
+    inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, (SharedVariable, Constant))]
 
     sampler_fn = compile_rv_inplace(
         inputs, vars_to_sample, allow_input_downcast=True, accept_inplace=True, mode=mode
