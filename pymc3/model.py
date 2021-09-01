@@ -59,6 +59,7 @@ from pymc3.aesaraf import (
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.data import GenTensorVariable, Minibatch
 from pymc3.distributions import logp_transform, logpt, logpt_sum
+from pymc3.distributions.transforms import Transform
 from pymc3.exceptions import ImputationWarning, SamplingError, ShapeError
 from pymc3.math import flatten_list
 from pymc3.util import UNSET, WithMemoization, get_var_name, treedict, treelist
@@ -954,46 +955,77 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         transform = getattr(rv_value_var.tag, "transform", None)
 
         if initval is None or transform:
-            # Sample/evaluate this using the existing initial values, and
-            # with the least effect on the RNGs involved (i.e. no in-placing)
-
-            mode = get_mode(None)
-            opt_qry = mode.provided_optimizer.excluding("random_make_inplace")
-            mode = Mode(linker=mode.linker, optimizer=opt_qry)
-
-            if transform:
-                value = initval if initval is not None else rv_var
-                rv_var = at.as_tensor_variable(transform.forward(rv_var, value))
-
-            def initval_to_rvval(value_var, value):
-                rv_var = self.values_to_rvs[value_var]
-                initval = value_var.type.make_constant(value)
-                transform = getattr(value_var.tag, "transform", None)
-                if transform:
-                    return transform.backward(rv_var, initval)
-                else:
-                    return initval
-
-            givens = {
-                self.values_to_rvs[k]: initval_to_rvval(k, v)
-                for k, v in self.initial_values.items()
-            }
-            initval_fn = aesara.function(
-                [], rv_var, mode=mode, givens=givens, on_unused_input="ignore"
-            )
-            try:
-                initval = initval_fn()
-            except NotImplementedError as ex:
-                if "Cannot sample from" in ex.args[0]:
-                    # The RV does not have a random number generator.
-                    # Our last chance is to take the test_value.
-                    # Note that this is a workaround for Flat and HalfFlat
-                    # until an initval default mechanism is implemented (#4752).
-                    initval = test_value
-                else:
-                    raise
+            initval = self._eval_initval(rv_var, initval, test_value, transform)
 
         self.initial_values[rv_value_var] = initval
+
+    def _eval_initval(
+        self,
+        rv_var: TensorVariable,
+        initval: Optional[Variable],
+        test_value: Optional[np.ndarray],
+        transform: Optional[Transform],
+    ) -> np.ndarray:
+        """Sample/evaluate an initial value using the existing initial values,
+        and with the least effect on the RNGs involved (i.e. no in-placing).
+
+        Parameters
+        ----------
+        rv_var : TensorVariable
+            The model variable the initival belongs to.
+        initval : Variable or None
+            The initial value to be evaluated.
+            If `None` a random draw will be made.
+        test_value : optional, ndarray
+            Fallback option if initval is None and random draws are not implemented.
+            This is relevant for pm.Flat or pm.HalfFlat distributions and is subject
+            to ongoing refactoring of the initval API.
+        transform : optional, Transform
+            A transformation associated with the random variable.
+            Transformations are automatically applied to initial values.
+
+        Returns
+        -------
+        initval : np.ndarray
+            Numeric (transformed) initial value.
+        """
+        mode = get_mode(None)
+        opt_qry = mode.provided_optimizer.excluding("random_make_inplace")
+        mode = Mode(linker=mode.linker, optimizer=opt_qry)
+
+        if transform:
+            if initval is not None:
+                value = initval
+            else:
+                value = rv_var
+            rv_var = at.as_tensor_variable(transform.forward(rv_var, value))
+
+        def initval_to_rvval(value_var, value):
+            rv_var = self.values_to_rvs[value_var]
+            initval = value_var.type.make_constant(value)
+            transform = getattr(value_var.tag, "transform", None)
+            if transform:
+                return transform.backward(rv_var, initval)
+            else:
+                return initval
+
+        givens = {
+            self.values_to_rvs[k]: initval_to_rvval(k, v) for k, v in self.initial_values.items()
+        }
+        initval_fn = aesara.function([], rv_var, mode=mode, givens=givens, on_unused_input="ignore")
+        try:
+            initval = initval_fn()
+        except NotImplementedError as ex:
+            if "Cannot sample from" in ex.args[0]:
+                # The RV does not have a random number generator.
+                # Our last chance is to take the test_value.
+                # Note that this is a workaround for Flat and HalfFlat
+                # until an initval default mechanism is implemented (#4752).
+                initval = test_value
+            else:
+                raise
+
+        return initval
 
     def next_rng(self) -> RandomStateSharedVariable:
         """Generate a new ``RandomStateSharedVariable``.
