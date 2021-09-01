@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import numpy as np
 import pytest
 
 import pymc3 as pm
@@ -36,6 +37,47 @@ class TestInitvalAssignment:
                 rv = pm.Uniform("u", 0, 1, testval=0.75)
                 assert pmodel.initial_values[rv.tag.value_var] == transform_fwd(rv, 0.75)
                 assert not hasattr(rv.tag, "test_value")
+        pass
+
+
+class TestInitvalEvaluation:
+    def test_random_draws(self):
+        pmodel = pm.Model()
+        rv = pm.Uniform.dist(lower=1, upper=2)
+        iv = pmodel._eval_initval(
+            rv_var=rv,
+            initval=None,
+            test_value=None,
+            transform=None,
+        )
+        assert isinstance(iv, np.ndarray)
+        assert 1 <= iv <= 2
+        pass
+
+    def test_applies_transform(self):
+        pmodel = pm.Model()
+        rv = pm.Uniform.dist()
+        tf = pm.Uniform.default_transform()
+        iv = pmodel._eval_initval(
+            rv_var=rv,
+            initval=0.5,
+            test_value=None,
+            transform=tf,
+        )
+        assert isinstance(iv, np.ndarray)
+        assert iv == 0
+        pass
+
+    def test_falls_back_to_test_value(self):
+        pmodel = pm.Model()
+        rv = pm.Flat.dist()
+        iv = pmodel._eval_initval(
+            rv_var=rv,
+            initval=None,
+            test_value=0.6,
+            transform=None,
+        )
+        assert iv == 0.6
         pass
 
 
