@@ -38,6 +38,7 @@ import aesara.tensor as at
 import numpy as np
 import scipy.sparse as sps
 
+from aesara.compile.mode import Mode, get_mode
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
@@ -955,7 +956,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if initval is None or transform:
             # Sample/evaluate this using the existing initial values, and
             # with the least effect on the RNGs involved (i.e. no in-placing)
-            from aesara.compile.mode import Mode, get_mode
 
             mode = get_mode(None)
             opt_qry = mode.provided_optimizer.excluding("random_make_inplace")
