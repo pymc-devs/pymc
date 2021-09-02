@@ -1,0 +1,398 @@
+from copy import copy
+from typing import Callable, Dict, Iterable, List, Tuple, cast
+
+import aesara
+import aesara.tensor as at
+import numpy as np
+from aesara.graph.basic import Variable
+from aesara.graph.fg import FunctionGraph
+from aesara.graph.opt import local_optimizer, out2in
+from aesara.graph.optdb import OptimizationQuery
+from aesara.scan.op import Scan
+from aesara.scan.opt import scan_eqopt1, scan_eqopt2
+from aesara.scan.utils import ScanArgs
+from aesara.tensor.random.type import RandomType
+from aesara.tensor.var import TensorVariable
+from aesara.updates import OrderedUpdates
+
+from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
+from aeppl.joint_logprob import factorized_joint_logprob
+from aeppl.logprob import _logprob
+from aeppl.opt import logprob_rewrites_db
+
+
+class MeasurableScan(Scan):
+    """A placeholder used to specify a log-likelihood for a scan sub-graph."""
+
+
+MeasurableVariable.register(MeasurableScan)
+
+
+def convert_outer_out_to_in(
+    input_scan_args: ScanArgs,
+    outer_out_vars: Iterable[TensorVariable],
+    new_outer_input_vars: Dict[TensorVariable, TensorVariable],
+    inner_out_fn: Callable[
+        [Dict[TensorVariable, TensorVariable]], Iterable[TensorVariable]
+    ],
+) -> ScanArgs:
+    r"""Convert outer-graph outputs into outer-graph inputs.
+
+    Parameters
+    ==========
+    input_scan_args:
+        The source `Scan` arguments.
+    outer_out_vars:
+        The outer-graph output variables that are to be converted into an
+        outer-graph input.
+    new_outer_input_vars:
+        The variables used for the new outer-graph input computed for
+        `outer_out_vars`.
+    inner_out_fn:
+        A function that takes the remapped outer-out variables and produces new
+        inner-graph outputs.  This can be used to transform the
+        `outer_out_vars`\s' corresponding inner-graph outputs into something
+        else entirely, like log-probabilities.
+
+    Outputs
+    =======
+    A `ScanArgs` object for a `Scan` in which `outer_out_vars` has been converted to an
+    outer-graph input.
+    """
+
+    output_scan_args = copy(input_scan_args)
+    inner_outs_to_new_inner_ins = {}
+
+    # Map inner-outputs to outer-outputs
+    old_inner_outs_to_outer_outs = {}
+
+    for oo_var in outer_out_vars:
+
+        var_info = output_scan_args.find_among_fields(
+            oo_var, field_filter=lambda x: x.startswith("outer_out")
+        )
+
+        assert var_info is not None
+        assert oo_var in new_outer_input_vars
+
+        io_var = output_scan_args.get_alt_field(var_info, "inner_out")
+        old_inner_outs_to_outer_outs[io_var] = oo_var
+
+    # In this loop, we gather information about the new inner-inputs that have
+    # been created and what their corresponding inner-outputs were, and we
+    # update the outer and inner-inputs to reflect the addition of new
+    # inner-inputs.
+    for old_inner_out_var, oo_var in old_inner_outs_to_outer_outs.items():
+
+        # Couldn't one do the same with `var_info`?
+        inner_out_info = output_scan_args.find_among_fields(
+            old_inner_out_var, field_filter=lambda x: x.startswith("inner_out")
+        )
+
+        output_scan_args.remove_from_fields(old_inner_out_var, rm_dependents=False)
+
+        # Remove the old outer-output variable.
+        # Not sure if this really matters, since we don't use the outer-outputs
+        # when building a new `Scan`, but doing it keeps the `ScanArgs` object
+        # consistent.
+        output_scan_args.remove_from_fields(oo_var, rm_dependents=False)
+
+        # Use the index for the specific inner-graph sub-collection to which this
+        # variable belongs (e.g. index `1` among the inner-graph sit-sot terms)
+        var_idx = inner_out_info.index
+
+        # The old inner-output variable becomes the a new inner-input
+        new_inner_in_var = old_inner_out_var.clone()
+        if new_inner_in_var.name:
+            new_inner_in_var.name = f"{new_inner_in_var.name}_vv"
+
+        inner_outs_to_new_inner_ins[old_inner_out_var] = new_inner_in_var
+
+        # We want to remove elements from both lists and tuples, because the
+        # members of `ScanArgs` could switch from being `list`s to `tuple`s
+        # soon
+        def remove(x, i):
+            return x[:i] + x[i + 1 :]
+
+        # If we're replacing a [m|s]it-sot, then we need to add a new nit-sot
+        add_nit_sot = False
+        if inner_out_info.name.endswith("mit_sot"):
+            inner_in_mit_sot_var = cast(
+                Tuple[int, ...], tuple(output_scan_args.inner_in_mit_sot[var_idx])
+            )
+            new_inner_in_seqs = inner_in_mit_sot_var + (new_inner_in_var,)
+            new_inner_in_mit_sot = remove(output_scan_args.inner_in_mit_sot, var_idx)
+            new_outer_in_mit_sot = remove(output_scan_args.outer_in_mit_sot, var_idx)
+            new_inner_in_sit_sot = tuple(output_scan_args.inner_in_sit_sot)
+            new_outer_in_sit_sot = tuple(output_scan_args.outer_in_sit_sot)
+            add_nit_sot = True
+        elif inner_out_info.name.endswith("sit_sot"):
+            new_inner_in_seqs = (output_scan_args.inner_in_sit_sot[var_idx],) + (
+                new_inner_in_var,
+            )
+            new_inner_in_sit_sot = remove(output_scan_args.inner_in_sit_sot, var_idx)
+            new_outer_in_sit_sot = remove(output_scan_args.outer_in_sit_sot, var_idx)
+            new_inner_in_mit_sot = tuple(output_scan_args.inner_in_mit_sot)
+            new_outer_in_mit_sot = tuple(output_scan_args.outer_in_mit_sot)
+            add_nit_sot = True
+        else:
+            new_inner_in_seqs = (new_inner_in_var,)
+            new_inner_in_mit_sot = tuple(output_scan_args.inner_in_mit_sot)
+            new_outer_in_mit_sot = tuple(output_scan_args.outer_in_mit_sot)
+            new_inner_in_sit_sot = tuple(output_scan_args.inner_in_sit_sot)
+            new_outer_in_sit_sot = tuple(output_scan_args.outer_in_sit_sot)
+
+        output_scan_args.inner_in_mit_sot = list(new_inner_in_mit_sot)
+        output_scan_args.inner_in_sit_sot = list(new_inner_in_sit_sot)
+        output_scan_args.outer_in_mit_sot = list(new_outer_in_mit_sot)
+        output_scan_args.outer_in_sit_sot = list(new_outer_in_sit_sot)
+
+        if inner_out_info.name.endswith("mit_sot"):
+            mit_sot_var_taps = cast(
+                Tuple[int, ...], tuple(output_scan_args.mit_sot_in_slices[var_idx])
+            )
+            taps = mit_sot_var_taps + (0,)
+            new_mit_sot_in_slices = remove(output_scan_args.mit_sot_in_slices, var_idx)
+        elif inner_out_info.name.endswith("sit_sot"):
+            taps = (-1, 0)
+            new_mit_sot_in_slices = tuple(output_scan_args.mit_sot_in_slices)
+        else:
+            taps = (0,)
+            new_mit_sot_in_slices = tuple(output_scan_args.mit_sot_in_slices)
+
+        output_scan_args.mit_sot_in_slices = list(new_mit_sot_in_slices)
+
+        taps, new_inner_in_seqs = zip(
+            *sorted(zip(taps, new_inner_in_seqs), key=lambda x: x[0])
+        )
+
+        new_inner_in_seqs = tuple(output_scan_args.inner_in_seqs) + tuple(
+            reversed(new_inner_in_seqs)
+        )
+
+        output_scan_args.inner_in_seqs = list(new_inner_in_seqs)
+
+        slice_seqs = zip(
+            -np.asarray(taps), [n if n < 0 else None for n in reversed(taps)]
+        )
+
+        # XXX: If the caller passes the variables output by `aesara.scan`, it's
+        # likely that this will fail, because those variables can sometimes be
+        # slices of the actual outer-inputs (e.g. `out[1:]` instead of `out`
+        # when `taps=[-1]`).
+        var_slices = [new_outer_input_vars[oo_var][b:e] for b, e in slice_seqs]
+        n_steps = at.min([at.shape(n)[0] for n in var_slices])
+
+        output_scan_args.n_steps = n_steps
+
+        new_outer_in_seqs = tuple(output_scan_args.outer_in_seqs) + tuple(
+            v[:n_steps] for v in var_slices
+        )
+
+        output_scan_args.outer_in_seqs = list(new_outer_in_seqs)
+
+        if add_nit_sot:
+            new_outer_in_nit_sot = tuple(output_scan_args.outer_in_nit_sot) + (n_steps,)
+        else:
+            new_outer_in_nit_sot = tuple(output_scan_args.outer_in_nit_sot)
+
+        output_scan_args.outer_in_nit_sot = list(new_outer_in_nit_sot)
+
+    # Now, we can add new inner-outputs for the custom calculations.
+    # We don't need to create corresponding outer-outputs, because `Scan` will
+    # do that when we call `Scan.make_node`.  All we need is a consistent
+    # outer-inputs and inner-graph spec., which we should have in
+    # `output_scan_args`.
+    remapped_io_to_ii = inner_outs_to_new_inner_ins
+    new_inner_out_nit_sot = tuple(output_scan_args.inner_out_nit_sot) + tuple(
+        inner_out_fn(remapped_io_to_ii)
+    )
+
+    output_scan_args.inner_out_nit_sot = list(new_inner_out_nit_sot)
+
+    return output_scan_args
+
+
+def get_random_outer_outputs(
+    scan_args: ScanArgs,
+) -> List[Tuple[int, TensorVariable, TensorVariable]]:
+    """Get the `MeasurableVariable` outputs of a `Scan` (well, its `ScanArgs`).
+
+    Returns
+    =======
+    A tuple of tuples containing the index of each outer-output variable, the
+    outer-output variable itself, and the inner-output variable that
+    is an instance of `MeasurableVariable`.
+    """
+    rv_vars = []
+    for n, oo_var in enumerate(
+        [o for o in scan_args.outer_outputs if not isinstance(o.type, RandomType)]
+    ):
+        oo_info = scan_args.find_among_fields(oo_var)
+        io_type = oo_info.name[(oo_info.name.index("_", 6) + 1) :]
+        inner_out_type = "inner_out_{}".format(io_type)
+        io_var = getattr(scan_args, inner_out_type)[oo_info.index]
+        if io_var.owner and isinstance(io_var.owner.op, MeasurableVariable):
+            rv_vars.append((n, oo_var, io_var))
+    return rv_vars
+
+
+def construct_scan(scan_args: ScanArgs) -> Tuple[List[TensorVariable], OrderedUpdates]:
+    scan_op = Scan(scan_args.inner_inputs, scan_args.inner_outputs, scan_args.info)
+    node = scan_op.make_node(*scan_args.outer_inputs)
+    updates = OrderedUpdates(zip(scan_args.outer_in_shared, scan_args.outer_out_shared))
+    return node.outputs, updates
+
+
+@_logprob.register(MeasurableScan)
+def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
+
+    new_node = op.make_node(*inputs)
+    scan_args = ScanArgs.from_node(new_node)
+    rv_outer_outs = get_random_outer_outputs(scan_args)
+
+    var_indices, rv_vars, io_vars = zip(*rv_outer_outs)
+    value_map = {_rv: _val for _rv, _val in zip(rv_vars, values)}
+
+    def create_inner_out_logp(
+        value_map: Dict[TensorVariable, TensorVariable]
+    ) -> TensorVariable:
+        """Create a log-likelihood inner-output for a `Scan`."""
+        logp_parts = factorized_joint_logprob(value_map, warn_missing_rvs=False)
+        return logp_parts.values()
+
+    logp_scan_args = convert_outer_out_to_in(
+        scan_args,
+        rv_vars,
+        value_map,
+        inner_out_fn=create_inner_out_logp,
+    )
+
+    # Remove the shared variables corresponding to replaced terms.
+
+    # TODO FIXME: This is a really dirty approach, because it effectively
+    # assumes that all sampling is being removed, and, thus, all shared updates
+    # relating to `RandomType`s.  Instead, we should be more precise and only
+    # remove the `RandomType`s associated with `values`.
+    logp_scan_args.outer_in_shared = [
+        i for i in logp_scan_args.outer_in_shared if not isinstance(i.type, RandomType)
+    ]
+    logp_scan_args.inner_in_shared = [
+        i for i in logp_scan_args.inner_in_shared if not isinstance(i.type, RandomType)
+    ]
+    logp_scan_args.inner_out_shared = [
+        i for i in logp_scan_args.inner_out_shared if not isinstance(i.type, RandomType)
+    ]
+
+    logp_scan_out, updates = construct_scan(logp_scan_args)
+
+    # Automatically pick up updates so that we don't have to pass them around
+    for key, value in updates.items():
+        key.default_update = value
+
+    return logp_scan_out
+
+
+@local_optimizer([Scan])
+def find_measurable_scans(fgraph, node):
+    r"""Finds `Scan`\s for which a `logprob` can be computed.
+
+    This will convert said `Scan`\s into `MeasurableScan`\s.
+    """
+
+    if not isinstance(node.op, Scan):
+        return None
+
+    if isinstance(node.op, MeasurableScan):
+        return
+
+    curr_scanargs = ScanArgs.from_node(node)
+
+    # Find the un-output `MeasurableVariable`s created in the inner-graph
+    clients: Dict[Variable, List[Variable]] = {}
+
+    local_fgraph_topo = aesara.graph.basic.io_toposort(
+        curr_scanargs.inner_inputs,
+        [o for o in curr_scanargs.inner_outputs if not isinstance(o.type, RandomType)],
+        clients=clients,
+    )
+    for n in local_fgraph_topo:
+        if isinstance(n.op, MeasurableVariable):
+            non_output_node_clients = [
+                c for c in clients[n] if c not in curr_scanargs.inner_outputs
+            ]
+
+            if non_output_node_clients:
+                # This node is a `MeasurableVariable`, but it depends on
+                # variable that's not being output?
+                # TODO: Why can't we make this a `MeasurableScan`?
+                return None
+
+    op = MeasurableScan(
+        curr_scanargs.inner_inputs, curr_scanargs.inner_outputs, curr_scanargs.info
+    )
+    new_node = op.make_node(*curr_scanargs.outer_inputs)
+
+    return dict(zip(node.outputs, new_node.outputs))
+
+
+@local_optimizer([Scan])
+def add_opts_to_inner_graphs(fgraph, node):
+    """Update the `Mode`(s) used to compile the inner-graph of a `Scan` `Op`.
+
+    This is how we add `rv_sinking_db` and any other log-probability rewrites
+    to the "body" (i.e. inner-graph) of a `Scan` loop.
+    """
+
+    if not isinstance(node.op, Scan):
+        return None
+
+    inner_fgraph = FunctionGraph(
+        node.op.inputs,
+        node.op.outputs,
+        clone=True,
+        copy_inputs=False,
+        copy_orphans=False,
+    )
+
+    logprob_rewrites_db.query(OptimizationQuery(include=["basic"])).optimize(
+        inner_fgraph
+    )
+
+    new_outputs = list(inner_fgraph.outputs)
+
+    op = Scan(node.op.inputs, new_outputs, node.op.info)
+    new_node = op.make_node(*node.inputs)
+
+    return dict(zip(node.outputs, new_node.outputs))
+
+
+@_get_measurable_outputs.register(MeasurableScan)
+def _get_measurable_outputs_MeasurableScan(op, node):
+    # TODO: This should probably use `get_random_outer_outputs`
+    # scan_args = ScanArgs.from_node(node)
+    # rv_outer_outs = get_random_outer_outputs(scan_args)
+    return [o for o in node.outputs if not isinstance(o.type, RandomType)]
+
+
+logprob_rewrites_db.register(
+    "add_opts_to_inner_graphs",
+    out2in(
+        add_opts_to_inner_graphs, name="add_opts_to_inner_graphs", ignore_newtrees=True
+    ),
+    -100,
+    "basic",
+    "scan",
+)
+
+logprob_rewrites_db.register(
+    "find_measurable_scans",
+    out2in(find_measurable_scans, name="find_measurable_scans", ignore_newtrees=True),
+    0,
+    "basic",
+    "scan",
+)
+
+# Add scan canonicalizations that aren't in the canonicalize DB
+logprob_rewrites_db.register("scan_eqopt1", scan_eqopt1, -9, "basic", "scan")
+logprob_rewrites_db.register("scan_eqopt2", scan_eqopt2, -9, "basic", "scan")
