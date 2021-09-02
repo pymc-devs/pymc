@@ -3,7 +3,7 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- aesara>=2.1.0, <2.2.0
+- aesara>=2.1.0
 - arviz>=0.11.2
 - cachetools>=4.2.1
 - cloudpickle
