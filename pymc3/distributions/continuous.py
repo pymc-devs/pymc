@@ -366,6 +366,9 @@ class Flat(Continuous):
         res.tag.test_value = np.full(size, floatX(0.0))
         return res
 
+    def get_moment(rv, size, *rv_inputs) -> np.ndarray:
+        return at.zeros(size, dtype=aesara.config.floatX)
+
     def logp(value):
         """
         Calculate log-probability of Flat distribution at specified value.
@@ -427,6 +430,9 @@ class HalfFlat(PositiveContinuous):
         res = super().dist([], size=size, **kwargs)
         res.tag.test_value = np.full(size, floatX(1.0))
         return res
+
+    def get_moment(value_var, size, *rv_inputs) -> np.ndarray:
+        return at.ones(size, dtype=aesara.config.floatX)
 
     def logp(value):
         """

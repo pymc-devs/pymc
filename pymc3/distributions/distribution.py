@@ -19,6 +19,7 @@ import types
 import warnings
 
 from abc import ABCMeta
+from functools import singledispatch
 from typing import Optional
 
 import aesara
@@ -26,6 +27,7 @@ import aesara.tensor as at
 
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
+from aesara.tensor.var import TensorVariable
 
 from pymc3.aesaraf import change_rv_size
 from pymc3.distributions import _logcdf, _logp
@@ -106,6 +108,13 @@ class DistributionMeta(ABCMeta):
                 def logcdf(op, var, rvs_to_values, *dist_params, **kwargs):
                     value_var = rvs_to_values.get(var, var)
                     return class_logcdf(value_var, *dist_params, **kwargs)
+
+            class_initval = clsdict.get("get_moment")
+            if class_initval:
+
+                @_get_moment.register(rv_type)
+                def get_moment(op, rv, size, *rv_inputs):
+                    return class_initval(rv, size, *rv_inputs)
 
             # Register the Aesara `RandomVariable` type as a subclass of this
             # `Distribution` type.
@@ -326,6 +335,24 @@ class Distribution(metaclass=DistributionMeta):
             rng.default_update = new_rng
 
         return rv_out
+
+
+@singledispatch
+def _get_moment(op, rv, size, *rv_inputs) -> TensorVariable:
+    """Fallback method for creating an initial value for a random variable.
+
+    Parameters are the same as for the `.dist()` method.
+    """
+    return None
+
+
+def get_moment(rv: TensorVariable) -> TensorVariable:
+    """Fallback method for creating an initial value for a random variable.
+
+    Parameters are the same as for the `.dist()` method.
+    """
+    size = rv.owner.inputs[1]
+    return _get_moment(rv.owner.op, rv, size, *rv.owner.inputs[3:])
 
 
 class NoDistribution(Distribution):
