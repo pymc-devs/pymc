@@ -49,7 +49,7 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.shape import SpecifyShape
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
-from aesara.tensor.var import TensorVariable
+from aesara.tensor.var import TensorConstant, TensorVariable
 
 from pymc3.exceptions import ShapeError
 from pymc3.vartypes import continuous_types, int_types, isgenerator, typefilter
@@ -389,7 +389,11 @@ def inputvars(a):
     -------
         r: list of tensor variables that are inputs
     """
-    return [v for v in graph_inputs(makeiter(a)) if isinstance(v, TensorVariable)]
+    return [
+        v
+        for v in graph_inputs(makeiter(a))
+        if isinstance(v, TensorVariable) and not isinstance(v, TensorConstant)
+    ]
 
 
 def cont_inputs(a):
