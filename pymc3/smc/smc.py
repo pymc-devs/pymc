@@ -460,7 +460,6 @@ class MH(SMC_KERNEL):
         Dimension specific scaling is provided by self.proposal_scales and set in self.tune()
         """
         ndim = self.tempered_posterior.shape[1]
-        self.proposal_dist = MultivariateNormalProposal(np.eye(ndim))
         self.proposal_scales = np.full(self.draws, min(1, 2.38 ** 2 / ndim))
 
     def resample(self):
@@ -475,7 +474,7 @@ class MH(SMC_KERNEL):
             # Rescale based on distance to 0.234 acceptance rate
             chain_scales = np.exp(np.log(self.proposal_scales) + (self.chain_acc_rate - 0.234))
             # Interpolate between individual and population scales
-            self.proposal_scales = 0.5 * chain_scales + 0.5 * chain_scales.mean()
+            self.proposal_scales = 0.5 * (chain_scales + chain_scales.mean())
 
             if self.tune_steps:
                 acc_rate = max(1.0 / self.proposed, self.chain_acc_rate.mean())
@@ -484,6 +483,14 @@ class MH(SMC_KERNEL):
                     max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate))),
                 )
             self.proposed = self.draws * self.n_steps
+
+        # Update MVNormal proposal based on the covariance of the tempered posterior.
+        cov = np.cov(self.tempered_posterior, ddof=0, rowvar=0)
+        cov = np.atleast_2d(cov)
+        cov += 1e-6 * np.eye(cov.shape[0])
+        if np.isnan(cov).any() or np.isinf(cov).any():
+            raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
+        self.proposal_dist = MultivariateNormalProposal(cov)
 
     def mutate(self):
         """Metropolis-Hastings perturbation."""
