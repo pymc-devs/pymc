@@ -16,6 +16,8 @@ import pytest
 
 import pymc3 as pm
 
+from pymc3.distributions.distribution import get_moment
+
 
 def transform_fwd(rv, expected_untransformed):
     return rv.tag.value_var.tag.transform.forward(rv, expected_untransformed).eval()
@@ -89,3 +91,15 @@ class TestSpecialDistributions:
         rv = pm.HalfFlat.dist()
         assert hasattr(rv.tag, "test_value")
         pass
+
+
+class TestMoment:
+    def test_basic(self):
+        rv = pm.Flat.dist()
+        assert get_moment(rv).eval() == np.zeros(())
+        rv = pm.HalfFlat.dist()
+        assert get_moment(rv).eval() == np.ones(())
+        rv = pm.Flat.dist(size=(2, 4))
+        assert np.all(get_moment(rv).eval() == np.zeros((2, 4)))
+        rv = pm.HalfFlat.dist(size=(2, 4))
+        assert np.all(get_moment(rv).eval() == np.ones((2, 4)))
