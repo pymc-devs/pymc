@@ -45,7 +45,7 @@ def test_mixture_basics():
         x_vv = X_rv.clone()
         x_vv.name = "x"
 
-        joint_logprob(M_rv, {M_rv: m_vv, I_rv: i_vv, X_rv: x_vv})
+        joint_logprob({M_rv: m_vv, I_rv: i_vv, X_rv: x_vv})
 
     with pytest.raises(NotImplementedError):
         env = create_mix_model((2,), 1)
@@ -53,7 +53,7 @@ def test_mixture_basics():
         i_vv = env["i_vv"]
         M_rv = env["M_rv"]
         m_vv = env["m_vv"]
-        joint_logprob(M_rv, {M_rv: m_vv, I_rv: i_vv})
+        joint_logprob({M_rv: m_vv, I_rv: i_vv})
 
     with pytest.raises(NotImplementedError):
         axis_at = at.lscalar("axis")
@@ -63,7 +63,7 @@ def test_mixture_basics():
         i_vv = env["i_vv"]
         M_rv = env["M_rv"]
         m_vv = env["m_vv"]
-        joint_logprob(M_rv, {M_rv: m_vv, I_rv: i_vv})
+        joint_logprob({M_rv: m_vv, I_rv: i_vv})
 
 
 @pytest.mark.parametrize(
@@ -94,7 +94,7 @@ def test_hetero_mixture_scalar(p_val, size):
     m_vv = M_rv.clone()
     m_vv.name = "m"
 
-    M_logp = joint_logprob(M_rv, {M_rv: m_vv, I_rv: i_vv}, sum=False)
+    M_logp = joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
 
     M_logp_fn = aesara.function([p_at, m_vv, i_vv], M_logp)
 
@@ -160,7 +160,7 @@ def test_hetero_mixture_nonscalar(p_val, size):
     m_vv = M_rv.clone()
     m_vv.name = "m"
 
-    M_logp = joint_logprob(M_rv, {M_rv: m_vv, I_rv: i_vv}, sum=False)
+    M_logp = joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
 
     M_logp_fn = aesara.function([p_at, m_vv, i_vv], M_logp)
 

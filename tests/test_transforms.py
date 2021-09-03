@@ -149,9 +149,7 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
     b_value_var.name = "b_value"
 
     transform_opt = TransformValuesOpt({a_value_var: DEFAULT_TRANSFORM})
-    res = joint_logprob(
-        b, {a: a_value_var, b: b_value_var}, extra_rewrites=transform_opt
-    )
+    res = joint_logprob({a: a_value_var, b: b_value_var}, extra_rewrites=transform_opt)
 
     test_val_rng = np.random.RandomState(3238)
 
@@ -200,7 +198,7 @@ def test_simple_transformed_logprob():
     x = x_rv.clone()
 
     transform_opt = TransformValuesOpt({x: DEFAULT_TRANSFORM})
-    tr_logp = joint_logprob(x_rv, {x_rv: x}, extra_rewrites=transform_opt)
+    tr_logp = joint_logprob({x_rv: x}, extra_rewrites=transform_opt)
 
     assert np.isclose(
         tr_logp.eval({x: np.log(2.5)}),
@@ -254,7 +252,6 @@ def test_hierarchical_uniform_transform():
         }
     )
     logp = joint_logprob(
-        x_rv,
         {lower_rv: lower, upper_rv: upper, x_rv: x},
         extra_rewrites=transform_opt,
     )
@@ -281,7 +278,6 @@ def test_nondefault_transforms():
     )
 
     logp = joint_logprob(
-        x_rv,
         {loc_rv: loc, scale_rv: scale, x_rv: x},
         extra_rewrites=transform_opt,
     )
@@ -319,7 +315,6 @@ def test_default_transform_multiout():
     transform_opt = TransformValuesOpt({x: DEFAULT_TRANSFORM})
 
     logp = joint_logprob(
-        x_rv,
         {x_rv: x},
         extra_rewrites=transform_opt,
     )
@@ -341,7 +336,6 @@ def test_nonexistent_default_transform():
     transform_opt = TransformValuesOpt({x: DEFAULT_TRANSFORM})
 
     logp = joint_logprob(
-        x_rv,
         {x_rv: x},
         extra_rewrites=transform_opt,
     )

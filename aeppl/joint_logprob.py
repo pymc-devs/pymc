@@ -1,6 +1,6 @@
 import warnings
 from collections import deque
-from typing import Dict, Iterable, Optional, Union
+from typing import Dict, Optional, Union
 
 import aesara.tensor as at
 from aesara import config
@@ -19,7 +19,6 @@ from aeppl.utils import rvs_to_value_vars
 
 
 def factorized_joint_logprob(
-    vars: Union[TensorVariable, Iterable[TensorVariable]],
     rv_values: Dict[TensorVariable, TensorVariable],
     warn_missing_rvs: bool = True,
     extra_rewrites: Optional[Union[GlobalOptimizer, LocalOptimizer]] = None,
@@ -27,6 +26,7 @@ def factorized_joint_logprob(
 ) -> Dict[TensorVariable, TensorVariable]:
     r"""Create a graph representing the joint log-probability/measure of a graph.
 
+    TODO: change this
     The input `var` determines which graph is used and `rv_values` specifies
     the resulting measure-space graph's input parameters.
 
@@ -47,10 +47,10 @@ def factorized_joint_logprob(
         Y \sim& \operatorname{N}(0, \sigma^2)
 
     If we create a value variable for ``Y_rv``, i.e. ``y = at.scalar("y")``,
-    the graph of ``joint_logprob(Y_rv, {Y_rv: y})`` is equivalent to the
+    the graph of ``joint_logprob({Y_rv: y})`` is equivalent to the
     conditional probability :math:`\log p(Y = y \mid \sigma^2)`.  If we specify
     a value variable for ``sigma2_rv``, i.e. ``s = at.scalar("s2")``, then
-    ``joint_logprob(Y_rv, {Y_rv: y, sigma2_rv: s})`` yields the joint
+    ``joint_logprob({Y_rv: y, sigma2_rv: s})`` yields the joint
     log-probability
 
     .. math::
@@ -61,12 +61,6 @@ def factorized_joint_logprob(
 
     Parameters
     ==========
-    vars
-        The graphs containing the stochastic/`RandomVariable` elements for
-        which we want to compute a joint log-probability.  This graph
-        effectively represents a statistical model.  When multiple elements are
-        given, their log-probabilities are summed, producing their joint
-        log-probability.
     rv_values
         A ``dict`` of variables that maps stochastic elements
         (e.g. `RandomVariable`\s) to symbolic `Variable`\s representing their
@@ -85,9 +79,6 @@ def factorized_joint_logprob(
     from the respective `RandomVariable`.
 
     """
-    if isinstance(vars, TensorVariable):
-        vars = [vars]
-
     # Since we're going to clone the entire graph, we need to keep a map from
     # the old nodes to the new ones; otherwise, we won't be able to use
     # `rv_values`.
@@ -100,7 +91,7 @@ def factorized_joint_logprob(
     # to give good warnings when an unaccounted for `RandomVariable` is
     # encountered
     fgraph = FunctionGraph(
-        outputs=list(vars) + [k for k in rv_values.keys() if k not in vars],
+        outputs=list(rv_values.keys()),
         clone=True,
         memo=memo,
         copy_orphans=False,

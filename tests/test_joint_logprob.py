@@ -22,13 +22,12 @@ from tests.utils import assert_no_rvs
 
 
 def test_joint_logprob_basic():
-
     # A simple check for when `joint_logprob` is the same as `logprob`
     a = at.random.uniform(0.0, 1.0)
     a.name = "a"
     a_value_var = a.clone()
 
-    a_logp = joint_logprob(a, {a: a_value_var}, sum=False)
+    a_logp = joint_logprob({a: a_value_var}, sum=False)
     a_logp_exp = logprob(a, a_value_var)
 
     assert equal_computations([a_logp], [a_logp_exp])
@@ -40,7 +39,7 @@ def test_joint_logprob_basic():
     sigma_value_var = sigma.clone()
     y_value_var = Y.clone()
 
-    total_ll = joint_logprob(Y, {Y: y_value_var, sigma: sigma_value_var}, sum=False)
+    total_ll = joint_logprob({Y: y_value_var, sigma: sigma_value_var}, sum=False)
 
     # We need to replace the reference to `sigma` in `Y` with its value
     # variable
@@ -64,7 +63,7 @@ def test_joint_logprob_basic():
     b_value_var = b.clone()
     c_value_var = c.clone()
 
-    b_logp = joint_logprob(b, {a: a_value_var, b: b_value_var, c: c_value_var})
+    b_logp = joint_logprob({a: a_value_var, b: b_value_var, c: c_value_var})
 
     # There shouldn't be any `RandomVariable`s in the resulting graph
     assert_no_rvs(b_logp)
@@ -83,7 +82,7 @@ def test_joint_logprob_multi_obs():
     a_val = a.clone()
     b_val = b.clone()
 
-    logp = joint_logprob((a, b), {a: a_val, b: b_val}, sum=False)
+    logp = joint_logprob({a: a_val, b: b_val}, sum=False)
     logp_exp = logprob(a, a_val) + logprob(b, b_val)
 
     assert equal_computations([logp], [logp_exp])
@@ -94,8 +93,8 @@ def test_joint_logprob_multi_obs():
     x_val = x.clone()
     y_val = y.clone()
 
-    logp = joint_logprob([x, y], {x: x_val, y: y_val})
-    exp_logp = joint_logprob([y], {x: x_val, y: y_val})
+    logp = joint_logprob({x: x_val, y: y_val})
+    exp_logp = joint_logprob({x: x_val, y: y_val})
 
     assert equal_computations([logp], [exp_logp])
 
@@ -110,7 +109,7 @@ def test_joint_logprob_diff_dims():
     y_vv = y.clone()
     y_vv.name = "y"
 
-    logp = joint_logprob([y], {x: x_vv, y: y_vv})
+    logp = joint_logprob({x: x_vv, y: y_vv})
 
     M_val = np.random.normal(size=(10, 3))
     x_val = np.random.normal(size=(3,))
@@ -155,7 +154,7 @@ def test_joint_logprob_incsubtensor(indices, size):
         Y_sst.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
     )
 
-    Y_sst_logp = joint_logprob(Y_sst, {Y_rv: y_value_var}, sum=False)
+    Y_sst_logp = joint_logprob({Y_rv: y_value_var, Y_sst: None}, sum=False)
 
     obs_logps = Y_sst_logp.eval({y_value_var: y_val})
 
@@ -196,9 +195,7 @@ def test_joint_logprob_subtensor():
     I_value_var = I_rv.type()
     I_value_var.name = "I_value"
 
-    A_idx_logp = joint_logprob(
-        A_idx, {A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False
-    )
+    A_idx_logp = joint_logprob({A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False)
 
     logp_vals_fn = aesara.function([A_idx_value_var, I_value_var], A_idx_logp)
 
@@ -233,7 +230,7 @@ def test_persist_inputs():
     beta = beta_rv.type()
     y = y_rv.type()
 
-    logp = joint_logprob(y_rv, {beta_rv: beta, y_rv: y})
+    logp = joint_logprob({beta_rv: beta, y_rv: y})
 
     assert x in ancestors([logp])
 
@@ -247,10 +244,10 @@ def test_ignore_logprob():
     beta = beta_rv.type()
     y = y_rv.type()
 
-    logp = joint_logprob(y_rv, {beta_rv: beta, y_rv: y})
+    logp = joint_logprob({beta_rv: beta, y_rv: y})
 
     y_rv_2 = at.random.normal(beta * x, 1, name="y")
-    logp_exp = joint_logprob(y_rv_2, {y_rv_2: y})
+    logp_exp = joint_logprob({y_rv_2: y})
 
     assert equal_computations([logp], [logp_exp])
 
@@ -285,7 +282,7 @@ def test_ignore_logprob_multiout():
     y_1_vv = Y_1_rv.clone()
     y_2_vv = Y_2_rv.clone()
 
-    logp_exp = joint_logprob(Y_1_rv, {Y_1_rv: y_1_vv, Y_2_rv: y_2_vv})
+    logp_exp = joint_logprob({Y_1_rv: y_1_vv, Y_2_rv: y_2_vv})
 
     assert logp_exp is None
 
@@ -298,4 +295,4 @@ def test_multiple_rvs_to_same_value_raises():
 
     msg = "More than one logprob factor was assigned to the value var x"
     with pytest.raises(ValueError, match=msg):
-        joint_logprob([x_rv1, x_rv2], {x_rv1: x, x_rv2: x})
+        joint_logprob({x_rv1: x, x_rv2: x})
