@@ -34,6 +34,7 @@ from pymc3.backends.ndarray import NDArray
 from pymc3.blocking import DictToArrayBijection
 from pymc3.model import Point, modelcontext
 from pymc3.sampling import sample_prior_predictive
+from pymc3.step_methods.metropolis import MultivariateNormalProposal
 from pymc3.vartypes import discrete_types
 
 
@@ -449,10 +450,7 @@ class MH(SMC_KERNEL):
         Dimension specific scaling is provided by self.proposal_scales and set in self.tune()
         """
         ndim = self.tempered_posterior.shape[1]
-        self.proposal_dist = multivariate_normal(
-            mean=np.zeros(ndim),
-            cov=np.eye(ndim),
-        )
+        self.proposal_dist = MultivariateNormalProposal(np.eye(ndim))
         self.proposal_scales = np.full(self.draws, min(1, 2.38 ** 2 / ndim))
 
     def resample(self):
@@ -477,7 +475,7 @@ class MH(SMC_KERNEL):
         for n_step in range(self.n_steps):
             proposal = floatX(
                 self.tempered_posterior
-                + self.proposal_dist.rvs(size=self.draws) * self.proposal_scales[:, None]
+                + self.proposal_dist(num_draws=self.draws) * self.proposal_scales[:, None]
             )
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])
