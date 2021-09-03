@@ -343,3 +343,14 @@ class TestMHKernel(SeededTest):
         post = idata.posterior.stack(sample=("chain", "draw"))
         assert np.abs(post["mu"].mean() - 10) < 0.1
         assert np.abs(post["sigma"].mean() - 0.5) < 0.05
+
+    def test_proposal_dist_shape(self):
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1)
+            y = pm.Normal("y", x, 1, observed=0)
+            trace = pm.sample_smc(
+                draws=10,
+                chains=1,
+                kernel=pm.smc.MH,
+                return_inferencedata=False,
+            )
