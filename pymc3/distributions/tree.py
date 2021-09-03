@@ -16,41 +16,50 @@ import math
 
 from copy import deepcopy
 
+import aesara
 import numpy as np
 
 
 class Tree:
     """Full binary tree
+
     A full binary tree is a tree where each node has exactly zero or two children.
     This structure is used as the basic component of the Bayesian Additive Regression Tree (BART)
+
     Attributes
     ----------
     tree_structure : dict
-        A dictionary that represents the nodes stored in breadth-first order, based in the array method
-        for storing binary trees (https://en.wikipedia.org/wiki/Binary_tree#Arrays).
+        A dictionary that represents the nodes stored in breadth-first order, based in the array
+        method for storing binary trees (https://en.wikipedia.org/wiki/Binary_tree#Arrays).
         The dictionary's keys are integers that represent the nodes position.
-        The dictionary's values are objects of type SplitNode or LeafNode that represent the nodes of the tree itself.
+        The dictionary's values are objects of type SplitNode or LeafNode that represent the nodes
+        of the tree itself.
     num_nodes : int
         Total number of nodes.
     idx_leaf_nodes : list
         List with the index of the leaf nodes of the tree.
     idx_prunable_split_nodes : list
-        List with the index of the prunable splitting nodes of the tree. A splitting node is prunable if both
-        its children are leaf nodes.
+        List with the index of the prunable splitting nodes of the tree. A splitting node is
+        prunable if both its children are leaf nodes.
     tree_id : int
         Identifier used to get the previous tree in the ParticleGibbs algorithm used in BART.
+    num_observations : int
+        Number of observations used to fit BART.
+
 
     Parameters
     ----------
     tree_id : int, optional
+    num_observations : int, optional
     """
 
-    def __init__(self, tree_id=0):
+    def __init__(self, tree_id=0, num_observations=0):
         self.tree_structure = {}
         self.num_nodes = 0
         self.idx_leaf_nodes = []
         self.idx_prunable_split_nodes = []
         self.tree_id = tree_id
+        self.num_observations = num_observations
 
     def __getitem__(self, index):
         return self.get_node(index)
@@ -77,12 +86,13 @@ class Tree:
         del self.tree_structure[index]
         self.num_nodes -= 1
 
-    def predict_output(self, num_observations):
-        output = np.zeros(num_observations)
+    def predict_output(self):
+        output = np.zeros(self.num_observations)
         for node_index in self.idx_leaf_nodes:
             current_node = self.get_node(node_index)
             output[current_node.idx_data_points] = current_node.value
-        return output
+
+        return output.astype(aesara.config.floatX)
 
     def predict_out_of_sample(self, x):
         """
@@ -163,7 +173,7 @@ class Tree:
         -------
 
         """
-        new_tree = Tree(tree_id)
+        new_tree = Tree(tree_id, len(idx_data_points))
         new_tree[0] = LeafNode(index=0, value=leaf_node_value, idx_data_points=idx_data_points)
         return new_tree
 

@@ -42,6 +42,7 @@ from pymc3.backends.arviz import _DefaultTrace
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
 from pymc3.blocking import DictToArrayBijection
+from pymc3.distributions import NoDistribution
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
 from pymc3.model import Model, Point, modelcontext
 from pymc3.parallel_sampling import Draw, _cpu_count
@@ -232,13 +233,17 @@ def _print_step_hierarchy(s: Step, level=0) -> None:
         _log.info(">" * level + f"{s.__class__.__name__}: [{varnames}]")
 
 
-def all_continuous(vars):
+def all_continuous(vars, model):
     """Check that vars not include discrete variables or BART variables, excepting observed RVs."""
 
     vars_ = [var for var in vars if not (var.owner and hasattr(var.tag, "observations"))]
+
     if any(
         [
-            (var.dtype in discrete_types or (var.owner and isinstance(var.owner.op, pm.BART)))
+            (
+                var.dtype in discrete_types
+                or isinstance(model.values_to_rvs[var].owner.op, NoDistribution)
+            )
             for var in vars_
         ]
     ):
@@ -499,7 +504,7 @@ def sample(
 
     draws += tune
 
-    if step is None and init is not None and all_continuous(model.value_vars):
+    if step is None and init is not None and all_continuous(model.value_vars, model):
         try:
             # By default, try to use NUTS
             _log.info("Auto-assigning NUTS sampler...")
@@ -635,8 +640,13 @@ def sample(
     trace.report._t_sampling = t_sampling
 
     if "variable_inclusion" in trace.stat_names:
-        variable_inclusion = np.stack(trace.get_sampler_stats("variable_inclusion")).mean(0)
-        trace.report.variable_importance = variable_inclusion / variable_inclusion.sum()
+        for strace in trace._straces.values():
+            for stat in strace._stats:
+                if "variable_inclusion" in stat:
+                    if trace.nchains > 1:
+                        stat["variable_inclusion"] = np.vstack(stat["variable_inclusion"])
+                    else:
+                        stat["variable_inclusion"] = [np.vstack(stat["variable_inclusion"])]
 
     n_chains = len(trace.chains)
     _log.info(
@@ -2128,7 +2138,7 @@ def init_nuts(
     vars = kwargs.get("vars", model.value_vars)
     if set(vars) != set(model.value_vars):
         raise ValueError("Must use init_nuts on all variables of a model.")
-    if not all_continuous(vars):
+    if not all_continuous(vars, model):
         raise ValueError("init_nuts can only be used for models with only " "continuous variables.")
 
     if not isinstance(init, str):
