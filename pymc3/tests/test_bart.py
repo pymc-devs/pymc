@@ -65,3 +65,15 @@ def test_bart_random():
     assert_almost_equal(pred_first, pred_all[0, :10], decimal=4)
     assert pred_all.shape == (2, 50)
     assert pred_first.shape == (10,)
+
+
+def test_missing_data():
+    X = np.random.normal(0, 1, size=(2, 50)).T
+    Y = np.random.normal(0, 1, size=50)
+    X[10:20, 0] = np.nan
+
+    with pm.Model() as model:
+        mu = pm.BART("mu", X, Y, m=10)
+        sigma = pm.HalfNormal("sigma", 1)
+        y = pm.Normal("y", mu, sigma, observed=Y)
+        idata = pm.sample(random_seed=3415)
