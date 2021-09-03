@@ -339,17 +339,15 @@ class Distribution(metaclass=DistributionMeta):
 
 @singledispatch
 def _get_moment(op, rv, size, *rv_inputs) -> TensorVariable:
-    """Fallback method for creating an initial value for a random variable.
-
-    Parameters are the same as for the `.dist()` method.
-    """
     return None
 
 
 def get_moment(rv: TensorVariable) -> TensorVariable:
-    """Fallback method for creating an initial value for a random variable.
+    """Method for choosing a representative point/value
+    that can be used to start optimization or MCMC sampling.
 
-    Parameters are the same as for the `.dist()` method.
+    The only parameter to this function is the RandomVariable
+    for which the value is to be derived.
     """
     size = rv.owner.inputs[1]
     return _get_moment(rv.owner.op, rv, size, *rv.owner.inputs[3:])
