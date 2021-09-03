@@ -1,5 +1,7 @@
 import numpy as np
 
+from numpy.random import RandomState
+
 import pymc3 as pm
 
 
@@ -33,7 +35,7 @@ def test_bart_vi():
         mu = pm.BART("mu", X, Y, m=10)
         sigma = pm.HalfNormal("sigma", 1)
         y = pm.Normal("y", mu, sigma, observed=Y)
-        idata = pm.sample(random_seed=3415, chains=1)
+        idata = pm.sample(random_seed=3415)
         var_imp = (
             idata.sample_stats["variable_inclusion"]
             .stack(samples=("chain", "draw"))
@@ -42,3 +44,23 @@ def test_bart_vi():
         var_imp /= var_imp.sum()
         assert var_imp[0] > var_imp[1:].sum()
         np.testing.assert_almost_equal(var_imp.sum(), 1)
+
+
+def test_bart_random():
+    X = np.random.normal(0, 1, size=(2, 50)).T
+    Y = np.random.normal(0, 1, size=50)
+
+    with pm.Model() as model:
+        mu = pm.BART("mu", X, Y, m=10)
+        sigma = pm.HalfNormal("sigma", 1)
+        y = pm.Normal("y", mu, sigma, observed=Y)
+        idata = pm.sample(random_seed=3415, chains=1)
+
+    rng = RandomState(12345)
+    pred_all = mu.owner.op.rng_fn(rng, size=2)
+    rng = RandomState(12345)
+    pred_first = mu.owner.op.rng_fn(rng, X_new=X[:10])
+
+    assert np.all(pred_first == pred_all[0, :10])
+    assert pred_all.shape == (2, 50)
+    assert pred_first.shape == (10,)
