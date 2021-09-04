@@ -650,6 +650,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         # The sequence of model-generated RNGs
         self.rng_seq = []
         self._initial_values = {}
+        self._initial_point_cache = {}
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -926,15 +927,28 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def test_point(self) -> Dict[str, np.ndarray]:
         """Deprecated alias for `Model.initial_point`."""
         warnings.warn(
-            "`Model.test_point` has been deprecated. Use `Model.initial_point` instead.",
+            "`Model.test_point` has been deprecated. Use `Model.initial_point` or `Model.recompute_initial_point()`.",
             DeprecationWarning,
         )
         return self.initial_point
 
     @property
     def initial_point(self) -> Dict[str, np.ndarray]:
-        """Maps names of variables to initial values."""
-        return Point(list(self.initial_values.items()), model=self)
+        """Maps free variable names to transformed, numeric initial values."""
+        if set(self._initial_point_cache) != {get_var_name(k) for k in self.initial_values}:
+            return self.recompute_initial_point()
+        return self._initial_point_cache
+
+    def recompute_initial_point(self) -> Dict[str, np.ndarray]:
+        """Recomputes numeric initial values for all free model variables.
+
+        Returns
+        -------
+        initial_point : dict
+            Maps free variable names to transformed, numeric initial values.
+        """
+        self._initial_point_cache = Point(list(self.initial_values.items()), model=self)
+        return self._initial_point_cache
 
     @property
     def initial_values(self) -> Dict[TensorVariable, np.ndarray]:
