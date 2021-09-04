@@ -515,7 +515,8 @@ def test_initial_point():
 
     assert model.rvs_to_values[a] in model.initial_values
     assert model.rvs_to_values[x] in model.initial_values
-    assert model.initial_values[b_value_var] == b_initval_trans
+    assert model.initial_values[b_value_var] == b_initval
+    assert model.recompute_initial_point()["b_interval__"] == b_initval_trans
     assert model.initial_values[model.rvs_to_values[y]] == y_initval
 
 
@@ -662,8 +663,8 @@ def test_set_initval():
         value = pm.NegativeBinomial("value", mu=mu, alpha=alpha)
 
     assert np.array_equal(model.initial_values[model.rvs_to_values[mu]], np.array([[100.0]]))
-    np.testing.assert_almost_equal(model.initial_values[model.rvs_to_values[alpha]], np.log(100))
-    assert 50 < model.initial_values[model.rvs_to_values[value]] < 150
+    np.testing.assert_array_equal(model.initial_values[model.rvs_to_values[alpha]], np.array(100))
+    assert model.initial_values[model.rvs_to_values[value]] is None
 
     # `Flat` cannot be sampled, so let's make sure that doesn't break initial
     # value computations

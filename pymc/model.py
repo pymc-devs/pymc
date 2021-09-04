@@ -937,17 +937,35 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         Returns
         -------
         initial_point : dict
-            Maps free variable names to transformed, numeric initial values.
+            Maps transformed free variable names to transformed, numeric initial values.
         """
-        self._initial_point_cache = Point(list(self.initial_values.items()), model=self)
+        numeric_initvals = {}
+        # The entries in `initial_values` are already in topological order and can be evaluated one by one.
+        for rv_value, initval in self.initial_values.items():
+            rv_var = self.values_to_rvs[rv_value]
+            transform = getattr(rv_value.tag, "transform", None)
+            if isinstance(initval, np.ndarray) and transform is None:
+                # Only untransformed, numeric initvals can be taken as they are.
+                numeric_initvals[rv_value] = initval
+            else:
+                # Evaluate initvals that are None, symbolic or need to be transformed.
+                # They can depend on other initvals from higher up in the graph,
+                # which are therefore fed to the evaluation as "givens".
+                test_value = getattr(rv_var.tag, "test_value", None)
+                numeric_initvals[rv_value] = self._eval_initval(
+                    rv_var, initval, test_value, transform, given=numeric_initvals
+                )
+
+        # Cache the evaluation results for next time.
+        self._initial_point_cache = Point(list(numeric_initvals.items()), model=self)
         return self._initial_point_cache
 
     @property
-    def initial_values(self) -> Dict[TensorVariable, np.ndarray]:
-        """Maps transformed variables to initial values.
+    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable]]]:
+        """Maps transformed variables to initial value placeholders.
 
         ⚠ The keys are NOT the objects returned by, `pm.Normal(...)`.
-        For a name-based dictionary use the `initial_point` property.
+        For a name-based dictionary use the `get_initial_point()` method.
         """
         return self._initial_values
 
@@ -955,14 +973,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if initval is not None:
             initval = rv_var.type.filter(initval)
 
-        test_value = getattr(rv_var.tag, "test_value", None)
-
         rv_value_var = self.rvs_to_values[rv_var]
-        transform = getattr(rv_value_var.tag, "transform", None)
-
-        if initval is None or transform:
-            initval = self._eval_initval(rv_var, initval, test_value, transform)
-
         self.initial_values[rv_value_var] = initval
 
     def _eval_initval(
@@ -971,6 +982,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         initval: Optional[Variable],
         test_value: Optional[np.ndarray],
         transform: Optional[Transform],
+        given: Optional[Dict[TensorVariable, np.ndarray]] = None,
     ) -> np.ndarray:
         """Sample/evaluate an initial value using the existing initial values,
         and with the least effect on the RNGs involved (i.e. no in-placing).
@@ -989,6 +1001,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         transform : optional, Transform
             A transformation associated with the random variable.
             Transformations are automatically applied to initial values.
+        given : optional, dict
+            Numeric initial values to be used for givens instead of `self.initial_values`.
 
         Returns
         -------
@@ -998,6 +1012,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         mode = get_mode(None)
         opt_qry = mode.provided_optimizer.excluding("random_make_inplace")
         mode = Mode(linker=mode.linker, optimizer=opt_qry)
+
+        if given is None:
+            given = self.initial_values
 
         if transform:
             if initval is not None:
@@ -1015,9 +1032,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             else:
                 return initval
 
-        givens = {
-            self.values_to_rvs[k]: initval_to_rvval(k, v) for k, v in self.initial_values.items()
-        }
+        givens = {self.values_to_rvs[k]: initval_to_rvval(k, v) for k, v in given.items()}
         initval_fn = aesara.function([], rv_var, mode=mode, givens=givens, on_unused_input="ignore")
         try:
             initval = initval_fn()
