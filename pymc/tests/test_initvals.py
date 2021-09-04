@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import aesara
 import aesara.tensor as at
 import numpy as np
 import pytest
@@ -38,7 +39,8 @@ class TestInitvalAssignment:
         with pm.Model() as pmodel:
             with pytest.warns(DeprecationWarning, match="`testval` argument is deprecated"):
                 rv = pm.Uniform("u", 0, 1, testval=0.75)
-                assert pmodel.initial_values[rv.tag.value_var] == transform_fwd(rv, 0.75)
+                initial_point = pmodel.recompute_initial_point()
+                assert initial_point["u_interval__"] == transform_fwd(rv, 0.75)
                 assert not hasattr(rv.tag, "test_value")
         pass
 
@@ -81,6 +83,33 @@ class TestInitvalEvaluation:
             transform=None,
         )
         assert iv == 0.6
+        pass
+
+    def test_dependent_initvals(self):
+        with pm.Model() as pmodel:
+            L = pm.Uniform("L", 0, 1, initval=0.5)
+            B = pm.Uniform("B", lower=L, upper=2, initval=1.25)
+            ip = pmodel.recompute_initial_point()
+            assert ip["L_interval__"] == 0
+            assert ip["B_interval__"] == 0
+
+            # Modify initval of L and re-evaluate
+            pmodel.initial_values[pmodel.rvs_to_values[L]] = 0.9
+            ip = pmodel.recompute_initial_point()
+            assert ip["B_interval__"] < 0
+        pass
+
+    def test_initval_resizing(self):
+        with pm.Model() as pmodel:
+            data = aesara.shared(np.arange(4))
+            rv = pm.Uniform("u", lower=data, upper=10)
+
+            ip = pmodel.recompute_initial_point()
+            assert np.shape(ip["u_interval__"]) == (4,)
+
+            data.set_value(np.arange(5))
+            ip = pmodel.recompute_initial_point()
+            assert np.shape(ip["u_interval__"]) == (5,)
         pass
 
 
