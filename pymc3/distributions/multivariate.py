@@ -63,7 +63,7 @@ __all__ = [
     "MatrixNormal",
     "KroneckerNormal",
     "CAR",
-    "StickBreakingWeights"
+    "StickBreakingWeights",
 ]
 
 # Step methods and advi do not catch LinAlgErrors at the
@@ -2112,7 +2112,9 @@ class StickBreakingWeightsRV(RandomVariable):
         return super().__call__(alpha, K, size=size, **kwargs)
 
     def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return [dist_params[1] + 1,]
+        return [
+            dist_params[1] + 1,
+        ]
 
     @classmethod
     def rng_fn(cls, rng, alpha, K, size):
@@ -2166,27 +2168,21 @@ class StickBreakingWeights(Continuous):
         return super().dist([alpha, K], **kwargs)
 
     def logp(value, alpha, K):
-        # K does not affect the log-likelihood value to my understanding...
-        ones = at.ones(
-            shape=at.concatenate([value.shape[:-1], [1,]])
-        )
-        
-        denominator = at.cumsum(
-            at.concatenate(
-                [
-                    ones,
-                    -value,
-                ],
-                axis=-1,
+        logp = -at.sum(
+            at.log(
+                at.cumsum(
+                    value[..., ::-1],
+                    axis=-1,
+                )
             ),
             axis=-1,
         )
-        
-        recovered_betas = value/(denominator[..., :-1])
+        logp -= -K * betaln(1, alpha)
+        logp += alpha * at.log(value[..., -1])
 
         return bound(
-            at.sum(pm.Beta.logp(value, 1, alpha)),
+            logp,
             alpha > 0,
-            at.all(value > 0),
-            at.all(value <= 1)
+            at.all(value >= 0),
+            at.all(value <= 1),
         )
