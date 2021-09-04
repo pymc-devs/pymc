@@ -913,6 +913,16 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return inputvars(self.unobserved_RVs)
 
     @property
+    def disc_vars(self):
+        """All the discrete variables in the model"""
+        return list(typefilter(self.value_vars, discrete_types))
+
+    @property
+    def cont_vars(self):
+        """All the continuous variables in the model"""
+        return list(typefilter(self.value_vars, continuous_types))
+
+    @property
     def test_point(self) -> Dict[str, np.ndarray]:
         """Deprecated alias for `Model.initial_point`."""
         warnings.warn(
@@ -934,16 +944,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         For a name-based dictionary use the `initial_point` property.
         """
         return self._initial_values
-
-    @property
-    def disc_vars(self):
-        """All the discrete variables in the model"""
-        return list(typefilter(self.value_vars, discrete_types))
-
-    @property
-    def cont_vars(self):
-        """All the continuous variables in the model"""
-        return list(typefilter(self.value_vars, continuous_types))
 
     def set_initval(self, rv_var, initval):
         if initval is not None:
