@@ -24,11 +24,11 @@ def factorized_joint_logprob(
     extra_rewrites: Optional[Union[GlobalOptimizer, LocalOptimizer]] = None,
     **kwargs,
 ) -> Dict[TensorVariable, TensorVariable]:
-    r"""Create a graph representing the joint log-probability/measure of a graph.
+    r"""Create a map between variables and their log-probabilities such that the
+    sum is their joint log-probability.
 
-    TODO: change this
-    The input `var` determines which graph is used and `rv_values` specifies
-    the resulting measure-space graph's input parameters.
+    The `rv_values` dictionary specifies a joint probability graph defined by
+    pairs of random variables and respective measure-space input parameters
 
     For example, consider the following
 
@@ -46,12 +46,12 @@ def factorized_joint_logprob(
         \sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5) \\
         Y \sim& \operatorname{N}(0, \sigma^2)
 
-    If we create a value variable for ``Y_rv``, i.e. ``y = at.scalar("y")``,
-    the graph of ``joint_logprob({Y_rv: y})`` is equivalent to the
-    conditional probability :math:`\log p(Y = y \mid \sigma^2)`.  If we specify
-    a value variable for ``sigma2_rv``, i.e. ``s = at.scalar("s2")``, then
-    ``joint_logprob({Y_rv: y, sigma2_rv: s})`` yields the joint
-    log-probability
+    If we create a value variable for ``Y_rv``, i.e. ``y_vv = at.scalar("y")``,
+    the graph of ``factorized_joint_logprob({Y_rv: y_vv})`` is equivalent to the
+    conditional probability :math:`\log p(Y = y \mid \sigma^2)`, with a stochastic
+    ``sigma2_rv``. If we specify a value variable for ``sigma2_rv``, i.e.
+    ``s_vv = at.scalar("s2")``, then ``factorized_joint_logprob({Y_rv: y_vv, sigma2_rv: s_vv})``
+    yields the joint log-probability of the two variables.
 
     .. math::
 
