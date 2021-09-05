@@ -178,25 +178,19 @@ def factorized_joint_logprob(
             q_rv_value_vars = remapped_vars[: len(q_rv_value_vars)]
             value_var_inputs = remapped_vars[len(q_rv_value_vars) :]
 
-            q_logprob_var = _logprob(
+            q_logprob_vars = _logprob(
                 node.op,
                 q_rv_value_vars,
                 *value_var_inputs,
                 **kwargs,
             )
 
-            for q_rv_var in q_rv_value_vars:
+            if not isinstance(q_logprob_vars, (list, tuple)):
+                q_logprob_vars = [q_logprob_vars]
+
+            for q_rv_var, q_logprob_var in zip(q_rv_value_vars, q_logprob_vars):
                 if q_rv_var.name:
                     q_logprob_var.name = f"{q_rv_var.name}_logprob"
-
-                # Recompute test values for the changes introduced by the
-                # replacements above.
-                if config.compute_test_value != "off":
-                    for node in io_toposort(
-                        graph_inputs((q_logprob_var,)),
-                        (q_logprob_var,),
-                    ):
-                        compute_test_value(node)
 
                 if q_rv_var in logprob_vars:
                     raise ValueError(
@@ -204,6 +198,12 @@ def factorized_joint_logprob(
                     )
 
                 logprob_vars[q_rv_var] = q_logprob_var
+
+            # Recompute test values for the changes introduced by the
+            # replacements above.
+            if config.compute_test_value != "off":
+                for node in io_toposort(graph_inputs(q_logprob_vars), q_logprob_vars):
+                    compute_test_value(node)
 
         else:
             raise NotImplementedError(
