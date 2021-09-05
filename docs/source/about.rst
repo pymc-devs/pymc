@@ -1,8 +1,3 @@
-:orphan:
-
-..
-    _href from docs/source/index.rst
-
 .. _about:
 
 **********
@@ -41,9 +36,17 @@ PyMC strives to make Bayesian modeling as simple and painless as possible,  allo
 * Bayesian models can be embedded in larger programs, and results can be analyzed
   with the full power of Python.
 
+What's new in version 4
+=======================
+
+:bdg-warning:`TODO`
+Add text
 
 What's new in version 3
 =======================
+
+:bdg-warning:`TODO`
+Move this section to a different place
 
 The third major version of PyMC has benefitted from being re-written from scratch. Substantial improvements in the user interface and performance have resulted from this. While PyMC2 relied on Fortran extensions (via f2py) for most of the computational heavy-lifting, PyMC leverages Aesara, a fork of the Theano library from the Montréal Institute for Learning Algorithms (MILA), for array-based expression evaluation, to perform its computation. What this provides, above all else, is fast automatic differentiation, which is at the heart of the gradient-based sampling and optimization methods currently providing inference for probabilistic programming.
 

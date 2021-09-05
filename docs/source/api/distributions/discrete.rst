@@ -6,19 +6,19 @@ Discrete
 .. autosummary::
 
    Binomial
-   ZeroInflatedBinomial
    BetaBinomial
    Bernoulli
+   DiscreteWeibull
    Poisson
-   ZeroInflatedPoisson
    NegativeBinomial
+   Constant
+   ZeroInflatedPoisson
+   ZeroInflatedBinomial
    ZeroInflatedNegativeBinomial
    DiscreteUniform
    Geometric
    HyperGeometric
    Categorical
-   DiscreteWeibull
-   Constant
    OrderedLogistic
    OrderedProbit
 

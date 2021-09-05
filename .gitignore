@@ -17,6 +17,7 @@ tags
 
 # Sphinx
 _build
+docs/jupyter_execute
 
 # Merge tool
 *.orig

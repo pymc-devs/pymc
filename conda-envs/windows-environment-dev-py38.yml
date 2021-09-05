@@ -27,8 +27,8 @@ dependencies:
 - pytest-cov>=2.5
 - pytest>=3.0
 - sphinx-autobuild>=0.7
+- sphinx-copybutton
 - sphinx-notfound-page
-- sphinx-panels
 - sphinx>=1.5
 - watermark
 - pip:

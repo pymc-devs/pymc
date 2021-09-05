@@ -23,9 +23,8 @@ dependencies:
 - python-graphviz
 - python=3.9
 - scipy>1.4.1
-- sphinx-autobuild>=0.7
+- sphinx-copybutton
 - sphinx-notfound-page
-- sphinx-panels
 - sphinx>=1.5
 - typing-extensions>=3.7.4
 - pip:
