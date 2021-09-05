@@ -19,12 +19,10 @@
 import os
 import sys
 
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
-sys.path.insert(0, os.path.abspath("sphinxext"))
 import pymc  # isort:skip
 
 # -- General configuration ------------------------------------------------
@@ -47,11 +45,12 @@ extensions = [
     "IPython.sphinxext.ipython_directive",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.napoleon",
-    "gallery_generator",
     "myst_nb",
     "sphinx_design",
     "sphinx_panels",
     "notfound.extension",
+    "sphinx_design",
+    "sphinx_copybutton",
 ]
 
 # Don't auto-generate summary for class members.
@@ -116,7 +115,7 @@ exclude_patterns = ["_build", "**.ipynb_checkpoints", "pymc-examples/.github"]
 
 # myst and panels config
 jupyter_execute_notebooks = "off"
-myst_heading_anchors = 3
+myst_heading_anchors = 2
 myst_enable_extensions = [
     "colon_fence",
 ]
@@ -154,6 +153,7 @@ intersphinx_mapping = {
     "arviz": ("https://arviz-devs.github.io/arviz/", None),
     "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
+    "nb": ("https://pymc-examples.readthedocs.io/en/latest/", None),
 }
 
 
@@ -180,12 +180,19 @@ html_theme_options = {
             "url": "https://twitter.com/pymc_devs",
             "icon": "fab fa-twitter-square",
         },
+        {
+            "name": "Discourse",
+            "url": "https://discourse.pymc.io",
+            "icon": "fab fa-discourse",
+        },
     ],
     "show_prev_next": False,
+    "navbar_align": "left",
     "navbar_start": ["navbar-logo", "navbar-version"],
     "navbar_end": ["search-field.html", "navbar-icon-links.html"],
     "search_bar_text": "Search...",
     "use_edit_page_button": False,  # TODO: see how to skip of fix for generated pages
+    "externalrefs": True,
     "google_analytics_id": "UA-176578023-1",
 }
 html_context = {
@@ -194,7 +201,12 @@ html_context = {
     "github_version": "main",
     "doc_path": "docs/source/",
 }
-html_sidebars = {"learn": [], "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
+# this controls which sidebar sections are available in which pages. [] removes the left sidebar
+html_sidebars = {
+    "learn": [],
+    "installation": [],
+    "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"],
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -208,7 +220,7 @@ html_sidebars = {"learn": [], "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "../pymc_logo.jpg"
+html_logo = "../logos/PyMC.jpg"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
