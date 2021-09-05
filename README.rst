@@ -36,7 +36,7 @@ containing Aesara ``RandomVariable``\s:
   # Compute the joint log-probability
   y = at.scalar("y")
   s = at.scalar("s")
-  logprob = joint_logprob(Y_rv, {Y_rv: y, S_rv: s})
+  logprob = joint_logprob({Y_rv: y, S_rv: s})
 
 
 Log-probability graphs are standard Aesara graphs, so we can compute
@@ -106,7 +106,7 @@ Joint log-probabilities can be computed for some terms that are *derived* from
   i = at.lscalar("i")
   m = at.scalar("m")
   # Compute the joint log-probability for the mixture
-  logprob = joint_logprob(M_rv, {M_rv: m, Z_rv: z, I_rv: i})
+  logprob = joint_logprob({M_rv: m, Z_rv: z, I_rv: i})
 
 
   logprob = optimize_graph(logprob, custom_opt=topo_constant_folding)
