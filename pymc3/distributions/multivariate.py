@@ -2183,6 +2183,7 @@ class StickBreakingWeights(Continuous):
         return bound(
             logp,
             alpha > 0,
+            K > 0,
             at.all(value >= 0),
             at.all(value <= 1),
         )

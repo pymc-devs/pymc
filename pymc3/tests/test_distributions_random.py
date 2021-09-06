@@ -2416,3 +2416,27 @@ def test_car_rng_fn(sparse):
         )
         f -= 1
     assert p > delta
+
+class TestStickBreakingWeights(BaseTestDistribution):
+    pymc_dist = pm.StickBreakingWeights
+
+    pymc_dist_params = {"alpha": 2., "K": 19}
+    expected_rv_op_params = {"alpha": 2., "K": 19}
+
+    sizes_to_check = [None, (1), (4,), (3, 4)]
+    sizes_expected = [(20,), (1, 20), (4, 20), (3, 4, 20)]
+
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "test_random_draws",
+        "check_rv_size",
+    ]
+
+    def test_random_draws(self):
+        draws = pm.StickBreakingWeights.dist(
+            alpha=0.5,
+            K=19,
+            size=(47, 53),
+        ).eval()
+        assert np.all(draws.sum(-1) == 1)
+        assert np.all(draws.mean(-1) == 1/(19 + 1))

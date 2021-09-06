@@ -2651,6 +2651,14 @@ class TestMatchesScipy:
 
                 self.check_logp(TestedInterpolated, R, {}, ref_pdf)
 
+    # def test_stickbreakingweights(self):
+    #     self.check_logp(
+
+    #     )
+    
+    # def test_stickbreakingweights_shape(self):
+    #     pass
+
 
 class TestBound:
     """Tests for pm.Bound distribution"""
