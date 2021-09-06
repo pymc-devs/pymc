@@ -26,7 +26,7 @@ Dispatching
 [Overdispersion](https://en.wikipedia.org/wiki/Overdispersion)
   "In statistics, overdispersion is the presence of greater variability (statistical dispersion) in a data set than would be expected based on a given statistical model."
 
- [Underdispersion](https://en.wikipedia.org/wiki/Overdispersion)
-   "In statistics, underdispersion is the presence of lower variability in a data set than would be expected based on a given statistical model."
+[Underdispersion](https://en.wikipedia.org/wiki/Overdispersion)
+  "In statistics, underdispersion is the presence of lower variability in a data set than would be expected based on a given statistical model."
 
 :::::
