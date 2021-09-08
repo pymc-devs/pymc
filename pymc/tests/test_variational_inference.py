@@ -41,9 +41,15 @@ from pymc.variational.inference import ADVI, ASVGD, NFVI, SVGD, FullRankADVI, fi
 from pymc.variational.opvi import Approximation, Group
 
 pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
-# pytestmark = pytest.mark.xfail(
-#     reason="These tests rely on Group, which hasn't been refactored for v4"
-# )
+
+def ignore_not_implemented_inference(func):
+    @functools.wraps(func)
+    def new_test(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except NotImplementedInference:
+            pytest.xfail("NotImplementedInference")
+    return new_test
 
 
 @pytest.mark.parametrize("diff", ["relative", "absolute"])
@@ -114,6 +120,7 @@ def three_var_model():
         (not_raises(), {MeanFieldGroup: ["one"], FullRankGroup: ["two", "three"]}),
     ],
 )
+@ignore_not_implemented_inference
 def test_init_groups(three_var_model, raises, grouping):
     with raises, three_var_model:
         approxes, groups = zip(*grouping.items())
@@ -152,6 +159,7 @@ def test_init_groups(three_var_model, raises, grouping):
     ],
     ids=lambda t: ", ".join(f"{k.__name__}: {v[0]}" for k, v in t[1].items()),
 )
+@ignore_not_implemented_inference
 def three_var_groups(request, three_var_model):
     kw, grouping = request.param
     approxes, groups = zip(*grouping.items())
@@ -211,6 +219,7 @@ def parametric_grouped_approxes(request):
 
 
 @pytest.fixture
+@ignore_not_implemented_inference
 def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
     one_initial_value = three_var_model.initial_point[three_var_model.one.tag.value_var.name]
     dsize = np.prod(one_initial_value.shape[1:])
@@ -267,6 +276,7 @@ def test_replacements_in_sample_node_aevb(three_var_aevb_approx, aevb_initial):
     ).eval({inp: np.random.rand(7, 7).astype("float32")})
 
 
+@ignore_not_implemented_inference
 def test_vae():
     minibatch_size = 10
     data = pm.floatX(np.random.rand(100))
@@ -298,6 +308,7 @@ def test_vae():
         )
 
 
+@ignore_not_implemented_inference
 def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
     approx = cls([three_var_model.one], model=three_var_model, **kw)
@@ -306,6 +317,7 @@ def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     logq.eval()
 
 
+@ignore_not_implemented_inference
 def test_logq_mini_2_sample_2_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
     approx = cls([three_var_model.one, three_var_model.two], model=three_var_model, **kw)
@@ -388,6 +400,7 @@ def test_logq_globals(three_var_approx):
         (not_raises(), "empirical", EmpiricalGroup, {"size": 100}),
     ],
 )
+@ignore_not_implemented_inference
 def test_group_api_vfam(three_var_model, raises, vfam, type_, kw):
     with three_var_model, raises:
         g = Group([three_var_model.one], vfam, **kw)
@@ -463,6 +476,7 @@ def test_group_api_vfam(three_var_model, raises, vfam, type_, kw):
         (not_raises(), dict(histogram=np.ones((20, 10, 2), "float32")), EmpiricalGroup, {}, None),
     ],
 )
+@ignore_not_implemented_inference
 def test_group_api_params(three_var_model, raises, params, type_, kw, formula):
     with three_var_model, raises:
         g = Group([three_var_model.one], params=params, **kw)
@@ -487,6 +501,7 @@ def test_group_api_params(three_var_model, raises, params, type_, kw, formula):
         (NormalizingFlowGroup, NormalizingFlow, {}),
     ],
 )
+@ignore_not_implemented_inference
 def test_single_group_shortcuts(three_var_model, approx, kw, gcls):
     with three_var_model:
         a = approx(**kw)
@@ -696,6 +711,7 @@ def inference_spec(request):
 
 
 @pytest.fixture(scope="function")
+@ignore_not_implemented_inference
 def inference(inference_spec, simple_model):
     with simple_model:
         return inference_spec()

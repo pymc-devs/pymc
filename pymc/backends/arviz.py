@@ -527,6 +527,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 and var not in self.model.observed_RVs
                 and var not in self.model.free_RVs
                 and var not in self.model.potentials
+                and var not in self.model.value_vars
                 and (self.observations is None or name not in self.observations)
                 and isinstance(var, (Constant, SharedVariable))
             )
