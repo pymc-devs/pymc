@@ -150,15 +150,8 @@
                     <a href="https://numfocus.org/">
                         <img class="ui image" height="120" src="https://www.numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png"/>
                     </a>
-                </div>
-                <div class="column">
-                    <a href="https://quantopian.com">
-                        <img class="ui image" height="120" src="https://raw.githubusercontent.com/pymc-devs/pymc3/main/docs/quantopianlogo.jpg"/>
-                    </a>
-                </div>
-                <div class="column">
-                    <a href="https://odsc.com/">
-                        <img class="ui image" height="120" src="https://raw.githubusercontent.com/pymc-devs/pymc3/main/docs/odsc_logo.png"/>
+                    <a href="https://pymc-labs.io">
+                        <img class="ui image" height="120" src="https://raw.githubusercontent.com/pymc-devs/pymc3/main/docs/pymc-labs-logo.png"/>
                     </a>
                 </div>
             </div>
