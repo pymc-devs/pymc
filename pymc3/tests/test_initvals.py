@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import aesara.tensor as at
 import numpy as np
 import pytest
 
@@ -90,6 +91,27 @@ class TestSpecialDistributions:
         assert hasattr(rv.tag, "test_value")
         rv = pm.HalfFlat.dist()
         assert hasattr(rv.tag, "test_value")
+        pass
+
+    @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
+    def test_initval_shape(self, rv_cls):
+        rv = rv_cls.dist(shape=(2,))
+        assert np.shape(rv.tag.test_value) == (2,)
+        # Can't set numeric test values when dimensionality is symbolic
+        rv = rv_cls.dist(shape=(at.scalar(),))
+        assert rv.tag.test_value is None
+        pass
+
+    @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
+    def test_initval_dims(self, rv_cls):
+        with pm.Model(
+            coords={
+                "year": [2019, 2020, 2021],
+            }
+        ) as pmodel:
+            rv = rv_cls("rv", dims=("year",))
+            # Can't set numeric test values when dimensionality is symbolic
+            assert rv.tag.test_value is None
         pass
 
 
