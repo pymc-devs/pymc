@@ -1690,7 +1690,7 @@ class Approximation(WithMemoization):
         if not return_inferencedata:
             return trace
         else:
-            return pm.to_inference_data(trace, **kwargs)
+            return pm.to_inference_data(trace, model=self.model, **kwargs)
 
     @property
     def ndim(self):
