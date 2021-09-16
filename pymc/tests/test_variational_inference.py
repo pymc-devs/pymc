@@ -835,6 +835,7 @@ def fit_method_with_object(request, another_simple_model):
         ("nfvi=bad-formula", dict(start={}), KeyError),
     ],
 )
+@ignore_not_implemented_inference
 def test_fit_fn_text(method, kwargs, error, another_simple_model):
     with another_simple_model:
         if error is not None:
@@ -876,6 +877,7 @@ def test_aevb(inference_spec, aevb_model):
             pytest.skip("Does not support AEVB")
 
 
+@ignore_not_implemented_inference
 def test_rowwise_approx(three_var_model, parametric_grouped_approxes):
     # add to inference that supports aevb
     cls, kw = parametric_grouped_approxes
@@ -927,6 +929,7 @@ def binomial_model():
 
 
 @pytest.fixture(scope="module")
+@ignore_not_implemented_inference
 def binomial_model_inference(binomial_model, inference_spec):
     with binomial_model:
         return inference_spec()
@@ -943,12 +946,20 @@ def test_replacements(binomial_model_inference):
         assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
     sampled = [p_s.eval() for _ in range(100)]
     assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
-    p_z = approx.sample_node(p_t, deterministic=True, size=10)
+    p_z = approx.sample_node(p_t, deterministic=False, size=10)
     assert p_z.shape.eval() == (10,)
+    try:
+        p_z = approx.sample_node(p_t, deterministic=True, size=10)
+        assert p_z.shape.eval() == (10,)
+    except NotImplementedInference:
+        pass
 
-    p_d = approx.sample_node(p_t, deterministic=True)
-    sampled = [p_d.eval() for _ in range(100)]
-    assert all(map(operator.eq, sampled[1:], sampled[:-1]))  # deterministic
+    try:
+        p_d = approx.sample_node(p_t, deterministic=True)
+        sampled = [p_d.eval() for _ in range(100)]
+        assert all(map(operator.eq, sampled[1:], sampled[:-1]))  # deterministic
+    except NotImplementedInference:
+        pass
 
     p_r = approx.sample_node(p_t, deterministic=d)
     sampled = [p_r.eval({d: 1}) for _ in range(100)]

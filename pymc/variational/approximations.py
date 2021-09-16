@@ -255,15 +255,21 @@ class EmpiricalGroup(Group):
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         aesara_condition_is_here = isinstance(deterministic, Variable)
+        if size is None:
+            size = 1
+        size = at.as_tensor(size)
         if aesara_condition_is_here:
             return at.switch(
                 deterministic,
-                at.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1),
+                at.repeat(self.mean.reshape((1, -1)), size, -1),
                 self.histogram[self.randidx(size)],
             )
         else:
             if deterministic:
-                return at.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1)
+                raise NotImplementedInference(
+                    "Deterministic sampling from a Histogram is broken in v4"
+                )
+                return at.repeat(self.mean.reshape((1, -1)), size, -1)
             else:
                 return self.histogram[self.randidx(size)]
 

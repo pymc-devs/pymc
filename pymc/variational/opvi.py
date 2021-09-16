@@ -957,6 +957,8 @@ class Group(WithMemoization):
             raise GroupError("Got empty group")
         if self.local:
             raise NotImplementedInference("Local inferene aka AEVB is not fully supported in v4")
+        if self.batched:
+            raise NotImplementedInference("Batched inferene is not fully supported in v4")
         if self.group is None:
             # delayed init
             self.group = group
@@ -1065,7 +1067,7 @@ class Group(WithMemoization):
     def bdim(self):
         if not self.local:
             if self.batched:
-                return next(iter(self.ordering.values()))[1][0]
+                return next(iter(self.ordering.values()))[2][0]
             else:
                 return 1
         else:
