@@ -1690,9 +1690,7 @@ class Approximation(WithMemoization):
         if not return_inferencedata:
             return trace
         else:
-            import arviz as az
-
-            return az.from_pymc3(trace, **kwargs)
+            return pm.to_inference_data(trace, **kwargs)
 
     @property
     def ndim(self):
