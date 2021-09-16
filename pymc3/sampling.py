@@ -516,6 +516,7 @@ def sample(
                 random_seed=random_seed,
                 progressbar=progressbar,
                 jitter_max_retries=jitter_max_retries,
+                tune=tune,
                 **kwargs,
             )
             if start is None:
@@ -2078,6 +2079,7 @@ def init_nuts(
     random_seed=None,
     progressbar=True,
     jitter_max_retries=10,
+    tune=None,
     **kwargs,
 ):
     """Set up the mass matrix initialization for NUTS.
@@ -2174,6 +2176,24 @@ def init_nuts(
         var = np.ones_like(mean)
         n = len(var)
         potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
+    elif init == "jitter+adapt_diag_grad":
+        start = _init_jitter(model, model.initial_point, chains, jitter_max_retries)
+        mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
+        var = np.ones_like(mean)
+        n = len(var)
+
+        if tune is not None and tune > 200:
+            stop_adaptation = tune - 50
+        else:
+            stop_adaptation = None
+
+        potential = quadpotential.QuadPotentialDiagAdaptExp(
+            n,
+            mean,
+            alpha=0.02,
+            use_grads=True,
+            stop_adaptation=stop_adaptation,
+        )
     elif init == "advi+adapt_diag_grad":
         approx: pm.MeanField = pm.fit(
             random_seed=random_seed,
