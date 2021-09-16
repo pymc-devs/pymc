@@ -91,7 +91,8 @@ class MeanFieldGroup(Group):
         z0 = self.symbolic_initial
         std = rho2sigma(self.rho)
         logdet = at.log(std)
-        logq = pm.Normal.logp(z0, 0, 1) - logdet
+        quaddist = ((z0) ** 2 + at.log(np.pi / 2.0)) / 2.0
+        logq = quaddist - logdet
         return logq.sum(range(1, logq.ndim))
 
 
