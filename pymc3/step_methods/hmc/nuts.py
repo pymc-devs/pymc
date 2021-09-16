@@ -254,7 +254,7 @@ class _Tree:
 
         self.left = self.right = start
         self.proposal = Proposal(
-            start.q.data, start.q_grad.data, start.energy, 1.0, start.model_logp
+            start.q.data, start.q_grad, start.energy, 1.0, start.model_logp
         )
         self.depth = 0
         self.log_size = 0
@@ -350,7 +350,7 @@ class _Tree:
                 log_size = -energy_change
                 proposal = Proposal(
                     right.q.data,
-                    right.q_grad.data,
+                    right.q_grad,
                     right.energy,
                     log_p_accept_weighted,
                     right.model_logp,
