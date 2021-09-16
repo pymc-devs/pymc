@@ -1652,7 +1652,7 @@ class Approximation(WithMemoization):
 
         return inner
 
-    def sample(self, draws=500, return_inferencedata=True):
+    def sample(self, draws=500, return_inferencedata=True, **kwargs):
         """Draw samples from variational posterior.
 
         Parameters
@@ -1668,6 +1668,7 @@ class Approximation(WithMemoization):
             Samples drawn from variational posterior.
         """
         # TODO: check for include_transformed case
+        kwargs["log_likelihood"] = False
 
         samples = self.sample_dict_fn(draws)  # type: dict
         points = ({name: records[i] for name, records in samples.items()} for i in range(draws))
@@ -1682,13 +1683,14 @@ class Approximation(WithMemoization):
                 trace.record(point)
         finally:
             trace.close()
-        
+
         trace = pm.sampling.MultiTrace([trace])
         if not return_inferencedata:
             return trace
         else:
             import arviz as az
-            return az.from_pymc3(trace)
+
+            return az.from_pymc3(trace, **kwargs)
 
     @property
     def ndim(self):

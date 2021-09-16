@@ -758,8 +758,8 @@ def test_fit_oo(inference, fit_kwargs, simple_model_data):
     trace = inference.fit(**fit_kwargs).sample(10000)
     mu_post = simple_model_data["mu_post"]
     d = simple_model_data["d"]
-    np.testing.assert_allclose(np.mean(trace["mu"]), mu_post, rtol=0.05)
-    np.testing.assert_allclose(np.std(trace["mu"]), np.sqrt(1.0 / d), rtol=0.2)
+    np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
+    np.testing.assert_allclose(np.std(trace.posterior["mu"]), np.sqrt(1.0 / d), rtol=0.2)
 
 
 def test_profile(inference):
@@ -857,6 +857,7 @@ def aevb_model():
     return {"model": model, "y": y, "x": x, "replace": dict(mu=mu, rho=rho)}
 
 
+@ignore_not_implemented_inference
 def test_aevb(inference_spec, aevb_model):
     # add to inference that supports aevb
     x = aevb_model["x"]
