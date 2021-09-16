@@ -167,10 +167,10 @@ class FullRankGroup(Group):
     @node_property
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
-        logdet = at.sum(
-            at.log(at.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1)), axis=-1, keepdims=True
-        )
-        logq = pm.Normal.logp(z0, 0, 1).sum(-1, keepdims=True) + logdet
+        diag = at.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1)
+        logdet = at.log(diag)
+        quaddist = ((z0) ** 2 + at.log(np.pi / 2.0)) / 2.0
+        logq = quaddist - logdet
         return logq.sum(range(1, logq.ndim))
 
     @node_property

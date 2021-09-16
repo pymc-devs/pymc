@@ -731,7 +731,7 @@ def fit_kwargs(inference, use_minibatch):
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=12000
         ),
         (FullRankADVI, "full"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50), n=6000
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=6000
         ),
         (FullRankADVI, "mini"): dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50), n=12000
