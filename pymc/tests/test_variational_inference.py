@@ -42,6 +42,7 @@ from pymc.variational.opvi import Approximation, Group
 
 pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
 
+
 def ignore_not_implemented_inference(func):
     @functools.wraps(func)
     def new_test(*args, **kwargs):
@@ -49,6 +50,7 @@ def ignore_not_implemented_inference(func):
             return func(*args, **kwargs)
         except NotImplementedInference:
             pytest.xfail("NotImplementedInference")
+
     return new_test
 
 
@@ -139,7 +141,6 @@ def test_init_groups(three_var_model, raises, grouping):
             model_dim = sum(v.size for v in three_var_model.initial_point.values())
             assert approx.ndim == model_dim
         trace = approx.sample(100)
-
 
 
 @pytest.fixture(
@@ -245,9 +246,7 @@ def three_var_aevb_approx(three_var_model, three_var_aevb_groups):
 
 def test_sample_aevb(three_var_aevb_approx, aevb_initial):
     inf = pm.KLqp(three_var_aevb_approx)
-    inf.fit(
-        1, more_replacements={aevb_initial: np.zeros_like(aevb_initial.get_value())[:1]}
-    )
+    inf.fit(1, more_replacements={aevb_initial: np.zeros_like(aevb_initial.get_value())[:1]})
     aevb_initial.set_value(np.random.rand(7, 7).astype("float32"))
     trace = three_var_aevb_approx.sample(500, return_inferencedata=False)
     assert set(trace.varnames) == {"one", "one_log__", "two", "three"}
