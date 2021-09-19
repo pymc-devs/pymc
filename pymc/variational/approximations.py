@@ -170,7 +170,7 @@ class FullRankGroup(Group):
         z0 = self.symbolic_initial
         diag = at.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1)
         logdet = at.log(diag)
-        quaddist = ((z0) ** 2 + at.log(np.pi / 2.0)) / 2.0
+        quaddist = -0.5 * z0 ** 2 - at.log((2 * np.pi) ** 0.5)
         logq = quaddist - logdet
         return logq.sum(range(1, logq.ndim))
 
