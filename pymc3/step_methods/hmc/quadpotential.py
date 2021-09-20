@@ -410,6 +410,9 @@ class QuadPotentialDiagAdaptExp(QuadPotentialDiagAdapt):
         super().__init__(*args, **kwargs)
         self._alpha = alpha
         self._use_grads = use_grads
+
+        if stop_adaptation is None:
+            stop_adaptation = np.inf
         self._stop_adaptation = stop_adaptation
 
     def update(self, sample, grad, tune):
