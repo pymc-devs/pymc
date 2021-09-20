@@ -87,7 +87,7 @@ class TestSample(SeededTest):
 
     def test_sample_init(self):
         with self.model:
-            for init in ("advi", "advi_map", "map"):
+            for init in ("advi", "advi_map", "map", "jitter+adapt_diag_grad"):
                 pm.sample(
                     init=init,
                     tune=0,

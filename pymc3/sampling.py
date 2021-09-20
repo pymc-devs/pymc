@@ -2101,6 +2101,9 @@ def init_nuts(
           as starting point.
         * jitter+adapt_diag: Same as ``adapt_diag``, but use test value plus a uniform jitter in
           [-1, 1] as starting point in each chain.
+        * jitter+adapt_diag_grad:
+          An experimental initialization method that uses information from gradients and samples
+          during tuning.
         * advi+adapt_diag: Run ADVI and then adapt the resulting diagonal mass matrix based on the
           sample variance of the tuning samples.
         * advi+adapt_diag_grad: Run ADVI and then adapt the resulting diagonal mass matrix based
