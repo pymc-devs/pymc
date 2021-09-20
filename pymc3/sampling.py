@@ -287,25 +287,7 @@ def sample(
         by default. See ``discard_tuned_samples``.
     init : str
         Initialization method to use for auto-assigned NUTS samplers.
-
-        * auto: Choose a default initialization method automatically.
-          Currently, this is ``jitter+adapt_diag``, but this can change in the future.
-          If you depend on the exact behaviour, choose an initialization method explicitly.
-        * adapt_diag: Start with a identity mass matrix and then adapt a diagonal based on the
-          variance of the tuning samples. All chains use the test value (usually the prior mean)
-          as starting point.
-        * jitter+adapt_diag: Same as ``adapt_diag``, but add uniform jitter in [-1, 1] to the
-          starting point in each chain.
-        * advi+adapt_diag: Run ADVI and then adapt the resulting diagonal mass matrix based on the
-          sample variance of the tuning samples.
-        * advi+adapt_diag_grad: Run ADVI and then adapt the resulting diagonal mass matrix based
-          on the variance of the gradients during tuning. This is **experimental** and might be
-          removed in a future release.
-        * advi: Run ADVI to estimate posterior mean and diagonal mass matrix.
-        * advi_map: Initialize ADVI with MAP and use MAP as starting point.
-        * map: Use the MAP as starting point. This is discouraged.
-        * adapt_full: Adapt a dense mass matrix using the sample covariances
-
+        See `pm.init_nuts` for a list of all options.
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically.  By default the NUTS step
@@ -2106,9 +2088,6 @@ def init_nuts(
           during tuning.
         * advi+adapt_diag: Run ADVI and then adapt the resulting diagonal mass matrix based on the
           sample variance of the tuning samples.
-        * advi+adapt_diag_grad: Run ADVI and then adapt the resulting diagonal mass matrix based
-          on the variance of the gradients during tuning. This is **experimental** and might be
-          removed in a future release.
         * advi: Run ADVI to estimate posterior mean and diagonal mass matrix.
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
         * map: Use the MAP as starting point. This is discouraged.
@@ -2197,24 +2176,6 @@ def init_nuts(
             use_grads=True,
             stop_adaptation=stop_adaptation,
         )
-    elif init == "advi+adapt_diag_grad":
-        approx: pm.MeanField = pm.fit(
-            random_seed=random_seed,
-            n=n_init,
-            method="advi",
-            model=model,
-            callbacks=cb,
-            progressbar=progressbar,
-            obj_optimizer=pm.adagrad_window,
-        )
-        start = approx.sample(draws=chains)
-        start = list(start)
-        std_apoint = approx.std.eval()
-        cov = std_apoint ** 2
-        mean = approx.mean.get_value()
-        weight = 50
-        n = len(cov)
-        potential = quadpotential.QuadPotentialDiagAdaptGrad(n, mean, cov, weight)
     elif init == "advi+adapt_diag":
         approx = pm.fit(
             random_seed=random_seed,

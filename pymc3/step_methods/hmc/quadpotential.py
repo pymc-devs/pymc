@@ -293,47 +293,6 @@ class QuadPotentialDiagAdapt(QuadPotential):
             raise ValueError("\n".join(errmsg))
 
 
-class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
-    """Adapt a diagonal mass matrix from the variances of the gradients.
-
-    This is experimental, and may be removed without prior deprication.
-    """
-
-    def reset(self):
-        super().reset()
-        self._grads1 = np.zeros(self._n, dtype=self.dtype)
-        self._ngrads1 = 0
-        self._grads2 = np.zeros(self._n, dtype=self.dtype)
-        self._ngrads2 = 0
-
-    def _update(self, var):
-        self._var[:] = var
-        np.sqrt(self._var, out=self._stds)
-        np.divide(1, self._stds, out=self._inv_stds)
-        self._var_aesara.set_value(self._var)
-
-    def update(self, sample, grad, tune):
-        """Inform the potential about a new sample during tuning."""
-        if not tune:
-            return
-
-        self._grads1[:] += np.abs(grad)
-        self._grads2[:] += np.abs(grad)
-        self._ngrads1 += 1
-        self._ngrads2 += 1
-
-        if self._n_samples <= 150:
-            super().update(sample, grad, tune)
-        else:
-            self._update((self._ngrads1 / self._grads1) ** 2)
-
-        if self._n_samples > 100 and self._n_samples % 100 == 50:
-            self._ngrads1 = self._ngrads2
-            self._ngrads2 = 1
-            self._grads1[:] = self._grads2
-            self._grads2[:] = 1
-
-
 class _WeightedVariance:
     """Online algorithm for computing mean of variance."""
 
