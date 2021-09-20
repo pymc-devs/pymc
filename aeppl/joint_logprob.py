@@ -119,6 +119,11 @@ def factorized_joint_logprob(
     lifted_rv_values = rv_remapper.rv_values
     replacements = lifted_rv_values.copy()
 
+    # To avoid cloning value variables, we map them to themselves in the
+    # `replacements` `dict` (i.e. entries already existing in `replacments`
+    # aren't cloned)
+    replacements.update({v: v for v in rv_values.values()})
+
     # Walk the graph from its inputs to its outputs and construct the
     # log-probability
     q = deque(fgraph.toposort())

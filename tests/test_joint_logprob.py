@@ -225,14 +225,20 @@ def test_persist_inputs():
     """Make sure we don't unnecessarily clone variables."""
     x = at.scalar("x")
     beta_rv = at.random.normal(0, 1, name="beta")
-    y_rv = at.random.normal(beta_rv * x, 1, name="y")
+    Y_rv = at.random.normal(beta_rv * x, 1, name="y")
 
-    beta = beta_rv.type()
-    y = y_rv.type()
+    beta_vv = beta_rv.type()
+    y_vv = Y_rv.clone()
 
-    logp = joint_logprob({beta_rv: beta, y_rv: y})
+    logp = joint_logprob({beta_rv: beta_vv, Y_rv: y_vv})
 
     assert x in ancestors([logp])
+
+    # Make sure we don't clone value variables when they're graphs.
+    y_vv_2 = y_vv * 2
+    logp_2 = joint_logprob({beta_rv: beta_vv, Y_rv: y_vv_2})
+
+    assert y_vv_2 in ancestors([logp_2])
 
 
 def test_ignore_logprob():
