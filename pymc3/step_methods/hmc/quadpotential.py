@@ -361,7 +361,7 @@ class _WeightedVariance:
     def add_sample(self, x, weight):
         x = np.asarray(x)
         if weight != 1:
-            raise ValueError("weight is unused and broken")
+            raise ValueError("Setting weight != 1 is not supported.")
         self.n_samples += 1
         old_diff = x - self.mean
         self.mean[:] += old_diff / self.n_samples
@@ -389,8 +389,8 @@ class _ExpWeightedVariance:
     def add_sample(self, value):
         alpha = self._alpha
         delta = value - self._mean
-        self._mean += alpha * delta
-        self._variance = (1 - alpha) * (self._variance + alpha * delta ** 2)
+        self._mean[...] += alpha * delta
+        self._variance[...] = (1 - alpha) * (self._variance + alpha * delta ** 2)
 
     def current_variance(self, out=None):
         if out is None:
