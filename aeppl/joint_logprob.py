@@ -114,13 +114,23 @@ def factorized_joint_logprob(
     if extra_rewrites is not None:
         extra_rewrites.optimize(fgraph)
 
-    # This is the updated random-to-value-vars map with the
-    # lifted variables
-    lifted_rv_values = rv_remapper.rv_values
-    replacements = lifted_rv_values.copy()
+    # This is the updated random-to-value-vars map with the lifted/rewritten
+    # variables.  The rewrites are supposed to produce new
+    # `MeasurableVariable`s that are amenable to `_logprob`.
+    updated_rv_values = rv_remapper.rv_values
 
-    # To avoid cloning value variables, we map them to themselves in the
-    # `replacements` `dict` (i.e. entries already existing in `replacments`
+    # When a `_logprob` has been produced for a `MeasurableVariable` node, all
+    # other references to it need to be replaced with its value-variable all
+    # throughout the `_logprob`-produced graphs.  The following `dict`
+    # cumulatively maintains remappings for all the variables/nodes that needed
+    # to be recreated after replacing `MeasurableVariable`s with their
+    # value-variables.  Since these replacements work in topological order, all
+    # the necessary value-variable replacements should be present for each
+    # node.
+    replacements = updated_rv_values.copy()
+
+    # To avoid cloning the value variables, we map them to themselves in the
+    # `replacements` `dict` (i.e. entries already existing in `replacements`
     # aren't cloned)
     replacements.update({v: v for v in rv_values.values()})
 
@@ -133,7 +143,7 @@ def factorized_joint_logprob(
     while q:
         node = q.popleft()
 
-        if not any(o in lifted_rv_values for o in node.outputs):
+        if not any(o in updated_rv_values for o in node.outputs):
             if (
                 isinstance(node.op, MeasurableVariable)
                 and not getattr(node.default_output().tag, "ignore_logprob", False)
