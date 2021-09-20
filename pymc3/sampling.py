@@ -2164,7 +2164,7 @@ def init_nuts(
         var = np.ones_like(mean)
         n = len(var)
 
-        if tune is not None and tune > 200:
+        if tune is not None and tune > 250:
             stop_adaptation = tune - 50
         else:
             stop_adaptation = None
