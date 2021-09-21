@@ -183,8 +183,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
             The number of initial samples that are just discarded and not used to estimate
             the mass matrix.
         early_update : bool
-            Whether to update the mass matrix live during the first half of the first
-            adaptation window.
+            Whether to update the mass matrix live during the first adaptation window.
         store_mass_matrix_trace : bool
             If true, store the mass matrix at each step of the adaptation. Only for debugging
             purposes.
@@ -268,8 +267,8 @@ class QuadPotentialDiagAdapt(QuadPotential):
             return
 
         if self._n_samples > self._discard_window:
-            self._foreground_var.add_sample(sample, weight=1)
-            self._background_var.add_sample(sample, weight=1)
+            self._foreground_var.add_sample(sample)
+            self._background_var.add_sample(sample)
 
         if self._early_update or self._n_samples > self.adaptation_window:
             self._update_from_weightvar(self._foreground_var)
@@ -344,15 +343,13 @@ class _WeightedVariance:
         if self.mean.shape != (nelem,):
             raise ValueError("Invalid shape for initial mean.")
 
-    def add_sample(self, x, weight):
+    def add_sample(self, x):
         x = np.asarray(x)
-        if weight != 1:
-            raise ValueError("Setting weight != 1 is not supported.")
         self.n_samples += 1
         old_diff = x - self.mean
         self.mean[:] += old_diff / self.n_samples
         new_diff = x - self.mean
-        self.raw_var[:] += weight * old_diff * new_diff
+        self.raw_var[:] += old_diff * new_diff
 
     def current_variance(self, out=None):
         if self.n_samples == 0:
@@ -666,8 +663,8 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         # Steps since previous update
         delta = self._n_samples - self._previous_update
 
-        self._foreground_cov.add_sample(sample, weight=1)
-        self._background_cov.add_sample(sample, weight=1)
+        self._foreground_cov.add_sample(sample)
+        self._background_cov.add_sample(sample)
 
         # Update the covariance matrix and recompute the Cholesky factorization
         # every "update_window" steps
@@ -726,13 +723,13 @@ class _WeightedCovariance:
         if self.mean.shape != (nelem,):
             raise ValueError("Invalid shape for initial mean.")
 
-    def add_sample(self, x, weight):
+    def add_sample(self, x):
         x = np.asarray(x)
         self.n_samples += 1
         old_diff = x - self.mean
         self.mean[:] += old_diff / self.n_samples
         new_diff = x - self.mean
-        self.raw_cov[:] += weight * new_diff[:, None] * old_diff[None, :]
+        self.raw_cov[:] += new_diff[:, None] * old_diff[None, :]
 
     def current_covariance(self, out=None):
         if self.n_samples == 0:

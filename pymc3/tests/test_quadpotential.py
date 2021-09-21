@@ -169,7 +169,7 @@ def test_weighted_covariance(ndim=10, seed=5432):
 
     est = quadpotential._WeightedCovariance(ndim)
     for sample in samples:
-        est.add_sample(sample, 1)
+        est.add_sample(sample)
     mu_est = est.current_mean()
     cov_est = est.current_covariance()
 
@@ -184,7 +184,7 @@ def test_weighted_covariance(ndim=10, seed=5432):
         10,
     )
     for sample in samples[10:]:
-        est2.add_sample(sample, 1)
+        est2.add_sample(sample)
     mu_est2 = est2.current_mean()
     cov_est2 = est2.current_covariance()
 
