@@ -12,7 +12,7 @@ from aesara.graph.optdb import OptimizationQuery
 from aesara.tensor.basic_opt import ShapeFeature
 from aesara.tensor.var import TensorVariable
 
-from aeppl.abstract import MeasurableVariable, get_measurable_outputs
+from aeppl.abstract import get_measurable_outputs
 from aeppl.logprob import _logprob
 from aeppl.opt import PreserveRVMappings, logprob_rewrites_db
 from aeppl.utils import rvs_to_value_vars
@@ -143,72 +143,67 @@ def factorized_joint_logprob(
     while q:
         node = q.popleft()
 
-        if not any(o in updated_rv_values for o in node.outputs):
-            if (
-                isinstance(node.op, MeasurableVariable)
-                and not getattr(node.default_output().tag, "ignore_logprob", False)
-                and warn_missing_rvs
-            ):
-                warnings.warn(
-                    "Found a random variable that was neither among the observations "
-                    f"nor the conditioned variables: {node}"
-                )
+        outputs = get_measurable_outputs(node.op, node)
+
+        if not outputs:
             continue
 
-        if isinstance(node.op, MeasurableVariable):
-
-            outputs = get_measurable_outputs(node.op, node)
-
-            q_rv_value_vars = [
-                replacements[q_rv_var]
-                for q_rv_var in outputs
-                if not getattr(q_rv_var.tag, "ignore_logprob", False)
-            ]
-
-            if not q_rv_value_vars:
-                continue
-
-            # Replace `RandomVariable`s in the inputs with value variables.
-            # Also, store the results in the `replacements` map so that we
-            # don't need to redo these replacements.
-            remapped_vars, _ = rvs_to_value_vars(
-                q_rv_value_vars + list(node.inputs),
-                initial_replacements=replacements,
+        if warn_missing_rvs and any(
+            o not in updated_rv_values
+            for o in outputs
+            if getattr(o.tag, "ignore_logprob", False)
+        ):
+            warnings.warn(
+                "Found a random variable that was neither among the observations "
+                f"nor the conditioned variables: {node}"
             )
-            q_rv_value_vars = remapped_vars[: len(q_rv_value_vars)]
-            value_var_inputs = remapped_vars[len(q_rv_value_vars) :]
+            continue
 
-            q_logprob_vars = _logprob(
-                node.op,
-                q_rv_value_vars,
-                *value_var_inputs,
-                **kwargs,
-            )
+        q_rv_value_vars = [
+            replacements[q_rv_var]
+            for q_rv_var in outputs
+            if not getattr(q_rv_var.tag, "ignore_logprob", False)
+        ]
 
-            if not isinstance(q_logprob_vars, (list, tuple)):
-                q_logprob_vars = [q_logprob_vars]
+        if not q_rv_value_vars:
+            continue
 
-            for q_rv_var, q_logprob_var in zip(q_rv_value_vars, q_logprob_vars):
-                if q_rv_var.name:
-                    q_logprob_var.name = f"{q_rv_var.name}_logprob"
+        # Replace `RandomVariable`s in the inputs with value variables.
+        # Also, store the results in the `replacements` map for the nodes
+        # that follow.
+        remapped_vars, _ = rvs_to_value_vars(
+            q_rv_value_vars + list(node.inputs),
+            initial_replacements=replacements,
+        )
+        q_rv_value_vars = remapped_vars[: len(q_rv_value_vars)]
+        value_var_inputs = remapped_vars[len(q_rv_value_vars) :]
 
-                if q_rv_var in logprob_vars:
-                    raise ValueError(
-                        f"More than one logprob factor was assigned to the value var {q_rv_var}"
-                    )
+        q_logprob_vars = _logprob(
+            node.op,
+            q_rv_value_vars,
+            *value_var_inputs,
+            **kwargs,
+        )
 
-                logprob_vars[q_rv_var] = q_logprob_var
+        if not isinstance(q_logprob_vars, (list, tuple)):
+            q_logprob_vars = [q_logprob_vars]
 
-            # Recompute test values for the changes introduced by the
-            # replacements above.
-            if config.compute_test_value != "off":
-                for node in io_toposort(graph_inputs(q_logprob_vars), q_logprob_vars):
-                    compute_test_value(node)
+        for q_rv_var, q_logprob_var in zip(q_rv_value_vars, q_logprob_vars):
+            if q_rv_var.name:
+                q_logprob_var.name = f"{q_rv_var.name}_logprob"
 
-        else:
-            raise NotImplementedError(
-                f"A measure/probability could not be derived for {node}"
-            )
+            if q_rv_var in logprob_vars:
+                raise ValueError(
+                    f"More than one logprob factor was assigned to the value var {q_rv_var}"
+                )
+
+            logprob_vars[q_rv_var] = q_logprob_var
+
+        # Recompute test values for the changes introduced by the
+        # replacements above.
+        if config.compute_test_value != "off":
+            for node in io_toposort(graph_inputs(q_logprob_vars), q_logprob_vars):
+                compute_test_value(node)
 
     return logprob_vars
 
