@@ -60,7 +60,7 @@ class HamiltonianMC(BaseHMC):
         Parameters
         ----------
         vars: list, default=None
-            List of Aesara variables. If None, all continuous RVs from the
+            List of value variables. If None, all continuous RVs from the
             model are included.
         path_length: float, default=2
             Total length to travel

@@ -89,6 +89,8 @@ class BaseHMC(GradientSharedStep):
 
         if vars is None:
             vars = self._model.cont_vars
+        else:
+            vars = [self._model.rvs_to_values.get(var, var) for var in vars]
 
         super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **aesara_kwargs)
 

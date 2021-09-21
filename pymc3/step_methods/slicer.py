@@ -35,7 +35,7 @@ class Slice(ArrayStep):
     Parameters
     ----------
     vars: list
-        List of variables for sampler.
+        List of value variables for sampler.
     w: float
         Initial width of slice (Defaults to 1).
     tune: bool
@@ -57,6 +57,8 @@ class Slice(ArrayStep):
 
         if vars is None:
             vars = self.model.cont_vars
+        else:
+            vars = [self.model.rvs_to_values.get(var, var) for var in vars]
         vars = inputvars(vars)
 
         super().__init__(vars, [self.model.fastlogp], **kwargs)

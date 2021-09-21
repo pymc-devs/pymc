@@ -115,7 +115,7 @@ class NUTS(BaseHMC):
         Parameters
         ----------
         vars: list, default=None
-            List of Aesara variables. If None, all continuous RVs from the
+            List of value variables. If None, all continuous RVs from the
             model are included.
         Emax: float, default 1000
             Maximum energy change allowed during leapfrog steps. Larger

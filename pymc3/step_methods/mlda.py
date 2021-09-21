@@ -74,6 +74,8 @@ class MetropolisMLDA(Metropolis):
             value_vars = kwargs.get("vars", None)
             if value_vars is None:
                 value_vars = model.value_vars
+            else:
+                value_vars = [model.rvs_to_values.get(var, var) for var in value_vars]
             value_vars = pm.inputvars(value_vars)
             shared = pm.make_shared_replacements(initial_values, value_vars, model)
 
@@ -142,6 +144,8 @@ class DEMetropolisZMLDA(DEMetropolisZ):
             value_vars = kwargs.get("vars", None)
             if value_vars is None:
                 value_vars = model.value_vars
+            else:
+                value_vars = [model.rvs_to_values.get(var, var) for var in value_vars]
             value_vars = pm.inputvars(value_vars)
             shared = pm.make_shared_replacements(initial_values, value_vars, model)
 
@@ -218,7 +222,7 @@ class MLDA(ArrayStepShared):
         Note this list excludes the model passed to the model
         argument above, which is the finest available.
     vars : list
-        List of variables for sampler
+        List of value variables for sampler
     base_sampler : string
         Sampler used in the base (coarsest) chain. Can be 'Metropolis' or
         'DEMetropolisZ'. Defaults to 'DEMetropolisZ'.
@@ -549,6 +553,8 @@ class MLDA(ArrayStepShared):
         # Process model variables
         if value_vars is None:
             value_vars = model.value_vars
+        else:
+            value_vars = [model.rvs_to_values.get(var, var) for var in value_vars]
         value_vars = pm.inputvars(value_vars)
         self.vars = value_vars
         self.var_names = [var.name for var in self.vars]

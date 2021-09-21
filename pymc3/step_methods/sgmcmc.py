@@ -87,7 +87,7 @@ class BaseStochasticGradient(ArrayStepShared):
     Parameters
     ----------
     vars: list
-        List of variables for sampler
+        List of value variables for sampler
     batch_size`: int
         Batch Size for each step
     total_size: int
@@ -132,6 +132,8 @@ class BaseStochasticGradient(ArrayStepShared):
 
         if vars is None:
             vars = model.value_vars
+        else:
+            vars = [model.rvs_to_values.get(var, var) for var in vars]
 
         vars = inputvars(vars)
 

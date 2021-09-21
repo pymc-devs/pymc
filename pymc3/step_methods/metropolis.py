@@ -130,7 +130,7 @@ class Metropolis(ArrayStepShared):
         Parameters
         ----------
         vars: list
-            List of variables for sampler
+            List of value variables for sampler
         S: standard deviation or covariance matrix
             Some measure of variance to parameterize proposal distribution
         proposal_dist: function
@@ -153,6 +153,8 @@ class Metropolis(ArrayStepShared):
 
         if vars is None:
             vars = model.value_vars
+        else:
+            vars = [model.rvs_to_values.get(var, var) for var in vars]
         vars = pm.inputvars(vars)
 
         if S is None:
@@ -288,7 +290,7 @@ class BinaryMetropolis(ArrayStep):
     Parameters
     ----------
     vars: list
-        List of variables for sampler
+        List of value variables for sampler
     scaling: scalar or array
         Initial scale factor for proposal. Defaults to 1.
     tune: bool
@@ -320,6 +322,8 @@ class BinaryMetropolis(ArrayStep):
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
+
+        vars = [model.rvs_to_values.get(var, var) for var in vars]
 
         if not all([v.dtype in pm.discrete_types for v in vars]):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
@@ -388,7 +392,7 @@ class BinaryGibbsMetropolis(ArrayStep):
     Parameters
     ----------
     vars: list
-        List of variables for sampler
+        List of value variables for sampler
     order: list or 'random'
         List of integers indicating the Gibbs update order
         e.g., [0, 2, 1, ...]. Default is random
@@ -410,6 +414,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         self.transit_p = transit_p
 
         initial_point = model.initial_point
+        vars = [model.rvs_to_values.get(var, var) for var in vars]
         self.dim = sum(initial_point[v.name].size for v in vars)
 
         if order == "random":
@@ -490,6 +495,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         model = pm.modelcontext(model)
 
+        vars = [model.rvs_to_values.get(var, var) for var in vars]
         vars = pm.inputvars(vars)
 
         initial_point = model.initial_point
@@ -697,6 +703,8 @@ class DEMetropolis(PopulationArrayStepShared):
 
         if vars is None:
             vars = model.cont_vars
+        else:
+            vars = [model.rvs_to_values.get(var, var) for var in vars]
         vars = pm.inputvars(vars)
 
         if S is None:
@@ -846,6 +854,8 @@ class DEMetropolisZ(ArrayStepShared):
 
         if vars is None:
             vars = model.cont_vars
+        else:
+            vars = [model.rvs_to_values.get(var, var) for var in vars]
         vars = pm.inputvars(vars)
 
         if S is None:
