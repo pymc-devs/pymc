@@ -163,10 +163,19 @@ def naive_bcast_rv_lift(fgraph, node):
 
 
 logprob_rewrites_db = SequenceDB()
-logprob_rewrites_db.register("canonicalize", optdb["canonicalize"], -10, "basic")
 rv_sinking_db = EquilibriumDB()
+logprob_rewrites_db.name = "logprob_rewrites_db"
+logprob_rewrites_db.register(
+    "pre-canonicalize", optdb.query("+canonicalize"), -10, "basic"
+)
+
+rv_sinking_db.name = "rv_sinking_db"
 rv_sinking_db.register("dimshuffle_lift", local_dimshuffle_rv_lift, -5, "basic")
 rv_sinking_db.register("subtensor_lift", local_subtensor_rv_lift, -5, "basic")
 rv_sinking_db.register("broadcast_to_lift", naive_bcast_rv_lift, -5, "basic")
 rv_sinking_db.register("incsubtensor_lift", incsubtensor_rv_replace, -5, "basic")
+
 logprob_rewrites_db.register("sinking", rv_sinking_db, -10, "basic")
+logprob_rewrites_db.register(
+    "post-canonicalize", optdb.query("+canonicalize"), 10, "basic"
+)
