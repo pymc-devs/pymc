@@ -22,6 +22,7 @@ from sys import modules
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     List,
     Optional,
@@ -645,7 +646,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         # The sequence of model-generated RNGs
         self.rng_seq = []
         self._initial_values = {}
-        self._initial_point_cache = {}
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -927,42 +927,59 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     @property
     def initial_point(self) -> Dict[str, np.ndarray]:
         """Maps free variable names to transformed, numeric initial values."""
-        if set(self._initial_point_cache) != {
-            get_var_name(self.rvs_to_values[k]) for k in self.initial_values
-        }:
-            return self.recompute_initial_point()
-        return self._initial_point_cache
+        return self.recompute_initial_point()
 
     def recompute_initial_point(self) -> Dict[str, np.ndarray]:
+        """Recomputes the initial point of the model.
+
+        Returns
+        -------
+        ip : dict
+            Maps names of transformed variables to numeric initial values in the transformed space.
+        """
+        fn = self.make_initial_point_fn()
+        return Point(fn(), model=self)
+
+    def make_initial_point_fn(
+        self,
+        *,
+        return_transformed: bool = True,
+    ) -> Callable[[], Dict[TensorVariable, np.ndarray]]:
         """Recomputes numeric initial values for all free model variables.
+
+        Parameters
+        ----------
+        return_transformed : bool
+            Switches between returning the dictionary based on RV vars or RV value vars as keys.
 
         Returns
         -------
         initial_point : dict
             Maps transformed free variable names to transformed, numeric initial values.
         """
-        numeric_initvals = {}
-        # The entries in `initial_values` are already in topological order and can be evaluated one by one.
-        for rv_var, initval in self.initial_values.items():
-            rv_value = self.rvs_to_values[rv_var]
-            transform = getattr(rv_value.tag, "transform", None)
-            if isinstance(initval, np.ndarray) and transform is None:
-                # Only untransformed, numeric initvals can be taken as they are.
-                numeric_initvals[rv_var] = initval
-            else:
-                # Evaluate initvals that are None, symbolic or need to be transformed.
-                # They can depend on other initvals from higher up in the graph,
-                # which are therefore fed to the evaluation as "givens".
-                test_value = getattr(rv_var.tag, "test_value", None)
-                numeric_initvals[rv_var] = self._eval_initval(
-                    rv_var, initval, test_value, transform, given=numeric_initvals
-                )
 
-        # Cache the evaluation results for next time.
-        self._initial_point_cache = Point(
-            [(self.rvs_to_values[k], v) for k, v in numeric_initvals.items()], model=self
-        )
-        return self._initial_point_cache
+        def fn():
+            numeric_initvals = {}
+            # The entries in `initial_values` are already in topological order and can be evaluated one by one.
+            for rv_var, initval in self.initial_values.items():
+                rv_value = self.rvs_to_values[rv_var]
+                transform = getattr(rv_value.tag, "transform", None)
+                if isinstance(initval, np.ndarray) and transform is None:
+                    # Only untransformed, numeric initvals can be taken as they are.
+                    numeric_initvals[rv_var] = initval
+                else:
+                    # Evaluate initvals that are None, symbolic or need to be transformed.
+                    # They can depend on other initvals from higher up in the graph,
+                    # which are therefore fed to the evaluation as "givens".
+                    test_value = getattr(rv_var.tag, "test_value", None)
+                    numeric_initvals[rv_var] = self._eval_initval(
+                        rv_var, initval, test_value, transform, given=numeric_initvals
+                    )
+            if return_transformed:
+                return {self.rvs_to_values[k]: v for k, v in numeric_initvals.items()}
+            return numeric_initvals
+
+        return fn
 
     @property
     def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable]]]:
