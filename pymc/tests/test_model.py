@@ -513,11 +513,11 @@ def test_initial_point():
     with model:
         y = pm.Normal("y", initval=y_initval)
 
-    assert model.rvs_to_values[a] in model.initial_values
-    assert model.rvs_to_values[x] in model.initial_values
-    assert model.initial_values[b_value_var] == b_initval
+    assert a in model.initial_values
+    assert x in model.initial_values
+    assert model.initial_values[b] == b_initval
     assert model.recompute_initial_point()["b_interval__"] == b_initval_trans
-    assert model.initial_values[model.rvs_to_values[y]] == y_initval
+    assert model.initial_values[y] == y_initval
 
 
 def test_point_logps():
@@ -662,9 +662,9 @@ def test_set_initval():
         alpha = pm.HalfNormal("alpha", initval=100)
         value = pm.NegativeBinomial("value", mu=mu, alpha=alpha)
 
-    assert np.array_equal(model.initial_values[model.rvs_to_values[mu]], np.array([[100.0]]))
-    np.testing.assert_array_equal(model.initial_values[model.rvs_to_values[alpha]], np.array(100))
-    assert model.initial_values[model.rvs_to_values[value]] is None
+    assert np.array_equal(model.initial_values[mu], np.array([[100.0]]))
+    np.testing.assert_array_equal(model.initial_values[alpha], np.array(100))
+    assert model.initial_values[value] is None
 
     # `Flat` cannot be sampled, so let's make sure that doesn't break initial
     # value computations
@@ -672,7 +672,7 @@ def test_set_initval():
         x = pm.Flat("x")
         y = pm.Normal("y", x, 1)
 
-    assert model.rvs_to_values[y] in model.initial_values
+    assert y in model.initial_values
 
 
 def test_datalogpt_multiple_shapes():
