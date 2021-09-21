@@ -351,7 +351,9 @@ class Distribution(metaclass=DistributionMeta):
 
 @singledispatch
 def _get_moment(op, rv, size, *rv_inputs) -> TensorVariable:
-    return None
+    raise NotImplementedError(
+        f"Random variable {rv} of type {op} has no get_moment implementation."
+    )
 
 
 def get_moment(rv: TensorVariable) -> TensorVariable:
