@@ -22,12 +22,10 @@ from sys import modules
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Dict,
     List,
     Optional,
     Sequence,
-    Set,
     Tuple,
     Type,
     TypeVar,
@@ -40,7 +38,6 @@ import aesara.tensor as at
 import numpy as np
 import scipy.sparse as sps
 
-from aesara.compile.mode import Mode, get_mode
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
@@ -61,8 +58,8 @@ from pymc.aesaraf import (
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
 from pymc.distributions import logp_transform, logpt, logpt_sum
-from pymc.distributions.transforms import Transform
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
+from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
 from pymc.util import (
     UNSET,
@@ -918,19 +915,23 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def test_point(self) -> Dict[str, np.ndarray]:
-        """Deprecated alias for `Model.initial_point`."""
+        """Deprecated alias for `Model.recompute_initial_point(seed=None)`."""
         warnings.warn(
-            "`Model.test_point` has been deprecated. Use `Model.initial_point` or `Model.recompute_initial_point()`.",
+            "`Model.test_point` has been deprecated. Use `Model.recompute_initial_point(seed=None)`.",
             DeprecationWarning,
         )
-        return self.initial_point
+        return self.recompute_initial_point()
 
     @property
     def initial_point(self) -> Dict[str, np.ndarray]:
-        """Maps free variable names to transformed, numeric initial values."""
+        """Deprecated alias for `Model.recompute_initial_point(seed=None)`."""
+        warnings.warn(
+            "`Model.initial_point` has been deprecated. Use `Model.recompute_initial_point(seed=None)`.",
+            DeprecationWarning,
+        )
         return self.recompute_initial_point()
 
-    def recompute_initial_point(self) -> Dict[str, np.ndarray]:
+    def recompute_initial_point(self, seed=None) -> Dict[str, np.ndarray]:
         """Recomputes the initial point of the model.
 
         Returns
@@ -938,69 +939,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         ip : dict
             Maps names of transformed variables to numeric initial values in the transformed space.
         """
-        fn = self.make_initial_point_fn()
-        return Point(fn(), model=self)
-
-    def make_initial_point_fn(
-        self,
-        *,
-        rng: Optional[Union[int, np.random.RandomState]] = None,
-        jitter_rvs: Set[TensorVariable] = {},
-        default_strategy: str = "moment",
-        return_transformed: bool = True,
-    ) -> Callable[[], Dict[TensorVariable, np.ndarray]]:
-        """Recomputes numeric initial values for all free model variables.
-
-        Parameters
-        ----------
-        rng : int or numpy.random.RandomState
-            A random state to be used for initializing random number generators for drawing from priors.
-        jitter_rvs : set
-            The set (or list or tuple) of random variables for which a U(-1, +1) jitter should be
-            added to the initial value. Only available for variables that have a transform or real-valued support.
-        default_strategy : str
-            Which of { "moment", "prior" } to prefer if the initval setting for an RV is None.
-        return_transformed : bool
-            Switches between returning the dictionary based on RV vars or RV value vars as keys.
-
-        Returns
-        -------
-        initial_point : dict
-            Maps transformed free variable names to transformed, numeric initial values.
-        """
-        from pymc3.distributions.distribution import get_moment
-
-        def fn():
-            numeric_initvals = {}
-            # The entries in `initial_values` are already in topological order and can be evaluated one by one.
-            for rv_var, initval in self.initial_values.items():
-                rv_value = self.rvs_to_values[rv_var]
-                transform = getattr(rv_value.tag, "transform", None)
-                if isinstance(initval, np.ndarray) and transform is None:
-                    # Only untransformed, numeric initvals can be taken as they are.
-                    numeric_initvals[rv_var] = initval
-                else:
-                    # Evaluate initvals that are None, symbolic or need to be transformed.
-                    # They can depend on other initvals from higher up in the graph,
-                    # which are therefore fed to the evaluation as "givens".
-                    if initval is None:
-                        initval = default_strategy
-                    if initval == "moment":
-                        initval = get_moment(rv_var)
-                    elif initval == "prior":
-                        initval = None
-                    elif isinstance(initval, str):
-                        raise NotImplementedError(
-                            f"Unsupported initval setting '{initval}' for {rv_var}."
-                        )
-                    numeric_initvals[rv_var] = self._eval_initval(
-                        rv_var, initval, transform, given=numeric_initvals
-                    )
-            if return_transformed:
-                return {self.rvs_to_values[k]: v for k, v in numeric_initvals.items()}
-            return numeric_initvals
-
-        return fn
+        if seed is None:
+            seed = self.rng_seeder.randint(2 ** 30, dtype=np.int64)
+        fn = make_initial_point_fn(model=self, return_transformed=True)
+        return Point(fn(seed), model=self)
 
     @property
     def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
@@ -1018,61 +960,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             initval = rv_var.type.filter(initval)
 
         self.initial_values[rv_var] = initval
-
-    def _eval_initval(
-        self,
-        rv_var: TensorVariable,
-        initval: Optional[Variable],
-        transform: Optional[Transform],
-        given: Optional[Dict[TensorVariable, np.ndarray]] = None,
-    ) -> np.ndarray:
-        """Sample/evaluate an initial value using the existing initial values,
-        and with the least effect on the RNGs involved (i.e. no in-placing).
-
-        Parameters
-        ----------
-        rv_var : TensorVariable
-            The model variable the initival belongs to.
-        initval : Variable or None
-            The initial value to be evaluated.
-            If `None` a random draw will be made.
-        transform : optional, Transform
-            A transformation associated with the random variable.
-            Transformations are automatically applied to initial values.
-        given : optional, dict
-            Numeric initial values to be used for givens instead of `self.initial_values`.
-
-        Returns
-        -------
-        initval : np.ndarray
-            Numeric (transformed) initial value.
-        """
-        mode = get_mode(None)
-        opt_qry = mode.provided_optimizer.excluding("random_make_inplace")
-        mode = Mode(linker=mode.linker, optimizer=opt_qry)
-
-        if given is None:
-            given = self.initial_values
-
-        if transform:
-            if initval is not None:
-                value = initval
-            else:
-                value = rv_var
-            rv_var = at.as_tensor_variable(transform.forward(rv_var, value))
-
-        def initval_to_rvval(rv_var, value):
-            value_var = self.rvs_to_values[rv_var]
-            initval = value_var.type.make_constant(value)
-            transform = getattr(value_var.tag, "transform", None)
-            if transform:
-                return transform.backward(rv_var, initval)
-            else:
-                return initval
-
-        givens = {k: initval_to_rvval(k, v) for k, v in given.items()}
-        initval_fn = aesara.function([], rv_var, mode=mode, givens=givens, on_unused_input="ignore")
-        return initval_fn()
 
     def next_rng(self) -> RandomStateSharedVariable:
         """Generate a new ``RandomStateSharedVariable``.

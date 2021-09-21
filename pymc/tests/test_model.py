@@ -516,7 +516,7 @@ def test_initial_point():
     assert a in model.initial_values
     assert x in model.initial_values
     assert model.initial_values[b] == b_initval
-    assert model.recompute_initial_point()["b_interval__"] == b_initval_trans
+    assert model.recompute_initial_point(0)["b_interval__"] == b_initval_trans
     assert model.initial_values[y] == y_initval
 
 

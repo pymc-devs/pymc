@@ -39,6 +39,19 @@ from pymc.tests.helpers import SeededTest
 from pymc.tests.models import simple_init
 
 
+class TestInitNuts(SeededTest):
+    def setup_method(self):
+        super().setup_method()
+        self.model, self.start, self.step, _ = simple_init()
+
+    def test_checks_seeds_kwarg(self):
+        with self.model:
+            with pytest.raises(ValueError, match="must be array-like"):
+                pm.sampling.init_nuts(seeds=1)
+            with pytest.raises(ValueError, match="Number of seeds"):
+                pm.sampling.init_nuts(chains=2, seeds=[1])
+
+
 class TestSample(SeededTest):
     def setup_method(self):
         super().setup_method()
@@ -160,7 +173,7 @@ class TestSample(SeededTest):
         with self.model:
             tune = 50
             chains = 2
-            start, step = pm.sampling.init_nuts(chains=chains)
+            start, step = pm.sampling.init_nuts(chains=chains, seeds=[1, 2])
             pm.sample(draws=2, tune=tune, chains=chains, step=step, start=start, cores=1)
             assert step.potential._n_samples == tune
             assert step.step_adapt._count == tune + 1
@@ -629,7 +642,7 @@ class TestSamplePPC(SeededTest):
         data = np.random.poisson(lam=10, size=200)
         model = pm.Model()
         with model:
-            mu = pm.HalfFlat("sigma", initval="moment")
+            mu = pm.HalfFlat("sigma")
             pm.Poisson("foo", mu=mu, observed=data)
             idata = pm.sample(tune=1000)
 
@@ -831,13 +844,13 @@ def check_exec_nuts_init(method):
         pm.Normal("a", mu=0, sigma=1, size=2)
         pm.HalfNormal("b", sigma=1)
     with model:
-        start, _ = pm.init_nuts(init=method, n_init=10)
+        start, _ = pm.init_nuts(init=method, n_init=10, seeds=[1])
         assert isinstance(start, list)
         assert len(start) == 1
         assert isinstance(start[0], dict)
         assert model.a.tag.value_var.name in start[0]
         assert model.b.tag.value_var.name in start[0]
-        start, _ = pm.init_nuts(init=method, n_init=10, chains=2)
+        start, _ = pm.init_nuts(init=method, n_init=10, chains=2, seeds=[1, 2])
         assert isinstance(start, list)
         assert len(start) == 2
         assert isinstance(start[0], dict)
