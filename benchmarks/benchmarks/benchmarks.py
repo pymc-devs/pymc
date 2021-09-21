@@ -173,12 +173,14 @@ class NUTSInitSuite:
     def time_glm_hierarchical_init(self, init):
         """How long does it take to run the initialization."""
         with glm_hierarchical_model():
-            pm.init_nuts(init=init, chains=self.chains, progressbar=False)
+            pm.init_nuts(
+                init=init, chains=self.chains, progressbar=False, seeds=np.arange(self.chains)
+            )
 
     def track_glm_hierarchical_ess(self, init):
         with glm_hierarchical_model():
             start, step = pm.init_nuts(
-                init=init, chains=self.chains, progressbar=False, random_seed=123
+                init=init, chains=self.chains, progressbar=False, seeds=np.arange(self.chains)
             )
             t0 = time.time()
             idata = pm.sample(
@@ -187,7 +189,7 @@ class NUTSInitSuite:
                 cores=4,
                 chains=self.chains,
                 start=start,
-                random_seed=100,
+                seeds=np.arange(self.chains),
                 progressbar=False,
                 compute_convergence_checks=False,
             )
@@ -199,7 +201,7 @@ class NUTSInitSuite:
         model, start = mixture_model()
         with model:
             _, step = pm.init_nuts(
-                init=init, chains=self.chains, progressbar=False, random_seed=123
+                init=init, chains=self.chains, progressbar=False, seeds=np.arange(self.chains)
             )
             start = [{k: v for k, v in start.items()} for _ in range(self.chains)]
             t0 = time.time()
@@ -209,7 +211,7 @@ class NUTSInitSuite:
                 cores=4,
                 chains=self.chains,
                 start=start,
-                random_seed=100,
+                seeds=np.arange(self.chains),
                 progressbar=False,
                 compute_convergence_checks=False,
             )

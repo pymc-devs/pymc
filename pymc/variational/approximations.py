@@ -23,6 +23,7 @@ import pymc as pm
 
 from pymc.blocking import DictToArrayBijection
 from pymc.distributions.dist_math import rho2sigma
+from pymc.initial_point import make_initial_point_fn
 from pymc.math import batched_diag
 from pymc.variational import flows, opvi
 from pymc.variational.opvi import Approximation, Group, node_property
@@ -69,12 +70,13 @@ class MeanFieldGroup(Group):
         self._finalize_init()
 
     def create_shared_params(self, start=None):
-        if start is None:
-            start = self.model.initial_point
-        else:
-            start_ = start.copy()
-            self.model.update_start_vals(start_, self.model.initial_point)
-            start = start_
+        ipfn = make_initial_point_fn(
+            model=self.model,
+            overrides=start,
+            jitter_rvs={},
+            return_transformed=True,
+        )
+        start = ipfn(self.model.rng_seeder.randint(2 ** 30, dtype=np.int64))
         if self.batched:
             start = start[self.group[0].name][0]
         else:
@@ -124,12 +126,13 @@ class FullRankGroup(Group):
         self._finalize_init()
 
     def create_shared_params(self, start=None):
-        if start is None:
-            start = self.model.initial_point
-        else:
-            start_ = start.copy()
-            self.model.update_start_vals(start_, self.model.initial_point)
-            start = start_
+        ipfn = make_initial_point_fn(
+            model=self.model,
+            overrides=start,
+            jitter_rvs={},
+            return_transformed=True,
+        )
+        start = ipfn(self.model.rng_seeder.randint(2 ** 30, dtype=np.int64))
         if self.batched:
             start = start[self.group[0].name][0]
         else:
@@ -238,12 +241,13 @@ class EmpiricalGroup(Group):
             if size is None:
                 raise opvi.ParametrizationError("Need `trace` or `size` to initialize")
             else:
-                if start is None:
-                    start = self.model.initial_point
-                else:
-                    start_ = self.model.initial_point.copy()
-                    self.model.update_start_vals(start_, start)
-                    start = start_
+                ipfn = make_initial_point_fn(
+                    model=self.model,
+                    overrides=start,
+                    jitter_rvs={},
+                    return_transformed=True,
+                )
+                start = ipfn(self.model.rng_seeder.randint(2 ** 30, dtype=np.int64))
                 start = pm.floatX(DictToArrayBijection.map(start))
                 # Initialize particles
                 histogram = np.tile(start, (size, 1))
