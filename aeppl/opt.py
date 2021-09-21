@@ -163,12 +163,27 @@ def naive_bcast_rv_lift(fgraph, node):
 
 
 logprob_rewrites_db = SequenceDB()
-rv_sinking_db = EquilibriumDB()
 logprob_rewrites_db.name = "logprob_rewrites_db"
 logprob_rewrites_db.register(
     "pre-canonicalize", optdb.query("+canonicalize"), -10, "basic"
 )
 
+
+class RVSinkingDB(EquilibriumDB):
+    r"""This `EquilibriumDB` doesn't hide its exceptions.
+
+    By setting `failure_callback` to ``None`` in the `EquilibriumOptimizer`\s
+    that `EquilibriumDB` generates, we're able to directly emit the desired
+    exceptions from within the `LocalOptimization`\s themselves.
+    """
+
+    def query(self, *tags, **kwtags):
+        res = super().query(*tags, **kwtags)
+        res.failure_callback = None
+        return res
+
+
+rv_sinking_db = RVSinkingDB()
 rv_sinking_db.name = "rv_sinking_db"
 rv_sinking_db.register("dimshuffle_lift", local_dimshuffle_rv_lift, -5, "basic")
 rv_sinking_db.register("subtensor_lift", local_subtensor_rv_lift, -5, "basic")

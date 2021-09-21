@@ -88,17 +88,22 @@ def get_stack_mixture_vars(
             join_axis = int(get_constant_value(join_axis))
         except ValueError:
             # TODO: Support symbolic join axes
-            return None
+            raise NotImplementedError(
+                "Symbolic `Join` axes are not supported in mixtures"
+            )
 
         if join_axis != 0:
             # TODO: Support other join axes
-            return None
+            raise NotImplementedError("Only `Join` axis 0 is supported in mixtures")
 
     if not all(
         rv.owner and isinstance(rv.owner.op, RandomVariable) for rv in mixture_rvs
     ):
         # Currently, all mixture components must be `RandomVariable` outputs
         # TODO: Allow constants and make them Dirac-deltas
+        # raise NotImplementedError(
+        #     "All mixture components must be `RandomVariable` outputs"
+        # )
         return None
 
     return mixture_rvs
