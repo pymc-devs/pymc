@@ -95,6 +95,11 @@ class TestSpecialDistributions:
 
 class TestMoment:
     def test_basic(self):
+        # Standard distributions
+        rv = pm.Normal.dist(mu=2.3)
+        np.testing.assert_allclose(get_moment(rv).eval(), 2.3)
+
+        # Special distributions
         rv = pm.Flat.dist()
         assert get_moment(rv).eval() == np.zeros(())
         rv = pm.HalfFlat.dist()

@@ -336,6 +336,11 @@ class Uniform(BoundedContinuous):
             ),
         )
 
+    def get_moment(value, size, lower, upper):
+        lower = at.full(size, lower, dtype=aesara.config.floatX)
+        upper = at.full(size, upper, dtype=aesara.config.floatX)
+        return (lower + upper) / 2
+
 
 class FlatRV(RandomVariable):
     name = "flat"
@@ -366,7 +371,7 @@ class Flat(Continuous):
         res.tag.test_value = np.full(size, floatX(0.0))
         return res
 
-    def get_moment(rv, size, *rv_inputs) -> np.ndarray:
+    def get_moment(rv, size, *rv_inputs):
         return at.zeros(size, dtype=aesara.config.floatX)
 
     def logp(value):
@@ -431,7 +436,7 @@ class HalfFlat(PositiveContinuous):
         res.tag.test_value = np.full(size, floatX(1.0))
         return res
 
-    def get_moment(value_var, size, *rv_inputs) -> np.ndarray:
+    def get_moment(value_var, size, *rv_inputs):
         return at.ones(size, dtype=aesara.config.floatX)
 
     def logp(value):
@@ -587,6 +592,9 @@ class Normal(Continuous):
             normal_lcdf(mu, sigma, value),
             0 < sigma,
         )
+
+    def get_moment(value_var, size, mu, sigma):
+        return at.full(size, mu, dtype=aesara.config.floatX)
 
 
 class TruncatedNormalRV(RandomVariable):

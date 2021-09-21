@@ -394,6 +394,10 @@ class Bernoulli(Discrete):
             p <= 1,
         )
 
+    def get_moment(value, size, p):
+        p = at.full(size, p)
+        return at.switch(p < 0.5, np.int64(0), np.int64(1))
+
     def _distr_parameters_for_repr(self):
         return ["p"]
 
