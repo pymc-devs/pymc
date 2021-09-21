@@ -927,7 +927,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     @property
     def initial_point(self) -> Dict[str, np.ndarray]:
         """Maps free variable names to transformed, numeric initial values."""
-        if set(self._initial_point_cache) != {get_var_name(k) for k in self.initial_values}:
+        if set(self._initial_point_cache) != {
+            get_var_name(self.rvs_to_values[k]) for k in self.initial_values
+        }:
             return self.recompute_initial_point()
         return self._initial_point_cache
 
@@ -941,31 +943,32 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """
         numeric_initvals = {}
         # The entries in `initial_values` are already in topological order and can be evaluated one by one.
-        for rv_value, initval in self.initial_values.items():
-            rv_var = self.values_to_rvs[rv_value]
+        for rv_var, initval in self.initial_values.items():
+            rv_value = self.rvs_to_values[rv_var]
             transform = getattr(rv_value.tag, "transform", None)
             if isinstance(initval, np.ndarray) and transform is None:
                 # Only untransformed, numeric initvals can be taken as they are.
-                numeric_initvals[rv_value] = initval
+                numeric_initvals[rv_var] = initval
             else:
                 # Evaluate initvals that are None, symbolic or need to be transformed.
                 # They can depend on other initvals from higher up in the graph,
                 # which are therefore fed to the evaluation as "givens".
                 test_value = getattr(rv_var.tag, "test_value", None)
-                numeric_initvals[rv_value] = self._eval_initval(
+                numeric_initvals[rv_var] = self._eval_initval(
                     rv_var, initval, test_value, transform, given=numeric_initvals
                 )
 
         # Cache the evaluation results for next time.
-        self._initial_point_cache = Point(list(numeric_initvals.items()), model=self)
+        self._initial_point_cache = Point(
+            [(self.rvs_to_values[k], v) for k, v in numeric_initvals.items()], model=self
+        )
         return self._initial_point_cache
 
     @property
     def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable]]]:
         """Maps transformed variables to initial value placeholders.
 
-        ⚠ The keys are NOT the objects returned by, `pm.Normal(...)`.
-        For a name-based dictionary use the `get_initial_point()` method.
+        Keys are the random variables (as returned by e.g. ``pm.Uniform()``).
         """
         return self._initial_values
 
@@ -973,8 +976,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if initval is not None:
             initval = rv_var.type.filter(initval)
 
-        rv_value_var = self.rvs_to_values[rv_var]
-        self.initial_values[rv_value_var] = initval
+        self.initial_values[rv_var] = initval
 
     def _eval_initval(
         self,
@@ -1023,8 +1025,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 value = rv_var
             rv_var = at.as_tensor_variable(transform.forward(rv_var, value))
 
-        def initval_to_rvval(value_var, value):
-            rv_var = self.values_to_rvs[value_var]
+        def initval_to_rvval(rv_var, value):
+            value_var = self.rvs_to_values[rv_var]
             initval = value_var.type.make_constant(value)
             transform = getattr(value_var.tag, "transform", None)
             if transform:
@@ -1032,7 +1034,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             else:
                 return initval
 
-        givens = {self.values_to_rvs[k]: initval_to_rvval(k, v) for k, v in given.items()}
+        givens = {k: initval_to_rvval(k, v) for k, v in given.items()}
         initval_fn = aesara.function([], rv_var, mode=mode, givens=givens, on_unused_input="ignore")
         try:
             initval = initval_fn()

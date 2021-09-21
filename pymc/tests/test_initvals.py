@@ -94,7 +94,7 @@ class TestInitvalEvaluation:
             assert ip["B_interval__"] == 0
 
             # Modify initval of L and re-evaluate
-            pmodel.initial_values[pmodel.rvs_to_values[L]] = 0.9
+            pmodel.initial_values[L] = 0.9
             ip = pmodel.recompute_initial_point()
             assert ip["B_interval__"] < 0
         pass
