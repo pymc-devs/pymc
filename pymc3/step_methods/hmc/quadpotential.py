@@ -155,11 +155,40 @@ class QuadPotentialDiagAdapt(QuadPotential):
         adaptation_window_multiplier=1,
         dtype=None,
         discard_window=50,
-        initial_weights=None,
         early_update=False,
         store_mass_matrix_trace=False,
     ):
-        """Set up a diagonal mass matrix."""
+        """Set up a diagonal mass matrix.
+
+        Parameters
+        ----------
+        n : int
+            The number of parameters.
+        initial_mean : np.ndarray
+            An initial guess for the posterior mean of each parameter.
+        initial_diag : np.ndarray
+            An estimate of the posterior variance of each parameter.
+        initial_weight : int
+            How much weight the initial guess has compared to new samples during tuning.
+            Measured in equivalent number of samples.
+        adaptation_window : int
+            The size of the adaptation window during tuning. It specifies how many samples
+            are used to estimate the mass matrix in each section of the adaptation.
+        adaptation_window_multiplier : float
+            The factor with which we increase the adaptation window after each adaptation
+            window.
+        dtype : np.dtype
+            The dtype used to store the mass matrix
+        discard_window : int
+            The number of initial samples that are just discarded and not used to estimate
+            the mass matrix.
+        early_update : bool
+            Whether to update the mass matrix live during the first half of the first
+            adaptation window.
+        store_mass_matrix_trace : bool
+            If true, store the mass matrix at each step of the adaptation. Only for debugging
+            purposes.
+        """
         if initial_diag is not None and initial_diag.ndim != 1:
             raise ValueError("Initial diagonal must be one-dimensional.")
         if initial_mean.ndim != 1:
@@ -190,8 +219,6 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         self._store_mass_matrix_trace = store_mass_matrix_trace
         self._mass_trace = []
-
-        self._initial_weights = initial_weights
 
         self.reset()
 
@@ -366,6 +393,34 @@ class _ExpWeightedVariance:
 
 class QuadPotentialDiagAdaptExp(QuadPotentialDiagAdapt):
     def __init__(self, *args, alpha, use_grads=False, stop_adaptation=None, **kwargs):
+        """Set up a diagonal mass matrix.
+
+        Parameters
+        ----------
+        n : int
+            The number of parameters.
+        initial_mean : np.ndarray
+            An initial guess for the posterior mean of each parameter.
+        initial_diag : np.ndarray
+            An estimate of the posterior variance of each parameter.
+        alpha : float
+            Decay rate of the exponetial weighted variance.
+        use_grads : bool
+            Use gradients, not only samples to estimate the mass matrix.
+        stop_adaptation : int
+            Stop the mass matrix adaptation after this many samples.
+        dtype : np.dtype
+            The dtype used to store the mass matrix
+        discard_window : int
+            The number of initial samples that are just discarded and not used to estimate
+            the mass matrix.
+        store_mass_matrix_trace : bool
+            If true, store the mass matrix at each step of the adaptation. Only for debugging
+            purposes.
+        """
+        if len(args) > 3:
+            raise ValueError("Unsupported arguments to QuadPotentialDiagAdaptExp")
+
         super().__init__(*args, **kwargs)
         self._alpha = alpha
         self._use_grads = use_grads
@@ -411,10 +466,8 @@ class QuadPotentialDiagAdaptExp(QuadPotentialDiagAdapt):
     def _update_from_variances(self, var_estimator, inv_var_estimator):
         var = var_estimator.current_variance()
         inv_var = inv_var_estimator.current_variance()
-        # print(inv_var)
         updated = np.sqrt(var / inv_var)
         self._var[:] = updated
-        # updated = np.exp((np.log(var) - np.log(inv_var)) / 2)
         np.sqrt(updated, out=self._stds)
         np.divide(1, self._stds, out=self._inv_stds)
 
