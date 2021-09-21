@@ -39,7 +39,7 @@ class PGBART(ArrayStepShared):
     Parameters
     ----------
     vars: list
-        List of variables for sampler
+        List of value variables for sampler
     num_particles : int
         Number of particles for the conditional SMC sampler. Defaults to 10
     max_stages : int

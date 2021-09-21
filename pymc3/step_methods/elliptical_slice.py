@@ -16,6 +16,7 @@ import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
 
+from pymc3.aesaraf import inputvars
 from pymc3.model import modelcontext
 from pymc3.step_methods.arraystep import ArrayStep, Competence
 
@@ -61,7 +62,7 @@ class EllipticalSlice(ArrayStep):
     Parameters
     ----------
     vars: list
-        List of variables for sampler.
+        List of value variables for sampler.
     prior_cov: array, optional
         Covariance matrix of the multivariate Gaussian prior.
     prior_chol: array, optional
@@ -88,6 +89,8 @@ class EllipticalSlice(ArrayStep):
 
         if vars is None:
             vars = self.model.cont_vars
+        else:
+            vars = [self.model.rvs_to_values.get(var, var) for var in vars]
         vars = inputvars(vars)
 
         super().__init__(vars, [self.model.fastlogp], **kwargs)

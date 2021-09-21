@@ -618,8 +618,8 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, unc, unc / 10.0))
         with model:
             steps = (
-                CategoricalGibbsMetropolis(model.x, proposal="uniform"),
-                CategoricalGibbsMetropolis(model.x, proposal="proportional"),
+                CategoricalGibbsMetropolis([model.x], proposal="uniform"),
+                CategoricalGibbsMetropolis([model.x], proposal="proportional"),
             )
         for step in steps:
             idata = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
@@ -1767,3 +1767,61 @@ class TestMLDA:
                         )
                         assert Q_1_0.mean(axis=1) == 0.0
                         assert Q_2_1.mean(axis=1) == 0.0
+
+
+class TestRVsAssignmentSteps:
+    """
+    Test that step methods convert input RVs to respective value vars
+    Step methods are tested with one and two variables to cover compound
+    the special branches in `BlockedStep.__new__`
+    """
+
+    @pytest.mark.parametrize(
+        "step, step_kwargs",
+        [
+            (NUTS, {}),
+            (HamiltonianMC, {}),
+            (Metropolis, {}),
+            (Slice, {}),
+            (EllipticalSlice, {"prior_cov": np.eye(1)}),
+            (DEMetropolis, {}),
+            (DEMetropolisZ, {}),
+            # (MLDA, {}),  # TODO
+        ],
+    )
+    def test_continuous_steps(self, step, step_kwargs):
+        with Model() as m:
+            c1 = HalfNormal("c1")
+            c2 = HalfNormal("c2")
+
+            assert [m.rvs_to_values[c1]] == step([c1], **step_kwargs).vars
+            assert {m.rvs_to_values[c1], m.rvs_to_values[c2]} == set(
+                step([c1, c2], **step_kwargs).vars
+            )
+
+    @pytest.mark.parametrize(
+        "step, step_kwargs",
+        [
+            (BinaryGibbsMetropolis, {}),
+            (CategoricalGibbsMetropolis, {}),
+        ],
+    )
+    def test_discrete_steps(self, step, step_kwargs):
+        with Model() as m:
+            d1 = Bernoulli("d1", p=0.5)
+            d2 = Bernoulli("d2", p=0.5)
+
+            assert [m.rvs_to_values[d1]] == step([d1], **step_kwargs).vars
+            assert {m.rvs_to_values[d1], m.rvs_to_values[d2]} == set(
+                step([d1, d2], **step_kwargs).vars
+            )
+
+    def test_compound_step(self):
+        with Model() as m:
+            c1 = HalfNormal("c1")
+            c2 = HalfNormal("c2")
+
+            step1 = NUTS([c1])
+            step2 = NUTS([c2])
+            step = CompoundStep([step1, step2])
+            assert {m.rvs_to_values[c1], m.rvs_to_values[c2]} == set(step.vars)
