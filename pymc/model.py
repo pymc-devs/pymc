@@ -27,6 +27,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -943,12 +944,22 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def make_initial_point_fn(
         self,
         *,
+        rng: Optional[Union[int, np.random.RandomState]] = None,
+        jitter_rvs: Set[TensorVariable] = {},
+        default_strategy: str = "moment",
         return_transformed: bool = True,
     ) -> Callable[[], Dict[TensorVariable, np.ndarray]]:
         """Recomputes numeric initial values for all free model variables.
 
         Parameters
         ----------
+        rng : int or numpy.random.RandomState
+            A random state to be used for initializing random number generators for drawing from priors.
+        jitter_rvs : set
+            The set (or list or tuple) of random variables for which a U(-1, +1) jitter should be
+            added to the initial value. Only available for variables that have a transform or real-valued support.
+        default_strategy : str
+            Which of { "moment", "prior" } to prefer if the initval setting for an RV is None.
         return_transformed : bool
             Switches between returning the dictionary based on RV vars or RV value vars as keys.
 
@@ -957,6 +968,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         initial_point : dict
             Maps transformed free variable names to transformed, numeric initial values.
         """
+        from pymc3.distributions.distribution import get_moment
 
         def fn():
             numeric_initvals = {}
@@ -971,9 +983,18 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                     # Evaluate initvals that are None, symbolic or need to be transformed.
                     # They can depend on other initvals from higher up in the graph,
                     # which are therefore fed to the evaluation as "givens".
-                    test_value = getattr(rv_var.tag, "test_value", None)
+                    if initval is None:
+                        initval = default_strategy
+                    if initval == "moment":
+                        initval = get_moment(rv_var)
+                    elif initval == "prior":
+                        initval = None
+                    elif isinstance(initval, str):
+                        raise NotImplementedError(
+                            f"Unsupported initval setting '{initval}' for {rv_var}."
+                        )
                     numeric_initvals[rv_var] = self._eval_initval(
-                        rv_var, initval, test_value, transform, given=numeric_initvals
+                        rv_var, initval, transform, given=numeric_initvals
                     )
             if return_transformed:
                 return {self.rvs_to_values[k]: v for k, v in numeric_initvals.items()}
@@ -982,15 +1003,18 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return fn
 
     @property
-    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable]]]:
+    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
         """Maps transformed variables to initial value placeholders.
 
-        Keys are the random variables (as returned by e.g. ``pm.Uniform()``).
+        Keys are the random variables (as returned by e.g. ``pm.Uniform()``) and
+        values are the numeric/symbolic initial values, strings denoting the strategy to get them, or None.
         """
         return self._initial_values
 
     def set_initval(self, rv_var, initval):
-        if initval is not None:
+        """Sets an initial value (strategy) for a random variable."""
+        if initval is not None and not isinstance(initval, (Variable, str)):
+            # Convert scalars or array-like inputs to ndarrays
             initval = rv_var.type.filter(initval)
 
         self.initial_values[rv_var] = initval
@@ -999,7 +1023,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         self,
         rv_var: TensorVariable,
         initval: Optional[Variable],
-        test_value: Optional[np.ndarray],
         transform: Optional[Transform],
         given: Optional[Dict[TensorVariable, np.ndarray]] = None,
     ) -> np.ndarray:
@@ -1013,10 +1036,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         initval : Variable or None
             The initial value to be evaluated.
             If `None` a random draw will be made.
-        test_value : optional, ndarray
-            Fallback option if initval is None and random draws are not implemented.
-            This is relevant for pm.Flat or pm.HalfFlat distributions and is subject
-            to ongoing refactoring of the initval API.
         transform : optional, Transform
             A transformation associated with the random variable.
             Transformations are automatically applied to initial values.
@@ -1053,19 +1072,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         givens = {k: initval_to_rvval(k, v) for k, v in given.items()}
         initval_fn = aesara.function([], rv_var, mode=mode, givens=givens, on_unused_input="ignore")
-        try:
-            initval = initval_fn()
-        except NotImplementedError as ex:
-            if "Cannot sample from" in ex.args[0]:
-                # The RV does not have a random number generator.
-                # Our last chance is to take the test_value.
-                # Note that this is a workaround for Flat and HalfFlat
-                # until an initval default mechanism is implemented (#4752).
-                initval = test_value
-            else:
-                raise
-
-        return initval
+        return initval_fn()
 
     def next_rng(self) -> RandomStateSharedVariable:
         """Generate a new ``RandomStateSharedVariable``.
