@@ -14,7 +14,6 @@
 
 from pymc3.step_methods.compound import CompoundStep
 from pymc3.step_methods.elliptical_slice import EllipticalSlice
-from pymc3.step_methods.gibbs import ElemwiseCategorical
 from pymc3.step_methods.hmc import NUTS, HamiltonianMC
 from pymc3.step_methods.metropolis import (
     BinaryGibbsMetropolis,
