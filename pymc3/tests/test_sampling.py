@@ -94,8 +94,6 @@ class TestSample(SeededTest):
                 "adapt_diag",
                 "jitter+adapt_diag",
                 "jitter+adapt_diag_grad",
-                "advi+adapt_diag_grad",
-                "advi+adapt_diag",
                 "adapt_full",
                 "jitter+adapt_full",
             ):
