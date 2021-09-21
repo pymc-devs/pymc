@@ -1007,7 +1007,6 @@ class TestMatchesScipy:
         self.check_logp(Flat, Runif, {}, lambda value: 0)
         with Model():
             x = Flat("a")
-            assert_allclose(x.tag.test_value, 0)
         self.check_logcdf(Flat, R, {}, lambda value: np.log(0.5))
         # Check infinite cases individually.
         assert 0.0 == logcdf(Flat.dist(), np.inf).eval()
@@ -1017,8 +1016,6 @@ class TestMatchesScipy:
         self.check_logp(HalfFlat, Rplus, {}, lambda value: 0)
         with Model():
             x = HalfFlat("a", size=2)
-            assert_allclose(x.tag.test_value, 1)
-            assert x.tag.test_value.shape == (2,)
         self.check_logcdf(HalfFlat, Rplus, {}, lambda value: -np.inf)
         # Check infinite cases individually.
         assert 0.0 == logcdf(HalfFlat.dist(), np.inf).eval()
@@ -3232,9 +3229,12 @@ def test_serialize_density_dist():
     def func(x):
         return -2 * (x ** 2).sum()
 
+    def random(rng, size):
+        return rng.uniform(-2, 2, size=size)
+
     with pm.Model():
         pm.Normal("x")
-        y = pm.DensityDist("y", logp=func)
+        y = pm.DensityDist("y", logp=func, random=random)
         pm.sample(draws=5, tune=1, mp_ctx="spawn")
 
     import cloudpickle

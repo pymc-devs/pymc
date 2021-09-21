@@ -25,6 +25,10 @@ def transform_fwd(rv, expected_untransformed):
     return rv.tag.value_var.tag.transform.forward(rv, expected_untransformed).eval()
 
 
+def transform_back(rv, transformed):
+    return rv.tag.value_var.tag.transform.backward(rv, transformed).eval()
+
+
 class TestInitvalAssignment:
     def test_dist_warnings_and_errors(self):
         with pytest.warns(DeprecationWarning, match="argument is deprecated and has no effect"):
@@ -52,7 +56,6 @@ class TestInitvalEvaluation:
         iv = pmodel._eval_initval(
             rv_var=rv,
             initval=None,
-            test_value=None,
             transform=None,
         )
         assert isinstance(iv, np.ndarray)
@@ -66,23 +69,10 @@ class TestInitvalEvaluation:
         iv = pmodel._eval_initval(
             rv_var=rv,
             initval=0.5,
-            test_value=None,
             transform=tf,
         )
         assert isinstance(iv, np.ndarray)
         assert iv == 0
-        pass
-
-    def test_falls_back_to_test_value(self):
-        pmodel = pm.Model()
-        rv = pm.Flat.dist()
-        iv = pmodel._eval_initval(
-            rv_var=rv,
-            initval=None,
-            test_value=0.6,
-            transform=None,
-        )
-        assert iv == 0.6
         pass
 
     def test_dependent_initvals(self):
@@ -112,14 +102,35 @@ class TestInitvalEvaluation:
             assert np.shape(ip["u_interval__"]) == (5,)
         pass
 
+    def test_seeding(self):
+        with pm.Model() as pmodel:
+            pm.Normal("A", initval="prior")
+            pm.Uniform("B", initval="moment")
+            pm.Normal("C", initval="moment")
+            ip1 = pmodel.recompute_initial_point(rng=42)
+            ip2 = pmodel.recompute_initial_point(rng=42)
+            ip3 = pmodel.recompute_initial_point(rng=15)
+            assert ip1 == ip2
+            assert ip3 != ip2
+        pass
 
-class TestSpecialDistributions:
-    def test_automatically_assigned_test_values(self):
-        # ...because they don't have random number generators.
-        rv = pm.Flat.dist()
-        assert hasattr(rv.tag, "test_value")
-        rv = pm.HalfFlat.dist()
-        assert hasattr(rv.tag, "test_value")
+    def test_adds_jitter(self):
+        with pm.Model() as pmodel:
+            A = pm.Flat("A", initval="moment")
+            B = pm.HalfFlat("B", initval="moment")
+            C = pm.Normal("C", mu=A + B, initval="moment", sd=0.001)
+            fn = pmodel.make_initial_point_fn(jitter_rvs={B})
+            iv = fn()
+        # Moment of the Flat is 0
+        assert iv[pmodel.rvs_to_values[A]] == 0
+        # Moment of the HalfFlat is 1, but HalfFlat is log-transformed by default
+        # so the transformed initial value with jitter will be
+        b_transformed = iv[pmodel.rvs_to_values[B]]
+        b_untransformed = transform_back(B, b_transformed)
+        assert b_transformed != 0
+        assert -1 < b_transformed < 1
+        # C is centered on 0 + untransformed initval of B
+        assert iv[pmodel.rvs_to_values[C]] == 0 + b_untransformed
         pass
 
 
@@ -139,14 +150,12 @@ class TestMoment:
         rv = pm.HalfFlat.dist(size=(2, 4))
         assert np.all(get_moment(rv).eval() == np.ones((2, 4)))
 
-    @pytest.mark.xfail(reason="Test values are still used for initvals.")
     @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
     def test_numeric_moment_shape(self, rv_cls):
         rv = rv_cls.dist(shape=(2,))
         assert not hasattr(rv.tag, "test_value")
         assert tuple(get_moment(rv).shape.eval()) == (2,)
 
-    @pytest.mark.xfail(reason="Test values are still used for initvals.")
     @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
     def test_symbolic_moment_shape(self, rv_cls):
         s = at.scalar()
@@ -155,7 +164,6 @@ class TestMoment:
         assert tuple(get_moment(rv).shape.eval({s: 4})) == (4,)
         pass
 
-    @pytest.mark.xfail(reason="Test values are still used for initvals.")
     @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
     def test_moment_from_dims(self, rv_cls):
         with pm.Model(

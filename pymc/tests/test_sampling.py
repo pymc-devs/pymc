@@ -629,7 +629,7 @@ class TestSamplePPC(SeededTest):
         data = np.random.poisson(lam=10, size=200)
         model = pm.Model()
         with model:
-            mu = pm.HalfFlat("sigma")
+            mu = pm.HalfFlat("sigma", initval="moment")
             pm.Poisson("foo", mu=mu, observed=data)
             idata = pm.sample(tune=1000)
 

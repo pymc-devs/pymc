@@ -1853,6 +1853,9 @@ class TestDensityDist:
 
         assert obs.eval().shape == (100,) + size
 
+    @pytest.mark.xfail(
+        reason="Needs refactoring of _check_start_shape to not attempt random draws. See #5031."
+    )
     def test_density_dist_without_random(self):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0, 1)
@@ -1861,8 +1864,9 @@ class TestDensityDist:
                 mu,
                 logp=lambda value, mu: pm.Normal.logp(value, mu, 1),
                 observed=np.random.randn(100),
+                initval=0,
             )
-            idata = pm.sample(100, cores=1)
+            idata = pm.sample(tune=50, draws=100, cores=1, step=pm.Metropolis())
 
         samples = 500
         with pytest.raises(NotImplementedError):

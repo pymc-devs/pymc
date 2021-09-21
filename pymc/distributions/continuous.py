@@ -365,10 +365,13 @@ class Flat(Continuous):
 
     rv_op = flat
 
+    def __new__(cls, *args, **kwargs):
+        kwargs.setdefault("initval", "moment")
+        return super().__new__(cls, *args, **kwargs)
+
     @classmethod
     def dist(cls, *, size=None, **kwargs):
         res = super().dist([], size=size, **kwargs)
-        res.tag.test_value = np.full(size, floatX(0.0))
         return res
 
     def get_moment(rv, size, *rv_inputs):
@@ -430,10 +433,13 @@ class HalfFlat(PositiveContinuous):
 
     rv_op = halfflat
 
+    def __new__(cls, *args, **kwargs):
+        kwargs.setdefault("initval", "moment")
+        return super().__new__(cls, *args, **kwargs)
+
     @classmethod
     def dist(cls, *, size=None, **kwargs):
         res = super().dist([], size=size, **kwargs)
-        res.tag.test_value = np.full(size, floatX(1.0))
         return res
 
     def get_moment(value_var, size, *rv_inputs):
