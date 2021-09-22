@@ -71,3 +71,7 @@ class CompoundStep:
         for method in self.methods:
             if hasattr(method, "reset_tuning"):
                 method.reset_tuning()
+
+    @property
+    def vars(self):
+        return [var for method in self.methods for var in method.vars]

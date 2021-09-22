@@ -187,11 +187,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
         except TypeError:
             steps.append(step)
         for step in steps:
-            try:
-                assigned_vars = assigned_vars.union(set(step.vars))
-            except AttributeError:
-                for method in step.methods:
-                    assigned_vars = assigned_vars.union(set(method.vars))
+            assigned_vars = assigned_vars.union(set(step.vars))
 
     # Use competence classmethods to select step methods for remaining
     # variables
