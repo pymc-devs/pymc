@@ -702,14 +702,11 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             `alpha` can be changed using `ValueGradFunction.set_weights([alpha])`.
         """
         if grad_vars is None:
-            grad_vars = [v.tag.value_var for v in typefilter(self.free_RVs, continuous_types)]
+            grad_vars = [self.rvs_to_values[v] for v in typefilter(self.free_RVs, continuous_types)]
         else:
             for i, var in enumerate(grad_vars):
                 if var.dtype not in continuous_types:
                     raise ValueError(f"Can only compute the gradient of continuous types: {var}")
-                # We allow one to pass the random variable terms as arguments
-                if hasattr(var.tag, "value_var"):
-                    grad_vars[i] = var.tag.value_var
 
         if tempered:
             with self:
