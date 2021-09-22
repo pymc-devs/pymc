@@ -169,7 +169,7 @@ def test_weighted_covariance(ndim=10, seed=5432):
 
     est = quadpotential._WeightedCovariance(ndim)
     for sample in samples:
-        est.add_sample(sample, 1)
+        est.add_sample(sample)
     mu_est = est.current_mean()
     cov_est = est.current_covariance()
 
@@ -184,7 +184,7 @@ def test_weighted_covariance(ndim=10, seed=5432):
         10,
     )
     for sample in samples[10:]:
-        est2.add_sample(sample, 1)
+        est2.add_sample(sample)
     mu_est2 = est2.current_mean()
     cov_est2 = est2.current_covariance()
 
@@ -279,9 +279,3 @@ def test_full_adapt_sampling(seed=289586):
         pot = quadpotential.QuadPotentialFullAdapt(initial_point_size, np.zeros(initial_point_size))
         step = pymc3.NUTS(model=model, potential=pot)
         pymc3.sample(draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1)
-
-
-def test_issue_3965():
-    with pymc3.Model():
-        pymc3.Normal("n")
-        pymc3.sample(100, tune=300, chains=1, init="advi+adapt_diag_grad")

@@ -87,10 +87,19 @@ class TestSample(SeededTest):
 
     def test_sample_init(self):
         with self.model:
-            for init in ("advi", "advi_map", "map"):
+            for init in (
+                "advi",
+                "advi_map",
+                "map",
+                "adapt_diag",
+                "jitter+adapt_diag",
+                "jitter+adapt_diag_grad",
+                "adapt_full",
+                "jitter+adapt_full",
+            ):
                 pm.sample(
                     init=init,
-                    tune=0,
+                    tune=120,
                     n_init=1000,
                     draws=50,
                     random_seed=self.random_seed,
