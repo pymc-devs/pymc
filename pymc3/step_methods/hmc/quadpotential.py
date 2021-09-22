@@ -154,8 +154,40 @@ class QuadPotentialDiagAdapt(QuadPotential):
         adaptation_window=101,
         adaptation_window_multiplier=1,
         dtype=None,
+        discard_window=50,
+        early_update=False,
+        store_mass_matrix_trace=False,
     ):
-        """Set up a diagonal mass matrix."""
+        """Set up a diagonal mass matrix.
+
+        Parameters
+        ----------
+        n : int
+            The number of parameters.
+        initial_mean : np.ndarray
+            An initial guess for the posterior mean of each parameter.
+        initial_diag : np.ndarray
+            An estimate of the posterior variance of each parameter.
+        initial_weight : int
+            How much weight the initial guess has compared to new samples during tuning.
+            Measured in equivalent number of samples.
+        adaptation_window : int
+            The size of the adaptation window during tuning. It specifies how many samples
+            are used to estimate the mass matrix in each section of the adaptation.
+        adaptation_window_multiplier : float
+            The factor with which we increase the adaptation window after each adaptation
+            window.
+        dtype : np.dtype
+            The dtype used to store the mass matrix
+        discard_window : int
+            The number of initial samples that are just discarded and not used to estimate
+            the mass matrix.
+        early_update : bool
+            Whether to update the mass matrix live during the first adaptation window.
+        store_mass_matrix_trace : bool
+            If true, store the mass matrix at each step of the adaptation. Only for debugging
+            purposes.
+        """
         if initial_diag is not None and initial_diag.ndim != 1:
             raise ValueError("Initial diagonal must be one-dimensional.")
         if initial_mean.ndim != 1:
@@ -175,11 +207,17 @@ class QuadPotentialDiagAdapt(QuadPotential):
         self.dtype = dtype
         self._n = n
 
+        self._discard_window = discard_window
+        self._early_update = early_update
+
         self._initial_mean = initial_mean
         self._initial_diag = initial_diag
         self._initial_weight = initial_weight
         self.adaptation_window = adaptation_window
         self.adaptation_window_multiplier = float(adaptation_window_multiplier)
+
+        self._store_mass_matrix_trace = store_mass_matrix_trace
+        self._mass_trace = []
 
         self.reset()
 
@@ -222,12 +260,18 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
     def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning."""
+        if self._store_mass_matrix_trace:
+            self._mass_trace.append(self._stds.copy())
+
         if not tune:
             return
 
-        self._foreground_var.add_sample(sample, weight=1)
-        self._background_var.add_sample(sample, weight=1)
-        self._update_from_weightvar(self._foreground_var)
+        if self._n_samples > self._discard_window:
+            self._foreground_var.add_sample(sample)
+            self._background_var.add_sample(sample)
+
+        if self._early_update or self._n_samples > self.adaptation_window:
+            self._update_from_weightvar(self._foreground_var)
 
         if self._n_samples > 0 and self._n_samples % self.adaptation_window == 0:
             self._foreground_var = self._background_var
@@ -275,47 +319,6 @@ class QuadPotentialDiagAdapt(QuadPotential):
             raise ValueError("\n".join(errmsg))
 
 
-class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
-    """Adapt a diagonal mass matrix from the variances of the gradients.
-
-    This is experimental, and may be removed without prior deprication.
-    """
-
-    def reset(self):
-        super().reset()
-        self._grads1 = np.zeros(self._n, dtype=self.dtype)
-        self._ngrads1 = 0
-        self._grads2 = np.zeros(self._n, dtype=self.dtype)
-        self._ngrads2 = 0
-
-    def _update(self, var):
-        self._var[:] = var
-        np.sqrt(self._var, out=self._stds)
-        np.divide(1, self._stds, out=self._inv_stds)
-        self._var_aesara.set_value(self._var)
-
-    def update(self, sample, grad, tune):
-        """Inform the potential about a new sample during tuning."""
-        if not tune:
-            return
-
-        self._grads1[:] += np.abs(grad)
-        self._grads2[:] += np.abs(grad)
-        self._ngrads1 += 1
-        self._ngrads2 += 1
-
-        if self._n_samples <= 150:
-            super().update(sample, grad, tune)
-        else:
-            self._update((self._ngrads1 / self._grads1) ** 2)
-
-        if self._n_samples > 100 and self._n_samples % 100 == 50:
-            self._ngrads1 = self._ngrads2
-            self._ngrads2 = 1
-            self._grads1[:] = self._grads2
-            self._grads2[:] = 1
-
-
 class _WeightedVariance:
     """Online algorithm for computing mean of variance."""
 
@@ -340,13 +343,13 @@ class _WeightedVariance:
         if self.mean.shape != (nelem,):
             raise ValueError("Invalid shape for initial mean.")
 
-    def add_sample(self, x, weight):
+    def add_sample(self, x):
         x = np.asarray(x)
         self.n_samples += 1
         old_diff = x - self.mean
         self.mean[:] += old_diff / self.n_samples
         new_diff = x - self.mean
-        self.raw_var[:] += weight * old_diff * new_diff
+        self.raw_var[:] += old_diff * new_diff
 
     def current_variance(self, out=None):
         if self.n_samples == 0:
@@ -358,6 +361,112 @@ class _WeightedVariance:
 
     def current_mean(self):
         return self.mean.copy(dtype=self._dtype)
+
+
+class _ExpWeightedVariance:
+    def __init__(self, n_vars, *, init_mean, init_var, alpha):
+        self._variance = init_var
+        self._mean = init_mean
+        self._alpha = alpha
+
+    def add_sample(self, value):
+        alpha = self._alpha
+        delta = value - self._mean
+        self._mean[...] += alpha * delta
+        self._variance[...] = (1 - alpha) * (self._variance + alpha * delta ** 2)
+
+    def current_variance(self, out=None):
+        if out is None:
+            out = np.empty_like(self._variance)
+        np.copyto(out, self._variance)
+        return out
+
+    def current_mean(self, out=None):
+        if out is None:
+            out = np.empty_like(self._mean)
+        np.copyto(out, self._mean)
+        return out
+
+
+class QuadPotentialDiagAdaptExp(QuadPotentialDiagAdapt):
+    def __init__(self, *args, alpha, use_grads=False, stop_adaptation=None, **kwargs):
+        """Set up a diagonal mass matrix.
+
+        Parameters
+        ----------
+        n : int
+            The number of parameters.
+        initial_mean : np.ndarray
+            An initial guess for the posterior mean of each parameter.
+        initial_diag : np.ndarray
+            An estimate of the posterior variance of each parameter.
+        alpha : float
+            Decay rate of the exponetial weighted variance.
+        use_grads : bool
+            Use gradients, not only samples to estimate the mass matrix.
+        stop_adaptation : int
+            Stop the mass matrix adaptation after this many samples.
+        dtype : np.dtype
+            The dtype used to store the mass matrix
+        discard_window : int
+            The number of initial samples that are just discarded and not used to estimate
+            the mass matrix.
+        store_mass_matrix_trace : bool
+            If true, store the mass matrix at each step of the adaptation. Only for debugging
+            purposes.
+        """
+        if len(args) > 3:
+            raise ValueError("Unsupported arguments to QuadPotentialDiagAdaptExp")
+
+        super().__init__(*args, **kwargs)
+        self._alpha = alpha
+        self._use_grads = use_grads
+
+        if stop_adaptation is None:
+            stop_adaptation = np.inf
+        self._stop_adaptation = stop_adaptation
+
+    def update(self, sample, grad, tune):
+        if tune and self._n_samples < self._stop_adaptation:
+            if self._n_samples > self._discard_window:
+                self._variance_estimator.add_sample(sample)
+                if self._use_grads:
+                    self._variance_estimator_grad.add_sample(grad)
+            elif self._n_samples == self._discard_window:
+                self._variance_estimator = _ExpWeightedVariance(
+                    self._n,
+                    init_mean=sample.copy(),
+                    init_var=np.zeros_like(sample),
+                    alpha=self._alpha,
+                )
+                if self._use_grads:
+                    self._variance_estimator_grad = _ExpWeightedVariance(
+                        self._n,
+                        init_mean=grad.copy(),
+                        init_var=np.zeros_like(grad),
+                        alpha=self._alpha,
+                    )
+
+            if self._n_samples > 2 * self._discard_window:
+                if self._use_grads:
+                    self._update_from_variances(
+                        self._variance_estimator, self._variance_estimator_grad
+                    )
+                else:
+                    self._update_from_weightvar(self._variance_estimator)
+
+            self._n_samples += 1
+
+        if self._store_mass_matrix_trace:
+            self._mass_trace.append(self._stds.copy())
+
+    def _update_from_variances(self, var_estimator, inv_var_estimator):
+        var = var_estimator.current_variance()
+        inv_var = inv_var_estimator.current_variance()
+        updated = np.sqrt(var / inv_var)
+        self._var[:] = updated
+        np.sqrt(updated, out=self._stds)
+        np.divide(1, self._stds, out=self._inv_stds)
 
 
 class QuadPotentialDiag(QuadPotential):
@@ -554,8 +663,8 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         # Steps since previous update
         delta = self._n_samples - self._previous_update
 
-        self._foreground_cov.add_sample(sample, weight=1)
-        self._background_cov.add_sample(sample, weight=1)
+        self._foreground_cov.add_sample(sample)
+        self._background_cov.add_sample(sample)
 
         # Update the covariance matrix and recompute the Cholesky factorization
         # every "update_window" steps
@@ -614,13 +723,13 @@ class _WeightedCovariance:
         if self.mean.shape != (nelem,):
             raise ValueError("Invalid shape for initial mean.")
 
-    def add_sample(self, x, weight):
+    def add_sample(self, x):
         x = np.asarray(x)
         self.n_samples += 1
         old_diff = x - self.mean
         self.mean[:] += old_diff / self.n_samples
         new_diff = x - self.mean
-        self.raw_cov[:] += weight * new_diff[:, None] * old_diff[None, :]
+        self.raw_cov[:] += new_diff[:, None] * old_diff[None, :]
 
     def current_covariance(self, out=None):
         if self.n_samples == 0:
