@@ -3262,3 +3262,28 @@ def test_distinct_rvs():
         pp_samples_2 = pm.sample_prior_predictive(samples=2)
 
     assert np.array_equal(pp_samples["y"], pp_samples_2["y"])
+
+
+@pytest.mark.parametrize(
+    "method,newcode",
+    [
+        ("logp", r"pm.logp\(rv, x\)"),
+        ("logcdf", r"pm.logcdf\(rv, x\)"),
+        ("random", r"rv.eval\(\)"),
+    ],
+)
+def test_logp_gives_migration_instructions(method, newcode):
+    rv = pm.Normal.dist()
+    f = getattr(rv, method)
+    with pytest.raises(AttributeError, match=rf"use `{newcode}`"):
+        f()
+
+    # A dim-induced resize of the rv created by the `.dist()` API,
+    # happening in Distribution.__new__ would make us loose the monkeypatches.
+    # So this triggers it to test if the monkeypatch still works.
+    with pm.Model(coords={"year": [2019, 2021, 2022]}):
+        rv = pm.Normal("n", dims="year")
+        f = getattr(rv, method)
+        with pytest.raises(AttributeError, match=rf"use `{newcode}`"):
+            f()
+    pass
