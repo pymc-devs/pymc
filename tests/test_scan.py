@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from aesara.scan.utils import ScanArgs
 
-from aeppl.joint_logprob import joint_logprob
+from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
 from aeppl.logprob import logprob
 from aeppl.scan import construct_scan, convert_outer_out_to_in, get_random_outer_outputs
 from tests.utils import assert_no_rvs
@@ -341,3 +341,53 @@ def test_scan_joint_logprob(require_inner_rewrites):
     y_logp_ref_val = y_logp_ref.eval(test_point)
 
     assert np.allclose(y_logp_val, y_logp_ref_val)
+
+
+@aesara.config.change_flags(compute_test_value="raise")
+def test_initial_values():
+    srng = at.random.RandomStream(seed=2320)
+
+    p_S_0 = np.array([0.9, 0.1])
+    S_0_rv = srng.categorical(p_S_0, name="S_0")
+    S_0_rv.tag.test_value = 0
+
+    Gamma_at = at.matrix("Gamma")
+    Gamma_at.tag.test_value = np.array([[0, 1], [1, 0]])
+
+    s_0_vv = S_0_rv.clone()
+    s_0_vv.name = "s_0"
+
+    def step_fn(S_tm1, Gamma):
+        S_t = srng.categorical(Gamma[S_tm1], name="S_t")
+        return S_t
+
+    S_1T_rv, _ = aesara.scan(
+        fn=step_fn,
+        outputs_info=[{"initial": S_0_rv, "taps": [-1]}],
+        non_sequences=[Gamma_at],
+        strict=True,
+        n_steps=10,
+        name="S_0T",
+    )
+
+    S_1T_rv.name = "S_1T"
+    s_1T_vv = S_1T_rv.clone()
+    s_1T_vv.name = "s_1T"
+
+    logp_parts = factorized_joint_logprob({S_1T_rv: s_1T_vv, S_0_rv: s_0_vv})
+
+    s_0_val = 0
+    s_1T_val = np.array([1, 0, 1, 0, 1, 1, 0, 1, 0, 1])
+    Gamma_val = np.array([[0.1, 0.9], [0.9, 0.1]])
+
+    exp_res = np.log(p_S_0[s_0_val])
+    s_prev = s_0_val
+    for s in s_1T_val:
+        exp_res += np.log(Gamma_val[s_prev, s])
+        s_prev = s
+
+    S_0T_logp = sum(v.sum() for v in logp_parts.values())
+    S_0T_logp_fn = aesara.function([s_0_vv, s_1T_vv, Gamma_at], S_0T_logp)
+    res = S_0T_logp_fn(s_0_val, s_1T_val, Gamma_val)
+
+    assert res == pytest.approx(exp_res)
