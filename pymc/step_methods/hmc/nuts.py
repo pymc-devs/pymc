@@ -16,14 +16,14 @@ from collections import namedtuple
 
 import numpy as np
 
-from pymc3.aesaraf import floatX
-from pymc3.backends.report import SamplerWarning, WarningType
-from pymc3.distributions.bart import BARTRV
-from pymc3.math import logbern, logdiffexp_numpy
-from pymc3.step_methods.arraystep import Competence
-from pymc3.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
-from pymc3.step_methods.hmc.integration import IntegrationError
-from pymc3.vartypes import continuous_types
+from pymc.aesaraf import floatX
+from pymc.backends.report import SamplerWarning, WarningType
+from pymc.distributions.bart import BARTRV
+from pymc.math import logbern, logdiffexp_numpy
+from pymc.step_methods.arraystep import Competence
+from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
+from pymc.step_methods.hmc.integration import IntegrationError
+from pymc.vartypes import continuous_types
 
 __all__ = ["NUTS"]
 
@@ -157,7 +157,7 @@ class NUTS(BaseHMC):
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods. It can be specified instead
             of the scaling matrix.
-        model: pymc3.Model
+        model: pymc.Model
             The model
         kwargs: passed to BaseHMC
 

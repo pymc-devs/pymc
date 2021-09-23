@@ -14,8 +14,8 @@
 
 from aesara import tensor as at
 
-from pymc3.aesaraf import floatX
-from pymc3.variational.opvi import TestFunction
+from pymc.aesaraf import floatX
+from pymc.variational.opvi import TestFunction
 
 __all__ = ["rbf"]
 

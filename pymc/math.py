@@ -85,7 +85,7 @@ except ImportError:
 from aesara.tensor.nlinalg import det, matrix_dot, matrix_inverse, trace
 from scipy.linalg import block_diag as scipy_block_diag
 
-from pymc3.aesaraf import floatX, ix_, largest_common_dtype
+from pymc.aesaraf import floatX, ix_, largest_common_dtype
 
 # pylint: enable=unused-import
 
@@ -204,7 +204,7 @@ def invlogit(x, eps=None):
     """The inverse of the logit function, 1 / (1 + exp(-x))."""
     if eps is not None:
         warnings.warn(
-            "pymc3.math.invlogit no longer supports the ``eps`` argument and it will be ignored.",
+            "pymc.math.invlogit no longer supports the ``eps`` argument and it will be ignored.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -237,8 +237,8 @@ def log1mexp(x, *, negative_input=False):
     """
     if not negative_input:
         warnings.warn(
-            "pymc3.math.log1mexp will expect a negative input in a future "
-            "version of PyMC3.\n To suppress this warning set `negative_input=True`",
+            "pymc.math.log1mexp will expect a negative input in a future "
+            "version of PyMC.\n To suppress this warning set `negative_input=True`",
             FutureWarning,
             stacklevel=2,
         )
@@ -257,8 +257,8 @@ def log1mexp_numpy(x, *, negative_input=False):
 
     if not negative_input:
         warnings.warn(
-            "pymc3.math.log1mexp_numpy will expect a negative input in a future "
-            "version of PyMC3.\n To suppress this warning set `negative_input=True`",
+            "pymc.math.log1mexp_numpy will expect a negative input in a future "
+            "version of PyMC.\n To suppress this warning set `negative_input=True`",
             FutureWarning,
             stacklevel=2,
         )

@@ -19,15 +19,15 @@ from collections import OrderedDict
 import aesara
 import aesara.tensor as at
 
-from pymc3.aesaraf import at_rng, make_shared_replacements
-from pymc3.model import inputvars, modelcontext
-from pymc3.step_methods.arraystep import ArrayStepShared
+from pymc.aesaraf import at_rng, make_shared_replacements
+from pymc.model import inputvars, modelcontext
+from pymc.step_methods.arraystep import ArrayStepShared
 
 __all__ = []
 
 EXPERIMENTAL_WARNING = (
     "Warning: Stochastic Gradient based sampling methods are experimental step methods and not yet"
-    " recommended for use in PyMC3!"
+    " recommended for use in PyMC!"
 )
 
 

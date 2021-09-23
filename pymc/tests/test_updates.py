@@ -16,7 +16,7 @@ import aesara
 import numpy as np
 import pytest
 
-from pymc3.variational.updates import (
+from pymc.variational.updates import (
     adadelta,
     adagrad,
     adagrad_window,

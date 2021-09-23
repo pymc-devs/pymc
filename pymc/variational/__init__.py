@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 # commonly used
-from pymc3.variational import (
+from pymc.variational import (
     approximations,
     callbacks,
     flows,
@@ -23,14 +23,14 @@ from pymc3.variational import (
     test_functions,
     updates,
 )
-from pymc3.variational.approximations import (
+from pymc.variational.approximations import (
     Empirical,
     FullRank,
     MeanField,
     NormalizingFlow,
     sample_approx,
 )
-from pymc3.variational.inference import (
+from pymc.variational.inference import (
     ADVI,
     ASVGD,
     NFVI,
@@ -41,11 +41,11 @@ from pymc3.variational.inference import (
     KLqp,
     fit,
 )
-from pymc3.variational.opvi import Approximation, Group
+from pymc.variational.opvi import Approximation, Group
 
 # special
-from pymc3.variational.stein import Stein
-from pymc3.variational.updates import (
+from pymc.variational.stein import Stein
+from pymc.variational.updates import (
     adadelta,
     adagrad,
     adagrad_window,

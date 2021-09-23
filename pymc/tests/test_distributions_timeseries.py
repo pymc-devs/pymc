@@ -15,12 +15,12 @@
 import numpy as np
 import pytest
 
-from pymc3.aesaraf import floatX
-from pymc3.distributions.continuous import Flat, Normal
-from pymc3.distributions.timeseries import AR, AR1, GARCH11, EulerMaruyama
-from pymc3.model import Model
-from pymc3.sampling import sample, sample_posterior_predictive
-from pymc3.tests.helpers import select_by_precision
+from pymc.aesaraf import floatX
+from pymc.distributions.continuous import Flat, Normal
+from pymc.distributions.timeseries import AR, AR1, GARCH11, EulerMaruyama
+from pymc.model import Model
+from pymc.sampling import sample, sample_posterior_predictive
+from pymc.tests.helpers import select_by_precision
 
 # pytestmark = pytest.mark.usefixtures("seeded_test")
 pytestmark = pytest.mark.xfail(reason="Timeseries not refactored")

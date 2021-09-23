@@ -20,10 +20,10 @@ import numpy as np
 
 from aesara.compile.ops import as_op
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3 import Categorical, Metropolis, Model, Normal
-from pymc3.aesaraf import floatX_array
+from pymc import Categorical, Metropolis, Model, Normal
+from pymc.aesaraf import floatX_array
 
 
 def simple_model():

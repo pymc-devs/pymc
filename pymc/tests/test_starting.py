@@ -15,7 +15,7 @@
 import numpy as np
 import pytest
 
-from pymc3 import (
+from pymc import (
     Beta,
     Binomial,
     Deterministic,
@@ -26,10 +26,10 @@ from pymc3 import (
     Uniform,
     find_MAP,
 )
-from pymc3.tests.checks import close_to
-from pymc3.tests.helpers import select_by_precision
-from pymc3.tests.models import non_normal, simple_arbitrary_det, simple_model
-from pymc3.tuning import starting
+from pymc.tests.checks import close_to
+from pymc.tests.helpers import select_by_precision
+from pymc.tests.models import non_normal, simple_arbitrary_det, simple_model
+from pymc.tuning import starting
 
 
 def test_accuracy_normal():
@@ -102,7 +102,7 @@ def test_find_MAP():
 
 
 def test_find_MAP_issue_4488():
-    # Test for https://github.com/pymc-devs/pymc3/issues/4488
+    # Test for https://github.com/pymc-devs/pymc/issues/4488
     with Model() as m:
         x = Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
         y = Deterministic("y", x + 1)

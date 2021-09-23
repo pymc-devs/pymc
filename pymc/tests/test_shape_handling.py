@@ -18,9 +18,9 @@ import pytest
 
 from aesara import tensor as at
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.distributions.shape_utils import (
+from pymc.distributions.shape_utils import (
     broadcast_dist_samples_shape,
     broadcast_dist_samples_to,
     broadcast_distribution_samples,
@@ -31,7 +31,7 @@ from pymc3.distributions.shape_utils import (
     shapes_broadcasting,
     to_tuple,
 )
-from pymc3.exceptions import ShapeWarning
+from pymc.exceptions import ShapeWarning
 
 test_shapes = [
     (tuple(), (1,), (4,), (5, 4)),

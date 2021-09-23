@@ -15,11 +15,11 @@ import aesara
 
 from aesara import tensor as at
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.variational import opvi
-from pymc3.variational.opvi import ObjectiveFunction, Operator
-from pymc3.variational.stein import Stein
+from pymc.variational import opvi
+from pymc.variational.opvi import ObjectiveFunction, Operator
+from pymc.variational.stein import Stein
 
 __all__ = ["KL", "KSD"]
 

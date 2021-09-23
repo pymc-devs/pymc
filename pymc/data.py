@@ -30,9 +30,9 @@ from aesara.graph.basic import Apply
 from aesara.tensor.type import TensorType
 from aesara.tensor.var import TensorVariable
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import pandas_to_array
+from pymc.aesaraf import pandas_to_array
 
 __all__ = [
     "get_data",
@@ -56,7 +56,7 @@ def get_data(filename):
     -------
     BytesIO of the data
     """
-    data_pkg = "pymc3.tests"
+    data_pkg = "pymc.tests"
     try:
         content = pkgutil.get_data(data_pkg, os.path.join("data", filename))
     except FileNotFoundError:
@@ -159,7 +159,7 @@ class Minibatch(TensorVariable):
     Notes
     -----
     Below is a common use case of Minibatch with variational inference.
-    Importantly, we need to make PyMC3 "aware" that a minibatch is being used in inference.
+    Importantly, we need to make PyMC "aware" that a minibatch is being used in inference.
     Otherwise, we will get the wrong :math:`logp` for the model.
     the density of the model ``logp`` that is affected by Minibatch. See more in the examples below.
     To do so, we need to pass the ``total_size`` parameter to the observed node, which correctly scales
@@ -276,7 +276,7 @@ class Minibatch(TensorVariable):
 
     >>> moredata = np.random.rand(10, 20, 30, 40, 50)
 
-    The default ``total_size`` that can be passed to ``PyMC3`` random node
+    The default ``total_size`` that can be passed to PyMC random node
     is then ``(10, 20, 30, 40, 50)`` but can be less verbose in some cases
 
     1. Advanced indexing, ``total_size = (10, Ellipsis, 50)``
@@ -486,7 +486,7 @@ class Data:
     Examples
     --------
 
-    >>> import pymc3 as pm
+    >>> import pymc as pm
     >>> import numpy as np
     >>> # We generate 10 datasets
     >>> true_mu = [np.random.randn() for _ in range(10)]
@@ -506,7 +506,7 @@ class Data:
     ...         idatas.append(pm.sample())
 
     To set the value of the data container variable, check out
-    :func:`pymc3.model.set_data()`.
+    :func:`pymc.model.set_data()`.
 
     For more information, take a look at this example notebook
     https://docs.pymc.io/notebooks/data_container.html
@@ -527,7 +527,7 @@ class Data:
         name = model.name_for(name)
 
         # `pandas_to_array` takes care of parameter `value` and
-        # transforms it to something digestible for pymc3
+        # transforms it to something digestible for pymc
         shared_object = aesara.shared(pandas_to_array(value), name)
 
         if isinstance(dims, str):

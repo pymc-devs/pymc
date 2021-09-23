@@ -1,10 +1,10 @@
 # Implementing a Distribution (developer guide)
 
-This guide provides an overview on how to implement a distribution for version 4 of PyMC3.
+This guide provides an overview on how to implement a distribution for version 4 of PyMC.
 It is designed for developers who wish to add a new distribution to the library.
 Users will not be aware of all this complexity and should instead make use of helper methods such as (TODO).
 
-PyMC3 {class}`~pymc3.distributions.Distribution` build on top of Aesara's {class}`~aesara.tensor.random.op.RandomVariable`, and implement `logp` and `logcdf` methods as well as other initialization and validation helpers, most notably `shape/dims`, alternative parametrizations, and default `transforms`.
+PyMC {class}`~pymc.distributions.Distribution` build on top of Aesara's {class}`~aesara.tensor.random.op.RandomVariable`, and implement `logp` and `logcdf` methods as well as other initialization and validation helpers, most notably `shape/dims`, alternative parametrizations, and default `transforms`.
 
 Here is a summary check-list of the steps needed to implement a new distribution.
 Each section will be expanded below:
@@ -19,11 +19,11 @@ This guide does not attempt to explain the rationale behind the `Distributions` 
 
 ## 1. Creating a new `RandomVariable` `Op`
 
-{class}`~aesara.tensor.random.op.RandomVariable` are responsible for implementing the random sampling methods, which in version 3 of PyMC3 used to be one of the standard `Distribution` methods, alongside `logp` and `logcdf`.
+{class}`~aesara.tensor.random.op.RandomVariable` are responsible for implementing the random sampling methods, which in version 3 of PyMC used to be one of the standard `Distribution` methods, alongside `logp` and `logcdf`.
 The `RandomVariable` is also responsible for parameter broadcasting and shape inference.
 
 Before creating a new `RandomVariable` make sure that it is not offered in the [Numpy library](https://numpy.org/doc/stable/reference/random/generator.html#distributions).
-If it is, it should be added to the [Aesara library](https://github.com/aesara-devs/aesara) first and then imported into the PyMC3 library.
+If it is, it should be added to the [Aesara library](https://github.com/aesara-devs/aesara) first and then imported into the PyMC library.
 
 In addition, it might not always be necessary to implement a new `RandomVariable`.
 For example if the new `Distribution` is just a special parametrization of an existing `Distribution`.
@@ -86,11 +86,11 @@ blah = BlahRV()
 Some important things to keep in mind:
 
 1. Everything inside the `rng_fn` method is pure Python code (as are the inputs) and should not make use of other `Aesara` symbolic ops. The random method should make use of the `rng` which is a Numpy    {class}`~numpy.random.RandomState`, so that samples are reproducible.
-1. The `size` argument (together with the inputs shape) are the only way for the user to specify non-default `RandomVariable` dimensions. The `rng_fn` will have to take this into consideration for correct output. `size` is the specification used by `Numpy` and `Scipy` and works like PyMC3 `shape` for univariate distributions, but is different for multivariate distributions. Unfortunately there is no general reference documenting how `size` ought to work for multivariate distributions. This [discussion](https://github.com/numpy/numpy/issues/17669) may be helpful to get more context.
-1. `Aesara` tries to infer the output shape of the `RandomVariable` (given a user-specified size) by introspection of the `ndim_supp` and `ndim_params` attributes. However, the default method may not work for more complex distributions. In that case, custom `_shape_from_params` (and less probably, `_infer_shape`) should also be implemented in the new `RandomVariable` class. One simple example is seen in the {class}`~pymc3.distributions.multivariate.DirichletMultinomialRV` where it was necessary to specify the `rep_param_idx` so that the `default_shape_from_params` helper method could do its job. In more complex cases, it may not be possible to make use of the default helper, but those have not been found yet!
-1. It's okay to use the `rng_fn` `classmethods` of other Aesara and PyMC3 `RandomVariables` inside the new `rng_fn`. For example if you are implementing a negative HalfNormal `RandomVariable`, your `rng_fn` can simply return `- halfnormal.rng_fn(rng, scale, size)`.
+1. The `size` argument (together with the inputs shape) are the only way for the user to specify non-default `RandomVariable` dimensions. The `rng_fn` will have to take this into consideration for correct output. `size` is the specification used by `Numpy` and `Scipy` and works like PyMC `shape` for univariate distributions, but is different for multivariate distributions. Unfortunately there is no general reference documenting how `size` ought to work for multivariate distributions. This [discussion](https://github.com/numpy/numpy/issues/17669) may be helpful to get more context.
+1. `Aesara` tries to infer the output shape of the `RandomVariable` (given a user-specified size) by introspection of the `ndim_supp` and `ndim_params` attributes. However, the default method may not work for more complex distributions. In that case, custom `_shape_from_params` (and less probably, `_infer_shape`) should also be implemented in the new `RandomVariable` class. One simple example is seen in the {class}`~pymc.distributions.multivariate.DirichletMultinomialRV` where it was necessary to specify the `rep_param_idx` so that the `default_shape_from_params` helper method could do its job. In more complex cases, it may not be possible to make use of the default helper, but those have not been found yet!
+1. It's okay to use the `rng_fn` `classmethods` of other Aesara and PyMC `RandomVariables` inside the new `rng_fn`. For example if you are implementing a negative HalfNormal `RandomVariable`, your `rng_fn` can simply return `- halfnormal.rng_fn(rng, scale, size)`.
 
-*Note: In addition to `size`, the `PyMC3` API also provides `shape` and `dims` as alternatives to define a distribution dimensionality, but this is taken care of by {class}`~pymc3.distributions.Distribution`, and should not require any extra changes.*
+*Note: In addition to `size`, the PyMC API also provides `shape` and `dims` as alternatives to define a distribution dimensionality, but this is taken care of by {class}`~pymc.distributions.Distribution`, and should not require any extra changes.*
 
 For a quick test that your new `RandomVariable` `Op` is working, you can call the `Op` with the necessary parameters and then call `eval()` on the returned object:
 
@@ -112,10 +112,10 @@ blah([0, 0], [1, 2], size=(10, 2)).eval()
 
 ```
 
-## 2. Inheriting from a PyMC3 base `Distribution` class
+## 2. Inheriting from a PyMC base `Distribution` class
 
-After implementing the new `RandomVariable` `Op`, it's time to make use of it in a new PyMC3 {class}`pymc3.distributions.Distribution`.
-PyMC3 works in a very {term}`functional <Functional Programming>` way, and the `distribution` classes are there mostly to facilitate porting the `v3` code to the new `v4` version, add PyMC3 API features and keep related methods organized together.
+After implementing the new `RandomVariable` `Op`, it's time to make use of it in a new PyMC {class}`pymc.distributions.Distribution`.
+PyMC works in a very {term}`functional <Functional Programming>` way, and the `distribution` classes are there mostly to facilitate porting the `v3` code to the new `v4` version, add PyMC API features and keep related methods organized together.
 In practice, they take care of:
 
 1. Linking ({term}`Dispatching`) a rv_op class with the corresponding logp and logcdf methods.
@@ -127,9 +127,9 @@ Here is how the example continues:
 
 ```python
 
-from pymc3.aesaraf import floatX, intX
-from pymc3.distributions.continuous import PositiveContinuous
-from pymc3.distributions.dist_math import bound
+from pymc.aesaraf import floatX, intX
+from pymc.distributions.continuous import PositiveContinuous
+from pymc.distributions.dist_math import bound
 
 # Subclassing `PositiveContinuous` will dispatch a default `log` transformation
 class Blah(PositiveContinuous):
@@ -183,8 +183,8 @@ class Blah(PositiveContinuous):
 
 Some notes:
 
-1. A distribution should at the very least inherit from {class}`~pymc3.distributions.Discrete` or {class}`~pymc3.distributions.Continuous`. For the latter, more specific subclasses exist: `PositiveContinuous`, `UnitContinuous`, `BoundedContinuous`, `CircularContinuous`, which specify default transformations for the variables. If you need to specify a one-time custom transform you can also override the `__new__` method, as is done for the {class}`~pymc3.distributions.multivariate.Dirichlet`.
-1. If a distribution does not have a corresponding `random` implementation, a `RandomVariable` should still be created that raises a `NotImplementedError`. This is the case for the {class}`~pymc3.distributions.continuous.Flat`. In this case it will be necessary to provide a standard `initval` by
+1. A distribution should at the very least inherit from {class}`~pymc.distributions.Discrete` or {class}`~pymc.distributions.Continuous`. For the latter, more specific subclasses exist: `PositiveContinuous`, `UnitContinuous`, `BoundedContinuous`, `CircularContinuous`, which specify default transformations for the variables. If you need to specify a one-time custom transform you can also override the `__new__` method, as is done for the {class}`~pymc.distributions.multivariate.Dirichlet`.
+1. If a distribution does not have a corresponding `random` implementation, a `RandomVariable` should still be created that raises a `NotImplementedError`. This is the case for the {class}`~pymc.distributions.continuous.Flat`. In this case it will be necessary to provide a standard `initval` by
    overriding `__new__`.
 1. As mentioned above, `v4` works in a very {term}`functional <Functional Programming>` way, and all the information that is needed in the `logp` and `logcdf` methods is expected to be "carried" via the `RandomVariable` inputs. You may pass numerical arguments that are not strictly needed for the `rng_fn` method but are used in the `logp` and `logcdf` methods. Just keep in mind whether this affects the correct shape inference behavior of the `RandomVariable`. If specialized non-numeric information is needed you might need to define your custom`_logp` and `_logcdf` {term}`Dispatching` functions, but this should be done as a last resort.
 1. The `logcdf` method is not a requirement, but it's a nice plus!
@@ -193,7 +193,7 @@ For a quick check that things are working you can try the following:
 
 ```python
 
-import pymc3 as pm
+import pymc as pm
 
 # pm.blah = pm.Uniform in this example
 blah = pm.Blah.dist([0, 0], [1, 2])
@@ -213,7 +213,7 @@ pm.logcdf(blah, [1.5, 1.5]).eval()
 
 ## 3. Adding tests for the new `RandomVariable`
 
-Tests for new `RandomVariables` are mostly located in `pymc3/tests/test_distributions_random.py`.
+Tests for new `RandomVariables` are mostly located in `pymc/tests/test_distributions_random.py`.
 Most tests can be accommodated by the default `BaseTestDistribution` class, which provides default tests for checking:
 1. Expected inputs are passed to the `rv_op` by the `dist` `classmethod`, via `check_pymc_params_match_rv_op`
 1. Expected (exact) draws are being returned, via `check_pymc_draws_match_reference`
@@ -224,7 +224,7 @@ Most tests can be accommodated by the default `BaseTestDistribution` class, whic
 class TestBlah(BaseTestDistribution):
 
     pymc_dist = pm.Blah
-    # Parameters with which to test the blah pymc3 Distribution
+    # Parameters with which to test the blah pymc Distribution
     pymc_dist_params = {"param1": 0.25, "param2": 2.0}
     # Parameters that are expected to have passed as inputs to the RandomVariable op
     expected_rv_op_params = {"param1": 0.25, "param2": 2.0}
@@ -258,7 +258,7 @@ class TestBlahAltParam2(BaseTestDistribution):
 
 ```
 
-Custom tests can also be added to the class as is done for the {class}`~pymc3.tests.test_random.TestFlat`.
+Custom tests can also be added to the class as is done for the {class}`~pymc.tests.test_random.TestFlat`.
 
 ### Note on `check_rv_size` test:
 
@@ -271,28 +271,28 @@ tests_to_run = ["check_rv_size"]
 ```
 
 This is usually needed for Multivariate distributions.
-You can see an example in {class}`~pymc3.test.test_random.TestDirichlet`.
+You can see an example in {class}`~pymc.test.test_random.TestDirichlet`.
 
 ### Notes on `check_pymcs_draws_match_reference` test
 
 The `check_pymcs_draws_match_reference` is a very simple test for the equality of draws from the `RandomVariable` and the exact same python function, given the same inputs and random seed.
 A small number (`size=15`) is checked. This is not supposed to be a test for the correctness of the random generator.
-The latter kind of test (if warranted) can be performed with the aid of `pymc3_random` and `pymc3_random_discrete` methods in the same test file, which will perform an expensive statistical comparison between the RandomVariable `rng_fn` and a reference Python function.
+The latter kind of test (if warranted) can be performed with the aid of `pymc_random` and `pymc_random_discrete` methods in the same test file, which will perform an expensive statistical comparison between the RandomVariable `rng_fn` and a reference Python function.
 This kind of test only makes sense if there is a good independent generator reference (i.e., not just the same composition of numpy / scipy python calls that is done inside `rng_fn`).
 
 Finally, when your `rng_fn` is doing something more than just calling a `numpy` or `scipy` method, you will need to setup an equivalent seeded function with which to compare for the exact draws (instead of relying on `seeded_[scipy|numpy]_distribution_builder`).
-You can find an example in {class}`~pymc3.tests.test_distributions_random.TestWeibull`, whose `rng_fn` returns `beta * np.random.weibull(alpha, size=size)`.
+You can find an example in {class}`~pymc.tests.test_distributions_random.TestWeibull`, whose `rng_fn` returns `beta * np.random.weibull(alpha, size=size)`.
 
 
 ## 4. Adding tests for the `logp` / `logcdf` methods
 
-Tests for the `logp` and `logcdf` methods are contained in `pymc3/tests/test_distributions.py`, and most make use of the `TestMatchesScipy` class, which provides `check_logp`, `check_logcdf`, and
+Tests for the `logp` and `logcdf` methods are contained in `pymc/tests/test_distributions.py`, and most make use of the `TestMatchesScipy` class, which provides `check_logp`, `check_logcdf`, and
 `check_selfconsistency_discrete_logcdf` standard methods.
 These will suffice for most distributions.
 
 ```python
 
-from pymc3.tests.helpers import select_by_precision
+from pymc.tests.helpers import select_by_precision
 
 R = Domain([-np.inf, -2.1, -1, -0.01, 0.0, 0.01, 1, 2.1, np.inf])
 Rplus = Domain([0, 0.01, 0.1, 0.9, 0.99, 1, 1.5, 2, 100, np.inf])
@@ -302,21 +302,21 @@ Rplus = Domain([0, 0.01, 0.1, 0.9, 0.99, 1, 1.5, 2, 100, np.inf])
 def test_blah(self):
 
   self.check_logp(
-      pymc3_dist=pm.Blah,
+      pymc_dist=pm.Blah,
       # Domain of the distribution values
       domain=R,
       # Domains of the distribution parameters
       paramdomains={"mu": R, "sigma": Rplus},
       # Reference scipy (or other) logp function
       scipy_logp = lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma),
-      # Number of decimal points expected to match between the pymc3 and reference functions
+      # Number of decimal points expected to match between the pymc and reference functions
       decimal=select_by_precision(float64=6, float32=3),
       # Maximum number of combinations of domain * paramdomains to test
       n_samples=100,
   )
 
   self.check_logcdf(
-      pymc3_dist=pm.Blah,
+      pymc_dist=pm.Blah,
       domain=R,
       paramdomains={"mu": R, "sigma": Rplus},
       scipy_logcdf=lambda value, mu, sigma: sp.norm.logcdf(value, mu, sigma),
@@ -326,13 +326,13 @@ def test_blah(self):
 
 ```
 
-These methods will perform a grid evaluation on the combinations of domain and paramdomains values, and check that the pymc3 methods and the reference functions match.
+These methods will perform a grid evaluation on the combinations of domain and paramdomains values, and check that the pymc methods and the reference functions match.
 There are a couple of details worth keeping in mind:
 
 1. By default the first and last values (edges) of the `Domain` are not compared (they are used for other things). If it is important to test the edge of the `Domain`, the edge values can be repeated. This is done by the `Bool`: `Bool = Domain([0, 0, 1, 1], "int64")`
 1. There are some default domains (such as `R` and `Rplus`) that you can use for testing your new distribution, but it's also perfectly fine to create your own domains inside the test function if there is a good reason for it (e.g., when the default values lead too many extreme unlikely combinations that are not very informative about the correctness of the implementation).
 1. By default, a random subset of 100 `param` x `paramdomain` combinations is tested, in order to keep the test runtime under control. When testing your shiny new distribution, you can temporarily set `n_samples=-1` to force all combinations to be tested. This is important to avoid the your `PR` leading to surprising failures in future runs whenever some bad combinations of parameters are randomly tested.
-1. On Github all tests are run twice, under the `aesara.config.floatX` flags of `"float64"` and `"float32"`. However, the reference Python functions will run in a pure "float64" environment, which means the reference and the `PyMC3` results can diverge quite a lot (e.g., underflowing to `-np.inf` for extreme parameters). You should therefore make sure you test locally in both regimes. A quick and dirty way of doing this is to temporariliy add `aesara.config.floatX = "float32"` at the very top of file, immediately after `import aesara`. Remember to set `n_samples=-1` as well to test all combinations. The test output will show what exact parameter values lead to a failure. If you are confident that your implementation is correct, you may opt to tweak the decimal precision with `select_by_precision`, or adjust the tested `Domain` values. In extreme cases, you can mark the test with a conditional `xfail` (if only one of the sub-methods is failing, they should be separated, so that the `xfail` is as narrow as possible):
+1. On Github all tests are run twice, under the `aesara.config.floatX` flags of `"float64"` and `"float32"`. However, the reference Python functions will run in a pure "float64" environment, which means the reference and the PyMC results can diverge quite a lot (e.g., underflowing to `-np.inf` for extreme parameters). You should therefore make sure you test locally in both regimes. A quick and dirty way of doing this is to temporariliy add `aesara.config.floatX = "float32"` at the very top of file, immediately after `import aesara`. Remember to set `n_samples=-1` as well to test all combinations. The test output will show what exact parameter values lead to a failure. If you are confident that your implementation is correct, you may opt to tweak the decimal precision with `select_by_precision`, or adjust the tested `Domain` values. In extreme cases, you can mark the test with a conditional `xfail` (if only one of the sub-methods is failing, they should be separated, so that the `xfail` is as narrow as possible):
 
 ```python
 
@@ -413,5 +413,5 @@ It generally looks something like this:
  """
 ```
 
-The new distribution should be referenced in the respective API page in the `docs` module (e.g., `pymc3/docs/api/distributions.continuous.rst`).
+The new distribution should be referenced in the respective API page in the `docs` module (e.g., `pymc/docs/api/distributions.continuous.rst`).
 If appropriate, a new notebook example should be added to [pymc-examples](https://github.com/pymc-devs/pymc-examples/) illustrating how this distribution can be used and how it relates (and/or differs) from other distributions that users are more likely to be familiar with.

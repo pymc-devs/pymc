@@ -48,7 +48,7 @@ from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorVariable
 from pandas import Series
 
-from pymc3.aesaraf import (
+from pymc.aesaraf import (
     compile_rv_inplace,
     gradient,
     hessian,
@@ -56,14 +56,14 @@ from pymc3.aesaraf import (
     pandas_to_array,
     rvs_to_value_vars,
 )
-from pymc3.blocking import DictToArrayBijection, RaveledVars
-from pymc3.data import GenTensorVariable, Minibatch
-from pymc3.distributions import logp_transform, logpt, logpt_sum
-from pymc3.distributions.transforms import Transform
-from pymc3.exceptions import ImputationWarning, SamplingError, ShapeError
-from pymc3.math import flatten_list
-from pymc3.util import UNSET, WithMemoization, get_var_name, treedict, treelist
-from pymc3.vartypes import continuous_types, discrete_types, typefilter
+from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.data import GenTensorVariable, Minibatch
+from pymc.distributions import logp_transform, logpt, logpt_sum
+from pymc.distributions.transforms import Transform
+from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
+from pymc.math import flatten_list
+from pymc.util import UNSET, WithMemoization, get_var_name, treedict, treelist
+from pymc.vartypes import continuous_types, discrete_types, typefilter
 
 __all__ = [
     "Model",
@@ -659,7 +659,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.deterministics = treelist()
             self.potentials = treelist()
 
-        from pymc3.printing import str_for_model
+        from pymc.printing import str_for_model
 
         self.str_repr = types.MethodType(str_for_model, self)
         self._repr_latex_ = types.MethodType(
@@ -1135,7 +1135,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         shared_object = self[name]
         if not isinstance(shared_object, SharedVariable):
             raise TypeError(
-                f"The variable `{name}` must be a `SharedVariable` (e.g. `pymc3.Data`) to allow updating. "
+                f"The variable `{name}` must be a `SharedVariable` (e.g. `pymc.Data`) to allow updating. "
                 f"The current type is: {type(shared_object)}"
             )
 
@@ -1620,7 +1620,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         ``KeyError`` if the parameters provided by `start` do not agree with the
         parameters contained within the model.
 
-        ``pymc3.exceptions.SamplingError`` if the evaluation of the parameters
+        ``pymc.exceptions.SamplingError`` if the evaluation of the parameters
         in ``start`` leads to an invalid (i.e. non-finite) state
 
         Returns
@@ -1708,7 +1708,7 @@ def set_data(new_data, model=None):
 
     .. code:: ipython
 
-        >>> import pymc3 as pm
+        >>> import pymc as pm
         >>> with pm.Model() as model:
         ...     x = pm.Data('x', [1., 2., 3.])
         ...     y = pm.Data('y', [1., 2., 3.])
@@ -1845,7 +1845,7 @@ def Deterministic(name, var, model=None, dims=None, auto=False):
         model.deterministics.append(var)
     model.add_random_variable(var, dims)
 
-    from pymc3.printing import str_for_potential_or_deterministic
+    from pymc.printing import str_for_potential_or_deterministic
 
     var.str_repr = types.MethodType(
         functools.partial(str_for_potential_or_deterministic, dist_name="Deterministic"), var
@@ -1878,7 +1878,7 @@ def Potential(name, var, model=None):
     model.potentials.append(var)
     model.add_random_variable(var)
 
-    from pymc3.printing import str_for_potential_or_deterministic
+    from pymc.printing import str_for_potential_or_deterministic
 
     var.str_repr = types.MethodType(
         functools.partial(str_for_potential_or_deterministic, dist_name="Potential"), var

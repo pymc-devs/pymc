@@ -12,5 +12,5 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc3.step_methods.hmc.hmc import HamiltonianMC
-from pymc3.step_methods.hmc.nuts import NUTS
+from pymc.step_methods.hmc.hmc import HamiltonianMC
+from pymc.step_methods.hmc.nuts import NUTS

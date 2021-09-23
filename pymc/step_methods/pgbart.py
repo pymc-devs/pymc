@@ -22,14 +22,14 @@ import numpy as np
 from aesara import function as aesara_function
 from pandas import DataFrame, Series
 
-from pymc3.aesaraf import inputvars, join_nonshared_inputs, make_shared_replacements
-from pymc3.blocking import RaveledVars
-from pymc3.distributions.bart import BARTRV
-from pymc3.distributions.tree import LeafNode, SplitNode, Tree
-from pymc3.model import modelcontext
-from pymc3.step_methods.arraystep import ArrayStepShared, Competence
+from pymc.aesaraf import inputvars, join_nonshared_inputs, make_shared_replacements
+from pymc.blocking import RaveledVars
+from pymc.distributions.bart import BARTRV
+from pymc.distributions.tree import LeafNode, SplitNode, Tree
+from pymc.model import modelcontext
+from pymc.step_methods.arraystep import ArrayStepShared, Competence
 
-_log = logging.getLogger("pymc3")
+_log = logging.getLogger("pymc")
 
 
 class PGBART(ArrayStepShared):
@@ -523,9 +523,9 @@ def logp(point, out_vars, vars, shared):
     Parameters
     ----------
     out_vars: List
-        containing :class:`pymc3.Distribution` for the output variables
+        containing :class:`pymc.Distribution` for the output variables
     vars: List
-        containing :class:`pymc3.Distribution` for the input variables
+        containing :class:`pymc.Distribution` for the input variables
     shared: List
         containing :class:`aesara.tensor.Tensor` for depended shared data
     """

@@ -17,10 +17,10 @@ import pytest
 
 from cachetools import cached
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.distributions.transforms import Transform
-from pymc3.util import UNSET, hash_key, hashable, locally_cachedmethod
+from pymc.distributions.transforms import Transform
+from pymc.util import UNSET, hash_key, hashable, locally_cachedmethod
 
 
 class TestTransformName:

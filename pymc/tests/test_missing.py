@@ -19,11 +19,11 @@ import pytest
 
 from numpy import array, ma
 
-from pymc3.distributions.continuous import Gamma, Normal, Uniform
-from pymc3.distributions.transforms import Interval
-from pymc3.exceptions import ImputationWarning
-from pymc3.model import Model
-from pymc3.sampling import sample, sample_posterior_predictive, sample_prior_predictive
+from pymc.distributions.continuous import Gamma, Normal, Uniform
+from pymc.distributions.transforms import Interval
+from pymc.exceptions import ImputationWarning
+from pymc.model import Model
+from pymc.sampling import sample, sample_posterior_predictive, sample_prior_predictive
 
 
 @pytest.mark.parametrize(

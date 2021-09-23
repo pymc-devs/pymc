@@ -21,9 +21,9 @@ from aesara.graph.basic import walk
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.util import get_default_varnames, get_var_name
+from pymc.util import get_default_varnames, get_var_name
 
 VarName = NewType("VarName", str)
 
@@ -183,7 +183,7 @@ class ModelGraph:
         return plates
 
     def make_graph(self, formatting: str = "plain"):
-        """Make graphviz Digraph of PyMC3 model
+        """Make graphviz Digraph of PyMC model
 
         Returns
         -------
@@ -217,7 +217,7 @@ class ModelGraph:
 
 
 def model_to_graphviz(model=None, *, formatting: str = "plain"):
-    """Produce a graphviz Digraph from a PyMC3 model.
+    """Produce a graphviz Digraph from a PyMC model.
 
     Requires graphviz, which may be installed most easily with
         conda install -c conda-forge python-graphviz

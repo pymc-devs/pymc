@@ -16,7 +16,7 @@ import aesara
 import numpy as np
 import pytest
 
-import pymc3 as pm
+import pymc as pm
 
 
 @pytest.fixture(scope="function", autouse=True)

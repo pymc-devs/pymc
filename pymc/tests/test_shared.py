@@ -15,9 +15,9 @@
 import aesara
 import numpy as np
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.tests.helpers import SeededTest
+from pymc.tests.helpers import SeededTest
 
 
 class TestShared(SeededTest):

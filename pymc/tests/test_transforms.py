@@ -19,14 +19,14 @@ import pytest
 
 from aesara.tensor.var import TensorConstant
 
-import pymc3 as pm
-import pymc3.distributions.transforms as tr
+import pymc as pm
+import pymc.distributions.transforms as tr
 
-from pymc3.aesaraf import jacobian
-from pymc3.distributions import logpt
-from pymc3.tests.checks import close_to, close_to_logical
-from pymc3.tests.helpers import SeededTest
-from pymc3.tests.test_distributions import (
+from pymc.aesaraf import jacobian
+from pymc.distributions import logpt
+from pymc.tests.checks import close_to, close_to_logical
+from pymc.tests.helpers import SeededTest
+from pymc.tests.test_distributions import (
     Circ,
     MultiSimplex,
     R,

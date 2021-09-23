@@ -1,5 +1,5 @@
 # Architecture
-This document describes the high-level architecture of PyMC3.
+This document describes the high-level architecture of PyMC.
 
 # Bird's Eye View
 [comment]: <> (https://drive.google.com/file/d/1lfEzokkNUJr_JIeSDQfha5a57pokz0qI)
@@ -7,7 +7,7 @@ This document describes the high-level architecture of PyMC3.
 Lets you define probabilistic graphs or models that can be easily used to compute log probabilities for posterior
 inference or to draw random samples for prior and posterior prediction.
 
-PyMC3 includes a few inference techniques, in particular:
+PyMC includes a few inference techniques, in particular:
 * Markov chain Monte Carlo
 * Variational Inference
 * Sequential Monte Carlo
@@ -15,13 +15,13 @@ PyMC3 includes a few inference techniques, in particular:
 It also contains numerous others pieces of functionality such as GraphviZ model visualization tools
 as well as various mathematical helper functions.
 
-The most central pieces functionality of PyMC3 are shown visually below, as well as their
+The most central pieces functionality of PyMC are shown visually below, as well as their
 relation to other major packages. Not all modules are shown, either because
 they are smaller or self explanatory in scope, or they're pending
 deprecation
 
-## Functionality not in PyMC3
-It is easier to start with functionality that is not present in PyMC3 but
+## Functionality not in PyMC
+It is easier to start with functionality that is not present in PyMC but
 rather deferred to outside libraries. If seeking to understand any
 of the topics below refer to that specific library
 
@@ -39,7 +39,7 @@ of the topics below refer to that specific library
 
 
 # Modules
-The codebase of PyMC3 is split among single Python file modules at the root
+The codebase of PyMC is split among single Python file modules at the root
 level, as well as directories with Python code for logical groups of functionality.
 Admittedly the split between single `.py` module or directory is not defined by a strict
 criteria but tends to occur when single `.py` files would be "too big".
@@ -56,12 +56,12 @@ with pm.Model() as model:
 
 ```
 
-## {mod}`pymc3.model`
+## {mod}`pymc.model`
 Contains primitives related model definition and methods used for evaluation of the model.
 In no particular order they are
 
 * `ContextMeta`: The context manager that enables the `with pm.Model() as model` syntax
-* {class}`~pymc3.Factor`: Defines the methods for the various logprobs for models
+* {class}`~pymc.Factor`: Defines the methods for the various logprobs for models
 * `ValueGrad` which handles the value and gradient and is the main connection point to Aesara
 * `Deterministic` and `Potential`: Definitions for two pieces of functionality useful in some model definitions
 
@@ -69,8 +69,8 @@ In no particular order they are
 Contains multiple submodules that define distributions,  as well as logic that aids in distributions usage.
 Important modules to note are
 
-* `distribution.py`: This contains parent class for all PyMC3 distributions.
-  Notably the `distribution.distribution` class contains the `observed` argument which in PyMC3 differentiates
+* `distribution.py`: This contains parent class for all PyMC distributions.
+  Notably the `distribution.distribution` class contains the `observed` argument which in PyMC differentiates
   a random variable distribution from a likelihood distribution.
 
 * `logprob.py`: This contains the log probability logic for the distributions themselves.

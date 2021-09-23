@@ -4,7 +4,7 @@
     _referenced in docs/source/notebooks/table_of_contents_tutorials.js
 
 =================================
-Advanced usage of Aesara in PyMC3
+Advanced usage of Aesara in PyMC
 =================================
 
 Using shared variables
@@ -26,7 +26,7 @@ later. They are very similar to global variables in may ways::
 Shared variables can also contain arrays, and are allowed to change
 their shape as long as the number of dimensions stays the same.
 
-We can use shared variables in PyMC3 to fit the same model to several
+We can use shared variables in PyMC to fit the same model to several
 datasets without the need to recreate the model each time (which can
 be time consuming if the number of datasets is large)::
 
@@ -48,7 +48,7 @@ be time consuming if the number of datasets is large)::
             idatas.append(pm.sample())
 
 We can also sometimes use shared variables to work around limitations
-in the current PyMC3 api. A common task in Machine Learning is to predict
+in the current PyMC api. A common task in Machine Learning is to predict
 values for unseen data, and one way to achieve this is to use a shared
 variable for our observations::
 
@@ -92,7 +92,7 @@ Good reasons for defining a custom `Op` might be the following:
   include models where you need to solve differential equations or
   integrals, or find a root or minimum of a function that depends
   on your parameters.
-- You want to connect your PyMC3 model to some existing external code.
+- You want to connect your PyMC model to some existing external code.
 - After carefully considering different parametrizations and a lot
   of profiling your model is still too slow, but you know of a faster
   way to compute the gradient than what Aesara is doing. This faster
@@ -211,7 +211,7 @@ If you value your sanity, always check that the gradient is ok::
 
 We can now define our model using this new `Op`::
 
-    import pymc3 as pm
+    import pymc as pm
 
     at_mu_from_theta = MuFromTheta()
 

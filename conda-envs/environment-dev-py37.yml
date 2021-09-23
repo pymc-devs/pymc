@@ -1,4 +1,4 @@
-name: pymc3-dev-py37
+name: pymc-dev-py37
 channels:
 - conda-forge
 - defaults

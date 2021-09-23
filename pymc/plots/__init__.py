@@ -37,9 +37,9 @@ def alias_deprecation(func, alias: str):
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         raise DeprecationWarning(
-            f"The function `{alias}` from PyMC3 was an alias for `{original}` from ArviZ. "
-            "It was removed in PyMC3 4.0. "
-            f"Switch to `pymc3.{original}` or `arviz.{original}`."
+            f"The function `{alias}` from PyMC was an alias for `{original}` from ArviZ. "
+            "It was removed in PyMC 4.0. "
+            f"Switch to `pymc.{original}` or `arviz.{original}`."
         )
 
     return wrapped
@@ -56,7 +56,7 @@ traceplot = alias_deprecation(az.plot_trace, alias="traceplot")
 compareplot = alias_deprecation(az.plot_compare, alias="compareplot")
 
 
-from pymc3.plots.posteriorplot import plot_posterior_predictive_glm
+from pymc.plots.posteriorplot import plot_posterior_predictive_glm
 
 __all__ = tuple(az.plots.__all__) + (
     "autocorrplot",

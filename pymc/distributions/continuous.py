@@ -70,9 +70,9 @@ from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
 
-from pymc3.aesaraf import floatX
-from pymc3.distributions import logp_transform, transforms
-from pymc3.distributions.dist_math import (
+from pymc.aesaraf import floatX
+from pymc.distributions import logp_transform, transforms
+from pymc.distributions.dist_math import (
     SplineWrapper,
     betaln,
     bound,
@@ -85,9 +85,9 @@ from pymc3.distributions.dist_math import (
     normal_lcdf,
     zvalue,
 )
-from pymc3.distributions.distribution import Continuous
-from pymc3.math import logdiffexp, logit
-from pymc3.util import UNSET
+from pymc.distributions.distribution import Continuous
+from pymc.math import logdiffexp, logit
+from pymc.util import UNSET
 
 __all__ = [
     "Uniform",
@@ -3840,7 +3840,7 @@ class Interpolated(BoundedContinuous):
 
         import matplotlib.pyplot as plt
         import numpy as np
-        import pymc3 as pm
+        import pymc as pm
         import arviz as az
         from scipy.stats import gamma
         plt.style.use('arviz-darkgrid')

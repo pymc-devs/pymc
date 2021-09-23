@@ -20,18 +20,18 @@ from collections import namedtuple
 
 import numpy as np
 
-from pymc3.aesaraf import floatX
-from pymc3.backends.report import SamplerWarning, WarningType
-from pymc3.blocking import DictToArrayBijection, RaveledVars
-from pymc3.exceptions import SamplingError
-from pymc3.model import Point, modelcontext
-from pymc3.step_methods import step_sizes
-from pymc3.step_methods.arraystep import GradientSharedStep
-from pymc3.step_methods.hmc import integration
-from pymc3.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
-from pymc3.tuning import guess_scaling
+from pymc.aesaraf import floatX
+from pymc.backends.report import SamplerWarning, WarningType
+from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.exceptions import SamplingError
+from pymc.model import Point, modelcontext
+from pymc.step_methods import step_sizes
+from pymc.step_methods.arraystep import GradientSharedStep
+from pymc.step_methods.hmc import integration
+from pymc.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
+from pymc.tuning import guess_scaling
 
-logger = logging.getLogger("pymc3")
+logger = logging.getLogger("pymc")
 
 HMCStepData = namedtuple("HMCStepData", "end, accept_stat, divergence_info, stats")
 
@@ -78,7 +78,7 @@ class BaseHMC(GradientSharedStep):
         is_cov: bool, default=False
             Treat scaling as a covariance matrix/vector if True, else treat
             it as a precision matrix/vector
-        model: pymc3 Model instance
+        model: pymc.Model
         blocked: bool, default=True
         potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,

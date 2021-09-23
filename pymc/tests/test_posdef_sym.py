@@ -15,7 +15,7 @@
 import aesara
 import numpy as np
 
-from pymc3.distributions import multivariate as mv
+from pymc.distributions import multivariate as mv
 
 
 def test_posdef_symmetric1():

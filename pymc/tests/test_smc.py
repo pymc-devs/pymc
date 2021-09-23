@@ -27,12 +27,12 @@ from aesara.tensor.random.var import (
 from aesara.tensor.sort import SortOp
 from arviz.data.inference_data import InferenceData
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import floatX
-from pymc3.backends.base import MultiTrace
-from pymc3.smc.smc import IMH
-from pymc3.tests.helpers import SeededTest
+from pymc.aesaraf import floatX
+from pymc.backends.base import MultiTrace
+from pymc.smc.smc import IMH
+from pymc.tests.helpers import SeededTest
 
 
 class TestSMC(SeededTest):
@@ -515,7 +515,7 @@ class TestSimulator(SeededTest):
     def test_named_model(self):
         # Named models used to fail with Simulator because the arguments to the
         # random fn used to be passed by name. This is no longer true.
-        # https://github.com/pymc-devs/pymc3/pull/4365#issuecomment-761221146
+        # https://github.com/pymc-devs/pymc/pull/4365#issuecomment-761221146
         name = "NamedModel"
         with pm.Model(name=name):
             a = pm.Normal("a", mu=0, sigma=1)

@@ -18,8 +18,8 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from pymc3.aesaraf import floatX
-from pymc3.math import (
+from pymc.aesaraf import floatX
+from pymc.math import (
     LogDet,
     cartesian,
     expand_packed_triangular,
@@ -35,7 +35,7 @@ from pymc3.math import (
     logdiffexp_numpy,
     probit,
 )
-from pymc3.tests.helpers import SeededTest, verify_grad
+from pymc.tests.helpers import SeededTest, verify_grad
 
 
 def test_kronecker():
@@ -164,7 +164,7 @@ def test_log1mexp_numpy_integer_input():
 def test_log1mexp_deprecation_warnings():
     with pytest.warns(
         FutureWarning,
-        match="pymc3.math.log1mexp_numpy will expect a negative input",
+        match="pymc.math.log1mexp_numpy will expect a negative input",
     ):
         res_pos = log1mexp_numpy(2)
 
@@ -174,7 +174,7 @@ def test_log1mexp_deprecation_warnings():
 
     with pytest.warns(
         FutureWarning,
-        match="pymc3.math.log1mexp will expect a negative input",
+        match="pymc.math.log1mexp will expect a negative input",
     ):
         res_pos_at = log1mexp(2).eval()
 
@@ -256,7 +256,7 @@ def test_expand_packed_triangular():
 def test_invlogit_deprecation_warning():
     with pytest.warns(
         DeprecationWarning,
-        match="pymc3.math.invlogit no longer supports the",
+        match="pymc.math.invlogit no longer supports the",
     ):
         res = invlogit(np.array(-750.0), 1e-5).eval()
 

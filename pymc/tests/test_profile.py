@@ -12,9 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.tests.models import simple_model
+from pymc.tests.models import simple_model
 
 
 class TestProfile:

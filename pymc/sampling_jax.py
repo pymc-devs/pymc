@@ -22,8 +22,8 @@ from aesara.graph.opt import MergeOptimizer
 from aesara.link.jax.dispatch import jax_funcify
 from aesara.tensor.type import TensorType
 
-from pymc3 import modelcontext
-from pymc3.aesaraf import compile_rv_inplace
+from pymc import modelcontext
+from pymc.aesaraf import compile_rv_inplace
 
 warnings.warn("This module is experimental.")
 

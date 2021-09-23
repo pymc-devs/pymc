@@ -39,17 +39,17 @@ except ImportError:  # pragma: no cover
 
 from scipy.special import expit
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import change_rv_size, floatX, intX
-from pymc3.distributions import _logp
-from pymc3.distributions.continuous import get_tau_sigma, interpolated
-from pymc3.distributions.discrete import _OrderedLogistic, _OrderedProbit
-from pymc3.distributions.dist_math import clipped_beta_rvs
-from pymc3.distributions.multivariate import _OrderedMultinomial, quaddist_matrix
-from pymc3.distributions.shape_utils import to_tuple
-from pymc3.tests.helpers import SeededTest, select_by_precision
-from pymc3.tests.test_distributions import (
+from pymc.aesaraf import change_rv_size, floatX, intX
+from pymc.distributions import _logp
+from pymc.distributions.continuous import get_tau_sigma, interpolated
+from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
+from pymc.distributions.dist_math import clipped_beta_rvs
+from pymc.distributions.multivariate import _OrderedMultinomial, quaddist_matrix
+from pymc.distributions.shape_utils import to_tuple
+from pymc.tests.helpers import SeededTest, select_by_precision
+from pymc.tests.test_distributions import (
     Domain,
     R,
     RandomPdMatrix,
@@ -60,7 +60,7 @@ from pymc3.tests.test_distributions import (
 )
 
 
-def pymc3_random(
+def pymc_random(
     dist,
     paramdomains,
     ref_rand,
@@ -101,7 +101,7 @@ def pymc3_random(
         assert p > alpha, str(pt)
 
 
-def pymc3_random_discrete(
+def pymc_random_discrete(
     dist,
     paramdomains,
     valuedomain=Domain([0]),
@@ -264,7 +264,7 @@ class TestZeroInflatedBinomial(BaseTestCases.BaseTestCase):
 class BaseTestDistribution(SeededTest):
     """
     This class provides a base for tests that new RandomVariables are correctly
-    implemented, and that the mapping of parameters between the PyMC3
+    implemented, and that the mapping of parameters between the PyMC
     Distribution and the respective RandomVariable is correct.
 
     Three default tests are provided which check:
@@ -304,8 +304,8 @@ class BaseTestDistribution(SeededTest):
         function, given the  same inputs and random seed. A small number
         (`size=15`) is checked. This is not supposed to be a test for the
         correctness of the random generator. The latter kind of test
-        (if warranted) can be performed with the aid of `pymc3_random` and
-        `pymc3_random_discrete` methods in this file, which will perform an
+        (if warranted) can be performed with the aid of `pymc_random` and
+        `pymc_random_discrete` methods in this file, which will perform an
         expensive statistical comparison between the RandomVariable `rng_fn`
         and a reference Python function. This kind of test only makes sense if
         there is a good independent generator reference (i.e., not just the same
@@ -1679,7 +1679,7 @@ class TestInterpolated(BaseTestDistribution):
                         pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
                         return super().dist(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
-                pymc3_random(
+                pymc_random(
                     TestedInterpolated,
                     {},
                     extra_args={"rng": aesara.shared(rng)},
@@ -1732,7 +1732,7 @@ class TestScalarParameterSamples(SeededTest):
                     kwargs.pop("shape", None)
                     super().__init__(n=n, **kwargs)
 
-            pymc3_random(
+            pymc_random(
                 TestedLKJCorr,
                 {"eta": Domain([1.0, 10.0, 100.0])},
                 size=10000 // n,
@@ -1745,7 +1745,7 @@ class TestScalarParameterSamples(SeededTest):
             component = np.random.choice(w.size, size=size, p=w)
             return np.random.normal(mu[component], sigma[component], size=size)
 
-        pymc3_random(
+        pymc_random(
             pm.NormalMixture,
             {
                 "w": Simplex(2),
@@ -1756,7 +1756,7 @@ class TestScalarParameterSamples(SeededTest):
             size=1000,
             ref_rand=ref_rand,
         )
-        pymc3_random(
+        pymc_random(
             pm.NormalMixture,
             {
                 "w": Simplex(3),
@@ -2342,7 +2342,7 @@ def test_matrix_normal_random_with_random_variables():
     """
     This test checks for shape correctness when using MatrixNormal distribution
     with parameters as random variables.
-    Originally reported - https://github.com/pymc-devs/pymc3/issues/3585
+    Originally reported - https://github.com/pymc-devs/pymc/issues/3585
     """
     K = 3
     D = 15

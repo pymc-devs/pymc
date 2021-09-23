@@ -17,11 +17,11 @@
 import numpy as np
 import numpy.random as nr
 
-from pymc3.aesaraf import inputvars
-from pymc3.blocking import RaveledVars
-from pymc3.model import modelcontext
-from pymc3.step_methods.arraystep import ArrayStep, Competence
-from pymc3.vartypes import continuous_types
+from pymc.aesaraf import inputvars
+from pymc.blocking import RaveledVars
+from pymc.model import modelcontext
+from pymc.step_methods.arraystep import ArrayStep, Competence
+from pymc.vartypes import continuous_types
 
 __all__ = ["Slice"]
 

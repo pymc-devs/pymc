@@ -27,10 +27,10 @@ from aesara.tensor.random.basic import (
 )
 from scipy import stats
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import floatX, intX, take_along_axis
-from pymc3.distributions.dist_math import (
+from pymc.aesaraf import floatX, intX, take_along_axis
+from pymc.distributions.dist_math import (
     betaln,
     binomln,
     bound,
@@ -40,9 +40,9 @@ from pymc3.distributions.dist_math import (
     normal_lccdf,
     normal_lcdf,
 )
-from pymc3.distributions.distribution import Discrete
-from pymc3.distributions.logprob import _logcdf, _logp
-from pymc3.math import sigmoid
+from pymc.distributions.distribution import Discrete
+from pymc.distributions.logprob import _logcdf, _logp
+from pymc.math import sigmoid
 
 __all__ = [
     "Binomial",

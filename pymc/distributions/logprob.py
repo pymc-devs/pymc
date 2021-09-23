@@ -37,7 +37,7 @@ from aesara.tensor.subtensor import (
 )
 from aesara.tensor.var import TensorVariable
 
-from pymc3.aesaraf import extract_rv_and_value_vars, floatX, rvs_to_value_vars
+from pymc.aesaraf import extract_rv_and_value_vars, floatX, rvs_to_value_vars
 
 
 @singledispatch

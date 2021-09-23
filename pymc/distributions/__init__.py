@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc3.distributions.logprob import (  # isort:skip
+from pymc.distributions.logprob import (  # isort:skip
     _logcdf,
     _logp,
     logcdf,
@@ -22,9 +22,9 @@ from pymc3.distributions.logprob import (  # isort:skip
     logpt_sum,
 )
 
-from pymc3.distributions.bart import BART
-from pymc3.distributions.bound import Bound
-from pymc3.distributions.continuous import (
+from pymc.distributions.bart import BART
+from pymc.distributions.bound import Bound
+from pymc.distributions.continuous import (
     AsymmetricLaplace,
     Beta,
     Cauchy,
@@ -60,7 +60,7 @@ from pymc3.distributions.continuous import (
     Wald,
     Weibull,
 )
-from pymc3.distributions.discrete import (
+from pymc.distributions.discrete import (
     Bernoulli,
     BetaBinomial,
     Binomial,
@@ -78,15 +78,15 @@ from pymc3.distributions.discrete import (
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
 )
-from pymc3.distributions.distribution import (
+from pymc.distributions.distribution import (
     Continuous,
     DensityDist,
     Discrete,
     Distribution,
     NoDistribution,
 )
-from pymc3.distributions.mixture import Mixture, MixtureSameFamily, NormalMixture
-from pymc3.distributions.multivariate import (
+from pymc.distributions.mixture import Mixture, MixtureSameFamily, NormalMixture
+from pymc.distributions.multivariate import (
     CAR,
     Dirichlet,
     DirichletMultinomial,
@@ -101,8 +101,8 @@ from pymc3.distributions.multivariate import (
     Wishart,
     WishartBartlett,
 )
-from pymc3.distributions.simulator import Simulator
-from pymc3.distributions.timeseries import (
+from pymc.distributions.simulator import Simulator
+from pymc.distributions.timeseries import (
     AR,
     AR1,
     GARCH11,

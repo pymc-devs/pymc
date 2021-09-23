@@ -248,7 +248,7 @@ var Search = {
       if (results.length) {
         var item = results.pop();
         var listItem = $('<div class="ui padded segment"></div>');
-        var isMethod = item[1].startsWith('pymc3.')
+        var isMethod = item[1].startsWith('pymc.')
         var header = isMethod ? item[1].slice(item[1].lastIndexOf('.') + 1, item[1].length) : item[1];
         if (DOCUMENTATION_OPTIONS.FILE_SUFFIX === '') {
           // dirhtml builder
@@ -276,7 +276,7 @@ var Search = {
           listItem.append($('<div class="content"></div>').html(
             $('<div class="content"></div>').html(
               $('<div class="meta"> In <span><code class="python">' +
-                item[1].replace('pymc3.', 'pm.') + '</code></span></div>')
+                item[1].replace('pymc.', 'pm.') + '</code></span></div>')
             )
           ));
           Search.output.append(listItem);

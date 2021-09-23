@@ -21,8 +21,8 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from pymc3.backends import base
-from pymc3.tests import models
+from pymc.backends import base
+from pymc.tests import models
 
 
 class ModelBackendSetupTestCase:

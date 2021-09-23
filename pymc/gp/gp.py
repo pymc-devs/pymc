@@ -20,11 +20,11 @@ import numpy as np
 
 from aesara.tensor.nlinalg import eigh
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.gp.cov import Constant, Covariance
-from pymc3.gp.mean import Zero
-from pymc3.gp.util import (
+from pymc.gp.cov import Constant, Covariance
+from pymc.gp.mean import Zero
+from pymc.gp.util import (
     cholesky,
     conditioned_vars,
     infer_shape,
@@ -32,7 +32,7 @@ from pymc3.gp.util import (
     solve_upper,
     stabilize,
 )
-from pymc3.math import (
+from pymc.math import (
     cartesian,
     kron_diag,
     kron_dot,
@@ -223,7 +223,7 @@ class Latent(Base):
         given: dict
             Can optionally take as key value pairs: `X`, `y`, `noise`,
             and `gp`.  See the section in the documentation on additive GP
-            models in PyMC3 for more information.
+            models in PyMC for more information.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
@@ -516,7 +516,7 @@ class Marginal(Base):
         given: dict
             Can optionally take as key value pairs: `X`, `y`, `noise`,
             and `gp`.  See the section in the documentation on additive GP
-            models in PyMC3 for more information.
+            models in PyMC for more information.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
@@ -538,7 +538,7 @@ class Marginal(Base):
         Xnew: array-like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        point: pymc3.model.Point
+        point: pymc.model.Point
             A specific point to condition on.
         diag: bool
             If `True`, return the diagonal instead of the full covariance
@@ -809,7 +809,7 @@ class MarginalSparse(Marginal):
         given: dict
             Can optionally take as key value pairs: `X`, `Xu`, `y`, `noise`,
             and `gp`.  See the section in the documentation on additive GP
-            models in PyMC3 for more information.
+            models in PyMC for more information.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
@@ -1184,7 +1184,7 @@ class MarginalKron(Base):
         Xnew: array-like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        point: pymc3.model.Point
+        point: pymc.model.Point
             A specific point to condition on.
         diag: bool
             If `True`, return the diagonal instead of the full covariance

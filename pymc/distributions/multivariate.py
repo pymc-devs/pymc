@@ -39,15 +39,15 @@ from aesara.tensor.slinalg import solve_upper_triangular as solve_upper
 from aesara.tensor.type import TensorType
 from scipy import linalg, stats
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import floatX, intX
-from pymc3.distributions import transforms
-from pymc3.distributions.continuous import ChiSquared, Normal, assert_negative_support
-from pymc3.distributions.dist_math import bound, factln, logpow, multigammaln
-from pymc3.distributions.distribution import Continuous, Discrete
-from pymc3.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
-from pymc3.math import kron_diag, kron_dot
+from pymc.aesaraf import floatX, intX
+from pymc.distributions import transforms
+from pymc.distributions.continuous import ChiSquared, Normal, assert_negative_support
+from pymc.distributions.dist_math import bound, factln, logpow, multigammaln
+from pymc.distributions.distribution import Continuous, Discrete
+from pymc.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
+from pymc.math import kron_diag, kron_dot
 
 __all__ = [
     "MvNormal",
@@ -863,7 +863,7 @@ class Wishart(Continuous):
 
     Notes
     -----
-    This distribution is unusable in a PyMC3 model. You should instead
+    This distribution is unusable in a PyMC model. You should instead
     use LKJCholeskyCov or LKJCorr.
     """
     rv_op = wishart
@@ -879,7 +879,7 @@ class Wishart(Continuous):
             "symmetric matrix is basically zero. Instead, please "
             "use LKJCholeskyCov or LKJCorr. For more information "
             "on the issues surrounding the Wishart see here: "
-            "https://github.com/pymc-devs/pymc3/issues/538.",
+            "https://github.com/pymc-devs/pymc/issues/538.",
             UserWarning,
         )
 

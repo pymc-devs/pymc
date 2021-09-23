@@ -56,8 +56,8 @@ distribution is
   Williams, or `this introduction <https://www.ics.uci.edu/~welling/teaching/KernelsICS273B/gpB.pdf>`_
   by D. Mackay.
 
-PyMC3 is a great environment for working with fully Bayesian Gaussian Process
-models.  GPs in PyMC3 have a clear syntax and are highly composable, and many
+PyMC is a great environment for working with fully Bayesian Gaussian Process
+models.  GPs in PyMC have a clear syntax and are highly composable, and many
 predefined covariance functions (or kernels), mean functions, and several GP
 implementations are included.  GPs are treated as distributions that can be
 used within larger or hierarchical models, not just as standalone regression
@@ -90,7 +90,7 @@ function will act on, is because :code:`cov_func` hasn't actually seen the
 input data yet.  The :code:`active_dims` argument is optional, and defaults to
 all columns of the matrix of inputs.
 
-Covariance functions in PyMC3 closely follow the algebraic rules for kernels,
+Covariance functions in PyMC closely follow the algebraic rules for kernels,
 which allows users to combine covariance functions into new ones, for example:
 
 - The sum of two covariance functions is also a covariance function::
@@ -113,7 +113,7 @@ which allows users to combine covariance functions into new ones, for example:
 
 After the covariance function is defined, it is now a function that is
 evaluated by calling :code:`cov_func(x, x)` (or :code:`mean_func(x)`).  Since
-PyMC3 is built on top of Aesara, it is relatively easy to define and experiment
+PyMC is built on top of Aesara, it is relatively easy to define and experiment
 with non-standard covariance and mean functons.  For more information check out
 the tutorial on covariance functions.
 
@@ -121,13 +121,13 @@ the tutorial on covariance functions.
 GP Implementations
 ==================
 
-PyMC3 includes several GP implementations, including marginal and latent
+PyMC includes several GP implementations, including marginal and latent
 variable models and also some fast approximations.  Their usage all follows a
 similar pattern:  First, a GP is instantiated with a mean function and a
 covariance function.  Then, GP objects can be added together, allowing for
 function characteristics to be carefully modeled and separated.  Finally, one
 of `prior`, `marginal_likelihood` or `conditional` methods is called on the GP
-object to actually construct the PyMC3 random variable that represents the
+object to actually construct the PyMC random variable that represents the
 function prior.
 
 Using :code:`gp.Latent` for the example, the syntax to first specify the GP
@@ -148,18 +148,18 @@ conditioned on.
   or other, depending on the implementation.  See the notebooks for examples.
   The :code:`conditional` method works similarly.
 
-Calling the `prior` method will create a PyMC3 random variable that represents
+Calling the `prior` method will create a PyMC random variable that represents
 the latent function :math:`f(x) = \mathbf{f}`::
 
 	f = gp.prior("f", X)
 
-:code:`f` is a random variable that can be used within a PyMC3 model like any
+:code:`f` is a random variable that can be used within a PyMC model like any
 other type of random variable.  The first argument is the name of the random
 variable representing the function we are placing the prior over.
 The second argument is the inputs to the function that the prior is over,
 :code:`X`.  The inputs are usually known and present in the data, but they can
-also be PyMC3 random variables.  If the inputs are an Aesara tensor or a
-PyMC3 random variable, the :code:`shape` needs to be given.
+also be PyMC random variables.  If the inputs are an Aesara tensor or a
+PyMC random variable, the :code:`shape` needs to be given.
 
 Usually at this point, inference is performed on the model.  The
 :code:`conditional` method creates the conditional, or predictive,
@@ -171,7 +171,7 @@ distribution over the latent function at arbitrary :math:`x_*` input points,
 Additive GPs
 ============
 
-The GP implementation in PyMC3 is constructed so that it is easy to define
+The GP implementation in PyMC is constructed so that it is easy to define
 additive GPs and sample from individual GP components.  We can write::
 
     gp1 = pm.gp.Marginal(mean_func1, cov_func1)
@@ -216,7 +216,7 @@ These equations show how to break down GP models into individual components to s
 contributes to the data.  For more information, check out `David Duvenaud's PhD
 thesis <https://www.cs.toronto.edu/~duvenaud/thesis.pdf>`_.
 
-The GP objects in PyMC3 keeps track of these marginals automatically.  The
+The GP objects in PyMC keeps track of these marginals automatically.  The
 following code sketch shows how to define the conditional distribution of
 :math:`f_2^*`.  We use `gp.Marginal` in the example, but the same works for
 other implementations.  The first block fits the GP prior.  We denote
@@ -260,7 +260,7 @@ arguments are required for conditionals of :math:`f1` and :math:`f2`, but not
 Since the marginal likelihoood method of :code:`gp1` or :code:`gp2` weren't called,
 their conditionals need to be provided with the required inputs.  In the same
 fashion as the prior, :code:`f_star`, :code:`f1_star` and :code:`f2_star` are random
-variables that can now be used like any other random variable in PyMC3.
+variables that can now be used like any other random variable in PyMC.
 
 Check the notebooks for detailed demonstrations of the usage of GP functionality
-in PyMC3.
+in PyMC.

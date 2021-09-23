@@ -12,10 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc3.step_methods.compound import CompoundStep
-from pymc3.step_methods.elliptical_slice import EllipticalSlice
-from pymc3.step_methods.hmc import NUTS, HamiltonianMC
-from pymc3.step_methods.metropolis import (
+from pymc.step_methods.compound import CompoundStep
+from pymc.step_methods.elliptical_slice import EllipticalSlice
+from pymc.step_methods.hmc import NUTS, HamiltonianMC
+from pymc.step_methods.metropolis import (
     BinaryGibbsMetropolis,
     BinaryMetropolis,
     CategoricalGibbsMetropolis,
@@ -29,11 +29,11 @@ from pymc3.step_methods.metropolis import (
     PoissonProposal,
     UniformProposal,
 )
-from pymc3.step_methods.mlda import (
+from pymc.step_methods.mlda import (
     MLDA,
     DEMetropolisZMLDA,
     MetropolisMLDA,
     RecursiveDAProposal,
 )
-from pymc3.step_methods.pgbart import PGBART
-from pymc3.step_methods.slicer import Slice
+from pymc.step_methods.pgbart import PGBART
+from pymc.step_methods.slicer import Slice

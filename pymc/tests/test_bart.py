@@ -3,7 +3,7 @@ import numpy as np
 from numpy.random import RandomState
 from numpy.testing import assert_almost_equal
 
-import pymc3 as pm
+import pymc as pm
 
 
 def test_split_node():

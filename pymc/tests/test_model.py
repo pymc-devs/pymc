@@ -30,14 +30,14 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorConstant
 from numpy.testing import assert_almost_equal
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3 import Deterministic, Potential
-from pymc3.blocking import DictToArrayBijection, RaveledVars
-from pymc3.distributions import Normal, logpt_sum, transforms
-from pymc3.exceptions import ShapeError
-from pymc3.model import Point, ValueGradFunction
-from pymc3.tests.helpers import SeededTest
+from pymc import Deterministic, Potential
+from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.distributions import Normal, logpt_sum, transforms
+from pymc.exceptions import ShapeError
+from pymc.model import Point, ValueGradFunction
+from pymc.tests.helpers import SeededTest
 
 
 class NewModel(pm.Model):
@@ -320,7 +320,7 @@ class TestValueGradFunction(unittest.TestCase):
         # where `tt.switch` would not always broadcast tensors with single
         # values https://github.com/pymc-devs/aesara/issues/270
 
-        # Known issue 1: https://github.com/pymc-devs/pymc3/issues/4389
+        # Known issue 1: https://github.com/pymc-devs/pymc/issues/4389
         data = pm.floatX(np.zeros(10))
         with pm.Model() as m:
             p = pm.Beta("p", 1, 1)
@@ -332,7 +332,7 @@ class TestValueGradFunction(unittest.TestCase):
         )
 
     def test_aesara_switch_broadcast_edge_cases_2(self):
-        # Known issue 2: https://github.com/pymc-devs/pymc3/issues/4417
+        # Known issue 2: https://github.com/pymc-devs/pymc/issues/4417
         # fmt: off
         data = np.array([
             1.35202174, -0.83690274, 1.11175166, 1.29000367, 0.21282749,
@@ -402,7 +402,7 @@ def test_tempered_logp_dlogp():
 
 
 def test_model_pickle(tmpdir):
-    """Tests that PyMC3 models are pickleable"""
+    """Tests that PyMC models are pickleable"""
     with pm.Model() as model:
         x = pm.Normal("x")
         pm.Normal("y", observed=1)
@@ -411,7 +411,7 @@ def test_model_pickle(tmpdir):
 
 
 def test_model_pickle_deterministic(tmpdir):
-    """Tests that PyMC3 models are pickleable"""
+    """Tests that PyMC models are pickleable"""
     with pm.Model() as model:
         x = pm.Normal("x")
         z = pm.Normal("z")

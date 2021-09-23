@@ -21,10 +21,10 @@ import pytest
 from scipy.integrate import odeint
 from scipy.stats import norm
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.ode import DifferentialEquation
-from pymc3.ode.utils import augment_system
+from pymc.ode import DifferentialEquation
+from pymc.ode.utils import augment_system
 
 IS_FLOAT32 = aesara.config.floatX == "float32"
 IS_WINDOWS = sys.platform == "win32"
@@ -201,9 +201,9 @@ def test_logp_scalar_ode():
     with pm.Model() as model_1:
         forward = ode_model(theta=[alpha], y0=[y0])
         y = pm.Normal("y", mu=forward, sd=1, observed=yobs)
-    pymc3_logp = model_1.logp()
+    pymc_logp = model_1.logp()
 
-    np.testing.assert_allclose(manual_logp, pymc3_logp)
+    np.testing.assert_allclose(manual_logp, pymc_logp)
 
 
 class TestErrors:

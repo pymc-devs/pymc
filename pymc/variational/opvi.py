@@ -55,19 +55,19 @@ import numpy as np
 
 from aesara.graph.basic import Variable
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import at_rng, identity
-from pymc3.backends import NDArray
-from pymc3.model import modelcontext
-from pymc3.util import (
+from pymc.aesaraf import at_rng, identity
+from pymc.backends import NDArray
+from pymc.model import modelcontext
+from pymc.util import (
     WithMemoization,
     get_default_varnames,
     get_transformed,
     locally_cachedmethod,
 )
-from pymc3.variational.updates import adagrad_window
-from pymc3.vartypes import discrete_types
+from pymc.variational.updates import adagrad_window
+from pymc.vartypes import discrete_types
 
 __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
 
@@ -548,7 +548,7 @@ class Group(WithMemoization):
     Parameters
     ----------
     group: list
-        List of PyMC3 variables or None indicating that group takes all the rest variables
+        List of PyMC variables or None indicating that group takes all the rest variables
     vfam: str
         String that marks the corresponding variational family for the group.
         Cannot be passed both with `params`
@@ -558,7 +558,7 @@ class Group(WithMemoization):
     random_seed: int
         Random seed for underlying random generator
     model :
-        PyMC3 Model
+        PyMC Model
     local: bool
         Indicates whether this group is local. Cannot be passed without `params`.
         Such group should have only one variable
@@ -645,7 +645,7 @@ class Group(WithMemoization):
     **Using AEVB**
 
     Autoencoding variational Bayes is a powerful tool to get conditional :math:`q(\lambda|X)` distribution
-    on latent variables. It is well supported by PyMC3 and all you need is to provide a dictionary
+    on latent variables. It is well supported by PyMC and all you need is to provide a dictionary
     with well shaped variational parameters, the correct approximation will be autoselected as mentioned
     in section above. However we have some implementation restrictions in AEVB. They require autoencoded
     variable to have first dimension as *batch* dimension and other dimensions should stay fixed.
@@ -681,7 +681,7 @@ class Group(WithMemoization):
         latent3_{i, \dots} \sim \mathcal{N}(\mu_i, \Sigma_i) \forall i
 
     **Note**: Using rowwise and user-parametrized approximation is ok, but
-    shape should be checked beforehand, it is impossible to infer it by PyMC3
+    shape should be checked beforehand, it is impossible to infer it by PyMC
 
     **Normalizing Flow Group**
 
@@ -1289,7 +1289,7 @@ class Approximation(WithMemoization):
         -   :class:`NormalizingFlow`
         -   :class:`Empirical`
 
-    Single group accepts `local_rv` keyword with dict mapping PyMC3 variables
+    Single group accepts `local_rv` keyword with dict mapping PyMC variables
     to their local Group parameters dict
 
     See Also
@@ -1629,7 +1629,7 @@ class Approximation(WithMemoization):
 
         Returns
         -------
-        trace: :class:`pymc3.backends.base.MultiTrace`
+        trace: :class:`pymc.backends.base.MultiTrace`
             Samples drawn from variational posterior.
         """
         vars_sampled = get_default_varnames(

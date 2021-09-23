@@ -17,10 +17,10 @@ import pytest
 
 from aesara.compile.sharedvalue import SharedVariable
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.model_graph import ModelGraph, model_to_graphviz
-from pymc3.tests.helpers import SeededTest
+from pymc.model_graph import ModelGraph, model_to_graphviz
+from pymc.tests.helpers import SeededTest
 
 
 def radon_model():
@@ -74,7 +74,7 @@ def radon_model():
 
 
 def model_with_imputations():
-    """The example from https://github.com/pymc-devs/pymc3/issues/4043"""
+    """The example from https://github.com/pymc-devs/pymc/issues/4043"""
     x = np.random.randn(10) + 10.0
     x = np.concatenate([x, [np.nan], [np.nan]])
     x = np.ma.masked_array(x, np.isnan(x))

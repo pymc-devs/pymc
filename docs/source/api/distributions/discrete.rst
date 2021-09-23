@@ -2,7 +2,7 @@
 Discrete
 ********
 
-.. currentmodule:: pymc3.distributions.discrete
+.. currentmodule:: pymc.distributions.discrete
 .. autosummary::
 
    Binomial
@@ -22,5 +22,5 @@ Discrete
    OrderedLogistic
    OrderedProbit
 
-.. automodule:: pymc3.distributions.discrete
+.. automodule:: pymc.distributions.discrete
    :members:

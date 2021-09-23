@@ -15,10 +15,10 @@
 import aesara
 import aesara.tensor as at
 
-from pymc3.aesaraf import floatX
-from pymc3.util import WithMemoization, locally_cachedmethod
-from pymc3.variational.opvi import node_property
-from pymc3.variational.test_functions import rbf
+from pymc.aesaraf import floatX
+from pymc.util import WithMemoization, locally_cachedmethod
+from pymc.variational.opvi import node_property
+from pymc.variational.test_functions import rbf
 
 __all__ = ["Stein"]
 

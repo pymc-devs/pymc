@@ -12,5 +12,5 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc3.gp import cov, mean, util
-from pymc3.gp.gp import TP, Latent, LatentKron, Marginal, MarginalKron, MarginalSparse
+from pymc.gp import cov, mean, util
+from pymc.gp.gp import TP, Latent, LatentKron, Marginal, MarginalKron, MarginalSparse

@@ -14,7 +14,7 @@
 
 """Storage backends for traces
 
-The NDArray (pymc3.backends.NDArray) backend holds the entire trace in memory.
+The NDArray (pymc.backends.NDArray) backend holds the entire trace in memory.
 
 Selecting values from a backend
 -------------------------------
@@ -60,8 +60,8 @@ Loading a saved backend
 Saved backends can be loaded using `arviz.from_netcdf`
 
 """
-from pymc3.backends.arviz import predictions_to_inference_data, to_inference_data
-from pymc3.backends.ndarray import (
+from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
+from pymc.backends.ndarray import (
     NDArray,
     load_trace,
     point_list_to_multitrace,

@@ -21,10 +21,10 @@ import numpy as np
 from aesara.graph.basic import Variable
 from numpy.random import uniform
 
-from pymc3.blocking import DictToArrayBijection, PointType, RaveledVars
-from pymc3.model import modelcontext
-from pymc3.step_methods.compound import CompoundStep
-from pymc3.util import get_var_name
+from pymc.blocking import DictToArrayBijection, PointType, RaveledVars
+from pymc.model import modelcontext
+from pymc.step_methods.compound import CompoundStep
+from pymc.util import get_var_name
 
 __all__ = ["ArrayStep", "ArrayStepShared", "metrop_select", "Competence"]
 

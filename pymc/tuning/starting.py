@@ -27,13 +27,13 @@ from fastprogress.fastprogress import ProgressBar, progress_bar
 from numpy import isfinite, nan_to_num
 from scipy.optimize import minimize
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import inputvars
-from pymc3.blocking import DictToArrayBijection, RaveledVars
-from pymc3.model import Point, modelcontext
-from pymc3.util import get_default_varnames, get_var_name
-from pymc3.vartypes import discrete_types, typefilter
+from pymc.aesaraf import inputvars
+from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.model import Point, modelcontext
+from pymc.util import get_default_varnames, get_var_name
+from pymc.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
 
@@ -53,7 +53,7 @@ def find_MAP(
     """Finds the local maximum a posteriori point given a model.
 
     `find_MAP` should not be used to initialize the NUTS sampler. Simply call
-    ``pymc3.sample()`` and it will automatically initialize NUTS in a better
+    ``pymc.sample()`` and it will automatically initialize NUTS in a better
     way.
 
     Parameters
@@ -84,7 +84,7 @@ def find_MAP(
     Older code examples used `find_MAP` to initialize the NUTS sampler,
     but this is not an effective way of choosing starting values for sampling.
     As a result, we have greatly enhanced the initialization of NUTS and
-    wrapped it inside ``pymc3.sample()`` and you should thus avoid this method.
+    wrapped it inside ``pymc.sample()`` and you should thus avoid this method.
     """
     model = modelcontext(model)
 

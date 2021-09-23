@@ -15,10 +15,10 @@
 import numpy as np
 import scipy.stats as sp
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.tests.checks import close_to
-from pymc3.tests.models import mv_simple, simple_model
+from pymc.tests.checks import close_to
+from pymc.tests.models import mv_simple, simple_model
 
 tol = 2.0 ** -11
 

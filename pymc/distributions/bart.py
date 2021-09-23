@@ -16,7 +16,7 @@ import numpy as np
 
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
 
-from pymc3.distributions.distribution import NoDistribution
+from pymc.distributions.distribution import NoDistribution
 
 __all__ = ["BART"]
 

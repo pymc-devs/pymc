@@ -19,7 +19,7 @@ import logging
 import multiprocessing as mp
 import platform
 
-_log = logging.getLogger("pymc3")
+_log = logging.getLogger("pymc")
 
 if not logging.root.handlers:
     _log.setLevel(logging.INFO)
@@ -28,7 +28,7 @@ if not logging.root.handlers:
         _log.addHandler(handler)
 
 _log.info(
-    "You are running the v4 development version of PyMC3 which currently still lacks key features. You probably want to use the stable v3 instead which you can either install via conda or find on the v3 GitHub branch: https://github.com/pymc-devs/pymc3/tree/v3"
+    "You are running the v4 development version of PyMC which currently still lacks key features. You probably want to use the stable v3 instead which you can either install via conda or find on the v3 GitHub branch: https://github.com/pymc-devs/pymc/tree/v3"
 )
 
 
@@ -42,21 +42,21 @@ def __set_compiler_flags():
 
 __set_compiler_flags()
 
-from pymc3 import gp, ode, sampling
-from pymc3.aesaraf import *
-from pymc3.backends import (
+from pymc import gp, ode, sampling
+from pymc.aesaraf import *
+from pymc.backends import (
     load_trace,
     predictions_to_inference_data,
     save_trace,
     to_inference_data,
 )
-from pymc3.backends.tracetab import *
-from pymc3.blocking import *
-from pymc3.data import *
-from pymc3.distributions import *
-from pymc3.distributions import transforms
-from pymc3.exceptions import *
-from pymc3.math import (
+from pymc.backends.tracetab import *
+from pymc.blocking import *
+from pymc.data import *
+from pymc.distributions import *
+from pymc.distributions import transforms
+from pymc.exceptions import *
+from pymc.math import (
     expand_packed_triangular,
     invlogit,
     invprobit,
@@ -65,15 +65,15 @@ from pymc3.math import (
     logsumexp,
     probit,
 )
-from pymc3.model import *
-from pymc3.model_graph import model_to_graphviz
-from pymc3.plots import *
-from pymc3.printing import *
-from pymc3.sampling import *
-from pymc3.smc import *
-from pymc3.stats import *
-from pymc3.step_methods import *
-from pymc3.tests import test
-from pymc3.tuning import *
-from pymc3.variational import *
-from pymc3.vartypes import *
+from pymc.model import *
+from pymc.model_graph import model_to_graphviz
+from pymc.plots import *
+from pymc.printing import *
+from pymc.sampling import *
+from pymc.smc import *
+from pymc.stats import *
+from pymc.step_methods import *
+from pymc.tests import test
+from pymc.tuning import *
+from pymc.variational import *
+from pymc.vartypes import *

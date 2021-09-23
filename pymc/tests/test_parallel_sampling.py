@@ -24,10 +24,10 @@ import pytest
 from aesara.compile.ops import as_op
 from aesara.tensor.type import TensorType
 
-import pymc3 as pm
-import pymc3.parallel_sampling as ps
+import pymc as pm
+import pymc.parallel_sampling as ps
 
-from pymc3.aesaraf import floatX
+from pymc.aesaraf import floatX
 
 
 def test_context():
@@ -212,7 +212,7 @@ def test_spawn_densitydist_bound_method():
 
 @pytest.mark.xfail(reason="DensityDist was not yet refactored for v4")
 def test_spawn_densitydist_syswarning(monkeypatch):
-    monkeypatch.setattr("pymc3.distributions.distribution.PLATFORM", "win32")
+    monkeypatch.setattr("pymc.distributions.distribution.PLATFORM", "win32")
     with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
         normal_dist = pm.Normal.dist(mu, 1)

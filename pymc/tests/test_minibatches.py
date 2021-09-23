@@ -22,11 +22,11 @@ import pytest
 from aesara import tensor as at
 from scipy import stats as stats
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3 import GeneratorAdapter, Normal, at_rng, floatX, generator
-from pymc3.aesaraf import GeneratorOp
-from pymc3.tests.helpers import select_by_precision
+from pymc import GeneratorAdapter, Normal, at_rng, floatX, generator
+from pymc.aesaraf import GeneratorOp
+from pymc.tests.helpers import select_by_precision
 
 
 class _DataSampler:

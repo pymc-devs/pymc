@@ -2,7 +2,7 @@
 Timeseries
 **********
 
-.. currentmodule:: pymc3.distributions.timeseries
+.. currentmodule:: pymc.distributions.timeseries
 .. autosummary::
     AR1
     AR
@@ -12,5 +12,5 @@ Timeseries
     MvGaussianRandomWalk
     MvStudentTRandomWalk
 
-.. automodule:: pymc3.distributions.timeseries
+.. automodule:: pymc.distributions.timeseries
    :members:

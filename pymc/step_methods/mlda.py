@@ -23,13 +23,13 @@ import numpy as np
 
 from aesara.tensor.sharedvar import TensorSharedVariable
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.blocking import DictToArrayBijection
-from pymc3.model import Model, Point
-from pymc3.step_methods.arraystep import ArrayStepShared, Competence, metrop_select
-from pymc3.step_methods.compound import CompoundStep
-from pymc3.step_methods.metropolis import (
+from pymc.blocking import DictToArrayBijection
+from pymc.model import Model, Point
+from pymc.step_methods.arraystep import ArrayStepShared, Competence, metrop_select
+from pymc.step_methods.compound import CompoundStep
+from pymc.step_methods.metropolis import (
     DEMetropolisZ,
     Metropolis,
     Proposal,
@@ -281,14 +281,14 @@ class MLDA(ArrayStepShared):
         differences between levels to enable computing a variance-reduced
         sum of the quantity of interest after sampling. In order to use
         variance reduction, the user needs to do the following when defining
-        the PyMC3 model (also demonstrated in the example notebook):
+        the PyMC model (also demonstrated in the example notebook):
             - Include a `pm.Data()` variable with the name `Q` in the
             model description of all levels.
             - Use an Aesara Op to calculate the forward model (or the
             combination of a forward model and a likelihood). This Op
             should have a `perform()` method which (in addition to all
             the other calculations), calculates the quantity of interest
-            and stores it to the variable `Q` of the PyMC3 model,
+            and stores it to the variable `Q` of the PyMC model,
             using the `set_value()` function.
         When variance_reduction=True, all subchains run for a fixed number
         of iterations (equal to subsampling_rates) and a random sample is
@@ -312,10 +312,10 @@ class MLDA(ArrayStepShared):
             - Use an Aesara Op to define the forward model (and
             optionally the likelihood) for all levels. The Op needs
             to store the result of each forward model calculation
-            to the variable model_output of the PyMC3 model,
+            to the variable model_output of the PyMC model,
             using the `set_value()` function.
             - Define a Multivariate Normal likelihood (either using
-            the standard PyMC3 API or within an Op) which has mean
+            the standard PyMC API or within an Op) which has mean
             equal to the forward model output plus mu_B and covariance
             equal to the model error plus Sigma_B.
         Given the above, MLDA will capture and iteratively update the
@@ -326,7 +326,7 @@ class MLDA(ArrayStepShared):
     Examples
     ----------
     .. code:: ipython
-        >>> import pymc3 as pm
+        >>> import pymc as pm
         ... datum = 1
         ...
         ... with pm.Model() as coarse_model:
@@ -393,7 +393,7 @@ class MLDA(ArrayStepShared):
         self.is_child = kwargs.get("is_child", False)
         if not self.is_child:
             warnings.warn(
-                "The MLDA implementation in PyMC3 is still immature. You should be particularly critical of its results."
+                "The MLDA implementation in PyMC is still immature. You should be particularly critical of its results."
             )
 
         if not isinstance(coarse_models, list):
@@ -1099,7 +1099,7 @@ class RecursiveDAProposal(Proposal):
 
         # Logging is reduced to avoid extensive console output
         # during multiple recursive calls of subsample()
-        _log = logging.getLogger("pymc3")
+        _log = logging.getLogger("pymc")
         _log.setLevel(logging.ERROR)
 
         with self.model_below:

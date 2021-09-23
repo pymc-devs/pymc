@@ -29,14 +29,13 @@ from arviz import InferenceData
 from arviz import from_dict as az_from_dict
 from scipy import stats
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import compile_rv_inplace
-from pymc3.backends.base import MultiTrace
-from pymc3.backends.ndarray import NDArray
-from pymc3.exceptions import IncorrectArgumentsError, SamplingError
-from pymc3.tests.helpers import SeededTest
-from pymc3.tests.models import simple_init
+from pymc.aesaraf import compile_rv_inplace
+from pymc.backends.ndarray import NDArray
+from pymc.exceptions import IncorrectArgumentsError, SamplingError
+from pymc.tests.helpers import SeededTest
+from pymc.tests.models import simple_init
 
 
 class TestSample(SeededTest):
@@ -304,7 +303,7 @@ class TestSample(SeededTest):
 
 @pytest.mark.xfail(reason="Lognormal not refactored for v4")
 def test_sample_find_MAP_does_not_modify_start():
-    # see https://github.com/pymc-devs/pymc3/pull/4458
+    # see https://github.com/pymc-devs/pymc/pull/4458
     with pm.Model():
         pm.LogNormal("untransformed")
 
@@ -342,7 +341,7 @@ def test_partial_trace_sample():
 
 
 def test_chain_idx():
-    # see https://github.com/pymc-devs/pymc3/issues/4469
+    # see https://github.com/pymc-devs/pymc/issues/4469
     with pm.Model():
         mu = pm.Normal("mu")
         x = pm.Normal("x", mu=mu, sigma=1, observed=np.asarray(3))
@@ -438,31 +437,14 @@ class TestNamedSampling(SeededTest):
 
 class TestChooseBackend:
     def test_choose_backend_none(self):
-        with mock.patch("pymc3.sampling.NDArray") as nd:
-            pm.sampling._choose_backend(None)
+        with mock.patch("pymc.sampling.NDArray") as nd:
+            pm.sampling._choose_backend(None, "chain")
         assert nd.called
 
     def test_choose_backend_list_of_variables(self):
-        with mock.patch("pymc3.sampling.NDArray") as nd:
-            pm.sampling._choose_backend(["var1", "var2"])
+        with mock.patch("pymc.sampling.NDArray") as nd:
+            pm.sampling._choose_backend(["var1", "var2"], "chain")
         nd.assert_called_with(vars=["var1", "var2"])
-
-    def test_errors_and_warnings(self):
-        with pm.Model():
-            A = pm.Normal("A")
-            B = pm.Uniform("B")
-            strace = pm.sampling.NDArray(vars=[A, B])
-            strace.setup(10, 0)
-
-            with pytest.raises(ValueError, match="from existing MultiTrace"):
-                pm.sampling._choose_backend(trace=MultiTrace([strace]))
-
-            strace.record({"A": 2, "B_interval__": 0.1})
-            assert len(strace) == 1
-            with pytest.raises(ValueError, match="Continuation of traces"):
-                pm.sampling._choose_backend(trace=strace)
-        pass
-
 
 class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
@@ -888,7 +870,7 @@ def test_exec_nuts_init(method):
 def test_default_sample_nuts_jitter(init, start, expectation, monkeypatch):
     # This test tries to check whether the starting points returned by init_nuts are actually
     # being used when pm.sample() is called without specifying an explicit start point (see
-    # https://github.com/pymc-devs/pymc3/pull/4285).
+    # https://github.com/pymc-devs/pymc/pull/4285).
     def _mocked_init_nuts(*args, **kwargs):
         if init == "adapt_diag":
             start_ = [{"x": np.array(0.79788456)}]
@@ -897,7 +879,7 @@ def test_default_sample_nuts_jitter(init, start, expectation, monkeypatch):
         _, step = pm.init_nuts(*args, **kwargs)
         return start_, step
 
-    monkeypatch.setattr("pymc3.sampling.init_nuts", _mocked_init_nuts)
+    monkeypatch.setattr("pymc.sampling.init_nuts", _mocked_init_nuts)
     with pm.Model() as m:
         x = pm.HalfNormal("x", transform=None)
         with expectation:

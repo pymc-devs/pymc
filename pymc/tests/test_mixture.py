@@ -21,9 +21,9 @@ from aesara import tensor as at
 from numpy.testing import assert_allclose
 from scipy.special import logsumexp
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3 import (
+from pymc import (
     Dirichlet,
     Exponential,
     Gamma,
@@ -37,9 +37,9 @@ from pymc3 import (
     Poisson,
     sample,
 )
-from pymc3.aesaraf import floatX
-from pymc3.distributions.shape_utils import to_tuple
-from pymc3.tests.helpers import SeededTest
+from pymc.aesaraf import floatX
+from pymc.distributions.shape_utils import to_tuple
+from pymc.tests.helpers import SeededTest
 
 
 # Generate data
@@ -539,7 +539,7 @@ class TestMixtureSameFamily(SeededTest):
         )
 
     # TODO: Handle case when `batch_shape` == `sample_shape`.
-    # See https://github.com/pymc-devs/pymc3/issues/4185 for details.
+    # See https://github.com/pymc-devs/pymc/issues/4185 for details.
     def test_with_mvnormal(self):
         # 10 batch, 3-variate Gaussian
         mu = np.random.randn(self.mixture_comps, 3)

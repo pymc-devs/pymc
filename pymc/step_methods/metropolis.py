@@ -20,11 +20,11 @@ import scipy.linalg
 from aesara.graph.fg import MissingInputError
 from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import compile_rv_inplace, floatX, rvs_to_value_vars
-from pymc3.blocking import DictToArrayBijection, RaveledVars
-from pymc3.step_methods.arraystep import (
+from pymc.aesaraf import compile_rv_inplace, floatX, rvs_to_value_vars
+from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.step_methods.arraystep import (
     ArrayStep,
     ArrayStepShared,
     Competence,

@@ -115,7 +115,7 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
-import pymc3 as pm
+import pymc as pm
 
 __all__ = [
     "sgd",
