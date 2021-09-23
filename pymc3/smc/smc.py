@@ -19,12 +19,12 @@ from typing import Dict
 import aesara.tensor as at
 import numpy as np
 
-from aesara import function as aesara_function
 from aesara.graph.basic import clone_replace
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
 from pymc3.aesaraf import (
+    compile_rv_inplace,
     floatX,
     inputvars,
     join_nonshared_inputs,
@@ -575,6 +575,6 @@ def _logp_forw(point, out_vars, vars, shared):
         vars = new_vars
 
     out_list, inarray0 = join_nonshared_inputs(point, out_vars, vars, shared)
-    f = aesara_function([inarray0], out_list[0])
+    f = compile_rv_inplace([inarray0], out_list[0])
     f.trust_input = True
     return f
