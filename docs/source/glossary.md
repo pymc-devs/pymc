@@ -104,13 +104,11 @@ Hierarchical Ordinary Differential Equation
 
 [Bayes' theorem](https://en.wikipedia.org/wiki/Bayes%27_theorem)
   Describes the probability of an event, based on prior knowledge of conditions that might be related to the event. For example, if the risk of developing health problems is known to increase with age, Bayes' theorem allows the risk to an individual of a known age to be assessed more accurately (by conditioning it on their age) than simply assuming that the individual is typical of the population as a whole.
-  Formula:
-  $$
-    \begin{eqnarray}
-      P(A|B) = (P(B|A) P(A))/P(B)
-    \end{eqnarray}
-  $$
-  Where A and B are events and P(B) != 0
+  > Formula:
+  > $$
+  > P(A|B) = \frac{P(B|A) P(A}{Pr(B)}
+  > $$
+  > Where A and B are events and P(B) != 0
   
 
 [Markov Chain](https://en.wikipedia.org/wiki/Markov_chain)
