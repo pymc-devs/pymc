@@ -29,12 +29,7 @@ from pymc.blocking import DictToArrayBijection
 from pymc.model import Model, Point
 from pymc.step_methods.arraystep import ArrayStepShared, Competence, metrop_select
 from pymc.step_methods.compound import CompoundStep
-from pymc.step_methods.metropolis import (
-    DEMetropolisZ,
-    Metropolis,
-    Proposal,
-    delta_logp,
-)
+from pymc.step_methods.metropolis import DEMetropolisZ, Metropolis, Proposal, delta_logp
 
 __all__ = [
     "MetropolisMLDA",

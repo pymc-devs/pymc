@@ -446,6 +446,7 @@ class TestChooseBackend:
             pm.sampling._choose_backend(["var1", "var2"], "chain")
         nd.assert_called_with(vars=["var1", "var2"])
 
+
 class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
         nchains = 2

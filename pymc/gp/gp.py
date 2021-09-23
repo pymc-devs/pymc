@@ -32,13 +32,7 @@ from pymc.gp.util import (
     solve_upper,
     stabilize,
 )
-from pymc.math import (
-    cartesian,
-    kron_diag,
-    kron_dot,
-    kron_solve_lower,
-    kron_solve_upper,
-)
+from pymc.math import cartesian, kron_diag, kron_dot, kron_solve_lower, kron_solve_upper
 
 __all__ = ["Latent", "Marginal", "TP", "MarginalSparse", "LatentKron", "MarginalKron"]
 
