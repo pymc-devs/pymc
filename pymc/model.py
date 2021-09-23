@@ -50,6 +50,7 @@ from pandas import Series
 
 from pymc.aesaraf import (
     compile_rv_inplace,
+    floatX,
     gradient,
     hessian,
     inputvars,
@@ -1882,7 +1883,7 @@ def _get_scaling(total_size, shape, ndim):
             denom = shape[0]
         else:
             denom = 1
-        coef = total_size / denom
+        coef = floatX(total_size) / floatX(denom)
     elif isinstance(total_size, (list, tuple)):
         if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis and i is not None)):
             raise TypeError(
@@ -1912,8 +1913,10 @@ def _get_scaling(total_size, shape, ndim):
         else:
             shp_end = np.asarray([])
         shp_begin = shape[: len(begin)]
-        begin_coef = [t / shp_begin[i] for i, t in enumerate(begin) if t is not None]
-        end_coef = [t / shp_end[i] for i, t in enumerate(end) if t is not None]
+        begin_coef = [
+            floatX(t) / floatX(shp_begin[i]) for i, t in enumerate(begin) if t is not None
+        ]
+        end_coef = [floatX(t) / floatX(shp_end[i]) for i, t in enumerate(end) if t is not None]
         coefs = begin_coef + end_coef
         coef = at.prod(coefs)
     else:
