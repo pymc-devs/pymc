@@ -109,7 +109,15 @@ class Binomial(Discrete):
     rv_op = binomial
 
     @classmethod
-    def dist(cls, n, p, *args, **kwargs):
+    def dist(cls, n, p=None, logit_p=None, *args, **kwargs):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        elif p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+
+        if logit_p is not None:
+            p = at.sigmoid(logit_p)
+
         n = at.as_tensor_variable(intX(n))
         p = at.as_tensor_variable(floatX(p))
         # mode = at.cast(tround(n * p), self.dtype)
@@ -1112,7 +1120,14 @@ class Categorical(Discrete):
     rv_op = categorical
 
     @classmethod
-    def dist(cls, p, **kwargs):
+    def dist(cls, p=None, logit_p=None, **kwargs):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        elif p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+
+        if logit_p is not None:
+            p = at.sigmoid(logit_p)
 
         p = at.as_tensor_variable(floatX(p))
 
