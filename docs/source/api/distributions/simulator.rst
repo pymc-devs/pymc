@@ -2,10 +2,10 @@
 Simulator
 **********
 
-.. currentmodule:: pymc3.distributions.simulator
+.. currentmodule:: pymc.distributions.simulator
 .. autosummary::
 
    Simulator
 
-.. automodule:: pymc3.distributions.simulator
+.. automodule:: pymc.distributions.simulator
    :members:

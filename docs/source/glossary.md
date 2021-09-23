@@ -1,6 +1,6 @@
 # Glossary
 
-A glossary of common terms used throughout the PyMC3 documentation and examples.
+A glossary of common terms used throughout the PyMC documentation and examples.
 
 :::::{glossary}
 [Term with external reference](https://www.youtube.com/watch?v=6dc7JgR8eI0)

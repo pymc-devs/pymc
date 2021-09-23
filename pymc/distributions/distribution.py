@@ -28,9 +28,9 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.var import TensorVariable
 
-from pymc3.aesaraf import change_rv_size
-from pymc3.distributions import _logcdf, _logp
-from pymc3.distributions.shape_utils import (
+from pymc.aesaraf import change_rv_size
+from pymc.distributions import _logcdf, _logp
+from pymc.distributions.shape_utils import (
     Dims,
     Shape,
     Size,
@@ -42,9 +42,9 @@ from pymc3.distributions.shape_utils import (
     resize_from_dims,
     resize_from_observed,
 )
-from pymc3.printing import str_for_dist
-from pymc3.util import UNSET
-from pymc3.vartypes import string_types
+from pymc.printing import str_for_dist
+from pymc.util import UNSET
+from pymc.vartypes import string_types
 
 __all__ = [
     "DensityDist",
@@ -147,14 +147,14 @@ class Distribution(metaclass=DistributionMeta):
         transform=UNSET,
         **kwargs,
     ) -> RandomVariable:
-        """Adds a RandomVariable corresponding to a PyMC3 distribution to the current model.
+        """Adds a RandomVariable corresponding to a PyMC distribution to the current model.
 
         Note that all remaining kwargs must be compatible with ``.dist()``
 
         Parameters
         ----------
         cls : type
-            A PyMC3 distribution.
+            A PyMC distribution.
         name : str
             Name for the new model variable.
         rng : optional
@@ -182,7 +182,7 @@ class Distribution(metaclass=DistributionMeta):
         """
 
         try:
-            from pymc3.model import Model
+            from pymc.model import Model
 
             model = Model.get_context()
         except TypeError:

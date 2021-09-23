@@ -16,9 +16,9 @@ import numpy as np
 
 from numpy import inf
 
-from pymc3.step_methods.metropolis import tune
-from pymc3.tests import models
-from pymc3.tuning import find_MAP, scaling
+from pymc.step_methods.metropolis import tune
+from pymc.tests import models
+from pymc.tuning import find_MAP, scaling
 
 
 def test_adjust_precision():

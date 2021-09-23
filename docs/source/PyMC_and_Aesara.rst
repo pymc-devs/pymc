@@ -3,15 +3,15 @@
 ..
     _href from docs/source/index.rst
 
-================
-PyMC3 and Aesara
-================
+===============
+PyMC and Aesara
+===============
 
 What is Aesara
 ==============
 
 Aesara is a package that allows us to define functions involving array
-operations and linear algebra. When we define a PyMC3 model, we implicitly
+operations and linear algebra. When we define a PyMC model, we implicitly
 build up an Aesara function from the space of our parameters to
 their posterior probability density up to a constant factor. We then use
 symbolic manipulations of this function to also get access to its gradient.
@@ -20,7 +20,7 @@ For a thorough introduction to Aesara see the
 `aesara docs <https://aesara.readthedocs.io/en/latest/>`_,
 but for the most part you don't need detailed knowledge about it as long
 as you are not trying to define new distributions or other extensions
-of PyMC3. But let's look at a simple example to get a rough
+of PyMC. But let's look at a simple example to get a rough
 idea about how it works. Say, we'd like to define the (completely
 arbitrarily chosen) function
 
@@ -129,11 +129,11 @@ Changing elements of an array is possible using `at.set_subtensor`::
     b = a.copy()
     b[:10] = 1
 
-How PyMC3 uses Aesara
-=====================
+How PyMC uses Aesara
+====================
 
 Now that we have a basic understanding of Aesara we can look at what
-happens if we define a PyMC3 model. Let's look at a simple example::
+happens if we define a PyMC model. Let's look at a simple example::
 
     true_mu = 0.1
     data = true_mu + np.random.randn(50)

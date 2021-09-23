@@ -20,16 +20,16 @@ import numpy as np
 
 from fastprogress.fastprogress import progress_bar
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.variational import opvi, test_functions
-from pymc3.variational.approximations import (
+from pymc.variational import opvi, test_functions
+from pymc.variational.approximations import (
     Empirical,
     FullRank,
     MeanField,
     NormalizingFlow,
 )
-from pymc3.variational.operators import KL, KSD
+from pymc.variational.operators import KL, KSD
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class Inference:
     approx: Approximation class or instance
     tf: TestFunction instance
     model: Model
-        PyMC3 Model
+        PyMC Model
     kwargs: kwargs passed to :class:`Operator`
     """
 
@@ -363,7 +363,7 @@ class ADVI(KLqp):
     mappings for the likelihood of observations. We denote the parameters of
     the deterministic mappings as :math:`\eta`. An example of such mappings is
     the deconvolutional neural network used in the convolutional VAE example
-    in the PyMC3 notebook directory.
+    in the PyMC notebook directory.
 
     This function maximizes the evidence lower bound (ELBO)
     :math:`{\cal L}(\gamma, \nu, \eta)` defined as follows:
@@ -425,7 +425,7 @@ class ADVI(KLqp):
 
         The tensors to which mini-bathced samples are supplied are
         handled separately by using callbacks in :func:`Inference.fit` method
-        that change storage of shared Aesara variable or by :func:`pymc3.generator`
+        that change storage of shared Aesara variable or by :func:`pymc.generator`
         that automatically iterates over minibatches and defined beforehand.
 
     -   (optional) Parameters of deterministic mappings
@@ -434,7 +434,7 @@ class ADVI(KLqp):
         as `more_obj_params` argument.
 
     For more information concerning training stage please reference
-    :func:`pymc3.variational.opvi.ObjectiveFunction.step_function`
+    :func:`pymc.variational.opvi.ObjectiveFunction.step_function`
 
     Parameters
     ----------
@@ -442,8 +442,8 @@ class ADVI(KLqp):
         mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model: :class:`pymc3.Model`
-        PyMC3 model for inference
+    model: :class:`pymc.Model`
+        PyMC model for inference
     random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -477,8 +477,8 @@ class FullRankADVI(KLqp):
         mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model: :class:`pymc3.Model`
-        PyMC3 model for inference
+    model: :class:`pymc.Model`
+        PyMC model for inference
     random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -544,8 +544,8 @@ class SVGD(ImplicitGradient):
         number of particles to use for approximation
     jitter: `float`
         noise sd for initial point
-    model: :class:`pymc3.Model`
-        PyMC3 model for inference
+    model: :class:`pymc.Model`
+        PyMC model for inference
     kernel: `callable`
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
     temperature: float
@@ -704,7 +704,7 @@ class NFVI(KLqp):
 
     **Flow Formulas**
 
-    In PyMC3 there is a flexible way to define flows with formulas. We have 5 of them by the moment:
+    In PyMC there is a flexible way to define flows with formulas. We have 5 of them by the moment:
 
     -   Loc (:code:`loc`): :math:`z' = z + \mu`
     -   Scale (:code:`scale`): :math:`z' = \sigma * z`
@@ -720,8 +720,8 @@ class NFVI(KLqp):
     flow: str|AbstractFlow
         formula or initialized Flow, default is `'scale-loc'` that
         is identical to MeanField
-    model: :class:`pymc3.Model`
-        PyMC3 model for inference
+    model: :class:`pymc.Model`
+        PyMC model for inference
     random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -762,7 +762,7 @@ def fit(
         -   'nfvi=<formula>'  for Normalizing Flow using formula
 
     model: :class:`Model`
-        PyMC3 model for inference
+        PyMC model for inference
     random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one

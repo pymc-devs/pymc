@@ -2,12 +2,12 @@
 Mean Functions
 **************
 
-.. currentmodule:: pymc3.gp.mean
+.. currentmodule:: pymc.gp.mean
 .. autosummary::
 
    Zero
    Constant
    Linear
 
-.. automodule:: pymc3.gp.mean
+.. automodule:: pymc.gp.mean
    :members:

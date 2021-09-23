@@ -23,13 +23,13 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 from scipy.spatial import cKDTree
 
-from pymc3.aesaraf import floatX
-from pymc3.distributions.distribution import NoDistribution
-from pymc3.distributions.logprob import _logp
+from pymc.aesaraf import floatX
+from pymc.distributions.distribution import NoDistribution
+from pymc.distributions.logprob import _logp
 
 __all__ = ["Simulator"]
 
-_log = logging.getLogger("pymc3")
+_log = logging.getLogger("pymc")
 
 
 class SimulatorRV(RandomVariable):

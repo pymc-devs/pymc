@@ -48,10 +48,10 @@ from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 from scipy import integrate
 from scipy.special import erf, logit
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import floatX, intX
-from pymc3.distributions import (
+from pymc.aesaraf import floatX, intX
+from pymc.distributions import (
     AR1,
     CAR,
     AsymmetricLaplace,
@@ -120,10 +120,10 @@ from pymc3.distributions import (
     logpt,
     logpt_sum,
 )
-from pymc3.math import kronecker
-from pymc3.model import Deterministic, Model, Point, Potential
-from pymc3.tests.helpers import select_by_precision
-from pymc3.vartypes import continuous_types
+from pymc.math import kronecker
+from pymc.model import Deterministic, Model, Point, Potential
+from pymc.tests.helpers import select_by_precision
+from pymc.vartypes import continuous_types
 
 
 def get_lkj_cases():
@@ -601,7 +601,7 @@ def test_hierarchical_obs_logpt():
 class TestMatchesScipy:
     def check_logp(
         self,
-        pymc3_dist,
+        pymc_dist,
         domain,
         paramdomains,
         scipy_logp,
@@ -611,33 +611,33 @@ class TestMatchesScipy:
         scipy_args=None,
     ):
         """
-        Generic test for PyMC3 logp methods
+        Generic test for PyMC logp methods
 
-        Test PyMC3 logp and equivalent scipy logpmf/logpdf methods give similar
+        Test PyMC logp and equivalent scipy logpmf/logpdf methods give similar
         results for valid values and parameters inside the supported edges.
         Edges are excluded by default, but can be artificially included by
         creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
 
         Parameters
         ----------
-        pymc3_dist: PyMC3 distribution
+        pymc_dist: PyMC distribution
         domain : Domain
             Supported domain of distribution values
         paramdomains : Dictionary of Parameter : Domain pairs
             Supported domains of distribution parameters
         scipy_logp : Scipy logpmf/logpdf method
-            Scipy logp method of equivalent pymc3_dist distribution
+            Scipy logp method of equivalent pymc_dist distribution
         decimal : Int
-            Level of precision with which pymc3_dist and scipy logp are compared.
+            Level of precision with which pymc_dist and scipy logp are compared.
             Defaults to 6 for float64 and 3 for float32
         n_samples : Int
             Upper limit on the number of valid domain and value combinations that
-            are compared between pymc3 and scipy methods. If n_samples is below the
+            are compared between pymc and scipy methods. If n_samples is below the
             total number of combinations, a random subset is evaluated. Setting
             n_samples = -1, will return all possible combinations. Defaults to 100
-        extra_args : Dictionary with extra arguments needed to build pymc3 model
+        extra_args : Dictionary with extra arguments needed to build pymc model
             Dictionary is passed to helper function `build_model` from which
-            the pymc3 distribution logp is calculated
+            the pymc distribution logp is calculated
         scipy_args : Dictionary with extra arguments needed to call scipy logp method
             Usually the same as extra_args
         """
@@ -654,8 +654,8 @@ class TestMatchesScipy:
             args.update(scipy_args)
             return scipy_logp(**args)
 
-        model, param_vars = build_model(pymc3_dist, domain, paramdomains, extra_args)
-        logp_pymc3 = model.fastlogp_nojac
+        model, param_vars = build_model(pymc_dist, domain, paramdomains, extra_args)
+        logp_pymc = model.fastlogp_nojac
 
         domains = paramdomains.copy()
         domains["value"] = domain
@@ -665,7 +665,7 @@ class TestMatchesScipy:
             pt_logp = Point(pt_d, model=model)
             pt_ref = Point(pt, filter_model_vars=False, model=model)
             assert_almost_equal(
-                logp_pymc3(pt_logp),
+                logp_pymc(pt_logp),
                 logp_reference(pt_ref),
                 decimal=decimal,
                 err_msg=str(pt),
@@ -697,7 +697,7 @@ class TestMatchesScipy:
 
     def check_logcdf(
         self,
-        pymc3_dist,
+        pymc_dist,
         domain,
         paramdomains,
         scipy_logcdf,
@@ -707,57 +707,57 @@ class TestMatchesScipy:
         skip_paramdomain_outside_edge_test=False,
     ):
         """
-        Generic test for PyMC3 logcdf methods
+        Generic test for PyMC logcdf methods
 
         The following tests are performed by default:
-            1. Test PyMC3 logcdf and equivalent scipy logcdf methods give similar
+            1. Test PyMC logcdf and equivalent scipy logcdf methods give similar
             results for valid values and parameters inside the supported edges.
             Edges are excluded by default, but can be artificially included by
             creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
             Can be skipped via skip_paramdomain_inside_edge_test
-            2. Test PyMC3 logcdf method returns -inf for invalid parameter values
+            2. Test PyMC logcdf method returns -inf for invalid parameter values
             outside the supported edges. Can be skipped via skip_paramdomain_outside_edge_test
-            3. Test PyMC3 logcdf method returns -inf and 0 for values below and
+            3. Test PyMC logcdf method returns -inf and 0 for values below and
             above the supported edge, respectively, when using valid parameters.
-            4. Test PyMC3 logcdf methods works with multiple value or returns
+            4. Test PyMC logcdf methods works with multiple value or returns
             default informative TypeError
 
         Parameters
         ----------
-        pymc3_dist: PyMC3 distribution
+        pymc_dist: PyMC distribution
         domain : Domain
             Supported domain of distribution values
         paramdomains : Dictionary of Parameter : Domain pairs
             Supported domains of distribution parameters
         scipy_logcdf : Scipy logcdf method
-            Scipy logcdf method of equivalent pymc3_dist distribution
+            Scipy logcdf method of equivalent pymc_dist distribution
         decimal : Int
-            Level of precision with which pymc3_dist and scipy_logcdf are compared.
+            Level of precision with which pymc_dist and scipy_logcdf are compared.
             Defaults to 6 for float64 and 3 for float32
         n_samples : Int
             Upper limit on the number of valid domain and value combinations that
-            are compared between pymc3 and scipy methods. If n_samples is below the
+            are compared between pymc and scipy methods. If n_samples is below the
             total number of combinations, a random subset is evaluated. Setting
             n_samples = -1, will return all possible combinations. Defaults to 100
         skip_paramdomain_inside_edge_test : Bool
-            Whether to run test 1., which checks that pymc3 and scipy distributions
+            Whether to run test 1., which checks that pymc and scipy distributions
             match for valid values and parameters inside the respective domain edges
         skip_paramdomain_outside_edge_test : Bool
-            Whether to run test 2., which checks that pymc3 distribution logcdf
+            Whether to run test 2., which checks that pymc distribution logcdf
             returns -inf for invalid parameter values outside the supported domain edge
 
         Returns
         -------
 
         """
-        # Test pymc3 and scipy distributions match for values and parameters
+        # Test pymc and scipy distributions match for values and parameters
         # within the supported domain edges (excluding edges)
         if not skip_paramdomain_inside_edge_test:
             domains = paramdomains.copy()
             domains["value"] = domain
 
-            model, param_vars = build_model(pymc3_dist, domain, paramdomains)
-            pymc3_logcdf = model.fastfn(logpt(model["value"], cdf=True))
+            model, param_vars = build_model(pymc_dist, domain, paramdomains)
+            pymc_logcdf = model.fastfn(logpt(model["value"], cdf=True))
 
             if decimal is None:
                 decimal = select_by_precision(float64=6, float32=3)
@@ -767,14 +767,14 @@ class TestMatchesScipy:
                 scipy_eval = scipy_logcdf(**params)
 
                 value = params.pop("value")
-                # Update shared parameter variables in pymc3_logcdf function
+                # Update shared parameter variables in pymc_logcdf function
                 for param_name, param_value in params.items():
                     param_vars[param_name].set_value(param_value)
-                pymc3_eval = pymc3_logcdf({"value": value})
+                pymc_eval = pymc_logcdf({"value": value})
 
                 params["value"] = value  # for displaying in err_msg
                 assert_almost_equal(
-                    pymc3_eval,
+                    pymc_eval,
                     scipy_eval,
                     decimal=decimal,
                     err_msg=str(params),
@@ -782,12 +782,12 @@ class TestMatchesScipy:
 
         valid_value = domain.vals[0]
         valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
-        valid_dist = pymc3_dist.dist(**valid_params)
+        valid_dist = pymc_dist.dist(**valid_params)
 
         # Natural domains do not have inf as the upper edge, but should also be ignored
         nat_domains = (NatSmall, Nat, NatBig, PosNat)
 
-        # Test pymc3 distribution gives -inf for parameters outside the
+        # Test pymc distribution gives -inf for parameters outside the
         # supported domain edges (excluding edgse)
         if not skip_paramdomain_outside_edge_test:
             # Step1: collect potential invalid parameters
@@ -808,7 +808,7 @@ class TestMatchesScipy:
                         # otherwise, we won't be able to create the
                         # `RandomVariable`
                         with aesara.config.change_flags(compute_test_value="off"):
-                            invalid_dist = pymc3_dist.dist(**test_params)
+                            invalid_dist = pymc_dist.dist(**test_params)
                         with aesara.config.change_flags(mode=Mode("py")):
                             assert_equal(
                                 logcdf(invalid_dist, valid_value).eval(),
@@ -837,7 +837,7 @@ class TestMatchesScipy:
                 )
 
         # Test that method works with multiple values or raises informative TypeError
-        valid_dist = pymc3_dist.dist(**valid_params, size=2)
+        valid_dist = pymc_dist.dist(**valid_params, size=2)
         with aesara.config.change_flags(mode=Mode("py")):
             try:
                 logcdf(valid_dist, np.array([valid_value, valid_value])).eval()
@@ -2081,12 +2081,12 @@ class TestMatchesScipy:
         else:
             d_point_trans = d_point
 
-        pymc3_res = logp(d, d_point_trans, jacobian=False).eval()
-        scipy_res = np.empty_like(pymc3_res)
+        pymc_res = logp(d, d_point_trans, jacobian=False).eval()
+        scipy_res = np.empty_like(pymc_res)
         for idx in np.ndindex(a.shape[:-1]):
             scipy_res[idx] = scipy.stats.dirichlet(a[idx]).logpdf(d_point[idx])
 
-        assert_almost_equal(pymc3_res, scipy_res)
+        assert_almost_equal(pymc_res, scipy_res)
 
     def test_dirichlet_shape(self):
         a = at.as_tensor_variable(np.r_[1, 2])
@@ -2472,7 +2472,7 @@ class TestMatchesScipy:
             (1000.0, 500.000, 10.000, 20.000, -27.8707323),
             (-1.0, 1.0, 20.0, 0.9, -3.91967108),  # Fails in scipy version
             (0.01, 0.01, 100.0, 0.01, -5.5241087),  # Fails in scipy version
-            (-1.0, 0.0, 0.1, 0.1, -51.022349),  # Fails in previous pymc3 version
+            (-1.0, 0.0, 0.1, 0.1, -51.022349),  # Fails in previous pymc version
         ],
     )
     def test_ex_gaussian(self, value, mu, sigma, nu, logp):
@@ -2627,7 +2627,7 @@ class TestMatchesScipy:
                 xmin = mu - 5 * sigma
                 xmax = mu + 5 * sigma
 
-                from pymc3.distributions.continuous import interpolated
+                from pymc.distributions.continuous import interpolated
 
                 class TestedInterpolated(Interpolated):
                     rv_op = interpolated
@@ -3213,7 +3213,7 @@ class TestBugfixes:
 
     def test_issue_4499(self):
         # Test for bug in Uniform and DiscreteUniform logp when setting check_bounds = False
-        # https://github.com/pymc-devs/pymc3/issues/4499
+        # https://github.com/pymc-devs/pymc/issues/4499
         with pm.Model(check_bounds=False) as m:
             x = pm.Uniform("x", 0, 2, size=10, transform=None)
         assert_almost_equal(m.logp({"x": np.ones(10)}), -np.log(2) * 10)

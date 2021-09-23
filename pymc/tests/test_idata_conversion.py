@@ -10,9 +10,9 @@ from arviz import InferenceData
 from arviz.tests.helpers import check_multiple_attrs
 from numpy import ma
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.backends.arviz import predictions_to_inference_data, to_inference_data
+from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 
 
 @pytest.fixture(scope="module")
@@ -37,7 +37,7 @@ def chains():
     return 2
 
 
-class TestDataPyMC3:
+class TestDataPyMC:
     class Data:
         def __init__(self, model, trace):
             self.model = model
@@ -295,7 +295,7 @@ class TestDataPyMC3:
         assert np.all(idata2.constant_data.x.dim2.values == np.array(["c1", "c2"]))
 
     def test_missing_data_model(self):
-        # source pymc3/pymc3/tests/test_missing.py
+        # source pymc/pymc/tests/test_missing.py
         data = ma.masked_values([1, 2, -1, 4, -1], value=-1)
         model = pm.Model()
         with model:
@@ -479,7 +479,7 @@ class TestDataPyMC3:
             assert set(predictive_trace.keys()) == {"obs"}
             # this should be four chains of 100 samples
             # assert predictive_trace["obs"].shape == (400, 2)
-            # but the shape seems to vary between pymc3 versions
+            # but the shape seems to vary between pymc versions
             inference_data = predictions_to_inference_data(predictive_trace, posterior_trace=trace)
         test_dict = {"posterior": ["beta"], "~observed_data": ""}
         fails = check_multiple_attrs(test_dict, inference_data)
@@ -565,7 +565,7 @@ class TestDataPyMC3:
         assert "direction" in idata.observed_data.dims
 
 
-class TestPyMC3WarmupHandling:
+class TestPyMCWarmupHandling:
     @pytest.mark.parametrize("save_warmup", [False, True])
     @pytest.mark.parametrize("chains", [1, 2])
     @pytest.mark.parametrize("tune,draws", [(0, 50), (10, 40), (30, 0)])

@@ -12,5 +12,5 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc3.ode import utils
-from pymc3.ode.ode import DifferentialEquation
+from pymc.ode import utils
+from pymc.ode.ode import DifferentialEquation

@@ -16,10 +16,10 @@ import numpy as np
 
 from numpy import exp, log, sqrt
 
-from pymc3.aesaraf import hessian_diag, inputvars
-from pymc3.blocking import DictToArrayBijection
-from pymc3.model import Point, modelcontext
-from pymc3.util import get_var_name
+from pymc.aesaraf import hessian_diag, inputvars
+from pymc.blocking import DictToArrayBijection
+from pymc.model import Point, modelcontext
+from pymc.util import get_var_name
 
 __all__ = ["find_hessian", "trace_cov", "guess_scaling"]
 

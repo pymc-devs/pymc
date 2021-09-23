@@ -19,13 +19,13 @@ from aesara import tensor as at
 from aesara.graph.basic import Variable
 from aesara.tensor.var import TensorVariable
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.blocking import DictToArrayBijection
-from pymc3.distributions.dist_math import rho2sigma
-from pymc3.math import batched_diag
-from pymc3.variational import flows, opvi
-from pymc3.variational.opvi import Approximation, Group, node_property
+from pymc.blocking import DictToArrayBijection
+from pymc.distributions.dist_math import rho2sigma
+from pymc.math import batched_diag
+from pymc.variational import flows, opvi
+from pymc.variational.opvi import Approximation, Group, node_property
 
 __all__ = ["MeanField", "FullRank", "Empirical", "NormalizingFlow", "sample_approx"]
 
@@ -349,7 +349,7 @@ class NormalizingFlowGroup(Group):
 
     **Flow Formulas**
 
-    In PyMC3 there is a flexible way to define flows with formulas. We have 5 of them by the moment:
+    In PyMC there is a flexible way to define flows with formulas. We have 5 of them by the moment:
 
     -   Loc (:code:`loc`): :math:`z' = z + \mu`
     -   Scale (:code:`scale`): :math:`z' = \sigma * z`
@@ -516,7 +516,7 @@ def sample_approx(approx, draws=100, include_transformed=True):
 
     Returns
     -------
-    trace: class:`pymc3.backends.base.MultiTrace`
+    trace: class:`pymc.backends.base.MultiTrace`
         Samples drawn from variational posterior.
     """
     return approx.sample(draws=draws, include_transformed=include_transformed)

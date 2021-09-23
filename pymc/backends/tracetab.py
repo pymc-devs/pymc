@@ -20,7 +20,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from pymc3.util import get_default_varnames
+from pymc.util import get_default_varnames
 
 __all__ = ["trace_to_dataframe"]
 

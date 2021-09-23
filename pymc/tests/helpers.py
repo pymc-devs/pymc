@@ -22,7 +22,7 @@ import numpy.random as nr
 from aesara.gradient import verify_grad as at_verify_grad
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 
-from pymc3.aesaraf import at_rng, set_at_rng
+from pymc.aesaraf import at_rng, set_at_rng
 
 
 class SeededTest:

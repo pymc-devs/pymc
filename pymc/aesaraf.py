@@ -51,8 +51,8 @@ from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorConstant, TensorVariable
 
-from pymc3.exceptions import ShapeError
-from pymc3.vartypes import continuous_types, int_types, isgenerator, typefilter
+from pymc.exceptions import ShapeError
+from pymc.vartypes import continuous_types, int_types, isgenerator, typefilter
 
 PotentialShapeType = Union[
     int, np.ndarray, Tuple[Union[int, Variable], ...], List[Union[int, Variable]], Variable
@@ -351,7 +351,7 @@ def rvs_to_value_vars(
     """
 
     # Avoid circular dependency
-    from pymc3.distributions import NoDistribution
+    from pymc.distributions import NoDistribution
 
     def transform_replacements(var, replacements):
         rv_var, rv_value_var = extract_rv_and_value_vars(var)
@@ -695,7 +695,7 @@ class GeneratorOp(Op):
     __props__ = ("generator",)
 
     def __init__(self, gen, default=None):
-        from pymc3.data import GeneratorAdapter
+        from pymc.data import GeneratorAdapter
 
         super().__init__()
         if not isinstance(gen, GeneratorAdapter):
@@ -719,7 +719,7 @@ class GeneratorOp(Op):
     __call__ = aesara.config.change_flags(compute_test_value="off")(Op.__call__)
 
     def set_gen(self, gen):
-        from pymc3.data import GeneratorAdapter
+        from pymc.data import GeneratorAdapter
 
         if not isinstance(gen, GeneratorAdapter):
             gen = GeneratorAdapter(gen)
@@ -897,7 +897,7 @@ def compile_rv_inplace(inputs, outputs, mode=None, **kwargs):
     """
 
     # Avoid circular dependency
-    from pymc3.distributions import NoDistribution
+    from pymc.distributions import NoDistribution
 
     # Set the default update of a NoDistribution RNG so that it is automatically
     # updated after every function call

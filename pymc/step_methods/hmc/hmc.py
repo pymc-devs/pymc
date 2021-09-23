@@ -14,10 +14,10 @@
 
 import numpy as np
 
-from pymc3.step_methods.arraystep import Competence
-from pymc3.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
-from pymc3.step_methods.hmc.integration import IntegrationError
-from pymc3.vartypes import discrete_types
+from pymc.step_methods.arraystep import Competence
+from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
+from pymc.step_methods.hmc.integration import IntegrationError
+from pymc.vartypes import discrete_types
 
 __all__ = ["HamiltonianMC"]
 
@@ -105,7 +105,7 @@ class HamiltonianMC(BaseHMC):
             disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
         max_steps: int
             The maximum number of leapfrog steps.
-        model: pymc3.Model
+        model: pymc.Model
             The model
         **kwargs: passed to BaseHMC
         """

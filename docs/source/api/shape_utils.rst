@@ -8,7 +8,7 @@ The main challenge when broadcasting samples drawn from a generative model, is t
 
 This module introduces functions that are made aware of the requested `size_tuple` of i.i.d samples, and does the broadcasting on the core shapes, transparently ignoring or moving the i.i.d `size_tuple` prepended axes around.
 
-.. currentmodule:: pymc3.distributions.shape_utils
+.. currentmodule:: pymc.distributions.shape_utils
 
 .. autosummary::
 
@@ -19,5 +19,5 @@ This module introduces functions that are made aware of the requested `size_tupl
    broadcast_distribution_samples
    broadcast_dist_samples_to
 
-.. automodule:: pymc3.distributions.shape_utils
+.. automodule:: pymc.distributions.shape_utils
    :members:

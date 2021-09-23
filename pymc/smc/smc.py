@@ -23,19 +23,19 @@ from aesara.graph.basic import clone_replace
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
-from pymc3.aesaraf import (
+from pymc.aesaraf import (
     compile_rv_inplace,
     floatX,
     inputvars,
     join_nonshared_inputs,
     make_shared_replacements,
 )
-from pymc3.backends.ndarray import NDArray
-from pymc3.blocking import DictToArrayBijection
-from pymc3.model import Point, modelcontext
-from pymc3.sampling import sample_prior_predictive
-from pymc3.step_methods.metropolis import MultivariateNormalProposal
-from pymc3.vartypes import discrete_types
+from pymc.backends.ndarray import NDArray
+from pymc.blocking import DictToArrayBijection
+from pymc.model import Point, modelcontext
+from pymc.sampling import sample_prior_predictive
+from pymc.step_methods.metropolis import MultivariateNormalProposal
+from pymc.vartypes import discrete_types
 
 
 class SMC_KERNEL(ABC):
@@ -301,7 +301,7 @@ class SMC_KERNEL(ABC):
         }
 
     def _posterior_to_trace(self, chain=0) -> NDArray:
-        """Save results into a PyMC3 trace
+        """Save results into a PyMC trace
 
         This method shoud not be overwritten.
         """
@@ -544,9 +544,9 @@ def _logp_forw(point, out_vars, vars, shared):
     Parameters
     ----------
     out_vars: List
-        containing :class:`pymc3.Distribution` for the output variables
+        containing :class:`pymc.Distribution` for the output variables
     vars: List
-        containing :class:`pymc3.Distribution` for the input variables
+        containing :class:`pymc.Distribution` for the input variables
     shared: List
         containing :class:`aesara.tensor.Tensor` for depended shared data
     """

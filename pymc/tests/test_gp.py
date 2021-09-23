@@ -22,9 +22,9 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.math import cartesian, kronecker
+from pymc.math import cartesian, kronecker
 
 np.random.seed(101)
 

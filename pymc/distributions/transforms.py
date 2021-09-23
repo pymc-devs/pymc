@@ -17,8 +17,8 @@ import aesara.tensor as at
 from aesara.tensor.subtensor import advanced_set_subtensor1
 from aesara.tensor.var import TensorVariable
 
-from pymc3.aesaraf import floatX, gradient
-from pymc3.math import invlogit, logit, logsumexp
+from pymc.aesaraf import floatX, gradient
+from pymc.math import invlogit, logit, logsumexp
 
 __all__ = [
     "Transform",

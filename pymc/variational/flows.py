@@ -17,10 +17,10 @@ import numpy as np
 
 from aesara import tensor as at
 
-from pymc3.distributions.dist_math import rho2sigma
-from pymc3.util import WithMemoization
-from pymc3.variational import opvi
-from pymc3.variational.opvi import collect_shared_to_list, node_property
+from pymc.distributions.dist_math import rho2sigma
+from pymc.util import WithMemoization
+from pymc.variational import opvi
+from pymc.variational.opvi import collect_shared_to_list, node_property
 
 __all__ = ["Formula", "PlanarFlow", "HouseholderFlow", "RadialFlow", "LocFlow", "ScaleFlow"]
 

@@ -5,11 +5,11 @@
 
 .. _prob_dists:
 
-**********************************
-Probability Distributions in PyMC3
-**********************************
+*********************************
+Probability Distributions in PyMC
+*********************************
 
-The most fundamental step in building Bayesian models is the specification of a full probability model for the problem at hand. This primarily involves assigning parametric statistical distributions to unknown quantities in the model, in addition to appropriate functional forms for likelihoods to represent the information from the data. To this end, PyMC3 includes a comprehensive set of pre-defined statistical distributions that can be used as model building blocks.
+The most fundamental step in building Bayesian models is the specification of a full probability model for the problem at hand. This primarily involves assigning parametric statistical distributions to unknown quantities in the model, in addition to appropriate functional forms for likelihoods to represent the information from the data. To this end, PyMC includes a comprehensive set of pre-defined statistical distributions that can be used as model building blocks.
 
 For example, if we wish to define a particular variable as having a normal prior, we can specify that using an instance of the ``Normal`` class.
 
@@ -43,13 +43,13 @@ All distributions in ``pm.distributions`` will have two important methods: ``ran
             ...
             return total_log_prob
 
-PyMC3 expects the ``logp()`` method to return a log-probability evaluated at the passed ``value`` argument. This method is used internally by all of the inference methods to calculate the model log-probability that is used for fitting models. The ``random()`` method is used to simulate values from the variable, and is used internally for posterior predictive checks.
+PyMC expects the ``logp()`` method to return a log-probability evaluated at the passed ``value`` argument. This method is used internally by all of the inference methods to calculate the model log-probability that is used for fitting models. The ``random()`` method is used to simulate values from the variable, and is used internally for posterior predictive checks.
 
 
 Custom distributions
 ====================
 
-Despite the fact that PyMC3 ships with a large set of the most common probability distributions, some problems may require the use of functional forms that are less common, and not available in ``pm.distributions``. One example of this is in survival analysis, where time-to-event data is modeled using probability densities that are designed to accommodate censored data.
+Despite the fact that PyMC ships with a large set of the most common probability distributions, some problems may require the use of functional forms that are less common, and not available in ``pm.distributions``. One example of this is in survival analysis, where time-to-event data is modeled using probability densities that are designed to accommodate censored data.
 
 An exponential survival function, where :math:`c=0` denotes failure (or non-survival), is defined by:
 
@@ -58,7 +58,7 @@ An exponential survival function, where :math:`c=0` denotes failure (or non-surv
     f(c, t) = \left\{ \begin{array}{l} \exp(-\lambda t), \text{if c=1} \\
                \lambda \exp(-\lambda t), \text{if c=0}  \end{array} \right.
 
-Such a function can be implemented as a PyMC3 distribution by writing a function that specifies the log-probability, then passing that function as an argument to the ``DensityDist`` function, which creates an instance of a PyMC3 distribution with the custom function as its log-probability.
+Such a function can be implemented as a PyMC distribution by writing a function that specifies the log-probability, then passing that function as an argument to the ``DensityDist`` function, which creates an instance of a PyMC distribution with the custom function as its log-probability.
 
 For the exponential survival function, this is:
 

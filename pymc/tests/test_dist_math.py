@@ -22,11 +22,11 @@ from aesara import config, function
 from aesara.tensor.random.basic import multinomial
 from scipy import interpolate, stats
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import floatX
-from pymc3.distributions import Discrete
-from pymc3.distributions.dist_math import (
+from pymc.aesaraf import floatX
+from pymc.distributions import Discrete
+from pymc.distributions.dist_math import (
     MvNormalLogp,
     SplineWrapper,
     alltrue_scalar,
@@ -37,8 +37,8 @@ from pymc3.distributions.dist_math import (
     incomplete_beta,
     multigammaln,
 )
-from pymc3.tests.checks import close_to
-from pymc3.tests.helpers import verify_grad
+from pymc.tests.checks import close_to
+from pymc.tests.helpers import verify_grad
 
 
 def test_bound():

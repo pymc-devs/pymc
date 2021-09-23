@@ -35,8 +35,8 @@ from aesara.tensor.slinalg import Cholesky
 from aesara.tensor.slinalg import solve_lower_triangular as solve_lower
 from aesara.tensor.slinalg import solve_upper_triangular as solve_upper
 
-from pymc3.aesaraf import floatX
-from pymc3.distributions.shape_utils import to_tuple
+from pymc.aesaraf import floatX
+from pymc.distributions.shape_utils import to_tuple
 
 f = floatX
 c = -0.5 * np.log(2.0 * np.pi)
@@ -74,7 +74,7 @@ def bound(logp, *conditions, broadcast_conditions=True):
 
     # If called inside a model context, see if bounds check is disabled
     try:
-        from pymc3.model import modelcontext
+        from pymc.model import modelcontext
 
         model = modelcontext(None)
         if not model.check_bounds:

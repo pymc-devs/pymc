@@ -23,10 +23,10 @@ from aesara.graph.basic import Apply
 from aesara.graph.op import Op, get_test_value
 from aesara.tensor.type import TensorType
 
-from pymc3.exceptions import DtypeError, ShapeError
-from pymc3.ode import utils
+from pymc.exceptions import DtypeError, ShapeError
+from pymc.ode import utils
 
-_log = logging.getLogger("pymc3")
+_log = logging.getLogger("pymc")
 floatX = aesara.config.floatX
 
 

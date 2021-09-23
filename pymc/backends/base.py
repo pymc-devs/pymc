@@ -14,7 +14,7 @@
 
 """Base backend for traces
 
-See the docstring for pymc3.backends for more information
+See the docstring for pymc.backends for more information
 """
 import itertools as itl
 import logging
@@ -26,11 +26,11 @@ from typing import List
 import aesara.tensor as at
 import numpy as np
 
-from pymc3.backends.report import SamplerReport, merge_reports
-from pymc3.model import modelcontext
-from pymc3.util import get_var_name
+from pymc.backends.report import SamplerReport, merge_reports
+from pymc.model import modelcontext
+from pymc.util import get_var_name
 
-logger = logging.getLogger("pymc3")
+logger = logging.getLogger("pymc")
 
 
 class BackendError(Exception):

@@ -12,5 +12,5 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc3.tuning.scaling import find_hessian, guess_scaling, trace_cov
-from pymc3.tuning.starting import find_MAP
+from pymc.tuning.scaling import find_hessian, guess_scaling, trace_cov
+from pymc.tuning.starting import find_MAP

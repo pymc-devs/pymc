@@ -1,6 +1,6 @@
 Graphing Models
 ---------------
 
-.. currentmodule:: pymc3.model_graph
-.. automodule:: pymc3.model_graph
+.. currentmodule:: pymc.model_graph
+.. automodule:: pymc.model_graph
    :members:

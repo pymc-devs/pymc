@@ -2,7 +2,7 @@
 Data
 ****
 
-.. currentmodule:: pymc3.data
+.. currentmodule:: pymc.data
 
-.. automodule:: pymc3.data
+.. automodule:: pymc.data
    :members:

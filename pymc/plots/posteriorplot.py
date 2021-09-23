@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pymc3.backends.base import MultiTrace
+from pymc.backends.base import MultiTrace
 
 if TYPE_CHECKING:
     from arviz.data.inference_data import InferenceData
@@ -54,7 +54,7 @@ def plot_posterior_predictive_glm(
 
     Warnings
     --------
-    The `plot_posterior_predictive_glm` function will be removed in a future PyMC3 release.
+    The `plot_posterior_predictive_glm` function will be removed in a future PyMC release.
     """
     warnings.warn(
         "The `plot_posterior_predictive_glm` function will migrate to Arviz in a future release. "

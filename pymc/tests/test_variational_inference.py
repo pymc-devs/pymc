@@ -21,13 +21,13 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import intX
-from pymc3.tests import models
-from pymc3.tests.helpers import not_raises
-from pymc3.variational import flows, opvi
-from pymc3.variational.approximations import (
+from pymc.aesaraf import intX
+from pymc.tests import models
+from pymc.tests.helpers import not_raises
+from pymc.variational import flows, opvi
+from pymc.variational.approximations import (
     Empirical,
     EmpiricalGroup,
     FullRank,
@@ -37,8 +37,8 @@ from pymc3.variational.approximations import (
     NormalizingFlow,
     NormalizingFlowGroup,
 )
-from pymc3.variational.inference import ADVI, ASVGD, NFVI, SVGD, FullRankADVI, fit
-from pymc3.variational.opvi import Approximation, Group
+from pymc.variational.inference import ADVI, ASVGD, NFVI, SVGD, FullRankADVI, fit
+from pymc.variational.opvi import Approximation, Group
 
 # pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
 pytestmark = pytest.mark.xfail(

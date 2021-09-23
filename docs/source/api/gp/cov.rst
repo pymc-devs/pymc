@@ -2,7 +2,7 @@
 Covariance Functions
 ********************
 
-.. currentmodule:: pymc3.gp.cov
+.. currentmodule:: pymc.gp.cov
 .. autosummary::
    Constant
    WhiteNoise
@@ -20,5 +20,5 @@ Covariance Functions
    Kron
    Coregion
 
-.. automodule:: pymc3.gp.cov
+.. automodule:: pymc.gp.cov
    :members:

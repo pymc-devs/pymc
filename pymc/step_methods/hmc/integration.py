@@ -18,7 +18,7 @@ import numpy as np
 
 from scipy import linalg
 
-from pymc3.blocking import RaveledVars
+from pymc.blocking import RaveledVars
 
 State = namedtuple("State", "q, p, v, q_grad, energy, model_logp")
 

@@ -20,12 +20,12 @@ from aesara import shared
 from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorVariable
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import floatX
-from pymc3.distributions import logpt
-from pymc3.exceptions import ShapeError
-from pymc3.tests.helpers import SeededTest
+from pymc.aesaraf import floatX
+from pymc.distributions import logpt
+from pymc.exceptions import ShapeError
+from pymc.tests.helpers import SeededTest
 
 
 class TestData(SeededTest):
@@ -122,7 +122,7 @@ class TestData(SeededTest):
     def test_shared_data_as_index(self):
         """
         Allow pm.Data to be used for index variables, i.e with integers as well as floats.
-        See https://github.com/pymc-devs/pymc3/issues/3813
+        See https://github.com/pymc-devs/pymc/issues/3813
         """
         with pm.Model() as model:
             index = pm.Data("index", [2, 0, 1, 0, 2])
@@ -154,7 +154,7 @@ class TestData(SeededTest):
     def test_shared_data_as_rv_input(self):
         """
         Allow pm.Data to be used as input for other RVs.
-        See https://github.com/pymc-devs/pymc3/issues/3842
+        See https://github.com/pymc-devs/pymc/issues/3842
         """
         with pm.Model() as m:
             x = pm.Data("x", [1.0, 2.0, 3.0])
@@ -194,7 +194,7 @@ class TestData(SeededTest):
         )
 
     def test_shared_scalar_as_rv_input(self):
-        # See https://github.com/pymc-devs/pymc3/issues/3139
+        # See https://github.com/pymc-devs/pymc/issues/3139
         with pm.Model() as m:
             shared_var = shared(5.0)
             v = pm.Normal("v", mu=shared_var, size=1)

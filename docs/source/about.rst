@@ -5,23 +5,23 @@
 
 .. _about:
 
-***********
-About PyMC3
-***********
+**********
+About PyMC
+**********
 
 .. _intro:
 
 Purpose
 =======
 
-PyMC3 is a probabilistic programming package for Python that allows users to fit Bayesian models using a variety of numerical methods, most notably Markov chain Monte Carlo (MCMC) and variational inference (VI). Its flexibility and extensibility make it applicable to a large suite of problems. Along with core model specification and fitting functionality, PyMC3 includes functionality for summarizing output and for model diagnostics.
+PyMC is a probabilistic programming package for Python that allows users to fit Bayesian models using a variety of numerical methods, most notably Markov chain Monte Carlo (MCMC) and variational inference (VI). Its flexibility and extensibility make it applicable to a large suite of problems. Along with core model specification and fitting functionality, PyMC includes functionality for summarizing output and for model diagnostics.
 
 
 
 Features
 ========
 
-PyMC3 strives to make Bayesian modeling as simple and painless as possible,  allowing users to focus on their scientific problem, rather than on the methods used to solve it. Here is a partial list of its features:
+PyMC strives to make Bayesian modeling as simple and painless as possible,  allowing users to focus on their scientific problem, rather than on the methods used to solve it. Here is a partial list of its features:
 
 * Modern methods for fitting Bayesian models, including MCMC and VI.
 
@@ -45,7 +45,7 @@ PyMC3 strives to make Bayesian modeling as simple and painless as possible,  all
 What's new in version 3
 =======================
 
-The third major version of PyMC has benefitted from being re-written from scratch. Substantial improvements in the user interface and performance have resulted from this. While PyMC2 relied on Fortran extensions (via f2py) for most of the computational heavy-lifting, PyMC3 leverages Aesara, a fork of the Theano library from the Montréal Institute for Learning Algorithms (MILA), for array-based expression evaluation, to perform its computation. What this provides, above all else, is fast automatic differentiation, which is at the heart of the gradient-based sampling and optimization methods currently providing inference for probabilistic programming.
+The third major version of PyMC has benefitted from being re-written from scratch. Substantial improvements in the user interface and performance have resulted from this. While PyMC2 relied on Fortran extensions (via f2py) for most of the computational heavy-lifting, PyMC leverages Aesara, a fork of the Theano library from the Montréal Institute for Learning Algorithms (MILA), for array-based expression evaluation, to perform its computation. What this provides, above all else, is fast automatic differentiation, which is at the heart of the gradient-based sampling and optimization methods currently providing inference for probabilistic programming.
 
 Major changes from previous versions:
 
@@ -90,7 +90,7 @@ plotting, csv table output, improved imputation syntax, and posterior
 predictive check plots. PyMC 2.3 was released on October 31, 2013. It included
 Python 3 compatibility, improved summary plots, and some important bug fixes.
 
-In 2011, John Salvatier began thinking about implementing gradient-based MCMC samplers, and developed the ``mcex`` package to experiment with his ideas. The following year, John was invited by the team to re-engineer PyMC to accomodate Hamiltonian Monte Carlo sampling. This led to the adoption of Theano as the computational back end, and marked the beginning of PyMC3's development. The first alpha version of PyMC3 was released in June 2015. Over the following 2 years, the core development team grew to 12 members, and the first release, PyMC3 3.0, was launched in January 2017.  In 2020 the PyMC developers forked Theano and in 2021 renamed the forked project to Aesara.
+In 2011, John Salvatier began thinking about implementing gradient-based MCMC samplers, and developed the ``mcex`` package to experiment with his ideas. The following year, John was invited by the team to re-engineer PyMC to accomodate Hamiltonian Monte Carlo sampling. This led to the adoption of Theano as the computational back end, and marked the beginning of PyMC's development. The first alpha version of PyMC was released in June 2015. Over the following 2 years, the core development team grew to 12 members, and the first release, PyMC 3.0, was launched in January 2017.  In 2020 the PyMC developers forked Theano and in 2021 renamed the forked project to Aesara.
 
 .. _support:
 
@@ -98,25 +98,25 @@ In 2011, John Salvatier began thinking about implementing gradient-based MCMC sa
 Support PyMC
 ************
 
-PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3
+PyMC is a non-profit project under NumFOCUS umbrella. If you want to support PyMC
 financially, consider donating to the project.
 
 .. raw:: html
 
     <style>.centered {text-align: center;}</style>
-    <div class="centered"><a href="https://numfocus.org/donate-to-pymc3">
-      <div class="ui huge primary button">Donate to PyMC3</div>
+    <div class="centered"><a href="https://numfocus.org/donate-to-pymc">
+      <div class="ui huge primary button">Donate to PyMC</div>
     </a></div>
 
-Citing PyMC3
-============
-If you use PyMC3 in your reseach please cite: Salvatier J., Wiecki T.V., Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ Computer Science 2:e55 [DOI: 10.7717/peerj-cs.55](https://doi.org/10.7717/peerj-cs.55).
+Citing PyMC
+===========
+If you use PyMC in your reseach please cite: Salvatier J., Wiecki T.V., Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC. PeerJ Computer Science 2:e55 [DOI: 10.7717/peerj-cs.55](https://doi.org/10.7717/peerj-cs.55).
 
 The BibTeX entry is:
 
 .. code-block:: none
 
-    @article{pymc3,
+    @article{pymc,
       title={Probabilistic programming in Python using PyMC3},
       author={Salvatier, John and Wiecki, Thomas V and Fonnesbeck, Christopher},
       journal={PeerJ Computer Science},
@@ -141,7 +141,7 @@ let's face it, amazing!
 
     <style>.centered {text-align: center;}</style>
     <p><div class="centered">
-    <a href="https://tidelift.com/subscription/pkg/pypi-pymc3?utm_source=undefined&utm_medium=referral&utm_campaign=enterprise">
+    <a href="https://tidelift.com/subscription/pkg/pypi-pymc?utm_source=undefined&utm_medium=referral&utm_campaign=enterprise">
       <button class="ui large orange button" color="orange">Learn more</button>
     </a>
     <a href="https://tidelift.com/subscription/request-a-demo?utm_source=undefined&utm_medium=referral&utm_campaign=enterprise">
@@ -189,22 +189,22 @@ Sponsors
 
 |NumFOCUS| |PyMCLabs|
 
-More details about sponsoring PyMC3 can be found `here <https://github.com/pymc-devs/pymc3/blob/main/GOVERNANCE.md#institutional-partners-and-funding>`_.
+More details about sponsoring PyMC can be found `here <https://github.com/pymc-devs/pymc/blob/main/GOVERNANCE.md#institutional-partners-and-funding>`_.
 If you are interested in becoming a sponsor, reach out to `pymc.devs@gmail.com <pymc.devs@gmail.com>`_
 
 **************
 Usage Overview
 **************
 
-For a detailed overview of building models in PyMC3, please read the appropriate sections in the rest of the documentation. For a flavor of what PyMC3 models look like, here is a quick example.
+For a detailed overview of building models in PyMC, please read the appropriate sections in the rest of the documentation. For a flavor of what PyMC models look like, here is a quick example.
 
-First, let's import PyMC3 and `ArviZ <https://arviz-devs.github.io/arviz/>`__ (which handles plotting and diagnostics):
+First, let's import PyMC and `ArviZ <https://arviz-devs.github.io/arviz/>`__ (which handles plotting and diagnostics):
 
 ::
 
     import arviz as az
     import numpy as np
-    import pymc3 as pm
+    import pymc as pm
 
 Models are defined using a context manager (``with`` statement). The model is specified declaratively inside the context manager, instantiating model variables and transforming them as necessary. Here is an example of a model for a bioassay experiment:
 
@@ -266,6 +266,6 @@ See also
 .. |NumFOCUS| image:: https://numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png
    :target: http://www.numfocus.org/
    :height: 120px
-.. |PyMCLabs| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/main/docs/pymc-labs-logo.png
+.. |PyMCLabs| image:: https://raw.githubusercontent.com/pymc-devs/pymc/main/docs/pymc-labs-logo.png
    :target: https://pymc-labs.io
    :height: 120px

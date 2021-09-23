@@ -18,12 +18,12 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
-from pymc3.aesaraf import _conversion_map, take_along_axis
-from pymc3.distributions.continuous import Normal, get_tau_sigma
-from pymc3.distributions.dist_math import bound
-from pymc3.distributions.distribution import Discrete, Distribution
-from pymc3.distributions.shape_utils import to_tuple
-from pymc3.math import logsumexp
+from pymc.aesaraf import _conversion_map, take_along_axis
+from pymc.distributions.continuous import Normal, get_tau_sigma
+from pymc.distributions.dist_math import bound
+from pymc.distributions.distribution import Discrete, Distribution
+from pymc.distributions.shape_utils import to_tuple
+from pymc.math import logsumexp
 
 __all__ = ["Mixture", "NormalMixture", "MixtureSameFamily"]
 
@@ -56,8 +56,8 @@ class Mixture(Distribution):
     w: array of floats
         w >= 0 and w <= 1
         the mixture weights
-    comp_dists: multidimensional PyMC3 distribution (e.g. `pm.Poisson.dist(...)`)
-        or iterable of PyMC3 distributions the component distributions
+    comp_dists: multidimensional PyMC distribution (e.g. `pm.Poisson.dist(...)`)
+        or iterable of PyMC distributions the component distributions
         :math:`f_1, \ldots, f_n`
 
     Examples
@@ -650,7 +650,7 @@ class MixtureSameFamily(Distribution):
     w: array of floats
         w >= 0 and w <= 1
         the mixture weights
-    comp_dists: PyMC3 distribution (e.g. `pm.Multinomial.dist(...)`)
+    comp_dists: PyMC distribution (e.g. `pm.Multinomial.dist(...)`)
         The `comp_dists` can be scalar or multidimensional distribution.
         Assuming its shape to be - (i_0, ..., i_n, mixture_axis, i_n+1, ..., i_N),
         the `mixture_axis` is consumed resulting in the shape of mixture as -

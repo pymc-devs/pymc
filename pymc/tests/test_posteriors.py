@@ -14,7 +14,7 @@
 
 import pytest
 
-from pymc3.tests import sampler_fixtures as sf
+from pymc.tests import sampler_fixtures as sf
 
 
 class TestNUTSUniform(sf.NutsFixture, sf.UniformFixture):

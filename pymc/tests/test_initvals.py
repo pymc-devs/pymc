@@ -14,9 +14,9 @@
 import numpy as np
 import pytest
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.distributions.distribution import get_moment
+from pymc.distributions.distribution import get_moment
 
 
 def transform_fwd(rv, expected_untransformed):

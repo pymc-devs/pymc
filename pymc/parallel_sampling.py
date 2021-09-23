@@ -27,11 +27,11 @@ import numpy as np
 
 from fastprogress.fastprogress import progress_bar
 
-from pymc3 import aesaraf
-from pymc3.blocking import DictToArrayBijection
-from pymc3.exceptions import SamplingError
+from pymc import aesaraf
+from pymc.blocking import DictToArrayBijection
+from pymc.exceptions import SamplingError
 
-logger = logging.getLogger("pymc3")
+logger = logging.getLogger("pymc")
 
 
 class ParallelSamplingError(Exception):
@@ -400,7 +400,7 @@ class ParallelSampler:
             raise ValueError("Number of seeds and start_points must be %s." % chains)
 
         if mp_ctx is None or isinstance(mp_ctx, str):
-            # Closes issue https://github.com/pymc-devs/pymc3/issues/3849
+            # Closes issue https://github.com/pymc-devs/pymc/issues/3849
             if platform.system() == "Darwin":
                 mp_ctx = "forkserver"
             mp_ctx = multiprocessing.get_context(mp_ctx)

@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 """
-pymc3.blocking
+pymc.blocking
 
 Classes for working with subsets of parameters.
 """

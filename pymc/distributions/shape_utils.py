@@ -27,8 +27,8 @@ import numpy as np
 from aesara.graph.basic import Variable
 from aesara.tensor.var import TensorVariable
 
-from pymc3.aesaraf import change_rv_size, pandas_to_array
-from pymc3.exceptions import ShapeError, ShapeWarning
+from pymc.aesaraf import change_rv_size, pandas_to_array
+from pymc.exceptions import ShapeError, ShapeWarning
 
 __all__ = [
     "to_tuple",

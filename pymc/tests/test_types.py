@@ -17,10 +17,10 @@ from copy import copy
 import aesara
 import numpy as np
 
-from pymc3.distributions import Normal
-from pymc3.model import Model
-from pymc3.sampling import sample
-from pymc3.step_methods import MLDA, NUTS, HamiltonianMC, Metropolis, Slice
+from pymc.distributions import Normal
+from pymc.model import Model
+from pymc.sampling import sample
+from pymc.step_methods import MLDA, NUTS, HamiltonianMC, Metropolis, Slice
 
 
 class TestType:

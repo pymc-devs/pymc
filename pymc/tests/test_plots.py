@@ -18,10 +18,10 @@ import pytest
 
 from arviz import from_pymc3
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.backends.ndarray import point_list_to_multitrace
-from pymc3.plots import plot_posterior_predictive_glm
+from pymc.backends.ndarray import point_list_to_multitrace
+from pymc.plots import plot_posterior_predictive_glm
 
 
 @pytest.mark.parametrize("inferencedata", [True, False])

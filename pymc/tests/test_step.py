@@ -29,9 +29,9 @@ from aesara.compile.ops import as_op
 from aesara.graph.op import Op
 from numpy.testing import assert_array_almost_equal
 
-from pymc3.aesaraf import floatX
-from pymc3.data import Data
-from pymc3.distributions import (
+from pymc.aesaraf import floatX
+from pymc.data import Data
+from pymc.distributions import (
     Bernoulli,
     Beta,
     Binomial,
@@ -40,10 +40,10 @@ from pymc3.distributions import (
     MvNormal,
     Normal,
 )
-from pymc3.exceptions import SamplingError
-from pymc3.model import Model, Potential, set_data
-from pymc3.sampling import assign_step_methods, sample
-from pymc3.step_methods import (
+from pymc.exceptions import SamplingError
+from pymc.model import Model, Potential, set_data
+from pymc.sampling import assign_step_methods, sample
+from pymc.step_methods import (
     MLDA,
     NUTS,
     BinaryGibbsMetropolis,
@@ -60,10 +60,10 @@ from pymc3.step_methods import (
     Slice,
     UniformProposal,
 )
-from pymc3.step_methods.mlda import extract_Q_estimate
-from pymc3.tests.checks import close_to
-from pymc3.tests.helpers import select_by_precision
-from pymc3.tests.models import (
+from pymc.step_methods.mlda import extract_Q_estimate
+from pymc.tests.checks import close_to
+from pymc.tests.helpers import select_by_precision
+from pymc.tests.models import (
     mv_prior_simple,
     mv_simple,
     mv_simple_coarse,
@@ -520,7 +520,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         example
 
         ```
-        BENCHMARK=100000 ./scripts/test.sh -s pymc3/tests/test_step.py:TestStepMethods
+        BENCHMARK=100000 ./scripts/test.sh -s pymc/tests/test_step.py:TestStepMethods
         ```
 
         on multiple commits.
@@ -1476,16 +1476,16 @@ class TestMLDA:
                 itypes = [at.dvector]
                 otypes = [at.dvector]
 
-            def __init__(self, x, pymc3_model):
+            def __init__(self, x, pymc_model):
                 self.x = x
-                self.pymc3_model = pymc3_model
+                self.pymc_model = pymc_model
 
             def perform(self, node, inputs, outputs):
                 intercept = inputs[0][0]
                 x_coeff = inputs[0][1]
 
-                temp = intercept + x_coeff * x + self.pymc3_model.bias.get_value()
-                with self.pymc3_model:
+                temp = intercept + x_coeff * x + self.pymc_model.bias.get_value()
+                with self.pymc_model:
                     set_data({"model_output": temp})
                 outputs[0][0] = np.array(temp)
 
@@ -1624,17 +1624,17 @@ class TestMLDA:
                 itypes = [at.dvector]
                 otypes = [at.dscalar]
 
-            def __init__(self, x, y, pymc3_model):
+            def __init__(self, x, y, pymc_model):
                 self.x = x
                 self.y = y
-                self.pymc3_model = pymc3_model
+                self.pymc_model = pymc_model
 
             def perform(self, node, inputs, outputs):
                 intercept = inputs[0][0]
                 x_coeff = inputs[0][1]
 
                 temp = np.array(intercept + x_coeff * self.x, dtype=p)
-                self.pymc3_model.Q.set_value(np.array(x_coeff, dtype=p))
+                self.pymc_model.Q.set_value(np.array(x_coeff, dtype=p))
                 outputs[0][0] = np.array(
                     -(0.5 / s ** 2) * np.sum((temp - self.y) ** 2, dtype=p), dtype=p
                 )
@@ -1647,17 +1647,17 @@ class TestMLDA:
                 itypes = [at.dvector]
                 otypes = [at.dscalar]
 
-            def __init__(self, x, y, pymc3_model):
+            def __init__(self, x, y, pymc_model):
                 self.x = x
                 self.y = y
-                self.pymc3_model = pymc3_model
+                self.pymc_model = pymc_model
 
             def perform(self, node, inputs, outputs):
                 intercept = inputs[0][0]
                 x_coeff = inputs[0][1]
 
                 temp = np.array(intercept + x_coeff * self.x, dtype=p)
-                self.pymc3_model.Q.set_value(temp.mean(dtype=p))
+                self.pymc_model.Q.set_value(temp.mean(dtype=p))
                 outputs[0][0] = np.array(
                     -(0.5 / s ** 2) * np.sum((temp - self.y) ** 2, dtype=p), dtype=p
                 )

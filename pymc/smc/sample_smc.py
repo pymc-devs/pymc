@@ -27,13 +27,13 @@ import numpy as np
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
 
-import pymc3
+import pymc
 
-from pymc3.backends.arviz import dict_to_dataset, to_inference_data
-from pymc3.backends.base import MultiTrace
-from pymc3.model import modelcontext
-from pymc3.parallel_sampling import _cpu_count
-from pymc3.smc.smc import IMH
+from pymc.backends.arviz import dict_to_dataset, to_inference_data
+from pymc.backends.base import MultiTrace
+from pymc.model import modelcontext
+from pymc.parallel_sampling import _cpu_count
+from pymc.smc.smc import IMH
 
 
 def sample_smc(
@@ -80,7 +80,7 @@ def sample_smc(
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
         Defaults to ``True``.
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc3.to_inference_data`
+        Keyword arguments for :func:`pymc.to_inference_data`
     progressbar : bool, optional default=True
         Whether or not to display a progress bar in the command line.
     **kernel_kwargs: keyword arguments passed to the SMC kernel.
@@ -203,7 +203,7 @@ def sample_smc(
 
     model = modelcontext(model)
 
-    _log = logging.getLogger("pymc3")
+    _log = logging.getLogger("pymc")
     _log.info("Initializing SMC sampler...")
     _log.info(
         f"Sampling {chains} chain{'s' if chains > 1 else ''} "
@@ -290,7 +290,7 @@ def sample_smc(
         sample_stats = dict_to_dataset(
             sample_stats_dict,
             attrs=sample_settings_dict,
-            library=pymc3,
+            library=pymc,
         )
 
         ikwargs = dict(model=model)

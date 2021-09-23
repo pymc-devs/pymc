@@ -2,7 +2,7 @@
 Continuous
 **********
 
-.. currentmodule:: pymc3.distributions.continuous
+.. currentmodule:: pymc.distributions.continuous
 .. autosummary::
 
    Uniform
@@ -38,5 +38,5 @@ Continuous
    Interpolated
    PolyaGamma
 
-.. automodule:: pymc3.distributions.continuous
+.. automodule:: pymc.distributions.continuous
    :members:

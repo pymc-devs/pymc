@@ -16,8 +16,8 @@ import threading
 
 from pytest import raises
 
-from pymc3 import Model, Normal
-from pymc3.model import modelcontext
+from pymc import Model, Normal
+from pymc.model import modelcontext
 
 
 class TestModelContext:

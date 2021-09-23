@@ -1,9 +1,9 @@
 import aesara
 import numpy as np
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.sampling_jax import sample_numpyro_nuts
+from pymc.sampling_jax import sample_numpyro_nuts
 
 
 def test_transform_samples():

@@ -30,12 +30,12 @@ from aesara.tensor.subtensor import (
     Subtensor,
 )
 
-from pymc3.aesaraf import floatX, walk_model
-from pymc3.distributions.continuous import Normal, Uniform
-from pymc3.distributions.discrete import Bernoulli
-from pymc3.distributions.logprob import logcdf, logp, logpt
-from pymc3.model import Model
-from pymc3.tests.helpers import select_by_precision
+from pymc.aesaraf import floatX, walk_model
+from pymc.distributions.continuous import Normal, Uniform
+from pymc.distributions.discrete import Bernoulli
+from pymc.distributions.logprob import logcdf, logp, logpt
+from pymc.model import Model
+from pymc.tests.helpers import select_by_precision
 
 
 def assert_no_rvs(var):

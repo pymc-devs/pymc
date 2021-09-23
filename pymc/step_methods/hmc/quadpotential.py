@@ -21,7 +21,7 @@ import scipy.linalg
 from numpy.random import normal
 from scipy.sparse import issparse
 
-from pymc3.aesaraf import floatX
+from pymc.aesaraf import floatX
 
 __all__ = [
     "quad_potential",

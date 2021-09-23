@@ -22,7 +22,7 @@ from aesara.tensor.elemwise import DimShuffle
 from aesara.tensor.random.basic import RandomVariable
 from aesara.tensor.var import TensorConstant
 
-from pymc3.model import Model
+from pymc.model import Model
 
 __all__ = [
     "str_for_dist",

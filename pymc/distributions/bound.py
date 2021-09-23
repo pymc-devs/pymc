@@ -18,13 +18,13 @@ from aesara.tensor import as_tensor_variable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 
-from pymc3.aesaraf import floatX, intX
-from pymc3.distributions import _logp
-from pymc3.distributions.continuous import BoundedContinuous
-from pymc3.distributions.dist_math import bound
-from pymc3.distributions.distribution import Continuous, Discrete
-from pymc3.distributions.shape_utils import to_tuple
-from pymc3.model import modelcontext
+from pymc.aesaraf import floatX, intX
+from pymc.distributions import _logp
+from pymc.distributions.continuous import BoundedContinuous
+from pymc.distributions.dist_math import bound
+from pymc.distributions.distribution import Continuous, Discrete
+from pymc.distributions.shape_utils import to_tuple
+from pymc.model import modelcontext
 
 __all__ = ["Bound"]
 
@@ -119,13 +119,13 @@ class Bound:
     The resulting distribution is not normalized anymore. This
     is usually fine if the bounds are constants. If you need
     truncated distributions, use `Bound` in combination with
-    a :class:`~pymc3.model.Potential` with the cumulative probability function.
+    a :class:`~pymc.model.Potential` with the cumulative probability function.
 
     The bounds are inclusive for discrete distributions.
 
     Parameters
     ----------
-    distribution: pymc3 distribution
+    distribution: pymc distribution
         Distribution to be transformed into a bounded distribution.
     lower: float or array like, optional
         Lower bound of the distribution.

@@ -16,9 +16,9 @@ import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
 
-from pymc3.aesaraf import inputvars
-from pymc3.model import modelcontext
-from pymc3.step_methods.arraystep import ArrayStep, Competence
+from pymc.aesaraf import inputvars
+from pymc.model import modelcontext
+from pymc.step_methods.arraystep import ArrayStep, Competence
 
 __all__ = ["EllipticalSlice"]
 

@@ -360,8 +360,8 @@ class Stationary(Covariance):
 
     Parameters
     ----------
-    ls: Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC3 random
-    variables.  If input_dim == 1, a scalar or PyMC3 random variable.
+    ls: Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC random
+    variables.  If input_dim == 1, a scalar or PyMC random variable.
     ls_inv: Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
     """
 
@@ -610,7 +610,7 @@ class WarpedInput(Covariance):
     cov_func: Covariance
     warp_func: callable
         Aesara function of X and additional optional arguments.
-    args: optional, tuple or list of scalars or PyMC3 variables
+    args: optional, tuple or list of scalars or PyMC variables
         Additional inputs (besides X or Xs) to warp_func.
     """
 
@@ -650,7 +650,7 @@ class Gibbs(Covariance):
     ----------
     lengthscale_func: callable
         Aesara function of X and additional optional arguments.
-    args: optional, tuple or list of scalars or PyMC3 variables
+    args: optional, tuple or list of scalars or PyMC variables
         Additional inputs (besides X or Xs) to lengthscale_func.
     """
 
@@ -712,7 +712,7 @@ class ScaledCov(Covariance):
         Base kernel or covariance function
     scaling_func: callable
         Aesara function of X and additional optional arguments.
-    args: optional, tuple or list of scalars or PyMC3 variables
+    args: optional, tuple or list of scalars or PyMC variables
         Additional inputs (besides X or Xs) to lengthscale_func.
     """
 

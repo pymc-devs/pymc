@@ -30,9 +30,9 @@ from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.type import TensorType
 from aesara.tensor.var import TensorVariable
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import (
+from pymc.aesaraf import (
     _conversion_map,
     change_rv_size,
     extract_obs_data,
@@ -41,8 +41,8 @@ from pymc3.aesaraf import (
     take_along_axis,
     walk_model,
 )
-from pymc3.exceptions import ShapeError
-from pymc3.vartypes import int_types
+from pymc.exceptions import ShapeError
+from pymc.vartypes import int_types
 
 FLOATX = str(aesara.config.floatX)
 INTX = str(_conversion_map[FLOATX])

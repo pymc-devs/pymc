@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from matplotlib import image
 
 DOC_SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_IMG_LOC = os.path.join(os.path.dirname(DOC_SRC), "logos", "PyMC3.png")
+DEFAULT_IMG_LOC = os.path.join(os.path.dirname(DOC_SRC), "logos", "PyMC.png")
 TABLE_OF_CONTENTS_FILENAME = "table_of_contents_{}.js"
 
 INDEX_TEMPLATE = """

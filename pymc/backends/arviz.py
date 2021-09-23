@@ -1,4 +1,4 @@
-"""PyMC3-ArviZ conversion code."""
+"""PyMC-ArviZ conversion code."""
 import logging
 import warnings
 
@@ -25,22 +25,22 @@ from arviz.data.base import CoordSpec, DimSpec
 from arviz.data.base import dict_to_dataset as _dict_to_dataset
 from arviz.data.base import generate_dims_coords, make_attrs, requires
 
-import pymc3
+import pymc
 
-from pymc3.aesaraf import extract_obs_data
-from pymc3.distributions import logpt
-from pymc3.model import modelcontext
-from pymc3.util import get_default_varnames
+from pymc.aesaraf import extract_obs_data
+from pymc.distributions import logpt
+from pymc.model import modelcontext
+from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
     from typing import Set  # pylint: disable=ungrouped-imports
 
-    from pymc3.backends.base import MultiTrace  # pylint: disable=invalid-name
-    from pymc3.model import Model
+    from pymc.backends.base import MultiTrace  # pylint: disable=invalid-name
+    from pymc.model import Model
 
 ___all__ = [""]
 
-_log = logging.getLogger("pymc3")
+_log = logging.getLogger("pymc")
 
 # random variable object ...
 Var = Any  # pylint: disable=invalid-name
@@ -338,7 +338,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         return (
             dict_to_dataset(
                 data,
-                library=pymc3,
+                library=pymc,
                 coords=self.coords,
                 dims=self.dims,
                 attrs=self.attrs,
@@ -346,7 +346,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             ),
             dict_to_dataset(
                 data_warmup,
-                library=pymc3,
+                library=pymc,
                 coords=self.coords,
                 dims=self.dims,
                 attrs=self.attrs,
@@ -356,7 +356,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
 
     @requires("trace")
     def sample_stats_to_xarray(self):
-        """Extract sample_stats from PyMC3 trace."""
+        """Extract sample_stats from PyMC trace."""
         data = {}
         rename_key = {
             "model_logp": "lp",
@@ -380,7 +380,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         return (
             dict_to_dataset(
                 data,
-                library=pymc3,
+                library=pymc,
                 dims=None,
                 coords=self.coords,
                 attrs=self.attrs,
@@ -388,7 +388,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             ),
             dict_to_dataset(
                 data_warmup,
-                library=pymc3,
+                library=pymc,
                 dims=None,
                 coords=self.coords,
                 attrs=self.attrs,
@@ -399,7 +399,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
     @requires("trace")
     @requires("model")
     def log_likelihood_to_xarray(self):
-        """Extract log likelihood and log_p data from PyMC3 trace."""
+        """Extract log likelihood and log_p data from PyMC trace."""
         if self.predictions or not self.log_likelihood:
             return None
         data_warmup = {}
@@ -421,7 +421,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         return (
             dict_to_dataset(
                 data,
-                library=pymc3,
+                library=pymc,
                 dims=self.dims,
                 coords=self.coords,
                 skip_event_dims=True,
@@ -429,7 +429,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             ),
             dict_to_dataset(
                 data_warmup,
-                library=pymc3,
+                library=pymc,
                 dims=self.dims,
                 coords=self.coords,
                 skip_event_dims=True,
@@ -455,7 +455,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                     k,
                 )
         return dict_to_dataset(
-            data, library=pymc3, coords=self.coords, dims=self.dims, index_origin=self.index_origin
+            data, library=pymc, coords=self.coords, dims=self.dims, index_origin=self.index_origin
         )
 
     @requires(["posterior_predictive"])
@@ -488,7 +488,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 if var_names is None
                 else dict_to_dataset(
                     {k: np.expand_dims(self.prior[k], 0) for k in var_names},
-                    library=pymc3,
+                    library=pymc,
                     coords=self.coords,
                     dims=self.dims,
                     index_origin=self.index_origin,
@@ -504,7 +504,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             return None
         return dict_to_dataset(
             self.observations,
-            library=pymc3,
+            library=pymc,
             coords=self.coords,
             dims=self.dims,
             default_dims=[],
@@ -551,7 +551,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
 
         return dict_to_dataset(
             constant_data,
-            library=pymc3,
+            library=pymc,
             coords=self.coords,
             dims=self.dims,
             default_dims=[],
@@ -593,18 +593,18 @@ def to_inference_data(
     save_warmup: Optional[bool] = None,
     density_dist_obs: bool = True,
 ) -> InferenceData:
-    """Convert pymc3 data into an InferenceData object.
+    """Convert pymc data into an InferenceData object.
 
     All three of them are optional arguments, but at least one of ``trace``,
     ``prior`` and ``posterior_predictive`` must be present.
     For a usage example read the
-    :ref:`Creating InferenceData section on from_pymc3 <creating_InferenceData>`
+    :ref:`Creating InferenceData section on from_pymc <creating_InferenceData>`
 
     Parameters
     ----------
     trace : MultiTrace, optional
         Trace generated from MCMC sampling. Output of
-        :func:`~pymc3.sampling.sample`.
+        :func:`~pymc.sampling.sample`.
     prior : dict, optional
         Dictionary with the variable names as keys, and values numpy arrays
         containing prior and prior predictive samples.
@@ -664,15 +664,15 @@ def predictions_to_inference_data(
     Parameters
     ----------
     predictions: Dict[str, np.ndarray]
-        The predictions are the return value of :func:`~pymc3.sample_posterior_predictive`,
+        The predictions are the return value of :func:`~pymc.sample_posterior_predictive`,
         a dictionary of strings (variable names) to numpy ndarrays (draws).
     posterior_trace: MultiTrace
         This should be a trace that has been thinned appropriately for
-        ``pymc3.sample_posterior_predictive``. Specifically, any variable whose shape is
+        ``pymc.sample_posterior_predictive``. Specifically, any variable whose shape is
         a deterministic function of the shape of any predictor (explanatory, independent, etc.)
         variables must be *removed* from this trace.
     model: Model
-        The pymc3 model. It can be ommited if within a model context.
+        The pymc model. It can be ommited if within a model context.
     coords: Dict[str, array-like[Any]]
         Coordinates for the variables.  Map from coordinate names to coordinate values.
     dims: Dict[str, array-like[str]]

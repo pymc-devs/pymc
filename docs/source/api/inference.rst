@@ -5,60 +5,60 @@ Inference
 Sampling
 --------
 
-.. currentmodule:: pymc3.sampling
+.. currentmodule:: pymc.sampling
 
-.. automodule:: pymc3.sampling
+.. automodule:: pymc.sampling
    :members:
 
 
 Step-methods
 ^^^^^^^^^^^^
 
-.. currentmodule:: pymc3.sampling
+.. currentmodule:: pymc.sampling
 
-.. autofunction:: pymc3.sampling.assign_step_methods
+.. autofunction:: pymc.sampling.assign_step_methods
 
 
 NUTS
 ~~~~
 
-.. currentmodule:: pymc3.step_methods.hmc.nuts
+.. currentmodule:: pymc.step_methods.hmc.nuts
 
-.. automodule:: pymc3.step_methods.hmc.nuts
+.. automodule:: pymc.step_methods.hmc.nuts
    :members:
 
 Metropolis
 ~~~~~~~~~~
 
-.. currentmodule:: pymc3.step_methods.metropolis
+.. currentmodule:: pymc.step_methods.metropolis
 
-.. automodule:: pymc3.step_methods.metropolis
+.. automodule:: pymc.step_methods.metropolis
    :members:
 
 Slice
 ~~~~~
 
-.. currentmodule:: pymc3.step_methods.slicer
+.. currentmodule:: pymc.step_methods.slicer
 
-.. automodule:: pymc3.step_methods.slicer
+.. automodule:: pymc.step_methods.slicer
    :members:
 
 Hamiltonian Monte Carlo
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: pymc3.step_methods.hmc.hmc
+.. currentmodule:: pymc.step_methods.hmc.hmc
 
-.. autoclass:: pymc3.step_methods.hmc.hmc.HamiltonianMC
+.. autoclass:: pymc.step_methods.hmc.hmc.HamiltonianMC
    :members:
 
 MultiTrace
 ^^^^^^^^^^
 
-.. currentmodule:: pymc3.backends.base
-.. autoclass:: pymc3.backends.base.MultiTrace
+.. currentmodule:: pymc.backends.base
+.. autoclass:: pymc.backends.base.MultiTrace
     :members:
 
-.. autoclass:: pymc3.backends.base.BaseTrace
+.. autoclass:: pymc.backends.base.BaseTrace
 
 Variational Inference
 ---------------------
@@ -66,48 +66,48 @@ Variational Inference
 OPVI
 ^^^^
 
-.. currentmodule:: pymc3.variational.opvi
+.. currentmodule:: pymc.variational.opvi
 
-.. automodule:: pymc3.variational.opvi
+.. automodule:: pymc.variational.opvi
    :members:
 
 VI Inference API
 ^^^^^^^^^^^^^^^^
 
-.. currentmodule:: pymc3.variational.inference
+.. currentmodule:: pymc.variational.inference
 
-.. automodule:: pymc3.variational.inference
+.. automodule:: pymc.variational.inference
    :members:
 
 Approximations
 ^^^^^^^^^^^^^^
 
-.. currentmodule:: pymc3.variational.approximations
+.. currentmodule:: pymc.variational.approximations
 
-.. automodule:: pymc3.variational.approximations
+.. automodule:: pymc.variational.approximations
    :members:
 
 Operators
 ^^^^^^^^^
 
-.. currentmodule:: pymc3.variational.operators
+.. currentmodule:: pymc.variational.operators
 
-.. automodule:: pymc3.variational.operators
+.. automodule:: pymc.variational.operators
    :members:
 
 
 Sequential Monte Carlo
 ----------------------
 
-.. currentmodule:: pymc3.smc.sample_smc
+.. currentmodule:: pymc.smc.sample_smc
 
-.. automodule:: pymc3.smc.sample_smc
+.. automodule:: pymc.smc.sample_smc
    :members:
 
 Kernels
 ^^^^^^^
 
-.. currentmodule:: pymc3.smc.smc
+.. currentmodule:: pymc.smc.smc
 
-.. automodule:: pymc3.smc.smc
+.. automodule:: pymc.smc.smc
    :members:

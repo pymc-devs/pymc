@@ -16,14 +16,14 @@ import logging
 import numpy as np
 import numpy.testing as npt
 
-import pymc3
+import pymc
 
-from pymc3.aesaraf import floatX
-from pymc3.blocking import DictToArrayBijection, RaveledVars
-from pymc3.step_methods.hmc.base_hmc import BaseHMC
-from pymc3.tests import models
+from pymc.aesaraf import floatX
+from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.step_methods.hmc.base_hmc import BaseHMC
+from pymc.tests import models
 
-logger = logging.getLogger("pymc3")
+logger = logging.getLogger("pymc")
 
 
 def test_leapfrog_reversible():
@@ -56,10 +56,10 @@ def test_leapfrog_reversible():
 
 
 def test_nuts_tuning():
-    with pymc3.Model():
-        pymc3.Normal("mu", mu=0, sigma=1)
-        step = pymc3.NUTS()
-        idata = pymc3.sample(
+    with pymc.Model():
+        pymc.Normal("mu", mu=0, sigma=1)
+        step = pymc.NUTS()
+        idata = pymc.sample(
             10, step=step, tune=5, discard_tuned_samples=False, progressbar=False, chains=1
         )
 

@@ -20,9 +20,9 @@ from typing import Any, Optional
 
 import arviz
 
-from pymc3.util import get_untransformed_name, is_transformed_name
+from pymc.util import get_untransformed_name, is_transformed_name
 
-logger = logging.getLogger("pymc3")
+logger = logging.getLogger("pymc")
 
 
 @enum.unique

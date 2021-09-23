@@ -18,9 +18,9 @@ import numpy as np
 from aesara import scan
 from scipy import stats
 
-from pymc3.distributions import distribution, multivariate
-from pymc3.distributions.continuous import Flat, Normal, get_tau_sigma
-from pymc3.distributions.shape_utils import to_tuple
+from pymc.distributions import distribution, multivariate
+from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
+from pymc.distributions.shape_utils import to_tuple
 
 __all__ = [
     "AR1",

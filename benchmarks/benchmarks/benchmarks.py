@@ -20,7 +20,7 @@ import arviz as az
 import numpy as np
 import pandas as pd
 
-import pymc3 as pm
+import pymc as pm
 
 
 def glm_hierarchical_model(random_seed=123):

@@ -26,10 +26,10 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from pymc3.backends import base
-from pymc3.backends.base import MultiTrace
-from pymc3.exceptions import TraceDirectoryError
-from pymc3.model import Model, modelcontext
+from pymc.backends import base
+from pymc.backends.base import MultiTrace
+from pymc.exceptions import TraceDirectoryError
+from pymc.model import Model, modelcontext
 
 
 def save_trace(trace: MultiTrace, directory: Optional[str] = None, overwrite=False) -> str:
@@ -37,7 +37,7 @@ def save_trace(trace: MultiTrace, directory: Optional[str] = None, overwrite=Fal
 
     TODO: Also save warnings.
 
-    This is a custom data format for PyMC3 traces.  Each chain goes inside
+    This is a custom data format for PyMC traces.  Each chain goes inside
     a directory, and each directory contains a metadata json file, and a
     numpy compressed file.  See https://docs.scipy.org/doc/numpy/neps/npy-format.html
     for more information about this format.
@@ -92,7 +92,7 @@ def load_trace(directory: str, model=None) -> MultiTrace:
     Parameters
     ----------
     directory: str
-        Path to a pymc3 serialized trace
+        Path to a pymc serialized trace
     model: pm.Model (optional)
         Model used to create the trace.  Can also be inferred from context
 
@@ -110,7 +110,7 @@ def load_trace(directory: str, model=None) -> MultiTrace:
         if os.path.isdir(subdir):
             straces.append(SerializeNDArray(subdir).load(model))
     if not straces:
-        raise TraceDirectoryError("%s is not a PyMC3 saved chain directory." % directory)
+        raise TraceDirectoryError("%s is not a PyMC saved chain directory." % directory)
     return base.MultiTrace(straces)
 
 

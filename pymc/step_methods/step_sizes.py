@@ -16,7 +16,7 @@ import numpy as np
 
 from scipy import stats
 
-from pymc3.backends.report import SamplerWarning, WarningType
+from pymc.backends.report import SamplerWarning, WarningType
 
 
 class DualAverageAdaptation:

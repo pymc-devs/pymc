@@ -17,10 +17,10 @@ import numpy.testing as npt
 import pytest
 import scipy.sparse
 
-import pymc3
+import pymc
 
-from pymc3.aesaraf import floatX
-from pymc3.step_methods.hmc import quadpotential
+from pymc.aesaraf import floatX
+from pymc.step_methods.hmc import quadpotential
 
 
 def test_elemwise_posdef():
@@ -135,9 +135,9 @@ def test_random_dense():
 
 
 def test_user_potential():
-    model = pymc3.Model()
+    model = pymc.Model()
     with model:
-        pymc3.Normal("a", mu=0, sigma=1)
+        pymc.Normal("a", mu=0, sigma=1)
 
     # Work around missing nonlocal in python2
     called = []
@@ -149,8 +149,8 @@ def test_user_potential():
 
     pot = Potential(floatX([1]))
     with model:
-        step = pymc3.NUTS(potential=pot)
-        pymc3.sample(10, init=None, step=step, chains=1)
+        step = pymc.NUTS(potential=pot)
+        pymc.sample(10, init=None, step=step, chains=1)
     assert called
 
 
@@ -270,12 +270,12 @@ def test_full_adapt_sampling(seed=289586):
     L[np.diag_indices_from(L)] = np.exp(L[np.diag_indices_from(L)])
     L[np.triu_indices_from(L, 1)] = 0.0
 
-    with pymc3.Model() as model:
-        pymc3.MvNormal("a", mu=np.zeros(len(L)), chol=L, size=len(L))
+    with pymc.Model() as model:
+        pymc.MvNormal("a", mu=np.zeros(len(L)), chol=L, size=len(L))
 
         initial_point = model.initial_point
         initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
 
         pot = quadpotential.QuadPotentialFullAdapt(initial_point_size, np.zeros(initial_point_size))
-        step = pymc3.NUTS(model=model, potential=pot)
-        pymc3.sample(draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1)
+        step = pymc.NUTS(model=model, potential=pot)
+        pymc.sample(draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1)

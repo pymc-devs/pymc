@@ -35,18 +35,18 @@ from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
 
-import pymc3 as pm
+import pymc as pm
 
-from pymc3.aesaraf import change_rv_size, compile_rv_inplace, inputvars, walk_model
-from pymc3.backends.arviz import _DefaultTrace
-from pymc3.backends.base import BaseTrace, MultiTrace
-from pymc3.backends.ndarray import NDArray
-from pymc3.blocking import DictToArrayBijection
-from pymc3.distributions import NoDistribution
-from pymc3.exceptions import IncorrectArgumentsError, SamplingError
-from pymc3.model import Model, Point, modelcontext
-from pymc3.parallel_sampling import Draw, _cpu_count
-from pymc3.step_methods import (
+from pymc.aesaraf import change_rv_size, compile_rv_inplace, inputvars, walk_model
+from pymc.backends.arviz import _DefaultTrace
+from pymc.backends.base import BaseTrace, MultiTrace
+from pymc.backends.ndarray import NDArray
+from pymc.blocking import DictToArrayBijection
+from pymc.distributions import NoDistribution
+from pymc.exceptions import IncorrectArgumentsError, SamplingError
+from pymc.model import Model, Point, modelcontext
+from pymc.parallel_sampling import Draw, _cpu_count
+from pymc.step_methods import (
     NUTS,
     PGBART,
     BinaryGibbsMetropolis,
@@ -58,16 +58,16 @@ from pymc3.step_methods import (
     Metropolis,
     Slice,
 )
-from pymc3.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
-from pymc3.step_methods.hmc import quadpotential
-from pymc3.util import (
+from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
+from pymc.step_methods.hmc import quadpotential
+from pymc.util import (
     chains_and_samples,
     dataset_to_point_list,
     get_default_varnames,
     get_untransformed_name,
     is_transformed_name,
 )
-from pymc3.vartypes import discrete_types
+from pymc.vartypes import discrete_types
 
 sys.setrecursionlimit(10000)
 
@@ -97,7 +97,7 @@ PointType = Dict[str, np.ndarray]
 PointList = List[PointType]
 Backend = Union[BaseTrace, MultiTrace, NDArray]
 
-_log = logging.getLogger("pymc3")
+_log = logging.getLogger("pymc")
 
 
 def instantiate_steppers(
@@ -168,7 +168,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
         the model's parameters. Defaults to ``None`` (no assigned variables).
     methods : vector of step method classes
         The set of step methods from which the function may choose. Defaults
-        to the main step methods provided by PyMC3.
+        to the main step methods provided by PyMC.
     step_kwargs : dict
         Parameters for the samplers. Keys are the lower case names of
         the step method, values a dict of arguments.
@@ -341,14 +341,14 @@ def sample(
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
         Defaults to `False`, but we'll switch to `True` in an upcoming release.
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc3.to_inference_data`
+        Keyword arguments for :func:`pymc.to_inference_data`
     mp_ctx : multiprocessing.context.BaseContent
         A multiprocessing context for parallel sampling. See multiprocessing
         documentation for details.
 
     Returns
     -------
-    trace : pymc3.backends.base.MultiTrace or arviz.InferenceData
+    trace : pymc.backends.base.MultiTrace or arviz.InferenceData
         A ``MultiTrace`` or ArviZ ``InferenceData`` object that contains the samples.
 
     Notes
@@ -400,7 +400,7 @@ def sample(
     --------
     .. code:: ipython
 
-        In [1]: import pymc3 as pm
+        In [1]: import pymc as pm
            ...: n = 100
            ...: h = 61
            ...: alpha = 2
@@ -847,7 +847,7 @@ def _sample(
 
     Returns
     -------
-    strace : pymc3.backends.base.BaseTrace
+    strace : pymc.backends.base.BaseTrace
         A ``BaseTrace`` object that contains the samples for this chain.
     """
     skip_first = kwargs.get("skip_first", 0)
@@ -1434,10 +1434,10 @@ def _mp_sample(
 
     Returns
     -------
-    trace : pymc3.backends.base.MultiTrace
+    trace : pymc.backends.base.MultiTrace
         A ``MultiTrace`` object that contains the samples for all chains.
     """
-    import pymc3.parallel_sampling as ps
+    import pymc.parallel_sampling as ps
 
     # We did draws += tune in pm.sample
     draws -= tune
@@ -2009,7 +2009,7 @@ def _init_jitter(model, point, chains, jitter_max_retries):
 
     Parameters
     ----------
-    model : pymc3.Model
+    model : pymc.Model
     point : dict
     chains : int
     jitter_max_retries : int
@@ -2017,7 +2017,7 @@ def _init_jitter(model, point, chains, jitter_max_retries):
 
     Returns
     -------
-    start : ``pymc3.model.Point``
+    start : ``pymc.model.Point``
         Starting point for sampler
     """
     start = []
@@ -2094,13 +2094,13 @@ def init_nuts(
         that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
         init methods.
     **kwargs : keyword arguments
-        Extra keyword arguments are forwarded to pymc3.NUTS.
+        Extra keyword arguments are forwarded to pymc.NUTS.
 
     Returns
     -------
-    start : ``pymc3.model.Point``
+    start : ``pymc.model.Point``
         Starting point for sampler
-    nuts_sampler : ``pymc3.step_methods.NUTS``
+    nuts_sampler : ``pymc.step_methods.NUTS``
         Instantiated and initialized NUTS sampler object
     """
     model = modelcontext(model)
