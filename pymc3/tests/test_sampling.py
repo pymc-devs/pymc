@@ -32,6 +32,7 @@ from scipy import stats
 import pymc3 as pm
 
 from pymc3.aesaraf import compile_rv_inplace
+from pymc3.backends.base import MultiTrace
 from pymc3.backends.ndarray import NDArray
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
 from pymc3.tests.helpers import SeededTest
@@ -438,13 +439,29 @@ class TestNamedSampling(SeededTest):
 class TestChooseBackend:
     def test_choose_backend_none(self):
         with mock.patch("pymc3.sampling.NDArray") as nd:
-            pm.sampling._choose_backend(None, "chain")
+            pm.sampling._choose_backend(None)
         assert nd.called
 
     def test_choose_backend_list_of_variables(self):
         with mock.patch("pymc3.sampling.NDArray") as nd:
-            pm.sampling._choose_backend(["var1", "var2"], "chain")
+            pm.sampling._choose_backend(["var1", "var2"])
         nd.assert_called_with(vars=["var1", "var2"])
+
+    def test_errors_and_warnings(self):
+        with pm.Model():
+            A = pm.Normal("A")
+            B = pm.Uniform("B")
+            strace = pm.sampling.NDArray(vars=[A, B])
+            strace.setup(10, 0)
+
+            with pytest.raises(ValueError, match="from existing MultiTrace"):
+                pm.sampling._choose_backend(trace=MultiTrace([strace]))
+
+            strace.record({"A": 2, "B_interval__": 0.1})
+            assert len(strace) == 1
+            with pytest.raises(ValueError, match="Continuation of traces"):
+                pm.sampling._choose_backend(trace=strace)
+        pass
 
 
 class TestSamplePPC(SeededTest):
