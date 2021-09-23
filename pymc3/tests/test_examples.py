@@ -350,6 +350,9 @@ class TestMultilevelNormal(SeededTest):
 
         return model, coarse_models
 
+    @pytest.mark.skip(
+        reason="MLDA needs to be refactored to no longer depend on trace continuation. See #5021."
+    )
     def test_run(self):
         model, coarse_models = self.build_models()
 
