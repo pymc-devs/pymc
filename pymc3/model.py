@@ -518,16 +518,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     name: str
         name that will be used as prefix for names of all random
         variables defined within model
-    model: Model
-        instance of Model that is supposed to be a parent for the new
-        instance. If ``None``, context will be used. All variables
-        defined within instance will be passed to the parent instance.
-        So that 'nested' model contributes to the variables and
-        likelihood factors of parent model.
-    aesara_config: dict
-        A dictionary of Aesara config values that should be set
-        temporarily in the model context. See the documentation
-        of Aesara for a complete list.
     check_bounds: bool
         Ensure that input parameters to distributions are in a valid
         range. If your model is built in a way where you know your
@@ -551,7 +541,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         class CustomModel(Model):
             # 1) override init
-            def __init__(self, mean=0, sigma=1, name='', model=None):
+            def __init__(self, mean=0, sigma=1, name=''):
                 # 2) call super's init first, passing model and name
                 # to it name will be prefix for all variables here if
                 # no name specified for model there will be no prefix
@@ -627,8 +617,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def __init__(
         self,
         name="",
-        model=None,
-        aesara_config=None,
         coords=None,
         check_bounds=True,
         rng_seeder: Optional[Union[int, np.random.RandomState]] = None,
