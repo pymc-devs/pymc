@@ -23,7 +23,7 @@ import warnings
 
 from collections import defaultdict
 from copy import copy, deepcopy
-from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Union, cast
 
 import aesara.gradient as tg
 import cloudpickle
@@ -253,7 +253,7 @@ def sample(
     step=None,
     init="auto",
     n_init=200_000,
-    start=None,
+    start: Optional[Union[PointType, Sequence[Optional[PointType]]]] = None,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
     chain_idx=0,
     chains=None,
@@ -689,7 +689,7 @@ def _sample_many(
     draws,
     chain: int,
     chains: int,
-    start: list,
+    start: Sequence[PointType],
     random_seed: list,
     step,
     callback=None,
@@ -746,7 +746,7 @@ def _sample_population(
     draws: int,
     chain: int,
     chains: int,
-    start,
+    start: Sequence[PointType],
     random_seed,
     step,
     tune,
@@ -809,7 +809,7 @@ def _sample(
     chain: int,
     progressbar: bool,
     random_seed,
-    start,
+    start: PointType,
     draws: int,
     step=None,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
@@ -875,7 +875,7 @@ def _sample(
 def iter_sample(
     draws: int,
     step,
-    start: Optional[Dict[Any, Any]] = None,
+    start: PointType,
     trace=None,
     chain=0,
     tune: Optional[int] = None,
@@ -895,8 +895,7 @@ def iter_sample(
     step : function
         Step function
     start : dict
-        Starting point in parameter space (or partial point). Defaults to trace.point(-1)) if
-        there is a trace provided and model.initial_point if not (defaults to empty dict)
+        Starting point in parameter space (or partial point).
     trace : backend or list
         This should be a backend instance, or a list of variables to track.
         If None or a list of variables, the NDArray backend is used.
@@ -935,7 +934,7 @@ def iter_sample(
 def _iter_sample(
     draws,
     step,
-    start=None,
+    start: Optional[PointType],
     trace: Optional[Union[BaseTrace, List[str]]] = None,
     chain=0,
     tune=None,
@@ -951,8 +950,8 @@ def _iter_sample(
         The number of samples to draw
     step : function
         Step function
-    start : dict, optional
-        Starting point in parameter space (or partial point). Defaults to model.initial_point if not (defaults to empty dict)
+    start : dict
+        Starting point in parameter space (or partial point).
     trace : backend or list
         This should be a backend instance, or a list of variables to track.
         If None or a list of variables, the NDArray backend is used.
@@ -978,18 +977,16 @@ def _iter_sample(
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
-    if start is None:
-        start = {}
-
     strace = _choose_backend(trace, model=model)
-
-    model.update_start_vals(start, model.initial_point)
 
     try:
         step = CompoundStep(step)
     except TypeError:
         pass
 
+    if start is None:
+        start = {}
+    model.update_start_vals(start, model.initial_point)
     point = Point(start, model=model, filter_model_vars=True)
 
     if step.generates_stats and strace.supports_sampler_stats:
@@ -1200,7 +1197,7 @@ def _prepare_iter_population(
     draws: int,
     chains: list,
     step,
-    start: list,
+    start: Sequence[PointType],
     parallelize: bool,
     tune=None,
     model=None,
@@ -1253,10 +1250,7 @@ def _prepare_iter_population(
     traces = [_choose_backend(None, model=model) for chain in chains]
     for c, strace in enumerate(traces):
         # initialize the trace size and variable transforms
-        if len(strace) > 0:
-            model.update_start_vals(start[c], strace.point(-1))
-        else:
-            model.update_start_vals(start[c], model.initial_point)
+        model.update_start_vals(start[c], model.initial_point)
 
     # 2. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
@@ -1390,7 +1384,7 @@ def _mp_sample(
     cores: int,
     chain: int,
     random_seed: list,
-    start: list,
+    start: Sequence[PointType],
     progressbar=True,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
     model=None,
@@ -1448,9 +1442,11 @@ def _mp_sample(
             strace = _choose_backend(copy(trace), model=model)
         else:
             strace = _choose_backend(None, model=model)
+
         # for user supplied start value, fill-in missing value if the supplied
         # dict does not contain all parameters
         model.update_start_vals(start[idx - chain], model.initial_point)
+
         if step.generates_stats and strace.supports_sampler_stats:
             strace.setup(draws + tune, idx, step.stats_dtypes)
         else:
