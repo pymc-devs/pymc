@@ -318,4 +318,4 @@ Partners, with associated benefits:
 -   Only Institutional Contributors are invited to the Institutional Partners
     Workshop and bi-annual PyMC Developer Meeting
 
-The PyMC project currently recognizes Quantopian as a Tier 1 Institutional Partner, with Thomas Wiecki and Adrian Seyboldt as their institutional contributors and council members.
+The PyMC project currently recognizes PyMC Labs as a Tier 1 Institutional Partner, with Thomas Wiecki, Adrian Seyboldt, Alexandre Andorra, Luciano Paz, Maxim Kochurov, Ricardo Vieira, and Eric Ma as their institutional contributors and council members.
