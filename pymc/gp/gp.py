@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import functools
 import warnings
 
 import aesara.tensor as at
@@ -730,12 +729,31 @@ class MarginalSparse(Marginal):
                 )
         else:
             self.sigma = noise
-        logp = functools.partial(self._build_marginal_likelihood_logp, X=X, Xu=Xu, sigma=noise)
         if is_observed:
-            return pm.DensityDist(name, logp, observed=y, **kwargs)
+            return pm.DensityDist(
+                name,
+                X,
+                Xu,
+                self.sigma,
+                logp=self._build_marginal_likelihood_logp,
+                observed=y,
+                ndims_params=[2, 2, 0],
+                size=X.shape[0],
+                **kwargs,
+            )
         else:
-            shape = infer_shape(X, kwargs.pop("shape", None))
-            return pm.DensityDist(name, logp, size=shape, **kwargs)
+            return pm.DensityDist(
+                name,
+                X,
+                Xu,
+                self.sigma,
+                logp=self._build_marginal_likelihood_logp,
+                observed=y,
+                ndims_params=[2, 2, 0],
+                # ndim_supp=1,
+                size=X.shape[0],
+                **kwargs,
+            )
 
     def _build_conditional(self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total):
         sigma2 = at.square(sigma)

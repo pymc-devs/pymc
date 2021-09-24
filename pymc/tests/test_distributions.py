@@ -120,6 +120,7 @@ from pymc.distributions import (
     logpt,
     logpt_sum,
 )
+from pymc.distributions.shape_utils import to_tuple
 from pymc.math import kronecker
 from pymc.model import Deterministic, Model, Point, Potential
 from pymc.tests.helpers import select_by_precision
@@ -1580,7 +1581,7 @@ class TestMatchesScipy:
             {"n": NatSmall, "p": Unit},
         )
 
-    @pytest.mark.xfail(reason="checkd tests has not been refactored")
+    @pytest.mark.xfail(reason="checkd tests have not been refactored")
     @pytest.mark.skipif(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_beta_binomial_distribution(self):
         self.checkd(
@@ -2448,7 +2449,7 @@ class TestMatchesScipy:
             lambda value, eta, cutpoints: orderedprobit_logpdf(value, eta, cutpoints),
         )
 
-    @pytest.mark.xfail(reason="DensityDist no longer supported")
+    @pytest.mark.xfail(reason="checkd tests have not been refactored")
     def test_densitydist(self):
         def logp(x):
             return -log(2 * 0.5) - abs(x - 0.5) / 0.5
@@ -3227,14 +3228,13 @@ class TestBugfixes:
         assert_almost_equal(m.logp({"x": np.ones(10)}), 0 * 10)
 
 
-@pytest.mark.xfail(reason="DensityDist no longer supported")
 def test_serialize_density_dist():
     def func(x):
         return -2 * (x ** 2).sum()
 
     with pm.Model():
         pm.Normal("x")
-        y = pm.DensityDist("y", func)
+        y = pm.DensityDist("y", logp=func)
         pm.sample(draws=5, tune=1, mp_ctx="spawn")
 
     import cloudpickle
@@ -3287,3 +3287,34 @@ def test_logp_gives_migration_instructions(method, newcode):
         with pytest.raises(AttributeError, match=rf"use `{newcode}`"):
             f()
     pass
+
+
+def test_density_dist_old_api_error():
+    with pm.Model():
+        with pytest.raises(
+            TypeError, match="The DensityDist API has changed, you are using the old API"
+        ):
+            pm.DensityDist("a", lambda x: x)
+
+
+@pytest.mark.parametrize("size", [None, (), (2,)], ids=str)
+def test_density_dist_multivariate_logp(size):
+    supp_shape = 5
+    with pm.Model() as model:
+
+        def logp(value, mu):
+            return pm.MvNormal.logp(value, mu, at.eye(mu.shape[0]))
+
+        mu = pm.Normal("mu", size=supp_shape)
+        a = pm.DensityDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
+    mu_val = np.random.normal(loc=0, scale=1, size=supp_shape).astype(aesara.config.floatX)
+    a_val = np.random.normal(loc=mu_val, scale=1, size=to_tuple(size) + (supp_shape,)).astype(
+        aesara.config.floatX
+    )
+    log_densityt = pm.logpt(a, a.tag.value_var, sum=False)
+    assert (
+        log_densityt.eval(
+            {a.tag.value_var: a_val, mu.tag.value_var: mu_val},
+        ).shape
+        == to_tuple(size)
+    )

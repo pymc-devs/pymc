@@ -186,7 +186,6 @@ def test_iterator():
             pass
 
 
-@pytest.mark.xfail(reason="DensityDist was not yet refactored for v4")
 def test_spawn_densitydist_function():
     with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
@@ -194,38 +193,19 @@ def test_spawn_densitydist_function():
         def func(x):
             return -2 * (x ** 2).sum()
 
-        obs = pm.DensityDist("density_dist", func, observed=np.random.randn(100))
+        obs = pm.DensityDist("density_dist", logp=func, observed=np.random.randn(100))
         pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
 
 
-@pytest.mark.xfail(reason="DensityDist was not yet refactored for v4")
 def test_spawn_densitydist_bound_method():
+    N = 100
     with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
-        normal_dist = pm.Normal.dist(mu, 1)
-        logp = lambda x: pm.logp(normal_dist, x, transformed=False)
-        obs = pm.DensityDist("density_dist", logp, observed=np.random.randn(100))
-        msg = "logp for DensityDist is a bound method, leading to RecursionError while serializing"
-        with pytest.raises(ValueError, match=msg):
-            pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
+        normal_dist = pm.Normal.dist(mu, 1, size=N)
 
+        def logp(x):
+            out = pm.logp(normal_dist, x, transformed=False)
+            return out
 
-@pytest.mark.xfail(reason="DensityDist was not yet refactored for v4")
-def test_spawn_densitydist_syswarning(monkeypatch):
-    monkeypatch.setattr("pymc.distributions.distribution.PLATFORM", "win32")
-    with pm.Model() as model:
-        mu = pm.Normal("mu", 0, 1)
-        normal_dist = pm.Normal.dist(mu, 1)
-        with pytest.warns(UserWarning, match="errors when sampling on platforms"):
-            obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
-
-
-@pytest.mark.xfail(reason="DensityDist was not yet refactored for v4")
-def test_spawn_densitydist_mpctxwarning(monkeypatch):
-    ctx = multiprocessing.get_context("spawn")
-    monkeypatch.setattr(multiprocessing, "get_context", lambda: ctx)
-    with pm.Model() as model:
-        mu = pm.Normal("mu", 0, 1)
-        normal_dist = pm.Normal.dist(mu, 1)
-        with pytest.warns(UserWarning, match="errors when sampling when multiprocessing"):
-            obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
+        obs = pm.DensityDist("density_dist", logp=logp, observed=np.random.randn(N), size=N)
+        pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
