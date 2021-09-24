@@ -21,6 +21,7 @@ import time
 import traceback
 
 from collections import namedtuple
+from typing import Dict, Sequence
 
 import cloudpickle
 import numpy as np
@@ -227,7 +228,7 @@ class ProcessAdapter:
         step_method_pickled,
         chain: int,
         seed,
-        start,
+        start: Dict[str, np.ndarray],
         mp_ctx,
     ):
         self.chain = chain
@@ -389,7 +390,7 @@ class ParallelSampler:
         chains: int,
         cores: int,
         seeds: list,
-        start_points: list,
+        start_points: Sequence[Dict[str, np.ndarray]],
         step_method,
         start_chain_num: int = 0,
         progressbar: bool = True,
