@@ -119,6 +119,11 @@ def factorized_joint_logprob(
     # `MeasurableVariable`s that are amenable to `_logprob`.
     updated_rv_values = rv_remapper.rv_values
 
+    # Some rewrites also transform the original value variables. This is the
+    # updated map from the new value variables to the original ones, which
+    # we want to use as the keys in the final dictionary output
+    original_values = rv_remapper.original_values
+
     # When a `_logprob` has been produced for a `MeasurableVariable` node, all
     # other references to it need to be replaced with its value-variable all
     # throughout the `_logprob`-produced graphs.  The following `dict`
@@ -189,6 +194,9 @@ def factorized_joint_logprob(
             q_logprob_vars = [q_logprob_vars]
 
         for q_rv_var, q_logprob_var in zip(q_rv_value_vars, q_logprob_vars):
+
+            q_rv_var = original_values[q_rv_var]
+
             if q_rv_var.name:
                 q_logprob_var.name = f"{q_rv_var.name}_logprob"
 

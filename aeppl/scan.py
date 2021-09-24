@@ -439,8 +439,7 @@ def find_measurable_scans(fgraph, node):
             ).default_output()
 
             # Replace the mapping
-            del rv_map_feature.rv_values[rv_var]
-            rv_map_feature.rv_values[full_out] = new_val_var
+            rv_map_feature.update_rv_maps(rv_var, new_val_var, full_out)
 
     op = MeasurableScan(
         curr_scanargs.inner_inputs, curr_scanargs.inner_outputs, curr_scanargs.info

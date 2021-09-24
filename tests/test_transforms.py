@@ -7,7 +7,7 @@ import scipy.special
 from aesara.graph.fg import FunctionGraph
 from numdifftools import Jacobian
 
-from aeppl.joint_logprob import joint_logprob
+from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
 from aeppl.transforms import (
     DEFAULT_TRANSFORM,
     LogOddsTransform,
@@ -428,3 +428,17 @@ def test_TransformValuesMapping():
     fg.attach_feature(tvm2)
 
     assert fg._features[-1] is tvm
+
+
+def test_original_values_output_dict():
+    """
+    Test that the original unconstrained value variable appears an the key of
+    the logprob factor
+    """
+    p_rv = at.random.beta(1, 1, name="p")
+    p_vv = p_rv.clone()
+
+    tr = TransformValuesOpt({p_vv: DEFAULT_TRANSFORM})
+    logp_dict = factorized_joint_logprob({p_rv: p_vv}, extra_rewrites=tr)
+
+    assert p_vv in logp_dict

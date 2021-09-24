@@ -15,7 +15,7 @@ from aesara.tensor.subtensor import (
 )
 
 from aeppl.abstract import MeasurableVariable
-from aeppl.joint_logprob import joint_logprob
+from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
 from aeppl.logprob import _logprob, logprob
 from aeppl.utils import rvs_to_value_vars, walk_model
 from tests.utils import assert_no_rvs
@@ -162,6 +162,20 @@ def test_joint_logprob_incsubtensor(indices, size):
     exp_obs_logps = sp.norm.logpdf(y_val_idx, mu, sigma)
 
     np.testing.assert_almost_equal(obs_logps, exp_obs_logps)
+
+
+def test_incsubtensor_original_values_output_dict():
+    """
+    Test that the original un-incsubtensor value variable appears an the key of
+    the logprob factor
+    """
+
+    base_rv = at.random.normal(0, 1, size=2)
+    rv = at.set_subtensor(base_rv[0], 5)
+    vv = rv.clone()
+
+    logp_dict = factorized_joint_logprob({rv: vv})
+    assert vv in logp_dict
 
 
 def test_joint_logprob_subtensor():

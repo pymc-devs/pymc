@@ -137,7 +137,7 @@ def mixture_replace(fgraph, node):
 
     mixture_rvs = mixture_res
 
-    mixture_value_var = rv_map_feature.rv_values.pop(out_var, None)
+    mixture_value_var = rv_map_feature.rv_values[out_var]
 
     # We loop through mixture components and collect all the array elements
     # that belong to each one (by way of their indices).
@@ -151,7 +151,7 @@ def mixture_replace(fgraph, node):
 
     new_mixture_rv = new_node.default_output()
     new_mixture_rv.name = "mixture"
-    rv_map_feature.rv_values[new_mixture_rv] = mixture_value_var
+    rv_map_feature.update_rv_maps(out_var, mixture_value_var, new_mixture_rv)
 
     # FIXME: This is pretty hackish
     fgraph.import_node(new_node, import_missing=True, reason="mixture_rv")
