@@ -193,16 +193,19 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
         np.testing.assert_almost_equal(exp_logprob_val, logprob_val, decimal=decimals)
 
 
-def test_simple_transformed_logprob():
+@pytest.mark.parametrize("use_jacobian", [True, False])
+def test_simple_transformed_logprob_nojac(use_jacobian):
     x_rv = at.random.halfnormal(0, 3, name="x_rv")
     x = x_rv.clone()
 
     transform_opt = TransformValuesOpt({x: DEFAULT_TRANSFORM})
-    tr_logp = joint_logprob({x_rv: x}, extra_rewrites=transform_opt)
+    tr_logp = joint_logprob(
+        {x_rv: x}, extra_rewrites=transform_opt, use_jacobian=use_jacobian
+    )
 
     assert np.isclose(
         tr_logp.eval({x: np.log(2.5)}),
-        sp.stats.halfnorm(0, 3).logpdf(2.5) + np.log(2.5),
+        sp.stats.halfnorm(0, 3).logpdf(2.5) + (np.log(2.5) if use_jacobian else 0.0),
     )
 
 
