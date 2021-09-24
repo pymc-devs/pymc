@@ -1522,25 +1522,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         conditional on the values of `b` and stored in `b`.
 
         """
-        # TODO FIXME XXX: If we're going to incrementally update transformed
-        # variables, we should do it in topological order.
-        for a_name, a_value in tuple(a.items()):
-            # If the name is a random variable, get its value variable and
-            # potentially transform it
-            var = self.named_vars.get(a_name, None)
-            value_var = self.rvs_to_values.get(var, None)
-            if value_var:
-                transform = getattr(value_var.tag, "transform", None)
-                if transform:
-                    fval_graph = transform.forward(var, a_value)
-                    (fval_graph,), _ = rvs_to_value_vars((fval_graph,), apply_transforms=True)
-                    fval_graph_inputs = {i: b[i.name] for i in inputvars(fval_graph) if i.name in b}
-                    rv_var_value = fval_graph.eval(fval_graph_inputs)
-                    # Why are these transformed values stored in `b`?  They're
-                    # not going to be used to update `a`.
-                    b[value_var.name] = rv_var_value
-
-        a.update({k: v for k, v in b.items() if k not in a})
+        raise DeprecationWarning(
+            "The `Model.update_start_vals` method was removed."
+            " To change initial values you may set the items of `Model.initial_values` directly."
+        )
 
     def eval_rv_shapes(self) -> Dict[str, Tuple[int, ...]]:
         """Evaluates shapes of untransformed AND transformed free variables.
