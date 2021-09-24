@@ -346,7 +346,6 @@ class TestValueGradFunction(unittest.TestCase):
         npt.assert_allclose(m.dlogp([m.rvs_to_values[mu]])({"mu": 0}), 2.499424682024436, rtol=1e-5)
 
 
-@pytest.mark.xfail(reason="DensityDist not refactored for v4")
 def test_multiple_observed_rv():
     "Test previously buggy multi-observed RV comparison code."
     y1_data = np.random.randn(10)
@@ -354,7 +353,7 @@ def test_multiple_observed_rv():
     with pm.Model() as model:
         mu = pm.Normal("mu")
         x = pm.DensityDist(  # pylint: disable=unused-variable
-            "x", pm.Normal.dist(mu, 1.0).logp, observed={"value": 0.1}
+            "x", mu, logp=lambda value, mu: pm.Normal.logp(value, mu, 1.0), observed=0.1
         )
     assert not model["x"] == model["mu"]
     assert model["x"] == model["x"]

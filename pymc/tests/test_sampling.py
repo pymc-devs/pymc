@@ -1014,7 +1014,6 @@ class TestSamplePriorPredictive(SeededTest):
         assert gen2["y"].shape == (draws, n2)
         assert gen2["o"].shape == (draws, n2)
 
-    @pytest.mark.xfail(reason="DensityDist not refactored for v4")
     def test_density_dist(self):
         obs = np.random.normal(-1, 0.1, size=10)
         with pm.Model():
@@ -1022,8 +1021,9 @@ class TestSamplePriorPredictive(SeededTest):
             sd = pm.Gamma("sd", 1, 2)
             a = pm.DensityDist(
                 "a",
-                pm.Normal.dist(mu, sd).logp,
-                random=pm.Normal.dist(mu, sd).random,
+                mu,
+                sd,
+                random=lambda mu, sd, rng=None, size=None: rng.normal(loc=mu, scale=sd, size=size),
                 observed=obs,
             )
             prior = pm.sample_prior_predictive()
