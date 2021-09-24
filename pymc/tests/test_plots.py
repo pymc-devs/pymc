@@ -16,10 +16,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from arviz import from_pymc3
-
 import pymc as pm
 
+from pymc.backends.arviz import to_inference_data
 from pymc.backends.ndarray import point_list_to_multitrace
 from pymc.plots import plot_posterior_predictive_glm
 
@@ -31,7 +30,7 @@ def test_plot_posterior_predictive_glm_defaults(inferencedata):
         pm.Normal("Intercept")
     trace = point_list_to_multitrace([{"x": np.array([1]), "Intercept": np.array([1])}], model)
     if inferencedata:
-        trace = from_pymc3(trace, model=model)
+        trace = to_inference_data(trace=trace, model=model)
     _, ax = plt.subplots()
     plot_posterior_predictive_glm(trace, samples=1)
     lines = ax.get_lines()
@@ -52,7 +51,7 @@ def test_plot_posterior_predictive_glm_non_defaults(inferencedata):
         pm.Normal("Intercept")
     trace = point_list_to_multitrace([{"x": np.array([1]), "Intercept": np.array([1])}], model)
     if inferencedata:
-        trace = from_pymc3(trace, model=model)
+        trace = to_inference_data(trace=trace, model=model)
     _, ax = plt.subplots()
     plot_posterior_predictive_glm(
         trace, samples=1, lm=lambda x, _: x, eval=np.linspace(0, 1, 10), lw=0.3, c="b"
