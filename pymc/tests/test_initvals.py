@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import aesara.tensor as at
 import numpy as np
 import pytest
 
@@ -95,6 +96,11 @@ class TestSpecialDistributions:
 
 class TestMoment:
     def test_basic(self):
+        # Standard distributions
+        rv = pm.Normal.dist(mu=2.3)
+        np.testing.assert_allclose(get_moment(rv).eval(), 2.3)
+
+        # Special distributions
         rv = pm.Flat.dist()
         assert get_moment(rv).eval() == np.zeros(())
         rv = pm.HalfFlat.dist()
@@ -103,3 +109,33 @@ class TestMoment:
         assert np.all(get_moment(rv).eval() == np.zeros((2, 4)))
         rv = pm.HalfFlat.dist(size=(2, 4))
         assert np.all(get_moment(rv).eval() == np.ones((2, 4)))
+
+    @pytest.mark.xfail(reason="Test values are still used for initvals.")
+    @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
+    def test_numeric_moment_shape(self, rv_cls):
+        rv = rv_cls.dist(shape=(2,))
+        assert not hasattr(rv.tag, "test_value")
+        assert tuple(get_moment(rv).shape.eval()) == (2,)
+
+    @pytest.mark.xfail(reason="Test values are still used for initvals.")
+    @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
+    def test_symbolic_moment_shape(self, rv_cls):
+        s = at.scalar()
+        rv = rv_cls.dist(shape=(s,))
+        assert not hasattr(rv.tag, "test_value")
+        assert tuple(get_moment(rv).shape.eval({s: 4})) == (4,)
+        pass
+
+    @pytest.mark.xfail(reason="Test values are still used for initvals.")
+    @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
+    def test_moment_from_dims(self, rv_cls):
+        with pm.Model(
+            coords={
+                "year": [2019, 2020, 2021, 2022],
+                "city": ["Bonn", "Paris", "Lisbon"],
+            }
+        ):
+            rv = rv_cls("rv", dims=("year", "city"))
+            assert not hasattr(rv.tag, "test_value")
+            assert tuple(get_moment(rv).shape.eval()) == (4, 3)
+        pass
