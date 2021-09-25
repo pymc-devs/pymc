@@ -337,7 +337,7 @@ class Uniform(BoundedContinuous):
         )
 
     def get_moment(value, size, lower, upper):
-        lower = at.full(size, lower, dtype=aesara.config.floatX)
+        lower = at.full(size, lower, dtype=value.owner.op.inputs[2])
         upper = at.full(size, upper, dtype=aesara.config.floatX)
         return (lower + upper) / 2
 
