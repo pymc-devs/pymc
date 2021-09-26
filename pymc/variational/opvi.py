@@ -59,11 +59,11 @@ import pymc as pm
 
 from pymc.aesaraf import at_rng, identity, rvs_to_value_vars
 from pymc.backends import NDArray
+from pymc.blocking import DictToArrayBijection
 from pymc.model import modelcontext
 from pymc.util import WithMemoization, locally_cachedmethod
 from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
-from pymc.blocking import DictToArrayBijection
 
 __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
 
