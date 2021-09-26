@@ -253,7 +253,7 @@ def sample(
     step=None,
     init="auto",
     n_init=200_000,
-    start: Optional[Union[PointType, Sequence[Optional[PointType]]]] = None,
+    initvals: Optional[Union[PointType, Sequence[Optional[PointType]]]] = None,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
     chain_idx=0,
     chains=None,
@@ -291,11 +291,10 @@ def sample(
         users.
     n_init : int
         Number of iterations of initializer. Only works for 'ADVI' init methods.
-    start : dict, or array of dict
-        Starting point in parameter space (or partial point)
-        Defaults to ``trace.point(-1))`` if there is a trace provided and model.initial_point if not
-        (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
-        overwrite the default.
+    initvals : optional, dict, array of dict
+        Dict or list of dicts with initial values to use instead of the defaults from `Model.initial_values`.
+        The keys should be names of transformed random variables.
+        Initialization methods for NUTS (see ``init`` keyword) can overwrite the default.
     trace : backend or list
         This should be a backend instance, or a list of variables to track.
         If None or a list of variables, the NDArray backend is used.
@@ -417,13 +416,23 @@ def sample(
             mean     sd  hdi_3%  hdi_97%
         p  0.609  0.047   0.528    0.699
     """
+    if "start" in kwargs:
+        if initvals is not None:
+            raise ValueError("Passing both `start` and `initvals` is not supported.")
+        warnings.warn(
+            "The `start` kwarg was renamed to `initvals`. Please check the docstring.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        initvals = kwargs.pop("start")
+
     model = modelcontext(model)
     if not model.free_RVs:
         raise SamplingError(
             "Cannot sample from the model, since the model does not contain any free variables."
         )
 
-    start = deepcopy(start)
+    start = deepcopy(initvals)
     model_initial_point = model.initial_point
     if start is None:
         model.check_start_vals(model_initial_point)
