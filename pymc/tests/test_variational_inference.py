@@ -934,9 +934,8 @@ def binomial_model_inference(binomial_model, inference_spec):
         return inference_spec()
 
 
+@pytest.mark.xfail("aesara.config.warn_float64 == 'raise'", reason="too strict float32")
 def test_replacements(binomial_model_inference):
-    if aesara.config.warn_float64 == "raise":
-        pytest.skip("float32 is unreasonably strict here")
     d = at.bscalar()
     d.tag.test_value = 1
     approx = binomial_model_inference.approx
