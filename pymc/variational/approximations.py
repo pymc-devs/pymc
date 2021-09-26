@@ -25,7 +25,12 @@ from pymc.blocking import DictToArrayBijection
 from pymc.distributions.dist_math import rho2sigma
 from pymc.math import batched_diag
 from pymc.variational import flows, opvi
-from pymc.variational.opvi import Approximation, Group, node_property
+from pymc.variational.opvi import (
+    Approximation,
+    Group,
+    NotImplementedInference,
+    node_property,
+)
 
 __all__ = ["MeanField", "FullRank", "Empirical", "NormalizingFlow", "sample_approx"]
 
