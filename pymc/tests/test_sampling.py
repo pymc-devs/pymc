@@ -875,35 +875,6 @@ def test_exec_nuts_init(method):
 
 
 @pytest.mark.parametrize(
-    "init, start, expectation",
-    [
-        ("auto", None, pytest.raises(SamplingError)),
-        ("jitter+adapt_diag", None, pytest.raises(SamplingError)),
-        ("auto", {"x": 0}, does_not_raise()),
-        ("jitter+adapt_diag", {"x": 0}, does_not_raise()),
-        ("adapt_diag", None, does_not_raise()),
-    ],
-)
-def test_default_sample_nuts_jitter(init, start, expectation, monkeypatch):
-    # This test tries to check whether the starting points returned by init_nuts are actually
-    # being used when pm.sample() is called without specifying an explicit start point (see
-    # https://github.com/pymc-devs/pymc/pull/4285).
-    def _mocked_init_nuts(*args, **kwargs):
-        if init == "adapt_diag":
-            start_ = [{"x": np.array(0.79788456)}]
-        else:
-            start_ = [{"x": np.array(-0.04949886)}]
-        _, step = pm.init_nuts(*args, **kwargs)
-        return start_, step
-
-    monkeypatch.setattr("pymc.sampling.init_nuts", _mocked_init_nuts)
-    with pm.Model() as m:
-        x = pm.HalfNormal("x", transform=None)
-        with expectation:
-            pm.sample(tune=1, draws=0, chains=1, init=init, start=start)
-
-
-@pytest.mark.parametrize(
     "initval, jitter_max_retries, expectation",
     [
         (0, 0, pytest.raises(SamplingError)),
