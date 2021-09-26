@@ -38,7 +38,7 @@ from pymc.variational.approximations import (
     NormalizingFlowGroup,
 )
 from pymc.variational.inference import ADVI, ASVGD, NFVI, SVGD, FullRankADVI, fit
-from pymc.variational.opvi import Approximation, Group
+from pymc.variational.opvi import Approximation, Group, NotImplementedInference
 
 pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
 
