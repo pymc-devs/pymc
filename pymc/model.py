@@ -1864,14 +1864,18 @@ def Deterministic(name, var, model=None, dims=None, auto=False):
 
 def _get_scaling(total_size, shape, ndim):
     """
-    Gets scaling constant for logp
+    Gets scaling constant for logp.
+
     Parameters
     ----------
-    total_size: int or list[int]
+    total_size: Optional[int|List[int]]
+        size of a fully observed data without minibatching,
+        `None` means data is fully observed
     shape: shape
-        shape to scale
+        shape of an observed data
     ndim: int
         ndim hint
+
     Returns
     -------
     scalar
