@@ -200,7 +200,7 @@ html_sidebars = {"learn": [], "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "../logo/PyMC.png"
+html_logo = "../pymc_logo.jpg"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
