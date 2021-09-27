@@ -89,11 +89,11 @@ class treelist(list):
     # This is my best guess about what this should do.  I might be happier
     # to kill both of these if they are not used.
     def __mul__(self, other) -> "treelist":
-        return cast("treelist", list.__mul__(self, other))
+        return cast("treelist", super().__mul__(other))
 
     def __imul__(self, other) -> "treelist":
         t0 = len(self)
-        list.__imul__(self, other)
+        super().__imul__(other)
         if self.parent is not None:
             self.parent.extend(self[t0:])
         return self  # python spec says should return the result.

@@ -60,7 +60,7 @@ class Constant(Mean):
     """
 
     def __init__(self, c=0):
-        Mean.__init__(self)
+        super().__init__()
         self.c = c
 
     def __call__(self, X):
@@ -80,7 +80,7 @@ class Linear(Mean):
     """
 
     def __init__(self, coeffs, intercept=0):
-        Mean.__init__(self)
+        super().__init__()
         self.b = intercept
         self.A = coeffs
 
@@ -90,7 +90,7 @@ class Linear(Mean):
 
 class Add(Mean):
     def __init__(self, first_mean, second_mean):
-        Mean.__init__(self)
+        super().__init__()
         self.m1 = first_mean
         self.m2 = second_mean
 
@@ -100,7 +100,7 @@ class Add(Mean):
 
 class Prod(Mean):
     def __init__(self, first_mean, second_mean):
-        Mean.__init__(self)
+        super().__init__()
         self.m1 = first_mean
         self.m2 = second_mean
 
