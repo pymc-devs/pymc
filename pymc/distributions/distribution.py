@@ -436,7 +436,7 @@ class DensityDist(NoDistribution):
         name : str
         dist_params : Tuple
             A sequence of the distribution's parameter. These will be converted into
-            aesara tensors internally. These parameters could be other ``RandomVariable``
+            Aesara tensors internally. These parameters could be other ``RandomVariable``
             instances.
         logp : Optional[Callable]
             A callable that calculates the log density of some given observed ``value``

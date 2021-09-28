@@ -10,7 +10,7 @@ from pymc.distributions.distribution import get_moment
 from pymc.distributions.shape_utils import to_tuple
 
 
-@pytest.mark.parametrize("size", [None, (), (2,), (3, 2)], ids=str)
+@pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
 def test_density_dist_moment_scalar(size):
     def moment(rv, size, mu):
         return (at.ones(size) * mu).astype(rv.dtype)
@@ -24,7 +24,7 @@ def test_density_dist_moment_scalar(size):
     assert np.all(evaled_moment == mu_val)
 
 
-@pytest.mark.parametrize("size", [None, (), (2,), (3, 2)], ids=str)
+@pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
 def test_density_dist_moment_multivariate(size):
     def moment(rv, size, mu):
         return (at.ones(size)[..., None] * mu).astype(rv.dtype)
