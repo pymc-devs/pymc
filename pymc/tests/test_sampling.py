@@ -314,7 +314,6 @@ class TestSample(SeededTest):
                 xvars = [t["mu"] for t in trace]
 
 
-@pytest.mark.xfail(reason="Lognormal not refactored for v4")
 def test_sample_find_MAP_does_not_modify_start():
     # see https://github.com/pymc-devs/pymc/pull/4458
     with pm.Model():
