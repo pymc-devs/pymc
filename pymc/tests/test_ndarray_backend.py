@@ -221,6 +221,9 @@ class TestSaveLoad:
         with TestSaveLoad.model():
             cls.trace = pm.sample(return_inferencedata=False)
 
+    @pytest.mark.xfail(
+        reason="Needs aeppl integration due to unintentional model graph rewrite #5007."
+    )
     def test_save_new_model(self, tmpdir_factory):
         directory = str(tmpdir_factory.mktemp("data"))
         save_dir = pm.save_trace(self.trace, directory, overwrite=True)
@@ -239,6 +242,9 @@ class TestSaveLoad:
 
         assert (new_trace["w"] == new_trace_copy["w"]).all()
 
+    @pytest.mark.xfail(
+        reason="Needs aeppl integration due to unintentional model graph rewrite #5007."
+    )
     def test_save_and_load(self, tmpdir_factory):
         directory = str(tmpdir_factory.mktemp("data"))
         save_dir = pm.save_trace(self.trace, directory, overwrite=True)
@@ -256,11 +262,17 @@ class TestSaveLoad:
                 "Restored value of statistic %s does not match stored value" % stat
             )
 
+    @pytest.mark.xfail(
+        reason="Needs aeppl integration due to unintentional model graph rewrite #5007."
+    )
     def test_bad_load(self, tmpdir_factory):
         directory = str(tmpdir_factory.mktemp("data"))
         with pytest.raises(pm.TraceDirectoryError):
             pm.load_trace(directory, model=TestSaveLoad.model())
 
+    @pytest.mark.xfail(
+        reason="Needs aeppl integration due to unintentional model graph rewrite #5007."
+    )
     def test_sample_posterior_predictive(self, tmpdir_factory):
         directory = str(tmpdir_factory.mktemp("data"))
         save_dir = pm.save_trace(self.trace, directory, overwrite=True)
