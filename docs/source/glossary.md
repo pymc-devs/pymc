@@ -21,17 +21,17 @@ Dispatching
 Bayesian model
   A Bayesian model is a composite of variables and distributional definitions for these variables. Fundamentally, models are mappings of one set of variables through a probability distribution onto another set of variables. These models define the ways values of some variables can arise, given values of other variables.
   
-Bayesian data analysis
-  Once we have defined the statistical model, Bayesian data analysis logically processes the data to produce inference. Probability theory is used to represent plausibility, whether in reference to countable events in the world, or theoretical constructs like parameters.
+Bayesian inference
+  Once we have defined the statistical model, Bayesian inference processes the data and model to produce a posterior distribution. that is a joint distribution of all parameters in the model. This distribution is used to represent plausibility, and is the logical consequence of the model and data.
   
 Likelihood
   The probability of the data, or the relative number of ways that a value of a parameter can produce the data, is called a likelihood. It is derived by enumerating all the possible data sequences that could have happened and then eliminating those sequences inconsistent with the data.
   
 Prior
-  Bayesian statistics allow us to include all information we have about the structure of the problem into the model. We do this via assuming prior distributions of the model’s variables, or the priors. Priors represent the plausibility of each possible value of the parameters before accounting for the data. Priors multiplied by likelihood produces the posterior. 
+  Bayesian statistics allow us, in principle, to include all information we have about the structure of the problem into the model. We can do this via assuming prior distributions of the model’s parameters. Priors represent the plausibility of the value of the parameters before accounting for the data. Priors multiplied by likelihood produce the posterior. 
   
 Posterior
-  The outcome of a Bayesian model is the posterior probability, the updated plausibility of any specific target of inference after the model has seen the data. It produces the posterior distribution, which is a ranking of the relative plausibilities of every possible combination of parameter values.
+  The outcome of a Bayesian model is the posterior distribution, which describes the relative plausibilities of every possible combination of parameter values. We can think the posterior as the updated priors after the model has seen the data.
 
   Once your model produces a posterior distribution, you need to summarize and interpret it. Common questions for the posterior include: intervals of defined boundaries, intervals of defined probability mass, point estimates. When the posterior distribution is very similar to the prior, the available data does not contain much information about a parameter of interest.
 
