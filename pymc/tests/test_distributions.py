@@ -141,7 +141,6 @@ def get_lkj_cases():
     return [
         (tri, 1, 3, 1.5963125911388549),
         (tri, 3, 3, -7.7963493376312742),
-        (tri, 0, 3, -np.inf),
         (np.array([1.1, 0.0, -0.7]), 1, 3, -np.inf),
         (np.array([0.7, 0.0, -1.1]), 1, 3, -np.inf),
     ]
@@ -2094,7 +2093,6 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_lkj(self, x, eta, n, lp):
         with Model() as model:
             LKJCorr("lkj", eta=eta, n=n, transform=None)
@@ -3311,3 +3309,29 @@ class TestCensored:
                 match="The dist dist was already registered in the current model",
             ):
                 x = pm.Censored("x", registered_dist, lower=None, upper=None)
+
+
+# TODO: Finish this test
+def test_lkjcholeskycov_sampling_shape():
+    samples = 5
+    D = 15
+    dist_shape = ((D * (D + 1)) // 2,)
+
+    with pm.Model() as model:
+        sd_dist = pm.HalfCauchy("sd_dist", beta=2.5, shape=1)
+        packedL = pm.LKJCholeskyCov("packedL", eta=2, n=D, sd_dist=sd_dist, compute_corr=False)
+
+    with model:
+        trace = pm.sample(
+            tune=5,
+            draws=samples,
+            chains=1,
+            return_inferencedata=False,
+            compute_convergence_checks=False,
+        )
+
+    # TODO: assert something about the logp (separate test?)
+    # pt = model.recompute_initial_point(0)
+    # logp = model.compile_logp(pt)
+
+    assert trace["packedL"].shape == (samples,) + dist_shape

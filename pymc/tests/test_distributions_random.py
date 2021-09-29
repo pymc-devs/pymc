@@ -47,7 +47,11 @@ from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc.distributions.dist_math import clipped_beta_rvs
 from pymc.distributions.logprob import logp
-from pymc.distributions.multivariate import _OrderedMultinomial, quaddist_matrix
+from pymc.distributions.multivariate import (
+    _LKJCholeskyCov,
+    _OrderedMultinomial,
+    quaddist_matrix,
+)
 from pymc.distributions.shape_utils import to_tuple
 from pymc.tests.helpers import SeededTest, select_by_precision
 from pymc.tests.test_distributions import (
@@ -365,8 +369,9 @@ class BaseTestDistribution(SeededTest):
         sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
         for size, expected in zip(sizes_to_check, sizes_expected):
             pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
-            actual = tuple(pymc_rv.shape.eval())
-            assert actual == expected, f"size={size}, expected={expected}, actual={actual}"
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            actual = pymc_rv.eval().shape
+            assert actual == expected_symbolic == expected
 
         # test multi-parameters sampling for univariate distributions (with univariate inputs)
         if (
@@ -386,8 +391,9 @@ class BaseTestDistribution(SeededTest):
             ]
             for size, expected in zip(sizes_to_check, sizes_expected):
                 pymc_rv = self.pymc_dist.dist(**params, size=size)
-                actual = tuple(pymc_rv.shape.eval())
-                assert actual == expected
+                expected_symbolic = tuple(pymc_rv.shape.eval())
+                actual = pymc_rv.eval().shape
+                assert actual == expected_symbolic == expected
 
     def validate_tests_list(self):
         assert len(self.tests_to_run) == len(
@@ -1546,6 +1552,84 @@ class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
+class TestLKJCov(BaseTestDistribution):
+    pymc_dist = _LKJCholeskyCov
+    pymc_dist_params = {"eta": 1.0, "n": 2, "sd_dist": np.array([0.5, 2.0])}
+    expected_rv_op_params = {"eta": 1.0, "n": 2, "sd_dist": np.array([0.5, 2.0])}
+
+    sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+    sizes_expected = [
+        (3,),
+        (3,),
+        (1, 3),
+        (1, 3),
+        (5, 3),
+        (4, 5, 3),
+        (2, 4, 2, 3),
+    ]
+
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_expected_draws",
+    ]
+
+    def check_expected_draws(self):
+        rng = aesara.shared(self.get_random_state(reset=True))
+        x = _LKJCholeskyCov.dist(n=2, eta=10_000, sd_dist=np.array([1.0, 2.0]), rng=rng)
+        assert np.all(np.abs(x.eval() - np.array([1.0, 0, 2.0])) < 0.1)
+
+    # TODO: Enable or remove this test
+    def check_expected_draws_slow(self):
+        def ref_rand(size, n, eta):
+            shape = n * (n - 1) // 2
+            beta = eta - 1 + n / 2
+            return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
+
+        pymc_random(
+            pm.LKJCorr,
+            {"n": Domain([2, 10, 50], edges=[0, -1]), "eta": Domain([1.0, 10.0, 100.0])},
+            size=1000,
+            ref_rand=ref_rand,
+        )
+
+
+class TestLKJCorr(BaseTestDistribution):
+    pymc_dist = pm.LKJCorr
+    pymc_dist_params = {"n": 3, "eta": 1.0}
+    expected_rv_op_params = {"n": 3, "eta": 1.0}
+
+    sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+    sizes_expected = [
+        (3,),
+        (3,),
+        (1, 3),
+        (1, 3),
+        (5, 3),
+        (4, 5, 3),
+        (2, 4, 2, 3),
+    ]
+
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "test_lkj",
+        "check_rv_size",
+    ]
+
+    def test_lkj(self):
+        def ref_rand(size, n, eta):
+            shape = n * (n - 1) // 2
+            beta = eta - 1 + n / 2
+            return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
+
+        pymc3_random(
+            pm.LKJCorr,
+            {"n": Domain([2, 10, 50], edges=[0, -1]), "eta": Domain([1.0, 10.0, 100.0])},
+            size=1000,
+            ref_rand=ref_rand,
+        )
+
+
 class TestOrderedLogistic(BaseTestDistribution):
     pymc_dist = _OrderedLogistic
     pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2])}
@@ -2241,7 +2325,6 @@ def generate_shapes(include_params=False):
     return data
 
 
-@pytest.mark.skip(reason="This test is covered by Aesara")
 class TestMvNormal(SeededTest):
     @pytest.mark.parametrize(
         ["sample_shape", "dist_shape", "mu_shape", "param"],
@@ -2261,7 +2344,7 @@ class TestMvNormal(SeededTest):
     def test_with_chol_rv(self, sample_shape, dist_shape, mu_shape):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
-            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            sd_dist = pm.Exponential("sd_dist", 1.0, shape=3)
             chol, corr, stds = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
@@ -2278,7 +2361,7 @@ class TestMvNormal(SeededTest):
     def test_with_cov_rv(self, sample_shape, dist_shape, mu_shape):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
-            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            sd_dist = pm.Exponential("sd_dist", 1.0, shape=3)
             chol, corr, stds = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
@@ -2325,7 +2408,6 @@ class TestMvNormal(SeededTest):
         assert prior_pred["X"].shape == (1, N, 2)
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 def test_matrix_normal_random_with_random_variables():
     """
     This test checks for shape correctness when using MatrixNormal distribution
@@ -2337,7 +2419,7 @@ def test_matrix_normal_random_with_random_variables():
     mu_0 = np.zeros((D, K))
     lambd = 1.0
     with pm.Model() as model:
-        sd_dist = pm.HalfCauchy.dist(beta=2.5)
+        sd_dist = pm.HalfCauchy("sd_dist", beta=2.5)
         packedL = pm.LKJCholeskyCov("packedL", eta=2, n=D, sd_dist=sd_dist)
         L = pm.expand_packed_triangular(D, packedL, lower=True)
         Sigma = pm.Deterministic("Sigma", L.dot(L.T))  # D x D covariance
@@ -2372,7 +2454,7 @@ class TestMvGaussianRandomWalk(SeededTest):
     def test_with_chol_rv(self, sample_shape, dist_shape, mu_shape):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
-            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            sd_dist = pm.Exponential("sd_dist", 1.0, shape=3)
             chol, corr, stds = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )

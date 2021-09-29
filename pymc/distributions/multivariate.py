@@ -43,7 +43,12 @@ import pymc as pm
 
 from pymc.aesaraf import floatX, intX
 from pymc.distributions import transforms
-from pymc.distributions.continuous import ChiSquared, Normal, assert_negative_support
+from pymc.distributions.continuous import (
+    BoundedContinuous,
+    ChiSquared,
+    Normal,
+    assert_negative_support,
+)
 from pymc.distributions.dist_math import (
     betaln,
     check_parameters,
@@ -58,6 +63,7 @@ from pymc.distributions.shape_utils import (
     to_tuple,
 )
 from pymc.math import kron_diag, kron_dot
+from pymc.util import UNSET
 
 __all__ = [
     "MvNormal",
@@ -1085,67 +1091,117 @@ def _lkj_normalizing_constant(eta, n):
     return result
 
 
+# TODO: Can the `sd_dist` be a separate distribution that we take as an input?
+# TODO: Explain that this takes draws from flatten upper triangular matrix, change name as well!
+class _LKJCholeskyCovRV(RandomVariable):
+
+    name = "_lkjcholeskycov"
+    ndim_supp = 1
+    ndims_params = (0, 0, 1)
+    dtype = "floatX"
+    _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
+
+    def _shape_from_params(self, dist_params, **kwargs):
+        n = dist_params[1]
+        dist_shape = ((n * (n + 1)) // 2,)
+        return dist_shape
+
+    def rng_fn(self, rng, eta, n, sd_dist, size):
+
+        dist_shape = ((n * (n + 1)) // 2,)
+
+        # We will always provide random with an integer size and then reshape
+        # the output to get the correct size
+        if size is not None:
+            orig_size = size
+            size = np.prod(size)
+        else:
+            size = 1
+            orig_size = None
+
+        P = np.full((size, n, n), np.eye(n))
+        # original implementation in R see:
+        # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
+        beta = eta - 1.0 + n / 2.0
+        r12 = 2.0 * stats.beta.rvs(a=beta, b=beta, size=(size,)) - 1.0
+        P[..., 0, 1] = r12
+        P[..., 1, 1] = np.sqrt(1.0 - r12 ** 2)
+        for mp1 in range(2, n):
+            beta -= 0.5
+            y = stats.beta.rvs(a=mp1 / 2.0, b=beta, size=(size,))
+            z = stats.norm.rvs(loc=0, scale=1, size=(size,) + (mp1,))
+            z = z / np.sqrt(np.einsum("ij,ij->j", z, z))
+            P[..., 0:mp1, mp1] = np.sqrt(y[..., np.newaxis]) * z
+            P[..., mp1, mp1] = np.sqrt(1.0 - y)
+        C = np.einsum("...ji,...jk->...ik", P, P)
+
+        D = sd_dist
+        C *= D[..., :, np.newaxis] * D[..., np.newaxis, :]
+        tril_idx = np.tril_indices(n, k=0)
+
+        samples = np.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
+
+        if orig_size is None:
+            samples = samples[0]
+        else:
+            samples = np.reshape(samples, orig_size + dist_shape)
+
+        return samples
+
+
+_ljk_cholesky_cov = _LKJCholeskyCovRV()
+
+
 class _LKJCholeskyCov(Continuous):
     r"""Underlying class for covariance matrix with LKJ distributed correlations.
     See docs for LKJCholeskyCov function for more details on how to use it in models.
     """
+    rv_op = _ljk_cholesky_cov
 
-    def __init__(self, eta, n, sd_dist, *args, **kwargs):
-        self.n = at.as_tensor_variable(n)
-        self.eta = at.as_tensor_variable(eta)
+    def __new__(cls, *args, **kwargs):
+        transform = kwargs.get("transform", UNSET)
+        if transform is UNSET:
+            kwargs["transform"] = cls.default_transform()
+        return super().__new__(cls, *args, **kwargs)
 
-        if "transform" in kwargs and kwargs["transform"] is not None:
-            raise ValueError("Invalid parameter: transform.")
-        if "shape" in kwargs:
-            raise ValueError("Invalid parameter: shape.")
-
-        shape = n * (n + 1) // 2
-
-        if sd_dist.shape.ndim not in [0, 1]:
-            raise ValueError("Invalid shape for sd_dist.")
-
+    @classmethod
+    def default_transform(cls):
         def transform_params(rv_var):
-            _, _, _, n, eta = rv_var.owner.inputs
-            return np.arange(1, n + 1).cumsum() - 1
+            _, _, _, _, n, _ = rv_var.owner.inputs
+            return at.arange(1, n + 1).cumsum() - 1
 
-        transform = transforms.CholeskyCovPacked(transform_params)
+        return transforms.CholeskyCovPacked(transform_params)
 
-        kwargs["shape"] = shape
-        kwargs["transform"] = transform
-        super().__init__(*args, **kwargs)
+    @classmethod
+    def dist(cls, eta, n, sd_dist, **kwargs):
+        eta = at.as_tensor_variable(floatX(eta))
+        n = at.at_least_1d(at.as_tensor_variable(intX(n)))
+        sd_dist = at.as_tensor_variable(floatX(sd_dist))
+        return super().dist([eta, n, sd_dist], **kwargs)
 
-        self.sd_dist = sd_dist
-        self.diag_idxs = transform.diag_idxs
-
-        self.mode = floatX(np.zeros(shape))
-        self.mode[self.diag_idxs] = 1
-
-    def logp(self, x):
+    def logp(value, eta, n, sd_dist):
         """
         Calculate log-probability of Covariance matrix with LKJ
         distributed correlations at specified value.
 
         Parameters
         ----------
-        x: numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
         -------
         TensorVariable
         """
-        n = self.n
-        eta = self.eta
 
-        diag_idxs = self.diag_idxs
-        cumsum = at.cumsum(x ** 2)
+        diag_idxs = at.cumsum(at.arange(1, n + 1)) - 1
+        cumsum = at.cumsum(value ** 2)
         variance = at.zeros(n)
-        variance = at.inc_subtensor(variance[0], x[0] ** 2)
+        variance = at.inc_subtensor(variance[0], value[0] ** 2)
         variance = at.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
         sd_vals = at.sqrt(variance)
 
-        logp_sd = self.sd_dist.logp(sd_vals).sum()
-        corr_diag = x[diag_idxs] / sd_vals
+        corr_diag = value[diag_idxs] / sd_vals
 
         logp_lkj = (2 * eta - 3 + n - at.arange(n)) * at.log(corr_diag)
         logp_lkj = at.sum(logp_lkj)
@@ -1158,111 +1214,10 @@ class _LKJCholeskyCov(Continuous):
 
         norm = _lkj_normalizing_constant(eta, n)
 
-        return norm + logp_lkj + logp_sd + det_invjac
-
-    def _random(self, n, eta, size=1):
-        eta_sample_shape = (size,) + eta.shape
-        P = np.eye(n) * np.ones(eta_sample_shape + (n, n))
-        # original implementation in R see:
-        # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
-        beta = eta - 1.0 + n / 2.0
-        r12 = 2.0 * stats.beta.rvs(a=beta, b=beta, size=eta_sample_shape) - 1.0
-        P[..., 0, 1] = r12
-        P[..., 1, 1] = np.sqrt(1.0 - r12 ** 2)
-        for mp1 in range(2, n):
-            beta -= 0.5
-            y = stats.beta.rvs(a=mp1 / 2.0, b=beta, size=eta_sample_shape)
-            z = stats.norm.rvs(loc=0, scale=1, size=eta_sample_shape + (mp1,))
-            z = z / np.sqrt(np.einsum("ij,ij->j", z, z))
-            P[..., 0:mp1, mp1] = np.sqrt(y[..., np.newaxis]) * z
-            P[..., mp1, mp1] = np.sqrt(1.0 - y)
-        C = np.einsum("...ji,...jk->...ik", P, P)
-        D = np.atleast_1d(self.sd_dist.random(size=P.shape[:-2]))
-        if D.shape in [tuple(), (1,)]:
-            D = self.sd_dist.random(size=P.shape[:-1])
-        elif D.ndim < C.ndim - 1:
-            D = [D] + [self.sd_dist.random(size=P.shape[:-2]) for _ in range(n - 1)]
-            D = np.moveaxis(np.array(D), 0, C.ndim - 2)
-        elif D.ndim == C.ndim - 1:
-            if D.shape[-1] == 1:
-                D = [D] + [self.sd_dist.random(size=P.shape[:-2]) for _ in range(n - 1)]
-                D = np.concatenate(D, axis=-1)
-            elif D.shape[-1] != n:
-                raise ValueError(
-                    "The size of the samples drawn from the "
-                    "supplied sd_dist.random have the wrong "
-                    "size. Expected {} but got {} instead.".format(n, D.shape[-1])
-                )
-        else:
-            raise ValueError(
-                "Supplied sd_dist.random generates samples with "
-                "too many dimensions. It must yield samples "
-                "with 0 or 1 dimensions. Got {} instead".format(D.ndim - C.ndim - 2)
-            )
-        C *= D[..., :, np.newaxis] * D[..., np.newaxis, :]
-        tril_idx = np.tril_indices(n, k=0)
-        return np.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Covariance matrix with LKJ
-        distributed correlations.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # # Get parameters and broadcast them
-        # n, eta = draw_values([self.n, self.eta], point=point, size=size)
-        # broadcast_shape = np.broadcast(n, eta).shape
-        # # We can only handle cov matrices with a constant n per random call
-        # n = np.unique(n)
-        # if len(n) > 1:
-        #     raise RuntimeError("Varying n is not supported for LKJCholeskyCov")
-        # n = int(n[0])
-        # dist_shape = ((n * (n + 1)) // 2,)
-        # # We make sure that eta and the drawn n get their shapes broadcasted
-        # eta = np.broadcast_to(eta, broadcast_shape)
-        # # We change the size of the draw depending on the broadcast shape
-        # sample_shape = broadcast_shape + dist_shape
-        # if size is not None:
-        #     if not isinstance(size, tuple):
-        #         try:
-        #             size = tuple(size)
-        #         except TypeError:
-        #             size = (size,)
-        #     if size == sample_shape:
-        #         size = None
-        #     elif size == broadcast_shape:
-        #         size = None
-        #     elif size[-len(sample_shape) :] == sample_shape:
-        #         size = size[: len(size) - len(sample_shape)]
-        #     elif size[-len(broadcast_shape) :] == broadcast_shape:
-        #         size = size[: len(size) - len(broadcast_shape)]
-        # # We will always provide _random with an integer size and then reshape
-        # # the output to get the correct size
-        # if size is not None:
-        #     _size = np.prod(size)
-        # else:
-        #     _size = 1
-        # samples = self._random(n, eta, size=_size)
-        # if size is None:
-        #     samples = samples[0]
-        # else:
-        #     samples = np.reshape(samples, size + sample_shape)
-        # return samples
+        return norm + logp_lkj + det_invjac
 
 
-def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=True, *args, **kwargs):
+def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=True, store_in_trace=True, *args, **kwargs):
     r"""Wrapper function for covariance matrix with LKJ distributed correlations.
 
     This defines a distribution over Cholesky decomposed covariance
@@ -1282,7 +1237,7 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
         Dimension of the covariance matrix (n > 1).
     sd_dist: pm.Distribution
         A distribution for the standard deviations.
-    compute_corr: bool, default=False
+    compute_corr: bool, default=True
         If `True`, returns three values: the Cholesky decomposition, the correlations
         and the standard deviations of the covariance matrix. Otherwise, only returns
         the packed Cholesky decomposition. Defaults to `False` to ensure backwards
@@ -1399,7 +1354,6 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
     packed_chol = _LKJCholeskyCov(name, eta=eta, n=n, sd_dist=sd_dist)
     if not compute_corr:
         return packed_chol
-
     else:
         chol = pm.expand_packed_triangular(n, packed_chol, lower=True)
         # compute covariance matrix
@@ -1415,7 +1369,46 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
         return chol, corr, stds
 
 
-class LKJCorr(Continuous):
+class LKJCorrRV(RandomVariable):
+    name = "lkjcorr"
+    ndim_supp = 1
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("LKJCorrRV", "\\operatorname{LKJCorrRV}")
+
+    def _infer_shape(self, size, dist_params, param_shapes=None):
+        n = dist_params[0]
+        shape = tuple(size) + (n,)
+        return shape
+
+    @classmethod
+    def rng_fn(cls, rng, n, eta, size=None):
+        # TODO: rng is not being used by the stat.sebta.rvs!
+        size = 1 if size is None else size
+        size = size if isinstance(size, tuple) else (size,)
+        # original implementation in R see:
+        # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
+        beta = eta - 1.0 + n / 2.0
+        r12 = 2.0 * stats.beta.rvs(a=beta, b=beta, size=size) - 1.0
+        P = np.eye(n)[:, :, np.newaxis] * np.ones(size)
+        P[0, 1] = r12
+        P[1, 1] = np.sqrt(1.0 - r12 ** 2)
+        for mp1 in range(2, n):
+            beta -= 0.5
+            y = stats.beta.rvs(a=mp1 / 2.0, b=beta, size=size)
+            z = stats.norm.rvs(loc=0, scale=1, size=(mp1,) + size)
+            z = z / np.sqrt(np.einsum("ij,ij->j", z, z))
+            P[0:mp1, mp1] = np.sqrt(y) * z
+            P[mp1, mp1] = np.sqrt(1.0 - y)
+        C = np.einsum("ji...,jk...->...ik", P, P)
+        triu_idx = np.triu_indices(n, k=1)
+        return C[..., triu_idx[0], triu_idx[1]]
+
+
+lkjcorr = LKJCorrRV()
+
+
+class LKJCorr(BoundedContinuous):
     r"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
 
@@ -1457,86 +1450,17 @@ class LKJCorr(Continuous):
         100(9), pp.1989-2001.
     """
 
-    def __init__(self, eta=None, n=None, p=None, transform="interval", *args, **kwargs):
-        if (p is not None) and (n is not None) and (eta is None):
-            warnings.warn(
-                "Parameters to LKJCorr have changed: shape parameter n -> eta "
-                "dimension parameter p -> n. Please update your code. "
-                "Automatically re-assigning parameters for backwards compatibility.",
-                FutureWarning,
-            )
-            self.n = p
-            self.eta = n
-            eta = self.eta
-            n = self.n
-        elif (n is not None) and (eta is not None) and (p is None):
-            self.n = n
-            self.eta = eta
-        else:
-            raise ValueError(
-                "Invalid parameter: please use eta as the shape parameter and "
-                "n as the dimension parameter."
-            )
+    bound_args_indices = [-1, 1]
+    rv_op = lkjcorr
 
-        shape = n * (n - 1) // 2
-        self.mean = floatX(np.zeros(shape))
+    @classmethod
+    def dist(cls, n, eta, *args, **kwargs):
+        n = at.as_tensor_variable(intX(n))
+        eta = at.as_tensor_variable(floatX(eta))
 
-        if transform == "interval":
-            transform = transforms.interval(-1, 1)
+        return super().dist([n, eta], *args, **kwargs)
 
-        super().__init__(shape=shape, transform=transform, *args, **kwargs)
-        warnings.warn(
-            "Parameters in LKJCorr have been rename: shape parameter n -> eta "
-            "dimension parameter p -> n. Please double check your initialization.",
-            FutureWarning,
-        )
-        self.tri_index = np.zeros([n, n], dtype="int32")
-        self.tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
-        self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
-
-    def _random(self, n, eta, size=None):
-        size = size if isinstance(size, tuple) else (size,)
-        # original implementation in R see:
-        # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
-        beta = eta - 1.0 + n / 2.0
-        r12 = 2.0 * stats.beta.rvs(a=beta, b=beta, size=size) - 1.0
-        P = np.eye(n)[:, :, np.newaxis] * np.ones(size)
-        P[0, 1] = r12
-        P[1, 1] = np.sqrt(1.0 - r12 ** 2)
-        for mp1 in range(2, n):
-            beta -= 0.5
-            y = stats.beta.rvs(a=mp1 / 2.0, b=beta, size=size)
-            z = stats.norm.rvs(loc=0, scale=1, size=(mp1,) + size)
-            z = z / np.sqrt(np.einsum("ij,ij->j", z, z))
-            P[0:mp1, mp1] = np.sqrt(y) * z
-            P[mp1, mp1] = np.sqrt(1.0 - y)
-        C = np.einsum("ji...,jk...->...ik", P, P)
-        triu_idx = np.triu_indices(n, k=1)
-        return C[..., triu_idx[0], triu_idx[1]]
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from LKJ distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # n, eta = draw_values([self.n, self.eta], point=point, size=size)
-        # size = 1 if size is None else size
-        # samples = generate_samples(self._random, n, eta, broadcast_shape=(size,))
-        # return samples
-
-    def logp(self, x):
+    def logp(x, n, eta):
         """
         Calculate log-probability of LKJ distribution at specified
         value.
@@ -1550,10 +1474,15 @@ class LKJCorr(Continuous):
         -------
         TensorVariable
         """
-        n = self.n
-        eta = self.eta
+        # TODO: What is this n.data?
+        _n = n.data
+        _eta = eta.data
+        shape = _n * (_n - 1) // 2
+        tri_index = np.zeros([_n, _n], dtype="int32")
+        tri_index[np.triu_indices(_n, k=1)] = np.arange(shape)
+        tri_index[np.triu_indices(_n, k=1)[::-1]] = np.arange(shape)
 
-        X = x[self.tri_index]
+        X = at.take(x, tri_index)
         X = at.fill_diagonal(X, 1)
 
         result = _lkj_normalizing_constant(eta, n)
