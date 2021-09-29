@@ -1853,9 +1853,6 @@ class TestDensityDist:
 
         assert obs.eval().shape == (100,) + size
 
-    @pytest.mark.xfail(
-        reason="Needs refactoring of _check_start_shape to not attempt random draws. See #5031."
-    )
     def test_density_dist_without_random(self):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0, 1)
