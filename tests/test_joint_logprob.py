@@ -143,20 +143,19 @@ def test_joint_logprob_incsubtensor(indices, size):
     data = rng.normal(mu[indices], 1.0)
     y_val = rng.normal(mu, sigma, size=size)
 
-    Y_rv = at.random.normal(mu, sigma, size=size)
+    Y_base_rv = at.random.normal(mu, sigma, size=size)
+    Y_rv = at.set_subtensor(Y_base_rv[indices], data)
     Y_rv.name = "Y"
     y_value_var = Y_rv.clone()
     y_value_var.name = "y"
 
-    Y_sst = at.set_subtensor(Y_rv[indices], data)
-
     assert isinstance(
-        Y_sst.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
+        Y_rv.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
     )
 
-    Y_sst_logp = joint_logprob({Y_rv: y_value_var, Y_sst: None}, sum=False)
+    Y_rv_logp = joint_logprob({Y_rv: y_value_var}, sum=False)
 
-    obs_logps = Y_sst_logp.eval({y_value_var: y_val})
+    obs_logps = Y_rv_logp.eval({y_value_var: y_val})
 
     y_val_idx = y_val.copy()
     y_val_idx[indices] = data

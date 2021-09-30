@@ -24,6 +24,7 @@ from aesara.tensor.subtensor import (
 )
 from aesara.tensor.var import TensorVariable
 
+from aeppl.abstract import MeasurableVariable
 from aeppl.utils import indices_from_subtensor
 
 inc_subtensor_ops = (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
@@ -88,22 +89,32 @@ def incsubtensor_rv_replace(fgraph, node):
     if not isinstance(node.op, inc_subtensor_ops):
         return None  # pragma: no cover
 
-    rv_var = node.inputs[0]
+    rv_var = node.outputs[0]
+    if rv_var not in rv_map_feature.rv_values:
+        return None  # pragma: no cover
 
-    if not (rv_var.owner and isinstance(rv_var.owner.op, RandomVariable)):
+    base_rv_var = node.inputs[0]
+
+    if not (
+        base_rv_var.owner
+        and isinstance(base_rv_var.owner.op, MeasurableVariable)
+        and base_rv_var not in rv_map_feature.rv_values
+    ):
         return None  # pragma: no cover
 
     data = node.inputs[1]
     idx = indices_from_subtensor(getattr(node.op, "idx_list", None), node.inputs[2:])
 
     # Create a new value variable with the indices `idx` set to `data`
-    z = at.set_subtensor(rv_map_feature.rv_values[rv_var][idx], data)
+    value_var = rv_map_feature.rv_values[rv_var]
+    new_value_var = at.set_subtensor(value_var[idx], data)
 
-    # Replace `rv_var`'s value variable with the new one
-    rv_map_feature.rv_values[rv_var] = z
+    # Map new value variable to `base_rv_var` and remove old_mapping
+    rv_map_feature.rv_values[base_rv_var] = new_value_var
+    del rv_map_feature.rv_values[rv_var]
 
     # Return the `RandomVariable` being indexed
-    return [rv_var]
+    return [base_rv_var]
 
 
 @local_optimizer([BroadcastTo])
