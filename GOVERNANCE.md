@@ -3,26 +3,23 @@
 ## The Project
 
 The PyMC Project (The Project) is an open source software project
-affiliated with the 501c3 NumFocus Foundation. The goal of The Project is to
+affiliated with the 501c3 NumFOCUS Foundation. The goal of The Project is to
 develop open source software and deploy open and public websites and services
 for reproducible, exploratory and interactive computing. The Software developed
 by The Project is released under OSI approved open source licenses,
 developed openly and hosted in public GitHub repositories under the
-[GitHub organization](https://github.com/pymc-devs). Examples of
-Project Software include the PyMC3 library and its documentation, etc.
+[pymc-devs GitHub organization](https://github.com/pymc-devs). Examples of
+Project Software include the PyMC library and its documentation, etc.
 The Services run by the Project consist of public websites and web-services
-that are hosted at [http://docs.pymc.io](http://docs.pymc.io)
+that are hosted at [http://docs.pymc.io](https://docs.pymc.io)
 
 The Project is developed by a team of distributed developers, called
 Contributors. Contributors are individuals who have contributed code,
 documentation, designs or other work to one or more Project repositories,
 or who have done significant work to empower the Community,
-moderating on [Discourse](http://docs.pymc.io),
+participating on [Discourse](https://discourse.pymc.io),
 organizing [PyMCon](https://pymcon.com) or helped on other platforms and events.
 Anyone can be a Contributor. Contributors can be affiliated with any legal
-entity or none. Contributors participate in the project by submitting,
-reviewing and discussing GitHub Pull Requests and Issues and participating in
-open and public Project discussions on GitHub, Slack, Gitter chat rooms and mailing lists.
 The foundation of Project participation is openness and transparency.
 
 There have been over 250 Contributors to the Project, their contributions are listed in the
@@ -42,13 +39,13 @@ Institutional Partners section below).
 
 ## Governance
 
-This section describes the governance and leadership model of The Project.
+This section outlines the governance and leadership model of The Project.
 
 The foundations of Project governance are:
 
--   Openness & Transparency
--   Active Contribution
--   Institutional Neutrality
+- Openness & Transparency
+- Active Contribution
+- Institutional Neutrality
 
 Traditionally, Project leadership was provided by a BDFL (Chris Fonnesbeck) and
 subset of Contributors, called Core Developers, whose active and consistent
@@ -79,7 +76,8 @@ also members of all the groups listed above:
 Recurring Contributors comprise what we understand as the PyMC Team.
 The Team will generally act as a single unit, except for some specific
 questions where dedicated teams will prevail.
-The PyMC project currently counts with the Developer and Documentation teams.
+Currently there are two teams within the PyMC project,
+the Developer and Documentation teams.
 Team members can be part of one, some or none of these dedicated teams.
 
 ![community_diagram](docs/community_diagram.png)
@@ -88,30 +86,90 @@ Anyone working with The Project has the responsibility to personally uphold
 the Code of Conduct. Core Contributors have the additional responsibility
 of _enforcing_ the Code of Conduct to maintain a safe community.
 
-## BDFL
+## Recurring Contributors
+Recurring Contributors are those individuals who contribute recurrently to the
+project and can provide valuable insight on the project.
+They are therefore actively consulted and can participate in the same communication
+channels as Core Contributors. However, unlike Core Contributors,
+Recurrent Contributors don't have voting, managing or writing rights.
 
-The Project will have a BDFL (Benevolent Dictator for Life), who is currently
-Chris Fonnesbeck. As Dictator, the BDFL has the authority to make all final
-decisions for The Project. As Benevolent, the BDFL, in practice chooses to
-defer that authority to the consensus of the community discussion channels and
-the Steering Council (see below). It is expected, and in the past has been the
-case, that the BDFL will only rarely assert their final authority. Because
-rarely used, we refer to BDFL’s final authority as a “special” or “overriding”
-vote. When it does occur, the BDFL override typically happens in situations
-where there is a deadlock in the Steering Council or if the Steering Council
-asks the BDFL to make a decision on a specific matter. To ensure the
-benevolence of the BDFL, The Project encourages others to fork the project if
-they disagree with the overall direction the BDFL is taking. The BDFL is chair
-of the Steering Council (see below) and may delegate their authority on a
-particular decision or set of decisions to any other Council member at their
-discretion.
+In practice, this translates in participating from private team discussions
+(i.e. in Slack or live meetings) but not being able to vote Steering Council
+members or having commit rights on GitHub.
 
-The BDFL can appoint their successor, but it is expected that the Steering
-Council would be consulted on this decision. If the BDFL is unable to appoint a
-successor, the Steering Council will make a suggestion or suggestions to the
-Main NumFOCUS Board. While the Steering Council and Main NumFOCUS Board will
-work together closely on the BDFL selection process, the Main NUMFOCUS Board
-will make the final decision.
+The Recurrent Contributor position will often be an intermediate step for people
+in becoming Core Contributors once their contributions are frequent enough
+and during a sustained period of time.
+But it is also an important role by itself for people who want to be part of
+the project but don't have the time or don't want the responsibilities that
+come with being a Core Contributors.
+
+### Recurring Contributor membership
+Recurring Contributors can nominate any Contributor to participate in the
+Project private communication channels (i.e. Slack public channel)
+and become a Recurring Contributor.
+For the nomination to go forward, it has to be ratified by the Steering Council.
+For a nomination to be rejected, clear reasoning behind the decision must be
+shared with the rest of the team. People whose nomination has been rejected can
+be nominated at any time again in the future, three months after the previous
+nomination at the earliest.
+
+#### Current Recurring Contributors
+
+- everyone on slack! This may be too long so it could be a good idea to
+format as a table instead or to put within a `<details>` tag so
+it's hidden by default while still available publicly
+
+## Core Contributors
+Core Contributors are those individuals entrusted with the development and
+well being of the Project due to their frequency of quality contributions over
+a sustained period of time. They are the main governing and decision body
+of the Project and are therefore given voting and managing rights to the Project
+services (i.e. commit rights on GitHub or moderation rights on Discourse).
+The exact permissions of all Core Contributors may not be the same
+and depend on their team memberships. Even if they have commit rights,
+Core Contributors should still have their pull requests reviewed by at least
+one other Core Contributor before merging unless prevented by a major force
+reason. If overstepping, Core Contributors can also be subject to a vote
+of no confidence (see below) and see their permissions revoked.
+
+### Core Contributor membership
+To become a Core Contributor, one must already be a Recurring Contributor.
+Core Contributors can nominate any Recurring Contributor to become a
+Core Contributor. For the nomination to go forward, it has to be
+ratified by the Steering Council.
+For a nomination to be rejected, clear reasoning behind the decision must be
+shared with the rest of the team. People whose nomination has been rejected can
+be nominated at any time again in the future, three months after the previous
+nomination at the earliest.
+
+### Current Core Contributors
+<!-- a table will probably look better, but we can worry about that later -->
+
+* Adrian Seyboldt
+* Alex Andorra
+* Austin Rochford
+* Brandon T. Willard
+* Chris Fonnesbeck
+* Colin Carroll
+* Eelke Spaak
+* Eric Ma
+* George Ho
+* John Salvatier
+* Junpeng Lao
+* Luciano Paz
+* Marco E. Gorelli
+* Martina Cantaro
+* Maxim Kochurov
+* Meenal Jhajharia
+* Michael Osthege
+* Oriol Abril-Pla
+* Osvaldo Martin
+* Ravin Kumar
+* Ricardo Vieira
+* Robert P. Goldman
+* Sayam Kumar
+* Thomas Wiecki
 
 ## Steering Council
 
@@ -120,6 +178,9 @@ who have produced contributions that are substantial in quality and quantity,
 and sustained over at least one year. The overall role of the Council is to
 ensure, through working with the BDFL and taking input from the Community, the
 long-term well-being of the project, both technically and as a community.
+
+The Steering Council will have between 4 and 7 members with at least one member
+per dedicated team and no more than 2 institutional members per company.
 
 During the everyday project activities, council members participate in all
 discussions, code review and other project activities as peers with all other
@@ -133,47 +194,34 @@ in terms of project direction, to potentially less experienced contributors.
 The Steering Council and its Members play a special role in certain situations.
 In particular, the Council may:
 
--   Make decisions about the overall scope, vision and direction of the
-    project.
--   Make decisions about strategic collaborations with other organizations or
-    individuals.
--   Make decisions about specific technical issues, features, bugs and pull
-    requests. They are the primary mechanism of guiding the code review process
-    and merging pull requests.
--   Make decisions about the Services that are run by The Project and manage
-    those Services for the benefit of the Project and Community.
--   Make decisions when regular community discussion doesn’t produce consensus
-    on an issue in a reasonable time frame.
+- Make decisions about the overall scope, vision and direction of the
+  project.
+- Make decisions about strategic collaborations with other organizations or
+  individuals.
+- Make decisions about specific technical issues, features, bugs and pull
+  requests. They are the primary mechanism of guiding the code review process
+  and merging pull requests.
+- Make decisions about the Services that are run by The Project and manage
+  those Services for the benefit of the Project and Community.
+- Make decisions when regular community discussion doesn’t produce consensus
+  on an issue in a reasonable time frame.
 
 ### Current Steering Council
 
 The current Steering Council membership comprises:
 
-<!-- should be add between parentheses the company they work for
-if they are an institutional contributor/council member -->
+- void until we merge this and then have an election.
+  The process for renewing and electing a new member is the same so it won't
+  make any difference.
 
-- Colin Carroll
-- Peadar Coyle
-- Bill Engels
-- Chris Fonnesbeck
-- Maxim Kochurov
-- Junpeng Lao
-- Osvaldo Martin
-- Austin Rochford
-- Adrian Seyboldt
-- Thomas Wiecki
-
-### Past Steering Council members
-
-- Name (year-year)
+Institutional Contributors are indicated as `name (company)`
 
 ### Council membership
 
 To become eligible for being a Steering Council Member an individual must be a
 Core Contributor who has produced contributions that are substantial in
 quality and quantity, and sustained over at least one year. Potential Council
-Members are nominated by existing Council members and voted upon by the
-existing Council after asking if the potential Member is interested and willing
+after asking if the potential Member is interested and willing
 to serve in that capacity.
 
 When considering potential Members, the Council will look at candidates with a
@@ -209,19 +257,6 @@ the period during which they were active in the Council.
 The Council reserves the right to eject current Members, other than the BDFL,
 if they are deemed to be actively harmful to the project’s well-being, and
 attempts at communication and conflict resolution have failed.
-
-<!-- todos:
-
-- vote of no conficence. Either core or recurring contributors
-should also be able to remove people from the council, even if by a very high
-majority vote. IMO (Oriol) this point is not up for discussion in itself, only in
-how it should happen.
-
-- election discussion. Do we want to keep the current council votes new council
-  or should core/recurring contributors vote?
-
-- Should there be a minimum of 1 council member from each dedicated team?
--->
 
 ### Private communications of the Council
 
@@ -277,59 +312,31 @@ The current NumFOCUS Subcommittee consists of:
 - Jon Sedar
 - Thomas Wiecki
 
-## Core Contributors
-Core Contributors are those individuals with commit or managing rights to any of
-the repositories or services of the PyMC Project. However, the exact permissions
-of all Core Contributors may not be the same and depend on their team memberships.
-Therefore, Core Contributors may act as Recurrent Contributors depending
-on the task at hand.
-We believe this to be necessary given the current size and scope of
-the PyMC project. Contributors may be proficient in some areas of the
-project while being inexperienced in some others.
+## BDFL
 
-### Core Contributor membership
-To become a Core Contributor, one must already be a Recurring Contributor.
-Core Contributors can nominate any Recurring Contributor to become a
-Core Contributor. For the nomination to go forward, it has to be
-ratified by the Steering Council and the BDFL.
-For a nomination to be rejected, clear reasoning behind the decision must be
-shared with the rest of the team. People whose nomination has been rejected can
-be nominated at any time again in the future, three months after the previous
-nomination at the earliest.
+The Project will have a BDFL (Benevolent Dictator for Life), who is currently
+Chris Fonnesbeck. As Dictator, the BDFL has the authority to make all final
+decisions for The Project. As Benevolent, the BDFL, in practice chooses to
+defer that authority to the consensus of the community discussion channels and
+the Steering Council. It is expected, and in the past has been the
+case, that the BDFL will only rarely assert their final authority. Because
+rarely used, we refer to BDFL’s final authority as a “special” or “overriding”
+vote. When it does occur, the BDFL override typically happens in situations
+where there is a deadlock in the Steering Council or if the Steering Council
+asks the BDFL to make a decision on a specific matter. To ensure the
+benevolence of the BDFL, The Project encourages others to fork the project if
+they disagree with the overall direction the BDFL is taking. The BDFL is chair
+of the Steering Council (see below) and may delegate their authority on a
+particular decision or set of decisions to any other Council member at their
+discretion.
 
-### Current Core Contributors
+The BDFL can appoint their successor, but it is expected that the Steering
+Council would be consulted on this decision. If the BDFL is unable to appoint a
+successor, the Steering Council will make a suggestion or suggestions to the
+Main NumFOCUS Board. While the Steering Council and Main NumFOCUS Board will
+work together closely on the BDFL selection process, the Main NUMFOCUS Board
+will make the final decision.
 
-<!-- we could list them here or link to the pymc-devs organization, however,
-linking to the pymc-devs org would require the core team not being secret.
-I actually don't know if this is already the case, if it's possible even nor
-obviously how it would be done. I do believe it's important to be clear and
-explicit about who are core contributors, especially for people interested
-in joining the project to reach out, but also for organizations and meet-ups
-to ask for speakers.
-
-Regarding the reaching out, we do have the project mail and some people
-may not desire being contacted privately. I also think we should have some
-rules or guidance on this here and/or in the community/contributing pages.-->
-
-## Recurring Contributors
-Recurring Contributors are those individuals who can participate from
-The Project private communication channels.
-
-### Recurring Contributor membership
-Recurring Contributors can nominate any Contributor to participate in the
-Project private communication channels and become a Recurring Contributor.
-For the nomination to go forward, it has to be ratified by
-the Steering Council and the BDFL.
-For a nomination to be rejected, clear reasoning behind the decision must be
-shared with the rest of the team. People whose nomination has been rejected can
-be nominated at any time again in the future, three months after the previous
-nomination at the earliest.
-
-#### Current Recurring Contributors
-
-- everyone on slack! This may be too long so it could be a good idea to
-format as a table instead or to put within a `<details>` tag so
-it's hidden by default while still available publicly
 
 ## Conflict of interest
 
@@ -350,33 +357,51 @@ issue, but must recuse themselves from voting on the issue. If the BDFL has
 recused themselves for a particular decision, they will appoint a substitute
 BDFL for that decision.
 
+## Vote of no conficence
+In exceptional circumstances, Council Members as well as Core Contributors
+may remove a sitting council member via a vote of no confidence.
+Core contributors can also call for a vote to remove the entire council
+-- in which case, Council Members do not vote.
+A no-confidence vote is triggered when a Core Contributor calls for one
+publicly on an appropriate project communication channel,
+and two other core team members second the proposal.
+The initial call for a no-confidence vote must specify which type is intended
+-- whether it is targeting a single member or the council as a whole.
+
+The vote lasts for two weeks, and the people taking part in it vary:
+* If this is a single-member vote called by Core contributors,
+  both Council members and Core contributors vote,
+  and the vote is deemed successful if at least two thirds of voters
+  express a lack of confidence.
+* If this is a whole-council vote, then it was necessarily called by
+  Core contributors (since Council members can’t remove the whole Council)
+  and only Core contributors vote.
+  The vote is deemed successful if at least two thirds of voters
+  express a lack of confidence.
+
+After voting:
+* If a single-member vote on a council member succeeds, then that member is
+  removed from the council and the resulting vacancy can be handled in the usual way.
+* If a single-member vote on a core contributor succeeds, their permissions are
+  revoked and would have to wait six months to be eligible for core contributor
+  nomination again.
+* If a whole-council vote succeeds, the council is dissolved and a new council election is triggered immediately.
+
+## Ejecting Core Contributors
+Core contributors can be ejected through a simple majority vote by the council. Council members vote "Yes" or "No".
+
+Upon ejecting a core contributor the council must publish an issue ticket, or public document detailing the
+* Violations
+* Evidence if available
+* Remediation plan (if necessary)
+* Signatures majority of council members to validate correctness and accuracy
+
+## Leaving the project
+Any contributor can also voluntarily leave the project by notifying the community through a public means or by notifying the entire council. When doing so, they can add themselves to the alumni section below if desired.
+
+People who leave the project voluntarily can rejoin at any time
+
 ## Team Organization
-<!-- Open questions
-
-1. do we want to give commit rights to core contributors to some repositories
-only based on the team they are part of?
-
-(quick discussion with myself - Oriol) With pymc3 being the source of the
-website and a large part of the docs, both members of developer and documentation
-team need to have commit rights there, so it would basically mean that
-devs would not have commit rights to pymc-examples and/or resources repo.
-**However**, this would become much more relevant and sensible if we had more
-teams! (see next question).
-
-2. do we want to create/formalize other teams?
-
-Some ideas are events/pymcon and community/discourse teams. PyMCon is organized by
-a clear subset of the team, with plenty of help from "outsiders", so it makes sense
-for this to be a team. With the current definitions, I think Sid and Christian
-would automatically become core contributors by doing that due to their commit/admin
-rights to pymcon repo/pymcon webex+zulip.
-
-Discourse is also managed by a clear subset of the team who have the
-moderator/admin rights, and there are users that are more active than most/all
-devs, so it doesn't sound too far-fetched to bring them onboard in
-order to better distribute the work and hopefully empower Discourse even more.
--->
-
 As stated previously, The Team will generally act as a single unit,
 except for some specific questions where dedicated teams will prevail.
 These dedicated teams have no difference in how they are governed.
@@ -392,40 +417,60 @@ Team members can be part of one, some or none of these dedicated teams.
 
 ### Developer Team
 The focus of the developer team is the probabilistic programming library
-and flagship of The Project, [PyMC3](https://github.com/pymc-devs/pymc3).
+and flagship of The Project, [PyMC](https://github.com/pymc-devs/pymc).
 
 #### Current Developer Team
-<!-- list recurring and core contributors alphabetically to emphasise the
-team aspect, not the core/recurring "status".
 
-As there are already lists of core and recurring contributors,
-it is probably not relevant to distinguish core and recurring contributors
-at all here. -->
-
-- Chris Fonnesbeck
+-
 
 ### Documentation Team
-The focus of the documentation team is not only documenting the PyMC3 library,
-but also making sure there are resources to learn Bayesian statistics with
-PyMC3.
+The focus of the documentation team is ensuring the PyMC library
+is well documented, building and maintaining the infrastructure needed
+for that aim and making sure there are resources to learn
+Bayesian statistics with PyMC.
+It is not the goal nor responsibility of the Documentation team to
+write all the documentation for the PyMC library.
 
 #### Current Documentation Team
 
 - Abhipsha Das
+- Benjamin Vincent
 - Chris Fonnesbeck
 - Lorenzo Toniazzi
 - Martina Cantaro
 - Meenal Jhajharia
+- Michael Osthege
 - Olga Kahn
 - Oriol Abril-Pla
+- Osvaldo Martin
 - Raul Maldonado
 - Ravin Kumar
 - Sayam Kumar
--
+
+### Team structure in practice
+
+Our two teams are currently structured about GitHub centric tasks, so the
+permissions on GitHub repositories is mapped to team membership and role
+within the team. The team defines to which repositories the permissions
+are given, the role defines the type of permissions given:
+
+Role:
+- Recurring Contributors are given triage permissions
+- Core Contributors are given write permissions
+
+Team:
+* Development team members are given permissions to [pymc](https://github.com/pymc-devs/pymc) repository
+* Documentation team members are given permissions to [pymc-examples](https://github.com/pymc-devs/pymc-examples)
+  and [resources](https://github.com/pymc-devs/resources)
+  repositories.
+
+In addition, Council members are given admin rights to all repositories within
+the [pymc-devs](https://github.com/pymc-devs) organization.
 
 ## Institutional Partners and Funding
 
-The BDFL and Steering Council are the primary leadership for the project. No
+The PyMC Core Contributors (together with the BDFL and Steering Council)
+are the primary leadership for the project. No
 outside institution, individual or legal entity has the ability to own,
 control, usurp or influence the project other than by participating in the
 Project as Contributors and Council Members. However, because institutions are
@@ -433,7 +478,7 @@ the primary funding mechanism for the project, it is important to formally
 acknowledge institutional participation in the project. These are Institutional
 Partners.
 
-An Institutional Contributor is any individual Project Contributor who
+An Institutional Contributor is any individual Core Contributor who
 contributes to the project as part of their official duties at an Institutional
 Partner. Likewise, an Institutional Council Member is any Project Steering
 Council Member who contributes to the project as part of their official duties
@@ -453,7 +498,8 @@ with any other member of the community of Contributors and Council
 Members. Merely using PyMC Software or Services in an
 institutional context does not allow an entity to become an
 Institutional Partner. Financial gifts do not enable an entity to
-become an Institutional Partner. Once an institution becomes eligible
+become an Institutional Partner (see Sponsors below for financial gift recognition).
+Once an institution becomes eligible
 for Institutional Partnership, the Steering Council must nominate and
 approve the Partnership.
 
@@ -497,7 +543,7 @@ Partners, with associated benefits:
 - Only Institutional Contributors are invited to the Institutional Partners
   Workshop and bi-annual PyMC Developer Meeting
 
-The PyMC3 project currently recognizes PyMC Labs as a Tier 1 Institutional Partner,
+The PyMC project currently recognizes PyMC Labs as a Tier 1 Institutional Partner,
 with Thomas Wiecki and Adrian Seyboldt as their institutional contributors
 and council members.
 
@@ -507,6 +553,11 @@ either directly or by sponsoring PyMCon.
 
 Sponsors will be recognized by placing their logo on the PyMC website but will have
 no extra benefits related to The Project. Note that PyMCon sponsors may have
-extra benefits but those will be related to the conference, not The Project.
+extra benefits but those will be related to the conference, not the Project.
 
-<!-- note: search numpy's definition numpy.org/about -->
+## Team Alumni
+
+* Person + extra info if we want (examples https://mc-stan.org/about/team/ or
+  https://numpy.org/doc/stable/dev/governance/people.html#emeritus-members)
+
+<!-- We can open that to council members or core contributors if they want to list themselves here after leaving the team. -->
