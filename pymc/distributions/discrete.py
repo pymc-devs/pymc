@@ -327,8 +327,7 @@ class Bernoulli(Discrete):
     The bernoulli distribution can be parametrized either in terms of p or logit_p.
     The link between the parametrizations is given by
 
-    .. math::
-        logit(p) &= ln\left (\frac{p}{1-p} \right)
+    .. math:: logit(p) = ln(\frac{p}{1-p})
 
     Parameters
     ----------
