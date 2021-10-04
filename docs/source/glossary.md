@@ -17,10 +17,6 @@ Functional Programming
   This contrasts with functions or methods that depend on variables that are not explicitly passed as an input (such as accessing `self.variable` inside a method) or that alter the inputs or other state variables in-place, instead of returning new distinct variables as outputs.
 Dispatching
   Choosing which function or method implementation to use based on the type of the input variables (usually just the first variable). For some examples, see Python's documentation for the [singledispatch](https://docs.python.org/3/library/functools.html#functools.singledispatch) decorator.
-
-:::::
-
-```{glossary}
 {term}`Bayesian Workflow`
   Bayesian workflow is the overall iterative procedure towards model refinement. It often includes the two related tasks of inference and the exploratory analysis of models.
   - For a compact overview, see Bayesian statistics and modelling by van de Schoot, R., Depaoli, S., King, R. et al in Nat Rev Methods     - Primers 1, 1 (2021). https://doi.org/10.1038/s43586-020-00001-2
@@ -29,7 +25,7 @@ Dispatching
   - For an upcoming textbook that uses PyMC3, Tensorflow Probability, and ArviZ libraries, see Bayesian Modeling and Computation by Osvaldo A. Martin, Ravin Kumar, Junpeng Lao
 
 Bayesian inference
-  Once we have defined the statistical model, Bayesian inference processes the data and model to produce a posterior distribution. That is a joint distribution of all parameters in the model. This distribution is used to represent plausibility, and is the logical consequence of the model and data.
+  Once we have defined the statistical model, Bayesian inference processes the data and model to produce a {term}`posterior` distribution. That is a joint distribution of all parameters in the model. This distribution is used to represent plausibility, and is the logical consequence of the model and data.
 
 Bayesian model
   A Bayesian model is a composite of variables and distributional definitions for these variables. Fundamentally, it tells you all the ways that the observed data could have been produced.
@@ -58,4 +54,4 @@ Posterior
   Once you are satisfied with the model, posterior distribution can be summarized and interpreted. Common questions for the posterior include: intervals of defined boundaries, intervals of defined probability mass, and point estimates. When the posterior is very similar to the prior, the available data does not contain much information about a parameter of interest.
   
   - For more on generating and interpreting the posterior samples, see Statistical Rethinking 2nd Edition By Richard McElreath, chapter 3.
-```
+:::::
