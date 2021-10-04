@@ -915,7 +915,7 @@ class TestGPAdditive:
         fp = np.random.randn(self.Xnew.shape[0])
         npt.assert_allclose(fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2)
 
-    @pytest.mark.xfail(reason="DensityDist was not yet refactored")
+    @pytest.mark.xfail(reason="MarginalSparse must be refactored to not use DensityDist")
     @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
     def testAdditiveMarginalSparse(self, approx):
         Xu = np.random.randn(10, 3)
@@ -946,8 +946,10 @@ class TestGPAdditive:
         with model2:
             fp2 = gptot.conditional("fp2", self.Xnew)
 
-        fp = np.random.randn(self.Xnew.shape[0])
-        npt.assert_allclose(fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2)
+        fp = np.random.randn(self.Xnew.shape[0], 1)
+        npt.assert_allclose(
+            pm.logp(fp1, fp1).eval({fp1: fp}), pm.logp(fp2, fp2).eval({fp2: fp}), atol=0, rtol=1e-2
+        )
 
     @pytest.mark.xfail(reason="MvNormal was not yet refactored")
     def testAdditiveLatent(self):

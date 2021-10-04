@@ -58,16 +58,16 @@ An exponential survival function, where :math:`c=0` denotes failure (or non-surv
     f(c, t) = \left\{ \begin{array}{l} \exp(-\lambda t), \text{if c=1} \\
                \lambda \exp(-\lambda t), \text{if c=0}  \end{array} \right.
 
-Such a function can be implemented as a PyMC distribution by writing a function that specifies the log-probability, then passing that function as an argument to the ``DensityDist`` function, which creates an instance of a PyMC distribution with the custom function as its log-probability.
+Such a function can be implemented as a PyMC distribution by writing a function that specifies the log-probability, then passing that function as a keyword argument to the ``DensityDist`` function, which creates an instance of a PyMC distribution with the custom function as its log-probability.
 
 For the exponential survival function, this is:
 
 ::
 
-    def logp(failure, value):
-        return (failure * log(λ) - λ * value).sum()
+    def logp(value, t, lam):
+        return (value * log(lam) - lam * t).sum()
 
-    exp_surv = pm.DensityDist('exp_surv', logp, observed={'failure':failure, 'value':t})
+    exp_surv = pm.DensityDist('exp_surv', t, lam, logp=logp, observed=failure)
 
 Similarly, if a random number generator is required, a function returning random numbers corresponding to the probability distribution can be passed as the ``random`` argument.
 

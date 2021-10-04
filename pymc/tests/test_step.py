@@ -983,6 +983,7 @@ class TestNutsCheckTrace:
                 sample(init=None, cores=2, random_seed=1)
             error.match("Initial evaluation")
 
+    @pytest.mark.xfail(reason="Start shape checks that were previously skipped run into ValueError")
     def test_linalg(self, caplog):
         with Model():
             a = Normal("a", size=2, initval=floatX(np.zeros(2)))

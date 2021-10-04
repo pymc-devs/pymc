@@ -366,12 +366,15 @@ class TestDataPyMC:
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
 
-    @pytest.mark.xfail(reason="DensityDist not refactored for v4")
+    @pytest.mark.xfail(reason="MultiObservedRV is no longer used in v4")
     def test_multiple_observed_rv_without_observations(self):
         with pm.Model():
             mu = pm.Normal("mu")
             x = pm.DensityDist(  # pylint: disable=unused-variable
-                "x", logpt(pm.Normal.dist(mu, 1.0)), observed={"value": 0.1}
+                "x",
+                mu,
+                logp=lambda value, mu: pm.Normal.logp(value, mu, 1),
+                observed=0.1,
             )
             inference_data = pm.sample(100, chains=2, return_inferencedata=True)
         test_dict = {
@@ -384,7 +387,7 @@ class TestDataPyMC:
         assert not fails
         assert inference_data.observed_data.value.dtype.kind == "f"
 
-    @pytest.mark.xfail(reason="DensityDist not refactored for v4")
+    @pytest.mark.xfail(reason="MultiObservedRV is no longer used in v4")
     @pytest.mark.parametrize("multiobs", (True, False))
     def test_multiobservedrv_to_observed_data(self, multiobs):
         # fake regression data, with weights (W)
@@ -400,12 +403,13 @@ class TestDataPyMC:
             b = pm.Normal("b", 0, 10)
             mu = a + b * X
             sigma = pm.HalfNormal("sigma", 1)
+            w = W
 
-            def weighted_normal(y, w):
-                return w * logpt(pm.Normal.dist(mu=mu, sd=sigma), y)
+            def weighted_normal(value, mu, sigma, w):
+                return w * pm.Normal.logp(value, mu, sigma)
 
             y_logp = pm.DensityDist(  # pylint: disable=unused-variable
-                "y_logp", weighted_normal, observed={"y": Y, "w": W}
+                "y_logp", mu, sigma, w, logp=weighted_normal, observed=Y, size=N
             )
             idata = pm.sample(
                 20, tune=20, return_inferencedata=True, idata_kwargs={"density_dist_obs": multiobs}

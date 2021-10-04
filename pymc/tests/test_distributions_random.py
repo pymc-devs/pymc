@@ -1838,111 +1838,54 @@ def test_mixture_random_shape_fast():
     assert rand3.shape == (100, 20)
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestDensityDist:
-    @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
-    def test_density_dist_with_random_sampleable(self, shape):
+    @pytest.mark.parametrize("size", [(), (3,), (3, 2)], ids=str)
+    def test_density_dist_with_random(self, size):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0, 1)
-            normal_dist = pm.Normal.dist(mu, 1, shape=shape)
             obs = pm.DensityDist(
                 "density_dist",
-                normal_dist.logp,
-                observed=np.random.randn(100, *shape),
-                shape=shape,
-                random=normal_dist.random,
+                mu,
+                random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
+                observed=np.random.randn(100, *size),
+                size=size,
             )
-            idata = pm.sample(100, cores=1)
 
-        samples = 500
-        size = 100
-        ppc = pm.sample_posterior_predictive(idata, samples=samples, model=model, size=size)
-        assert ppc["density_dist"].shape == (samples, size) + obs.distribution.shape
+        assert obs.eval().shape == (100,) + size
 
-    @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
-    def test_density_dist_with_random_sampleable_failure(self, shape):
+    def test_density_dist_without_random(self):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0, 1)
-            normal_dist = pm.Normal.dist(mu, 1, shape=shape)
             pm.DensityDist(
                 "density_dist",
-                normal_dist.logp,
-                observed=np.random.randn(100, *shape),
-                shape=shape,
-                random=normal_dist.random,
-                wrap_random_with_dist_shape=False,
+                mu,
+                logp=lambda value, mu: pm.Normal.logp(value, mu, 1),
+                observed=np.random.randn(100),
             )
             idata = pm.sample(100, cores=1)
 
         samples = 500
-        with pytest.raises(RuntimeError):
+        with pytest.raises(NotImplementedError):
             pm.sample_posterior_predictive(idata, samples=samples, model=model, size=100)
 
-    @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
-    def test_density_dist_with_random_sampleable_hidden_error(self, shape):
+    @pytest.mark.parametrize("size", [(), (3,), (3, 2)], ids=str)
+    def test_density_dist_with_random_multivariate(self, size):
+        supp_shape = 5
         with pm.Model() as model:
-            mu = pm.Normal("mu", 0, 1)
-            normal_dist = pm.Normal.dist(mu, 1, shape=shape)
+            mu = pm.Normal("mu", 0, 1, size=supp_shape)
             obs = pm.DensityDist(
                 "density_dist",
-                normal_dist.logp,
-                observed=np.random.randn(100, *shape),
-                shape=shape,
-                random=normal_dist.random,
-                wrap_random_with_dist_shape=False,
-                check_shape_in_random=False,
+                mu,
+                random=lambda mu, rng=None, size=None: rng.multivariate_normal(
+                    mean=mu, cov=np.eye(len(mu)), size=size
+                ),
+                observed=np.random.randn(100, *size, supp_shape),
+                size=size,
+                ndims_params=[1],
+                ndim_supp=1,
             )
-            idata = pm.sample(100, cores=1)
 
-        samples = 500
-        ppc = pm.sample_posterior_predictive(idata, samples=samples, model=model)
-        assert len(ppc["density_dist"]) == samples
-        assert ((samples,) + obs.distribution.shape) != ppc["density_dist"].shape
-
-    def test_density_dist_with_random_sampleable_handcrafted_success(self):
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0, 1)
-            normal_dist = pm.Normal.dist(mu, 1)
-            rvs = pm.Normal.dist(mu, 1, shape=100).random
-            obs = pm.DensityDist(
-                "density_dist",
-                normal_dist.logp,
-                observed=np.random.randn(100),
-                random=rvs,
-                wrap_random_with_dist_shape=False,
-            )
-            idata = pm.sample(100, cores=1)
-
-        samples = 500
-        size = 100
-        ppc = pm.sample_posterior_predictive(idata, samples=samples, model=model, size=size)
-        assert ppc["density_dist"].shape == (samples, size) + obs.distribution.shape
-
-    @pytest.mark.xfail
-    def test_density_dist_with_random_sampleable_handcrafted_success_fast(self):
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0, 1)
-            normal_dist = pm.Normal.dist(mu, 1)
-            rvs = pm.Normal.dist(mu, 1, shape=100).random
-            obs = pm.DensityDist(
-                "density_dist",
-                normal_dist.logp,
-                observed=np.random.randn(100),
-                random=rvs,
-                wrap_random_with_dist_shape=False,
-            )
-            pm.sample(100, cores=1)
-
-    def test_density_dist_without_random_not_sampleable(self):
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0, 1)
-            normal_dist = pm.Normal.dist(mu, 1)
-            pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
-            idata = pm.sample(100, cores=1)
-
-        samples = 500
-        with pytest.raises(ValueError):
-            pm.sample_posterior_predictive(idata, samples=samples, model=model, size=100)
+        assert obs.eval().shape == (100,) + size + (supp_shape,)
 
 
 class TestNestedRandom(SeededTest):

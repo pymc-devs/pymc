@@ -324,10 +324,17 @@ class Bernoulli(Discrete):
     Variance  :math:`p (1 - p)`
     ========  ======================
 
+    The bernoulli distribution can be parametrized either in terms of p or logit_p.
+    The link between the parametrizations is given by
+
+    .. math:: logit(p) = ln(\frac{p}{1-p})
+
     Parameters
     ----------
     p: float
         Probability of success (0 < p < 1).
+    logit_p: float
+        Alternative log odds for the probability of success.
     """
     rv_op = bernoulli
 
@@ -1158,7 +1165,11 @@ class Categorical(Discrete):
             a = at.log(p[value_clip])
 
         return bound(
-            a, value >= 0, value <= (k - 1), at.all(p_ >= 0, axis=-1), at.all(p <= 1, axis=-1)
+            a,
+            value >= 0,
+            value <= (k - 1),
+            at.all(p_ >= 0, axis=-1),
+            at.all(p <= 1, axis=-1),
         )
 
 
@@ -1336,7 +1347,10 @@ class ZeroInflatedPoisson(Discrete):
         """
 
         return bound(
-            at.logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(poisson, value, {}, theta)),
+            at.logaddexp(
+                at.log1p(-psi),
+                at.log(psi) + _logcdf(poisson, value, {}, theta),
+            ),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1468,7 +1482,10 @@ class ZeroInflatedBinomial(Discrete):
         """
 
         return bound(
-            at.logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(binomial, value, {}, n, p)),
+            at.logaddexp(
+                at.log1p(-psi),
+                at.log(psi) + _logcdf(binomial, value, {}, n, p),
+            ),
             0 <= value,
             value <= n,
             0 <= psi,
@@ -1483,7 +1500,10 @@ class ZeroInflatedNegBinomialRV(RandomVariable):
     ndim_supp = 0
     ndims_params = [0, 0, 0]
     dtype = "int64"
-    _print_name = ("ZeroInflatedNegBinom", "\\operatorname{ZeroInflatedNegBinom}")
+    _print_name = (
+        "ZeroInflatedNegBinom",
+        "\\operatorname{ZeroInflatedNegBinom}",
+    )
 
     @classmethod
     def rng_fn(cls, rng, psi, n, p, size):

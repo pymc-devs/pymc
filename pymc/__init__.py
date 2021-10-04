@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 # pylint: disable=wildcard-import
-__version__ = "4.0"
+__version__ = "4.0.0"
 
 import logging
 import multiprocessing as mp
@@ -27,6 +27,38 @@ if not logging.root.handlers:
         handler = logging.StreamHandler()
         _log.addHandler(handler)
 
+
+def _check_install_compatibilitites():
+    try:
+        import theano
+
+        print(
+            "!" * 60
+            + f"\nYour Python environment has Theano(-PyMC) {theano.__version__} installed, "
+            + f"but you are importing PyMC {__version__} which uses Aesara as its backend."
+            + f"\nFor PyMC {__version__} to work as expected you should uninstall Theano(-PyMC)."
+            + "\nSee https://github.com/pymc-devs/pymc/wiki for update instructions.\n"
+            + "!" * 60
+        )
+    except ImportError:
+        pass
+
+    try:
+        import pymc3
+
+        print(
+            "!" * 60
+            + f"\nYou are importing PyMC {__version__}, but your environment also has"
+            + f" the legacy version PyMC3 {pymc3.__version__} installed."
+            + f"\nFor PyMC {__version__} to work as expected you should uninstall PyMC3."
+            + "\nSee https://github.com/pymc-devs/pymc/wiki for update instructions.\n"
+            + "!" * 60
+        )
+    except ImportError:
+        pass
+
+
+_check_install_compatibilitites()
 _log.info(
     "You are running the v4 development version of PyMC which currently still lacks key features. You probably want to use the stable v3 instead which you can either install via conda or find on the v3 GitHub branch: https://github.com/pymc-devs/pymc/tree/v3"
 )

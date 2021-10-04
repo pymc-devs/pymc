@@ -103,16 +103,20 @@ License
 Software using PyMC
 ===================
 
-- `Exoplanet <https://github.com/dfm/exoplanet>`__: a toolkit for modeling of transit and/or radial velocity observations of exoplanets and other astronomical time series.
+General purpose
+---------------
+
 - `Bambi <https://github.com/bambinos/bambi>`__: BAyesian Model-Building Interface (BAMBI) in Python.
-- `pymc3_models <https://github.com/parsing-science/pymc3_models>`__: Custom PyMC models built on top of the scikit-learn API.
-- `PMProphet <https://github.com/luke14free/pm-prophet>`__: PyMC port of Facebook's Prophet model for timeseries modeling
-- `webmc3 <https://github.com/AustinRochford/webmc3>`__: A web interface for exploring PyMC traces
-- `sampled <https://github.com/ColCarroll/sampled>`__: Decorator for PyMC models.
-- `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
-- `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
+- `SunODE <https://github.com/aseyboldt/sunode>`__: Fast ODE solver, much faster than the one that comes with PyMC.
 - `pymc-learn <https://github.com/pymc-learn/pymc-learn>`__: Custom PyMC models built on top of pymc3_models/scikit-learn API
 - `fenics-pymc3 <https://github.com/IvanYashchuk/fenics-pymc3>`__: Differentiable interface to FEniCS, a library for solving partial differential equations.
+
+Domain specific
+---------------
+
+- `Exoplanet <https://github.com/dfm/exoplanet>`__: a toolkit for modeling of transit and/or radial velocity observations of exoplanets and other astronomical time series.
+- `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
+- `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
 - `cell2location <https://github.com/BayraktarLab/cell2location>`__: Comprehensive mapping of tissue cell architecture via integrated single cell and spatial transcriptomics.
 
 Please contact us if your software is not listed here.

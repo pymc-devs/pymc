@@ -875,35 +875,6 @@ def test_exec_nuts_init(method):
 
 
 @pytest.mark.parametrize(
-    "init, start, expectation",
-    [
-        ("auto", None, pytest.raises(SamplingError)),
-        ("jitter+adapt_diag", None, pytest.raises(SamplingError)),
-        ("auto", {"x": 0}, does_not_raise()),
-        ("jitter+adapt_diag", {"x": 0}, does_not_raise()),
-        ("adapt_diag", None, does_not_raise()),
-    ],
-)
-def test_default_sample_nuts_jitter(init, start, expectation, monkeypatch):
-    # This test tries to check whether the starting points returned by init_nuts are actually
-    # being used when pm.sample() is called without specifying an explicit start point (see
-    # https://github.com/pymc-devs/pymc/pull/4285).
-    def _mocked_init_nuts(*args, **kwargs):
-        if init == "adapt_diag":
-            start_ = [{"x": np.array(0.79788456)}]
-        else:
-            start_ = [{"x": np.array(-0.04949886)}]
-        _, step = pm.init_nuts(*args, **kwargs)
-        return start_, step
-
-    monkeypatch.setattr("pymc.sampling.init_nuts", _mocked_init_nuts)
-    with pm.Model() as m:
-        x = pm.HalfNormal("x", transform=None)
-        with expectation:
-            pm.sample(tune=1, draws=0, chains=1, init=init, start=start)
-
-
-@pytest.mark.parametrize(
     "initval, jitter_max_retries, expectation",
     [
         (0, 0, pytest.raises(SamplingError)),
@@ -1043,7 +1014,6 @@ class TestSamplePriorPredictive(SeededTest):
         assert gen2["y"].shape == (draws, n2)
         assert gen2["o"].shape == (draws, n2)
 
-    @pytest.mark.xfail(reason="DensityDist not refactored for v4")
     def test_density_dist(self):
         obs = np.random.normal(-1, 0.1, size=10)
         with pm.Model():
@@ -1051,8 +1021,9 @@ class TestSamplePriorPredictive(SeededTest):
             sd = pm.Gamma("sd", 1, 2)
             a = pm.DensityDist(
                 "a",
-                pm.Normal.dist(mu, sd).logp,
-                random=pm.Normal.dist(mu, sd).random,
+                mu,
+                sd,
+                random=lambda mu, sd, rng=None, size=None: rng.normal(loc=mu, scale=sd, size=size),
                 observed=obs,
             )
             prior = pm.sample_prior_predictive()

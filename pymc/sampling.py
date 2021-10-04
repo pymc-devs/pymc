@@ -23,7 +23,7 @@ import warnings
 
 from collections import defaultdict
 from copy import copy, deepcopy
-from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, cast
 
 import aesara.gradient as tg
 import cloudpickle
@@ -253,7 +253,7 @@ def sample(
     step=None,
     init="auto",
     n_init=200_000,
-    start=None,
+    initvals: Optional[Union[PointType, Sequence[Optional[PointType]]]] = None,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
     chain_idx=0,
     chains=None,
@@ -291,11 +291,10 @@ def sample(
         users.
     n_init : int
         Number of iterations of initializer. Only works for 'ADVI' init methods.
-    start : dict, or array of dict
-        Starting point in parameter space (or partial point)
-        Defaults to ``trace.point(-1))`` if there is a trace provided and model.initial_point if not
-        (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
-        overwrite the default.
+    initvals : optional, dict, array of dict
+        Dict or list of dicts with initial values to use instead of the defaults from `Model.initial_values`.
+        The keys should be names of transformed random variables.
+        Initialization methods for NUTS (see ``init`` keyword) can overwrite the default.
     trace : backend or list
         This should be a backend instance, or a list of variables to track.
         If None or a list of variables, the NDArray backend is used.
@@ -417,31 +416,27 @@ def sample(
             mean     sd  hdi_3%  hdi_97%
         p  0.609  0.047   0.528    0.699
     """
+    if "start" in kwargs:
+        if initvals is not None:
+            raise ValueError("Passing both `start` and `initvals` is not supported.")
+        warnings.warn(
+            "The `start` kwarg was renamed to `initvals`. Please check the docstring.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        initvals = kwargs.pop("start")
+
     model = modelcontext(model)
     if not model.free_RVs:
         raise SamplingError(
             "Cannot sample from the model, since the model does not contain any free variables."
         )
 
-    start = deepcopy(start)
-    model_initial_point = model.initial_point
-    if start is None:
-        model.check_start_vals(model_initial_point)
-    else:
-        if isinstance(start, dict):
-            model.update_start_vals(start, model.initial_point)
-        else:
-            for chain_start_vals in start:
-                model.update_start_vals(chain_start_vals, model.initial_point)
-        model.check_start_vals(start)
-
     if cores is None:
         cores = min(4, _cpu_count())
 
     if chains is None:
         chains = max(2, cores)
-    if isinstance(start, dict):
-        start = [start] * chains
     if random_seed == -1:
         random_seed = None
     if chains == 1 and isinstance(random_seed, int):
@@ -467,10 +462,6 @@ def sample(
             stacklevel=2,
         )
 
-    if start is not None:
-        for start_vals in start:
-            _check_start_shape(model, start_vals)
-
     # small trace warning
     if draws == 0:
         msg = "Tuning was enabled throughout the whole trace."
@@ -481,11 +472,12 @@ def sample(
 
     draws += tune
 
+    initial_points = None
     if step is None and init is not None and all_continuous(model.value_vars, model):
         try:
             # By default, try to use NUTS
             _log.info("Auto-assigning NUTS sampler...")
-            start_, step = init_nuts(
+            initial_points, step = init_nuts(
                 init=init,
                 chains=chains,
                 n_init=n_init,
@@ -494,31 +486,40 @@ def sample(
                 progressbar=progressbar,
                 jitter_max_retries=jitter_max_retries,
                 tune=tune,
+                initvals=initvals,
                 **kwargs,
             )
-            if start is None:
-                start = start_
-                model.check_start_vals(start)
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
             # gradient computation failed
-            _log.info("Initializing NUTS failed. " "Falling back to elementwise auto-assignment.")
+            _log.info("Initializing NUTS failed. Falling back to elementwise auto-assignment.")
             _log.debug("Exception in init nuts", exec_info=True)
             step = assign_step_methods(model, step, step_kwargs=kwargs)
-            start = model_initial_point
     else:
-        start = model_initial_point
         step = assign_step_methods(model, step, step_kwargs=kwargs)
 
     if isinstance(step, list):
         step = CompoundStep(step)
 
-    if isinstance(start, dict):
-        start = [start] * chains
+    if initial_points is None:
+        initvals = initvals or {}
+        if isinstance(initvals, dict):
+            initvals = [initvals] * chains
+        initial_points = []
+        mip = model.initial_point
+        for ivals in initvals:
+            ivals = deepcopy(ivals)
+            model.update_start_vals(ivals, mip)
+            initial_points.append(ivals)
+
+    # One final check that shapes and logps at the starting points are okay.
+    for ip in initial_points:
+        model.check_start_vals(ip)
+        _check_start_shape(model, ip)
 
     sample_args = {
         "draws": draws,
         "step": step,
-        "start": start,
+        "start": initial_points,
         "trace": trace,
         "chain": chain_idx,
         "chains": chains,
@@ -570,7 +571,7 @@ def sample(
             )
             _log.info(f"Population sampling ({chains} chains)")
 
-            initial_point_model_size = sum(start[0][n.name].size for n in model.value_vars)
+            initial_point_model_size = sum(initial_points[0][n.name].size for n in model.value_vars)
 
             if has_demcmc and chains < 3:
                 raise ValueError(
@@ -655,31 +656,41 @@ def sample(
         return trace
 
 
-def _check_start_shape(model, start):
-    if not isinstance(start, dict):
-        raise TypeError("start argument must be a dict or an array-like of dicts")
+def _check_start_shape(model, start: PointType):
+    """Checks that the prior evaluations and initial points have identical shapes.
 
-    # Filter "non-input" variables
-    initial_point = model.initial_point
-    start = {k: v for k, v in start.items() if k in initial_point}
-
+    Parameters
+    ----------
+    model : pm.Model
+        The current model on context.
+    start : dict
+        The complete dictionary mapping (transformed) variable names to numeric initial values.
+    """
     e = ""
     for var in model.basic_RVs:
-        var_shape = model.fastfn(var.shape)(start)
-        if var.name in start.keys():
-            start_var_shape = np.shape(start[var.name])
-            if start_var_shape:
-                if not np.array_equal(var_shape, start_var_shape):
-                    e += "\nExpected shape {} for var '{}', got: {}".format(
-                        tuple(var_shape), var.name, start_var_shape
-                    )
-            # if start var has no shape
+        try:
+            var_shape = model.fastfn(var.shape)(start)
+            if var.name in start.keys():
+                start_var_shape = np.shape(start[var.name])
+                if start_var_shape:
+                    if not np.array_equal(var_shape, start_var_shape):
+                        e += "\nExpected shape {} for var '{}', got: {}".format(
+                            tuple(var_shape), var.name, start_var_shape
+                        )
+                # if start var has no shape
+                else:
+                    # if model var has a specified shape
+                    if var_shape.size > 0:
+                        e += "\nExpected shape {} for var " "'{}', got scalar {}".format(
+                            tuple(var_shape), var.name, start[var.name]
+                        )
+        except NotImplementedError as ex:
+            if ex.args[0].startswith("Cannot sample"):
+                _log.warning(
+                    f"Unable to check start shape of {var} because the RV does not implement random sampling."
+                )
             else:
-                # if model var has a specified shape
-                if var_shape.size > 0:
-                    e += "\nExpected shape {} for var " "'{}', got scalar {}".format(
-                        tuple(var_shape), var.name, start[var.name]
-                    )
+                raise
 
     if e != "":
         raise ValueError(f"Bad shape for start argument:{e}")
@@ -689,7 +700,7 @@ def _sample_many(
     draws,
     chain: int,
     chains: int,
-    start: list,
+    start: Sequence[PointType],
     random_seed: list,
     step,
     callback=None,
@@ -746,7 +757,7 @@ def _sample_population(
     draws: int,
     chain: int,
     chains: int,
-    start,
+    start: Sequence[PointType],
     random_seed,
     step,
     tune,
@@ -809,7 +820,7 @@ def _sample(
     chain: int,
     progressbar: bool,
     random_seed,
-    start,
+    start: PointType,
     draws: int,
     step=None,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
@@ -875,7 +886,7 @@ def _sample(
 def iter_sample(
     draws: int,
     step,
-    start: Optional[Dict[Any, Any]] = None,
+    start: PointType,
     trace=None,
     chain=0,
     tune: Optional[int] = None,
@@ -895,8 +906,7 @@ def iter_sample(
     step : function
         Step function
     start : dict
-        Starting point in parameter space (or partial point). Defaults to trace.point(-1)) if
-        there is a trace provided and model.initial_point if not (defaults to empty dict)
+        Starting point in parameter space (or partial point).
     trace : backend or list
         This should be a backend instance, or a list of variables to track.
         If None or a list of variables, the NDArray backend is used.
@@ -935,7 +945,7 @@ def iter_sample(
 def _iter_sample(
     draws,
     step,
-    start=None,
+    start: PointType,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
     chain=0,
     tune=None,
@@ -951,8 +961,9 @@ def _iter_sample(
         The number of samples to draw
     step : function
         Step function
-    start : dict, optional
-        Starting point in parameter space (or partial point). Defaults to model.initial_point if not (defaults to empty dict)
+    start : dict
+        Starting point in parameter space (or partial point).
+        Must contain numeric (transformed) initial values for all (transformed) free variables.
     trace : backend or list
         This should be a backend instance, or a list of variables to track.
         If None or a list of variables, the NDArray backend is used.
@@ -978,19 +989,14 @@ def _iter_sample(
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
-    if start is None:
-        start = {}
-
     strace = _choose_backend(trace, model=model)
-
-    model.update_start_vals(start, model.initial_point)
 
     try:
         step = CompoundStep(step)
     except TypeError:
         pass
 
-    point = Point(start, model=model, filter_model_vars=True)
+    point = start
 
     if step.generates_stats and strace.supports_sampler_stats:
         strace.setup(draws, chain, step.stats_dtypes)
@@ -1200,7 +1206,7 @@ def _prepare_iter_population(
     draws: int,
     chains: list,
     step,
-    start: list,
+    start: Sequence[PointType],
     parallelize: bool,
     tune=None,
     model=None,
@@ -1251,12 +1257,6 @@ def _prepare_iter_population(
 
     # 1. prepare a BaseTrace for each chain
     traces = [_choose_backend(None, model=model) for chain in chains]
-    for c, strace in enumerate(traces):
-        # initialize the trace size and variable transforms
-        if len(strace) > 0:
-            model.update_start_vals(start[c], strace.point(-1))
-        else:
-            model.update_start_vals(start[c], model.initial_point)
 
     # 2. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
@@ -1390,7 +1390,7 @@ def _mp_sample(
     cores: int,
     chain: int,
     random_seed: list,
-    start: list,
+    start: Sequence[PointType],
     progressbar=True,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
     model=None,
@@ -1419,6 +1419,7 @@ def _mp_sample(
         Random seeds for each chain.
     start : list
         Starting points for each chain.
+        Dicts must contain numeric (transformed) initial values for all (transformed) free variables.
     progressbar : bool
         Whether or not to display a progress bar in the command line.
     trace : BaseTrace, list, or None
@@ -1448,9 +1449,7 @@ def _mp_sample(
             strace = _choose_backend(copy(trace), model=model)
         else:
             strace = _choose_backend(None, model=model)
-        # for user supplied start value, fill-in missing value if the supplied
-        # dict does not contain all parameters
-        model.update_start_vals(start[idx - chain], model.initial_point)
+
         if step.generates_stats and strace.supports_sampler_stats:
             strace.setup(draws + tune, idx, step.stats_dtypes)
         else:
@@ -2048,8 +2047,10 @@ def init_nuts(
     progressbar=True,
     jitter_max_retries=10,
     tune=None,
+    *,
+    initvals: Optional[Union[PointType, Sequence[Optional[PointType]]]] = None,
     **kwargs,
-):
+) -> Tuple[Sequence[PointType], NUTS]:
     """Set up the mass matrix initialization for NUTS.
 
     NUTS convergence and sampling speed is extremely dependent on the
@@ -2084,6 +2085,9 @@ def init_nuts(
 
     chains : int
         Number of jobs to start.
+    initvals : optional, dict or list of dicts
+        Dict or list of dicts with initial values to use instead of the defaults from `Model.initial_values`.
+        The keys should be names of transformed random variables.
     n_init : int
         Number of iterations of initializer. Only works for 'ADVI' init methods.
     model : Model (optional if in ``with`` context)
@@ -2098,8 +2102,8 @@ def init_nuts(
 
     Returns
     -------
-    start : ``pymc.model.Point``
-        Starting point for sampler
+    initial_points : list
+        Starting points for each chain.
     nuts_sampler : ``pymc.step_methods.NUTS``
         Instantiated and initialized NUTS sampler object
     """
@@ -2129,6 +2133,8 @@ def init_nuts(
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="absolute"),
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
     ]
+
+    # TODO: Consider `initvals` for selecting the starting point.
 
     apoint = DictToArrayBijection.map(model.initial_point)
 
@@ -2233,4 +2239,25 @@ def init_nuts(
 
     step = pm.NUTS(potential=potential, model=model, **kwargs)
 
-    return start, step
+    # The "start" dict determined from initialization methods does not always respect the support of variables.
+    # The next block combines it with the user-provided initvals such that initvals take priority.
+    if initvals is None or isinstance(initvals, dict):
+        initvals = [initvals or {}] * chains
+    if isinstance(start, dict):
+        start = [start] * chains
+    mip = model.initial_point
+    initial_points = []
+    for st, iv in zip(start, initvals):
+        from_init = deepcopy(st)
+        model.update_start_vals(from_init, mip)
+
+        from_user = deepcopy(iv)
+        model.update_start_vals(from_user, mip)
+
+        initial_points.append(
+            {
+                **from_init,
+                **from_user,  # prioritize user-provided
+            }
+        )
+    return initial_points, step
