@@ -20,7 +20,7 @@ from cachetools import cached
 import pymc as pm
 
 from pymc.distributions.transforms import Transform
-from pymc.util import UNSET, hash_key, hashable, locally_cachedmethod
+from pymc.util import UNSET, deprecator, hash_key, hashable, locally_cachedmethod
 
 
 class TestTransformName:
@@ -136,3 +136,44 @@ def test_unset_repr(capsys):
     help(fn)
     captured = capsys.readouterr()
     assert "a=UNSET" in captured.out
+
+
+class TestDeprecatorDecorator:
+    def test_warning_msg():
+        version = "1.2.3"
+        reason = "Good reason"
+        deprecated_args = "x"
+
+        @deprecator(version=version, reason=reason, deprecated_args="x")
+        def foo(x, y):
+            pass
+
+        with pytest.warns(DeprecationWarning, match=version) as warnversion:
+            foo()
+        with pytest.warns(DeprecationWarning, match=deprecated_args) as warnwarnargs:
+            foo()
+        with pytest.warns(DeprecationWarning, match=reason) as warnreason:
+            foo()
+
+        assert len(warnversion[0]) == 1
+        assert len(warnwarnargs[0]) == 1
+        assert len(warnreason[0]) == 1
+
+    def test_ignore_action():
+        @deprecator(reason="some reason", version="1", action="ignore")
+        def foo():
+            pass
+
+        with pytest.warns(None) as warns:
+            foo()
+        assert len(warns) == 0
+
+    def test_sphinx_docstring():
+        @deprecator(version="1.0", reason="some reason")
+        def basicfunc(x, y):
+            """
+            something
+            """
+            return x + y
+
+        assert basicfunc.__doc__ == "\nsomething\n\n.. deprecated:: 1.0\n   some reason\n"

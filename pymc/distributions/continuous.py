@@ -52,6 +52,8 @@ from aesara.tensor.random.basic import (
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
 
+from pymc.util import deprecator
+
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
 except ImportError:  # pragma: no cover
@@ -1690,10 +1692,9 @@ class AsymmetricLaplace(Continuous):
         )
 
 
+@deprecator(reason="use LogNormal now!", version=4.0)
 class LogNormal(PositiveContinuous):
     r"""
-    Note: Class name Lognormal is deprecated, use LogNormal now!
-
     Log-normal log-likelihood.
 
     Distribution of any random variable whose logarithm is normally

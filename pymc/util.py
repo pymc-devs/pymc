@@ -13,6 +13,9 @@
 #   limitations under the License.
 
 import functools
+import inspect
+import re
+import textwrap
 import warnings
 
 from typing import Dict, List, Tuple, Union
@@ -345,3 +348,108 @@ def locally_cachedmethod(f):
         return cf
 
     return cachedmethod(self_cache_fn(f.__name__), key=hash_key)(f)
+
+
+def deprecator(reason=None, version=None, warn=True, deprecated_args=None, docs=True):
+    """
+    PyMC deprecation helper. This decorator emits deprecated warnings.
+
+    Parameters
+    ----------
+    reason: string
+        Brief description of reason/motive behind deprecation or additional notes.
+    version: float
+        PyMC version in which the method or class was deprecated.
+    warn: bool
+        To mark if warning is emitted (default: True) or not (False).
+        This can be useful for developers to keep records without warnings.
+    deprecated_args: string
+        String of parameters to be deprecated, e.g. "x y" to deprecate `x` and `y`.
+    docs: bool
+        To mark if docstring should be generated (default: True) or not (False).
+
+    Notes
+    -----
+    The function `sphinxformatter` is a modified version of the source code from the library Deprecated
+    # https://github.com/tantale/deprecated (MIT License)
+    """
+    if deprecated_args is not None:
+        deprecated_args = set(deprecated_args.split())
+    cause = reason
+    if cause is not None and version is not None:
+        reason = f", since version {version} ({cause})"
+
+    if cause is not None and version is None:
+        reason = "({cause})"
+
+    if cause is None and version is not None:
+        reason = f", since version {version}"
+
+    def sphinxformatter(version, reason):
+        fmtsphinx = ".. deprecated:: {version}" if version else ".. deprecated::"
+        sphinxtext = [fmtsphinx.format(directive="deprecated", version=version)]
+        reason = reason.lstrip()
+        for paragraph in reason.splitlines():
+            if paragraph:
+                sphinxtext.extend(
+                    textwrap.fill(
+                        paragraph,
+                        initial_indent="   ",
+                        subsequent_indent="   ",
+                    ).splitlines()
+                )
+            else:
+                sphinxtext.append("")
+        return sphinxtext
+
+    def decorator(func):
+        """
+        This function formats the warning message and sphinx text
+        """
+        if deprecated_args is None:
+            if inspect.isclass(func):
+                fmt = "Class {name} is deprecated{reason}."
+            else:
+                fmt = "Function or method {name} is deprecated{reason}."
+        else:
+            fmt = "Parameter(s) {name} deprecated{reason}"
+
+        sphinxtext = sphinxformatter(version, cause)
+        if docs is True:
+            docstring = textwrap.dedent(func.__doc__ or "")
+        if docstring:
+            docstring = re.sub(r"\n+$", "", docstring, flags=re.DOTALL) + "\n\n"
+        else:
+            docstring = "\n"
+
+        if deprecated_args is None:
+            for line in sphinxtext:
+                docstring += f"{line}\n"
+        else:
+            # if deprecated arguments are given, docstring is not modified
+            docstring = docstring
+
+        func.__doc__ = docstring
+
+        @functools.wraps(func)
+        def new_func(*args, **kwargs):
+            if deprecated_args is None:
+                name = func.__name__
+            else:
+                argstodeprecate = deprecated_args.intersection(kwargs)
+                if argstodeprecate is not None:
+                    name = ", ".join(repr(arg) for arg in argstodeprecate)
+
+            if name != "":
+                if action != "ignore":
+                    warnings.simplefilter("always", DeprecationWarning)
+                    warnings.warn(
+                        fmt.format(name=name, reason=reason),
+                        category=DeprecationWarning,
+                        stacklevel=2,
+                    )
+            return func
+
+        return new_func
+
+    return decorator
