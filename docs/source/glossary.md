@@ -3,6 +3,7 @@
 A glossary of common terms used throughout the PyMC3 documentation and examples.
 
 :::::{glossary}
+:sorted:
 [Term with external reference](https://www.youtube.com/watch?v=6dc7JgR8eI0)
   Terms are defined within this glossary directive. The term id is defined as the non
   indented line, and can be text alone (like {term}`second term`) or also include a link
