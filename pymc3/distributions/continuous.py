@@ -926,19 +926,37 @@ class HalfNormal(PositiveContinuous):
 
 
 class ZeroSumNormal(Continuous):
-    def __init__(self, sigma=1, zerosum_dims=None, zerosum_axes=None, **kwargs):
-        shape = kwargs.get("shape", ())
+    def __new__(cls, name, *args, **kwargs):
+        zerosum_axes = kwargs.get("zerosum_axes", None)
+        zerosum_dims = kwargs.get("zerosum_dims", None)
         dims = kwargs.get("dims", None)
-        if isinstance(shape, int):
-            shape = (shape,)
 
+        if isinstance(zerosum_dims, str):
+            zerosum_dims = (zerosum_dims,)
         if isinstance(dims, str):
             dims = (dims,)
+
+        if zerosum_dims is not None:
+            if dims is None:
+                raise ValueError("zerosum_dims can only be used with the dims kwargs.")
+            if zerosum_axes is not None:
+                raise ValueError("Only one of zerosum_axes and zerosum_dims can be specified.")
+            zerosum_axes = []
+            for dim in zerosum_dims:
+                zerosum_axes.append(dims.index(dim))
+            kwargs["zerosum_axes"] = zerosum_axes
+
+        return super().__new__(cls, name, *args, **kwargs)
+
+    def __init__(self, sigma=1, zerosum_axes=None, zerosum_dims=None, **kwargs):
+        shape = kwargs.get("shape", ())
+        if isinstance(shape, int):
+            shape = (shape,)
 
         self.mu = self.median = self.mode = tt.zeros(shape)
         self.sigma = tt.as_tensor_variable(sigma)
 
-        if zerosum_dims is None and zerosum_axes is None:
+        if zerosum_axes is None:
             if shape:
                 zerosum_axes = (-1,)
             else:
@@ -947,21 +965,9 @@ class ZeroSumNormal(Continuous):
         if isinstance(zerosum_axes, int):
             zerosum_axes = (zerosum_axes,)
 
-        if isinstance(zerosum_dims, str):
-            zerosum_dims = (zerosum_dims,)
-
-        if zerosum_axes is not None and zerosum_dims is not None:
-            raise ValueError("Only one of zerosum_axes and zerosum_dims can be specified.")
-
-        if zerosum_dims is not None:
-            if dims is None:
-                raise ValueError("zerosum_dims can only be used with the dims kwargs.")
-            zerosum_axes = []
-            for dim in zerosum_dims:
-                zerosum_axes.append(dims.index(dim))
         self.zerosum_axes = [a if a >= 0 else len(shape) + a for a in zerosum_axes]
 
-        if "transform" not in kwargs or kwargs["transform"] == None:
+        if "transform" not in kwargs or kwargs["transform"] is None:
             kwargs["transform"] = transforms.ZeroSumTransform(zerosum_axes)
 
         super().__init__(**kwargs)
