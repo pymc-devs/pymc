@@ -2,7 +2,7 @@
 Distribution utility classes and functions
 *******************************************
 
-.. currentmodule:: pymc3.distributions
+.. currentmodule:: pymc.distributions
 .. autosummary::
 
   Distribution

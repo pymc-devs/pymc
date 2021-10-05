@@ -9,11 +9,11 @@
 * - {fa}`discourse,fa-2x,style=fab`
   - [Discourse Forum](https://discourse.pymc.io/)
 
-    The PyMC3 discourse forum is a great place to ask general questions about Bayesian statistics, or more specific ones about PyMC3 usage.
+    The PyMC discourse forum is a great place to ask general questions about Bayesian statistics, or more specific ones about PyMC usage.
 * - {fa}`meetup,fa-2x,style=fab`
   - Conferences
 
-    PyMC3 talks have been given at a number of conferences, including [PyCon](https://us.pycon.org/),
+    PyMC talks have been given at a number of conferences, including [PyCon](https://us.pycon.org/),
     [PyData](https://pydata.org/events/), and [ODSC](https://odsc.com/) events.
 * - {fa}`python,fa-2x,style=fab`
   - [Meetup Groups](https://www.meetup.com/)
@@ -30,9 +30,9 @@
 * - {fa}`youtube,fa-2x,style=fab`
   - [YouTube Playlist](https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy)
 
-    There is an actively curated playlist of PyMC3 talks on YouTube.
+    There is an actively curated playlist of PyMC talks on YouTube.
 * - {fa}`youtube,fa-2x,style=fab`
-  - [Advance Bayesian Modelling with PyMC3](https://github.com/junpenglao/advance-bayesian-modelling-with-PyMC3)
+  - [Advance Bayesian Modelling with PyMC](https://github.com/junpenglao/advance-bayesian-modelling-with-PyMC)
 
     A two days advance workshop in May 2018 @CEAi in the Czech Republic.
 :::
@@ -79,9 +79,9 @@ Principled introduction to Bayesian data analysis.
 * - [{fa}`link`][dbda website]
   - [Book Website][dbda website]
 * - [{fa}`link`][dbda 1st ed nb]
-  - [PyMC3 notebooks for *first edition*][dbda 1st ed nb]
+  - [PyMC notebooks for *first edition*][dbda 1st ed nb]
 * - [{fa}`link`][dbda 2nd ed nb]
-  - [PyMC3 notebooks for *second edition*][dbda 2nd ed nb]
+  - [PyMC notebooks for *second edition*][dbda 2nd ed nb]
 :::
 
 ---
@@ -101,7 +101,7 @@ A Bayesian Course with Examples in R and Stan.
 * - [{fa}`link`][rethinking website]
   - [Book Website][rethinking website]
 * - [{fa}`link`][rethinking port]
-  - [PyMC3 port of the code][rethinking port]
+  - [PyMC port of the code][rethinking port]
 :::
 
 ---
@@ -112,7 +112,7 @@ Bayesian Analysis with Python
 *Osvaldo Martin*
 ^^^^^^^^
 
-A great introductory book written by a maintainer of PyMC3.
+A great introductory book written by a maintainer of PyMC.
 
 :::{list-table}
 :header-rows: 0
@@ -121,7 +121,7 @@ A great introductory book written by a maintainer of PyMC3.
 * - [{fa}`link`][bap website]
   - [Book Website][bap website]
 * - [{fa}`link`][bap code]
-  - [Code and errata in PyMC3][bap code]
+  - [Code and errata in PyMC][bap code]
 :::
 
 ---
@@ -141,7 +141,7 @@ Focused on using Bayesian statistics in cognitive modeling.
 * - [{fa}`link`][bcm website]
   - [Book Website][bcm website]
 * - [{fa}`link`][bcm code]
-  - [PyMC3 implementation][bcm code]
+  - [PyMC implementation][bcm code]
 :::
 
 ---
@@ -161,7 +161,7 @@ A comprehensive, standard, and wonderful textbook on Bayesian methods.
 * - [{fa}`link`][bda3 website]
   - [Book Website][bda3 website]
 * - [{fa}`link`][bda3 port]
-  - [Examples and exercises implemented in PyMC3][bda3 port]
+  - [Examples and exercises implemented in PyMC][bda3 port]
 :::
 
 ::::

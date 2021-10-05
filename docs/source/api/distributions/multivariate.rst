@@ -2,7 +2,7 @@
 Multivariate
 ************
 
-.. currentmodule:: pymc3.distributions.multivariate
+.. currentmodule:: pymc.distributions.multivariate
 .. autosummary::
 
    MvNormal
@@ -18,5 +18,5 @@ Multivariate
    DirichletMultinomial
    CAR
 
-.. automodule:: pymc3.distributions.multivariate
+.. automodule:: pymc.distributions.multivariate
    :members:

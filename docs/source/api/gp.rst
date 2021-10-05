@@ -1,7 +1,7 @@
 Gaussian Processes API
 ----------------------
 
-.. currentmodule:: pymc3.gp.gp
+.. currentmodule:: pymc.gp.gp
 
 .. toctree::
 

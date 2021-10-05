@@ -2,23 +2,23 @@
 Backends
 ********
 
-.. currentmodule:: pymc3.backends
+.. currentmodule:: pymc.backends
 
-.. automodule:: pymc3.backends
+.. automodule:: pymc.backends
    :members:
 
 ndarray
 ^^^^^^^
 
-.. currentmodule:: pymc3.backends.ndarray
+.. currentmodule:: pymc.backends.ndarray
 
-.. automodule:: pymc3.backends.ndarray
+.. automodule:: pymc.backends.ndarray
    :members:
 
 tracetab
 ^^^^^^^^
 
-.. currentmodule:: pymc3.backends.tracetab
+.. currentmodule:: pymc.backends.tracetab
 
-.. automodule:: pymc3.backends.tracetab
+.. automodule:: pymc.backends.tracetab
    :members:

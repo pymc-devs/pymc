@@ -1,4 +1,4 @@
-name: pymc3-dev-py39
+name: pymc-dev-py39
 channels:
 - conda-forge
 - defaults

@@ -19,11 +19,11 @@ from os.path import dirname, join, realpath
 
 from setuptools import find_packages, setup
 
-DISTNAME = "pymc3"
+DISTNAME = "pymc"
 DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Aesara"
 AUTHOR = "PyMC Developers"
 AUTHOR_EMAIL = "pymc.devs@gmail.com"
-URL = "http://github.com/pymc-devs/pymc3"
+URL = "http://github.com/pymc-devs/pymc"
 LICENSE = "Apache License, Version 2.0"
 
 classifiers = [
@@ -55,7 +55,7 @@ test_reqs = ["pytest", "pytest-cov"]
 
 
 def get_version():
-    VERSIONFILE = join("pymc3", "__init__.py")
+    VERSIONFILE = join("pymc", "__init__.py")
     lines = open(VERSIONFILE).readlines()
     version_regex = r"^__version__ = ['\"]([^'\"]*)['\"]"
     for line in lines:

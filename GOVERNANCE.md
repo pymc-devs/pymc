@@ -4,16 +4,16 @@
 The Project
 ===========
 
-The PyMC3 Project (The Project) is an open source software project
+The PyMC Project (The Project) is an open source software project
 affiliated with the 501c3 NumFocus Foundation. The goal of The Project is to
 develop open source software and deploy open and public websites and services
 for reproducible, exploratory and interactive computing. The Software developed
 by The Project is released under the Apache 2 open source license,
 developed openly and hosted in public GitHub repositories under the
-[GitHub organization](https://github.com/pymc-devs/pymc3). Examples of
-Project Software include the PyMC3 code and the Documentation, etc. The Services run by the
+[GitHub organization](https://github.com/pymc-devs/pymc). Examples of
+Project Software include the PyMC code and the Documentation, etc. The Services run by the
 Project consist of public websites and web-services that are hosted
-at [http://pymc-devs.github.io/pymc3/](http://pymc-devs.github.io/pymc3/)
+at [http://pymc-devs.github.io/pymc/](http://pymc-devs.github.io/pymc/)
 The Project is developed by a team of distributed developers, called
 Contributors. Contributors are individuals who have contributed code,
 documentation, designs or other work to one or more Project repositories.
@@ -271,7 +271,7 @@ of their official duties. To state this another way, the only way for
 an Institutional Partner to influence the project is by actively
 contributing to the open development of the project, on equal terms
 with any other member of the community of Contributors and Council
-Members. Merely using PyMC3 Software or Services in an
+Members. Merely using PyMC Software or Services in an
 institutional context does not allow an entity to become an
 Institutional Partner. Financial gifts do not enable an entity to
 become an Institutional Partner. Once an institution becomes eligible
@@ -289,10 +289,10 @@ building proprietary products and services that leverage Project Software and
 Services. Funding acquired by Institutional Partners to work on The Project is
 called Institutional Funding. However, no funding obtained by an Institutional
 Partner can override The Project BDFL and Steering Council. If a Partner has
-funding to do PyMC3 work and the Council decides to not pursue that
+funding to do PyMC work and the Council decides to not pursue that
 work as a project, the Partner is free to pursue it on their own. However in
 this situation, that part of the Partner’s work will not be under the
-PyMC3 banner and cannot use the Project trademarks in a way that
+PyMC banner and cannot use the Project trademarks in a way that
 suggests a formal relationship.
 
 To acknowledge institutional contributions, there are two level of Institutional
@@ -318,4 +318,4 @@ Partners, with associated benefits:
 -   Only Institutional Contributors are invited to the Institutional Partners
     Workshop and bi-annual PyMC Developer Meeting
 
-The PyMC3 project currently recognizes Quantopian as a Tier 1 Institutional Partner, with Thomas Wiecki and Adrian Seyboldt as their institutional contributors and council members.
+The PyMC project currently recognizes PyMC Labs as a Tier 1 Institutional Partner, with Thomas Wiecki, Adrian Seyboldt, Alexandre Andorra, Luciano Paz, Maxim Kochurov, Ricardo Vieira, and Eric Ma as their institutional contributors and council members.
