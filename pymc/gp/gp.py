@@ -223,8 +223,7 @@ class Latent(Base):
         """
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens)
-        shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, cov=cov, size=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
 
 @conditioned_vars(["X", "f", "nu"])
@@ -341,8 +340,7 @@ class TP(Latent):
         X = self.X
         f = self.f
         nu2, mu, cov = self._build_conditional(Xnew, X, f)
-        shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvStudentT(name, nu=nu2, mu=mu, cov=cov, size=shape, **kwargs)
+        return pm.MvStudentT(name, nu=nu2, mu=mu, cov=cov, **kwargs)
 
 
 @conditioned_vars(["X", "y", "noise"])
@@ -422,9 +420,6 @@ class Marginal(Base):
         noise: scalar, Variable, or Covariance
             Standard deviation of the Gaussian noise.  Can also be a Covariance for
             non-white noise.
-        is_observed: bool
-            Whether to set `y` as an `observed` variable in the `model`.
-            Default is `True`.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
@@ -436,11 +431,12 @@ class Marginal(Base):
         self.X = X
         self.y = y
         self.noise = noise
+        # TODO: deprecate is_observed.  untested, shouldnt be used.
         if is_observed:
             return pm.MvNormal(name, mu=mu, cov=cov, observed=y, **kwargs)
         else:
-            shape = infer_shape(X, kwargs.pop("shape", None))
-            return pm.MvNormal(name, mu=mu, cov=cov, size=shape, **kwargs)
+            # shape = infer_shape(X, kwargs.pop("shape", None))
+            return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
     def _get_given_vals(self, given):
         if given is None:
@@ -517,8 +513,7 @@ class Marginal(Base):
 
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
-        shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, cov=cov, size=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
         R"""
@@ -829,8 +824,7 @@ class MarginalSparse(Marginal):
 
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
-        shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, cov=cov, size=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
 
 @conditioned_vars(["Xs", "f"])
