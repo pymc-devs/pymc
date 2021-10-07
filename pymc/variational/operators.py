@@ -49,7 +49,7 @@ class KL(Operator):
     """
 
     def __init__(self, approx, beta=1.0):
-        Operator.__init__(self, approx)
+        super().__init__(approx)
         self.beta = pm.floatX(beta)
 
     def apply(self, f):
@@ -73,7 +73,7 @@ class KSDObjective(ObjectiveFunction):
     def __init__(self, op, tf):
         if not isinstance(op, KSD):
             raise opvi.ParametrizationError("Op should be KSD")
-        ObjectiveFunction.__init__(self, op, tf)
+        super().__init__(op, tf)
 
     @aesara.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
@@ -127,7 +127,7 @@ class KSD(Operator):
     objective_class = KSDObjective
 
     def __init__(self, approx, temperature=1):
-        Operator.__init__(self, approx)
+        super().__init__(approx)
         self.temperature = temperature
 
     def apply(self, f):
