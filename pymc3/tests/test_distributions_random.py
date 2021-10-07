@@ -42,12 +42,13 @@ from scipy.special import expit
 import pymc3 as pm
 
 from pymc3.aesaraf import change_rv_size, floatX, intX
-from pymc3.distributions import _logp
+from pymc3.distributions import Binomial, Categorical, _logp
 from pymc3.distributions.continuous import get_tau_sigma, interpolated
 from pymc3.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.multivariate import _OrderedMultinomial, quaddist_matrix
 from pymc3.distributions.shape_utils import to_tuple
+from pymc3.model import Model
 from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.tests.test_distributions import (
     Domain,
@@ -994,6 +995,25 @@ class TestBinomial(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
+class TestLogitBinomial(BaseTestDistribution):
+    pymc_dist = pm.Binomial
+    pymc_dist_params = {"n": 100, "logit_p": 2.197224577}
+    expected_rv_op_params = {"n": 100, "p": 0.9}
+    tests_to_run = ["check_pymc_params_match_rv_op"]
+
+    @pytest.mark.parametrize(
+        "n, p, logit_p, expected",
+        [
+            (5, None, None, "Must specify either p or logit_p."),
+            (5, 0.5, 0.5, "Can't specify both p and logit_p."),
+        ],
+    )
+    def test_binomial_init_fail(self, n, p, logit_p, expected):
+        with Model():
+            with pytest.raises(ValueError, match=f"Incompatible parametrization. {expected}"):
+                Binomial("x", n=n, p=p, logit_p=logit_p)
+
+
 class TestNegativeBinomial(BaseTestDistribution):
     pymc_dist = pm.NegativeBinomial
     pymc_dist_params = {"n": 100, "p": 0.33}
@@ -1231,6 +1251,28 @@ class TestCategorical(BaseTestDistribution):
         "check_pymc_params_match_rv_op",
         "check_rv_size",
     ]
+
+
+class TestLogitCategorical(BaseTestDistribution):
+    pymc_dist = pm.Categorical
+    pymc_dist_params = {"logit_p": np.array([-0.944461608841, 0.489548225319, -2.197224577336])}
+    expected_rv_op_params = {"p": np.array([0.28, 0.62, 0.10])}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+    ]
+
+    @pytest.mark.parametrize(
+        "p, logit_p, expected",
+        [
+            (None, None, "Must specify either p or logit_p."),
+            (0.5, 0.5, "Can't specify both p and logit_p."),
+        ],
+    )
+    def test_categorical_init_fail(self, p, logit_p, expected):
+        with Model():
+            with pytest.raises(ValueError, match=f"Incompatible parametrization. {expected}"):
+                Categorical("x", p=p, logit_p=logit_p)
 
 
 class TestGeometric(BaseTestDistribution):
