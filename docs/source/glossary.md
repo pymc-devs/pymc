@@ -14,14 +14,14 @@ Dispatching
 
 [Dispersion](https://en.wikipedia.org/wiki/Statistical_dispersion)
   In statistics, dispersion (also called variability, scatter, or spread) is the extent to which a distribution is stretched or squeezed
-  
+
 [Overdispersion](https://en.wikipedia.org/wiki/Overdispersion)
   In statistics, overdispersion is the presence of greater {term}`variability <dispersion>` in a data set than would be expected based on a given statistical model.
 
 Underdispersion
   In statistics, underdispersion is the presence of lower {term}`variability <dispersion>` in a data set than would be expected based on a given statistical model.
-  Choosing which function or method implementation to use based on the type of the input variables (usually just the first variable). For some examples, see Python's documentation for the [singledispatch](https://docs.python.org/3/library/functools.html#functools.singledispatch) decorator. 
-  
+  Choosing which function or method implementation to use based on the type of the input variables (usually just the first variable). For some examples, see Python's documentation for the [singledispatch](https://docs.python.org/3/library/functools.html#functools.singledispatch) decorator.
+
 Bayesian Workflow
   Bayesian workflow is the overall iterative procedure towards model refinement. It often includes the two related tasks of {term}`inference` and the exploratory analysis of models.
   - For a compact overview, see Bayesian statistics and modelling by van de Schoot, R., Depaoli, S., King, R. et al in Nat Rev Methods - Primers 1, 1 (2021).
