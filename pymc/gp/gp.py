@@ -41,7 +41,7 @@ class Base:
     Base class.
     """
 
-    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
+    def __init__(self, *, mean_func=Zero(), cov_func=Constant(0.0)):
         self.mean_func = mean_func
         self.cov_func = cov_func
 
@@ -122,8 +122,8 @@ class Latent(Base):
             fcond = gp.conditional("fcond", Xnew=Xnew)
     """
 
-    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
-        super().__init__(mean_func, cov_func)
+    def __init__(self, *, mean_func=Zero(), cov_func=Constant(0.0)):
+        super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def _build_prior(self, name, X, reparameterize=True, **kwargs):
         mu = self.mean_func(X)
@@ -256,11 +256,11 @@ class TP(Latent):
         Processes as Alternatives to Gaussian Processes.  arXiv preprint arXiv:1402.4306.
     """
 
-    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), nu=None):
+    def __init__(self, *, mean_func=Zero(), cov_func=Constant(0.0), nu=None):
         if nu is None:
             raise ValueError("Student's T process requires a degrees of freedom parameter, 'nu'")
         self.nu = nu
-        super().__init__(mean_func, cov_func)
+        super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
         raise TypeError("Student's T processes aren't additive")
@@ -638,7 +638,7 @@ class MarginalSparse(Marginal):
         if approx not in self._available_approx:
             raise NotImplementedError(approx)
         self.approx = approx
-        super().__init__(mean_func, cov_func)
+        super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
         # new_gp will default to FITC approx
@@ -881,13 +881,13 @@ class LatentKron(Base):
             fcond = gp.conditional("fcond", Xnew=Xnew)
     """
 
-    def __init__(self, mean_func=Zero(), cov_funcs=(Constant(0.0))):
+    def __init__(self, *, mean_func=Zero(), cov_funcs=(Constant(0.0))):
         try:
             self.cov_funcs = list(cov_funcs)
         except TypeError:
             self.cov_funcs = [cov_funcs]
         cov_func = pm.gp.cov.Kron(self.cov_funcs)
-        super().__init__(mean_func, cov_func)
+        super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
         raise TypeError("Additive, Kronecker-structured processes not implemented")
@@ -1037,13 +1037,13 @@ class MarginalKron(Base):
             fcond = gp.conditional("fcond", Xnew=Xnew)
     """
 
-    def __init__(self, mean_func=Zero(), cov_funcs=(Constant(0.0))):
+    def __init__(self, *, mean_func=Zero(), cov_funcs=(Constant(0.0))):
         try:
             self.cov_funcs = list(cov_funcs)
         except TypeError:
             self.cov_funcs = [cov_funcs]
         cov_func = pm.gp.cov.Kron(self.cov_funcs)
-        super().__init__(mean_func, cov_func)
+        super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
         raise TypeError("Additive, Kronecker-structured processes not implemented")
