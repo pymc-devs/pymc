@@ -54,7 +54,7 @@ class LoggingHandler(BufferingHandler):
         # shouldFlush anyway, we can set a capacity of zero.
         # You can call flush() manually to clear out the
         # buffer.
-        BufferingHandler.__init__(self, 0)
+        super().__init__(0)
         self.matcher = matcher
 
     def shouldFlush(self):
