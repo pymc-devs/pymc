@@ -871,11 +871,11 @@ def test_mvnormal_logprob(dist_params, obs, size, error):
     "dist_params, obs, size, error",
     [
         ((np.array([-0.5, 0.5]),), np.array([[0.0, 1.0], [1.0, 0.0]]), (), True),
-        ((np.array([0.5, 0.5]),), np.array([[0.1, 0.5], [0.9, 0.5]]), (), False),
-        ((np.array([0.5, 0.5]),), np.array([[0.1, 0.5], [0.9, 0.5]]), (3, 2), False),
+        ((np.array([0.5, 0.5]),), np.array([[0.1, 0.9], [0.5, 0.5]]), (), False),
+        ((np.array([0.5, 0.5]),), np.array([[0.1, 0.9], [0.5, 0.5]]), (3, 2), False),
         pytest.param(
             (np.array([[10.0, 5.7], [0.1, 0.8]]),),
-            np.array([[0.1, 0.5], [0.9, 0.5]]),
+            np.array([[0.1, 0.9], [0.5, 0.5]]),
             (),
             False,
             marks=pytest.mark.xfail(
@@ -894,7 +894,7 @@ def test_dirichlet_logprob(dist_params, obs, size, error):
     cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
 
     def scipy_logprob(obs, alpha):
-        return stats.dirichlet.logpdf(obs, alpha)
+        return stats.dirichlet.logpdf(obs.T, alpha)
 
     with cm:
         scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logprob)
@@ -909,7 +909,7 @@ def test_dirichlet_logprob(dist_params, obs, size, error):
         (
             (
                 np.array([10, 3], dtype=np.int64),
-                np.array([[0.1, 0.8], [0.9, 0.2]]).T,
+                np.array([[0.1, 0.9], [0.8, 0.2]]),
             ),
             np.array([[3, 1], [7, 9]], dtype=np.int64),
             (),
