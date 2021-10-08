@@ -9,10 +9,9 @@ fastprogress>=0.2.0
 h5py>=2.7
 ipython>=7.16
 myst-nb
-nbsphinx>=0.4
-numpy>=1.15.0
+numpy==1.15
 numpydoc>=0.9
-pandas>=0.24.0
+pandas==0.24
 pre-commit>=2.8.0
 pydata-sphinx-theme
 pytest-cov>=2.5
@@ -24,5 +23,5 @@ sphinx-design
 sphinx-notfound-page
 sphinx-panels
 sphinx>=1.5
-typing-extensions>=3.7.4
+typing-extensions
 watermark
