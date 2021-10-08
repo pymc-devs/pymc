@@ -185,7 +185,7 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
                 sp.misc.derivative(a_backward_fn, a_trans_value, dx=1e-6)
             )
 
-        exp_logprob_val += np.log(np.linalg.det(jacobian_val))
+        exp_logprob_val += np.linalg.slogdet(jacobian_val)[-1]
         exp_logprob_val += b_dist.logpdf(b_val).sum()
 
         logprob_val = logp_vals_fn(a_trans_value, b_val)
