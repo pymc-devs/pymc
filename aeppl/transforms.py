@@ -263,8 +263,8 @@ class LogOddsTransform(RVTransform):
         return at.log(sigmoid_value) + at.log1p(-sigmoid_value)
 
 
-class StickBreaking(RVTransform):
-    name = "stickbreaking"
+class Simplex(RVTransform):
+    name = "simplex"
 
     def forward(self, value, *inputs):
         log_value = at.log(value)
@@ -406,5 +406,5 @@ TransformedVonMisesRV = create_default_transformed_rv_op(
 )
 TransformedDirichletRV = create_default_transformed_rv_op(
     at.random.dirichlet,
-    StickBreaking(),
+    Simplex(),
 )
