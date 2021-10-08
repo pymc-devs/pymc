@@ -32,8 +32,9 @@ dependencies:
 - pytest>=3.0
 - recommonmark>=0.4
 - sphinx-autobuild>=0.7
-- sphinx-design
 - sphinx-notfound-page
 - sphinx-panels
 - sphinx>=1.5
 - watermark
+- pip:
+  - sphinx-design

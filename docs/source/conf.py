@@ -89,7 +89,7 @@ author = "PyMC contributors"
 version = pymc.__version__
 if os.environ.get("READTHEDOCS", False):
     rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
-    if rtd_version.lower() == "latest":
+    if "." not in rtd_version and rtd_version.lower() != "stable":
         version = "dev"
 # The full version, including alpha/beta/rc tags.
 release = version
