@@ -101,7 +101,7 @@ class PGBART(ArrayStepShared):
         Number of particles for the conditional SMC sampler. Defaults to 10
     max_stages : int
         Maximum number of iterations of the conditional SMC sampler. Defaults to 100.
-    batch = int
+    batch : int
         Number of trees fitted per step. Defaults to  "auto", which is the 10% of the `m` trees
         during tuning and 20% after tuning.
     model: PyMC Model
@@ -109,8 +109,8 @@ class PGBART(ArrayStepShared):
 
     Note
     ----
-    This sampler is inspired on [Lakshminarayanan2015] Particle Gibbs sampler, but introduces
-    several changes. The changes will be proeperly documented soon.
+    This sampler is inspired by the [Lakshminarayanan2015] Particle Gibbs sampler, but introduces
+    several changes. The changes will be properly documented soon.
 
     References
     ----------
