@@ -63,7 +63,7 @@ class BARTRV(RandomVariable):
                 pred = np.zeros((flatten_size, X_new.shape[0]))
                 for ind, p in enumerate(pred):
                     for tree in all_trees[idx[ind]]:
-                        p += np.array([tree.predict_out_of_sample(x) for x in X_new])
+                        p += np.array([tree.predict_out_of_sample(x, cls.m) for x in X_new])
             return pred.reshape((*size, -1))
         else:
             return np.full_like(cls.Y, cls.Y.mean())
@@ -92,6 +92,9 @@ class BART(NoDistribution):
     k : float
         Scale parameter for the values of the leaf nodes. Defaults to 2. Recomended to be between 1
         and 3.
+    response : str
+        How the leaf_node values are computed. Available options are ``constant``, ``linear`` or
+        ``mix`` (default).
     split_prior : array-like
         Each element of split_prior should be in the [0, 1] interval and the elements should sum to
         1. Otherwise they will be normalized.
@@ -106,6 +109,7 @@ class BART(NoDistribution):
         m=50,
         alpha=0.25,
         k=2,
+        response="mix",
         split_prior=None,
         **kwargs,
     ):
@@ -125,6 +129,7 @@ class BART(NoDistribution):
                 m=m,
                 alpha=alpha,
                 k=k,
+                response=response,
                 split_prior=split_prior,
             ),
         )()

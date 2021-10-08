@@ -94,23 +94,31 @@ class Tree:
 
         return output.astype(aesara.config.floatX)
 
-    def predict_out_of_sample(self, x):
+    def predict_out_of_sample(self, X, m):
         """
         Predict output of tree for an unobserved point x.
 
         Parameters
         ----------
-        x : numpy array
+        X : numpy array
+            Unobserved point
+        m : int
+            Number of trees
 
         Returns
         -------
         float
             Value of the leaf value where the unobserved point lies.
         """
-        leaf_node = self._traverse_tree(x=x, node_index=0)
-        return leaf_node.value
+        leaf_node, split_variable = self._traverse_tree(X, node_index=0)
+        if leaf_node.linear_params is None:
+            return leaf_node.value
+        else:
+            x = X[split_variable].item()
+            y_x = leaf_node.linear_params[0] + leaf_node.linear_params[1] * x
+            return y_x / m
 
-    def _traverse_tree(self, x, node_index=0):
+    def _traverse_tree(self, x, node_index=0, split_variable=None):
         """
         Traverse the tree starting from a particular node given an unobserved point.
 
@@ -125,13 +133,14 @@ class Tree:
         """
         current_node = self.get_node(node_index)
         if isinstance(current_node, SplitNode):
-            if x[current_node.idx_split_variable] <= current_node.split_value:
+            split_variable = current_node.idx_split_variable
+            if x[split_variable] <= current_node.split_value:
                 left_child = current_node.get_idx_left_child()
-                current_node = self._traverse_tree(x, left_child)
+                current_node, _ = self._traverse_tree(x, left_child, split_variable)
             else:
                 right_child = current_node.get_idx_right_child()
-                current_node = self._traverse_tree(x, right_child)
-        return current_node
+                current_node, _ = self._traverse_tree(x, right_child, split_variable)
+        return current_node, split_variable
 
     def grow_tree(self, index_leaf_node, new_split_node, new_left_node, new_right_node):
         """
@@ -202,7 +211,8 @@ class SplitNode(BaseNode):
 
 
 class LeafNode(BaseNode):
-    def __init__(self, index, value, idx_data_points):
+    def __init__(self, index, value, idx_data_points, linear_params=None):
         super().__init__(index)
         self.value = value
         self.idx_data_points = idx_data_points
+        self.linear_params = linear_params
