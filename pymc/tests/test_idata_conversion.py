@@ -12,7 +12,11 @@ from numpy import ma
 
 import pymc as pm
 
-from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
+from pymc.backends.arviz import (
+    InferenceDataConverter,
+    predictions_to_inference_data,
+    to_inference_data,
+)
 
 
 @pytest.fixture(scope="module")
@@ -597,6 +601,25 @@ class TestDataPyMC:
         )
         for dname, cvals in coords.items():
             np.testing.assert_array_equal(ds[dname].values, cvals)
+
+    def test_issue_5043_autoconvert_coord_values(self):
+        coords = {
+            "city": ("Bonn", "Berlin"),
+        }
+        with pm.Model(coords=coords) as pmodel:
+            assert isinstance(pmodel.coords["city"], tuple)
+            pm.Normal("x", dims="city")
+            mtrace = pm.sample(
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+                step=pm.Metropolis(),
+                cores=1,
+                tune=7,
+                draws=15,
+            )
+            converter = InferenceDataConverter(trace=mtrace)
+            with pytest.raises(ValueError, match="same length as the number of data dimensions"):
+                converter.to_inference_data()
 
 
 class TestPyMCWarmupHandling:
