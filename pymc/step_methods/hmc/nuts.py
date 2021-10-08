@@ -18,7 +18,7 @@ import numpy as np
 
 from pymc.aesaraf import floatX
 from pymc.backends.report import SamplerWarning, WarningType
-from pymc.distributions.bart import BARTRV
+from pymc.bart.bart import BARTRV
 from pymc.math import logbern, logdiffexp_numpy
 from pymc.step_methods.arraystep import Competence
 from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData

@@ -22,7 +22,6 @@ from pymc.distributions.logprob import (  # isort:skip
     logpt_sum,
 )
 
-from pymc.distributions.bart import BART
 from pymc.distributions.bound import Bound
 from pymc.distributions.continuous import (
     AsymmetricLaplace,
@@ -190,7 +189,6 @@ __all__ = [
     "Rice",
     "Moyal",
     "Simulator",
-    "BART",
     "CAR",
     "PolyaGamma",
     "logpt",
