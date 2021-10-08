@@ -41,6 +41,7 @@ from pymc.aesaraf import change_rv_size, compile_rv_inplace, inputvars, walk_mod
 from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray
+from pymc.bart.pgbart import PGBART
 from pymc.blocking import DictToArrayBijection
 from pymc.distributions import NoDistribution
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
@@ -48,7 +49,6 @@ from pymc.model import Model, Point, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
 from pymc.step_methods import (
     NUTS,
-    PGBART,
     BinaryGibbsMetropolis,
     BinaryMetropolis,
     CategoricalGibbsMetropolis,

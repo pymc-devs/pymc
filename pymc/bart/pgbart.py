@@ -23,9 +23,9 @@ from aesara import function as aesara_function
 from pandas import DataFrame, Series
 
 from pymc.aesaraf import inputvars, join_nonshared_inputs, make_shared_replacements
+from pymc.bart.bart import BARTRV
+from pymc.bart.tree import LeafNode, SplitNode, Tree
 from pymc.blocking import RaveledVars
-from pymc.distributions.bart import BARTRV
-from pymc.distributions.tree import LeafNode, SplitNode, Tree
 from pymc.model import modelcontext
 from pymc.step_methods.arraystep import ArrayStepShared, Competence
 

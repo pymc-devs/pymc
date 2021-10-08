@@ -35,5 +35,4 @@ from pymc.step_methods.mlda import (
     MetropolisMLDA,
     RecursiveDAProposal,
 )
-from pymc.step_methods.pgbart import PGBART
 from pymc.step_methods.slicer import Slice
