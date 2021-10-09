@@ -235,10 +235,9 @@ class TestSample(SeededTest):
     @pytest.mark.parametrize(
         "start, error",
         [
-            ([1, 2], TypeError),
-            ({"x": 1}, TypeError),
+            ({"x": 1}, ValueError),
             ({"x": [1, 2, 3]}, ValueError),
-            ({"x": np.array([[1, 1], [1, 1]])}, TypeError),
+            ({"x": np.array([[1, 1], [1, 1]])}, ValueError),
         ],
     )
     def test_sample_start_bad_shape(self, start, error):
