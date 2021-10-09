@@ -568,6 +568,36 @@ class TestDataPyMC:
         assert "direction" not in idata.log_likelihood.dims
         assert "direction" in idata.observed_data.dims
 
+    def test_constant_data_coords_issue_5046(self):
+        """This is a regression test against a bug where a local coords variable was overwritten."""
+        dims = {
+            "alpha": ["backwards"],
+            "bravo": ["letters", "yesno"],
+        }
+        coords = {
+            "backwards": np.arange(17)[::-1],
+            "letters": list("ABCDEFGHIJK"),
+            "yesno": ["yes", "no"],
+        }
+        data = {
+            name: np.random.uniform(size=[len(coords[dn]) for dn in dnames])
+            for name, dnames in dims.items()
+        }
+
+        for k in data:
+            assert len(data[k].shape) == len(dims[k])
+
+        ds = pm.backends.arviz.dict_to_dataset(
+            data=data,
+            library=pm,
+            coords=coords,
+            dims=dims,
+            default_dims=[],
+            index_origin=0,
+        )
+        for dname, cvals in coords.items():
+            np.testing.assert_array_equal(ds[dname].values, cvals)
+
 
 class TestPyMCWarmupHandling:
     @pytest.mark.parametrize("save_warmup", [False, True])
