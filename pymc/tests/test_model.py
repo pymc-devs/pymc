@@ -594,6 +594,28 @@ class TestUpdateStartVals(SeededTest):
         assert_almost_equal(start["interv_interval__"], test_point["interv_interval__"])
 
 
+class TestShapeEvaluation:
+    def test_eval_rv_shapes(self):
+        with pm.Model(
+            coords={
+                "city": ["Sydney", "Las Vegas", "Düsseldorf"],
+            }
+        ) as pmodel:
+            pm.Data("budget", [1, 2, 3, 4], dims="year")
+            pm.Normal("untransformed", size=(1, 2))
+            pm.Uniform("transformed", size=(7,))
+            obs = pm.Uniform("observed", size=(3,), observed=[0.1, 0.2, 0.3])
+            pm.LogNormal("lognorm", mu=at.log(obs))
+            pm.Normal("from_dims", dims=("city", "year"))
+        shapes = pmodel.eval_rv_shapes()
+        assert shapes["untransformed"] == (1, 2)
+        assert shapes["transformed"] == (7,)
+        assert shapes["transformed_interval__"] == (7,)
+        assert shapes["lognorm"] == (3,)
+        assert shapes["lognorm_log__"] == (3,)
+        assert shapes["from_dims"] == (3, 4)
+
+
 class TestCheckStartVals(SeededTest):
     def setup_method(self):
         super().setup_method()
