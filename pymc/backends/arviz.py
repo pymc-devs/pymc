@@ -131,9 +131,9 @@ def dict_to_dataset(
         for name, vals in data.items():
             vals = np.atleast_1d(vals)
             val_dims = dims.get(name)
-            val_dims, coords = generate_dims_coords(vals.shape, name, dims=val_dims, coords=coords)
-            coords = {key: xr.IndexVariable((key,), data=coords[key]) for key in val_dims}
-            out_data[name] = xr.DataArray(vals, dims=val_dims, coords=coords)
+            val_dims, crds = generate_dims_coords(vals.shape, name, dims=val_dims, coords=coords)
+            crds = {key: xr.IndexVariable((key,), data=crds[key]) for key in val_dims}
+            out_data[name] = xr.DataArray(vals, dims=val_dims, coords=crds)
         return xr.Dataset(data_vars=out_data, attrs=make_attrs(attrs=attrs, library=library))
 
 

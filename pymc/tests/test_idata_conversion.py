@@ -568,9 +568,8 @@ class TestDataPyMC:
         assert "direction" not in idata.log_likelihood.dims
         assert "direction" in idata.observed_data.dims
 
-    @pytest.mark.xfail(reason="Critical bug in dataset conversion.")
     def test_constant_data_coords_issue_5046(self):
-        # For some reason only the first entry of the `dims` ends up in the dataset.
+        """This is a regression test against a bug where a local coords variable was overwritten."""
         dims = {
             "alpha": ["backwards"],
             "bravo": ["letters", "yesno"],
