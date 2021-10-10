@@ -3650,6 +3650,17 @@ class Interpolated(BoundedContinuous):
 
     rv_op = interpolated
 
+    def __new__(cls, *args, **kwargs):
+        transform = kwargs.get("transform", UNSET)
+        if transform is UNSET:
+
+            def transform_params(*params):
+                _, _, _, x_points, _, _ = params
+                return floatX(x_points[0]), floatX(x_points[-1])
+
+            kwargs["transform"] = transforms.interval(transform_params)
+        return super().__new__(cls, *args, **kwargs)
+
     @classmethod
     def dist(cls, x_points, pdf_points, *args, **kwargs):
 

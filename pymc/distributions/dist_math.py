@@ -341,7 +341,7 @@ class SplineWrapper(Op):
 
     def perform(self, node, inputs, output_storage):
         (x,) = inputs
-        output_storage[0][0] = np.asarray(self.spline(x))
+        output_storage[0][0] = np.asarray(self.spline(x), dtype=x.dtype)
 
     def grad(self, inputs, grads):
         (x,) = inputs
