@@ -871,7 +871,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self._RV_dims
 
     @property
-    def coords(self) -> Dict[str, Union[Sequence, None]]:
+    def coords(self) -> Dict[str, Union[Tuple, None]]:
         """Coordinate values for model dimensions."""
         return self._coords
 
@@ -1096,8 +1096,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             raise ValueError(
                 f"The `length` passed for the '{name}' coord must be an Aesara Variable or None."
             )
+        if values is not None:
+            # Conversion to a tuple ensures that the coordinate values are immutable.
+            # Also unlike numpy arrays the's tuple.index(...) which is handy to work with.
+            values = tuple(values)
         if name in self.coords:
-            if not values.equals(self.coords[name]):
+            if not np.array_equal(values, self.coords[name]):
                 raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
         else:
             self._coords[name] = values

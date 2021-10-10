@@ -12,7 +12,11 @@ from numpy import ma
 
 import pymc as pm
 
-from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
+from pymc.backends.arviz import (
+    InferenceDataConverter,
+    predictions_to_inference_data,
+    to_inference_data,
+)
 
 
 @pytest.fixture(scope="module")
@@ -597,6 +601,45 @@ class TestDataPyMC:
         )
         for dname, cvals in coords.items():
             np.testing.assert_array_equal(ds[dname].values, cvals)
+
+    def test_issue_5043_autoconvert_coord_values(self):
+        coords = {
+            "city": pd.Series(["Bonn", "Berlin"]),
+        }
+        with pm.Model(coords=coords) as pmodel:
+            # The model tracks coord values as (immutable) tuples
+            assert isinstance(pmodel.coords["city"], tuple)
+            pm.Normal("x", dims="city")
+            mtrace = pm.sample(
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+                step=pm.Metropolis(),
+                cores=1,
+                tune=7,
+                draws=15,
+            )
+            # The converter must convert coord values them to numpy arrays
+            # because tuples as coordinate values causes problems with xarray.
+            converter = InferenceDataConverter(trace=mtrace)
+            assert isinstance(converter.coords["city"], np.ndarray)
+            converter.to_inference_data()
+
+            # We're not automatically converting things other than tuple,
+            # so advanced use cases remain supported at the InferenceData level.
+            # They just can't be used in the model construction already.
+            converter = InferenceDataConverter(
+                trace=mtrace,
+                coords={
+                    "city": pd.MultiIndex.from_tuples(
+                        [
+                            ("Bonn", 53111),
+                            ("Berlin", 10178),
+                        ],
+                        names=["name", "zipcode"],
+                    )
+                },
+            )
+            assert isinstance(converter.coords["city"], pd.MultiIndex)
 
 
 class TestPyMCWarmupHandling:
