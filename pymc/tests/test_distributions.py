@@ -1114,10 +1114,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(
-        condition=(aesara.config.floatX == "float32"),
-        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
-    )
     def test_wald_logcdf(self):
         self.check_logcdf(
             Wald,
@@ -1273,6 +1269,10 @@ class TestMatchesScipy:
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
         )
 
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="SciPy log CDF stopped working after un-pinning NumPy version.",
+    )
     def test_negative_binomial(self):
         def scipy_mu_alpha_logpmf(value, mu, alpha):
             return sp.nbinom.logpmf(value, alpha, 1 - mu / (mu + alpha))
