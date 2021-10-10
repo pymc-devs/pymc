@@ -7,8 +7,6 @@ from typing import (  # pylint: disable=unused-import
     Any,
     Dict,
     Iterable,
-    List,
-    Mapping,
     Optional,
     Tuple,
     Union,
@@ -21,9 +19,7 @@ from aesara.graph.basic import Constant
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from arviz import InferenceData, concat, rcParams
-from arviz.data.base import CoordSpec, DimSpec
-from arviz.data.base import dict_to_dataset as _dict_to_dataset
-from arviz.data.base import generate_dims_coords, make_attrs, requires
+from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
 
 import pymc
 
@@ -101,42 +97,6 @@ class _DefaultTrace:
             self.trace_dict[k][idx, :] = v
 
 
-def dict_to_dataset(
-    data,
-    library=None,
-    coords=None,
-    dims=None,
-    attrs=None,
-    default_dims=None,
-    skip_event_dims=None,
-    index_origin=None,
-):
-    """Temporal workaround for dict_to_dataset.
-
-    Once ArviZ>0.11.2 release is available, only two changes are needed for everything to work.
-    1) this should be deleted, 2) dict_to_dataset should be imported as is from arviz, no underscore,
-    also remove unnecessary imports
-    """
-    if default_dims is None:
-        return _dict_to_dataset(
-            data,
-            attrs=attrs,
-            library=library,
-            coords=coords,
-            dims=dims,
-            skip_event_dims=skip_event_dims,
-        )
-    else:
-        out_data = {}
-        for name, vals in data.items():
-            vals = np.atleast_1d(vals)
-            val_dims = dims.get(name)
-            val_dims, crds = generate_dims_coords(vals.shape, name, dims=val_dims, coords=coords)
-            crds = {key: xr.IndexVariable((key,), data=crds[key]) for key in val_dims}
-            out_data[name] = xr.DataArray(vals, dims=val_dims, coords=crds)
-        return xr.Dataset(data_vars=out_data, attrs=make_attrs(attrs=attrs, library=library))
-
-
 class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
     """Encapsulate InferenceData specific logic."""
 
@@ -160,7 +120,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         model=None,
         save_warmup: Optional[bool] = None,
         density_dist_obs: bool = True,
-        index_origin: Optional[int] = None,
     ):
 
         self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
@@ -196,7 +155,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         self.posterior_predictive = posterior_predictive
         self.log_likelihood = log_likelihood
         self.predictions = predictions
-        self.index_origin = rcParams["data.index_origin"] if index_origin is None else index_origin
 
         def arbitrary_element(dct: Dict[Any, np.ndarray]) -> np.ndarray:
             return next(iter(dct.values()))
@@ -344,7 +302,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 coords=self.coords,
                 dims=self.dims,
                 attrs=self.attrs,
-                index_origin=self.index_origin,
             ),
             dict_to_dataset(
                 data_warmup,
@@ -352,7 +309,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 coords=self.coords,
                 dims=self.dims,
                 attrs=self.attrs,
-                index_origin=self.index_origin,
             ),
         )
 
@@ -386,7 +342,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 dims=None,
                 coords=self.coords,
                 attrs=self.attrs,
-                index_origin=self.index_origin,
             ),
             dict_to_dataset(
                 data_warmup,
@@ -394,7 +349,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 dims=None,
                 coords=self.coords,
                 attrs=self.attrs,
-                index_origin=self.index_origin,
             ),
         )
 
@@ -427,7 +381,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 dims=self.dims,
                 coords=self.coords,
                 skip_event_dims=True,
-                index_origin=self.index_origin,
             ),
             dict_to_dataset(
                 data_warmup,
@@ -435,7 +388,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 dims=self.dims,
                 coords=self.coords,
                 skip_event_dims=True,
-                index_origin=self.index_origin,
             ),
         )
 
@@ -456,9 +408,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                     "This can mean that some draws or even whole chains are not represented.",
                     k,
                 )
-        return dict_to_dataset(
-            data, library=pymc, coords=self.coords, dims=self.dims, index_origin=self.index_origin
-        )
+        return dict_to_dataset(data, library=pymc, coords=self.coords, dims=self.dims)
 
     @requires(["posterior_predictive"])
     def posterior_predictive_to_xarray(self):
@@ -493,7 +443,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                     library=pymc,
                     coords=self.coords,
                     dims=self.dims,
-                    index_origin=self.index_origin,
                 )
             )
         return priors_dict
@@ -510,7 +459,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             coords=self.coords,
             dims=self.dims,
             default_dims=[],
-            index_origin=self.index_origin,
         )
 
     @requires(["trace", "predictions"])
@@ -557,7 +505,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             coords=self.coords,
             dims=self.dims,
             default_dims=[],
-            index_origin=self.index_origin,
         )
 
     def to_inference_data(self):
