@@ -39,7 +39,7 @@ repos:
     - id: no-print-statements
       files: ^pymc3/
     - id: conda-env-sorter
-      paths: ^conda-envs/environment-dev-py37\.yml$
+      files: ^conda-envs/environment-dev-py.+\.yml$
 - repo: local
   hooks:
     - id: check-no-tests-are-ignored
