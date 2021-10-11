@@ -272,7 +272,7 @@ class Simplex(RVTransform):
         return log_value[..., :-1] - shift
 
     def backward(self, value, *inputs):
-        value = at.concatenate([value, -at.sum(value, -1, keepdims=True)])
+        value = at.concatenate([value, -at.sum(value, -1, keepdims=True)], axis=-1)
         exp_value_max = at.exp(value - at.max(value, -1, keepdims=True))
         return exp_value_max / at.sum(exp_value_max, -1, keepdims=True)
 
