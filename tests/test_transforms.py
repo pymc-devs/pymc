@@ -3,6 +3,7 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 import scipy as sp
+import scipy.special
 from aesara.graph.fg import FunctionGraph
 from numdifftools import Jacobian
 
@@ -17,6 +18,34 @@ from aeppl.transforms import (
     _default_transformed_rv,
 )
 from tests.utils import assert_no_rvs
+
+
+class DirichletScipyDist:
+    def __init__(self, alphas):
+        self.alphas = alphas
+
+    def rvs(self, size=None, random_state=None):
+        if size is None:
+            size = ()
+        samples_shape = tuple(np.atleast_1d(size)) + self.alphas.shape
+        samples = np.empty(samples_shape)
+        alphas_bcast = np.broadcast_to(self.alphas, samples_shape)
+
+        for index in np.ndindex(*samples_shape[:-1]):
+            samples[index] = random_state.dirichlet(alphas_bcast[index])
+
+        return samples
+
+    def logpdf(self, value):
+        res = (
+            np.sum(
+                scipy.special.xlogy(self.alphas - 1, value)
+                - scipy.special.gammaln(self.alphas),
+                axis=-1,
+            )
+            + scipy.special.gammaln(np.sum(self.alphas, axis=-1))
+        )
+        return res
 
 
 @pytest.mark.parametrize(
@@ -111,18 +140,21 @@ from tests.utils import assert_no_rvs
         ),
         (
             at.random.dirichlet,
-            (np.array([0.5, 0.5]),),
+            (np.array([0.7, 0.3]),),
             lambda alpha: sp.stats.dirichlet(alpha),
+            (),
+        ),
+        (
+            at.random.dirichlet,
+            (np.array([[0.7, 0.3], [0.9, 0.1]]),),
+            lambda alpha: DirichletScipyDist(alpha),
             (),
         ),
         pytest.param(
             at.random.dirichlet,
-            (np.array([0.5, 0.5]),),
-            lambda alpha: sp.stats.dirichlet(alpha),
+            (np.array([0.3, 0.7]),),
+            lambda alpha: DirichletScipyDist(alpha),
             (3, 2),
-            marks=pytest.mark.xfail(
-                reason="Need to make the test framework work for arbitrary sizes"
-            ),
         ),
     ],
 )
@@ -153,7 +185,6 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
 
     test_val_rng = np.random.RandomState(3238)
 
-    decimals = 6 if aesara.config.floatX == "float64" else 4
     logp_vals_fn = aesara.function([a_value_var, b_value_var], res)
 
     a_trans_op = _default_transformed_rv(a.owner.op, a.owner).op
@@ -165,6 +196,11 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
     a_backward_fn = aesara.function(
         [a_value_var], transform.backward(a_value_var, *a.owner.inputs)
     )
+    log_jac_fn = aesara.function(
+        [a_value_var],
+        transform.log_jac_det(a_value_var, *a.owner.inputs),
+        on_unused_input="ignore",
+    )
 
     for i in range(10):
         a_dist = sp_dist(*dist_params)
@@ -174,23 +210,55 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
         b_dist = sp.stats.norm(a_val, 1.0)
         b_val = b_dist.rvs(random_state=test_val_rng).astype(b_value_var.dtype)
 
-        exp_logprob_val = a_dist.logpdf(a_val)
-
         a_trans_value = a_forward_fn(a_val)
+
         if a_val.ndim > 0:
-            # exp_logprob_val = np.vectorize(a_dist.logpdf, signature="(n)->()")(a_val)
-            jacobian_val = Jacobian(a_backward_fn)(a_trans_value)[:-1]
+
+            def jacobian_estimate_novec(value):
+
+                dim_diff = a_val.ndim - value.ndim
+                if dim_diff > 0:
+                    # Make sure the dimensions match the expected input
+                    # dimensions for the compiled backward transform function
+                    def a_backward_fn_(x):
+                        x_ = np.expand_dims(x, axis=list(range(dim_diff)))
+                        return a_backward_fn(x_).squeeze()
+
+                else:
+                    a_backward_fn_ = a_backward_fn
+
+                jacobian_val = Jacobian(a_backward_fn_)(value)
+
+                n_missing_dims = jacobian_val.shape[0] - jacobian_val.shape[1]
+                if n_missing_dims > 0:
+                    missing_bases = np.eye(jacobian_val.shape[0])[..., -n_missing_dims:]
+                    jacobian_val = np.concatenate(
+                        [jacobian_val, missing_bases], axis=-1
+                    )
+
+                return np.linalg.slogdet(jacobian_val)[-1]
+
+            jacobian_estimate = np.vectorize(
+                jacobian_estimate_novec, signature="(n)->()"
+            )
+
+            exp_log_jac_val = jacobian_estimate(a_trans_value)
         else:
             jacobian_val = np.atleast_2d(
                 sp.misc.derivative(a_backward_fn, a_trans_value, dx=1e-6)
             )
+            exp_log_jac_val = np.linalg.slogdet(jacobian_val)[-1]
 
-        exp_logprob_val += np.linalg.slogdet(jacobian_val)[-1]
+        log_jac_val = log_jac_fn(a_trans_value)
+        np.testing.assert_almost_equal(exp_log_jac_val, log_jac_val, decimal=4)
+
+        exp_logprob_val = a_dist.logpdf(a_val).sum()
+        exp_logprob_val += exp_log_jac_val.sum()
         exp_logprob_val += b_dist.logpdf(b_val).sum()
 
         logprob_val = logp_vals_fn(a_trans_value, b_val)
 
-        np.testing.assert_almost_equal(exp_logprob_val, logprob_val, decimal=decimals)
+        np.testing.assert_almost_equal(exp_logprob_val, logprob_val, decimal=4)
 
 
 @pytest.mark.parametrize("use_jacobian", [True, False])
