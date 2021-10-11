@@ -173,7 +173,6 @@ def test_deterministic_clipping():
     )
 
 
-@pytest.mark.xfail(reason="Transform does not work with Elemwise ops, see #60")
 def test_censored_transform():
     x_rv = at.random.normal(0.5, 1)
     cens_x_rv = at.clip(x_rv, 0, x_rv)

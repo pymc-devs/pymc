@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 import scipy as sp
 import scipy.special
+from aesara.graph.basic import equal_computations
 from aesara.graph.fg import FunctionGraph
 from numdifftools import Jacobian
 
@@ -263,16 +264,17 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
 
 @pytest.mark.parametrize("use_jacobian", [True, False])
 def test_simple_transformed_logprob_nojac(use_jacobian):
-    x_rv = at.random.halfnormal(0, 3, name="x_rv")
-    x = x_rv.clone()
+    X_rv = at.random.halfnormal(0, 3, name="X")
+    x_vv = X_rv.clone()
+    x_vv.name = "x"
 
-    transform_opt = TransformValuesOpt({x: DEFAULT_TRANSFORM})
+    transform_opt = TransformValuesOpt({x_vv: DEFAULT_TRANSFORM})
     tr_logp = joint_logprob(
-        {x_rv: x}, extra_rewrites=transform_opt, use_jacobian=use_jacobian
+        {X_rv: x_vv}, extra_rewrites=transform_opt, use_jacobian=use_jacobian
     )
 
     assert np.isclose(
-        tr_logp.eval({x: np.log(2.5)}),
+        tr_logp.eval({x_vv: np.log(2.5)}),
         sp.stats.halfnorm(0, 3).logpdf(2.5) + (np.log(2.5) if use_jacobian else 0.0),
     )
 
@@ -442,3 +444,50 @@ def test_original_values_output_dict():
     logp_dict = factorized_joint_logprob({p_rv: p_vv}, extra_rewrites=tr)
 
     assert p_vv in logp_dict
+
+
+def test_mixture_transform():
+    """Make sure that non-`RandomVariable` `MeasurableVariable`s can be transformed.
+
+    This test is specific to `MixtureRV`, which is derived from an `OpFromGraph`.
+    """
+
+    I_rv = at.random.bernoulli(0.5, name="I")
+    Y_1_rv = at.random.beta(100, 1, name="Y_1")
+    Y_2_rv = at.random.beta(1, 100, name="Y_2")
+
+    # A `MixtureRV`, which is an `OpFromGraph` subclass, will replace this
+    # `at.stack` in the graph
+    Y_rv = at.stack([Y_1_rv, Y_2_rv])[I_rv]
+    Y_rv.name = "Y"
+
+    i_vv = I_rv.clone()
+    i_vv.name = "i"
+    y_vv = Y_rv.clone()
+    y_vv.name = "y"
+
+    logp_no_trans = joint_logprob(
+        {Y_rv: y_vv, I_rv: i_vv},
+    )
+
+    transform_opt = TransformValuesOpt({y_vv: LogTransform()})
+
+    with pytest.warns(None) as record:
+        # This shouldn't raise any warnings
+        logp_trans = joint_logprob(
+            {Y_rv: y_vv, I_rv: i_vv},
+            extra_rewrites=transform_opt,
+            use_jacobian=False,
+        )
+
+    assert not record.list
+
+    # The untransformed graph should be the same as the transformed graph after
+    # replacing the `Y_rv` value variable with a transformed version of itself
+    logp_nt_fg = FunctionGraph(outputs=[logp_no_trans], clone=False)
+    y_trans = at.exp(y_vv)
+    y_trans.name = "y_log"
+    logp_nt_fg.replace(y_vv, y_trans)
+    logp_nt = logp_nt_fg.outputs[0]
+
+    assert equal_computations([logp_nt], [logp_trans])

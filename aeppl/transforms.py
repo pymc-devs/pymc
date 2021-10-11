@@ -1,18 +1,18 @@
 import abc
+from copy import copy
 from functools import partial, singledispatch
-from typing import Dict, List, Optional, Type, Union
+from typing import Dict, List, Optional, Union
 
 import aesara.tensor as at
 from aesara.gradient import jacobian
-from aesara.graph.basic import Node, Variable
+from aesara.graph.basic import Apply, Node, Variable
 from aesara.graph.features import AlreadyThere, Feature
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op
 from aesara.graph.opt import GlobalOptimizer, in2out, local_optimizer
-from aesara.graph.utils import MetaType
-from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 
+from aeppl.abstract import MeasurableVariable
 from aeppl.logprob import _logprob
 
 
@@ -20,32 +20,15 @@ from aeppl.logprob import _logprob
 def _default_transformed_rv(
     op: Op,
     node: Node,
-) -> Optional[TensorVariable]:
-    """Create a graph for a transformed log-probability of a ``RandomVariable``.
+) -> Optional[Apply]:
+    """Create a node for a transformed log-probability of a `MeasurableVariable`.
 
-    This function dispatches on the type of ``op``, which should be a subclass
-    of ``RandomVariable``.  If you want to implement new transforms for a
-    ``RandomVariable``, register a function on this dispatcher.
+    This function dispatches on the type of `op`.  If you want to implement
+    new transforms for a `MeasurableVariable`, register a function on this
+    dispatcher.
 
     """
     return None
-
-
-class DistributionMeta(MetaType):
-    def __new__(cls, name, bases, clsdict):
-        cls_res = super().__new__(cls, name, bases, clsdict)
-        base_op = clsdict.get("base_op", None)
-
-        if base_op is not None and clsdict.get("default", False):
-            # Create dispatch functions
-            @_default_transformed_rv.register(type(base_op))
-            def class_transformed_rv(op, node):
-                new_op = cls_res()
-                res = new_op.make_node(*node.inputs)
-                res.outputs[1].name = node.outputs[1].name
-                return res
-
-        return cls_res
 
 
 class RVTransform(abc.ABC):
@@ -65,29 +48,6 @@ class RVTransform(abc.ABC):
         # return at.log(at.abs_(jac))
         phi_inv = self.backward(value, *inputs)
         return at.log(at.nlinalg.det(at.atleast_2d(jacobian(phi_inv, [value]))))
-
-
-class TransformedRV(RandomVariable, metaclass=DistributionMeta):
-    r"""A base class for transformed `RandomVariable`\s."""
-
-
-@_logprob.register(TransformedRV)
-def transformed_logprob(op, values, *inputs, use_jacobian=True, **kwargs):
-    """Compute the log-likelihood graph for a `TransformedRV`.
-
-    We assume that the value variable was back-transformed to be on the natural
-    support of the respective random variable.
-    """
-    (value,) = values
-
-    logprob = _logprob(op.base_op, values, *inputs, **kwargs)
-
-    if use_jacobian:
-        original_forward_value = op.transform.forward(value, *inputs)
-        jacobian = op.transform.log_jac_det(original_forward_value, *inputs)
-        logprob += jacobian
-
-    return logprob
 
 
 class DefaultTransformSentinel:
@@ -118,6 +78,7 @@ def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
 
     try:
         rv_var = node.default_output()
+        rv_var_out_idx = node.outputs.index(rv_var)
     except ValueError:
         return None
 
@@ -135,9 +96,11 @@ def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
             return None
         transform = trans_node.op.transform
     else:
-        new_op = _create_transformed_rv_op(node.op, transform)()
-        trans_node = new_op.make_node(*node.inputs)
-        trans_node.outputs[1].name = node.outputs[1].name
+        new_op = _create_transformed_rv_op(node.op, transform)
+        # Create a new `Apply` node and outputs
+        trans_node = node.clone()
+        trans_node.op = new_op
+        trans_node.outputs[rv_var_out_idx].name = node.outputs[rv_var_out_idx].name
 
     # We now assume that the old value variable represents the *transformed space*.
     # This means that we need to replace all instance of the old value variable
@@ -146,7 +109,9 @@ def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     if value_var.name and getattr(transform, "name", None):
         new_value_var.name = f"{value_var.name}_{transform.name}"
 
-    rv_map_feature.update_rv_maps(rv_var, new_value_var, trans_node.outputs[1])
+    rv_map_feature.update_rv_maps(
+        rv_var, new_value_var, trans_node.outputs[rv_var_out_idx]
+    )
 
     return trans_node.outputs
 
@@ -304,8 +269,14 @@ def _create_transformed_rv_op(
     *,
     default: bool = False,
     cls_dict_extra: Optional[Dict] = None,
-) -> Type[TransformedRV]:
-    """Create a new `TransformedRV` given a base `RandomVariable` `Op`
+) -> Op:
+    """Create a new transformed variable instance given a base `RandomVariable` `Op`.
+
+    This will essentially copy the `type` of the given `Op` instance, create a
+    copy of said `Op` instance and change it's `type` to the new one.
+
+    In the end, we have an `Op` instance that will map to a `RVTransform` while
+    also behaving exactly as it did before.
 
     Parameters
     ==========
@@ -321,21 +292,52 @@ def _create_transformed_rv_op(
     """
 
     trans_name = getattr(transform, "name", "transformed")
-    rv_type_name = type(rv_op).__name__
-    cls_dict = type(rv_op).__dict__.copy()
+    rv_op_type = type(rv_op)
+    rv_type_name = rv_op_type.__name__
+    cls_dict = rv_op_type.__dict__.copy()
     rv_name = cls_dict.get("name", "")
     if rv_name:
         cls_dict["name"] = f"{rv_name}_{trans_name}"
-    cls_dict["base_op"] = rv_op
     cls_dict["transform"] = transform
-    cls_dict["default"] = default
 
     if cls_dict_extra is not None:
         cls_dict.update(cls_dict_extra)
 
-    new_op_type = type(f"Transformed{rv_type_name}", (TransformedRV,), cls_dict)
+    new_op_type = type(f"Transformed{rv_type_name}", (rv_op_type,), cls_dict)
 
-    return new_op_type
+    MeasurableVariable.register(new_op_type)
+
+    @_logprob.register(new_op_type)
+    def transformed_logprob(op, values, *inputs, use_jacobian=True, **kwargs):
+        """Compute the log-likelihood graph for a `TransformedRV`.
+
+        We assume that the value variable was back-transformed to be on the natural
+        support of the respective random variable.
+        """
+        (value,) = values
+
+        logprob = _logprob(rv_op, values, *inputs, **kwargs)
+
+        if use_jacobian:
+            original_forward_value = op.transform.forward(value, *inputs)
+            jacobian = op.transform.log_jac_det(original_forward_value, *inputs)
+            logprob += jacobian
+
+        return logprob
+
+    transform_op = rv_op_type if default else new_op_type
+
+    @_default_transformed_rv.register(transform_op)
+    def class_transformed_rv(op, node):
+        new_op = new_op_type()
+        res = new_op.make_node(*node.inputs)
+        res.outputs[1].name = node.outputs[1].name
+        return res
+
+    new_op = copy(rv_op)
+    new_op.__class__ = new_op_type
+
+    return new_op
 
 
 create_default_transformed_rv_op = partial(_create_transformed_rv_op, default=True)
