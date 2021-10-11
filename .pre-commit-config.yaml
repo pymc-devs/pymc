@@ -38,6 +38,8 @@ repos:
   hooks:
     - id: no-print-statements
       files: ^pymc3/
+    - id: conda-env-sorter
+      files: ^conda-envs/environment-dev-py.+\.yml$
 - repo: local
   hooks:
     - id: check-no-tests-are-ignored
@@ -47,13 +49,6 @@ repos:
       language: python
       name: Check no tests are ignored
       pass_filenames: false
-    - id: conda-env-sort
-      additional_dependencies: [pyyaml]
-      entry: python scripts/sort_conda_envs.py
-      files: ^conda-envs/environment-dev-py37\.yml$
-      language: python
-      name: Sort dependencies in conda envs
-      types: [yaml]
     - id: pip-from-conda
       additional_dependencies: [pyyaml]
       entry: python scripts/generate_pip_deps_from_conda.py

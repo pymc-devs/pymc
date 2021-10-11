@@ -13,9 +13,9 @@ dependencies:
 - libblas=*=*mkl
 - mkl-service
 - myst-nb
-- numpy=1.15
+- numpy>=1.15
 - numpydoc>=0.9
-- pandas=0.24
+- pandas>=0.24
 - pre-commit>=2.8.0
 - pydata-sphinx-theme
 - pytest-cov>=2.5
@@ -25,7 +25,10 @@ dependencies:
 - recommonmark>=0.4
 - scipy>1.4.1
 - sphinx-autobuild>=0.7
+- sphinx-notfound-page
 - sphinx-panels
 - sphinx>=1.5
 - typing-extensions
 - watermark
+- pip:
+  - sphinx-design

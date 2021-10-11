@@ -49,7 +49,9 @@ extensions = [
     "sphinx.ext.napoleon",
     "gallery_generator",
     "myst_nb",
+    "sphinx_design",
     "sphinx_panels",
+    "notfound.extension",
 ]
 
 # Don't auto-generate summary for class members.
@@ -83,9 +85,12 @@ author = "PyMC contributors"
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
-#
-# The short X.Y version.
+
 version = pymc.__version__
+if os.environ.get("READTHEDOCS", False):
+    rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
+    if "." not in rtd_version and rtd_version.lower() != "stable":
+        version = "dev"
 # The full version, including alpha/beta/rc tags.
 release = version
 
@@ -95,6 +100,9 @@ release = version
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
 language = None
+
+# configure notfound extension to not add any prefix to the urls
+notfound_urls_prefix = "/en/latest/"
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
