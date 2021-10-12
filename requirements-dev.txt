@@ -3,13 +3,12 @@
 
 aesara>=2.1.0
 arviz>=0.11.4
-cachetools
+cachetools>=4.2.1
 cloudpickle
 fastprogress>=0.2.0
 h5py
-ipython>=7.16
+ipython
 myst-nb
-nbsphinx>=0.4
 numpy>=1.15.0
 numpydoc>=0.9
 pandas
