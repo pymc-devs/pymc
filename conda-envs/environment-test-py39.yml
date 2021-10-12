@@ -1,16 +1,19 @@
-name: pymc-dev-py39
+name: pymc3-test-py39
 channels:
 - conda-forge
 - defaults
 dependencies:
 - aesara>=2.1.0
-- arviz>=0.11.4
-- cachetools>=4.2.1
+- arviz>=0.11.2
+- cachetools
 - cloudpickle
 - fastprogress>=0.2.0
-- h5py>=2.7
-- ipython
+- h5py
+- ipython>=7.16
+- libblas=*=*mkl
+- mkl-service
 - myst-nb
+- nbsphinx>=0.4
 - numpy>=1.15.0
 - numpydoc>=0.9
 - pandas
@@ -23,10 +26,7 @@ dependencies:
 - recommonmark>=0.4
 - scipy>1.4.1
 - sphinx-autobuild>=0.7
-- sphinx-notfound-page
 - sphinx-panels
 - sphinx>=1.5
 - typing-extensions>=3.7.4
 - watermark
-- pip:
-  - sphinx-design
