@@ -25,7 +25,6 @@ dependencies:
 - pydata-sphinx-theme
 - pytest-cov>=2.5
 - pytest>=3.0
-- recommonmark>=0.4
 - sphinx-autobuild>=0.7
 - sphinx-notfound-page
 - sphinx-panels
