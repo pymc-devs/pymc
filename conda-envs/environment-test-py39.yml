@@ -1,4 +1,4 @@
-name: pymc3-test-py39
+name: pymc-test-py39
 channels:
 - conda-forge
 - defaults
