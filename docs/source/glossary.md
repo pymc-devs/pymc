@@ -20,7 +20,6 @@ Dispatching
 
 Underdispersion
   In statistics, underdispersion is the presence of lower {term}`variability <dispersion>` in a data set than would be expected based on a given statistical model.
-  Choosing which function or method implementation to use based on the type of the input variables (usually just the first variable). For some examples, see Python's documentation for the [singledispatch](https://docs.python.org/3/library/functools.html#functools.singledispatch) decorator.
 
 Bayesian Workflow
   Bayesian workflow is the overall iterative procedure towards model refinement. It often includes the two related tasks of {term}`inference` and the exploratory analysis of models.
