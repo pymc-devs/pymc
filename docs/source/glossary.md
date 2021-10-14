@@ -70,18 +70,29 @@ GLM
   :::{note} Do not confuse these with general linear models
   :::
 
-[Probability Mass](https://en.wikipedia.org/wiki/Probability_mass_function)
+[Probability Mass Function](https://en.wikipedia.org/wiki/Probability_mass_function)
+[PMF](https://en.wikipedia.org/wiki/Probability_mass_function)
   A function that gives the probability that a discrete random variable is exactly equal to some value.
-[Maximum a Posteriori (MAP)](https://en.wikipedia.org/wiki/Maximum_a_posteriori_estimation)
+
+[Maximum a Posteriori](https://en.wikipedia.org/wiki/Maximum_a_posteriori_estimation)
+[MAP](https://en.wikipedia.org/wiki/Maximum_a_posteriori_estimation)
   An estimate of an unknown density estimation, that equals the mode of the posterior distribution. MAP can therefore be seen as a regularization of maximum likelihood estimation.
-[No-U-Turn Samples (NUTS)](https://arxiv.org/abs/1111.4246)
-  An extension of Hamiltonian Monte Carlo Method that algorithmically sets likely candidate points that spans a wide swath of the target distribution, stopping automatically when it starts to double back and retrace its steps.
-[Hamiltonian Monte Carlo Method](https://en.wikipedia.org/wiki/Hamiltonian_Monte_Carlo)
-  A Markov chain Monte Carlo method for obtaining a sequence of random samples which converge to being distributed according to a target probability distribution.
+
+[No-U-Turn Sampler](https://arxiv.org/abs/1111.4246)
+[NUTS](https://arxiv.org/abs/1111.4246)
+  An extension of {term}`Hamiltonian Monte Carlo` that algorithmically sets likely candidate points that spans a wide swath of the target distribution, stopping automatically when it starts to double back and retrace its steps.
+
+[Hamiltonian Monte Carlo](https://en.wikipedia.org/wiki/Hamiltonian_Monte_Carlo)
+[HMC](https://en.wikipedia.org/wiki/Hamiltonian_Monte_Carlo)
+  A {term}`Markov Chain Monte Carlo` method for obtaining a sequence of random samples which converge to being distributed according to a target probability distribution.
+
 [Credibility](https://en.wikipedia.org/wiki/Credibility_theory)
   A form of statistical inference used to forecast an uncertain future event
-[Ordinary Differential Equation (ODE)](https://en.wikipedia.org/wiki/Ordinary_differential_equation)
+
+[Ordinary Differential Equation](https://en.wikipedia.org/wiki/Ordinary_differential_equation)
+[ODE](https://en.wikipedia.org/wiki/Ordinary_differential_equation)
   A type of differential equation containing one or more functions of one independent variable and the derivatives of those functions
-Hierarchical Ordinary Differential Equation (ODE)
-  Individual, group, or other level types calculations of {term}`Ordinary Differential Equation (ODE)`'s.
+
+Hierarchical Ordinary Differential Equation
+  Individual, group, or other level types calculations of {term}`Ordinary Differential Equation`'s.
 :::::
