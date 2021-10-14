@@ -1075,7 +1075,6 @@ class Group(WithMemoization):
 
     @node_property
     def ndim(self):
-        # XXX: This needs to be refactored
         if self.batched:
             return self.ordering.size * self.bdim
         else:
@@ -1083,7 +1082,6 @@ class Group(WithMemoization):
 
     @property
     def ddim(self):
-        # TODO: This needs to be refactored
         return sum(s.stop - s.start for _, s, _, _ in self.ordering.values())
 
     def _new_initial(self, size, deterministic, more_replacements=None):
