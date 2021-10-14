@@ -1,7 +1,6 @@
 import numpy as np
 
 from numpy.random import RandomState
-from numpy.testing import assert_almost_equal
 
 import pymc as pm
 
@@ -62,6 +61,7 @@ def test_bart_random():
     rng = RandomState(12345)
     pred_first = mu.owner.op.rng_fn(rng, X_new=X[:10])
 
+    np.testing.assert_almost_equal(pred_first, pred_all[0, :10], decimal=4)
     assert pred_all.shape == (2, 50)
     assert pred_first.shape == (10,)
 
