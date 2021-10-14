@@ -1103,3 +1103,16 @@ def test_flow_formula(formula, length, order):
     if order is not None:
         assert flows_list == order
     spec(dim=2, jitter=1)(at.ones((3, 2))).eval()  # should work
+
+
+@pytest.mark.parametrize("score", [True, False])
+def test_fit_with_nans(score):
+    X_mean = pm.floatX(np.linspace(0, 10, 10))
+    y = pm.floatX(np.random.normal(X_mean * 4, 0.05))
+    with pm.Model():
+        inp = pm.Normal("X", X_mean, size=X_mean.shape)
+        coef = pm.Normal("b", 4.0)
+        mean = inp * coef
+        pm.Normal("y", mean, 0.1, observed=y)
+        with pytest.raises(FloatingPointError) as e:
+            advi = pm.fit(100, score=score, obj_optimizer=pm.adam(learning_rate=float("nan")))
