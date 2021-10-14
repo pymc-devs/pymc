@@ -267,7 +267,7 @@ def sample(
     callback=None,
     jitter_max_retries=10,
     *,
-    return_inferencedata=None,
+    return_inferencedata=True,
     idata_kwargs: dict = None,
     mp_ctx=None,
     **kwargs,
@@ -336,7 +336,7 @@ def sample(
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
         that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
         init methods.
-    return_inferencedata : bool, default=True
+    return_inferencedata : bool
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
         Defaults to `True`.
     idata_kwargs : dict, optional
@@ -449,9 +449,6 @@ def sample(
 
     if not isinstance(random_seed, abc.Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
-
-    if return_inferencedata is None:
-        return_inferencedata = True
 
     if not discard_tuned_samples and not return_inferencedata:
         warnings.warn(
@@ -1893,7 +1890,7 @@ def sample_prior_predictive(
     var_names: Optional[Iterable[str]] = None,
     random_seed=None,
     mode: Optional[Union[str, Mode]] = None,
-    return_inferencedata=None,
+    return_inferencedata=True,
     idata_kwargs: dict = None,
 ) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate samples from the prior predictive distribution.
@@ -1924,8 +1921,6 @@ def sample_prior_predictive(
         or a dictionary with variable names as keys and samples as numpy arrays.
     """
     model = modelcontext(model)
-    if return_inferencedata is None:
-        return_inferencedata = True
 
     if model.potentials:
         warnings.warn(
@@ -1992,11 +1987,9 @@ def sample_prior_predictive(
 
     if not return_inferencedata:
         return prior
-
     ikwargs = dict(model=model)
     if idata_kwargs:
         ikwargs.update(idata_kwargs)
-
     return pm.to_inference_data(prior=prior, **ikwargs)
 
 
