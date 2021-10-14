@@ -45,7 +45,7 @@ If you already know about Bayesian statistics:
 -  `PyMC examples <https://docs.pymc.io/nb_examples/index.html>`__ and the `API reference <https://docs.pymc.io/en/stable/api.html>`__
 
 Learn Bayesian statistics with a book together with PyMC
----------------------------------------------------------
+--------------------------------------------------------
 
 -  `Probabilistic Programming and Bayesian Methods for Hackers <https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers>`__: Fantastic book with many applied code examples.
 -  `PyMC port of the book "Doing Bayesian Data Analysis" by John Kruschke <https://github.com/aloctavodia/Doing_bayesian_data_analysis>`__ as well as the `second edition <https://github.com/JWarmenhoven/DBDA-python>`__: Principled introduction to Bayesian data analysis.
