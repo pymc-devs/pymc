@@ -59,4 +59,15 @@ Posterior
 
   - For more on generating and interpreting the posterior samples, see Statistical Rethinking 2nd Edition By Richard McElreath, chapter 3.
 
+Generalized Linear Model
+GLM
+  In a Generalized Linear Model (GLM), we assume the response variable $y_i$ to follow an
+  exponential family distribution with mean $\mu_i$, which is assumed to be some (often nonlinear)
+  function of $x_i^T\beta$. They're considered linear because the covariates affect the distribution
+  of $Y_i$ only through the linear combination $x_i^T\beta$. Some examples of Generalized Linear
+  Models are: Linear Regression, ANOVA, Logistic Regression and Poisson Regression
+
+  :::{note} Do not confuse these with general linear models
+  :::
+
 :::::
