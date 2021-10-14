@@ -1579,7 +1579,7 @@ def sample_posterior_predictive(
     -------
     arviz.InferenceData or Dict
         An ArviZ ``InferenceData`` object containing the posterior predictive samples (default), or
-        a dictionary with variable names as keys, and samples numpy arrays.
+        a dictionary with variable names as keys, and samples as numpy arrays.
     """
 
     _trace: Union[MultiTrace, PointList]
@@ -1743,6 +1743,8 @@ def sample_posterior_predictive_w(
     weights: Optional[ArrayLike] = None,
     random_seed: Optional[int] = None,
     progressbar: bool = True,
+    return_inferencedata=True,
+    idata_kwargs: dict = None,
 ):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
@@ -1769,12 +1771,18 @@ def sample_posterior_predictive_w(
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
+    return_inferencedata : bool
+        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
+        Defaults to True.
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
 
     Returns
     -------
-    samples : dict
-        Dictionary with the variables as keys. The values corresponding to the
-        posterior predictive samples from the weighted models.
+    arviz.InferenceData or Dict
+        An ArviZ ``InferenceData`` object containing the posterior predictive samples from the
+        weighted models (default), or a dictionary with variable names as keys, and samples as
+        numpy arrays.
     """
     if isinstance(traces[0], InferenceData):
         n_samples = [
@@ -1893,7 +1901,13 @@ def sample_posterior_predictive_w(
     except KeyboardInterrupt:
         pass
     else:
-        return {k: np.asarray(v) for k, v in ppc.items()}
+        ppc = {k: np.asarray(v) for k, v in ppc.items()}
+        if not return_inferencedata:
+            return ppc
+        ikwargs = dict(model=models)
+        if idata_kwargs:
+            ikwargs.update(idata_kwargs)
+        return pm.to_inference_data(posterior_predictive=ppc, **ikwargs)
 
 
 def sample_prior_predictive(
