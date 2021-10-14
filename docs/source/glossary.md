@@ -4,20 +4,22 @@ A glossary of common terms used throughout the PyMC documentation and examples.
 
 :::::{glossary}
 :sorted:
-[Term with external reference](https://www.youtube.com/watch?v=6dc7JgR8eI0)
-  Terms are defined within this glossary directive. The term id is defined as the non
-  indented line, and can be text alone (like {term}`second term`) or also include a link
-  to an external reference.
 
-Second term
-  Definitions can have as many lines as desired, and should be written in markdown. Definitions
-  can contain any markdown formatting for MyST to parse, this includes basic markdown like **bold**
-  as well as MyST directives and roles like {fa}`fort awesome,style=fab`
 Functional Programming
   Functional programming is a programming style that prefers the use of basic functions with explicit and distinct inputs and outputs.
   This contrasts with functions or methods that depend on variables that are not explicitly passed as an input (such as accessing `self.variable` inside a method) or that alter the inputs or other state variables in-place, instead of returning new distinct variables as outputs.
+
 Dispatching
   Choosing which function or method implementation to use based on the type of the input variables (usually just the first variable). For some examples, see Python's documentation for the [singledispatch](https://docs.python.org/3/library/functools.html#functools.singledispatch) decorator.
+
+[Dispersion](https://en.wikipedia.org/wiki/Statistical_dispersion)
+  In statistics, dispersion (also called variability, scatter, or spread) is the extent to which a distribution is stretched or squeezed
+
+[Overdispersion](https://en.wikipedia.org/wiki/Overdispersion)
+  In statistics, overdispersion is the presence of greater {term}`variability <dispersion>` in a data set than would be expected based on a given statistical model.
+
+Underdispersion
+  In statistics, underdispersion is the presence of lower {term}`variability <dispersion>` in a data set than would be expected based on a given statistical model.
 
 Bayesian Workflow
   Bayesian workflow is the overall iterative procedure towards model refinement. It often includes the two related tasks of {term}`inference` and the exploratory analysis of models.
@@ -56,4 +58,5 @@ Posterior
   Once you are satisfied with the model, posterior distribution can be summarized and interpreted. Common questions for the posterior include: intervals of defined boundaries, intervals of defined probability mass, and point estimates. When the posterior is very similar to the prior, the available data does not contain much information about a parameter of interest.
 
   - For more on generating and interpreting the posterior samples, see Statistical Rethinking 2nd Edition By Richard McElreath, chapter 3.
+
 :::::
