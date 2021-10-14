@@ -117,9 +117,7 @@ exclude_patterns = ["_build", "**.ipynb_checkpoints", "pymc-examples/.github"]
 # myst and panels config
 jupyter_execute_notebooks = "off"
 myst_heading_anchors = 3
-myst_enable_extensions = [
-    "colon_fence",
-]
+myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath"]
 panels_add_bootstrap_css = False
 
 # The reST default role (used for this markup: `text`) to use for all
