@@ -79,7 +79,7 @@ def rebuild_exc(exc, tb):
 
 
 class _Process:
-    """Seperate process for each chain.
+    """Separate process for each chain.
     We communicate with the main process using a pipe,
     and send finished samples using shared memory.
     """
