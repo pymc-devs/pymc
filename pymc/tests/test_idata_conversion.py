@@ -12,7 +12,11 @@ from numpy import ma
 
 import pymc as pm
 
-from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
+from pymc.backends.arviz import (
+    InferenceDataConverter,
+    predictions_to_inference_data,
+    to_inference_data,
+)
 
 
 @pytest.fixture(scope="module")
@@ -366,12 +370,15 @@ class TestDataPyMC:
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
 
-    @pytest.mark.xfail(reason="DensityDist not refactored for v4")
+    @pytest.mark.xfail(reason="MultiObservedRV is no longer used in v4")
     def test_multiple_observed_rv_without_observations(self):
         with pm.Model():
             mu = pm.Normal("mu")
             x = pm.DensityDist(  # pylint: disable=unused-variable
-                "x", logpt(pm.Normal.dist(mu, 1.0)), observed={"value": 0.1}
+                "x",
+                mu,
+                logp=lambda value, mu: pm.Normal.logp(value, mu, 1),
+                observed=0.1,
             )
             inference_data = pm.sample(100, chains=2, return_inferencedata=True)
         test_dict = {
@@ -384,7 +391,7 @@ class TestDataPyMC:
         assert not fails
         assert inference_data.observed_data.value.dtype.kind == "f"
 
-    @pytest.mark.xfail(reason="DensityDist not refactored for v4")
+    @pytest.mark.xfail(reason="MultiObservedRV is no longer used in v4")
     @pytest.mark.parametrize("multiobs", (True, False))
     def test_multiobservedrv_to_observed_data(self, multiobs):
         # fake regression data, with weights (W)
@@ -400,12 +407,13 @@ class TestDataPyMC:
             b = pm.Normal("b", 0, 10)
             mu = a + b * X
             sigma = pm.HalfNormal("sigma", 1)
+            w = W
 
-            def weighted_normal(y, w):
-                return w * logpt(pm.Normal.dist(mu=mu, sd=sigma), y)
+            def weighted_normal(value, mu, sigma, w):
+                return w * pm.Normal.logp(value, mu, sigma)
 
             y_logp = pm.DensityDist(  # pylint: disable=unused-variable
-                "y_logp", weighted_normal, observed={"y": Y, "w": W}
+                "y_logp", mu, sigma, w, logp=weighted_normal, observed=Y, size=N
             )
             idata = pm.sample(
                 20, tune=20, return_inferencedata=True, idata_kwargs={"density_dist_obs": multiobs}
@@ -563,6 +571,75 @@ class TestDataPyMC:
         assert not fails
         assert "direction" not in idata.log_likelihood.dims
         assert "direction" in idata.observed_data.dims
+
+    def test_constant_data_coords_issue_5046(self):
+        """This is a regression test against a bug where a local coords variable was overwritten."""
+        dims = {
+            "alpha": ["backwards"],
+            "bravo": ["letters", "yesno"],
+        }
+        coords = {
+            "backwards": np.arange(17)[::-1],
+            "letters": list("ABCDEFGHIJK"),
+            "yesno": ["yes", "no"],
+        }
+        data = {
+            name: np.random.uniform(size=[len(coords[dn]) for dn in dnames])
+            for name, dnames in dims.items()
+        }
+
+        for k in data:
+            assert len(data[k].shape) == len(dims[k])
+
+        ds = pm.backends.arviz.dict_to_dataset(
+            data=data,
+            library=pm,
+            coords=coords,
+            dims=dims,
+            default_dims=[],
+            index_origin=0,
+        )
+        for dname, cvals in coords.items():
+            np.testing.assert_array_equal(ds[dname].values, cvals)
+
+    def test_issue_5043_autoconvert_coord_values(self):
+        coords = {
+            "city": pd.Series(["Bonn", "Berlin"]),
+        }
+        with pm.Model(coords=coords) as pmodel:
+            # The model tracks coord values as (immutable) tuples
+            assert isinstance(pmodel.coords["city"], tuple)
+            pm.Normal("x", dims="city")
+            mtrace = pm.sample(
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+                step=pm.Metropolis(),
+                cores=1,
+                tune=7,
+                draws=15,
+            )
+            # The converter must convert coord values them to numpy arrays
+            # because tuples as coordinate values causes problems with xarray.
+            converter = InferenceDataConverter(trace=mtrace)
+            assert isinstance(converter.coords["city"], np.ndarray)
+            converter.to_inference_data()
+
+            # We're not automatically converting things other than tuple,
+            # so advanced use cases remain supported at the InferenceData level.
+            # They just can't be used in the model construction already.
+            converter = InferenceDataConverter(
+                trace=mtrace,
+                coords={
+                    "city": pd.MultiIndex.from_tuples(
+                        [
+                            ("Bonn", 53111),
+                            ("Berlin", 10178),
+                        ],
+                        names=["name", "zipcode"],
+                    )
+                },
+            )
+            assert isinstance(converter.coords["city"], pd.MultiIndex)
 
 
 class TestPyMCWarmupHandling:

@@ -987,7 +987,7 @@ class TestNutsCheckTrace:
         with Model():
             a = Normal("a", size=2, initval=floatX(np.zeros(2)))
             a = at.switch(a > 0, np.inf, a)
-            b = at.slinalg.solve(floatX(np.eye(2)), a)
+            b = at.slinalg.solve(floatX(np.eye(2)), a, check_finite=False)
             Normal("c", mu=b, size=2, initval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
             trace = sample(20, init=None, tune=5, chains=2, return_inferencedata=False)
