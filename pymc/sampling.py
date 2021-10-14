@@ -1911,9 +1911,9 @@ def sample_prior_predictive(
         Seed for the random number generator.
     mode:
         The mode used by ``aesara.function`` to compile the graph.
-    return_inferencedata : bool, default=True
+    return_inferencedata : bool
         Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
-        Defaults to `True`.
+        Defaults to True.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
 
