@@ -1,0 +1,24 @@
+# "test" conda envs are used to set up our CI environment in GitHub actions
+name: pymc-test-py39
+channels:
+- conda-forge
+- defaults
+dependencies:
+- aesara>=2.1.0
+- arviz>=0.11.4
+- cachetools
+- cloudpickle
+- fastprogress>=0.2.0
+- h5py
+- ipython>=7.16
+- libblas=*=*mkl
+- mkl-service
+- numpy>=1.15.0
+- pandas
+- pre-commit>=2.8.0
+- pytest-cov>=2.5
+- pytest>=3.0
+- python-graphviz
+- python=3.9
+- scipy>1.4.1
+- typing-extensions>=3.7.4

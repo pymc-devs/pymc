@@ -1,6 +1,6 @@
 ---
 name: 'Bug Report'
-about: Inform about bugs in the PyMC3 library
+about: Inform about bugs in the PyMC/PyMC3 library
 
 ---
 
@@ -26,8 +26,8 @@ about: Inform about bugs in the PyMC3 library
 
 ## Versions and main components
 
-* PyMC3 Version:
+* PyMC/PyMC3 Version:
 * Aesara/Theano Version:
 * Python Version:
 * Operating system:
-* How did you install PyMC3: (conda/pip)
+* How did you install PyMC/PyMC3: (conda/pip)

@@ -1,15 +1,18 @@
-name: pymc-dev-py38
+name: pymc-test-py38
 channels:
 - conda-forge
 - defaults
 dependencies:
  # base dependencies (see install guide for Windows)
 - aesara>=2.1.0
-- arviz>=0.11.4
-- cachetools>=4.2.1
+- arviz>=0.11.2
+- cachetools
 - cloudpickle
 - fastprogress>=0.2.0
-- h5py
+- h5py>=2.7
+- libpython
+- mkl-service
+- m2w64-toolchain
 - numpy>=1.15.0
 - pandas
 - pip
@@ -17,18 +20,8 @@ dependencies:
 - python-graphviz
 - scipy>1.4.1
 - typing-extensions>=3.7.4
-# Extra stuff for dev, testing and docs build
-- ipython
-- myst-nb
-- numpydoc>=0.9
+# Extra stuff for testing
+- ipython>=7.16
 - pre-commit>=2.8.0
-- pydata-sphinx-theme
 - pytest-cov>=2.5
 - pytest>=3.0
-- sphinx-autobuild>=0.7
-- sphinx-notfound-page
-- sphinx-panels
-- sphinx>=1.5
-- watermark
-- pip:
-  - sphinx-design

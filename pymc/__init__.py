@@ -83,6 +83,7 @@ from pymc.backends import (
     to_inference_data,
 )
 from pymc.backends.tracetab import *
+from pymc.bart import *
 from pymc.blocking import *
 from pymc.data import *
 from pymc.distributions import *

@@ -41,6 +41,7 @@ from pymc.aesaraf import change_rv_size, compile_rv_inplace, inputvars, walk_mod
 from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray
+from pymc.bart.pgbart import PGBART
 from pymc.blocking import DictToArrayBijection
 from pymc.distributions import NoDistribution
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
@@ -48,7 +49,6 @@ from pymc.model import Model, Point, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
 from pymc.step_methods import (
     NUTS,
-    PGBART,
     BinaryGibbsMetropolis,
     BinaryMetropolis,
     CategoricalGibbsMetropolis,
@@ -667,33 +667,18 @@ def _check_start_shape(model, start: PointType):
         The complete dictionary mapping (transformed) variable names to numeric initial values.
     """
     e = ""
-    for var in model.basic_RVs:
-        try:
-            var_shape = model.fastfn(var.shape)(start)
-            if var.name in start.keys():
-                start_var_shape = np.shape(start[var.name])
-                if start_var_shape:
-                    if not np.array_equal(var_shape, start_var_shape):
-                        e += "\nExpected shape {} for var '{}', got: {}".format(
-                            tuple(var_shape), var.name, start_var_shape
-                        )
-                # if start var has no shape
-                else:
-                    # if model var has a specified shape
-                    if var_shape.size > 0:
-                        e += "\nExpected shape {} for var " "'{}', got scalar {}".format(
-                            tuple(var_shape), var.name, start[var.name]
-                        )
-        except NotImplementedError as ex:
-            if ex.args[0].startswith("Cannot sample"):
-                _log.warning(
-                    f"Unable to check start shape of {var} because the RV does not implement random sampling."
-                )
-            else:
-                raise
-
+    try:
+        actual_shapes = model.eval_rv_shapes()
+    except NotImplementedError as ex:
+        warnings.warn(f"Unable to validate shapes: {ex.args[0]}", UserWarning)
+        return
+    for name, sval in start.items():
+        ashape = actual_shapes.get(name)
+        sshape = np.shape(sval)
+        if ashape != tuple(sshape):
+            e += f"\nExpected shape {ashape} for var '{name}', got: {sshape}"
     if e != "":
-        raise ValueError(f"Bad shape for start argument:{e}")
+        raise ValueError(f"Bad shape in start point:{e}")
 
 
 def _sample_many(

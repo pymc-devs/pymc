@@ -62,7 +62,14 @@ from pymc.distributions import logp_transform, logpt, logpt_sum
 from pymc.distributions.transforms import Transform
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
 from pymc.math import flatten_list
-from pymc.util import UNSET, WithMemoization, get_var_name, treedict, treelist
+from pymc.util import (
+    UNSET,
+    WithMemoization,
+    get_transformed_name,
+    get_var_name,
+    treedict,
+    treelist,
+)
 from pymc.vartypes import continuous_types, discrete_types, typefilter
 
 __all__ = [
@@ -864,7 +871,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self._RV_dims
 
     @property
-    def coords(self) -> Dict[str, Union[Sequence, None]]:
+    def coords(self) -> Dict[str, Union[Tuple, None]]:
         """Coordinate values for model dimensions."""
         return self._coords
 
@@ -1089,8 +1096,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             raise ValueError(
                 f"The `length` passed for the '{name}' coord must be an Aesara Variable or None."
             )
+        if values is not None:
+            # Conversion to a tuple ensures that the coordinate values are immutable.
+            # Also unlike numpy arrays the's tuple.index(...) which is handy to work with.
+            values = tuple(values)
         if name in self.coords:
-            if not values.equals(self.coords[name]):
+            if not np.array_equal(values, self.coords[name]):
                 raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
         else:
             self._coords[name] = values
@@ -1602,6 +1613,33 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                     b[value_var.name] = rv_var_value
 
         a.update({k: v for k, v in b.items() if k not in a})
+
+    def eval_rv_shapes(self) -> Dict[str, Tuple[int, ...]]:
+        """Evaluates shapes of untransformed AND transformed free variables.
+
+        Returns
+        -------
+        shapes : dict
+            Maps untransformed and transformed variable names to shape tuples.
+        """
+        names = []
+        outputs = []
+        for rv in self.free_RVs:
+            rv_var = self.rvs_to_values[rv]
+            transform = getattr(rv_var.tag, "transform", None)
+            if transform is not None:
+                names.append(get_transformed_name(rv.name, transform))
+                outputs.append(transform.forward(rv, rv).shape)
+            names.append(rv.name)
+            outputs.append(rv.shape)
+        f = aesara.function(
+            inputs=[],
+            outputs=outputs,
+            givens=[(obs, obs.tag.observations) for obs in self.observed_RVs],
+            mode=aesara.compile.mode.FAST_COMPILE,
+            on_unused_input="ignore",
+        )
+        return {name: tuple(shape) for name, shape in zip(names, f())}
 
     def check_start_vals(self, start):
         r"""Check that the starting values for MCMC do not cause the relevant log probability

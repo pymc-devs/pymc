@@ -10,7 +10,7 @@ focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
-Check out the `getting started guide <http://docs.pymc.io/notebooks/getting_started>`__,  or
+Check out the `getting started guide <https://docs.pymc.io/en/stable/pymc-examples/examples/getting_started.html>`__,  or
 `interact with live examples <https://mybinder.org/v2/gh/pymc-devs/pymc/main?filepath=%2Fdocs%2Fsource%2Fnotebooks>`__
 using Binder!
 For questions on PyMC, head on over to our `PyMC Discourse <https://discourse.pymc.io/>`__ forum.
@@ -40,9 +40,9 @@ Getting started
 If you already know about Bayesian statistics:
 ----------------------------------------------
 
--  `API quickstart guide <http://docs.pymc.io/notebooks/api_quickstart>`__
--  The `PyMC tutorial <http://docs.pymc.io/notebooks/getting_started>`__
--  `PyMC examples <https://docs.pymc.io/nb_examples/index.html>`__ and the `API reference <http://docs.pymc.io/api>`__
+-  `API quickstart guide <https://docs.pymc.io/en/stable/pymc-examples/examples/pymc3_howto/api_quickstart.html>`__
+-  The `PyMC tutorial <https://docs.pymc.io/en/stable/pymc-examples/examples/getting_started.html>`__
+-  `PyMC examples <https://docs.pymc.io/nb_examples/index.html>`__ and the `API reference <https://docs.pymc.io/en/stable/api.html>`__
 
 Learn Bayesian statistics with a book together with PyMC:
 ---------------------------------------------------------
