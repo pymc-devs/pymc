@@ -1532,7 +1532,9 @@ def sample_posterior_predictive(
     random_seed=None,
     progressbar: bool = True,
     mode: Optional[Union[str, Mode]] = None,
-) -> Dict[str, np.ndarray]:
+    return_inferencedata=True,
+    idata_kwargs: dict = None,
+) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -1567,12 +1569,17 @@ def sample_posterior_predictive(
         time until completion ("expected time of arrival"; ETA).
     mode:
         The mode used by ``aesara.function`` to compile the graph.
+    return_inferencedata : bool
+        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
+        Defaults to True.
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
 
     Returns
     -------
-    samples : dict
-        Dictionary with the variable names as keys, and values numpy arrays containing
-        posterior predictive samples.
+    arviz.InferenceData or Dict
+        An ArviZ ``InferenceData`` object containing the posterior predictive samples (default), or
+        a dictionary with variable names as keys, and samples numpy arrays.
     """
 
     _trace: Union[MultiTrace, PointList]
@@ -1721,7 +1728,12 @@ def sample_posterior_predictive(
         for k, ary in ppc_trace.items():
             ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
 
-    return ppc_trace
+    if not return_inferencedata:
+        return ppc_trace
+    ikwargs = dict(model=model)
+    if idata_kwargs:
+        ikwargs.update(idata_kwargs)
+    return pm.to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
 
 
 def sample_posterior_predictive_w(
