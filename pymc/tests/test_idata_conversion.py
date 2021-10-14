@@ -66,8 +66,10 @@ class TestDataPyMC:
 
     def get_inference_data(self, data, eight_schools_params):
         with data.model:
-            prior = pm.sample_prior_predictive()
-            posterior_predictive = pm.sample_posterior_predictive(data.obj)
+            prior = pm.sample_prior_predictive(return_inferencedata=False)
+            posterior_predictive = pm.sample_posterior_predictive(
+                data.obj, return_inferencedata=False
+            )
 
         return (
             to_inference_data(
@@ -85,8 +87,10 @@ class TestDataPyMC:
         self, data, eight_schools_params, inplace
     ) -> Tuple[InferenceData, Dict[str, np.ndarray]]:
         with data.model:
-            prior = pm.sample_prior_predictive()
-            posterior_predictive = pm.sample_posterior_predictive(data.obj)
+            prior = pm.sample_prior_predictive(return_inferencedata=False)
+            posterior_predictive = pm.sample_posterior_predictive(
+                data.obj, return_inferencedata=False
+            )
 
             idata = to_inference_data(
                 trace=data.obj,
@@ -106,7 +110,9 @@ class TestDataPyMC:
         self, data, eight_schools_params
     ) -> Tuple[InferenceData, Dict[str, np.ndarray]]:
         with data.model:
-            posterior_predictive = pm.sample_posterior_predictive(data.obj)
+            posterior_predictive = pm.sample_posterior_predictive(
+                data.obj, return_inferencedata=False
+            )
             idata = predictions_to_inference_data(
                 posterior_predictive,
                 posterior_trace=data.obj,
@@ -199,7 +205,9 @@ class TestDataPyMC:
 
     def test_posterior_predictive_keep_size(self, data, chains, draws, eight_schools_params):
         with data.model:
-            posterior_predictive = pm.sample_posterior_predictive(data.obj, keep_size=True)
+            posterior_predictive = pm.sample_posterior_predictive(
+                data.obj, keep_size=True, return_inferencedata=False
+            )
             inference_data = to_inference_data(
                 trace=data.obj,
                 posterior_predictive=posterior_predictive,
@@ -214,7 +222,9 @@ class TestDataPyMC:
 
     def test_posterior_predictive_warning(self, data, eight_schools_params, caplog):
         with data.model:
-            posterior_predictive = pm.sample_posterior_predictive(data.obj, 370)
+            posterior_predictive = pm.sample_posterior_predictive(
+                data.obj, 370, return_inferencedata=False
+            )
             inference_data = to_inference_data(
                 trace=data.obj,
                 posterior_predictive=posterior_predictive,
@@ -375,10 +385,7 @@ class TestDataPyMC:
         with pm.Model():
             mu = pm.Normal("mu")
             x = pm.DensityDist(  # pylint: disable=unused-variable
-                "x",
-                mu,
-                logp=lambda value, mu: pm.Normal.logp(value, mu, 1),
-                observed=0.1,
+                "x", mu, logp=lambda value, mu: pm.Normal.logp(value, mu, 1), observed=0.1
             )
             inference_data = pm.sample(100, chains=2, return_inferencedata=True)
         test_dict = {
@@ -483,7 +490,9 @@ class TestDataPyMC:
             y = pm.Data("y", [1.0, 2.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
-            predictive_trace = pm.sample_posterior_predictive(inference_data)
+            predictive_trace = pm.sample_posterior_predictive(
+                inference_data, return_inferencedata=False
+            )
             assert set(predictive_trace.keys()) == {"obs"}
             # this should be four chains of 100 samples
             # assert predictive_trace["obs"].shape == (400, 2)
@@ -506,8 +515,8 @@ class TestDataPyMC:
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
             idata = pm.sample(100, tune=100)
-            prior = pm.sample_prior_predictive()
-            posterior_predictive = pm.sample_posterior_predictive(idata)
+            prior = pm.sample_prior_predictive(return_inferencedata=False)
+            posterior_predictive = pm.sample_posterior_predictive(idata, return_inferencedata=False)
 
         # Only prior
         inference_data = to_inference_data(prior=prior, model=model)
@@ -539,7 +548,7 @@ class TestDataPyMC:
             y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
-            prior = pm.sample_prior_predictive()
+            prior = pm.sample_prior_predictive(return_inferencedata=False)
 
         test_dict = {
             "prior": ["beta", "~obs"],
@@ -574,10 +583,7 @@ class TestDataPyMC:
 
     def test_constant_data_coords_issue_5046(self):
         """This is a regression test against a bug where a local coords variable was overwritten."""
-        dims = {
-            "alpha": ["backwards"],
-            "bravo": ["letters", "yesno"],
-        }
+        dims = {"alpha": ["backwards"], "bravo": ["letters", "yesno"]}
         coords = {
             "backwards": np.arange(17)[::-1],
             "letters": list("ABCDEFGHIJK"),
@@ -592,20 +598,13 @@ class TestDataPyMC:
             assert len(data[k].shape) == len(dims[k])
 
         ds = pm.backends.arviz.dict_to_dataset(
-            data=data,
-            library=pm,
-            coords=coords,
-            dims=dims,
-            default_dims=[],
-            index_origin=0,
+            data=data, library=pm, coords=coords, dims=dims, default_dims=[], index_origin=0
         )
         for dname, cvals in coords.items():
             np.testing.assert_array_equal(ds[dname].values, cvals)
 
     def test_issue_5043_autoconvert_coord_values(self):
-        coords = {
-            "city": pd.Series(["Bonn", "Berlin"]),
-        }
+        coords = {"city": pd.Series(["Bonn", "Berlin"])}
         with pm.Model(coords=coords) as pmodel:
             # The model tracks coord values as (immutable) tuples
             assert isinstance(pmodel.coords["city"], tuple)
@@ -631,11 +630,7 @@ class TestDataPyMC:
                 trace=mtrace,
                 coords={
                     "city": pd.MultiIndex.from_tuples(
-                        [
-                            ("Bonn", 53111),
-                            ("Berlin", 10178),
-                        ],
-                        names=["name", "zipcode"],
+                        [("Bonn", 53111), ("Berlin", 10178)], names=["name", "zipcode"]
                     )
                 },
             )
