@@ -1,3 +1,4 @@
+# "dev" conda envs are to be used by devs in setting their local environments
 name: pymc-dev-py38
 channels:
 - conda-forge
@@ -8,7 +9,7 @@ dependencies:
 - cachetools>=4.2.1
 - cloudpickle
 - fastprogress>=0.2.0
-- h5py
+- h5py>=2.7
 - ipython
 - myst-nb
 - numpy>=1.15.0
@@ -20,13 +21,11 @@ dependencies:
 - pytest>=3.0
 - python-graphviz
 - python=3.8
-- recommonmark>=0.4
 - scipy>1.4.1
 - sphinx-autobuild>=0.7
 - sphinx-notfound-page
 - sphinx-panels
 - sphinx>=1.5
 - typing-extensions>=3.7.4
-- watermark
 - pip:
   - sphinx-design

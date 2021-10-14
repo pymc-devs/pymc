@@ -52,7 +52,7 @@ repos:
     - id: pip-from-conda
       additional_dependencies: [pyyaml]
       entry: python scripts/generate_pip_deps_from_conda.py
-      files: ^conda-envs/
+      files: ^conda-envs/environment-dev-py.+.yml$
       language: python
       name: Generate pip dependency from conda
     - id: no-relative-imports
