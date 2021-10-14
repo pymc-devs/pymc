@@ -1,4 +1,5 @@
-from typing import List, Optional
+from copy import copy
+from typing import Callable, List, Optional
 
 import aesara.tensor as at
 import numpy as np
@@ -13,7 +14,7 @@ from aesara.tensor.random.opt import local_dimshuffle_rv_lift, local_subtensor_r
 from aesara.tensor.shape import shape_tuple
 from aesara.tensor.var import TensorVariable
 
-from aeppl.abstract import MeasurableVariable
+from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 from aeppl.logprob import _logprob, logprob
 from aeppl.opt import naive_bcast_rv_lift, rv_sinking_db, subtensor_ops
 from aeppl.utils import get_constant_value, indices_from_subtensor
@@ -135,16 +136,23 @@ def mixture_replace(fgraph, node):
     if mixture_res is None:
         return None  # pragma: no cover
 
-    mixture_rvs = mixture_res
-
     mixture_value_var = rv_map_feature.rv_values[out_var]
 
     # We loop through mixture components and collect all the array elements
     # that belong to each one (by way of their indices).
-    for i, component_rv in enumerate(mixture_rvs):
+    mixture_rvs = []
+    for i, component_rv in enumerate(mixture_res):
         if component_rv in rv_map_feature.rv_values:
-            raise ValueError("A value variable was specified for a mixture component")
-        component_rv.tag.ignore_logprob = True
+            raise ValueError(
+                f"A value variable was specified for a mixture component: {component_rv}"
+            )
+
+        # We create custom types for the mixture components and assign them
+        # null `get_measurable_outputs` dispatches so that they aren't
+        # erroneously encountered in places like `factorized_joint_logprob`.
+        new_node = assign_custom_measurable_outputs(component_rv.owner)
+        out_idx = component_rv.owner.outputs.index(component_rv)
+        mixture_rvs.append(new_node.outputs[out_idx])
 
     # Replace this sub-graph with a `MixtureRV`
     new_node = MixtureRV.create_node(node, node.inputs[1:], mixture_rvs)
@@ -153,10 +161,54 @@ def mixture_replace(fgraph, node):
     new_mixture_rv.name = "mixture"
     rv_map_feature.update_rv_maps(out_var, mixture_value_var, new_mixture_rv)
 
-    # FIXME: This is pretty hackish
-    fgraph.import_node(new_node, import_missing=True, reason="mixture_rv")
-
     return [new_mixture_rv]
+
+
+def noop_measurable_outputs_fn(*args, **kwargs):
+    return None
+
+
+def assign_custom_measurable_outputs(
+    node: Apply,
+    measurable_outputs_fn: Callable = noop_measurable_outputs_fn,
+    type_prefix: str = "Unmeasurable",
+) -> Apply:
+    """Assign a custom ``_get_measurable_outputs`` dispatch function to a measurable variable instance.
+
+    The node is cloned and a custom `Op` that's a copy of the original node's
+    `Op` is created.  That custom `Op` replaces the old `Op` in the cloned
+    node, and then a custom dispatch implementation is created for the clone
+    `Op` in `_get_measurable_outputs`.
+
+    Parameters
+    ==========
+    node
+        The node to recreate with a new cloned `Op`.
+    measurable_outputs_fn
+        The function that will be assigned to the new cloned `Op` in the
+        `_get_measurable_outputs` dispatcher.
+        The default is a no-op function (i.e. no measurable outputs)
+    type_prefix
+        The prefix used for the new type's name.
+        The default is "Unmeasurable", which matches the default
+        "measurable_outputs_fn".
+    """
+
+    new_node = node.clone()
+    op_type = type(new_node.op)
+    new_op_type = type(
+        f"{type_prefix}{op_type.__name__}", (op_type,), op_type.__dict__.copy()
+    )
+
+    new_node.op = copy(new_node.op)
+    new_node.op.__class__ = new_op_type
+
+    # TODO: The above could be a stand-alone utility function for all sorts of
+    # instance-based dispatching
+
+    _get_measurable_outputs.register(new_op_type)(measurable_outputs_fn)
+
+    return new_node
 
 
 @_logprob.register(MixtureRV)
