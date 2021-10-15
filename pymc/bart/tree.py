@@ -111,12 +111,13 @@ class Tree:
             Value of the leaf value where the unobserved point lies.
         """
         leaf_node, split_variable = self._traverse_tree(X, node_index=0)
-        if leaf_node.linear_params is None:
+        linear_params = leaf_node.linear_params
+        if linear_params is None:
             return leaf_node.value
         else:
             x = X[split_variable].item()
-            y_x = leaf_node.linear_params[0] + leaf_node.linear_params[1] * x
-            return y_x / m
+            y_x = (linear_params[0] + linear_params[1] * x) / m
+            return y_x + linear_params[2]
 
     def _traverse_tree(self, x, node_index=0, split_variable=None):
         """
@@ -136,10 +137,10 @@ class Tree:
             split_variable = current_node.idx_split_variable
             if x[split_variable] <= current_node.split_value:
                 left_child = current_node.get_idx_left_child()
-                current_node, _ = self._traverse_tree(x, left_child, split_variable)
+                current_node, split_variable = self._traverse_tree(x, left_child, split_variable)
             else:
                 right_child = current_node.get_idx_right_child()
-                current_node, _ = self._traverse_tree(x, right_child, split_variable)
+                current_node, split_variable = self._traverse_tree(x, right_child, split_variable)
         return current_node, split_variable
 
     def grow_tree(self, index_leaf_node, new_split_node, new_left_node, new_right_node):
