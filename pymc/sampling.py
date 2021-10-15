@@ -272,11 +272,11 @@ def sample(
     callback=None,
     jitter_max_retries=10,
     *,
-    return_inferencedata=None,
+    return_inferencedata=True,
     idata_kwargs: dict = None,
     mp_ctx=None,
     **kwargs,
-):
+) -> Union[InferenceData, MultiTrace]:
     r"""Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -341,9 +341,9 @@ def sample(
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
         that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
         init methods.
-    return_inferencedata : bool, default=True
+    return_inferencedata : bool
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
-        Defaults to `False`, but we'll switch to `True` in an upcoming release.
+        Defaults to `True`.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
     mp_ctx : multiprocessing.context.BaseContent
@@ -454,9 +454,6 @@ def sample(
 
     if not isinstance(random_seed, abc.Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
-
-    if return_inferencedata is None:
-        return_inferencedata = True
 
     if not discard_tuned_samples and not return_inferencedata:
         warnings.warn(
@@ -1539,7 +1536,9 @@ def sample_posterior_predictive(
     random_seed=None,
     progressbar: bool = True,
     mode: Optional[Union[str, Mode]] = None,
-) -> Dict[str, np.ndarray]:
+    return_inferencedata=True,
+    idata_kwargs: dict = None,
+) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -1574,12 +1573,17 @@ def sample_posterior_predictive(
         time until completion ("expected time of arrival"; ETA).
     mode:
         The mode used by ``aesara.function`` to compile the graph.
+    return_inferencedata : bool
+        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
+        Defaults to True.
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
 
     Returns
     -------
-    samples : dict
-        Dictionary with the variable names as keys, and values numpy arrays containing
-        posterior predictive samples.
+    arviz.InferenceData or Dict
+        An ArviZ ``InferenceData`` object containing the posterior predictive samples (default), or
+        a dictionary with variable names as keys, and samples as numpy arrays.
     """
 
     _trace: Union[MultiTrace, PointList]
@@ -1728,7 +1732,12 @@ def sample_posterior_predictive(
         for k, ary in ppc_trace.items():
             ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
 
-    return ppc_trace
+    if not return_inferencedata:
+        return ppc_trace
+    ikwargs = dict(model=model)
+    if idata_kwargs:
+        ikwargs.update(idata_kwargs)
+    return pm.to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
 
 
 def sample_posterior_predictive_w(
@@ -1738,6 +1747,8 @@ def sample_posterior_predictive_w(
     weights: Optional[ArrayLike] = None,
     random_seed: Optional[int] = None,
     progressbar: bool = True,
+    return_inferencedata=True,
+    idata_kwargs: dict = None,
 ):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
@@ -1764,12 +1775,18 @@ def sample_posterior_predictive_w(
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
+    return_inferencedata : bool
+        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
+        Defaults to True.
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
 
     Returns
     -------
-    samples : dict
-        Dictionary with the variables as keys. The values corresponding to the
-        posterior predictive samples from the weighted models.
+    arviz.InferenceData or Dict
+        An ArviZ ``InferenceData`` object containing the posterior predictive samples from the
+        weighted models (default), or a dictionary with variable names as keys, and samples as
+        numpy arrays.
     """
     if isinstance(traces[0], InferenceData):
         n_samples = [
@@ -1888,7 +1905,13 @@ def sample_posterior_predictive_w(
     except KeyboardInterrupt:
         pass
     else:
-        return {k: np.asarray(v) for k, v in ppc.items()}
+        ppc = {k: np.asarray(v) for k, v in ppc.items()}
+        if not return_inferencedata:
+            return ppc
+        ikwargs = dict(model=models)
+        if idata_kwargs:
+            ikwargs.update(idata_kwargs)
+        return pm.to_inference_data(posterior_predictive=ppc, **ikwargs)
 
 
 def sample_prior_predictive(
@@ -1897,7 +1920,9 @@ def sample_prior_predictive(
     var_names: Optional[Iterable[str]] = None,
     random_seed=None,
     mode: Optional[Union[str, Mode]] = None,
-) -> Dict[str, np.ndarray]:
+    return_inferencedata=True,
+    idata_kwargs: dict = None,
+) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate samples from the prior predictive distribution.
 
     Parameters
@@ -1913,12 +1938,17 @@ def sample_prior_predictive(
         Seed for the random number generator.
     mode:
         The mode used by ``aesara.function`` to compile the graph.
+    return_inferencedata : bool
+        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
+        Defaults to True.
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
 
     Returns
     -------
-    dict
-        Dictionary with variable names as keys. The values are numpy arrays of prior
-        samples.
+    arviz.InferenceData or Dict
+        An ArviZ ``InferenceData`` object containing the prior and prior predictive samples (default),
+        or a dictionary with variable names as keys and samples as numpy arrays.
     """
     model = modelcontext(model)
 
@@ -1984,7 +2014,13 @@ def sample_prior_predictive(
     for var_name in vars_:
         if var_name in data:
             prior[var_name] = data[var_name]
-    return prior
+
+    if not return_inferencedata:
+        return prior
+    ikwargs = dict(model=model)
+    if idata_kwargs:
+        ikwargs.update(idata_kwargs)
+    return pm.to_inference_data(prior=prior, **ikwargs)
 
 
 def _init_jitter(

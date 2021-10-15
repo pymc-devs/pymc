@@ -8,6 +8,8 @@
 - The GLM submodule has been removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
 - The `Distribution` keyword argument `testval` has been deprecated in favor of `initval`. Furthermore `initval` no longer assigns a `tag.test_value` on tensors since the initial values are now kept track of by the model object ([see #4913](https://github.com/pymc-devs/pymc/pull/4913)).
 - `pm.sample` now returns results as `InferenceData` instead of `MultiTrace` by default (see [#4744](https://github.com/pymc-devs/pymc/pull/4744)).
+- `pm.sample_prior_predictive`, `pm.sample_posterior_predictive` and `pm.sample_posterior_predictive_w` now return an `InferenceData` object
+  by default, instead of a dictionary (see [#5073](https://github.com/pymc-devs/pymc/pull/5073)).
 - `pm.sample_prior_predictive` no longer returns transformed variable values by default. Pass them by name in `var_names` if you want to obtain these draws (see [4769](https://github.com/pymc-devs/pymc/pull/4769)).
 - ⚠ `pm.Bound` interface no longer accepts a callable class as argument, instead it requires an instantiated distribution (created via the `.dist()` API) to be passed as an argument. In addition, Bound no longer returns a class instance but works as a normal PyMC distribution. Finally, it is no longer possible to do predictive random sampling from Bounded variables. Please, consult the new documentation for details on how to use Bounded variables (see [4815](https://github.com/pymc-devs/pymc/pull/4815)).
 - `pm.DensityDist` no longer accepts the `logp` as its first position argument. It is now an optional keyword argument. If you pass a callable as the first positional argument, a `TypeError` will be raised (see [5026](https://github.com/pymc-devs/pymc3/pull/5026)).

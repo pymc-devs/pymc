@@ -1583,7 +1583,7 @@ class TestMatrixNormal(BaseTestDistribution):
                 rowcov=np.eye(3),
                 colcov=np.eye(3),
             )
-            check = pm.sample_prior_predictive(n_fails)
+            check = pm.sample_prior_predictive(n_fails, return_inferencedata=False)
 
         ref_smp = ref_rand(mu=np.random.random((3, 3)), rowcov=np.eye(3), colcov=np.eye(3))
 
@@ -1922,7 +1922,7 @@ class TestNestedRandom(SeededTest):
             nested_rvs_info,
         )
         with model:
-            return pm.sample_prior_predictive(prior_samples)
+            return pm.sample_prior_predictive(prior_samples, return_inferencedata=False)
 
     @pytest.mark.parametrize(
         ["prior_samples", "shape", "mu", "alpha"],
@@ -2380,7 +2380,7 @@ def test_car_rng_fn(sparse):
     with pm.Model(rng_seeder=1):
         car = pm.CAR("car", mu, W, alpha, tau, size=size)
         mn = pm.MvNormal("mn", mu, cov, size=size)
-        check = pm.sample_prior_predictive(n_fails)
+        check = pm.sample_prior_predictive(n_fails, return_inferencedata=False)
 
     p, f = delta, n_fails
     while p <= delta and f > 0:

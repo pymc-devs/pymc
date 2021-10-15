@@ -55,17 +55,19 @@ class TestData(SeededTest):
             prior_trace1 = pm.sample_prior_predictive(1000)
             pp_trace1 = pm.sample_posterior_predictive(idata, samples=1000)
 
-        assert prior_trace0["b"].shape == (1000,)
-        assert prior_trace0["obs"].shape == (1000, 100)
-        assert prior_trace1["obs"].shape == (1000, 200)
+        assert prior_trace0.prior["b"].shape == (1, 1000)
+        assert prior_trace0.prior_predictive["obs"].shape == (1, 1000, 100)
+        assert prior_trace1.prior_predictive["obs"].shape == (1, 1000, 200)
 
-        assert pp_trace0["obs"].shape == (1000, 100)
+        assert pp_trace0.posterior_predictive["obs"].shape == (1, 1000, 100)
+        np.testing.assert_allclose(
+            x, pp_trace0.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
+        )
 
-        np.testing.assert_allclose(x, pp_trace0["obs"].mean(axis=0), atol=1e-1)
-
-        assert pp_trace1["obs"].shape == (1000, 200)
-
-        np.testing.assert_allclose(x_pred, pp_trace1["obs"].mean(axis=0), atol=1e-1)
+        assert pp_trace1.posterior_predictive["obs"].shape == (1, 1000, 200)
+        np.testing.assert_allclose(
+            x_pred, pp_trace1.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
+        )
 
     def test_sample_posterior_predictive_after_set_data(self):
         with pm.Model() as model:
@@ -86,8 +88,10 @@ class TestData(SeededTest):
             pm.set_data(new_data={"x": x_test})
             y_test = pm.sample_posterior_predictive(trace)
 
-        assert y_test["obs"].shape == (1000, 3)
-        np.testing.assert_allclose(x_test, y_test["obs"].mean(axis=0), atol=1e-1)
+        assert y_test.posterior_predictive["obs"].shape == (1, 1000, 3)
+        np.testing.assert_allclose(
+            x_test, y_test.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
+        )
 
     def test_sample_after_set_data(self):
         with pm.Model() as model:
@@ -116,8 +120,10 @@ class TestData(SeededTest):
             )
             pp_trace = pm.sample_posterior_predictive(new_idata, 1000)
 
-        assert pp_trace["obs"].shape == (1000, 3)
-        np.testing.assert_allclose(new_y, pp_trace["obs"].mean(axis=0), atol=1e-1)
+        assert pp_trace.posterior_predictive["obs"].shape == (1, 1000, 3)
+        np.testing.assert_allclose(
+            new_y, pp_trace.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
+        )
 
     def test_shared_data_as_index(self):
         """
@@ -130,7 +136,7 @@ class TestData(SeededTest):
             alpha = pm.Normal("alpha", 0, 1.5, size=3)
             pm.Normal("obs", alpha[index], np.sqrt(1e-2), observed=y)
 
-            prior_trace = pm.sample_prior_predictive(1000, var_names=["alpha"])
+            prior_trace = pm.sample_prior_predictive(1000)
             idata = pm.sample(
                 1000,
                 init=None,
@@ -146,10 +152,10 @@ class TestData(SeededTest):
             pm.set_data(new_data={"index": new_index, "y": new_y})
             pp_trace = pm.sample_posterior_predictive(idata, 1000, var_names=["alpha", "obs"])
 
-        assert prior_trace["alpha"].shape == (1000, 3)
+        assert prior_trace.prior["alpha"].shape == (1, 1000, 3)
         assert idata.posterior["alpha"].shape == (1, 1000, 3)
-        assert pp_trace["alpha"].shape == (1000, 3)
-        assert pp_trace["obs"].shape == (1000, 3)
+        assert pp_trace.posterior_predictive["alpha"].shape == (1, 1000, 3)
+        assert pp_trace.posterior_predictive["obs"].shape == (1, 1000, 3)
 
     def test_shared_data_as_rv_input(self):
         """

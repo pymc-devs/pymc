@@ -179,6 +179,7 @@ class SMC_KERNEL(ABC):
             self.draws,
             var_names=[v.name for v in self.model.unobserved_value_vars],
             model=self.model,
+            return_inferencedata=False,
         )
 
     def _initialize_kernel(self):

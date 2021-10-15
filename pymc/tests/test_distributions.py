@@ -3249,7 +3249,7 @@ def test_distinct_rvs():
         X_rv = pm.Normal("x")
         Y_rv = pm.Normal("y")
 
-        pp_samples = pm.sample_prior_predictive(samples=2)
+        pp_samples = pm.sample_prior_predictive(samples=2, return_inferencedata=False)
 
     assert X_rv.owner.inputs[0] != Y_rv.owner.inputs[0]
 
@@ -3259,7 +3259,7 @@ def test_distinct_rvs():
         X_rv = pm.Normal("x")
         Y_rv = pm.Normal("y")
 
-        pp_samples_2 = pm.sample_prior_predictive(samples=2)
+        pp_samples_2 = pm.sample_prior_predictive(samples=2, return_inferencedata=False)
 
     assert np.array_equal(pp_samples["y"], pp_samples_2["y"])
 
