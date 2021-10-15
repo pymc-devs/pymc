@@ -461,7 +461,7 @@ or public document detailing the
 
 For decisions about the project the Council will perform it directly on the proposal issue. For decisions about people, such as electing or ejecting Core Contributors, the Council will vote privately. However the decision will be posted publicly in an issue ticket.
 
-### Vote of no conficence
+### Vote of no confidence
 In exceptional circumstances, Council Members as well as Core Contributors
 may remove a sitting council member via a vote of no confidence.
 Core contributors can also call for a vote to remove the entire council
@@ -576,7 +576,7 @@ core contributor membership sections.
 ### Documentation Team
 The focus of the documentation team is ensuring the PyMC library
 is well documented, building and maintaining the infrastructure needed
-for that aim and making sure there are resources to learn
+for that aim, and making sure there are resources to learn
 Bayesian statistics with PyMC.
 It is not the goal nor responsibility of the Documentation team to
 write all the documentation for the PyMC library.
@@ -691,7 +691,7 @@ and council members.
 
 ## Sponsors
 Sponsors are Organizations that provide significant funding to the PyMC project
-either directly or by sponsoring PyMCon.
+directly.
 Prospective sponsors should reach out to the Steering Council and provide them
 with a proof of donation in order to have the sponsorship approved.
 The PyMC project reserves the right to not approve a sponsorship if
