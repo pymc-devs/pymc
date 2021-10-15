@@ -165,8 +165,10 @@ class Distribution(metaclass=DistributionMeta):
         dims : tuple, optional
             A tuple of dimension names known to the model.
         initval : optional
-            Test value to be attached to the output RV.
-            Must match its shape exactly.
+            Numeric or symbolic untransformed initial value of matching shape,
+            or one of the following initial value strategies: "moment", "prior".
+            Depending on the sampler's settings, a random jitter may be added to numeric, symbolic
+            or moment-based initial values in the transformed space.
         observed : optional
             Observed data to be passed when registering the random variable in the model.
             See ``Model.register_rv``.
@@ -600,31 +602,16 @@ class DensityDist(NoDistribution):
         else:
             dtype = cls.rv_op.dtype
         ndim_supp = cls.rv_op.ndim_supp
-        if not hasattr(output.tag, "test_value"):
-            size = to_tuple(kwargs.get("size", None)) + (1,) * ndim_supp
-            output.tag.test_value = np.zeros(size, dtype)
         return output
 
 
 def default_not_implemented(rv_name, method_name):
-    if method_name == "random":
-        # This is a hack to catch the NotImplementedError when creating the RV without random
-        # If the message starts with "Cannot sample from", then it uses the test_value as
-        # the initial_val.
-        message = (
-            f"Cannot sample from the DensityDist '{rv_name}' because the {method_name} "
-            "keyword argument was not provided when the distribution was "
-            f"but this method had not been provided when the distribution was "
-            f"constructed. Please re-build your model and provide a callable "
-            f"to '{rv_name}'s {method_name} keyword argument.\n"
-        )
-    else:
-        message = (
-            f"Attempted to run {method_name} on the DensityDist '{rv_name}', "
-            f"but this method had not been provided when the distribution was "
-            f"constructed. Please re-build your model and provide a callable "
-            f"to '{rv_name}'s {method_name} keyword argument.\n"
-        )
+    message = (
+        f"Attempted to run {method_name} on the DensityDist '{rv_name}', "
+        f"but this method had not been provided when the distribution was "
+        f"constructed. Please re-build your model and provide a callable "
+        f"to '{rv_name}'s {method_name} keyword argument.\n"
+    )
 
     def func(*args, **kwargs):
         raise NotImplementedError(message)

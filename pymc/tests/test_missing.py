@@ -27,15 +27,14 @@ from pymc.sampling import sample, sample_posterior_predictive, sample_prior_pred
 
 
 @pytest.mark.parametrize(
-    "data",
-    [ma.masked_values([1, 2, -1, 4, -1], value=-1), pd.DataFrame([1, 2, np.nan, 4, np.nan])],
+    "data", [ma.masked_values([1, 2, -1, 4, -1], value=-1), pd.DataFrame([1, 2, np.nan, 4, np.nan])]
 )
 def test_missing(data):
 
     with Model() as model:
         x = Normal("x", 1, 1)
         with pytest.warns(ImputationWarning):
-            y = Normal("y", x, 1, observed=data)
+            _ = Normal("y", x, 1, observed=data)
 
     assert "y_missing" in model.named_vars
 
@@ -43,7 +42,7 @@ def test_missing(data):
     assert not np.isnan(model.logp(test_point))
 
     with model:
-        prior_trace = sample_prior_predictive()
+        prior_trace = sample_prior_predictive(return_inferencedata=False)
     assert {"x", "y"} <= set(prior_trace.keys())
 
 
@@ -61,7 +60,7 @@ def test_missing_with_predictors():
     assert not np.isnan(model.logp(test_point))
 
     with model:
-        prior_trace = sample_prior_predictive()
+        prior_trace = sample_prior_predictive(return_inferencedata=False)
     assert {"x", "y"} <= set(prior_trace.keys())
 
 
@@ -77,7 +76,7 @@ def test_missing_dual_observations():
         with pytest.warns(ImputationWarning):
             ovar2 = Normal("o2", mu=beta2 * latent, observed=obs2)
 
-        prior_trace = sample_prior_predictive()
+        prior_trace = sample_prior_predictive(return_inferencedata=False)
         assert {"beta1", "beta2", "theta", "o1", "o2"} <= set(prior_trace.keys())
         # TODO: Assert something
         trace = sample(chains=1, draws=50)
@@ -101,7 +100,7 @@ def test_interval_missing_observations():
             model.rvs_to_values[model.named_vars["theta1_observed"]].tag.transform, Interval
         )
 
-        prior_trace = sample_prior_predictive()
+        prior_trace = sample_prior_predictive(return_inferencedata=False)
 
         # Make sure the observed + missing combined deterministics have the
         # same shape as the original observations vectors
@@ -122,10 +121,7 @@ def test_interval_missing_observations():
         assert {"theta1", "theta2"} <= set(prior_trace.keys())
 
         trace = sample(
-            chains=1,
-            draws=50,
-            compute_convergence_checks=False,
-            return_inferencedata=False,
+            chains=1, draws=50, compute_convergence_checks=False, return_inferencedata=False
         )
 
         assert np.all(0 < trace["theta1_missing"].mean(0))
@@ -135,7 +131,7 @@ def test_interval_missing_observations():
 
         # Make sure that the observed values are newly generated samples and that
         # the observed and deterministic matche
-        pp_trace = sample_posterior_predictive(trace)
+        pp_trace = sample_posterior_predictive(trace, return_inferencedata=False)
         assert np.all(np.var(pp_trace["theta1"], 0) > 0.0)
         assert np.all(np.var(pp_trace["theta2"], 0) > 0.0)
         assert np.mean(pp_trace["theta1"][:, ~obs1.mask] - pp_trace["theta1_observed"]) == 0.0

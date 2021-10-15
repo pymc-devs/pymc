@@ -17,8 +17,9 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 """
-import copy
 import sys
+
+from typing import Optional
 
 import aesara.gradient as tg
 import numpy as np
@@ -31,7 +32,8 @@ import pymc as pm
 
 from pymc.aesaraf import inputvars
 from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.model import Point, modelcontext
+from pymc.initial_point import make_initial_point_fn
+from pymc.model import modelcontext
 from pymc.util import get_default_varnames, get_var_name
 from pymc.vartypes import discrete_types, typefilter
 
@@ -48,6 +50,7 @@ def find_MAP(
     maxeval=5000,
     model=None,
     *args,
+    seed: Optional[int] = None,
     **kwargs
 ):
     """Finds the local maximum a posteriori point given a model.
@@ -95,14 +98,16 @@ def find_MAP(
     vars = inputvars(vars)
     disc_vars = list(typefilter(vars, discrete_types))
     allinmodel(vars, model)
-    start = copy.deepcopy(start)
-    if start is None:
-        start = model.initial_point
-    else:
-        model.update_start_vals(start, model.initial_point)
+    ipfn = make_initial_point_fn(
+        model=model,
+        jitter_rvs={},
+        return_transformed=True,
+        overrides=start,
+    )
+    if seed is None:
+        seed = model.rng_seeder.randint(2 ** 30, dtype=np.int64)
+    start = ipfn(seed)
     model.check_start_vals(start)
-
-    start = Point(start, model=model)
 
     x0 = DictToArrayBijection.map(start)
 

@@ -60,6 +60,7 @@ import pymc as pm
 from pymc.aesaraf import at_rng, identity, rvs_to_value_vars
 from pymc.backends import NDArray
 from pymc.blocking import DictToArrayBijection
+from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
 from pymc.util import WithMemoization, locally_cachedmethod
 from pymc.variational.updates import adagrad_window
@@ -861,16 +862,17 @@ class Group(WithMemoization):
             self.__init_group__(self.group)
 
     def _prepare_start(self, start=None):
-        if start is None:
-            start = self.model.initial_point
-        else:
-            start_ = start.copy()
-            self.model.update_start_vals(start_, self.model.initial_point)
-            start = start_
+        ipfn = make_initial_point_fn(
+            model=self.model,
+            overrides=start,
+            jitter_rvs={},
+            return_transformed=True,
+        )
+        start = ipfn(self.model.rng_seeder.randint(2 ** 30, dtype=np.int64))
         group_vars = {self.model.rvs_to_values[v].name for v in self.group}
         start = {k: v for k, v in start.items() if k in group_vars}
         if self.batched:
-            start = start[self.model.rvs_to_values[self.group[0]].name][0]
+            start = start[self.group[0].name][0]
         else:
             start = DictToArrayBijection.map(start).data
         return start

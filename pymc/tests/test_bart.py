@@ -43,7 +43,7 @@ def test_bart_vi():
         )
         var_imp /= var_imp.sum()
         assert var_imp[0] > var_imp[1:].sum()
-        np.testing.assert_almost_equal(var_imp.sum(), 1)
+        assert_almost_equal(var_imp.sum(), 1)
 
 
 def test_bart_random():
@@ -61,8 +61,7 @@ def test_bart_random():
     rng = RandomState(12345)
     pred_first = mu.owner.op.rng_fn(rng, X_new=X[:10])
 
-    # XXX: is this supposed to work?
-    # np.testing.assert_almost_equal(pred_first, pred_all[0, :10], decimal=4)
+    np.testing.assert_almost_equal(pred_first, pred_all[0, :10], decimal=4)
     assert pred_all.shape == (2, 50)
     assert pred_first.shape == (10,)
 
