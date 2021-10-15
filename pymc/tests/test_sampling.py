@@ -472,36 +472,38 @@ class TestSamplePPC(SeededTest):
             trace = pm.sample(
                 draws=ndraws,
                 chains=nchains,
+                return_inferencedata=False,
             )
 
         with model:
             # test list input
-            ppc0 = pm.sample_posterior_predictive([model.initial_point], samples=10)
+            ppc0 = pm.sample_posterior_predictive(
+                [model.initial_point], samples=10, return_inferencedata=False
+            )
             # # deprecated argument is not introduced to fast version [2019/08/20:rpg]
-            ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
+            ppc = pm.sample_posterior_predictive(trace, var_names=["a"], return_inferencedata=False)
             # test empty ppc
-            ppc = pm.sample_posterior_predictive(trace, var_names=[])
+            ppc = pm.sample_posterior_predictive(trace, var_names=[], return_inferencedata=False)
             assert len(ppc) == 0
 
             # test keep_size parameter
-            ppc = pm.sample_posterior_predictive(trace, keep_size=True)
-            assert ppc.posterior_predictive["a"].shape == (1, nchains, ndraws)
+            ppc = pm.sample_posterior_predictive(trace, keep_size=True, return_inferencedata=False)
+            assert ppc["a"].shape == (nchains, ndraws)
 
             # test default case
-            ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
-            assert "a" in ppc.posterior_predictive.data_vars
-            assert ppc.posterior_predictive["a"].shape == (1, nchains * ndraws)
+            ppc = pm.sample_posterior_predictive(trace, var_names=["a"], return_inferencedata=False)
+            assert "a" in ppc
+            assert ppc["a"].shape == (nchains * ndraws,)
             # mu's standard deviation may have changed thanks to a's observed
-            _, pval = stats.kstest(
-                ppc.posterior_predictive["a"] - trace.posterior["mu"],
-                stats.norm(loc=0, scale=1).cdf,
-            )
+            _, pval = stats.kstest(ppc["a"] - trace["mu"], stats.norm(loc=0, scale=1).cdf)
             assert pval > 0.001
 
         # size argument not introduced to fast version [2019/08/20:rpg]
         with model:
-            ppc = pm.sample_posterior_predictive(trace, size=5, var_names=["a"])
-            assert ppc.posterior_predictive["a"].shape == (1, nchains * ndraws, 5)
+            ppc = pm.sample_posterior_predictive(
+                trace, size=5, var_names=["a"], return_inferencedata=False
+            )
+            assert ppc["a"].shape == (nchains * ndraws, 5)
 
     def test_normal_vector(self, caplog):
         with pm.Model() as model:
