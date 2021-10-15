@@ -505,6 +505,29 @@ class TestSamplePPC(SeededTest):
             )
             assert ppc["a"].shape == (nchains * ndraws, 5)
 
+    def test_normal_scalar_idata(self):
+        nchains = 2
+        ndraws = 500
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0)
+            a = pm.Normal("a", mu=mu, sigma=1, observed=0.0)
+            trace = pm.sample(
+                draws=ndraws,
+                chains=nchains,
+                return_inferencedata=False,
+                discard_tuned_samples=False,
+            )
+
+        assert not isinstance(trace, InferenceData)
+
+        with model:
+            # test keep_size parameter and idata input
+            idata = pm.to_inference_data(trace)
+            assert isinstance(idata, InferenceData)
+
+            ppc = pm.sample_posterior_predictive(idata, keep_size=True, return_inferencedata=False)
+            assert ppc["a"].shape == (nchains, ndraws)
+
     def test_normal_vector(self, caplog):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
