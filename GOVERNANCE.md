@@ -506,7 +506,7 @@ After voting:
   Voting is blind and mediated by either an application or a third party like NumFOCUS.
   Each voter can vote zero or more times, once per each candidate.
   As this is not about ranking but about capabilities,
-  voters vote on a yes/neutral/no basis per candidate -- “would I trust this person to lead ArviZ?”.
+  voters vote on a yes/neutral/no basis per candidate -- “would I trust this person to lead PyMC?”.
 * Candidates are evaluated independently,
   each candidate having 60% or more of yes votes and less or
   equal than 20% of no votes is chosen.
@@ -545,7 +545,7 @@ After voting:
 ## Leaving the project
 Any contributor can also voluntarily leave the project by notifying the community through a public means or by notifying the entire council. When doing so, they can add themselves to the alumni section below if desired.
 
-People who leave the project voluntarily can rejoin at any time
+People who leave the project voluntarily can rejoin at any time.
 
 ## Team Organization
 As stated previously, The Team will generally act as a single unit,
@@ -602,7 +602,7 @@ Role:
 - Core Contributors are given write permissions
 
 Team:
-* Development team members are given permissions to [pymc](https://github.com/pymc-devs/pymc) repository
+* Development team members are given permissions to the [pymc](https://github.com/pymc-devs/pymc) repository.
 * Documentation team members are given permissions to [pymc-examples](https://github.com/pymc-devs/pymc-examples)
   and [resources](https://github.com/pymc-devs/resources) repositories.
 
