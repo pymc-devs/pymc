@@ -30,8 +30,8 @@ Contributors work on behalf of and are responsible to the larger Project
 Community and we strive to keep the barrier between Contributors and Users as
 low as possible.
 
-The Project is formally affiliated with the 501c3 NumFOCUS Foundation
-([http://numfocus.org](http://numfocus.org)), which serves as its fiscal
+The Project is formally affiliated with the 501c3
+[NumFOCUS Foundation](http://numfocus.org), which serves as its fiscal
 sponsor, may hold project trademarks and other intellectual property, helps
 manage project donations and acts as a parent legal entity. NumFOCUS is the
 only legal entity that has a formal relationship with the project (see
@@ -95,14 +95,14 @@ Recurrent Contributors don't have voting, managing or writing rights.
 
 In practice, this translates in participating from private team discussions
 (i.e. in Slack or live meetings) but not being able to vote Steering Council
-members or having commit rights on GitHub.
+members nor having commit rights on GitHub.
 
 The Recurrent Contributor position will often be an intermediate step for people
 in becoming Core Contributors once their contributions are frequent enough
 and during a sustained period of time.
 But it is also an important role by itself for people who want to be part of
 the project but don't have the time or don't want the responsibilities that
-come with being a Core Contributors.
+come with being a Core Contributor.
 
 ### Recurring Contributor membership
 Recurring Contributors can nominate any Contributor to participate in the
@@ -112,10 +112,30 @@ For the nomination to go forward, it has to be ratified by the Steering Council.
 For a nomination to be rejected, clear reasoning behind the decision must be
 shared with the rest of the team. People whose nomination has been rejected can
 be nominated at any time again in the future, three months after the previous
-nomination at the earliest.
+nomination at the earliest. The nomination process is explained below
+in more detail in a section of its own.
+
+Interns and contractors are added to the team as Recurrent Contributors.
+We consider the selection/hiring process to replace the nomination process.
 
 #### Current Recurring Contributors
+Contributors who are also part of a dedicated team or are institutional
+contributors will have so indicated after their name.
+Dedicated teams only cover a small part of the work needed to
+get the project going, tasks like fundraising, outreach and marketing,
+or organizing events for example don't (yet) have a dedicated team.
+Contributors don't need to be part of any dedicated team.
 
+- Abhipsha Das (docs)
+- Benjamin Vincent (docs - PyMC Labs)
+- Bill Engels (dev)
+- Jon Sedar
+- Kaustubh Chaudhari (dev)
+- Larry Dong (dev)
+- Lorenzo Toniazzi (docs)
+- Olga Khan (docs)
+- Peadar Coyle
+- Raul Maldonado (docs)
 - everyone on slack! This may be too long so it could be a good idea to
 format as a table instead or to put within a `<details>` tag so
 it's hidden by default while still available publicly
@@ -144,32 +164,36 @@ be nominated at any time again in the future, three months after the previous
 nomination at the earliest.
 
 ### Current Core Contributors
-<!-- a table will probably look better, but we can worry about that later -->
+Contributors who are also part of a dedicated team or are institutional
+contributors will have so indicated after their name.
+Dedicated teams only cover a small part of the work needed to
+get the project going, tasks like fundraising, outreach and marketing,
+or organizing events for example don't (yet) have a dedicated team.
+Contributors don't need to be part of any dedicated team.
 
-* Adrian Seyboldt
-* Alex Andorra
+* Adrian Seyboldt (dev - PyMC Labs)
+* Alex Andorra (dev - PyMC Labs)
 * Austin Rochford
-* Brandon T. Willard
-* Chris Fonnesbeck
-* Colin Carroll
-* Eelke Spaak
-* Eric Ma
-* George Ho
-* John Salvatier
-* Junpeng Lao
-* Luciano Paz
-* Marco E. Gorelli
-* Martina Cantaro
-* Maxim Kochurov
-* Meenal Jhajharia
-* Michael Osthege
-* Oriol Abril-Pla
-* Osvaldo Martin
-* Ravin Kumar
-* Ricardo Vieira
-* Robert P. Goldman
-* Sayam Kumar
-* Thomas Wiecki
+* Brandon T. Willard (dev)
+* Chris Fonnesbeck (dev, docs)
+* Colin Carroll (dev)
+* Eelke Spaak (dev)
+* Eric Ma (dev - PyMC Labs)
+* George Ho (dev)
+* Junpeng Lao (dev)
+* Luciano Paz (dev - PyMC Labs)
+* Marco E. Gorelli (dev, docs)
+* Martina Cantaro (docs)
+* Maxim Kochurov (dev - PyMC Labs)
+* Meenal Jhajharia (dev, docs)
+* Michael Osthege (dev, docs)
+* Oriol Abril-Pla (docs)
+* Osvaldo Martin (dev, docs)
+* Ravin Kumar (dev, docs)
+* Ricardo Vieira (dev)
+* Robert P. Goldman (dev)
+* Sayam Kumar (dev, docs)
+* Thomas Wiecki (dev - PyMC Labs)
 
 ## Steering Council
 
@@ -199,8 +223,7 @@ In particular, the Council may:
 - Make decisions about strategic collaborations with other organizations or
   individuals.
 - Make decisions about specific technical issues, features, bugs and pull
-  requests. They are the primary mechanism of guiding the code review process
-  and merging pull requests.
+  requests.
 - Make decisions about the Services that are run by The Project and manage
   those Services for the benefit of the Project and Community.
 - Make decisions when regular community discussion doesn’t produce consensus
@@ -214,7 +237,7 @@ The current Steering Council membership comprises:
   The process for renewing and electing a new member is the same so it won't
   make any difference.
 
-Institutional Contributors are indicated as `name (company)`
+Institutional Council Members are indicated as `name (company)`
 
 ### Council membership
 
@@ -224,7 +247,8 @@ quality and quantity, and sustained over at least one year. Potential Council
 after asking if the potential Member is interested and willing
 to serve in that capacity.
 
-When considering potential Members, the Council will look at candidates with a
+Similarly to when nominating new team members, when considering potential
+Council Members one should look at candidates with a
 comprehensive view of their contributions. This will include but is not limited
 to code, code review, infrastructure work, mailing list and chat participation,
 community help/building, education and outreach, design work, etc. We are
@@ -245,27 +269,30 @@ responsibilities for an extended interval of time.
 If a Council member becomes inactive in the project for a period of six months,
 they will be considered for removal from the Council. Before removal, inactive
 Member will be approached by the BDFL to see if they plan on returning to
-active participation. If not they will be removed immediately upon a Council
-vote. If they plan on returning to active participation soon, they will be
+active participation. If not they will be removed immediately, as they
+are effectively renouncing to their position.
+If they plan on returning to active participation soon, they will be
 given a grace period of six months. If they don’t return to active participation
-within that time period they will be removed by vote of the Council without
+within that time period they will be removed without
 further grace period. All former Council members can be considered for
-membership again at any time in the future, like any other Core Contributor.
- Retired Council members will be listed on the project website, acknowledging
+membership again at any time in the future.
+Retired Council members will be listed on the project website, acknowledging
 the period during which they were active in the Council.
 
 The Council reserves the right to eject current Members, other than the BDFL,
 if they are deemed to be actively harmful to the project’s well-being, and
-attempts at communication and conflict resolution have failed.
+attempts at communication and conflict resolution have failed. See
+the section on votes of no-confidence for details on the process.
 
 ### Private communications of the Council
 
 Unless specifically required, all Council discussions and activities will be
-public and done in collaboration and discussion with the Project Contributors
-and Community. The Council will have a private mailing list that will be used
+public and done in collaboration and discussion with the Project Team
+and also the Community when possible.
+The Council will have a private mailing list that will be used
 sparingly and only when a specific matter requires privacy. When private
 communications and decisions are needed, the Council will do its best to
-summarize those to the Community after eliding personal/private/sensitive
+summarize those to the Team after eliding personal/private/sensitive
 information that should not be posted to the public internet.
 
 ### Subcommittees
@@ -273,8 +300,7 @@ information that should not be posted to the public internet.
 The Council can create subcommittees that provide leadership and guidance for
 specific aspects of the project. Like the Council as a whole, subcommittees
 should conduct their business in an open and public manner unless privacy is
-specifically called for. Private subcommittee communications should happen on
-the main private mailing list of the Council unless specifically called for.
+specifically called for.
 
 Even if the BDFL does not sit on a specific subcommittee, they still retain
 override authority on the subcommittee's decisions. However, it is expected that
@@ -297,11 +323,16 @@ interactions with NumFOCUS.
   Council.
 - This Subcommittee shall NOT make decisions about the direction, scope or
   technical direction of the Project.
-- This Subcommittee will have 5 members, 4 of whom will be current Council
-  Members and 1 of whom will be external to the Steering Council. No more
-  than 2 Subcommitee Members can report to one person through employment or
-  contracting work (including the reportee, i.e. the reportee + 1 is the
-  max). This avoids effective majorities resting on one person.
+
+#### NumFOCUS subcommittee membership
+This Subcommittee will have 5 members. With at least
+2 members being on the Steering Council. No more
+than 2 Subcommitee Members can report to one person or company through
+employment or contracting work (including the reportee, i.e.
+the reportee + 1 is the max).
+This avoids effective majorities resting on one person.
+
+Any Core Contributor is eligible for the NumFOCUS subcommittee.
 
 #### Current NumFOCUS Subcommitee
 The current NumFOCUS Subcommittee consists of:
@@ -357,7 +388,80 @@ issue, but must recuse themselves from voting on the issue. If the BDFL has
 recused themselves for a particular decision, they will appoint a substitute
 BDFL for that decision.
 
-## Vote of no conficence
+## Voting processes
+### Nomination process
+> Used when adding members to the team as recurrent or core contributors.
+
+A nomination process is triggered automatically whenever a team member
+requests so on one of the team's communication channels
+(public Slack channels at the day of writing, preferably `#general`).
+Nomination should be explicit regarding which roles and teams are
+requested. Again, note that team members don't need to be part of any
+dedicated team to be recurrent nor core contributors.
+
+After this happens, the Steering Council will reach out to the candidate
+to see if they accept the nomination. If the nomination is accepted
+it will be considered by the Steering Council.
+At their earliest convenience and no later than two weeks, the Steering
+Council will vote on the nominee using the process below on
+Steering Council decisions.
+
+Voting will be private to the Steering Council only with results published
+on the nomination request.
+In the case of a rejection, results must include the reasons behind
+the decision (i.e. the time since starting to contribute is deemed
+too short for now).
+
+### Steering Council decisions
+By and large we expect the decisions in PyMC to be made _ad hoc_
+and require little formal coordination and with the community at large.
+However, for controversial proposals and new team members the council can
+intervene to make the final decision in a group vote.
+
+#### Call for a vote
+Core Contributors can call for a vote to resolve a target issue
+they feel has been stale for too long and for which
+informal consensus appears unlikely.
+For a vote to be called, the target issue must be at least 2 months old.
+
+To do so, they have to open a proposal issue ticket labeled "Council Vote".
+The proposal issue should contain a link to the target issue and
+a proposal on how to resolve it.
+Proposals should include a statement making clear what it means to
+"agree" or to "disagree".
+
+Before voting starts, at least 3 days will be left for Core Contributors
+to raise doubts about the proposal's phrasing, no extra discussion will
+take place in the proposal issue.
+Proposal issues should be locked from creation to prevent attracting
+discussion from people not familiar with the decision process.
+
+A vote is also called automatically whenever someone is nominated to
+be added to the team.
+
+The Steering Council can also call a vote on their own in order
+to eject a Core contributor.
+
+Upon ejecting a core contributor the council must publish an issue ticket,
+or public document detailing the
+* Violations
+* Evidence if available
+* Remediation plan (if necessary)
+* Signatures majority of council members to validate correctness and accuracy
+
+#### Voting
+
+* Each Council Member will vote either "Yes", "No", or "Neutral".
+* It is recommended that all Council Members expose their reasons when voting.
+  "No" votes, however, must list the reasons for disagreement.
+  Any "No" vote with no reason listed will be considered a "Neutral" vote.
+* An absence of vote is considered as "Neutral".
+* Voting will remain open for at least 3 days.
+* For the proposal to pass, at least 60% of the council must vote "Yes", and no more than 20% can vote "No".
+
+For decisions about the project the Council will perform it directly on the proposal issue. For decisions about people, such as electing or ejecting Core Contributors, the Council will vote privately. However the decision will be posted publicly in an issue ticket.
+
+### Vote of no conficence
 In exceptional circumstances, Council Members as well as Core Contributors
 may remove a sitting council member via a vote of no confidence.
 Core contributors can also call for a vote to remove the entire council
@@ -387,14 +491,56 @@ After voting:
   nomination again.
 * If a whole-council vote succeeds, the council is dissolved and a new council election is triggered immediately.
 
-## Ejecting Core Contributors
-Core contributors can be ejected through a simple majority vote by the council. Council members vote "Yes" or "No".
+### Election process
+> Used when choosing the steering council and it's subcommittees
 
-Upon ejecting a core contributor the council must publish an issue ticket, or public document detailing the
-* Violations
-* Evidence if available
-* Remediation plan (if necessary)
-* Signatures majority of council members to validate correctness and accuracy
+#### Nominations
+* Nominations are taken over a single GitHub issue ticket over the course of 2 weeks.
+* Only Core Contributors may nominate folks
+* Self Nominations are allowed
+* At the conclusion of the 2 weeks, the list of nominations is posted on the ticket and this ticket is closed.
+
+#### Voting
+
+* Voting occurs over a period of at least 1 week, at the conclusion of the nominations.
+  Voting is blind and mediated by either an application or a third party like NumFOCUS.
+  Each voter can vote zero or more times, once per each candidate.
+  As this is not about ranking but about capabilities,
+  voters vote on a yes/neutral/no basis per candidate -- “would I trust this person to lead ArviZ?”.
+* Candidates are evaluated independently,
+  each candidate having 60% or more of yes votes and less or
+  equal than 20% of no votes is chosen.
+  If the number of chosen candidates matches the number or range set for the
+  council/subcommittee being chosen and all extra constrained are met,
+  all candidates are confirmed and the election process stops here.
+* In the event that not enough/too many candidates were confirmed or
+  the membership constraints were not met,
+  candidates are ranked by interpreting yes=+1, neutral=0 and no=-1.
+  * If too many candidates were confirmed,
+    the {max_range} number of candidates with higher rank are elected.
+  * If not enough candidates were chosen,
+    the {min_range} number of candidates with higher rank are elected.
+  * If membership constraints were not met, candidates are selected
+    progressively by rank if they meet the membership requirements.
+    If for example out of 7 candidates for the NumFOCUS subcommittee
+    only three are on the Steering Council and they were ranked 5th-7th,
+    in order to meet the membership constraints, the person ranked 4th
+    would not be elected, as their election would prevent membership
+    requirements from being met.
+* In the event of a tie there will be a runoff election for the tied candidates.
+  To avoid further ties and discriminate more among the tied candidates,
+  this vote will be held by Majority Judgment (MJ):
+  for each candidate, voters judge their suitability for office as either
+  "Excellent", "Very Good", "Good", "Acceptable", "Poor", or "Reject".
+  Multiple candidates may be given the same grade by a voter.
+  The candidate with the highest median grade is the winner.
+* If more than one candidate has the same highest median-grade,
+  the MJ winner is discovered by removing (one-by-one) any grades equal
+  in value to the shared median grade from each tied candidate's total.
+  This is repeated until only one of the previously tied candidates
+  is currently found to have the highest median-grade.
+* If ties are still present after this second round, the winner will be chosen at random. Each person tied will pick an integer number in the [1, 100] interval and send it privately to the third party mediating the election. After receiving all the numbers, said third party will draw a random integer from random.org. The person with the closest circular distance, defined as min(|a-b|, 100-|a-b|), will be selected. This process will be repeated as many times as necessary as there may be ties resulting from candidates choosing the same number.
+* At the conclusion of voting, all the results will be posted. And at least 24 hours will be left to challenge the election result in case there were suspicions of irregularities or the process had not been correctly carried out.
 
 ## Leaving the project
 Any contributor can also voluntarily leave the project by notifying the community through a public means or by notifying the entire council. When doing so, they can add themselves to the alumni section below if desired.
@@ -415,13 +561,17 @@ involved in The Project to attract more diverse Contributors.
 The PyMC project currently counts with the Developer and Documentation teams.
 Team members can be part of one, some or none of these dedicated teams.
 
+Team members are expected to participate and join these dedicated teams
+organically, that is, the Steering Council will take part actively
+in team assignments if they are part of a role change with the respective
+nomination.
+
 ### Developer Team
 The focus of the developer team is the probabilistic programming library
 and flagship of The Project, [PyMC](https://github.com/pymc-devs/pymc).
 
-#### Current Developer Team
-
--
+For current members of the developer team, refer to the recurrent and
+core contributor membership sections.
 
 ### Documentation Team
 The focus of the documentation team is ensuring the PyMC library
@@ -431,24 +581,17 @@ Bayesian statistics with PyMC.
 It is not the goal nor responsibility of the Documentation team to
 write all the documentation for the PyMC library.
 
-#### Current Documentation Team
+For current members of the documentation team, refer to the recurrent and
+core contributor membership sections.
 
-- Abhipsha Das
-- Benjamin Vincent
-- Chris Fonnesbeck
-- Lorenzo Toniazzi
-- Martina Cantaro
-- Meenal Jhajharia
-- Michael Osthege
-- Olga Kahn
-- Oriol Abril-Pla
-- Osvaldo Martin
-- Raul Maldonado
-- Ravin Kumar
-- Sayam Kumar
+### "No-team" tasks
+All tasks related to the project that are not specifically listed in the
+description of a dedicated team are the responsibility of the PyMC team
+as a whole. At the time of writing, this includes but is not limited to:
+fundraising, issue triaging, running PyMC related events like PyMCon or
+sprints, outreach or presence on social networks.
 
 ### Team structure in practice
-
 Our two teams are currently structured about GitHub centric tasks, so the
 permissions on GitHub repositories is mapped to team membership and role
 within the team. The team defines to which repositories the permissions
@@ -461,8 +604,7 @@ Role:
 Team:
 * Development team members are given permissions to [pymc](https://github.com/pymc-devs/pymc) repository
 * Documentation team members are given permissions to [pymc-examples](https://github.com/pymc-devs/pymc-examples)
-  and [resources](https://github.com/pymc-devs/resources)
-  repositories.
+  and [resources](https://github.com/pymc-devs/resources) repositories.
 
 In addition, Council members are given admin rights to all repositories within
 the [pymc-devs](https://github.com/pymc-devs) organization.
@@ -550,6 +692,12 @@ and council members.
 ## Sponsors
 Sponsors are Organizations that provide significant funding to the PyMC project
 either directly or by sponsoring PyMCon.
+Prospective sponsors should reach out to the Steering Council and provide them
+with a proof of donation in order to have the sponsorship approved.
+The PyMC project reserves the right to not approve a sponsorship if
+the goals or culture of the prospective sponsor are deemed incompatible
+with the goals of the project. In such case, like with any negative vote
+from the Steering Council, reasoning behind the decision will be provided.
 
 Sponsors will be recognized by placing their logo on the PyMC website but will have
 no extra benefits related to The Project. Note that PyMCon sponsors may have
@@ -557,7 +705,14 @@ extra benefits but those will be related to the conference, not the Project.
 
 ## Team Alumni
 
-* Person + extra info if we want (examples https://mc-stan.org/about/team/ or
-  https://numpy.org/doc/stable/dev/governance/people.html#emeritus-members)
-
-<!-- We can open that to council members or core contributors if they want to list themselves here after leaving the team. -->
+* Agustina Arroyuelo (GSoC 2018)
+* Anand Patil
+* David Huard
+* Demetri Pananos (GSoC 2019)
+* John Salvatier
+* Joseph Willard (GSoC 2019)
+* Juan Martín Loyola (GSoC 2019)
+* Rasul Karimov (GSoC 2020)
+* Sharan Yalburgi (GSoC 2018)
+* Taku Yoshioka
+* Tirth Patel (GSoC 2020)
