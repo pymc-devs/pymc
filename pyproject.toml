@@ -2,6 +2,9 @@
 minversion = "6.0"
 xfail_strict=true
 
+[tool.black]
+line-length = 100
+
 [tool.coverage.report]
 exclude_lines = [
   "pragma: nocover",
