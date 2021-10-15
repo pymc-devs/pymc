@@ -20,7 +20,6 @@ import aesara
 import numpy as np
 
 from aesara import function as aesara_function
-from pandas import DataFrame, Series
 
 from pymc.aesaraf import inputvars, join_nonshared_inputs, make_shared_replacements
 from pymc.bart.bart import BARTRV
@@ -127,11 +126,13 @@ class PGBART(ArrayStepShared):
     def __init__(self, vars=None, num_particles=10, max_stages=100, batch="auto", model=None):
         _log.warning("BART is experimental. Use with caution.")
         model = modelcontext(model)
-        initial_values = model.initial_point
+        initial_values = model.recompute_initial_point()
         value_bart = inputvars(vars)[0]
         self.bart = model.values_to_rvs[value_bart].owner.op
 
-        self.X, self.Y, self.missing_data = preprocess_XY(self.bart.X, self.bart.Y)
+        self.X = self.bart.X
+        self.Y = self.bart.Y
+        self.missing_data = np.any(np.isnan(self.X))
         self.m = self.bart.m
         self.alpha = self.bart.alpha
         self.k = self.bart.k
@@ -342,16 +343,6 @@ class PGBART(ArrayStepShared):
         particle.old_likelihood_logp = new_likelihood
 
 
-def preprocess_XY(X, Y):
-    if isinstance(Y, (Series, DataFrame)):
-        Y = Y.to_numpy()
-    if isinstance(X, (Series, DataFrame)):
-        X = X.to_numpy()
-    missing_data = np.any(np.isnan(X))
-    Y = Y.astype(float)
-    return X, Y, missing_data
-
-
 class SampleSplittingVariable:
     def __init__(self, alpha_prior):
         """
@@ -493,16 +484,19 @@ def draw_leaf_value(Y_mu_pred, X_mu, mean, linear_fit, m, normal, mu_std, respon
     linear_params = None
     if Y_mu_pred.size == 0:
         return 0, linear_params
-    elif Y_mu_pred.size == 1:
-        mu_mean = Y_mu_pred.item() / m
     else:
-        if response == "constant":
+        norm = normal.random() * mu_std
+        if Y_mu_pred.size == 1:
+            mu_mean = Y_mu_pred.item() / m
+        elif response == "constant":
             mu_mean = mean(Y_mu_pred) / m
         elif response == "linear":
             Y_fit, linear_params = linear_fit(X_mu, Y_mu_pred)
             mu_mean = Y_fit / m
-    draw = normal.random() * mu_std + mu_mean
-    return draw, linear_params
+            linear_params[2] = norm
+
+        draw = norm + mu_mean
+        return draw, linear_params
 
 
 def fast_mean():
@@ -532,11 +526,14 @@ def fast_linear_fit():
         xbar = np.sum(X) / n
         ybar = np.sum(Y) / n
 
-        b = (X @ Y - n * xbar * ybar) / (X @ X - n * xbar ** 2)
-        a = ybar - b * xbar
+        if np.all(X == xbar):
+            b = 0
+        else:
+            b = (X @ Y - n * xbar * ybar) / (X @ X - n * xbar ** 2)
 
+        a = ybar - b * xbar
         Y_fit = a + b * X
-        return Y_fit, (a, b)
+        return Y_fit, [a, b, 0]
 
     try:
         from numba import jit

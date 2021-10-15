@@ -15,6 +15,7 @@
 import numpy as np
 
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
+from pandas import DataFrame, Series
 
 from pymc.distributions.distribution import NoDistribution
 
@@ -93,8 +94,8 @@ class BART(NoDistribution):
         Scale parameter for the values of the leaf nodes. Defaults to 2. Recomended to be between 1
         and 3.
     response : str
-        How the leaf_node values are computed. Available options are ``constant``, ``linear`` or
-        ``mix`` (default).
+        How the leaf_node values are computed. Available options are ``constant`` (default),
+        ``linear`` or ``mix``.
     split_prior : array-like
         Each element of split_prior should be in the [0, 1] interval and the elements should sum to
         1. Otherwise they will be normalized.
@@ -109,12 +110,13 @@ class BART(NoDistribution):
         m=50,
         alpha=0.25,
         k=2,
-        response="mix",
+        response="constant",
         split_prior=None,
         **kwargs,
     ):
 
         cls.all_trees = []
+        X, Y = preprocess_XY(X, Y)
 
         bart_op = type(
             f"BART_{name}",
@@ -143,3 +145,14 @@ class BART(NoDistribution):
     @classmethod
     def dist(cls, *params, **kwargs):
         return super().dist(params, **kwargs)
+
+
+def preprocess_XY(X, Y):
+    if isinstance(Y, (Series, DataFrame)):
+        Y = Y.to_numpy()
+    if isinstance(X, (Series, DataFrame)):
+        X = X.to_numpy()
+        # X = np.random.normal(X, X.std(0)/100)
+    Y = Y.astype(float)
+    X = X.astype(float)
+    return X, Y
