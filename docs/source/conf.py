@@ -383,6 +383,12 @@ texinfo_documents = [
 #     app.add_css_file("https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css")
 #     app.add_css_file("default.css")
 
-
+# Autosummary
 autosummary_generate = True
+
+## Overwrite the autosummary generator function with custom one
 generate.generate_autosummary_content = custom_generate.generate_autosummary_content
+
+# Autodoc
+## Do not show docstring of parent class.
+autodoc_inherit_docstrings = False
