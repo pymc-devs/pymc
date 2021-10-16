@@ -186,7 +186,7 @@ Contributors don't need to be part of any dedicated team.
 * Martina Cantaro (docs)
 * Maxim Kochurov (dev - PyMC Labs)
 * Meenal Jhajharia (dev, docs)
-* Michael Osthege (dev, docs)
+* Michael Osthege (dev)
 * Oriol Abril-Pla (docs)
 * Osvaldo Martin (dev, docs)
 * Ravin Kumar (dev, docs)
@@ -250,7 +250,7 @@ to serve in that capacity.
 Similarly to when nominating new team members, when considering potential
 Council Members one should look at candidates with a
 comprehensive view of their contributions. This will include but is not limited
-to code, code review, infrastructure work, mailing list and chat participation,
+to code, code review, infrastructure work, forum and chat participation,
 community help/building, education and outreach, design work, etc. We are
 deliberately not setting arbitrary quantitative metrics (like “100 commits in
 this repo”) to avoid encouraging behavior that plays to the metrics rather than
