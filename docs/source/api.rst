@@ -1,21 +1,13 @@
-.. _api:
-
 *************
 API Reference
 *************
 
-.. toctree::
-   :maxdepth: 2
+.. autosummary::
+   :toctree: api
+   :template: custom-module-template.rst
+   :recursive:
 
-   api/distributions
-   api/gp
-   api/model
-   api/ode
-   api/samplers
-   api/smc
-   api/step_methods
-   api/inference
-   api/plots
+   pymc
 
 Indices and tables
 ===================

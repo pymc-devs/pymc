@@ -19,11 +19,16 @@
 import os
 import sys
 
+from sphinx.ext.autosummary import generate
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 import pymc  # isort:skip
+
+sys.path.insert(0, os.path.abspath("sphinx_autosummary"))
+import custom_generate  # isort:skip
 
 # -- General configuration ------------------------------------------------
 
@@ -377,3 +382,7 @@ texinfo_documents = [
 # def setup(app):
 #     app.add_css_file("https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css")
 #     app.add_css_file("default.css")
+
+
+autosummary_generate = True
+generate.generate_autosummary_content = custom_generate.generate_autosummary_content
