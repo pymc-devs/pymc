@@ -13,6 +13,7 @@ jobs:
         floatx: [float32, float64]
         test-subset:
           - |
+            --ignore=pymc3/tests/test_backports.py
             --ignore=pymc3/tests/test_dist_math.py
             --ignore=pymc3/tests/test_distribution_defaults.py
             --ignore=pymc3/tests/test_distributions.py
@@ -42,6 +43,7 @@ jobs:
             pymc3/tests/test_shared.py
             pymc3/tests/test_smc.py
           - |
+            pymc3/tests/test_backports.py
             pymc3/tests/test_examples.py
             pymc3/tests/test_mixture.py
             pymc3/tests/test_ode.py
