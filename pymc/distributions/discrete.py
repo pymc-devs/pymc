@@ -1745,7 +1745,7 @@ class OrderedLogistic:
     def __new__(cls, name, *args, compute_p=True, **kwargs):
         out_rv = _OrderedLogistic(name, *args, **kwargs)
         if compute_p:
-            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3])
+            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3], dims=kwargs.get("dims"))
         return out_rv
 
     @classmethod
@@ -1856,7 +1856,7 @@ class OrderedProbit:
     def __new__(cls, name, *args, compute_p=True, **kwargs):
         out_rv = _OrderedProbit(name, *args, **kwargs)
         if compute_p:
-            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3])
+            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3], dims=kwargs.get("dims"))
         return out_rv
 
     @classmethod
