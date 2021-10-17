@@ -1,5 +1,9 @@
 # Release Notes
 
+## PyMC 3.11.5 (TBD)
+### Backports
++ The `pm.logp(rv, x)` syntax is now available and recommended to make your model code `v4`-ready. Note that this backport is just an alias and much less capable than what's available with `pymc >=4` (see [#5083](https://github.com/pymc-devs/pymc/pulls/5083)).
+
 ## PyMC3 3.11.4 (20 August 2021)
 
 ### New Features
