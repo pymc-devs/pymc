@@ -28,12 +28,12 @@ def logp(
     """
     Calculate log-probability of a distribution at specified value.
 
-    This function is a backported poor-mans version of PyMC >=4.0 like capabilities.
+    This function is a limited functionality backported version of PyMC >=4.0 like capabilities.
 
     Parameters
     ----------
     value : numeric
-        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        Value(s) for which log-probability is calculated. If the log-probabilities for multiple
         values are desired the values must be provided in a numpy array or theano tensor
 
     Returns
