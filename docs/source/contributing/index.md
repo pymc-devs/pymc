@@ -23,8 +23,9 @@ You will need to express your interest in the issue by commenting on it using yo
 ::::
 
 
-## Others
-Issue triaging
+## Become a sponsor
+
+TODO add information on how to become a sponsor. Description of the process is being created here https://github.com/pymc-devs/pymc/pull/4980
 
 :::{toctree}
 :hidden:

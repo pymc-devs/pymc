@@ -1,3 +1,5 @@
-# Step 3
+# Videos and Podcasts
 
-More content
+TODO
+- Link to PyMC's youtube videos
+- Link to Alex Andorra's podcast
