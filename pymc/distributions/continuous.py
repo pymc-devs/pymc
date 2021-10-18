@@ -4283,7 +4283,7 @@ class GenExtreme(Continuous):
 
     .. math::
 
-       G(x \mid \mu, \sigma, \xi) = exp\{ -\[1 + \xi z\]^{-\frac{1}{\xi}} \}
+       G(x \mid \mu, \sigma, \xi) = \exp\left[ -\left(1 + \xi z\right)^{-\frac{1}{\xi}} \right]
 
     where
 
@@ -4295,10 +4295,10 @@ class GenExtreme(Continuous):
 
     .. math::
 
-        {x: 1 + \xi(\frac{x-\mu}{\sigma}) > 0}
+        \left\{x: 1 + \xi(\frac{x-\mu}{\sigma}) > 0 \right\}
 
     Note that this parametrization differs from that of Scipy in the sign of
-    the shape parameter, $\xi$.
+    the shape parameter, :math:`\xi`.
 
     .. plot::
 
@@ -4320,19 +4320,19 @@ class GenExtreme(Continuous):
         plt.show()
 
 
-    ========  ==========================================
-    Support   :math: `x \in [\mu - \sigma/\xi, +\inf]`, when :math: `\xi > 0`
-              :math: `x \in \mathbb{R}` when \xi = 0
-              :math: `x \in [-\inf, \mu - \sigma/\xi]`, when :math: `\xi < 0`
-    Mean      :math: `\mu + \sigma(g_1 - 1)/\xi`, when `\xi \neq 0, \xi < 1`
-              :math: `\mu + \sigma \gamma`, when `\xi = 0`
-              :math: `\inf`, when `xi \geq 1`
+    ========  =========================================================================
+    Support   * :math:`x \in [\mu - \sigma/\xi, +\infty]`, when :math: `\xi > 0`
+              * :math:`x \in \mathbb{R}` when \xi = 0
+              * :math:`x \in [-\infty, \mu - \sigma/\xi]`, when :math: `\xi < 0`
+    Mean      * :math:`\mu + \sigma(g_1 - 1)/\xi`, when `\xi \neq 0, \xi < 1`
+              * :math:`\mu + \sigma \gamma`, when `\xi = 0`
+              * :math:`\infty`, when `xi \geq 1`
                 where :math:`\gamma` is the Euler-Mascheroni constant, and
                 :math:`g_k = \Gamma (1-k\xi)`
-    Variance  :math:`\sigma^2 (g_2 - g_1^2)/\xi^2`, when `\xi \neq 0, \xi < 0.5`
-              :math:`\frac{\pi^2}{6} \sigma^2`, when `\xi = 0`
-              :math:`\inf`, when `\xi \geq 0.5`
-    ========  ==========================================
+    Variance  * :math:`\sigma^2 (g_2 - g_1^2)/\xi^2`, when :math:`\xi \neq 0, \xi < 0.5`
+              * :math:`\frac{\pi^2}{6} \sigma^2`, when :math:`\xi = 0`
+              * :math:`\infty`, when :math:`\xi \geq 0.5`
+    ========  =========================================================================
 
     Parameters
     ----------
@@ -4344,7 +4344,7 @@ class GenExtreme(Continuous):
         Shape parameter
     scipy: bool
         Whether or not to use the Scipy interpretation of the shape parameter
-        default False.
+        (defaults to `False`).
     """
 
     rv_op = gev
