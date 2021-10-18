@@ -4386,7 +4386,7 @@ class GenExtreme(Continuous):
 
         logp_expression = at.switch(
             at.isclose(xi, 0),
-            at.log(sigma) - scaled - at.exp(-scaled),
+            -at.log(sigma) - scaled - at.exp(-scaled),
             -at.log(sigma)
             - ((xi + 1) / xi) * at.log1p(xi * scaled)
             - at.pow(1 + xi * scaled, -1 / xi),
