@@ -64,13 +64,16 @@ def pymc_random(
     dist,
     paramdomains,
     ref_rand,
-    valuedomain=Domain([0]),
+    valuedomain=None,
     size=10000,
     alpha=0.05,
     fails=10,
     extra_args=None,
     model_args=None,
 ):
+    if valuedomain is None:
+        valuedomain = Domain([0], edges=(None, None))
+
     if model_args is None:
         model_args = {}
 
@@ -104,12 +107,15 @@ def pymc_random(
 def pymc_random_discrete(
     dist,
     paramdomains,
-    valuedomain=Domain([0]),
+    valuedomain=None,
     ref_rand=None,
     size=100000,
     alpha=0.05,
     fails=20,
 ):
+    if valuedomain is None:
+        valuedomain = Domain([0], edges=(None, None))
+
     model, param_vars = build_model(dist, valuedomain, paramdomains)
     model_dist = change_rv_size(model.named_vars["value"], size, expand=True)
     pymc_rand = aesara.function([], model_dist)

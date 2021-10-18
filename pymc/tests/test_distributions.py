@@ -35,6 +35,8 @@ except ImportError:  # pragma: no cover
         raise RuntimeError("polyagamma package is not installed!")
 
 
+from contextlib import ExitStack as does_not_raise
+
 import pytest
 import scipy.stats
 import scipy.stats.distributions as sp
@@ -155,6 +157,14 @@ class Domain:
         if edges is None:
             edges = array(vals[0]), array(vals[-1])
             vals = vals[1:-1]
+
+        if not vals:
+            raise ValueError(
+                f"Domain has no values left after removing edges: {edges}.\n"
+                "You can duplicate the edge values or explicitly specify the edges with the edge keyword.\n"
+                f"For example: `Domain([{edges[0]}, {edges[0]}, {edges[1]}, {edges[1]}])`"
+            )
+
         if shape is None:
             shape = avals[0].shape
 
@@ -190,6 +200,22 @@ class Domain:
 
     def __neg__(self):
         return Domain([-v for v in self.vals], self.dtype, (-self.lower, -self.upper), self.shape)
+
+
+@pytest.mark.parametrize(
+    "values, edges, expectation",
+    [
+        ([], None, pytest.raises(IndexError)),
+        ([], (0, 0), pytest.raises(ValueError)),
+        ([0], None, pytest.raises(ValueError)),
+        ([0], (0, 0), does_not_raise()),
+        ([-1, 1], None, pytest.raises(ValueError)),
+        ([-1, 0, 1], None, does_not_raise()),
+    ],
+)
+def test_domain(values, edges, expectation):
+    with expectation:
+        Domain(values, edges=edges)
 
 
 def product(domains, n_samples=-1):
@@ -2423,7 +2449,7 @@ class TestMatchesScipy:
     def test_categorical(self, n):
         self.check_logp(
             Categorical,
-            Domain(range(n), "int64"),
+            Domain(range(n), dtype="int64", edges=(None, None)),
             {"p": Simplex(n)},
             lambda value, p: categorical_logpdf(value, p),
         )
@@ -2432,7 +2458,7 @@ class TestMatchesScipy:
     def test_orderedlogistic(self, n):
         self.check_logp(
             OrderedLogistic,
-            Domain(range(n), "int64"),
+            Domain(range(n), dtype="int64", edges=(None, None)),
             {"eta": R, "cutpoints": Vector(R, n - 1)},
             lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints),
         )
@@ -2441,7 +2467,7 @@ class TestMatchesScipy:
     def test_orderedprobit(self, n):
         self.check_logp(
             OrderedProbit,
-            Domain(range(n), "int64"),
+            Domain(range(n), dtype="int64", edges=(None, None)),
             {"eta": Runif, "cutpoints": UnitSortedVector(n - 1)},
             lambda value, eta, cutpoints: orderedprobit_logpdf(value, eta, cutpoints),
         )
