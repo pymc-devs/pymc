@@ -37,6 +37,7 @@ Continuous
    LogitNormal
    Interpolated
    PolyaGamma
+   GenExtreme
 
 .. automodule:: pymc.distributions.continuous
    :members:

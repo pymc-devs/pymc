@@ -75,6 +75,7 @@ from pymc.distributions import (
     Flat,
     Gamma,
     Geometric,
+    GenExtreme,
     Gumbel,
     HalfCauchy,
     HalfFlat,
@@ -2542,6 +2543,20 @@ class TestMatchesScipy:
             R,
             {"mu": R, "beta": Rplusbig},
             lambda value, mu, beta: sp.gumbel_r.logcdf(value, loc=mu, scale=beta),
+        )
+
+    def test_genextreme(self):
+        self.check_logp(
+            GenExtreme,
+            R,
+            {"mu": R, "sigma": Rplus, "xi": Domain([-1, 1])},
+            lambda value, mu, sigma, xi: sp.genextreme.logpdf(value, c=-xi, loc=mu, scale=sigma),
+        )
+        self.check_logcdf(
+            GenExtreme,
+            R,
+            {"mu": R, "sigma": Rplus, "xi": Domain([-1, 1])},
+            lambda value, mu, sigma, xi: sp.genextreme.logcdf(value, c=-xi, loc=mu, scale=sigma),
         )
 
     def test_logistic(self):

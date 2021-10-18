@@ -32,6 +32,7 @@ from pymc.distributions.continuous import (
     Exponential,
     Flat,
     Gamma,
+    GenExtreme,
     Gumbel,
     HalfCauchy,
     HalfFlat,
@@ -198,4 +199,5 @@ __all__ = [
     "logcdf",
     "_logcdf",
     "logpt_sum",
+    "GenExtreme",
 ]

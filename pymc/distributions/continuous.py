@@ -123,6 +123,7 @@ __all__ = [
     "Moyal",
     "AsymmetricLaplace",
     "PolyaGamma",
+    "GenExtreme",
 ]
 
 
@@ -4246,3 +4247,169 @@ class PolyaGamma(PositiveContinuous):
         TensorVariable
         """
         return bound(_PolyaGammaLogDistFunc(False)(value, h, z), h > 0, value > 0)
+
+
+class GenExtremeRV(RandomVariable):
+    name: str = "Generalized Extreme Value"
+    ndim_supp: int = 0
+    ndims_params: List[int] = [0, 0, 0]
+    dtype: str = "floatX"
+    _print_name: Tuple[str, str] = ("Generalized Extreme Value", "\\operatorname{GEV}")
+
+    def __call__(self, mu=0.0, sigma=1.0, xi=0.0, size=None, **kwargs) -> TensorVariable:
+        return super().__call__(mu, sigma, xi, size=size, **kwargs)
+
+    @classmethod
+    def rng_fn(
+        cls,
+        rng: np.random.RandomState,
+        mu: np.ndarray,
+        sigma: np.ndarray,
+        xi: np.ndarray,
+        size: Tuple[int, ...],
+    ) -> np.ndarray:
+        # Notice negative here, since remainder of GenExtreme is based on Coles parametrization
+        return stats.genextreme.rvs(c=-xi, loc=mu, scale=sigma, random_state=rng, size=size)
+
+
+gev = GenExtremeRV()
+
+
+class GenExtreme(Continuous):
+    r"""
+        Univariate Generalized Extreme Value log-likelihood
+
+    The cdf of this distribution is
+
+    .. math::
+
+       G(x \mid \mu, \sigma, \xi) = exp\{ -\[1 + \xi z\]^{-\frac{1}{\xi}} \}
+
+    where
+
+    .. math::
+
+        z = \frac{x - \mu}{\sigma}.
+
+    and is defined on the set:
+
+    .. math::
+
+        {x: 1 + \xi(\frac{x-\mu}{\sigma}) > 0}
+
+    Note that this parametrization differs from that of Scipy in the sign of
+    the shape parameter, $\xi$.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
+        x = np.linspace(-10, 20, 200)
+        mus = [0., 4., -1.]
+        sigmas = [2., 2., 4.]
+        xis = [-0.3, 0.0, 0.3]
+        for mu, sigma, xi in zip(mus, sigmas, xis):
+            pdf = st.genextreme.pdf(x, c=-xi, loc=mu, scale=sigma)
+            plt.plot(x, pdf, label=rf'$\mu$ = {mu}, $\sigma$ = {sigma}, $\xi$={xi}')
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+
+    ========  ==========================================
+    Support   :math: `x \in [\mu - \sigma/\xi, +\inf]`, when :math: `\xi > 0`
+              :math: `x \in \mathbb{R}` when \xi = 0
+              :math: `x \in [-\inf, \mu - \sigma/\xi]`, when :math: `\xi < 0`
+    Mean      :math: `\mu + \sigma(g_1 - 1)/\xi`, when `\xi \neq 0, \xi < 1`
+              :math: `\mu + \sigma \gamma`, when `\xi = 0`
+              :math: `\inf`, when `xi \geq 1`
+                where :math:`\gamma` is the Euler-Mascheroni constant, and
+                :math:`g_k = \Gamma (1-k\xi)`
+    Variance  :math:`\sigma^2 (g_2 - g_1^2)/\xi^2`, when `\xi \neq 0, \xi < 0.5`
+              :math:`\frac{\pi^2}{6} \sigma^2`, when `\xi = 0`
+              :math:`\inf`, when `\xi \geq 0.5`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    mu: float
+        Location parameter.
+    sigma: float
+        Scale parameter (sigma > 0).
+    xi: float
+        Shape parameter
+    scipy: bool
+        Whether or not to use the Scipy interpretation of the shape parameter
+        default False.
+    """
+
+    rv_op = gev
+
+    @classmethod
+    def dist(cls, mu=0, sigma=1, xi=0, scipy=False, **kwargs):
+        # If SciPy, use its parametrization, otherwise convert to standard
+        if scipy:
+            xi = -xi
+        mu = at.as_tensor_variable(floatX(mu))
+        sigma = at.as_tensor_variable(floatX(sigma))
+        xi = at.as_tensor_variable(floatX(xi))
+
+        return super().dist([mu, sigma, xi], **kwargs)
+
+    def logp(value, mu, sigma, xi):
+        """
+        Calculate log-probability of Generalized Extreme Value distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        scaled = (value - mu) / sigma
+
+        logp_expression = at.switch(
+            at.isclose(xi, 0),
+            at.log(sigma) - scaled - at.exp(-scaled),
+            -at.log(sigma)
+            - ((xi + 1) / xi) * at.log1p(xi * scaled)
+            - at.pow(1 + xi * scaled, -1 / xi),
+        )
+        # bnd = mu - sigma/xi
+        return bound(
+            logp_expression,
+            1 + xi * (value - mu) / sigma > 0,
+            # at.switch(xi > 0, value > bnd, value < bnd),
+            sigma > 0,
+        )
+
+    def logcdf(value, mu, sigma, xi):
+        """
+        Compute the log of the cumulative distribution function for Generalized Extreme Value
+        distribution at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or `TensorVariable`
+            Value(s) for which log CDF is calculated. If the log CDF for
+            multiple values are desired the values must be provided in a numpy
+            array or `TensorVariable`.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        scaled = (value - mu) / sigma
+        logc_expression = at.switch(
+            at.isclose(xi, 0), -at.exp(-scaled), -at.pow(1 + xi * scaled, -1 / xi)
+        )
+        return bound(logc_expression, 1 + xi * scaled > 0, sigma > 0)
