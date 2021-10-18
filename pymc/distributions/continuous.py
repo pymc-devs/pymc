@@ -4321,12 +4321,12 @@ class GenExtreme(Continuous):
 
 
     ========  =========================================================================
-    Support   * :math:`x \in [\mu - \sigma/\xi, +\infty]`, when :math: `\xi > 0`
-              * :math:`x \in \mathbb{R}` when \xi = 0
-              * :math:`x \in [-\infty, \mu - \sigma/\xi]`, when :math: `\xi < 0`
-    Mean      * :math:`\mu + \sigma(g_1 - 1)/\xi`, when `\xi \neq 0, \xi < 1`
+    Support   * :math:`x \in [\mu - \sigma/\xi, +\infty]`, when :math:`\xi > 0`
+              * :math:`x \in \mathbb{R}` when :math:`\xi = 0`
+              * :math:`x \in [-\infty, \mu - \sigma/\xi]`, when :math:`\xi < 0`
+    Mean      * :math:`\mu + \sigma(g_1 - 1)/\xi`, when :math:`\xi \neq 0, \xi < 1`
               * :math:`\mu + \sigma \gamma`, when :math:`\xi = 0`
-              * :math:`\infty`, when :math:`xi \geq 1`
+              * :math:`\infty`, when :math:`\xi \geq 1`
                 where :math:`\gamma` is the Euler-Mascheroni constant, and
                 :math:`g_k = \Gamma (1-k\xi)`
     Variance  * :math:`\sigma^2 (g_2 - g_1^2)/\xi^2`, when :math:`\xi \neq 0, \xi < 0.5`
@@ -4346,8 +4346,8 @@ class GenExtreme(Continuous):
         Whether or not to use the Scipy interpretation of the shape parameter
         (defaults to `False`).
 
-    Reference
-    ---------
+    References
+    ----------
     .. [Coles2001] Coles, S.G. (2001).
         An Introduction to the Statistical Modeling of Extreme Values
         Springer-Verlag, London
