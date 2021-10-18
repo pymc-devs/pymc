@@ -2549,14 +2549,18 @@ class TestMatchesScipy:
         self.check_logp(
             GenExtreme,
             R,
-            {"mu": R, "sigma": Rplus, "xi": Domain([-1, 1])},
-            lambda value, mu, sigma, xi: sp.genextreme.logpdf(value, c=-xi, loc=mu, scale=sigma),
+            {"mu": R, "sigma": Rplus, "xi": Domain([-1, -1, -0.5, 0, 0.5, 1, 1])},
+            lambda value, mu, sigma, xi: sp.genextreme.logpdf(
+                value, c=-xi, loc=mu, scale=sigma, n_samples=-1
+            ),
         )
         self.check_logcdf(
             GenExtreme,
             R,
-            {"mu": R, "sigma": Rplus, "xi": Domain([-1, 1])},
-            lambda value, mu, sigma, xi: sp.genextreme.logcdf(value, c=-xi, loc=mu, scale=sigma),
+            {"mu": R, "sigma": Rplus, "xi": Domain([-1, -1, -0.5, 0, 0.5, 1, 1])},
+            lambda value, mu, sigma, xi: sp.genextreme.logcdf(
+                value, c=-xi, loc=mu, scale=sigma, n_samples=-1
+            ),
         )
 
     def test_logistic(self):

@@ -548,6 +548,20 @@ class TestExGaussian(BaseTestDistribution):
     ]
 
 
+class TestGenExtreme(BaseTestDistribution):
+    pymc_dist = pm.GenExtreme
+    pymc_dist_params = {"mu": 0, "sigma": 1, "xi": -0.1}
+    expected_rv_op_params = {"mu": 0, "sigma": 1, "xi": -0.1}
+    # Notice, using different parametrization of xi sign to scipy
+    reference_dist_params = {"loc": 0, "scale": 1, "c": 0.1}
+    reference_dist = seeded_scipy_distribution_builder("genextreme")
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
 class TestGumbel(BaseTestDistribution):
     pymc_dist = pm.Gumbel
     pymc_dist_params = {"mu": 1.5, "beta": 3.0}

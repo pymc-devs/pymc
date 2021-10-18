@@ -4420,3 +4420,10 @@ class GenExtreme(Continuous):
             at.isclose(xi, 0), -at.exp(-scaled), -at.pow(1 + xi * scaled, -1 / xi)
         )
         return bound(logc_expression, 1 + xi * scaled > 0, sigma > 0)
+
+    def get_moment(value_var, size, mu, sigma, xi):
+        r"""
+        Using the mode, as the mean can be infinite when :math:`\xi > 1`
+        """
+        mode = at.switch(at.isclose(xi, 0), mu, mu + sigma * (at.pow(1 + xi, -xi) - 1) / xi)
+        return at.full(size, mode, dtype=aesara.config.floatX)
