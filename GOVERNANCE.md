@@ -5,7 +5,9 @@
 The PyMC Project (The Project) is an open source software project
 affiliated with the 501c3 NumFOCUS Foundation. The goal of The Project is to
 develop open source software and deploy open and public websites and services
-for reproducible, exploratory and interactive computing. The Software developed
+for reproducible, exploratory and interactive computing.
+The main focus of the Project is in scientific and statistical computing.
+The Software developed
 by The Project is released under OSI approved open source licenses,
 developed openly and hosted in public GitHub repositories under the
 [pymc-devs GitHub organization](https://github.com/pymc-devs). Examples of
@@ -128,7 +130,6 @@ Contributors don't need to be part of any dedicated team.
 
 - Abhipsha Das (docs)
 - Benjamin Vincent (docs - PyMC Labs)
-- Bill Engels (dev)
 - Jon Sedar
 - Kaustubh Chaudhari (dev)
 - Larry Dong (dev)
@@ -136,9 +137,6 @@ Contributors don't need to be part of any dedicated team.
 - Olga Khan (docs)
 - Peadar Coyle
 - Raul Maldonado (docs)
-- everyone on slack! This may be too long so it could be a good idea to
-format as a table instead or to put within a `<details>` tag so
-it's hidden by default while still available publicly
 
 ## Core Contributors
 Core Contributors are those individuals entrusted with the development and
@@ -149,8 +147,12 @@ services (i.e. commit rights on GitHub or moderation rights on Discourse).
 The exact permissions of all Core Contributors may not be the same
 and depend on their team memberships. Even if they have commit rights,
 Core Contributors should still have their pull requests reviewed by at least
-one other Core Contributor before merging unless prevented by a major force
-reason. If overstepping, Core Contributors can also be subject to a vote
+one other Core Contributor before merging.
+In rare circumstances, a Core Contributor may bypass this review
+if in their best judgement it is appropriate to do so,
+but such expedited PR merges must be justifiable and
+ultimately subject to review post hoc, if necessary.
+If overstepping, Core Contributors can also be subject to a vote
 of no confidence (see below) and see their permissions revoked.
 
 ### Core Contributor membership
@@ -174,6 +176,7 @@ Contributors don't need to be part of any dedicated team.
 * Adrian Seyboldt (dev - PyMC Labs)
 * Alex Andorra (dev - PyMC Labs)
 * Austin Rochford
+* Bill Engels (dev)
 * Brandon T. Willard (dev)
 * Chris Fonnesbeck (dev, docs)
 * Colin Carroll (dev)
@@ -243,9 +246,7 @@ Institutional Council Members are indicated as `name (company)`
 
 To become eligible for being a Steering Council Member an individual must be a
 Core Contributor who has produced contributions that are substantial in
-quality and quantity, and sustained over at least one year. Potential Council
-after asking if the potential Member is interested and willing
-to serve in that capacity.
+quality and quantity, and sustained over at least one year.
 
 Similarly to when nominating new team members, when considering potential
 Council Members one should look at candidates with a
@@ -257,7 +258,7 @@ this repo”) to avoid encouraging behavior that plays to the metrics rather tha
 the project’s overall well-being. We want to encourage a diverse array of
 backgrounds, viewpoints and talents in our team, which is why we explicitly do
 not define code as the sole metric on which council membership will be
-evaluated.
+evaluated. See the section on election process for more details.
 
 Council membership is assigned for a two year period, with no limit on how many
 periods can be served.
@@ -321,8 +322,8 @@ interactions with NumFOCUS.
   be spent in a manner that is consistent with the non-profit mission of
   NumFOCUS and the direction of the Project as determined by the full
   Council.
-- This Subcommittee shall NOT make decisions about the direction, scope or
-  technical direction of the Project.
+- This Subcommittee shall NOT make decisions about the direction, scope,
+  technical or financial direction of the Project.
 
 #### NumFOCUS subcommittee membership
 This Subcommittee will have 5 members. With at least
@@ -451,11 +452,11 @@ or public document detailing the
 
 #### Voting
 
-* Each Council Member will vote either "Yes", "No", or "Neutral".
+* Each Council Member will vote either "Yes", "No", or "Abstain".
 * It is recommended that all Council Members expose their reasons when voting.
   "No" votes, however, must list the reasons for disagreement.
-  Any "No" vote with no reason listed will be considered a "Neutral" vote.
-* An absence of vote is considered as "Neutral".
+  Any "No" vote with no reason listed will be considered a "Abstain" vote.
+* An absence of vote is considered as "Abstain".
 * Voting will remain open for at least 3 days.
 * For the proposal to pass, at least 60% of the council must vote "Yes", and no more than 20% can vote "No".
 
@@ -469,14 +470,18 @@ Core contributors can also call for a vote to remove the entire council
 A no-confidence vote is triggered when a Core Contributor calls for one
 publicly on an appropriate project communication channel,
 and two other core team members second the proposal.
-The initial call for a no-confidence vote must specify which type is intended
--- whether it is targeting a single member or the council as a whole.
+The initial call for a no-confidence vote must specify which type is intended.
 
 The vote lasts for two weeks, and the people taking part in it vary:
-* If this is a single-member vote called by Core contributors,
-  both Council members and Core contributors vote,
+* If this is a single-member vote
+  all Core contributors (including council members) vote,
   and the vote is deemed successful if at least two thirds of voters
   express a lack of confidence.
+
+  Such votes can target removing from the Council
+  (while continuing to be a Core Contributor) or a Core Contributor removal,
+  which should be clear from the initial vote call. Council members
+  can be called for a Core Contributor removal.
 * If this is a whole-council vote, then it was necessarily called by
   Core contributors (since Council members can’t remove the whole Council)
   and only Core contributors vote.
@@ -489,14 +494,16 @@ After voting:
 * If a single-member vote on a core contributor succeeds, their permissions are
   revoked and would have to wait six months to be eligible for core contributor
   nomination again.
-* If a whole-council vote succeeds, the council is dissolved and a new council election is triggered immediately.
+* If a whole-council vote succeeds, the council is dissolved
+  and a new council election is triggered immediately.
+  In such case, members of the dissolved council continue to be Core Contributors.
 
 ### Election process
 > Used when choosing the steering council and it's subcommittees
 
 #### Nominations
 * Nominations are taken over a single GitHub issue ticket over the course of 2 weeks.
-* Only Core Contributors may nominate folks
+* Only Core Contributors may nominate candidates for Council membership
 * Self Nominations are allowed
 * At the conclusion of the 2 weeks, the list of nominations is posted on the ticket and this ticket is closed.
 
@@ -592,6 +599,7 @@ fundraising, issue triaging, running PyMC related events like PyMCon or
 sprints, outreach or presence on social networks.
 
 ### Team structure in practice
+#### GitHub
 Our two teams are currently structured about GitHub centric tasks, so the
 permissions on GitHub repositories is mapped to team membership and role
 within the team. The team defines to which repositories the permissions
@@ -608,6 +616,16 @@ Team:
 
 In addition, Council members are given admin rights to all repositories within
 the [pymc-devs](https://github.com/pymc-devs) organization.
+
+#### Other accounts and services
+The PyMC Project also has accounts and hosts services on other platforms
+such as Twitter, Discourse, ReadTheDocs or Medium.
+
+If possible, all Council Members and relevant Core Contributors should have
+admin rights on those platforms.
+If this were not possible, admin rights should be distributed between
+Council Members and relevant Core Contributors and establish a rotation
+of the admin rights every 1-2 years.
 
 ## Institutional Partners and Funding
 
@@ -690,10 +708,10 @@ with Thomas Wiecki and Adrian Seyboldt as their institutional contributors
 and council members.
 
 ## Sponsors
-Sponsors are Organizations that provide significant funding to the PyMC project
-directly.
-Prospective sponsors should reach out to the Steering Council and provide them
-with a proof of donation in order to have the sponsorship approved.
+Sponsors are organizations that provide significant funding to the PyMC project
+directly. Interested sponsors are encouraged to reach out
+to the Steering Council to arrange the sponsorship and recognition.
+
 The PyMC project reserves the right to not approve a sponsorship if
 the goals or culture of the prospective sponsor are deemed incompatible
 with the goals of the project. In such case, like with any negative vote
