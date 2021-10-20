@@ -6,13 +6,13 @@ The PyMC Project (The Project) is an open source software project
 affiliated with the 501c3 NumFOCUS Foundation. The goal of The Project is to
 develop open source software and deploy open and public websites and services
 for reproducible, exploratory and interactive computing.
-The main focus of the Project is in scientific and statistical computing.
+The main focus of The Project is in scientific and statistical computing.
 The Software developed
 by The Project is released under OSI approved open source licenses,
 developed openly and hosted in public GitHub repositories under the
 [pymc-devs GitHub organization](https://github.com/pymc-devs). Examples of
 Project Software include the PyMC library and its documentation, etc.
-The Services run by the Project consist of public websites and web-services
+The Services run by The Project consist of public websites and web-services
 that are hosted at [http://docs.pymc.io](https://docs.pymc.io)
 
 The Project is developed by a team of distributed developers, called
@@ -21,7 +21,8 @@ documentation, designs or other work to one or more Project repositories,
 or who have done significant work to empower the Community,
 participating on [Discourse](https://discourse.pymc.io),
 organizing [PyMCon](https://pymcon.com) or helped on other platforms and events.
-Anyone can be a Contributor. Contributors can be affiliated with any legal
+Anyone can be a Contributor.
+Contributors can be affiliated with any legal entity or none.
 The foundation of Project participation is openness and transparency.
 
 There have been over 250 Contributors to the Project, their contributions are listed in the
@@ -52,9 +53,9 @@ The foundations of Project governance are:
 Traditionally, Project leadership was provided by a BDFL (Chris Fonnesbeck) and
 subset of Contributors, called Core Developers, whose active and consistent
 contributions have been recognized by their receiving “commit rights” to the
-Project GitHub repositories. In general all Project decisions are made through
+Project GitHub repositories. In general all Project decisions were made through
 consensus among the Core Developers with input from the Community. The BDFL
-can, but rarely chooses to, override the Core Developers and make a final
+could, but rarely chose to, override the Core Developers and make a final
 decision on a matter.
 
 While this approach has served us well, as the Project grows and faces more
@@ -85,7 +86,7 @@ Team members can be part of one, some or none of these dedicated teams.
 ![community_diagram](docs/community_diagram.png)
 
 Anyone working with The Project has the responsibility to personally uphold
-the Code of Conduct. Core Contributors have the additional responsibility
+the Code of Conduct. Recurrent Contributors have the additional responsibility
 of _enforcing_ the Code of Conduct to maintain a safe community.
 
 ## Recurring Contributors
@@ -103,8 +104,9 @@ The Recurrent Contributor position will often be an intermediate step for people
 in becoming Core Contributors once their contributions are frequent enough
 and during a sustained period of time.
 But it is also an important role by itself for people who want to be part of
-the project but don't have the time or don't want the responsibilities that
-come with being a Core Contributor.
+the project on a more advisory-like role, as they for example might not have
+the time availability or don't want the responsibilities that come
+with being a Core Contributor.
 
 ### Recurring Contributor membership
 Recurring Contributors can nominate any Contributor to participate in the
@@ -141,9 +143,12 @@ Contributors don't need to be part of any dedicated team.
 ## Core Contributors
 Core Contributors are those individuals entrusted with the development and
 well being of the Project due to their frequency of quality contributions over
-a sustained period of time. They are the main governing and decision body
+a sustained period of time.
+
+They are the main governing and decision body
 of the Project and are therefore given voting and managing rights to the Project
 services (i.e. commit rights on GitHub or moderation rights on Discourse).
+
 The exact permissions of all Core Contributors may not be the same
 and depend on their team memberships. Even if they have commit rights,
 Core Contributors should still have their pull requests reviewed by at least
@@ -163,7 +168,8 @@ ratified by the Steering Council.
 For a nomination to be rejected, clear reasoning behind the decision must be
 shared with the rest of the team. People whose nomination has been rejected can
 be nominated at any time again in the future, three months after the previous
-nomination at the earliest.
+nomination at the earliest. The nomination process is explained below
+in more detail in a section of its own.
 
 ### Current Core Contributors
 Contributors who are also part of a dedicated team or are institutional
@@ -188,7 +194,7 @@ Contributors don't need to be part of any dedicated team.
 * Marco E. Gorelli (dev, docs)
 * Martina Cantaro (docs)
 * Maxim Kochurov (dev - PyMC Labs)
-* Meenal Jhajharia (dev, docs)
+* Meenal Jhajharia (docs)
 * Michael Osthege (dev)
 * Oriol Abril-Pla (docs)
 * Osvaldo Martin (dev, docs)
@@ -207,7 +213,11 @@ ensure, through working with the BDFL and taking input from the Community, the
 long-term well-being of the project, both technically and as a community.
 
 The Steering Council will have between 4 and 7 members with at least one member
-per dedicated team and no more than 2 institutional members per company.
+per dedicated team.
+No more than 2 Council Members can report to one person or company
+(including Institutional Partners) through employment or
+contracting work (including the reportee, i.e. the reportee + 1 is the max).
+
 
 During the everyday project activities, council members participate in all
 discussions, code review and other project activities as peers with all other
@@ -380,7 +390,7 @@ Such conflict of interests include, but are not limited to:
 - Financial interests, such as investments, employment or contracting work,
   outside of The Project that may influence their work on The Project.
 - Access to proprietary information of their employer that could potentially
-  leak into their work with the Project.
+  leak into their work with The Project.
 
 All members of the Council, BDFL included, shall disclose to the rest of the
 Council any conflict of interest they may have. Members with a conflict of
@@ -397,7 +407,9 @@ A nomination process is triggered automatically whenever a team member
 requests so on one of the team's communication channels
 (public Slack channels at the day of writing, preferably `#general`).
 Nomination should be explicit regarding which roles and teams are
-requested. Again, note that team members don't need to be part of any
+suggested, but the council makes the final decision on
+dedicated team membership.
+Again, note that team members don't need to be part of any
 dedicated team to be recurrent nor core contributors.
 
 After this happens, the Steering Council will reach out to the candidate
@@ -423,7 +435,8 @@ intervene to make the final decision in a group vote.
 Core Contributors can call for a vote to resolve a target issue
 they feel has been stale for too long and for which
 informal consensus appears unlikely.
-For a vote to be called, the target issue must be at least 2 months old.
+For a vote to be called, the target issue or discussion post (i.e. on Discourse)
+must be at least 1 month old.
 
 To do so, they have to open a proposal issue ticket labeled "Council Vote".
 The proposal issue should contain a link to the target issue and
@@ -460,7 +473,10 @@ or public document detailing the
 * Voting will remain open for at least 3 days.
 * For the proposal to pass, at least 60% of the council must vote "Yes", and no more than 20% can vote "No".
 
-For decisions about the project the Council will perform it directly on the proposal issue. For decisions about people, such as electing or ejecting Core Contributors, the Council will vote privately. However the decision will be posted publicly in an issue ticket.
+For decisions about the project the Council will perform it directly
+on the proposal issue. For decisions about people,
+such as electing or ejecting Team Members, the Council will vote privately.
+However the decision will be posted publicly in an issue ticket.
 
 ### Vote of no confidence
 In exceptional circumstances, Council Members as well as Core Contributors
@@ -518,7 +534,7 @@ After voting:
   each candidate having 60% or more of yes votes and less or
   equal than 20% of no votes is chosen.
   If the number of chosen candidates matches the number or range set for the
-  council/subcommittee being chosen and all extra constrained are met,
+  council/subcommittee being chosen and all extra constrains are met,
   all candidates are confirmed and the election process stops here.
 * In the event that not enough/too many candidates were confirmed or
   the membership constraints were not met,
@@ -536,14 +552,15 @@ After voting:
     requirements from being met.
 * In the event of a tie there will be a runoff election for the tied candidates.
   To avoid further ties and discriminate more among the tied candidates,
-  this vote will be held by Majority Judgment (MJ):
+  this vote will be held by Majority Judgment:
   for each candidate, voters judge their suitability for office as either
   "Excellent", "Very Good", "Good", "Acceptable", "Poor", or "Reject".
   Multiple candidates may be given the same grade by a voter.
   The candidate with the highest median grade is the winner.
 * If more than one candidate has the same highest median-grade,
-  the MJ winner is discovered by removing (one-by-one) any grades equal
-  in value to the shared median grade from each tied candidate's total.
+  the Majority Judgment winner is discovered by removing (one-by-one)
+  any grades equal in value to the shared median grade from
+  each tied candidate's total.
   This is repeated until only one of the previously tied candidates
   is currently found to have the highest median-grade.
 * If ties are still present after this second round, the winner will be chosen at random. First we make a alphanumerically sorted list of the names in the tie. Then we will draw one prior predictive sample from a `pm.Categorical` distribution over the elements in the list to determine the winner.
@@ -596,7 +613,7 @@ All tasks related to the project that are not specifically listed in the
 description of a dedicated team are the responsibility of the PyMC team
 as a whole. At the time of writing, this includes but is not limited to:
 fundraising, issue triaging, running PyMC related events like PyMCon or
-sprints, outreach or presence on social networks.
+sprints, outreach, or presence on social networks.
 
 ### Team structure in practice
 #### GitHub
