@@ -43,7 +43,7 @@ def test_bart_vi():
         )
         var_imp /= var_imp.sum()
         assert var_imp[0] > var_imp[1:].sum()
-        assert_almost_equal(var_imp.sum(), 1)
+        np.testing.assert_almost_equal(var_imp.sum(), 1)
 
 
 def test_bart_random():
