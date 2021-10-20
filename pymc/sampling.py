@@ -2229,7 +2229,7 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains))
+        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
         std_apoint = approx.std.eval()
         cov = std_apoint ** 2
         mean = approx.mean.get_value()
@@ -2246,7 +2246,7 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains))
+        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "advi_map":
@@ -2260,7 +2260,7 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains))
+        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "map":
