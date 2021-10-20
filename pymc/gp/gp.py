@@ -27,6 +27,7 @@ from pymc.gp.util import (
     cholesky,
     conditioned_vars,
     infer_shape,
+    replace_with_value,
     solve_lower,
     solve_upper,
     stabilize,
@@ -540,12 +541,10 @@ class Marginal(Base):
         if given is None:
             given = {}
 
-        mu, cov = self.predictt(Xnew, diag, pred_noise, given)
-        # XXX: This needs to be refactored
-        # return draw_values([mu, cov], point=point)
-        return None, None
+        mu, cov = self._predict_at(Xnew, diag, pred_noise, given)
+        return replace_with_values([mu, cov], replacements=point)
 
-    def predictt(self, Xnew, diag=False, pred_noise=False, given=None):
+    def _predict_at(self, Xnew, diag=False, pred_noise=False, given=None):
         R"""
         Return the mean vector and covariance matrix of the conditional
         distribution as symbolic variables.
@@ -1199,12 +1198,10 @@ class MarginalKron(Base):
             Whether or not observation noise is included in the conditional.
             Default is `False`.
         """
-        mu, cov = self._build_conditional(Xnew, pred_noise, diag)
-        # XXX: This needs to be refactored
-        # return draw_values([mu, cov], point=point)
-        return None, None
+        mu, cov = self._predict_at(Xnew, pred_noise, diag)
+        return replace_with_values([mu, cov], replacements=point)
 
-    def predictt(self, Xnew, diag=False, pred_noise=False):
+    def _predict_at(self, Xnew, diag=False, pred_noise=False):
         R"""
         Return the mean vector and covariance matrix of the conditional
         distribution as symbolic variables.

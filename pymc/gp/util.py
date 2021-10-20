@@ -14,9 +14,12 @@
 
 import warnings
 
+from typing import Dict
+
 import aesara.tensor as at
 import numpy as np
 
+from aesara.compile import SharedVariable
 from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
     cholesky,
     solve,
@@ -29,6 +32,37 @@ from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-impor
 )
 from aesara.tensor.var import TensorConstant
 from scipy.cluster.vq import kmeans
+
+from pymc.aesaraf import compile_rv_inplace, walk_model
+
+
+def replace_with_value(vars_needed, replacements: Dict):
+    R"""
+    Replace random variable nodes in the graph with values given in replacements.
+
+    NOTE TO REVIEWER:  Modified this from `sample_posterior_predictive`.  Is there a better way to do this?
+    """
+    inputs, input_names = [], []
+    for rv in walk_model(vars_needed, walk_past_rvs=True):
+        if rv in model.named_vars.values() and not isinstance(rv, SharedVariable):
+            inputs.append(rv)
+            input_names.append(rv.name)
+
+    fn = compile_rv_inplace(
+        inputs,
+        vars_needed,
+        allow_input_downcast=True,
+        accept_inplace=True,
+        on_unused_input="ignore",
+    )
+
+    replacements = {name: val for name, val in replacements.items() if name in input_names}
+    missing = set(needed) - set(replacements.keys())
+    if len(missing) > 0:
+        missing_str = ", ".join(missing)
+        raise ValueError(f"Values for {missing_str} must be included in `replacements`.")
+
+    return fn(**replacements)
 
 
 def infer_shape(X, n_points=None):
