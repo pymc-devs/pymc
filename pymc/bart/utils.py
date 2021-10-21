@@ -51,7 +51,7 @@ def predict(idata, rng, X_new=None, size=None):
 
 
 def plot_dependence(
-    bart_trees,
+    idata,
     X=None,
     Y=None,
     kind="pdp",
@@ -78,8 +78,8 @@ def plot_dependence(
 
     Parameters
     ----------
-    bart_trees: DataArray of trees
-        BART trees
+    idata: InferenceData
+        InferenceData containing a collection of BART_trees in sample_stats group
     X : array-like
         The covariate matrix.
     Y : array-like
@@ -144,6 +144,7 @@ def plot_dependence(
         )
 
     rng = RandomState(seed=random_seed)
+    bart_trees = idata.sample_stats.bart_trees
 
     if isinstance(X, pd.DataFrame):
         X_names = list(X.columns)
