@@ -16,7 +16,7 @@ import numpy as np
 
 from pymc.step_methods.arraystep import Competence
 from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
-from pymc.step_methods.hmc.integration import IntegrationError
+from pymc.step_methods.hmc.integration import IntegrationError, State
 from pymc.vartypes import discrete_types
 
 __all__ = ["HamiltonianMC"]
@@ -161,6 +161,8 @@ class HamiltonianMC(BaseHMC):
             "accepted": accepted,
             "model_logp": state.model_logp,
         }
+        # Retrieve State q and p data from respective RaveledVars
+        end = State(end.q.data, end.p.data, end.v, end.q_grad, end.energy, end.model_logp)
         return HMCStepData(end, accept_stat, div_info, stats)
 
     @staticmethod
