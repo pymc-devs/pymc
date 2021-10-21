@@ -41,7 +41,6 @@ jobs:
             --ignore=pymc/tests/test_step.py
             --ignore=pymc/tests/test_tuning.py
             --ignore=pymc/tests/test_transforms.py
-            --ignore=pymc/tests/test_types.py
             --ignore=pymc/tests/test_variational_inference.py
             --ignore=pymc/tests/test_sampling_jax.py
             --ignore=pymc/tests/test_dist_math.py
