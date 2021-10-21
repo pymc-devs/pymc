@@ -16,6 +16,7 @@ from copy import copy
 
 import aesara
 import numpy as np
+import pytest
 
 from pymc.distributions import Normal
 from pymc.model import Model
@@ -45,7 +46,7 @@ class TestType:
 
         for sampler in self.samplers:
             with model:
-                sample(10, sampler())
+                sample(draws=10, tune=10, chains=1, step=sampler())
 
     @aesara.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
     def test_float32(self):
@@ -58,8 +59,9 @@ class TestType:
 
         for sampler in self.samplers:
             with model:
-                sample(10, sampler())
+                sample(draws=10, tune=10, chains=1, step=sampler())
 
+    @pytest.mark.xfail(reason="MLDA not refactored for V4 yet")
     @aesara.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
     def test_float64_MLDA(self):
         data = np.random.randn(5)
@@ -76,8 +78,9 @@ class TestType:
         assert obs.dtype == "float64"
 
         with model:
-            sample(10, MLDA(coarse_models=[coarse_model]))
+            sample(draws=10, tune=10, chains=1, step=MLDA(coarse_models=[coarse_model]))
 
+    @pytest.mark.xfail(reason="MLDA not refactored for V4 yet")
     @aesara.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
     def test_float32_MLDA(self):
         data = np.random.randn(5).astype("float32")
@@ -94,4 +97,4 @@ class TestType:
         assert obs.dtype == "float32"
 
         with model:
-            sample(10, MLDA(coarse_models=[coarse_model]))
+            sample(draws=10, tune=10, chains=1, step=MLDA(coarse_models=[coarse_model]))
