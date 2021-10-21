@@ -20,7 +20,6 @@ import aesara.tensor as at
 import numpy as np
 
 from aesara.graph.basic import clone_replace
-from arviz import psislw
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
@@ -237,33 +236,19 @@ class SMC_KERNEL(ABC):
 
         low_beta = old_beta = self.beta
         up_beta = 2.0
+        rN = int(len(self.likelihood_logp) * self.threshold)
 
-        if self.threshold is not None:
-            rN = int(len(self.likelihood_logp) * self.threshold)
-
-            while up_beta - low_beta > 1e-6:
-                new_beta = (low_beta + up_beta) / 2.0
-                log_weights_un = (new_beta - old_beta) * self.likelihood_logp
-                log_weights = log_weights_un - logsumexp(log_weights_un)
-                ESS = int(np.exp(-logsumexp(log_weights * 2)))
-                if ESS == rN:
-                    break
-                elif ESS < rN:
-                    up_beta = new_beta
-                else:
-                    low_beta = new_beta
-        else:
-            rN = int(len(self.likelihood_logp) * 0.5)
-            while up_beta - low_beta > 1e-6:
-                new_beta = (low_beta + up_beta) / 2.0
-                log_weights_un = (new_beta - old_beta) * self.likelihood_logp
-                log_weights = log_weights_un - logsumexp(log_weights_un)
-                log_weights, pareto = psislw(log_weights)
-                ESS = int(np.exp(-logsumexp(log_weights * 2)))
-                if pareto >= 0.5:
-                    up_beta = new_beta
-                else:
-                    break
+        while up_beta - low_beta > 1e-6:
+            new_beta = (low_beta + up_beta) / 2.0
+            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
+            log_weights = log_weights_un - logsumexp(log_weights_un)
+            ESS = int(np.exp(-logsumexp(log_weights * 2)))
+            if ESS == rN:
+                break
+            elif ESS < rN:
+                up_beta = new_beta
+            else:
+                low_beta = new_beta
         if new_beta >= 1:
             new_beta = 1
             log_weights_un = (new_beta - old_beta) * self.likelihood_logp
@@ -381,7 +366,6 @@ class IMH(SMC_KERNEL):
                 max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate))),
             )
             self.proposed = self.draws * self.n_steps
-        print(self.n_steps)
 
         # Update MVNormal proposal based on the mean and covariance of the
         # tempered posterior.
@@ -390,18 +374,16 @@ class IMH(SMC_KERNEL):
         cov += 1e-6 * np.eye(cov.shape[0])
         if np.isnan(cov).any() or np.isinf(cov).any():
             raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
-        mean = np.mean(self.tempered_posterior, axis=0)
-        self.cov = cov
+        mean = np.average(self.tempered_posterior, axis=0)
         self.proposal_dist = multivariate_normal(mean, cov)
 
     def mutate(self):
         """Independent Metropolis-Hastings perturbation."""
         ac_ = np.empty((self.n_steps, self.draws))
-        cov = self.cov  # self.proposal_dist.cov
+
+        cov = self.proposal_dist.cov
         log_R = np.log(np.random.rand(self.n_steps, self.draws))
-        self.old_likelihood_logp = np.copy(self.likelihood_logp)
         for n_step in range(self.n_steps):
-            log_R = np.log(np.random.rand(self.draws))
             # The proposal is independent from the current point.
             # We have to take that into account to compute the Metropolis-Hastings acceptance
             proposal = floatX(self.proposal_dist.rvs(size=self.draws))
@@ -424,47 +406,7 @@ class IMH(SMC_KERNEL):
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
 
-            # log_weights_un = self.likelihood_logp - self.old_likelihood_logp
-            # log_weights = log_weights_un - logsumexp(log_weights_un)
-            # _, pareto = psislw(log_weights)
-            # if np.isfinite(pareto):# >= 0.7:
-            #    break
-            # print(self.beta, n_step, pareto)
-        # self.acc_rate = np.mean(ac_)
-        self.acc_rate = np.mean(np.sum(ac_, 0) > 0)
-        # print(np.mean(ac_), np.mean(np.sum(ac_, 0) > 0))
-
-    #        ac_ = 0
-    #        cov = self.proposal_dist.cov
-    #        rejected = np.ones(self.draws, dtype=bool)
-    #        itero = 0
-    #        for _ in range(self.n_steps):#while True:
-    #            indi = np.arange(self.draws)
-    #            indi = indi[rejected]
-    #            if len(indi) < 0.1*self.draws:
-    #                break
-    #            propo = floatX(self.proposal_dist.rvs(size=len(indi)))
-    #            propo = propo.reshape(len(propo), -1)
-    #            fw = self.proposal_dist.logpdf(propo)
-    #            bk = multivariate_normal(propo.mean(axis=0), cov).logpdf(self.tempered_posterior[rejected])
-    #            rnd = np.random.rand(len(indi))
-    #            for idx, draw in enumerate(indi):
-    #                proposal = propo[idx]
-    #                forward = fw[idx]
-    #                backward = bk[idx]
-    #                ll = self.likelihood_logp_func(proposal)
-    #                pl = self.prior_logp_func(proposal)
-    #                proposal_logp = pl + ll * self.beta
-    #                accepted = rnd[idx] < ((proposal_logp + backward) - (self.tempered_posterior_logp[draw] + forward))
-    #                rejected[draw] = not accepted
-    #                if accepted:
-    #                    self.tempered_posterior[draw] = proposal
-    #                    self.tempered_posterior_logp[draw] = proposal_logp
-    #                    self.prior_logp[draw] = pl
-    #                    self.likelihood_logp[draw] = ll
-    #                ac_ += accepted
-    #                itero += 1
-    #        self.acc_rate = 1-np.mean(rejected)#ac_/itero
+        self.acc_rate = np.mean(ac_)
 
     def sample_stats(self):
         stats = super().sample_stats()
