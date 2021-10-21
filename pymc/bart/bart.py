@@ -39,35 +39,7 @@ class BARTRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng=np.random.default_rng(), *args, **kwargs):
-        size = kwargs.pop("size", None)
-        X_new = kwargs.pop("X_new", None)
-        all_trees = cls.all_trees
-        if all_trees:
-
-            if size is None:
-                size = ()
-            elif isinstance(size, int):
-                size = [size]
-
-            flatten_size = 1
-            for s in size:
-                flatten_size *= s
-
-            idx = rng.randint(len(all_trees), size=flatten_size)
-
-            if X_new is None:
-                pred = np.zeros((flatten_size, all_trees[0][0].num_observations))
-                for ind, p in enumerate(pred):
-                    for tree in all_trees[idx[ind]]:
-                        p += tree.predict_output()
-            else:
-                pred = np.zeros((flatten_size, X_new.shape[0]))
-                for ind, p in enumerate(pred):
-                    for tree in all_trees[idx[ind]]:
-                        p += np.array([tree.predict_out_of_sample(x, cls.m) for x in X_new])
-            return pred.reshape((*size, -1))
-        else:
-            return np.full_like(cls.Y, cls.Y.mean())
+        return np.full_like(cls.Y, cls.Y.mean())
 
 
 bart = BARTRV()
@@ -115,7 +87,6 @@ class BART(NoDistribution):
         **kwargs,
     ):
 
-        cls.all_trees = []
         X, Y = preprocess_XY(X, Y)
 
         bart_op = type(
@@ -123,7 +94,6 @@ class BART(NoDistribution):
             (BARTRV,),
             dict(
                 name="BART",
-                all_trees=cls.all_trees,
                 inplace=False,
                 initval=Y.mean(),
                 X=X,

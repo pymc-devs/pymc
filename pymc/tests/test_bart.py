@@ -58,9 +58,9 @@ def test_bart_random():
         idata = pm.sample(random_seed=3415, chains=1)
 
     rng = RandomState(12345)
-    pred_all = mu.owner.op.rng_fn(rng, size=2)
+    pred_all = pm.bart.utils.predict(idata, rng, size=2)
     rng = RandomState(12345)
-    pred_first = mu.owner.op.rng_fn(rng, X_new=X[:10])
+    pred_first = pm.bart.utils.predict(idata, rng, X_new=X[:10])
 
     assert_almost_equal(pred_first, pred_all[0, :10], decimal=4)
     assert pred_all.shape == (2, 50)
