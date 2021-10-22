@@ -61,7 +61,6 @@ class TestType:
             with model:
                 sample(draws=10, tune=10, chains=1, step=sampler())
 
-    @pytest.mark.xfail(reason="MLDA not refactored for V4 yet")
     @aesara.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
     def test_float64_MLDA(self):
         data = np.random.randn(5)
@@ -80,7 +79,6 @@ class TestType:
         with model:
             sample(draws=10, tune=10, chains=1, step=MLDA(coarse_models=[coarse_model]))
 
-    @pytest.mark.xfail(reason="MLDA not refactored for V4 yet")
     @aesara.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
     def test_float32_MLDA(self):
         data = np.random.randn(5).astype("float32")
