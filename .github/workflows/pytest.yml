@@ -161,6 +161,7 @@ jobs:
             pymc/tests/test_sampling.py
             pymc/tests/test_tuning.py
             pymc/tests/test_shared.py
+            pymc/tests/test_types.py
           - |
             pymc/tests/test_gp.py
             pymc/tests/test_ode.py
