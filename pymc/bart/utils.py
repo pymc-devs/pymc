@@ -144,7 +144,6 @@ def plot_dependence(
         )
 
     rng = RandomState(seed=random_seed)
-    bart_trees = idata.sample_stats.bart_trees
 
     if isinstance(X, pd.DataFrame):
         X_names = list(X.columns)
@@ -199,13 +198,13 @@ def plot_dependence(
             for x_i in new_X_i:
                 new_X[:, indices_mi] = X[:, indices_mi]
                 new_X[:, i] = x_i
-                y_pred.append(np.mean(predict(bart_trees, rng, X_new=new_X, size=samples), 1))
+                y_pred.append(np.mean(predict(idata, rng, X_new=new_X, size=samples), 1))
             new_X_target.append(new_X_i)
         else:
             for instance in instances:
                 new_X = X[idx_s]
                 new_X[:, indices_mi] = X[:, indices_mi][instance]
-                y_pred.append(np.mean(predict(bart_trees, rng, X_new=new_X, size=samples), 0))
+                y_pred.append(np.mean(predict(idata, rng, X_new=new_X, size=samples), 0))
             new_X_target.append(new_X[:, i])
         new_Y.append(np.array(y_pred).T)
 

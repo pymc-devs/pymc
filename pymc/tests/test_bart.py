@@ -60,7 +60,7 @@ def test_missing_data():
         idata = pm.sample(random_seed=3415)
 
 
-def test_utils():
+class TestUtils:
     X = np.random.normal(0, 1, size=(2, 50)).T
     Y = np.random.normal(0, 1, size=50)
 
@@ -70,11 +70,11 @@ def test_utils():
         y = pm.Normal("y", mu, sigma, observed=Y)
         idata = pm.sample(random_seed=3415)
 
-    def test_predict():
+    def test_predict(self):
         rng = RandomState(12345)
-        pred_all = pm.bart.utils.predict(idata, rng, size=2)
+        pred_all = pm.bart.utils.predict(self.idata, rng, size=2)
         rng = RandomState(12345)
-        pred_first = pm.bart.utils.predict(idata, rng, X_new=X[:10])
+        pred_first = pm.bart.utils.predict(self.idata, rng, X_new=self.X[:10])
 
         assert_almost_equal(pred_first, pred_all[0, :10], decimal=4)
         assert pred_all.shape == (2, 50)
@@ -84,11 +84,16 @@ def test_utils():
         "kwargs",
         [
             {},
-            {"kind": "pdp", "xs_interval": "quantiles", "xs_values": [0.25, 0.5, 0.75]},
-            {"kind": "ice", "instances": 5},
-            {"var_idx": 0, "rug": False, "smooth": False, "color": "k"},
-            {"grid": (1, 2), "sharey": "False", "alpha": 1},
+            {
+                "kind": "pdp",
+                "samples": 2,
+                "xs_interval": "quantiles",
+                "xs_values": [0.25, 0.5, 0.75],
+            },
+            {"kind": "ice", "instances": 2},
+            {"var_idx": [0], "rug": False, "smooth": False, "color": "k"},
+            {"grid": (1, 2), "sharey": "none", "alpha": 1},
         ],
     )
-    def test_pdp():
-        pm.bart.utils.plot_dependence(idata, X=None, Y=None, **kwargs)
+    def test_pdp(self, kwargs):
+        pm.bart.utils.plot_dependence(self.idata, X=self.X, Y=self.Y, **kwargs)
