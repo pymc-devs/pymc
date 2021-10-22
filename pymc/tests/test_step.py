@@ -1569,8 +1569,8 @@ class TestMLDA:
 
             assert np.allclose(m0, -3.5)
             assert np.allclose(m1, -2.2)
-            assert np.allclose(s0, 0)
-            assert np.allclose(s1, 0)
+            assert np.allclose(s0, 0, atol=1e-3)
+            assert np.allclose(s1, 0, atol=1e-3)
 
     def test_variance_reduction(self):
         """
