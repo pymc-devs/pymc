@@ -19,7 +19,7 @@ from cachetools import cached
 
 import pymc as pm
 
-from pymc.distributions.transforms import Transform
+from pymc.distributions.transforms import RVTransform
 from pymc.util import UNSET, hash_key, hashable, locally_cachedmethod
 
 
@@ -28,8 +28,14 @@ class TestTransformName:
     transform_name = "test"
 
     def test_get_transformed_name(self):
-        class NewTransform(Transform):
+        class NewTransform(RVTransform):
             name = self.transform_name
+
+            def forward(self, value):
+                return 0
+
+            def backward(self, value):
+                return 0
 
         test_transform = NewTransform()
 

@@ -14,6 +14,7 @@ import jax
 import numpy as np
 import pandas as pd
 
+from aesara.assert_op import Assert
 from aesara.compile import SharedVariable
 from aesara.graph.basic import clone_replace, graph_inputs
 from aesara.graph.fg import FunctionGraph
@@ -24,6 +25,18 @@ from pymc import modelcontext
 from pymc.aesaraf import compile_rv_inplace
 
 warnings.warn("This module is experimental.")
+
+
+@jax_funcify.register(Assert)
+def jax_funcify_Assert(op, **kwargs):
+    # Jax does not allow assert whose values aren't known during JIT compilation
+    # within it's JIT-ed code. Hence we need to make a simple pass through
+    # version of the Assert Op.
+    # https://github.com/google/jax/issues/2273#issuecomment-589098722
+    def assert_fn(value, *inps):
+        return value
+
+    return assert_fn
 
 
 def replace_shared_variables(graph):
@@ -132,7 +145,7 @@ def sample_numpyro_nuts(
         if transform is not None:
             # TODO: This will fail when the transformation depends on another variable
             #  such as in interval transform with RVs as edges
-            trans_samples = transform.backward(rv, raw_samples)
+            trans_samples = transform.backward(raw_samples, *rv.owner.inputs)
             trans_samples.name = rv.name
             mcmc_samples.append(trans_samples)
 

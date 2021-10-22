@@ -14,6 +14,7 @@
 import aesara.tensor as at
 import numpy as np
 
+from aeppl.logprob import _logprob
 from aesara.tensor.random.basic import (
     RandomVariable,
     bernoulli,
@@ -41,7 +42,7 @@ from pymc.distributions.dist_math import (
     normal_lcdf,
 )
 from pymc.distributions.distribution import Discrete
-from pymc.distributions.logprob import _logcdf, _logp
+from pymc.distributions.logprob import _logcdf
 from pymc.math import sigmoid
 
 __all__ = [
@@ -1318,7 +1319,7 @@ class ZeroInflatedPoisson(Discrete):
 
         logp_val = at.switch(
             at.gt(value, 0),
-            at.log(psi) + _logp(poisson, value, {}, theta),
+            at.log(psi) + _logprob(poisson, [value], None, None, None, theta),
             at.logaddexp(at.log1p(-psi), at.log(psi) - theta),
         )
 
@@ -1451,7 +1452,7 @@ class ZeroInflatedBinomial(Discrete):
 
         logp_val = at.switch(
             at.gt(value, 0),
-            at.log(psi) + _logp(binomial, value, {}, n, p),
+            at.log(psi) + _logprob(binomial, [value], None, None, None, n, p),
             at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
         )
 
@@ -1610,7 +1611,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         return bound(
             at.switch(
                 at.gt(value, 0),
-                at.log(psi) + _logp(nbinom, value, {}, n, p),
+                at.log(psi) + _logprob(nbinom, [value], None, None, None, n, p),
                 at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
             ),
             0 <= value,

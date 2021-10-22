@@ -143,9 +143,7 @@ def test_multinomial_bound():
         p_b = pm.Dirichlet("p", floatX(np.ones(2)))
         MultinomialB("x", n, p_b, observed=x)
 
-    assert np.isclose(
-        modelA.logp({"p_stickbreaking__": [0]}), modelB.logp({"p_stickbreaking__": [0]})
-    )
+    assert np.isclose(modelA.logp({"p_simplex__": [0]}), modelB.logp({"p_simplex__": [0]}))
 
 
 class TestMvNormalLogp:

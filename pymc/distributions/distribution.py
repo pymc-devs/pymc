@@ -24,13 +24,14 @@ from typing import Callable, Optional, Sequence
 import aesara
 import numpy as np
 
+from aeppl.logprob import _logprob
 from aesara.tensor.basic import as_tensor_variable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import change_rv_size
-from pymc.distributions import _logcdf, _logp
+from pymc.distributions import _logcdf
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
@@ -98,10 +99,11 @@ class DistributionMeta(ABCMeta):
             class_logp = clsdict.get("logp")
             if class_logp:
 
-                @_logp.register(rv_type)
-                def logp(op, var, rvs_to_values, *dist_params, **kwargs):
-                    value_var = rvs_to_values.get(var, var)
-                    return class_logp(value_var, *dist_params, **kwargs)
+                @_logprob.register(rv_type)
+                def logp(op, value_var_list, *dist_params, **kwargs):
+                    _dist_params = dist_params[3:]
+                    value_var = value_var_list[0]
+                    return class_logp(value_var, *_dist_params)
 
             class_logcdf = clsdict.get("logcdf")
             if class_logcdf:
@@ -574,13 +576,11 @@ class DensityDist(NoDistribution):
         # Register custom logp
         rv_type = type(rv_op)
 
-        @_logp.register(rv_type)
-        def density_dist_logp(op, rv, rvs_to_values, *dist_params, **kwargs):
-            value_var = rvs_to_values.get(rv, rv)
-            return logp(
-                value_var,
-                *dist_params,
-            )
+        @_logprob.register(rv_type)
+        def density_dist_logp(op, value_var_list, *dist_params, **kwargs):
+            _dist_params = dist_params[3:]
+            value_var = value_var_list[0]
+            return logp(value_var, *_dist_params)
 
         @_logcdf.register(rv_type)
         def density_dist_logcdf(op, var, rvs_to_values, *dist_params, **kwargs):
