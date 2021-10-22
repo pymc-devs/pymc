@@ -41,6 +41,7 @@ from pymc.aesaraf import floatX
 from pymc.distributions.shape_utils import to_tuple
 from pymc.tests.helpers import SeededTest
 
+pytestmark = pytest.mark.xfail(reason="Mixture not refactored.")
 
 # Generate data
 def generate_normal_mixture_data(w, mu, sd, size=1000):

@@ -506,7 +506,7 @@ def test_initial_point():
         b = pm.Uniform("b", testval=b_initval)
 
     b_value_var = model.rvs_to_values[b]
-    b_initval_trans = b_value_var.tag.transform.forward(b, b_initval).eval()
+    b_initval_trans = b_value_var.tag.transform.forward(b_initval, *b.owner.inputs).eval()
 
     y_initval = np.array(-2.4, dtype=aesara.config.floatX)
 
@@ -565,8 +565,12 @@ class TestCheckStartVals(SeededTest):
             b = pm.Uniform("b", lower=2.0, upper=3.0)
 
         start = {
-            "a_interval__": model.rvs_to_values[a].tag.transform.forward(a, 0.3).eval(),
-            "b_interval__": model.rvs_to_values[b].tag.transform.forward(b, 2.1).eval(),
+            "a_interval__": model.rvs_to_values[a]
+            .tag.transform.forward(0.3, *a.owner.inputs)
+            .eval(),
+            "b_interval__": model.rvs_to_values[b]
+            .tag.transform.forward(2.1, *b.owner.inputs)
+            .eval(),
         }
         model.check_start_vals(start)
 
@@ -577,7 +581,9 @@ class TestCheckStartVals(SeededTest):
 
         start = {
             "a_interval__": np.nan,
-            "b_interval__": model.rvs_to_values[b].tag.transform.forward(b, 2.1).eval(),
+            "b_interval__": model.rvs_to_values[b]
+            .tag.transform.forward(2.1, *b.owner.inputs)
+            .eval(),
         }
         with pytest.raises(pm.exceptions.SamplingError):
             model.check_start_vals(start)
@@ -588,8 +594,12 @@ class TestCheckStartVals(SeededTest):
             b = pm.Uniform("b", lower=2.0, upper=3.0)
 
         start = {
-            "a_interval__": model.rvs_to_values[a].tag.transform.forward(a, 0.3).eval(),
-            "b_interval__": model.rvs_to_values[b].tag.transform.forward(b, 2.1).eval(),
+            "a_interval__": model.rvs_to_values[a]
+            .tag.transform.forward(0.3, *a.owner.inputs)
+            .eval(),
+            "b_interval__": model.rvs_to_values[b]
+            .tag.transform.forward(2.1, *b.owner.inputs)
+            .eval(),
             "c": 1.0,
         }
         with pytest.raises(KeyError):

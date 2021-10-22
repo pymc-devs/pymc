@@ -38,6 +38,8 @@ import aesara.tensor as at
 import numpy as np
 import scipy.sparse as sps
 
+from aeppl.transforms import RVTransform
+from aesara.compile.mode import Mode, get_mode
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
@@ -743,22 +745,31 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     @property
     def logpt(self):
         """Aesara scalar of log-probability of the model"""
-        with self:
-            factors = [logpt_sum(var, self.rvs_to_values.get(var, None)) for var in self.free_RVs]
-            factors += [logpt_sum(obs, obs.tag.observations) for obs in self.observed_RVs]
 
-            # Convert random variables into their log-likelihood inputs and
-            # apply their transforms, if any
-            potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+        rv_values = {}
+        for var in self.free_RVs:
+            rv_values[var] = self.rvs_to_values.get(var, None)
+        rv_factors = logpt(self.free_RVs, rv_values)
 
-            factors += potentials
+        obs_values = {}
+        for obs in self.observed_RVs:
+            obs_values[obs] = obs.tag.observations
+        obs_factors = logpt(self.observed_RVs, obs_values)
 
-            logp_var = at.sum([at.sum(factor) for factor in factors])
-            if self.name:
-                logp_var.name = f"__logp_{self.name}"
-            else:
-                logp_var.name = "__logp"
-            return logp_var
+        # Convert random variables into their log-likelihood inputs and
+        # apply their transforms, if any
+        potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+        logp_var = at.sum([at.sum(factor) for factor in potentials])
+        if rv_factors is not None:
+            logp_var += rv_factors
+        if obs_factors is not None:
+            logp_var += obs_factors
+
+        if self.name:
+            logp_var.name = f"__logp_{self.name}"
+        else:
+            logp_var.name = "__logp"
+        return logp_var
 
     @property
     def logp_nojact(self):
@@ -769,20 +780,25 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         will be the same as logpt as there is no need for Jacobian correction.
         """
         with self:
-            factors = [
-                logpt_sum(var, getattr(var.tag, "value_var", None), jacobian=False)
-                for var in self.free_RVs
-            ]
-            factors += [
-                logpt_sum(obs, obs.tag.observations, jacobian=False) for obs in self.observed_RVs
-            ]
+            rv_values = {}
+            for var in self.free_RVs:
+                rv_values[var] = getattr(var.tag, "value_var", None)
+            rv_factors = logpt(self.free_RVs, rv_values, jacobian=False)
+
+            obs_values = {}
+            for obs in self.observed_RVs:
+                obs_values[obs] = obs.tag.observations
+            obs_factors = logpt(self.observed_RVs, obs_values, jacobian=False)
 
             # Convert random variables into their log-likelihood inputs and
             # apply their transforms, if any
             potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
-            factors += potentials
+            logp_var = at.sum([at.sum(factor) for factor in potentials])
 
-            logp_var = at.sum([at.sum(factor) for factor in factors])
+            if rv_factors is not None:
+                logp_var += rv_factors
+            if obs_factors is not None:
+                logp_var += obs_factors
 
             if self.name:
                 logp_var.name = f"__logp_nojac_{self.name}"
@@ -795,20 +811,28 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic)."""
         with self:
-            factors = [logpt_sum(var, getattr(var.tag, "value_var", None)) for var in self.free_RVs]
-            return at.sum(factors)
+            rv_values = {}
+            for var in self.free_RVs:
+                rv_values[var] = getattr(var.tag, "value_var", None)
+            return logpt(self.free_RVs, rv_values)
 
     @property
     def datalogpt(self):
         with self:
-            factors = [logpt_sum(obs, obs.tag.observations) for obs in self.observed_RVs]
+            obs_values = {}
+            for obs in self.observed_RVs:
+                obs_values[obs] = obs.tag.observations
+            obs_factors = logpt(self.observed_RVs, obs_values)
 
             # Convert random variables into their log-likelihood inputs and
             # apply their transforms, if any
             potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+            logp_var = at.sum([at.sum(factor) for factor in potentials])
 
-            factors += [at.sum(factor) for factor in potentials]
-            return at.sum(factors)
+            if obs_factors is not None:
+                logp_var += obs_factors
+
+            return logp_var
 
     @property
     def vars(self):
@@ -838,7 +862,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             if transform is not None:
                 # We need to create and add an un-transformed version of
                 # each transformed variable
-                untrans_value_var = transform.backward(rv, value_var)
+                untrans_value_var = transform.backward(value_var, *rv.owner.inputs)
                 untrans_value_var.name = rv.name
                 vars.append(untrans_value_var)
             vars.append(value_var)
@@ -1332,7 +1356,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             value_var.tag.transform = transform
             value_var.name = f"{value_var.name}_{transform.name}__"
             if aesara.config.compute_test_value != "off":
-                value_var.tag.test_value = transform.forward(rv_var, value_var).tag.test_value
+                value_var.tag.test_value = transform.forward(
+                    value_var, *rv_var.owner.inputs
+                ).tag.test_value
             self.named_vars[value_var.name] = value_var
 
         self.rvs_to_values[rv_var] = value_var
@@ -1542,7 +1568,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             transform = getattr(rv_var.tag, "transform", None)
             if transform is not None:
                 names.append(get_transformed_name(rv.name, transform))
-                outputs.append(transform.forward(rv, rv).shape)
+                outputs.append(transform.forward(rv, *rv.owner.inputs).shape)
             names.append(rv.name)
             outputs.append(rv.shape)
         f = aesara.function(

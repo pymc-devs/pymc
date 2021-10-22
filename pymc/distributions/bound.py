@@ -14,12 +14,12 @@
 
 import numpy as np
 
+from aeppl.logprob import logprob
 from aesara.tensor import as_tensor_variable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import floatX, intX
-from pymc.distributions import _logp
 from pymc.distributions.continuous import BoundedContinuous
 from pymc.distributions.dist_math import bound
 from pymc.distributions.distribution import Continuous, Discrete
@@ -46,7 +46,7 @@ boundrv = BoundRV()
 
 class _ContinuousBounded(BoundedContinuous):
     rv_op = boundrv
-    bound_args_indices = [1, 2]
+    bound_args_indices = [4, 5]
 
     def logp(value, distribution, lower, upper):
         """
@@ -67,7 +67,7 @@ class _ContinuousBounded(BoundedContinuous):
         -------
         TensorVariable
         """
-        logp = _logp(distribution.owner.op, value, {}, *distribution.owner.inputs[3:])
+        logp = logprob(distribution, value)
         return bound(logp, (value >= lower), (value <= upper))
 
 
@@ -107,7 +107,7 @@ class _DiscreteBounded(Discrete):
         -------
         TensorVariable
         """
-        logp = _logp(distribution.owner.op, value, {}, *distribution.owner.inputs[3:])
+        logp = logprob(distribution, value)
         return bound(logp, (value >= lower), (value <= upper))
 
 
@@ -166,6 +166,7 @@ class Bound:
                 raise ValueError("Given dims do not exist in model coordinates.")
 
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval)
+        distribution.tag.ignore_logprob = True
 
         if isinstance(distribution.owner.op, Continuous):
             res = _ContinuousBounded(
@@ -200,7 +201,7 @@ class Bound:
 
         cls._argument_checks(distribution, **kwargs)
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval=None)
-
+        distribution.tag.ignore_logprob = True
         if isinstance(distribution.owner.op, Continuous):
             res = _ContinuousBounded.dist(
                 [distribution, lower, upper],

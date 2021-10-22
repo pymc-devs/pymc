@@ -394,7 +394,7 @@ class Dirichlet(Continuous):
     rv_op = dirichlet
 
     def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("transform", transforms.stick_breaking)
+        kwargs.setdefault("transform", transforms.simplex)
         return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
@@ -2082,7 +2082,7 @@ class CAR(Continuous):
         TensorVariable
         """
 
-        sparse = isinstance(W, aesara.sparse.SparseVariable)
+        sparse = isinstance(W, aesara.sparse.SparseConstant)
 
         if sparse:
             D = sp_sum(W, axis=0)

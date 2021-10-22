@@ -42,7 +42,9 @@ def convert_str_to_rv_dict(
         if isinstance(key, str):
             if is_transformed_name(key):
                 rv = model[get_untransformed_name(key)]
-                initvals[rv] = model.rvs_to_values[rv].tag.transform.backward(rv, initval)
+                initvals[rv] = model.rvs_to_values[rv].tag.transform.backward(
+                    initval, *rv.owner.inputs
+                )
             else:
                 initvals[model[key]] = initval
         else:
@@ -277,7 +279,7 @@ def make_initial_point_expression(
         transform = getattr(rvs_to_values[variable].tag, "transform", None)
 
         if transform is not None:
-            value = transform.forward(variable, value)
+            value = transform.forward(value, *variable.owner.inputs)
 
         if variable in jitter_rvs:
             jitter = at.random.uniform(-1, 1, size=value.shape)
@@ -287,7 +289,7 @@ def make_initial_point_expression(
         initial_values_transformed.append(value)
 
         if transform is not None:
-            value = transform.backward(variable, value)
+            value = transform.backward(value, *variable.owner.inputs)
 
         initial_values.append(value)
 

@@ -4,6 +4,7 @@ channels:
 - conda-forge
 - defaults
 dependencies:
+- aeppl>=0.0.13
 - aesara>=2.2.2
 - arviz>=0.11.4
 - cachetools>=4.2.1

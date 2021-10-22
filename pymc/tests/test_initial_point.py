@@ -23,11 +23,11 @@ from pymc.initial_point import make_initial_point_fn, make_initial_point_fns_per
 
 
 def transform_fwd(rv, expected_untransformed):
-    return rv.tag.value_var.tag.transform.forward(rv, expected_untransformed).eval()
+    return rv.tag.value_var.tag.transform.forward(expected_untransformed, *rv.owner.inputs).eval()
 
 
 def transform_back(rv, transformed) -> np.ndarray:
-    return rv.tag.value_var.tag.transform.backward(rv, transformed).eval()
+    return rv.tag.value_var.tag.transform.backward(transformed, *rv.owner.inputs).eval()
 
 
 class TestInitvalAssignment:
