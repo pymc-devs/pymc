@@ -4,6 +4,11 @@ import re
 import sys
 import warnings
 
+from typing import Callable, List
+
+from aesara.graph import optimize_graph
+from aesara.tensor import TensorVariable
+
 xla_flags = os.getenv("XLA_FLAGS", "").lstrip("--")
 xla_flags = re.sub(r"xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
 os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"])
@@ -18,10 +23,9 @@ from aesara.assert_op import Assert
 from aesara.compile import SharedVariable
 from aesara.graph.basic import clone_replace, graph_inputs
 from aesara.graph.fg import FunctionGraph
-from aesara.graph.opt import MergeOptimizer
 from aesara.link.jax.dispatch import jax_funcify
 
-from pymc import modelcontext
+from pymc import Model, modelcontext
 from pymc.aesaraf import compile_rv_inplace
 
 warnings.warn("This module is experimental.")
@@ -39,7 +43,7 @@ def jax_funcify_Assert(op, **kwargs):
     return assert_fn
 
 
-def replace_shared_variables(graph):
+def replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariable]:
     """Replace shared variables in graph by their constant values
 
     Raises
@@ -60,6 +64,34 @@ def replace_shared_variables(graph):
 
     new_graph = clone_replace(graph, replace=replacements)
     return new_graph
+
+
+def get_jaxified_logp(model: Model) -> Callable:
+    """Compile model.logpt into an optimized jax function"""
+
+    logpt = replace_shared_variables([model.logpt])[0]
+
+    logpt_fgraph = FunctionGraph(outputs=[logpt], clone=False)
+    optimize_graph(logpt_fgraph, include=["fast_run"], exclude=["cxx_only", "BlasOpt"])
+
+    # We now jaxify the optimized fgraph
+    logp_fn = jax_funcify(logpt_fgraph)
+
+    if isinstance(logp_fn, (list, tuple)):
+        # This handles the new JAX backend, which always returns a tuple
+        logp_fn = logp_fn[0]
+
+    def logp_fn_wrap(x):
+        res = logp_fn(*x)
+
+        if isinstance(res, (list, tuple)):
+            # This handles the new JAX backend, which always returns a tuple
+            res = res[0]
+
+        # Jax expects a potential with the opposite sign of model.logpt
+        return -res
+
+    return logp_fn_wrap
 
 
 def sample_numpyro_nuts(
@@ -83,27 +115,10 @@ def sample_numpyro_nuts(
     init_state = [model.initial_point[rv_name] for rv_name in rv_names]
     init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
 
-    logpt = replace_shared_variables([model.logpt])[0]
-    logpt_fgraph = FunctionGraph(outputs=[logpt], clone=False)
-    MergeOptimizer().optimize(logpt_fgraph)
-    logp_fn = jax_funcify(logpt_fgraph)
-
-    if isinstance(logp_fn, (list, tuple)):
-        # This handles the new JAX backend, which always returns a tuple
-        logp_fn = logp_fn[0]
-
-    def logp_fn_wrap(x):
-        res = logp_fn(*x)
-
-        if isinstance(res, (list, tuple)):
-            # This handles the new JAX backend, which always returns a tuple
-            res = res[0]
-
-        # Jax expects a potential with the opposite sign of model.logpt
-        return -res
+    logp_fn = get_jaxified_logp(model)
 
     nuts_kernel = NUTS(
-        potential_fn=logp_fn_wrap,
+        potential_fn=logp_fn,
         target_accept_prob=target_accept,
         adapt_step_size=True,
         adapt_mass_matrix=True,

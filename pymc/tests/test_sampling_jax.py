@@ -1,4 +1,5 @@
 import aesara
+import aesara.tensor as at
 import numpy as np
 import pytest
 
@@ -7,7 +8,11 @@ from aesara.graph import graph_inputs
 
 import pymc as pm
 
-from pymc.sampling_jax import replace_shared_variables, sample_numpyro_nuts
+from pymc.sampling_jax import (
+    get_jaxified_logp,
+    replace_shared_variables,
+    sample_numpyro_nuts,
+)
 
 
 def test_transform_samples():
@@ -40,7 +45,6 @@ def test_transform_samples():
 
 
 def test_replace_shared_variables():
-
     x = aesara.shared(5, name="shared_x")
 
     new_x = replace_shared_variables([x])
@@ -50,3 +54,14 @@ def test_replace_shared_variables():
     x.default_update = x + 1
     with pytest.raises(ValueError, match="shared variables with default_update"):
         replace_shared_variables([x])
+
+
+def test_get_jaxified_logp():
+    with pm.Model() as m:
+        x = pm.Flat("x")
+        y = pm.Flat("y")
+        pm.Potential("pot", at.log(at.exp(x) + at.exp(y)))
+
+    jax_fn = get_jaxified_logp(m)
+    # This would underflow if not optimized
+    assert not np.isinf(jax_fn((np.array(5000.0), np.array(5000.0))))
