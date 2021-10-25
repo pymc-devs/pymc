@@ -22,9 +22,8 @@ from aesara import scan
 from scipy import stats, signal
 from typing import List, Tuple
 
-import pymc as pymc
-from pymc import logp
-from pymc.aesaraf import floatX, intX
+# from pymc import logp
+# from pymc.aesaraf import floatX, intX
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, HalfNormal, get_tau_sigma
 from pymc.distributions.shape_utils import to_tuple
