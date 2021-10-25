@@ -9,9 +9,9 @@ from typing import Callable, List
 from aesara.graph import optimize_graph
 from aesara.tensor import TensorVariable
 
-xla_flags = os.getenv("XLA_FLAGS", "").lstrip("--")
-xla_flags = re.sub(r"xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
-os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"])
+xla_flags = os.getenv("XLA_FLAGS", "")
+xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
+os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
 
 import aesara.tensor as at
 import arviz as az
