@@ -12,8 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara.tensor as at
 import numpy as np
 
+from aeppl.logprob import _logprob
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
 from pandas import DataFrame, Series
 
@@ -146,6 +148,20 @@ class BART(NoDistribution):
     def dist(cls, *params, **kwargs):
         return super().dist(params, **kwargs)
 
+    def logp(x, *inputs):
+        """Calculate log probability.
+
+        Parameters
+        ----------
+        x: numeric, TensorVariable
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return at.zeros_like(x)
+
 
 def preprocess_XY(X, Y):
     if isinstance(Y, (Series, DataFrame)):
@@ -156,3 +172,10 @@ def preprocess_XY(X, Y):
     Y = Y.astype(float)
     X = X.astype(float)
     return X, Y
+
+
+@_logprob.register(BARTRV)
+def logp(op, value_var, *dist_params, **kwargs):
+    _dist_params = dist_params[3:]
+    value_var = value_var[0]
+    return BART.logp(value_var, *_dist_params)

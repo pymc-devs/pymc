@@ -1987,7 +1987,7 @@ def sample_prior_predictive(
         transformed_value_var = model[name]
         rv_var = model.values_to_rvs[transformed_value_var]
         transform = transformed_value_var.tag.transform
-        transformed_rv_var = transform.forward(rv_var, rv_var)
+        transformed_rv_var = transform.forward(rv_var, *rv_var.owner.inputs)
 
         names.append(name)
         vars_to_sample.append(transformed_rv_var)

@@ -37,15 +37,16 @@ except ImportError:  # pragma: no cover
         raise RuntimeError("polyagamma package is not installed!")
 
 
+from aeppl.logprob import _logprob
 from scipy.special import expit
 
 import pymc as pm
 
 from pymc.aesaraf import change_rv_size, floatX, intX
-from pymc.distributions import _logp
 from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc.distributions.dist_math import clipped_beta_rvs
+from pymc.distributions.logprob import logpt
 from pymc.distributions.multivariate import _OrderedMultinomial, quaddist_matrix
 from pymc.distributions.shape_utils import to_tuple
 from pymc.tests.helpers import SeededTest, select_by_precision
@@ -64,13 +65,16 @@ def pymc_random(
     dist,
     paramdomains,
     ref_rand,
-    valuedomain=Domain([0]),
+    valuedomain=None,
     size=10000,
     alpha=0.05,
     fails=10,
     extra_args=None,
     model_args=None,
 ):
+    if valuedomain is None:
+        valuedomain = Domain([0], edges=(None, None))
+
     if model_args is None:
         model_args = {}
 
@@ -104,12 +108,15 @@ def pymc_random(
 def pymc_random_discrete(
     dist,
     paramdomains,
-    valuedomain=Domain([0]),
+    valuedomain=None,
     ref_rand=None,
     size=100000,
     alpha=0.05,
     fails=20,
 ):
+    if valuedomain is None:
+        valuedomain = Domain([0], edges=(None, None))
+
     model, param_vars = build_model(dist, valuedomain, paramdomains)
     model_dist = change_rv_size(model.named_vars["value"], size, expand=True)
     pymc_rand = aesara.function([], model_dist)
@@ -1200,10 +1207,12 @@ class TestDirichletMultinomial(BaseTestDistribution):
     ]
 
     def test_random_draws(self):
+        default_rng = aesara.shared(np.random.default_rng(1234))
         draws = pm.DirichletMultinomial.dist(
             n=np.array([5, 100]),
             a=np.array([[0.001, 0.001, 0.001, 1000], [1000, 1000, 0.001, 0.001]]),
             size=(2, 3),
+            rng=default_rng,
         ).eval()
         assert np.all(draws.sum(-1) == np.array([5, 100]))
         assert np.all((draws.sum(-2)[:, :, 0] > 30) & (draws.sum(-2)[:, :, 0] <= 70))
@@ -1615,7 +1624,6 @@ class TestMatrixNormal(BaseTestDistribution):
                     size=15,
                 )
 
-        msg = "Value must be two dimensional."
         with pm.Model():
             matrixnormal = pm.MatrixNormal(
                 "matnormal",
@@ -1623,14 +1631,8 @@ class TestMatrixNormal(BaseTestDistribution):
                 rowcov=np.eye(3),
                 colcov=np.eye(3),
             )
-            with pytest.raises(ValueError, match=msg):
-                rvs_to_values = {matrixnormal: aesara.tensor.ones((3, 3, 3))}
-                _logp(
-                    matrixnormal.owner.op,
-                    matrixnormal,
-                    rvs_to_values,
-                    *matrixnormal.owner.inputs[3:],
-                )
+            with pytest.raises(TypeError):
+                logpt(matrixnormal, aesara.tensor.ones((3, 3, 3)))
 
         with pm.Model():
             with pytest.warns(DeprecationWarning):
@@ -1859,7 +1861,7 @@ class TestDensityDist:
             pm.DensityDist(
                 "density_dist",
                 mu,
-                logp=lambda value, mu: pm.Normal.logp(value, mu, 1),
+                logp=lambda value, mu: logpt(pm.Normal.dist(mu, 1, size=100), value),
                 observed=np.random.randn(100),
                 initval=0,
             )

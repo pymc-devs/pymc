@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 from collections.abc import Mapping
 from functools import singledispatch
@@ -19,14 +20,12 @@ from typing import Dict, Optional, Union
 import aesara.tensor as at
 import numpy as np
 
+from aeppl import factorized_joint_logprob
+from aeppl.transforms import TransformValuesOpt
 from aesara import config
-from aesara.gradient import disconnected_grad
-from aesara.graph.basic import Constant, clone, graph_inputs, io_toposort
-from aesara.graph.fg import FunctionGraph
+from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.graph.op import Op, compute_test_value
-from aesara.graph.type import CType
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.opt import local_subtensor_rv_lift
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -109,6 +108,16 @@ def _get_scaling(total_size, shape, ndim):
     return at.as_tensor(floatX(coef))
 
 
+subtensor_types = (
+    AdvancedIncSubtensor,
+    AdvancedIncSubtensor1,
+    AdvancedSubtensor,
+    AdvancedSubtensor1,
+    IncSubtensor,
+    Subtensor,
+)
+
+
 def logpt(
     var: TensorVariable,
     rv_values: Optional[Union[TensorVariable, Dict[TensorVariable, TensorVariable]]] = None,
@@ -116,16 +125,157 @@ def logpt(
     jacobian: bool = True,
     scaling: bool = True,
     transformed: bool = True,
-    cdf: bool = False,
-    sum: bool = False,
+    sum: bool = True,
     **kwargs,
 ) -> TensorVariable:
-    """Create a measure-space (i.e. log-likelihood) graph for a random variable at a given point.
+    """Create a measure-space (i.e. log-likelihood) graph for a random variable
+    or a list of random variables at a given point.
 
     The input `var` determines which log-likelihood graph is used and
     `rv_value` is that graph's input parameter.  For example, if `var` is
     the output of a ``NormalRV`` ``Op``, then the output is a graph of the
     density function for `var` set to the value `rv_value`.
+
+    Parameters
+    ==========
+    var
+        The `RandomVariable` output that determines the log-likelihood graph.
+        Can also be a list of variables. The final log-likelihood graph will
+        be the sum total of all individual log-likelihood graphs of variables
+        in the list.
+    rv_values
+        A variable, or ``dict`` of variables, that represents the value of
+        `var` in its log-likelihood.  If no `rv_value` is provided,
+        ``var.tag.value_var`` will be checked and, when available, used.
+    jacobian
+        Whether or not to include the Jacobian term.
+    scaling
+        A scaling term to apply to the generated log-likelihood graph.
+    transformed
+        Apply transforms.
+    sum
+        Sum the log-likelihood.
+
+    """
+    # TODO: In future when we drop support for tag.value_var most of the following
+    # logic can be removed and logpt can just be a wrapper function that calls aeppl's
+    # joint_logprob directly.
+
+    # If var is not a list make it one.
+    if not isinstance(var, list):
+        var = [var]
+
+    # If logpt isn't provided values and the variable (provided in var)
+    # is an RV, it is assumed that the tagged value var or observation is
+    # the value variable for that particular RV.
+    if rv_values is None:
+        rv_values = {}
+        for _var in var:
+            if isinstance(_var.owner.op, RandomVariable):
+                rv_value_var = getattr(
+                    _var.tag, "observations", getattr(_var.tag, "value_var", _var)
+                )
+                rv_values = {_var: rv_value_var}
+    elif not isinstance(rv_values, Mapping):
+        # Else if we're given a single value and a single variable we assume a mapping among them.
+        rv_values = (
+            {var[0]: at.as_tensor_variable(rv_values).astype(var[0].type)} if len(var) == 1 else {}
+        )
+
+    # Since the filtering of logp graph is based on value variables
+    # provided to this function
+    if not rv_values:
+        warnings.warn("No value variables provided the logp will be an empty graph")
+
+    if scaling:
+        rv_scalings = {}
+        for _var in var:
+            rv_value_var = getattr(_var.tag, "observations", getattr(_var.tag, "value_var", _var))
+            rv_scalings[rv_value_var] = _get_scaling(
+                getattr(_var.tag, "total_size", None), rv_value_var.shape, rv_value_var.ndim
+            )
+
+    # Unlike aeppl, PyMC's logpt is expected to plug in the values variables to corresponding
+    # RVs automatically unless the values are explicity set to None. Hence we iterate through
+    # the graph to find RVs and construct a new RVs to values dictionary.
+    tmp_rvs_to_values = rv_values.copy()
+    transform_map = {}
+    for node in io_toposort(graph_inputs(var), var):
+        if isinstance(node.op, RandomVariable):
+            curr_var = node.out
+            rv_value_var = getattr(
+                curr_var.tag, "observations", getattr(curr_var.tag, "value_var", curr_var)
+            )
+            rv_value = rv_values.get(curr_var, rv_value_var)
+            tmp_rvs_to_values[curr_var] = rv_value
+            # Along with value variables we also check for transforms if any.
+            if hasattr(rv_value_var.tag, "transform") and transformed:
+                transform_map[rv_value] = rv_value_var.tag.transform
+        # The condition below is a hackish way of excluding the value variable for the
+        # RV being indexed in case of Advanced Indexing of RVs. It gets added by the
+        # logic above but aeppl does not expect us to include it in the dictionary of
+        # {RV:values} given to it.
+        if isinstance(node.op, subtensor_types):
+            curr_var = node.out
+            if (
+                curr_var in tmp_rvs_to_values.keys()
+                and curr_var.owner.inputs[0] in tmp_rvs_to_values.keys()
+            ):
+                tmp_rvs_to_values.pop(curr_var.owner.inputs[0])
+
+    transform_opt = TransformValuesOpt(transform_map)
+    temp_logp_var_dict = factorized_joint_logprob(
+        tmp_rvs_to_values, extra_rewrites=transform_opt, use_jacobian=jacobian, **kwargs
+    )
+
+    # aeppl returns the logpt for every single value term we provided to it. This includes
+    # the extra values we plugged in above so we need to filter those out.
+    logp_var_dict = {}
+    for value_var, _logp in temp_logp_var_dict.items():
+        if value_var in rv_values.values():
+            logp_var_dict[value_var] = _logp
+
+    # If it's an empty dictionary the logp is None
+    if not logp_var_dict:
+        logp_var = None
+    else:
+        # Otherwise apply appropriate scalings and at.add and/or at.sum the
+        # graphs accordingly.
+        if scaling:
+            for _value in logp_var_dict.keys():
+                if _value in rv_scalings:
+                    logp_var_dict[_value] *= rv_scalings[_value]
+
+        if len(logp_var_dict) == 1:
+            logp_var_dict = tuple(logp_var_dict.values())[0]
+            if sum:
+                logp_var = at.sum(logp_var_dict)
+            else:
+                logp_var = logp_var_dict
+        else:
+            if sum:
+                logp_var = at.sum([at.sum(factor) for factor in logp_var_dict.values()])
+            else:
+                logp_var = at.add(*logp_var_dict.values())
+
+        # Recompute test values for the changes introduced by the replacements
+        # above.
+        if config.compute_test_value != "off":
+            for node in io_toposort(graph_inputs((logp_var,)), (logp_var,)):
+                compute_test_value(node)
+
+    return logp_var
+
+
+def logcdfpt(
+    var: TensorVariable,
+    rv_values: Optional[Union[TensorVariable, Dict[TensorVariable, TensorVariable]]] = None,
+    *,
+    scaling: bool = True,
+    sum: bool = True,
+    **kwargs,
+) -> TensorVariable:
+    """Create a measure-space (i.e. log-cdf) graph for a random variable at a given point.
 
     Parameters
     ==========
@@ -141,8 +291,6 @@ def logpt(
         A scaling term to apply to the generated log-likelihood graph.
     transformed
         Apply transforms.
-    cdf
-        Return the log cumulative distribution.
     sum
         Sum the log-likelihood.
 
@@ -167,22 +315,6 @@ def logpt(
         if rv_value_var is None:
             rv_value_var = rv_value
 
-    if rv_var is None:
-        if var.owner is not None:
-            return _logp(
-                var.owner.op,
-                var,
-                rv_values,
-                *var.owner.inputs,
-                jacobian=jacobian,
-                scaling=scaling,
-                transformed=transformed,
-                cdf=cdf,
-                sum=sum,
-            )
-
-        return at.zeros_like(var)
-
     rv_node = rv_var.owner
 
     rng, size, dtype, *dist_params = rv_node.inputs
@@ -197,19 +329,9 @@ def logpt(
     tmp_rv_values = rv_values.copy()
     tmp_rv_values[rv_var] = rv_var
 
-    if not cdf:
-        logp_var = _logp(rv_node.op, rv_var, tmp_rv_values, *dist_params, **kwargs)
-    else:
-        logp_var = _logcdf(rv_node.op, rv_var, tmp_rv_values, *dist_params, **kwargs)
+    logp_var = _logcdf(rv_node.op, rv_var, tmp_rv_values, *dist_params, **kwargs)
 
     transform = getattr(rv_value_var.tag, "transform", None) if rv_value_var else None
-
-    if transform and transformed and not cdf and jacobian:
-        transformed_jacobian = transform.jacobian_det(rv_var, rv_value)
-        if transformed_jacobian:
-            if logp_var.ndim > transformed_jacobian.ndim:
-                logp_var = logp_var.sum(axis=-1)
-            logp_var += transformed_jacobian
 
     # Replace random variables with their value variables
     replacements = rv_values.copy()
@@ -217,7 +339,7 @@ def logpt(
 
     (logp_var,), _ = rvs_to_value_vars(
         (logp_var,),
-        apply_transforms=transformed and not cdf,
+        apply_transforms=False,
         initial_replacements=replacements,
     )
 
@@ -236,108 +358,7 @@ def logpt(
             compute_test_value(node)
 
     if rv_var.name is not None:
-        logp_var.name = "__logp_%s" % rv_var.name
-
-    return logp_var
-
-
-@singledispatch
-def _logp(
-    op: Op,
-    var: TensorVariable,
-    rvs_to_values: Dict[TensorVariable, TensorVariable],
-    *inputs: TensorVariable,
-    **kwargs,
-):
-    """Create a log-likelihood graph.
-
-    This function dispatches on the type of `op`, which should be a subclass
-    of `RandomVariable`.  If you want to implement new log-likelihood graphs
-    for a `RandomVariable`, register a new function on this dispatcher.
-
-    The default assumes that the log-likelihood of a term is a zero.
-
-    """
-    value_var = rvs_to_values.get(var, var)
-    return at.zeros_like(value_var)
-
-
-def convert_indices(indices, entry):
-    if indices and isinstance(entry, CType):
-        rval = indices.pop(0)
-        return rval
-    elif isinstance(entry, slice):
-        return slice(
-            convert_indices(indices, entry.start),
-            convert_indices(indices, entry.stop),
-            convert_indices(indices, entry.step),
-        )
-    else:
-        return entry
-
-
-def indices_from_subtensor(idx_list, indices):
-    """Compute a usable index tuple from the inputs of a ``*Subtensor**`` ``Op``."""
-    return tuple(
-        tuple(convert_indices(list(indices), idx) for idx in idx_list) if idx_list else indices
-    )
-
-
-@_logp.register(IncSubtensor)
-@_logp.register(AdvancedIncSubtensor)
-@_logp.register(AdvancedIncSubtensor1)
-def incsubtensor_logp(op, var, rvs_to_values, indexed_rv_var, rv_values, *indices, **kwargs):
-
-    index = indices_from_subtensor(getattr(op, "idx_list", None), indices)
-
-    _, (new_rv_var,) = clone(
-        tuple(v for v in graph_inputs((indexed_rv_var,)) if not isinstance(v, Constant)),
-        (indexed_rv_var,),
-        copy_inputs=False,
-        copy_orphans=False,
-    )
-    new_values = at.set_subtensor(disconnected_grad(new_rv_var)[index], rv_values)
-    logp_var = logpt(indexed_rv_var, new_values, **kwargs)
-
-    return logp_var
-
-
-@_logp.register(Subtensor)
-@_logp.register(AdvancedSubtensor)
-@_logp.register(AdvancedSubtensor1)
-def subtensor_logp(op, var, rvs_to_values, indexed_rv_var, *indices, **kwargs):
-
-    index = indices_from_subtensor(getattr(op, "idx_list", None), indices)
-
-    rv_value = rvs_to_values.get(var, getattr(var.tag, "value_var", None))
-
-    if indexed_rv_var.owner and isinstance(indexed_rv_var.owner.op, RandomVariable):
-
-        # We need to lift the index operation through the random variable so
-        # that we have a new random variable consisting of only the relevant
-        # subset of variables per the index.
-        var_copy = var.owner.clone().default_output()
-        fgraph = FunctionGraph(
-            [i for i in graph_inputs((indexed_rv_var,)) if not isinstance(i, Constant)],
-            [var_copy],
-            clone=False,
-        )
-
-        (lifted_var,) = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
-
-        new_rvs_to_values = rvs_to_values.copy()
-        new_rvs_to_values[lifted_var] = rv_value
-
-        logp_var = logpt(lifted_var, new_rvs_to_values, **kwargs)
-
-        for idx_var in index:
-            logp_var += logpt(idx_var, rvs_to_values, **kwargs)
-
-    # TODO: We could add the constant case (i.e. `indexed_rv_var.owner is None`)
-    else:
-        raise NotImplementedError(
-            f"`Subtensor` log-likelihood not implemented for {indexed_rv_var.owner}"
-        )
+        logp_var.name = f"__logp_{rv_var.name}"
 
     return logp_var
 
@@ -359,7 +380,15 @@ def logp(var, rv_values, **kwargs):
 def logcdf(var, rv_values, **kwargs):
     """Create a log-CDF graph."""
 
-    return logp(var, rv_values, cdf=True, **kwargs)
+    # Attach the value_var to the tag of var when it does not have one
+    if not hasattr(var.tag, "value_var"):
+        if isinstance(rv_values, Mapping):
+            value_var = rv_values[var]
+        else:
+            value_var = rv_values
+        var.tag.value_var = at.as_tensor_variable(value_var, dtype=var.dtype)
+
+    return logcdfpt(var, rv_values, **kwargs)
 
 
 @singledispatch
