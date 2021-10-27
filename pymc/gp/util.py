@@ -65,9 +65,9 @@ def replace_with_value(vars_needed, replacements: Dict):
     return fn(**replacements)
 
 
-def infer_shape(X, n_points=None):
+def infer_size(X, n_points=None):
     R"""
-    Maybe attempt to infer the shape of a Gaussian process input matrix.
+    Maybe attempt to infer the size, or N, of a Gaussian process input matrix.
 
     If a specific shape cannot be inferred, for instance if X is symbolic, then an
     error is raised.
