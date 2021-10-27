@@ -767,7 +767,7 @@ class TestCoregion:
                 B = pm.gp.cov.Coregion(1)
 
 
-@pytest.mark.xfail(reason="MvNormal was not yet refactored")
+# @pytest.mark.xfail(reason="MvNormal was not yet refactored")
 class TestMarginalVsLatent:
     R"""
     Compare the logp of models Marginal, noise=0 and Latent.
@@ -781,7 +781,7 @@ class TestMarginalVsLatent:
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.Marginal(mean_func, cov_func)
+            gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
             f = gp.marginal_likelihood("f", X, y, noise=0.0, is_observed=False, observed=y)
             p = gp.conditional("p", Xnew)
         self.logp = model.logp({"p": pnew})
@@ -794,7 +794,7 @@ class TestMarginalVsLatent:
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.Latent(mean_func, cov_func)
+            gp = pm.gp.Latent(mean_func=mean_func, cov_func=cov_func)
             f = gp.prior("f", self.X, reparameterize=False)
             p = gp.conditional("p", self.Xnew)
         latent_logp = model.logp({"f": self.y, "p": self.pnew})
@@ -804,7 +804,7 @@ class TestMarginalVsLatent:
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.Latent(mean_func, cov_func)
+            gp = pm.gp.Latent(mean_func=mean_func, cov_func=cov_func)
             f = gp.prior("f", self.X, reparameterize=True)
             p = gp.conditional("p", self.Xnew)
         chol = np.linalg.cholesky(cov_func(self.X).eval())
@@ -828,7 +828,7 @@ class TestMarginalVsMarginalSparse:
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.Marginal(mean_func, cov_func)
+            gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
             sigma = 0.1
             f = gp.marginal_likelihood("f", X, y, noise=sigma)
             p = gp.conditional("p", Xnew)
@@ -845,7 +845,7 @@ class TestMarginalVsMarginalSparse:
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.MarginalSparse(mean_func, cov_func, approx=approx)
+            gp = pm.gp.MarginalSparse(mean_func=mean_func, cov_func=cov_func, approx=approx)
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
             p = gp.conditional("p", self.Xnew)
         approx_logp = model.logp({"f": self.y, "p": self.pnew})
@@ -856,7 +856,7 @@ class TestMarginalVsMarginalSparse:
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.MarginalSparse(mean_func, cov_func, approx=approx)
+            gp = pm.gp.MarginalSparse(mean_func=mean_func, cov_func=cov_func, approx=approx)
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
         mu1, var1 = self.gp.predict(self.Xnew, diag=True)
         mu2, var2 = gp.predict(self.Xnew, diag=True)
@@ -867,7 +867,7 @@ class TestMarginalVsMarginalSparse:
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.MarginalSparse(mean_func, cov_func, approx="DTC")
+            gp = pm.gp.MarginalSparse(mean_func=mean_func, cov_func=cov_func, approx="DTC")
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma, is_observed=False)
         mu1, cov1 = self.gp.predict(self.Xnew, pred_noise=True)
         mu2, cov2 = gp.predict(self.Xnew, pred_noise=True)
@@ -888,7 +888,7 @@ class TestGPAdditive:
         )
         self.means = (pm.gp.mean.Constant(0.5), pm.gp.mean.Constant(0.5), pm.gp.mean.Constant(0.5))
 
-    @pytest.mark.xfail(reason="MvNormal was not yet refactored")
+    # @pytest.mark.xfail(reason="MvNormal was not yet refactored")
     def testAdditiveMarginal(self):
         with pm.Model() as model1:
             gp1 = pm.gp.Marginal(self.means[0], self.covs[0])
@@ -1007,7 +1007,7 @@ class TestGPAdditive:
                 gp1 + gp2
 
 
-@pytest.mark.xfail(reason="MvNormal was not yet refactored")
+# @pytest.mark.xfail(reason="MvNormal was not yet refactored")
 class TestTP:
     R"""
     Compare TP with high degress of freedom to GP
@@ -1015,9 +1015,9 @@ class TestTP:
 
     def setup_method(self):
         X = np.random.randn(20, 3)
-        y = np.random.randn(20) * 0.01
-        Xnew = np.random.randn(50, 3)
-        pnew = np.random.randn(50) * 0.01
+        y = np.random.randn(20)
+        Xnew = np.random.randn(30, 3)
+        pnew = np.random.randn(30)
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             gp = pm.gp.Latent(cov_func=cov_func)
@@ -1027,29 +1027,29 @@ class TestTP:
         self.y = y
         self.Xnew = Xnew
         self.pnew = pnew
-        self.latent_logp = model.logp({"f": y, "p": pnew})
-        self.plogp = p.logp({"f": y, "p": pnew})
+        self.nu = 1000
+        self.gp_latent_logp = model.logp({"f": y, "p": pnew})
 
     def testTPvsLatent(self):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            tp = pm.gp.TP(cov_func=cov_func, nu=10000)
+            tp = pm.gp.TP(cov_func=cov_func, nu=self.nu)
             f = tp.prior("f", self.X, reparameterize=False)
             p = tp.conditional("p", self.Xnew)
         tp_logp = model.logp({"f": self.y, "p": self.pnew})
-        npt.assert_allclose(self.latent_logp, tp_logp, atol=0, rtol=1e-2)
+        npt.assert_allclose(self.gp_latent_logp, tp_logp, atol=0, rtol=1e-2)
 
     def testTPvsLatentReparameterized(self):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            tp = pm.gp.TP(cov_func=cov_func, nu=10000)
+            tp = pm.gp.TP(cov_func=cov_func, nu=self.nu)
             f = tp.prior("f", self.X, reparameterize=True)
             p = tp.conditional("p", self.Xnew)
         chol = np.linalg.cholesky(cov_func(self.X).eval())
-        y_rotated = np.linalg.solve(chol, self.y)
-        # testing full model logp unreliable due to introduction of f_chi2__log__
-        plogp = p.logp({"f_rotated_": y_rotated, "p": self.pnew, "f_chi2__log__": np.log(1e20)})
-        npt.assert_allclose(self.plogp, plogp, atol=0, rtol=1e-2)
+        f_rotated = np.linalg.solve(chol, self.y)
+
+        tp_logp = model.logp({"f_rotated_": f_rotated, "p": self.pnew})
+        npt.assert_allclose(self.gp_latent_logp, tp_logp, atol=0, rtol=1e-2)
 
     def testAdditiveTPRaises(self):
         with pm.Model() as model:
