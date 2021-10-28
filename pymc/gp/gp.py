@@ -432,11 +432,14 @@ class Marginal(Base):
         self.X = X
         self.y = y
         self.noise = noise
-        # TODO: deprecate is_observed.  untested, shouldnt be used.
         if is_observed:
             return pm.MvNormal(name, mu=mu, cov=cov, observed=y, **kwargs)
         else:
-            # size = infer_size(X, kwargs.pop("size", None))
+            warnings.warn(
+                "The 'is_observed' argument has been deprecated.  If the GP is "
+                "unobserved use gp.Latent instead.",
+                DeprecationWarning,
+            )
             return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
     def _get_given_vals(self, given):
@@ -736,6 +739,11 @@ class MarginalSparse(Marginal):
                 **kwargs,
             )
         else:
+            warnings.warn(
+                "The 'is_observed' argument has been deprecated.  If the GP is "
+                "unobserved use gp.Latent instead.",
+                DeprecationWarning,
+            )
             return pm.DensityDist(
                 name,
                 X,
