@@ -45,7 +45,7 @@ def trace_to_dataframe(trace, chains=None, varnames=None, include_transformed=Fa
         "The `trace_to_dataframe` function will soon be removed. "
         "Please use ArviZ to save traces. "
         "If you have good reasons for using the `trace_to_dataframe` function, file an issue and tell us about them. ",
-        DeprecationWarning,
+        FutureWarning,
     )
     var_shapes = trace._straces[0].var_shapes
 

@@ -2122,7 +2122,7 @@ class TestMatchesScipy:
         dir_rv = Dirichlet.dist(a)
         assert dir_rv.shape.eval() == (2,)
 
-        with pytest.warns(DeprecationWarning), aesara.change_flags(compute_test_value="ignore"):
+        with pytest.warns(FutureWarning), aesara.change_flags(compute_test_value="ignore"):
             dir_rv = Dirichlet.dist(at.vector())
 
     def test_dirichlet_2D(self):

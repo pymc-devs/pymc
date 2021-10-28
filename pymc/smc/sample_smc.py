@@ -151,7 +151,7 @@ def sample_smc(
         warnings.warn(
             f'The kernel string argument "{kernel}" in sample_smc has been deprecated. '
             f"It is no longer needed to distinguish between `abc` and `metropolis`",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         kernel = IMH
@@ -160,7 +160,7 @@ def sample_smc(
         warnings.warn(
             "save_sim_data has been deprecated. Use pm.sample_posterior_predictive "
             "to obtain the same type of samples.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
 
@@ -168,7 +168,7 @@ def sample_smc(
         warnings.warn(
             "save_log_pseudolikelihood has been deprecated. This information is "
             "now saved as log_likelihood in models with Simulator distributions.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
 
@@ -176,7 +176,7 @@ def sample_smc(
     if parallel is not None:
         warnings.warn(
             "The argument parallel is deprecated, use the argument cores instead.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         if parallel is False:

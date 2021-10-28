@@ -838,7 +838,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def vars(self):
         warnings.warn(
             "Model.vars has been deprecated. Use Model.value_vars instead.",
-            DeprecationWarning,
+            FutureWarning,
         )
         return self.value_vars
 
@@ -942,7 +942,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """Deprecated alias for `Model.recompute_initial_point(seed=None)`."""
         warnings.warn(
             "`Model.test_point` has been deprecated. Use `Model.recompute_initial_point(seed=None)`.",
-            DeprecationWarning,
+            FutureWarning,
         )
         return self.recompute_initial_point()
 
@@ -951,7 +951,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """Deprecated alias for `Model.recompute_initial_point(seed=None)`."""
         warnings.warn(
             "`Model.initial_point` has been deprecated. Use `Model.recompute_initial_point(seed=None)`.",
-            DeprecationWarning,
+            FutureWarning,
         )
         return self.recompute_initial_point()
 
@@ -1548,7 +1548,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         conditional on the values of `b` and stored in `b`.
 
         """
-        raise DeprecationWarning(
+        raise FutureWarning(
             "The `Model.update_start_vals` method was removed."
             " To change initial values you may set the items of `Model.initial_values` directly."
         )
@@ -1630,7 +1630,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def check_test_point(self, *args, **kwargs):
         warnings.warn(
             "`Model.check_test_point` has been deprecated. Use `Model.point_logps` instead.",
-            DeprecationWarning,
+            FutureWarning,
         )
         return self.point_logps(*args, **kwargs)
 

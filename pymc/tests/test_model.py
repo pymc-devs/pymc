@@ -425,7 +425,7 @@ def test_model_vars():
         a = pm.Normal("a")
         pm.Normal("x", a)
 
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         old_vars = model.vars
 
     assert old_vars == model.value_vars
@@ -495,14 +495,14 @@ def test_initial_point():
         a = pm.Uniform("a")
         x = pm.Normal("x", a)
 
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         initial_point = model.test_point
 
     assert all(var.name in initial_point for var in model.value_vars)
 
     b_initval = np.array(0.3, dtype=aesara.config.floatX)
 
-    with pytest.warns(DeprecationWarning), model:
+    with pytest.warns(FutureWarning), model:
         b = pm.Uniform("b", testval=b_initval)
 
     b_value_var = model.rvs_to_values[b]
@@ -526,7 +526,7 @@ def test_point_logps():
         a = pm.Uniform("a")
         pm.Normal("x", a)
 
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         logp_vals = model.check_test_point()
 
     assert "x" in logp_vals.keys()

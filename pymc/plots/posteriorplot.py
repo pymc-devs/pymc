@@ -59,7 +59,7 @@ def plot_posterior_predictive_glm(
     warnings.warn(
         "The `plot_posterior_predictive_glm` function will migrate to Arviz in a future release. "
         "\nKeep up to date with `ArviZ <https://arviz-devs.github.io/arviz/>`_ for future updates.",
-        DeprecationWarning,
+        FutureWarning,
     )
 
     if lm is None:
