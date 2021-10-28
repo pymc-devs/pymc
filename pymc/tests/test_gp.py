@@ -897,7 +897,9 @@ class TestGPAdditive:
             model1_logp = model1.logp({"fsum": self.y})
 
         with pm.Model() as model2:
-            gptot = pm.gp.Marginal(mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs))
+            gptot = pm.gp.Marginal(
+                mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs)
+            )
             fsum = gptot.marginal_likelihood("f", self.X, self.y, noise=self.noise)
             model2_logp = model2.logp({"fsum": self.y})
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
@@ -919,9 +921,15 @@ class TestGPAdditive:
         Xu = np.random.randn(10, 3)
         sigma = 0.1
         with pm.Model() as model1:
-            gp1 = pm.gp.MarginalSparse(mean_func=self.means[0], cov_func=self.covs[0], approx=approx)
-            gp2 = pm.gp.MarginalSparse(mean_func=self.means[1], cov_func=self.covs[1], approx=approx)
-            gp3 = pm.gp.MarginalSparse(mean_func=self.means[2], cov_func=self.covs[2], approx=approx)
+            gp1 = pm.gp.MarginalSparse(
+                mean_func=self.means[0], cov_func=self.covs[0], approx=approx
+            )
+            gp2 = pm.gp.MarginalSparse(
+                mean_func=self.means[1], cov_func=self.covs[1], approx=approx
+            )
+            gp3 = pm.gp.MarginalSparse(
+                mean_func=self.means[2], cov_func=self.covs[2], approx=approx
+            )
 
             gpsum = gp1 + gp2 + gp3
             fsum = gpsum.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
@@ -974,7 +982,7 @@ class TestGPAdditive:
         logp1 = model1.logp({"fsum": self.y, "fp1": fp})
         logp2 = model2.logp({"fsum": self.y, "fp2": fp})
         npt.assert_allclose(logp1, logp2, atol=0, rtol=1e-2)
-        
+
     def testAdditiveSparseRaises(self):
         # cant add different approximations
         with pm.Model() as model:
@@ -1011,7 +1019,7 @@ class TestTP:
         y = np.random.randn(20)
         Xnew = np.random.randn(30, 3)
         pnew = np.random.randn(30)
-        
+
         with pm.Model() as model1:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             gp = pm.gp.Latent(cov_func=cov_func)
