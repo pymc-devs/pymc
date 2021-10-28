@@ -88,22 +88,22 @@ def infer_size(X, n_points=None):
     return n_points
 
 
-def stabilize(K, c=1e-6):
+def stabilize(K, jitter=1e-6):
     R"""
     Adds small diagonal to a covariance matrix.
 
     Often the matrices calculated from covariance functions, `K = cov_func(X)`
     do not appear numerically to be positive semi-definite.  Adding a small
-    correction, `c`, to the diagonal is usually enough to fix this.
+    correction, `jitter`, to the diagonal is usually enough to fix this.
 
     Parameters
     ----------
     K: array-like
         A square covariance or kernel matrix.
-    c: float
+    jitter: float
         A small constant.
     """
-    return K + c * at.identity_like(K)
+    return K + jitter * at.identity_like(K)
 
 
 def kmeans_inducing_points(n_inducing, X):
