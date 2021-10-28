@@ -35,15 +35,17 @@ from scipy.cluster.vq import kmeans
 
 from pymc.aesaraf import compile_rv_inplace, walk_model
 
+JITTER_DEFAULT = 1e-6
+
 
 # TODO: add test
 def replace_with_values(model, vars_needed, replacements=None):
     R"""
     Replace random variable nodes in the graph with values given by the replacements dict.
     Uses untransformed versions of the inputs, performs some basic input validation.
-    
+
     NOTE TO REVIEWER:  Modified this from `sample_posterior_predictive`.  Is there a better way to do this?
-    
+
     """
     inputs, input_names = [], []
     for rv in walk_model(vars_needed, walk_past_rvs=True):
@@ -53,8 +55,8 @@ def replace_with_values(model, vars_needed, replacements=None):
 
     # then deterministic, no inputs are required, can eval and return
     if len(inputs) == 0:
-        return tuple([v.eval() for v in vars_needed])
-            
+        return tuple(v.eval() for v in vars_needed)
+
     fn = compile_rv_inplace(
         inputs,
         vars_needed,
@@ -95,7 +97,7 @@ def infer_size(X, n_points=None):
     return n_points
 
 
-def stabilize(K, jitter=1e-6):
+def stabilize(K, jitter=JITTER_DEFAULT):
     R"""
     Adds small diagonal to a covariance matrix.
 

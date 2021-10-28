@@ -21,9 +21,11 @@ from aesara.tensor.nlinalg import eigh
 
 import pymc as pm
 
+from pymc.distributions.distribution import NoDistribution
 from pymc.gp.cov import Constant, Covariance
 from pymc.gp.mean import Zero
 from pymc.gp.util import (
+    JITTER_DEFAULT,
     cholesky,
     conditioned_vars,
     infer_size,
@@ -33,10 +35,7 @@ from pymc.gp.util import (
     stabilize,
 )
 from pymc.math import cartesian, kron_diag, kron_dot, kron_solve_lower, kron_solve_upper
-from pymc.distributions.distribution import NoDistribution
 from pymc.model import modelcontext
-
-JITTER_DEFAULT = 1e-6
 
 __all__ = ["Latent", "Marginal", "TP", "MarginalSparse", "LatentKron", "MarginalKron"]
 
@@ -163,7 +162,7 @@ class Latent(Base):
             Reparameterize the distribution by rotating the random
             variable by the Cholesky factor of the covariance matrix.
         jitter: scalar
-            A small correction added to the diagonal of positive semi-definite 
+            A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.  Default value is 1e-6.
         **kwargs
             Extra keyword arguments that are passed to distribution constructor.
@@ -226,7 +225,7 @@ class Latent(Base):
             and `gp`.  See the section in the documentation on additive GP
             models in PyMC for more information.
         jitter: scalar
-            A small correction added to the diagonal of positive semi-definite 
+            A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.  For conditionals
             the default value is 0.0.
         **kwargs
@@ -344,7 +343,7 @@ class TP(Latent):
         Xnew: array-like
             Function input values.
         jitter: scalar
-            A small correction added to the diagonal of positive semi-definite 
+            A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.  For conditionals
             the default value is 0.0.
         **kwargs
@@ -436,7 +435,7 @@ class Marginal(Base):
             Standard deviation of the Gaussian noise.  Can also be a Covariance for
             non-white noise.
         jitter: scalar
-            A small correction added to the diagonal of positive semi-definite 
+            A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.  Default value is 0.0.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
@@ -477,7 +476,9 @@ class Marginal(Base):
             X, y, noise = self.X, self.y, self.noise
         return X, y, noise, cov_total, mean_total
 
-    def _build_conditional(self, Xnew, pred_noise, diag, X, y, noise, cov_total, mean_total, jitter):
+    def _build_conditional(
+        self, Xnew, pred_noise, diag, X, y, noise, cov_total, mean_total, jitter
+    ):
         Kxx = cov_total(X)
         Kxs = self.cov_func(X, Xnew)
         Knx = noise(X)
@@ -528,7 +529,7 @@ class Marginal(Base):
             and `gp`.  See the section in the documentation on additive GP
             models in PyMC for more information.
         jitter: scalar
-            A small correction added to the diagonal of positive semi-definite 
+            A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.  For conditionals
             the default value is 0.0.
         **kwargs
@@ -540,7 +541,9 @@ class Marginal(Base):
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens, jitter)
         return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
-    def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None, jitter=0.0, model=None):
+    def predict(
+        self, Xnew, point=None, diag=False, pred_noise=False, given=None, jitter=0.0, model=None
+    ):
         R"""
         Return the mean vector and covariance matrix of the conditional
         distribution as numpy arrays, given a `point`, such as the MAP
@@ -562,7 +565,7 @@ class Marginal(Base):
         given: dict
             Same as `conditional` method.
         jitter: scalar
-            A small correction added to the diagonal of positive semi-definite 
+            A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.  For conditionals
             the default value is 0.0.
         """
@@ -708,7 +711,9 @@ class MarginalSparse(Marginal):
         quadratic = 0.5 * (at.dot(r, r_l) - at.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
-    def marginal_likelihood(self, name, X, Xu, y, noise=None, is_observed=True, jitter=0.0, **kwargs):
+    def marginal_likelihood(
+        self, name, X, Xu, y, noise=None, is_observed=True, jitter=0.0, **kwargs
+    ):
         R"""
         Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
@@ -732,7 +737,7 @@ class MarginalSparse(Marginal):
             Whether to set `y` as an `observed` variable in the `model`.
             Default is `True`.
         jitter: scalar
-            A small correction added to the diagonal of positive semi-definite 
+            A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.  Default value is 0.0.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
@@ -787,7 +792,9 @@ class MarginalSparse(Marginal):
                 **kwargs,
             )
 
-    def _build_conditional(self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total, jitter):
+    def _build_conditional(
+        self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total, jitter
+    ):
         sigma2 = at.square(sigma)
         Kuu = cov_total(Xu)
         Kuf = cov_total(Xu, X)
@@ -855,7 +862,7 @@ class MarginalSparse(Marginal):
             and `gp`.  See the section in the documentation on additive GP
             models in PyMC for more information.
         jitter: scalar
-            A small correction added to the diagonal of positive semi-definite 
+            A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.  For conditionals
             the default value is 0.0.
         **kwargs
@@ -866,7 +873,7 @@ class MarginalSparse(Marginal):
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens, jitter)
         return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
-    
+
 
 @conditioned_vars(["Xs", "f"])
 class LatentKron(Base):
@@ -934,15 +941,14 @@ class LatentKron(Base):
         raise TypeError("Additive, Kronecker-structured processes not implemented")
 
     def _build_prior(self, name, Xs, jitter, **kwargs):
-        self.N = np.prod([len(X) for X in Xs])
+        self.N = int(np.prod([len(X) for X in Xs]))
         mu = self.mean_func(cartesian(*Xs))
-        chols = [cholesky(stabilize(cov(X, jitter))) for cov, X in zip(self.cov_funcs, Xs)]
-        # remove reparameterization option
+        chols = [cholesky(stabilize(cov(X), jitter)) for cov, X in zip(self.cov_funcs, Xs)]
         v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=self.N, **kwargs)
         f = pm.Deterministic(name, mu + at.flatten(kron_dot(chols, v)))
         return f
 
-    def prior(self, name, Xs, jitter, **kwargs):
+    def prior(self, name, Xs, jitter=JITTER_DEFAULT, **kwargs):
         """
         Returns the prior distribution evaluated over the input
         locations `Xs`.
@@ -957,7 +963,7 @@ class LatentKron(Base):
             total covariance function is measured on the full grid
             `cartesian(*Xs)`.
         jitter: scalar
-            A small correction added to the diagonal of positive semi-definite 
+            A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.  Default value is 1e-6.
         **kwargs
             Extra keyword arguments that are passed to the `KroneckerNormal`
@@ -965,6 +971,7 @@ class LatentKron(Base):
         """
         if len(Xs) != len(self.cov_funcs):
             raise ValueError("Must provide a covariance function for each X")
+
         f = self._build_prior(name, Xs, jitter, **kwargs)
         self.Xs = Xs
         self.f = f
@@ -1015,7 +1022,7 @@ class LatentKron(Base):
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
         jitter: scalar
-            A small correction added to the diagonal of positive semi-definite 
+            A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.  For conditionals
             the default value is 0.0.
         **kwargs
@@ -1023,8 +1030,7 @@ class LatentKron(Base):
             constructor.
         """
         mu, cov = self._build_conditional(Xnew, jitter)
-        size = infer_size(Xnew, kwargs.pop("size", None))
-        return pm.MvNormal(name, mu=mu, cov=cov, size=size, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
 
 @conditioned_vars(["Xs", "y", "sigma"])
@@ -1103,7 +1109,7 @@ class MarginalKron(Base):
         return mu, covs
 
     def _check_inputs(self, Xs, y):
-        N = np.prod([len(X) for X in Xs])
+        N = int(np.prod([len(X) for X in Xs]))
         if len(Xs) != len(self.cov_funcs):
             raise ValueError("Must provide a covariance function for each X")
         if N != len(y):
@@ -1152,7 +1158,7 @@ class MarginalKron(Base):
                 "unobserved use gp.LatentKron instead.",
                 DeprecationWarning,
             )
-            size = np.prod([len(X) for X in Xs])
+            size = int(np.prod([len(X) for X in Xs]))
             return pm.KroneckerNormal(name, mu=mu, covs=covs, sigma=sigma, size=size, **kwargs)
 
     def _build_conditional(self, Xnew, pred_noise, diag):
@@ -1229,8 +1235,7 @@ class MarginalKron(Base):
             constructor.
         """
         mu, cov = self._build_conditional(Xnew, pred_noise, False)
-        size = infer_size(Xnew, kwargs.pop("size", None))
-        return pm.MvNormal(name, mu=mu, cov=cov, size=size, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False, model=None):
         R"""

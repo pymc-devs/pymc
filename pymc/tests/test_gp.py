@@ -937,7 +937,7 @@ class TestGPAdditive:
 
         with pm.Model() as model2:
             gptot = pm.gp.MarginalSparse(
-                reduce(add, self.means), reduce(add, self.covs), approx=approx
+                mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs), approx=approx
             )
             fsum = gptot.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
             model2_logp = model2.logp({"fsum": self.y})
@@ -953,9 +953,11 @@ class TestGPAdditive:
             fp2 = gptot.conditional("fp2", self.Xnew)
 
         fp = np.random.randn(self.Xnew.shape[0])
-        npt.assert_allclose(
-            pm.logp(fp1, fp1).eval({fp1: fp}), pm.logp(fp2, fp2).eval({fp2: fp}), atol=0, rtol=1e-2
-        )
+
+        model1_logp = model1.logp({"fp1": fp, "fsum": self.y})
+        model2_logp = model2.logp({"fp2": fp, "fsum": self.y})
+
+        npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 
     def testAdditiveLatent(self):
         with pm.Model() as model1:
@@ -1061,7 +1063,6 @@ class TestTP:
                 gp1 + gp2
 
 
-@pytest.mark.xfail(reason="MvNormal was not yet refactored")
 class TestLatentKron:
     """
     Compare gp.LatentKron to gp.Latent, both with Gaussian noise.
@@ -1117,7 +1118,6 @@ class TestLatentKron:
             gp.prior("f", Xs=[np.linspace(0, 1, 7)[:, None], np.linspace(0, 1, 5)[:, None]])
 
 
-@pytest.mark.xfail(reason="The `gp.predict` method was not yet refactored")
 class TestMarginalKron:
     """
     Compare gp.MarginalKron to gp.Marginal.
@@ -1136,6 +1136,10 @@ class TestMarginalKron:
         self.Xnew = np.concatenate(self.Xnews, axis=1)
         self.sigma = 0.2
         self.pnew = np.random.randn(len(self.Xnew))
+
+        print("pnew", self.pnew)
+        print("y", self.y)
+
         ls = 0.2
         with pm.Model() as model:
             self.cov_funcs = [
@@ -1154,7 +1158,8 @@ class TestMarginalKron:
     def testMarginalKronvsMarginalpredict(self):
         with pm.Model() as kron_model:
             kron_gp = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
-            f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma, shape=self.N)
+            # f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma, shape=self.N)
+            f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma)
             p = kron_gp.conditional("p", self.Xnew)
             mu, cov = kron_gp.predict(self.Xnew)
         npt.assert_allclose(mu, self.mu, atol=1e-5, rtol=1e-2)
@@ -1163,7 +1168,8 @@ class TestMarginalKron:
     def testMarginalKronvsMarginal(self):
         with pm.Model() as kron_model:
             kron_gp = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
-            f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma, shape=self.N)
+            # f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma, shape=self.N)
+            f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma)
             p = kron_gp.conditional("p", self.Xnew)
         kron_logp = kron_model.logp({"p": self.pnew})
         npt.assert_allclose(kron_logp, self.logp, atol=0, rtol=1e-2)
