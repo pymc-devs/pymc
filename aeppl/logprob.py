@@ -72,7 +72,7 @@ def normal_logprob(op, values, *inputs, **kwargs):
     mu, sigma = inputs[3:]
     res = (
         -0.5 * at.pow((value - mu) / sigma, 2)
-        - at.log(np.sqrt(2.0 * np.pi))
+        - at.log(at.sqrt(2.0 * np.pi))
         - at.log(sigma)
     )
     res = Assert("sigma > 0")(res, at.all(at.gt(sigma, 0.0)))
@@ -85,7 +85,7 @@ def halfnormal_logprob(op, values, *inputs, **kwargs):
     loc, sigma = inputs[3:]
     res = (
         -0.5 * at.pow((value - loc) / sigma, 2)
-        + at.log(np.sqrt(2.0 / np.pi))
+        + at.log(at.sqrt(2.0 / np.pi))
         - at.log(sigma)
     )
     res = at.switch(at.ge(value, loc), res, -np.inf)
@@ -193,7 +193,7 @@ def gamma_logprob(op, values, *inputs, **kwargs):
 def invgamma_logprob(op, values, *inputs, **kwargs):
     (value,) = values
     alpha, beta = inputs[3:]
-    res = -(alpha + 1) * np.log(value) - at.gammaln(alpha) - 1.0 / value
+    res = -(alpha + 1) * at.log(value) - at.gammaln(alpha) - 1.0 / value
     res = (
         -at.gammaln(alpha)
         + xlogy0(alpha, beta)
@@ -453,7 +453,7 @@ def mvnormal_logprob(op, values, *inputs, **kwargs):
     logdet = at.sum(at.log(cov_chol_diag))
 
     n = value.shape[-1]
-    res = -0.5 * n * np.log(2 * np.pi) - 0.5 * quaddist - logdet
+    res = -0.5 * n * at.log(2 * np.pi) - 0.5 * quaddist - logdet
     res = Assert("0 < diag(Sigma)")(res, all_pos_definite)
     return res
 
