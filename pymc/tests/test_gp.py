@@ -1137,9 +1137,6 @@ class TestMarginalKron:
         self.sigma = 0.2
         self.pnew = np.random.randn(len(self.Xnew))
 
-        print("pnew", self.pnew)
-        print("y", self.y)
-
         ls = 0.2
         with pm.Model() as model:
             self.cov_funcs = [
