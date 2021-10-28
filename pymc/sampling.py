@@ -1650,7 +1650,7 @@ def sample_posterior_predictive(
         warnings.warn(
             "In this version, RNG seeding is managed by the Model objects. "
             "See the `rng_seeder` argument in Model's constructor.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
 
@@ -1806,7 +1806,7 @@ def sample_posterior_predictive_w(
         warnings.warn(
             "In this version, RNG seeding is managed by the Model objects. "
             "See the `rng_seeder` argument in Model's constructor.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
 
@@ -1973,7 +1973,7 @@ def sample_prior_predictive(
         warnings.warn(
             "In this version, RNG seeding is managed by the Model objects. "
             "See the `rng_seeder` argument in Model's constructor.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
 

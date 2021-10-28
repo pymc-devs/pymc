@@ -264,6 +264,6 @@ def test_multigamma():
 
 
 def test_incomplete_beta_deprecation():
-    with pytest.warns(DeprecationWarning, match="incomplete_beta has been deprecated"):
+    with pytest.warns(FutureWarning, match="incomplete_beta has been deprecated"):
         res = incomplete_beta(3, 5, 0.5).eval()
     assert np.isclose(res, at.betainc(3, 5, 0.5).eval())

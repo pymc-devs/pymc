@@ -1410,7 +1410,7 @@ class LKJCorr(Continuous):
                 "Parameters to LKJCorr have changed: shape parameter n -> eta "
                 "dimension parameter p -> n. Please update your code. "
                 "Automatically re-assigning parameters for backwards compatibility.",
-                DeprecationWarning,
+                FutureWarning,
             )
             self.n = p
             self.eta = n
@@ -1435,7 +1435,7 @@ class LKJCorr(Continuous):
         warnings.warn(
             "Parameters in LKJCorr have been rename: shape parameter n -> eta "
             "dimension parameter p -> n. Please double check your initialization.",
-            DeprecationWarning,
+            FutureWarning,
         )
         self.tri_index = np.zeros([n, n], dtype="int32")
         self.tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
@@ -1665,7 +1665,7 @@ class MatrixNormal(Continuous):
                 "The shape argument in MatrixNormal is deprecated and will be ignored."
                 "MatrixNormal automatically derives the shape"
                 "from row and column matrix dimensions.",
-                DeprecationWarning,
+                FutureWarning,
             )
 
         # Among-row matrices

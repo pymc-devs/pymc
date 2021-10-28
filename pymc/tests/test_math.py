@@ -255,7 +255,7 @@ def test_expand_packed_triangular():
 
 def test_invlogit_deprecation_warning():
     with pytest.warns(
-        DeprecationWarning,
+        FutureWarning,
         match="pymc.math.invlogit no longer supports the",
     ):
         res = invlogit(np.array(-750.0), 1e-5).eval()
