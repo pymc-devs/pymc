@@ -54,7 +54,7 @@ class TestLinearMean:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             linear_mean = pm.gp.mean.Linear(2, 0.5)
-        M = linear_mean.eval()
+        M = linear_mean(X).eval()
         npt.assert_allclose(M[1], 0.7222, atol=1e-3)
         assert M.shape == (10,)
 
@@ -767,17 +767,16 @@ class TestCoregion:
                 B = pm.gp.cov.Coregion(1)
 
 
-# @pytest.mark.xfail(reason="MvNormal was not yet refactored")
 class TestMarginalVsLatent:
     R"""
     Compare the logp of models Marginal, noise=0 and Latent.
     """
 
     def setup_method(self):
-        X = np.random.randn(50, 3)
-        y = np.random.randn(50) * 0.01
-        Xnew = np.random.randn(60, 3)
-        pnew = np.random.randn(60) * 0.01
+        X = np.random.randn(20, 3)
+        y = np.random.randn(20)
+        Xnew = np.random.randn(30, 3)
+        pnew = np.random.randn(30)
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
@@ -813,7 +812,6 @@ class TestMarginalVsLatent:
         npt.assert_allclose(latent_logp, self.logp, atol=5)
 
 
-@pytest.mark.xfail(reason="The `gp.predict` method was not yet refactored")
 class TestMarginalVsMarginalSparse:
     R"""
     Compare logp of models Marginal and MarginalSparse.
@@ -822,9 +820,9 @@ class TestMarginalVsMarginalSparse:
 
     def setup_method(self):
         X = np.random.randn(50, 3)
-        y = np.random.randn(50) * 0.01
+        y = np.random.randn(50)
         Xnew = np.random.randn(60, 3)
-        pnew = np.random.randn(60) * 0.01
+        pnew = np.random.randn(60)
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
@@ -858,8 +856,8 @@ class TestMarginalVsMarginalSparse:
             mean_func = pm.gp.mean.Constant(0.5)
             gp = pm.gp.MarginalSparse(mean_func=mean_func, cov_func=cov_func, approx=approx)
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
-        mu1, var1 = self.gp.predict(self.Xnew, diag=True)
-        mu2, var2 = gp.predict(self.Xnew, diag=True)
+            mu1, var1 = self.gp.predict(self.Xnew, diag=True)
+            mu2, var2 = gp.predict(self.Xnew, diag=True)
         npt.assert_allclose(mu1, mu2, atol=0, rtol=1e-3)
         npt.assert_allclose(var1, var2, atol=0, rtol=1e-3)
 
@@ -869,8 +867,8 @@ class TestMarginalVsMarginalSparse:
             mean_func = pm.gp.mean.Constant(0.5)
             gp = pm.gp.MarginalSparse(mean_func=mean_func, cov_func=cov_func, approx="DTC")
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma, is_observed=False)
-        mu1, cov1 = self.gp.predict(self.Xnew, pred_noise=True)
-        mu2, cov2 = gp.predict(self.Xnew, pred_noise=True)
+            mu1, cov1 = self.gp.predict(self.Xnew, pred_noise=True)
+            mu2, cov2 = gp.predict(self.Xnew, pred_noise=True)
         npt.assert_allclose(mu1, mu2, atol=0, rtol=1e-3)
         npt.assert_allclose(cov1, cov2, atol=0, rtol=1e-3)
 
@@ -878,7 +876,7 @@ class TestMarginalVsMarginalSparse:
 class TestGPAdditive:
     def setup_method(self):
         self.X = np.random.randn(50, 3)
-        self.y = np.random.randn(50) * 0.01
+        self.y = np.random.randn(50)
         self.Xnew = np.random.randn(60, 3)
         self.noise = pm.gp.cov.WhiteNoise(0.1)
         self.covs = (
@@ -888,19 +886,18 @@ class TestGPAdditive:
         )
         self.means = (pm.gp.mean.Constant(0.5), pm.gp.mean.Constant(0.5), pm.gp.mean.Constant(0.5))
 
-    # @pytest.mark.xfail(reason="MvNormal was not yet refactored")
     def testAdditiveMarginal(self):
         with pm.Model() as model1:
-            gp1 = pm.gp.Marginal(self.means[0], self.covs[0])
-            gp2 = pm.gp.Marginal(self.means[1], self.covs[1])
-            gp3 = pm.gp.Marginal(self.means[2], self.covs[2])
+            gp1 = pm.gp.Marginal(mean_func=self.means[0], cov_func=self.covs[0])
+            gp2 = pm.gp.Marginal(mean_func=self.means[1], cov_func=self.covs[1])
+            gp3 = pm.gp.Marginal(mean_func=self.means[2], cov_func=self.covs[2])
 
             gpsum = gp1 + gp2 + gp3
             fsum = gpsum.marginal_likelihood("f", self.X, self.y, noise=self.noise)
             model1_logp = model1.logp({"fsum": self.y})
 
         with pm.Model() as model2:
-            gptot = pm.gp.Marginal(reduce(add, self.means), reduce(add, self.covs))
+            gptot = pm.gp.Marginal(mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs))
             fsum = gptot.marginal_likelihood("f", self.X, self.y, noise=self.noise)
             model2_logp = model2.logp({"fsum": self.y})
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
@@ -913,17 +910,18 @@ class TestGPAdditive:
             fp2 = gptot.conditional("fp2", self.Xnew)
 
         fp = np.random.randn(self.Xnew.shape[0])
-        npt.assert_allclose(fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2)
+        logp1 = model1.logp({"fp1": fp})
+        logp2 = model2.logp({"fp2": fp})
+        npt.assert_allclose(logp1, logp2, atol=0, rtol=1e-2)
 
-    @pytest.mark.xfail(reason="MarginalSparse must be refactored to not use DensityDist")
     @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
     def testAdditiveMarginalSparse(self, approx):
         Xu = np.random.randn(10, 3)
         sigma = 0.1
         with pm.Model() as model1:
-            gp1 = pm.gp.MarginalSparse(self.means[0], self.covs[0], approx=approx)
-            gp2 = pm.gp.MarginalSparse(self.means[1], self.covs[1], approx=approx)
-            gp3 = pm.gp.MarginalSparse(self.means[2], self.covs[2], approx=approx)
+            gp1 = pm.gp.MarginalSparse(mean_func=self.means[0], cov_func=self.covs[0], approx=approx)
+            gp2 = pm.gp.MarginalSparse(mean_func=self.means[1], cov_func=self.covs[1], approx=approx)
+            gp3 = pm.gp.MarginalSparse(mean_func=self.means[2], cov_func=self.covs[2], approx=approx)
 
             gpsum = gp1 + gp2 + gp3
             fsum = gpsum.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
@@ -946,24 +944,23 @@ class TestGPAdditive:
         with model2:
             fp2 = gptot.conditional("fp2", self.Xnew)
 
-        fp = np.random.randn(self.Xnew.shape[0], 1)
+        fp = np.random.randn(self.Xnew.shape[0])
         npt.assert_allclose(
             pm.logp(fp1, fp1).eval({fp1: fp}), pm.logp(fp2, fp2).eval({fp2: fp}), atol=0, rtol=1e-2
         )
 
-    @pytest.mark.xfail(reason="MvNormal was not yet refactored")
     def testAdditiveLatent(self):
         with pm.Model() as model1:
-            gp1 = pm.gp.Latent(self.means[0], self.covs[0])
-            gp2 = pm.gp.Latent(self.means[1], self.covs[1])
-            gp3 = pm.gp.Latent(self.means[2], self.covs[2])
+            gp1 = pm.gp.Latent(mean_func=self.means[0], cov_func=self.covs[0])
+            gp2 = pm.gp.Latent(mean_func=self.means[1], cov_func=self.covs[1])
+            gp3 = pm.gp.Latent(mean_func=self.means[2], cov_func=self.covs[2])
 
             gpsum = gp1 + gp2 + gp3
             fsum = gpsum.prior("fsum", self.X, reparameterize=False)
             model1_logp = model1.logp({"fsum": self.y})
 
         with pm.Model() as model2:
-            gptot = pm.gp.Latent(reduce(add, self.means), reduce(add, self.covs))
+            gptot = pm.gp.Latent(mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs))
             fsum = gptot.prior("fsum", self.X, reparameterize=False)
             model2_logp = model2.logp({"fsum": self.y})
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
@@ -974,13 +971,10 @@ class TestGPAdditive:
             fp2 = gptot.conditional("fp2", self.Xnew)
 
         fp = np.random.randn(self.Xnew.shape[0])
-        npt.assert_allclose(
-            fp1.logp({"fsum": self.y, "fp1": fp}),
-            fp2.logp({"fsum": self.y, "fp2": fp}),
-            atol=0,
-            rtol=1e-2,
-        )
-
+        logp1 = model1.logp({"fsum": self.y, "fp1": fp})
+        logp2 = model2.logp({"fsum": self.y, "fp2": fp})
+        npt.assert_allclose(logp1, logp2, atol=0, rtol=1e-2)
+        
     def testAdditiveSparseRaises(self):
         # cant add different approximations
         with pm.Model() as model:
@@ -1007,7 +1001,6 @@ class TestGPAdditive:
                 gp1 + gp2
 
 
-# @pytest.mark.xfail(reason="MvNormal was not yet refactored")
 class TestTP:
     R"""
     Compare TP with high degress of freedom to GP
@@ -1018,17 +1011,18 @@ class TestTP:
         y = np.random.randn(20)
         Xnew = np.random.randn(30, 3)
         pnew = np.random.randn(30)
-        with pm.Model() as model:
+        
+        with pm.Model() as model1:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             gp = pm.gp.Latent(cov_func=cov_func)
             f = gp.prior("f", X, reparameterize=False)
             p = gp.conditional("p", Xnew)
+        self.gp_latent_logp = model1.logp({"f": y, "p": pnew})
         self.X = X
         self.y = y
         self.Xnew = Xnew
         self.pnew = pnew
-        self.nu = 1000
-        self.gp_latent_logp = model.logp({"f": y, "p": pnew})
+        self.nu = 10000
 
     def testTPvsLatent(self):
         with pm.Model() as model:
@@ -1047,7 +1041,6 @@ class TestTP:
             p = tp.conditional("p", self.Xnew)
         chol = np.linalg.cholesky(cov_func(self.X).eval())
         f_rotated = np.linalg.solve(chol, self.y)
-
         tp_logp = model.logp({"f_rotated_": f_rotated, "p": self.pnew})
         npt.assert_allclose(self.gp_latent_logp, tp_logp, atol=0, rtol=1e-2)
 
@@ -1077,7 +1070,7 @@ class TestLatentKron:
         self.y = np.random.randn(self.N) * 0.1
         self.Xnews = (np.random.randn(5, 1), np.random.randn(5, 1), np.random.randn(5, 1))
         self.Xnew = np.concatenate(self.Xnews, axis=1)
-        self.pnew = np.random.randn(len(self.Xnew)) * 0.01
+        self.pnew = np.random.randn(len(self.Xnew))
         ls = 0.2
         with pm.Model() as latent_model:
             self.cov_funcs = (
@@ -1134,7 +1127,7 @@ class TestMarginalKron:
         self.Xnews = (np.random.randn(5, 1), np.random.randn(5, 1), np.random.randn(5, 1))
         self.Xnew = np.concatenate(self.Xnews, axis=1)
         self.sigma = 0.2
-        self.pnew = np.random.randn(len(self.Xnew)) * 0.01
+        self.pnew = np.random.randn(len(self.Xnew))
         ls = 0.2
         with pm.Model() as model:
             self.cov_funcs = [
