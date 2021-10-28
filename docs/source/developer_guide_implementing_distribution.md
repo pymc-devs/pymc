@@ -67,7 +67,7 @@ class BlahRV(RandomVariable):
     # start with a NumPy `RandomState` object, then the distribution
     # parameters, and, finally, the size.
     #
-    # This is effectively the v4 replacement for `Distribution.random`.
+    # This is effectively the PyMC replacement for `Distribution.random`.
     @classmethod
     def rng_fn(
         cls,
