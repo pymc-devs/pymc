@@ -27,7 +27,7 @@ If it is, it should be added to the [Aesara library](https://github.com/aesara-d
 
 In addition, it might not always be necessary to implement a new `RandomVariable`.
 For example if the new `Distribution` is just a special parametrization of an existing `Distribution`.
-This is the case of the `OrderedLogistic` and `OrderedProbit`, which are just special parametrizations of the `Categorial` distribution.
+This is the case of the `OrderedLogistic` and `OrderedProbit`, which are just special parametrizations of the `Categorical` distribution.
 
 The following snippet illustrates how to create a new `RandomVariable`:
 
