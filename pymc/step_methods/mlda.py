@@ -15,7 +15,7 @@
 import logging
 import warnings
 
-from typing import List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import aesara
 import arviz as az
@@ -25,7 +25,8 @@ from aesara.tensor.sharedvar import TensorSharedVariable
 
 import pymc as pm
 
-from pymc.blocking import DictToArrayBijection
+from pymc.aesaraf import compile_rv_inplace
+from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.model import Model, Point
 from pymc.step_methods.arraystep import ArrayStepShared, Competence, metrop_select
 from pymc.step_methods.compound import CompoundStep
@@ -65,22 +66,14 @@ class MetropolisMLDA(Metropolis):
             self.Q_last = np.nan
             self.Q_reg = [np.nan] * self.mlda_subsampling_rate_above
 
-            # extract some necessary variables
-            value_vars = kwargs.get("vars", None)
-            if value_vars is None:
-                value_vars = model.value_vars
-            else:
-                value_vars = [model.rvs_to_values.get(var, var) for var in value_vars]
-            value_vars = pm.inputvars(value_vars)
-            shared = pm.make_shared_replacements(initial_values, value_vars, model)
-
         # call parent class __init__
         super().__init__(*args, **kwargs)
 
         # modify the delta function and point to model if VR is used
         if self.mlda_variance_reduction:
-            self.delta_logp = delta_logp_inverse(initial_values, model.logpt, value_vars, shared)
             self.model = model
+            self.delta_logp_factory = self.delta_logp
+            self.delta_logp = lambda q, q0: -self.delta_logp_factory(q0, q)
 
     def reset_tuning(self):
         """
@@ -135,22 +128,14 @@ class DEMetropolisZMLDA(DEMetropolisZ):
             self.Q_last = np.nan
             self.Q_reg = [np.nan] * self.mlda_subsampling_rate_above
 
-            # extract some necessary variables
-            value_vars = kwargs.get("vars", None)
-            if value_vars is None:
-                value_vars = model.value_vars
-            else:
-                value_vars = [model.rvs_to_values.get(var, var) for var in value_vars]
-            value_vars = pm.inputvars(value_vars)
-            shared = pm.make_shared_replacements(initial_values, value_vars, model)
-
         # call parent class __init__
         super().__init__(*args, **kwargs)
 
         # modify the delta function and point to model if VR is used
         if self.mlda_variance_reduction:
-            self.delta_logp = delta_logp_inverse(initial_values, model.logpt, value_vars, shared)
             self.model = model
+            self.delta_logp_factory = self.delta_logp
+            self.delta_logp = lambda q, q0: -self.delta_logp_factory(q0, q)
 
     def reset_tuning(self):
         """Skips resetting of tuned sampler parameters
@@ -363,7 +348,7 @@ class MLDA(ArrayStepShared):
     def __init__(
         self,
         coarse_models: List[Model],
-        value_vars: Optional[list] = None,
+        vars: Optional[list] = None,
         base_sampler="DEMetropolisZ",
         base_S: Optional = None,
         base_proposal_dist: Optional[Type[Proposal]] = None,
@@ -386,10 +371,6 @@ class MLDA(ArrayStepShared):
         # this variable is used to identify MLDA objects which are
         # not in the finest level (i.e. child MLDA objects)
         self.is_child = kwargs.get("is_child", False)
-        if not self.is_child:
-            warnings.warn(
-                "The MLDA implementation in PyMC is still immature. You should be particularly critical of its results."
-            )
 
         if not isinstance(coarse_models, list):
             raise ValueError("MLDA step method cannot use coarse_models if it is not a list")
@@ -546,20 +527,20 @@ class MLDA(ArrayStepShared):
         self.mode = mode
 
         # Process model variables
-        if value_vars is None:
-            value_vars = model.value_vars
+        if vars is None:
+            vars = model.value_vars
         else:
-            value_vars = [model.rvs_to_values.get(var, var) for var in value_vars]
-        value_vars = pm.inputvars(value_vars)
-        self.vars = value_vars
+            vars = [model.rvs_to_values.get(var, var) for var in vars]
+        vars = pm.inputvars(vars)
+        self.vars = vars
         self.var_names = [var.name for var in self.vars]
 
         self.accepted = 0
 
         # Construct Aesara function for current-level model likelihood
         # (for use in acceptance)
-        shared = pm.make_shared_replacements(initial_values, value_vars, model)
-        self.delta_logp = delta_logp_inverse(initial_values, model.logpt, value_vars, shared)
+        shared = pm.make_shared_replacements(initial_values, vars, model)
+        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
 
         # Construct Aesara function for below-level model likelihood
         # (for use in acceptance)
@@ -571,7 +552,7 @@ class MLDA(ArrayStepShared):
             initial_values, model_below.logpt, vars_below, shared_below
         )
 
-        super().__init__(value_vars, shared)
+        super().__init__(vars, shared)
 
         # initialise complete step method hierarchy
         if self.num_levels == 2:
@@ -643,7 +624,7 @@ class MLDA(ArrayStepShared):
 
                 # MLDA sampler in some intermediate level, targeting self.model_below
                 self.step_method_below = pm.MLDA(
-                    value_vars=vars_below,
+                    vars=vars_below,
                     base_S=self.base_S,
                     base_sampler=self.base_sampler,
                     base_proposal_dist=self.base_proposal_dist,
@@ -715,7 +696,7 @@ class MLDA(ArrayStepShared):
         if self.store_Q_fine and not self.is_child:
             self.stats_dtypes[0][f"Q_{self.num_levels - 1}"] = object
 
-    def astep(self, q0):
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
         """One MLDA step, given current sample q0"""
         # Check if the tuning flag has been changed and if yes,
         # change the proposal's tuning flag and reset self.accepted
@@ -730,10 +711,6 @@ class MLDA(ArrayStepShared):
                     method.tune = self.tune
             self.accepted = 0
 
-        # Convert current sample from numpy array ->
-        # dict before feeding to proposal
-        q0_dict = DictToArrayBijection.rmap(q0)
-
         # Set subchain_selection (which sample from the coarse chain
         # is passed as a proposal to the fine chain). If variance
         # reduction is used, a random sample is selected as proposal.
@@ -747,17 +724,18 @@ class MLDA(ArrayStepShared):
 
         # Call the recursive DA proposal to get proposed sample
         # and convert dict -> numpy array
-        pre_q = self.proposal_dist(q0_dict)
-        q = DictToArrayBijection.map(pre_q)
+        q = self.proposal_dist(q0)
 
         # Evaluate MLDA acceptance log-ratio
         # If proposed sample from lower levels is the same as current one,
         # do not calculate likelihood, just set accept to 0.0
         if (q.data == q0.data).all():
-            accept = np.float(0.0)
+            accept = np.float64(0.0)
             skipped_logp = True
         else:
-            accept = self.delta_logp(q.data, q0.data) + self.delta_logp_below(q0.data, q.data)
+            # NB! The order and sign of the first term are swapped compared
+            # to the convention to make sure the proposal is evaluated last.
+            accept = -self.delta_logp(q0.data, q.data) + self.delta_logp_below(q0.data, q.data)
             skipped_logp = False
 
         # Accept/reject sample - next sample is stored in q_new
@@ -811,11 +789,11 @@ class MLDA(ArrayStepShared):
         if isinstance(self.step_method_below, MLDA):
             self.base_tuning_stats = self.step_method_below.base_tuning_stats
         elif isinstance(self.step_method_below, MetropolisMLDA):
-            self.base_tuning_stats.append({"base_scaling": self.step_method_below.scaling[0]})
+            self.base_tuning_stats.append({"base_scaling": self.step_method_below.scaling})
         elif isinstance(self.step_method_below, DEMetropolisZMLDA):
             self.base_tuning_stats.append(
                 {
-                    "base_scaling": self.step_method_below.scaling[0],
+                    "base_scaling": self.step_method_below.scaling,
                     "base_lambda": self.step_method_below.lamb,
                 }
             )
@@ -823,10 +801,10 @@ class MLDA(ArrayStepShared):
             # Below method is CompoundStep
             for method in self.step_method_below.methods:
                 if isinstance(method, MetropolisMLDA):
-                    self.base_tuning_stats.append({"base_scaling": method.scaling[0]})
+                    self.base_tuning_stats.append({"base_scaling": method.scaling})
                 elif isinstance(method, DEMetropolisZMLDA):
                     self.base_tuning_stats.append(
-                        {"base_scaling": method.scaling[0], "base_lambda": method.lamb}
+                        {"base_scaling": method.scaling, "base_lambda": method.lamb}
                     )
 
         return q_new, [stats] + self.base_tuning_stats
@@ -962,19 +940,6 @@ class RecursiveSampleMoments:
         self.t += 1
 
 
-def delta_logp_inverse(point, logp, vars, shared):
-    [logp0], inarray0 = pm.join_nonshared_inputs(point, [logp], vars, shared)
-
-    tensor_type = inarray0.type
-    inarray1 = tensor_type("inarray1")
-
-    logp1 = pm.CallableTensor(logp0)(inarray1)
-
-    f = aesara.function([inarray1, inarray0], -logp0 + logp1)
-    f.trust_input = True
-    return f
-
-
 def extract_Q_estimate(trace, levels):
     """
     Returns expectation and standard error of quantity of interest,
@@ -1015,9 +980,6 @@ def subsample(
     trace=None,
     tune=0,
     model=None,
-    random_seed=None,
-    callback=None,
-    **kwargs,
 ):
     """
     A stripped down version of sample(), which is called only
@@ -1032,18 +994,9 @@ def subsample(
     model = pm.modelcontext(model)
     chain = 0
     random_seed = np.random.randint(2 ** 30)
-
-    if start is not None:
-        pm.sampling._check_start_shape(model, start)
-    else:
-        start = {}
+    callback = None
 
     draws += tune
-
-    step = pm.sampling.assign_step_methods(model, step, step_kwargs=kwargs)
-
-    if isinstance(step, list):
-        step = CompoundStep(step)
 
     sampling = pm.sampling._iter_sample(
         draws, step, start, trace, chain, tune, model, random_seed, callback
@@ -1086,9 +1039,8 @@ class RecursiveDAProposal(Proposal):
         self.subsampling_rate = subsampling_rate
         self.subchain_selection = None
         self.tuning_end_trigger = True
-        self.trace = None
 
-    def __call__(self, q0_dict: dict) -> dict:
+    def __call__(self, q0: RaveledVars) -> RaveledVars:
         """Returns proposed sample given the current sample
         in dictionary form (q0_dict)."""
 
@@ -1096,6 +1048,10 @@ class RecursiveDAProposal(Proposal):
         # during multiple recursive calls of subsample()
         _log = logging.getLogger("pymc")
         _log.setLevel(logging.ERROR)
+
+        # Convert current sample from RaveledVars ->
+        # dict before feeding to subsample.
+        q0_dict = DictToArrayBijection.rmap(q0)
 
         with self.model_below:
             # Check if the tuning flag has been set to False
@@ -1106,11 +1062,10 @@ class RecursiveDAProposal(Proposal):
 
             if self.tune:
                 # Subsample in tuning mode
-                self.trace = subsample(
+                trace = subsample(
                     draws=0,
                     step=self.step_method_below,
                     start=q0_dict,
-                    trace=self.trace,
                     tune=self.subsampling_rate,
                 )
             else:
@@ -1122,11 +1077,11 @@ class RecursiveDAProposal(Proposal):
                         self.step_method_below.tuning_end_trigger = True
                     self.tuning_end_trigger = False
 
-                self.trace = subsample(
+                trace = subsample(
                     draws=self.subsampling_rate,
                     step=self.step_method_below,
                     start=q0_dict,
-                    trace=self.trace,
+                    tune=0,
                 )
 
         # set logging back to normal
@@ -1135,7 +1090,13 @@ class RecursiveDAProposal(Proposal):
         # return sample with index self.subchain_selection from the generated
         # sequence of length self.subsampling_rate. The index is set within
         # MLDA's astep() function
-        new_point = self.trace.point(-self.subsampling_rate + self.subchain_selection)
-        new_point = Point(new_point, model=self.model_below, filter_model_vars=True)
+        q_dict = trace.point(self.subchain_selection)
 
-        return new_point
+        # Make sure output dict is ordered the same way as the input dict.
+        q_dict = Point(
+            {key: q_dict[key] for key in q0_dict.keys()},
+            model=self.model_below,
+            filter_model_vars=True,
+        )
+
+        return DictToArrayBijection.map(q_dict)

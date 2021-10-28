@@ -41,14 +41,20 @@ from pymc.aesaraf import change_rv_size, compile_rv_inplace, inputvars, walk_mod
 from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray
+from pymc.bart.pgbart import PGBART
 from pymc.blocking import DictToArrayBijection
 from pymc.distributions import NoDistribution
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
+from pymc.initial_point import (
+    PointType,
+    StartDict,
+    filter_rvs_to_jitter,
+    make_initial_point_fns_per_chain,
+)
 from pymc.model import Model, Point, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
 from pymc.step_methods import (
     NUTS,
-    PGBART,
     BinaryGibbsMetropolis,
     BinaryMetropolis,
     CategoricalGibbsMetropolis,
@@ -93,7 +99,6 @@ STEP_METHODS = (
 Step = Union[BlockedStep, CompoundStep]
 
 ArrayLike = Union[np.ndarray, List[float]]
-PointType = Dict[str, np.ndarray]
 PointList = List[PointType]
 Backend = Union[BaseTrace, MultiTrace, NDArray]
 
@@ -253,7 +258,7 @@ def sample(
     step=None,
     init="auto",
     n_init=200_000,
-    initvals: Optional[Union[PointType, Sequence[Optional[PointType]]]] = None,
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
     chain_idx=0,
     chains=None,
@@ -267,11 +272,11 @@ def sample(
     callback=None,
     jitter_max_retries=10,
     *,
-    return_inferencedata=None,
+    return_inferencedata=True,
     idata_kwargs: dict = None,
     mp_ctx=None,
     **kwargs,
-):
+) -> Union[InferenceData, MultiTrace]:
     r"""Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -292,7 +297,7 @@ def sample(
     n_init : int
         Number of iterations of initializer. Only works for 'ADVI' init methods.
     initvals : optional, dict, array of dict
-        Dict or list of dicts with initial values to use instead of the defaults from `Model.initial_values`.
+        Dict or list of dicts with initial value strategies to use instead of the defaults from `Model.initial_values`.
         The keys should be names of transformed random variables.
         Initialization methods for NUTS (see ``init`` keyword) can overwrite the default.
     trace : backend or list
@@ -336,9 +341,9 @@ def sample(
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
         that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
         init methods.
-    return_inferencedata : bool, default=True
+    return_inferencedata : bool
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
-        Defaults to `False`, but we'll switch to `True` in an upcoming release.
+        Defaults to `True`.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
     mp_ctx : multiprocessing.context.BaseContent
@@ -420,7 +425,7 @@ def sample(
         if initvals is not None:
             raise ValueError("Passing both `start` and `initvals` is not supported.")
         warnings.warn(
-            "The `start` kwarg was renamed to `initvals`. Please check the docstring.",
+            "The `start` kwarg was renamed to `initvals` and can now do more. Please check the docstring.",
             FutureWarning,
             stacklevel=2,
         )
@@ -449,9 +454,6 @@ def sample(
 
     if not isinstance(random_seed, abc.Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
-
-    if return_inferencedata is None:
-        return_inferencedata = True
 
     if not discard_tuned_samples and not return_inferencedata:
         warnings.warn(
@@ -482,7 +484,7 @@ def sample(
                 chains=chains,
                 n_init=n_init,
                 model=model,
-                random_seed=random_seed,
+                seeds=random_seed,
                 progressbar=progressbar,
                 jitter_max_retries=jitter_max_retries,
                 tune=tune,
@@ -501,15 +503,14 @@ def sample(
         step = CompoundStep(step)
 
     if initial_points is None:
-        initvals = initvals or {}
-        if isinstance(initvals, dict):
-            initvals = [initvals] * chains
-        initial_points = []
-        mip = model.initial_point
-        for ivals in initvals:
-            ivals = deepcopy(ivals)
-            model.update_start_vals(ivals, mip)
-            initial_points.append(ivals)
+        # Time to draw/evaluate numeric start points for each chain.
+        ipfns = make_initial_point_fns_per_chain(
+            model=model,
+            overrides=initvals,
+            jitter_rvs=filter_rvs_to_jitter(step),
+            chains=chains,
+        )
+        initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed)]
 
     # One final check that shapes and logps at the starting points are okay.
     for ip in initial_points:
@@ -667,33 +668,18 @@ def _check_start_shape(model, start: PointType):
         The complete dictionary mapping (transformed) variable names to numeric initial values.
     """
     e = ""
-    for var in model.basic_RVs:
-        try:
-            var_shape = model.fastfn(var.shape)(start)
-            if var.name in start.keys():
-                start_var_shape = np.shape(start[var.name])
-                if start_var_shape:
-                    if not np.array_equal(var_shape, start_var_shape):
-                        e += "\nExpected shape {} for var '{}', got: {}".format(
-                            tuple(var_shape), var.name, start_var_shape
-                        )
-                # if start var has no shape
-                else:
-                    # if model var has a specified shape
-                    if var_shape.size > 0:
-                        e += "\nExpected shape {} for var " "'{}', got scalar {}".format(
-                            tuple(var_shape), var.name, start[var.name]
-                        )
-        except NotImplementedError as ex:
-            if ex.args[0].startswith("Cannot sample"):
-                _log.warning(
-                    f"Unable to check start shape of {var} because the RV does not implement random sampling."
-                )
-            else:
-                raise
-
+    try:
+        actual_shapes = model.eval_rv_shapes()
+    except NotImplementedError as ex:
+        warnings.warn(f"Unable to validate shapes: {ex.args[0]}", UserWarning)
+        return
+    for name, sval in start.items():
+        ashape = actual_shapes.get(name)
+        sshape = np.shape(sval)
+        if ashape != tuple(sshape):
+            e += f"\nExpected shape {ashape} for var '{name}', got: {sshape}"
     if e != "":
-        raise ValueError(f"Bad shape for start argument:{e}")
+        raise ValueError(f"Bad shape in start point:{e}")
 
 
 def _sample_many(
@@ -1249,7 +1235,7 @@ def _prepare_iter_population(
         raise ValueError("Argument `draws` should be above 0.")
 
     # The initialization of traces, samplers and points must happen in the right order:
-    # 1. traces are initialized and update_start_vals configures variable transforms
+    # 1. traces are initialized
     # 2. population of points is created
     # 3. steppers are initialized and linked to the points object
     # 4. traces are configured to track the sampler stats
@@ -1260,7 +1246,7 @@ def _prepare_iter_population(
 
     # 2. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
-    population = [Point(start[c], model=model) for c in range(nchains)]
+    population = [start[c] for c in range(nchains)]
 
     # 3. Set up the steppers
     steppers: List[Step] = []
@@ -1550,7 +1536,9 @@ def sample_posterior_predictive(
     random_seed=None,
     progressbar: bool = True,
     mode: Optional[Union[str, Mode]] = None,
-) -> Dict[str, np.ndarray]:
+    return_inferencedata=True,
+    idata_kwargs: dict = None,
+) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -1585,12 +1573,17 @@ def sample_posterior_predictive(
         time until completion ("expected time of arrival"; ETA).
     mode:
         The mode used by ``aesara.function`` to compile the graph.
+    return_inferencedata : bool
+        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
+        Defaults to True.
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
 
     Returns
     -------
-    samples : dict
-        Dictionary with the variable names as keys, and values numpy arrays containing
-        posterior predictive samples.
+    arviz.InferenceData or Dict
+        An ArviZ ``InferenceData`` object containing the posterior predictive samples (default), or
+        a dictionary with variable names as keys, and samples as numpy arrays.
     """
 
     _trace: Union[MultiTrace, PointList]
@@ -1739,7 +1732,12 @@ def sample_posterior_predictive(
         for k, ary in ppc_trace.items():
             ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
 
-    return ppc_trace
+    if not return_inferencedata:
+        return ppc_trace
+    ikwargs = dict(model=model)
+    if idata_kwargs:
+        ikwargs.update(idata_kwargs)
+    return pm.to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
 
 
 def sample_posterior_predictive_w(
@@ -1749,6 +1747,8 @@ def sample_posterior_predictive_w(
     weights: Optional[ArrayLike] = None,
     random_seed: Optional[int] = None,
     progressbar: bool = True,
+    return_inferencedata=True,
+    idata_kwargs: dict = None,
 ):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
@@ -1775,12 +1775,18 @@ def sample_posterior_predictive_w(
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
+    return_inferencedata : bool
+        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
+        Defaults to True.
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
 
     Returns
     -------
-    samples : dict
-        Dictionary with the variables as keys. The values corresponding to the
-        posterior predictive samples from the weighted models.
+    arviz.InferenceData or Dict
+        An ArviZ ``InferenceData`` object containing the posterior predictive samples from the
+        weighted models (default), or a dictionary with variable names as keys, and samples as
+        numpy arrays.
     """
     if isinstance(traces[0], InferenceData):
         n_samples = [
@@ -1899,7 +1905,13 @@ def sample_posterior_predictive_w(
     except KeyboardInterrupt:
         pass
     else:
-        return {k: np.asarray(v) for k, v in ppc.items()}
+        ppc = {k: np.asarray(v) for k, v in ppc.items()}
+        if not return_inferencedata:
+            return ppc
+        ikwargs = dict(model=models)
+        if idata_kwargs:
+            ikwargs.update(idata_kwargs)
+        return pm.to_inference_data(posterior_predictive=ppc, **ikwargs)
 
 
 def sample_prior_predictive(
@@ -1908,7 +1920,9 @@ def sample_prior_predictive(
     var_names: Optional[Iterable[str]] = None,
     random_seed=None,
     mode: Optional[Union[str, Mode]] = None,
-) -> Dict[str, np.ndarray]:
+    return_inferencedata=True,
+    idata_kwargs: dict = None,
+) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate samples from the prior predictive distribution.
 
     Parameters
@@ -1924,12 +1938,17 @@ def sample_prior_predictive(
         Seed for the random number generator.
     mode:
         The mode used by ``aesara.function`` to compile the graph.
+    return_inferencedata : bool
+        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
+        Defaults to True.
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
 
     Returns
     -------
-    dict
-        Dictionary with variable names as keys. The values are numpy arrays of prior
-        samples.
+    arviz.InferenceData or Dict
+        An ArviZ ``InferenceData`` object containing the prior and prior predictive samples (default),
+        or a dictionary with variable names as keys and samples as numpy arrays.
     """
     model = modelcontext(model)
 
@@ -1968,7 +1987,7 @@ def sample_prior_predictive(
         transformed_value_var = model[name]
         rv_var = model.values_to_rvs[transformed_value_var]
         transform = transformed_value_var.tag.transform
-        transformed_rv_var = transform.forward(rv_var, rv_var)
+        transformed_rv_var = transform.forward(rv_var, *rv_var.owner.inputs)
 
         names.append(name)
         vars_to_sample.append(transformed_rv_var)
@@ -1995,10 +2014,22 @@ def sample_prior_predictive(
     for var_name in vars_:
         if var_name in data:
             prior[var_name] = data[var_name]
-    return prior
+
+    if not return_inferencedata:
+        return prior
+    ikwargs = dict(model=model)
+    if idata_kwargs:
+        ikwargs.update(idata_kwargs)
+    return pm.to_inference_data(prior=prior, **ikwargs)
 
 
-def _init_jitter(model, point, chains, jitter_max_retries):
+def _init_jitter(
+    model: Model,
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
+    seeds: Sequence[int],
+    jitter: bool,
+    jitter_max_retries: int,
+) -> PointType:
     """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
 
     ``model.check_start_vals`` is used to test whether the jittered starting
@@ -2008,9 +2039,8 @@ def _init_jitter(model, point, chains, jitter_max_retries):
 
     Parameters
     ----------
-    model : pymc.Model
-    point : dict
-    chains : int
+    jitter: bool
+        Whether to apply jitter or not.
     jitter_max_retries : int
         Maximum number of repeated attempts at initializing values (per chain).
 
@@ -2019,36 +2049,45 @@ def _init_jitter(model, point, chains, jitter_max_retries):
     start : ``pymc.model.Point``
         Starting point for sampler
     """
-    start = []
-    for _ in range(chains):
-        for i in range(jitter_max_retries + 1):
-            mean = {var: val.copy() for var, val in point.items()}
-            for val in mean.values():
-                val[...] += 2 * np.random.rand(*val.shape) - 1
 
+    ipfns = make_initial_point_fns_per_chain(
+        model=model,
+        overrides=initvals,
+        jitter_rvs=set(model.free_RVs) if jitter else {},
+        chains=len(seeds),
+    )
+
+    if not jitter:
+        return [ipfn(seed) for ipfn, seed in zip(ipfns, seeds)]
+
+    initial_points = []
+    for ipfn, seed in zip(ipfns, seeds):
+        rng = np.random.RandomState(seed)
+        for i in range(jitter_max_retries + 1):
+            point = ipfn(seed)
             if i < jitter_max_retries:
                 try:
-                    model.check_start_vals(mean)
+                    model.check_start_vals(point)
                 except SamplingError:
-                    pass
+                    # Retry with a new seed
+                    seed = rng.randint(2 ** 30, dtype=np.int64)
                 else:
                     break
-
-        start.append(mean)
-    return start
+        initial_points.append(point)
+    return initial_points
 
 
 def init_nuts(
+    *,
     init="auto",
     chains=1,
-    n_init=500000,
+    n_init=500_000,
     model=None,
-    random_seed=None,
+    seeds: Sequence[int] = None,
     progressbar=True,
     jitter_max_retries=10,
     tune=None,
-    *,
-    initvals: Optional[Union[PointType, Sequence[Optional[PointType]]]] = None,
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     **kwargs,
 ) -> Tuple[Sequence[PointType], NUTS]:
     """Set up the mass matrix initialization for NUTS.
@@ -2091,6 +2130,8 @@ def init_nuts(
     n_init : int
         Number of iterations of initializer. Only works for 'ADVI' init methods.
     model : Model (optional if in ``with`` context)
+    seeds : list
+        Seed values for each chain.
     progressbar : bool
         Whether or not to display a progressbar for advi sampling.
     jitter_max_retries : int
@@ -2124,35 +2165,45 @@ def init_nuts(
     if init == "auto":
         init = "jitter+adapt_diag"
 
-    _log.info(f"Initializing NUTS using {init}...")
+    if seeds is None:
+        seeds = model.rng_seeder.randint(2 ** 30, dtype=np.int64, size=chains)
+    if not isinstance(seeds, (list, tuple, np.ndarray)):
+        raise ValueError(f"The `seeds` must be array-like. Got {type(seeds)} instead.")
+    if len(seeds) != chains:
+        raise ValueError(
+            f"Number of seeds ({len(seeds)}) does not match the number of chains ({chains})."
+        )
 
-    if random_seed is not None:
-        random_seed = int(np.atleast_1d(random_seed)[0])
+    _log.info(f"Initializing NUTS using {init}...")
 
     cb = [
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="absolute"),
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
     ]
 
-    # TODO: Consider `initvals` for selecting the starting point.
+    initial_points = _init_jitter(
+        model,
+        initvals,
+        seeds=seeds,
+        jitter="jitter" in init,
+        jitter_max_retries=jitter_max_retries,
+    )
 
-    apoint = DictToArrayBijection.map(model.initial_point)
+    apoints = [DictToArrayBijection.map(point) for point in initial_points]
+    apoints_data = [apoint.data for apoint in apoints]
 
     if init == "adapt_diag":
-        start = [model.initial_point] * chains
-        mean = np.mean([apoint.data] * chains, axis=0)
+        mean = np.mean(apoints_data, axis=0)
         var = np.ones_like(mean)
         n = len(var)
         potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
     elif init == "jitter+adapt_diag":
-        start = _init_jitter(model, model.initial_point, chains, jitter_max_retries)
-        mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
+        mean = np.mean(apoints_data, axis=0)
         var = np.ones_like(mean)
         n = len(var)
         potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
     elif init == "jitter+adapt_diag_grad":
-        start = _init_jitter(model, model.initial_point, chains, jitter_max_retries)
-        mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
+        mean = np.mean(apoints_data, axis=0)
         var = np.ones_like(mean)
         n = len(var)
 
@@ -2170,7 +2221,7 @@ def init_nuts(
         )
     elif init == "advi+adapt_diag":
         approx = pm.fit(
-            random_seed=random_seed,
+            random_seed=seeds[0],
             n=n_init,
             method="advi",
             model=model,
@@ -2178,8 +2229,7 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        start = approx.sample(draws=chains)
-        start = list(start)
+        initial_points = list(approx.sample(draws=chains))
         std_apoint = approx.std.eval()
         cov = std_apoint ** 2
         mean = approx.mean.get_value()
@@ -2188,7 +2238,7 @@ def init_nuts(
         potential = quadpotential.QuadPotentialDiagAdapt(n, mean, cov, weight)
     elif init == "advi":
         approx = pm.fit(
-            random_seed=random_seed,
+            random_seed=seeds[0],
             n=n_init,
             method="advi",
             model=model,
@@ -2196,41 +2246,37 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        start = approx.sample(draws=chains)
-        start = list(start)
+        initial_points = list(approx.sample(draws=chains))
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "advi_map":
         start = pm.find_MAP(include_transformed=True)
         approx = pm.MeanField(model=model, start=start)
         pm.fit(
-            random_seed=random_seed,
+            random_seed=seeds[0],
             n=n_init,
             method=pm.KLqp(approx),
             callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        start = approx.sample(draws=chains)
-        start = list(start)
+        initial_points = list(approx.sample(draws=chains))
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "map":
         start = pm.find_MAP(include_transformed=True)
         cov = pm.find_hessian(point=start)
-        start = [start] * chains
+        initial_points = [start] * chains
         potential = quadpotential.QuadPotentialFull(cov)
     elif init == "adapt_full":
-        initial_point = model.initial_point
-        start = [initial_point] * chains
-        mean = np.mean([apoint.data] * chains, axis=0)
+        mean = np.mean(apoints_data * chains, axis=0)
+        initial_point = initial_points[0]
         initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
         cov = np.eye(initial_point_model_size)
         potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
     elif init == "jitter+adapt_full":
-        initial_point = model.initial_point
-        start = _init_jitter(model, initial_point, chains, jitter_max_retries)
-        mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
+        mean = np.mean(apoints_data, axis=0)
+        initial_point = initial_points[0]
         initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
         cov = np.eye(initial_point_model_size)
         potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
@@ -2239,25 +2285,4 @@ def init_nuts(
 
     step = pm.NUTS(potential=potential, model=model, **kwargs)
 
-    # The "start" dict determined from initialization methods does not always respect the support of variables.
-    # The next block combines it with the user-provided initvals such that initvals take priority.
-    if initvals is None or isinstance(initvals, dict):
-        initvals = [initvals or {}] * chains
-    if isinstance(start, dict):
-        start = [start] * chains
-    mip = model.initial_point
-    initial_points = []
-    for st, iv in zip(start, initvals):
-        from_init = deepcopy(st)
-        model.update_start_vals(from_init, mip)
-
-        from_user = deepcopy(iv)
-        model.update_start_vals(from_user, mip)
-
-        initial_points.append(
-            {
-                **from_init,
-                **from_user,  # prioritize user-provided
-            }
-        )
     return initial_points, step

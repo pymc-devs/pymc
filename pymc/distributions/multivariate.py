@@ -394,7 +394,7 @@ class Dirichlet(Continuous):
     rv_op = dirichlet
 
     def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("transform", transforms.stick_breaking)
+        kwargs.setdefault("transform", transforms.simplex)
         return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
@@ -752,7 +752,7 @@ class OrderedMultinomial:
     def __new__(cls, name, *args, compute_p=True, **kwargs):
         out_rv = _OrderedMultinomial(name, *args, **kwargs)
         if compute_p:
-            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[4])
+            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[4], dims=kwargs.get("dims"))
         return out_rv
 
     @classmethod
@@ -2082,7 +2082,7 @@ class CAR(Continuous):
         TensorVariable
         """
 
-        sparse = isinstance(W, aesara.sparse.SparseVariable)
+        sparse = isinstance(W, aesara.sparse.SparseConstant)
 
         if sparse:
             D = sp_sum(W, axis=0)

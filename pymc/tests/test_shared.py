@@ -48,10 +48,14 @@ class TestShared(SeededTest):
             prior_trace1 = pm.sample_prior_predictive(1000)
             pp_trace1 = pm.sample_posterior_predictive(idata, 1000)
 
-        assert prior_trace0["b"].shape == (1000,)
-        assert prior_trace0["obs"].shape == (1000, 100)
-        np.testing.assert_allclose(x, pp_trace0["obs"].mean(axis=0), atol=1e-1)
+        assert prior_trace0.prior["b"].shape == (1, 1000)
+        assert prior_trace0.prior_predictive["obs"].shape == (1, 1000, 100)
+        np.testing.assert_allclose(
+            x, pp_trace0.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
+        )
 
-        assert prior_trace1["b"].shape == (1000,)
-        assert prior_trace1["obs"].shape == (1000, 200)
-        np.testing.assert_allclose(x_pred, pp_trace1["obs"].mean(axis=0), atol=1e-1)
+        assert prior_trace1.prior["b"].shape == (1, 1000)
+        assert prior_trace1.prior_predictive["obs"].shape == (1, 1000, 200)
+        np.testing.assert_allclose(
+            x_pred, pp_trace1.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
+        )

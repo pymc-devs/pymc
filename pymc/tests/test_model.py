@@ -506,17 +506,18 @@ def test_initial_point():
         b = pm.Uniform("b", testval=b_initval)
 
     b_value_var = model.rvs_to_values[b]
-    b_initval_trans = b_value_var.tag.transform.forward(b, b_initval).eval()
+    b_initval_trans = b_value_var.tag.transform.forward(b_initval, *b.owner.inputs).eval()
 
     y_initval = np.array(-2.4, dtype=aesara.config.floatX)
 
     with model:
         y = pm.Normal("y", initval=y_initval)
 
-    assert model.rvs_to_values[a] in model.initial_values
-    assert model.rvs_to_values[x] in model.initial_values
-    assert model.initial_values[b_value_var] == b_initval_trans
-    assert model.initial_values[model.rvs_to_values[y]] == y_initval
+    assert a in model.initial_values
+    assert x in model.initial_values
+    assert model.initial_values[b] == b_initval
+    assert model.recompute_initial_point(0)["b_interval__"] == b_initval_trans
+    assert model.initial_values[y] == y_initval
 
 
 def test_point_logps():
@@ -532,66 +533,26 @@ def test_point_logps():
     assert "a" in logp_vals.keys()
 
 
-class TestUpdateStartVals(SeededTest):
-    def setup_method(self):
-        super().setup_method()
-
-    def test_soft_update_all_present(self):
-        model = pm.Model()
-        start = {"a": 1, "b": 2}
-        test_point = {"a": 3, "b": 4}
-        model.update_start_vals(start, test_point)
-        assert start == {"a": 1, "b": 2}
-
-    def test_soft_update_one_missing(self):
-        model = pm.Model()
-        start = {
-            "a": 1,
-        }
-        test_point = {"a": 3, "b": 4}
-        model.update_start_vals(start, test_point)
-        assert start == {"a": 1, "b": 4}
-
-    def test_soft_update_empty(self):
-        model = pm.Model()
-        start = {}
-        test_point = {"a": 3, "b": 4}
-        model.update_start_vals(start, test_point)
-        assert start == test_point
-
-    def test_soft_update_transformed(self):
-        with pm.Model() as model:
-            pm.Exponential("a", 1)
-        start = {"a": 2.0}
-        test_point = {"a_log__": 0}
-        model.update_start_vals(start, test_point)
-        assert_almost_equal(np.exp(start["a_log__"]), start["a"])
-
-    def test_soft_update_parent(self):
-        with pm.Model() as model:
-            a = pm.Uniform("a", lower=0.0, upper=1.0)
-            b = pm.Uniform("b", lower=2.0, upper=3.0)
-            pm.Uniform("lower", lower=a, upper=3.0)
-            pm.Uniform("upper", lower=0.0, upper=b)
-            pm.Uniform("interv", lower=a, upper=b)
-
-        initial_point = {
-            "a_interval__": np.array(0.0, dtype=aesara.config.floatX),
-            "b_interval__": np.array(0.0, dtype=aesara.config.floatX),
-            "lower_interval__": np.array(0.0, dtype=aesara.config.floatX),
-            "upper_interval__": np.array(0.0, dtype=aesara.config.floatX),
-            "interv_interval__": np.array(0.0, dtype=aesara.config.floatX),
-        }
-        start = {"a": 0.3, "b": 2.1, "lower": 1.4, "upper": 1.4, "interv": 1.4}
-        test_point = {
-            "lower_interval__": -0.3746934494414109,
-            "upper_interval__": 0.693147180559945,
-            "interv_interval__": 0.4519851237430569,
-        }
-        model.update_start_vals(start, initial_point)
-        assert_almost_equal(start["lower_interval__"], test_point["lower_interval__"])
-        assert_almost_equal(start["upper_interval__"], test_point["upper_interval__"])
-        assert_almost_equal(start["interv_interval__"], test_point["interv_interval__"])
+class TestShapeEvaluation:
+    def test_eval_rv_shapes(self):
+        with pm.Model(
+            coords={
+                "city": ["Sydney", "Las Vegas", "Düsseldorf"],
+            }
+        ) as pmodel:
+            pm.Data("budget", [1, 2, 3, 4], dims="year")
+            pm.Normal("untransformed", size=(1, 2))
+            pm.Uniform("transformed", size=(7,))
+            obs = pm.Uniform("observed", size=(3,), observed=[0.1, 0.2, 0.3])
+            pm.LogNormal("lognorm", mu=at.log(obs))
+            pm.Normal("from_dims", dims=("city", "year"))
+        shapes = pmodel.eval_rv_shapes()
+        assert shapes["untransformed"] == (1, 2)
+        assert shapes["transformed"] == (7,)
+        assert shapes["transformed_interval__"] == (7,)
+        assert shapes["lognorm"] == (3,)
+        assert shapes["lognorm_log__"] == (3,)
+        assert shapes["from_dims"] == (3, 4)
 
 
 class TestCheckStartVals(SeededTest):
@@ -603,8 +564,14 @@ class TestCheckStartVals(SeededTest):
             a = pm.Uniform("a", lower=0.0, upper=1.0)
             b = pm.Uniform("b", lower=2.0, upper=3.0)
 
-        start = {"a": 0.3, "b": 2.1}
-        model.update_start_vals(start, model.initial_point)
+        start = {
+            "a_interval__": model.rvs_to_values[a]
+            .tag.transform.forward(0.3, *a.owner.inputs)
+            .eval(),
+            "b_interval__": model.rvs_to_values[b]
+            .tag.transform.forward(2.1, *b.owner.inputs)
+            .eval(),
+        }
         model.check_start_vals(start)
 
     def test_invalid_start_point(self):
@@ -612,8 +579,12 @@ class TestCheckStartVals(SeededTest):
             a = pm.Uniform("a", lower=0.0, upper=1.0)
             b = pm.Uniform("b", lower=2.0, upper=3.0)
 
-        start = {"a": np.nan, "b": np.nan}
-        model.update_start_vals(start, model.initial_point)
+        start = {
+            "a_interval__": np.nan,
+            "b_interval__": model.rvs_to_values[b]
+            .tag.transform.forward(2.1, *b.owner.inputs)
+            .eval(),
+        }
         with pytest.raises(pm.exceptions.SamplingError):
             model.check_start_vals(start)
 
@@ -622,8 +593,15 @@ class TestCheckStartVals(SeededTest):
             a = pm.Uniform("a", lower=0.0, upper=1.0)
             b = pm.Uniform("b", lower=2.0, upper=3.0)
 
-        start = {"a": 0.3, "b": 2.1, "c": 1.0}
-        model.update_start_vals(start, model.initial_point)
+        start = {
+            "a_interval__": model.rvs_to_values[a]
+            .tag.transform.forward(0.3, *a.owner.inputs)
+            .eval(),
+            "b_interval__": model.rvs_to_values[b]
+            .tag.transform.forward(2.1, *b.owner.inputs)
+            .eval(),
+            "c": 1.0,
+        }
         with pytest.raises(KeyError):
             model.check_start_vals(start)
 
@@ -639,9 +617,9 @@ def test_set_initval():
         alpha = pm.HalfNormal("alpha", initval=100)
         value = pm.NegativeBinomial("value", mu=mu, alpha=alpha)
 
-    assert np.array_equal(model.initial_values[model.rvs_to_values[mu]], np.array([[100.0]]))
-    np.testing.assert_almost_equal(model.initial_values[model.rvs_to_values[alpha]], np.log(100))
-    assert 50 < model.initial_values[model.rvs_to_values[value]] < 150
+    assert np.array_equal(model.initial_values[mu], np.array([[100.0]]))
+    np.testing.assert_array_equal(model.initial_values[alpha], np.array(100))
+    assert model.initial_values[value] is None
 
     # `Flat` cannot be sampled, so let's make sure that doesn't break initial
     # value computations
@@ -649,7 +627,7 @@ def test_set_initval():
         x = pm.Flat("x")
         y = pm.Normal("y", x, 1)
 
-    assert model.rvs_to_values[y] in model.initial_values
+    assert y in model.initial_values
 
 
 def test_datalogpt_multiple_shapes():

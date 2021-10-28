@@ -14,15 +14,14 @@
 
 from pymc.distributions.logprob import (  # isort:skip
     _logcdf,
-    _logp,
     logcdf,
     logp,
+    logcdfpt,
     logp_transform,
     logpt,
     logpt_sum,
 )
 
-from pymc.distributions.bart import BART
 from pymc.distributions.bound import Bound
 from pymc.distributions.continuous import (
     AsymmetricLaplace,
@@ -190,12 +189,10 @@ __all__ = [
     "Rice",
     "Moyal",
     "Simulator",
-    "BART",
     "CAR",
     "PolyaGamma",
     "logpt",
     "logp",
-    "_logp",
     "logp_transform",
     "logcdf",
     "_logcdf",

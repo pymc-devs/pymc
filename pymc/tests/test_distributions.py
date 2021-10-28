@@ -35,6 +35,8 @@ except ImportError:  # pragma: no cover
         raise RuntimeError("polyagamma package is not installed!")
 
 
+from contextlib import ExitStack as does_not_raise
+
 import pytest
 import scipy.stats
 import scipy.stats.distributions as sp
@@ -116,6 +118,7 @@ from pymc.distributions import (
     ZeroInflatedPoisson,
     continuous,
     logcdf,
+    logcdfpt,
     logp,
     logpt,
     logpt_sum,
@@ -155,6 +158,14 @@ class Domain:
         if edges is None:
             edges = array(vals[0]), array(vals[-1])
             vals = vals[1:-1]
+
+        if not vals:
+            raise ValueError(
+                f"Domain has no values left after removing edges: {edges}.\n"
+                "You can duplicate the edge values or explicitly specify the edges with the edge keyword.\n"
+                f"For example: `Domain([{edges[0]}, {edges[0]}, {edges[1]}, {edges[1]}])`"
+            )
+
         if shape is None:
             shape = avals[0].shape
 
@@ -190,6 +201,22 @@ class Domain:
 
     def __neg__(self):
         return Domain([-v for v in self.vals], self.dtype, (-self.lower, -self.upper), self.shape)
+
+
+@pytest.mark.parametrize(
+    "values, edges, expectation",
+    [
+        ([], None, pytest.raises(IndexError)),
+        ([], (0, 0), pytest.raises(ValueError)),
+        ([0], None, pytest.raises(ValueError)),
+        ([0], (0, 0), does_not_raise()),
+        ([-1, 1], None, pytest.raises(ValueError)),
+        ([-1, 0, 1], None, does_not_raise()),
+    ],
+)
+def test_domain(values, edges, expectation):
+    with expectation:
+        Domain(values, edges=edges)
 
 
 def product(domains, n_samples=-1):
@@ -758,7 +785,7 @@ class TestMatchesScipy:
             domains["value"] = domain
 
             model, param_vars = build_model(pymc_dist, domain, paramdomains)
-            pymc_logcdf = model.fastfn(logpt(model["value"], cdf=True))
+            pymc_logcdf = model.fastfn(logcdfpt(model["value"]))
 
             if decimal is None:
                 decimal = select_by_precision(float64=6, float32=3)
@@ -867,7 +894,7 @@ class TestMatchesScipy:
             decimal = select_by_precision(float64=6, float32=3)
 
         model, param_vars = build_model(distribution, domain, paramdomains)
-        dist_logcdf = model.fastfn(logpt(model["value"], cdf=True))
+        dist_logcdf = model.fastfn(logcdfpt(model["value"]))
         dist_logp = model.fastfn(logpt(model["value"]))
 
         for pt in product(domains, n_samples=n_samples):
@@ -945,17 +972,16 @@ class TestMatchesScipy:
         valid_dist = Triangular.dist(lower=0, upper=1, c=0.9, size=2)
         with aesara.config.change_flags(mode=Mode("py")):
             assert np.all(logp(valid_dist, np.array([-1, 2])).eval() == -np.inf)
-            assert np.all(logcdf(valid_dist, np.array([-1, 2])).eval() == [-np.inf, 0])
+            assert np.all(logcdf(valid_dist, np.array([-1, 2]), sum=False).eval() == [-np.inf, 0])
 
-        # Custom logp / logcdf check for invalid parameters
+        # Custom logcdf check for invalid parameters.
+        # Invalid logp checks for triangular are being done in aeppl
         invalid_dist = Triangular.dist(lower=1, upper=0, c=0.1)
         with aesara.config.change_flags(mode=Mode("py")):
-            assert logp(invalid_dist, 0.5).eval() == -np.inf
             assert logcdf(invalid_dist, 2).eval() == -np.inf
 
         invalid_dist = Triangular.dist(lower=0, upper=1, c=2.0)
         with aesara.config.change_flags(mode=Mode("py")):
-            assert logp(invalid_dist, 0.5).eval() == -np.inf
             assert logcdf(invalid_dist, 2).eval() == -np.inf
 
     @pytest.mark.skipif(
@@ -1007,7 +1033,6 @@ class TestMatchesScipy:
         self.check_logp(Flat, Runif, {}, lambda value: 0)
         with Model():
             x = Flat("a")
-            assert_allclose(x.tag.test_value, 0)
         self.check_logcdf(Flat, R, {}, lambda value: np.log(0.5))
         # Check infinite cases individually.
         assert 0.0 == logcdf(Flat.dist(), np.inf).eval()
@@ -1017,8 +1042,6 @@ class TestMatchesScipy:
         self.check_logp(HalfFlat, Rplus, {}, lambda value: 0)
         with Model():
             x = HalfFlat("a", size=2)
-            assert_allclose(x.tag.test_value, 1)
-            assert x.tag.test_value.shape == (2,)
         self.check_logcdf(HalfFlat, Rplus, {}, lambda value: -np.inf)
         # Check infinite cases individually.
         assert 0.0 == logcdf(HalfFlat.dist(), np.inf).eval()
@@ -1114,10 +1137,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(
-        condition=(aesara.config.floatX == "float32"),
-        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
-    )
     def test_wald_logcdf(self):
         self.check_logcdf(
             Wald,
@@ -1155,6 +1174,9 @@ class TestMatchesScipy:
         decimals = select_by_precision(float64=6, float32=1)
         assert_almost_equal(model.fastlogp(pt), logp, decimal=decimals, err_msg=str(pt))
 
+    @pytest.mark.xfail(
+        reason="Fails because mu and sigma values are being picked randomly from domains"
+    )
     def test_beta_logp(self):
         self.check_logp(
             Beta,
@@ -1273,6 +1295,10 @@ class TestMatchesScipy:
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
         )
 
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="SciPy log CDF stopped working after un-pinning NumPy version.",
+    )
     def test_negative_binomial(self):
         def scipy_mu_alpha_logpmf(value, mu, alpha):
             return sp.nbinom.logpmf(value, alpha, 1 - mu / (mu + alpha))
@@ -2066,7 +2092,7 @@ class TestMatchesScipy:
     def test_dirichlet(self, n):
         self.check_logp(Dirichlet, Simplex(n), {"a": Vector(Rplus, n)}, dirichlet_logpdf)
 
-    @pytest.mark.parametrize("dist_shape", [1, (2, 1), (1, 2), (2, 4, 3)])
+    @pytest.mark.parametrize("dist_shape", [(1, 2), (2, 4, 3)])
     def test_dirichlet_with_batch_shapes(self, dist_shape):
         a = np.ones(dist_shape)
         with pm.Model() as model:
@@ -2078,11 +2104,13 @@ class TestMatchesScipy:
         d_point /= d_point.sum(axis=-1)[..., None]
 
         if hasattr(d_value.tag, "transform"):
-            d_point_trans = d_value.tag.transform.forward(d, at.as_tensor(d_point)).eval()
+            d_point_trans = d_value.tag.transform.forward(
+                at.as_tensor(d_point), *d.owner.inputs
+            ).eval()
         else:
             d_point_trans = d_point
 
-        pymc_res = logp(d, d_point_trans, jacobian=False).eval()
+        pymc_res = logp(d, d_point_trans, jacobian=False, sum=False).eval()
         scipy_res = np.empty_like(pymc_res)
         for idx in np.ndindex(a.shape[:-1]):
             scipy_res[idx] = scipy.stats.dirichlet(a[idx]).logpdf(d_point[idx])
@@ -2184,7 +2212,7 @@ class TestMatchesScipy:
 
         assert_almost_equal(
             scipy.stats.multinomial.logpmf(vals, n, p),
-            logp(model_many.m, vals).eval().squeeze(),
+            logp(model_many.m, vals, sum=False).eval().squeeze(),
             decimal=4,
         )
 
@@ -2245,7 +2273,7 @@ class TestMatchesScipy:
         np.put_along_axis(p, inds, 1, axis=-1)
 
         dist = Multinomial.dist(n=n, p=p)
-        logp_mn = at.exp(pm.logp(dist, vals)).eval()
+        logp_mn = at.exp(pm.logp(dist, vals, sum=False)).eval()
         assert_almost_equal(
             logp_mn,
             np.ones(vals.shape[:-1]),
@@ -2311,7 +2339,7 @@ class TestMatchesScipy:
 
         assert_almost_equal(
             np.asarray([dirichlet_multinomial_logpmf(val, n, a) for val in vals]),
-            logp(model_many.m, vals).eval().squeeze(),
+            logp(model_many.m, vals, sum=False).eval().squeeze(),
             decimal=4,
         )
 
@@ -2378,7 +2406,7 @@ class TestMatchesScipy:
         dist = DirichletMultinomial.dist(n=n, a=a)
 
         # Logp should be approx -9.98004998e-06
-        dist_logp = logp(dist, vals).eval()
+        dist_logp = logp(dist, vals, sum=False).eval()
         expected_logp = np.full_like(dist_logp, fill_value=-9.98004998e-06)
         assert_almost_equal(
             dist_logp,
@@ -2426,7 +2454,7 @@ class TestMatchesScipy:
     def test_categorical(self, n):
         self.check_logp(
             Categorical,
-            Domain(range(n), "int64"),
+            Domain(range(n), dtype="int64", edges=(None, None)),
             {"p": Simplex(n)},
             lambda value, p: categorical_logpdf(value, p),
         )
@@ -2435,7 +2463,7 @@ class TestMatchesScipy:
     def test_orderedlogistic(self, n):
         self.check_logp(
             OrderedLogistic,
-            Domain(range(n), "int64"),
+            Domain(range(n), dtype="int64", edges=(None, None)),
             {"eta": R, "cutpoints": Vector(R, n - 1)},
             lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints),
         )
@@ -2444,7 +2472,7 @@ class TestMatchesScipy:
     def test_orderedprobit(self, n):
         self.check_logp(
             OrderedProbit,
-            Domain(range(n), "int64"),
+            Domain(range(n), dtype="int64", edges=(None, None)),
             {"eta": Runif, "cutpoints": UnitSortedVector(n - 1)},
             lambda value, eta, cutpoints: orderedprobit_logpdf(value, eta, cutpoints),
         )
@@ -2674,21 +2702,17 @@ class TestBound:
         assert logpt(InfBoundedNormal, 0).eval() != -np.inf
         assert logpt(InfBoundedNormal, 11).eval() != -np.inf
 
-        assert logpt(LowerNormalTransform, -1).eval() != -np.inf
-        assert logpt(UpperNormalTransform, 1).eval() != -np.inf
-        assert logpt(BoundedNormalTransform, 0).eval() != -np.inf
-        assert logpt(BoundedNormalTransform, 11).eval() != -np.inf
+        value = at.dscalar("x")
+        assert logpt(LowerNormalTransform, value).eval({value: -1}) != -np.inf
+        assert logpt(UpperNormalTransform, value).eval({value: 1}) != -np.inf
+        assert logpt(BoundedNormalTransform, value).eval({value: 0}) != -np.inf
+        assert logpt(BoundedNormalTransform, value).eval({value: 11}) != -np.inf
 
-        assert np.allclose(
-            logpt(UnboundedNormal, 5).eval(), Normal.logp(value=5, mu=0, sigma=1).eval()
-        )
-        assert np.allclose(logpt(LowerNormal, 5).eval(), Normal.logp(value=5, mu=0, sigma=1).eval())
-        assert np.allclose(
-            logpt(UpperNormal, -5).eval(), Normal.logp(value=-5, mu=0, sigma=1).eval()
-        )
-        assert np.allclose(
-            logpt(BoundedNormal, 5).eval(), Normal.logp(value=5, mu=0, sigma=1).eval()
-        )
+        ref_dist = Normal.dist(mu=0, sigma=1)
+        assert np.allclose(logpt(UnboundedNormal, 5).eval(), logpt(ref_dist, 5).eval())
+        assert np.allclose(logpt(LowerNormal, 5).eval(), logpt(ref_dist, 5).eval())
+        assert np.allclose(logpt(UpperNormal, -5).eval(), logpt(ref_dist, 5).eval())
+        assert np.allclose(logpt(BoundedNormal, 5).eval(), logpt(ref_dist, 5).eval())
 
     def test_discrete(self):
         with Model() as model:
@@ -2706,10 +2730,11 @@ class TestBound:
         assert logpt(UnboundedPoisson, 0).eval() != -np.inf
         assert logpt(UnboundedPoisson, 11).eval() != -np.inf
 
-        assert np.allclose(logpt(UnboundedPoisson, 5).eval(), Poisson.logp(value=5, mu=4).eval())
-        assert np.allclose(logpt(UnboundedPoisson, 5).eval(), Poisson.logp(value=5, mu=4).eval())
-        assert np.allclose(logpt(UnboundedPoisson, 5).eval(), Poisson.logp(value=5, mu=4).eval())
-        assert np.allclose(logpt(UnboundedPoisson, 5).eval(), Poisson.logp(value=5, mu=4).eval())
+        ref_dist = Poisson.dist(mu=4)
+        assert np.allclose(logpt(UnboundedPoisson, 5).eval(), logpt(ref_dist, 5).eval())
+        assert np.allclose(logpt(LowerPoisson, 5).eval(), logpt(ref_dist, 5).eval())
+        assert np.allclose(logpt(UpperPoisson, 5).eval(), logpt(ref_dist, 5).eval())
+        assert np.allclose(logpt(BoundedPoisson, 5).eval(), logpt(ref_dist, 5).eval())
 
     def create_invalid_distribution(self):
         class MyNormal(RandomVariable):
@@ -2812,19 +2837,19 @@ class TestBound:
             UpperPoisson = Bound("upper", dist, upper=[np.inf, 10], transform=None)
             BoundedPoisson = Bound("bounded", dist, lower=[1, 2], upper=[9, 10], transform=None)
 
-        first, second = logpt(LowerPoisson, [0, 0]).eval()
+        first, second = logpt(LowerPoisson, [0, 0], sum=False).eval()
         assert first == -np.inf
         assert second != -np.inf
 
-        first, second = logpt(UpperPoisson, [11, 11]).eval()
+        first, second = logpt(UpperPoisson, [11, 11], sum=False).eval()
         assert first != -np.inf
         assert second == -np.inf
 
-        first, second = logpt(BoundedPoisson, [1, 1]).eval()
+        first, second = logpt(BoundedPoisson, [1, 1], sum=False).eval()
         assert first != -np.inf
         assert second == -np.inf
 
-        first, second = logpt(BoundedPoisson, [10, 10]).eval()
+        first, second = logpt(BoundedPoisson, [10, 10], sum=False).eval()
         assert first == -np.inf
         assert second != -np.inf
 
@@ -2833,8 +2858,8 @@ class TestBoundedContinuous:
     def get_dist_params_and_interval_bounds(self, model, rv_name):
         interval_rv = model.named_vars[f"{rv_name}_interval__"]
         rv = model.named_vars[rv_name]
-        dist_params = rv.owner.inputs[3:]
-        lower_interval, upper_interval = interval_rv.tag.transform.param_extract_fn(rv)
+        dist_params = rv.owner.inputs
+        lower_interval, upper_interval = interval_rv.tag.transform.args_fn(*rv.owner.inputs)
         return (
             dist_params,
             lower_interval,
@@ -2846,7 +2871,7 @@ class TestBoundedContinuous:
         with Model() as model:
             TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=None, upper=3)
         (
-            (_, _, lower, upper),
+            (_, _, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
@@ -2860,7 +2885,7 @@ class TestBoundedContinuous:
         with Model() as model:
             TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=-2, upper=None)
         (
-            (_, _, lower, upper),
+            (_, _, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
@@ -2880,7 +2905,7 @@ class TestBoundedContinuous:
                 upper=None,
             )
         (
-            (_, _, lower, upper),
+            (_, _, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
@@ -2901,7 +2926,7 @@ class TestBoundedContinuous:
                 upper=np.array([np.inf, np.inf]),
             )
         (
-            (_, _, lower, upper),
+            (_, _, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
@@ -3150,7 +3175,7 @@ def test_car_logp(sparse, size):
         W = aesara.sparse.csr_from_dense(W)
 
     car_dist = CAR.dist(mu, W, alpha, tau, size=size)
-    car_logp = logp(car_dist, xs).eval()
+    car_logp = logp(car_dist, xs, sum=False).eval()
 
     # Check to make sure that the CAR and MVN log PDFs are equivalent
     # up to an additive constant which is independent of the CAR parameters
@@ -3206,7 +3231,7 @@ class TestBugfixes:
         d = dist_cls.dist(mu=mu, cov=np.eye(dims), **kwargs, size=(20))
 
         X = np.random.normal(size=(20, dims))
-        actual_t = logp(d, X)
+        actual_t = logp(d, X, sum=False)
         assert isinstance(actual_t, TensorVariable)
         actual_a = actual_t.eval()
         assert isinstance(actual_a, np.ndarray)
@@ -3232,9 +3257,12 @@ def test_serialize_density_dist():
     def func(x):
         return -2 * (x ** 2).sum()
 
+    def random(rng, size):
+        return rng.uniform(-2, 2, size=size)
+
     with pm.Model():
         pm.Normal("x")
-        y = pm.DensityDist("y", logp=func)
+        y = pm.DensityDist("y", logp=func, random=random)
         pm.sample(draws=5, tune=1, mp_ctx="spawn")
 
     import cloudpickle
@@ -3249,7 +3277,7 @@ def test_distinct_rvs():
         X_rv = pm.Normal("x")
         Y_rv = pm.Normal("y")
 
-        pp_samples = pm.sample_prior_predictive(samples=2)
+        pp_samples = pm.sample_prior_predictive(samples=2, return_inferencedata=False)
 
     assert X_rv.owner.inputs[0] != Y_rv.owner.inputs[0]
 
@@ -3259,7 +3287,7 @@ def test_distinct_rvs():
         X_rv = pm.Normal("x")
         Y_rv = pm.Normal("y")
 
-        pp_samples_2 = pm.sample_prior_predictive(samples=2)
+        pp_samples_2 = pm.sample_prior_predictive(samples=2, return_inferencedata=False)
 
     assert np.array_equal(pp_samples["y"], pp_samples_2["y"])
 

@@ -12,9 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import sys
+
+import aesara
 import pytest
 
 from pymc.tests import sampler_fixtures as sf
+
+IS_LINUX = sys.platform == "linux"
+IS_FLOAT32 = aesara.config.floatX == "float32"
 
 
 class TestNUTSUniform(sf.NutsFixture, sf.UniformFixture):
@@ -37,6 +43,10 @@ class TestMetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
     atol = 0.05
 
 
+@pytest.mark.xfail(
+    condition=IS_FLOAT32 and IS_LINUX,
+    reason="Test fails on linux float32 systems. See https://github.com/pymc-devs/pymc/issues/5088",
+)
 class TestSliceUniform(sf.SliceFixture, sf.UniformFixture):
     n_samples = 10000
     tune = 1000

@@ -10,7 +10,7 @@ focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
-Check out the `getting started guide <http://docs.pymc.io/notebooks/getting_started>`__,  or
+Check out the `getting started guide <https://docs.pymc.io/en/stable/pymc-examples/examples/getting_started.html>`__,  or
 `interact with live examples <https://mybinder.org/v2/gh/pymc-devs/pymc/main?filepath=%2Fdocs%2Fsource%2Fnotebooks>`__
 using Binder!
 For questions on PyMC, head on over to our `PyMC Discourse <https://discourse.pymc.io/>`__ forum.
@@ -40,12 +40,12 @@ Getting started
 If you already know about Bayesian statistics:
 ----------------------------------------------
 
--  `API quickstart guide <http://docs.pymc.io/notebooks/api_quickstart>`__
--  The `PyMC tutorial <http://docs.pymc.io/notebooks/getting_started>`__
--  `PyMC examples <https://docs.pymc.io/nb_examples/index.html>`__ and the `API reference <http://docs.pymc.io/api>`__
+-  `API quickstart guide <https://docs.pymc.io/en/stable/pymc-examples/examples/pymc3_howto/api_quickstart.html>`__
+-  The `PyMC tutorial <https://docs.pymc.io/en/stable/pymc-examples/examples/getting_started.html>`__
+-  `PyMC examples <https://docs.pymc.io/nb_examples/index.html>`__ and the `API reference <https://docs.pymc.io/en/stable/api.html>`__
 
-Learn Bayesian statistics with a book together with PyMC:
----------------------------------------------------------
+Learn Bayesian statistics with a book together with PyMC
+--------------------------------------------------------
 
 -  `Probabilistic Programming and Bayesian Methods for Hackers <https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers>`__: Fantastic book with many applied code examples.
 -  `PyMC port of the book "Doing Bayesian Data Analysis" by John Kruschke <https://github.com/aloctavodia/Doing_bayesian_data_analysis>`__ as well as the `second edition <https://github.com/JWarmenhoven/DBDA-python>`__: Principled introduction to Bayesian data analysis.
@@ -53,11 +53,12 @@ Learn Bayesian statistics with a book together with PyMC:
 -  `PyMC port of the book "Bayesian Cognitive Modeling" by Michael Lee and EJ Wagenmakers <https://github.com/pymc-devs/resources/tree/master/BCM>`__: Focused on using Bayesian statistics in cognitive modeling.
 -  `Bayesian Analysis with Python  <https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python-second-edition>`__ (second edition) by Osvaldo Martin: Great introductory book. (`code <https://github.com/aloctavodia/BAP>`__ and errata).
 
-PyMC talks
+Audio & Video
 ----------
 
-There are also several talks on PyMC which are gathered in this `YouTube playlist <https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy>`__
-and as part of `PyMCon 2020 <https://discourse.pymc.io/c/pymcon/2020talks/15>`__
+- Here is a `YouTube playlist <https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy>`__ gathering several talks on PyMC.
+- You can also find all the talks given at **PyMCon 2020** `here <https://discourse.pymc.io/c/pymcon/2020talks/15>`__.
+- The `"Learning Bayesian Statistics" podcast <https://www.learnbayesstats.com/>`__ helps you discover and stay up-to-date with the vast Bayesian community. Bonus: it's hosted by Alex Andorra, one of the PyMC core devs!
 
 Installation
 ============

@@ -377,7 +377,7 @@ def rvs_to_value_vars(
             # potential replacements
             return [rv_value_var]
 
-        trans_rv_value = transform.backward(rv_var, rv_value_var)
+        trans_rv_value = transform.backward(rv_value_var, *rv_var.owner.inputs)
         replacements[var] = trans_rv_value
 
         # Walk the transformed variable and make replacements

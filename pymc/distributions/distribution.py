@@ -24,13 +24,14 @@ from typing import Callable, Optional, Sequence
 import aesara
 import numpy as np
 
+from aeppl.logprob import _logprob
 from aesara.tensor.basic import as_tensor_variable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import change_rv_size
-from pymc.distributions import _logcdf, _logp
+from pymc.distributions import _logcdf
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
@@ -98,10 +99,11 @@ class DistributionMeta(ABCMeta):
             class_logp = clsdict.get("logp")
             if class_logp:
 
-                @_logp.register(rv_type)
-                def logp(op, var, rvs_to_values, *dist_params, **kwargs):
-                    value_var = rvs_to_values.get(var, var)
-                    return class_logp(value_var, *dist_params, **kwargs)
+                @_logprob.register(rv_type)
+                def logp(op, value_var_list, *dist_params, **kwargs):
+                    _dist_params = dist_params[3:]
+                    value_var = value_var_list[0]
+                    return class_logp(value_var, *_dist_params)
 
             class_logcdf = clsdict.get("logcdf")
             if class_logcdf:
@@ -165,8 +167,10 @@ class Distribution(metaclass=DistributionMeta):
         dims : tuple, optional
             A tuple of dimension names known to the model.
         initval : optional
-            Test value to be attached to the output RV.
-            Must match its shape exactly.
+            Numeric or symbolic untransformed initial value of matching shape,
+            or one of the following initial value strategies: "moment", "prior".
+            Depending on the sampler's settings, a random jitter may be added to numeric, symbolic
+            or moment-based initial values in the transformed space.
         observed : optional
             Observed data to be passed when registering the random variable in the model.
             See ``Model.register_rv``.
@@ -572,13 +576,11 @@ class DensityDist(NoDistribution):
         # Register custom logp
         rv_type = type(rv_op)
 
-        @_logp.register(rv_type)
-        def density_dist_logp(op, rv, rvs_to_values, *dist_params, **kwargs):
-            value_var = rvs_to_values.get(rv, rv)
-            return logp(
-                value_var,
-                *dist_params,
-            )
+        @_logprob.register(rv_type)
+        def density_dist_logp(op, value_var_list, *dist_params, **kwargs):
+            _dist_params = dist_params[3:]
+            value_var = value_var_list[0]
+            return logp(value_var, *_dist_params)
 
         @_logcdf.register(rv_type)
         def density_dist_logcdf(op, var, rvs_to_values, *dist_params, **kwargs):
@@ -600,31 +602,16 @@ class DensityDist(NoDistribution):
         else:
             dtype = cls.rv_op.dtype
         ndim_supp = cls.rv_op.ndim_supp
-        if not hasattr(output.tag, "test_value"):
-            size = to_tuple(kwargs.get("size", None)) + (1,) * ndim_supp
-            output.tag.test_value = np.zeros(size, dtype)
         return output
 
 
 def default_not_implemented(rv_name, method_name):
-    if method_name == "random":
-        # This is a hack to catch the NotImplementedError when creating the RV without random
-        # If the message starts with "Cannot sample from", then it uses the test_value as
-        # the initial_val.
-        message = (
-            f"Cannot sample from the DensityDist '{rv_name}' because the {method_name} "
-            "keyword argument was not provided when the distribution was "
-            f"but this method had not been provided when the distribution was "
-            f"constructed. Please re-build your model and provide a callable "
-            f"to '{rv_name}'s {method_name} keyword argument.\n"
-        )
-    else:
-        message = (
-            f"Attempted to run {method_name} on the DensityDist '{rv_name}', "
-            f"but this method had not been provided when the distribution was "
-            f"constructed. Please re-build your model and provide a callable "
-            f"to '{rv_name}'s {method_name} keyword argument.\n"
-        )
+    message = (
+        f"Attempted to run {method_name} on the DensityDist '{rv_name}', "
+        f"but this method had not been provided when the distribution was "
+        f"constructed. Please re-build your model and provide a callable "
+        f"to '{rv_name}'s {method_name} keyword argument.\n"
+    )
 
     def func(*args, **kwargs):
         raise NotImplementedError(message)

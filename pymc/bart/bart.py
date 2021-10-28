@@ -12,9 +12,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara.tensor as at
 import numpy as np
 
+from aeppl.logprob import _logprob
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
+from pandas import DataFrame, Series
 
 from pymc.distributions.distribution import NoDistribution
 
@@ -63,7 +66,7 @@ class BARTRV(RandomVariable):
                 pred = np.zeros((flatten_size, X_new.shape[0]))
                 for ind, p in enumerate(pred):
                     for tree in all_trees[idx[ind]]:
-                        p += np.array([tree.predict_out_of_sample(x) for x in X_new])
+                        p += np.array([tree.predict_out_of_sample(x, cls.m) for x in X_new])
             return pred.reshape((*size, -1))
         else:
             return np.full_like(cls.Y, cls.Y.mean())
@@ -92,6 +95,9 @@ class BART(NoDistribution):
     k : float
         Scale parameter for the values of the leaf nodes. Defaults to 2. Recomended to be between 1
         and 3.
+    response : str
+        How the leaf_node values are computed. Available options are ``constant`` (default),
+        ``linear`` or ``mix``.
     split_prior : array-like
         Each element of split_prior should be in the [0, 1] interval and the elements should sum to
         1. Otherwise they will be normalized.
@@ -106,11 +112,13 @@ class BART(NoDistribution):
         m=50,
         alpha=0.25,
         k=2,
+        response="constant",
         split_prior=None,
         **kwargs,
     ):
 
         cls.all_trees = []
+        X, Y = preprocess_XY(X, Y)
 
         bart_op = type(
             f"BART_{name}",
@@ -125,6 +133,7 @@ class BART(NoDistribution):
                 m=m,
                 alpha=alpha,
                 k=k,
+                response=response,
                 split_prior=split_prior,
             ),
         )()
@@ -138,3 +147,35 @@ class BART(NoDistribution):
     @classmethod
     def dist(cls, *params, **kwargs):
         return super().dist(params, **kwargs)
+
+    def logp(x, *inputs):
+        """Calculate log probability.
+
+        Parameters
+        ----------
+        x: numeric, TensorVariable
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return at.zeros_like(x)
+
+
+def preprocess_XY(X, Y):
+    if isinstance(Y, (Series, DataFrame)):
+        Y = Y.to_numpy()
+    if isinstance(X, (Series, DataFrame)):
+        X = X.to_numpy()
+        # X = np.random.normal(X, X.std(0)/100)
+    Y = Y.astype(float)
+    X = X.astype(float)
+    return X, Y
+
+
+@_logprob.register(BARTRV)
+def logp(op, value_var, *dist_params, **kwargs):
+    _dist_params = dist_params[3:]
+    value_var = value_var[0]
+    return BART.logp(value_var, *_dist_params)

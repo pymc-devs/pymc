@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import numpy as np
+import pytest
 
 from numpy import inf
 
@@ -33,17 +34,13 @@ def test_guess_scaling():
     assert all((a1 > 0) & (a1 < 1e200))
 
 
-def test_mle_jacobian():
+@pytest.mark.parametrize("bounded", [False, True])
+def test_mle_jacobian(bounded):
     """Test MAP / MLE estimation for distributions with flat priors."""
     truth = 10.0  # Simple normal model should give mu=10.0
-    rtol = 1e-5  # this rtol should work on both floatX precisions
+    rtol = 1e-4  # this rtol should work on both floatX precisions
 
-    start, model, _ = models.simple_normal(bounded_prior=False)
-    with model:
-        map_estimate = find_MAP(method="BFGS", model=model)
-    np.testing.assert_allclose(map_estimate["mu_i"], truth, rtol=rtol)
-
-    start, model, _ = models.simple_normal(bounded_prior=True)
+    start, model, _ = models.simple_normal(bounded_prior=bounded)
     with model:
         map_estimate = find_MAP(method="BFGS", model=model)
     np.testing.assert_allclose(map_estimate["mu_i"], truth, rtol=rtol)

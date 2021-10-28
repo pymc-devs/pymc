@@ -38,6 +38,7 @@ import aesara.tensor as at
 import numpy as np
 import scipy.sparse as sps
 
+from aeppl.transforms import RVTransform
 from aesara.compile.mode import Mode, get_mode
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant, Variable, graph_inputs
@@ -59,10 +60,17 @@ from pymc.aesaraf import (
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
 from pymc.distributions import logp_transform, logpt, logpt_sum
-from pymc.distributions.transforms import Transform
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
+from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
-from pymc.util import UNSET, WithMemoization, get_var_name, treedict, treelist
+from pymc.util import (
+    UNSET,
+    WithMemoization,
+    get_transformed_name,
+    get_var_name,
+    treedict,
+    treelist,
+)
 from pymc.vartypes import continuous_types, discrete_types, typefilter
 
 __all__ = [
@@ -638,7 +646,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         # The sequence of model-generated RNGs
         self.rng_seq = []
         self._initial_values = {}
-        self._initial_point_cache = {}
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -738,22 +745,31 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     @property
     def logpt(self):
         """Aesara scalar of log-probability of the model"""
-        with self:
-            factors = [logpt_sum(var, self.rvs_to_values.get(var, None)) for var in self.free_RVs]
-            factors += [logpt_sum(obs, obs.tag.observations) for obs in self.observed_RVs]
 
-            # Convert random variables into their log-likelihood inputs and
-            # apply their transforms, if any
-            potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+        rv_values = {}
+        for var in self.free_RVs:
+            rv_values[var] = self.rvs_to_values.get(var, None)
+        rv_factors = logpt(self.free_RVs, rv_values)
 
-            factors += potentials
+        obs_values = {}
+        for obs in self.observed_RVs:
+            obs_values[obs] = obs.tag.observations
+        obs_factors = logpt(self.observed_RVs, obs_values)
 
-            logp_var = at.sum([at.sum(factor) for factor in factors])
-            if self.name:
-                logp_var.name = f"__logp_{self.name}"
-            else:
-                logp_var.name = "__logp"
-            return logp_var
+        # Convert random variables into their log-likelihood inputs and
+        # apply their transforms, if any
+        potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+        logp_var = at.sum([at.sum(factor) for factor in potentials])
+        if rv_factors is not None:
+            logp_var += rv_factors
+        if obs_factors is not None:
+            logp_var += obs_factors
+
+        if self.name:
+            logp_var.name = f"__logp_{self.name}"
+        else:
+            logp_var.name = "__logp"
+        return logp_var
 
     @property
     def logp_nojact(self):
@@ -764,20 +780,25 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         will be the same as logpt as there is no need for Jacobian correction.
         """
         with self:
-            factors = [
-                logpt_sum(var, getattr(var.tag, "value_var", None), jacobian=False)
-                for var in self.free_RVs
-            ]
-            factors += [
-                logpt_sum(obs, obs.tag.observations, jacobian=False) for obs in self.observed_RVs
-            ]
+            rv_values = {}
+            for var in self.free_RVs:
+                rv_values[var] = getattr(var.tag, "value_var", None)
+            rv_factors = logpt(self.free_RVs, rv_values, jacobian=False)
+
+            obs_values = {}
+            for obs in self.observed_RVs:
+                obs_values[obs] = obs.tag.observations
+            obs_factors = logpt(self.observed_RVs, obs_values, jacobian=False)
 
             # Convert random variables into their log-likelihood inputs and
             # apply their transforms, if any
             potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
-            factors += potentials
+            logp_var = at.sum([at.sum(factor) for factor in potentials])
 
-            logp_var = at.sum([at.sum(factor) for factor in factors])
+            if rv_factors is not None:
+                logp_var += rv_factors
+            if obs_factors is not None:
+                logp_var += obs_factors
 
             if self.name:
                 logp_var.name = f"__logp_nojac_{self.name}"
@@ -790,20 +811,28 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic)."""
         with self:
-            factors = [logpt_sum(var, getattr(var.tag, "value_var", None)) for var in self.free_RVs]
-            return at.sum(factors)
+            rv_values = {}
+            for var in self.free_RVs:
+                rv_values[var] = getattr(var.tag, "value_var", None)
+            return logpt(self.free_RVs, rv_values)
 
     @property
     def datalogpt(self):
         with self:
-            factors = [logpt_sum(obs, obs.tag.observations) for obs in self.observed_RVs]
+            obs_values = {}
+            for obs in self.observed_RVs:
+                obs_values[obs] = obs.tag.observations
+            obs_factors = logpt(self.observed_RVs, obs_values)
 
             # Convert random variables into their log-likelihood inputs and
             # apply their transforms, if any
             potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+            logp_var = at.sum([at.sum(factor) for factor in potentials])
 
-            factors += [at.sum(factor) for factor in potentials]
-            return at.sum(factors)
+            if obs_factors is not None:
+                logp_var += obs_factors
+
+            return logp_var
 
     @property
     def vars(self):
@@ -833,7 +862,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             if transform is not None:
                 # We need to create and add an un-transformed version of
                 # each transformed variable
-                untrans_value_var = transform.backward(rv, value_var)
+                untrans_value_var = transform.backward(value_var, *rv.owner.inputs)
                 untrans_value_var.name = rv.name
                 vars.append(untrans_value_var)
             vars.append(value_var)
@@ -864,7 +893,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self._RV_dims
 
     @property
-    def coords(self) -> Dict[str, Union[Sequence, None]]:
+    def coords(self) -> Dict[str, Union[Tuple, None]]:
         """Coordinate values for model dimensions."""
         return self._coords
 
@@ -910,121 +939,51 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def test_point(self) -> Dict[str, np.ndarray]:
-        """Deprecated alias for `Model.initial_point`."""
+        """Deprecated alias for `Model.recompute_initial_point(seed=None)`."""
         warnings.warn(
-            "`Model.test_point` has been deprecated. Use `Model.initial_point` or `Model.recompute_initial_point()`.",
+            "`Model.test_point` has been deprecated. Use `Model.recompute_initial_point(seed=None)`.",
             DeprecationWarning,
         )
-        return self.initial_point
+        return self.recompute_initial_point()
 
     @property
     def initial_point(self) -> Dict[str, np.ndarray]:
-        """Maps free variable names to transformed, numeric initial values."""
-        if set(self._initial_point_cache) != {get_var_name(k) for k in self.initial_values}:
-            return self.recompute_initial_point()
-        return self._initial_point_cache
+        """Deprecated alias for `Model.recompute_initial_point(seed=None)`."""
+        warnings.warn(
+            "`Model.initial_point` has been deprecated. Use `Model.recompute_initial_point(seed=None)`.",
+            DeprecationWarning,
+        )
+        return self.recompute_initial_point()
 
-    def recompute_initial_point(self) -> Dict[str, np.ndarray]:
-        """Recomputes numeric initial values for all free model variables.
+    def recompute_initial_point(self, seed=None) -> Dict[str, np.ndarray]:
+        """Recomputes the initial point of the model.
 
         Returns
         -------
-        initial_point : dict
-            Maps free variable names to transformed, numeric initial values.
+        ip : dict
+            Maps names of transformed variables to numeric initial values in the transformed space.
         """
-        self._initial_point_cache = Point(list(self.initial_values.items()), model=self)
-        return self._initial_point_cache
+        if seed is None:
+            seed = self.rng_seeder.randint(2 ** 30, dtype=np.int64)
+        fn = make_initial_point_fn(model=self, return_transformed=True)
+        return Point(fn(seed), model=self)
 
     @property
-    def initial_values(self) -> Dict[TensorVariable, np.ndarray]:
-        """Maps transformed variables to initial values.
+    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
+        """Maps transformed variables to initial value placeholders.
 
-        ⚠ The keys are NOT the objects returned by, `pm.Normal(...)`.
-        For a name-based dictionary use the `initial_point` property.
+        Keys are the random variables (as returned by e.g. ``pm.Uniform()``) and
+        values are the numeric/symbolic initial values, strings denoting the strategy to get them, or None.
         """
         return self._initial_values
 
     def set_initval(self, rv_var, initval):
-        if initval is not None:
+        """Sets an initial value (strategy) for a random variable."""
+        if initval is not None and not isinstance(initval, (Variable, str)):
+            # Convert scalars or array-like inputs to ndarrays
             initval = rv_var.type.filter(initval)
 
-        test_value = getattr(rv_var.tag, "test_value", None)
-
-        rv_value_var = self.rvs_to_values[rv_var]
-        transform = getattr(rv_value_var.tag, "transform", None)
-
-        if initval is None or transform:
-            initval = self._eval_initval(rv_var, initval, test_value, transform)
-
-        self.initial_values[rv_value_var] = initval
-
-    def _eval_initval(
-        self,
-        rv_var: TensorVariable,
-        initval: Optional[Variable],
-        test_value: Optional[np.ndarray],
-        transform: Optional[Transform],
-    ) -> np.ndarray:
-        """Sample/evaluate an initial value using the existing initial values,
-        and with the least effect on the RNGs involved (i.e. no in-placing).
-
-        Parameters
-        ----------
-        rv_var : TensorVariable
-            The model variable the initival belongs to.
-        initval : Variable or None
-            The initial value to be evaluated.
-            If `None` a random draw will be made.
-        test_value : optional, ndarray
-            Fallback option if initval is None and random draws are not implemented.
-            This is relevant for pm.Flat or pm.HalfFlat distributions and is subject
-            to ongoing refactoring of the initval API.
-        transform : optional, Transform
-            A transformation associated with the random variable.
-            Transformations are automatically applied to initial values.
-
-        Returns
-        -------
-        initval : np.ndarray
-            Numeric (transformed) initial value.
-        """
-        mode = get_mode(None)
-        opt_qry = mode.provided_optimizer.excluding("random_make_inplace")
-        mode = Mode(linker=mode.linker, optimizer=opt_qry)
-
-        if transform:
-            if initval is not None:
-                value = initval
-            else:
-                value = rv_var
-            rv_var = at.as_tensor_variable(transform.forward(rv_var, value))
-
-        def initval_to_rvval(value_var, value):
-            rv_var = self.values_to_rvs[value_var]
-            initval = value_var.type.make_constant(value)
-            transform = getattr(value_var.tag, "transform", None)
-            if transform:
-                return transform.backward(rv_var, initval)
-            else:
-                return initval
-
-        givens = {
-            self.values_to_rvs[k]: initval_to_rvval(k, v) for k, v in self.initial_values.items()
-        }
-        initval_fn = aesara.function([], rv_var, mode=mode, givens=givens, on_unused_input="ignore")
-        try:
-            initval = initval_fn()
-        except NotImplementedError as ex:
-            if "Cannot sample from" in ex.args[0]:
-                # The RV does not have a random number generator.
-                # Our last chance is to take the test_value.
-                # Note that this is a workaround for Flat and HalfFlat
-                # until an initval default mechanism is implemented (#4752).
-                initval = test_value
-            else:
-                raise
-
-        return initval
+        self.initial_values[rv_var] = initval
 
     def next_rng(self) -> RandomStateSharedVariable:
         """Generate a new ``RandomStateSharedVariable``.
@@ -1089,8 +1048,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             raise ValueError(
                 f"The `length` passed for the '{name}' coord must be an Aesara Variable or None."
             )
+        if values is not None:
+            # Conversion to a tuple ensures that the coordinate values are immutable.
+            # Also unlike numpy arrays the's tuple.index(...) which is handy to work with.
+            values = tuple(values)
         if name in self.coords:
-            if not values.equals(self.coords[name]):
+            if not np.array_equal(values, self.coords[name]):
                 raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
         else:
             self._coords[name] = values
@@ -1393,7 +1356,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             value_var.tag.transform = transform
             value_var.name = f"{value_var.name}_{transform.name}__"
             if aesara.config.compute_test_value != "off":
-                value_var.tag.test_value = transform.forward(rv_var, value_var).tag.test_value
+                value_var.tag.test_value = transform.forward(
+                    value_var, *rv_var.owner.inputs
+                ).tag.test_value
             self.named_vars[value_var.name] = value_var
 
         self.rvs_to_values[rv_var] = value_var
@@ -1583,25 +1548,37 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         conditional on the values of `b` and stored in `b`.
 
         """
-        # TODO FIXME XXX: If we're going to incrementally update transformed
-        # variables, we should do it in topological order.
-        for a_name, a_value in tuple(a.items()):
-            # If the name is a random variable, get its value variable and
-            # potentially transform it
-            var = self.named_vars.get(a_name, None)
-            value_var = self.rvs_to_values.get(var, None)
-            if value_var:
-                transform = getattr(value_var.tag, "transform", None)
-                if transform:
-                    fval_graph = transform.forward(var, a_value)
-                    (fval_graph,), _ = rvs_to_value_vars((fval_graph,), apply_transforms=True)
-                    fval_graph_inputs = {i: b[i.name] for i in inputvars(fval_graph) if i.name in b}
-                    rv_var_value = fval_graph.eval(fval_graph_inputs)
-                    # Why are these transformed values stored in `b`?  They're
-                    # not going to be used to update `a`.
-                    b[value_var.name] = rv_var_value
+        raise DeprecationWarning(
+            "The `Model.update_start_vals` method was removed."
+            " To change initial values you may set the items of `Model.initial_values` directly."
+        )
 
-        a.update({k: v for k, v in b.items() if k not in a})
+    def eval_rv_shapes(self) -> Dict[str, Tuple[int, ...]]:
+        """Evaluates shapes of untransformed AND transformed free variables.
+
+        Returns
+        -------
+        shapes : dict
+            Maps untransformed and transformed variable names to shape tuples.
+        """
+        names = []
+        outputs = []
+        for rv in self.free_RVs:
+            rv_var = self.rvs_to_values[rv]
+            transform = getattr(rv_var.tag, "transform", None)
+            if transform is not None:
+                names.append(get_transformed_name(rv.name, transform))
+                outputs.append(transform.forward(rv, *rv.owner.inputs).shape)
+            names.append(rv.name)
+            outputs.append(rv.shape)
+        f = aesara.function(
+            inputs=[],
+            outputs=outputs,
+            givens=[(obs, obs.tag.observations) for obs in self.observed_RVs],
+            mode=aesara.compile.mode.FAST_COMPILE,
+            on_unused_input="ignore",
+        )
+        return {name: tuple(shape) for name, shape in zip(names, f())}
 
     def check_start_vals(self, start):
         r"""Check that the starting values for MCMC do not cause the relevant log probability
