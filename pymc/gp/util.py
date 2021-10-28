@@ -14,7 +14,7 @@
 
 import warnings
 
-from typing import Dict
+from typing import Dict, Optional
 
 import aesara.tensor as at
 import numpy as np
@@ -36,11 +36,14 @@ from scipy.cluster.vq import kmeans
 from pymc.aesaraf import compile_rv_inplace, walk_model
 
 
-def replace_with_value(vars_needed, replacements: Dict):
+# TODO: add test
+def replace_with_values(model, vars_needed, replacements=None):
     R"""
-    Replace random variable nodes in the graph with values given in replacements.
-
+    Replace random variable nodes in the graph with values given by the replacements dict.
+    Uses untransformed versions of the inputs, performs some basic input validation.
+    
     NOTE TO REVIEWER:  Modified this from `sample_posterior_predictive`.  Is there a better way to do this?
+    
     """
     inputs, input_names = [], []
     for rv in walk_model(vars_needed, walk_past_rvs=True):
@@ -48,6 +51,10 @@ def replace_with_value(vars_needed, replacements: Dict):
             inputs.append(rv)
             input_names.append(rv.name)
 
+    # then deterministic, no inputs are required, can eval and return
+    if len(inputs) == 0:
+        return tuple([v.eval() for v in vars_needed])
+            
     fn = compile_rv_inplace(
         inputs,
         vars_needed,
@@ -57,9 +64,9 @@ def replace_with_value(vars_needed, replacements: Dict):
     )
 
     replacements = {name: val for name, val in replacements.items() if name in input_names}
-    missing = set(needed) - set(replacements.keys())
+    missing = set(vars_needed) - set(replacements.keys())
     if len(missing) > 0:
-        missing_str = ", ".join(missing)
+        missing_str = ", ".join({m.name for m in missing})
         raise ValueError(f"Values for {missing_str} must be included in `replacements`.")
 
     return fn(**replacements)
