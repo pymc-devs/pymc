@@ -224,6 +224,8 @@ class IntervalTransform(RVTransform):
             return at.log(value - a)
         elif b is not None:
             return at.log(b - value)
+        else:
+            return value
 
     def backward(self, value, *inputs):
         a, b = self.args_fn(*inputs)
@@ -235,6 +237,8 @@ class IntervalTransform(RVTransform):
             return at.exp(value) + a
         elif b is not None:
             return b - at.exp(value)
+        else:
+            return value
 
     def log_jac_det(self, value, *inputs):
         a, b = self.args_fn(*inputs)
@@ -242,6 +246,8 @@ class IntervalTransform(RVTransform):
         if a is not None and b is not None:
             s = at.softplus(-value)
             return at.log(b - a) - 2 * s - value
+        elif a is None and b is None:
+            return 0
         else:
             return value
 
