@@ -233,11 +233,11 @@ def model_to_graphviz(model=None, *, formatting: str = "plain"):
         The model to plot. Not required when called from inside a modelcontext.
     formatting : str
         one of { "plain" }
-    
+
     Examples
     --------
     How to plot the graph of the model.
-    
+
     .. code-block:: python
     
         import numpy as np
