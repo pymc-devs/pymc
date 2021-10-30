@@ -48,7 +48,7 @@ Posterior
 
   - For more on generating and interpreting the posterior samples, see Statistical Rethinking 2nd Edition By Richard McElreath, chapter 3.
 
-Maximum a Posterior 
+Maximum a Posteriori
 MAP
   Similar to {term}`MLE`, MAP is also utilized to estimate the parameters of models to explain the observed datasets. Unlike MLE, MAP tries to maximize the posterior function instead of the likelihood function.  
   
