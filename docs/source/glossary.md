@@ -84,7 +84,7 @@ GLM
 
 [Hamiltonian Monte Carlo](https://en.wikipedia.org/wiki/Hamiltonian_Monte_Carlo)
 [HMC](https://en.wikipedia.org/wiki/Hamiltonian_Monte_Carlo)
-  A {term}`Markov Chain Monte Carlo` method for obtaining a sequence of random samples which converge to being distributed according to a target probability distribution.
+  A {term}`Markov Chain Monte Carlo` method for obtaining a sequence of random samples which converge to being distributed according to a target probability distribution. The approach uses the derivatives of the density function being sampled to generate efficient transitions spanning the posterior.
 
 [Credibility](https://en.wikipedia.org/wiki/Credibility_theory)
   A form of statistical inference used to forecast an uncertain future event
