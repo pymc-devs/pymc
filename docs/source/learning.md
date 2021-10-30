@@ -82,7 +82,7 @@ TODO
 :::{toctree}
 :hidden:
 
-learn/step1
-learn/step2
-learn/step3
+learn/books
+learn/notebooks
+learn/videos_and_podcasts
 :::

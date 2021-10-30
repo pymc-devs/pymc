@@ -21,7 +21,6 @@ sphinx-autobuild>=0.7
 sphinx-copybutton
 sphinx-design
 sphinx-notfound-page
-sphinx-panels
 sphinx>=1.5
 typing-extensions>=3.7.4
 watermark

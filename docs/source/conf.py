@@ -47,7 +47,6 @@ extensions = [
     "sphinx.ext.napoleon",
     "myst_nb",
     "sphinx_design",
-    "sphinx_panels",
     "notfound.extension",
     "sphinx_design",
     "sphinx_copybutton",

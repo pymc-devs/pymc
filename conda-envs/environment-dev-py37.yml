@@ -25,7 +25,6 @@ dependencies:
 - scipy>1.4.1
 - sphinx-copybutton
 - sphinx-notfound-page
-- sphinx-panels
 - sphinx>=1.5
 - typing-extensions
 - watermark
