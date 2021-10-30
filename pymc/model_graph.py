@@ -233,31 +233,6 @@ def model_to_graphviz(model=None, *, formatting: str = "plain"):
         The model to plot. Not required when called from inside a modelcontext.
     formatting : str
         one of { "plain" }
-    
-    Examples
-    --------
-    How to plot the graph of the model.
-    
-    .. code-block:: python
-    
-        import numpy as np
-        from pymc3 import HalfCauchy, Model, Normal, model_to_graphviz
-
-        J = 8
-        y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
-        sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
-
-        with Model() as schools:
-
-            eta = Normal("eta", 0, 1, shape=J)
-            mu = Normal("mu", 0, sigma=1e6)
-            tau = HalfCauchy("tau", 25)
-
-            theta = mu + tau * eta
-
-            obs = Normal("obs", theta, sigma=sigma, observed=y)
-         
-        model_to_graphviz(schools)
     """
     if not "plain" in formatting:
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
