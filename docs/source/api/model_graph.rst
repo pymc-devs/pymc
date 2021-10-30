@@ -7,5 +7,3 @@ Graphing Models
 
 .. image:: ../images/model_to_graphviz.png
    :width: 1000px
-
-

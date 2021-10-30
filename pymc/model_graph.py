@@ -239,7 +239,7 @@ def model_to_graphviz(model=None, *, formatting: str = "plain"):
     How to plot the graph of the model.
 
     .. code-block:: python
-    
+
         import numpy as np
         from pymc import HalfCauchy, Model, Normal, model_to_graphviz
 
@@ -256,7 +256,7 @@ def model_to_graphviz(model=None, *, formatting: str = "plain"):
             theta = mu + tau * eta
 
             obs = Normal("obs", theta, sigma=sigma, observed=y)
-         
+
         model_to_graphviz(schools)
     """
     if not "plain" in formatting:
