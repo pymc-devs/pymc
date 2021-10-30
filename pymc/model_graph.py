@@ -241,7 +241,7 @@ def model_to_graphviz(model=None, *, formatting: str = "plain"):
     .. code-block:: python
     
         import numpy as np
-        from pymc3 import HalfCauchy, Model, Normal, model_to_graphviz
+        from pymc import HalfCauchy, Model, Normal, model_to_graphviz
 
         J = 8
         y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
