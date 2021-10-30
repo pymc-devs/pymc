@@ -454,7 +454,7 @@ class Marginal(Base):
             warnings.warn(
                 "The 'is_observed' argument has been deprecated.  If the GP is "
                 "unobserved use gp.Latent instead.",
-                DeprecationWarning,
+                FutureWarning,
             )
             return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
@@ -776,7 +776,7 @@ class MarginalSparse(Marginal):
             warnings.warn(
                 "The 'is_observed' argument has been deprecated.  If the GP is "
                 "unobserved use gp.Latent instead.",
-                DeprecationWarning,
+                FutureWarning,
             )
             return pm.DensityDist(
                 name,
@@ -1156,7 +1156,7 @@ class MarginalKron(Base):
             warnings.warn(
                 "The 'is_observed' argument has been deprecated.  If the GP is "
                 "unobserved use gp.LatentKron instead.",
-                DeprecationWarning,
+                FutureWarning,
             )
             size = int(np.prod([len(X) for X in Xs]))
             return pm.KroneckerNormal(name, mu=mu, covs=covs, sigma=sigma, size=size, **kwargs)
