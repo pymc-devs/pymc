@@ -85,7 +85,7 @@ Donate
 
 # Testimonials
 
-::::{card-carousel} 3
+::::{card-carousel} 2
 
 :::{card}
 :class-body: small
