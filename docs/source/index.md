@@ -9,17 +9,19 @@ sd_hide_title: true
 :margin: 0 2 auto auto
 :width: 50%
 :text-align: center
+:shadow: none
 
 +++
 Probabilistic Programming in Python
 :::
 
+::::{div} sd-d-flex-row sd-align-major-center
 :::{button-ref} learning
 :color: primary
-:shadow:
 
 Get started!
 :::
+::::
 
 
 :::{card} Announcements: library name change and launching PyMC 4.0!
@@ -48,12 +50,14 @@ Fit your model using gradient-based MCMC algorithms like NUTS, using ADVI for fa
 
 PyMC is a non-profit project under NumFOCUS umbrella. If you value PyMC and want to support its development, consider donating to the project.
 
+::::{div} sd-d-flex-row sd-align-major-center
 :::{button-link} https://numfocus.org/donate-to-pymc3
 :color: secondary
-:shadow:
+
 
 Donate
 :::
+::::
 
 ## Our sponsors
 
@@ -65,11 +69,13 @@ Donate
 :::{grid-item-card}
 :img-background: https://www.numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png
 :link: https://numfocus.org/
+:shadow: none
 :::
 
 :::{grid-item-card}
 :img-background: https://github.com/pymc-devs/pymc/raw/main/docs/pymc-labs-logo.png
 :link: https://www.pymc-labs.io/
+:shadow: none
 :::
 
 :::{grid-item}
