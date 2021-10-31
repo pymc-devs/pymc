@@ -77,9 +77,7 @@ __set_compiler_flags()
 from pymc import gp, ode, sampling
 from pymc.aesaraf import *
 from pymc.backends import (
-    load_trace,
     predictions_to_inference_data,
-    save_trace,
     to_inference_data,
 )
 from pymc.backends.tracetab import *

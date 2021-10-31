@@ -63,7 +63,5 @@ Saved backends can be loaded using `arviz.from_netcdf`
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 from pymc.backends.ndarray import (
     NDArray,
-    load_trace,
     point_list_to_multitrace,
-    save_trace,
 )
