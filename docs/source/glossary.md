@@ -47,4 +47,13 @@ Posterior
   Once you are satisfied with the model, posterior distribution can be summarized and interpreted. Common questions for the posterior include: intervals of defined boundaries, intervals of defined probability mass, and point estimates. When the posterior is very similar to the prior, the available data does not contain much information about a parameter of interest.
 
   - For more on generating and interpreting the posterior samples, see Statistical Rethinking 2nd Edition By Richard McElreath, chapter 3.
+
+Maximum a Posteriori
+MAP
+  Similar to {term}`MLE`, MAP is also utilized to estimate the parameters of models to explain the observed datasets. Unlike MLE, MAP tries to maximize the posterior function instead of the likelihood function.
+
+  In this method, there is a prior assumption about the distribution of model parameters. If the prior distribution is a uniform distribution, the MAP method will become MLE.
+
+  - For a concise comparison between {term}`MLE` and {term}`MAP`, consider Deep Learning by Ian Goodfellow, chapter 5.6.1
+
 :::::
