@@ -37,7 +37,14 @@ This ties into our second announcement, which is that we are hereby launching th
 
 # Main Features & Benefits
 
-::::{grid} 1 2 2 2
+::::::{grid} 1 1 2 2
+:gutter: 1
+
+:::::{grid-item}
+
+::::{grid} 1
+:gutter: 1
+
 :::{grid-item-card}  Friendly modelling API
 PyMC allows you to write down models using an intuitive syntax to describe a data generating process.
 :::
@@ -45,6 +52,33 @@ PyMC allows you to write down models using an intuitive syntax to describe a dat
 Fit your model using gradient-based MCMC algorithms like NUTS, using ADVI for fast approximate inference — including minibatch-ADVI for scaling to large datasets — or using Gaussian processes to build Bayesian nonparametric models.
 :::
 ::::
+:::::
+
+:::::{grid-item-card} As easy as:
+
+```{code-block} python
+---
+---
+    import pymc3 as pm
+
+    X, y = linear_training_data()
+    with pm.Model() as linear_model:
+        weights = pm.Normal("weights", mu=0, sigma=1)
+        noise = pm.Gamma("noise", alpha=2, beta=1)
+        y_observed = pm.Normal(
+            "y_observed",
+            mu=X @ weights,
+            sigma=noise,
+            observed=y,
+        )
+
+        prior = pm.sample_prior_predictive()
+        posterior = pm.sample()
+        posterior_pred = pm.sample_posterior_predictive(posterior)
+```
+:::::
+
+::::::
 
 # Support
 
@@ -134,7 +168,7 @@ _Peader Coyle_
 
 ::::
 
-More testimonials can be found on our [Testimonials Wiki](https://github.com/pymc-devs/pymc/wiki/Testimonials).
+Find more testimonials [here](https://github.com/pymc-devs/pymc/wiki/Testimonials).
 
 # Citing PyMC
 
