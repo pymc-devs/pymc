@@ -17,7 +17,6 @@ import warnings
 
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-import aesara
 import arviz as az
 import numpy as np
 
@@ -25,7 +24,6 @@ from aesara.tensor.sharedvar import TensorSharedVariable
 
 import pymc as pm
 
-from pymc.aesaraf import compile_rv_inplace
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.model import Model, Point
 from pymc.step_methods.arraystep import ArrayStepShared, Competence, metrop_select
