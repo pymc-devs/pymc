@@ -76,7 +76,7 @@ class DistributionMeta(ABCMeta):
             def _random(*args, **kwargs):
                 warnings.warn(
                     "The old `Distribution.random` interface is deprecated.",
-                    DeprecationWarning,
+                    FutureWarning,
                     stacklevel=2,
                 )
                 return clsdict["random"](*args, **kwargs)
@@ -202,7 +202,7 @@ class Distribution(metaclass=DistributionMeta):
             initval = kwargs.pop("testval")
             warnings.warn(
                 "The `testval` argument is deprecated; use `initval`.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
 
@@ -294,7 +294,7 @@ class Distribution(metaclass=DistributionMeta):
                 "The `.dist(testval=...)` argument is deprecated and has no effect. "
                 "Initial values for sampling/optimization can be specified with `initval` in a modelcontext. "
                 "For using Aesara's test value features, you must assign the `.tag.test_value` yourself.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
         if "initval" in kwargs:

@@ -36,7 +36,7 @@ def alias_deprecation(func, alias: str):
 
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
-        raise DeprecationWarning(
+        raise FutureWarning(
             f"The function `{alias}` from PyMC was an alias for `{original}` from ArviZ. "
             "It was removed in PyMC 4.0. "
             f"Switch to `pymc.{original}` or `arviz.{original}`."

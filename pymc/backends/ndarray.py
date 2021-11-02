@@ -32,88 +32,6 @@ from pymc.exceptions import TraceDirectoryError
 from pymc.model import Model, modelcontext
 
 
-def save_trace(trace: MultiTrace, directory: Optional[str] = None, overwrite=False) -> str:
-    """Save multitrace to file.
-
-    TODO: Also save warnings.
-
-    This is a custom data format for PyMC traces.  Each chain goes inside
-    a directory, and each directory contains a metadata json file, and a
-    numpy compressed file.  See https://docs.scipy.org/doc/numpy/neps/npy-format.html
-    for more information about this format.
-
-    Parameters
-    ----------
-    trace: pm.MultiTrace
-        trace to save to disk
-    directory: str (optional)
-        path to a directory to save the trace
-    overwrite: bool (default False)
-        whether to overwrite an existing directory.
-
-    Returns
-    -------
-    str, path to the directory where the trace was saved
-    """
-    warnings.warn(
-        "The `save_trace` function will soon be removed."
-        "Instead, use `arviz.to_netcdf` to save traces.",
-        DeprecationWarning,
-    )
-
-    if directory is None:
-        directory = ".pymc_{}.trace"
-        idx = 1
-        while os.path.exists(directory.format(idx)):
-            idx += 1
-        directory = directory.format(idx)
-
-    if os.path.isdir(directory):
-        if overwrite:
-            shutil.rmtree(directory)
-        else:
-            raise OSError(
-                "Cautiously refusing to overwrite the already existing {}! Please supply "
-                "a different directory, or set `overwrite=True`".format(directory)
-            )
-    os.makedirs(directory)
-
-    for chain, ndarray in trace._straces.items():
-        SerializeNDArray(os.path.join(directory, str(chain))).save(ndarray)
-    return directory
-
-
-def load_trace(directory: str, model=None) -> MultiTrace:
-    """Loads a multitrace that has been written to file.
-
-    A the model used for the trace must be passed in, or the command
-    must be run in a model context.
-
-    Parameters
-    ----------
-    directory: str
-        Path to a pymc serialized trace
-    model: pm.Model (optional)
-        Model used to create the trace.  Can also be inferred from context
-
-    Returns
-    -------
-    pm.Multitrace that was saved in the directory
-    """
-    warnings.warn(
-        "The `load_trace` function will soon be removed."
-        "Instead, use `arviz.from_netcdf` to load traces.",
-        DeprecationWarning,
-    )
-    straces = []
-    for subdir in glob.glob(os.path.join(directory, "*")):
-        if os.path.isdir(subdir):
-            straces.append(SerializeNDArray(subdir).load(model))
-    if not straces:
-        raise TraceDirectoryError("%s is not a PyMC saved chain directory." % directory)
-    return base.MultiTrace(straces)
-
-
 class SerializeNDArray:
     metadata_file = "metadata.json"
     samples_file = "samples.npz"
@@ -125,7 +43,7 @@ class SerializeNDArray:
         warnings.warn(
             "The `SerializeNDArray` class will soon be removed. "
             "Instead, use ArviZ to save/load traces.",
-            DeprecationWarning,
+            FutureWarning,
         )
         self.directory = directory
         self.metadata_path = os.path.join(self.directory, self.metadata_file)

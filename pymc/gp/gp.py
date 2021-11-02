@@ -725,7 +725,7 @@ class MarginalSparse(Marginal):
                 self.sigma = sigma
                 warnings.warn(
                     "The 'sigma' argument has been deprecated. Use 'noise' instead.",
-                    DeprecationWarning,
+                    FutureWarning,
                 )
         else:
             self.sigma = noise

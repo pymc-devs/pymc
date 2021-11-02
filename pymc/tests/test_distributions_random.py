@@ -1635,7 +1635,7 @@ class TestMatrixNormal(BaseTestDistribution):
                 logpt(matrixnormal, aesara.tensor.ones((3, 3, 3)))
 
         with pm.Model():
-            with pytest.warns(DeprecationWarning):
+            with pytest.warns(FutureWarning):
                 matrixnormal = pm.MatrixNormal(
                     "matnormal",
                     mu=np.random.random((3, 3)),
