@@ -1,4 +1,4 @@
-exclude: ^(docs/logos|pymc3/tests/data)/
+exclude: ^(docs/logos|pymc/tests/data)/
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.0.1
@@ -32,12 +32,12 @@ repos:
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
-      files: ^pymc3/
+      files: ^pymc/
 - repo: https://github.com/MarcoGorelli/madforhooks
   rev: 0.2.1
   hooks:
     - id: no-print-statements
-      files: ^pymc3/
+      files: ^pymc/
     - id: conda-env-sorter
       files: ^conda-envs/environment-dev-py.+\.yml$
 - repo: local
