@@ -22,7 +22,6 @@ from functools import singledispatch
 from typing import Callable, Optional, Sequence
 
 import aesara
-import numpy as np
 
 from aeppl.logprob import _logprob
 from aesara.tensor.basic import as_tensor_variable
@@ -43,7 +42,6 @@ from pymc.distributions.shape_utils import (
     maybe_resize,
     resize_from_dims,
     resize_from_observed,
-    to_tuple,
 )
 from pymc.printing import str_for_dist
 from pymc.util import UNSET
