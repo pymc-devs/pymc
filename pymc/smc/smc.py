@@ -126,7 +126,7 @@ class SMC_KERNEL(ABC):
         draws=2000,
         start=None,
         model=None,
-        random_seed=-1,
+        random_seed=None,
         threshold=0.5,
     ):
         """
@@ -140,6 +140,8 @@ class SMC_KERNEL(ABC):
             Starting point in parameter space. It should be a list of dict with length `chains`.
             When None (default) the starting point is sampled from the prior distribution.
         model: Model (optional if in ``with`` context)).
+        random_seed: int
+            Value used to initialize the random number generator.
         threshold: float
             Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
             the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
@@ -151,10 +153,7 @@ class SMC_KERNEL(ABC):
         self.start = start
         self.threshold = threshold
         self.model = model
-        self.random_seed = random_seed
-
-        if self.random_seed != -1:
-            np.random.seed(self.random_seed)
+        self.rng = np.random.default_rng(seed=random_seed)
 
         self.model = modelcontext(model)
         self.variables = inputvars(self.model.value_vars)
@@ -262,7 +261,7 @@ class SMC_KERNEL(ABC):
 
     def resample(self):
         """Resample particles based on importance weights"""
-        self.resampling_indexes = np.random.choice(
+        self.resampling_indexes = self.rng.choice(
             np.arange(self.draws), size=self.draws, p=self.weights
         )
 
@@ -382,11 +381,11 @@ class IMH(SMC_KERNEL):
         ac_ = np.empty((self.n_steps, self.draws))
 
         cov = self.proposal_dist.cov
-        log_R = np.log(np.random.rand(self.n_steps, self.draws))
+        log_R = np.log(self.rng.random((self.n_steps, self.draws)))
         for n_step in range(self.n_steps):
             # The proposal is independent from the current point.
             # We have to take that into account to compute the Metropolis-Hastings acceptance
-            proposal = floatX(self.proposal_dist.rvs(size=self.draws))
+            proposal = floatX(self.proposal_dist.rvs(size=self.draws, random_state=self.rng))
             proposal = proposal.reshape(len(proposal), -1)
             # To do that we compute the logp of moving to a new point
             forward = self.proposal_dist.logpdf(proposal)
@@ -497,11 +496,12 @@ class MH(SMC_KERNEL):
         """Metropolis-Hastings perturbation."""
         ac_ = np.empty((self.n_steps, self.draws))
 
-        log_R = np.log(np.random.rand(self.n_steps, self.draws))
+        log_R = np.log(self.rng.random((self.n_steps, self.draws)))
         for n_step in range(self.n_steps):
             proposal = floatX(
                 self.tempered_posterior
-                + self.proposal_dist(num_draws=self.draws) * self.proposal_scales[:, None]
+                + self.proposal_dist(num_draws=self.draws, rng=self.rng)
+                * self.proposal_scales[:, None]
             )
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])

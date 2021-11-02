@@ -32,7 +32,7 @@ import pymc as pm
 from pymc.aesaraf import floatX
 from pymc.backends.base import MultiTrace
 from pymc.smc.smc import IMH
-from pymc.tests.helpers import SeededTest
+from pymc.tests.helpers import SeededTest, assert_random_state_equal
 
 
 class TestSMC(SeededTest):
@@ -77,8 +77,10 @@ class TestSMC(SeededTest):
             y = pm.Normal("y", x, 1, observed=0)
 
     def test_sample(self):
+        initial_rng_state = np.random.get_state()
         with self.SMC_test:
             mtrace = pm.sample_smc(draws=self.samples, return_inferencedata=False)
+        assert_random_state_equal(initial_rng_state, np.random.get_state())
 
         x = mtrace["X"]
         mu1d = np.abs(x).mean(axis=0)
@@ -531,11 +533,14 @@ class TestSimulator(SeededTest):
 class TestMHKernel(SeededTest):
     def test_normal_model(self):
         data = st.norm(10, 0.5).rvs(1000, random_state=self.get_random_state())
+
+        initial_rng_state = np.random.get_state()
         with pm.Model() as m:
             mu = pm.Normal("mu", 0, 3)
             sigma = pm.HalfNormal("sigma", 1)
             y = pm.Normal("y", mu, sigma, observed=data)
             idata = pm.sample_smc(draws=2000, kernel=pm.smc.MH)
+        assert_random_state_equal(initial_rng_state, np.random.get_state())
 
         post = idata.posterior.stack(sample=("chain", "draw"))
         assert np.abs(post["mu"].mean() - 10) < 0.1
