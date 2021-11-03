@@ -379,31 +379,33 @@ class IMH(SMC_KERNEL):
     def mutate(self):
         """Independent Metropolis-Hastings perturbation."""
         ac_ = np.empty((self.n_steps, self.draws))
-
-        cov = self.proposal_dist.cov
         log_R = np.log(self.rng.random((self.n_steps, self.draws)))
+
+        # The proposal is independent from the current point.
+        # We have to take that into account to compute the Metropolis-Hastings acceptance
+        # We first compute the logp of proposing a transition to the current points.
+        # This variable is updated at the end of the loop with the entries from the accepted
+        # transitions, which is equivalent to recomputing it in every iteration of the loop.
+        backward_logp = self.proposal_dist.logpdf(self.tempered_posterior)
         for n_step in range(self.n_steps):
-            # The proposal is independent from the current point.
-            # We have to take that into account to compute the Metropolis-Hastings acceptance
             proposal = floatX(self.proposal_dist.rvs(size=self.draws, random_state=self.rng))
             proposal = proposal.reshape(len(proposal), -1)
-            # To do that we compute the logp of moving to a new point
-            forward = self.proposal_dist.logpdf(proposal)
-            # And to going back from that new point
-            backward = multivariate_normal(proposal.mean(axis=0), cov).logpdf(
-                self.tempered_posterior
-            )
+            # We then compute the logp of proposing a transition to the new points
+            forward_logp = self.proposal_dist.logpdf(proposal)
+
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])
             proposal_logp = pl + ll * self.beta
             accepted = log_R[n_step] < (
-                (proposal_logp + backward) - (self.tempered_posterior_logp + forward)
+                (proposal_logp + backward_logp) - (self.tempered_posterior_logp + forward_logp)
             )
+
             ac_[n_step] = accepted
             self.tempered_posterior[accepted] = proposal[accepted]
             self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
+            backward_logp[accepted] = forward_logp[accepted]
 
         self.acc_rate = np.mean(ac_)
 
