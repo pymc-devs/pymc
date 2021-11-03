@@ -27,7 +27,7 @@ If it is, it should be added to the [Aesara library](https://github.com/aesara-d
 
 In addition, it might not always be necessary to implement a new `RandomVariable`.
 For example if the new `Distribution` is just a special parametrization of an existing `Distribution`.
-This is the case of the `OrderedLogistic` and `OrderedProbit`, which are just special parametrizations of the `Categorial` distribution.
+This is the case of the `OrderedLogistic` and `OrderedProbit`, which are just special parametrizations of the `Categorical` distribution.
 
 The following snippet illustrates how to create a new `RandomVariable`:
 
@@ -67,7 +67,7 @@ class BlahRV(RandomVariable):
     # start with a NumPy `RandomState` object, then the distribution
     # parameters, and, finally, the size.
     #
-    # This is effectively the v4 replacement for `Distribution.random`.
+    # This is effectively the PyMC replacement for `Distribution.random`.
     @classmethod
     def rng_fn(
         cls,
@@ -115,7 +115,7 @@ blah([0, 0], [1, 2], size=(10, 2)).eval()
 ## 2. Inheriting from a PyMC base `Distribution` class
 
 After implementing the new `RandomVariable` `Op`, it's time to make use of it in a new PyMC {class}`pymc.distributions.Distribution`.
-PyMC works in a very {term}`functional <Functional Programming>` way, and the `distribution` classes are there mostly to facilitate porting the `v3` code to the new `v4` version, add PyMC API features and keep related methods organized together.
+PyMC works in a very {term}`functional <Functional Programming>` way, and the `distribution` classes are there mostly to facilitate porting the `PyMC3` code to the new `PyMC` version, add PyMC API features and keep related methods organized together.
 In practice, they take care of:
 
 1. Linking ({term}`Dispatching`) a rv_op class with the corresponding logp and logcdf methods.
@@ -186,7 +186,7 @@ Some notes:
 1. A distribution should at the very least inherit from {class}`~pymc.distributions.Discrete` or {class}`~pymc.distributions.Continuous`. For the latter, more specific subclasses exist: `PositiveContinuous`, `UnitContinuous`, `BoundedContinuous`, `CircularContinuous`, which specify default transformations for the variables. If you need to specify a one-time custom transform you can also override the `__new__` method, as is done for the {class}`~pymc.distributions.multivariate.Dirichlet`.
 1. If a distribution does not have a corresponding `random` implementation, a `RandomVariable` should still be created that raises a `NotImplementedError`. This is the case for the {class}`~pymc.distributions.continuous.Flat`. In this case it will be necessary to provide a standard `initval` by
    overriding `__new__`.
-1. As mentioned above, `v4` works in a very {term}`functional <Functional Programming>` way, and all the information that is needed in the `logp` and `logcdf` methods is expected to be "carried" via the `RandomVariable` inputs. You may pass numerical arguments that are not strictly needed for the `rng_fn` method but are used in the `logp` and `logcdf` methods. Just keep in mind whether this affects the correct shape inference behavior of the `RandomVariable`. If specialized non-numeric information is needed you might need to define your custom`_logp` and `_logcdf` {term}`Dispatching` functions, but this should be done as a last resort.
+1. As mentioned above, `PyMC` works in a very {term}`functional <Functional Programming>` way, and all the information that is needed in the `logp` and `logcdf` methods is expected to be "carried" via the `RandomVariable` inputs. You may pass numerical arguments that are not strictly needed for the `rng_fn` method but are used in the `logp` and `logcdf` methods. Just keep in mind whether this affects the correct shape inference behavior of the `RandomVariable`. If specialized non-numeric information is needed you might need to define your custom`_logp` and `_logcdf` {term}`Dispatching` functions, but this should be done as a last resort.
 1. The `logcdf` method is not a requirement, but it's a nice plus!
 
 For a quick check that things are working you can try the following:
