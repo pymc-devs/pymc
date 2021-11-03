@@ -16,10 +16,7 @@
 
 Store sampling values in memory as a NumPy array.
 """
-import json
-import os
-import shutil
-import warnings
+
 
 from typing import Any, Dict, List, Optional
 
@@ -27,93 +24,7 @@ import numpy as np
 
 from pymc.backends import base
 from pymc.backends.base import MultiTrace
-from pymc.exceptions import TraceDirectoryError
 from pymc.model import Model, modelcontext
-
-
-class SerializeNDArray:
-    metadata_file = "metadata.json"
-    samples_file = "samples.npz"
-    metadata_path = None  # type: str
-    samples_path = None  # type: str
-
-    def __init__(self, directory: str):
-        """Helper to save and load NDArray objects"""
-        warnings.warn(
-            "The `SerializeNDArray` class will soon be removed. "
-            "Instead, use ArviZ to save/load traces.",
-            FutureWarning,
-        )
-        self.directory = directory
-        self.metadata_path = os.path.join(self.directory, self.metadata_file)
-        self.samples_path = os.path.join(self.directory, self.samples_file)
-
-    @staticmethod
-    def to_metadata(ndarray):
-        """Extract ndarray metadata into json-serializable content"""
-        if ndarray._stats is None:
-            stats = ndarray._stats
-            sampler_vars = None
-        else:
-            stats = []
-            sampler_vars = []
-            for stat in ndarray._stats:
-                stats.append({key: value.tolist() for key, value in stat.items()})
-                sampler_vars.append({key: str(value.dtype) for key, value in stat.items()})
-
-        metadata = {
-            "draw_idx": ndarray.draw_idx,
-            "draws": ndarray.draws,
-            "_stats": stats,
-            "chain": ndarray.chain,
-            "sampler_vars": sampler_vars,
-        }
-        return metadata
-
-    def save(self, ndarray):
-        """Serialize a ndarray to file
-
-        The goal here is to be modestly safer and more portable than a
-        pickle file. The expense is that the model code must be available
-        to reload the multitrace.
-        """
-        if not isinstance(ndarray, NDArray):
-            raise TypeError("Can only save NDArray")
-
-        if os.path.isdir(self.directory):
-            shutil.rmtree(self.directory)
-
-        os.mkdir(self.directory)
-
-        with open(self.metadata_path, "w") as buff:
-            json.dump(SerializeNDArray.to_metadata(ndarray), buff)
-
-        np.savez_compressed(self.samples_path, **ndarray.samples)
-
-    def load(self, model: Model) -> "NDArray":
-        """Load the saved ndarray from file"""
-        if not os.path.exists(self.samples_path) or not os.path.exists(self.metadata_path):
-            raise TraceDirectoryError("%s is not a trace directory" % self.directory)
-
-        new_trace = NDArray(model=model)
-        with open(self.metadata_path) as buff:
-            metadata = json.load(buff)
-
-        metadata["_stats"] = [
-            {k: np.array(v) for k, v in stat.items()} for stat in metadata["_stats"]
-        ]
-
-        # it seems like at least some old traces don't have 'sampler_vars'
-        try:
-            sampler_vars = metadata.pop("sampler_vars")
-            new_trace._set_sampler_vars(sampler_vars)
-        except KeyError:
-            pass
-
-        for key, value in metadata.items():
-            setattr(new_trace, key, value)
-        new_trace.samples = dict(np.load(self.samples_path))
-        return new_trace
 
 
 class NDArray(base.BaseTrace):
