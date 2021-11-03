@@ -21,6 +21,7 @@ from aesara.tensor.nlinalg import eigh
 
 import pymc as pm
 
+# Avoid circular dependency
 from pymc.distributions.distribution import NoDistribution
 from pymc.gp.cov import Constant, Covariance
 from pymc.gp.mean import Zero

@@ -14,7 +14,7 @@
 
 import warnings
 
-from typing import Dict, Optional
+from typing import Dict
 
 import aesara.tensor as at
 import numpy as np
