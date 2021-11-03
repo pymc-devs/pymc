@@ -1,5 +1,3 @@
-from functools import partial
-
 import arviz as az
 import matplotlib.pyplot as plt
 import numpy as np
