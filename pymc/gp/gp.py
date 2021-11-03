@@ -748,18 +748,12 @@ class MarginalSparse(Marginal):
         self.X = X
         self.Xu = Xu
         self.y = y
+
         if noise is None:
-            sigma = kwargs.get("sigma")
-            if sigma is None:
-                raise ValueError("noise argument must be specified")
-            else:
-                self.sigma = sigma
-                warnings.warn(
-                    "The 'sigma' argument has been deprecated. Use 'noise' instead.",
-                    DeprecationWarning,
-                )
+            raise ValueError("noise argument must be specified")
         else:
             self.sigma = noise
+
         if is_observed:
             return pm.DensityDist(
                 name,
