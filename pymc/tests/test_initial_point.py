@@ -13,6 +13,7 @@
 #   limitations under the License.
 import aesara
 import aesara.tensor as at
+import cloudpickle
 import numpy as np
 import pytest
 
@@ -218,3 +219,12 @@ class TestMoment:
             assert not hasattr(rv.tag, "test_value")
             assert tuple(get_moment(rv).shape.eval()) == (4, 3)
         pass
+
+
+def test_pickling_issue_5090():
+    with pm.Model() as model:
+        pm.Normal("x", initval="prior")
+    ip_before = model.recompute_initial_point(seed=5090)
+    model = cloudpickle.loads(cloudpickle.dumps(model))
+    ip_after = model.recompute_initial_point(seed=5090)
+    assert ip_before["x"] == ip_after["x"]
