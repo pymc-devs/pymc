@@ -11,6 +11,8 @@ dependencies:
 - cloudpickle
 - fastprogress>=0.2.0
 - h5py
+- mkl==2020.4
+- mkl-service==2.3.0
 - numpy>=1.15.0
 - pandas
 - pip
