@@ -50,6 +50,12 @@ class TestInitvalAssignment:
                 assert not hasattr(rv.tag, "test_value")
         pass
 
+    def test_valid_string_strategy(self):
+        with pm.Model() as pmodel:
+            pm.Uniform("x", 0, 1, size=2, initval="unknown")
+            with pytest.raises(ValueError, match="Invalid string strategy: unknown"):
+                pmodel.recompute_initial_point(seed=0)
+
 
 class TestInitvalEvaluation:
     def test_make_initial_point_fns_per_chain_checks_kwargs(self):
