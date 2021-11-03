@@ -16,8 +16,6 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-import pymc as pm
-
 from pymc.backends import base, ndarray
 from pymc.tests import backend_fixtures as bf
 
@@ -205,78 +203,3 @@ class TestSqueezeCat:
         expected = np.concatenate([self.x, self.y])
         result = base._squeeze_cat([self.x, self.y], True, True)
         npt.assert_equal(result, expected)
-
-
-class TestSaveLoad:
-    @staticmethod
-    def model(rng_seeder=None):
-        with pm.Model(rng_seeder=rng_seeder) as model:
-            x = pm.Normal("x", 0, 1)
-            y = pm.Normal("y", x, 1, observed=2)
-            z = pm.Normal("z", x + y, 1)
-        return model
-
-    @classmethod
-    def setup_class(cls):
-        with TestSaveLoad.model():
-            cls.trace = pm.sample(return_inferencedata=False)
-
-    def test_save_new_model(self, tmpdir_factory):
-        directory = str(tmpdir_factory.mktemp("data"))
-        save_dir = pm.save_trace(self.trace, directory, overwrite=True)
-
-        assert save_dir == directory
-        with pm.Model() as model:
-            w = pm.Normal("w", 0, 1)
-            new_trace = pm.sample(return_inferencedata=False)
-
-        with pytest.raises(OSError):
-            _ = pm.save_trace(new_trace, directory)
-
-        _ = pm.save_trace(new_trace, directory, overwrite=True)
-        with model:
-            new_trace_copy = pm.load_trace(directory)
-
-        assert (new_trace["w"] == new_trace_copy["w"]).all()
-
-    def test_save_and_load(self, tmpdir_factory):
-        directory = str(tmpdir_factory.mktemp("data"))
-        save_dir = pm.save_trace(self.trace, directory, overwrite=True)
-
-        assert save_dir == directory
-
-        trace2 = pm.load_trace(directory, model=TestSaveLoad.model())
-
-        for var in ("x", "z"):
-            assert (self.trace[var] == trace2[var]).all()
-
-        assert self.trace.stat_names == trace2.stat_names
-        for stat in self.trace.stat_names:
-            assert all(self.trace[stat] == trace2[stat]), (
-                "Restored value of statistic %s does not match stored value" % stat
-            )
-
-    def test_bad_load(self, tmpdir_factory):
-        directory = str(tmpdir_factory.mktemp("data"))
-        with pytest.raises(pm.TraceDirectoryError):
-            pm.load_trace(directory, model=TestSaveLoad.model())
-
-    def test_sample_posterior_predictive(self, tmpdir_factory):
-        directory = str(tmpdir_factory.mktemp("data"))
-        save_dir = pm.save_trace(self.trace, directory, overwrite=True)
-
-        assert save_dir == directory
-
-        rng = np.random.RandomState(10)
-
-        with TestSaveLoad.model(rng_seeder=rng):
-            ppc = pm.sample_posterior_predictive(self.trace)
-
-        rng = np.random.RandomState(10)
-
-        with TestSaveLoad.model(rng_seeder=rng):
-            trace2 = pm.load_trace(directory)
-            ppc2 = pm.sample_posterior_predictive(trace2)
-
-        for key, value in ppc.items():
-            assert (value == ppc2[key]).all()

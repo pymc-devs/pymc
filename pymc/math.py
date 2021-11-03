@@ -205,7 +205,7 @@ def invlogit(x, eps=None):
     if eps is not None:
         warnings.warn(
             "pymc.math.invlogit no longer supports the ``eps`` argument and it will be ignored.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
     return at.sigmoid(x)

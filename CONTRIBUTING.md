@@ -113,7 +113,7 @@ tools:
   $ pytest --cov=pymc pymc/tests/<name of test>.py
   ```
 
-* No `pre-commit` errors: see the [Python code style](https://github.com/pymc-devs/pymc/wiki/PyMC-Python-Code-Style) and [Jupyter Notebook style](https://github.com/pymc-devs/pymc/wiki/PyMC-Jupyter-Notebook-Style-Guide) page from our Wiki on how to install and run it.
+* No `pre-commit` errors: see the [Python code style](https://github.com/pymc-devs/pymc/wiki/Python-Code-Style) and [Jupyter Notebook style](https://github.com/pymc-devs/pymc/wiki/PyMC-Jupyter-Notebook-Style-Guide) page from our Wiki on how to install and run it.
 
 ## Developing in Docker
 

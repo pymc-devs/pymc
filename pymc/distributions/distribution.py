@@ -22,7 +22,6 @@ from functools import singledispatch
 from typing import Callable, Optional, Sequence
 
 import aesara
-import numpy as np
 
 from aeppl.logprob import _logprob
 from aesara.tensor.basic import as_tensor_variable
@@ -43,7 +42,6 @@ from pymc.distributions.shape_utils import (
     maybe_resize,
     resize_from_dims,
     resize_from_observed,
-    to_tuple,
 )
 from pymc.printing import str_for_dist
 from pymc.util import UNSET
@@ -78,7 +76,7 @@ class DistributionMeta(ABCMeta):
             def _random(*args, **kwargs):
                 warnings.warn(
                     "The old `Distribution.random` interface is deprecated.",
-                    DeprecationWarning,
+                    FutureWarning,
                     stacklevel=2,
                 )
                 return clsdict["random"](*args, **kwargs)
@@ -204,7 +202,7 @@ class Distribution(metaclass=DistributionMeta):
             initval = kwargs.pop("testval")
             warnings.warn(
                 "The `testval` argument is deprecated; use `initval`.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
 
@@ -296,7 +294,7 @@ class Distribution(metaclass=DistributionMeta):
                 "The `.dist(testval=...)` argument is deprecated and has no effect. "
                 "Initial values for sampling/optimization can be specified with `initval` in a modelcontext. "
                 "For using Aesara's test value features, you must assign the `.tag.test_value` yourself.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
         if "initval" in kwargs:

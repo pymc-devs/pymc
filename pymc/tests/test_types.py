@@ -16,7 +16,6 @@ from copy import copy
 
 import aesara
 import numpy as np
-import pytest
 
 from pymc.distributions import Normal
 from pymc.model import Model

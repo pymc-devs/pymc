@@ -37,7 +37,6 @@ except ImportError:  # pragma: no cover
         raise RuntimeError("polyagamma package is not installed!")
 
 
-from aeppl.logprob import _logprob
 from scipy.special import expit
 
 import pymc as pm
@@ -1635,7 +1634,7 @@ class TestMatrixNormal(BaseTestDistribution):
                 logpt(matrixnormal, aesara.tensor.ones((3, 3, 3)))
 
         with pm.Model():
-            with pytest.warns(DeprecationWarning):
+            with pytest.warns(FutureWarning):
                 matrixnormal = pm.MatrixNormal(
                     "matnormal",
                     mu=np.random.random((3, 3)),

@@ -22,7 +22,7 @@ import time
 import warnings
 
 from collections import defaultdict
-from copy import copy, deepcopy
+from copy import copy
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, cast
 
 import aesara.gradient as tg
@@ -51,7 +51,7 @@ from pymc.initial_point import (
     filter_rvs_to_jitter,
     make_initial_point_fns_per_chain,
 )
-from pymc.model import Model, Point, modelcontext
+from pymc.model import Model, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
 from pymc.step_methods import (
     NUTS,
@@ -1650,7 +1650,7 @@ def sample_posterior_predictive(
         warnings.warn(
             "In this version, RNG seeding is managed by the Model objects. "
             "See the `rng_seeder` argument in Model's constructor.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
 
@@ -1806,7 +1806,7 @@ def sample_posterior_predictive_w(
         warnings.warn(
             "In this version, RNG seeding is managed by the Model objects. "
             "See the `rng_seeder` argument in Model's constructor.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
 
@@ -1973,7 +1973,7 @@ def sample_prior_predictive(
         warnings.warn(
             "In this version, RNG seeding is managed by the Model objects. "
             "See the `rng_seeder` argument in Model's constructor.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
 

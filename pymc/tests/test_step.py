@@ -16,8 +16,6 @@ import shutil
 import sys
 import tempfile
 
-from math import isclose
-
 import aesara
 import aesara.tensor as at
 import arviz as az

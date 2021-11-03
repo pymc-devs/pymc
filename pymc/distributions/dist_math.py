@@ -510,7 +510,7 @@ def log_i0(x):
 def incomplete_beta(a, b, value):
     warnings.warn(
         "incomplete_beta has been deprecated. Use aesara.tensor.betainc instead.",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return at.betainc(a, b, value)

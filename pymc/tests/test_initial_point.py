@@ -32,7 +32,7 @@ def transform_back(rv, transformed) -> np.ndarray:
 
 class TestInitvalAssignment:
     def test_dist_warnings_and_errors(self):
-        with pytest.warns(DeprecationWarning, match="argument is deprecated and has no effect"):
+        with pytest.warns(FutureWarning, match="argument is deprecated and has no effect"):
             rv = pm.Exponential.dist(lam=1, testval=0.5)
         assert not hasattr(rv.tag, "test_value")
 
@@ -42,7 +42,7 @@ class TestInitvalAssignment:
 
     def test_new_warnings(self):
         with pm.Model() as pmodel:
-            with pytest.warns(DeprecationWarning, match="`testval` argument is deprecated"):
+            with pytest.warns(FutureWarning, match="`testval` argument is deprecated"):
                 rv = pm.Uniform("u", 0, 1, testval=0.75)
                 initial_point = pmodel.recompute_initial_point(seed=0)
                 assert initial_point["u_interval__"] == transform_fwd(rv, 0.75)

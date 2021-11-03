@@ -17,9 +17,7 @@ import numpy as np
 import pytest
 import scipy.stats.distributions as sp
 
-from aesara.gradient import DisconnectedGrad
-from aesara.graph.basic import Constant, ancestors, graph_inputs
-from aesara.graph.fg import FunctionGraph
+from aesara.graph.basic import ancestors
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
