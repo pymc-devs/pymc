@@ -14,6 +14,7 @@
 
 import logging
 
+from copy import copy
 from typing import Any, Dict, List, Tuple
 
 import aesara
@@ -121,7 +122,7 @@ class PGBART(ArrayStepShared):
     name = "bartsampler"
     default_blocked = False
     generates_stats = True
-    stats_dtypes = [{"variable_inclusion": np.ndarray}]
+    stats_dtypes = [{"variable_inclusion": np.ndarray, "bart_trees": np.ndarray}]
 
     def __init__(self, vars=None, num_particles=10, max_stages=100, batch="auto", model=None):
         _log.warning("BART is experimental. Use with caution.")
@@ -159,6 +160,7 @@ class PGBART(ArrayStepShared):
             tree_id=0,
             leaf_node_value=self.init_mean / self.m,
             idx_data_points=np.arange(self.num_observations, dtype="int32"),
+            m=self.m,
         )
         self.mean = fast_mean()
         self.linear_fit = fast_linear_fit()
@@ -169,8 +171,6 @@ class PGBART(ArrayStepShared):
 
         self.tune = True
         self.idx = 0
-        self.iter = 0
-        self.sum_trees = []
         self.batch = batch
 
         if self.batch == "auto":
@@ -193,12 +193,12 @@ class PGBART(ArrayStepShared):
                 self.init_likelihood,
             )
             self.all_particles.append(p)
+        self.all_trees = np.array([p.tree for p in self.all_particles])
         super().__init__(vars, shared)
 
     def astep(self, q: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
         point_map_info = q.point_map_info
         sum_trees_output = q.data
-
         variable_inclusion = np.zeros(self.num_variates, dtype="int")
 
         if self.idx == self.m:
@@ -212,7 +212,6 @@ class PGBART(ArrayStepShared):
             particles = self.init_particles(tree_id)
             # Compute the sum of trees without the tree we are attempting to replace
             self.sum_trees_output_noi = sum_trees_output - particles[0].tree.predict_output()
-            self.idx += 1
 
             # The old tree is not growing so we update the weights only once.
             self.update_weight(particles[0])
@@ -258,6 +257,7 @@ class PGBART(ArrayStepShared):
             # Get the new tree and update
             new_particle = np.random.choice(particles, p=normalized_weights)
             new_tree = new_particle.tree
+            self.all_trees[self.idx] = new_tree
             new_particle.log_weight = new_particle.old_likelihood_logp - self.log_num_particles
             self.all_particles[tree_id] = new_particle
             sum_trees_output = self.sum_trees_output_noi + new_tree.predict_output()
@@ -268,17 +268,11 @@ class PGBART(ArrayStepShared):
                     self.ssv = SampleSplittingVariable(self.split_prior)
             else:
                 self.batch = max(1, int(self.m * 0.2))
-                self.iter += 1
-                self.sum_trees.append(new_tree)
-                if not self.iter % self.m:
-                    # XXX update the all_trees variable in BARTRV to be used in the rng_fn method
-                    # this fails for chains > 1 as the variable is not shared between proccesses
-                    self.bart.all_trees.append(self.sum_trees)
-                    self.sum_trees = []
                 for index in new_particle.used_variates:
                     variable_inclusion[index] += 1
+            self.idx += 1
 
-        stats = {"variable_inclusion": variable_inclusion}
+        stats = {"variable_inclusion": variable_inclusion, "bart_trees": copy(self.all_trees)}
         sum_trees_output = RaveledVars(sum_trees_output, point_map_info)
         return sum_trees_output, [stats]
 
@@ -526,11 +520,11 @@ def fast_linear_fit():
         xbar = np.sum(X) / n
         ybar = np.sum(Y) / n
 
-        if np.all(X == xbar):
-            b = 0
+        den = X @ X - n * xbar ** 2
+        if den > 1e-10:
+            b = (X @ Y - n * xbar * ybar) / den
         else:
-            b = (X @ Y - n * xbar * ybar) / (X @ X - n * xbar ** 2)
-
+            b = 0
         a = ybar - b * xbar
         Y_fit = a + b * X
         return Y_fit, [a, b, 0]
