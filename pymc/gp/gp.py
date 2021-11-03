@@ -1109,9 +1109,7 @@ class MarginalKron(Base):
             raise ValueError("Must provide a covariance function for each X")
         if N != len(y):
             raise ValueError(
-                (
-                    "Length of y ({}) must match length of cartesian" "cartesian product of Xs ({})"
-                ).format(len(y), N)
+                f"Length of y ({len(y)}) must match length of cartesian product of Xs ({N})" 
             )
 
     def marginal_likelihood(self, name, Xs, y, sigma, is_observed=True, **kwargs):
@@ -1156,7 +1154,7 @@ class MarginalKron(Base):
             size = int(np.prod([len(X) for X in Xs]))
             return pm.KroneckerNormal(name, mu=mu, covs=covs, sigma=sigma, size=size, **kwargs)
 
-    def _build_conditional(self, Xnew, pred_noise, diag):
+    def _build_conditional(self, Xnew, diag, pred_noise):
         Xs, y, sigma = self.Xs, self.y, self.sigma
 
         # Old points
@@ -1170,7 +1168,9 @@ class MarginalKron(Base):
             eigs += sigma ** 2
 
         # New points
+        print('diag', diag)
         Km = self.cov_func(Xnew, diag=diag)
+        print('Km', Km.eval())
         Knm = self.cov_func(X, Xnew)
         Kmn = Knm.T
 
@@ -1195,7 +1195,7 @@ class MarginalKron(Base):
                 cov += sigma * at.identity_like(cov)
         return mu, cov
 
-    def conditional(self, name, Xnew, pred_noise=False, **kwargs):
+    def conditional(self, name, Xnew, pred_noise=False, diag=False, **kwargs):
         """
         Returns the conditional distribution evaluated over new input
         locations `Xnew`, just as in `Marginal`.
@@ -1229,7 +1229,7 @@ class MarginalKron(Base):
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
         """
-        mu, cov = self._build_conditional(Xnew, pred_noise, False)
+        mu, cov = self._build_conditional(Xnew, diag, pred_noise)
         return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False, model=None):
@@ -1252,8 +1252,8 @@ class MarginalKron(Base):
             Whether or not observation noise is included in the conditional.
             Default is `False`.
         """
+        mu, cov = self._predict_at(Xnew, diag, pred_noise)
         model = modelcontext(model)
-        mu, cov = self._predict_at(Xnew, pred_noise, diag)
         return replace_with_values(model, [mu, cov], replacements=point)
 
     def _predict_at(self, Xnew, diag=False, pred_noise=False):
@@ -1273,5 +1273,5 @@ class MarginalKron(Base):
             Whether or not observation noise is included in the conditional.
             Default is `False`.
         """
-        mu, cov = self._build_conditional(Xnew, pred_noise, diag)
+        mu, cov = self._build_conditional(Xnew, diag, pred_noise)
         return mu, cov

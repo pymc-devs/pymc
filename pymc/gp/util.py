@@ -43,9 +43,15 @@ def replace_with_values(model, vars_needed, replacements=None):
     R"""
     Replace random variable nodes in the graph with values given by the replacements dict.
     Uses untransformed versions of the inputs, performs some basic input validation.
-
-    NOTE TO REVIEWER:  Modified this from `sample_posterior_predictive`.  Is there a better way to do this?
-
+    
+    Parameters
+    ----------
+    model: Model
+        A PyMC model object
+    vars_needed: list of TensorVariables
+        A list of variable outputs
+    replacements: dict with string keys, numeric values
+    
     """
     inputs, input_names = [], []
     for rv in walk_model(vars_needed, walk_past_rvs=True):
@@ -64,11 +70,14 @@ def replace_with_values(model, vars_needed, replacements=None):
         accept_inplace=True,
         on_unused_input="ignore",
     )
-
+    
+    # remove unneeded inputs    
     replacements = {name: val for name, val in replacements.items() if name in input_names}
-    missing = set(vars_needed) - set(replacements.keys())
+    missing = set(input_names) - set(replacements.keys())
+    
+    # error if more inputs needed
     if len(missing) > 0:
-        missing_str = ", ".join({m.name for m in missing})
+        missing_str = ", ".join(missing)
         raise ValueError(f"Values for {missing_str} must be included in `replacements`.")
 
     return fn(**replacements)
@@ -115,7 +124,7 @@ def stabilize(K, jitter=JITTER_DEFAULT):
     return K + jitter * at.identity_like(K)
 
 
-def kmeans_inducing_points(n_inducing, X):
+def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
     R"""
     Use the K-means algorithm to initialize the locations `X` for the inducing
     points `fu`.
@@ -126,6 +135,8 @@ def kmeans_inducing_points(n_inducing, X):
         The number of inducing points (or k, the number of clusters)
     X: array-like
         Gaussian process input matrix.
+    **kmeans_kwargs:
+        Extra keyword arguments that are passed to `scipy.cluster.vq.kmeans`
     """
     # first whiten X
     if isinstance(X, TensorConstant):
@@ -143,7 +154,11 @@ def kmeans_inducing_points(n_inducing, X):
     # if std of a column is very small (zero), don't normalize that column
     scaling[scaling <= 1e-6] = 1.0
     Xw = X / scaling
-    Xu, distortion = kmeans(Xw, n_inducing)
+    
+    if "k_or_guess" in kmeans_kwargs:
+        warn.UserWarning("Use `n_inducing` to set the `k_or_guess` parameter instead.")
+    
+    Xu, distortion = kmeans(Xw, k_or_guess=n_inducing, **kmeans_kwargs)
     return Xu * scaling
 
 

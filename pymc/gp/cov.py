@@ -152,7 +152,7 @@ class Covariance:
         elif isinstance(result[0][0], Prod):
             return result[0][0].factor_list[0] * A
         else:
-            raise RuntimeError
+            raise TypeError(f"Unknown Covariance combination type {result[0][0]}.  Known types are `Add` or `Prod`.")
 
 
 class Combination(Covariance):

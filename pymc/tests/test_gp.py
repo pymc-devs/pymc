@@ -688,6 +688,34 @@ class TestScaledCov:
         with pytest.raises(TypeError):
             pm.gp.cov.ScaledCov(1, "str is not Covariance object", lambda x: x)
 
+                
+class TestCircular:
+    def test_1d_tau1(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        etalon = 0.600881
+        with pm.Model():
+            cov = pm.gp.cov.Circular(1, 1, tau=5)
+        K = cov(X).eval()
+        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
+        K = cov(X, X).eval()
+        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
+        # check diagonal
+        Kd = cov(X, diag=True).eval()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_1d_tau2(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        etalon = 0.691239
+        with pm.Model():
+            cov = pm.gp.cov.Circular(1, 1, tau=4)
+        K = cov(X).eval()
+        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
+        K = cov(X, X).eval()
+        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
+        # check diagonal
+        Kd = cov(X, diag=True).eval()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
 
 class TestHandleArgs:
     def test_handleargs(self):
@@ -765,7 +793,7 @@ class TestCoregion:
         with pm.Model() as model:
             with pytest.raises(ValueError):
                 B = pm.gp.cov.Coregion(1)
-
+                
 
 class TestMarginalVsLatent:
     R"""
@@ -1155,17 +1183,18 @@ class TestMarginalKron:
     def testMarginalKronvsMarginalpredict(self):
         with pm.Model() as kron_model:
             kron_gp = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
-            # f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma, shape=self.N)
             f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma)
             p = kron_gp.conditional("p", self.Xnew)
             mu, cov = kron_gp.predict(self.Xnew)
         npt.assert_allclose(mu, self.mu, atol=1e-5, rtol=1e-2)
         npt.assert_allclose(cov, self.cov, atol=1e-5, rtol=1e-2)
+        with kron_model:
+            _, var = kron_gp.predict(self.Xnew, diag=True)
+        npt.assert_allclose(np.diag(cov), var, atol=1e-5, rtol=1e-2)
 
     def testMarginalKronvsMarginal(self):
         with pm.Model() as kron_model:
             kron_gp = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
-            # f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma, shape=self.N)
             f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma)
             p = kron_gp.conditional("p", self.Xnew)
         kron_logp = kron_model.logp({"p": self.pnew})
@@ -1179,7 +1208,7 @@ class TestMarginalKron:
             gp1 + gp2
 
 
-class TestUtil:
+class TestPlotGP:
     def test_plot_gp_dist(self):
         """Test that the plotting helper works with the stated input shapes."""
         import matplotlib.pyplot as plt
@@ -1206,31 +1235,57 @@ class TestUtil:
             pm.gp.util.plot_gp_dist(ax, x=np.linspace(0, 50, X), samples=samples)
         plt.close()
         pass
+    
 
-
-class TestCircular:
-    def test_1d_tau1(self):
-        X = np.linspace(0, 1, 10)[:, None]
-        etalon = 0.600881
-        with pm.Model():
-            cov = pm.gp.cov.Circular(1, 1, tau=5)
-        K = cov(X).eval()
-        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
-        K = cov(X, X).eval()
-        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
-        # check diagonal
-        Kd = cov(X, diag=True).eval()
-        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
-
-    def test_1d_tau2(self):
-        X = np.linspace(0, 1, 10)[:, None]
-        etalon = 0.691239
-        with pm.Model():
-            cov = pm.gp.cov.Circular(1, 1, tau=4)
-        K = cov(X).eval()
-        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
-        K = cov(X, X).eval()
-        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
-        # check diagonal
-        Kd = cov(X, diag=True).eval()
-        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+class TestKmeansInducing:
+    def setup_method(self):
+        self.centers = (-5, 5)
+        self.x = np.concatenate(
+            (
+                self.centers[0] + np.random.randn(500), 
+                self.centers[1] + np.random.randn(500)
+            )
+        )
+    
+    def test_kmeans(self):
+        X = self.x[:, None]
+        Xu = pm.gp.util.kmeans_inducing_points(2, X).flatten()
+        npt.assert_allclose(np.asarray(self.centers), np.sort(Xu), atol=0.1)
+        
+        X = at.as_tensor_variable(self.x[:, None])
+        Xu = pm.gp.util.kmeans_inducing_points(2, X).flatten()
+        npt.assert_allclose(np.asarray(self.centers), np.sort(Xu), atol=0.1)
+        
+    def test_kmeans_raises(self):
+        with pytest.raises(TypeError):
+            Xu = pm.gp.util.kmeans_inducing_points(2, "str is the wrong type").flatten()
+        
+    
+    
+class TestReplaceWithValues:
+    def test_basic_replace(self):
+        with pm.Model() as model:
+            a = pm.Normal("a")
+            b = pm.Normal("b", mu=a)
+            c = a*b
+        
+        c_val, = pm.gp.util.replace_with_values(model, [c], replacements={"a": 2, "b": 3, "x": 100})
+        assert c_val == np.array(6.0)
+        
+    def test_replace_no_inputs_needed(self):
+        with pm.Model() as model:
+            a = at.as_tensor_variable(2.0)
+            b = 1.0 + a
+            c = a*b
+        
+        c_val, = pm.gp.util.replace_with_values(model, [c], replacements={"x": 100})
+        assert c_val == np.array(6.0)
+        
+    def test_missing_input(self):
+        with pm.Model() as model:
+            a = pm.Normal("a")
+            b = pm.Normal("b", mu=a)
+            c = a*b
+        
+        with pytest.raises(ValueError):
+            c_val, = pm.gp.util.replace_with_values(model, [c], replacements={"a": 2, "x": 100})
