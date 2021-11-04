@@ -14,8 +14,6 @@
 
 import warnings
 
-from typing import Dict
-
 import aesara.tensor as at
 import numpy as np
 
@@ -35,24 +33,31 @@ from scipy.cluster.vq import kmeans
 
 from pymc.aesaraf import compile_rv_inplace, walk_model
 
+# Avoid circular dependency when importing modelcontext
+from pymc.distributions.distribution import NoDistribution
+
+assert NoDistribution  # keep both pylint and black happy
+from pymc.model import modelcontext
+
 JITTER_DEFAULT = 1e-6
 
 
-# TODO: add test
-def replace_with_values(model, vars_needed, replacements=None):
+def replace_with_values(vars_needed, replacements=None, model=None):
     R"""
     Replace random variable nodes in the graph with values given by the replacements dict.
     Uses untransformed versions of the inputs, performs some basic input validation.
-    
+
     Parameters
     ----------
-    model: Model
-        A PyMC model object
     vars_needed: list of TensorVariables
         A list of variable outputs
     replacements: dict with string keys, numeric values
-    
+        The variable name and values to be replaced in the model graph.
+    model: Model
+        A PyMC model object
     """
+    model = modelcontext(model)
+
     inputs, input_names = [], []
     for rv in walk_model(vars_needed, walk_past_rvs=True):
         if rv in model.named_vars.values() and not isinstance(rv, SharedVariable):
@@ -70,11 +75,11 @@ def replace_with_values(model, vars_needed, replacements=None):
         accept_inplace=True,
         on_unused_input="ignore",
     )
-    
-    # remove unneeded inputs    
+
+    # remove unneeded inputs
     replacements = {name: val for name, val in replacements.items() if name in input_names}
     missing = set(input_names) - set(replacements.keys())
-    
+
     # error if more inputs needed
     if len(missing) > 0:
         missing_str = ", ".join(missing)
@@ -154,10 +159,10 @@ def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
     # if std of a column is very small (zero), don't normalize that column
     scaling[scaling <= 1e-6] = 1.0
     Xw = X / scaling
-    
+
     if "k_or_guess" in kmeans_kwargs:
         warn.UserWarning("Use `n_inducing` to set the `k_or_guess` parameter instead.")
-    
+
     Xu, distortion = kmeans(Xw, k_or_guess=n_inducing, **kmeans_kwargs)
     return Xu * scaling
 

@@ -688,7 +688,7 @@ class TestScaledCov:
         with pytest.raises(TypeError):
             pm.gp.cov.ScaledCov(1, "str is not Covariance object", lambda x: x)
 
-                
+
 class TestCircular:
     def test_1d_tau1(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -793,7 +793,7 @@ class TestCoregion:
         with pm.Model() as model:
             with pytest.raises(ValueError):
                 B = pm.gp.cov.Coregion(1)
-                
+
 
 class TestMarginalVsLatent:
     R"""
@@ -1235,57 +1235,56 @@ class TestPlotGP:
             pm.gp.util.plot_gp_dist(ax, x=np.linspace(0, 50, X), samples=samples)
         plt.close()
         pass
-    
+
 
 class TestKmeansInducing:
     def setup_method(self):
         self.centers = (-5, 5)
         self.x = np.concatenate(
-            (
-                self.centers[0] + np.random.randn(500), 
-                self.centers[1] + np.random.randn(500)
-            )
+            (self.centers[0] + np.random.randn(500), self.centers[1] + np.random.randn(500))
         )
-    
+
     def test_kmeans(self):
         X = self.x[:, None]
         Xu = pm.gp.util.kmeans_inducing_points(2, X).flatten()
         npt.assert_allclose(np.asarray(self.centers), np.sort(Xu), atol=0.1)
-        
+
         X = at.as_tensor_variable(self.x[:, None])
         Xu = pm.gp.util.kmeans_inducing_points(2, X).flatten()
         npt.assert_allclose(np.asarray(self.centers), np.sort(Xu), atol=0.1)
-        
+
     def test_kmeans_raises(self):
         with pytest.raises(TypeError):
             Xu = pm.gp.util.kmeans_inducing_points(2, "str is the wrong type").flatten()
-        
-    
-    
+
+
 class TestReplaceWithValues:
     def test_basic_replace(self):
         with pm.Model() as model:
             a = pm.Normal("a")
             b = pm.Normal("b", mu=a)
-            c = a*b
-        
-        c_val, = pm.gp.util.replace_with_values(model, [c], replacements={"a": 2, "b": 3, "x": 100})
+            c = a * b
+
+        (c_val,) = pm.gp.util.replace_with_values(
+            [c], replacements={"a": 2, "b": 3, "x": 100}, model=model
+        )
         assert c_val == np.array(6.0)
-        
+
     def test_replace_no_inputs_needed(self):
         with pm.Model() as model:
             a = at.as_tensor_variable(2.0)
             b = 1.0 + a
-            c = a*b
-        
-        c_val, = pm.gp.util.replace_with_values(model, [c], replacements={"x": 100})
+            c = a * b
+            (c_val,) = pm.gp.util.replace_with_values([c], replacements={"x": 100})
         assert c_val == np.array(6.0)
-        
+
     def test_missing_input(self):
         with pm.Model() as model:
             a = pm.Normal("a")
             b = pm.Normal("b", mu=a)
-            c = a*b
-        
+            c = a * b
+
         with pytest.raises(ValueError):
-            c_val, = pm.gp.util.replace_with_values(model, [c], replacements={"a": 2, "x": 100})
+            (c_val,) = pm.gp.util.replace_with_values(
+                [c], replacements={"a": 2, "x": 100}, model=model
+            )

@@ -21,8 +21,6 @@ from aesara.tensor.nlinalg import eigh
 
 import pymc as pm
 
-# Avoid circular dependency
-from pymc.distributions.distribution import NoDistribution
 from pymc.gp.cov import Constant, Covariance
 from pymc.gp.mean import Zero
 from pymc.gp.util import (
@@ -36,7 +34,6 @@ from pymc.gp.util import (
     stabilize,
 )
 from pymc.math import cartesian, kron_diag, kron_dot, kron_solve_lower, kron_solve_upper
-from pymc.model import modelcontext
 
 __all__ = ["Latent", "Marginal", "TP", "MarginalSparse", "LatentKron", "MarginalKron"]
 
@@ -572,9 +569,8 @@ class Marginal(Base):
         """
         if given is None:
             given = {}
-        model = modelcontext(model)
         mu, cov = self._predict_at(Xnew, diag, pred_noise, given, jitter)
-        return replace_with_values(model, [mu, cov], replacements=point)
+        return replace_with_values([mu, cov], replacements=point, model=model)
 
     def _predict_at(self, Xnew, diag=False, pred_noise=False, given=None, jitter=0.0):
         R"""
@@ -1109,7 +1105,7 @@ class MarginalKron(Base):
             raise ValueError("Must provide a covariance function for each X")
         if N != len(y):
             raise ValueError(
-                f"Length of y ({len(y)}) must match length of cartesian product of Xs ({N})" 
+                f"Length of y ({len(y)}) must match length of cartesian product of Xs ({N})"
             )
 
     def marginal_likelihood(self, name, Xs, y, sigma, is_observed=True, **kwargs):
@@ -1167,10 +1163,7 @@ class MarginalKron(Base):
         if sigma is not None:
             eigs += sigma ** 2
 
-        # New points
-        print('diag', diag)
         Km = self.cov_func(Xnew, diag=diag)
-        print('Km', Km.eval())
         Knm = self.cov_func(X, Xnew)
         Kmn = Knm.T
 
@@ -1253,8 +1246,7 @@ class MarginalKron(Base):
             Default is `False`.
         """
         mu, cov = self._predict_at(Xnew, diag, pred_noise)
-        model = modelcontext(model)
-        return replace_with_values(model, [mu, cov], replacements=point)
+        return replace_with_values([mu, cov], replacements=point, model=model)
 
     def _predict_at(self, Xnew, diag=False, pred_noise=False):
         R"""
