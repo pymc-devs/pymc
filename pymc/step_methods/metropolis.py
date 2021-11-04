@@ -50,36 +50,35 @@ __all__ = [
 
 
 class Proposal:
-    def __init__(self, s, rng_seed: Optional[int] = None):
+    def __init__(self, s):
         self.s = s
-        self.rng = np.random.default_rng(rng_seed)
 
 
 class NormalProposal(Proposal):
     def __call__(self, rng: Optional[np.random.Generator] = None):
         if rng is None:
-            rng = self.rng
+            rng = nr
         return rng.normal(scale=self.s)
 
 
 class UniformProposal(Proposal):
     def __call__(self, rng: Optional[np.random.Generator] = None):
         if rng is None:
-            rng = self.rng
+            rng = nr
         return rng.uniform(low=-self.s, high=self.s, size=len(self.s))
 
 
 class CauchyProposal(Proposal):
     def __call__(self, rng: Optional[np.random.Generator] = None):
         if rng is None:
-            rng = self.rng
+            rng = nr
         return rng.standard_cauchy(size=np.size(self.s)) * self.s
 
 
 class LaplaceProposal(Proposal):
     def __call__(self, rng: Optional[np.random.Generator] = None):
         if rng is None:
-            rng = self.rng
+            rng = nr
         size = np.size(self.s)
         return (rng.standard_exponential(size=size) - rng.standard_exponential(size=size)) * self.s
 
@@ -87,22 +86,21 @@ class LaplaceProposal(Proposal):
 class PoissonProposal(Proposal):
     def __call__(self, rng: Optional[np.random.Generator] = None):
         if rng is None:
-            rng = self.rng
+            rng = nr
         return rng.poisson(lam=self.s, size=np.size(self.s)) - self.s
 
 
 class MultivariateNormalProposal(Proposal):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        n, m = self.s.shape
+    def __init__(self, s):
+        n, m = s.shape
         if n != m:
             raise ValueError("Covariance matrix is not symmetric.")
         self.n = n
-        self.chol = scipy.linalg.cholesky(self.s, lower=True)
+        self.chol = scipy.linalg.cholesky(s, lower=True)
 
     def __call__(self, num_draws=None, rng: Optional[np.random.Generator] = None):
         if rng is None:
-            rng = self.rng
+            rng = nr
         if num_draws is not None:
             b = rng.normal(size=(self.n, num_draws))
             return np.dot(self.chol, b).T
