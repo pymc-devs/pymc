@@ -767,9 +767,10 @@ class TestSamplePPC(SeededTest):
                 return_inferencedata=False,
                 compute_convergence_checks=False,
             )
-            ppc_trace = pm.trace_to_dataframe(
-                trace, varnames=[n for n in trace.varnames if n != "out"]
-            ).to_dict("records")
+            varnames = [v for v in trace.varnames if v != "out"]
+            ppc_trace = [
+                dict(zip(varnames, row)) for row in zip(*(trace.get_values(v) for v in varnames))
+            ]
             ppc = pm.sample_posterior_predictive(
                 return_inferencedata=False,
                 model=model,
