@@ -464,8 +464,8 @@ def align_minibatches(batches=None):
 
 
 class Data:
-    """Data container class that wraps the Aesara ``SharedVariable`` class
-    and lets the model be aware of its inputs and outputs.
+    """Data container class that wraps :func:`aesara.shared` and lets
+    the model be aware of its inputs and outputs.
 
     Parameters
     ----------
@@ -478,7 +478,7 @@ class Data:
         random variables). Use this when `value` is a pandas Series or DataFrame. The
         `dims` will then be the name of the Series / DataFrame's columns. See ArviZ
         documentation for more information about dimensions and coordinates:
-        https://arviz-devs.github.io/arviz/notebooks/Introduction.html
+        :ref:`arviz:quickstart`.
     export_index_as_coords: bool, optional, default=False
         If True, the `Data` container will try to infer what the coordinates should be
         if there is an index in `value`.
