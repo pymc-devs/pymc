@@ -1761,7 +1761,7 @@ class _OrderedProbit(Categorical):
     rv_op = categorical
 
     @classmethod
-    def dist(cls, eta, cutpoints, sigma = 1, *args, **kwargs):
+    def dist(cls, eta, cutpoints, sigma=1, *args, **kwargs):
         eta = at.as_tensor_variable(floatX(eta))
         cutpoints = at.as_tensor_variable(cutpoints)
 
