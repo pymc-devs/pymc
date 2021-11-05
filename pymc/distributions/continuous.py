@@ -1191,7 +1191,6 @@ class Beta(UnitContinuous):
         return super().dist([alpha, beta], **kwargs)
 
     def get_moment(rv, size, alpha, beta):
-        alpha, beta = at.broadcast_arrays(alpha, beta)
         mean = alpha / (alpha + beta)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
