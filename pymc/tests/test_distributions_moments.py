@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from pymc import Bernoulli, Flat, HalfFlat, Normal, TruncatedNormal, Uniform
-from pymc.distributions import HalfNormal
+from pymc.distributions import Beta, HalfNormal
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
