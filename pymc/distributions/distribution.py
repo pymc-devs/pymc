@@ -22,7 +22,6 @@ from functools import singledispatch
 from typing import Callable, Optional, Sequence
 
 import aesara
-import numpy as np
 
 from aeppl.logprob import _logprob
 from aesara.tensor.basic import as_tensor_variable
@@ -371,7 +370,7 @@ def get_moment(rv: TensorVariable) -> TensorVariable:
     for which the value is to be derived.
     """
     size = rv.owner.inputs[1]
-    return _get_moment(rv.owner.op, rv, size, *rv.owner.inputs[3:])
+    return _get_moment(rv.owner.op, rv, size, *rv.owner.inputs[3:]).astype(rv.dtype)
 
 
 class Discrete(Distribution):
