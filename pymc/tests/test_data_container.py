@@ -366,6 +366,19 @@ class TestData(SeededTest):
         assert "columns" in pmodel.coords
         assert pmodel.RV_dims == {"observations": ("rows", "columns")}
 
+    def test_data_kwargs(self):
+        strict_value = True
+        allow_downcast_value = False
+        with pm.Model():
+            data = pm.Data(
+                "data",
+                value=[[1.0], [2.0], [3.0]],
+                strict=strict_value,
+                allow_downcast=allow_downcast_value,
+            )
+        assert data.container.strict is strict_value
+        assert data.container.allow_downcast is allow_downcast_value
+
 
 def test_data_naming():
     """
