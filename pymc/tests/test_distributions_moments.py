@@ -8,7 +8,6 @@ from scipy import special
 
 import pymc as pm
 
-from pymc import Simulator
 from pymc.distributions import (
     AsymmetricLaplace,
     Bernoulli,
@@ -50,6 +49,7 @@ from pymc.distributions import (
     Poisson,
     PolyaGamma,
     Rice,
+    Simulator,
     SkewNormal,
     StudentT,
     Triangular,
@@ -62,11 +62,71 @@ from pymc.distributions import (
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
 )
-from pymc.distributions.distribution import get_moment
+from pymc.distributions.distribution import _get_moment, get_moment
 from pymc.distributions.multivariate import MvNormal
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
+
+
+def test_all_distributions_have_moments():
+    import pymc.distributions as dist_module
+
+    from pymc.distributions.distribution import DistributionMeta
+
+    dists = (getattr(dist_module, dist) for dist in dist_module.__all__)
+    dists = (dist for dist in dists if isinstance(dist, DistributionMeta))
+    missing_moments = {
+        dist for dist in dists if type(getattr(dist, "rv_op", None)) not in _get_moment.registry
+    }
+
+    # Ignore super classes
+    missing_moments -= {
+        dist_module.Distribution,
+        dist_module.Discrete,
+        dist_module.Continuous,
+        dist_module.NoDistribution,
+        dist_module.DensityDist,
+        dist_module.simulator.Simulator,
+    }
+
+    # Distributions that have not been refactored for V4 yet
+    not_implemented = {
+        dist_module.multivariate.LKJCorr,
+        dist_module.mixture.Mixture,
+        dist_module.mixture.MixtureSameFamily,
+        dist_module.mixture.NormalMixture,
+        dist_module.timeseries.AR,
+        dist_module.timeseries.AR1,
+        dist_module.timeseries.GARCH11,
+        dist_module.timeseries.GaussianRandomWalk,
+        dist_module.timeseries.MvGaussianRandomWalk,
+        dist_module.timeseries.MvStudentTRandomWalk,
+    }
+
+    # Distributions that have been refactored but don't yet have moments
+    not_implemented |= {
+        dist_module.discrete.DiscreteWeibull,
+        dist_module.multivariate.CAR,
+        dist_module.multivariate.DirichletMultinomial,
+        dist_module.multivariate.KroneckerNormal,
+        dist_module.multivariate.Wishart,
+    }
+
+    unexpected_implemented = not_implemented - missing_moments
+    if unexpected_implemented:
+        raise Exception(
+            f"Distributions {unexpected_implemented} have a `get_moment` implemented. "
+            "This test must be updated to expect this."
+        )
+
+    unexpected_not_implemented = missing_moments - not_implemented
+    if unexpected_not_implemented:
+        raise NotImplementedError(
+            f"Unexpected by this test, distributions {unexpected_not_implemented} do "
+            "not have a `get_moment` implementation. Either add a moment or filter "
+            "these distributions in this test."
+        )
 
 
 def test_rv_size_is_none():
