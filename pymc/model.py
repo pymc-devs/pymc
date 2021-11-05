@@ -1628,7 +1628,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return Series(
             {
                 rv.name: np.round(
-                    self.fn(logpt_sum(rv, getattr(rv.tag, "observations", None)))(point),
+                    np.asarray(
+                        self.fn(logpt_sum(rv, getattr(rv.tag, "observations", None)))(point)
+                    ),
                     round_vals,
                 )
                 for rv in self.basic_RVs
