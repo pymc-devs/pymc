@@ -157,4 +157,3 @@ def test_beta_moment(alpha, beta, size, expected):
     with Model() as model:
         Beta("x", alpha=alpha, beta=beta, size=size)
     assert_moment_is_expected(model, expected)
-
