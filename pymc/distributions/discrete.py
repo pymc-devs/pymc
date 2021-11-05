@@ -43,6 +43,7 @@ from pymc.distributions.dist_math import (
 )
 from pymc.distributions.distribution import Discrete
 from pymc.distributions.logprob import _logcdf
+from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.math import sigmoid
 
 __all__ = [
@@ -352,6 +353,11 @@ class Bernoulli(Discrete):
         p = at.as_tensor_variable(floatX(p))
         return super().dist([p], **kwargs)
 
+    def get_moment(rv, size, p):
+        if not rv_size_is_none(size):
+            p = at.full(size, p)
+        return at.switch(p < 0.5, 0, 1)
+
     def logp(value, p):
         r"""
         Calculate log-probability of Bernoulli distribution at specified value.
@@ -401,13 +407,6 @@ class Bernoulli(Discrete):
             0 <= p,
             p <= 1,
         )
-
-    def get_moment(value, size, p):
-        p = at.full(size, p)
-        return at.switch(p < 0.5, at.zeros_like(value), at.ones_like(value))
-
-    def _distr_parameters_for_repr(self):
-        return ["p"]
 
 
 class DiscreteWeibullRV(RandomVariable):
