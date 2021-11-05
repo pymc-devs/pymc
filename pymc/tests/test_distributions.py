@@ -2473,8 +2473,8 @@ class TestMatchesScipy:
         self.check_logp(
             OrderedProbit,
             Domain(range(n), dtype="int64", edges=(None, None)),
-            {"eta": Runif, "cutpoints": UnitSortedVector(n - 1), "sigma": Rplus},
-            lambda value, eta, cutpoints, sigma: orderedprobit_logpdf(value, eta, cutpoints, sigma),
+            {"eta": Runif, "cutpoints": UnitSortedVector(n - 1)},
+            lambda value, eta, cutpoints: orderedprobit_logpdf(value, eta, cutpoints),
         )
 
     @pytest.mark.xfail(reason="checkd tests have not been refactored")
