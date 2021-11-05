@@ -2473,8 +2473,8 @@ class TestMatchesScipy:
         self.check_logp(
             OrderedProbit,
             Domain(range(n), dtype="int64", edges=(None, None)),
-            {"eta": Runif, "cutpoints": UnitSortedVector(n - 1)},
-            lambda value, eta, cutpoints: orderedprobit_logpdf(value, eta, cutpoints),
+            {"eta": Runif, "cutpoints": UnitSortedVector(n - 1), "sigma": Rplus},
+            lambda value, eta, cutpoints, sigma: orderedprobit_logpdf(value, eta, cutpoints, sigma),
         )
 
     @pytest.mark.xfail(reason="checkd tests have not been refactored")
@@ -3132,11 +3132,11 @@ def test_ordered_logistic_probs():
 
 def test_ordered_probit_probs():
     with pm.Model() as m:
-        pm.OrderedProbit("op_p", cutpoints=np.array([-2, 0, 2]), eta=0)
-        pm.OrderedProbit("op_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, compute_p=False)
+        pm.OrderedProbit("op_p", cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1)
+        pm.OrderedProbit("op_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1, compute_p=False)
     assert len(m.deterministics) == 1
 
-    x = pm.OrderedProbit.dist(cutpoints=np.array([-2, 0, 2]), eta=0)
+    x = pm.OrderedProbit.dist(cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1)
     assert isinstance(x, TensorVariable)
 
 
