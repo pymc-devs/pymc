@@ -22,7 +22,7 @@ broadcasting rules to shape tuples, and also to samples
 drawn from probability distributions.
 
 The main challenge when broadcasting samples drawn from a generative model,
-is that each random variate has a core shape. When we draw many i.i.d samples
+is that each random variable has a core shape. When we draw many i.i.d samples
 from a given RV, for example if we ask for size_tuple i.i.d draws,
 the result usually is a size_tuple + RV_core_shape.
 In the generative model's hierarchy, the downstream RVs that are conditionally
