@@ -1313,6 +1313,12 @@ class Kumaraswamy(UnitContinuous):
 
         return super().dist([a, b], *args, **kwargs)
 
+    def get_moment(rv, size, a, b):
+        mean = at.exp(at.log(b) + at.gammaln(1 + 1 / a) + at.gammaln(b) - at.gammaln(1 + 1 / a + b))
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, a, b):
         """
         Calculate log-probability of Kumaraswamy distribution at specified value.

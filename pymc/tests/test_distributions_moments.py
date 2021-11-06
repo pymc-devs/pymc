@@ -2,7 +2,15 @@ import numpy as np
 import pytest
 
 from pymc import Bernoulli, Flat, HalfFlat, Normal, TruncatedNormal, Uniform
-from pymc.distributions import Beta, Cauchy, Exponential, HalfNormal, Laplace, StudentT
+from pymc.distributions import (
+    Beta,
+    Cauchy,
+    Exponential,
+    HalfNormal,
+    Kumaraswamy,
+    Laplace,
+    StudentT,
+)
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
@@ -216,4 +224,20 @@ def test_studentt_moment(mu, nu, sigma, size, expected):
 def test_cauchy_moment(alpha, beta, size, expected):
     with Model() as model:
         Cauchy("x", alpha=alpha, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "a, b, size, expected",
+    [
+        (1, 1, None, 0.5),
+        (1, 1, 5, np.full(5, 0.5)),
+        (1, np.arange(1, 6), None, 1 / np.arange(2, 7)),
+        (np.arange(1, 6), 1, None, np.arange(1, 6) / np.arange(2, 7)),
+        (1, np.arange(1, 6), (2, 5), np.full((2, 5), 1 / np.arange(2, 7))),
+    ],
+)
+def test_kumaraswamy_moment(a, b, size, expected):
+    with Model() as model:
+        Kumaraswamy("x", a=a, b=b, size=size)
     assert_moment_is_expected(model, expected)
