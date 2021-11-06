@@ -2031,7 +2031,7 @@ class Cauchy(Continuous):
     def get_moment(rv, size, alpha, beta):
         alpha, _ = at.broadcast_arrays(alpha, beta)
         if not rv_size_is_none(size):
-            alpha = at.full(size, median)
+            alpha = at.full(size, alpha)
         return alpha
 
     def logcdf(value, alpha, beta):
