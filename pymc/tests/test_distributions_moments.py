@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from pymc import Bernoulli, Flat, HalfFlat, Normal, TruncatedNormal, Uniform
-from pymc.distributions import HalfNormal
+from pymc.distributions import Beta, HalfNormal
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
@@ -141,4 +141,19 @@ def test_truncatednormal_moment(mu, sigma, lower, upper, size, expected):
 def test_bernoulli_moment(p, size, expected):
     with Model() as model:
         Bernoulli("x", p=p, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "alpha, beta, size, expected",
+    [
+        (1, 1, None, 0.5),
+        (1, 1, 5, np.full(5, 0.5)),
+        (1, np.arange(1, 6), None, 1 / np.arange(2, 7)),
+        (1, np.arange(1, 6), (2, 5), np.full((2, 5), 1 / np.arange(2, 7))),
+    ],
+)
+def test_beta_moment(alpha, beta, size, expected):
+    with Model() as model:
+        Beta("x", alpha=alpha, beta=beta, size=size)
     assert_moment_is_expected(model, expected)

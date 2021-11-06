@@ -1190,6 +1190,12 @@ class Beta(UnitContinuous):
 
         return super().dist([alpha, beta], **kwargs)
 
+    def get_moment(rv, size, alpha, beta):
+        mean = alpha / (alpha + beta)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     @classmethod
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sigma=None):
         if (alpha is not None) and (beta is not None):
