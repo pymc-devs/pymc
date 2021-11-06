@@ -6,6 +6,7 @@ from pymc.distributions import (
     Beta,
     Cauchy,
     Exponential,
+    Gamma,
     HalfCauchy,
     HalfNormal,
     Kumaraswamy,
@@ -281,4 +282,24 @@ def test_lognormal_moment(mu, sigma, size, expected):
 def test_halfcauchy_moment(beta, size, expected):
     with Model() as model:
         HalfCauchy("x", beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "alpha, beta, size, expected",
+    [
+        (1, 1, None, 1),
+        (1, 1, 5, np.full(5, 1)),
+        (np.arange(1, 6), 1, None, np.arange(1, 6)),
+        (
+            np.arange(1, 6),
+            2 * np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), 0.5),
+        ),
+    ],
+)
+def test_gamma_moment(alpha, beta, size, expected):
+    with Model() as model:
+        Gamma("x", alpha=alpha, beta=beta, size=size)
     assert_moment_is_expected(model, expected)

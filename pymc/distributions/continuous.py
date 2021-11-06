@@ -2226,6 +2226,13 @@ class Gamma(PositiveContinuous):
 
         return alpha, beta
 
+    def get_moment(rv, size, alpha, inv_beta):
+        # The Aesara `GammaRV` `Op` inverts the `beta` parameter itself
+        mean = alpha * inv_beta
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logcdf(value, alpha, inv_beta):
         """
         Compute the log of the cumulative distribution function for Gamma distribution
