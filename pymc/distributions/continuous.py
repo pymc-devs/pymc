@@ -1399,6 +1399,12 @@ class Exponential(PositiveContinuous):
         # Aesara exponential op is parametrized in terms of mu (1/lam)
         return super().dist([at.inv(lam)], **kwargs)
 
+    def get_moment(rv, size, lam):
+        mean = 1 / lam
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logcdf(value, mu):
         r"""
         Compute the log of cumulative distribution function for the Exponential distribution
