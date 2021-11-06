@@ -1761,16 +1761,16 @@ class _OrderedProbit(Categorical):
     rv_op = categorical
 
     @classmethod
-    def dist(cls, eta, cutpoints, *args, **kwargs):
+    def dist(cls, eta, cutpoints, sigma=1, *args, **kwargs):
         eta = at.as_tensor_variable(floatX(eta))
         cutpoints = at.as_tensor_variable(cutpoints)
 
         probits = at.shape_padright(eta) - cutpoints
         _log_p = at.concatenate(
             [
-                at.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
-                log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
-                at.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
+                at.shape_padright(normal_lccdf(0, sigma, probits[..., 0])),
+                log_diff_normal_cdf(0, sigma, probits[..., :-1], probits[..., 1:]),
+                at.shape_padright(normal_lcdf(0, sigma, probits[..., -1])),
             ],
             axis=-1,
         )
@@ -1816,12 +1816,12 @@ class OrderedProbit:
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
+    sigma: float, default 1.0
+         Standard deviation of the probit function.
     compute_p: boolean, default True
         Whether to compute and store in the trace the inferred probabilities of each categories,
         based on the cutpoints' values. Defaults to True.
         Might be useful to disable it if memory usage is of interest.
-    sigma: float
-         The standard deviation of probit function.
     Example
     --------
     .. code:: python
