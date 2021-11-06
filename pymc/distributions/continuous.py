@@ -1698,6 +1698,12 @@ class LogNormal(PositiveContinuous):
 
         return super().dist([mu, sigma], *args, **kwargs)
 
+    def get_moment(rv, size, mu, sigma):
+        mean = at.exp(mu + 0.5 * sigma ** 2)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logcdf(value, mu, sigma):
         """
         Compute the log of the cumulative distribution function for LogNormal distribution
