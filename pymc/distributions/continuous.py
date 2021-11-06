@@ -1405,8 +1405,7 @@ class Exponential(PositiveContinuous):
         # Aesara exponential op is parametrized in terms of mu (1/lam)
         return super().dist([at.inv(lam)], **kwargs)
 
-    def get_moment(rv, size, lam):
-        mu = 1 / lam
+    def get_moment(rv, size, mu):
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
         return mu
