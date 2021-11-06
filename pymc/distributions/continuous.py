@@ -2106,6 +2106,12 @@ class HalfCauchy(PositiveContinuous):
         assert_negative_support(beta, "beta", "HalfCauchy")
         return super().dist([0.0, beta], **kwargs)
 
+    def get_moment(rv, size, loc, beta):
+        mean = beta
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logcdf(value, loc, beta):
         """
         Compute the log of the cumulative distribution function for HalfCauchy distribution

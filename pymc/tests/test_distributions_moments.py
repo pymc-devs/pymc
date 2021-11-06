@@ -6,6 +6,7 @@ from pymc.distributions import (
     Beta,
     Cauchy,
     Exponential,
+    HalfCauchy,
     HalfNormal,
     Kumaraswamy,
     Laplace,
@@ -261,4 +262,23 @@ def test_kumaraswamy_moment(a, b, size, expected):
 def test_lognormal_moment(mu, sigma, size, expected):
     with Model() as model:
         LogNormal("x", mu=mu, sigma=sigma, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "beta, size, expected",
+    [
+        (1, None, 1),
+        (1, 5, np.ones(5)),
+        (np.arange(5), None, np.arange(5)),
+        (
+            np.arange(5),
+            (2, 5),
+            np.full((2, 5), np.arange(5)),
+        ),
+    ],
+)
+def test_halfcauchy_moment(beta, size, expected):
+    with Model() as model:
+        HalfCauchy("x", beta=beta, size=size)
     assert_moment_is_expected(model, expected)
