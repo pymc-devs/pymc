@@ -1481,6 +1481,12 @@ class Laplace(Continuous):
         assert_negative_support(b, "b", "Laplace")
         return super().dist([mu, b], *args, **kwargs)
 
+    def get_moment(rv, size, mu, b):
+        mu, _ = at.broadcast_arrays(mu, b)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     def logcdf(value, mu, b):
         """
         Compute the log of the cumulative distribution function for Laplace distribution
