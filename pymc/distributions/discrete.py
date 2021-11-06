@@ -1817,7 +1817,7 @@ class OrderedProbit:
         ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
     sigma: float, default 1.0
-         The standard deviation of probit function.
+         Standard deviation of the probit function.
     compute_p: boolean, default True
         Whether to compute and store in the trace the inferred probabilities of each categories,
         based on the cutpoints' values. Defaults to True.
