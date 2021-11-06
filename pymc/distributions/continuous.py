@@ -1400,10 +1400,10 @@ class Exponential(PositiveContinuous):
         return super().dist([at.inv(lam)], **kwargs)
 
     def get_moment(rv, size, lam):
-        mean = 1 / lam
+        mu = 1 / lam
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
-        return mean
+            mu = at.full(size, mu)
+        return mu
 
     def logcdf(value, mu):
         r"""
@@ -2019,11 +2019,14 @@ class Cauchy(Continuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
 
-        # median = alpha
-        # mode = alpha
-
         assert_negative_support(beta, "beta", "Cauchy")
         return super().dist([alpha, beta], **kwargs)
+
+    def get_moment(rv, size, alpha, beta):
+        alpha, _ = at.broadcast_arrays(alpha, beta)
+        if not rv_size_is_none(size):
+            alpha = at.full(size, median)
+        return alpha
 
     def logcdf(value, alpha, beta):
         """
