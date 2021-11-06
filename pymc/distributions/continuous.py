@@ -1313,6 +1313,12 @@ class Kumaraswamy(UnitContinuous):
 
         return super().dist([a, b], *args, **kwargs)
 
+    def get_moment(rv, size, a, b):
+        mean = at.exp(at.log(b) + at.gammaln(1 + 1 / a) + at.gammaln(b) - at.gammaln(1 + 1 / a + b))
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, a, b):
         """
         Calculate log-probability of Kumaraswamy distribution at specified value.
@@ -1399,6 +1405,11 @@ class Exponential(PositiveContinuous):
         # Aesara exponential op is parametrized in terms of mu (1/lam)
         return super().dist([at.inv(lam)], **kwargs)
 
+    def get_moment(rv, size, mu):
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     def logcdf(value, mu):
         r"""
         Compute the log of cumulative distribution function for the Exponential distribution
@@ -1474,6 +1485,12 @@ class Laplace(Continuous):
 
         assert_negative_support(b, "b", "Laplace")
         return super().dist([mu, b], *args, **kwargs)
+
+    def get_moment(rv, size, mu, b):
+        mu, _ = at.broadcast_arrays(mu, b)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
 
     def logcdf(value, mu, b):
         """
@@ -1800,6 +1817,12 @@ class StudentT(Continuous):
 
         return super().dist([nu, mu, sigma], **kwargs)
 
+    def get_moment(rv, size, nu, mu, sigma):
+        mu, _, _ = at.broadcast_arrays(mu, nu, sigma)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     def logp(value, nu, mu, sigma):
         """
         Calculate log-probability of StudentT distribution at specified value.
@@ -2001,11 +2024,14 @@ class Cauchy(Continuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
 
-        # median = alpha
-        # mode = alpha
-
         assert_negative_support(beta, "beta", "Cauchy")
         return super().dist([alpha, beta], **kwargs)
+
+    def get_moment(rv, size, alpha, beta):
+        alpha, _ = at.broadcast_arrays(alpha, beta)
+        if not rv_size_is_none(size):
+            alpha = at.full(size, alpha)
+        return alpha
 
     def logcdf(value, alpha, beta):
         """
