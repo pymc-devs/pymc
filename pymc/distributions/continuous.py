@@ -2514,6 +2514,12 @@ class Weibull(PositiveContinuous):
 
         return super().dist([alpha, beta], *args, **kwargs)
 
+    def get_moment(rv, size, alpha, beta):
+        mean = beta * at.gamma(1 + 1 / alpha)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logcdf(value, alpha, beta):
         r"""
         Compute the log of the cumulative distribution function for Weibull distribution

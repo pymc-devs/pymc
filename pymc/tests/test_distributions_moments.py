@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
 
+from scipy import special
+
 from pymc import Bernoulli, Flat, HalfFlat, Normal, TruncatedNormal, Uniform
 from pymc.distributions import (
     Beta,
@@ -13,6 +15,7 @@ from pymc.distributions import (
     Laplace,
     LogNormal,
     StudentT,
+    Weibull,
 )
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
@@ -302,4 +305,24 @@ def test_halfcauchy_moment(beta, size, expected):
 def test_gamma_moment(alpha, beta, size, expected):
     with Model() as model:
         Gamma("x", alpha=alpha, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "alpha, beta, size, expected",
+    [
+        (1, 1, None, 1),
+        (1, 1, 5, np.full(5, 1)),
+        (np.arange(1, 6), 1, None, special.gamma(1 + 1 / np.arange(1, 6))),
+        (
+            np.arange(1, 6),
+            np.arange(2, 7),
+            (2, 5),
+            np.full((2, 5), np.arange(2, 7) * special.gamma(1 + 1 / np.arange(1, 6))),
+        ),
+    ],
+)
+def test_weibull_moment(alpha, beta, size, expected):
+    with Model() as model:
+        Weibull("x", alpha=alpha, beta=beta, size=size)
     assert_moment_is_expected(model, expected)
