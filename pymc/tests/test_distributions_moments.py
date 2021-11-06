@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from pymc import Bernoulli, Flat, HalfFlat, Normal, TruncatedNormal, Uniform
-from pymc.distributions import Beta, Exponential, HalfNormal, Laplace
+from pymc.distributions import Beta, Exponential, HalfNormal, Laplace, StudentT
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
@@ -186,4 +186,19 @@ def test_exponential_moment(lam, size, expected):
 def test_laplace_moment(mu, b, size, expected):
     with Model() as model:
         Laplace("x", mu=mu, b=b, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, nu, sigma, size, expected",
+    [
+        (0, 1, 1, None, 0),
+        (0, np.ones(5), 1, None, np.zeros(5)),
+        (np.arange(5), 10, np.arange(1, 6), None, np.arange(5)),
+        (np.arange(5), 10, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(5))),
+    ],
+)
+def test_studentt_moment(mu, nu, sigma, size, expected):
+    with Model() as model:
+        StudentT("x", mu=mu, nu=nu, sigma=sigma, size=size)
     assert_moment_is_expected(model, expected)

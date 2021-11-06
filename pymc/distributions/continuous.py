@@ -1812,6 +1812,12 @@ class StudentT(Continuous):
 
         return super().dist([nu, mu, sigma], **kwargs)
 
+    def get_moment(rv, size, nu, mu, sigma):
+        mu, _, _ = at.broadcast_arrays(mu, nu, sigma)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     def logp(value, nu, mu, sigma):
         """
         Calculate log-probability of StudentT distribution at specified value.
