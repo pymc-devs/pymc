@@ -59,7 +59,7 @@ def test_missing_data():
         idata = pm.sample(random_seed=3415, chains=1)
 
 
-@pytest.xfail("random fn is not yet implemented")
+@pytest.mark.xfail("random fn is not yet implemented")
 def test_random_fn():
     X = np.random.normal(0, 1, size=(2, 50)).T
     Y = np.random.normal(0, 1, size=50)
