@@ -84,7 +84,7 @@ class TestUtils:
         rng = RandomState(12345)
         pred_first = pm.bart.utils.predict(self.idata, rng, X_new=self.X[:10])
 
-        assert_almost_equal(pred_first, pred_all[0, :10], decimal=4)
+        np.testing.assert_almost_equal(pred_first, pred_all[0, :10], decimal=4)
         assert pred_all.shape == (2, 50)
         assert pred_first.shape == (10,)
 
