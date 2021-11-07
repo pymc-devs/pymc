@@ -117,6 +117,12 @@ class Binomial(Discrete):
         # mode = at.cast(tround(n * p), self.dtype)
         return super().dist([n, p], **kwargs)
 
+    def get_moment(rv, size, n, p):
+        mean = n * p
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, n, p):
         r"""
         Calculate log-probability of Binomial distribution at specified value.
@@ -569,6 +575,11 @@ class Poisson(Discrete):
         mu = at.as_tensor_variable(floatX(mu))
         # mode = intX(at.floor(mu))
         return super().dist([mu], *args, **kwargs)
+
+    def get_moment(rv, size, mu):
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
 
     def logp(value, mu):
         r"""
