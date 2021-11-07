@@ -1074,7 +1074,7 @@ class TestSamplePriorPredictive(SeededTest):
         obs = np.random.normal(-1, 0.1, size=10)
         with pm.Model():
             mu = pm.Normal("mu", 0, 1)
-            sd = pm.Gamma("sd", 1, 2)
+            sd = pm.HalfNormal("sd", 1e-6)
             a = pm.DensityDist(
                 "a",
                 mu,
@@ -1084,7 +1084,7 @@ class TestSamplePriorPredictive(SeededTest):
             )
             prior = pm.sample_prior_predictive(return_inferencedata=False)
 
-        npt.assert_almost_equal(prior["a"].mean(), 0, decimal=1)
+        npt.assert_almost_equal((prior["a"] - prior["mu"][..., None]).mean(), 0, decimal=3)
 
     def test_shape_edgecase(self):
         with pm.Model():
