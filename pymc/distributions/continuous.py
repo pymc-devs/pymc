@@ -2637,6 +2637,12 @@ class HalfStudentT(PositiveContinuous):
         assert_negative_support(sigma, "sigma", "HalfStudentT")
 
         return super().dist([nu, sigma], *args, **kwargs)
+    
+    def get_moment(rv, size, nu, sigma):
+        median = at.as_tensor_varialbe(sigma)
+        if not rv_size_is_none(size):
+            median = at.full(size, median)
+        return median
 
     def logp(value, nu, sigma):
         """

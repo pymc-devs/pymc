@@ -16,6 +16,7 @@ from pymc.distributions import (
     LogNormal,
     StudentT,
     Weibull,
+    HalfStudentT,
 )
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
@@ -124,6 +125,26 @@ def test_normal_moment(mu, sigma, size, expected):
 def test_halfnormal_moment(sigma, size, expected):
     with Model() as model:
         HalfNormal("x", sigma=sigma, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, sigma, size, expected",
+    [
+        (0, 1, None, np.exp(0.5)),
+        (0, 1, 5, np.full(5, np.exp(0.5))),
+        (np.arange(5), 1, None, np.exp(np.arange(5) + 0.5)),
+        (
+            np.arange(5),
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), np.exp(np.arange(5) + 0.5 * np.arange(1, 6) ** 2)),
+        ),
+    ],
+)
+def test_halfstudentt_moment(nu, sigma, size, expected):
+    with Model() as model:
+        HalfStudentT("x", nu=nu, sigma=sigma, size=size)
     assert_moment_is_expected(model, expected)
 
 
