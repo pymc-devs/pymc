@@ -58,6 +58,14 @@ def test_missing_data():
         y = pm.Normal("y", mu, sigma, observed=Y)
         idata = pm.sample(random_seed=3415, chains=1)
 
+
+@pytest.xfail("random fn is not yet implemented")
+def test_random_fn():
+    X = np.random.normal(0, 1, size=(2, 50)).T
+    Y = np.random.normal(0, 1, size=50)
+
+    with pm.Model() as model:
+        mu = pm.BART("mu", X, Y, m=10)
     rng = RandomState(12345)
     pred_all = mu.owner.op.rng_fn(rng, size=2)
     rng = RandomState(12345)
