@@ -38,8 +38,6 @@ import aesara.tensor as at
 import numpy as np
 import scipy.sparse as sps
 
-from aeppl.transforms import RVTransform
-from aesara.compile.mode import Mode, get_mode
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph

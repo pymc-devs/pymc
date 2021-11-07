@@ -17,6 +17,7 @@ import contextlib
 from logging.handlers import BufferingHandler
 
 import aesara
+import numpy as np
 import numpy.random as nr
 
 from aesara.gradient import verify_grad as at_verify_grad
@@ -123,3 +124,11 @@ def verify_grad(op, pt, n_tests=2, rng=None, *args, **kwargs):
     if rng is None:
         rng = nr.RandomState(411342)
     at_verify_grad(op, pt, n_tests, rng, *args, **kwargs)
+
+
+def assert_random_state_equal(state1, state2):
+    for field1, field2 in zip(state1, state2):
+        if isinstance(field1, np.ndarray):
+            np.testing.assert_array_equal(field1, field2)
+        else:
+            assert field1 == field2

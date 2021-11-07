@@ -24,7 +24,7 @@ from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from aesara.graph.basic import Variable
+from aesara.graph.basic import Constant, Variable
 from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import change_rv_size, pandas_to_array
@@ -37,6 +37,7 @@ __all__ = [
     "get_broadcastable_dist_samples",
     "broadcast_distribution_samples",
     "broadcast_dist_samples_to",
+    "rv_size_is_none",
 ]
 
 
@@ -674,3 +675,8 @@ def maybe_resize(
         )
 
     return rv_out
+
+
+def rv_size_is_none(size: Variable) -> bool:
+    """Check wether an rv size is None (ie., at.Constant([]))"""
+    return isinstance(size, Constant) and size.data.size == 0

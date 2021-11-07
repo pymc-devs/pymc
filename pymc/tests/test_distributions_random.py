@@ -37,7 +37,6 @@ except ImportError:  # pragma: no cover
         raise RuntimeError("polyagamma package is not installed!")
 
 
-from aeppl.logprob import _logprob
 from scipy.special import expit
 
 import pymc as pm

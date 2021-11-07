@@ -269,10 +269,15 @@ def make_initial_point_expression(
         if strategy is None:
             strategy = default_strategy
 
-        if strategy == "moment":
-            value = get_moment(variable)
-        elif strategy == "prior":
-            value = variable
+        if isinstance(strategy, str):
+            if strategy == "moment":
+                value = get_moment(variable)
+            elif strategy == "prior":
+                value = variable
+            else:
+                raise ValueError(
+                    f'Invalid string strategy: {strategy}. It must be one of ["moment", "prior"]'
+                )
         else:
             value = at.as_tensor(strategy, dtype=variable.dtype).astype(variable.dtype)
 

@@ -628,6 +628,15 @@ def sample(
                     else:
                         stat["variable_inclusion"] = [np.vstack(stat["variable_inclusion"])]
 
+    if "bart_trees" in trace.stat_names:
+        for strace in trace._straces.values():
+            for stat in strace._stats:
+                if "bart_trees" in stat:
+                    if trace.nchains > 1:
+                        stat["bart_trees"] = np.vstack(stat["bart_trees"])
+                    else:
+                        stat["bart_trees"] = [np.vstack(stat["bart_trees"])]
+
     n_chains = len(trace.chains)
     _log.info(
         f'Sampling {n_chains} chain{"s" if n_chains > 1 else ""} for {n_tune:_d} tune and {n_draws:_d} draw iterations '

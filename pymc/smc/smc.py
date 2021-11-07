@@ -126,7 +126,7 @@ class SMC_KERNEL(ABC):
         draws=2000,
         start=None,
         model=None,
-        random_seed=-1,
+        random_seed=None,
         threshold=0.5,
     ):
         """
@@ -140,6 +140,8 @@ class SMC_KERNEL(ABC):
             Starting point in parameter space. It should be a list of dict with length `chains`.
             When None (default) the starting point is sampled from the prior distribution.
         model: Model (optional if in ``with`` context)).
+        random_seed: int
+            Value used to initialize the random number generator.
         threshold: float
             Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
             the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
@@ -151,10 +153,7 @@ class SMC_KERNEL(ABC):
         self.start = start
         self.threshold = threshold
         self.model = model
-        self.random_seed = random_seed
-
-        if self.random_seed != -1:
-            np.random.seed(self.random_seed)
+        self.rng = np.random.default_rng(seed=random_seed)
 
         self.model = modelcontext(model)
         self.variables = inputvars(self.model.value_vars)
@@ -190,7 +189,7 @@ class SMC_KERNEL(ABC):
 
         """
         # Create dictionary that stores original variables shape and size
-        initial_point = self.model.initial_point
+        initial_point = self.model.recompute_initial_point(seed=self.rng.integers(2 ** 30))
         for v in self.variables:
             self.var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
 
@@ -262,7 +261,7 @@ class SMC_KERNEL(ABC):
 
     def resample(self):
         """Resample particles based on importance weights"""
-        self.resampling_indexes = np.random.choice(
+        self.resampling_indexes = self.rng.choice(
             np.arange(self.draws), size=self.draws, p=self.weights
         )
 
@@ -380,31 +379,33 @@ class IMH(SMC_KERNEL):
     def mutate(self):
         """Independent Metropolis-Hastings perturbation."""
         ac_ = np.empty((self.n_steps, self.draws))
+        log_R = np.log(self.rng.random((self.n_steps, self.draws)))
 
-        cov = self.proposal_dist.cov
-        log_R = np.log(np.random.rand(self.n_steps, self.draws))
+        # The proposal is independent from the current point.
+        # We have to take that into account to compute the Metropolis-Hastings acceptance
+        # We first compute the logp of proposing a transition to the current points.
+        # This variable is updated at the end of the loop with the entries from the accepted
+        # transitions, which is equivalent to recomputing it in every iteration of the loop.
+        backward_logp = self.proposal_dist.logpdf(self.tempered_posterior)
         for n_step in range(self.n_steps):
-            # The proposal is independent from the current point.
-            # We have to take that into account to compute the Metropolis-Hastings acceptance
-            proposal = floatX(self.proposal_dist.rvs(size=self.draws))
+            proposal = floatX(self.proposal_dist.rvs(size=self.draws, random_state=self.rng))
             proposal = proposal.reshape(len(proposal), -1)
-            # To do that we compute the logp of moving to a new point
-            forward = self.proposal_dist.logpdf(proposal)
-            # And to going back from that new point
-            backward = multivariate_normal(proposal.mean(axis=0), cov).logpdf(
-                self.tempered_posterior
-            )
+            # We then compute the logp of proposing a transition to the new points
+            forward_logp = self.proposal_dist.logpdf(proposal)
+
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])
             proposal_logp = pl + ll * self.beta
             accepted = log_R[n_step] < (
-                (proposal_logp + backward) - (self.tempered_posterior_logp + forward)
+                (proposal_logp + backward_logp) - (self.tempered_posterior_logp + forward_logp)
             )
+
             ac_[n_step] = accepted
             self.tempered_posterior[accepted] = proposal[accepted]
             self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
+            backward_logp[accepted] = forward_logp[accepted]
 
         self.acc_rate = np.mean(ac_)
 
@@ -497,11 +498,12 @@ class MH(SMC_KERNEL):
         """Metropolis-Hastings perturbation."""
         ac_ = np.empty((self.n_steps, self.draws))
 
-        log_R = np.log(np.random.rand(self.n_steps, self.draws))
+        log_R = np.log(self.rng.random((self.n_steps, self.draws)))
         for n_step in range(self.n_steps):
             proposal = floatX(
                 self.tempered_posterior
-                + self.proposal_dist(num_draws=self.draws) * self.proposal_scales[:, None]
+                + self.proposal_dist(num_draws=self.draws, rng=self.rng)
+                * self.proposal_scales[:, None]
             )
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])

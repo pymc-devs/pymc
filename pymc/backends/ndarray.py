@@ -16,7 +16,6 @@
 
 Store sampling values in memory as a NumPy array.
 """
-import glob
 import json
 import os
 import shutil

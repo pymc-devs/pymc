@@ -13,6 +13,7 @@
 #   limitations under the License.
 import aesara
 import aesara.tensor as at
+import cloudpickle
 import numpy as np
 import pytest
 
@@ -48,6 +49,12 @@ class TestInitvalAssignment:
                 assert initial_point["u_interval__"] == transform_fwd(rv, 0.75)
                 assert not hasattr(rv.tag, "test_value")
         pass
+
+    def test_valid_string_strategy(self):
+        with pm.Model() as pmodel:
+            pm.Uniform("x", 0, 1, size=2, initval="unknown")
+            with pytest.raises(ValueError, match="Invalid string strategy: unknown"):
+                pmodel.recompute_initial_point(seed=0)
 
 
 class TestInitvalEvaluation:
@@ -218,3 +225,12 @@ class TestMoment:
             assert not hasattr(rv.tag, "test_value")
             assert tuple(get_moment(rv).shape.eval()) == (4, 3)
         pass
+
+
+def test_pickling_issue_5090():
+    with pm.Model() as model:
+        pm.Normal("x", initval="prior")
+    ip_before = model.recompute_initial_point(seed=5090)
+    model = cloudpickle.loads(cloudpickle.dumps(model))
+    ip_after = model.recompute_initial_point(seed=5090)
+    assert ip_before["x"] == ip_after["x"]

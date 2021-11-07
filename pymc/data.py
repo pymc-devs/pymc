@@ -464,8 +464,8 @@ def align_minibatches(batches=None):
 
 
 class Data:
-    """Data container class that wraps the Aesara ``SharedVariable`` class
-    and lets the model be aware of its inputs and outputs.
+    """Data container class that wraps :func:`aesara.shared` and lets
+    the model be aware of its inputs and outputs.
 
     Parameters
     ----------
@@ -478,10 +478,12 @@ class Data:
         random variables). Use this when `value` is a pandas Series or DataFrame. The
         `dims` will then be the name of the Series / DataFrame's columns. See ArviZ
         documentation for more information about dimensions and coordinates:
-        https://arviz-devs.github.io/arviz/notebooks/Introduction.html
+        :ref:`arviz:quickstart`.
     export_index_as_coords: bool, optional, default=False
         If True, the `Data` container will try to infer what the coordinates should be
         if there is an index in `value`.
+    **kwargs: dict, optional
+        Extra arguments passed to :func:`aesara.shared`.
 
     Examples
     --------
@@ -512,7 +514,15 @@ class Data:
     https://docs.pymc.io/notebooks/data_container.html
     """
 
-    def __new__(self, name, value, *, dims=None, export_index_as_coords=False):
+    def __new__(
+        self,
+        name,
+        value,
+        *,
+        dims=None,
+        export_index_as_coords=False,
+        **kwargs,
+    ):
         if isinstance(value, list):
             value = np.array(value)
 
@@ -528,7 +538,7 @@ class Data:
 
         # `pandas_to_array` takes care of parameter `value` and
         # transforms it to something digestible for pymc
-        shared_object = aesara.shared(pandas_to_array(value), name)
+        shared_object = aesara.shared(pandas_to_array(value), name, **kwargs)
 
         if isinstance(dims, str):
             dims = (dims,)

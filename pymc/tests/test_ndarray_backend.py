@@ -16,8 +16,6 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-import pymc as pm
-
 from pymc.backends import base, ndarray
 from pymc.tests import backend_fixtures as bf
 

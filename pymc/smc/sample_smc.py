@@ -42,7 +42,7 @@ def sample_smc(
     *,
     start=None,
     model=None,
-    random_seed=-1,
+    random_seed=None,
     chains=None,
     cores=None,
     compute_convergence_checks=True,
@@ -191,15 +191,19 @@ def sample_smc(
         cores = min(chains, cores)
 
     if random_seed == -1:
+        raise FutureWarning(
+            f"random_seed should be a non-negative integer or None, got: {random_seed}"
+            "This will raise a ValueError in the Future"
+        )
         random_seed = None
-    if chains == 1 and isinstance(random_seed, int):
-        random_seed = [random_seed]
-    if random_seed is None or isinstance(random_seed, int):
-        if random_seed is not None:
-            np.random.seed(random_seed)
-        random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
-    if not isinstance(random_seed, Iterable):
-        raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
+    if isinstance(random_seed, int) or random_seed is None:
+        rng = np.random.default_rng(seed=random_seed)
+        random_seed = list(rng.integers(2 ** 30, size=chains))
+    elif isinstance(random_seed, Iterable):
+        if len(random_seed) != chains:
+            raise ValueError(f"Length of seeds ({len(seeds)}) must match number of chains {chains}")
+    else:
+        raise TypeError("Invalid value for `random_seed`. Must be tuple, list, int or None")
 
     model = modelcontext(model)
 

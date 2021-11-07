@@ -43,6 +43,7 @@ from pymc.distributions.dist_math import (
 )
 from pymc.distributions.distribution import Discrete
 from pymc.distributions.logprob import _logcdf
+from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.math import sigmoid
 
 __all__ = [
@@ -352,6 +353,11 @@ class Bernoulli(Discrete):
         p = at.as_tensor_variable(floatX(p))
         return super().dist([p], **kwargs)
 
+    def get_moment(rv, size, p):
+        if not rv_size_is_none(size):
+            p = at.full(size, p)
+        return at.switch(p < 0.5, 0, 1)
+
     def logp(value, p):
         r"""
         Calculate log-probability of Bernoulli distribution at specified value.
@@ -401,13 +407,6 @@ class Bernoulli(Discrete):
             0 <= p,
             p <= 1,
         )
-
-    def get_moment(value, size, p):
-        p = at.full(size, p)
-        return at.switch(p < 0.5, at.zeros_like(value), at.ones_like(value))
-
-    def _distr_parameters_for_repr(self):
-        return ["p"]
 
 
 class DiscreteWeibullRV(RandomVariable):
@@ -1762,16 +1761,16 @@ class _OrderedProbit(Categorical):
     rv_op = categorical
 
     @classmethod
-    def dist(cls, eta, cutpoints, *args, **kwargs):
+    def dist(cls, eta, cutpoints, sigma=1, *args, **kwargs):
         eta = at.as_tensor_variable(floatX(eta))
         cutpoints = at.as_tensor_variable(cutpoints)
 
         probits = at.shape_padright(eta) - cutpoints
         _log_p = at.concatenate(
             [
-                at.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
-                log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
-                at.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
+                at.shape_padright(normal_lccdf(0, sigma, probits[..., 0])),
+                log_diff_normal_cdf(0, sigma, probits[..., :-1], probits[..., 1:]),
+                at.shape_padright(normal_lcdf(0, sigma, probits[..., -1])),
             ],
             axis=-1,
         )
@@ -1817,12 +1816,12 @@ class OrderedProbit:
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
+    sigma: float, default 1.0
+         Standard deviation of the probit function.
     compute_p: boolean, default True
         Whether to compute and store in the trace the inferred probabilities of each categories,
         based on the cutpoints' values. Defaults to True.
         Might be useful to disable it if memory usage is of interest.
-    sigma: float
-         The standard deviation of probit function.
     Example
     --------
     .. code:: python
