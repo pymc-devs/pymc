@@ -343,17 +343,18 @@ def test_weibull_moment(alpha, beta, size, expected):
         Weibull("x", alpha=alpha, beta=beta, size=size)
     assert_moment_is_expected(model, expected)
 
+
 @pytest.mark.parametrize(
     "mu, s, size, expected",
     [
         (1, 1, None, 1),
         (1, 1, 5, np.full(5, 1)),
-        (np.arange(1, 6), np.arange(1, 6), None, np.arange(1, 6)),
+        (2, np.arange(1, 6), None, np.full(5, 2)),
         (
             np.arange(1, 6),
             np.arange(1, 6),
             (2, 5),
-            np.full((2, 5), np.arange(1,6)),
+            np.full((2, 5), np.arange(1, 6)),
         ),
     ],
 )
