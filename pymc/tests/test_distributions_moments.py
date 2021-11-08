@@ -7,6 +7,7 @@ from pymc import Bernoulli, Flat, HalfFlat, Normal, TruncatedNormal, Uniform
 from pymc.distributions import (
     Beta,
     Cauchy,
+    Constant,
     ChiSquared,
     Exponential,
     Gamma,
@@ -340,4 +341,22 @@ def test_gamma_moment(alpha, beta, size, expected):
 def test_weibull_moment(alpha, beta, size, expected):
     with Model() as model:
         Weibull("x", alpha=alpha, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+@pytest.mark.parametrize(
+    "c, size, expected",
+    [
+        (1, None, 1),
+        (1, 5, np.full(5, 1)),
+        (np.arange(1, 6), None, np.arange(1, 6)),
+        (
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), np.arange(1,6)),
+        ),
+    ],
+)
+def test_constant_moment(c, size, expected):
+    with Model() as model:
+        Constant("x", c=c, size=size)
     assert_moment_is_expected(model, expected)
