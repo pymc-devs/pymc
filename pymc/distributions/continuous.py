@@ -3388,6 +3388,12 @@ class Logistic(Continuous):
         s = at.as_tensor_variable(floatX(s))
         return super().dist([mu, s], *args, **kwargs)
 
+    def get_moment(rv, size, mu, s):
+        mu, _ = at.broadcast_arrays(mu, s)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     def logcdf(value, mu, s):
         r"""
         Compute the log of the cumulative distribution function for Logistic distribution

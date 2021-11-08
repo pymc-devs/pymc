@@ -17,6 +17,7 @@ from pymc.distributions import (
     HalfStudentT,
     Kumaraswamy,
     Laplace,
+    Logistic,
     LogNormal,
     Poisson,
     StudentT,
@@ -412,4 +413,24 @@ def test_poisson_moment(mu, size, expected):
 def test_constant_moment(c, size, expected):
     with Model() as model:
         Constant("x", c=c, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, s, size, expected",
+    [
+        (1, 1, None, 1),
+        (1, 1, 5, np.full(5, 1)),
+        (2, np.arange(1, 6), None, np.full(5, 2)),
+        (
+            np.arange(1, 6),
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), np.arange(1, 6)),
+        ),
+    ],
+)
+def test_logistic_moment(mu, s, size, expected):
+    with Model() as model:
+        Logistic("x", mu=mu, s=s, size=size)
     assert_moment_is_expected(model, expected)
