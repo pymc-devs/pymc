@@ -64,7 +64,7 @@ def replace_with_values(vars_needed, replacements=None, model=None):
             inputs.append(rv)
             input_names.append(rv.name)
 
-    # then deterministic, no inputs are required, can eval and return
+    # Then it's deterministic, no inputs are required, can eval and return
     if len(inputs) == 0:
         return tuple(v.eval() for v in vars_needed)
 
@@ -76,11 +76,11 @@ def replace_with_values(vars_needed, replacements=None, model=None):
         on_unused_input="ignore",
     )
 
-    # remove unneeded inputs
+    # Remove unneeded inputs
     replacements = {name: val for name, val in replacements.items() if name in input_names}
     missing = set(input_names) - set(replacements.keys())
 
-    # error if more inputs needed
+    # Error if more inputs are needed
     if len(missing) > 0:
         missing_str = ", ".join(missing)
         raise ValueError(f"Values for {missing_str} must be included in `replacements`.")
