@@ -383,7 +383,8 @@ def test_poisson_moment(mu, size, expected):
     with Model() as model:
         Poisson("x", mu=mu, size=size)
     assert_moment_is_expected(model, expected)
-  
+
+
 @pytest.mark.parametrize(
     "mu, s, size, expected",
     [
