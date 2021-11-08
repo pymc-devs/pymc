@@ -12,6 +12,7 @@ from pymc.distributions import (
     Constant,
     Exponential,
     Gamma,
+    Geometric,
     HalfCauchy,
     HalfNormal,
     HalfStudentT,
@@ -481,4 +482,19 @@ def test_zero_inflated_binomial_moment(psi, n, p, size, expected):
 def test_logistic_moment(mu, s, size, expected):
     with Model() as model:
         Logistic("x", mu=mu, s=s, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "p, size, expected",
+    [
+        (0.5, None, 2),
+        (0.2, 5, 5 * np.ones(5)),
+        (np.linspace(0.25, 1, 4), None, [4, 2, 1, 1]),
+        (np.linspace(0.25, 1, 4), (2, 4), np.full((2, 4), [4, 2, 1, 1])),
+    ],
+)
+def test_geometric_moment(p, size, expected):
+    with Model() as model:
+        Geometric("x", p=p, size=size)
     assert_moment_is_expected(model, expected)
