@@ -2635,11 +2635,10 @@ class HalfStudentT(PositiveContinuous):
         return super().dist([nu, sigma], *args, **kwargs)
     
     def get_moment(rv, size, nu, sigma):
-        median = at.as_tensor_variable(sigma)
         sigma, _ = at.broadcast_arrays(sigma, nu)
         if not rv_size_is_none(size):
-            median = at.full(size, median)
-        return median
+            sigma = at.full(size, sigma)
+        return sigma
 
     def logp(value, nu, sigma):
         """
