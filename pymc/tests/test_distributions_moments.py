@@ -348,7 +348,7 @@ def test_weibull_moment(alpha, beta, size, expected):
     [
         (1, 1, None, 1),
         (1, 1, 5, np.full(5, 1)),
-        (np.arange(1, 6), np.arange(1, 6), None, np.arange(1, 6)),
+        (2, np.arange(1, 6), None, np.full(5, 2)),
         (
             np.arange(1, 6),
             np.arange(1, 6),
