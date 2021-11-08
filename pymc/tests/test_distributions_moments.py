@@ -13,6 +13,7 @@ from pymc.distributions import (
     Gamma,
     HalfCauchy,
     HalfNormal,
+    HalfStudentT,
     Kumaraswamy,
     Laplace,
     LogNormal,
@@ -127,6 +128,21 @@ def test_normal_moment(mu, sigma, size, expected):
 def test_halfnormal_moment(sigma, size, expected):
     with Model() as model:
         HalfNormal("x", sigma=sigma, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "nu, sigma, size, expected",
+    [
+        (1, 1, None, 1),
+        (1, 1, 5, np.ones(5)),
+        (1, np.arange(5), (2, 5), np.full((2, 5), np.arange(5))),
+        (np.arange(1, 6), 1, None, np.full(5, 1)),
+    ],
+)
+def test_halfstudentt_moment(nu, sigma, size, expected):
+    with Model() as model:
+        HalfStudentT("x", nu=nu, sigma=sigma, size=size)
     assert_moment_is_expected(model, expected)
 
 
