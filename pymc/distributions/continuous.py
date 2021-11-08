@@ -2427,6 +2427,12 @@ class ChiSquared(PositiveContinuous):
         nu = at.as_tensor_variable(floatX(nu))
         return super().dist([nu], *args, **kwargs)
 
+    def get_moment(rv, size, nu):
+        moment = nu
+        if not rv_size_is_none(size):
+            moment = at.full(size, moment)
+        return moment
+
     def logcdf(value, nu):
         """
         Compute the log of the cumulative distribution function for ChiSquared distribution
