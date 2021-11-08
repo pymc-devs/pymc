@@ -893,7 +893,6 @@ def test_rowwise_approx(three_var_model, parametric_grouped_approxes):
             pytest.skip("Does not support rowwise grouping")
 
 
-@pytest.mark.xfail(reason="https://github.com/pymc-devs/pymc/issues/5090")
 def test_pickle_approx(three_var_approx):
     import cloudpickle
 
