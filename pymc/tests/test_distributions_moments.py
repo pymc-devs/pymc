@@ -8,8 +8,8 @@ from pymc.distributions import (
     Beta,
     Binomial,
     Cauchy,
-    Constant,
     ChiSquared,
+    Constant,
     Exponential,
     Gamma,
     HalfCauchy,
@@ -354,7 +354,7 @@ def test_weibull_moment(alpha, beta, size, expected):
         Weibull("x", alpha=alpha, beta=beta, size=size)
     assert_moment_is_expected(model, expected)
 
-    
+
 @pytest.mark.parametrize(
     "n, p, size, expected",
     [
@@ -383,7 +383,8 @@ def test_poisson_moment(mu, size, expected):
     with Model() as model:
         Poisson("x", mu=mu, size=size)
     assert_moment_is_expected(model, expected)
-    
+
+
 @pytest.mark.parametrize(
     "c, size, expected",
     [
@@ -396,4 +397,3 @@ def test_constant_moment(c, size, expected):
     with Model() as model:
         Constant("x", c=c, size=size)
     assert_moment_is_expected(model, expected)
-    

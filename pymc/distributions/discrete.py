@@ -1221,7 +1221,7 @@ class Constant(Discrete):
         if not rv_size_is_none(size):
             c = at.full(size, c)
         return c
-    
+
     def logp(value, c):
         r"""
         Calculate log-probability of Constant distribution at specified value.
