@@ -155,6 +155,7 @@ jobs:
           - |
             pymc/tests/test_initial_point.py
             pymc/tests/test_distributions_random.py
+            pymc/tests/test_distributions_moments.py
             pymc/tests/test_distributions_timeseries.py
           - |
             pymc/tests/test_parallel_sampling.py

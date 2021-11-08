@@ -85,6 +85,7 @@ from pymc.distributions.dist_math import (
     zvalue,
 )
 from pymc.distributions.distribution import Continuous
+from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.math import logdiffexp, logit
 from pymc.util import UNSET
 
@@ -290,6 +291,13 @@ class Uniform(BoundedContinuous):
         upper = at.as_tensor_variable(floatX(upper))
         return super().dist([lower, upper], **kwargs)
 
+    def get_moment(rv, size, lower, upper):
+        lower, upper = at.broadcast_arrays(lower, upper)
+        moment = (lower + upper) / 2
+        if not rv_size_is_none(size):
+            moment = at.full(size, moment)
+        return moment
+
     def logcdf(value, lower, upper):
         """
         Compute the log of the cumulative distribution function for Uniform distribution
@@ -314,11 +322,6 @@ class Uniform(BoundedContinuous):
                 0,
             ),
         )
-
-    def get_moment(value, size, lower, upper):
-        lower = at.full(size, lower, dtype=aesara.config.floatX)
-        upper = at.full(size, upper, dtype=aesara.config.floatX)
-        return (lower + upper) / 2
 
 
 class FlatRV(RandomVariable):
@@ -353,8 +356,8 @@ class Flat(Continuous):
         res = super().dist([], size=size, **kwargs)
         return res
 
-    def get_moment(rv, size, *rv_inputs):
-        return at.zeros(size, dtype=aesara.config.floatX)
+    def get_moment(rv, size):
+        return at.zeros(size)
 
     def logp(value):
         """
@@ -421,8 +424,8 @@ class HalfFlat(PositiveContinuous):
         res = super().dist([], size=size, **kwargs)
         return res
 
-    def get_moment(value_var, size, *rv_inputs):
-        return at.ones(size, dtype=aesara.config.floatX)
+    def get_moment(rv, size):
+        return at.ones(size)
 
     def logp(value):
         """
@@ -540,6 +543,12 @@ class Normal(Continuous):
 
         return super().dist([mu, sigma], **kwargs)
 
+    def get_moment(rv, size, mu, sigma):
+        mu, _ = at.broadcast_arrays(mu, sigma)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     def logcdf(value, mu, sigma):
         """
         Compute the log of the cumulative distribution function for Normal distribution
@@ -559,9 +568,6 @@ class Normal(Continuous):
             normal_lcdf(mu, sigma, value),
             0 < sigma,
         )
-
-    def get_moment(value_var, size, mu, sigma):
-        return at.full(size, mu, dtype=aesara.config.floatX)
 
 
 class TruncatedNormalRV(RandomVariable):
@@ -691,18 +697,34 @@ class TruncatedNormal(BoundedContinuous):
         assert_negative_support(sigma, "sigma", "TruncatedNormal")
         assert_negative_support(tau, "tau", "TruncatedNormal")
 
-        # if lower is None and upper is None:
-        #     initval = mu
-        # elif lower is None and upper is not None:
-        #     initval = upper - 1.0
-        # elif lower is not None and upper is None:
-        #     initval = lower + 1.0
-        # else:
-        #     initval = (lower + upper) / 2
-
         lower = at.as_tensor_variable(floatX(lower)) if lower is not None else at.constant(-np.inf)
         upper = at.as_tensor_variable(floatX(upper)) if upper is not None else at.constant(np.inf)
         return super().dist([mu, sigma, lower, upper], **kwargs)
+
+    def get_moment(rv, size, mu, sigma, lower, upper):
+        mu, _, lower, upper = at.broadcast_arrays(mu, sigma, lower, upper)
+        moment = at.switch(
+            at.isinf(lower),
+            at.switch(
+                at.isinf(upper),
+                # lower = -inf, upper = inf
+                mu,
+                # lower = -inf, upper = x
+                upper - 1,
+            ),
+            at.switch(
+                at.isinf(upper),
+                # lower = x, upper = inf
+                lower + 1,
+                # lower = x, upper = x
+                (lower + upper) / 2,
+            ),
+        )
+
+        if not rv_size_is_none(size):
+            moment = at.full(size, moment)
+
+        return moment
 
     def logp(
         value,
@@ -828,6 +850,12 @@ class HalfNormal(PositiveContinuous):
 
         return super().dist([0.0, sigma], **kwargs)
 
+    def get_moment(rv, size, loc, sigma):
+        moment = loc + sigma
+        if not rv_size_is_none(size):
+            moment = at.full(size, moment)
+        return moment
+
     def logcdf(value, loc, sigma):
         """
         Compute the log of the cumulative distribution function for HalfNormal distribution
@@ -849,9 +877,6 @@ class HalfNormal(PositiveContinuous):
             loc <= value,
             0 < sigma,
         )
-
-    def _distr_parameters_for_repr(self):
-        return ["sigma"]
 
 
 class WaldRV(RandomVariable):
@@ -1165,6 +1190,12 @@ class Beta(UnitContinuous):
 
         return super().dist([alpha, beta], **kwargs)
 
+    def get_moment(rv, size, alpha, beta):
+        mean = alpha / (alpha + beta)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     @classmethod
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sigma=None):
         if (alpha is not None) and (beta is not None):
@@ -1282,6 +1313,12 @@ class Kumaraswamy(UnitContinuous):
 
         return super().dist([a, b], *args, **kwargs)
 
+    def get_moment(rv, size, a, b):
+        mean = at.exp(at.log(b) + at.gammaln(1 + 1 / a) + at.gammaln(b) - at.gammaln(1 + 1 / a + b))
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, a, b):
         """
         Calculate log-probability of Kumaraswamy distribution at specified value.
@@ -1368,6 +1405,11 @@ class Exponential(PositiveContinuous):
         # Aesara exponential op is parametrized in terms of mu (1/lam)
         return super().dist([at.inv(lam)], **kwargs)
 
+    def get_moment(rv, size, mu):
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     def logcdf(value, mu):
         r"""
         Compute the log of cumulative distribution function for the Exponential distribution
@@ -1443,6 +1485,12 @@ class Laplace(Continuous):
 
         assert_negative_support(b, "b", "Laplace")
         return super().dist([mu, b], *args, **kwargs)
+
+    def get_moment(rv, size, mu, b):
+        mu, _ = at.broadcast_arrays(mu, b)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
 
     def logcdf(value, mu, b):
         """
@@ -1650,6 +1698,12 @@ class LogNormal(PositiveContinuous):
 
         return super().dist([mu, sigma], *args, **kwargs)
 
+    def get_moment(rv, size, mu, sigma):
+        mean = at.exp(mu + 0.5 * sigma ** 2)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logcdf(value, mu, sigma):
         """
         Compute the log of the cumulative distribution function for LogNormal distribution
@@ -1768,6 +1822,12 @@ class StudentT(Continuous):
         assert_negative_support(nu, "nu", "StudentT")
 
         return super().dist([nu, mu, sigma], **kwargs)
+
+    def get_moment(rv, size, nu, mu, sigma):
+        mu, _, _ = at.broadcast_arrays(mu, nu, sigma)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
 
     def logp(value, nu, mu, sigma):
         """
@@ -1970,11 +2030,14 @@ class Cauchy(Continuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
 
-        # median = alpha
-        # mode = alpha
-
         assert_negative_support(beta, "beta", "Cauchy")
         return super().dist([alpha, beta], **kwargs)
+
+    def get_moment(rv, size, alpha, beta):
+        alpha, _ = at.broadcast_arrays(alpha, beta)
+        if not rv_size_is_none(size):
+            alpha = at.full(size, alpha)
+        return alpha
 
     def logcdf(value, alpha, beta):
         """
@@ -2042,6 +2105,12 @@ class HalfCauchy(PositiveContinuous):
         beta = at.as_tensor_variable(floatX(beta))
         assert_negative_support(beta, "beta", "HalfCauchy")
         return super().dist([0.0, beta], **kwargs)
+
+    def get_moment(rv, size, loc, beta):
+        mean = beta
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logcdf(value, loc, beta):
         """
@@ -2156,6 +2225,13 @@ class Gamma(PositiveContinuous):
             )
 
         return alpha, beta
+
+    def get_moment(rv, size, alpha, inv_beta):
+        # The Aesara `GammaRV` `Op` inverts the `beta` parameter itself
+        mean = alpha * inv_beta
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logcdf(value, alpha, inv_beta):
         """
@@ -2437,6 +2513,12 @@ class Weibull(PositiveContinuous):
         assert_negative_support(beta, "beta", "Weibull")
 
         return super().dist([alpha, beta], *args, **kwargs)
+
+    def get_moment(rv, size, alpha, beta):
+        mean = beta * at.gamma(1 + 1 / alpha)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logcdf(value, alpha, beta):
         r"""

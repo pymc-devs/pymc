@@ -45,7 +45,8 @@ class Tree:
         Identifier used to get the previous tree in the ParticleGibbs algorithm used in BART.
     num_observations : int
         Number of observations used to fit BART.
-
+    m : int
+        Number of trees
 
     Parameters
     ----------
@@ -53,13 +54,14 @@ class Tree:
     num_observations : int, optional
     """
 
-    def __init__(self, tree_id=0, num_observations=0):
+    def __init__(self, tree_id=0, num_observations=0, m=0):
         self.tree_structure = {}
         self.num_nodes = 0
         self.idx_leaf_nodes = []
         self.idx_prunable_split_nodes = []
         self.tree_id = tree_id
         self.num_observations = num_observations
+        self.m = m
 
     def __getitem__(self, index):
         return self.get_node(index)
@@ -94,7 +96,7 @@ class Tree:
 
         return output.astype(aesara.config.floatX)
 
-    def predict_out_of_sample(self, X, m):
+    def predict_out_of_sample(self, X):
         """
         Predict output of tree for an unobserved point x.
 
@@ -102,8 +104,6 @@ class Tree:
         ----------
         X : numpy array
             Unobserved point
-        m : int
-            Number of trees
 
         Returns
         -------
@@ -116,7 +116,7 @@ class Tree:
             return leaf_node.value
         else:
             x = X[split_variable].item()
-            y_x = (linear_params[0] + linear_params[1] * x) / m
+            y_x = (linear_params[0] + linear_params[1] * x) / self.m
             return y_x + linear_params[2]
 
     def _traverse_tree(self, x, node_index=0, split_variable=None):
@@ -170,7 +170,7 @@ class Tree:
             self.idx_prunable_split_nodes.remove(parent_index)
 
     @staticmethod
-    def init_tree(tree_id, leaf_node_value, idx_data_points):
+    def init_tree(tree_id, leaf_node_value, idx_data_points, m):
         """
 
         Parameters
@@ -178,12 +178,14 @@ class Tree:
         tree_id
         leaf_node_value
         idx_data_points
+        m : int
+            number of trees in BART
 
         Returns
         -------
 
         """
-        new_tree = Tree(tree_id, len(idx_data_points))
+        new_tree = Tree(tree_id, len(idx_data_points), m)
         new_tree[0] = LeafNode(index=0, value=leaf_node_value, idx_data_points=idx_data_points)
         return new_tree
 

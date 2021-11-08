@@ -12,53 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numpy.testing as npt
-
-from pymc.backends import ndarray
 from pymc.backends import tracetab as ttab
-from pymc.tests import backend_fixtures as bf
-
-
-class TestTraceToDf(bf.ModelBackendSampledTestCase):
-    backend = ndarray.NDArray
-    name = "text-db"
-    shape = (2, 3)
-
-    def test_trace_to_dataframe(self):
-        mtrace = self.mtrace
-        df = ttab.trace_to_dataframe(mtrace)
-        assert len(mtrace) * mtrace.nchains == df.shape[0]
-
-        checked = False
-        for varname in self.test_point.keys():
-            vararr = mtrace.get_values(varname)
-            # With `shape` above, only one variable has to have that
-            # `shape`.
-            if vararr.shape[1:] != self.shape:
-                continue
-            npt.assert_equal(vararr[:, 0, 0], df[varname + "__0_0"].values)
-            npt.assert_equal(vararr[:, 1, 0], df[varname + "__1_0"].values)
-            npt.assert_equal(vararr[:, 1, 2], df[varname + "__1_2"].values)
-            checked = True
-        assert checked
-
-    def test_trace_to_dataframe_chain_arg(self):
-        mtrace = self.mtrace
-        df = ttab.trace_to_dataframe(mtrace, chains=0)
-        assert len(mtrace) == df.shape[0]
-
-        checked = False
-        for varname in self.test_point.keys():
-            vararr = mtrace.get_values(varname, chains=0)
-            # With `shape` above, only one variable has to have that
-            # `shape`.
-            if vararr.shape[1:] != self.shape:
-                continue
-            npt.assert_equal(vararr[:, 0, 0], df[varname + "__0_0"].values)
-            npt.assert_equal(vararr[:, 1, 0], df[varname + "__1_0"].values)
-            npt.assert_equal(vararr[:, 1, 2], df[varname + "__1_2"].values)
-            checked = True
-        assert checked
 
 
 def test_create_flat_names_0d():

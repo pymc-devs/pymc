@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import functools
-import warnings
 
 from typing import Dict, List, Tuple, Union
 
@@ -229,16 +228,6 @@ def biwrap(wrapper):
             return newwrapper
 
     return enhanced
-
-
-# FIXME: this function is poorly named, because it returns a LIST of
-# points, not a dictionary of points.
-def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
-    warnings.warn(
-        "dataset_to_point_dict was renamed to dataset_to_point_list and will be removed!",
-        FutureWarning,
-    )
-    return dataset_to_point_list(ds)
 
 
 def dataset_to_point_list(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:

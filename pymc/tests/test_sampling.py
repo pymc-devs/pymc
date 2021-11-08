@@ -767,9 +767,10 @@ class TestSamplePPC(SeededTest):
                 return_inferencedata=False,
                 compute_convergence_checks=False,
             )
-            ppc_trace = pm.trace_to_dataframe(
-                trace, varnames=[n for n in trace.varnames if n != "out"]
-            ).to_dict("records")
+            varnames = [v for v in trace.varnames if v != "out"]
+            ppc_trace = [
+                dict(zip(varnames, row)) for row in zip(*(trace.get_values(v) for v in varnames))
+            ]
             ppc = pm.sample_posterior_predictive(
                 return_inferencedata=False,
                 model=model,
@@ -1074,7 +1075,7 @@ class TestSamplePriorPredictive(SeededTest):
         obs = np.random.normal(-1, 0.1, size=10)
         with pm.Model():
             mu = pm.Normal("mu", 0, 1)
-            sd = pm.Gamma("sd", 1, 2)
+            sd = pm.HalfNormal("sd", 1e-6)
             a = pm.DensityDist(
                 "a",
                 mu,
@@ -1084,7 +1085,7 @@ class TestSamplePriorPredictive(SeededTest):
             )
             prior = pm.sample_prior_predictive(return_inferencedata=False)
 
-        npt.assert_almost_equal(prior["a"].mean(), 0, decimal=1)
+        npt.assert_almost_equal((prior["a"] - prior["mu"][..., None]).mean(), 0, decimal=3)
 
     def test_shape_edgecase(self):
         with pm.Model():
