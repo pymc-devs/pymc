@@ -7,6 +7,7 @@ from pymc import Bernoulli, Flat, HalfFlat, Normal, TruncatedNormal, Uniform
 from pymc.distributions import (
     Beta,
     Cauchy,
+    ChiSquared,
     Exponential,
     Gamma,
     HalfCauchy,
@@ -170,6 +171,20 @@ def test_bernoulli_moment(p, size, expected):
 def test_beta_moment(alpha, beta, size, expected):
     with Model() as model:
         Beta("x", alpha=alpha, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "nu, size, expected",
+    [
+        (1, None, 1),
+        (1, 5, np.full(5, 1)),
+        (np.arange(1, 6), None, np.arange(1, 6)),
+    ],
+)
+def test_chisquared_moment(nu, size, expected):
+    with Model() as model:
+        ChiSquared("x", nu=nu, size=size)
     assert_moment_is_expected(model, expected)
 
 
