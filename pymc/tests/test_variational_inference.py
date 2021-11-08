@@ -902,7 +902,7 @@ def test_pickle_approx(three_var_approx):
     assert new.sample(1)
 
 
-@pytest.mark.xfail("https://github.com/pymc-devs/pymc/issues/5090")
+@pytest.mark.xfail(reason="https://github.com/pymc-devs/pymc/issues/5090")
 def test_pickle_single_group(three_var_approx_single_group_mf):
     import cloudpickle
 
@@ -911,7 +911,7 @@ def test_pickle_single_group(three_var_approx_single_group_mf):
     assert new.sample(1)
 
 
-@pytest.mark.xfail("https://github.com/pymc-devs/pymc/issues/5090")
+@pytest.mark.xfail(reason="https://github.com/pymc-devs/pymc/issues/5090")
 def test_pickle_approx_aevb(three_var_aevb_approx):
     import cloudpickle
 
