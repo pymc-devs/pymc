@@ -1449,6 +1449,12 @@ class ZeroInflatedBinomial(Discrete):
         p = at.as_tensor_variable(floatX(p))
         return super().dist([psi, n, p], *args, **kwargs)
 
+    def get_moment(rv, size, psi, n, p):
+        mean = at.round((1 - psi) * n * p)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, psi, n, p):
         r"""
         Calculate log-probability of ZeroInflatedBinomial distribution at specified value.
