@@ -11,12 +11,12 @@ from pymc.distributions import (
     Gamma,
     HalfCauchy,
     HalfNormal,
+    HalfStudentT,
     Kumaraswamy,
     Laplace,
     LogNormal,
     StudentT,
     Weibull,
-    HalfStudentT,
 )
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
