@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from aesara import tensor as at
 from scipy import special
 
 from pymc.distributions import (
@@ -13,6 +14,7 @@ from pymc.distributions import (
     Cauchy,
     ChiSquared,
     Constant,
+    DensityDist,
     Dirichlet,
     DiscreteUniform,
     ExGaussian,
@@ -897,4 +899,21 @@ def test_asymmetriclaplace_moment(b, kappa, mu, size, expected):
 def test_rice_moment(nu, sigma, size, expected):
     with Model() as model:
         Rice("x", nu=nu, sigma=sigma, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "get_moment, size, expected",
+    [
+        (None, None, 0.0),
+        (None, 5, np.zeros(5)),
+        ("custom_moment", None, 5),
+        ("custom_moment", (2, 5), np.full((2, 5), 5)),
+    ],
+)
+def test_density_dist_moment(get_moment, size, expected):
+    if get_moment == "custom_moment":
+        get_moment = lambda rv, size, *rv_inputs: 5 * at.ones(size, dtype=rv.dtype)
+    with Model() as model:
+        DensityDist("x", get_moment=get_moment, size=size)
     assert_moment_is_expected(model, expected)

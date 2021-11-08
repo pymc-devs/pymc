@@ -24,6 +24,7 @@ from typing import Callable, Optional, Sequence
 import aesara
 
 from aeppl.logprob import _logcdf, _logprob
+from aesara import tensor as at
 from aesara.tensor.basic import as_tensor_variable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
@@ -472,9 +473,9 @@ class DensityDist(NoDistribution):
             as the first argument ``rv``. ``size`` is the random variable's size implied
             by the ``dims``, ``size`` and parameters supplied to the distribution. Finally,
             ``rv_inputs`` is the sequence of the distribution parameters, in the same order
-            as they were supplied when the DensityDist was created. If ``None``, a
-            ``NotImplemented`` error will be raised when trying to draw random samples from
-            the distribution's prior or posterior predictive.
+            as they were supplied when the DensityDist was created. If ``None``, a default
+            ``get_moment`` function will be assigned that will always return 0, or an array
+            of zeros.
         ndim_supp : int
             The number of dimensions in the support of the distribution. Defaults to assuming
             a scalar distribution, i.e. ``ndim_supp = 0``.
@@ -614,3 +615,7 @@ def default_not_implemented(rv_name, method_name):
         raise NotImplementedError(message)
 
     return func
+
+
+def default_get_moment(rv, size, *rv_inputs):
+    return at.zeros(size, dtype=rv.dtype)
