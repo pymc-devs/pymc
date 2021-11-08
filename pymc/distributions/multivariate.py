@@ -2173,26 +2173,34 @@ class CAR(Continuous):
 class StickBreakingWeightsRV(RandomVariable):
     name = "stick_breaking_weights"
     ndim_supp = 1
-    ndims_params = [0]
+    ndims_params = [0, 0]
     dtype = "floatX"
     _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
     
-    def __call__(self, alpha=1., size=None, **kwargs):
-        return super().__call__(alpha, size=size, **kwargs)
+    def __call__(self, alpha=1., K=10, size=None, **kwargs):
+        return super().__call__(alpha, K, size=size, **kwargs)
 
     def _infer_shape(self, size, dist_params, param_shapes=None):
-        if isinstance(size, int):
-            return size
-        else:
-            return tuple(size[:-1]) + tuple(size[-1] + 1,)
+        alpha, K = dist_params
+        return [K + 1,]
     
     @classmethod
-    def rng_fn(cls, rng, alpha, size):
+    def rng_fn(cls, rng, alpha, K, size):
+        if K < 0:
+            raise ValueError("K needs to be a positive integer.")
+        
+        if np.ndim(alpha) > 0:
+            raise ValueError("The concentration parameter needs to be a scalar.")
+
         if size is None:
             raise ValueError("size cannot be None because K is inferred from size")
             
-        if isinstance(size, int):
-            size = (size,)
+        if size is None:
+            size = (K,)
+        elif isinstance(size, int):
+            size = (size,) + (K,)
+        else:
+            size = tuple(size) + (K,)
             
         betas = rng.beta(1, alpha, size=size) # adapt this to vector alpha
         
@@ -2227,15 +2235,29 @@ class StickBreakingWeights(Continuous):
         return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
-    def dist(cls, alpha, *args, **kwargs):
+    def dist(cls, alpha, K, *args, **kwargs):
         alpha = at.as_tensor_variable(floatX(alpha))
+        K = at.as_tensor_variable(intX(K))
+
+        print(kwargs["size"])
+        
+        if alpha.ndim > 0:
+            raise ValueError("alpha must be a scalar.")
+            
+        if K.ndim > 0:
+            raise ValueError("K must be a scalar.")
 
         assert_negative_support(alpha, "alpha", "StickBreakingWeights")
+        assert_negative_support(K, "K", "StickBreakingWeights")
 
-        return super().dist([alpha], **kwargs)
+        return super().dist([alpha, K], **kwargs)
 
-    def logp(value, alpha):
-        K = floatX(value.shape[-1])
+    def logp(value, alpha, K):
+        if at.lt(K, 0).eval():
+            raise ValueError("K needs to be a positive integer.")
+            
+        if at.lt(alpha, 0).eval():
+            raise ValueError("alpha needs to be a positive.") 
         
         logp = -at.sum(
             at.log(
@@ -2246,7 +2268,7 @@ class StickBreakingWeights(Continuous):
             ),
             axis=-1,
         )
-        logp -= -K * betaln(1, alpha)
+        logp += -K * betaln(1, alpha)
         logp += alpha * at.log(value[..., -1]) # check this
 
         return bound(

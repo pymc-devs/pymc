@@ -160,6 +160,7 @@ __all__ = [
     "KroneckerNormal",
     "MvStudentT",
     "Dirichlet",
+    "StickBreakingWeights",
     "Multinomial",
     "DirichletMultinomial",
     "OrderedMultinomial",
