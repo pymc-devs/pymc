@@ -9,6 +9,7 @@ from pymc.distributions import (
     Binomial,
     Cauchy,
     ChiSquared,
+    Constant,
     Exponential,
     Gamma,
     HalfCauchy,
@@ -397,4 +398,18 @@ def test_binomial_moment(n, p, size, expected):
 def test_poisson_moment(mu, size, expected):
     with Model() as model:
         Poisson("x", mu=mu, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "c, size, expected",
+    [
+        (1, None, 1),
+        (1, 5, np.full(5, 1)),
+        (np.arange(1, 6), None, np.arange(1, 6)),
+    ],
+)
+def test_constant_moment(c, size, expected):
+    with Model() as model:
+        Constant("x", c=c, size=size)
     assert_moment_is_expected(model, expected)

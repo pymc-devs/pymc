@@ -1217,6 +1217,11 @@ class Constant(Discrete):
         c = at.as_tensor_variable(floatX(c))
         return super().dist([c], **kwargs)
 
+    def get_moment(rv, size, c):
+        if not rv_size_is_none(size):
+            c = at.full(size, c)
+        return c
+
     def logp(value, c):
         r"""
         Calculate log-probability of Constant distribution at specified value.
