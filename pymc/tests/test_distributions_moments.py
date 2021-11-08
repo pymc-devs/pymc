@@ -6,6 +6,7 @@ from scipy import special
 from pymc import Bernoulli, Flat, HalfFlat, Normal, TruncatedNormal, Uniform
 from pymc.distributions import (
     Beta,
+    Binomial,
     Cauchy,
     ChiSquared,
     Exponential,
@@ -15,6 +16,7 @@ from pymc.distributions import (
     Kumaraswamy,
     Laplace,
     LogNormal,
+    Poisson,
     StudentT,
     Weibull,
 )
@@ -224,7 +226,13 @@ def test_laplace_moment(mu, b, size, expected):
         (0, 1, 1, None, 0),
         (0, np.ones(5), 1, None, np.zeros(5)),
         (np.arange(5), 10, np.arange(1, 6), None, np.arange(5)),
-        (np.arange(5), 10, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(5))),
+        (
+            np.arange(5),
+            10,
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), np.arange(5)),
+        ),
     ],
 )
 def test_studentt_moment(mu, nu, sigma, size, expected):
@@ -333,11 +341,44 @@ def test_gamma_moment(alpha, beta, size, expected):
             np.arange(1, 6),
             np.arange(2, 7),
             (2, 5),
-            np.full((2, 5), np.arange(2, 7) * special.gamma(1 + 1 / np.arange(1, 6))),
+            np.full(
+                (2, 5),
+                np.arange(2, 7) * special.gamma(1 + 1 / np.arange(1, 6)),
+            ),
         ),
     ],
 )
 def test_weibull_moment(alpha, beta, size, expected):
     with Model() as model:
         Weibull("x", alpha=alpha, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "n, p, size, expected",
+    [
+        (7, 0.7, None, 5),
+        (7, 0.3, 5, np.full(5, 2)),
+        (10, np.arange(1, 6) / 10, None, np.arange(1, 6)),
+        (10, np.arange(1, 6) / 10, (2, 5), np.full((2, 5), np.arange(1, 6))),
+    ],
+)
+def test_binomial_moment(n, p, size, expected):
+    with Model() as model:
+        Binomial("x", n=n, p=p, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, size, expected",
+    [
+        (2.7, None, 2),
+        (2.3, 5, np.full(5, 2)),
+        (np.arange(1, 5), None, np.arange(1, 5)),
+        (np.arange(1, 5), (2, 4), np.full((2, 4), np.arange(1, 5))),
+    ],
+)
+def test_poisson_moment(mu, size, expected):
+    with Model() as model:
+        Poisson("x", mu=mu, size=size)
     assert_moment_is_expected(model, expected)

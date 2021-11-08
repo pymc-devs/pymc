@@ -114,8 +114,13 @@ class Binomial(Discrete):
     def dist(cls, n, p, *args, **kwargs):
         n = at.as_tensor_variable(intX(n))
         p = at.as_tensor_variable(floatX(p))
-        # mode = at.cast(tround(n * p), self.dtype)
         return super().dist([n, p], **kwargs)
+
+    def get_moment(rv, size, n, p):
+        mean = at.round(n * p)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, n, p):
         r"""
@@ -567,8 +572,13 @@ class Poisson(Discrete):
     @classmethod
     def dist(cls, mu, *args, **kwargs):
         mu = at.as_tensor_variable(floatX(mu))
-        # mode = intX(at.floor(mu))
         return super().dist([mu], *args, **kwargs)
+
+    def get_moment(rv, size, mu):
+        mu = at.floor(mu)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
 
     def logp(value, mu):
         r"""
