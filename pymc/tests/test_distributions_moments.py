@@ -357,8 +357,8 @@ def test_binomial_moment(n, p, size, expected):
 @pytest.mark.parametrize(
     "mu, size, expected",
     [
-        (2, None, 2),
-        (2, 5, np.full(5, 2)),
+        (2.7, None, 2),
+        (2.3, 5, np.full(5, 2)),
         (np.arange(1, 5), None, np.arange(1, 5)),
         (np.arange(1, 5), (2, 4), np.full((2, 4), np.arange(1, 5))),
     ],
