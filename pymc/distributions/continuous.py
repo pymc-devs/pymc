@@ -2633,7 +2633,7 @@ class HalfStudentT(PositiveContinuous):
         assert_negative_support(sigma, "sigma", "HalfStudentT")
 
         return super().dist([nu, sigma], *args, **kwargs)
-    
+
     def get_moment(rv, size, nu, sigma):
         sigma, _ = at.broadcast_arrays(sigma, nu)
         if not rv_size_is_none(size):
