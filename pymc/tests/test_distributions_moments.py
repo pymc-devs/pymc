@@ -9,10 +9,12 @@ from pymc.distributions import (
     Binomial,
     Cauchy,
     ChiSquared,
+    Constant,
     Exponential,
     Gamma,
     HalfCauchy,
     HalfNormal,
+    HalfStudentT,
     Kumaraswamy,
     Laplace,
     Logistic,
@@ -128,6 +130,21 @@ def test_normal_moment(mu, sigma, size, expected):
 def test_halfnormal_moment(sigma, size, expected):
     with Model() as model:
         HalfNormal("x", sigma=sigma, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "nu, sigma, size, expected",
+    [
+        (1, 1, None, 1),
+        (1, 1, 5, np.ones(5)),
+        (1, np.arange(5), (2, 5), np.full((2, 5), np.arange(5))),
+        (np.arange(1, 6), 1, None, np.full(5, 1)),
+    ],
+)
+def test_halfstudentt_moment(nu, sigma, size, expected):
+    with Model() as model:
+        HalfStudentT("x", nu=nu, sigma=sigma, size=size)
     assert_moment_is_expected(model, expected)
 
 
@@ -386,6 +403,20 @@ def test_poisson_moment(mu, size, expected):
 
 
 @pytest.mark.parametrize(
+    "c, size, expected",
+    [
+        (1, None, 1),
+        (1, 5, np.full(5, 1)),
+        (np.arange(1, 6), None, np.arange(1, 6)),
+    ],
+)
+def test_constant_moment(c, size, expected):
+    with Model() as model:
+        Constant("x", c=c, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
     "mu, s, size, expected",
     [
         (1, 1, None, 1),
@@ -403,3 +434,4 @@ def test_logistic_moment(mu, s, size, expected):
     with Model() as model:
         Logistic("x", mu=mu, s=s, size=size)
     assert_moment_is_expected(model, expected)
+
