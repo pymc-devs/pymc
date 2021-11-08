@@ -342,8 +342,8 @@ def test_weibull_moment(alpha, beta, size, expected):
 @pytest.mark.parametrize(
     "n, p, size, expected",
     [
-        (10, 0.5, None, 5),
-        (10, 0.5, 5, np.full(5, 5)),
+        (7, 0.7, None, 5),
+        (7, 0.3, 5, np.full(5, 2)),
         (10, np.arange(1, 6) / 10, None, np.arange(1, 6)),
         (10, np.arange(1, 6) / 10, (2, 5), np.full((2, 5), np.arange(1, 6))),
     ],
