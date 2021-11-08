@@ -2628,10 +2628,6 @@ class HalfStudentT(PositiveContinuous):
         lam, sigma = get_tau_sigma(lam, sigma)
         sigma = at.as_tensor_variable(sigma)
 
-        # mode = at.as_tensor_variable(0)
-        # median = at.as_tensor_variable(sigma)
-        # sd = at.as_tensor_variable(sigma)
-
         assert_negative_support(nu, "nu", "HalfStudentT")
         assert_negative_support(lam, "lam", "HalfStudentT")
         assert_negative_support(sigma, "sigma", "HalfStudentT")
@@ -2639,7 +2635,8 @@ class HalfStudentT(PositiveContinuous):
         return super().dist([nu, sigma], *args, **kwargs)
     
     def get_moment(rv, size, nu, sigma):
-        median = at.as_tensor_varialbe(sigma)
+        lam, sigma = get_tau_sigma(None, sigma)
+        median = at.as_tensor_variable(sigma)
         if not rv_size_is_none(size):
             median = at.full(size, median)
         return median

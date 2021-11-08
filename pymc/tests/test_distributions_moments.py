@@ -129,17 +129,12 @@ def test_halfnormal_moment(sigma, size, expected):
 
 
 @pytest.mark.parametrize(
-    "mu, sigma, size, expected",
+    "nu, sigma, size, expected",
     [
-        (0, 1, None, np.exp(0.5)),
-        (0, 1, 5, np.full(5, np.exp(0.5))),
-        (np.arange(5), 1, None, np.exp(np.arange(5) + 0.5)),
-        (
-            np.arange(5),
-            np.arange(1, 6),
-            (2, 5),
-            np.full((2, 5), np.exp(np.arange(5) + 0.5 * np.arange(1, 6) ** 2)),
-        ),
+        (1, 1, None, 1),
+        (1, 1, 5, np.ones(5)),
+        (1, np.arange(5), None, np.arange(5)),
+        (1, np.arange(5), (2, 5), np.full((2, 5), np.arange(5))),
     ],
 )
 def test_halfstudentt_moment(nu, sigma, size, expected):
