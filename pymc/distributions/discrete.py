@@ -819,6 +819,12 @@ class Geometric(Discrete):
         p = at.as_tensor_variable(floatX(p))
         return super().dist([p], *args, **kwargs)
 
+    def get_moment(rv, size, p):
+        mean = at.round(1.0 / p)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, p):
         r"""
         Calculate log-probability of Geometric distribution at specified value.
