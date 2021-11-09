@@ -716,6 +716,12 @@ class NegativeBinomial(Discrete):
 
         return n, p
 
+    def get_moment(rv, size, n, p):
+        mu = at.floor(n * (1 - p) / p)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     def logp(value, n, p):
         r"""
         Calculate log-probability of NegativeBinomial distribution at specified value.
@@ -1316,6 +1322,12 @@ class ZeroInflatedPoisson(Discrete):
         theta = at.as_tensor_variable(floatX(theta))
         return super().dist([psi, theta], *args, **kwargs)
 
+    def get_moment(rv, size, psi, theta):
+        mean = at.floor(psi * theta)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, psi, theta):
         r"""
         Calculate log-probability of ZeroInflatedPoisson distribution at specified value.
@@ -1448,6 +1460,12 @@ class ZeroInflatedBinomial(Discrete):
         n = at.as_tensor_variable(intX(n))
         p = at.as_tensor_variable(floatX(p))
         return super().dist([psi, n, p], *args, **kwargs)
+
+    def get_moment(rv, size, psi, n, p):
+        mean = at.round((1 - psi) * n * p)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, psi, n, p):
         r"""

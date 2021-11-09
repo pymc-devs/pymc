@@ -19,9 +19,12 @@ from pymc.distributions import (
     Laplace,
     Logistic,
     LogNormal,
+    NegativeBinomial,
     Poisson,
     StudentT,
     Weibull,
+    ZeroInflatedBinomial,
+    ZeroInflatedPoisson,
 )
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
@@ -403,6 +406,21 @@ def test_poisson_moment(mu, size, expected):
 
 
 @pytest.mark.parametrize(
+    "n, p, size, expected",
+    [
+        (10, 0.7, None, 4),
+        (10, 0.7, 5, np.full(5, 4)),
+        (np.full(3, 10), np.arange(1, 4) / 10, None, np.array([90, 40, 23])),
+        (10, np.arange(1, 4) / 10, (2, 3), np.full((2, 3), np.array([90, 40, 23]))),
+    ],
+)
+def test_negative_binomial_moment(n, p, size, expected):
+    with Model() as model:
+        NegativeBinomial("x", n=n, p=p, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
     "c, size, expected",
     [
         (1, None, 1),
@@ -413,6 +431,36 @@ def test_poisson_moment(mu, size, expected):
 def test_constant_moment(c, size, expected):
     with Model() as model:
         Constant("x", c=c, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "psi, theta, size, expected",
+    [
+        (0.9, 3.0, None, 2),
+        (0.8, 2.9, 5, np.full(5, 2)),
+        (0.2, np.arange(1, 5) * 5, None, np.arange(1, 5)),
+        (0.2, np.arange(1, 5) * 5, (2, 4), np.full((2, 4), np.arange(1, 5))),
+    ],
+)
+def test_zero_inflated_poisson_moment(psi, theta, size, expected):
+    with Model() as model:
+        ZeroInflatedPoisson("x", psi=psi, theta=theta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "psi, n, p, size, expected",
+    [
+        (0.2, 7, 0.7, None, 4),
+        (0.2, 7, 0.3, 5, np.full(5, 2)),
+        (0.6, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
+        (0.6, 25, np.arange(1, 6) / 10, (2, 5), np.full((2, 5), np.arange(1, 6))),
+    ],
+)
+def test_zero_inflated_binomial_moment(psi, n, p, size, expected):
+    with Model() as model:
+        ZeroInflatedBinomial("x", psi=psi, n=n, p=p, size=size)
     assert_moment_is_expected(model, expected)
 
 
