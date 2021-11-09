@@ -2771,10 +2771,6 @@ class ExGaussian(Continuous):
         sigma = at.as_tensor_variable(floatX(sigma))
         nu = at.as_tensor_variable(floatX(nu))
 
-        sd = sigma
-        mean = mu + nu
-        variance = (sigma ** 2) + (nu ** 2)
-
         assert_negative_support(sigma, "sigma", "ExGaussian")
         assert_negative_support(nu, "nu", "ExGaussian")
 

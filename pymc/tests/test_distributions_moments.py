@@ -10,6 +10,7 @@ from pymc.distributions import (
     Cauchy,
     ChiSquared,
     Constant,
+    ExGaussian,
     Exponential,
     Gamma,
     HalfCauchy,
@@ -433,4 +434,19 @@ def test_constant_moment(c, size, expected):
 def test_logistic_moment(mu, s, size, expected):
     with Model() as model:
         Logistic("x", mu=mu, s=s, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, nu, sigma, size, expected",
+    [
+        (1, 1, None, None, 2),
+        (1, 1, None, 5, np.full(5, 2)),
+        (1, np.arange(1, 6), None, None, np.arange(2, 7)),
+        (1, np.arange(1, 6), None, (2, 5), np.full((2, 5), np.arange(2, 7))),
+    ],
+)
+def test_exgaussian_moment(mu, nu, sigma, size, expected):
+    with Model() as model:
+        ExGaussian("x", mu=mu, sigma=sigma, nu=nu, size=size)
     assert_moment_is_expected(model, expected)
