@@ -716,6 +716,12 @@ class NegativeBinomial(Discrete):
 
         return n, p
 
+    def get_moment(rv, size, n, p):
+        mu = at.floor(n * (1 - p) / p)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     def logp(value, n, p):
         r"""
         Calculate log-probability of NegativeBinomial distribution at specified value.

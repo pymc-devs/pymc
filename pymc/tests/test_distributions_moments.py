@@ -19,6 +19,7 @@ from pymc.distributions import (
     Laplace,
     Logistic,
     LogNormal,
+    NegativeBinomial,
     Poisson,
     StudentT,
     Weibull,
@@ -404,7 +405,26 @@ def test_poisson_moment(mu, size, expected):
 
 
 @pytest.mark.parametrize(
+<<<<<<< HEAD
     "c, size, expected",
+=======
+    "n, p, size, expected",
+    [
+        (10, 0.7, None, 4),
+        (10, 0.7, 5, np.full(5, 4)),
+        (np.full(3, 10), np.arange(1, 4) / 10, None, np.array([90, 40, 23])),
+        (10, np.arange(1, 4) / 10, (2, 3), np.full((2, 3), np.array([90, 40, 23]))),
+    ],
+)
+def test_negative_binomial_moment(n, p, size, expected):
+    with Model() as model:
+        NegativeBinomial("x", n=n, p=p, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "psi, n, p, size, expected",
+>>>>>>> 2eb37150 (negative binomial moment)
     [
         (1, None, 1),
         (1, 5, np.full(5, 1)),
