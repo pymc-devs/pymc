@@ -406,9 +406,6 @@ def test_poisson_moment(mu, size, expected):
 
 
 @pytest.mark.parametrize(
-<<<<<<< HEAD
-    "c, size, expected",
-=======
     "n, p, size, expected",
     [
         (10, 0.7, None, 4),
@@ -424,6 +421,20 @@ def test_negative_binomial_moment(n, p, size, expected):
 
 
 @pytest.mark.parametrize(
+    "c, size, expected",
+    [
+        (1, None, 1),
+        (1, 5, np.full(5, 1)),
+        (np.arange(1, 6), None, np.arange(1, 6)),
+    ],
+)
+def test_constant_moment(c, size, expected):
+    with Model() as model:
+        Constant("x", c=c, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
     "psi, theta, size, expected",
     [
         (0.9, 3.0, None, 2),
@@ -435,21 +446,21 @@ def test_negative_binomial_moment(n, p, size, expected):
 def test_zero_inflated_poisson_moment(psi, theta, size, expected):
     with Model() as model:
         ZeroInflatedPoisson("x", psi=psi, theta=theta, size=size)
-    assert_moment_is_expected(model, expected)   
+    assert_moment_is_expected(model, expected)
 
 
 @pytest.mark.parametrize(
     "psi, n, p, size, expected",
->>>>>>> 2eb37150 (negative binomial moment)
     [
-        (1, None, 1),
-        (1, 5, np.full(5, 1)),
-        (np.arange(1, 6), None, np.arange(1, 6)),
+        (0.2, 7, 0.7, None, 4),
+        (0.2, 7, 0.3, 5, np.full(5, 2)),
+        (0.6, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
+        (0.6, 25, np.arange(1, 6) / 10, (2, 5), np.full((2, 5), np.arange(1, 6))),
     ],
 )
-def test_constant_moment(c, size, expected):
+def test_zero_inflated_binomial_moment(psi, n, p, size, expected):
     with Model() as model:
-        Constant("x", c=c, size=size)
+        ZeroInflatedBinomial("x", psi=psi, n=n, p=p, size=size)
     assert_moment_is_expected(model, expected)
 
 
