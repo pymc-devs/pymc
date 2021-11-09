@@ -434,4 +434,3 @@ def test_logistic_moment(mu, s, size, expected):
     with Model() as model:
         Logistic("x", mu=mu, s=s, size=size)
     assert_moment_is_expected(model, expected)
-
