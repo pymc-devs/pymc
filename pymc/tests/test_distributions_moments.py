@@ -24,6 +24,7 @@ from pymc.distributions import (
     StudentT,
     Weibull,
     ZeroInflatedBinomial,
+    ZeroInflatedPoisson,
 )
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
@@ -420,6 +421,21 @@ def test_negative_binomial_moment(n, p, size, expected):
     with Model() as model:
         NegativeBinomial("x", n=n, p=p, size=size)
     assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "psi, theta, size, expected",
+    [
+        (0.9, 3.0, None, 2),
+        (0.8, 2.9, 5, np.full(5, 2)),
+        (0.2, np.arange(1, 5) * 5, None, np.arange(1, 5)),
+        (0.2, np.arange(1, 5) * 5, (2, 4), np.full((2, 4), np.arange(1, 5))),
+    ],
+)
+def test_zero_inflated_poisson_moment(psi, theta, size, expected):
+    with Model() as model:
+        ZeroInflatedPoisson("x", psi=psi, theta=theta, size=size)
+    assert_moment_is_expected(model, expected)   
 
 
 @pytest.mark.parametrize(

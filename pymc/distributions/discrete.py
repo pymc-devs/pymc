@@ -1322,6 +1322,12 @@ class ZeroInflatedPoisson(Discrete):
         theta = at.as_tensor_variable(floatX(theta))
         return super().dist([psi, theta], *args, **kwargs)
 
+    def get_moment(rv, size, psi, theta):
+        mu = at.floor(psi * theta)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     def logp(value, psi, theta):
         r"""
         Calculate log-probability of ZeroInflatedPoisson distribution at specified value.
