@@ -1066,6 +1066,12 @@ class DiscreteUniform(Discrete):
         upper = intX(at.floor(upper))
         return super().dist([lower, upper], **kwargs)
 
+    def get_moment(rv, size, lower, upper):
+        mode = at.maximum(at.floor((upper + lower) / 2.0), lower)
+        if not rv_size_is_none(size):
+            mode = at.full(size, mode)
+        return mode
+
     def logp(value, lower, upper):
         r"""
         Calculate log-probability of DiscreteUniform distribution at specified value.

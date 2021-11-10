@@ -10,6 +10,7 @@ from pymc.distributions import (
     Cauchy,
     ChiSquared,
     Constant,
+    DiscreteUniform,
     Exponential,
     Flat,
     Gamma,
@@ -540,3 +541,26 @@ def test_hyper_geometric_moment(N, k, n, size, expected):
     with Model() as model:
         HyperGeometric("x", N=N, k=k, n=n, size=size)
     assert_moment_is_expected(model, expected)
+<<<<<<< HEAD
+=======
+
+
+@pytest.mark.parametrize(
+    "lower, upper, size, expected",
+    [
+        (1, 5, None, 3),
+        (1, 5, 5, np.full(5, 3)),
+        (1, np.arange(5, 22, 4), None, np.arange(3, 13, 2)),
+        (
+            1,
+            np.arange(5, 22, 4),
+            (2, 5),
+            np.full((2, 5), np.arange(3, 13, 2)),
+        ),
+    ],
+)
+def test_discrete_uniform_moment(lower, upper, size, expected):
+    with Model() as model:
+        DiscreteUniform("x", lower=lower, upper=upper, size=size)
+    assert_moment_is_expected(model, expected)
+>>>>>>> 530892a2... add discrete uniform moment
