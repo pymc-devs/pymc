@@ -2776,7 +2776,7 @@ class ExGaussian(Continuous):
         return super().dist([mu, sigma, nu], *args, **kwargs)
 
     def get_moment(rv, size, mu, sigma, nu):
-        #mu, nu, _ = at.broadcast_arrays(mu, nu, sigma)
+        mu, nu, _ = at.broadcast_arrays(mu, nu, sigma)
         moment = mu + nu
         if not rv_size_is_none(size):
             moment = at.full(size, moment)
