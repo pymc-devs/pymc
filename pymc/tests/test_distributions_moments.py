@@ -159,9 +159,7 @@ def test_halfstudentt_moment(nu, sigma, size, expected):
     assert_moment_is_expected(model, expected)
 
 
-@pytest.mark.skip(
-    reason="aeppl interval transform fails when both edges are None"
-)
+@pytest.mark.skip(reason="aeppl interval transform fails when both edges are None")
 @pytest.mark.parametrize(
     "mu, sigma, lower, upper, size, expected",
     [
@@ -173,9 +171,7 @@ def test_halfstudentt_moment(nu, sigma, size, expected):
 )
 def test_truncatednormal_moment(mu, sigma, lower, upper, size, expected):
     with Model() as model:
-        TruncatedNormal(
-            "x", mu=mu, sigma=sigma, lower=lower, upper=upper, size=size
-        )
+        TruncatedNormal("x", mu=mu, sigma=sigma, lower=lower, upper=upper, size=size)
     assert_moment_is_expected(model, expected)
 
 
@@ -541,8 +537,6 @@ def test_hyper_geometric_moment(N, k, n, size, expected):
     with Model() as model:
         HyperGeometric("x", N=N, k=k, n=n, size=size)
     assert_moment_is_expected(model, expected)
-<<<<<<< HEAD
-=======
 
 
 @pytest.mark.parametrize(
@@ -563,4 +557,3 @@ def test_discrete_uniform_moment(lower, upper, size, expected):
     with Model() as model:
         DiscreteUniform("x", lower=lower, upper=upper, size=size)
     assert_moment_is_expected(model, expected)
->>>>>>> 530892a2... add discrete uniform moment
