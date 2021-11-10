@@ -156,7 +156,7 @@ def factorized_joint_logprob(
         if warn_missing_rvs and any(
             o not in updated_rv_values
             for o in outputs
-            if getattr(o.tag, "ignore_logprob", False)
+            if not getattr(o.tag, "ignore_logprob", False)
         ):
             warnings.warn(
                 "Found a random variable that was neither among the observations "

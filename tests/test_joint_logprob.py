@@ -306,6 +306,16 @@ def test_ignore_logprob_multiout():
     assert logp_exp is None
 
 
+def test_warn_random_not_found():
+    x_rv = at.random.normal(name="x")
+    y_rv = at.random.normal(x_rv, 1, name="y")
+
+    y_vv = y_rv.clone()
+
+    with pytest.warns(UserWarning):
+        factorized_joint_logprob({y_rv: y_vv})
+
+
 def test_multiple_rvs_to_same_value_raises():
     x_rv1 = at.random.normal(name="x1")
     x_rv2 = at.random.normal(name="x2")
