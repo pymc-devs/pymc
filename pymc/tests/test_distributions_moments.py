@@ -3,17 +3,19 @@ import pytest
 
 from scipy import special
 
-from pymc import Bernoulli, Flat, HalfFlat, Normal, TruncatedNormal, Uniform
 from pymc.distributions import (
+    Bernoulli,
     Beta,
     Binomial,
     Cauchy,
     ChiSquared,
     Constant,
     Exponential,
+    Flat,
     Gamma,
     Geometric,
     HalfCauchy,
+    HalfFlat,
     HalfNormal,
     HalfStudentT,
     Kumaraswamy,
@@ -21,8 +23,11 @@ from pymc.distributions import (
     Logistic,
     LogNormal,
     NegativeBinomial,
+    Normal,
     Poisson,
     StudentT,
+    TruncatedNormal,
+    Uniform,
     Weibull,
     ZeroInflatedBinomial,
     ZeroInflatedPoisson,
