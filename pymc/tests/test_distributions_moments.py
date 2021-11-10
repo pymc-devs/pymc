@@ -520,3 +520,4 @@ def test_geometric_moment(p, size, expected):
     with Model() as model:
         Geometric("x", p=p, size=size)
     assert_moment_is_expected(model, expected)
+    
