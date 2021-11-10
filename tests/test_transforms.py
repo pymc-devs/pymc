@@ -10,7 +10,6 @@ from numdifftools import Jacobian
 from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
 from aeppl.transforms import (
     DEFAULT_TRANSFORM,
-    IntervalTransform,
     LogOddsTransform,
     LogTransform,
     RVTransform,
@@ -443,16 +442,3 @@ def test_original_values_output_dict():
     logp_dict = factorized_joint_logprob({p_rv: p_vv}, extra_rewrites=tr)
 
     assert p_vv in logp_dict
-
-
-def test_useless_interval_transform():
-    x_rv = at.random.normal(0, 1)
-    x_vv = x_rv.clone()
-
-    transform_opt = TransformValuesOpt(
-        {x_vv: IntervalTransform(lambda *inputs: (None, None))}
-    )
-
-    logp = joint_logprob({x_rv: x_vv}, extra_rewrites=transform_opt)
-
-    assert np.isclose(logp.eval({x_vv: 5}), sp.stats.norm(0, 1).logpdf(5))
