@@ -926,6 +926,12 @@ class HyperGeometric(Discrete):
         n = at.as_tensor_variable(intX(n))
         return super().dist([good, bad, n], *args, **kwargs)
 
+    def get_moment(rv, size, N, k, n):
+        mode = intX(at.floor((n + 1) * (k + 1) / (N + 2)))
+        if not rv_size_is_none(size):
+            mode = at.full(size, mode)
+        return mode
+
     def logp(value, good, bad, n):
         r"""
         Calculate log-probability of HyperGeometric distribution at specified value.
