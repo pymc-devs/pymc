@@ -505,8 +505,8 @@ def test_exgaussian_moment(mu, nu, sigma, size, expected):
     with Model() as model:
         ExGaussian("x", mu=mu, sigma=sigma, nu=nu, size=size)
     assert_moment_is_expected(model, expected)
-        
-        
+
+
 @pytest.mark.parametrize(
     "p, size, expected",
     [
@@ -520,4 +520,3 @@ def test_geometric_moment(p, size, expected):
     with Model() as model:
         Geometric("x", p=p, size=size)
     assert_moment_is_expected(model, expected)
-    
