@@ -441,6 +441,7 @@ def test_logistic_moment(mu, s, size, expected):
     "mu, nu, sigma, size, expected",
     [
         (1, 1, None, None, 2),
+        (np.ones(2, 5), 1, 1, None, np.full([2, 5], 2)),
         (1, 1, None, 5, np.full(5, 2)),
         (1, np.arange(1, 6), None, None, np.arange(2, 7)),
         (1, np.arange(1, 6), None, (2, 5), np.full((2, 5), np.arange(2, 7))),
