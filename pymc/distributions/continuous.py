@@ -2107,10 +2107,9 @@ class HalfCauchy(PositiveContinuous):
         return super().dist([0.0, beta], **kwargs)
 
     def get_moment(rv, size, loc, beta):
-        mean = beta
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
-        return mean
+            beta = at.full(size, beta)
+        return beta
 
     def logcdf(value, loc, beta):
         """
