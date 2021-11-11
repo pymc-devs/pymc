@@ -10,12 +10,9 @@ from pymc.distributions import (
     Cauchy,
     ChiSquared,
     Constant,
-<<<<<<< HEAD
     DiscreteUniform,
     ExGaussian,
-=======
     Dirichlet,
->>>>>>> 39d15fa1 (Adding Dirichlet moment)
     Exponential,
     Flat,
     Gamma,
