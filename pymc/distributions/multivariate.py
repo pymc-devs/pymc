@@ -224,6 +224,9 @@ class MvNormal(Continuous):
         cov = quaddist_matrix(cov, chol, tau, lower)
         return super().dist([mu, cov], **kwargs)
 
+    def get_moment(rv, size, mu, cov):
+        return mu
+
     def logp(value, mu, cov):
         """
         Calculate log-probability of Multivariate Normal distribution

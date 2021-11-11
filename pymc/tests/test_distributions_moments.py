@@ -36,6 +36,7 @@ from pymc.distributions import (
     ZeroInflatedBinomial,
     ZeroInflatedPoisson,
 )
+from pymc.distributions.multivariate import MvNormal
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
@@ -594,4 +595,17 @@ def test_hyper_geometric_moment(N, k, n, size, expected):
 def test_discrete_uniform_moment(lower, upper, size, expected):
     with Model() as model:
         DiscreteUniform("x", lower=lower, upper=upper, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, cov, size, expected",
+    [
+        (np.array([1.]), np.array([[1.]]), None, np.array([1.])),
+        (np.ones((10, )), np.identity(10), None, np.ones((10, )))
+    ]
+)
+def test_mv_normal_moment(mu, cov, size, expected):
+    with Model() as model:
+        MvNormal("x", mu=mu, cov=cov, size=size)
     assert_moment_is_expected(model, expected)
