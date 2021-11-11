@@ -25,6 +25,7 @@ from pymc.distributions import (
     Laplace,
     Logistic,
     LogNormal,
+    MvStudentT,
     NegativeBinomial,
     Normal,
     Pareto,
@@ -611,4 +612,19 @@ def test_hyper_geometric_moment(N, k, n, size, expected):
 def test_discrete_uniform_moment(lower, upper, size, expected):
     with Model() as model:
         DiscreteUniform("x", lower=lower, upper=upper, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "nu, mu, cov, size, expected",
+    [
+        (2, np.ones(1), np.eye(1), None, np.ones(1)),
+        (2, np.ones(2), np.eye(2), None, np.ones(2)),
+        (2, np.ones(2), np.eye(2), 2, np.full((2, 2), np.ones(2))),
+        (1, np.ones(2), np.eye(2), (2, 5), np.full((2, 5, 2), np.ones(2))),
+    ],
+)
+def test_mvstudentt_moment(nu, mu, cov, size, expected):
+    with Model() as model:
+        MvStudentT("x", nu=nu, mu=mu, cov=cov, size=size)
     assert_moment_is_expected(model, expected)
