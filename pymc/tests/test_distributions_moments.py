@@ -26,10 +26,12 @@ from pymc.distributions import (
     LogNormal,
     NegativeBinomial,
     Normal,
+    Pareto,
     Poisson,
     StudentT,
     TruncatedNormal,
     Uniform,
+    Wald,
     Weibull,
     ZeroInflatedBinomial,
     ZeroInflatedPoisson,
@@ -357,6 +359,42 @@ def test_halfcauchy_moment(beta, size, expected):
 def test_gamma_moment(alpha, beta, size, expected):
     with Model() as model:
         Gamma("x", alpha=alpha, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "alpha, m, size, expected",
+    [
+        (2, 1, None, 1 * 2 ** (1 / 2)),
+        (2, 1, 5, np.full(5, 1 * 2 ** (1 / 2))),
+        (np.arange(2, 7), np.arange(1, 6), None, np.arange(1, 6) * 2 ** (1 / np.arange(2, 7))),
+        (
+            np.arange(2, 7),
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), np.arange(1, 6) * 2 ** (1 / np.arange(2, 7))),
+        ),
+    ],
+)
+def test_pareto_moment(alpha, m, size, expected):
+    with Model() as model:
+        Pareto("x", alpha=alpha, m=m, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, lam, phi, size, expected",
+    [
+        (2, None, None, None, 2),
+        (None, 1, 1, 5, np.full(5, 1)),
+        (1, None, np.ones(5), None, np.full(5, 1)),
+        (3, np.full(5, 2), None, None, np.full(5, 3)),
+        (np.arange(1, 6), None, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
+    ],
+)
+def test_wald_moment(mu, lam, phi, size, expected):
+    with Model() as model:
+        Wald("x", mu=mu, lam=lam, phi=phi, size=size)
     assert_moment_is_expected(model, expected)
 
 
