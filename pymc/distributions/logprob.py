@@ -195,33 +195,26 @@ def logpt(
                 getattr(_var.tag, "total_size", None), rv_value_var.shape, rv_value_var.ndim
             )
 
-    # Unlike aeppl, PyMC's logpt is expected to plug in the values variables to corresponding
-    # RVs automatically unless the values are explicity set to None. Hence we iterate through
-    # the graph to find RVs and construct a new RVs to values dictionary.
+    # Aeppl needs all rv-values pairs, not just that of the requested var.
+    # Hence we iterate through the graph to collect them.
     tmp_rvs_to_values = rv_values.copy()
     transform_map = {}
     for node in io_toposort(graph_inputs(var), var):
-        if isinstance(node.op, RandomVariable):
-            curr_var = node.out
+        try:
+            curr_vars = [node.default_output()]
+        except ValueError:
+            curr_vars = node.outputs
+        for curr_var in curr_vars:
             rv_value_var = getattr(
-                curr_var.tag, "observations", getattr(curr_var.tag, "value_var", curr_var)
+                curr_var.tag, "observations", getattr(curr_var.tag, "value_var", None)
             )
+            if rv_value_var is None:
+                continue
             rv_value = rv_values.get(curr_var, rv_value_var)
             tmp_rvs_to_values[curr_var] = rv_value
             # Along with value variables we also check for transforms if any.
             if hasattr(rv_value_var.tag, "transform") and transformed:
                 transform_map[rv_value] = rv_value_var.tag.transform
-        # The condition below is a hackish way of excluding the value variable for the
-        # RV being indexed in case of Advanced Indexing of RVs. It gets added by the
-        # logic above but aeppl does not expect us to include it in the dictionary of
-        # {RV:values} given to it.
-        if isinstance(node.op, subtensor_types):
-            curr_var = node.out
-            if (
-                curr_var in tmp_rvs_to_values.keys()
-                and curr_var.owner.inputs[0] in tmp_rvs_to_values.keys()
-            ):
-                tmp_rvs_to_values.pop(curr_var.owner.inputs[0])
 
     transform_opt = TransformValuesOpt(transform_map)
     temp_logp_var_dict = factorized_joint_logprob(

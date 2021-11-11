@@ -926,6 +926,13 @@ class HyperGeometric(Discrete):
         n = at.as_tensor_variable(intX(n))
         return super().dist([good, bad, n], *args, **kwargs)
 
+    def get_moment(rv, size, good, bad, n):
+        N, k = good + bad, good
+        mode = at.floor((n + 1) * (k + 1) / (N + 2))
+        if not rv_size_is_none(size):
+            mode = at.full(size, mode)
+        return mode
+
     def logp(value, good, bad, n):
         r"""
         Calculate log-probability of HyperGeometric distribution at specified value.
@@ -1059,6 +1066,12 @@ class DiscreteUniform(Discrete):
         lower = intX(at.floor(lower))
         upper = intX(at.floor(upper))
         return super().dist([lower, upper], **kwargs)
+
+    def get_moment(rv, size, lower, upper):
+        mode = at.maximum(at.floor((upper + lower) / 2.0), lower)
+        if not rv_size_is_none(size):
+            mode = at.full(size, mode)
+        return mode
 
     def logp(value, lower, upper):
         r"""

@@ -10,6 +10,7 @@ from pymc.distributions import (
     Cauchy,
     ChiSquared,
     Constant,
+    DiscreteUniform,
     ExGaussian,
     Exponential,
     Flat,
@@ -19,16 +20,19 @@ from pymc.distributions import (
     HalfFlat,
     HalfNormal,
     HalfStudentT,
+    HyperGeometric,
     Kumaraswamy,
     Laplace,
     Logistic,
     LogNormal,
     NegativeBinomial,
     Normal,
+    Pareto,
     Poisson,
     StudentT,
     TruncatedNormal,
     Uniform,
+    Wald,
     Weibull,
     ZeroInflatedBinomial,
     ZeroInflatedPoisson,
@@ -360,6 +364,42 @@ def test_gamma_moment(alpha, beta, size, expected):
 
 
 @pytest.mark.parametrize(
+    "alpha, m, size, expected",
+    [
+        (2, 1, None, 1 * 2 ** (1 / 2)),
+        (2, 1, 5, np.full(5, 1 * 2 ** (1 / 2))),
+        (np.arange(2, 7), np.arange(1, 6), None, np.arange(1, 6) * 2 ** (1 / np.arange(2, 7))),
+        (
+            np.arange(2, 7),
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), np.arange(1, 6) * 2 ** (1 / np.arange(2, 7))),
+        ),
+    ],
+)
+def test_pareto_moment(alpha, m, size, expected):
+    with Model() as model:
+        Pareto("x", alpha=alpha, m=m, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, lam, phi, size, expected",
+    [
+        (2, None, None, None, 2),
+        (None, 1, 1, 5, np.full(5, 1)),
+        (1, None, np.ones(5), None, np.full(5, 1)),
+        (3, np.full(5, 2), None, None, np.full(5, 3)),
+        (np.arange(1, 6), None, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
+    ],
+)
+def test_wald_moment(mu, lam, phi, size, expected):
+    with Model() as model:
+        Wald("x", mu=mu, lam=lam, phi=phi, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
     "alpha, beta, size, expected",
     [
         (1, 1, None, 1),
@@ -418,7 +458,12 @@ def test_poisson_moment(mu, size, expected):
         (10, 0.7, None, 4),
         (10, 0.7, 5, np.full(5, 4)),
         (np.full(3, 10), np.arange(1, 4) / 10, None, np.array([90, 40, 23])),
-        (10, np.arange(1, 4) / 10, (2, 3), np.full((2, 3), np.array([90, 40, 23]))),
+        (
+            10,
+            np.arange(1, 4) / 10,
+            (2, 3),
+            np.full((2, 3), np.array([90, 40, 23])),
+        ),
     ],
 )
 def test_negative_binomial_moment(n, p, size, expected):
@@ -462,7 +507,13 @@ def test_zero_inflated_poisson_moment(psi, theta, size, expected):
         (0.2, 7, 0.7, None, 4),
         (0.2, 7, 0.3, 5, np.full(5, 2)),
         (0.6, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
-        (0.6, 25, np.arange(1, 6) / 10, (2, 5), np.full((2, 5), np.arange(1, 6))),
+        (
+            0.6,
+            25,
+            np.arange(1, 6) / 10,
+            (2, 5),
+            np.full((2, 5), np.arange(1, 6)),
+        ),
     ],
 )
 def test_zero_inflated_binomial_moment(psi, n, p, size, expected):
@@ -519,4 +570,45 @@ def test_exgaussian_moment(mu, nu, sigma, size, expected):
 def test_geometric_moment(p, size, expected):
     with Model() as model:
         Geometric("x", p=p, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "N, k, n, size, expected",
+    [
+        (50, 10, 20, None, 4),
+        (50, 10, 23, 5, np.full(5, 5)),
+        (50, 10, np.arange(23, 28), None, np.full(5, 5)),
+        (
+            50,
+            10,
+            np.arange(18, 23),
+            (2, 5),
+            np.full((2, 5), 4),
+        ),
+    ],
+)
+def test_hyper_geometric_moment(N, k, n, size, expected):
+    with Model() as model:
+        HyperGeometric("x", N=N, k=k, n=n, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "lower, upper, size, expected",
+    [
+        (1, 5, None, 3),
+        (1, 5, 5, np.full(5, 3)),
+        (1, np.arange(5, 22, 4), None, np.arange(3, 13, 2)),
+        (
+            1,
+            np.arange(5, 22, 4),
+            (2, 5),
+            np.full((2, 5), np.arange(3, 13, 2)),
+        ),
+    ],
+)
+def test_discrete_uniform_moment(lower, upper, size, expected):
+    with Model() as model:
+        DiscreteUniform("x", lower=lower, upper=upper, size=size)
     assert_moment_is_expected(model, expected)

@@ -995,6 +995,12 @@ class Wald(PositiveContinuous):
 
         return super().dist([mu, lam, alpha], **kwargs)
 
+    def get_moment(rv, size, mu, lam, alpha):
+        mu, _, _ = at.broadcast_arrays(mu, lam, alpha)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     @staticmethod
     def get_mu_lam_phi(
         mu: Optional[float], lam: Optional[float], phi: Optional[float]
@@ -1943,8 +1949,11 @@ class Pareto(BoundedContinuous):
 
         return super().dist([alpha, m], **kwargs)
 
-    def _distr_parameters_for_repr(self):
-        return ["alpha", "m"]
+    def get_moment(rv, size, alpha, m):
+        median = m * 2 ** (1 / alpha)
+        if not rv_size_is_none(size):
+            median = at.full(size, median)
+        return median
 
     def logcdf(
         value: Union[float, np.ndarray, TensorVariable],
