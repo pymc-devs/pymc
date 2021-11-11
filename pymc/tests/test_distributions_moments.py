@@ -612,6 +612,8 @@ def test_hyper_geometric_moment(N, k, n, size, expected):
 def test_discrete_uniform_moment(lower, upper, size, expected):
     with Model() as model:
         DiscreteUniform("x", lower=lower, upper=upper, size=size)
+
+@pytest.mark.parametrize(
     "a, size, expected",
     [
         (
