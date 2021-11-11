@@ -74,16 +74,45 @@ class TestInitvalEvaluation:
     def test_dependent_initvals(self):
         with pm.Model() as pmodel:
             L = pm.Uniform("L", 0, 1, initval=0.5)
-            B = pm.Uniform("B", lower=L, upper=2, initval=1.25)
+            U = pm.Uniform("U", lower=9, upper=10, initval=9.5)
+            B1 = pm.Uniform("B1", lower=L, upper=U, initval=5)
+            B2 = pm.Uniform("B2", lower=L, upper=U, initval=(L + U) / 2)
             ip = pmodel.recompute_initial_point(seed=0)
             assert ip["L_interval__"] == 0
-            assert ip["B_interval__"] == 0
+            assert ip["U_interval__"] == 0
+            assert ip["B1_interval__"] == 0
+            assert ip["B2_interval__"] == 0
 
             # Modify initval of L and re-evaluate
-            pmodel.initial_values[L] = 0.9
+            pmodel.initial_values[U] = 9.9
             ip = pmodel.recompute_initial_point(seed=0)
-            assert ip["B_interval__"] < 0
+            assert ip["B1_interval__"] < 0
+            assert ip["B2_interval__"] == 0
         pass
+
+    def test_nested_initvals(self):
+        # See issue #5168
+        with pm.Model() as pmodel:
+            one = pm.LogNormal("one", mu=np.log(1), sd=1e-5, initval="prior")
+            two = pm.Lognormal("two", mu=np.log(one * 2), sd=1e-5, initval="prior")
+            three = pm.LogNormal("three", mu=np.log(two * 2), sd=1e-5, initval="prior")
+            four = pm.LogNormal("four", mu=np.log(three * 2), sd=1e-5, initval="prior")
+            five = pm.LogNormal("five", mu=np.log(four * 2), sd=1e-5, initval="prior")
+            six = pm.LogNormal("six", mu=np.log(five * 2), sd=1e-5, initval="prior")
+
+        ip_vals = list(make_initial_point_fn(model=pmodel, return_transformed=True)(0).values())
+        assert np.allclose(np.exp(ip_vals), [1, 2, 4, 8, 16, 32], rtol=1e-3)
+
+        ip_vals = list(make_initial_point_fn(model=pmodel, return_transformed=False)(0).values())
+        assert np.allclose(ip_vals, [1, 2, 4, 8, 16, 32], rtol=1e-3)
+
+        pmodel.initial_values[four] = 1
+
+        ip_vals = list(make_initial_point_fn(model=pmodel, return_transformed=True)(0).values())
+        assert np.allclose(np.exp(ip_vals), [1, 2, 4, 1, 2, 4], rtol=1e-3)
+
+        ip_vals = list(make_initial_point_fn(model=pmodel, return_transformed=False)(0).values())
+        assert np.allclose(ip_vals, [1, 2, 4, 1, 2, 4], rtol=1e-3)
 
     def test_initval_resizing(self):
         with pm.Model() as pmodel:
