@@ -2779,14 +2779,17 @@ class ExGaussian(Continuous):
         sigma = at.as_tensor_variable(floatX(sigma))
         nu = at.as_tensor_variable(floatX(nu))
 
-        # sd = sigma
-        # mean = mu + nu
-        # variance = (sigma ** 2) + (nu ** 2)
-
         assert_negative_support(sigma, "sigma", "ExGaussian")
         assert_negative_support(nu, "nu", "ExGaussian")
 
         return super().dist([mu, sigma, nu], *args, **kwargs)
+
+    def get_moment(rv, size, mu, sigma, nu):
+        mu, nu, _ = at.broadcast_arrays(mu, nu, sigma)
+        moment = mu + nu
+        if not rv_size_is_none(size):
+            moment = at.full(size, moment)
+        return moment
 
     def logp(value, mu, sigma, nu):
         """
