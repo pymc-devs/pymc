@@ -238,7 +238,7 @@ class BetaBinomial(Discrete):
         beta = at.as_tensor_variable(floatX(beta))
         n = at.as_tensor_variable(intX(n))
         return super().dist([n, alpha, beta], **kwargs)
-    
+
     def get_moment(rv, size, n, alpha, beta):
         mean = (n * alpha) / (alpha + beta)
         if not rv_size_is_none(size):
