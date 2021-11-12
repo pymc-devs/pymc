@@ -46,7 +46,11 @@ from pymc.distributions import transforms
 from pymc.distributions.continuous import ChiSquared, Normal, assert_negative_support
 from pymc.distributions.dist_math import bound, factln, logpow, multigammaln
 from pymc.distributions.distribution import Continuous, Discrete
-from pymc.distributions.shape_utils import broadcast_dist_samples_to, rv_size_is_none, to_tuple
+from pymc.distributions.shape_utils import (
+    broadcast_dist_samples_to,
+    rv_size_is_none,
+    to_tuple,
+)
 from pymc.math import kron_diag, kron_dot
 
 __all__ = [
@@ -407,9 +411,11 @@ class Dirichlet(Continuous):
 
     def get_moment(rv, size, a):
         norm_constant = at.sum(a, axis=-1)[..., None]
-        moment = a/norm_constant
+        moment = a / norm_constant
         if not rv_size_is_none(size):
-            return at.full(size, moment)
+            if isinstance(size, int):
+                size = (size,)
+            moment = at.full((*size, *a.shape), moment)
         return moment
 
     def logp(value, a):
