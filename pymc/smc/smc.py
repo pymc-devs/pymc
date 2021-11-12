@@ -541,43 +541,35 @@ class MH(SMC_KERNEL):
         return stats
 
 
-def _logp_forw(point, out_vars, vars, shared):
+def _logp_forw(point, out_vars, in_vars, shared):
     """Compile Aesara function of the model and the input and output variables.
 
     Parameters
     ----------
     out_vars: List
         containing :class:`pymc.Distribution` for the output variables
-    vars: List
+    in_vars: List
         containing :class:`pymc.Distribution` for the input variables
     shared: List
         containing :class:`aesara.tensor.Tensor` for depended shared data
     """
 
-    # Convert expected input of discrete variables to (rounded) floats
-    if any(var.dtype in discrete_types for var in vars):
-        replace_int_to_float = {}
-        replace_float_to_round = {}
-        new_vars = []
-        for var in vars:
-            if var.dtype in discrete_types:
-                float_var = at.TensorType("floatX", var.broadcastable)(var.name)
-                replace_int_to_float[var] = float_var
-                new_vars.append(float_var)
-
-                round_float_var = at.round(float_var)
-                round_float_var.name = var.name
-                replace_float_to_round[float_var] = round_float_var
+    # Replace integer inputs with rounded float inputs
+    if any(var.dtype in discrete_types for var in in_vars):
+        replace_int_input = {}
+        new_in_vars = []
+        for in_var in in_vars:
+            if in_var.dtype in discrete_types:
+                float_var = at.TensorType("floatX", in_var.broadcastable)(in_var.name)
+                new_in_vars.append(float_var)
+                replace_int_input[in_var] = at.round(float_var)
             else:
-                new_vars.append(var)
+                new_in_vars.append(in_var)
 
-        replace_int_to_float.update(shared)
-        replace_float_to_round.update(shared)
-        out_vars = clone_replace(out_vars, replace_int_to_float, strict=False)
-        out_vars = clone_replace(out_vars, replace_float_to_round)
-        vars = new_vars
+        out_vars = clone_replace(out_vars, replace_int_input, strict=False)
+        in_vars = new_in_vars
 
-    out_list, inarray0 = join_nonshared_inputs(point, out_vars, vars, shared)
+    out_list, inarray0 = join_nonshared_inputs(point, out_vars, in_vars, shared)
     f = compile_rv_inplace([inarray0], out_list[0])
     f.trust_input = True
     return f
