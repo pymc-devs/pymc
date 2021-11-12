@@ -3727,6 +3727,14 @@ class Moyal(Continuous):
 
         return super().dist([mu, sigma], *args, **kwargs)
 
+    def get_moment(rv, size, mu, sigma):
+        mu, sigma = at.broadcast_arrays(mu, sigma)
+        mean = mu + sigma * (np.euler_gamma + at.log(2))
+
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, mu, sigma):
         """
         Calculate log-probability of Moyal distribution at specified value.
