@@ -7,6 +7,7 @@ from pymc.distributions import (
     Bernoulli,
     Beta,
     Binomial,
+    Categorical,
     Cauchy,
     ChiSquared,
     Constant,
@@ -611,4 +612,23 @@ def test_hyper_geometric_moment(N, k, n, size, expected):
 def test_discrete_uniform_moment(lower, upper, size, expected):
     with Model() as model:
         DiscreteUniform("x", lower=lower, upper=upper, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "p, size, expected",
+    [
+        (np.arange(0.1, 0.4, 0.1), None, 3),
+        (np.arange(0.1, 0.4, 0.1), 5, np.full(5, 3)),
+        (np.full((2, 4), np.arange(0.1, 0.4, 0.1)), None, [3, 3]),
+        (
+            np.full((2, 4), np.arange(0.1, 0.4, 0.1)),
+            (3, 2),
+            np.full((3, 2), [3, 3]),
+        ),
+    ],
+)
+def test_categorical_moment(p, size, expected):
+    with Model() as model:
+        Categorical("x", p=p, size=size)
     assert_moment_is_expected(model, expected)
