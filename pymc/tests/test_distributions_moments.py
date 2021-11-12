@@ -25,6 +25,7 @@ from pymc.distributions import (
     Laplace,
     Logistic,
     LogNormal,
+    MatrixNormal,
     MvStudentT,
     NegativeBinomial,
     Normal,
@@ -615,16 +616,35 @@ def test_discrete_uniform_moment(lower, upper, size, expected):
     assert_moment_is_expected(model, expected)
 
 
+rand1d = np.random.rand(2)
+
+
 @pytest.mark.parametrize(
     "nu, mu, cov, size, expected",
     [
         (2, np.ones(1), np.eye(1), None, np.ones(1)),
-        (2, np.ones(2), np.eye(2), None, np.ones(2)),
-        (2, np.ones(2), np.eye(2), 2, np.full((2, 2), np.ones(2))),
-        (1, np.ones(2), np.eye(2), (2, 5), np.full((2, 5, 2), np.ones(2))),
+        (2, rand1d, np.eye(2), None, rand1d),
+        (2, rand1d, np.eye(2), 2, np.full((2, 2), rand1d)),
+        (1, rand1d, np.eye(2), (2, 5), np.full((2, 5, 2), rand1d)),
     ],
 )
 def test_mvstudentt_moment(nu, mu, cov, size, expected):
     with Model() as model:
         MvStudentT("x", nu=nu, mu=mu, cov=cov, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+rand2d = np.random.rand(2, 3)
+
+
+@pytest.mark.parametrize(
+    "mu, rowchol, colchol, expected",
+    [
+        (np.ones((1, 1)), np.eye(1), np.eye(1), np.ones((1, 1))),
+        (rand2d, np.eye(2), np.eye(3), rand2d),
+    ],
+)
+def test_matrixnormal_moment(mu, rowchol, colchol, expected):
+    with Model() as model:
+        MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol)
     assert_moment_is_expected(model, expected)

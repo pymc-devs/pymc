@@ -1719,6 +1719,14 @@ class MatrixNormal(Continuous):
 
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
 
+    def get_moment(rv, size, mu, rowchol, colchol):
+        moment = mu
+        if not rv_size_is_none(size):
+            if isinstance(size, int):
+                size = (size,)
+            moment = at.full((*size, mu.size), moment)
+        return moment
+
     def logp(value, mu, rowchol, colchol):
         """
         Calculate log-probability of Matrix-valued Normal distribution
