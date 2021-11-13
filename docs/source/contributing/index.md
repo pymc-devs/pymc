@@ -25,6 +25,18 @@ TODO add information on how to become a sponsor. Description of the process is b
 
 :::{toctree}
 :hidden:
+:maxdepth: 1
+:caption: Style guides
+
+python_style
+jupyter_style
+:::
+
+
+:::{toctree}
+:hidden:
+:maxdepth: 1
+:caption: Developer content
 
 developer_guide
 developer_guide_implementing_distribution
