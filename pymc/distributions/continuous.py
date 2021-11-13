@@ -86,7 +86,7 @@ from pymc.distributions.dist_math import (
 )
 from pymc.distributions.distribution import Continuous
 from pymc.distributions.shape_utils import rv_size_is_none
-from pymc.math import logdiffexp, logit
+from pymc.math import invlogit, logdiffexp, logit
 from pymc.util import UNSET
 
 __all__ = [
@@ -3101,6 +3101,12 @@ class Triangular(BoundedContinuous):
 
         return super().dist([lower, c, upper], *args, **kwargs)
 
+    def get_moment(rv, size, lower, c, upper):
+        mean = (lower + upper + c) / 3
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logcdf(value, lower, c, upper):
         """
         Compute the log of the cumulative distribution function for Triangular distribution
@@ -3197,6 +3203,12 @@ class Gumbel(Continuous):
             assert_negative_support(beta, "beta", "Gumbel")
 
         return super().dist([mu, beta], **kwargs)
+
+    def get_moment(rv, size, mu, beta):
+        mean = mu + beta * np.euler_gamma
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def _distr_parameters_for_repr(self):
         return ["mu", "beta"]
@@ -3500,6 +3512,12 @@ class LogitNormal(UnitContinuous):
         assert_negative_support(tau, "tau", "LogitNormal")
 
         return super().dist([mu, sigma], **kwargs)
+
+    def get_moment(rv, size, mu, sigma):
+        median, _ = at.broadcast_arrays(invlogit(mu), sigma)
+        if not rv_size_is_none(size):
+            median = at.full(size, median)
+        return median
 
     def logp(value, mu, sigma):
         """

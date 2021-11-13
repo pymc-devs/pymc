@@ -17,6 +17,7 @@ from pymc.distributions import (
     Flat,
     Gamma,
     Geometric,
+    Gumbel,
     HalfCauchy,
     HalfFlat,
     HalfNormal,
@@ -25,12 +26,14 @@ from pymc.distributions import (
     Kumaraswamy,
     Laplace,
     Logistic,
+    LogitNormal,
     LogNormal,
     NegativeBinomial,
     Normal,
     Pareto,
     Poisson,
     StudentT,
+    Triangular,
     TruncatedNormal,
     Uniform,
     Wald,
@@ -649,4 +652,63 @@ def test_discrete_uniform_moment(lower, upper, size, expected):
 def test_dirichlet_moment(a, size, expected):
     with Model() as model:
         Dirichlet("x", a=a, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, beta, size, expected",
+    [
+        (0, 2, None, 2 * np.euler_gamma),
+        (1, np.arange(1, 4), None, 1 + np.arange(1, 4) * np.euler_gamma),
+        (np.arange(5), 2, None, np.arange(5) + 2 * np.euler_gamma),
+        (1, 2, 5, np.full(5, 1 + 2 * np.euler_gamma)),
+        (
+            np.arange(5),
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), np.arange(5) + np.arange(1, 6) * np.euler_gamma),
+        ),
+    ],
+)
+def test_gumbel_moment(mu, beta, size, expected):
+    with Model() as model:
+        Gumbel("x", mu=mu, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "c, lower, upper, size, expected",
+    [
+        (1, 0, 5, None, 2),
+        (3, np.arange(-3, 6, 3), np.arange(3, 12, 3), None, np.array([1, 3, 5])),
+        (np.arange(-3, 6, 3), -3, 3, None, np.array([-1, 0, 1])),
+        (3, -3, 6, 5, np.full(5, 2)),
+        (
+            np.arange(-3, 6, 3),
+            np.arange(-9, -2, 3),
+            np.arange(3, 10, 3),
+            (2, 3),
+            np.full((2, 3), np.array([-3, 0, 3])),
+        ),
+    ],
+)
+def test_triangular_moment(c, lower, upper, size, expected):
+    with Model() as model:
+        Triangular("x", c=c, lower=lower, upper=upper, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, sigma, size, expected",
+    [
+        (1, 2, None, special.expit(1)),
+        (0, np.arange(1, 5), None, special.expit(np.zeros(4))),
+        (np.arange(4), 1, None, special.expit(np.arange(4))),
+        (1, 5, 4, special.expit(np.ones(4))),
+        (np.arange(4), np.arange(1, 5), (2, 4), np.full((2, 4), special.expit(np.arange(4)))),
+    ],
+)
+def test_logitnormal_moment(mu, sigma, size, expected):
+    with Model() as model:
+        LogitNormal("x", mu=mu, sigma=sigma, size=size)
     assert_moment_is_expected(model, expected)
