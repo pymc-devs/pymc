@@ -8,6 +8,7 @@ from pymc.distributions import (
     Beta,
     BetaBinomial,
     Binomial,
+    Categorical,
     Cauchy,
     ChiSquared,
     Constant,
@@ -727,4 +728,23 @@ def test_triangular_moment(c, lower, upper, size, expected):
 def test_logitnormal_moment(mu, sigma, size, expected):
     with Model() as model:
         LogitNormal("x", mu=mu, sigma=sigma, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "p, size, expected",
+    [
+        (np.array([0.1, 0.3, 0.6]), None, 2),
+        (np.array([0.6, 0.1, 0.3]), 5, np.full(5, 0)),
+        (np.full((2, 3), np.array([0.6, 0.1, 0.3])), None, [0, 0]),
+        (
+            np.full((2, 3), np.array([0.1, 0.3, 0.6])),
+            (3, 2),
+            np.full((3, 2), [2, 2]),
+        ),
+    ],
+)
+def test_categorical_moment(p, size, expected):
+    with Model() as model:
+        Categorical("x", p=p, size=size)
     assert_moment_is_expected(model, expected)

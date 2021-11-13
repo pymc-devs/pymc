@@ -1167,12 +1167,13 @@ class Categorical(Discrete):
     def dist(cls, p, **kwargs):
 
         p = at.as_tensor_variable(floatX(p))
-
-        # mode = at.argmax(p, axis=-1)
-        # if mode.ndim == 1:
-        #     mode = at.squeeze(mode)
-
         return super().dist([p], **kwargs)
+
+    def get_moment(rv, size, p):
+        mode = at.argmax(p, axis=-1)
+        if not rv_size_is_none(size):
+            mode = at.full(size, mode)
+        return mode
 
     def logp(value, p):
         r"""
