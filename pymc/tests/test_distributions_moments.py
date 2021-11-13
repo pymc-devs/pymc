@@ -43,7 +43,6 @@ from pymc.distributions import (
 )
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
-from pymc.math import invlogit
 from pymc.model import Model
 
 
@@ -667,8 +666,8 @@ def test_dirichlet_moment(a, size, expected):
             np.arange(5),
             np.arange(1, 6),
             (2, 5),
-            np.full((2, 5), np.arange(5) + np.arange(1, 6) * np.euler_gamma)
-        )
+            np.full((2, 5), np.arange(5) + np.arange(1, 6) * np.euler_gamma),
+        ),
     ],
 )
 def test_gumbel_moment(mu, beta, size, expected):
@@ -689,8 +688,8 @@ def test_gumbel_moment(mu, beta, size, expected):
             np.arange(-9, -2, 3),
             np.arange(3, 10, 3),
             (2, 3),
-            np.full((2, 3), np.array([-3, 0, 3]))
-        )
+            np.full((2, 3), np.array([-3, 0, 3])),
+        ),
     ],
 )
 def test_triangular_moment(c, lower, upper, size, expected):
@@ -706,12 +705,7 @@ def test_triangular_moment(c, lower, upper, size, expected):
         (0, np.arange(1, 5), None, special.expit(np.zeros(4))),
         (np.arange(4), 1, None, special.expit(np.arange(4))),
         (1, 5, 4, special.expit(np.ones(4))),
-        (
-            np.arange(4),
-            np.arange(1, 5),
-            (2, 4),
-            np.full((2, 4), special.expit(np.arange(4)))
-        )
+        (np.arange(4), np.arange(1, 5), (2, 4), np.full((2, 4), special.expit(np.arange(4)))),
     ],
 )
 def test_logitnormal_moment(mu, sigma, size, expected):
