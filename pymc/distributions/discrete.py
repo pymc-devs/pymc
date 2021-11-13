@@ -240,7 +240,7 @@ class BetaBinomial(Discrete):
         return super().dist([n, alpha, beta], **kwargs)
 
     def get_moment(rv, size, n, alpha, beta):
-        mean = (n * alpha) / (alpha + beta)
+        mean = at.round((n * alpha) / (alpha + beta))
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
         return mean
