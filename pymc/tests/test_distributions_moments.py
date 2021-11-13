@@ -10,6 +10,7 @@ from pymc.distributions import (
     Cauchy,
     ChiSquared,
     Constant,
+    Dirichlet,
     DiscreteUniform,
     ExGaussian,
     Exponential,
@@ -611,4 +612,41 @@ def test_hyper_geometric_moment(N, k, n, size, expected):
 def test_discrete_uniform_moment(lower, upper, size, expected):
     with Model() as model:
         DiscreteUniform("x", lower=lower, upper=upper, size=size)
+
+
+@pytest.mark.parametrize(
+    "a, size, expected",
+    [
+        (
+            np.array([2, 3, 5, 7, 11]),
+            None,
+            np.array([2, 3, 5, 7, 11]) / 28,
+        ),
+        (
+            np.array([[1, 2, 3], [5, 6, 7]]),
+            None,
+            np.array([[1, 2, 3], [5, 6, 7]]) / np.array([6, 18])[..., np.newaxis],
+        ),
+        (
+            np.array([[1, 2, 3], [5, 6, 7]]),
+            7,
+            np.apply_along_axis(
+                lambda x: np.divide(x, np.array([6, 18])),
+                1,
+                np.broadcast_to([[1, 2, 3], [5, 6, 7]], shape=[7, 2, 3]),
+            ),
+        ),
+        (
+            np.full(shape=np.array([7, 3]), fill_value=np.array([13, 17, 19])),
+            (
+                11,
+                5,
+            ),
+            np.broadcast_to([13, 17, 19], shape=[11, 5, 7, 3]) / 49,
+        ),
+    ],
+)
+def test_dirichlet_moment(a, size, expected):
+    with Model() as model:
+        Dirichlet("x", a=a, size=size)
     assert_moment_is_expected(model, expected)
