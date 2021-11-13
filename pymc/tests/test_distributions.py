@@ -474,6 +474,7 @@ def _dirichlet_logpdf(value, a):
 
 dirichlet_logpdf = np.vectorize(_dirichlet_logpdf, signature="(n),(n)->()")
 
+
 def categorical_logpdf(value, p):
     if value >= 0 and value <= len(p):
         return floatX(np.log(np.moveaxis(p, -1, 0)[value]))
@@ -2125,10 +2126,10 @@ class TestMatchesScipy:
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_stickbreakingweights(self, n):
         self.check_logp(
-            StickBreakingWeights, # pymc_dist
-            Simplex(n), # domain
-            {"alpha": Rplus}, # paramdomains
-            sbw_logpdf, # precompute values as in ex-gaussian dist
+            StickBreakingWeights,  # pymc_dist
+            Simplex(n),  # domain
+            {"alpha": Rplus},  # paramdomains
+            sbw_logpdf,  # precompute values as in ex-gaussian dist
         )
 
     def test_stickbreakingweights_shape(self):

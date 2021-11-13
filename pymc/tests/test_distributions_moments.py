@@ -52,6 +52,7 @@ from pymc.distributions import (
     Rice,
     Simulator,
     SkewNormal,
+    StickBreakingWeights,
     StudentT,
     Triangular,
     TruncatedNormal,
@@ -1087,6 +1088,11 @@ def test_matrixnormal_moment(mu, rowchol, colchol, size, expected):
 def test_rice_moment(nu, sigma, size, expected):
     with Model() as model:
         Rice("x", nu=nu, sigma=sigma, size=size)
+    "alpha, K, size, expected", [(3, 11, None, (3 / 4) ** np.arange(12) * 1 / 3)]
+)
+def test_stickbreakingweights_moment(alpha, K, size, expected):
+    with Model() as model:
+        StickBreakingWeights("x", alpha=alpha, K=K, size=size)
     assert_moment_is_expected(model, expected)
 
 

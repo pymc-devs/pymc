@@ -44,7 +44,11 @@ import pymc as pm
 from pymc.aesaraf import floatX, intX
 from pymc.distributions import transforms
 from pymc.distributions.continuous import ChiSquared, Normal, assert_negative_support
+<<<<<<< HEAD
 from pymc.distributions.dist_math import check_parameters, factln, logpow, multigammaln
+=======
+from pymc.distributions.dist_math import betaln, bound, factln, logpow, multigammaln
+>>>>>>> 36c8fe0b (Moment and random tests failing...)
 from pymc.distributions.distribution import Continuous, Discrete
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
@@ -2176,34 +2180,34 @@ class StickBreakingWeightsRV(RandomVariable):
     ndims_params = [0, 0]
     dtype = "floatX"
     _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
-    
-    def __call__(self, alpha=1., K=10, size=None, **kwargs):
+
+    def __call__(self, alpha=1.0, K=10, size=None, **kwargs):
         return super().__call__(alpha, K, size=size, **kwargs)
 
     def _infer_shape(self, size, dist_params, param_shapes=None):
         alpha, K = dist_params
-        return [K + 1,]
-    
+
+        size = tuple(size)
+
+        return size + (K + 1,)
+
     @classmethod
     def rng_fn(cls, rng, alpha, K, size):
         if K < 0:
             raise ValueError("K needs to be a positive integer.")
-        
+
         if np.ndim(alpha) > 0:
             raise ValueError("The concentration parameter needs to be a scalar.")
 
-        if size is None:
-            raise ValueError("size cannot be None because K is inferred from size")
-            
         if size is None:
             size = (K,)
         elif isinstance(size, int):
             size = (size,) + (K,)
         else:
             size = tuple(size) + (K,)
-            
-        betas = rng.beta(1, alpha, size=size) # adapt this to vector alpha
-        
+
+        betas = rng.beta(1, alpha, size=size)  # adapt this to vector alpha
+
         sticks = np.concatenate(
             (
                 np.ones(shape=(size[:-1] + (1,))),
@@ -2211,27 +2215,24 @@ class StickBreakingWeightsRV(RandomVariable):
             ),
             axis=-1,
         )
-        
+
         weights = sticks * betas
         weights = np.concatenate(
-            (
-                weights,
-                1 - weights.sum(axis=-1)[..., np.newaxis]
-            ),
+            (weights, 1 - weights.sum(axis=-1)[..., np.newaxis]),
             axis=-1,
         )
 
         return weights
-    
+
 
 stickbreakingweights = StickBreakingWeightsRV()
 
 
 class StickBreakingWeights(Continuous):
     rv_op = stickbreakingweights
-    
+
     def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("transform", transforms.stick_breaking)
+        kwargs.setdefault("transform", transforms.simplex)
         return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
@@ -2239,11 +2240,9 @@ class StickBreakingWeights(Continuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         K = at.as_tensor_variable(intX(K))
 
-        print(kwargs["size"])
-        
         if alpha.ndim > 0:
             raise ValueError("alpha must be a scalar.")
-            
+
         if K.ndim > 0:
             raise ValueError("K must be a scalar.")
 
@@ -2252,13 +2251,20 @@ class StickBreakingWeights(Continuous):
 
         return super().dist([alpha, K], **kwargs)
 
+    def get_moment(rv, size, alpha, K):
+        moment = (alpha / (1 + alpha)) ** at.arange(K + 1)
+        moment *= 1 / (1 + alpha)
+        if not rv_size_is_none(size):
+            moment = at.full(*size + (K + 1,), moment)
+        return moment
+
     def logp(value, alpha, K):
         if at.lt(K, 0).eval():
             raise ValueError("K needs to be a positive integer.")
-            
+
         if at.lt(alpha, 0).eval():
-            raise ValueError("alpha needs to be a positive.") 
-        
+            raise ValueError("alpha needs to be a positive.")
+
         logp = -at.sum(
             at.log(
                 at.cumsum(
@@ -2269,7 +2275,7 @@ class StickBreakingWeights(Continuous):
             axis=-1,
         )
         logp += -K * betaln(1, alpha)
-        logp += alpha * at.log(value[..., -1]) # check this
+        logp += alpha * at.log(value[..., -1])  # check this
 
         return bound(
             logp,

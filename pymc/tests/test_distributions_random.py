@@ -1177,12 +1177,19 @@ class TestDirichlet(BaseTestDistribution):
 
 
 class TestStickBreakingWeights(BaseTestDistribution):
-    print(pm.StickBreakingWeights.dist(2., 19, size=[3,]).eval().shape)
     pymc_dist = pm.StickBreakingWeights
-    pymc_dist_params = {"alpha": 2., "K": 19}
-    expected_rv_op_params = {"alpha": 2., "K": 19}
+    pymc_dist_params = {"alpha": 2.0, "K": 19}
+    expected_rv_op_params = {"alpha": 2.0, "K": 19}
     sizes_to_check = [None, (5,), (11, 5), (3, 13, 5)]
-    sizes_expected = [(20,), (20,), (11, 5, 20), (3, 13, 5, 20)]
+    sizes_expected = [
+        (20,),
+        (
+            5,
+            20,
+        ),
+        (11, 5, 20),
+        (3, 13, 5, 20),
+    ]
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",
