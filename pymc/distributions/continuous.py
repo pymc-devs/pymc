@@ -2326,22 +2326,19 @@ class InverseGamma(PositiveContinuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
 
-        # m = beta / (alpha - 1.0)
-        # try:
-        #     mean = (alpha > 1) * m or np.inf
-        # except ValueError:  # alpha is an array
-        #     m[alpha <= 1] = np.inf
-        #     mean = m
-
-        # mode = beta / (alpha + 1.0)
-        # variance = at.switch(
-        #     at.gt(alpha, 2), (beta ** 2) / ((alpha - 2) * (alpha - 1.0) ** 2), np.inf
-        # )
-
         assert_negative_support(alpha, "alpha", "InverseGamma")
         assert_negative_support(beta, "beta", "InverseGamma")
 
         return super().dist([alpha, beta], **kwargs)
+
+    def get_moment(rv, size, alpha, beta):
+        m = beta / (alpha - 1.0)
+        try:
+            mean = (alpha > 1) * m or np.inf
+        except ValueError:  # alpha is an array
+            m[alpha <= 1] = np.inf
+            mean = m
+        return mean
 
     @classmethod
     def _get_alpha_beta(cls, alpha, beta, mu, sigma):
