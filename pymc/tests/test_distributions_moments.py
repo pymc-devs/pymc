@@ -6,6 +6,7 @@ from scipy import special
 from pymc.distributions import (
     Bernoulli,
     Beta,
+    BetaBinomial,
     Binomial,
     Cauchy,
     ChiSquared,
@@ -209,6 +210,21 @@ def test_bernoulli_moment(p, size, expected):
 def test_beta_moment(alpha, beta, size, expected):
     with Model() as model:
         Beta("x", alpha=alpha, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "n, alpha, beta, size, expected",
+    [
+        (10, 1, 1, None, 5),
+        (10, 1, 1, 5, np.full(5, 5)),
+        (10, 1, np.arange(1, 6), None, np.round(10 / np.arange(2, 7))),
+        (10, 1, np.arange(1, 6), (2, 5), np.full((2, 5), np.round(10 / np.arange(2, 7)))),
+    ],
+)
+def test_beta_binomial_moment(alpha, beta, n, size, expected):
+    with Model() as model:
+        BetaBinomial("x", alpha=alpha, beta=beta, n=n, size=size)
     assert_moment_is_expected(model, expected)
 
 
