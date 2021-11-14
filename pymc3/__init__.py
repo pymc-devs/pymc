@@ -82,6 +82,7 @@ _hotfix_theano_printing()
 from pymc3 import gp, ode, sampling
 from pymc3.backends import load_trace, save_trace
 from pymc3.backends.tracetab import *
+from pymc3.backports import logp
 from pymc3.blocking import *
 from pymc3.data import *
 from pymc3.distributions import *
