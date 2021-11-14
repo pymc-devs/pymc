@@ -677,6 +677,26 @@ class TestCompoundStep:
                 assert not isinstance(sampler_instance, CompoundStep)
                 assert isinstance(sampler_instance, sampler)
 
+    def test_reset_tuning_is_called(self):
+        """If method exists, or not if it doesn't"""
+
+        class HasResetTuning:
+            def __init__(self):
+                self.reset_tuning_called = False
+                self.generates_stats = False
+
+            def reset_tuning(self):
+                self.reset_tuning_called = True
+
+        class NoResetTuning:
+            generates_stats = False
+
+        steps = [HasResetTuning(), NoResetTuning(), HasResetTuning(), NoResetTuning()]
+        compound_step = CompoundStep(steps)
+        compound_step.reset_tuning()
+        assert steps[0].reset_tuning_called
+        assert steps[2].reset_tuning_called
+
     def test_tune_parameter_in_sequential_chain_sampling(self):
         _, model = simple_2model_continuous()
         with model:
