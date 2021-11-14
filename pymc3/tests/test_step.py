@@ -17,6 +17,7 @@ import sys
 import tempfile
 
 from math import isclose
+from typing import List
 
 import arviz as az
 import numpy as np
@@ -59,6 +60,7 @@ from pymc3.step_methods import (
     Slice,
     UniformProposal,
 )
+from pymc3.step_methods.metropolis import SettingNotFoundInAttribute, SettingsResetter
 from pymc3.step_methods.mlda import extract_Q_estimate
 from pymc3.tests.checks import close_to
 from pymc3.tests.helpers import select_by_precision
@@ -843,6 +845,42 @@ class TestPopulationSamplers:
                     stepper
                 )
         pass
+
+
+class MockSettings:
+    def __init__(self, p1: int, p2: str, p3: List[int]) -> None:
+        self.p1: int = p1
+        self.p2: str = p2
+        self.p3: List[int] = p3
+
+
+class TestSettingResetter:
+    def test_fails_when_settings_are_not_attributes(self):
+        settings = MockSettings(p1=1, p2="a", p3=[])
+        with pytest.raises(SettingNotFoundInAttribute):
+            SettingsResetter(settings, "p1", "p2", "attribute-error")
+
+    def test_resets_settings_to_original_values(self):
+        """Make sure it works with mutable objects"""
+        settings = MockSettings(p1=1, p2="two", p3=[1, 2, [3]])
+        resetter = SettingsResetter(settings, "p1", "p2", "p3")
+        settings.p1 += 1
+        settings.p2 = "three"
+        settings.p3[1] = 11
+        settings.p3[2][0] += 10
+        resetter(settings)
+        assert settings.p1 == 1
+        assert settings.p2 == "two"
+        assert settings.p3 == [1, 2, [3]]
+
+    def test_resets_settings_can_be_called_on_different_instance(self):
+        settings = MockSettings(p1=1, p2=2, p3=3)
+        other_settings = MockSettings(p1=None, p2=None, p3=None)
+        resetter = SettingsResetter(settings, "p1", "p2", "p3")
+        resetter(other_settings)
+        assert other_settings.p1 == 1
+        assert other_settings.p2 == 2
+        assert other_settings.p3 == 3
 
 
 class TestMetropolis:

@@ -12,6 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import copy
+
+from typing import Any
+
 import numpy as np
 import numpy.random as nr
 import scipy.linalg
@@ -92,6 +96,28 @@ class MultivariateNormalProposal(Proposal):
         else:
             b = np.random.randn(self.n)
             return np.dot(self.chol, b)
+
+
+class SettingNotFoundInAttribute(BaseException):
+    pass
+
+
+class SettingsResetter:
+    """Stores a copy of initial settings so they can be reset on call"""
+
+    initial_settings: dict[str, Any]
+
+    def __init__(self, step_method: Any, *settings: str):
+        try:
+            self.initial_settings = {
+                param: copy.deepcopy(getattr(step_method, param)) for param in settings
+            }
+        except AttributeError:
+            raise SettingNotFoundInAttribute("check arguments for typos")
+
+    def __call__(self, step_method: Any) -> Any:
+        for param, initial_value in self.initial_settings.items():
+            setattr(step_method, param, initial_value)
 
 
 class Metropolis(ArrayStepShared):
@@ -176,12 +202,8 @@ class Metropolis(ArrayStepShared):
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
 
-        # remember initial settings before tuning so they can be reset
-        self._untuned_settings = dict(
-            scaling=self.scaling,
-            steps_until_tune=tune_interval,
-            accepted=self.accepted,
-            tune=self.tune,
+        self._settings_resetter = SettingsResetter(
+            self, "scaling", "steps_until_tune", "accepted", "tune"
         )
 
         self.mode = mode
@@ -191,10 +213,7 @@ class Metropolis(ArrayStepShared):
         super().__init__(vars, shared)
 
     def reset_tuning(self):
-        """Resets the tuned sampler parameters to their initial values."""
-        for attr, initial_value in self._untuned_settings.items():
-            setattr(self, attr, initial_value)
-        return
+        self._settings_resetter(self)
 
     def astep(self, q0):
         if not self.steps_until_tune and self.tune:
