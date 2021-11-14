@@ -35,6 +35,5 @@ TODO add categories to all notebooks
 examples/getting_started
 examples/GLM-linear
 examples/model_comparison
-examples/multilevel_modeling
 examples/posterior_predictive
 :::
