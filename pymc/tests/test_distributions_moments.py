@@ -601,10 +601,12 @@ def test_discrete_uniform_moment(lower, upper, size, expected):
 @pytest.mark.parametrize(
     "mu, cov, size, expected",
     [
-        (np.array([1.]), np.array([[1.]]), None, np.array([1.])),
-        (np.ones((10, )), np.identity(10), None, np.ones((10, ))),
+        (np.ones(1), np.identity(1), None, np.ones(1)),
+        (np.ones(10), np.identity(10), None, np.ones(10)),
         (np.ones(2), np.identity(2), 4, np.ones((4, 2))),
         (np.ones(2), np.identity(2), (4, 2), np.ones((4, 2, 2))),
+        (np.ones((2, 2)), np.identity(2), 4, np.ones((4, 2, 2))),
+        (np.ones((2, 2)), np.identity(2), (4, 2), np.ones((4, 2, 2, 2))),
     ]
 )
 def test_mv_normal_moment(mu, cov, size, expected):
