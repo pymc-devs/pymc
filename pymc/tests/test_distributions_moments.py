@@ -605,6 +605,7 @@ def test_discrete_uniform_moment(lower, upper, size, expected):
         (np.ones(10), np.identity(10), None, np.ones(10)),
         (np.ones(2), np.identity(2), 4, np.ones((4, 2))),
         (np.ones(2), np.identity(2), (4, 2), np.ones((4, 2, 2))),
+        (np.ones((2, 2)), np.identity(2), None, np.ones((2, 2))),
         (np.ones((2, 2)), np.identity(2), 4, np.ones((4, 2, 2))),
         (np.ones((2, 2)), np.identity(2), (4, 2), np.ones((4, 2, 2, 2))),
     ]
