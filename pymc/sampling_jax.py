@@ -168,10 +168,10 @@ def sample_numpyro_nuts(
 
     for i in range(draws):
         for c in range(chains):
-            draw = dict(
-                (value_var.name, raw_samples[c, i])
+            draw = {
+                value_var.name: raw_samples[c, i]
                 for value_var, raw_samples in zip(model.value_vars, raw_mcmc_samples)
-            )
+            }
             sample = fn(draw)
             for vi, v in enumerate(vars_to_sample):
                 mcmc_samples[v.name].append(sample[vi])
