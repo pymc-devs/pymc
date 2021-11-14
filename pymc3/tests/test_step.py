@@ -678,16 +678,16 @@ class TestCompoundStep:
                 assert isinstance(sampler_instance, sampler)
 
     def test_tune_parameter_in_sequential_chain_sampling(self):
-        __, model = simple_2model_continuous()
+        _, model = simple_2model_continuous()
         with model:
             for sampler in (Metropolis, HamiltonianMC, NUTS):
                 sampler_instance = sampler(blocked=False)
                 assert isinstance(sampler_instance, CompoundStep)
-                for __ in range(2):
+                for _ in range(2):
                     sampling = _iter_sample(draws=3, step=sampler_instance, tune=1)
                     tune_sampler = []
                     tune_method = []
-                    for __ in sampling:
+                    for _ in sampling:
                         tune_sampler.append(sampler_instance.tune)
                         tune_method.append([method.tune for method in sampler_instance.methods])
                     assert [True, False, False] == tune_sampler
