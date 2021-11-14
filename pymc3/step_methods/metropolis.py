@@ -331,11 +331,17 @@ class BinaryMetropolis(ArrayStep):
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
+        self._settings_resetter = SettingsResetter(
+            self, "scaling", "steps_until_tune", "accepted", "tune"
+        )
 
         if not all([v.dtype in pm.discrete_types for v in vars]):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
 
         super().__init__(vars, [model.fastlogp])
+
+    def reset_tuning(self):
+        self._settings_resetter(self)
 
     def astep(self, q0, logp):
 

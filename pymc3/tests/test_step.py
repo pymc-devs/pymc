@@ -60,7 +60,11 @@ from pymc3.step_methods import (
     Slice,
     UniformProposal,
 )
-from pymc3.step_methods.metropolis import SettingNotFoundInAttribute, SettingsResetter
+from pymc3.step_methods.metropolis import (
+    BinaryMetropolis,
+    SettingNotFoundInAttribute,
+    SettingsResetter,
+)
 from pymc3.step_methods.mlda import extract_Q_estimate
 from pymc3.tests.checks import close_to
 from pymc3.tests.helpers import select_by_precision
@@ -912,6 +916,27 @@ class TestMetropolis:
             with Model() as _:
                 Normal("n", 0, 2)
                 step = Metropolis(tune=tune, scaling=scaling, tune_interval=steps_until_tune)
+                step.scaling = None
+                step.steps_until_tune = None
+                step.accepted = None
+                step.tune = None
+                step.reset_tuning()
+                assert step.tune == tune
+                assert step.steps_until_tune == steps_until_tune
+                assert step.accepted == 0
+                assert step.scaling == scaling
+
+
+class TestBinaryMetropolis:
+    def test_reset_tuning_keeps_old_parameter_values(self):
+        steps_until_tune = 31
+        scaling = 0.1
+        for tune in [True, False]:
+            with Model() as _:
+                var = [Bernoulli("x", 0.1)]
+                step = BinaryMetropolis(
+                    var, tune=tune, scaling=scaling, tune_interval=steps_until_tune
+                )
                 step.scaling = None
                 step.steps_until_tune = None
                 step.accepted = None
