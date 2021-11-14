@@ -350,9 +350,8 @@ class MvStudentT(Continuous):
     def get_moment(rv, size, nu, mu, cov):
         moment = mu
         if not rv_size_is_none(size):
-            if isinstance(size, int):
-                size = (size,)
-            moment = at.full((*size, mu.size), moment)
+            moment_size = at.concatenate([size, mu.shape])
+            moment = at.full(moment_size, moment)
         return moment
 
     def logp(value, nu, mu, cov):
@@ -1668,8 +1667,8 @@ class MatrixNormal(Continuous):
 
         cholesky = Cholesky(lower=True, on_error="raise")
 
-        if kwargs.get("size", None) is not None:
-            raise NotImplementedError("MatrixNormal doesn't support size argument")
+        # if kwargs.get("size", None) is not None:
+        #     raise NotImplementedError("MatrixNormal doesn't support size argument")
 
         if "shape" in kwargs:
             kwargs.pop("shape")
@@ -1720,11 +1719,10 @@ class MatrixNormal(Continuous):
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
 
     def get_moment(rv, size, mu, rowchol, colchol):
-        moment = mu
+        output_shape = (rowchol.shape[0], colchol.shape[0])
         if not rv_size_is_none(size):
-            if isinstance(size, int):
-                size = (size,)
-            moment = at.full((*size, mu.size), moment)
+            output_shape = at.concatenate([size, output_shape])
+        moment = at.full(output_shape, mu)
         return moment
 
     def logp(value, mu, rowchol, colchol):
