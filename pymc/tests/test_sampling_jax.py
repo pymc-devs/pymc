@@ -44,6 +44,23 @@ def test_transform_samples():
     assert 1.5 < trace.posterior["sigma"].mean() < 2.5
 
 
+def test_deterministic_samples():
+    aesara.config.on_opt_error = "raise"
+    np.random.seed(13244)
+
+    obs = np.random.normal(10, 2, size=100)
+    obs_at = aesara.shared(obs, borrow=True, name="obs")
+    with pm.Model() as model:
+        a = pm.Normal("a", 0, 1)
+        b = pm.Deterministic("b", a / 2.0)
+        c = pm.Normal("c", a, sigma=1.0, observed=obs_at)
+
+        trace = sample_numpyro_nuts(chains=2, random_seed=1322, keep_untransformed=True)
+
+    assert 8 < trace.posterior["a"].mean() < 11
+    assert 4 < trace.posterior["b"].mean() < 6
+
+
 def test_replace_shared_variables():
     x = aesara.shared(5, name="shared_x")
 

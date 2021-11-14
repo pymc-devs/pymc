@@ -27,6 +27,7 @@ from aesara.link.jax.dispatch import jax_funcify
 
 from pymc import Model, modelcontext
 from pymc.aesaraf import compile_rv_inplace
+from pymc.util import get_default_varnames
 
 warnings.warn("This module is experimental.")
 
@@ -101,12 +102,18 @@ def sample_numpyro_nuts(
     target_accept=0.8,
     random_seed=10,
     model=None,
+    var_names=None,
     progress_bar=True,
     keep_untransformed=False,
 ):
     from numpyro.infer import MCMC, NUTS
 
     model = modelcontext(model)
+
+    if var_names is None:
+        var_names = model.unobserved_value_vars
+
+    vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
 
     tic1 = pd.Timestamp.now()
     print("Compiling...", file=sys.stdout)
@@ -116,6 +123,7 @@ def sample_numpyro_nuts(
     init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
 
     logp_fn = get_jaxified_logp(model)
+    fn = model.fastfn(vars_to_sample)
 
     nuts_kernel = NUTS(
         potential_fn=logp_fn,
@@ -143,45 +151,40 @@ def sample_numpyro_nuts(
     seed = jax.random.PRNGKey(random_seed)
     map_seed = jax.random.split(seed, chains)
 
-    pmap_numpyro.run(map_seed, init_params=init_state_batched, extra_fields=("num_steps",))
+    if chains == 1:
+        pmap_numpyro.run(seed, init_params=init_state, extra_fields=("num_steps",))
+    else:
+        pmap_numpyro.run(map_seed, init_params=init_state_batched, extra_fields=("num_steps",))
+
     raw_mcmc_samples = pmap_numpyro.get_samples(group_by_chain=True)
 
     tic3 = pd.Timestamp.now()
     print("Sampling time = ", tic3 - tic2, file=sys.stdout)
 
     print("Transforming variables...", file=sys.stdout)
-    mcmc_samples = []
-    for i, (value_var, raw_samples) in enumerate(zip(model.value_vars, raw_mcmc_samples)):
-        raw_samples = at.constant(np.asarray(raw_samples))
+    mcmc_samples = {}
+    for v in vars_to_sample:
+        mcmc_samples[v.name] = []
 
-        rv = model.values_to_rvs[value_var]
-        transform = getattr(value_var.tag, "transform", None)
+    for i in range(draws):
+        for c in range(chains):
+            draw = dict(
+                (value_var.name, raw_samples[c, i])
+                for value_var, raw_samples in zip(model.value_vars, raw_mcmc_samples)
+            )
+            sample = fn(draw)
+            for vi, v in enumerate(vars_to_sample):
+                mcmc_samples[v.name].append(sample[vi])
 
-        if transform is not None:
-            # TODO: This will fail when the transformation depends on another variable
-            #  such as in interval transform with RVs as edges
-            trans_samples = transform.backward(raw_samples, *rv.owner.inputs)
-            trans_samples.name = rv.name
-            mcmc_samples.append(trans_samples)
-
-            if keep_untransformed:
-                raw_samples.name = value_var.name
-                mcmc_samples.append(raw_samples)
-        else:
-            raw_samples.name = rv.name
-            mcmc_samples.append(raw_samples)
-
-    mcmc_varnames = [var.name for var in mcmc_samples]
-    mcmc_samples = compile_rv_inplace(
-        [],
-        mcmc_samples,
-        mode="JAX",
-    )()
+    for v in vars_to_sample:
+        mcmc_samples[v.name] = np.array(mcmc_samples[v.name]).reshape(
+            (chains, draws) + mcmc_samples[v.name][-1].shape
+        )
 
     tic4 = pd.Timestamp.now()
     print("Transformation time = ", tic4 - tic3, file=sys.stdout)
 
-    posterior = {k: v for k, v in zip(mcmc_varnames, mcmc_samples)}
+    posterior = mcmc_samples
     az_trace = az.from_dict(posterior=posterior)
 
     return az_trace
