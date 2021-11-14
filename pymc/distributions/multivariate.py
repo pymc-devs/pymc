@@ -29,7 +29,6 @@ from aesara.graph.basic import Apply
 from aesara.graph.op import Op
 from aesara.sparse.basic import sp_sum
 from aesara.tensor import gammaln, sigmoid
-from aesara.tensor.extra_ops import broadcast_shape
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
