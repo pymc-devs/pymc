@@ -865,6 +865,25 @@ class TestMetropolis:
             assert trace.get_sampler_stats("scaling", chains=c)[-1] != 0.1
         pass
 
+    def test_reset_tuning_keeps_old_parameter_values(self):
+        """After reset_tuning() old parameters must remain the same.
+        test_tuning_reset cannot check that `tune` parameter gets reset"""
+        steps_until_tune = 31
+        scaling = 0.1
+        for tune in [True, False]:
+            with Model() as _:
+                Normal("n", 0, 2)
+                step = Metropolis(tune=tune, scaling=scaling, tune_interval=steps_until_tune)
+                step.scaling = None
+                step.steps_until_tune = None
+                step.accepted = None
+                step.tune = None
+                step.reset_tuning()
+                assert step.tune == tune
+                assert step.steps_until_tune == steps_until_tune
+                assert step.accepted == 0
+                assert step.scaling == scaling
+
 
 class TestDEMetropolisZ:
     def test_tuning_lambda_sequential(self):
