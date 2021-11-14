@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 from enum import IntEnum, unique
-from typing import Dict, List
+from typing import Any, Dict, List, Type
 
 import numpy as np
 
@@ -47,7 +47,7 @@ class Competence(IntEnum):
 class BlockedStep:
 
     generates_stats = False
-    stats_dtypes: List[Dict[str, np.dtype]] = []
+    stats_dtypes: List[Dict[str, Type[Any]]] = []
     vars: List[PyMC3Variable] = []
 
     def __new__(cls, *args, **kwargs):
