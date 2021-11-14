@@ -416,6 +416,15 @@ class Dirichlet(Continuous):
 
         return super().dist([a], **kwargs)
 
+    def get_moment(rv, size, a):
+        norm_constant = at.sum(a, axis=-1)[..., None]
+        moment = a / norm_constant
+        if not rv_size_is_none(size):
+            if isinstance(size, int):
+                size = (size,)
+            moment = at.full((*size, *a.shape), moment)
+        return moment
+
     def logp(value, a):
         """
         Calculate log-probability of Dirichlet distribution

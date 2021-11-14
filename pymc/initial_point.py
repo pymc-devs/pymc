@@ -291,6 +291,7 @@ def make_initial_point_expression(
             jitter.name = f"{variable.name}_jitter"
             value = value + jitter
 
+        value = value.astype(variable.dtype)
         initial_values_transformed.append(value)
 
         if transform is not None:
@@ -310,18 +311,17 @@ def make_initial_point_expression(
     initial_values_clone = copy_graph.outputs[n_variables:-n_variables]
     initial_values_transformed_clone = copy_graph.outputs[-n_variables:]
 
-    # In the order the variables were created, replace each previous variable
-    # with the init_point for that variable.
-    initial_values = []
-    initial_values_transformed = []
+    # We now replace all rvs by the respective initial_point expressions
+    # in the constrained (untransformed) space. We do this in reverse topological
+    # order, so that later nodes do not reintroduce expressions with earlier
+    # rvs that would need to once again be replaced by their initial_points
+    graph = FunctionGraph(outputs=free_rvs_clone, clone=False)
+    replacements = reversed(list(zip(free_rvs_clone, initial_values_clone)))
+    graph.replace_all(replacements, import_missing=True)
 
-    for i in range(n_variables):
-        outputs = [initial_values_clone[i], initial_values_transformed_clone[i]]
-        graph = FunctionGraph(outputs=outputs, clone=False)
-        graph.replace_all(zip(free_rvs_clone[:i], initial_values), import_missing=True)
-        initial_values.append(graph.outputs[0])
-        initial_values_transformed.append(graph.outputs[1])
-
-    if return_transformed:
-        return initial_values_transformed
-    return initial_values
+    if not return_transformed:
+        return graph.outputs
+    # Because the unconstrained (transformed) expressions are a subgraph of the
+    # constrained initial point they were also automatically updated inplace
+    # when calling graph.replace_all above, so we don't need to do anything else
+    return initial_values_transformed_clone

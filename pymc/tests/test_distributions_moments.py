@@ -6,16 +6,20 @@ from scipy import special
 from pymc.distributions import (
     Bernoulli,
     Beta,
+    BetaBinomial,
     Binomial,
+    Categorical,
     Cauchy,
     ChiSquared,
     Constant,
+    Dirichlet,
     DiscreteUniform,
     ExGaussian,
     Exponential,
     Flat,
     Gamma,
     Geometric,
+    Gumbel,
     HalfCauchy,
     HalfFlat,
     HalfNormal,
@@ -24,14 +28,17 @@ from pymc.distributions import (
     Kumaraswamy,
     Laplace,
     Logistic,
+    LogitNormal,
     LogNormal,
     MatrixNormal,
     MvStudentT,
+    Moyal,
     NegativeBinomial,
     Normal,
     Pareto,
     Poisson,
     StudentT,
+    Triangular,
     TruncatedNormal,
     Uniform,
     Wald,
@@ -207,6 +214,21 @@ def test_bernoulli_moment(p, size, expected):
 def test_beta_moment(alpha, beta, size, expected):
     with Model() as model:
         Beta("x", alpha=alpha, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "n, alpha, beta, size, expected",
+    [
+        (10, 1, 1, None, 5),
+        (10, 1, 1, 5, np.full(5, 5)),
+        (10, 1, np.arange(1, 6), None, np.round(10 / np.arange(2, 7))),
+        (10, 1, np.arange(1, 6), (2, 5), np.full((2, 5), np.round(10 / np.arange(2, 7)))),
+    ],
+)
+def test_beta_binomial_moment(alpha, beta, n, size, expected):
+    with Model() as model:
+        BetaBinomial("x", alpha=alpha, beta=beta, n=n, size=size)
     assert_moment_is_expected(model, expected)
 
 
@@ -613,6 +635,136 @@ def test_hyper_geometric_moment(N, k, n, size, expected):
 def test_discrete_uniform_moment(lower, upper, size, expected):
     with Model() as model:
         DiscreteUniform("x", lower=lower, upper=upper, size=size)
+
+
+@pytest.mark.parametrize(
+    "a, size, expected",
+    [
+        (
+            np.array([2, 3, 5, 7, 11]),
+            None,
+            np.array([2, 3, 5, 7, 11]) / 28,
+        ),
+        (
+            np.array([[1, 2, 3], [5, 6, 7]]),
+            None,
+            np.array([[1, 2, 3], [5, 6, 7]]) / np.array([6, 18])[..., np.newaxis],
+        ),
+        (
+            np.array([[1, 2, 3], [5, 6, 7]]),
+            7,
+            np.apply_along_axis(
+                lambda x: np.divide(x, np.array([6, 18])),
+                1,
+                np.broadcast_to([[1, 2, 3], [5, 6, 7]], shape=[7, 2, 3]),
+            ),
+        ),
+        (
+            np.full(shape=np.array([7, 3]), fill_value=np.array([13, 17, 19])),
+            (
+                11,
+                5,
+            ),
+            np.broadcast_to([13, 17, 19], shape=[11, 5, 7, 3]) / 49,
+        ),
+    ],
+)
+def test_dirichlet_moment(a, size, expected):
+    with Model() as model:
+        Dirichlet("x", a=a, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, beta, size, expected",
+    [
+        (0, 2, None, 2 * np.euler_gamma),
+        (1, np.arange(1, 4), None, 1 + np.arange(1, 4) * np.euler_gamma),
+        (np.arange(5), 2, None, np.arange(5) + 2 * np.euler_gamma),
+        (1, 2, 5, np.full(5, 1 + 2 * np.euler_gamma)),
+        (
+            np.arange(5),
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), np.arange(5) + np.arange(1, 6) * np.euler_gamma),
+        ),
+    ],
+)
+def test_gumbel_moment(mu, beta, size, expected):
+    with Model() as model:
+        Gumbel("x", mu=mu, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "c, lower, upper, size, expected",
+    [
+        (1, 0, 5, None, 2),
+        (3, np.arange(-3, 6, 3), np.arange(3, 12, 3), None, np.array([1, 3, 5])),
+        (np.arange(-3, 6, 3), -3, 3, None, np.array([-1, 0, 1])),
+        (3, -3, 6, 5, np.full(5, 2)),
+        (
+            np.arange(-3, 6, 3),
+            np.arange(-9, -2, 3),
+            np.arange(3, 10, 3),
+            (2, 3),
+            np.full((2, 3), np.array([-3, 0, 3])),
+        ),
+    ],
+)
+def test_triangular_moment(c, lower, upper, size, expected):
+    with Model() as model:
+        Triangular("x", c=c, lower=lower, upper=upper, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, sigma, size, expected",
+    [
+        (1, 2, None, special.expit(1)),
+        (0, np.arange(1, 5), None, special.expit(np.zeros(4))),
+        (np.arange(4), 1, None, special.expit(np.arange(4))),
+        (1, 5, 4, special.expit(np.ones(4))),
+        (np.arange(4), np.arange(1, 5), (2, 4), np.full((2, 4), special.expit(np.arange(4)))),
+    ],
+)
+def test_logitnormal_moment(mu, sigma, size, expected):
+    with Model() as model:
+        LogitNormal("x", mu=mu, sigma=sigma, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "p, size, expected",
+    [
+        (np.array([0.1, 0.3, 0.6]), None, 2),
+        (np.array([0.6, 0.1, 0.3]), 5, np.full(5, 0)),
+        (np.full((2, 3), np.array([0.6, 0.1, 0.3])), None, [0, 0]),
+        (
+            np.full((2, 3), np.array([0.1, 0.3, 0.6])),
+            (3, 2),
+            np.full((3, 2), [2, 2]),
+        ),
+    ],
+)
+def test_categorical_moment(p, size, expected):
+    with Model() as model:
+        Categorical("x", p=p, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, sigma, size, expected",
+    [
+        (4.0, 3.0, None, 7.8110885363844345),
+        (4, np.full(5, 3), None, np.full(5, 7.8110885363844345)),
+        (np.arange(5), 1, None, np.arange(5) + 1.2703628454614782),
+        (np.arange(5), np.ones(5), (2, 5), np.full((2, 5), np.arange(5) + 1.2703628454614782)),
+    ],
+)
+def test_moyal_moment(mu, sigma, size, expected):
+    with Model() as model:
+        Moyal("x", mu=mu, sigma=sigma, size=size)
     assert_moment_is_expected(model, expected)
 
 
