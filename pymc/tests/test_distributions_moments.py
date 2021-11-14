@@ -761,7 +761,7 @@ def test_categorical_moment(p, size, expected):
         (np.ones((2, 2)), np.identity(2), None, np.ones((2, 2))),
         (np.ones((2, 2)), np.identity(2), 4, np.ones((4, 2, 2))),
         (np.ones((2, 2)), np.identity(2), (4, 2), np.ones((4, 2, 2, 2))),
-    ]
+    ],
 )
 def test_mv_normal_moment(mu, cov, size, expected):
     with Model() as model:

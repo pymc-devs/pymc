@@ -21,7 +21,6 @@ from functools import reduce
 
 import aesara
 import aesara.tensor as at
-from aesara.tensor.extra_ops import broadcast_shape
 import numpy as np
 import scipy
 
@@ -30,6 +29,7 @@ from aesara.graph.basic import Apply
 from aesara.graph.op import Op
 from aesara.sparse.basic import sp_sum
 from aesara.tensor import gammaln, sigmoid
+from aesara.tensor.extra_ops import broadcast_shape
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
@@ -47,7 +47,11 @@ from pymc.distributions import transforms
 from pymc.distributions.continuous import ChiSquared, Normal, assert_negative_support
 from pymc.distributions.dist_math import bound, factln, logpow, multigammaln
 from pymc.distributions.distribution import Continuous, Discrete
-from pymc.distributions.shape_utils import broadcast_dist_samples_to, rv_size_is_none, to_tuple
+from pymc.distributions.shape_utils import (
+    broadcast_dist_samples_to, 
+    rv_size_is_none, 
+    to_tuple,
+)
 from pymc.math import kron_diag, kron_dot
 
 __all__ = [
