@@ -30,6 +30,7 @@ from pymc.distributions import (
     Logistic,
     LogitNormal,
     LogNormal,
+    Moyal,
     NegativeBinomial,
     Normal,
     Pareto,
@@ -747,4 +748,19 @@ def test_logitnormal_moment(mu, sigma, size, expected):
 def test_categorical_moment(p, size, expected):
     with Model() as model:
         Categorical("x", p=p, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, sigma, size, expected",
+    [
+        (4.0, 3.0, None, 7.8110885363844345),
+        (4, np.full(5, 3), None, np.full(5, 7.8110885363844345)),
+        (np.arange(5), 1, None, np.arange(5) + 1.2703628454614782),
+        (np.arange(5), np.ones(5), (2, 5), np.full((2, 5), np.arange(5) + 1.2703628454614782)),
+    ],
+)
+def test_moyal_moment(mu, sigma, size, expected):
+    with Model() as model:
+        Moyal("x", mu=mu, sigma=sigma, size=size)
     assert_moment_is_expected(model, expected)
