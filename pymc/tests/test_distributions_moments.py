@@ -637,6 +637,12 @@ def test_mvstudentt_moment(nu, mu, cov, size, expected):
     assert_moment_is_expected(model, expected)
 
 
+def check_matrixnormal_moment(mu, rowchol, colchol, size, expected):
+    with Model() as model:
+        MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
+    assert_moment_is_expected(model, expected)
+
+
 @pytest.mark.parametrize(
     "mu, rowchol, colchol, size, expected",
     [
@@ -648,6 +654,8 @@ def test_mvstudentt_moment(nu, mu, cov, size, expected):
     ],
 )
 def test_matrixnormal_moment(mu, rowchol, colchol, size, expected):
-    with Model() as model:
-        MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
-    assert_moment_is_expected(model, expected)
+    if size is None:
+        check_matrixnormal_moment(mu, rowchol, colchol, size, expected)
+    else:
+        with pytest.raises(NotImplementedError):
+            check_matrixnormal_moment(mu, rowchol, colchol, size, expected)

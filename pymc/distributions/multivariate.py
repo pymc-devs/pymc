@@ -1667,8 +1667,8 @@ class MatrixNormal(Continuous):
 
         cholesky = Cholesky(lower=True, on_error="raise")
 
-        # if kwargs.get("size", None) is not None:
-        #     raise NotImplementedError("MatrixNormal doesn't support size argument")
+        if kwargs.get("size", None) is not None:
+            raise NotImplementedError("MatrixNormal doesn't support size argument")
 
         if "shape" in kwargs:
             kwargs.pop("shape")
