@@ -26,7 +26,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
 
 from pymc import Model, modelcontext
-from pymc.aesaraf import compile_rv_inplace
+from pymc.aesaraf import compile_rv_inplace, inputvars
 from pymc.util import get_default_varnames
 
 warnings.warn("This module is experimental.")
@@ -114,6 +114,8 @@ def sample_numpyro_nuts(
         var_names = model.unobserved_value_vars
 
     vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
+    inputs = [model.rvs_to_values[i] for i in model.free_RVs]
+
 
     tic1 = pd.Timestamp.now()
     print("Compiling...", file=sys.stdout)
@@ -123,7 +125,6 @@ def sample_numpyro_nuts(
     init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
 
     logp_fn = get_jaxified_logp(model)
-    fn = model.fastfn(vars_to_sample)
 
     nuts_kernel = NUTS(
         potential_fn=logp_fn,
@@ -164,22 +165,10 @@ def sample_numpyro_nuts(
     print("Transforming variables...", file=sys.stdout)
     mcmc_samples = {}
     for v in vars_to_sample:
-        mcmc_samples[v.name] = []
-
-    for i in range(draws):
-        for c in range(chains):
-            draw = {
-                value_var.name: raw_samples[c, i]
-                for value_var, raw_samples in zip(model.value_vars, raw_mcmc_samples)
-            }
-            sample = fn(draw)
-            for vi, v in enumerate(vars_to_sample):
-                mcmc_samples[v.name].append(sample[vi])
-
-    for v in vars_to_sample:
-        mcmc_samples[v.name] = np.array(mcmc_samples[v.name]).reshape(
-            (chains, draws) + mcmc_samples[v.name][-1].shape
-        )
+        fgraph = FunctionGraph(inputs, [v], clone=False)
+        jax_fn = jax_funcify(fgraph)
+        result = jax.vmap(jax.vmap(jax_fn))(*raw_mcmc_samples)[0]
+        mcmc_samples[v.name] = result
 
     tic4 = pd.Timestamp.now()
     print("Transformation time = ", tic4 - tic3, file=sys.stdout)

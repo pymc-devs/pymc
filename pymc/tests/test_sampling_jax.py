@@ -58,7 +58,7 @@ def test_deterministic_samples():
         trace = sample_numpyro_nuts(chains=2, random_seed=1322, keep_untransformed=True)
 
     assert 8 < trace.posterior["a"].mean() < 11
-    assert 4 < trace.posterior["b"].mean() < 6
+    assert np.allclose(trace.posterior["b"].values, trace.posterior["a"].values / 2)
 
 
 def test_replace_shared_variables():
