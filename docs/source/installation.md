@@ -1,3 +1,4 @@
+(installation)=
 # Installation
 
 To install PyMC, select the operating system where you want to perform the installation.

@@ -1,3 +1,4 @@
+(examples)=
 # Notebooks
 
 TODO add "core" notebooks:

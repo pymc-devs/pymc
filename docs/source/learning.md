@@ -30,15 +30,15 @@ A great introductory book written by a maintainer of PyMC. It provides a hands-o
 ### {octicon}`mortar-board;1em;sd-text-info` Tutorial notebooks
 
 #### Getting started
-The {ref}`examples/getting_started` notebook in our documentation shows the PyMC 4.0 code in action
+The {ref}`getting_started` notebook in our documentation shows the PyMC 4.0 code in action
 
 #### General Linear Models: Linear regression
 
-The {ref}`examples/GLM_linear` notebook provides a gentle introduction to Bayesian linear regression and how it differs from the frequentist approach, and showcases how to implement it using PyMC.
+The {ref}`GLM_linear` notebook provides a gentle introduction to Bayesian linear regression and how it differs from the frequentist approach, and showcases how to implement it using PyMC.
 
 #### Comparing models
 
-The {ref}`examples/model_comparison` notebook demonstrates the use of model comparison criteria in PyMC.
+The {ref}`model_comparison` notebook demonstrates the use of model comparison criteria in PyMC.
 
 #### Validating a model using prior and posterior predictive checks
 

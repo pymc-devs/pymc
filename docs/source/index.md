@@ -1,7 +1,7 @@
 ---
 sd_hide_title: true
 ---
-
+(index)=
 # PyMC Documentation
 
 :::{card}

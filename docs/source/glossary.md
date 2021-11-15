@@ -1,3 +1,4 @@
+(glossary)=
 # Glossary
 
 A glossary of common terms used throughout the PyMC documentation and examples.
@@ -77,9 +78,9 @@ GLM
 
 [Maximum a Posteriori](https://en.wikipedia.org/wiki/Maximum_a_posteriori_estimation)
 [MAP](https://en.wikipedia.org/wiki/Maximum_a_posteriori_estimation)
-  It is a point-estimate of an unknown quantity, that equals the mode of the posterior distribution. 
+  It is a point-estimate of an unknown quantity, that equals the mode of the posterior distribution.
 
-  If the prior distribution is a flat distribution, the MAP method is numerically equivalent to the {term}`Maximum Likelihood Estimate` (MLE). 
+  If the prior distribution is a flat distribution, the MAP method is numerically equivalent to the {term}`Maximum Likelihood Estimate` (MLE).
   When the prior is not flat the MAP estimation can be seen as a regularized version of the MLE.
 
   - For a concise comparison between {term}`MLE` and {term}`MAP`, consider Deep Learning by Ian Goodfellow, chapter 5.6.1 or [Machine Learning: a Probabilistic Perspective](https://probml.github.io/pml-book/book1.html) by Kevin Murphy.
