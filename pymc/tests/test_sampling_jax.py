@@ -51,7 +51,7 @@ def test_deterministic_samples():
     obs = np.random.normal(10, 2, size=100)
     obs_at = aesara.shared(obs, borrow=True, name="obs")
     with pm.Model() as model:
-        a = pm.Normal("a", 0, 1)
+        a = pm.Uniform("a", -20, 20)
         b = pm.Deterministic("b", a / 2.0)
         c = pm.Normal("c", a, sigma=1.0, observed=obs_at)
 
