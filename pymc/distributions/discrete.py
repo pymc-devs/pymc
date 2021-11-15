@@ -14,7 +14,6 @@
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.logprob import _logprob
 from aesara.tensor.random.basic import (
     RandomVariable,
     bernoulli,
@@ -42,7 +41,7 @@ from pymc.distributions.dist_math import (
     normal_lcdf,
 )
 from pymc.distributions.distribution import Discrete
-from pymc.distributions.logprob import _logcdf
+from pymc.distributions.logprob import logcdf, logp
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.math import sigmoid
 
@@ -754,7 +753,7 @@ class NegativeBinomial(Discrete):
         )
 
         # Return Poisson when alpha gets very large.
-        return at.switch(at.gt(alpha, 1e10), Poisson.logp(value, mu), negbinom)
+        return at.switch(at.gt(alpha, 1e10), logp(Poisson.dist(mu=mu), value), negbinom)
 
     def logcdf(value, n, p):
         """
@@ -1371,7 +1370,7 @@ class ZeroInflatedPoisson(Discrete):
 
         logp_val = at.switch(
             at.gt(value, 0),
-            at.log(psi) + _logprob(poisson, [value], None, None, None, theta),
+            at.log(psi) + logp(Poisson.dist(mu=theta), value),
             at.logaddexp(at.log1p(-psi), at.log(psi) - theta),
         )
 
@@ -1402,7 +1401,7 @@ class ZeroInflatedPoisson(Discrete):
         return bound(
             at.logaddexp(
                 at.log1p(-psi),
-                at.log(psi) + _logcdf(poisson, value, {}, theta),
+                at.log(psi) + logcdf(Poisson.dist(mu=theta), value),
             ),
             0 <= value,
             0 <= psi,
@@ -1510,7 +1509,7 @@ class ZeroInflatedBinomial(Discrete):
 
         logp_val = at.switch(
             at.gt(value, 0),
-            at.log(psi) + _logprob(binomial, [value], None, None, None, n, p),
+            at.log(psi) + logp(Binomial.dist(n=n, p=p), value),
             at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
         )
 
@@ -1543,7 +1542,7 @@ class ZeroInflatedBinomial(Discrete):
         return bound(
             at.logaddexp(
                 at.log1p(-psi),
-                at.log(psi) + _logcdf(binomial, value, {}, n, p),
+                at.log(psi) + logcdf(Binomial.dist(n=n, p=p), value),
             ),
             0 <= value,
             value <= n,
@@ -1669,7 +1668,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         return bound(
             at.switch(
                 at.gt(value, 0),
-                at.log(psi) + _logprob(nbinom, [value], None, None, None, n, p),
+                at.log(psi) + logp(NegativeBinomial.dist(n=n, p=p), value),
                 at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
             ),
             0 <= value,
@@ -1696,7 +1695,9 @@ class ZeroInflatedNegativeBinomial(Discrete):
         TensorVariable
         """
         return bound(
-            at.logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(nbinom, value, {}, n, p)),
+            at.logaddexp(
+                at.log1p(-psi), at.log(psi) + logcdf(NegativeBinomial.dist(n=n, p=p), value)
+            ),
             0 <= value,
             0 <= psi,
             psi <= 1,
