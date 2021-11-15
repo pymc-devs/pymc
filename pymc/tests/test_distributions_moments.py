@@ -758,15 +758,34 @@ def test_categorical_moment(p, size, expected):
         (np.ones(1), np.identity(1), None, np.ones(1)),
         (np.ones(10), np.identity(10), None, np.ones(10)),
         (np.ones(2), np.identity(2), 4, np.ones((4, 2))),
-        (np.ones(2), np.identity(2), (4, 2), np.ones((4, 2, 2))),
-        (np.ones((2, 2)), np.identity(2), None, np.ones((2, 2))),
-        (np.ones((2, 2)), np.identity(2), 4, np.ones((4, 2, 2))),
-        (np.ones((2, 2)), np.identity(2), (4, 2), np.ones((4, 2, 2, 2))),
+        (np.ones(2), np.identity(2), (4, 3), np.ones((4, 3, 2))),
+        (np.array([1, 0, 3.0]), np.identity(3), None, np.array([1, 0, 3.0])),
+        (np.array([1, 0, 3.0]), np.identity(3), 4, np.full((4, 3), [1, 0, 3.0])),
+        (np.array([1, 0, 3.0]), np.identity(3), (4, 2), np.full((4, 2, 3), [1, 0, 3.0])),
+        (
+            np.array([1, 3.0]),
+            np.identity(2),
+            (4, 5),
+            np.full((4, 5, 2), [1, 3.0]),
+        ),
+        (
+            np.array([1, 3.0]),
+            np.array([[1.0, 0.5], [0.5, 2]]),
+            (4, 5),
+            np.full((4, 5, 2), [1, 3.0]),
+        ),
+        (
+            np.array([1, 3, 0.0]),
+            np.array([[1.0, 0.5, 0.1], [0.5, 2, 0.5], [0.1, 0.5, 5]]),
+            (4, 5),
+            np.full((4, 5, 3), [1, 3, 0.0]),
+        ),
     ],
 )
 def test_mv_normal_moment(mu, cov, size, expected):
     with Model() as model:
         MvNormal("x", mu=mu, cov=cov, size=size)
+    assert_moment_is_expected(model, expected)
 
 
 @pytest.mark.parametrize(
