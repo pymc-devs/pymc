@@ -2102,7 +2102,7 @@ class CAR(Continuous):
         TensorVariable
         """
 
-        sparse = isinstance(W, aesara.sparse.SparseConstant)
+        sparse = isinstance(W, (aesara.sparse.SparseConstant, aesara.sparse.SparseVariable))
 
         if sparse:
             D = sp_sum(W, axis=0)
