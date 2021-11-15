@@ -784,10 +784,10 @@ def test_categorical_moment(p, size, expected):
             np.full((4, 5, 3), [1, 3, 0.0]),
         ),
         (
-            np.array([[3., 5], [1, 4]]),
+            np.array([[3.0, 5], [1, 4]]),
             np.identity(2),
             (4, 5),
-            np.full((4, 5, 2, 2), [[3., 5], [1, 4]])
+            np.full((4, 5, 2, 2), [[3.0, 5], [1, 4]]),
         ),
     ],
 )
