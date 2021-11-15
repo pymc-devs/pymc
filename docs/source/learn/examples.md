@@ -33,7 +33,7 @@ TODO add categories to all notebooks
 :::{toctree}
 
 examples/getting_started
-examples/GLM-linear
+examples/GLM_linear
 examples/model_comparison
 examples/posterior_predictive
 :::
