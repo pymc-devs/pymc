@@ -1061,6 +1061,7 @@ def test_flow_det(flow_spec):
     np.testing.assert_allclose(logJdet.eval(), det.eval(), atol=0.0001)
 
 
+@pytest.mark.skip("normalizing flows are not fully supported")
 def test_flow_det_local(flow_spec):
     z0 = at.arange(0, 12).astype("float32")
     spec = flow_spec.cls.get_param_spec_for(d=12)
