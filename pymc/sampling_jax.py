@@ -116,7 +116,6 @@ def sample_numpyro_nuts(
     vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
     inputs = [model.rvs_to_values[i] for i in model.free_RVs]
 
-
     tic1 = pd.Timestamp.now()
     print("Compiling...", file=sys.stdout)
 
