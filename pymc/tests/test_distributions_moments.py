@@ -391,7 +391,12 @@ def test_gamma_moment(alpha, beta, size, expected):
     [
         (5, 1, None, 1 / (5 - 1)),
         (0.5, 1, None, np.inf),
+        (1, 1, None, np.inf),
         (5, 1, 5, np.full(5, 1 / (5 - 1))),
+        (np.arange(2, 7), 1, None, 1 / np.arange(1, 6)),
+        (np.arange(2, 7), 1, 5, 1 / np.arange(1, 6)),
+        (2, np.arange(1, 6), None, np.arange(1, 6)),
+        (np.arange(2, 7), np.arange(1, 6), 5, np.ones(5)),
     ],
 )
 def test_inverse_gamma_moment(alpha, beta, size, expected):

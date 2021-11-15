@@ -2333,12 +2333,9 @@ class InverseGamma(PositiveContinuous):
 
     def get_moment(rv, size, alpha, beta):
         m = beta / (alpha - 1.0)
-        try:
-            mean = (alpha > 1) * m or np.inf
-        except ValueError:  # alpha is an array
-            m[alpha <= 1] = np.inf
-            mean = m
-        return mean
+        if not rv_size_is_none(size):
+            m = at.full(size, m)
+        return at.switch(alpha > 1, m, np.inf)
 
     @classmethod
     def _get_alpha_beta(cls, alpha, beta, mu, sigma):
