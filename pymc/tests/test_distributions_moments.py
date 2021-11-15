@@ -4,6 +4,7 @@ import pytest
 from scipy import special
 
 from pymc.distributions import (
+    AsymmetricLaplace,
     Bernoulli,
     Beta,
     BetaBinomial,
@@ -35,6 +36,7 @@ from pymc.distributions import (
     Normal,
     Pareto,
     Poisson,
+    SkewNormal,
     StudentT,
     Triangular,
     TruncatedNormal,
@@ -763,4 +765,60 @@ def test_categorical_moment(p, size, expected):
 def test_moyal_moment(mu, sigma, size, expected):
     with Model() as model:
         Moyal("x", mu=mu, sigma=sigma, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "alpha, mu, sigma, size, expected",
+    [
+        (1.0, 1.0, 1.0, None, 1.56418958),
+        (1, np.ones(5), 1, None, np.full(5, 1.56418958)),
+        (np.ones(5), 1, np.ones(5), None, np.full(5, 1.56418958)),
+        (
+            np.arange(5),
+            np.arange(1, 6),
+            np.arange(1, 6),
+            None,
+            (1.0, 3.12837917, 5.14094894, 7.02775903, 8.87030861),
+        ),
+        (
+            np.arange(5),
+            np.arange(1, 6),
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), (1.0, 3.12837917, 5.14094894, 7.02775903, 8.87030861)),
+        ),
+    ],
+)
+def test_skewnormal_moment(alpha, mu, sigma, size, expected):
+    with Model() as model:
+        SkewNormal("x", alpha=alpha, mu=mu, sigma=sigma, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "b, kappa, mu, size, expected",
+    [
+        (1.0, 1.0, 1.0, None, 1.0),
+        (1.0, np.ones(5), 1.0, None, np.full(5, 1.0)),
+        (np.arange(1, 6), 1.0, np.ones(5), None, np.full(5, 1.0)),
+        (
+            np.arange(1, 6),
+            np.arange(1, 6),
+            np.arange(1, 6),
+            None,
+            (1.0, 1.25, 2.111111111111111, 3.0625, 4.04),
+        ),
+        (
+            np.arange(1, 6),
+            np.arange(1, 6),
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), (1.0, 1.25, 2.111111111111111, 3.0625, 4.04)),
+        ),
+    ],
+)
+def test_asymmetriclaplace_moment(b, kappa, mu, size, expected):
+    with Model() as model:
+        AsymmetricLaplace("x", b=b, kappa=kappa, mu=mu, size=size)
     assert_moment_is_expected(model, expected)

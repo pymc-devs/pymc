@@ -1599,6 +1599,13 @@ class AsymmetricLaplace(Continuous):
 
         return super().dist([b, kappa, mu], *args, **kwargs)
 
+    def get_moment(rv, size, b, kappa, mu):
+        mean = mu - (kappa - 1 / kappa) / b
+
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, b, kappa, mu):
         """
         Calculate log-probability of Asymmetric-Laplace distribution at specified value.
@@ -3011,6 +3018,12 @@ class SkewNormal(Continuous):
         assert_negative_support(sigma, "sigma", "SkewNormal")
 
         return super().dist([mu, sigma, alpha], *args, **kwargs)
+
+    def get_moment(rv, size, mu, sigma, alpha):
+        mean = mu + sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha ** 2) ** 0.5
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, mu, sigma, alpha):
         """
