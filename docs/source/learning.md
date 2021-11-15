@@ -5,10 +5,9 @@
 
 Start here to get acquainted with the core concepts of Bayesian analysis and PyMC. The following resources only assume a very basic knowledge of code and statistics.
 
-::::{grid} 2
-:gutter: 4
+### {octicon}`book;1em;sd-text-info` Introductory books
 
-:::{grid-item-card} Bayesian Methods for Hackers
+#### Bayesian Methods for Hackers
 
 By Cameron Davidson-Pilon
 
@@ -17,29 +16,37 @@ The "hacker" in the title  means learn-as-you-code. This hands-on introduction t
 [Github repo](https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers)
 
 [Project homepage](http://camdavidsonpilon.github.io/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers/)
-:::
 
-:::{grid-item-card} Bayesian Analysis with Python
+#### Bayesian Analysis with Python
 
-by Osvaldo Martin
+By Osvaldo Martin
 
 A great introductory book written by a maintainer of PyMC. It provides a hands-on introduction to the main concepts of Bayesian statistics using synthetic and real data sets. Mastering the concepts in this book is a great foundation to pursue more advanced knowledge.
 
 [Book website](https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python-second-edition)
 
 [Code and errata in PyMC](https://github.com/aloctavodia/BAP)
-:::
 
-:::{grid-item-card} Getting started with PyMC
+### {octicon}`mortar-board;1em;sd-text-info` Tutorial notebooks
 
+#### Getting started
 The {doc}`nb:getting_started` notebook in our documentation shows the PyMC 4.0 code in action
-:::
 
-:::{grid-item-card} Glossary
+#### General Linear Models: Linear regression
+
+The {doc}`nb:GLM-linear` notebook provides a gentle introduction to Bayesian linear regression and how it differs from the frequentist approach, and showcases how to implement it using PyMC.
+
+#### Comparing models
+
+The {doc}`nb:model_comparison` notebook demonstrates the use of model comparison criteria in PyMC.
+
+#### Validating a model using prior and posterior predictive checks
+
+The {doc}`nb:posterior_predictive` notebooks explains what prior and posterior predictive checks are and how to implement them in PyMC to validate your model.
+
+### {octicon}`list-unordered;1em;sd-text-info` Glossary
 
 PyMC's own {doc}`glossary` defines many core terms and provides useful references.
-:::
-::::
 
 ---
 
@@ -85,4 +92,5 @@ TODO
 learn/examples
 learn/books
 learn/videos_and_podcasts
+glossary
 :::
