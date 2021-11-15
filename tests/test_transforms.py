@@ -17,6 +17,7 @@ from aeppl.transforms import (
     TransformValuesMapping,
     TransformValuesOpt,
     _default_transformed_rv,
+    transformed_variable,
 )
 from tests.utils import assert_no_rvs
 
@@ -485,7 +486,7 @@ def test_mixture_transform():
     # The untransformed graph should be the same as the transformed graph after
     # replacing the `Y_rv` value variable with a transformed version of itself
     logp_nt_fg = FunctionGraph(outputs=[logp_no_trans], clone=False)
-    y_trans = at.exp(y_vv)
+    y_trans = transformed_variable(at.exp(y_vv), y_vv)
     y_trans.name = "y_log"
     logp_nt_fg.replace(y_vv, y_trans)
     logp_nt = logp_nt_fg.outputs[0]

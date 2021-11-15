@@ -4,12 +4,17 @@ from functools import partial, singledispatch
 from typing import Dict, List, Optional, Union
 
 import aesara.tensor as at
-from aesara.gradient import jacobian
+from aesara.gradient import DisconnectedType, jacobian
 from aesara.graph.basic import Apply, Node, Variable
 from aesara.graph.features import AlreadyThere, Feature
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op
 from aesara.graph.opt import GlobalOptimizer, in2out, local_optimizer
+from aesara.tensor.basic_opt import (
+    register_specialize,
+    register_stabilize,
+    register_useless,
+)
 from aesara.tensor.var import TensorVariable
 
 from aeppl.abstract import MeasurableVariable
@@ -29,6 +34,41 @@ def _default_transformed_rv(
 
     """
     return None
+
+
+class TransformedVariable(Op):
+    """A no-op that identifies a transform and its un-transformed input."""
+
+    view_map = {0: [0]}
+
+    def make_node(self, tran_value: TensorVariable, value: TensorVariable):
+        return Apply(self, [tran_value, value], [tran_value.type()])
+
+    def perform(self, node, inputs, outputs):
+        raise NotImplementedError(
+            "These `Op`s should be removed from graphs used for computation."
+        )
+
+    def connection_pattern(self, node):
+        return [[True], [False]]
+
+    def infer_shape(self, fgraph, node, input_shapes):
+        return [input_shapes[0]]
+
+    def grad(self, args, g_outs):
+        return g_outs[0], DisconnectedType()()
+
+
+transformed_variable = TransformedVariable()
+
+
+@register_specialize
+@register_stabilize
+@register_useless
+@local_optimizer([TransformedVariable])
+def remove_TransformedVariables(fgraph, node):
+    if isinstance(node.op, TransformedVariable):
+        return [node.inputs[0]]
 
 
 class RVTransform(abc.ABC):
@@ -105,7 +145,9 @@ def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     # We now assume that the old value variable represents the *transformed space*.
     # This means that we need to replace all instance of the old value variable
     # with "inversely/un-" transformed versions of itself.
-    new_value_var = transform.backward(value_var, *trans_node.inputs)
+    new_value_var = transformed_variable(
+        transform.backward(value_var, *trans_node.inputs), value_var
+    )
     if value_var.name and getattr(transform, "name", None):
         new_value_var.name = f"{value_var.name}_{transform.name}"
 
@@ -319,7 +361,8 @@ def _create_transformed_rv_op(
         logprob = _logprob(rv_op, values, *inputs, **kwargs)
 
         if use_jacobian:
-            original_forward_value = op.transform.forward(value, *inputs)
+            assert isinstance(value.owner.op, TransformedVariable)
+            original_forward_value = value.owner.inputs[1]
             jacobian = op.transform.log_jac_det(original_forward_value, *inputs)
             logprob += jacobian
 
