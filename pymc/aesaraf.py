@@ -335,7 +335,7 @@ def rvs_to_value_vars(
     initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
     **kwargs,
 ) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
-    """Replace random variables in graphs with their value variables.
+    """Clone and replace random variables in graphs with their value variables.
 
     This will *not* recompute test values in the resulting graphs.
 
@@ -382,6 +382,16 @@ def rvs_to_value_vars(
 
         # Walk the transformed variable and make replacements
         return [trans_rv_value]
+
+    # Clone original graphs
+    inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
+    equiv = clone_get_equiv(inputs, graphs, False, False, {})
+    graphs = [equiv[n] for n in graphs]
+
+    if initial_replacements:
+        initial_replacements = {
+            equiv.get(k, k): equiv.get(v, v) for k, v in initial_replacements.items()
+        }
 
     return replace_rvs_in_graphs(graphs, transform_replacements, initial_replacements, **kwargs)
 
