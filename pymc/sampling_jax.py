@@ -174,6 +174,7 @@ def sample_numpyro_nuts(
 
     if chains == 1:
         init_params=init_state
+        map_seed = seed
     else:
         init_params=init_state_batched
 
