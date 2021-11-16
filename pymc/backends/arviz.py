@@ -25,14 +25,13 @@ import pymc
 
 from pymc.aesaraf import extract_obs_data
 from pymc.distributions import logpt
-from pymc.model import modelcontext
+from pymc.model import modelcontext, Model
 from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
     from typing import Set  # pylint: disable=ungrouped-imports
 
     from pymc.backends.base import MultiTrace  # pylint: disable=invalid-name
-    from pymc.model import Model
 
 ___all__ = [""]
 
@@ -40,6 +39,26 @@ _log = logging.getLogger("pymc")
 
 # random variable object ...
 Var = Any  # pylint: disable=invalid-name
+
+
+def find_observations(model: Model) -> Optional[Dict[str, Var]]:
+    """If there are observations available, return them as a dictionary."""
+    if model is None:
+        return None
+
+    observations = {}
+    for obs in model.observed_RVs:
+        aux_obs = getattr(obs.tag, "observations", None)
+        if aux_obs is not None:
+            try:
+                obs_data = extract_obs_data(aux_obs)
+                observations[obs.name] = obs_data
+            except TypeError:
+                warnings.warn(f"Could not extract data from symbolic observation {obs}")
+        else:
+            warnings.warn(f"No data for observation {obs}")
+
+    return observations
 
 
 class _DefaultTrace:
@@ -196,25 +215,8 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             self.dims = {**model_dims, **self.dims}
 
         self.density_dist_obs = density_dist_obs
-        self.observations = self.find_observations()
+        self.observations = find_observations(self.model)
 
-    def find_observations(self) -> Optional[Dict[str, Var]]:
-        """If there are observations available, return them as a dictionary."""
-        if self.model is None:
-            return None
-        observations = {}
-        for obs in self.model.observed_RVs:
-            aux_obs = getattr(obs.tag, "observations", None)
-            if aux_obs is not None:
-                try:
-                    obs_data = extract_obs_data(aux_obs)
-                    observations[obs.name] = obs_data
-                except TypeError:
-                    warnings.warn(f"Could not extract data from symbolic observation {obs}")
-            else:
-                warnings.warn(f"No data for observation {obs}")
-
-        return observations
 
     def split_trace(self) -> Tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
         """Split MultiTrace object into posterior and warmup.

@@ -27,6 +27,7 @@ from aesara.link.jax.dispatch import jax_funcify
 
 from pymc import Model, modelcontext
 from pymc.aesaraf import compile_rv_inplace, extract_obs_data
+from pymc.backends.arviz import find_observations
 from pymc.util import get_default_varnames
 
 warnings.warn("This module is experimental.")
@@ -93,24 +94,6 @@ def get_jaxified_logp(model: Model) -> Callable:
         return -res
 
     return logp_fn_wrap
-
-
-# Adopted from pm.to_inference_data
-def find_observations(model: Model) -> Dict[str, Any]:
-    """If there are observations available, return them as a dictionary."""
-    observations = {}
-    for obs in model.observed_RVs:
-        aux_obs = getattr(obs.tag, "observations", None)
-        if aux_obs is not None:
-            try:
-                obs_data = extract_obs_data(aux_obs)
-                observations[obs.name] = obs_data
-            except TypeError:
-                warnings.warn(f"Could not extract data from symbolic observation {obs}")
-        else:
-            warnings.warn(f"No data for observation {obs}")
-
-    return observations
 
 
 # Adopted from arviz numpyro extractor
