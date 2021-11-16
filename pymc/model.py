@@ -772,7 +772,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if rv_values:
             return logpt(self.free_RVs, rv_values)
         else:
-            return 0
+            return at.as_tensor(0.0)
 
     @property
     def varlogp_nojact(self):
@@ -784,7 +784,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if rv_values:
             return logpt(self.free_RVs, rv_values, jacobian=False)
         else:
-            return 0
+            return at.as_tensor(0.0)
 
     @property
     def observedlogpt(self):
@@ -795,7 +795,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if obs_values:
             return logpt(self.observed_RVs, obs_values)
         else:
-            return 0
+            return at.as_tensor(0.0)
 
     @property
     def potentiallogpt(self):
@@ -806,7 +806,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if potentials:
             return at.sum([at.sum(factor) for factor in potentials])
         else:
-            return 0
+            return at.as_tensor(0.0)
 
     @property
     def vars(self):
