@@ -25,13 +25,14 @@ import pymc
 
 from pymc.aesaraf import extract_obs_data
 from pymc.distributions import logpt
-from pymc.model import Model, modelcontext
+from pymc.model import modelcontext
 from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
     from typing import Set  # pylint: disable=ungrouped-imports
 
     from pymc.backends.base import MultiTrace  # pylint: disable=invalid-name
+    from pymc.model import Model
 
 ___all__ = [""]
 
@@ -41,7 +42,7 @@ _log = logging.getLogger("pymc")
 Var = Any  # pylint: disable=invalid-name
 
 
-def find_observations(model: Model) -> Optional[Dict[str, Var]]:
+def find_observations(model: Optional["Model"]) -> Optional[Dict[str, Var]]:
     """If there are observations available, return them as a dictionary."""
     if model is None:
         return None
