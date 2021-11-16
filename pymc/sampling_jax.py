@@ -173,10 +173,10 @@ def sample_numpyro_nuts(
     map_seed = jax.random.split(seed, chains)
 
     if chains == 1:
-        init_params=init_state
+        init_params = init_state
         map_seed = seed
     else:
-        init_params=init_state_batched
+        init_params = init_state_batched
 
     pmap_numpyro.run(
         map_seed,
