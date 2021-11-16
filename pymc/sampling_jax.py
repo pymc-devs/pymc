@@ -4,7 +4,7 @@ import re
 import sys
 import warnings
 
-from typing import Callable, List, Dict, Optional, Any
+from typing import Any, Callable, Dict, List, Optional
 
 from aesara.graph import optimize_graph
 from aesara.tensor import TensorVariable
