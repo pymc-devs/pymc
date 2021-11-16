@@ -46,6 +46,7 @@ from pymc.distributions import (
     ZeroInflatedBinomial,
     ZeroInflatedPoisson,
 )
+from pymc.distributions.multivariate import MvNormal
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
@@ -750,6 +751,40 @@ def test_logitnormal_moment(mu, sigma, size, expected):
 def test_categorical_moment(p, size, expected):
     with Model() as model:
         Categorical("x", p=p, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, cov, size, expected",
+    [
+        (np.ones(1), np.identity(1), None, np.ones(1)),
+        (np.ones(3), np.identity(3), None, np.ones(3)),
+        (np.ones((2, 2)), np.identity(2), None, np.ones((2, 2))),
+        (np.array([1, 0, 3.0]), np.identity(3), None, np.array([1, 0, 3.0])),
+        (np.array([1, 0, 3.0]), np.identity(3), (4, 2), np.full((4, 2, 3), [1, 0, 3.0])),
+        (
+            np.array([1, 3.0]),
+            np.identity(2),
+            5,
+            np.full((5, 2), [1, 3.0]),
+        ),
+        (
+            np.array([1, 3.0]),
+            np.array([[1.0, 0.5], [0.5, 2]]),
+            (4, 5),
+            np.full((4, 5, 2), [1, 3.0]),
+        ),
+        (
+            np.array([[3.0, 5], [1, 4]]),
+            np.identity(2),
+            (4, 5),
+            np.full((4, 5, 2, 2), [[3.0, 5], [1, 4]]),
+        ),
+    ],
+)
+def test_mv_normal_moment(mu, cov, size, expected):
+    with Model() as model:
+        MvNormal("x", mu=mu, cov=cov, size=size)
     assert_moment_is_expected(model, expected)
 
 
