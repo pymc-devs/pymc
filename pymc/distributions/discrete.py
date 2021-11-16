@@ -114,8 +114,13 @@ class Binomial(Discrete):
     def dist(cls, n, p, *args, **kwargs):
         n = at.as_tensor_variable(intX(n))
         p = at.as_tensor_variable(floatX(p))
-        # mode = at.cast(tround(n * p), self.dtype)
         return super().dist([n, p], **kwargs)
+
+    def get_moment(rv, size, n, p):
+        mean = at.round(n * p)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, n, p):
         r"""
@@ -233,6 +238,12 @@ class BetaBinomial(Discrete):
         beta = at.as_tensor_variable(floatX(beta))
         n = at.as_tensor_variable(intX(n))
         return super().dist([n, alpha, beta], **kwargs)
+
+    def get_moment(rv, size, n, alpha, beta):
+        mean = at.round((n * alpha) / (alpha + beta))
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, n, alpha, beta):
         r"""
@@ -567,8 +578,13 @@ class Poisson(Discrete):
     @classmethod
     def dist(cls, mu, *args, **kwargs):
         mu = at.as_tensor_variable(floatX(mu))
-        # mode = intX(at.floor(mu))
         return super().dist([mu], *args, **kwargs)
+
+    def get_moment(rv, size, mu):
+        mu = at.floor(mu)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
 
     def logp(value, mu):
         r"""
@@ -706,6 +722,12 @@ class NegativeBinomial(Discrete):
 
         return n, p
 
+    def get_moment(rv, size, n, p):
+        mu = at.floor(n * (1 - p) / p)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     def logp(value, n, p):
         r"""
         Calculate log-probability of NegativeBinomial distribution at specified value.
@@ -802,6 +824,12 @@ class Geometric(Discrete):
     def dist(cls, p, *args, **kwargs):
         p = at.as_tensor_variable(floatX(p))
         return super().dist([p], *args, **kwargs)
+
+    def get_moment(rv, size, p):
+        mean = at.round(1.0 / p)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, p):
         r"""
@@ -903,6 +931,13 @@ class HyperGeometric(Discrete):
         bad = at.as_tensor_variable(intX(N - k))
         n = at.as_tensor_variable(intX(n))
         return super().dist([good, bad, n], *args, **kwargs)
+
+    def get_moment(rv, size, good, bad, n):
+        N, k = good + bad, good
+        mode = at.floor((n + 1) * (k + 1) / (N + 2))
+        if not rv_size_is_none(size):
+            mode = at.full(size, mode)
+        return mode
 
     def logp(value, good, bad, n):
         r"""
@@ -1038,6 +1073,12 @@ class DiscreteUniform(Discrete):
         upper = intX(at.floor(upper))
         return super().dist([lower, upper], **kwargs)
 
+    def get_moment(rv, size, lower, upper):
+        mode = at.maximum(at.floor((upper + lower) / 2.0), lower)
+        if not rv_size_is_none(size):
+            mode = at.full(size, mode)
+        return mode
+
     def logp(value, lower, upper):
         r"""
         Calculate log-probability of DiscreteUniform distribution at specified value.
@@ -1126,12 +1167,13 @@ class Categorical(Discrete):
     def dist(cls, p, **kwargs):
 
         p = at.as_tensor_variable(floatX(p))
-
-        # mode = at.argmax(p, axis=-1)
-        # if mode.ndim == 1:
-        #     mode = at.squeeze(mode)
-
         return super().dist([p], **kwargs)
+
+    def get_moment(rv, size, p):
+        mode = at.argmax(p, axis=-1)
+        if not rv_size_is_none(size):
+            mode = at.full(size, mode)
+        return mode
 
     def logp(value, p):
         r"""
@@ -1206,6 +1248,11 @@ class Constant(Discrete):
     def dist(cls, c, *args, **kwargs):
         c = at.as_tensor_variable(floatX(c))
         return super().dist([c], **kwargs)
+
+    def get_moment(rv, size, c):
+        if not rv_size_is_none(size):
+            c = at.full(size, c)
+        return c
 
     def logp(value, c):
         r"""
@@ -1300,6 +1347,12 @@ class ZeroInflatedPoisson(Discrete):
         psi = at.as_tensor_variable(floatX(psi))
         theta = at.as_tensor_variable(floatX(theta))
         return super().dist([psi, theta], *args, **kwargs)
+
+    def get_moment(rv, size, psi, theta):
+        mean = at.floor(psi * theta)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, psi, theta):
         r"""
@@ -1433,6 +1486,12 @@ class ZeroInflatedBinomial(Discrete):
         n = at.as_tensor_variable(intX(n))
         p = at.as_tensor_variable(floatX(p))
         return super().dist([psi, n, p], *args, **kwargs)
+
+    def get_moment(rv, size, psi, n, p):
+        mean = at.round((1 - psi) * n * p)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, psi, n, p):
         r"""

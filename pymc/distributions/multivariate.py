@@ -46,7 +46,11 @@ from pymc.distributions import transforms
 from pymc.distributions.continuous import ChiSquared, Normal, assert_negative_support
 from pymc.distributions.dist_math import bound, factln, logpow, multigammaln
 from pymc.distributions.distribution import Continuous, Discrete
-from pymc.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
+from pymc.distributions.shape_utils import (
+    broadcast_dist_samples_to,
+    rv_size_is_none,
+    to_tuple,
+)
 from pymc.math import kron_diag, kron_dot
 
 __all__ = [
@@ -223,6 +227,13 @@ class MvNormal(Continuous):
         mu = at.as_tensor_variable(mu)
         cov = quaddist_matrix(cov, chol, tau, lower)
         return super().dist([mu, cov], **kwargs)
+
+    def get_moment(rv, size, mu, cov):
+        moment = mu
+        if not rv_size_is_none(size):
+            moment_size = at.concatenate([size, mu.shape])
+            moment = at.full(moment_size, mu)
+        return moment
 
     def logp(value, mu, cov):
         """
@@ -404,6 +415,15 @@ class Dirichlet(Continuous):
         # mode = at.switch(at.all(a > 1), (a - 1) / at.sum(a - 1), np.nan)
 
         return super().dist([a], **kwargs)
+
+    def get_moment(rv, size, a):
+        norm_constant = at.sum(a, axis=-1)[..., None]
+        moment = a / norm_constant
+        if not rv_size_is_none(size):
+            if isinstance(size, int):
+                size = (size,)
+            moment = at.full((*size, *a.shape), moment)
+        return moment
 
     def logp(value, a):
         """
