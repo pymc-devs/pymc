@@ -36,6 +36,7 @@ from pymc.distributions import (
     Normal,
     Pareto,
     Poisson,
+    Rice,
     SkewNormal,
     StudentT,
     Triangular,
@@ -792,7 +793,7 @@ def test_mv_normal_moment(mu, cov, size, expected):
     "mu, sigma, size, expected",
     [
         (4.0, 3.0, None, 7.8110885363844345),
-        (4, np.full(5, 3), None, np.full(5, 7.8110885363844345)),
+        (4.0, np.full(5, 3), None, np.full(5, 7.8110885363844345)),
         (np.arange(5), 1, None, np.arange(5) + 1.2703628454614782),
         (np.arange(5), np.ones(5), (2, 5), np.full((2, 5), np.arange(5) + 1.2703628454614782)),
     ],
@@ -807,7 +808,7 @@ def test_moyal_moment(mu, sigma, size, expected):
     "alpha, mu, sigma, size, expected",
     [
         (1.0, 1.0, 1.0, None, 1.56418958),
-        (1, np.ones(5), 1, None, np.full(5, 1.56418958)),
+        (1.0, np.ones(5), 1.0, None, np.full(5, 1.56418958)),
         (np.ones(5), 1, np.ones(5), None, np.full(5, 1.56418958)),
         (
             np.arange(5),
@@ -856,4 +857,44 @@ def test_skewnormal_moment(alpha, mu, sigma, size, expected):
 def test_asymmetriclaplace_moment(b, kappa, mu, size, expected):
     with Model() as model:
         AsymmetricLaplace("x", b=b, kappa=kappa, mu=mu, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "nu, sigma, size, expected",
+    [
+        (1.0, 1.0, None, 1.5485724605511453),
+        (1.0, np.ones(5), None, np.full(5, 1.5485724605511453)),
+        (
+            np.arange(1, 6),
+            1.0,
+            None,
+            (
+                1.5485724605511453,
+                2.2723834280687427,
+                3.1725772879007166,
+                4.127193542536757,
+                5.101069639492123,
+            ),
+        ),
+        (
+            np.arange(1, 6),
+            np.ones(5),
+            (2, 5),
+            np.full(
+                (2, 5),
+                (
+                    1.5485724605511453,
+                    2.2723834280687427,
+                    3.1725772879007166,
+                    4.127193542536757,
+                    5.101069639492123,
+                ),
+            ),
+        ),
+    ],
+)
+def test_rice_moment(nu, sigma, size, expected):
+    with Model() as model:
+        Rice("x", nu=nu, sigma=sigma, size=size)
     assert_moment_is_expected(model, expected)
