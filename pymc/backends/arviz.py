@@ -25,7 +25,7 @@ import pymc
 
 from pymc.aesaraf import extract_obs_data
 from pymc.distributions import logpt
-from pymc.model import modelcontext, Model
+from pymc.model import Model, modelcontext
 from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
@@ -216,7 +216,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
 
         self.density_dist_obs = density_dist_obs
         self.observations = find_observations(self.model)
-
 
     def split_trace(self) -> Tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
         """Split MultiTrace object into posterior and warmup.
