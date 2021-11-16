@@ -4,7 +4,7 @@ import re
 import sys
 import warnings
 
-from typing import Callable, List
+from typing import Callable, List, Dict, Optional, Any
 
 from aesara.graph import optimize_graph
 from aesara.tensor import TensorVariable
@@ -26,7 +26,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
 
 from pymc import Model, modelcontext
-from pymc.aesaraf import compile_rv_inplace, inputvars
+from pymc.aesaraf import compile_rv_inplace, extract_obs_data
 from pymc.util import get_default_varnames
 
 warnings.warn("This module is experimental.")
@@ -95,6 +95,45 @@ def get_jaxified_logp(model: Model) -> Callable:
     return logp_fn_wrap
 
 
+# Adopted from pm.to_inference_data
+def find_observations(model: Model) -> Dict[str, Any]:
+    """If there are observations available, return them as a dictionary."""
+    observations = {}
+    for obs in model.observed_RVs:
+        aux_obs = getattr(obs.tag, "observations", None)
+        if aux_obs is not None:
+            try:
+                obs_data = extract_obs_data(aux_obs)
+                observations[obs.name] = obs_data
+            except TypeError:
+                warnings.warn(f"Could not extract data from symbolic observation {obs}")
+        else:
+            warnings.warn(f"No data for observation {obs}")
+
+    return observations
+
+
+# Adopted from arviz numpyro extractor
+def sample_stats_to_xarray(posterior):
+    """Extract sample_stats from NumPyro posterior."""
+    rename_key = {
+        "potential_energy": "lp",
+        "adapt_state.step_size": "step_size",
+        "num_steps": "n_steps",
+        "accept_prob": "acceptance_rate",
+    }
+    data = {}
+    for stat, value in posterior.get_extra_fields(group_by_chain=True).items():
+        if isinstance(value, (dict, tuple)):
+            continue
+        name = rename_key.get(stat, stat)
+        value = value.copy()
+        data[name] = value
+        if stat == "num_steps":
+            data["tree_depth"] = np.log2(value).astype(int) + 1
+    return data
+
+
 def sample_numpyro_nuts(
     draws=1000,
     tune=1000,
@@ -151,9 +190,22 @@ def sample_numpyro_nuts(
     map_seed = jax.random.split(seed, chains)
 
     if chains == 1:
-        pmap_numpyro.run(seed, init_params=init_state, extra_fields=("num_steps",))
+        init_params=init_state
     else:
-        pmap_numpyro.run(map_seed, init_params=init_state_batched, extra_fields=("num_steps",))
+        init_params=init_state_batched
+
+    pmap_numpyro.run(
+        map_seed,
+        init_params=init_params,
+        extra_fields=(
+            "num_steps",
+            "potential_energy",
+            "energy",
+            "adapt_state.step_size",
+            "accept_prob",
+            "diverging",
+        ),
+    )
 
     raw_mcmc_samples = pmap_numpyro.get_samples(group_by_chain=True)
 
@@ -172,6 +224,10 @@ def sample_numpyro_nuts(
     print("Transformation time = ", tic4 - tic3, file=sys.stdout)
 
     posterior = mcmc_samples
-    az_trace = az.from_dict(posterior=posterior)
+    az_posterior = az.from_dict(posterior=posterior)
+
+    az_obs = az.from_dict(observed_data=find_observations(model))
+    az_stats = az.from_dict(sample_stats=sample_stats_to_xarray(pmap_numpyro))
+    az_trace = az.concat(az_posterior, az_obs, az_stats)
 
     return az_trace
