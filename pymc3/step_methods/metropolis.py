@@ -663,12 +663,18 @@ class DEMetropolis(PopulationArrayStepShared):
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
+        self._settings_resetter = SettingsResetter(
+            self, "scaling", "lamb", "steps_until_tune", "accepted", "tune"
+        )
 
         self.mode = mode
 
         shared = pm.make_shared_replacements(vars, model)
         self.delta_logp = delta_logp(model.logpt, vars, shared)
         super().__init__(vars, shared)
+
+    def reset_tuning(self):
+        self._settings_resetter(self)
 
     def astep(self, q0):
         if not self.steps_until_tune and self.tune:
