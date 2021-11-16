@@ -553,11 +553,11 @@ def test_zero_inflated_poisson_moment(psi, theta, size, expected):
 @pytest.mark.parametrize(
     "psi, n, p, size, expected",
     [
-        (0.2, 7, 0.7, None, 4),
-        (0.2, 7, 0.3, 5, np.full(5, 2)),
-        (0.6, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
+        (0.8, 7, 0.7, None, 4),
+        (0.8, 7, 0.3, 5, np.full(5, 2)),
+        (0.4, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
         (
-            0.6,
+            0.4,
             25,
             np.arange(1, 6) / 10,
             (2, 5),
