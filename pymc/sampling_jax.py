@@ -4,7 +4,7 @@ import re
 import sys
 import warnings
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Callable, List
 
 from aesara.graph import optimize_graph
 from aesara.tensor import TensorVariable
@@ -26,7 +26,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
 
 from pymc import Model, modelcontext
-from pymc.aesaraf import compile_rv_inplace, extract_obs_data
+from pymc.aesaraf import compile_rv_inplace
 from pymc.backends.arviz import find_observations
 from pymc.util import get_default_varnames
 
