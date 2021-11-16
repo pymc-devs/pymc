@@ -191,8 +191,7 @@ See [Google Scholar](https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&
 installation
 learning
 api
-developers
 community
 contributing/index
-about
+about/index
 :::

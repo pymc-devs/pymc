@@ -19,9 +19,17 @@ New to the open source space? Find a good beginner friendly documentation issue 
 You will need to express your interest in the issue by commenting on it using your Github account, and you will need to use some beginner level Git to complete the Pull Request process, but don't worry! There are plenty of good [Github tutorials](https://guides.github.com/activities/hello-world/) out there, and PyMC reviewers are happy to help.
 
 
-## Become a sponsor
+## Contribute as an institution
 
-TODO add information on how to become a sponsor. Description of the process is being created here https://github.com/pymc-devs/pymc/pull/4980
+Institutions can contribute in two main ways:
+
+- By becoming [Institutional Partners](https://github.com/pymc-devs/pymc/blob/main/GOVERNANCE.md#institutional-partners-and-funding)
+- By becoming [Sponsors](https://github.com/pymc-devs/pymc/blob/main/GOVERNANCE.md#sponsors)
+
+Contact PyMC at pymc.devs@gmail.com for more information.
+
+
+TODO: Add https://github.com/pymc-devs/pymc/blob/main/CONTRIBUTING.md
 
 :::{toctree}
 :hidden:
