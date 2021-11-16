@@ -3350,6 +3350,22 @@ class Rice(PositiveContinuous):
             return nu, b, sigma
         raise ValueError("Rice distribution must specify either nu" " or b.")
 
+    def get_moment(rv, size, nu, sigma):
+        nu_sigma_ratio = -(nu ** 2) / (2 * sigma ** 2)
+        mean = (
+            sigma
+            * np.sqrt(np.pi / 2)
+            * at.exp(nu_sigma_ratio / 2)
+            * (
+                (1 - nu_sigma_ratio) * at.i0(-nu_sigma_ratio / 2)
+                - nu_sigma_ratio * at.i1(-nu_sigma_ratio / 2)
+            )
+        )
+
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, b, sigma):
         """
         Calculate log-probability of Rice distribution at specified value.
