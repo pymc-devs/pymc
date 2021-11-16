@@ -2332,10 +2332,12 @@ class InverseGamma(PositiveContinuous):
         return super().dist([alpha, beta], **kwargs)
 
     def get_moment(rv, size, alpha, beta):
-        m = beta / (alpha - 1.0)
+        mean = beta / (alpha - 1.0)
+        mode = beta / (alpha + 1.0)
+        moment = at.switch(alpha > 1, mean, mode)
         if not rv_size_is_none(size):
-            m = at.full(size, m)
-        return at.switch(alpha > 1, m, np.inf)
+            moment = at.full(size, moment)
+        return moment
 
     @classmethod
     def _get_alpha_beta(cls, alpha, beta, mu, sigma):
