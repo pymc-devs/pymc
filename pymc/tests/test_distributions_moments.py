@@ -1088,6 +1088,9 @@ def test_matrixnormal_moment(mu, rowchol, colchol, size, expected):
 def test_rice_moment(nu, sigma, size, expected):
     with Model() as model:
         Rice("x", nu=nu, sigma=sigma, size=size)
+
+
+@pytest.mark.parametrize(
     "alpha, K, size, expected", [(3, 11, None, (3 / 4) ** np.arange(12) * 1 / 3)]
 )
 def test_stickbreakingweights_moment(alpha, K, size, expected):
