@@ -1,7 +1,11 @@
+import aesara
 import numpy as np
 import pytest
 
+from aesara import tensor as at
 from scipy import special
+
+import pymc as pm
 
 from pymc.distributions import (
     AsymmetricLaplace,
@@ -13,6 +17,7 @@ from pymc.distributions import (
     Cauchy,
     ChiSquared,
     Constant,
+    DensityDist,
     Dirichlet,
     DiscreteUniform,
     ExGaussian,
@@ -47,8 +52,9 @@ from pymc.distributions import (
     ZeroInflatedBinomial,
     ZeroInflatedPoisson,
 )
+from pymc.distributions.distribution import get_moment
 from pymc.distributions.multivariate import MvNormal
-from pymc.distributions.shape_utils import rv_size_is_none
+from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
 
@@ -898,3 +904,83 @@ def test_rice_moment(nu, sigma, size, expected):
     with Model() as model:
         Rice("x", nu=nu, sigma=sigma, size=size)
     assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "get_moment, size, expected",
+    [
+        (None, None, 0.0),
+        (None, 5, np.zeros(5)),
+        ("custom_moment", None, 5),
+        ("custom_moment", (2, 5), np.full((2, 5), 5)),
+    ],
+)
+def test_density_dist_default_moment_univariate(get_moment, size, expected):
+    if get_moment == "custom_moment":
+        get_moment = lambda rv, size, *rv_inputs: 5 * at.ones(size, dtype=rv.dtype)
+    with Model() as model:
+        DensityDist("x", get_moment=get_moment, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
+def test_density_dist_custom_moment_univariate(size):
+    def moment(rv, size, mu):
+        return (at.ones(size) * mu).astype(rv.dtype)
+
+    mu_val = np.array(np.random.normal(loc=2, scale=1)).astype(aesara.config.floatX)
+    with pm.Model():
+        mu = pm.Normal("mu")
+        a = pm.DensityDist("a", mu, get_moment=moment, size=size)
+    evaled_moment = get_moment(a).eval({mu: mu_val})
+    assert evaled_moment.shape == to_tuple(size)
+    assert np.all(evaled_moment == mu_val)
+
+
+@pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
+def test_density_dist_custom_moment_multivariate(size):
+    def moment(rv, size, mu):
+        return (at.ones(size)[..., None] * mu).astype(rv.dtype)
+
+    mu_val = np.random.normal(loc=2, scale=1, size=5).astype(aesara.config.floatX)
+    with pm.Model():
+        mu = pm.Normal("mu", size=5)
+        a = pm.DensityDist("a", mu, get_moment=moment, ndims_params=[1], ndim_supp=1, size=size)
+    evaled_moment = get_moment(a).eval({mu: mu_val})
+    assert evaled_moment.shape == to_tuple(size) + (5,)
+    assert np.all(evaled_moment == mu_val)
+
+
+@pytest.mark.parametrize(
+    "with_random, size",
+    [
+        (True, ()),
+        (True, (2,)),
+        (True, (3, 2)),
+        (False, ()),
+        (False, (2,)),
+    ],
+)
+def test_density_dist_default_moment_multivariate(with_random, size):
+    def _random(mu, rng=None, size=None):
+        return rng.normal(mu, scale=1, size=to_tuple(size) + mu.shape)
+
+    if with_random:
+        random = _random
+    else:
+        random = None
+
+    mu_val = np.random.normal(loc=2, scale=1, size=5).astype(aesara.config.floatX)
+    with pm.Model():
+        mu = pm.Normal("mu", size=5)
+        a = pm.DensityDist("a", mu, random=random, ndims_params=[1], ndim_supp=1, size=size)
+    if with_random:
+        evaled_moment = get_moment(a).eval({mu: mu_val})
+        assert evaled_moment.shape == to_tuple(size) + (5,)
+        assert np.all(evaled_moment == 0)
+    else:
+        with pytest.raises(
+            TypeError,
+            match="Cannot safely infer the size of a multivariate random variable's moment.",
+        ):
+            evaled_moment = get_moment(a).eval({mu: mu_val})
