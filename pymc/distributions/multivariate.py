@@ -348,10 +348,11 @@ class MvStudentT(Continuous):
         return super().dist([nu, mu, cov], **kwargs)
 
     def get_moment(rv, size, nu, mu, cov):
-        moment = mu
-        if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, mu.shape])
-            moment = at.full(moment_size, moment)
+        if rv_size_is_none(size):
+            moment_size = at.concatenate([nu.shape, mu.shape])
+        else:
+            moment_size = at.concatenate([size, nu.shape, mu.shape])
+        moment = at.full(moment_size, mu)
         return moment
 
     def logp(value, nu, mu, cov):
