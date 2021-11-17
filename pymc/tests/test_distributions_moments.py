@@ -52,6 +52,7 @@ from pymc.distributions import (
     Wald,
     Weibull,
     ZeroInflatedBinomial,
+    ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
 )
 from pymc.distributions.distribution import get_moment
@@ -1051,4 +1052,25 @@ def test_density_dist_default_moment_multivariate(with_random, size):
 def test_polyagamma_moment(h, z, size, expected):
     with Model() as model:
         PolyaGamma("x", h=h, z=z, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "psi, mu, alpha, size, expected",
+    [
+        (0.2, 10, 3, None, 2),
+        (0.2, 10, 4, 5, np.full(5, 2)),
+        (0.4, np.arange(1, 5), np.arange(2, 6), None, np.array([0, 0, 1, 1])),
+        (
+            np.linspace(0.2, 0.6, 3),
+            np.arange(1, 10, 4),
+            np.arange(1, 4),
+            (2, 3),
+            np.full((2, 3), np.array([0, 2, 5])),
+        ),
+    ],
+)
+def test_zero_inflated_negative_binomial_moment(psi, mu, alpha, size, expected):
+    with Model() as model:
+        ZeroInflatedNegativeBinomial("x", psi=psi, mu=mu, alpha=alpha, size=size)
     assert_moment_is_expected(model, expected)
