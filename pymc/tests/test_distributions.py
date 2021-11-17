@@ -109,6 +109,7 @@ from pymc.distributions import (
     Poisson,
     Rice,
     SkewNormal,
+    StickBreakingWeights,
     StudentT,
     Triangular,
     TruncatedNormal,
@@ -2132,21 +2133,21 @@ class TestMatchesScipy:
             sbw_logpdf,  # precompute values as in ex-gaussian dist
         )
 
-    def test_stickbreakingweights_shape(self):
-        alpha = at.as_tensor_variable(np.r_[1, 2])
-        sbw_rv = StickBreakingWeights.dist(alpha)
-        assert sbw_rv.shape.eval() == (2,)
+    # def test_stickbreakingweights_shape(self):
+    #     alpha = at.as_tensor_variable(np.r_[1, 2])
+    #     sbw_rv = StickBreakingWeights.dist(alpha)
+    #     assert sbw_rv.shape.eval() == (2,)
 
-        with pytest.warns(DeprecationWarning), aesara.change_flags(compute_test_value="ignore"):
-            sbw_rv = StickBreakingWeights.dist(at.vector())
+    #     with pytest.warns(DeprecationWarning), aesara.change_flags(compute_test_value="ignore"):
+    #         sbw_rv = StickBreakingWeights.dist(at.vector())
 
-    def test_dirichlet_2D(self):
-        self.check_logp(
-            StickBreakingWeights,
-            MultiSimplex(2, 2),
-            {"alpha": Vector(Vector(Rplus, 2), 2)},
-            dirichlet_logpdf,
-        )
+    # def test_dirichlet_2D(self):
+    #     self.check_logp(
+    #         StickBreakingWeights,
+    #         MultiSimplex(2, 2),
+    #         {"alpha": Vector(Vector(Rplus, 2), 2)},
+    #         dirichlet_logpdf,
+    #     )
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_multinomial(self, n):

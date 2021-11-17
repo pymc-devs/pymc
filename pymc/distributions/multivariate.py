@@ -2265,6 +2265,9 @@ class StickBreakingWeights(Continuous):
         if at.lt(alpha, 0).eval():
             raise ValueError("alpha needs to be a positive.")
 
+        if not at.allclose(value.sum(axis=-1), 1).eval():
+            raise ValueError("weights need to sum to 1.")
+
         logp = -at.sum(
             at.log(
                 at.cumsum(
@@ -2274,7 +2277,7 @@ class StickBreakingWeights(Continuous):
             ),
             axis=-1,
         )
-        logp += -K * betaln(1, alpha)
+        logp += -(K - 1) * betaln(1, alpha)
         logp += alpha * at.log(value[..., -1])  # check this
 
         return bound(
