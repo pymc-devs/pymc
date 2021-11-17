@@ -14,7 +14,7 @@
 
 import copy
 
-from typing import Any
+from typing import Any, List
 
 import numpy as np
 import numpy.random as nr
@@ -806,7 +806,7 @@ class DEMetropolisZ(ArrayStepShared):
         self.lamb = float(lamb)
         if tune not in {None, "scaling", "lambda"}:
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
-        self.tune = True
+        self.tune = bool(tune)
         self.tune_target = tune
         self.tune_interval = tune_interval
         self.tune_drop_fraction = tune_drop_fraction
@@ -814,13 +814,14 @@ class DEMetropolisZ(ArrayStepShared):
         self.accepted = 0
 
         # cache local history for the Z-proposals
-        self._history = []
-        # remember initial settings before tuning so they can be reset
-        self._untuned_settings = dict(
-            scaling=self.scaling,
-            lamb=self.lamb,
-            steps_until_tune=tune_interval,
-            accepted=self.accepted,
+        self._history: List[np.ndarray] = []
+        self._settings_resetter = SettingsResetter(
+            self,
+            "_history",
+            "scaling",
+            "lamb",
+            "steps_until_tune",
+            "accepted",
         )
 
         self.mode = mode
@@ -831,10 +832,7 @@ class DEMetropolisZ(ArrayStepShared):
 
     def reset_tuning(self):
         """Resets the tuned sampler parameters and history to their initial values."""
-        # history can't be reset via the _untuned_settings dict because it's a list
-        self._history = []
-        for attr, initial_value in self._untuned_settings.items():
-            setattr(self, attr, initial_value)
+        self._settings_resetter(self)
         return
 
     def astep(self, q0):
