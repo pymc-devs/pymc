@@ -28,6 +28,7 @@ from aesara.link.jax.dispatch import jax_funcify
 from pymc import Model, modelcontext
 from pymc.aesaraf import compile_rv_inplace
 from pymc.backends.arviz import find_observations
+from pymc.distributions import logpt
 from pymc.util import get_default_varnames
 
 warnings.warn("This module is experimental.")
@@ -97,7 +98,7 @@ def get_jaxified_logp(model: Model) -> Callable:
 
 
 # Adopted from arviz numpyro extractor
-def sample_stats_to_xarray(posterior):
+def _sample_stats_to_xarray(posterior):
     """Extract sample_stats from NumPyro posterior."""
     rename_key = {
         "potential_energy": "lp",
@@ -114,6 +115,18 @@ def sample_stats_to_xarray(posterior):
         data[name] = value
         if stat == "num_steps":
             data["tree_depth"] = np.log2(value).astype(int) + 1
+    return data
+
+
+def _get_log_likelihood(model, samples):
+    "Compute log-likelihood for all observations"
+    data = {}
+    for v in model.observed_RVs:
+        logp_v = replace_shared_variables([logpt(v)])
+        fgraph = FunctionGraph(model.value_vars, logp_v, clone=False)
+        jax_fn = jax_funcify(fgraph)
+        result = jax.vmap(jax.vmap(jax_fn))(*samples)[0]
+        data[v.name] = result
     return data
 
 
@@ -211,7 +224,8 @@ def sample_numpyro_nuts(
     az_posterior = az.from_dict(posterior=posterior)
 
     az_obs = az.from_dict(observed_data=find_observations(model))
-    az_stats = az.from_dict(sample_stats=sample_stats_to_xarray(pmap_numpyro))
-    az_trace = az.concat(az_posterior, az_obs, az_stats)
+    az_stats = az.from_dict(sample_stats=_sample_stats_to_xarray(pmap_numpyro))
+    az_ll = az.from_dict(log_likelihood=_get_log_likelihood(model, raw_mcmc_samples))
+    az_trace = az.concat(az_posterior, az_ll, az_obs, az_stats)
 
     return az_trace
