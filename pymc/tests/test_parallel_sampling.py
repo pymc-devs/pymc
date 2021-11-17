@@ -204,7 +204,7 @@ def test_spawn_densitydist_bound_method():
         normal_dist = pm.Normal.dist(mu, 1, size=N)
 
         def logp(x):
-            out = pm.logp(normal_dist, x, transformed=False)
+            out = pm.logp(normal_dist, x)
             return out
 
         obs = pm.DensityDist("density_dist", logp=logp, observed=np.random.randn(N), size=N)

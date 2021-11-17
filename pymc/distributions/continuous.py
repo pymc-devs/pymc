@@ -1599,6 +1599,13 @@ class AsymmetricLaplace(Continuous):
 
         return super().dist([b, kappa, mu], *args, **kwargs)
 
+    def get_moment(rv, size, b, kappa, mu):
+        mean = mu - (kappa - 1 / kappa) / b
+
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, b, kappa, mu):
         """
         Calculate log-probability of Asymmetric-Laplace distribution at specified value.
@@ -3012,6 +3019,12 @@ class SkewNormal(Continuous):
 
         return super().dist([mu, sigma, alpha], *args, **kwargs)
 
+    def get_moment(rv, size, mu, sigma, alpha):
+        mean = mu + sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha ** 2) ** 0.5
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, mu, sigma, alpha):
         """
         Calculate log-probability of SkewNormal distribution at specified value.
@@ -3336,6 +3349,22 @@ class Rice(PositiveContinuous):
             b = nu / sigma
             return nu, b, sigma
         raise ValueError("Rice distribution must specify either nu" " or b.")
+
+    def get_moment(rv, size, nu, sigma):
+        nu_sigma_ratio = -(nu ** 2) / (2 * sigma ** 2)
+        mean = (
+            sigma
+            * np.sqrt(np.pi / 2)
+            * at.exp(nu_sigma_ratio / 2)
+            * (
+                (1 - nu_sigma_ratio) * at.i0(-nu_sigma_ratio / 2)
+                - nu_sigma_ratio * at.i1(-nu_sigma_ratio / 2)
+            )
+        )
+
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, b, sigma):
         """

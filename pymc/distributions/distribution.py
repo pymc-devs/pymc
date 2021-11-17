@@ -23,14 +23,13 @@ from typing import Callable, Optional, Sequence
 
 import aesara
 
-from aeppl.logprob import _logprob
+from aeppl.logprob import _logcdf, _logprob
 from aesara.tensor.basic import as_tensor_variable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import change_rv_size
-from pymc.distributions import _logcdf
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
@@ -98,18 +97,18 @@ class DistributionMeta(ABCMeta):
             if class_logp:
 
                 @_logprob.register(rv_type)
-                def logp(op, value_var_list, *dist_params, **kwargs):
-                    _dist_params = dist_params[3:]
-                    value_var = value_var_list[0]
-                    return class_logp(value_var, *_dist_params)
+                def logp(op, values, *dist_params, **kwargs):
+                    dist_params = dist_params[3:]
+                    (value,) = values
+                    return class_logp(value, *dist_params)
 
             class_logcdf = clsdict.get("logcdf")
             if class_logcdf:
 
                 @_logcdf.register(rv_type)
-                def logcdf(op, var, rvs_to_values, *dist_params, **kwargs):
-                    value_var = rvs_to_values.get(var, var)
-                    return class_logcdf(value_var, *dist_params, **kwargs)
+                def logcdf(op, value, *dist_params, **kwargs):
+                    dist_params = dist_params[3:]
+                    return class_logcdf(value, *dist_params)
 
             class_initval = clsdict.get("get_moment")
             if class_initval:

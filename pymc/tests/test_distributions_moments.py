@@ -4,6 +4,7 @@ import pytest
 from scipy import special
 
 from pymc.distributions import (
+    AsymmetricLaplace,
     Bernoulli,
     Beta,
     BetaBinomial,
@@ -37,6 +38,8 @@ from pymc.distributions import (
     Normal,
     Pareto,
     Poisson,
+    Rice,
+    SkewNormal,
     StudentT,
     Triangular,
     TruncatedNormal,
@@ -46,6 +49,7 @@ from pymc.distributions import (
     ZeroInflatedBinomial,
     ZeroInflatedPoisson,
 )
+from pymc.distributions.multivariate import MvNormal
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
@@ -754,10 +758,44 @@ def test_categorical_moment(p, size, expected):
 
 
 @pytest.mark.parametrize(
+    "mu, cov, size, expected",
+    [
+        (np.ones(1), np.identity(1), None, np.ones(1)),
+        (np.ones(3), np.identity(3), None, np.ones(3)),
+        (np.ones((2, 2)), np.identity(2), None, np.ones((2, 2))),
+        (np.array([1, 0, 3.0]), np.identity(3), None, np.array([1, 0, 3.0])),
+        (np.array([1, 0, 3.0]), np.identity(3), (4, 2), np.full((4, 2, 3), [1, 0, 3.0])),
+        (
+            np.array([1, 3.0]),
+            np.identity(2),
+            5,
+            np.full((5, 2), [1, 3.0]),
+        ),
+        (
+            np.array([1, 3.0]),
+            np.array([[1.0, 0.5], [0.5, 2]]),
+            (4, 5),
+            np.full((4, 5, 2), [1, 3.0]),
+        ),
+        (
+            np.array([[3.0, 5], [1, 4]]),
+            np.identity(2),
+            (4, 5),
+            np.full((4, 5, 2, 2), [[3.0, 5], [1, 4]]),
+        ),
+    ],
+)
+def test_mv_normal_moment(mu, cov, size, expected):
+    with Model() as model:
+        MvNormal("x", mu=mu, cov=cov, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
     "mu, sigma, size, expected",
     [
         (4.0, 3.0, None, 7.8110885363844345),
-        (4, np.full(5, 3), None, np.full(5, 7.8110885363844345)),
+        (4.0, np.full(5, 3), None, np.full(5, 7.8110885363844345)),
         (np.arange(5), 1, None, np.arange(5) + 1.2703628454614782),
         (np.arange(5), np.ones(5), (2, 5), np.full((2, 5), np.arange(5) + 1.2703628454614782)),
     ],
@@ -766,6 +804,7 @@ def test_moyal_moment(mu, sigma, size, expected):
     with Model() as model:
         Moyal("x", mu=mu, sigma=sigma, size=size)
     assert_moment_is_expected(model, expected)
+
 
 
 rand1d = np.random.rand(2)
@@ -793,6 +832,61 @@ def test_mvstudentt_moment(nu, mu, cov, size, expected):
 def check_matrixnormal_moment(mu, rowchol, colchol, size, expected):
     with Model() as model:
         MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
+
+
+@pytest.mark.parametrize(
+    "alpha, mu, sigma, size, expected",
+    [
+        (1.0, 1.0, 1.0, None, 1.56418958),
+        (1.0, np.ones(5), 1.0, None, np.full(5, 1.56418958)),
+        (np.ones(5), 1, np.ones(5), None, np.full(5, 1.56418958)),
+        (
+            np.arange(5),
+            np.arange(1, 6),
+            np.arange(1, 6),
+            None,
+            (1.0, 3.12837917, 5.14094894, 7.02775903, 8.87030861),
+        ),
+        (
+            np.arange(5),
+            np.arange(1, 6),
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), (1.0, 3.12837917, 5.14094894, 7.02775903, 8.87030861)),
+        ),
+    ],
+)
+def test_skewnormal_moment(alpha, mu, sigma, size, expected):
+    with Model() as model:
+        SkewNormal("x", alpha=alpha, mu=mu, sigma=sigma, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "b, kappa, mu, size, expected",
+    [
+        (1.0, 1.0, 1.0, None, 1.0),
+        (1.0, np.ones(5), 1.0, None, np.full(5, 1.0)),
+        (np.arange(1, 6), 1.0, np.ones(5), None, np.full(5, 1.0)),
+        (
+            np.arange(1, 6),
+            np.arange(1, 6),
+            np.arange(1, 6),
+            None,
+            (1.0, 1.25, 2.111111111111111, 3.0625, 4.04),
+        ),
+        (
+            np.arange(1, 6),
+            np.arange(1, 6),
+            np.arange(1, 6),
+            (2, 5),
+            np.full((2, 5), (1.0, 1.25, 2.111111111111111, 3.0625, 4.04)),
+        ),
+    ],
+)
+def test_asymmetriclaplace_moment(b, kappa, mu, size, expected):
+    with Model() as model:
+        AsymmetricLaplace("x", b=b, kappa=kappa, mu=mu, size=size)
     assert_moment_is_expected(model, expected)
 
 
@@ -812,3 +906,43 @@ def test_matrixnormal_moment(mu, rowchol, colchol, size, expected):
     else:
         with pytest.raises(NotImplementedError):
             check_matrixnormal_moment(mu, rowchol, colchol, size, expected)
+
+
+@pytest.mark.parametrize(
+    "nu, sigma, size, expected",
+    [
+        (1.0, 1.0, None, 1.5485724605511453),
+        (1.0, np.ones(5), None, np.full(5, 1.5485724605511453)),
+        (
+            np.arange(1, 6),
+            1.0,
+            None,
+            (
+                1.5485724605511453,
+                2.2723834280687427,
+                3.1725772879007166,
+                4.127193542536757,
+                5.101069639492123,
+            ),
+        ),
+        (
+            np.arange(1, 6),
+            np.ones(5),
+            (2, 5),
+            np.full(
+                (2, 5),
+                (
+                    1.5485724605511453,
+                    2.2723834280687427,
+                    3.1725772879007166,
+                    4.127193542536757,
+                    5.101069639492123,
+                ),
+            ),
+        ),
+    ],
+)
+def test_rice_moment(nu, sigma, size, expected):
+    with Model() as model:
+        Rice("x", nu=nu, sigma=sigma, size=size)
+    assert_moment_is_expected(model, expected)
