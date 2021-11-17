@@ -41,6 +41,7 @@ from pymc.distributions import (
     Normal,
     Pareto,
     Poisson,
+    PolyaGamma,
     Rice,
     SkewNormal,
     StudentT,
@@ -984,3 +985,54 @@ def test_density_dist_default_moment_multivariate(with_random, size):
             match="Cannot safely infer the size of a multivariate random variable's moment.",
         ):
             evaled_moment = get_moment(a).eval({mu: mu_val})
+
+
+@pytest.mark.parametrize(
+    "h, z, size, expected",
+    [
+        (1.0, 0.0, None, 0.25),
+        (
+            1.0,
+            np.arange(5),
+            None,
+            (
+                0.25,
+                0.23105857863000487,
+                0.1903985389889412,
+                0.1508580422741444,
+                0.12050344750947711,
+            ),
+        ),
+        (
+            np.arange(1, 6),
+            np.arange(5),
+            None,
+            (
+                0.25,
+                0.46211715726000974,
+                0.5711956169668236,
+                0.6034321690965776,
+                0.6025172375473855,
+            ),
+        ),
+        (
+            np.arange(1, 6),
+            np.arange(5),
+            (2, 5),
+            np.full(
+                (2, 5),
+                (
+                    0.25,
+                    0.46211715726000974,
+                    0.5711956169668236,
+                    0.6034321690965776,
+                    0.6025172375473855,
+                ),
+            ),
+        ),
+    ],
+)
+def test_polyagamma_moment(h, z, size, expected):
+    with Model() as model:
+        PolyaGamma("x", h=h, z=z, size=size)
+    assert_moment_is_expected(model, expected)
