@@ -77,32 +77,6 @@ def change_rv_size(
     return rv_var
 
 
-def extract_rv_and_value_vars(
-    var: TensorVariable,
-) -> Tuple[TensorVariable, TensorVariable]:
-    """Return a random variable and its observations, value variable, or ``None``.
-
-    Parameters
-    ==========
-    var
-        A variable corresponding to a ``MeasurableVariable``.
-
-    Returns
-    =======
-    The first value in the tuple is the ``MeasurableVariable`` and the second is
-    the observations variable or the measure/log-probability value variable.
-
-    """
-    if not var.owner:
-        return None, None
-
-    if isinstance(var.owner.op, MeasurableVariable):
-        rv_value = getattr(var.tag, "observations", getattr(var.tag, "value_var", None))
-        return var, rv_value
-
-    return None, None
-
-
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
     """Extract data from observed symbolic variables.
 
@@ -239,19 +213,13 @@ def rvs_to_value_vars(
     """
 
     def replace_fn(var, replacements):
-        rv_var, rv_value_var = extract_rv_and_value_vars(var)
-
-        if rv_value_var is None:
-            rv_value_var = replacements.get(rv_var, None)
-
-            if rv_value_var is None:
-                return []
-
-        replacements[var] = rv_value_var
-
-        # In case the value variable is itself a graph, we walk it for
-        # potential replacements
-        return [rv_value_var]
+        rv_value_var = replacements.get(var, None)
+        if rv_value_var is not None:
+            replacements[var] = rv_value_var
+            # In case the value variable is itself a graph, we walk it for
+            # potential replacements
+            return [rv_value_var]
+        return []
 
     return replace_rvs_in_graphs(graphs, replace_fn, initial_replacements, **kwargs)
 

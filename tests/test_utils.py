@@ -3,6 +3,7 @@ import numpy as np
 from aesara.graph.basic import Constant, ancestors
 from aesara.tensor.random.basic import normal, uniform
 
+from aeppl.abstract import MeasurableVariable
 from aeppl.utils import change_rv_size, rvs_to_value_vars, walk_model
 from tests.utils import assert_no_rvs
 
@@ -88,7 +89,10 @@ def test_rvs_to_value_vars():
 
     d = at.log(c + b) + 2.0
 
-    (res,), replaced = rvs_to_value_vars((d,))
+    initial_replacements = {b: b_value_var, c: c_value_var}
+    (res,), replaced = rvs_to_value_vars(
+        (d,), initial_replacements=initial_replacements
+    )
 
     assert res.owner.op == at.add
     log_output = res.owner.inputs[0]
@@ -111,3 +115,42 @@ def test_rvs_to_value_vars():
     assert b_value_var in res_ancestors
     assert c_value_var in res_ancestors
     assert a_value_var not in res_ancestors
+
+
+def test_rvs_to_value_vars_intermediate_rv():
+    """Test that function replaces values above an intermediate RV. """
+    a = at.random.uniform(0.0, 1.0)
+    a.name = "a"
+    a.tag.value_var = a_value_var = a.clone()
+
+    b = at.random.uniform(0, a + 1.0)
+    b.name = "b"
+    b.tag.value_var = b.clone()
+
+    c = at.random.normal()
+    c.name = "c"
+    c.tag.value_var = c_value_var = c.clone()
+
+    d = at.log(c + b) + 2.0
+
+    initial_replacements = {a: a_value_var, c: c_value_var}
+    (res,), replaced = rvs_to_value_vars(
+        (d,), initial_replacements=initial_replacements
+    )
+
+    # Assert that the only RandomVariable that remains in the graph is `b`
+    res_ancestors = list(walk_model((res,), walk_past_rvs=True))
+
+    assert (
+        len(
+            list(
+                n
+                for n in res_ancestors
+                if n.owner and isinstance(n.owner.op, MeasurableVariable)
+            )
+        )
+        == 1
+    )
+
+    assert c_value_var in res_ancestors
+    assert a_value_var in res_ancestors
