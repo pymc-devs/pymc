@@ -88,7 +88,7 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - New features for BART:
   - Added linear response, increased number of trees fitted per step [5044](https://github.com/pymc-devs/pymc3/pull/5044).
   - Added partial dependence plots and individual conditional expectation plots [5091](https://github.com/pymc-devs/pymc3/pull/5091).
-  - Modify how particle weights are computed. This imporves accuracy of the modeled function (see [5177](https://github.com/pymc-devs/pymc3/pull/5177)).
+  - Modify how particle weights are computed. This improves accuracy of the modeled function (see [5177](https://github.com/pymc-devs/pymc3/pull/5177)).
 - `pm.Data` now passes additional kwargs to `aesara.shared`. [#5098](https://github.com/pymc-devs/pymc/pull/5098)
 - ...
 
