@@ -115,8 +115,8 @@ class DistributionMeta(ABCMeta):
             if class_initval:
 
                 @_get_moment.register(rv_type)
-                def get_moment(op, rv, size, *rv_inputs):
-                    return class_initval(rv, size, *rv_inputs)
+                def get_moment(op, rv, rng, size, dtype, *dist_params):
+                    return class_initval(rv, size, *dist_params)
 
             # Register the Aesara `RandomVariable` type as a subclass of this
             # `Distribution` type.
@@ -355,10 +355,8 @@ class Distribution(metaclass=DistributionMeta):
 
 
 @singledispatch
-def _get_moment(op, rv, size, *rv_inputs) -> TensorVariable:
-    raise NotImplementedError(
-        f"Random variable {rv} of type {op} has no get_moment implementation."
-    )
+def _get_moment(op, rv, *rv_inputs) -> TensorVariable:
+    raise NotImplementedError(f"Variable {rv} of type {op} has no get_moment implementation.")
 
 
 def get_moment(rv: TensorVariable) -> TensorVariable:
@@ -368,8 +366,7 @@ def get_moment(rv: TensorVariable) -> TensorVariable:
     The only parameter to this function is the RandomVariable
     for which the value is to be derived.
     """
-    size = rv.owner.inputs[1]
-    return _get_moment(rv.owner.op, rv, size, *rv.owner.inputs[3:]).astype(rv.dtype)
+    return _get_moment(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
 
 
 class Discrete(Distribution):
@@ -591,8 +588,8 @@ class DensityDist(NoDistribution):
             return logcdf(value_var, *dist_params, **kwargs)
 
         @_get_moment.register(rv_type)
-        def density_dist_get_moment(op, rv, size, *rv_inputs):
-            return get_moment(rv, size, *rv_inputs)
+        def density_dist_get_moment(op, rv, rng, size, dtype, *dist_params):
+            return get_moment(rv, size, *dist_params)
 
         cls.rv_op = rv_op
         return super().__new__(cls, name, *dist_params, **kwargs)
