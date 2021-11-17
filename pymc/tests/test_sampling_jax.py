@@ -9,10 +9,10 @@ from aesara.graph import graph_inputs
 import pymc as pm
 
 from pymc.sampling_jax import (
+    _get_log_likelihood,
     get_jaxified_logp,
     replace_shared_variables,
     sample_numpyro_nuts,
-    _get_log_likelihood,
 )
 
 
