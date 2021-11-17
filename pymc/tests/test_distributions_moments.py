@@ -806,7 +806,6 @@ def test_moyal_moment(mu, sigma, size, expected):
     assert_moment_is_expected(model, expected)
 
 
-
 rand1d = np.random.rand(2)
 rand2d = np.random.rand(2, 3)
 
