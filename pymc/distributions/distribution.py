@@ -24,6 +24,7 @@ from typing import Callable, Optional, Sequence
 import aesara
 
 from aeppl.logprob import _logcdf, _logprob
+from aesara import tensor as at
 from aesara.tensor.basic import as_tensor_variable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
@@ -472,9 +473,9 @@ class DensityDist(NoDistribution):
             as the first argument ``rv``. ``size`` is the random variable's size implied
             by the ``dims``, ``size`` and parameters supplied to the distribution. Finally,
             ``rv_inputs`` is the sequence of the distribution parameters, in the same order
-            as they were supplied when the DensityDist was created. If ``None``, a
-            ``NotImplemented`` error will be raised when trying to draw random samples from
-            the distribution's prior or posterior predictive.
+            as they were supplied when the DensityDist was created. If ``None``, a default
+            ``get_moment`` function will be assigned that will always return 0, or an array
+            of zeros.
         ndim_supp : int
             The number of dimensions in the support of the distribution. Defaults to assuming
             a scalar distribution, i.e. ``ndim_supp = 0``.
@@ -550,11 +551,16 @@ class DensityDist(NoDistribution):
         if logcdf is None:
             logcdf = default_not_implemented(name, "logcdf")
 
+        if get_moment is None:
+            get_moment = functools.partial(
+                default_get_moment,
+                rv_name=name,
+                has_fallback=random is not None,
+                ndim_supp=ndim_supp,
+            )
+
         if random is None:
             random = default_not_implemented(name, "random")
-
-        if get_moment is None:
-            get_moment = default_not_implemented(name, "get_moment")
 
         rv_op = type(
             f"DensityDist_{name}",
@@ -614,3 +620,16 @@ def default_not_implemented(rv_name, method_name):
         raise NotImplementedError(message)
 
     return func
+
+
+def default_get_moment(rv, size, *rv_inputs, rv_name=None, has_fallback=False, ndim_supp=0):
+    if ndim_supp == 0:
+        return at.zeros(size, dtype=rv.dtype)
+    elif has_fallback:
+        return at.zeros_like(rv)
+    else:
+        raise TypeError(
+            "Cannot safely infer the size of a multivariate random variable's moment. "
+            f"Please provide a get_moment function when instantiating the {rv_name} "
+            "random variable."
+        )
