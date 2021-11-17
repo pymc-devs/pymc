@@ -868,14 +868,15 @@ class TestSettingResetter:
         """Make sure it works with mutable objects"""
         settings = MockSettings(p1=1, p2="two", p3=[1, 2, [3]])
         resetter = SettingsResetter(settings, "p1", "p2", "p3")
-        settings.p1 += 1
-        settings.p2 = "three"
-        settings.p3[1] = 11
-        settings.p3[2][0] += 10
-        resetter(settings)
-        assert settings.p1 == 1
-        assert settings.p2 == "two"
-        assert settings.p3 == [1, 2, [3]]
+        for _ in range(2):
+            settings.p1 += 1
+            settings.p2 = "three"
+            settings.p3[1] = 11
+            settings.p3[2][0] += 10
+            resetter(settings)
+            assert settings.p1 == 1
+            assert settings.p2 == "two"
+            assert settings.p3 == [1, 2, [3]]
 
     def test_resets_settings_can_be_called_on_different_instance(self):
         settings = MockSettings(p1=1, p2=2, p3=3)

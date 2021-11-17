@@ -117,7 +117,7 @@ class SettingsResetter:
 
     def __call__(self, step_method: Any) -> Any:
         for param, initial_value in self.initial_settings.items():
-            setattr(step_method, param, initial_value)
+            setattr(step_method, param, copy.deepcopy(initial_value))
 
 
 class Metropolis(ArrayStepShared):
