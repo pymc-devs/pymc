@@ -31,6 +31,7 @@ from pymc.distributions import (
     HalfNormal,
     HalfStudentT,
     HyperGeometric,
+    InverseGamma,
     Kumaraswamy,
     Laplace,
     Logistic,
@@ -393,6 +394,21 @@ def test_halfcauchy_moment(beta, size, expected):
 def test_gamma_moment(alpha, beta, size, expected):
     with Model() as model:
         Gamma("x", alpha=alpha, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "alpha, beta, size, expected",
+    [
+        (5, 1, None, 1 / 4),
+        (0.5, 1, None, 1 / 1.5),
+        (5, 1, 5, np.full(5, 1 / (5 - 1))),
+        (np.arange(1, 6), 1, None, np.array([0.5, 1, 1 / 2, 1 / 3, 1 / 4])),
+    ],
+)
+def test_inverse_gamma_moment(alpha, beta, size, expected):
+    with Model() as model:
+        InverseGamma("x", alpha=alpha, beta=beta, size=size)
     assert_moment_is_expected(model, expected)
 
 
