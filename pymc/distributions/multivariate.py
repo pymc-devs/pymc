@@ -2259,15 +2259,6 @@ class StickBreakingWeights(Continuous):
         return moment
 
     def logp(value, alpha, K):
-        if at.lt(K, 0).eval():
-            raise ValueError("K needs to be a positive integer.")
-
-        if at.lt(alpha, 0).eval():
-            raise ValueError("alpha needs to be a positive.")
-
-        if not at.allclose(value.sum(axis=-1), 1).eval():
-            raise ValueError("weights need to sum to 1.")
-
         logp = -at.sum(
             at.log(
                 at.cumsum(
@@ -2283,6 +2274,8 @@ class StickBreakingWeights(Continuous):
         return bound(
             logp,
             alpha > 0,
+            K > 0,
             at.all(value >= 0),
             at.all(value <= 1),
+            at.allclose(value.sum(axis=-1), 1),
         )
