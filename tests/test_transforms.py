@@ -11,6 +11,7 @@ from numdifftools import Jacobian
 from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
 from aeppl.transforms import (
     DEFAULT_TRANSFORM,
+    IntervalTransform,
     LogOddsTransform,
     LogTransform,
     RVTransform,
@@ -492,3 +493,21 @@ def test_mixture_transform():
     logp_nt = logp_nt_fg.outputs[0]
 
     assert equal_computations([logp_nt], [logp_trans])
+
+
+def test_invalid_interval_transform():
+    x_rv = at.random.normal(0, 1)
+    x_vv = x_rv.clone()
+
+    msg = "Both edges of IntervalTransform cannot be None"
+    tr = IntervalTransform(lambda *inputs: (None, None))
+    with pytest.raises(ValueError, match=msg):
+        tr.forward(x_vv, *x_rv.owner.inputs)
+
+    tr = IntervalTransform(lambda *inputs: (None, None))
+    with pytest.raises(ValueError, match=msg):
+        tr.backward(x_vv, *x_rv.owner.inputs)
+
+    tr = IntervalTransform(lambda *inputs: (None, None))
+    with pytest.raises(ValueError, match=msg):
+        tr.log_jac_det(x_vv, *x_rv.owner.inputs)

@@ -1,7 +1,7 @@
 import abc
 from copy import copy
 from functools import partial, singledispatch
-from typing import Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import aesara.tensor as at
 from aesara.gradient import DisconnectedType, jacobian
@@ -219,7 +219,18 @@ class LogTransform(RVTransform):
 class IntervalTransform(RVTransform):
     name = "interval"
 
-    def __init__(self, args_fn):
+    def __init__(
+        self, args_fn: Callable[..., Tuple[Optional[Variable], Optional[Variable]]]
+    ):
+        """
+
+        Parameters
+        ==========
+        args_fn
+            Function that expects inputs of RandomVariable and returns the lower
+            and upper bounds for the interval transformation. If one of these is
+            None, the RV is considered to be unbounded on the respective edge.
+        """
         self.args_fn = args_fn
 
     def forward(self, value, *inputs):
@@ -231,6 +242,8 @@ class IntervalTransform(RVTransform):
             return at.log(value - a)
         elif b is not None:
             return at.log(b - value)
+        else:
+            raise ValueError("Both edges of IntervalTransform cannot be None")
 
     def backward(self, value, *inputs):
         a, b = self.args_fn(*inputs)
@@ -242,6 +255,8 @@ class IntervalTransform(RVTransform):
             return at.exp(value) + a
         elif b is not None:
             return b - at.exp(value)
+        else:
+            raise ValueError("Both edges of IntervalTransform cannot be None")
 
     def log_jac_det(self, value, *inputs):
         a, b = self.args_fn(*inputs)
@@ -249,6 +264,8 @@ class IntervalTransform(RVTransform):
         if a is not None and b is not None:
             s = at.softplus(-value)
             return at.log(b - a) - 2 * s - value
+        elif a is None and b is None:
+            raise ValueError("Both edges of IntervalTransform cannot be None")
         else:
             return value
 
