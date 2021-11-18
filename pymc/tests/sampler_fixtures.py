@@ -11,9 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import sys
-
-import aesara
 import aesara.tensor as at
 import arviz as az
 import numpy as np
@@ -40,15 +37,6 @@ class KnownVariance:
         for varname, expected in self.variances.items():
             samples = self.samples[varname]
             npt.assert_allclose(expected, samples.var(0), self.rtol, self.atol)
-
-        IS_LINUX = sys.platform == "linux"
-        IS_FLOAT32 = aesara.config.floatX == "float32"
-        from pymc.tests.test_posteriors import TestSliceUniform
-
-        if IS_LINUX and IS_FLOAT32 and isinstance(self, TestSliceUniform):
-            raise AssertionError(
-                "Temporarily fail this test for specific subsytems. See: https://github.com/pymc-devs/pymc/pull/4887#issuecomment-946506545"
-            )
 
 
 class KnownCDF:
