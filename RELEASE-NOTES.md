@@ -10,6 +10,19 @@ Instead update the vNext section until 4.0.0 is out.
 ## PyMC vNext (4.0.0-beta1 → 4.0.0-beta2 → 4.0.0)
 ⚠ The changes below are the delta between the upcoming releases `v3.11.5` →...→ `v4.0.0`.
 
+### No-yet working features
+We plan to get these working again, but at this point their inner workings have not been refactored.
+- Timeseries distributions (`AR1`, `AR`, `GaussianRandomWalk`, `GARCH11`, `EulerMaruyama`, `MvGaussianRandomWalk`, `MvStudentTRandomWalk`), see #4642
+- Mixture distributions
+- Cholesky distributions
+- Parts of the Gaussian process module (see #5035)
+- Variational inference submodule (WIP PR #4582)
+- Elliptical slice sampling (#5137)
+- `BaseStochasticGradient` (#5138)
+- `pm.sample_posterior_predictive_w` (see #4807)
+
+Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) for a potentially more complete list.
+
 ### Unexpected breaking changes (action needed)
 + New API is not available in `v3.11.5`.
 + Old API does not work in `v4.0.0`.
