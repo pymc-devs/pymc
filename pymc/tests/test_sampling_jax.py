@@ -70,12 +70,12 @@ def test_get_log_log_likelihood():
         sigma = pm.HalfNormal("sigma")
         b = pm.Normal("b", a, sigma=sigma, observed=obs_at)
 
-        trace = pm.sample(chains=1, random_seed=1322)
+        trace = pm.sample(tune=10, draws=10, chains=2, random_seed=1322)
 
     b_true = trace.log_likelihood.b.values
     a = np.array(trace.posterior.a)
     sigma_log_ = np.log(np.array(trace.posterior.sigma))
-    b_jax = _get_log_likelihood(model, [a, sigma_log_])["b"][0]
+    b_jax = _get_log_likelihood(model, [a, sigma_log_])["b"]
 
     assert np.allclose(b_jax.reshape(-1), b_true.reshape(-1))
 
