@@ -62,7 +62,7 @@ def test_deterministic_samples():
     assert np.allclose(trace.posterior["b"].values, trace.posterior["a"].values / 2)
 
 
-def test_get_log_log_likelihood():
+def test_get_log_likelihood():
     obs = np.random.normal(10, 2, size=100)
     obs_at = aesara.shared(obs, borrow=True, name="obs")
     with pm.Model() as model:
