@@ -30,6 +30,7 @@ from aesara.graph.basic import Apply
 from aesara.graph.op import Op
 from aesara.tensor import gammaln
 from aesara.tensor.extra_ops import broadcast_shape
+from aesara.tensor.math import tanh
 from aesara.tensor.random.basic import (
     BetaRV,
     WeibullRV,
@@ -3984,6 +3985,12 @@ class PolyaGamma(PositiveContinuous):
         Assert(msg)(h, at.all(at.gt(h, 0.0)))
 
         return super().dist([h, z], **kwargs)
+
+    def get_moment(rv, size, h, z):
+        mean = at.switch(at.eq(z, 0), h / 4, tanh(z / 2) * (h / (2 * z)))
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, h, z):
         """
