@@ -37,6 +37,7 @@ from pymc.distributions import (
     LogitNormal,
     LogNormal,
     Moyal,
+    Multinomial,
     NegativeBinomial,
     Normal,
     Pareto,
@@ -1035,4 +1036,20 @@ def test_density_dist_default_moment_multivariate(with_random, size):
 def test_polyagamma_moment(h, z, size, expected):
     with Model() as model:
         PolyaGamma("x", h=h, z=z, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "p, n, size, expected",
+    [
+        (np.array([0.25, 0.25, 0.25, 0.25]), 1, None, np.repeat(0, 4)),
+        (np.array([0.3, 0.6, 0.05, 0.05]), 2, None, np.array([1, 1, 0, 0])),
+        (np.array([0.3, 0.6, 0.05, 0.05]), 10, None, np.array([3, 6, 0, 0])),
+        (np.array([[0.5, 0.5], [0.6, 0.4]]), np.array([1, 10]), None, np.array([[0, 5], [1, 4]])),
+        (np.array([[0.5, 0.5], [0.6, 0.4]]), np.array([1, 10]), 2, np.full((2, 2, 2), [[0, 5], [1, 4]])),
+    ],
+)
+def test_multinomial_moment(p, n, size, expected):
+    with Model() as model:
+        Multinomial("x", n=n, p=p, size=size)
     assert_moment_is_expected(model, expected)

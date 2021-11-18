@@ -518,6 +518,13 @@ class Multinomial(Discrete):
 
         return super().dist([n, p], *args, **kwargs)
 
+    def get_moment(rv, size, n, p):
+        mode = at.round(n * p)
+        if not rv_size_is_none(size):
+            output_size = at.concatenate([size, p.shape])
+            mode = at.full(output_size, mode)
+        return mode
+
     def logp(value, n, p):
         """
         Calculate log-probability of Multinomial distribution
