@@ -1045,8 +1045,17 @@ def test_polyagamma_moment(h, z, size, expected):
         (np.array([0.25, 0.25, 0.25, 0.25]), 1, None, np.repeat(0, 4)),
         (np.array([0.3, 0.6, 0.05, 0.05]), 2, None, np.array([1, 1, 0, 0])),
         (np.array([0.3, 0.6, 0.05, 0.05]), 10, None, np.array([3, 6, 0, 0])),
-        (np.array([[0.5, 0.5], [0.6, 0.4]]), np.array([1, 10]), None, np.array([[0, 5], [1, 4]])),
-        (np.array([[0.5, 0.5], [0.6, 0.4]]), np.array([1, 10]), 2, np.full((2, 2, 2), [[0, 5], [1, 4]])),
+        (
+            np.array([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]]), 
+            np.array([1, 10]), 
+            None, 
+            np.array([[0, 0, 0, 0], [3, 3, 3, 2]])
+        ),
+        (
+            np.array([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]]), 
+            np.array([1, 10]), 
+            2, 
+            np.full((2, 2, 4), [[0, 0, 0, 0], [3, 3, 3, 2]])),
     ],
 )
 def test_multinomial_moment(p, n, size, expected):
