@@ -403,7 +403,6 @@ def test_gamma_moment(alpha, beta, size, expected):
         (5, 1, None, 1 / 4),
         (0.5, 1, None, 1 / 1.5),
         (5, 1, 5, np.full(5, 1 / (5 - 1))),
-        (np.arange(2, 7), 1, None, 1 / np.arange(1, 6)),
         (np.arange(1, 6), 1, None, np.array([0.5, 1, 1 / 2, 1 / 3, 1 / 4])),
     ],
 )
