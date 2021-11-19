@@ -949,30 +949,6 @@ class TestBinaryMetropolis:
                 assert step.scaling == scaling
 
 
-class TestDEMetropolis:
-    def test_reset_tuning(self):
-        tune_interval = 10
-        scaling = 0.1234
-        lamb = 4.321
-        for tune in [None, "scaling", "lambda"]:
-            with Model() as _:
-                Normal("n", mu=0, sigma=1)
-                step = DEMetropolis(
-                    tune=tune, scaling=scaling, lamb=lamb, tune_interval=tune_interval
-                )
-                step.tune = "foo"
-                step.scaling = None
-                step.lamb = None
-                step.steps_until_tune = None
-                step.accepted = None
-                step.reset_tuning()
-                assert step.tune == tune
-                assert step.scaling == scaling
-                assert step.lamb == lamb
-                assert step.steps_until_tune == tune_interval
-                assert step.accepted == 0
-
-
 @pytest.mark.parametrize("step_method", [DEMetropolis, DEMetropolisZ])
 class TestDEMetropolisAndDEMetropolisZ:
     def test_tuning_lambda_sequential(self, step_method):
