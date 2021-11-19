@@ -131,7 +131,7 @@ def make_initial_point_fn(
     model,
     overrides: Optional[StartDict] = None,
     jitter_rvs: Optional[Set[TensorVariable]] = None,
-    default_strategy: str = "prior",
+    default_strategy: str = "moment",
     return_transformed: bool = True,
 ) -> Callable:
     """Create seeded function that computes initial values for all free model variables.
@@ -226,7 +226,7 @@ def make_initial_point_expression(
     rvs_to_values: Dict[TensorVariable, TensorVariable],
     initval_strategies: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]],
     jitter_rvs: Set[TensorVariable] = None,
-    default_strategy: str = "prior",
+    default_strategy: str = "moment",
     return_transformed: bool = False,
 ) -> List[TensorVariable]:
     """Creates the tensor variables that need to be evaluated to obtain an initial point.
