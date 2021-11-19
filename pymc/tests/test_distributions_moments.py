@@ -249,14 +249,13 @@ def test_halfstudentt_moment(nu, sigma, size, expected):
     assert_moment_is_expected(model, expected)
 
 
-@pytest.mark.skip(reason="aeppl interval transform fails when both edges are None")
 @pytest.mark.parametrize(
     "mu, sigma, lower, upper, size, expected",
     [
-        (0.9, 1, -1, 1, None, 0),
-        (0.9, 1, -np.inf, np.inf, 5, np.full(5, 0.9)),
+        (0.9, 1, -5, 5, None, 0),
+        (1, np.ones(5), -10, np.inf, None, np.full(5, -9)),
         (np.arange(5), 1, None, 10, (2, 5), np.full((2, 5), 9)),
-        (1, np.ones(5), -10, np.inf, None, np.full((2, 5), -9)),
+        (1, 1, [-np.inf, -np.inf, -np.inf], 10, None, np.full(3, 9)),
     ],
 )
 def test_truncatednormal_moment(mu, sigma, lower, upper, size, expected):

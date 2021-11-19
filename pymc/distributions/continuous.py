@@ -717,16 +717,16 @@ class TruncatedNormal(BoundedContinuous):
     def get_moment(rv, size, mu, sigma, lower, upper):
         mu, _, lower, upper = at.broadcast_arrays(mu, sigma, lower, upper)
         moment = at.switch(
-            at.isinf(lower),
+            at.eq(lower, -np.inf),
             at.switch(
-                at.isinf(upper),
+                at.eq(upper, np.inf),
                 # lower = -inf, upper = inf
                 mu,
                 # lower = -inf, upper = x
                 upper - 1,
             ),
             at.switch(
-                at.isinf(upper),
+                at.eq(upper, np.inf),
                 # lower = x, upper = inf
                 lower + 1,
                 # lower = x, upper = x
