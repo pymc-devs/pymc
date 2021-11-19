@@ -19,7 +19,8 @@ from aeppl.logprob import _logprob
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
 from pandas import DataFrame, Series
 
-from pymc.distributions.distribution import NoDistribution
+from pymc.distributions.distribution import NoDistribution, _get_moment
+from pymc.distributions.shape_utils import rv_size_is_none
 
 __all__ = ["BART"]
 
@@ -110,6 +111,10 @@ class BART(NoDistribution):
 
         NoDistribution.register(BARTRV)
 
+        @_get_moment.register(BARTRV)
+        def get_moment(rv, size, *rv_inputs):
+            return cls.get_moment(rv, size, *rv_inputs)
+
         cls.rv_op = bart_op
         params = [X, Y, m, alpha, k]
         return super().__new__(cls, name, *params, **kwargs)
@@ -131,6 +136,13 @@ class BART(NoDistribution):
         TensorVariable
         """
         return at.zeros_like(x)
+
+    @classmethod
+    def get_moment(cls, rv, size, *rv_inputs):
+        mean = rv.Y.mean()
+        if not rv_size_is_none(size):
+            mean = at.fill(size, mean)
+        return mean
 
 
 def preprocess_XY(X, Y):

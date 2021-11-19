@@ -6,6 +6,8 @@ from numpy.testing import assert_almost_equal
 
 import pymc as pm
 
+from pymc.tests.test_distributions_moments import assert_moment_is_expected
+
 
 def test_split_node():
     split_node = pm.bart.tree.SplitNode(index=5, idx_split_variable=2, split_value=3.0)
@@ -97,3 +99,17 @@ class TestUtils:
     )
     def test_pdp(self, kwargs):
         pm.bart.utils.plot_dependence(self.idata, X=self.X, Y=self.Y, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "size, expected",
+    [
+        (None, np.zeros(50)),
+    ],
+)
+def test_bart_moment(size, expected):
+    X = np.zeros((50, 2))
+    Y = np.zeros(50)
+    with pm.Model() as model:
+        pm.BART("x", X=X, Y=Y, size=size)
+    assert_moment_is_expected(model, expected)
