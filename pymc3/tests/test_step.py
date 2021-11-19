@@ -987,13 +987,14 @@ class TestDEMetropolisAndDEMetropolisZ:
             assert set(trace.get_sampler_stats("tune", chains=c)) == {True, False}
         pass
 
-    # TODO bug
+    # TODO inconsistent interfaces
     # DEMetropolisZ goes through a sequential sampler
     # while DEMetropolis goes throug a parallel sampler
     # There is an inconsistency where the sequential sampler sets step.tune = bool(tune)
     # while parallel sampler does not.
     # Compare L1320 in _iter_population
-    # to L998.
+    # to L998. This is also the reason why DEMetropolis can store tuning target
+    # (lambda or scaling) in tune instead of tune_target like DEMetropolisZ
     def test_tuning_none(self, step_method):
         if isinstance(step_method, DEMetropolis):
             pytest.skip("Inconsisteny of tune setting between sequential and parallerl sampling")
