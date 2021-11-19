@@ -63,6 +63,7 @@ from pymc.distributions import (
     ZeroInflatedPoisson,
 )
 from pymc.distributions.distribution import _get_moment, get_moment
+from pymc.distributions.logprob import logpt
 from pymc.distributions.multivariate import MvNormal
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.initial_point import make_initial_point_fn
@@ -145,20 +146,25 @@ def test_rv_size_is_none():
     assert not rv_size_is_none(rv.owner.inputs[1])
 
 
-def assert_moment_is_expected(model, expected):
+def assert_moment_is_expected(model, expected, check_finite_logp=True):
     fn = make_initial_point_fn(
         model=model,
         return_transformed=False,
         default_strategy="moment",
     )
-    result = fn(0)["x"]
+    moment = fn(0)["x"]
     expected = np.asarray(expected)
     try:
         random_draw = model["x"].eval()
     except NotImplementedError:
-        random_draw = result
-    assert result.shape == expected.shape == random_draw.shape
-    assert np.allclose(result, expected)
+        random_draw = moment
+
+    assert moment.shape == expected.shape == random_draw.shape
+    assert np.allclose(moment, expected)
+
+    if check_finite_logp:
+        logp_moment = logpt(model["x"], at.constant(moment), transformed=False).eval()
+        assert np.isfinite(logp_moment)
 
 
 @pytest.mark.parametrize(
@@ -430,11 +436,11 @@ def test_lognormal_moment(mu, sigma, size, expected):
     [
         (1, None, 1),
         (1, 5, np.ones(5)),
-        (np.arange(5), None, np.arange(5)),
+        (np.arange(1, 5), None, np.arange(1, 5)),
         (
-            np.arange(5),
-            (2, 5),
-            np.full((2, 5), np.arange(5)),
+            np.arange(1, 5),
+            (2, 4),
+            np.full((2, 4), np.arange(1, 5)),
         ),
     ],
 )
@@ -676,11 +682,11 @@ def test_logistic_moment(mu, s, size, expected):
 @pytest.mark.parametrize(
     "mu, nu, sigma, size, expected",
     [
-        (1, 1, None, None, 2),
+        (1, 1, 1, None, 2),
         (1, 1, np.ones((2, 5)), None, np.full([2, 5], 2)),
-        (1, 1, None, 5, np.full(5, 2)),
-        (1, np.arange(1, 6), None, None, np.arange(2, 7)),
-        (1, np.arange(1, 6), None, (2, 5), np.full((2, 5), np.arange(2, 7))),
+        (1, 1, 3, 5, np.full(5, 2)),
+        (1, np.arange(1, 6), 5, None, np.arange(2, 7)),
+        (1, np.arange(1, 6), 1, (2, 5), np.full((2, 5), np.arange(2, 7))),
     ],
 )
 def test_exgaussian_moment(mu, nu, sigma, size, expected):
@@ -920,8 +926,10 @@ def test_interpolated_moment(x_points, pdf_points, size, expected):
 )
 def test_mv_normal_moment(mu, cov, size, expected):
     with Model() as model:
-        MvNormal("x", mu=mu, cov=cov, size=size)
-    assert_moment_is_expected(model, expected)
+        x = MvNormal("x", mu=mu, cov=cov, size=size)
+
+    # MvNormal logp is only impemented for up to 2D variables
+    assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
 
 
 @pytest.mark.parametrize(
@@ -957,8 +965,10 @@ rand2d = np.random.rand(2, 3)
 )
 def test_mvstudentt_moment(nu, mu, cov, size, expected):
     with Model() as model:
-        MvStudentT("x", nu=nu, mu=mu, cov=cov, size=size)
-    assert_moment_is_expected(model, expected)
+        x = MvStudentT("x", nu=nu, mu=mu, cov=cov, size=size)
+
+    # MvStudentT logp is only impemented for up to 2D variables
+    assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
 
 
 def check_matrixnormal_moment(mu, rowchol, colchol, size, expected):
@@ -1094,7 +1104,7 @@ def test_density_dist_default_moment_univariate(get_moment, size, expected):
         get_moment = lambda rv, size, *rv_inputs: 5 * at.ones(size, dtype=rv.dtype)
     with Model() as model:
         DensityDist("x", get_moment=get_moment, size=size)
-    assert_moment_is_expected(model, expected)
+    assert_moment_is_expected(model, expected, check_finite_logp=False)
 
 
 @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
