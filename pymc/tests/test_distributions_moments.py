@@ -1,12 +1,14 @@
 import aesara
 import numpy as np
 import pytest
+import scipy.stats as st
 
 from aesara import tensor as at
 from scipy import special
 
 import pymc as pm
 
+from pymc import Simulator
 from pymc.distributions import (
     AsymmetricLaplace,
     Bernoulli,
@@ -31,6 +33,7 @@ from pymc.distributions import (
     HalfNormal,
     HalfStudentT,
     HyperGeometric,
+    InverseGamma,
     Kumaraswamy,
     Laplace,
     Logistic,
@@ -53,6 +56,7 @@ from pymc.distributions import (
     Wald,
     Weibull,
     ZeroInflatedBinomial,
+    ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
 )
 from pymc.distributions.distribution import get_moment
@@ -399,6 +403,21 @@ def test_gamma_moment(alpha, beta, size, expected):
 
 
 @pytest.mark.parametrize(
+    "alpha, beta, size, expected",
+    [
+        (5, 1, None, 1 / 4),
+        (0.5, 1, None, 1 / 1.5),
+        (5, 1, 5, np.full(5, 1 / (5 - 1))),
+        (np.arange(1, 6), 1, None, np.array([0.5, 1, 1 / 2, 1 / 3, 1 / 4])),
+    ],
+)
+def test_inverse_gamma_moment(alpha, beta, size, expected):
+    with Model() as model:
+        InverseGamma("x", alpha=alpha, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
     "alpha, m, size, expected",
     [
         (2, 1, None, 1 * 2 ** (1 / 2)),
@@ -539,11 +558,11 @@ def test_zero_inflated_poisson_moment(psi, theta, size, expected):
 @pytest.mark.parametrize(
     "psi, n, p, size, expected",
     [
-        (0.2, 7, 0.7, None, 4),
-        (0.2, 7, 0.3, 5, np.full(5, 2)),
-        (0.6, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
+        (0.8, 7, 0.7, None, 4),
+        (0.8, 7, 0.3, 5, np.full(5, 2)),
+        (0.4, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
         (
-            0.6,
+            0.4,
             25,
             np.arange(1, 6) / 10,
             (2, 5),
@@ -1083,3 +1102,62 @@ def test_polyagamma_moment(h, z, size, expected):
     with Model() as model:
         PolyaGamma("x", h=h, z=z, size=size)
     assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "psi, mu, alpha, size, expected",
+    [
+        (0.2, 10, 3, None, 2),
+        (0.2, 10, 4, 5, np.full(5, 2)),
+        (0.4, np.arange(1, 5), np.arange(2, 6), None, np.array([0, 0, 1, 1])),
+        (
+            np.linspace(0.2, 0.6, 3),
+            np.arange(1, 10, 4),
+            np.arange(1, 4),
+            (2, 3),
+            np.full((2, 3), np.array([0, 2, 5])),
+        ),
+    ],
+)
+def test_zero_inflated_negative_binomial_moment(psi, mu, alpha, size, expected):
+    with Model() as model:
+        ZeroInflatedNegativeBinomial("x", psi=psi, mu=mu, alpha=alpha, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize("mu", [0, np.arange(3)], ids=str)
+@pytest.mark.parametrize("sigma", [1, np.array([1, 2, 5])], ids=str)
+@pytest.mark.parametrize("size", [None, 3, (5, 3)], ids=str)
+def test_simulator_moment(mu, sigma, size):
+    def normal_sim(rng, mu, sigma, size):
+        return rng.normal(mu, sigma, size=size)
+
+    with Model() as model:
+        x = Simulator("x", normal_sim, mu, sigma, size=size)
+
+    fn = make_initial_point_fn(
+        model=model,
+        return_transformed=False,
+        default_strategy="moment",
+    )
+
+    random_draw = model["x"].eval()
+    result = fn(0)["x"]
+    assert result.shape == random_draw.shape
+
+    # We perform a z-test between the moment and expected mean from a sample of 10 draws
+    # This test fails if the number of samples averaged in get_moment(Simulator)
+    # is much smaller than 10, but would not catch the case where the number of samples
+    # is higher than the expected 10
+
+    n = 10  # samples
+    expected_sample_mean = mu
+    expected_sample_mean_std = np.sqrt(sigma ** 2 / n)
+
+    # Multiple test adjustment for z-test to maintain alpha=0.01
+    alpha = 0.01
+    alpha /= 2 * 2 * 3  # Correct for number of test permutations
+    alpha /= random_draw.size  # Correct for distribution size
+    cutoff = st.norm().ppf(1 - (alpha / 2))
+
+    assert np.all(np.abs((result - expected_sample_mean) / expected_sample_mean_std) < cutoff)

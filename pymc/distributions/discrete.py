@@ -1462,7 +1462,7 @@ class ZeroInflatedBinomial(Discrete):
 
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
-    Mean      :math:`(1 - \psi) n p`
+    Mean      :math:`\psi n p`
     Variance  :math:`(1-\psi) n p [1 - p(1 - \psi n)].`
     ========  ==========================
 
@@ -1487,7 +1487,7 @@ class ZeroInflatedBinomial(Discrete):
         return super().dist([psi, n, p], *args, **kwargs)
 
     def get_moment(rv, size, psi, n, p):
-        mean = at.round((1 - psi) * n * p)
+        mean = at.round(psi * n * p)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
         return mean
@@ -1649,6 +1649,12 @@ class ZeroInflatedNegativeBinomial(Discrete):
         n = at.as_tensor_variable(floatX(n))
         p = at.as_tensor_variable(floatX(p))
         return super().dist([psi, n, p], *args, **kwargs)
+
+    def get_moment(rv, size, psi, n, p):
+        mean = at.floor(psi * n * (1 - p) / p)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, psi, n, p):
         r"""
