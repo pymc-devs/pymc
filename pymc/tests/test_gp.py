@@ -894,7 +894,7 @@ class TestMarginalVsMarginalSparse:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
             gp = pm.gp.MarginalSparse(mean_func=mean_func, cov_func=cov_func, approx="DTC")
-            f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma, is_observed=False)
+            f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
             mu1, cov1 = self.gp.predict(self.Xnew, pred_noise=True)
             mu2, cov2 = gp.predict(self.Xnew, pred_noise=True)
         npt.assert_allclose(mu1, mu2, atol=0, rtol=1e-3)
