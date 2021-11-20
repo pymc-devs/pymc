@@ -809,7 +809,7 @@ class TestMarginalVsLatent:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
             gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
-            f = gp.marginal_likelihood("f", X, y, noise=0.0, is_observed=False, observed=y)
+            f = gp.marginal_likelihood("f", X, y, noise=0.0)
             p = gp.conditional("p", Xnew)
         self.logp = model.logp({"p": pnew})
         self.X = X
