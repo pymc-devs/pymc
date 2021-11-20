@@ -1502,6 +1502,40 @@ class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
     ]
 
 
+class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
+    def zero_inflated_negbinomial_rng_fn(
+        self, size, psi, n, p, negbinomial_rng_fct, random_rng_fct
+    ):
+        return negbinomial_rng_fct(n, p, size=size) * (random_rng_fct(size=size) < psi)
+
+    def seeded_zero_inflated_negbinomial_rng_fn(self):
+        negbinomial_rng_fct = functools.partial(
+            getattr(np.random.RandomState, "negative_binomial"),
+            self.get_random_state(),
+        )
+
+        random_rng_fct = functools.partial(
+            getattr(np.random.RandomState, "random"), self.get_random_state()
+        )
+
+        return functools.partial(
+            self.zero_inflated_negbinomial_rng_fn,
+            negbinomial_rng_fct=negbinomial_rng_fct,
+            random_rng_fct=random_rng_fct,
+        )
+
+    pymc_dist = pm.ZeroInflatedNegativeBinomial
+    pymc_dist_params = {"psi": 0.9, "n": 12, "p": 0.7}
+    expected_rv_op_params = {"psi": 0.9, "n": 12, "p": 0.7}
+    reference_dist_params = {"psi": 0.9, "n": 12, "p": 0.7}
+    reference_dist = seeded_zero_inflated_negbinomial_rng_fn
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
 class TestOrderedLogistic(BaseTestDistribution):
     pymc_dist = _OrderedLogistic
     pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2])}

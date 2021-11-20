@@ -1790,11 +1790,27 @@ class TestMatchesScipy:
             logp_fn,
         )
 
+        self.check_logp(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"psi": Unit, "p": Unit, "n": NatSmall},
+            lambda value, psi, p, n: np.log((1 - psi) * sp.nbinom.pmf(0, n, p))
+            if value == 0
+            else np.log(psi * sp.nbinom.pmf(value, n, p)),
+        )
+
         self.check_logcdf(
             ZeroInflatedNegativeBinomial,
             Nat,
             {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
             logcdf_fn,
+        )
+
+        self.check_logcdf(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"psi": Unit, "p": Unit, "n": NatSmall},
+            lambda value, psi, p, n: np.log((1 - psi) + psi * sp.nbinom.cdf(value, n, p)),
         )
 
         self.check_selfconsistency_discrete_logcdf(
