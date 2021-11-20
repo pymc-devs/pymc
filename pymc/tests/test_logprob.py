@@ -29,10 +29,10 @@ from aesara.tensor.subtensor import (
 )
 
 from pymc.aesaraf import floatX, walk_model
-from pymc.distributions.continuous import Normal, Uniform
+from pymc.distributions.continuous import HalfFlat, Normal, TruncatedNormal, Uniform
 from pymc.distributions.discrete import Bernoulli
 from pymc.distributions.logprob import logcdf, logp, logpt
-from pymc.model import Model
+from pymc.model import Model, Potential
 from pymc.tests.helpers import select_by_precision
 
 
@@ -170,27 +170,42 @@ def test_logpt_subtensor():
 
 def test_logp_helper():
     value = at.vector("value")
-    x = Normal.dist(0, 1, size=2)
+    x = Normal.dist(0, 1)
 
-    x_logp = logp(x, value, sum=False)
+    x_logp = logp(x, value)
     np.testing.assert_almost_equal(x_logp.eval({value: [0, 1]}), sp.norm(0, 1).logpdf([0, 1]))
 
-    x_logp = logp(x, [0, 1], sum=False)
+    x_logp = logp(x, [0, 1])
     np.testing.assert_almost_equal(x_logp.eval(), sp.norm(0, 1).logpdf([0, 1]))
 
 
 def test_logcdf_helper():
     value = at.vector("value")
-    x = Normal.dist(0, 1, size=2)
+    x = Normal.dist(0, 1)
 
-    x_logp = logcdf(x, value, sum=False)
-    np.testing.assert_almost_equal(x_logp.eval({value: [0, 1]}), sp.norm(0, 1).logcdf([0, 1]))
+    x_logcdf = logcdf(x, value)
+    np.testing.assert_almost_equal(x_logcdf.eval({value: [0, 1]}), sp.norm(0, 1).logcdf([0, 1]))
 
-    x_logp = logcdf(x, [0, 1], sum=False)
-    np.testing.assert_almost_equal(x_logp.eval(), sp.norm(0, 1).logcdf([0, 1]))
+    x_logcdf = logcdf(x, [0, 1])
+    np.testing.assert_almost_equal(x_logcdf.eval(), sp.norm(0, 1).logcdf([0, 1]))
 
 
-def test_model_unchanged_logprob_access_():
+def test_logcdf_transformed_argument():
+    with Model() as m:
+        sigma = HalfFlat("sigma")
+        x = Normal("x", 0, sigma)
+        Potential("norm_term", -logcdf(x, 1.0))
+
+    sigma_value_log = -1.0
+    sigma_value = np.exp(sigma_value_log)
+    x_value = 0.5
+
+    observed = m.logp_nojac({"sigma_log__": sigma_value_log, "x": x_value})
+    expected = logp(TruncatedNormal.dist(0, sigma_value, lower=None, upper=1.0), x_value).eval()
+    assert np.isclose(observed, expected)
+
+
+def test_model_unchanged_logprob_access():
     # Issue #5007
     with Model() as model:
         a = Normal("a")

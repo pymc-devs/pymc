@@ -30,6 +30,7 @@ from aesara.graph.basic import Apply
 from aesara.graph.op import Op
 from aesara.tensor import gammaln
 from aesara.tensor.extra_ops import broadcast_shape
+from aesara.tensor.math import tanh
 from aesara.tensor.random.basic import (
     BetaRV,
     WeibullRV,
@@ -86,7 +87,7 @@ from pymc.distributions.dist_math import (
 )
 from pymc.distributions.distribution import Continuous
 from pymc.distributions.shape_utils import rv_size_is_none
-from pymc.math import logdiffexp, logit
+from pymc.math import invlogit, logdiffexp, logit
 from pymc.util import UNSET
 
 __all__ = [
@@ -995,6 +996,12 @@ class Wald(PositiveContinuous):
 
         return super().dist([mu, lam, alpha], **kwargs)
 
+    def get_moment(rv, size, mu, lam, alpha):
+        mu, _, _ = at.broadcast_arrays(mu, lam, alpha)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
     @staticmethod
     def get_mu_lam_phi(
         mu: Optional[float], lam: Optional[float], phi: Optional[float]
@@ -1593,6 +1600,13 @@ class AsymmetricLaplace(Continuous):
 
         return super().dist([b, kappa, mu], *args, **kwargs)
 
+    def get_moment(rv, size, b, kappa, mu):
+        mean = mu - (kappa - 1 / kappa) / b
+
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, b, kappa, mu):
         """
         Calculate log-probability of Asymmetric-Laplace distribution at specified value.
@@ -1943,8 +1957,11 @@ class Pareto(BoundedContinuous):
 
         return super().dist([alpha, m], **kwargs)
 
-    def _distr_parameters_for_repr(self):
-        return ["alpha", "m"]
+    def get_moment(rv, size, alpha, m):
+        median = m * 2 ** (1 / alpha)
+        if not rv_size_is_none(size):
+            median = at.full(size, median)
+        return median
 
     def logcdf(
         value: Union[float, np.ndarray, TensorVariable],
@@ -2107,10 +2124,9 @@ class HalfCauchy(PositiveContinuous):
         return super().dist([0.0, beta], **kwargs)
 
     def get_moment(rv, size, loc, beta):
-        mean = beta
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
-        return mean
+            beta = at.full(size, beta)
+        return beta
 
     def logcdf(value, loc, beta):
         """
@@ -2318,22 +2334,18 @@ class InverseGamma(PositiveContinuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
 
-        # m = beta / (alpha - 1.0)
-        # try:
-        #     mean = (alpha > 1) * m or np.inf
-        # except ValueError:  # alpha is an array
-        #     m[alpha <= 1] = np.inf
-        #     mean = m
-
-        # mode = beta / (alpha + 1.0)
-        # variance = at.switch(
-        #     at.gt(alpha, 2), (beta ** 2) / ((alpha - 2) * (alpha - 1.0) ** 2), np.inf
-        # )
-
         assert_negative_support(alpha, "alpha", "InverseGamma")
         assert_negative_support(beta, "beta", "InverseGamma")
 
         return super().dist([alpha, beta], **kwargs)
+
+    def get_moment(rv, size, alpha, beta):
+        mean = beta / (alpha - 1.0)
+        mode = beta / (alpha + 1.0)
+        moment = at.switch(alpha > 1, mean, mode)
+        if not rv_size_is_none(size):
+            moment = at.full(size, moment)
+        return moment
 
     @classmethod
     def _get_alpha_beta(cls, alpha, beta, mu, sigma):
@@ -2426,6 +2438,12 @@ class ChiSquared(PositiveContinuous):
     def dist(cls, nu, *args, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
         return super().dist([nu], *args, **kwargs)
+
+    def get_moment(rv, size, nu):
+        moment = nu
+        if not rv_size_is_none(size):
+            moment = at.full(size, moment)
+        return moment
 
     def logcdf(value, nu):
         """
@@ -2628,15 +2646,17 @@ class HalfStudentT(PositiveContinuous):
         lam, sigma = get_tau_sigma(lam, sigma)
         sigma = at.as_tensor_variable(sigma)
 
-        # mode = at.as_tensor_variable(0)
-        # median = at.as_tensor_variable(sigma)
-        # sd = at.as_tensor_variable(sigma)
-
         assert_negative_support(nu, "nu", "HalfStudentT")
         assert_negative_support(lam, "lam", "HalfStudentT")
         assert_negative_support(sigma, "sigma", "HalfStudentT")
 
         return super().dist([nu, sigma], *args, **kwargs)
+
+    def get_moment(rv, size, nu, sigma):
+        sigma, _ = at.broadcast_arrays(sigma, nu)
+        if not rv_size_is_none(size):
+            sigma = at.full(size, sigma)
+        return sigma
 
     def logp(value, nu, sigma):
         """
@@ -2763,14 +2783,17 @@ class ExGaussian(Continuous):
         sigma = at.as_tensor_variable(floatX(sigma))
         nu = at.as_tensor_variable(floatX(nu))
 
-        # sd = sigma
-        # mean = mu + nu
-        # variance = (sigma ** 2) + (nu ** 2)
-
         assert_negative_support(sigma, "sigma", "ExGaussian")
         assert_negative_support(nu, "nu", "ExGaussian")
 
         return super().dist([mu, sigma, nu], *args, **kwargs)
+
+    def get_moment(rv, size, mu, sigma, nu):
+        mu, nu, _ = at.broadcast_arrays(mu, nu, sigma)
+        moment = mu + nu
+        if not rv_size_is_none(size):
+            moment = at.full(size, moment)
+        return moment
 
     def logp(value, mu, sigma, nu):
         """
@@ -2993,6 +3016,12 @@ class SkewNormal(Continuous):
 
         return super().dist([mu, sigma, alpha], *args, **kwargs)
 
+    def get_moment(rv, size, mu, sigma, alpha):
+        mean = mu + sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha ** 2) ** 0.5
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, mu, sigma, alpha):
         """
         Calculate log-probability of SkewNormal distribution at specified value.
@@ -3081,6 +3110,12 @@ class Triangular(BoundedContinuous):
         c = at.as_tensor_variable(floatX(c))
 
         return super().dist([lower, c, upper], *args, **kwargs)
+
+    def get_moment(rv, size, lower, c, upper):
+        mean = (lower + upper + c) / 3
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logcdf(value, lower, c, upper):
         """
@@ -3178,6 +3213,12 @@ class Gumbel(Continuous):
             assert_negative_support(beta, "beta", "Gumbel")
 
         return super().dist([mu, beta], **kwargs)
+
+    def get_moment(rv, size, mu, beta):
+        mean = mu + beta * np.euler_gamma
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def _distr_parameters_for_repr(self):
         return ["mu", "beta"]
@@ -3306,6 +3347,22 @@ class Rice(PositiveContinuous):
             return nu, b, sigma
         raise ValueError("Rice distribution must specify either nu" " or b.")
 
+    def get_moment(rv, size, nu, sigma):
+        nu_sigma_ratio = -(nu ** 2) / (2 * sigma ** 2)
+        mean = (
+            sigma
+            * np.sqrt(np.pi / 2)
+            * at.exp(nu_sigma_ratio / 2)
+            * (
+                (1 - nu_sigma_ratio) * at.i0(-nu_sigma_ratio / 2)
+                - nu_sigma_ratio * at.i1(-nu_sigma_ratio / 2)
+            )
+        )
+
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, b, sigma):
         """
         Calculate log-probability of Rice distribution at specified value.
@@ -3379,6 +3436,12 @@ class Logistic(Continuous):
         mu = at.as_tensor_variable(floatX(mu))
         s = at.as_tensor_variable(floatX(s))
         return super().dist([mu, s], *args, **kwargs)
+
+    def get_moment(rv, size, mu, s):
+        mu, _ = at.broadcast_arrays(mu, s)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
 
     def logcdf(value, mu, s):
         r"""
@@ -3475,6 +3538,12 @@ class LogitNormal(UnitContinuous):
         assert_negative_support(tau, "tau", "LogitNormal")
 
         return super().dist([mu, sigma], **kwargs)
+
+    def get_moment(rv, size, mu, sigma):
+        median, _ = at.broadcast_arrays(invlogit(mu), sigma)
+        if not rv_size_is_none(size):
+            median = at.full(size, median)
+        return median
 
     def logp(value, mu, sigma):
         """
@@ -3702,6 +3771,13 @@ class Moyal(Continuous):
 
         return super().dist([mu, sigma], *args, **kwargs)
 
+    def get_moment(rv, size, mu, sigma):
+        mean = mu + sigma * (np.euler_gamma + at.log(2))
+
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
+
     def logp(value, mu, sigma):
         """
         Calculate log-probability of Moyal distribution at specified value.
@@ -3905,6 +3981,12 @@ class PolyaGamma(PositiveContinuous):
         Assert(msg)(h, at.all(at.gt(h, 0.0)))
 
         return super().dist([h, z], **kwargs)
+
+    def get_moment(rv, size, h, z):
+        mean = at.switch(at.eq(z, 0), h / 4, tanh(z / 2) * (h / (2 * z)))
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, h, z):
         """

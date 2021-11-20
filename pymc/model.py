@@ -714,54 +714,24 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                     raise ValueError(f"Can only compute the gradient of continuous types: {var}")
 
         if tempered:
-            with self:
-                # Convert random variables into their log-likelihood inputs and
-                # apply their transforms, if any
-                potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
-
-                free_RVs_logp = at.sum(
-                    [at.sum(logpt(var, self.rvs_to_values.get(var, None))) for var in self.free_RVs]
-                    + list(potentials)
-                )
-                observed_RVs_logp = at.sum(
-                    [at.sum(logpt(obs, obs.tag.observations)) for obs in self.observed_RVs]
-                )
-
-            costs = [free_RVs_logp, observed_RVs_logp]
+            # TODO: Should this differ from self.datalogpt,
+            #  where the potential terms are added to the observations?
+            costs = [self.varlogpt + self.potentiallogpt, self.observedlogpt]
         else:
             costs = [self.logpt]
 
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
         extra_vars = [self.rvs_to_values.get(var, var) for var in self.free_RVs]
+        ip = self.recompute_initial_point(0)
         extra_vars_and_values = {
-            var: self.initial_point[var.name]
-            for var in extra_vars
-            if var in input_vars and var not in grad_vars
+            var: ip[var.name] for var in extra_vars if var in input_vars and var not in grad_vars
         }
         return ValueGradFunction(costs, grad_vars, extra_vars_and_values, **kwargs)
 
     @property
     def logpt(self):
         """Aesara scalar of log-probability of the model"""
-
-        rv_values = {}
-        for var in self.free_RVs:
-            rv_values[var] = self.rvs_to_values.get(var, None)
-        rv_factors = logpt(self.free_RVs, rv_values)
-
-        obs_values = {}
-        for obs in self.observed_RVs:
-            obs_values[obs] = obs.tag.observations
-        obs_factors = logpt(self.observed_RVs, obs_values)
-
-        # Convert random variables into their log-likelihood inputs and
-        # apply their transforms, if any
-        potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
-        logp_var = at.sum([at.sum(factor) for factor in potentials])
-        if rv_factors is not None:
-            logp_var += rv_factors
-        if obs_factors is not None:
-            logp_var += obs_factors
+        logp_var = self.varlogpt + self.datalogpt
 
         if self.name:
             logp_var.name = f"__logp_{self.name}"
@@ -777,60 +747,65 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         Note that if there is no transformed variable in the model, logp_nojact
         will be the same as logpt as there is no need for Jacobian correction.
         """
-        with self:
-            rv_values = {}
-            for var in self.free_RVs:
-                rv_values[var] = getattr(var.tag, "value_var", None)
-            rv_factors = logpt(self.free_RVs, rv_values, jacobian=False)
+        logp_var = self.varlogp_nojact + self.datalogpt
 
-            obs_values = {}
-            for obs in self.observed_RVs:
-                obs_values[obs] = obs.tag.observations
-            obs_factors = logpt(self.observed_RVs, obs_values, jacobian=False)
+        if self.name:
+            logp_var.name = f"__logp_nojac_{self.name}"
+        else:
+            logp_var.name = "__logp_nojac"
+        return logp_var
 
-            # Convert random variables into their log-likelihood inputs and
-            # apply their transforms, if any
-            potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
-            logp_var = at.sum([at.sum(factor) for factor in potentials])
-
-            if rv_factors is not None:
-                logp_var += rv_factors
-            if obs_factors is not None:
-                logp_var += obs_factors
-
-            if self.name:
-                logp_var.name = f"__logp_nojac_{self.name}"
-            else:
-                logp_var.name = "__logp_nojac"
-            return logp_var
+    @property
+    def datalogpt(self):
+        """Aesara scalar of log-probability of the observed variables and
+        potential terms"""
+        return self.observedlogpt + self.potentiallogpt
 
     @property
     def varlogpt(self):
         """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic)."""
-        with self:
-            rv_values = {}
-            for var in self.free_RVs:
-                rv_values[var] = getattr(var.tag, "value_var", None)
+        rv_values = {}
+        for var in self.free_RVs:
+            rv_values[var] = self.rvs_to_values[var]
+        if rv_values:
             return logpt(self.free_RVs, rv_values)
+        else:
+            return 0
 
     @property
-    def datalogpt(self):
-        with self:
-            obs_values = {}
-            for obs in self.observed_RVs:
-                obs_values[obs] = obs.tag.observations
-            obs_factors = logpt(self.observed_RVs, obs_values)
+    def varlogp_nojact(self):
+        """Aesara scalar of log-probability of the unobserved random variables
+        (excluding deterministic) without jacobian term."""
+        rv_values = {}
+        for var in self.free_RVs:
+            rv_values[var] = self.rvs_to_values[var]
+        if rv_values:
+            return logpt(self.free_RVs, rv_values, jacobian=False)
+        else:
+            return 0
 
-            # Convert random variables into their log-likelihood inputs and
-            # apply their transforms, if any
-            potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
-            logp_var = at.sum([at.sum(factor) for factor in potentials])
+    @property
+    def observedlogpt(self):
+        """Aesara scalar of log-probability of the observed variables"""
+        obs_values = {}
+        for obs in self.observed_RVs:
+            obs_values[obs] = obs.tag.observations
+        if obs_values:
+            return logpt(self.observed_RVs, obs_values)
+        else:
+            return 0
 
-            if obs_factors is not None:
-                logp_var += obs_factors
-
-            return logp_var
+    @property
+    def potentiallogpt(self):
+        """Aesara scalar of log-probability of the Potential terms"""
+        # Convert random variables in Potential expression into their log-likelihood
+        # inputs and apply their transforms, if any
+        potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+        if potentials:
+            return at.sum([at.sum(factor) for factor in potentials])
+        else:
+            return 0
 
     @property
     def vars(self):

@@ -118,7 +118,6 @@ from pymc.distributions import (
     ZeroInflatedPoisson,
     continuous,
     logcdf,
-    logcdfpt,
     logp,
     logpt,
     logpt_sum,
@@ -785,7 +784,9 @@ class TestMatchesScipy:
             domains["value"] = domain
 
             model, param_vars = build_model(pymc_dist, domain, paramdomains)
-            pymc_logcdf = model.fastfn(logcdfpt(model["value"]))
+            rv = model["value"]
+            value = model.rvs_to_values[rv]
+            pymc_logcdf = model.fastfn(logcdf(rv, value))
 
             if decimal is None:
                 decimal = select_by_precision(float64=6, float32=3)
@@ -894,8 +895,10 @@ class TestMatchesScipy:
             decimal = select_by_precision(float64=6, float32=3)
 
         model, param_vars = build_model(distribution, domain, paramdomains)
-        dist_logcdf = model.fastfn(logcdfpt(model["value"]))
-        dist_logp = model.fastfn(logpt(model["value"]))
+        rv = model["value"]
+        value = model.rvs_to_values[rv]
+        dist_logcdf = model.fastfn(logcdf(rv, value))
+        dist_logp = model.fastfn(logp(rv, value))
 
         for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
@@ -972,7 +975,7 @@ class TestMatchesScipy:
         valid_dist = Triangular.dist(lower=0, upper=1, c=0.9, size=2)
         with aesara.config.change_flags(mode=Mode("py")):
             assert np.all(logp(valid_dist, np.array([-1, 2])).eval() == -np.inf)
-            assert np.all(logcdf(valid_dist, np.array([-1, 2]), sum=False).eval() == [-np.inf, 0])
+            assert np.all(logcdf(valid_dist, np.array([-1, 2])).eval() == [-np.inf, 0])
 
         # Custom logcdf check for invalid parameters.
         # Invalid logp checks for triangular are being done in aeppl
@@ -2110,7 +2113,7 @@ class TestMatchesScipy:
         else:
             d_point_trans = d_point
 
-        pymc_res = logp(d, d_point_trans, jacobian=False, sum=False).eval()
+        pymc_res = logpt(d, d_point_trans, jacobian=False, sum=False).eval()
         scipy_res = np.empty_like(pymc_res)
         for idx in np.ndindex(a.shape[:-1]):
             scipy_res[idx] = scipy.stats.dirichlet(a[idx]).logpdf(d_point[idx])
@@ -2212,7 +2215,7 @@ class TestMatchesScipy:
 
         assert_almost_equal(
             scipy.stats.multinomial.logpmf(vals, n, p),
-            logp(model_many.m, vals, sum=False).eval().squeeze(),
+            logp(model_many.m, vals).eval().squeeze(),
             decimal=4,
         )
 
@@ -2273,7 +2276,7 @@ class TestMatchesScipy:
         np.put_along_axis(p, inds, 1, axis=-1)
 
         dist = Multinomial.dist(n=n, p=p)
-        logp_mn = at.exp(pm.logp(dist, vals, sum=False)).eval()
+        logp_mn = at.exp(pm.logp(dist, vals)).eval()
         assert_almost_equal(
             logp_mn,
             np.ones(vals.shape[:-1]),
@@ -2339,7 +2342,7 @@ class TestMatchesScipy:
 
         assert_almost_equal(
             np.asarray([dirichlet_multinomial_logpmf(val, n, a) for val in vals]),
-            logp(model_many.m, vals, sum=False).eval().squeeze(),
+            logp(model_many.m, vals).eval().squeeze(),
             decimal=4,
         )
 
@@ -2406,7 +2409,7 @@ class TestMatchesScipy:
         dist = DirichletMultinomial.dist(n=n, a=a)
 
         # Logp should be approx -9.98004998e-06
-        dist_logp = logp(dist, vals, sum=False).eval()
+        dist_logp = logp(dist, vals).eval()
         expected_logp = np.full_like(dist_logp, fill_value=-9.98004998e-06)
         assert_almost_equal(
             dist_logp,
@@ -3175,7 +3178,7 @@ def test_car_logp(sparse, size):
         W = aesara.sparse.csr_from_dense(W)
 
     car_dist = CAR.dist(mu, W, alpha, tau, size=size)
-    car_logp = logp(car_dist, xs, sum=False).eval()
+    car_logp = logp(car_dist, xs).eval()
 
     # Check to make sure that the CAR and MVN log PDFs are equivalent
     # up to an additive constant which is independent of the CAR parameters
@@ -3231,7 +3234,7 @@ class TestBugfixes:
         d = dist_cls.dist(mu=mu, cov=np.eye(dims), **kwargs, size=(20))
 
         X = np.random.normal(size=(20, dims))
-        actual_t = logp(d, X, sum=False)
+        actual_t = logp(d, X)
         assert isinstance(actual_t, TensorVariable)
         actual_a = actual_t.eval()
         assert isinstance(actual_a, np.ndarray)
