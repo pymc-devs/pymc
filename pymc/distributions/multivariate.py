@@ -355,11 +355,10 @@ class MvStudentT(Continuous):
         return super().dist([nu, mu, cov], **kwargs)
 
     def get_moment(rv, size, nu, mu, cov):
-        if rv_size_is_none(size):
-            moment_size = at.concatenate([nu.shape, mu.shape])
-        else:
-            moment_size = at.concatenate([size, nu.shape, mu.shape])
-        moment = at.full(moment_size, mu)
+        moment = mu
+        if not rv_size_is_none(size):
+            moment_size = at.concatenate([size, moment.shape])
+            moment = at.full(moment_size, moment)
         return moment
 
     def logp(value, nu, mu, cov):
@@ -700,7 +699,7 @@ class _OrderedMultinomial(Multinomial):
 
 
 class OrderedMultinomial:
-    R"""
+    r"""
     Wrapper class for Ordered Multinomial distributions.
 
     Useful for regression on ordinal data whose values range
