@@ -1467,7 +1467,7 @@ class TestZeroInflatedBinomial(BaseTestDistribution):
     ]
 
 
-class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
+class TestZeroInflatedNegativeBinomialMuSigma(BaseTestDistribution):
     def zero_inflated_negbinomial_rng_fn(
         self, size, psi, n, p, negbinomial_rng_fct, random_rng_fct
     ):
