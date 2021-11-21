@@ -39,7 +39,9 @@ from pymc.distributions import (
     Logistic,
     LogitNormal,
     LogNormal,
+    MatrixNormal,
     Moyal,
+    MvStudentT,
     NegativeBinomial,
     Normal,
     Pareto,
@@ -830,6 +832,33 @@ def test_moyal_moment(mu, sigma, size, expected):
     assert_moment_is_expected(model, expected)
 
 
+rand1d = np.random.rand(2)
+rand2d = np.random.rand(2, 3)
+
+
+@pytest.mark.parametrize(
+    "nu, mu, cov, size, expected",
+    [
+        (2, np.ones(1), np.eye(1), None, np.ones(1)),
+        (2, rand1d, np.eye(2), None, rand1d),
+        (2, rand1d, np.eye(2), 2, np.full((2, 2), rand1d)),
+        (2, rand1d, np.eye(2), (2, 5), np.full((2, 5, 2), rand1d)),
+        (2, rand2d, np.eye(3), None, rand2d),
+        (2, rand2d, np.eye(3), 2, np.full((2, 2, 3), rand2d)),
+        (2, rand2d, np.eye(3), (2, 5), np.full((2, 5, 2, 3), rand2d)),
+    ],
+)
+def test_mvstudentt_moment(nu, mu, cov, size, expected):
+    with Model() as model:
+        MvStudentT("x", nu=nu, mu=mu, cov=cov, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+def check_matrixnormal_moment(mu, rowchol, colchol, size, expected):
+    with Model() as model:
+        MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
+
+
 @pytest.mark.parametrize(
     "alpha, mu, sigma, size, expected",
     [
@@ -884,6 +913,24 @@ def test_asymmetriclaplace_moment(b, kappa, mu, size, expected):
     with Model() as model:
         AsymmetricLaplace("x", b=b, kappa=kappa, mu=mu, size=size)
     assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, rowchol, colchol, size, expected",
+    [
+        (np.ones((1, 1)), np.eye(1), np.eye(1), None, np.ones((1, 1))),
+        (np.ones((1, 1)), np.eye(2), np.eye(3), None, np.ones((2, 3))),
+        (rand2d, np.eye(2), np.eye(3), None, rand2d),
+        (rand2d, np.eye(2), np.eye(3), 2, np.full((2, 2, 3), rand2d)),
+        (rand2d, np.eye(2), np.eye(3), (2, 5), np.full((2, 5, 2, 3), rand2d)),
+    ],
+)
+def test_matrixnormal_moment(mu, rowchol, colchol, size, expected):
+    if size is None:
+        check_matrixnormal_moment(mu, rowchol, colchol, size, expected)
+    else:
+        with pytest.raises(NotImplementedError):
+            check_matrixnormal_moment(mu, rowchol, colchol, size, expected)
 
 
 @pytest.mark.parametrize(

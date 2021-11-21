@@ -354,6 +354,13 @@ class MvStudentT(Continuous):
         assert_negative_support(nu, "nu", "MvStudentT")
         return super().dist([nu, mu, cov], **kwargs)
 
+    def get_moment(rv, size, nu, mu, cov):
+        moment = mu
+        if not rv_size_is_none(size):
+            moment_size = at.concatenate([size, moment.shape])
+            moment = at.full(moment_size, moment)
+        return moment
+
     def logp(value, nu, mu, cov):
         """
         Calculate log-probability of Multivariate Student's T distribution
@@ -692,7 +699,7 @@ class _OrderedMultinomial(Multinomial):
 
 
 class OrderedMultinomial:
-    R"""
+    r"""
     Wrapper class for Ordered Multinomial distributions.
 
     Useful for regression on ordinal data whose values range
@@ -1726,6 +1733,13 @@ class MatrixNormal(Continuous):
         # mean = median = mode = mu
 
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
+
+    def get_moment(rv, size, mu, rowchol, colchol):
+        output_shape = (rowchol.shape[0], colchol.shape[0])
+        if not rv_size_is_none(size):
+            output_shape = at.concatenate([size, output_shape])
+        moment = at.full(output_shape, mu)
+        return moment
 
     def logp(value, mu, rowchol, colchol):
         """
