@@ -17,6 +17,7 @@ import warnings
 import aesara.tensor as at
 import numpy as np
 
+from aesara.compile import SharedVariable
 from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
     cholesky,
     solve,
@@ -30,10 +31,66 @@ from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-impor
 from aesara.tensor.var import TensorConstant
 from scipy.cluster.vq import kmeans
 
+from pymc.aesaraf import compile_rv_inplace, walk_model
 
-def infer_shape(X, n_points=None):
+# Avoid circular dependency when importing modelcontext
+from pymc.distributions.distribution import NoDistribution
+
+assert NoDistribution  # keep both pylint and black happy
+from pymc.model import modelcontext
+
+JITTER_DEFAULT = 1e-6
+
+
+def replace_with_values(vars_needed, replacements=None, model=None):
     R"""
-    Maybe attempt to infer the shape of a Gaussian process input matrix.
+    Replace random variable nodes in the graph with values given by the replacements dict.
+    Uses untransformed versions of the inputs, performs some basic input validation.
+
+    Parameters
+    ----------
+    vars_needed: list of TensorVariables
+        A list of variable outputs
+    replacements: dict with string keys, numeric values
+        The variable name and values to be replaced in the model graph.
+    model: Model
+        A PyMC model object
+    """
+    model = modelcontext(model)
+
+    inputs, input_names = [], []
+    for rv in walk_model(vars_needed, walk_past_rvs=True):
+        if rv in model.named_vars.values() and not isinstance(rv, SharedVariable):
+            inputs.append(rv)
+            input_names.append(rv.name)
+
+    # Then it's deterministic, no inputs are required, can eval and return
+    if len(inputs) == 0:
+        return tuple(v.eval() for v in vars_needed)
+
+    fn = compile_rv_inplace(
+        inputs,
+        vars_needed,
+        allow_input_downcast=True,
+        accept_inplace=True,
+        on_unused_input="ignore",
+    )
+
+    # Remove unneeded inputs
+    replacements = {name: val for name, val in replacements.items() if name in input_names}
+    missing = set(input_names) - set(replacements.keys())
+
+    # Error if more inputs are needed
+    if len(missing) > 0:
+        missing_str = ", ".join(missing)
+        raise ValueError(f"Values for {missing_str} must be included in `replacements`.")
+
+    return fn(**replacements)
+
+
+def infer_size(X, n_points=None):
+    R"""
+    Maybe attempt to infer the size, or N, of a Gaussian process input matrix.
 
     If a specific shape cannot be inferred, for instance if X is symbolic, then an
     error is raised.
@@ -48,31 +105,31 @@ def infer_shape(X, n_points=None):
     """
     if n_points is None:
         try:
-            n_points = np.int(X.shape[0])
+            n_points = int(X.shape[0])
         except TypeError:
             raise TypeError("Cannot infer 'shape', provide as an argument")
     return n_points
 
 
-def stabilize(K, c=1e-6):
+def stabilize(K, jitter=JITTER_DEFAULT):
     R"""
     Adds small diagonal to a covariance matrix.
 
     Often the matrices calculated from covariance functions, `K = cov_func(X)`
     do not appear numerically to be positive semi-definite.  Adding a small
-    correction, `c`, to the diagonal is usually enough to fix this.
+    correction, `jitter`, to the diagonal is usually enough to fix this.
 
     Parameters
     ----------
     K: array-like
         A square covariance or kernel matrix.
-    c: float
+    jitter: float
         A small constant.
     """
-    return K + c * at.identity_like(K)
+    return K + jitter * at.identity_like(K)
 
 
-def kmeans_inducing_points(n_inducing, X):
+def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
     R"""
     Use the K-means algorithm to initialize the locations `X` for the inducing
     points `fu`.
@@ -83,6 +140,8 @@ def kmeans_inducing_points(n_inducing, X):
         The number of inducing points (or k, the number of clusters)
     X: array-like
         Gaussian process input matrix.
+    **kmeans_kwargs:
+        Extra keyword arguments that are passed to `scipy.cluster.vq.kmeans`
     """
     # first whiten X
     if isinstance(X, TensorConstant):
@@ -100,7 +159,11 @@ def kmeans_inducing_points(n_inducing, X):
     # if std of a column is very small (zero), don't normalize that column
     scaling[scaling <= 1e-6] = 1.0
     Xw = X / scaling
-    Xu, distortion = kmeans(Xw, n_inducing)
+
+    if "k_or_guess" in kmeans_kwargs:
+        warn.UserWarning("Use `n_inducing` to set the `k_or_guess` parameter instead.")
+
+    Xu, distortion = kmeans(Xw, k_or_guess=n_inducing, **kmeans_kwargs)
     return Xu * scaling
 
 
