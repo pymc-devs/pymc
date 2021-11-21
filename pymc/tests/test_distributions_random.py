@@ -1467,7 +1467,7 @@ class TestZeroInflatedBinomial(BaseTestDistribution):
     ]
 
 
-class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
+class TestZeroInflatedNegativeBinomialMuSigma(BaseTestDistribution):
     def zero_inflated_negbinomial_rng_fn(
         self, size, psi, n, p, negbinomial_rng_fct, random_rng_fct
     ):
@@ -1500,6 +1500,14 @@ class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
+
+
+class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
+    pymc_dist = pm.ZeroInflatedNegativeBinomial
+    pymc_dist_params = {"psi": 0.9, "n": 12, "p": 0.7}
+    expected_rv_op_params = {"psi": 0.9, "n": 12, "p": 0.7}
+    reference_dist_params = {"psi": 0.9, "n": 12, "p": 0.7}
+    tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
 class TestOrderedLogistic(BaseTestDistribution):
