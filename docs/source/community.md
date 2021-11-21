@@ -1,6 +1,23 @@
 (community)=
 # Community
 
+## Conferences
+
+## Twitter
+
+:::{raw} html
+
+  <a class="twitter-timeline" data-width="300" data-height="500" data-dnt="true" href="https://twitter.com/pymc_devs?ref_src=twsrc%5Etfw">Tweets by pymc_devs</a> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+:::
+
+## Discourse
+
+## Governance
+
+## Code of Conduct
+
+
+
 :::{list-table}
 :header-rows: 0
 :widths: 10 150
