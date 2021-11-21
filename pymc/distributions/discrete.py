@@ -1719,6 +1719,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
             0 <= value,
             0 <= psi,
             psi <= 1,
+            0 < n,
             0 < p,
             p <= 1,
         )
