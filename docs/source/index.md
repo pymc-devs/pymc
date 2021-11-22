@@ -65,7 +65,7 @@ Fit your model using gradient-based MCMC algorithms like NUTS, using ADVI for fa
 ```{code-block} python
 ---
 ---
-    import pymc3 as pm
+    import pymc as pm
 
     X, y = linear_training_data()
     with pm.Model() as linear_model:
