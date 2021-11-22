@@ -3,8 +3,6 @@
 
 TODO add "core" notebooks:
 
-- Getting started https://github.com/pymc-devs/pymc-examples/blob/2002ebd815a199be89b011039906b197bca42361/examples/getting_started.ipynb
-
 - https://docs.pymc.io/en/stable/pymc-examples/examples/generalized_linear_models/GLM-linear.html
   - https://github.com/pymc-devs/pymc-examples/blob/main/examples/generalized_linear_models/GLM-linear.ipynb
 
