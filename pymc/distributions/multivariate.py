@@ -2130,6 +2130,13 @@ class CAR(Continuous):
     def dist(cls, mu, W, alpha, tau, *args, **kwargs):
         return super().dist([mu, W, alpha, tau], **kwargs)
 
+    def get_moment(rv, size, mu, W, alpha, tau):
+        moment = mu
+        if not rv_size_is_none(size):
+            moment_size = at.concatenate([size, moment.shape])
+            moment = at.full(moment_size, mu)
+        return moment
+
     def logp(value, mu, W, alpha, tau):
         """
         Calculate log-probability of a CAR-distributed vector

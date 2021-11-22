@@ -9,6 +9,7 @@ from scipy import special
 import pymc as pm
 
 from pymc.distributions import (
+    CAR,
     AsymmetricLaplace,
     Bernoulli,
     Beta,
@@ -110,7 +111,6 @@ def test_all_distributions_have_moments():
     # Distributions that have been refactored but don't yet have moments
     not_implemented |= {
         dist_module.discrete.DiscreteWeibull,
-        dist_module.multivariate.CAR,
         dist_module.multivariate.DirichletMultinomial,
         dist_module.multivariate.Wishart,
     }
@@ -931,6 +931,34 @@ def test_mv_normal_moment(mu, cov, size, expected):
 
     # MvNormal logp is only impemented for up to 2D variables
     assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
+
+
+@pytest.mark.parametrize(
+    "mu, size, expected",
+    [
+        (
+            np.array([1, 0, 3.0, 4]),
+            None,
+            np.array([1, 0, 3.0, 4]),
+        ),
+        (np.array([1, 0, 3.0, 4]), 6, np.full((6, 4), [1, 0, 3.0, 4])),
+        (np.array([1, 0, 3.0, 4]), (5, 3), np.full((5, 3, 4), [1, 0, 3.0, 4])),
+        (
+            np.array([[3.0, 5, 2, 1], [1, 4, 0.5, 9]]),
+            (4, 5),
+            np.full((4, 5, 2, 4), [[3.0, 5, 2, 1], [1, 4, 0.5, 9]]),
+        ),
+    ],
+)
+def test_car_moment(mu, size, expected):
+    W = np.array(
+        [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
+    )
+    tau = 2
+    alpha = 0.5
+    with Model() as model:
+        CAR("x", mu=mu, W=W, alpha=alpha, tau=tau, size=size)
+    assert_moment_is_expected(model, expected)
 
 
 @pytest.mark.parametrize(
