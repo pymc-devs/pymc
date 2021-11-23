@@ -4,9 +4,9 @@ ODE
 
 This submodule contains tools used to perform inference on ordinary differential equations.
 
-.. currentmodule:: pymc3.ode
+.. currentmodule:: pymc.ode
 
 .. autosummary::
 
-.. automodule:: pymc3.ode
+.. automodule:: pymc.ode
    :members: DifferentialEquation

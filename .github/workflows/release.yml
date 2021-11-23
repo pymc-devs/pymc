@@ -23,7 +23,7 @@ jobs:
     #    pip install -r requirements.txt
     #- name: Run tests
     #  run: |
-    #    pytest --cov=./pymc3 --cov-report term-missing pymc3/
+    #    pytest --cov=./pymc --cov-report term-missing pymc/
     - name: Install release tooling
       run: |
         pip install twine wheel
@@ -33,9 +33,9 @@ jobs:
     - name: Check version number match
       run: |
         echo "GITHUB_REF: ${GITHUB_REF}"
-        # The GITHUB_REF should be something like "refs/tags/v3.x.x"
+        # The GITHUB_REF should be something like "refs/tags/v1.2.3"
         # Make sure the package version is the same as the tag
-        grep -Rq "^Version: ${GITHUB_REF:11}$" pymc3.egg-info/PKG-INFO
+        grep -Rq "^Version: ${GITHUB_REF:11}$" pymc.egg-info/PKG-INFO
     - name: Publish to PyPI
       run: |
         twine check dist/*
@@ -52,4 +52,4 @@ jobs:
       run: sleep 240
     - name: Install from PyPI
       run: |
-        pip install pymc3==${GITHUB_REF:11}
+        pip install pymc==${GITHUB_REF:11}

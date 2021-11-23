@@ -2,7 +2,7 @@
 Multivariate
 ************
 
-.. currentmodule:: pymc3.distributions.multivariate
+.. currentmodule:: pymc.distributions.multivariate
 .. autosummary::
 
    MvNormal
@@ -13,9 +13,10 @@ Multivariate
    LKJCholeskyCov
    LKJCorr
    Multinomial
+   OrderedMultinomial
    Dirichlet
    DirichletMultinomial
    CAR
 
-.. automodule:: pymc3.distributions.multivariate
+.. automodule:: pymc.distributions.multivariate
    :members:

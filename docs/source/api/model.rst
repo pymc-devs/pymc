@@ -1,6 +1,6 @@
 Model
 -----
 
-.. currentmodule:: pymc3.model
-.. automodule:: pymc3.model
+.. currentmodule:: pymc.model
+.. automodule:: pymc.model
    :members:

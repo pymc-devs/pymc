@@ -4,7 +4,7 @@
 """
 #!/usr/bin/env python3
 #
-# pymc3 documentation build configuration file, created by
+# pymc documentation build configuration file, created by
 # sphinx-quickstart on Sat Dec 26 14:40:23 2015.
 #
 # This file is execfile()d with the current directory set to its
@@ -19,13 +19,12 @@
 import os
 import sys
 
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 sys.path.insert(0, os.path.abspath("sphinxext"))
-import pymc3  # isort:skip
+import pymc  # isort:skip
 
 # -- General configuration ------------------------------------------------
 
@@ -39,6 +38,7 @@ extensions = [
     "matplotlib.sphinxext.plot_directive",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "numpydoc",
@@ -48,6 +48,9 @@ extensions = [
     "sphinx.ext.napoleon",
     "gallery_generator",
     "myst_nb",
+    "sphinx_design",
+    "sphinx_panels",
+    "notfound.extension",
 ]
 
 # Don't auto-generate summary for class members.
@@ -74,16 +77,19 @@ source_suffix = [".rst", ".md"]
 master_doc = "index"
 
 # General information about the project.
-project = "PyMC3"
+project = "PyMC"
 copyright = "2021, The PyMC Development Team"
 author = "PyMC contributors"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
-#
-# The short X.Y version.
-version = pymc3.__version__
+
+version = pymc.__version__
+if os.environ.get("READTHEDOCS", False):
+    rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
+    if "." not in rtd_version and rtd_version.lower() != "stable":
+        version = "dev"
 # The full version, including alpha/beta/rc tags.
 release = version
 
@@ -94,6 +100,9 @@ release = version
 # Usually you set "language" from the command line for these cases.
 language = None
 
+# configure notfound extension to not add any prefix to the urls
+notfound_urls_prefix = "/en/latest/"
+
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
 # today = ''
@@ -102,9 +111,13 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "**.ipynb_checkpoints"]
+exclude_patterns = ["_build", "**.ipynb_checkpoints", "pymc-examples/.github"]
 
+# myst and panels config
 jupyter_execute_notebooks = "off"
+myst_heading_anchors = 3
+myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath"]
+panels_add_bootstrap_css = False
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -136,6 +149,8 @@ todo_include_todos = False
 # intersphinx configuration to ease linking arviz docs
 intersphinx_mapping = {
     "arviz": ("https://arviz-devs.github.io/arviz/", None),
+    "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
 }
 
 
@@ -143,8 +158,7 @@ intersphinx_mapping = {
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme_path = ["."]
-html_theme = "semantic_sphinx"
+html_theme = "pydata_sphinx_theme"
 
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -152,17 +166,32 @@ html_theme = "semantic_sphinx"
 # documentation.
 
 html_theme_options = {
-    "navbar_links": [
-        ("Tutorials", "nb_tutorials/index"),
-        ("Examples", "nb_examples/index"),
-        ("Books + Videos", "learn"),
-        ("API", "api"),
-        ("Developer Guide", "developer_guide"),
-        ("About PyMC3", "about"),
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/pymc-devs/pymc",
+            "icon": "fab fa-github-square",
+        },
+        {
+            "name": "Twitter",
+            "url": "https://twitter.com/pymc_devs",
+            "icon": "fab fa-twitter-square",
+        },
     ],
-    #     "fixed_sidebar": "false",
-    #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Aesara"
+    "show_prev_next": False,
+    "navbar_start": ["navbar-logo", "navbar-version"],
+    "navbar_end": ["search-field.html", "navbar-icon-links.html"],
+    "search_bar_text": "Search...",
+    "use_edit_page_button": False,  # TODO: see how to skip of fix for generated pages
+    "google_analytics_id": "UA-176578023-1",
 }
+html_context = {
+    "github_user": "pymc-devs",
+    "github_repo": "pymc",
+    "github_version": "main",
+    "doc_path": "docs/source/",
+}
+html_sidebars = {"learn": [], "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -176,12 +205,12 @@ html_theme_options = {
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "../pymc3_logo.jpg"
+html_logo = "../pymc_logo.jpg"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = "../logos/PyMC3.ico"
+html_favicon = "../logos/PyMC.ico"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -202,7 +231,7 @@ html_static_path = ["_static", "nb_tutorials/_images", "nb_examples/_images"]
 # html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {"**": ["about.html", "navigation.html", "searchbox.html"]}
+# html_sidebars = {"**": ["about.html", "navigation.html", "searchbox.html"]}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
@@ -249,7 +278,7 @@ html_sidebars = {"**": ["about.html", "navigation.html", "searchbox.html"]}
 # html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "pymc3doc"
+htmlhelp_basename = "pymcdoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -267,7 +296,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [(master_doc, "pymc3.tex", "PyMC3 Documentation", "PyMC developers", "manual")]
+latex_documents = [(master_doc, "pymc.tex", "PyMC Documentation", "PyMC developers", "manual")]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
@@ -294,7 +323,7 @@ latex_documents = [(master_doc, "pymc3.tex", "PyMC3 Documentation", "PyMC develo
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "pymc3", "pymc3 Documentation", [author], 1)]
+man_pages = [(master_doc, "pymc", "pymc Documentation", [author], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
@@ -308,10 +337,10 @@ man_pages = [(master_doc, "pymc3", "pymc3 Documentation", [author], 1)]
 texinfo_documents = [
     (
         master_doc,
-        "pymc3",
-        "pymc3 Documentation",
+        "pymc",
+        "pymc Documentation",
         author,
-        "pymc3",
+        "pymc",
         "One line description of project.",
         "Miscellaneous",
     )
@@ -330,6 +359,6 @@ texinfo_documents = [
 # texinfo_no_detailmenu = False
 
 
-def setup(app):
-    app.add_css_file("https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css")
-    app.add_css_file("default.css")
+# def setup(app):
+#     app.add_css_file("https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css")
+#     app.add_css_file("default.css")

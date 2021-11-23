@@ -2,7 +2,7 @@
 Continuous
 **********
 
-.. currentmodule:: pymc3.distributions.continuous
+.. currentmodule:: pymc.distributions.continuous
 .. autosummary::
 
    Uniform
@@ -24,7 +24,7 @@ Continuous
    Gamma
    InverseGamma
    Weibull
-   Lognormal
+   LogNormal
    ChiSquared
    Wald
    Pareto
@@ -36,6 +36,7 @@ Continuous
    Logistic
    LogitNormal
    Interpolated
+   PolyaGamma
 
-.. automodule:: pymc3.distributions.continuous
+.. automodule:: pymc.distributions.continuous
    :members:

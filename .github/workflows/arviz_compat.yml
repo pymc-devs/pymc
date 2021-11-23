@@ -12,9 +12,9 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         floatx: [float64]
         test-subset:
-          - pymc3/tests/test_distributions.py
-          - pymc3/tests/test_distributions_random.py
-          - pymc3/tests/test_sampling.py
+          - pymc/tests/test_distributions.py
+          - pymc/tests/test_distributions_random.py
+          - pymc/tests/test_sampling.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
@@ -48,20 +48,20 @@ jobs:
             hashFiles('requirements.txt') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: pymc3-dev-py39
+          activate-environment: pymc-dev-py39
           channel-priority: strict
           environment-file: conda-envs/environment-dev-py39.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Install pymc3
+      - name: Install pymc
         run: |
-          conda activate pymc3-dev-py39
+          conda activate pymc-dev-py39
           pip install -e .
           python --version
       - name: Install latest arviz
         run: |
-          conda activate pymc3-dev-py39
+          conda activate pymc-dev-py39
           pip uninstall arviz -y
           pip install git+git://github.com/arviz-devs/arviz.git
       - name: Run tests
         run: |
-          python -m pytest -vv --cov=pymc3 --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET

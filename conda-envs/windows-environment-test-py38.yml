@@ -1,0 +1,29 @@
+name: pymc-test-py38
+channels:
+- conda-forge
+- defaults
+dependencies:
+ # base dependencies (see install guide for Windows)
+- aeppl>=0.0.17
+- aesara>=2.2.6
+- arviz>=0.11.2
+- cachetools
+- cloudpickle
+- fastprogress>=0.2.0
+- h5py>=2.7
+- libpython
+- mkl==2020.4
+- mkl-service==2.3.0
+- m2w64-toolchain
+- numpy>=1.15.0
+- pandas
+- pip
+- python=3.8
+- python-graphviz
+- scipy>1.4.1
+- typing-extensions>=3.7.4
+# Extra stuff for testing
+- ipython>=7.16
+- pre-commit>=2.8.0
+- pytest-cov>=2.5
+- pytest>=3.0
