@@ -408,12 +408,12 @@ class TestSimulator(SeededTest):
         # Check that the logps use the correct methods
         a_val = m.rvs_to_values[a]
         sim1_val = m.rvs_to_values[sim1]
-        logp_sim1 = pm.logp(sim1, sim1_val)
+        logp_sim1 = pm.logpt(sim1, sim1_val)
         logp_sim1_fn = aesara.function([sim1_val, a_val], logp_sim1)
 
         b_val = m.rvs_to_values[b]
         sim2_val = m.rvs_to_values[sim2]
-        logp_sim2 = pm.logp(sim2, sim2_val)
+        logp_sim2 = pm.logpt(sim2, sim2_val)
         logp_sim2_fn = aesara.function([sim2_val, b_val], logp_sim2)
 
         assert any(

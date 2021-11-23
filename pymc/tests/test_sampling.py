@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import sys
 import unittest.mock as mock
 
 from contextlib import ExitStack as does_not_raise
@@ -38,9 +37,6 @@ from pymc.backends.ndarray import NDArray
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
 from pymc.tests.helpers import SeededTest
 from pymc.tests.models import simple_init
-
-IS_LINUX = sys.platform == "linux"
-IS_FLOAT32 = aesara.config.floatX == "float32"
 
 
 class TestInitNuts(SeededTest):
@@ -705,10 +701,6 @@ class TestSamplePPC(SeededTest):
         assert post_pred["obs"].shape == (samples, 3)
         npt.assert_allclose(post_pred["p"], expected_p)
 
-    @pytest.mark.xfail(
-        condition=IS_FLOAT32 and IS_LINUX,
-        reason="Test fails on linux float32 systems. See https://github.com/pymc-devs/pymc/issues/5088",
-    )
     def test_deterministic_of_observed(self):
         rng = np.random.RandomState(8442)
 
@@ -716,9 +708,9 @@ class TestSamplePPC(SeededTest):
         meas_in_2 = pm.aesaraf.floatX(5 + 4 * rng.randn(10))
         nchains = 2
         with pm.Model(rng_seeder=rng) as model:
-            mu_in_1 = pm.Normal("mu_in_1", 0, 1)
+            mu_in_1 = pm.Normal("mu_in_1", 0, 2)
             sigma_in_1 = pm.HalfNormal("sd_in_1", 1)
-            mu_in_2 = pm.Normal("mu_in_2", 0, 1)
+            mu_in_2 = pm.Normal("mu_in_2", 0, 2)
             sigma_in_2 = pm.HalfNormal("sd__in_2", 1)
 
             in_1 = pm.Normal("in_1", mu_in_1, sigma_in_1, observed=meas_in_1)

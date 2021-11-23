@@ -45,8 +45,15 @@ All of the above apply to:
 - Changes to the BART implementation:
   - A BART variable can be combined with other random variables. The `inv_link` argument has been removed (see [4914](https://github.com/pymc-devs/pymc3/pull/4914)).
   - Moved BART to its own module (see [5058](https://github.com/pymc-devs/pymc3/pull/5058)).
+- Changes to the Gaussian Process (GP) submodule (see [5055](https://github.com/pymc-devs/pymc/pull/5055)):
+  - For all implementations, `gp.Latent`, `gp.Marginal` etc., `cov_func` and `mean_func` are required kwargs.
+  - In Windows test conda environment the `mkl` version is fixed to verison 2020.4, and `mkl-service` is fixed to `2.3.0`.  This was required for `gp.MarginalKron` to function properly.
+  - `gp.MvStudentT` uses rotated samples from `StudentT` directly now, instead of sampling from `pm.Chi2` and then from `pm.Normal`.
+  - The "jitter" parameter, or the diagonal noise term added to Gram matrices such that the Cholesky is numerically stable, is now exposed to the user instead of hard-coded.  See the function `gp.util.stabilize`.
+  - The `is_observed` arguement for `gp.Marginal*` implementations has been deprecated.
+  - In the gp.utils file, the `kmeans_inducing_points` function now passes through `kmeans_kwargs` to scipy's k-means function.
+  - The function `replace_with_values` function has been added to `gp.utils`.
 - ...
-
 
 ### Expected breaks
 + New API was already available in `v3`.
@@ -86,8 +93,9 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - `pm.DensityDist` can now accept an optional `logcdf` keyword argument to pass in a function to compute the cummulative density function of the distribution (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
 - `pm.DensityDist` can now accept an optional `get_moment` keyword argument to pass in a function to compute the moment of the distribution (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
 - New features for BART:
-  -  Added linear response, increased number of trees fitted per step [5044](https://github.com/pymc-devs/pymc3/pull/5044).
-  -  Added partial dependence plots and individual conditional expectation plots [5091](https://github.com/pymc-devs/pymc3/pull/5091).
+  - Added linear response, increased number of trees fitted per step [5044](https://github.com/pymc-devs/pymc3/pull/5044).
+  - Added partial dependence plots and individual conditional expectation plots [5091](https://github.com/pymc-devs/pymc3/pull/5091).
+  - Modify how particle weights are computed. This improves accuracy of the modeled function (see [5177](https://github.com/pymc-devs/pymc3/pull/5177)).
 - `pm.Data` now passes additional kwargs to `aesara.shared`. [#5098](https://github.com/pymc-devs/pymc/pull/5098)
 - ...
 

@@ -14,7 +14,6 @@
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.logprob import _logprob
 from aesara.tensor.random.basic import (
     RandomVariable,
     bernoulli,
@@ -42,7 +41,7 @@ from pymc.distributions.dist_math import (
     normal_lcdf,
 )
 from pymc.distributions.distribution import Discrete
-from pymc.distributions.logprob import _logcdf
+from pymc.distributions.logprob import logcdf, logp
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.math import sigmoid
 
@@ -754,7 +753,7 @@ class NegativeBinomial(Discrete):
         )
 
         # Return Poisson when alpha gets very large.
-        return at.switch(at.gt(alpha, 1e10), Poisson.logp(value, mu), negbinom)
+        return at.switch(at.gt(alpha, 1e10), logp(Poisson.dist(mu=mu), value), negbinom)
 
     def logcdf(value, n, p):
         """
@@ -1371,7 +1370,7 @@ class ZeroInflatedPoisson(Discrete):
 
         logp_val = at.switch(
             at.gt(value, 0),
-            at.log(psi) + _logprob(poisson, [value], None, None, None, theta),
+            at.log(psi) + logp(Poisson.dist(mu=theta), value),
             at.logaddexp(at.log1p(-psi), at.log(psi) - theta),
         )
 
@@ -1402,7 +1401,7 @@ class ZeroInflatedPoisson(Discrete):
         return bound(
             at.logaddexp(
                 at.log1p(-psi),
-                at.log(psi) + _logcdf(poisson, value, {}, theta),
+                at.log(psi) + logcdf(Poisson.dist(mu=theta), value),
             ),
             0 <= value,
             0 <= psi,
@@ -1463,7 +1462,7 @@ class ZeroInflatedBinomial(Discrete):
 
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
-    Mean      :math:`(1 - \psi) n p`
+    Mean      :math:`\psi n p`
     Variance  :math:`(1-\psi) n p [1 - p(1 - \psi n)].`
     ========  ==========================
 
@@ -1488,7 +1487,7 @@ class ZeroInflatedBinomial(Discrete):
         return super().dist([psi, n, p], *args, **kwargs)
 
     def get_moment(rv, size, psi, n, p):
-        mean = at.round((1 - psi) * n * p)
+        mean = at.round(psi * n * p)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
         return mean
@@ -1510,7 +1509,7 @@ class ZeroInflatedBinomial(Discrete):
 
         logp_val = at.switch(
             at.gt(value, 0),
-            at.log(psi) + _logprob(binomial, [value], None, None, None, n, p),
+            at.log(psi) + logp(Binomial.dist(n=n, p=p), value),
             at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
         )
 
@@ -1543,7 +1542,7 @@ class ZeroInflatedBinomial(Discrete):
         return bound(
             at.logaddexp(
                 at.log1p(-psi),
-                at.log(psi) + _logcdf(binomial, value, {}, n, p),
+                at.log(psi) + logcdf(Binomial.dist(n=n, p=p), value),
             ),
             0 <= value,
             value <= n,
@@ -1630,6 +1629,15 @@ class ZeroInflatedNegativeBinomial(Discrete):
     Var       :math:`\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)`
     ========  ==========================
 
+    The zero inflated negative binomial distribution can be parametrized
+    either in terms of mu or p, and either in terms of alpha or n.
+    The link between the parametrizations is given by
+
+    .. math::
+
+        \mu &= \frac{n(1-p)}{p} \\
+        \alpha &= n
+
     Parameters
     ----------
     psi: float
@@ -1638,18 +1646,27 @@ class ZeroInflatedNegativeBinomial(Discrete):
         Poission distribution parameter (mu > 0).
     alpha: float
         Gamma distribution parameter (alpha > 0).
-
+    p: float
+        Alternative probability of success in each trial (0 < p < 1).
+    n: float
+        Alternative number of target success trials (n > 0)
     """
 
     rv_op = zero_inflated_neg_binomial
 
     @classmethod
-    def dist(cls, psi, mu, alpha, *args, **kwargs):
+    def dist(cls, psi, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
         psi = at.as_tensor_variable(floatX(psi))
-        n, p = NegativeBinomial.get_n_p(mu=mu, alpha=alpha)
+        n, p = NegativeBinomial.get_n_p(mu=mu, alpha=alpha, p=p, n=n)
         n = at.as_tensor_variable(floatX(n))
         p = at.as_tensor_variable(floatX(p))
         return super().dist([psi, n, p], *args, **kwargs)
+
+    def get_moment(rv, size, psi, n, p):
+        mean = at.floor(psi * n * (1 - p) / p)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, psi, n, p):
         r"""
@@ -1669,7 +1686,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         return bound(
             at.switch(
                 at.gt(value, 0),
-                at.log(psi) + _logprob(nbinom, [value], None, None, None, n, p),
+                at.log(psi) + logp(NegativeBinomial.dist(n=n, p=p), value),
                 at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
             ),
             0 <= value,
@@ -1696,10 +1713,13 @@ class ZeroInflatedNegativeBinomial(Discrete):
         TensorVariable
         """
         return bound(
-            at.logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(nbinom, value, {}, n, p)),
+            at.logaddexp(
+                at.log1p(-psi), at.log(psi) + logcdf(NegativeBinomial.dist(n=n, p=p), value)
+            ),
             0 <= value,
             0 <= psi,
             psi <= 1,
+            0 < n,
             0 < p,
             p <= 1,
         )

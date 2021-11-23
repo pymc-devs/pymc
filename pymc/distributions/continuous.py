@@ -30,6 +30,7 @@ from aesara.graph.basic import Apply
 from aesara.graph.op import Op
 from aesara.tensor import gammaln
 from aesara.tensor.extra_ops import broadcast_shape
+from aesara.tensor.math import tanh
 from aesara.tensor.random.basic import (
     BetaRV,
     WeibullRV,
@@ -2333,22 +2334,18 @@ class InverseGamma(PositiveContinuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
 
-        # m = beta / (alpha - 1.0)
-        # try:
-        #     mean = (alpha > 1) * m or np.inf
-        # except ValueError:  # alpha is an array
-        #     m[alpha <= 1] = np.inf
-        #     mean = m
-
-        # mode = beta / (alpha + 1.0)
-        # variance = at.switch(
-        #     at.gt(alpha, 2), (beta ** 2) / ((alpha - 2) * (alpha - 1.0) ** 2), np.inf
-        # )
-
         assert_negative_support(alpha, "alpha", "InverseGamma")
         assert_negative_support(beta, "beta", "InverseGamma")
 
         return super().dist([alpha, beta], **kwargs)
+
+    def get_moment(rv, size, alpha, beta):
+        mean = beta / (alpha - 1.0)
+        mode = beta / (alpha + 1.0)
+        moment = at.switch(alpha > 1, mean, mode)
+        if not rv_size_is_none(size):
+            moment = at.full(size, moment)
+        return moment
 
     @classmethod
     def _get_alpha_beta(cls, alpha, beta, mu, sigma):
@@ -3984,6 +3981,12 @@ class PolyaGamma(PositiveContinuous):
         Assert(msg)(h, at.all(at.gt(h, 0.0)))
 
         return super().dist([h, z], **kwargs)
+
+    def get_moment(rv, size, h, z):
+        mean = at.switch(at.eq(z, 0), h / 4, tanh(z / 2) * (h / (2 * z)))
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, h, z):
         """

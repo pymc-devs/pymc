@@ -1,8 +1,14 @@
+import aesara
 import numpy as np
 import pytest
+import scipy.stats as st
 
+from aesara import tensor as at
 from scipy import special
 
+import pymc as pm
+
+from pymc import Simulator
 from pymc.distributions import (
     AsymmetricLaplace,
     Bernoulli,
@@ -13,6 +19,7 @@ from pymc.distributions import (
     Cauchy,
     ChiSquared,
     Constant,
+    DensityDist,
     Dirichlet,
     DiscreteUniform,
     ExGaussian,
@@ -26,16 +33,20 @@ from pymc.distributions import (
     HalfNormal,
     HalfStudentT,
     HyperGeometric,
+    InverseGamma,
     Kumaraswamy,
     Laplace,
     Logistic,
     LogitNormal,
     LogNormal,
+    MatrixNormal,
     Moyal,
+    MvStudentT,
     NegativeBinomial,
     Normal,
     Pareto,
     Poisson,
+    PolyaGamma,
     Rice,
     SkewNormal,
     StudentT,
@@ -45,10 +56,12 @@ from pymc.distributions import (
     Wald,
     Weibull,
     ZeroInflatedBinomial,
+    ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
 )
+from pymc.distributions.distribution import get_moment
 from pymc.distributions.multivariate import MvNormal
-from pymc.distributions.shape_utils import rv_size_is_none
+from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
 
@@ -390,6 +403,21 @@ def test_gamma_moment(alpha, beta, size, expected):
 
 
 @pytest.mark.parametrize(
+    "alpha, beta, size, expected",
+    [
+        (5, 1, None, 1 / 4),
+        (0.5, 1, None, 1 / 1.5),
+        (5, 1, 5, np.full(5, 1 / (5 - 1))),
+        (np.arange(1, 6), 1, None, np.array([0.5, 1, 1 / 2, 1 / 3, 1 / 4])),
+    ],
+)
+def test_inverse_gamma_moment(alpha, beta, size, expected):
+    with Model() as model:
+        InverseGamma("x", alpha=alpha, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
     "alpha, m, size, expected",
     [
         (2, 1, None, 1 * 2 ** (1 / 2)),
@@ -530,11 +558,11 @@ def test_zero_inflated_poisson_moment(psi, theta, size, expected):
 @pytest.mark.parametrize(
     "psi, n, p, size, expected",
     [
-        (0.2, 7, 0.7, None, 4),
-        (0.2, 7, 0.3, 5, np.full(5, 2)),
-        (0.6, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
+        (0.8, 7, 0.7, None, 4),
+        (0.8, 7, 0.3, 5, np.full(5, 2)),
+        (0.4, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
         (
-            0.6,
+            0.4,
             25,
             np.arange(1, 6) / 10,
             (2, 5),
@@ -804,6 +832,33 @@ def test_moyal_moment(mu, sigma, size, expected):
     assert_moment_is_expected(model, expected)
 
 
+rand1d = np.random.rand(2)
+rand2d = np.random.rand(2, 3)
+
+
+@pytest.mark.parametrize(
+    "nu, mu, cov, size, expected",
+    [
+        (2, np.ones(1), np.eye(1), None, np.ones(1)),
+        (2, rand1d, np.eye(2), None, rand1d),
+        (2, rand1d, np.eye(2), 2, np.full((2, 2), rand1d)),
+        (2, rand1d, np.eye(2), (2, 5), np.full((2, 5, 2), rand1d)),
+        (2, rand2d, np.eye(3), None, rand2d),
+        (2, rand2d, np.eye(3), 2, np.full((2, 2, 3), rand2d)),
+        (2, rand2d, np.eye(3), (2, 5), np.full((2, 5, 2, 3), rand2d)),
+    ],
+)
+def test_mvstudentt_moment(nu, mu, cov, size, expected):
+    with Model() as model:
+        MvStudentT("x", nu=nu, mu=mu, cov=cov, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+def check_matrixnormal_moment(mu, rowchol, colchol, size, expected):
+    with Model() as model:
+        MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
+
+
 @pytest.mark.parametrize(
     "alpha, mu, sigma, size, expected",
     [
@@ -861,6 +916,24 @@ def test_asymmetriclaplace_moment(b, kappa, mu, size, expected):
 
 
 @pytest.mark.parametrize(
+    "mu, rowchol, colchol, size, expected",
+    [
+        (np.ones((1, 1)), np.eye(1), np.eye(1), None, np.ones((1, 1))),
+        (np.ones((1, 1)), np.eye(2), np.eye(3), None, np.ones((2, 3))),
+        (rand2d, np.eye(2), np.eye(3), None, rand2d),
+        (rand2d, np.eye(2), np.eye(3), 2, np.full((2, 2, 3), rand2d)),
+        (rand2d, np.eye(2), np.eye(3), (2, 5), np.full((2, 5, 2, 3), rand2d)),
+    ],
+)
+def test_matrixnormal_moment(mu, rowchol, colchol, size, expected):
+    if size is None:
+        check_matrixnormal_moment(mu, rowchol, colchol, size, expected)
+    else:
+        with pytest.raises(NotImplementedError):
+            check_matrixnormal_moment(mu, rowchol, colchol, size, expected)
+
+
+@pytest.mark.parametrize(
     "nu, sigma, size, expected",
     [
         (1.0, 1.0, None, 1.5485724605511453),
@@ -898,3 +971,193 @@ def test_rice_moment(nu, sigma, size, expected):
     with Model() as model:
         Rice("x", nu=nu, sigma=sigma, size=size)
     assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "get_moment, size, expected",
+    [
+        (None, None, 0.0),
+        (None, 5, np.zeros(5)),
+        ("custom_moment", None, 5),
+        ("custom_moment", (2, 5), np.full((2, 5), 5)),
+    ],
+)
+def test_density_dist_default_moment_univariate(get_moment, size, expected):
+    if get_moment == "custom_moment":
+        get_moment = lambda rv, size, *rv_inputs: 5 * at.ones(size, dtype=rv.dtype)
+    with Model() as model:
+        DensityDist("x", get_moment=get_moment, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
+def test_density_dist_custom_moment_univariate(size):
+    def moment(rv, size, mu):
+        return (at.ones(size) * mu).astype(rv.dtype)
+
+    mu_val = np.array(np.random.normal(loc=2, scale=1)).astype(aesara.config.floatX)
+    with pm.Model():
+        mu = pm.Normal("mu")
+        a = pm.DensityDist("a", mu, get_moment=moment, size=size)
+    evaled_moment = get_moment(a).eval({mu: mu_val})
+    assert evaled_moment.shape == to_tuple(size)
+    assert np.all(evaled_moment == mu_val)
+
+
+@pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
+def test_density_dist_custom_moment_multivariate(size):
+    def moment(rv, size, mu):
+        return (at.ones(size)[..., None] * mu).astype(rv.dtype)
+
+    mu_val = np.random.normal(loc=2, scale=1, size=5).astype(aesara.config.floatX)
+    with pm.Model():
+        mu = pm.Normal("mu", size=5)
+        a = pm.DensityDist("a", mu, get_moment=moment, ndims_params=[1], ndim_supp=1, size=size)
+    evaled_moment = get_moment(a).eval({mu: mu_val})
+    assert evaled_moment.shape == to_tuple(size) + (5,)
+    assert np.all(evaled_moment == mu_val)
+
+
+@pytest.mark.parametrize(
+    "with_random, size",
+    [
+        (True, ()),
+        (True, (2,)),
+        (True, (3, 2)),
+        (False, ()),
+        (False, (2,)),
+    ],
+)
+def test_density_dist_default_moment_multivariate(with_random, size):
+    def _random(mu, rng=None, size=None):
+        return rng.normal(mu, scale=1, size=to_tuple(size) + mu.shape)
+
+    if with_random:
+        random = _random
+    else:
+        random = None
+
+    mu_val = np.random.normal(loc=2, scale=1, size=5).astype(aesara.config.floatX)
+    with pm.Model():
+        mu = pm.Normal("mu", size=5)
+        a = pm.DensityDist("a", mu, random=random, ndims_params=[1], ndim_supp=1, size=size)
+    if with_random:
+        evaled_moment = get_moment(a).eval({mu: mu_val})
+        assert evaled_moment.shape == to_tuple(size) + (5,)
+        assert np.all(evaled_moment == 0)
+    else:
+        with pytest.raises(
+            TypeError,
+            match="Cannot safely infer the size of a multivariate random variable's moment.",
+        ):
+            evaled_moment = get_moment(a).eval({mu: mu_val})
+
+
+@pytest.mark.parametrize(
+    "h, z, size, expected",
+    [
+        (1.0, 0.0, None, 0.25),
+        (
+            1.0,
+            np.arange(5),
+            None,
+            (
+                0.25,
+                0.23105857863000487,
+                0.1903985389889412,
+                0.1508580422741444,
+                0.12050344750947711,
+            ),
+        ),
+        (
+            np.arange(1, 6),
+            np.arange(5),
+            None,
+            (
+                0.25,
+                0.46211715726000974,
+                0.5711956169668236,
+                0.6034321690965776,
+                0.6025172375473855,
+            ),
+        ),
+        (
+            np.arange(1, 6),
+            np.arange(5),
+            (2, 5),
+            np.full(
+                (2, 5),
+                (
+                    0.25,
+                    0.46211715726000974,
+                    0.5711956169668236,
+                    0.6034321690965776,
+                    0.6025172375473855,
+                ),
+            ),
+        ),
+    ],
+)
+def test_polyagamma_moment(h, z, size, expected):
+    with Model() as model:
+        PolyaGamma("x", h=h, z=z, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "psi, mu, alpha, size, expected",
+    [
+        (0.2, 10, 3, None, 2),
+        (0.2, 10, 4, 5, np.full(5, 2)),
+        (0.4, np.arange(1, 5), np.arange(2, 6), None, np.array([0, 0, 1, 1])),
+        (
+            np.linspace(0.2, 0.6, 3),
+            np.arange(1, 10, 4),
+            np.arange(1, 4),
+            (2, 3),
+            np.full((2, 3), np.array([0, 2, 5])),
+        ),
+    ],
+)
+def test_zero_inflated_negative_binomial_moment(psi, mu, alpha, size, expected):
+    with Model() as model:
+        ZeroInflatedNegativeBinomial("x", psi=psi, mu=mu, alpha=alpha, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize("mu", [0, np.arange(3)], ids=str)
+@pytest.mark.parametrize("sigma", [1, np.array([1, 2, 5])], ids=str)
+@pytest.mark.parametrize("size", [None, 3, (5, 3)], ids=str)
+def test_simulator_moment(mu, sigma, size):
+    def normal_sim(rng, mu, sigma, size):
+        return rng.normal(mu, sigma, size=size)
+
+    with Model() as model:
+        x = Simulator("x", normal_sim, mu, sigma, size=size)
+
+    fn = make_initial_point_fn(
+        model=model,
+        return_transformed=False,
+        default_strategy="moment",
+    )
+
+    random_draw = model["x"].eval()
+    result = fn(0)["x"]
+    assert result.shape == random_draw.shape
+
+    # We perform a z-test between the moment and expected mean from a sample of 10 draws
+    # This test fails if the number of samples averaged in get_moment(Simulator)
+    # is much smaller than 10, but would not catch the case where the number of samples
+    # is higher than the expected 10
+
+    n = 10  # samples
+    expected_sample_mean = mu
+    expected_sample_mean_std = np.sqrt(sigma ** 2 / n)
+
+    # Multiple test adjustment for z-test to maintain alpha=0.01
+    alpha = 0.01
+    alpha /= 2 * 2 * 3  # Correct for number of test permutations
+    alpha /= random_draw.size  # Correct for distribution size
+    cutoff = st.norm().ppf(1 - (alpha / 2))
+
+    assert np.all(np.abs((result - expected_sample_mean) / expected_sample_mean_std) < cutoff)
