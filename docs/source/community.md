@@ -3,6 +3,11 @@
 
 ## Conferences
 
+[PyMCon](https://pymc-devs.github.io/pymcon/) was a conference organized by the PyMC developer community in 2020.
+
+PyMC talks have been given at a number of conferences, including [PyCon](https://us.pycon.org/),
+[PyData](https://pydata.org/events/), and [ODSC](https://odsc.com/) events.
+
 ## Twitter
 
 :::{raw} html
@@ -12,43 +17,12 @@
 
 ## Discourse
 
+The [PyMC Discourse Forum](https://discourse.pymc.io/) is a great place to ask general questions about Bayesian statistics, or more specific ones about PyMC usage.
+
 ## Governance
+
+Learn how the PyMC project is governed [here](https://github.com/pymc-devs/pymc/blob/main/GOVERNANCE.md).
 
 ## Code of Conduct
 
-
-
-:::{list-table}
-:header-rows: 0
-:widths: 10 150
-
-* - {fa}`discourse,fa-2x,style=fab`
-  - [Discourse Forum](https://discourse.pymc.io/)
-
-    The PyMC discourse forum is a great place to ask general questions about Bayesian statistics, or more specific ones about PyMC usage.
-* - {fa}`meetup,fa-2x,style=fab`
-  - Conferences
-
-    PyMC talks have been given at a number of conferences, including [PyCon](https://us.pycon.org/),
-    [PyData](https://pydata.org/events/), and [ODSC](https://odsc.com/) events.
-* - {fa}`python,fa-2x,style=fab`
-  - [Meetup Groups](https://www.meetup.com/)
-
-    Many areas have an local Bayesian, PyData, or Stan meetup.
-:::
-
-## Videos
-
-:::{list-table}
-:header-rows: 0
-:widths: 10 150
-
-* - {fa}`youtube,fa-2x,style=fab`
-  - [YouTube Playlist](https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy)
-
-    There is an actively curated playlist of PyMC talks on YouTube.
-* - {fa}`youtube,fa-2x,style=fab`
-  - [Advance Bayesian Modelling with PyMC](https://github.com/junpenglao/advance-bayesian-modelling-with-PyMC)
-
-    A two days advance workshop in May 2018 @CEAi in the Czech Republic.
-:::
+In order to foster a welcoming environment, participation in our project and community is guided by this [code of conduct](https://github.com/pymc-devs/pymc/blob/main/CODE_OF_CONDUCT.md).
