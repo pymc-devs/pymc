@@ -143,32 +143,6 @@ class Tree:
                 current_node, split_variable = self._traverse_tree(x, right_child, split_variable)
         return current_node, split_variable
 
-    def grow_tree(self, index_leaf_node, new_split_node, new_left_node, new_right_node):
-        """
-        Grow the tree from a particular node.
-
-        Parameters
-        ----------
-        index_leaf_node : int
-        new_split_node : SplitNode
-        new_left_node : LeafNode
-        new_right_node : LeafNode
-        """
-        current_node = self.get_node(index_leaf_node)
-
-        self.delete_node(index_leaf_node)
-        self.set_node(index_leaf_node, new_split_node)
-        self.set_node(new_left_node.index, new_left_node)
-        self.set_node(new_right_node.index, new_right_node)
-
-        # The new SplitNode is a prunable node since it has both children.
-        self.idx_prunable_split_nodes.append(index_leaf_node)
-        # If the parent of the node from which the tree is growing was a prunable node,
-        # remove from the list since one of its children is a SplitNode now
-        parent_index = current_node.get_idx_parent_node()
-        if parent_index in self.idx_prunable_split_nodes:
-            self.idx_prunable_split_nodes.remove(parent_index)
-
     @staticmethod
     def init_tree(tree_id, leaf_node_value, idx_data_points, m):
         """
