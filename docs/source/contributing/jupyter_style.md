@@ -112,7 +112,7 @@ np.array(
 After the notebook content finishes, there should be an `## Authors` section with bullet points
 to provide attribution to the people who contributed to the the general pattern should be:
 
-```
+```markdown
 * <verb> by <author> on <date> ([repo#PR](https://link-to.pr))
 ```
 
@@ -127,7 +127,7 @@ adapted
   It will therefore follow a different structure than the example above
   in order to include a link or reference to the original source:
 
-  ```
+  ```markdown
   Adapted from Alice's [blogpost](blog.alice.com) by Bob and Carol on ...
   ```
 re-executed
@@ -139,7 +139,7 @@ updated
 
 some examples:
 
-```
+```markdown
 * Authored by Chris Fonnesbeck in May, 2017 ([pymc#2124](https://github.com/pymc-devs/pymc/pull/2124))
 * Updated by Colin Carroll in June, 2018 ([pymc#3049](https://github.com/pymc-devs/pymc/pull/3049))
 * Updated by Alex Andorra in January, 2020 ([pymc#3765](https://github.com/pymc-devs/pymc/pull/3765))
@@ -149,8 +149,8 @@ some examples:
 
 and
 
-```
-* Adapted from chapter 5 of Bayesian Data Analysis 3rd Edition {cite:p}gelman2013bayesian
+```markdown
+* Adapted from chapter 5 of Bayesian Data Analysis 3rd Edition {cite:p}`gelman2013bayesian`
   by Demetri Pananos and Junpeng Lao on June, 2018 ([pymc#3054](https://github.com/pymc-devs/pymc/pull/3054))
 * Reexecuted by Ravin Kumar with PyMC 3.6 on March, 2019 ([pymc#3397](https://github.com/pymc-devs/pymc/pull/3397))
 * Reexecuted by Alex Andorra and Michael Osthege with PyMC 3.9 on June, 2020 ([pymc#3955](https://github.com/pymc-devs/pymc/pull/3955))
@@ -200,7 +200,7 @@ Once you're finished with your NB, add a very last cell with [the watermark pack
 %watermark -n -u -v -iv -w -p theano,xarray
 ```
 
-This last code cell should be preceded by a markdown cell with the `## Watermark` title only so it appears in the table of contents.
+This second to last code cell should be preceded by a markdown cell with the `## Watermark` title only so it appears in the table of contents.
 
 `watermark` should be in your virtual environment if you installed our `requirements-dev.txt`. Otherwise, just run `pip install watermark`. The `p` flag is optional but should be added if Theano (or Aesara if in `v4`) or xarray are not imported explicitly.
 This will also be checked by `pre-commit` (because we all forget to do things sometimes 😳).
