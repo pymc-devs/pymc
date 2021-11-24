@@ -1,10 +1,10 @@
 ****************************************************************
-Transformations of a random variable from one space to another.
+Transformations of a random variable from one space to another
 ****************************************************************
 
 Note that for convenience these entities can be addressed as
 ``pm.transforms.``\ *X* for any name *X*, although they are actually
-implemented as ``pm.distributions.transforms.``\*X*.
+implemented as ``pm.distributions.transforms.``\ *X*.
 
 .. currentmodule:: pymc.distributions.transforms
 
@@ -14,13 +14,11 @@ implemented as ``pm.distributions.transforms.``\*X*.
 ..
    .. autosummary::
 
-   transform
+   Transform
    stick_breaking
    logodds
    interval
    log_exp_m1
-   lowerbound
-   upperbound
    ordered
    log
    sum_to_1

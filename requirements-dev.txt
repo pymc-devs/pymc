@@ -18,9 +18,8 @@ pydata-sphinx-theme
 pytest-cov>=2.5
 pytest>=3.0
 scipy>1.4.1
-sphinx-autobuild>=0.7
+sphinx-copybutton
 sphinx-design
 sphinx-notfound-page
-sphinx-panels
 sphinx>=1.5
 typing-extensions>=3.7.4

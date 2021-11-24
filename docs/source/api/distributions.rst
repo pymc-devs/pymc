@@ -6,6 +6,7 @@ Distributions
 
    distributions/continuous
    distributions/discrete
+   distributions/logprob
    distributions/multivariate
    distributions/mixture
    distributions/simulator

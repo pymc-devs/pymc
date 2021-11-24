@@ -1,5 +1,5 @@
 :orphan:
-
+(Advanced_usage_of_Aesara_in_PyMC)=
 ..
     _referenced in docs/source/notebooks/table_of_contents_tutorials.js
 

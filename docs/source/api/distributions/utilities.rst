@@ -11,7 +11,6 @@ Distribution utility classes and functions
   NoDistribution
   DensityDist
 
-
 .. autoclass:: Distribution
 .. autoclass:: Discrete
 .. autoclass:: Continuous

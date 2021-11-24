@@ -31,9 +31,9 @@ Metropolis
 ~~~~~~~~~~
 
 .. currentmodule:: pymc.step_methods.metropolis
-
-.. automodule:: pymc.step_methods.metropolis
+odule:: pymc.step_methods.metropolis
    :members:
+.. autom
 
 Slice
 ~~~~~
