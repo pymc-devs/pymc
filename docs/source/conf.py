@@ -201,6 +201,7 @@ html_context = {
 html_sidebars = {
     "learn": [],
     "installation": [],
+    "community": ["twitter", "sidebar-nav-bs.html", "sidebar-ethical-ads.html"],
     "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"],
 }
 
