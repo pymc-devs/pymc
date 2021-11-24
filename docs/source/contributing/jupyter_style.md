@@ -33,7 +33,7 @@ the repository where the notebook is in (pymc or pymc-examples).
 The first cell of all example notebooks should have a MyST target, a level 1 markdown title (that is a title with a single `#`) followed by the post directive.
 The syntax is as follows:
 
-```
+```markdown
 (notebook_id)=
 # Notebook Title
 
