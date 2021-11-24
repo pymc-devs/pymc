@@ -30,6 +30,8 @@ TODO link to the pymc-examples
 TODO add categories to all notebooks
 
 :::{toctree}
+:hidden:
+:maxdepth: 1
 
 examples/getting_started
 examples/GLM_linear

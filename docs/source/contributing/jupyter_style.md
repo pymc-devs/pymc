@@ -1,4 +1,5 @@
-# PyMC Jupyter Style Guide
+(jupyter_style)=
+# Jupyter Style Guide
 
 These guidelines should be followed by all notebooks in the documentation, independently of
 the repository where the notebook is in (pymc or pymc-examples).

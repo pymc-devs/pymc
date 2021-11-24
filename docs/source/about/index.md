@@ -34,4 +34,5 @@ PyMC strives to make Bayesian modeling as simple and painless as possible,  allo
 citing_pymc
 history_and_versions
 pymc_for_enterprise
+testimonials
 :::

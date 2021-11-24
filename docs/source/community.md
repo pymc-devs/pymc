@@ -11,7 +11,8 @@ Discourse is the best place to interact with the PyMC community and its team
 
 ## Conferences
 
-[PyMCon](https://pymc-devs.github.io/pymcon/) was a conference organized by the PyMC developer community in 2020.
+The PyMC community organizes [PyMCon](https://pymc-devs.github.io/pymcon/), whose last edition was in 2020.
+Follow Discourse or Twitter to be updated about the next edition!
 
 PyMC talks have been given at a number of conferences, including [PyCon](https://us.pycon.org/),
 [PyData](https://pydata.org/events/), and [ODSC](https://odsc.com/) events.

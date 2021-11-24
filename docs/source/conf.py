@@ -110,11 +110,16 @@ notfound_urls_prefix = "/en/latest/"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "**.ipynb_checkpoints", "pymc-examples/.github"]
+exclude_patterns = [
+    "_build",
+    "**.ipynb_checkpoints",
+    "pymc-examples/.github",
+    "about/featured_testimonials.md",
+]
 
 # myst and panels config
 jupyter_execute_notebooks = "off"
-myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath"]
+myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "substitution"]
 panels_add_bootstrap_css = False
 
 # The reST default role (used for this markup: `text`) to use for all
@@ -227,7 +232,7 @@ html_favicon = "../logos/PyMC.ico"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static", "nb_tutorials/_images", "nb_examples/_images"]
+# html_static_path = ["_static", "nb_tutorials/_images", "nb_examples/_images"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

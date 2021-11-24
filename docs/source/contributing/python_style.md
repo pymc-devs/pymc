@@ -1,3 +1,4 @@
+(python_style)=
 # Python style guide
 
 ## Pre commit checks
