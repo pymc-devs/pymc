@@ -19,7 +19,7 @@ Probabilistic Programming in Python
 :::{button-ref} learning
 :color: primary
 :ref-type: ref
-:class: btn-lg
+:class: sd-fs-2 sd-px-5
 
 Get started!
 :::
@@ -95,7 +95,7 @@ PyMC is a non-profit project under NumFOCUS umbrella. If you value PyMC and want
 ::::{div} sd-d-flex-row sd-align-major-center
 :::{button-link} https://numfocus.org/donate-to-pymc3
 :color: secondary
-:class: btn-lg
+:class: sd-fs-2 sd-px-5
 
 
 Donate
