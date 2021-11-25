@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import functools
+import warnings
 
 from typing import Callable, Dict, List, Optional, Sequence, Set, Union
 
@@ -269,7 +270,19 @@ def make_initial_point_expression(
 
         if isinstance(strategy, str):
             if strategy == "moment":
-                value = get_moment(variable)
+                try:
+                    value = get_moment(variable)
+                except NotImplementedError:
+                    warnings.warn(
+                        f"Moment not defined for variable {variable} of type "
+                        f"{variable.owner.op.__class__.__name__}, defaulting to "
+                        f"a draw from the prior. This can lead to difficulties "
+                        f"during tuning. You can manually define an initval or "
+                        f"implement a get_moment dispatched function for this "
+                        f"distribution.",
+                        UserWarning,
+                    )
+                    value = variable
             elif strategy == "prior":
                 value = variable
             else:
