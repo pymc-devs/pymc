@@ -523,7 +523,7 @@ After voting:
 * Self Nominations are allowed
 * There are no limits to the number of people that can be nominated by a single core contributor
 * Once someone has been nominated, extra nominations are ignored. All candidates are treated equally
-  in the election independently of potential differences in their respective nominations.
+  in the election independently of potential differences (i.e. number of likes) in their respective nominations.
 * At the conclusion of the 2 weeks, the list of nominations is posted on the ticket and this ticket is closed.
 
 #### Voting
