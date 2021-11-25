@@ -110,13 +110,13 @@ Donate
 :::
 
 :::{grid-item-card}
-:img-background: https://www.numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png
+:img-background: _static/sponsors/numfocus.png
 :link: https://numfocus.org/
 :shadow: none
 :::
 
 :::{grid-item-card}
-:img-background: logos/sponsors/pymc-labs.png
+:img-background: _static/sponsors/pymc-labs.png
 :link: https://www.pymc-labs.io/
 :shadow: none
 :::
