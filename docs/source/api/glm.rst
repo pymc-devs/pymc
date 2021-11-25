@@ -1,6 +1,6 @@
-*************************
-Generalized Linear Models
-*************************
+********************************
+Generalized Linear Models (GLMs)
+********************************
 
 .. currentmodule:: pymc.glm.linear
 

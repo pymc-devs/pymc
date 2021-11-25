@@ -221,7 +221,9 @@ def test_interval():
         close_to_logical(vals < b, True, tol)
 
 
-@pytest.mark.xfail(reason="This test produces infinite values using aeppl")
+@pytest.mark.skipif(
+    aesara.config.floatX == "float32", reason="Test is designed for 64bit precision"
+)
 def test_interval_near_boundary():
     lb = -1.0
     ub = 1e-7

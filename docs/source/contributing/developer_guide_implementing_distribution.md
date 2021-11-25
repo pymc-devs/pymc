@@ -1,4 +1,4 @@
-# Implementing a Distribution (developer guide)
+# Implementing a Distribution
 
 This guide provides an overview on how to implement a distribution for version 4 of PyMC.
 It is designed for developers who wish to add a new distribution to the library.

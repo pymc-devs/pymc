@@ -10,32 +10,33 @@ Continuous
    HalfFlat
    Normal
    TruncatedNormal
-   HalfNormal
-   SkewNormal
    Beta
    Kumaraswamy
    Exponential
    Laplace
-   AsymmetricLaplace
    StudentT
-   HalfStudentT
    Cauchy
    HalfCauchy
    Gamma
-   InverseGamma
    Weibull
+   HalfStudentT
    LogNormal
    ChiSquared
+   HalfNormal
    Wald
    Pareto
+   InverseGamma
    ExGaussian
    VonMises
+   SkewNormal
    Triangular
    Gumbel
-   Rice
    Logistic
    LogitNormal
    Interpolated
+   Rice
+   Moyal
+   AsymmetricLaplace
    PolyaGamma
 
 .. automodule:: pymc.distributions.continuous

@@ -20,6 +20,8 @@ import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
 
+from pymc.util import UNSET
+
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf
 
@@ -1790,11 +1792,27 @@ class TestMatchesScipy:
             logp_fn,
         )
 
+        self.check_logp(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"psi": Unit, "p": Unit, "n": NatSmall},
+            lambda value, psi, p, n: np.log((1 - psi) * sp.nbinom.pmf(0, n, p))
+            if value == 0
+            else np.log(psi * sp.nbinom.pmf(value, n, p)),
+        )
+
         self.check_logcdf(
             ZeroInflatedNegativeBinomial,
             Nat,
             {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
             logcdf_fn,
+        )
+
+        self.check_logcdf(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"psi": Unit, "p": Unit, "n": NatSmall},
+            lambda value, psi, p, n: np.log((1 - psi) + psi * sp.nbinom.cdf(value, n, p)),
         )
 
         self.check_selfconsistency_discrete_logcdf(
@@ -2624,7 +2642,6 @@ class TestMatchesScipy:
         if aesara.config.floatX == "float32":
             raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
-    @pytest.mark.skipif(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
@@ -2651,6 +2668,21 @@ class TestMatchesScipy:
                     )
 
                 self.check_logp(TestedInterpolated, R, {}, ref_pdf)
+
+    @pytest.mark.parametrize("transform", [UNSET, None])
+    def test_interpolated_transform(self, transform):
+        # Issue: https://github.com/pymc-devs/pymc/issues/5048
+        x_points = np.linspace(0, 10, 10)
+        pdf_points = sp.norm.pdf(x_points, loc=1, scale=1)
+        with pm.Model() as m:
+            x = pm.Interpolated("x", x_points, pdf_points, transform=transform)
+
+        if transform is UNSET:
+            assert np.isfinite(m.logp({"x_interval__": -1.0}))
+            assert np.isfinite(m.logp({"x_interval__": 11.0}))
+        else:
+            assert not np.isfinite(m.logp({"x": -1.0}))
+            assert not np.isfinite(m.logp({"x": 11.0}))
 
 
 class TestBound:

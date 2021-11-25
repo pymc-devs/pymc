@@ -4,7 +4,7 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- aeppl=0.0.15
+- aeppl>=0.0.17
 - aesara>=2.2.6
 - arviz>=0.11.4
 - cachetools>=4.2.1
@@ -23,9 +23,8 @@ dependencies:
 - python-graphviz
 - python=3.8
 - scipy>1.4.1
-- sphinx-autobuild>=0.7
+- sphinx-copybutton
 - sphinx-notfound-page
-- sphinx-panels
 - sphinx>=1.5
 - typing-extensions>=3.7.4
 - pip:

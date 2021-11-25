@@ -1462,7 +1462,7 @@ class ZeroInflatedBinomial(Discrete):
 
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
-    Mean      :math:`(1 - \psi) n p`
+    Mean      :math:`\psi n p`
     Variance  :math:`(1-\psi) n p [1 - p(1 - \psi n)].`
     ========  ==========================
 
@@ -1487,7 +1487,7 @@ class ZeroInflatedBinomial(Discrete):
         return super().dist([psi, n, p], *args, **kwargs)
 
     def get_moment(rv, size, psi, n, p):
-        mean = at.round((1 - psi) * n * p)
+        mean = at.round(psi * n * p)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
         return mean
@@ -1629,6 +1629,15 @@ class ZeroInflatedNegativeBinomial(Discrete):
     Var       :math:`\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)`
     ========  ==========================
 
+    The zero inflated negative binomial distribution can be parametrized
+    either in terms of mu or p, and either in terms of alpha or n.
+    The link between the parametrizations is given by
+
+    .. math::
+
+        \mu &= \frac{n(1-p)}{p} \\
+        \alpha &= n
+
     Parameters
     ----------
     psi: float
@@ -1637,18 +1646,27 @@ class ZeroInflatedNegativeBinomial(Discrete):
         Poission distribution parameter (mu > 0).
     alpha: float
         Gamma distribution parameter (alpha > 0).
-
+    p: float
+        Alternative probability of success in each trial (0 < p < 1).
+    n: float
+        Alternative number of target success trials (n > 0)
     """
 
     rv_op = zero_inflated_neg_binomial
 
     @classmethod
-    def dist(cls, psi, mu, alpha, *args, **kwargs):
+    def dist(cls, psi, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
         psi = at.as_tensor_variable(floatX(psi))
-        n, p = NegativeBinomial.get_n_p(mu=mu, alpha=alpha)
+        n, p = NegativeBinomial.get_n_p(mu=mu, alpha=alpha, p=p, n=n)
         n = at.as_tensor_variable(floatX(n))
         p = at.as_tensor_variable(floatX(p))
         return super().dist([psi, n, p], *args, **kwargs)
+
+    def get_moment(rv, size, psi, n, p):
+        mean = at.floor(psi * n * (1 - p) / p)
+        if not rv_size_is_none(size):
+            mean = at.full(size, mean)
+        return mean
 
     def logp(value, psi, n, p):
         r"""
@@ -1701,6 +1719,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
             0 <= value,
             0 <= psi,
             psi <= 1,
+            0 < n,
             0 < p,
             p <= 1,
         )

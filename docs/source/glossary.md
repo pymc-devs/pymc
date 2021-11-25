@@ -1,3 +1,4 @@
+(glossary)=
 # Glossary
 
 A glossary of common terms used throughout the PyMC documentation and examples.
@@ -22,38 +23,39 @@ Underdispersion
   In statistics, underdispersion is the presence of lower {term}`variability <dispersion>` in a data set than would be expected based on a given statistical model.
 
 Bayesian Workflow
-  Bayesian workflow is the overall iterative procedure towards model refinement. It often includes the two related tasks of {term}`inference` and the exploratory analysis of models.
+  The Bayesian workflow involves all the steps needed for model building. This includes {term}`Bayesian inference` but also other tasks such as i) diagnoses of the quality of the inference, ii) model criticism, including evaluations of both model assumptions and model predictions, iii) comparison of models, not
+just for the purpose of model selection or model averaging but more importantly to better understand these models and iv) Preparation of the results for a particular audience. These non-inferencial tasks require both numerical and visual summaries to help practitioners analyse their models. And they are sometimes collectively known as [Exploratory Analysis of Bayesian Models](https://joss.theoj.org/papers/10.21105/joss.01143).
   - For a compact overview, see Bayesian statistics and modelling by van de Schoot, R., Depaoli, S., King, R. et al in Nat Rev Methods - Primers 1, 1 (2021).
   - For an in-depth overview, see Bayesian Workflow by Andrew Gelman, Aki Vehtari, Daniel Simpson, Charles C. Margossian, Bob Carpenter, Yuling Yao, Lauren Kennedy, Jonah Gabry, Paul-Christian Bürkner, Martin Modrák
   - For an exercise-based material, see Think Bayes 2e: Bayesian Statistics Made Simple by Allen B. Downey
-  - For an upcoming textbook that uses PyMC3, Tensorflow Probability, and ArviZ libraries, see Bayesian Modeling and Computation by Osvaldo A. Martin, Ravin Kumar, Junpeng Lao
+  - For an upcoming textbook that uses PyMC, Tensorflow Probability, and ArviZ libraries, see Bayesian Modeling and Computation by Osvaldo A. Martin, Ravin Kumar and Junpeng Lao
 
 Bayesian inference
   Once we have defined the statistical model, Bayesian inference processes the data and model to produce a {term}`posterior` distribution. That is a joint distribution of all parameters in the model. This distribution is used to represent plausibility, and is the logical consequence of the model and data.
 
 Bayesian model
-  A Bayesian model is a composite of variables and distributional definitions for these variables. Fundamentally, it tells you all the ways that the observed data could have been produced.
+  A Bayesian model is a composite of variables and distributional definitions for these variables. Bayesian models have two defining characteristics: i) Unknown quantities are described using probability distributions and ii) Bayes' theorem is used to update the values of the parameters conditioned on the data
 
 Prior
-  Bayesian statistics allow us, in principle, to include all information we have about the structure of the problem into the model. We can do this via assuming prior distributions of the model’s parameters. Priors represent the plausibility of the value of the parameters before accounting for the data. Priors multiplied by {term}`likelihood` produce the {term}`posterior`.
+  Bayesian statistics allow us, in principle, to include all information we have about the structure of the problem into a model. We can do this via assuming prior distributions of the model’s parameters. Priors represent the plausibility of the value of the parameters before accounting for the data. Priors multiplied by {term}`likelihood` produce the {term}`posterior`.
 
   Priors’ informativeness can fall anywhere on the complete uncertainty to relative certainty continuum. An informative prior might encode known restrictions on the possible range of values of that parameter.
 
-  To understand the implications of a prior, as well as the model itself, we can simulate predictions from the model, using only the prior distribution instead of the {term}`posterior` distribution - a process sometimes referred to as prior predictive simulation.
+  To understand the implications of a prior and likelihood we can simulate predictions from the model, before seeing any data. This can be done by taking samples from the prior predictive distribution.
 
   - For an in-depth guide to priors, consider Statistical Rethinking 2nd Edition By Richard McElreath, especially chapters 2.3
 
 Likelihood
-  There are many perspectives on likelihood, but conceptually we can think about it as the relative number of ways the model could have produced the data; in other words, the probability of the data, given the parameters.
+  There are many perspectives on likelihood, but conceptually we can think about it as the probability of the data, given the parameters. Or in other words, as the relative number of ways the data could have been produced.
 
   - For an in-depth unfolding of the concept, refer to Statistical Rethinking 2nd Edition By Richard McElreath, particularly chapter 2.
   - For the problem-based material, see Think Bayes 2e: Bayesian Statistics Made Simple by Allen B. Downey
   - For univariate, continuous scenarios, see the calibr8 paper: Bayesian calibration, process modeling and uncertainty quantification in biotechnology by Laura Marie Helleckes,  Michael Osthege, Wolfgang Wiechert, Eric von Lieres, Marco Oldiges
 
 Posterior
-  The outcome of a Bayesian model is the posterior distribution, which describes the relative plausibilities of every possible combination of parameter values. We can think of the posterior as the updated {term}`priors` after the model has seen the data.
+  The outcome of Bayesian inference is a posterior distribution, which describes the relative plausibilities of every possible combination of parameter values, given the observed data. We can think of the posterior as the updated {term}`priors` after the model has seen the data.
 
-  When the posterior is obtained using numerical methods we first need to check how adequately the model fits to data. By sampling from the posterior distribution we can simulate the observations, or the implied predictions of the model. This posterior predictive distribution can then be compared to the observed data, the process known as the posterior predictive check.
+  When the posterior is obtained using numerical methods we generally need to first diagnose the quality of the computed approximation. This is necessary as, for example, methods like {term}`MCMC` has only asymptotic guarantees. In a Bayesian setting predictions can be simulated by sampling from the posterior predictive distribution. When such predictions are used to check the internal consistency of the models by comparing it with the observed data used for inference, the process is known as the posterior predictive checks.
 
   Once you are satisfied with the model, posterior distribution can be summarized and interpreted. Common questions for the posterior include: intervals of defined boundaries, intervals of defined probability mass, and point estimates. When the posterior is very similar to the prior, the available data does not contain much information about a parameter of interest.
 
@@ -76,7 +78,12 @@ GLM
 
 [Maximum a Posteriori](https://en.wikipedia.org/wiki/Maximum_a_posteriori_estimation)
 [MAP](https://en.wikipedia.org/wiki/Maximum_a_posteriori_estimation)
-  An estimate of an unknown density estimation, that equals the mode of the posterior distribution. MAP can therefore be seen as a regularization of maximum likelihood estimation.
+  It is a point-estimate of an unknown quantity, that equals the mode of the posterior distribution.
+
+  If the prior distribution is a flat distribution, the MAP method is numerically equivalent to the {term}`Maximum Likelihood Estimate` (MLE).
+  When the prior is not flat the MAP estimation can be seen as a regularized version of the MLE.
+
+  - For a concise comparison between {term}`MLE` and {term}`MAP`, consider Deep Learning by Ian Goodfellow, chapter 5.6.1 or [Machine Learning: a Probabilistic Perspective](https://probml.github.io/pml-book/book1.html) by Kevin Murphy.
 
 [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246)
 [NUTS](https://arxiv.org/abs/1111.4246)
@@ -116,4 +123,5 @@ Hierarchical Ordinary Differential Equation
 [Markov Chain Monte Carlo](https://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo)
 [MCMC](https://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo)
   Markov chain Monte Carlo (MCMC) methods comprise a class of algorithms for sampling from a probability distribution. By constructing a {term}`Markov Chain` that has the desired distribution as its equilibrium distribution, one can obtain a sample of the desired distribution by recording states from the chain.  Various algorithms exist for constructing chains, including the Metropolis–Hastings algorithm.
+
 :::::

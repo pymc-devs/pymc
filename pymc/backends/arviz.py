@@ -42,6 +42,26 @@ _log = logging.getLogger("pymc")
 Var = Any  # pylint: disable=invalid-name
 
 
+def find_observations(model: Optional["Model"]) -> Optional[Dict[str, Var]]:
+    """If there are observations available, return them as a dictionary."""
+    if model is None:
+        return None
+
+    observations = {}
+    for obs in model.observed_RVs:
+        aux_obs = getattr(obs.tag, "observations", None)
+        if aux_obs is not None:
+            try:
+                obs_data = extract_obs_data(aux_obs)
+                observations[obs.name] = obs_data
+            except TypeError:
+                warnings.warn(f"Could not extract data from symbolic observation {obs}")
+        else:
+            warnings.warn(f"No data for observation {obs}")
+
+    return observations
+
+
 class _DefaultTrace:
     """
     Utility for collecting samples into a dictionary.
@@ -196,25 +216,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             self.dims = {**model_dims, **self.dims}
 
         self.density_dist_obs = density_dist_obs
-        self.observations = self.find_observations()
-
-    def find_observations(self) -> Optional[Dict[str, Var]]:
-        """If there are observations available, return them as a dictionary."""
-        if self.model is None:
-            return None
-        observations = {}
-        for obs in self.model.observed_RVs:
-            aux_obs = getattr(obs.tag, "observations", None)
-            if aux_obs is not None:
-                try:
-                    obs_data = extract_obs_data(aux_obs)
-                    observations[obs.name] = obs_data
-                except TypeError:
-                    warnings.warn(f"Could not extract data from symbolic observation {obs}")
-            else:
-                warnings.warn(f"No data for observation {obs}")
-
-        return observations
+        self.observations = find_observations(self.model)
 
     def split_trace(self) -> Tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
         """Split MultiTrace object into posterior and warmup.

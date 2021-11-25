@@ -9,6 +9,7 @@ from aesara.graph import graph_inputs
 import pymc as pm
 
 from pymc.sampling_jax import (
+    _get_log_likelihood,
     get_jaxified_logp,
     replace_shared_variables,
     sample_numpyro_nuts,
@@ -59,6 +60,24 @@ def test_deterministic_samples():
 
     assert 8 < trace.posterior["a"].mean() < 11
     assert np.allclose(trace.posterior["b"].values, trace.posterior["a"].values / 2)
+
+
+def test_get_log_likelihood():
+    obs = np.random.normal(10, 2, size=100)
+    obs_at = aesara.shared(obs, borrow=True, name="obs")
+    with pm.Model() as model:
+        a = pm.Normal("a", 0, 2)
+        sigma = pm.HalfNormal("sigma")
+        b = pm.Normal("b", a, sigma=sigma, observed=obs_at)
+
+        trace = pm.sample(tune=10, draws=10, chains=2, random_seed=1322)
+
+    b_true = trace.log_likelihood.b.values
+    a = np.array(trace.posterior.a)
+    sigma_log_ = np.log(np.array(trace.posterior.sigma))
+    b_jax = _get_log_likelihood(model, [a, sigma_log_])["b"]
+
+    assert np.allclose(b_jax.reshape(-1), b_true.reshape(-1))
 
 
 def test_replace_shared_variables():
