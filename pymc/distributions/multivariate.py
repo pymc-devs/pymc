@@ -453,9 +453,7 @@ class Dirichlet(Continuous):
         norm_constant = at.sum(a, axis=-1)[..., None]
         moment = a / norm_constant
         if not rv_size_is_none(size):
-            if isinstance(size, int):
-                size = (size,)
-            moment = at.full((*size, *a.shape), moment)
+            moment = at.full(at.concatenate([size, a.shape]), moment)
         return moment
 
     def logp(value, a):
@@ -683,6 +681,19 @@ class DirichletMultinomial(Discrete):
         a = floatX(a)
 
         return super().dist([n, a], **kwargs)
+
+    def get_moment(rv, size, n, a):
+        p = a / at.sum(a, axis=-1)
+        mode = at.round(n * p)
+        diff = n - at.sum(mode, axis=-1, keepdims=True)
+        inc_bool_arr = at.abs_(diff) > 0
+        mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+        # Reshape mode according to base shape (ignoring size)
+        mode = at.reshape(mode, rv.shape[size.size :])
+        if not rv_size_is_none(size):
+            output_size = at.concatenate([size, mode.shape])
+            mode = at.full(output_size, mode)
+        return mode
 
     def logp(value, n, a):
         """
