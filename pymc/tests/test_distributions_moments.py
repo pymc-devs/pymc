@@ -21,6 +21,7 @@ from pymc.distributions import (
     Constant,
     DensityDist,
     Dirichlet,
+    DirichletMultinomial,
     DiscreteUniform,
     DiscreteWeibull,
     ExGaussian,
@@ -112,7 +113,6 @@ def test_all_distributions_have_moments():
 
     # Distributions that have been refactored but don't yet have moments
     not_implemented |= {
-        dist_module.multivariate.DirichletMultinomial,
         dist_module.multivariate.Wishart,
     }
 
@@ -797,10 +797,7 @@ def test_discrete_weibull_moment(q, beta, size, expected):
         ),
         (
             np.full(shape=np.array([7, 3]), fill_value=np.array([13, 17, 19])),
-            (
-                11,
-                5,
-            ),
+            (11, 5),
             np.broadcast_to([13, 17, 19], shape=[11, 5, 7, 3]) / 49,
         ),
     ],
@@ -1461,3 +1458,32 @@ def test_lkjcholeskycov_moment(n, eta, size, expected):
         sd_dist = pm.Exponential.dist(1, size=(*to_tuple(size), n))
         LKJCholeskyCov("x", n=n, eta=eta, sd_dist=sd_dist, size=size, compute_corr=False)
     assert_moment_is_expected(model, expected, check_finite_logp=size is None)
+
+
+@pytest.mark.parametrize(
+    "a, n, size, expected",
+    [
+        (np.array([2, 2, 2, 2]), 1, None, np.array([1, 0, 0, 0])),
+        (np.array([3, 6, 0.5, 0.5]), 2, None, np.array([1, 1, 0, 0])),
+        (np.array([30, 60, 5, 5]), 10, None, np.array([4, 6, 0, 0])),
+        (
+            np.array([[26, 26, 26, 22]]),  # Dim: 1 x 4
+            np.array([[1], [10]]),  # Dim: 2 x 1
+            None,
+            np.array([[[1, 0, 0, 0]], [[2, 3, 3, 2]]]),  # Dim: 2 x 1 x 4
+        ),
+        (
+            np.array([[26, 26, 26, 22]]),  # Dim: 1 x 4
+            np.array([[1], [10]]),  # Dim: 2 x 1
+            (2, 1),
+            np.full(
+                (2, 1, 2, 1, 4),
+                np.array([[[1, 0, 0, 0]], [[2, 3, 3, 2]]]),  # Dim: 2 x 1 x 4
+            ),
+        ),
+    ],
+)
+def test_dirichlet_multinomial_moment(a, n, size, expected):
+    with Model() as model:
+        DirichletMultinomial("x", n=n, a=a, size=size)
+    assert_moment_is_expected(model, expected)
