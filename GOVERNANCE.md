@@ -518,9 +518,12 @@ After voting:
 > Used when choosing the steering council and it's subcommittees
 
 #### Nominations
-* Nominations are taken over a single GitHub issue ticket over the course of 2 weeks.
+* Nominations are taken over a single Discourse topic over the course of 2 weeks.
 * Only Core Contributors may nominate candidates for Council membership
 * Self Nominations are allowed
+* There are no limits to the number of people that can be nominated by a single core contributor
+* Once someone has been nominated, extra nominations are ignored. All candidates are treated equally
+  in the election independently of potential differences (i.e. number of likes) in their respective nominations.
 * At the conclusion of the 2 weeks, the list of nominations is posted on the ticket and this ticket is closed.
 
 #### Voting
