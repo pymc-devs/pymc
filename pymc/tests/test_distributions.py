@@ -2160,25 +2160,6 @@ class TestMatchesScipy:
             Multinomial, Vector(Nat, n), {"p": Simplex(n), "n": Nat}, multinomial_logpdf
         )
 
-    @pytest.mark.skip(reason="Moment calculations have not been refactored yet")
-    @pytest.mark.parametrize(
-        "p,n",
-        [
-            [[0.25, 0.25, 0.25, 0.25], 1],
-            [[0.3, 0.6, 0.05, 0.05], 2],
-            [[0.3, 0.6, 0.05, 0.05], 10],
-        ],
-    )
-    def test_multinomial_mode(self, p, n):
-        _p = np.array(p)
-        with Model() as model:
-            m = Multinomial("m", n, _p, _p.shape)
-        assert_allclose(m.distribution.mode.eval().sum(), n)
-        _p = np.array([p, p])
-        with Model() as model:
-            m = Multinomial("m", n, _p, _p.shape)
-        assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
-
     @pytest.mark.parametrize(
         "p, size, n",
         [
@@ -2205,14 +2186,6 @@ class TestMatchesScipy:
             m = Multinomial("m", n=n, p=p, size=size)
 
         assert m.eval().shape == size + p.shape
-
-    @pytest.mark.skip(reason="Moment calculations have not been refactored yet")
-    def test_multinomial_mode_with_shape(self):
-        n = [1, 10]
-        p = np.asarray([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]])
-        with Model() as model:
-            m = Multinomial("m", n=n, p=p, size=(2, 4))
-        assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
     def test_multinomial_vec(self):
         vals = np.array([[2, 4, 4], [3, 3, 4]])
