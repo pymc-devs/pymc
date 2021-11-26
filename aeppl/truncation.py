@@ -3,7 +3,6 @@ from typing import List, Optional
 
 import aesara.tensor as at
 import numpy as np
-from aesara.assert_op import Assert
 from aesara.graph.basic import Node
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.opt import local_optimizer
@@ -13,7 +12,7 @@ from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.var import TensorConstant
 
 from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
-from aeppl.logprob import _logcdf, _logprob
+from aeppl.logprob import CheckParameterValue, _logcdf, _logprob
 from aeppl.opt import rv_sinking_db
 
 
@@ -119,7 +118,7 @@ def censor_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
         )
 
     if is_lower_bounded and is_upper_bounded:
-        logprob = Assert("lower_bound <= upper_bound")(
+        logprob = CheckParameterValue("lower_bound <= upper_bound")(
             logprob, at.all(at.le(lower_bound, upper_bound))
         )
 

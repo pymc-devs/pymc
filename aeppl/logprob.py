@@ -4,12 +4,30 @@ from typing import Tuple
 import aesara.tensor as at
 import aesara.tensor.random.basic as arb
 import numpy as np
-from aesara.assert_op import Assert
 from aesara.graph.op import Op
+from aesara.raise_op import CheckAndRaise
 from aesara.tensor.slinalg import Cholesky, solve_lower_triangular
 from aesara.tensor.var import TensorVariable
 
 # from aesara.tensor.xlogx import xlogy0
+
+
+class ParameterValueError(ValueError):
+    """Exception for invalid parameters values in logprob graphs"""
+
+
+class CheckParameterValue(CheckAndRaise):
+    """Implements a parameter value check in a logprob graph.
+
+    Raises `ParameterValueError` if the check is not True.
+    """
+
+    def __init__(self, msg=""):
+        super().__init__(ParameterValueError, msg)
+
+    def __str__(self):
+        return f"Check{{{self.msg}}}"
+
 
 cholesky = Cholesky(lower=True, on_error="nan")
 
@@ -108,7 +126,7 @@ def uniform_logcdf(op, value, *inputs, **kwargs):
         ),
     )
 
-    res = Assert("lower <= upper")(res, at.all(at.le(lower, upper)))
+    res = CheckParameterValue("lower <= upper")(res, at.all(at.le(lower, upper)))
     return res
 
 
@@ -121,7 +139,7 @@ def normal_logprob(op, values, *inputs, **kwargs):
         - at.log(at.sqrt(2.0 * np.pi))
         - at.log(sigma)
     )
-    res = Assert("sigma > 0")(res, at.all(at.gt(sigma, 0.0)))
+    res = CheckParameterValue("sigma > 0")(res, at.all(at.gt(sigma, 0.0)))
     return res
 
 
@@ -136,7 +154,7 @@ def normal_logcdf(op, value, *inputs, **kwargs):
         at.log1p(-at.erfc(z / at.sqrt(2.0)) / 2.0),
     )
 
-    res = Assert("sigma > 0")(res, at.all(at.gt(sigma, 0.0)))
+    res = CheckParameterValue("sigma > 0")(res, at.all(at.gt(sigma, 0.0)))
     return res
 
 
@@ -150,7 +168,7 @@ def halfnormal_logprob(op, values, *inputs, **kwargs):
         - at.log(sigma)
     )
     res = at.switch(at.ge(value, loc), res, -np.inf)
-    res = Assert("sigma > 0")(res, at.all(at.gt(sigma, 0.0)))
+    res = CheckParameterValue("sigma > 0")(res, at.all(at.gt(sigma, 0.0)))
     return res
 
 
@@ -164,7 +182,7 @@ def beta_logprob(op, values, *inputs, **kwargs):
         - (at.gammaln(alpha) + at.gammaln(beta) - at.gammaln(alpha + beta))
     )
     res = at.switch(at.bitwise_and(at.ge(value, 0.0), at.le(value, 1.0)), res, -np.inf)
-    res = Assert("0 <= value <= 1, alpha > 0, beta > 0")(
+    res = CheckParameterValue("0 <= value <= 1, alpha > 0, beta > 0")(
         res, at.all(at.gt(alpha, 0.0)), at.all(at.gt(beta, 0.0))
     )
     return res
@@ -176,7 +194,7 @@ def exponential_logprob(op, values, *inputs, **kwargs):
     (mu,) = inputs[3:]
     res = -at.log(mu) - value / mu
     res = at.switch(at.ge(value, 0.0), res, -np.inf)
-    res = Assert("mu > 0")(res, at.all(at.gt(mu, 0.0)))
+    res = CheckParameterValue("mu > 0")(res, at.all(at.gt(mu, 0.0)))
     return res
 
 
@@ -198,7 +216,7 @@ def lognormal_logprob(op, values, *inputs, **kwargs):
         - at.log(value)
     )
     res = at.switch(at.gt(value, 0.0), res, -np.inf)
-    res = Assert("sigma > 0")(res, at.all(at.gt(sigma, 0)))
+    res = CheckParameterValue("sigma > 0")(res, at.all(at.gt(sigma, 0)))
     return res
 
 
@@ -208,7 +226,7 @@ def pareto_logprob(op, values, *inputs, **kwargs):
     alpha, m = inputs[3:]
     res = at.log(alpha) + xlogy0(alpha, m) - xlogy0(alpha + 1.0, value)
     res = at.switch(at.ge(value, m), res, -np.inf)
-    res = Assert("alpha > 0, m > 0")(
+    res = CheckParameterValue("alpha > 0, m > 0")(
         res, at.all(at.gt(alpha, 0.0)), at.all(at.gt(m, 0.0))
     )
     return res
@@ -219,7 +237,7 @@ def cauchy_logprob(op, values, *inputs, **kwargs):
     (value,) = values
     alpha, beta = inputs[3:]
     res = -at.log(np.pi) - at.log(beta) - at.log1p(at.pow((value - alpha) / beta, 2))
-    res = Assert("beta > 0")(res, at.all(at.gt(beta, 0.0)))
+    res = CheckParameterValue("beta > 0")(res, at.all(at.gt(beta, 0.0)))
     return res
 
 
@@ -244,7 +262,7 @@ def gamma_logprob(op, values, *inputs, **kwargs):
         + xlogy0(alpha - 1, value)
     )
     res = at.switch(at.ge(value, 0.0), res, -np.inf)
-    res = Assert("alpha > 0, beta > 0")(
+    res = CheckParameterValue("alpha > 0, beta > 0")(
         res, at.all(at.gt(alpha, 0.0)), at.all(at.gt(beta, 0.0))
     )
     return res
@@ -262,7 +280,7 @@ def invgamma_logprob(op, values, *inputs, **kwargs):
         + xlogy0(-alpha - 1, value)
     )
     res = at.switch(at.ge(value, 0.0), res, -np.inf)
-    res = Assert("alpha > 0, beta > 0")(
+    res = CheckParameterValue("alpha > 0, beta > 0")(
         res, at.all(at.gt(alpha, 0.0)), at.all(at.gt(beta, 0.0))
     )
     return res
@@ -287,7 +305,7 @@ def wald_logprob(op, values, *inputs, **kwargs):
     )
 
     res = at.switch(at.gt(value, 0.0), res, -np.inf)
-    res = Assert("mu > 0, scale > 0")(
+    res = CheckParameterValue("mu > 0, scale > 0")(
         res, at.all(at.gt(mu, 0.0)), at.all(at.gt(scale, 0.0))
     )
     return res
@@ -304,7 +322,7 @@ def weibull_logprob(op, values, *inputs, **kwargs):
         - at.pow(value / beta, alpha)
     )
     res = at.switch(at.ge(value, 0.0), res, -np.inf)
-    res = Assert("alpha > 0, beta > 0")(
+    res = CheckParameterValue("alpha > 0, beta > 0")(
         res, at.all(at.gt(alpha, 0.0)), at.all(at.gt(beta, 0.0))
     )
     return res
@@ -318,7 +336,7 @@ def vonmises_logprob(op, values, *inputs, **kwargs):
     res = at.switch(
         at.bitwise_and(at.ge(value, -np.pi), at.le(value, np.pi)), res, -np.inf
     )
-    res = Assert("kappa > 0")(res, at.all(at.gt(kappa, 0.0)))
+    res = CheckParameterValue("kappa > 0")(res, at.all(at.gt(kappa, 0.0)))
     return res
 
 
@@ -334,7 +352,7 @@ def triangular_logprob(op, values, *inputs, **kwargs):
     res = at.switch(
         at.bitwise_and(at.le(lower, value), at.le(value, upper)), res, -np.inf
     )
-    res = Assert("lower <= c, c <= upper")(
+    res = CheckParameterValue("lower <= c, c <= upper")(
         res, at.all(at.le(lower, c)), at.all(at.le(c, upper))
     )
     return res
@@ -346,7 +364,7 @@ def gumbel_logprob(op, values, *inputs, **kwargs):
     mu, beta = inputs[3:]
     z = (value - mu) / beta
     res = -z - at.exp(-z) - at.log(beta)
-    res = Assert("0 < beta")(res, at.all(at.lt(0.0, beta)))
+    res = CheckParameterValue("0 < beta")(res, at.all(at.lt(0.0, beta)))
     return res
 
 
@@ -356,7 +374,7 @@ def logistic_logprob(op, values, *inputs, **kwargs):
     mu, s = inputs[3:]
     z = (value - mu) / s
     res = -z - at.log(s) - 2.0 * at.log1p(at.exp(-z))
-    res = Assert("0 < s")(res, at.all(at.lt(0.0, s)))
+    res = CheckParameterValue("0 < s")(res, at.all(at.lt(0.0, s)))
     return res
 
 
@@ -366,7 +384,9 @@ def binomial_logprob(op, values, *inputs, **kwargs):
     n, p = inputs[3:]
     res = binomln(n, value) + xlogy0(value, p) + xlogy0(n - value, 1.0 - p)
     res = at.switch(at.bitwise_and(at.le(0, value), at.le(value, n)), res, -np.inf)
-    res = Assert("0 <= p, p <= 1")(res, at.all(at.le(0.0, p)), at.all(at.le(p, 1.0)))
+    res = CheckParameterValue("0 <= p, p <= 1")(
+        res, at.all(at.le(0.0, p)), at.all(at.le(p, 1.0))
+    )
     return res
 
 
@@ -380,7 +400,7 @@ def betabinomial_logprob(op, values, *inputs, **kwargs):
         - betaln(alpha, beta)
     )
     res = at.switch(at.bitwise_and(at.le(0, value), at.le(value, n)), res, -np.inf)
-    res = Assert("0 < alpha, 0 < beta")(
+    res = CheckParameterValue("0 < alpha, 0 < beta")(
         res, at.all(at.lt(0.0, alpha)), at.all(at.lt(0.0, beta))
     )
     return res
@@ -392,7 +412,9 @@ def bernoulli_logprob(op, values, *inputs, **kwargs):
     (p,) = inputs[3:]
     res = at.switch(value, at.log(p), at.log(1.0 - p))
     res = at.switch(at.bitwise_and(at.le(0, value), at.le(value, 1)), res, -np.inf)
-    res = Assert("0 <= p <= 1")(res, at.all(at.le(0.0, p)), at.all(at.le(p, 1.0)))
+    res = CheckParameterValue("0 <= p <= 1")(
+        res, at.all(at.le(0.0, p)), at.all(at.le(p, 1.0))
+    )
     return res
 
 
@@ -402,7 +424,7 @@ def poisson_logprob(op, values, *inputs, **kwargs):
     (mu,) = inputs[3:]
     res = xlogy0(value, mu) - at.gammaln(value + 1) - mu
     res = at.switch(at.le(0, value), res, -np.inf)
-    res = Assert("0 <= mu")(res, at.all(at.le(0.0, mu)))
+    res = CheckParameterValue("0 <= mu")(res, at.all(at.le(0.0, mu)))
     res = at.switch(at.bitwise_and(at.eq(mu, 0.0), at.eq(value, 0.0)), 0.0, res)
     return res
 
@@ -413,7 +435,7 @@ def poisson_logcdf(op, value, *inputs, **kwargs):
     value = at.floor(value)
     res = at.log(at.gammaincc(value + 1, mu))
     res = at.switch(at.le(0, value), res, -np.inf)
-    res = Assert("0 <= mu")(res, at.all(at.le(0.0, mu)))
+    res = CheckParameterValue("0 <= mu")(res, at.all(at.le(0.0, mu)))
     return res
 
 
@@ -428,7 +450,9 @@ def nbinom_logprob(op, values, *inputs, **kwargs):
         + xlogy0(n, n / (mu + n))
     )
     res = at.switch(at.le(0, value), res, -np.inf)
-    res = Assert("0 < mu, 0 < n")(res, at.all(at.lt(0.0, mu)), at.all(at.lt(0.0, n)))
+    res = CheckParameterValue("0 < mu, 0 < n")(
+        res, at.all(at.lt(0.0, mu)), at.all(at.lt(0.0, n))
+    )
     res = at.switch(at.gt(n, 1e10), poisson_logprob(op, values, *inputs[:3], mu), res)
     return res
 
@@ -439,7 +463,9 @@ def geometric_logprob(op, values, *inputs, **kwargs):
     (p,) = inputs[3:]
     res = at.log(p) + xlogy0(value - 1, 1 - p)
     res = at.switch(at.le(1, value), res, -np.inf)
-    res = Assert("0 <= p <= 1")(res, at.all(at.le(0.0, p)), at.all(at.ge(1.0, p)))
+    res = CheckParameterValue("0 <= p <= 1")(
+        res, at.all(at.le(0.0, p)), at.all(at.ge(1.0, p))
+    )
     return res
 
 
@@ -492,7 +518,9 @@ def categorical_logprob(op, values, *inputs, **kwargs):
     res = at.switch(
         at.bitwise_and(at.le(0, value), at.lt(value, at.shape(p)[-1])), res, -np.inf
     )
-    res = Assert("0 <= p <= 1")(res, at.all(at.ge(p, 0.0)), at.all(at.le(p, 1.0)))
+    res = CheckParameterValue("0 <= p <= 1")(
+        res, at.all(at.ge(p, 0.0)), at.all(at.le(p, 1.0))
+    )
     return res
 
 
@@ -525,7 +553,7 @@ def mvnormal_logprob(op, values, *inputs, **kwargs):
 
     n = value.shape[-1]
     res = -0.5 * n * at.log(2 * np.pi) - 0.5 * quaddist - logdet
-    res = Assert("0 < diag(Sigma)")(res, all_pos_definite)
+    res = CheckParameterValue("0 < diag(Sigma)")(res, all_pos_definite)
     return res
 
 
@@ -543,7 +571,7 @@ def dirichlet_logprob(op, values, *inputs, **kwargs):
         res,
         -np.inf,
     )
-    res = Assert("0 < alpha")(res, at.all(at.lt(0.0, alpha)))
+    res = CheckParameterValue("0 < alpha")(res, at.all(at.lt(0.0, alpha)))
     return res
 
 
@@ -559,7 +587,7 @@ def multinomial_logprob(op, values, *inputs, **kwargs):
         res,
         -np.inf,
     )
-    res = Assert("p <= 1, sum(p) == 1, n >= 0")(
+    res = CheckParameterValue("p <= 1, sum(p) == 1, n >= 0")(
         res,
         at.all(at.le(p, 1)),
         at.all(at.eq(at.sum(p, axis=-1), 1)),

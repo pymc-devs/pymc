@@ -4,8 +4,9 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 import scipy.stats as stats
+from aesara import function
 
-from aeppl.logprob import logcdf, logprob
+from aeppl.logprob import ParameterValueError, logcdf, logprob
 
 # @pytest.fixture(scope="module", autouse=True)
 # def set_aesara_flags():
@@ -197,7 +198,7 @@ def test_exponential_logprob(dist_params, obs, size, error):
 
     x = at.random.exponential(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, mu):
         return stats.expon.logpdf(obs, scale=mu)
@@ -244,7 +245,7 @@ def test_lognormal_logprob(dist_params, obs, size, error):
 
     x = at.random.lognormal(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, mu, sigma):
         return stats.lognorm.logpdf(obs, s=sigma, scale=np.exp(mu))
@@ -269,7 +270,7 @@ def test_pareto_logprob(dist_params, obs, size, error):
 
     x = at.random.pareto(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, b, scale):
         return stats.pareto.logpdf(obs, b, scale=scale)
@@ -294,7 +295,7 @@ def test_halfcauchy_logprob(dist_params, obs, size, error):
 
     x = at.random.halfcauchy(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, alpha, beta):
         return stats.halfcauchy.logpdf(obs, loc=alpha, scale=beta)
@@ -319,7 +320,7 @@ def test_gamma_logprob(dist_params, obs, size, error):
 
     x = at.random.gamma(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, alpha, inv_beta):
         return stats.gamma.logpdf(obs, alpha, scale=1.0 / inv_beta)
@@ -344,7 +345,7 @@ def test_invgamma_logprob(dist_params, obs, size, error):
 
     x = at.random.invgamma(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, alpha, beta):
         return stats.invgamma.logpdf(obs, alpha, scale=beta)
@@ -371,7 +372,7 @@ def test_chisquare_logprob(dist_params, obs, size, error):
 
     x = at.random.chisquare(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, df):
         return stats.chi2.logpdf(obs, df)
@@ -396,7 +397,7 @@ def test_wald_logprob(dist_params, obs, size, error):
 
     x = at.random.wald(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, mean, scale):
         return stats.invgauss.logpdf(obs, mean / scale, scale=scale)
@@ -421,7 +422,7 @@ def test_weibull_logprob(dist_params, obs, size, error):
 
     x = at.random.weibull(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, alpha, beta):
         return stats.weibull_min.logpdf(obs, alpha, scale=beta)
@@ -456,7 +457,7 @@ def test_vonmises_logprob(dist_params, obs, size, error):
 
     x = at.random.vonmises(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, mu, kappa):
         return stats.vonmises.logpdf(obs, kappa, loc=mu)
@@ -486,7 +487,7 @@ def test_triangular_logprob(dist_params, obs, size, error):
 
     x = at.random.triangular(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, lower, mode, upper):
         return stats.triang.logpdf(
@@ -513,7 +514,7 @@ def test_gumbel_logprob(dist_params, obs, size, error):
 
     x = at.random.gumbel(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, mu, beta):
         return stats.gumbel_r.logpdf(obs, loc=mu, scale=beta)
@@ -538,7 +539,7 @@ def test_logistic_logprob(dist_params, obs, size, error):
 
     x = at.random.logistic(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, mu, s):
         return stats.logistic.logpdf(obs, loc=mu, scale=s)
@@ -569,7 +570,7 @@ def test_binomial_logprob(dist_params, obs, size, error):
 
     x = at.random.binomial(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, n, p):
         return stats.binom.logpmf(obs, n, p)
@@ -599,7 +600,7 @@ def test_betabinomial_logprob(dist_params, obs, size, error):
 
     x = at.random.betabinom(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, n, alpha, beta):
         return stats.betabinom.logpmf(obs, n, alpha, beta)
@@ -624,7 +625,7 @@ def test_bernoulli_logprob(dist_params, obs, size, error):
 
     x = at.random.bernoulli(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, p):
         return stats.bernoulli.logpmf(obs, p)
@@ -654,7 +655,7 @@ def test_poisson_logprob(dist_params, obs, size, error):
 
     x = at.random.poisson(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, mu):
         return stats.poisson.logpmf(obs, mu)
@@ -684,7 +685,7 @@ def test_poisson_logcdf(dist_params, obs, size, error):
 
     x = at.random.poisson(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logcdf(obs, mu):
         return stats.poisson.logcdf(obs, mu)
@@ -722,7 +723,7 @@ def test_nbinom_logprob(dist_params, obs, size, error):
 
     x = at.random.nbinom(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, n, p):
         return stats.nbinom.logpmf(obs, n, p)
@@ -752,7 +753,7 @@ def test_geometric_logprob(dist_params, obs, size, error):
 
     x = at.random.geometric(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, p):
         return stats.geom.logpmf(obs, p)
@@ -801,7 +802,7 @@ def test_hypergeometric_logprob(dist_params, obs, size, error):
             (np.array([-0.5, 0.5]),),
             np.array([0, 1], dtype=np.int64),
             (),
-            AssertionError,
+            ParameterValueError,
             True,
         ),
         (
@@ -933,7 +934,7 @@ def test_mvnormal_logprob(dist_params, obs, size, error):
 
     x = at.random.multivariate_normal(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, mu, cov):
         return stats.multivariate_normal.logpdf(obs, mu, cov)
@@ -966,7 +967,7 @@ def test_dirichlet_logprob(dist_params, obs, size, error):
 
     x = at.random.dirichlet(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, alpha):
         return stats.dirichlet.logpdf(obs.T, alpha)
@@ -999,10 +1000,22 @@ def test_multinomial_logprob(dist_params, obs, size, error):
 
     x = at.random.multinomial(*dist_params_at, size=size_at)
 
-    cm = contextlib.suppress() if not error else pytest.raises(AssertionError)
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
 
     def scipy_logprob(obs, n, p):
         return stats.multinomial.logpmf(obs, n, p)
 
     with cm:
         scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logprob)
+
+
+def test_CheckParameter():
+    mu = at.constant(0)
+    sigma = at.scalar("sigma")
+    x_rv = at.random.normal(mu, sigma, name="x")
+    x_vv = at.constant(0)
+    x_logp = logprob(x_rv, x_vv)
+
+    x_logp_fn = function([sigma], x_logp)
+    with pytest.raises(ParameterValueError, match="sigma > 0"):
+        x_logp_fn(-1)
