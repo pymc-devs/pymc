@@ -44,11 +44,9 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "IPython.sphinxext.ipython_directive",
     "sphinx.ext.autosectionlabel",
-    "sphinx.ext.napoleon",
     "myst_nb",
     "sphinx_design",
     "notfound.extension",
-    "sphinx_design",
     "sphinx_copybutton",
 ]
 
@@ -232,7 +230,7 @@ html_favicon = "../logos/PyMC.ico"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ["_static", "nb_tutorials/_images", "nb_examples/_images"]
+html_static_path = ["../logos"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

@@ -19,6 +19,7 @@ Probabilistic Programming in Python
 :::{button-ref} learning
 :color: primary
 :ref-type: ref
+:class: sd-fs-2 sd-px-5
 
 Get started!
 :::
@@ -94,6 +95,7 @@ PyMC is a non-profit project under NumFOCUS umbrella. If you value PyMC and want
 ::::{div} sd-d-flex-row sd-align-major-center
 :::{button-link} https://numfocus.org/donate-to-pymc3
 :color: secondary
+:class: sd-fs-2 sd-px-5
 
 
 Donate
@@ -108,13 +110,13 @@ Donate
 :::
 
 :::{grid-item-card}
-:img-background: https://www.numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png
+:img-background: _static/sponsors/numfocus.png
 :link: https://numfocus.org/
 :shadow: none
 :::
 
 :::{grid-item-card}
-:img-background: https://github.com/pymc-devs/pymc/raw/main/docs/pymc-labs-logo.png
+:img-background: _static/sponsors/pymc-labs.png
 :link: https://www.pymc-labs.io/
 :shadow: none
 :::

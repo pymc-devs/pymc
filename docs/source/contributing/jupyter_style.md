@@ -29,10 +29,14 @@ the repository where the notebook is in (pymc or pymc-examples).
 * When using non meaningful names such as single letters, add bullet points with a 1-2 sentence description of each variable below the equation where they are first introduced.
 
 
-## Post directive
-The first cell of all example notebooks should have a level 1 markdown title (that is a title with a single `#`) followed by the post directive. The syntax of the post directive is as follows:
+## First cell
+The first cell of all example notebooks should have a MyST target, a level 1 markdown title (that is a title with a single `#`) followed by the post directive.
+The syntax is as follows:
 
-```
+```markdown
+(notebook_id)=
+# Notebook Title
+
 :::{post} Aug 31, 2021
 :tags: tag1, tag2, tags can have spaces, tag4
 :category: level
@@ -42,15 +46,22 @@ The first cell of all example notebooks should have a level 1 markdown title (th
 
 The date should correspond to the latest update/execution date, at least roughly (it's not a problem if the date is a few days off due to the review process before merging the PR). This will allow users to see which notebooks have been updated lately and will help the PyMC team make sure no notebook is left outdated for too long.
 
-Tags can be anything, but we ask you to try to use [existing tags](https://github.com/pymc-devs/pymc/wiki/Categories-and-Tags-for-PyMC-Examples) to avoid the tag list from getting too long. Each notebook should
-have a single category indicating the level of the notebook. Choose a category from [existing categories](https://github.com/pymc-devs/pymc/wiki/Categories-and-Tags-for-PyMC-Examples#categories).
+The [MyST target](https://myst-parser.readthedocs.io/en/latest/syntax/syntax.html#targets-and-cross-referencing)
+is important to ease referencing and linking notebooks between each other.
+
+Tags can be anything, but we ask you to try to use [existing tags](https://github.com/pymc-devs/pymc/wiki/Categories-and-Tags-for-PyMC-Examples)
+to avoid the tag list from getting too long.
+
+Each notebook should have a single category indicating the level of the notebook.
+Choose a category from [existing categories](https://github.com/pymc-devs/pymc/wiki/Categories-and-Tags-for-PyMC-Examples#categories).
 
 Authors should list people who authored, adapted or updated the notebook. See {ref}`jupyter_authors`
 for more details.
 
 ## Code preamble
 
-In a cell just below the cell where you imported matplotlib (usually the first one), set the ArviZ style to darkgrid (this has to be in another cell than the MPL import because of the way MPL sets its defaults):
+In a cell just below the cell where you imported matplotlib and/or ArviZ (usually the first one),
+set the ArviZ style to darkgrid (this has to be in another cell than the matplotlib import because of the way matplotlib sets its defaults):
 
 ```python
 RANDOM_SEED = 8927
@@ -122,6 +133,7 @@ and `<date>` should preferably be month and year.
 
 authored
 : for notebooks created specifically for pymc-examples
+
 adapted
 : for notebooks adapted from other sources such as books or blogposts.
   It will therefore follow a different structure than the example above
@@ -130,9 +142,11 @@ adapted
   ```markdown
   Adapted from Alice's [blogpost](blog.alice.com) by Bob and Carol on ...
   ```
+
 re-executed
 : for notebooks re-executed with a newer PyMC version without significant changes to the code.
   It can also mention the PyMC version used to run the notebook.
+
 updated
 : for notebooks that have not only been re-executed but have also had significant updates to
   their content (either code, explanations or both).
