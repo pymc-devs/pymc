@@ -47,7 +47,7 @@ The syntax is as follows:
 The date should correspond to the latest update/execution date, at least roughly (it's not a problem if the date is a few days off due to the review process before merging the PR). This will allow users to see which notebooks have been updated lately and will help the PyMC team make sure no notebook is left outdated for too long.
 
 The [MyST target](https://myst-parser.readthedocs.io/en/latest/syntax/syntax.html#targets-and-cross-referencing)
-is important to ease referencing and linking notebooks between them.
+is important to ease referencing and linking notebooks between each other.
 
 Tags can be anything, but we ask you to try to use [existing tags](https://github.com/pymc-devs/pymc/wiki/Categories-and-Tags-for-PyMC-Examples)
 to avoid the tag list from getting too long.
