@@ -11,6 +11,7 @@ dependencies:
 - numpy=1.15
 - numpydoc>=0.9
 - pandas=0.24
+- pip
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
 - pytest>=3.0
@@ -21,3 +22,5 @@ dependencies:
 - sphinx-autobuild>=0.7
 - sphinx>=1.5
 - watermark
+- pip:
+  - deprecat
