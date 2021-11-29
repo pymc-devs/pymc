@@ -28,58 +28,6 @@ from pymc.step_methods.arraystep import ArrayStepShared, Competence
 _log = logging.getLogger("pymc")
 
 
-class ParticleTree:
-    """
-    Particle tree
-    """
-
-    def __init__(self, tree):
-        self.tree = tree.copy()  # keeps the tree that we care at the moment
-        self.expansion_nodes = [0]
-        self.used_variates = []
-
-    def sample_tree(
-        self,
-        ssv,
-        available_predictors,
-        prior_prob_leaf_node,
-        X,
-        missing_data,
-        sum_trees,
-        mean,
-        linear_fit,
-        m,
-        normal,
-        mu_std,
-        response,
-    ):
-        if self.expansion_nodes:
-            index_leaf_node = self.expansion_nodes.pop(0)
-            # Probability that this node will remain a leaf node
-            prob_leaf = prior_prob_leaf_node[self.tree[index_leaf_node].depth]
-
-            if prob_leaf < np.random.random():
-                tree_grew, index_selected_predictor = grow_tree(
-                    self.tree,
-                    index_leaf_node,
-                    ssv,
-                    available_predictors,
-                    X,
-                    missing_data,
-                    sum_trees,
-                    mean,
-                    linear_fit,
-                    m,
-                    normal,
-                    mu_std,
-                    response,
-                )
-                if tree_grew:
-                    new_indexes = self.tree.idx_leaf_nodes[-2:]
-                    self.expansion_nodes.extend(new_indexes)
-                    self.used_variates.append(index_selected_predictor)
-
-
 class PGBART(ArrayStepShared):
     """
     Particle Gibss BART sampling step
@@ -138,7 +86,6 @@ class PGBART(ArrayStepShared):
 
         self.sum_trees = np.full_like(self.Y, self.init_mean * self.m).astype(aesara.config.floatX)
         self.a_tree = Tree.init_tree(
-            tree_id=0,
             leaf_node_value=self.init_mean,
             idx_data_points=np.arange(self.num_observations, dtype="int32"),
             m=self.m,
@@ -162,14 +109,13 @@ class PGBART(ArrayStepShared):
 
         self.log_num_particles = np.log(num_particles)
         self.indices = list(range(1, num_particles))
-        self.log_likelihoods = np.empty(num_particles)
+        self.log_weights = np.empty(num_particles)
         self.max_stages = max_stages
 
         shared = make_shared_replacements(initial_values, vars, model)
         self.likelihood_logp = logp(initial_values, [model.datalogpt], vars, shared)
         self.all_particles = []
-        for i in range(self.m):
-            self.a_tree.tree_id = i
+        for _ in range(self.m):
             p = ParticleTree(self.a_tree)
             self.all_particles.append(p)
         self.all_trees = np.array([p.tree for p in self.all_particles])
@@ -184,7 +130,6 @@ class PGBART(ArrayStepShared):
         if self.iter >= self.m * 3:
             for tree_id in tree_ids:
                 self.sum_trees = self.sum_trees - self.all_particles[tree_id].tree.predict_output()
-                self.a_tree.tree_id = tree_id
                 p = ParticleTree(self.a_tree)
                 self.all_particles[tree_id] = p
                 self.all_trees[tree_id] = p.tree
@@ -196,13 +141,15 @@ class PGBART(ArrayStepShared):
             # Generate an initial set of particles
             # at the end of the algorithm we return one of these particles as the new tree
             particles = self.init_particles(tree_id)
+            # update weight previous tree
+            self.log_weights[0] = self.likelihood_logp(self.sum_trees)
             # Compute the sum of trees without the tree we are attempting to replace
             self.sum_trees_noi = self.sum_trees - particles[0].tree.predict_output()
 
             for _ in range(self.max_stages):
                 # Sample each particle (try to grow each tree), except for the first one.
                 stop_growing = 1
-                for p in particles[1:]:
+                for idx, p in enumerate(particles[1:]):
                     p.sample_tree(
                         self.ssv,
                         self.available_predictors,
@@ -219,22 +166,20 @@ class PGBART(ArrayStepShared):
                     )
                     if p.expansion_nodes:
                         stop_growing = 0
+                    else:
+                        self.log_weights[idx + 1] = self.likelihood_logp(
+                            self.sum_trees_noi + p.tree.predict_output()
+                        )
                 if stop_growing:
                     break
 
-            for idx, p in enumerate(particles):
-                self.log_likelihoods[idx] = self.likelihood_logp(
-                    self.sum_trees_noi + p.tree.predict_output()
-                )
-
-            normalized_weights = normalize(self.log_likelihoods)
+            normalized_weights = normalize_weights(self.log_weights)
             # Get the new tree and update
             new_particle = np.random.choice(particles, p=normalized_weights)
             new_tree = new_particle.tree
             self.all_trees[tree_id] = new_tree
             self.all_particles[tree_id] = new_particle
-            new_pred = new_tree.predict_output()
-            self.sum_trees = self.sum_trees_noi + new_pred
+            self.sum_trees = self.sum_trees_noi + new_tree.predict_output()
 
             if self.tune:
                 self.ssv = SampleSplittingVariable(self.alpha_vec)
@@ -270,18 +215,70 @@ class PGBART(ArrayStepShared):
         return np.array(particles)
 
 
-def normalize(log_likelihoods):
+def normalize_weights(log_weights):
     """
     Use softmax to get normalized_weights
     """
-    log_w_max = log_likelihoods.max()
-    log_w_ = log_likelihoods - log_w_max
+    log_w_max = log_weights.max()
+    log_w_ = log_weights - log_w_max
     w_ = np.exp(log_w_)
     normalized_weights = w_ / w_.sum()
     # stabilize weights to avoid assigning exactly zero probability to a particle
     normalized_weights += 1e-12
 
     return normalized_weights
+
+
+class ParticleTree:
+    """
+    Particle tree
+    """
+
+    def __init__(self, tree):
+        self.tree = tree.copy()  # keeps the tree that we care at the moment
+        self.expansion_nodes = [0]
+        self.used_variates = []
+
+    def sample_tree(
+        self,
+        ssv,
+        available_predictors,
+        prior_prob_leaf_node,
+        X,
+        missing_data,
+        sum_trees,
+        mean,
+        linear_fit,
+        m,
+        normal,
+        mu_std,
+        response,
+    ):
+        if self.expansion_nodes:
+            index_leaf_node = self.expansion_nodes.pop(0)
+            # Probability that this node will remain a leaf node
+            prob_leaf = prior_prob_leaf_node[self.tree[index_leaf_node].depth]
+
+            if prob_leaf < np.random.random():
+                tree_grew, index_selected_predictor = grow_tree(
+                    self.tree,
+                    index_leaf_node,
+                    ssv,
+                    available_predictors,
+                    X,
+                    missing_data,
+                    sum_trees,
+                    mean,
+                    linear_fit,
+                    m,
+                    normal,
+                    mu_std,
+                    response,
+                )
+                if tree_grew:
+                    new_indexes = self.tree.idx_leaf_nodes[-2:]
+                    self.expansion_nodes.extend(new_indexes)
+                    self.used_variates.append(index_selected_predictor)
 
 
 class SampleSplittingVariable:
@@ -401,13 +398,6 @@ def grow_tree(
     tree.set_node(index_leaf_node, new_split_node)
     tree.set_node(new_nodes[0].index, new_nodes[0])
     tree.set_node(new_nodes[1].index, new_nodes[1])
-    # The new SplitNode is a prunable node since it has both children.
-    tree.idx_prunable_split_nodes.append(index_leaf_node)
-    # If the parent of the node from which the tree is growing was a prunable node,
-    # remove from the list since one of its children is a SplitNode now
-    parent_index = current_node.get_idx_parent_node()
-    if parent_index in tree.idx_prunable_split_nodes:
-        tree.idx_prunable_split_nodes.remove(parent_index)
 
     return True, index_selected_predictor
 
