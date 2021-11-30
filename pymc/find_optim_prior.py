@@ -56,12 +56,12 @@ def find_optim_prior(
 
     Returns
     -------
-    The optimized distribution parameters.
+    The optimized distribution parameters as a numpy array.
     """
     if len(pm_dist.rv_op.ndims_params) != 2:
         raise NotImplementedError(
-            "This function only works only works for two-parameter distributions, as there are "
-            "exactly two constraints."
+            "This function only works for two-parameter distributions, as there are exactly two "
+            "constraints. "
         )
 
     dist_params = aet.vector("dist_params")
