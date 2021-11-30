@@ -142,3 +142,17 @@ def test_unset_repr(capsys):
     help(fn)
     captured = capsys.readouterr()
     assert "a=UNSET" in captured.out
+
+
+def test_find_optim_prior():
+    MASS = 0.95
+    opt_params = pm.find_optim_prior(pm.Gamma, lower=0.1, upper=0.4, mass=MASS, init_guess=[1, 10])
+    np.testing.assert_allclose(opt_params, np.array([8.47481597, 37.65435601]))
+
+    opt_params = pm.find_optim_prior(
+        pm.Normal, lower=155, upper=180, mass=MASS, init_guess=[170, 3]
+    )
+    np.testing.assert_allclose(opt_params, np.array([167.5000001, 6.37766828]))
+
+    with pytest.raises(NotImplementedError, match="only works for two-parameter distributions"):
+        pm.find_optim_prior(pm.Exponential, lower=0.1, upper=0.4, mass=MASS, init_guess=[1])
