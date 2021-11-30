@@ -34,15 +34,8 @@ class Tree:
         The dictionary's keys are integers that represent the nodes position.
         The dictionary's values are objects of type SplitNode or LeafNode that represent the nodes
         of the tree itself.
-    num_nodes : int
-        Total number of nodes.
     idx_leaf_nodes : list
         List with the index of the leaf nodes of the tree.
-    idx_prunable_split_nodes : list
-        List with the index of the prunable splitting nodes of the tree. A splitting node is
-        prunable if both its children are leaf nodes.
-    tree_id : int
-        Identifier used to get the previous tree in the ParticleGibbs algorithm used in BART.
     num_observations : int
         Number of observations used to fit BART.
     m : int
@@ -50,16 +43,12 @@ class Tree:
 
     Parameters
     ----------
-    tree_id : int, optional
     num_observations : int, optional
     """
 
-    def __init__(self, tree_id=0, num_observations=0, m=0):
+    def __init__(self, num_observations=0, m=0):
         self.tree_structure = {}
-        self.num_nodes = 0
         self.idx_leaf_nodes = []
-        self.idx_prunable_split_nodes = []
-        self.tree_id = tree_id
         self.num_observations = num_observations
         self.m = m
 
@@ -77,7 +66,6 @@ class Tree:
 
     def set_node(self, index, node):
         self.tree_structure[index] = node
-        self.num_nodes += 1
         if isinstance(node, LeafNode):
             self.idx_leaf_nodes.append(index)
 
@@ -86,7 +74,6 @@ class Tree:
         if isinstance(current_node, LeafNode):
             self.idx_leaf_nodes.remove(index)
         del self.tree_structure[index]
-        self.num_nodes -= 1
 
     def predict_output(self):
         output = np.zeros(self.num_observations)
@@ -143,39 +130,12 @@ class Tree:
                 current_node, split_variable = self._traverse_tree(x, right_child, split_variable)
         return current_node, split_variable
 
-    def grow_tree(self, index_leaf_node, new_split_node, new_left_node, new_right_node):
-        """
-        Grow the tree from a particular node.
-
-        Parameters
-        ----------
-        index_leaf_node : int
-        new_split_node : SplitNode
-        new_left_node : LeafNode
-        new_right_node : LeafNode
-        """
-        current_node = self.get_node(index_leaf_node)
-
-        self.delete_node(index_leaf_node)
-        self.set_node(index_leaf_node, new_split_node)
-        self.set_node(new_left_node.index, new_left_node)
-        self.set_node(new_right_node.index, new_right_node)
-
-        # The new SplitNode is a prunable node since it has both children.
-        self.idx_prunable_split_nodes.append(index_leaf_node)
-        # If the parent of the node from which the tree is growing was a prunable node,
-        # remove from the list since one of its children is a SplitNode now
-        parent_index = current_node.get_idx_parent_node()
-        if parent_index in self.idx_prunable_split_nodes:
-            self.idx_prunable_split_nodes.remove(parent_index)
-
     @staticmethod
-    def init_tree(tree_id, leaf_node_value, idx_data_points, m):
+    def init_tree(leaf_node_value, idx_data_points, m):
         """
 
         Parameters
         ----------
-        tree_id
         leaf_node_value
         idx_data_points
         m : int
@@ -185,7 +145,7 @@ class Tree:
         -------
 
         """
-        new_tree = Tree(tree_id, len(idx_data_points), m)
+        new_tree = Tree(len(idx_data_points), m)
         new_tree[0] = LeafNode(index=0, value=leaf_node_value, idx_data_points=idx_data_points)
         return new_tree
 
