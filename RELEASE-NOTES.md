@@ -114,7 +114,8 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
   - Modify how particle weights are computed. This improves accuracy of the modeled function (see [5177](https://github.com/pymc-devs/pymc3/pull/5177)).
   - Improve sampling, increase default number of particles [5229](https://github.com/pymc-devs/pymc3/pull/5229).
 - `pm.Data` now passes additional kwargs to `aesara.shared`. [#5098](https://github.com/pymc-devs/pymc/pull/5098)
-- ...
+- The new `pm.find_optim_prior` function can be used to find the optimal prior parameters of a distribution under some
+  constraints (e.g lower and upper bound). See [#5231](https://github.com/pymc-devs/pymc/pull/5231).
 
 
 ### Internal changes
