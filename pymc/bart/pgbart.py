@@ -68,7 +68,6 @@ class PGBART(ArrayStepShared):
         self.m = self.bart.m
         self.alpha = self.bart.alpha
         self.k = self.bart.k
-        self.response = self.bart.response
         self.alpha_vec = self.bart.split_prior
         if self.alpha_vec is None:
             self.alpha_vec = np.ones(self.X.shape[1])
@@ -90,10 +89,8 @@ class PGBART(ArrayStepShared):
         self.a_tree = Tree.init_tree(
             leaf_node_value=self.init_mean / self.m,
             idx_data_points=np.arange(self.num_observations, dtype="int32"),
-            m=self.m,
         )
         self.mean = fast_mean()
-        self.linear_fit = fast_linear_fit()
 
         self.normal = NormalSampler()
         self.prior_prob_leaf_node = compute_prior_probability(self.alpha)
@@ -140,11 +137,9 @@ class PGBART(ArrayStepShared):
                 self.sum_trees,
                 self.X,
                 self.mean,
-                self.linear_fit,
                 self.m,
                 self.normal,
                 self.mu_std,
-                self.response,
             )
 
             # The old tree and the one with new leafs do not grow so we update the weights only once
@@ -162,11 +157,9 @@ class PGBART(ArrayStepShared):
                         self.missing_data,
                         self.sum_trees,
                         self.mean,
-                        self.linear_fit,
                         self.m,
                         self.normal,
                         self.mu_std,
-                        self.response,
                     )
                     if tree_grew:
                         self.update_weight(p)
@@ -286,11 +279,9 @@ class ParticleTree:
         missing_data,
         sum_trees,
         mean,
-        linear_fit,
         m,
         normal,
         mu_std,
-        response,
     ):
         tree_grew = False
         if self.expansion_nodes:
@@ -308,11 +299,9 @@ class ParticleTree:
                     missing_data,
                     sum_trees,
                     mean,
-                    linear_fit,
                     m,
                     normal,
                     mu_std,
-                    response,
                 )
                 if index_selected_predictor is not None:
                     new_indexes = self.tree.idx_leaf_nodes[-2:]
@@ -322,9 +311,9 @@ class ParticleTree:
 
         return tree_grew
 
-    def sample_leafs(self, sum_trees, X, mean, linear_fit, m, normal, mu_std, response):
+    def sample_leafs(self, sum_trees, X, mean, m, normal, mu_std):
 
-        sample_leaf_values(self.tree, sum_trees, X, mean, linear_fit, m, normal, mu_std, response)
+        sample_leaf_values(self.tree, sum_trees, X, mean, m, normal, mu_std)
 
 
 class SampleSplittingVariable:
@@ -379,11 +368,9 @@ def grow_tree(
     missing_data,
     sum_trees,
     mean,
-    linear_fit,
     m,
     normal,
     mu_std,
-    response,
 ):
     current_node = tree.get_node(index_leaf_node)
     idx_data_points = current_node.idx_data_points
@@ -409,28 +396,22 @@ def grow_tree(
             current_node.get_idx_right_child(),
         )
 
-        if response == "mix":
-            response = "linear" if np.random.random() >= 0.5 else "constant"
-
         new_nodes = []
         for idx in range(2):
             idx_data_point = new_idx_data_points[idx]
-            node_value, node_linear_params = draw_leaf_value(
+            node_value = draw_leaf_value(
                 sum_trees[idx_data_point],
                 X[idx_data_point, selected_predictor],
                 mean,
-                linear_fit,
                 m,
                 normal,
                 mu_std,
-                response,
             )
 
             new_node = LeafNode(
                 index=current_node_children[idx],
                 value=node_value,
                 idx_data_points=idx_data_point,
-                linear_params=node_linear_params,
             )
             new_nodes.append(new_node)
 
@@ -449,7 +430,7 @@ def grow_tree(
         return index_selected_predictor
 
 
-def sample_leaf_values(tree, sum_trees, X, mean, linear_fit, m, normal, mu_std, response):
+def sample_leaf_values(tree, sum_trees, X, mean, m, normal, mu_std):
 
     for idx in tree.idx_leaf_nodes:
         if idx > 0:
@@ -457,18 +438,15 @@ def sample_leaf_values(tree, sum_trees, X, mean, linear_fit, m, normal, mu_std, 
             idx_data_points = leaf.idx_data_points
             parent_node = tree[leaf.get_idx_parent_node()]
             selected_predictor = parent_node.idx_split_variable
-            node_value, node_linear_params = draw_leaf_value(
+            node_value = draw_leaf_value(
                 sum_trees[idx_data_points],
                 X[idx_data_points, selected_predictor],
                 mean,
-                linear_fit,
                 m,
                 normal,
                 mu_std,
-                response,
             )
             leaf.value = node_value
-            leaf.linear_params = node_linear_params
 
 
 def get_new_idx_data_points(split_value, idx_data_points, selected_predictor, X):
@@ -480,24 +458,19 @@ def get_new_idx_data_points(split_value, idx_data_points, selected_predictor, X)
     return left_node_idx_data_points, right_node_idx_data_points
 
 
-def draw_leaf_value(Y_mu_pred, X_mu, mean, linear_fit, m, normal, mu_std, response):
+def draw_leaf_value(Y_mu_pred, X_mu, mean, m, normal, mu_std):
     """Draw Gaussian distributed leaf values"""
-    linear_params = None
     if Y_mu_pred.size == 0:
-        return 0, linear_params
+        return 0
     else:
         norm = normal.random() * mu_std
         if Y_mu_pred.size == 1:
             mu_mean = Y_mu_pred.item() / m
-        elif response == "constant":
+        else:
             mu_mean = mean(Y_mu_pred) / m
-        elif response == "linear":
-            Y_fit, linear_params = linear_fit(X_mu, Y_mu_pred)
-            mu_mean = Y_fit / m
-            linear_params[2] = norm
 
         draw = norm + mu_mean
-        return draw, linear_params
+        return draw
 
 
 def fast_mean():
@@ -516,32 +489,6 @@ def fast_mean():
         return suma / count
 
     return mean
-
-
-def fast_linear_fit():
-    """If available use Numba to speed up the computation of the linear fit"""
-
-    def linear_fit(X, Y):
-
-        n = len(Y)
-        xbar = np.sum(X) / n
-        ybar = np.sum(Y) / n
-
-        den = X @ X - n * xbar ** 2
-        if den > 1e-10:
-            b = (X @ Y - n * xbar * ybar) / den
-        else:
-            b = 0
-        a = ybar - b * xbar
-        Y_fit = a + b * X
-        return Y_fit, [a, b, 0]
-
-    try:
-        from numba import jit
-
-        return jit(linear_fit)
-    except ImportError:
-        return linear_fit
 
 
 def discrete_uniform_sampler(upper_value):

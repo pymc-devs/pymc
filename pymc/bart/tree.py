@@ -46,11 +46,10 @@ class Tree:
     num_observations : int, optional
     """
 
-    def __init__(self, num_observations=0, m=0):
+    def __init__(self, num_observations=0):
         self.tree_structure = {}
         self.idx_leaf_nodes = []
         self.num_observations = num_observations
-        self.m = m
 
     def __getitem__(self, index):
         return self.get_node(index)
@@ -97,16 +96,10 @@ class Tree:
         float
             Value of the leaf value where the unobserved point lies.
         """
-        leaf_node, split_variable = self._traverse_tree(X, node_index=0)
-        linear_params = leaf_node.linear_params
-        if linear_params is None:
-            return leaf_node.value
-        else:
-            x = X[split_variable].item()
-            y_x = (linear_params[0] + linear_params[1] * x) / self.m
-            return y_x + linear_params[2]
+        leaf_node = self._traverse_tree(X, node_index=0)
+        return leaf_node.value
 
-    def _traverse_tree(self, x, node_index=0, split_variable=None):
+    def _traverse_tree(self, x, node_index=0):
         """
         Traverse the tree starting from a particular node given an unobserved point.
 
@@ -121,17 +114,16 @@ class Tree:
         """
         current_node = self.get_node(node_index)
         if isinstance(current_node, SplitNode):
-            split_variable = current_node.idx_split_variable
-            if x[split_variable] <= current_node.split_value:
+            if x[current_node.idx_split_variable] <= current_node.split_value:
                 left_child = current_node.get_idx_left_child()
-                current_node, split_variable = self._traverse_tree(x, left_child, split_variable)
+                current_node = self._traverse_tree(x, left_child)
             else:
                 right_child = current_node.get_idx_right_child()
-                current_node, split_variable = self._traverse_tree(x, right_child, split_variable)
-        return current_node, split_variable
+                current_node = self._traverse_tree(x, right_child)
+        return current_node
 
     @staticmethod
-    def init_tree(leaf_node_value, idx_data_points, m):
+    def init_tree(leaf_node_value, idx_data_points):
         """
 
         Parameters
@@ -145,7 +137,7 @@ class Tree:
         -------
 
         """
-        new_tree = Tree(len(idx_data_points), m)
+        new_tree = Tree(len(idx_data_points))
         new_tree[0] = LeafNode(index=0, value=leaf_node_value, idx_data_points=idx_data_points)
         return new_tree
 
@@ -174,8 +166,7 @@ class SplitNode(BaseNode):
 
 
 class LeafNode(BaseNode):
-    def __init__(self, index, value, idx_data_points, linear_params=None):
+    def __init__(self, index, value, idx_data_points):
         super().__init__(index)
         self.value = value
         self.idx_data_points = idx_data_points
-        self.linear_params = linear_params

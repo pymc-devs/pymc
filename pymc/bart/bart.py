@@ -67,9 +67,6 @@ class BART(NoDistribution):
     k : float
         Scale parameter for the values of the leaf nodes. Defaults to 2. Recomended to be between 1
         and 3.
-    response : str
-        How the leaf_node values are computed. Available options are ``constant`` (default),
-        ``linear`` or ``mix``.
     split_prior : array-like
         Each element of split_prior should be in the [0, 1] interval and the elements should sum to
         1. Otherwise they will be normalized.
@@ -84,7 +81,6 @@ class BART(NoDistribution):
         m=50,
         alpha=0.25,
         k=2,
-        response="constant",
         split_prior=None,
         **kwargs,
     ):
@@ -103,7 +99,6 @@ class BART(NoDistribution):
                 m=m,
                 alpha=alpha,
                 k=k,
-                response=response,
                 split_prior=split_prior,
             ),
         )()

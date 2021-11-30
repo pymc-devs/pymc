@@ -67,7 +67,7 @@ class TestUtils:
     Y = np.random.normal(0, 1, size=50)
 
     with pm.Model() as model:
-        mu = pm.BART("mu", X, Y, m=10, response="mix")
+        mu = pm.BART("mu", X, Y, m=10)
         sigma = pm.HalfNormal("sigma", 1)
         y = pm.Normal("y", mu, sigma, observed=Y)
         idata = pm.sample(random_seed=3415)
