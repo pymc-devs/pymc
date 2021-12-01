@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import List
+from typing import Dict, Optional
 
 import aesara
 import aesara.tensor as aet
@@ -29,14 +29,16 @@ def find_optim_prior(
     pm_dist: pm.Distribution,
     lower: float,
     upper: float,
-    init_guess: List[float],
+    init_guess: Dict[str, float],
     mass: float = 0.95,
-) -> np.ndarray:
+    fixed_params: Optional[Dict[str, float]] = None,
+) -> Dict[str, float]:
     """
     Find optimal parameters to get `mass` % of probability
     of `pm_dist` between `lower` and `upper`.
-    Note: only works for two-parameter distributions, as there
-    are exactly two constraints.
+    Note: only works for one- and two-parameter distributions, as there
+    are exactly two constraints. Fix some combination of parameters
+    if you want to use it on >=3-parameter distributions.
 
     Parameters
     ----------
@@ -47,27 +49,50 @@ def find_optim_prior(
         Lower bound to get `mass` % of probability of `pm_dist`.
     upper : float
         Upper bound to get `mass` % of probability of `pm_dist`.
-    init_guess: List[float]
+    init_guess: Dict[str, float]
         Initial guess for ``scipy.optimize.least_squares`` to find the
         optimal parameters of `pm_dist` fitting the interval constraint.
+        Must be a dictionary with the name of the PyMC distribution's
+        parameter as keys and the initial guess as values.
     mass: float, default to 0.95
         Share of the probability mass we want between ``lower`` and ``upper``.
         Defaults to 95%.
+    fixed_params: Dict[str, float], Optional, default None
+        Only used when `pm_dist` has at least three parameters.
+        Dictionary of fixed parameters, so that there are only 2 to optimize.
+        For instance, for a StudenT, you fix nu to a constant and get the optimized
+        mu and sigma.
 
     Returns
     -------
-    The optimized distribution parameters as a numpy array.
+    The optimized distribution parameters as a dictionary with the parameters'
+    name as key and the optimized value as value.
     """
-    if len(pm_dist.rv_op.ndims_params) != 2:
-        raise NotImplementedError(
-            "This function only works for two-parameter distributions, as there are exactly two "
-            "constraints. "
+    if len(init_guess) > 2:
+        if (fixed_params is None) or (len(fixed_params) < (len(pm_dist.rv_op.ndims_params) - 2)):
+            raise NotImplementedError(
+                "This function can only optimize two parameters. "
+                f"{pm_dist} has {len(pm_dist.rv_op.ndims_params)} parameters. "
+                f"You need to fix {len(pm_dist.rv_op.ndims_params) - 2} parameters in the "
+                "`fixed_params` dictionary."
+            )
+    elif (len(init_guess) < 2) and (len(init_guess) < len(pm_dist.rv_op.ndims_params)):
+        raise ValueError(
+            f"{pm_dist} has {len(pm_dist.rv_op.ndims_params)} parameters, but you provided only "
+            f"{len(init_guess)} initial guess. You need to provide 2."
         )
 
     dist_params = aet.vector("dist_params")
+    params_to_optim = {
+        arg_name: dist_params[i] for arg_name, i in zip(init_guess.keys(), range(len(init_guess)))
+    }
     lower_, upper_ = aet.scalars("lower", "upper")
 
-    dist_ = pm_dist.dist(*[dist_params[i] for i in range(len(init_guess))])
+    if fixed_params is not None:
+        dist_ = pm_dist.dist(**(params_to_optim | fixed_params))
+    else:
+        dist_ = pm_dist.dist(**params_to_optim)
+
     try:
         logcdf_lower = pm.logcdf(dist_, lower_)
         logcdf_upper = pm.logcdf(dist_, upper_)
@@ -89,8 +114,19 @@ def find_optim_prior(
     except Exception:
         jac = "2-point"
 
-    opt = optimize.least_squares(logcdf, init_guess, jac=jac, args=(lower, upper))
+    opt = optimize.least_squares(logcdf, x0=list(init_guess.values()), jac=jac, args=(lower, upper))
     if not opt.success:
         raise ValueError("Optimization of parameters failed.")
 
-    return opt.x
+    if fixed_params is not None:
+        return {
+            param_name: param_value for param_name, param_value in zip(init_guess.keys(), opt.x)
+        } | fixed_params
+    else:
+        return {
+            param_name: param_value for param_name, param_value in zip(init_guess.keys(), opt.x)
+        }
+
+
+# check that Scipy's parametrization is used
+# handle 1-param case
