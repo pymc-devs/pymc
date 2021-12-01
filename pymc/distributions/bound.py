@@ -21,7 +21,7 @@ from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import floatX, intX
 from pymc.distributions.continuous import BoundedContinuous
-from pymc.distributions.dist_math import bound
+from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import Continuous, Discrete
 from pymc.distributions.shape_utils import to_tuple
 from pymc.model import modelcontext
@@ -68,7 +68,7 @@ class _ContinuousBounded(BoundedContinuous):
         TensorVariable
         """
         logp = logprob(distribution, value)
-        return bound(logp, (value >= lower), (value <= upper))
+        return check_parameters(logp, (value >= lower), (value <= upper))
 
 
 class DiscreteBoundRV(BoundRV):
@@ -108,7 +108,7 @@ class _DiscreteBounded(Discrete):
         TensorVariable
         """
         logp = logprob(distribution, value)
-        return bound(logp, (value >= lower), (value <= upper))
+        return check_parameters(logp, (value >= lower), (value <= upper))
 
 
 class Bound:

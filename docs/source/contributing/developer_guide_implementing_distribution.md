@@ -129,11 +129,11 @@ Here is how the example continues:
 
 from pymc.aesaraf import floatX, intX
 from pymc.distributions.continuous import PositiveContinuous
-from pymc.distributions.dist_math import bound
+from pymc.distributions.dist_math import check_parameters
+
 
 # Subclassing `PositiveContinuous` will dispatch a default `log` transformation
 class Blah(PositiveContinuous):
-
     # This will be used by the metaclass `DistributionMeta` to dispatch the
     # class `logp` and `logcdf` methods to the `blah` `op`
     rv_op = blah
@@ -158,24 +158,25 @@ class Blah(PositiveContinuous):
     def logp(value, param1, param2):
         logp_expression = value * (param1 + at.log(param2))
 
-         # We use `bound` for parameter validation. After the default expression,
-         # multiple comma-separated symbolic conditions can be added. Whenever
-         # a bound is invalidated, the returned expression evaluates to `-np.inf`
-         return bound(
+        # A switch is often used to enforce the distribution support domain
+        bounded_logp_expression = at.switch(
+            at.gt(value >= 0),
             logp_expression,
-            value >= 0,
-            param2 >= 0,
-            # There is one sneaky optional keyowrd argument, that converts an
-            # otherwise elemwise `bound` to a reduced scalar bound. This is usually
-            # needed for multivariate distributions where the dimensionality
-            # of the bound conditions does not match that of the "value" / "logp"
-            # By default it is set to `True`.
-            broadcast_conditions=True,
+            -np.inf,
         )
 
-    # logcdf works the same way as logp. For bounded variables, it is expected
-    # to return `-inf` for values below the domain start and `0` for values
-    # above the domain end, but only when the parameters are valid.
+        # We use `check_parameters` for parameter validation. After the default expression,
+        # multiple comma-separated symbolic conditions can be added. Whenever
+        # a bound is invalidated, the returned expression raises an error with the message
+        # defined in the optional `msg` keyword argument.
+        return check_parameters(
+            logp_expression,
+            param2 >= 0,
+            msg="param2 >= 0",
+    )
+
+    # logcdf works the same way as logp. For bounded variables, it is expected to return
+    # `-inf` for values below the domain start and `0` for values above the domain end.
     def logcdf(value, param1, param2):
         ...
 
@@ -357,7 +358,7 @@ New distributions should have a rich docstring, following the same format as tha
 It generally looks something like this:
 
 ```python
- r"""Univariate blah distribution.
+r"""Univariate blah distribution.
 
  The pdf of this distribution is
 

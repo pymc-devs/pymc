@@ -31,7 +31,7 @@ from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-impor
 from aesara.tensor.var import TensorConstant
 from scipy.cluster.vq import kmeans
 
-from pymc.aesaraf import compile_rv_inplace, walk_model
+from pymc.aesaraf import compile_pymc, walk_model
 
 # Avoid circular dependency when importing modelcontext
 from pymc.distributions.distribution import NoDistribution
@@ -68,7 +68,7 @@ def replace_with_values(vars_needed, replacements=None, model=None):
     if len(inputs) == 0:
         return tuple(v.eval() for v in vars_needed)
 
-    fn = compile_rv_inplace(
+    fn = compile_pymc(
         inputs,
         vars_needed,
         allow_input_downcast=True,

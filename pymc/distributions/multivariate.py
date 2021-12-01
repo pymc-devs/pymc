@@ -44,7 +44,7 @@ import pymc as pm
 from pymc.aesaraf import floatX, intX
 from pymc.distributions import transforms
 from pymc.distributions.continuous import ChiSquared, Normal, assert_negative_support
-from pymc.distributions.dist_math import bound, factln, logpow, multigammaln
+from pymc.distributions.dist_math import check_parameters, factln, logpow, multigammaln
 from pymc.distributions.distribution import Continuous, Discrete
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
@@ -252,7 +252,7 @@ class MvNormal(Continuous):
         quaddist, logdet, ok = quaddist_parse(value, mu, cov)
         k = floatX(value.shape[-1])
         norm = -0.5 * k * pm.floatX(np.log(2 * np.pi))
-        return bound(norm - 0.5 * quaddist - logdet, ok)
+        return check_parameters(norm - 0.5 * quaddist - logdet, ok)
 
     def _distr_parameters_for_repr(self):
         return ["mu", "cov"]
@@ -380,7 +380,7 @@ class MvStudentT(Continuous):
 
         norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * at.log(nu * np.pi)
         inner = -(nu + k) / 2.0 * at.log1p(quaddist / nu)
-        return bound(norm + inner - logdet, ok)
+        return check_parameters(norm + inner - logdet, ok)
 
     def _distr_parameters_for_repr(self):
         return ["nu", "mu", "cov"]
@@ -448,12 +448,11 @@ class Dirichlet(Continuous):
         TensorVariable
         """
         # only defined for sum(value) == 1
-        return bound(
+        return check_parameters(
             at.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(at.sum(a, axis=-1)),
-            at.all(value >= 0),
-            at.all(value <= 1),
-            at.all(a > 0),
-            broadcast_conditions=False,
+            value >= 0,
+            value <= 1,
+            a > 0,
         )
 
     def _distr_parameters_for_repr(self):
@@ -554,14 +553,13 @@ class Multinomial(Discrete):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             factln(n) + at.sum(-factln(value) + logpow(p, value), axis=-1),
-            at.all(value >= 0),
-            at.all(at.eq(at.sum(value, axis=-1), n)),
-            at.all(p <= 1),
-            at.all(at.eq(at.sum(p, axis=-1), 1)),
-            at.all(at.ge(n, 0)),
-            broadcast_conditions=False,
+            value >= 0,
+            at.eq(at.sum(value, axis=-1), n),
+            p <= 1,
+            at.eq(at.sum(p, axis=-1), 1),
+            at.ge(n, 0),
         )
 
 
@@ -663,13 +661,12 @@ class DirichletMultinomial(Discrete):
 
         # Bounds checking to confirm parameters and data meet all constraints
         # and that each observation value_i sums to n_i.
-        return bound(
+        return check_parameters(
             result,
             value >= 0,
             a > 0,
             n >= 0,
             at.eq(value.sum(axis=-1), n),
-            broadcast_conditions=False,
         )
 
 
@@ -937,7 +934,7 @@ class Wishart(Continuous):
         IVI = det(V)
         IXI = det(X)
 
-        return bound(
+        return check_parameters(
             (
                 (nu - p - 1) * at.log(IXI)
                 - trace(matrix_inverse(V).dot(X))
@@ -949,7 +946,6 @@ class Wishart(Continuous):
             matrix_pos_def(X),
             at.eq(X, X.T),
             nu > (p - 1),
-            broadcast_conditions=False,
         )
 
 
@@ -1534,13 +1530,12 @@ class LKJCorr(Continuous):
 
         result = _lkj_normalizing_constant(eta, n)
         result += (eta - 1.0) * at.log(det(X))
-        return bound(
+        return check_parameters(
             result,
             X >= -1,
             X <= 1,
             matrix_pos_def(X),
             eta > 0,
-            broadcast_conditions=False,
         )
 
     def _distr_parameters_for_repr(self):
@@ -2146,9 +2141,9 @@ class CAR(Continuous):
 
         tau_dot_delta = D[None, :] * delta - alpha * Wdelta
         logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
-        return bound(
+        return check_parameters(
             0.5 * (logtau + logdet - logquad),
-            at.all(alpha <= 1),
-            at.all(alpha >= -1),
+            alpha <= 1,
+            alpha >= -1,
             tau > 0,
         )

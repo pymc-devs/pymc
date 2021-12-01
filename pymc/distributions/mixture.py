@@ -20,7 +20,7 @@ import numpy as np
 
 from pymc.aesaraf import _conversion_map, take_along_axis
 from pymc.distributions.continuous import Normal, get_tau_sigma
-from pymc.distributions.dist_math import bound
+from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import Discrete, Distribution
 from pymc.distributions.shape_utils import to_tuple
 from pymc.math import logsumexp
@@ -416,7 +416,7 @@ class Mixture(Distribution):
         """
         w = self.w
 
-        return bound(
+        return check_parameters(
             logsumexp(at.log(w) + self._comp_logp(value), axis=-1, keepdims=False),
             w >= 0,
             w <= 1,
@@ -744,7 +744,7 @@ class MixtureSameFamily(Distribution):
         value = at.shape_padaxis(value, axis=mixture_axis - comp_dists_ndim)
 
         comp_logp = comp_dists.logp(value)
-        return bound(
+        return check_parameters(
             logsumexp(at.log(w) + comp_logp, axis=mixture_axis, keepdims=False),
             w >= 0,
             w <= 1,

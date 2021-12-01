@@ -37,7 +37,7 @@ from fastprogress.fastprogress import progress_bar
 
 import pymc as pm
 
-from pymc.aesaraf import change_rv_size, compile_rv_inplace, inputvars, walk_model
+from pymc.aesaraf import change_rv_size, compile_pymc, inputvars, walk_model
 from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray
@@ -1697,7 +1697,7 @@ def sample_posterior_predictive(
     if size is not None:
         vars_to_sample = [change_rv_size(v, size, expand=True) for v in vars_to_sample]
 
-    sampler_fn = compile_rv_inplace(
+    sampler_fn = compile_pymc(
         inputs,
         vars_to_sample,
         allow_input_downcast=True,
@@ -2009,7 +2009,7 @@ def sample_prior_predictive(
 
     inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, SharedVariable)]
 
-    sampler_fn = compile_rv_inplace(
+    sampler_fn = compile_pymc(
         inputs, vars_to_sample, allow_input_downcast=True, accept_inplace=True, mode=mode
     )
 
