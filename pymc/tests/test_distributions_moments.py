@@ -54,6 +54,7 @@ from pymc.distributions import (
     Triangular,
     TruncatedNormal,
     Uniform,
+    VonMises,
     Wald,
     Weibull,
     ZeroInflatedBinomial,
@@ -435,6 +436,21 @@ def test_inverse_gamma_moment(alpha, beta, size, expected):
 def test_pareto_moment(alpha, m, size, expected):
     with Model() as model:
         Pareto("x", alpha=alpha, m=m, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, kappa, size, expected",
+    [
+        (0, 1, None, 0),
+        (0, np.ones(4), None, np.zeros(4)),
+        (np.arange(4), 0.5, None, np.arange(4)),
+        (np.arange(4), np.arange(1, 5), (2, 4), np.full((2, 4), np.arange(4))),
+    ],
+)
+def test_vonmises_moment(mu, kappa, size, expected):
+    with Model() as model:
+        VonMises("x", mu=mu, kappa=kappa, size=size)
     assert_moment_is_expected(model, expected)
 
 

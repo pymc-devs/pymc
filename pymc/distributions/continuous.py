@@ -2924,6 +2924,12 @@ class VonMises(CircularContinuous):
         assert_negative_support(kappa, "kappa", "VonMises")
         return super().dist([mu, kappa], *args, **kwargs)
 
+    def get_moment(rv, size, mu, kappa):
+        mu, _ = at.broadcast_arrays(mu, kappa)
+        if not rv_size_is_none(size):
+            mu = at.full(size, mu)
+        return mu
+
 
 class SkewNormalRV(RandomVariable):
     name = "skewnormal"
