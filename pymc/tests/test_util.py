@@ -146,13 +146,56 @@ def test_unset_repr(capsys):
 
 def test_find_optim_prior():
     MASS = 0.95
-    opt_params = pm.find_optim_prior(pm.Gamma, lower=0.1, upper=0.4, mass=MASS, init_guess=[1, 10])
-    np.testing.assert_allclose(opt_params, np.array([8.47481597, 37.65435601]))
 
+    # normal case
     opt_params = pm.find_optim_prior(
-        pm.Normal, lower=155, upper=180, mass=MASS, init_guess=[170, 3]
+        pm.Gamma, lower=0.1, upper=0.4, mass=MASS, init_guess={"alpha": 1, "beta": 10}
     )
-    np.testing.assert_allclose(opt_params, np.array([167.5000001, 6.37766828]))
+    np.testing.assert_allclose(np.asarray(opt_params.values()), np.array([8.47481597, 37.65435601]))
 
-    with pytest.raises(NotImplementedError, match="only works for two-parameter distributions"):
-        pm.find_optim_prior(pm.Exponential, lower=0.1, upper=0.4, mass=MASS, init_guess=[1])
+    # normal case, other distribution
+    opt_params = pm.find_optim_prior(
+        pm.Normal, lower=155, upper=180, mass=MASS, init_guess={"mu": 170, "sigma": 3}
+    )
+    np.testing.assert_allclose(np.asarray(opt_params.values()), np.array([167.5000001, 6.37766828]))
+
+    # 1-param case
+    opt_params = pm.find_optim_prior(
+        pm.Exponential, lower=0.1, upper=0.4, mass=MASS, init_guess={"lam": 10}
+    )
+    np.testing.assert_allclose(np.asarray(opt_params.values()), np.array([0.79929324]))
+
+    # 3-param case
+    opt_params = pm.find_optim_prior(
+        pm.StudentT,
+        lower=0.1,
+        upper=0.4,
+        mass=MASS,
+        init_guess={"mu": 170, "sigma": 3},
+        fixed_params={"nu": 7},
+    )
+    np.testing.assert_allclose(np.asarray(opt_params.values()), np.array([0.25, 0.06343503]))
+
+    with pytest.raises(ValueError, match="parameters, but you provided only"):
+        pm.find_optim_prior(
+            pm.Gamma,
+            lower=0.1,
+            upper=0.4,
+            mass=MASS,
+            init_guess={"alpha": 1},
+            fixed_params={"beta": 10},
+        )
+
+    with pytest.raises(TypeError, match="required positional argument"):
+        pm.find_optim_prior(
+            pm.StudentT, lower=0.1, upper=0.4, mass=MASS, init_guess={"mu": 170, "sigma": 3}
+        )
+
+    with pytest.raises(NotImplementedError, match="This function can only optimize two parameters"):
+        pm.find_optim_prior(
+            pm.StudentT,
+            lower=0.1,
+            upper=0.4,
+            mass=MASS,
+            init_guess={"mu": 170, "sigma": 3, "nu": 7},
+        )
