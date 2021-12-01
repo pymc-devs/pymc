@@ -98,8 +98,9 @@ def find_optim_prior(
         logcdf_upper = pm.logcdf(dist_, upper_)
     except AttributeError:
         raise AttributeError(
-            f"You cannot use `find_optim_params` with {pm_dist} -- it doesn't have a logcdf "
-            f"method yet. Open an issue or, even better, a PR on PyMC repo if you really need it."
+            f"You cannot use `find_optim_prior` with {pm_dist} -- it doesn't have a logcdf "
+            "method yet. Open an issue or, even better, a pull request on PyMC repo if you really "
+            "need it."
         )
 
     alpha = 1 - mass
@@ -126,7 +127,3 @@ def find_optim_prior(
         return {
             param_name: param_value for param_name, param_value in zip(init_guess.keys(), opt.x)
         }
-
-
-# check that Scipy's parametrization is used
-# handle 1-param case
