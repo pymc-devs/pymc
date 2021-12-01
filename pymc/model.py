@@ -48,7 +48,7 @@ from aesara.tensor.var import TensorVariable
 from pandas import Series
 
 from pymc.aesaraf import (
-    compile_rv_inplace,
+    compile_pymc,
     gradient,
     hessian,
     inputvars,
@@ -462,7 +462,7 @@ class ValueGradFunction:
 
         inputs = grad_vars
 
-        self._aesara_function = compile_rv_inplace(inputs, outputs, givens=givens, **kwargs)
+        self._aesara_function = compile_pymc(inputs, outputs, givens=givens, **kwargs)
 
     def set_weights(self, values):
         if values.shape != (self._n_costs - 1,):
@@ -1400,7 +1400,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         Compiled Aesara function
         """
         with self:
-            return compile_rv_inplace(
+            return compile_pymc(
                 self.value_vars,
                 outs,
                 allow_input_downcast=True,

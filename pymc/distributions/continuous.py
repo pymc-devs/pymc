@@ -76,7 +76,7 @@ from pymc.aesaraf import floatX
 from pymc.distributions import logp_transform, transforms
 from pymc.distributions.dist_math import (
     SplineWrapper,
-    bound,
+    check_parameters,
     clipped_beta_rvs,
     i0e,
     log_normal,
@@ -442,7 +442,7 @@ class HalfFlat(PositiveContinuous):
         -------
         TensorVariable
         """
-        return bound(at.zeros_like(value), value > 0)
+        return check_parameters(at.zeros_like(value), value > 0)
 
     def logcdf(value):
         """
@@ -565,7 +565,7 @@ class Normal(Continuous):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             normal_lcdf(mu, sigma, value),
             0 < sigma,
         )
@@ -771,7 +771,7 @@ class TruncatedNormal(BoundedContinuous):
             bounds.append(value <= upper)
         if not unbounded_lower and not unbounded_upper:
             bounds.append(lower <= upper)
-        return bound(logp, *bounds)
+        return check_parameters(logp, *bounds)
 
 
 class HalfNormal(PositiveContinuous):
@@ -873,7 +873,7 @@ class HalfNormal(PositiveContinuous):
         TensorVariable
         """
         z = zvalue(value, mu=loc, sigma=sigma)
-        return bound(
+        return check_parameters(
             at.log1p(-at.erfc(z / at.sqrt(2.0))),
             loc <= value,
             0 < sigma,
@@ -1051,7 +1051,7 @@ class Wald(PositiveContinuous):
         """
         centered_value = value - alpha
         # value *must* be iid. Otherwise this is wrong.
-        return bound(
+        return check_parameters(
             logpow(lam / (2.0 * np.pi), 0.5)
             - logpow(centered_value, 1.5)
             - (0.5 * lam / centered_value * ((centered_value - mu) / mu) ** 2),
@@ -1095,7 +1095,7 @@ class Wald(PositiveContinuous):
         a = normal_lcdf(0, 1, (q - 1.0) / r)
         b = 2.0 / l + normal_lcdf(0, 1, -(q + 1.0) / r)
 
-        return bound(
+        return check_parameters(
             at.switch(
                 at.lt(value, np.inf),
                 a + at.log1pexp(b - a),
@@ -1238,7 +1238,7 @@ class Beta(UnitContinuous):
         TensorVariable
         """
 
-        return bound(
+        return check_parameters(
             at.switch(
                 at.lt(value, 1),
                 at.log(at.betainc(alpha, beta, value)),
@@ -1342,7 +1342,7 @@ class Kumaraswamy(UnitContinuous):
         """
         logp = at.log(a) + at.log(b) + (a - 1) * at.log(value) + (b - 1) * at.log(1 - value ** a)
 
-        return bound(logp, value >= 0, value <= 1, a > 0, b > 0)
+        return check_parameters(logp, value >= 0, value <= 1, a > 0, b > 0)
 
     def logcdf(value, a, b):
         r"""
@@ -1361,7 +1361,7 @@ class Kumaraswamy(UnitContinuous):
         TensorVariable
         """
         logcdf = at.log1mexp(b * at.log1p(-(value ** a)))
-        return bound(at.switch(value < 1, logcdf, 0), value >= 0, a > 0, b > 0)
+        return check_parameters(at.switch(value < 1, logcdf, 0), value >= 0, a > 0, b > 0)
 
 
 class Exponential(PositiveContinuous):
@@ -1434,7 +1434,7 @@ class Exponential(PositiveContinuous):
         TensorVariable
         """
         lam = at.inv(mu)
-        return bound(
+        return check_parameters(
             at.log1mexp(-lam * value),
             0 <= value,
             0 <= lam,
@@ -1515,7 +1515,7 @@ class Laplace(Continuous):
         TensorVariable
         """
         y = (value - mu) / b
-        return bound(
+        return check_parameters(
             at.switch(
                 at.le(value, mu),
                 at.log(0.5) + y,
@@ -1622,7 +1622,7 @@ class AsymmetricLaplace(Continuous):
         TensorVariable
         """
         value = value - mu
-        return bound(
+        return check_parameters(
             at.log(b / (kappa + (kappa ** -1)))
             + (-value * b * at.sgn(value) * (kappa ** at.sgn(value))),
             0 < b,
@@ -1734,7 +1734,7 @@ class LogNormal(PositiveContinuous):
         TensorVariable
         """
 
-        return bound(
+        return check_parameters(
             normal_lcdf(mu, sigma, at.log(value)),
             0 < value,
             0 < sigma,
@@ -1858,7 +1858,7 @@ class StudentT(Continuous):
         TensorVariable
         """
         lam, sigma = get_tau_sigma(sigma=sigma)
-        return bound(
+        return check_parameters(
             gammaln((nu + 1.0) / 2.0)
             + 0.5 * at.log(lam / (nu * np.pi))
             - gammaln(nu / 2.0)
@@ -1889,7 +1889,7 @@ class StudentT(Continuous):
         sqrt_t2_nu = at.sqrt(t ** 2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
 
-        return bound(
+        return check_parameters(
             at.log(at.betainc(nu / 2.0, nu / 2.0, x)),
             0 < nu,
             0 < sigma,
@@ -1983,7 +1983,7 @@ class Pareto(BoundedContinuous):
         TensorVariable
         """
         arg = (m / value) ** alpha
-        return bound(
+        return check_parameters(
             at.switch(
                 at.le(arg, 1e-5),
                 at.log1p(-arg),
@@ -2071,7 +2071,7 @@ class Cauchy(Continuous):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             at.log(0.5 + at.arctan((value - alpha) / beta) / np.pi),
             0 < beta,
         )
@@ -2143,7 +2143,7 @@ class HalfCauchy(PositiveContinuous):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             at.log(2 * at.arctan((value - loc) / beta) / np.pi),
             loc <= value,
             0 < beta,
@@ -2267,7 +2267,7 @@ class Gamma(PositiveContinuous):
         """
         beta = at.inv(inv_beta)
 
-        return bound(
+        return check_parameters(
             at.log(at.gammainc(alpha, beta * value)),
             0 <= value,
             0 < alpha,
@@ -2386,7 +2386,7 @@ class InverseGamma(PositiveContinuous):
         TensorVariable
         """
 
-        return bound(
+        return check_parameters(
             at.log(at.gammaincc(alpha, beta / value)),
             0 <= value,
             0 < alpha,
@@ -2554,7 +2554,7 @@ class Weibull(PositiveContinuous):
         TensorVariable
         """
         a = (value / beta) ** alpha
-        return bound(
+        return check_parameters(
             at.log1mexp(-a),
             0 <= value,
             0 < alpha,
@@ -2675,7 +2675,7 @@ class HalfStudentT(PositiveContinuous):
 
         lam, sigma = get_tau_sigma(None, sigma)
 
-        return bound(
+        return check_parameters(
             at.log(2)
             + gammaln((nu + 1.0) / 2.0)
             - gammaln(nu / 2.0)
@@ -2811,7 +2811,7 @@ class ExGaussian(Continuous):
         """
 
         # Alogithm is adapted from dexGAUS.R from gamlss
-        return bound(
+        return check_parameters(
             at.switch(
                 at.gt(nu, 0.05 * sigma),
                 (
@@ -2849,7 +2849,7 @@ class ExGaussian(Continuous):
         """
 
         # Alogithm is adapted from pexGAUS.R from gamlss
-        return bound(
+        return check_parameters(
             at.switch(
                 at.gt(nu, 0.05 * sigma),
                 logdiffexp(
@@ -3043,7 +3043,7 @@ class SkewNormal(Continuous):
         TensorVariable
         """
         tau, sigma = get_tau_sigma(sigma=sigma)
-        return bound(
+        return check_parameters(
             at.log(1 + at.erf(((value - mu) * at.sqrt(tau) * alpha) / at.sqrt(2)))
             + (-tau * (value - mu) ** 2 + at.log(tau / np.pi / 2.0)) / 2.0,
             tau > 0,
@@ -3138,7 +3138,7 @@ class Triangular(BoundedContinuous):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             at.switch(
                 at.le(value, lower),
                 -np.inf,
@@ -3248,7 +3248,7 @@ class Gumbel(Continuous):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             -at.exp(-(value - mu) / beta),
             0 < beta,
         )
@@ -3384,7 +3384,7 @@ class Rice(PositiveContinuous):
         TensorVariable
         """
         x = value / sigma
-        return bound(
+        return check_parameters(
             at.log(x * at.exp((-(x - b) * (x - b)) / 2) * i0e(x * b) / sigma),
             sigma >= 0,
             value > 0,
@@ -3465,7 +3465,7 @@ class Logistic(Continuous):
         TensorVariable
         """
 
-        return bound(
+        return check_parameters(
             -at.log1pexp(-(value - mu) / s),
             0 < s,
         )
@@ -3566,7 +3566,7 @@ class LogitNormal(UnitContinuous):
         TensorVariable
         """
         tau, sigma = get_tau_sigma(sigma=sigma)
-        return bound(
+        return check_parameters(
             -0.5 * tau * (logit(value) - mu) ** 2
             + 0.5 * at.log(tau / (2.0 * np.pi))
             - at.log(value * (1 - value)),
@@ -3819,7 +3819,7 @@ class Moyal(Continuous):
         TensorVariable
         """
         scaled = (value - mu) / sigma
-        return bound(
+        return check_parameters(
             (-(1 / 2) * (scaled + at.exp(-scaled)) - at.log(sigma) - (1 / 2) * at.log(2 * np.pi)),
             0 < sigma,
         )
@@ -3840,7 +3840,7 @@ class Moyal(Continuous):
         TensorVariable
         """
         scaled = (value - mu) / sigma
-        return bound(
+        return check_parameters(
             at.log(at.erfc(at.exp(-scaled / 2) * (2 ** -0.5))),
             0 < sigma,
         )
@@ -4030,7 +4030,7 @@ class PolyaGamma(PositiveContinuous):
         TensorVariable
         """
 
-        return bound(_PolyaGammaLogDistFunc(True)(value, h, z), h > 0, value > 0)
+        return check_parameters(_PolyaGammaLogDistFunc(True)(value, h, z), h > 0, value > 0)
 
     def logcdf(value, h, z):
         """
@@ -4047,4 +4047,4 @@ class PolyaGamma(PositiveContinuous):
         -------
         TensorVariable
         """
-        return bound(_PolyaGammaLogDistFunc(False)(value, h, z), h > 0, value > 0)
+        return check_parameters(_PolyaGammaLogDistFunc(False)(value, h, z), h > 0, value > 0)

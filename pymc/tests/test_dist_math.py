@@ -18,6 +18,7 @@ import numpy.testing as npt
 import pytest
 import scipy.special
 
+from aeppl.logprob import ParameterValueError
 from aesara import config, function
 from aesara.tensor.random.basic import multinomial
 from scipy import interpolate, stats
@@ -29,8 +30,7 @@ from pymc.distributions import Discrete
 from pymc.distributions.dist_math import (
     MvNormalLogp,
     SplineWrapper,
-    alltrue_scalar,
-    bound,
+    check_parameters,
     clipped_beta_rvs,
     factln,
     i0e,
@@ -41,57 +41,35 @@ from pymc.tests.checks import close_to
 from pymc.tests.helpers import verify_grad
 
 
-def test_bound():
-    logp = at.ones((10, 10))
-    cond = at.ones((10, 10))
-    assert np.all(bound(logp, cond).eval() == logp.eval())
-
-    logp = at.ones((10, 10))
-    cond = at.zeros((10, 10))
-    assert np.all(bound(logp, cond).eval() == (-np.inf * logp).eval())
-
-    logp = at.ones((10, 10))
-    cond = True
-    assert np.all(bound(logp, cond).eval() == logp.eval())
-
-    logp = at.ones(3)
-    cond = np.array([1, 0, 1])
-    assert not np.all(bound(logp, cond).eval() == 1)
-    assert np.prod(bound(logp, cond).eval()) == -np.inf
-
-    logp = at.ones((2, 3))
-    cond = np.array([[1, 1, 1], [1, 0, 1]])
-    assert not np.all(bound(logp, cond).eval() == 1)
-    assert np.prod(bound(logp, cond).eval()) == -np.inf
-
-
-def test_check_bounds_false():
-    with pm.Model(check_bounds=False):
-        logp = at.ones(3)
-        cond = np.array([1, 0, 1])
-        assert np.all(bound(logp, cond).eval() == logp.eval())
+@pytest.mark.parametrize(
+    "conditions, succeeds",
+    [
+        ([], True),
+        ([True], True),
+        ([at.ones(10)], True),
+        ([at.ones(10), 5 * at.ones(101)], True),
+        ([np.ones(10), 5 * at.ones(101)], True),
+        ([np.ones(10), True, 5 * at.ones(101)], True),
+        ([np.array([1, 2, 3]), True, 5 * at.ones(101)], True),
+        ([False], False),
+        ([at.zeros(10)], False),
+        ([True, False], False),
+        ([np.array([0, -1]), at.ones(60)], False),
+        ([np.ones(10), False, 5 * at.ones(101)], False),
+    ],
+)
+def test_check_parameters(conditions, succeeds):
+    ret = check_parameters(1, *conditions, msg="parameter check msg")
+    if succeeds:
+        assert ret.eval()
+    else:
+        with pytest.raises(ParameterValueError, match="^parameter check msg$"):
+            ret.eval()
 
 
-def test_alltrue_scalar():
-    assert alltrue_scalar([]).eval()
-    assert alltrue_scalar([True]).eval()
-    assert alltrue_scalar([at.ones(10)]).eval()
-    assert alltrue_scalar([at.ones(10), 5 * at.ones(101)]).eval()
-    assert alltrue_scalar([np.ones(10), 5 * at.ones(101)]).eval()
-    assert alltrue_scalar([np.ones(10), True, 5 * at.ones(101)]).eval()
-    assert alltrue_scalar([np.array([1, 2, 3]), True, 5 * at.ones(101)]).eval()
-
-    assert not alltrue_scalar([False]).eval()
-    assert not alltrue_scalar([at.zeros(10)]).eval()
-    assert not alltrue_scalar([True, False]).eval()
-    assert not alltrue_scalar([np.array([0, -1]), at.ones(60)]).eval()
-    assert not alltrue_scalar([np.ones(10), False, 5 * at.ones(101)]).eval()
-
-
-def test_alltrue_shape():
-    vals = [True, at.ones(10), at.zeros(5)]
-
-    assert alltrue_scalar(vals).eval().shape == ()
+def test_check_parameters_shape():
+    conditions = [True, at.ones(10), at.ones(5)]
+    assert check_parameters(1, *conditions).eval().shape == ()
 
 
 class MultinomialA(Discrete):
@@ -102,13 +80,12 @@ class MultinomialA(Discrete):
         return super().dist([n, p], **kwargs)
 
     def logp(value, n, p):
-        return bound(
+        return check_parameters(
             factln(n) - factln(value).sum() + (value * at.log(p)).sum(),
             value >= 0,
             0 <= p,
             p <= 1,
             at.isclose(p.sum(), 1),
-            broadcast_conditions=False,
         )
 
 
@@ -120,17 +97,16 @@ class MultinomialB(Discrete):
         return super().dist([n, p], **kwargs)
 
     def logp(value, n, p):
-        return bound(
+        return check_parameters(
             factln(n) - factln(value).sum() + (value * at.log(p)).sum(),
             at.all(value >= 0),
             at.all(0 <= p),
             at.all(p <= 1),
             at.isclose(p.sum(), 1),
-            broadcast_conditions=False,
         )
 
 
-def test_multinomial_bound():
+def test_multinomial_check_parameters():
 
     x = np.array([1, 5])
     n = x.sum()

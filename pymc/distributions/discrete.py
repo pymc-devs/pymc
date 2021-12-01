@@ -33,7 +33,7 @@ from pymc.aesaraf import floatX, intX, take_along_axis
 from pymc.distributions.dist_math import (
     betaln,
     binomln,
-    bound,
+    check_parameters,
     factln,
     log_diff_normal_cdf,
     logpow,
@@ -135,7 +135,7 @@ class Binomial(Discrete):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
             0 <= value,
             value <= n,
@@ -160,7 +160,7 @@ class Binomial(Discrete):
         """
         value = at.floor(value)
 
-        return bound(
+        return check_parameters(
             at.switch(
                 at.lt(value, n),
                 at.log(at.betainc(n - value, value + 1, 1 - p)),
@@ -258,7 +258,7 @@ class BetaBinomial(Discrete):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             binomln(n, value) + betaln(value + alpha, n - value + beta) - betaln(alpha, beta),
             value >= 0,
             value <= n,
@@ -288,7 +288,7 @@ class BetaBinomial(Discrete):
 
         safe_lower = at.switch(at.lt(value, 0), value, 0)
 
-        return bound(
+        return check_parameters(
             at.switch(
                 at.lt(value, n),
                 at.logsumexp(
@@ -383,7 +383,7 @@ class Bernoulli(Discrete):
         TensorVariable
         """
 
-        return bound(
+        return check_parameters(
             at.switch(value, at.log(p), at.log1p(-p)),
             value >= 0,
             value <= 1,
@@ -407,7 +407,7 @@ class Bernoulli(Discrete):
         TensorVariable
         """
 
-        return bound(
+        return check_parameters(
             at.switch(
                 at.lt(value, 1),
                 at.log1p(-p),
@@ -496,7 +496,7 @@ class DiscreteWeibull(Discrete):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             at.log(at.power(q, at.power(value, beta)) - at.power(q, at.power(value + 1, beta))),
             0 <= value,
             0 < q,
@@ -519,7 +519,7 @@ class DiscreteWeibull(Discrete):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             at.log1p(-at.power(q, at.power(value + 1, beta))),
             0 <= value,
             0 < q,
@@ -599,7 +599,7 @@ class Poisson(Discrete):
         -------
         TensorVariable
         """
-        log_prob = bound(logpow(mu, value) - factln(value) - mu, mu >= 0, value >= 0)
+        log_prob = check_parameters(logpow(mu, value) - factln(value) - mu, mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
         return at.switch(at.eq(mu, 0) * at.eq(value, 0), 0, log_prob)
 
@@ -623,7 +623,7 @@ class Poisson(Discrete):
         safe_mu = at.switch(at.lt(mu, 0), 0, mu)
         safe_value = at.switch(at.lt(value, 0), 0, value)
 
-        return bound(
+        return check_parameters(
             at.log(at.gammaincc(safe_value + 1, safe_mu)),
             0 <= value,
             0 <= mu,
@@ -743,7 +743,7 @@ class NegativeBinomial(Discrete):
         """
         alpha = n
         mu = alpha * (1 - p) / p
-        negbinom = bound(
+        negbinom = check_parameters(
             binomln(value + alpha - 1, value)
             + logpow(mu / (mu + alpha), value)
             + logpow(alpha / (mu + alpha), alpha),
@@ -770,7 +770,7 @@ class NegativeBinomial(Discrete):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             at.log(at.betainc(n, at.floor(value) + 1, p)),
             0 <= value,
             0 < n,
@@ -844,7 +844,7 @@ class Geometric(Discrete):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             at.log(p) + logpow(1 - p, value - 1),
             0 <= p,
             p <= 1,
@@ -867,7 +867,7 @@ class Geometric(Discrete):
         TensorVariable
         """
 
-        return bound(
+        return check_parameters(
             at.log1mexp(at.log1p(-p) * value),
             0 <= value,
             0 <= p,
@@ -965,7 +965,7 @@ class HyperGeometric(Discrete):
         # value in [max(0, n - N + k), min(k, n)]
         lower = at.switch(at.gt(n - tot + good, 0), n - tot + good, 0)
         upper = at.switch(at.lt(good, n), good, n)
-        return bound(result, lower <= value, value <= upper)
+        return check_parameters(result, lower <= value, value <= upper)
 
     def logcdf(value, good, bad, n):
         """
@@ -991,7 +991,7 @@ class HyperGeometric(Discrete):
         # TODO: Use lower upper in locgdf for smarter logsumexp?
         safe_lower = at.switch(at.lt(value, 0), value, 0)
 
-        return bound(
+        return check_parameters(
             at.switch(
                 at.lt(value, n),
                 at.logsumexp(
@@ -1092,7 +1092,7 @@ class DiscreteUniform(Discrete):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             at.fill(value, -at.log(upper - lower + 1)),
             lower <= value,
             value <= upper,
@@ -1114,7 +1114,7 @@ class DiscreteUniform(Discrete):
         TensorVariable
         """
 
-        return bound(
+        return check_parameters(
             at.switch(
                 at.lt(value, upper),
                 at.log(at.minimum(at.floor(value), upper) - lower + 1) - at.log(upper - lower + 1),
@@ -1205,7 +1205,7 @@ class Categorical(Discrete):
         else:
             a = at.log(p[value_clip])
 
-        return bound(
+        return check_parameters(
             a,
             value >= 0,
             value <= (k - 1),
@@ -1267,7 +1267,7 @@ class Constant(Discrete):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             at.zeros_like(value),
             at.eq(value, c),
         )
@@ -1374,7 +1374,7 @@ class ZeroInflatedPoisson(Discrete):
             at.logaddexp(at.log1p(-psi), at.log(psi) - theta),
         )
 
-        return bound(
+        return check_parameters(
             logp_val,
             0 <= value,
             0 <= psi,
@@ -1398,7 +1398,7 @@ class ZeroInflatedPoisson(Discrete):
         TensorVariable
         """
 
-        return bound(
+        return check_parameters(
             at.logaddexp(
                 at.log1p(-psi),
                 at.log(psi) + logcdf(Poisson.dist(mu=theta), value),
@@ -1513,7 +1513,7 @@ class ZeroInflatedBinomial(Discrete):
             at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
         )
 
-        return bound(
+        return check_parameters(
             logp_val,
             0 <= value,
             value <= n,
@@ -1539,7 +1539,7 @@ class ZeroInflatedBinomial(Discrete):
         TensorVariable
         """
 
-        return bound(
+        return check_parameters(
             at.logaddexp(
                 at.log1p(-psi),
                 at.log(psi) + logcdf(Binomial.dist(n=n, p=p), value),
@@ -1683,7 +1683,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         TensorVariable
         """
 
-        return bound(
+        return check_parameters(
             at.switch(
                 at.gt(value, 0),
                 at.log(psi) + logp(NegativeBinomial.dist(n=n, p=p), value),
@@ -1712,7 +1712,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         -------
         TensorVariable
         """
-        return bound(
+        return check_parameters(
             at.logaddexp(
                 at.log1p(-psi), at.log(psi) + logcdf(NegativeBinomial.dist(n=n, p=p), value)
             ),

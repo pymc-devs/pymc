@@ -23,7 +23,7 @@ from aesara.graph.basic import Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.var import TensorVariable
 
-from pymc.aesaraf import compile_rv_inplace
+from pymc.aesaraf import compile_pymc
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
 StartDict = Dict[Union[Variable, str], Union[np.ndarray, Variable, str]]
@@ -185,9 +185,7 @@ def make_initial_point_fn(
             new_rng = np.random.Generator(np.random.PCG64())
         new_rng_nodes.append(aesara.shared(new_rng))
     graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
-    func = compile_rv_inplace(
-        inputs=[], outputs=graph.outputs, mode=aesara.compile.mode.FAST_COMPILE
-    )
+    func = compile_pymc(inputs=[], outputs=graph.outputs, mode=aesara.compile.mode.FAST_COMPILE)
 
     varnames = []
     for var in model.free_RVs:

@@ -22,7 +22,7 @@ from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
 
 import pymc as pm
 
-from pymc.aesaraf import compile_rv_inplace, floatX, rvs_to_value_vars
+from pymc.aesaraf import compile_pymc, floatX, rvs_to_value_vars
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.step_methods.arraystep import (
     ArrayStep,
@@ -1006,6 +1006,6 @@ def delta_logp(point, logp, vars, shared):
 
     logp1 = pm.CallableTensor(logp0)(inarray1)
 
-    f = compile_rv_inplace([inarray1, inarray0], logp1 - logp0)
+    f = compile_pymc([inarray1, inarray0], logp1 - logp0)
     f.trust_input = True
     return f

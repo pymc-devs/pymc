@@ -26,7 +26,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
 
 from pymc import Model, modelcontext
-from pymc.aesaraf import compile_rv_inplace
+from pymc.aesaraf import compile_pymc
 from pymc.backends.arviz import find_observations
 from pymc.distributions import logpt
 from pymc.util import get_default_varnames

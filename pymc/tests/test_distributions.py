@@ -20,6 +20,8 @@ import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
 
+from aeppl.logprob import ParameterValueError
+
 from pymc.util import UNSET
 
 try:
@@ -835,11 +837,8 @@ class TestMatchesScipy:
                         with aesara.config.change_flags(compute_test_value="off"):
                             invalid_dist = pymc_dist.dist(**test_params)
                         with aesara.config.change_flags(mode=Mode("py")):
-                            assert_equal(
-                                logcdf(invalid_dist, valid_value).eval(),
-                                -np.inf,
-                                err_msg=str(test_params),
-                            )
+                            with pytest.raises(ParameterValueError):
+                                logcdf(invalid_dist, valid_value).eval()
 
         # Test that values below domain edge evaluate to -np.inf
         if np.isfinite(domain.lower):
@@ -977,11 +976,13 @@ class TestMatchesScipy:
         # Invalid logp checks for triangular are being done in aeppl
         invalid_dist = Triangular.dist(lower=1, upper=0, c=0.1)
         with aesara.config.change_flags(mode=Mode("py")):
-            assert logcdf(invalid_dist, 2).eval() == -np.inf
+            with pytest.raises(ParameterValueError):
+                logcdf(invalid_dist, 2).eval()
 
         invalid_dist = Triangular.dist(lower=0, upper=1, c=2.0)
         with aesara.config.change_flags(mode=Mode("py")):
-            assert logcdf(invalid_dist, 2).eval() == -np.inf
+            with pytest.raises(ParameterValueError):
+                logcdf(invalid_dist, 2).eval()
 
     @pytest.mark.skipif(
         condition=_polyagamma_not_installed,
@@ -1025,8 +1026,10 @@ class TestMatchesScipy:
         # Custom logp / logcdf check for invalid parameters
         invalid_dist = DiscreteUniform.dist(lower=1, upper=0)
         with aesara.config.change_flags(mode=Mode("py")):
-            assert logp(invalid_dist, 0.5).eval() == -np.inf
-            assert logcdf(invalid_dist, 2).eval() == -np.inf
+            with pytest.raises(ParameterValueError):
+                logp(invalid_dist, 0.5).eval()
+            with pytest.raises(ParameterValueError):
+                logcdf(invalid_dist, 2).eval()
 
     def test_flat(self):
         self.check_logp(Flat, Runif, {}, lambda value: 0)
@@ -1173,9 +1176,6 @@ class TestMatchesScipy:
         decimals = select_by_precision(float64=6, float32=1)
         assert_almost_equal(model.fastlogp(pt), logp, decimal=decimals, err_msg=str(pt))
 
-    @pytest.mark.xfail(
-        reason="Fails because mu and sigma values are being picked randomly from domains"
-    )
     def test_beta_logp(self):
         self.check_logp(
             Beta,
@@ -1918,14 +1918,16 @@ class TestMatchesScipy:
         x.tag.test_value = np.zeros(2)
         mvn_logp = logp(MvNormal.dist(mu=mu, cov=cov), x)
         f_logp = aesara.function([cov, x], mvn_logp)
-        assert f_logp(cov_val, np.ones(2)) == -np.inf
+        with pytest.raises(ParameterValueError):
+            f_logp(cov_val, np.ones(2))
         dlogp = at.grad(mvn_logp, cov)
         f_dlogp = aesara.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
         mvn_logp = logp(MvNormal.dist(mu=mu, tau=cov), x)
         f_logp = aesara.function([cov, x], mvn_logp)
-        assert f_logp(cov_val, np.ones(2)) == -np.inf
+        with pytest.raises(ParameterValueError):
+            f_logp(cov_val, np.ones(2))
         dlogp = at.grad(mvn_logp, cov)
         f_dlogp = aesara.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
@@ -2232,28 +2234,25 @@ class TestMatchesScipy:
             assert np.isinf(logp(x, 3).eval())
 
     @aesara.config.change_flags(compute_test_value="raise")
-    def test_categorical_valid_p(self):
-        with Model():
-            x = Categorical("x", p=np.array([-0.2, 0.3, 0.5]))
-            assert np.isinf(logp(x, 0).eval())
-            assert np.isinf(logp(x, 1).eval())
-            assert np.isinf(logp(x, 2).eval())
-        with Model():
+    @pytest.mark.parametrize(
+        "p",
+        [
+            np.array([-0.2, 0.3, 0.5]),
             # A model where p sums to 1 but contains negative values
-            x = Categorical("x", p=np.array([-0.2, 0.7, 0.5]))
-            assert np.isinf(logp(x, 0).eval())
-            assert np.isinf(logp(x, 1).eval())
-            assert np.isinf(logp(x, 2).eval())
-        with Model():
+            np.array([-0.2, 0.7, 0.5]),
             # Hard edge case from #2082
             # Early automatic normalization of p's sum would hide the negative
             # entries if there is a single or pair number of negative values
             # and the rest are zero
-            x = Categorical("x", p=np.array([-1, -1, 0, 0]))
-            assert np.isinf(logp(x, 0).eval())
-            assert np.isinf(logp(x, 1).eval())
-            assert np.isinf(logp(x, 2).eval())
-            assert np.isinf(logp(x, 3).eval())
+            np.array([-1, -1, 0, 0]),
+        ],
+    )
+    def test_categorical_valid_p(self, p):
+        with Model():
+            x = Categorical("x", p=p)
+
+            with pytest.raises(ParameterValueError):
+                logp(x, 2).eval()
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_categorical(self, n):
