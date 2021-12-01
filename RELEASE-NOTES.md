@@ -15,7 +15,6 @@ We plan to get these working again, but at this point their inner workings have 
 - Timeseries distributions (`AR1`, `AR`, `GaussianRandomWalk`, `GARCH11`, `EulerMaruyama`, `MvGaussianRandomWalk`, `MvStudentTRandomWalk`), see #4642
 - Mixture distributions
 - Cholesky distributions
-- Parts of the Gaussian process module (see #5035)
 - Variational inference submodule (WIP PR #4582)
 - Elliptical slice sampling (#5137)
 - `BaseStochasticGradient` (#5138)
@@ -55,6 +54,8 @@ All of the above apply to:
 - `pm.DensityDist` no longer accepts the `logp` as its first position argument. It is now an optional keyword argument. If you pass a callable as the first positional argument, a `TypeError` will be raised (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
 - `pm.DensityDist` now accepts distribution parameters as positional arguments. Passing them as a dictionary in the `observed` keyword argument is no longer supported and will raise an error (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
 - The signature of the `logp` and `random` functions that can be passed into a `pm.DensityDist` has been changed (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
+- Changes to the Gaussian process (`gp`) submodule:
+  - The `gp.prior(..., shape=...)` kwarg was renamed to `size`.
 - Changes to the BART implementation:
   - A BART variable can be combined with other random variables. The `inv_link` argument has been removed (see [4914](https://github.com/pymc-devs/pymc3/pull/4914)).
   - Moved BART to its own module (see [5058](https://github.com/pymc-devs/pymc3/pull/5058)).
