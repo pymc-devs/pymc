@@ -438,6 +438,7 @@ def test_pareto_moment(alpha, m, size, expected):
         Pareto("x", alpha=alpha, m=m, size=size)
     assert_moment_is_expected(model, expected)
 
+
 @pytest.mark.parametrize(
     "mu, kappa, size, expected",
     [
