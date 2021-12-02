@@ -35,6 +35,7 @@ from pymc.distributions import (
     Interpolated,
     InverseGamma,
     Kumaraswamy,
+    KroneckerNormal,
     Laplace,
     Logistic,
     LogitNormal,
@@ -1316,3 +1317,30 @@ def test_simulator_moment(mu, sigma, size):
     cutoff = st.norm().ppf(1 - (alpha / 2))
 
     assert np.all(np.abs((result - expected_sample_mean) / expected_sample_mean_std) < cutoff)
+
+@pytest.mark.parametrize(
+    "mu, covs, size, expected",
+    [
+        (np.ones(1), [np.identity(1), np.identity(1)], None, np.ones(1)),
+        (np.ones(6), [np.identity(2), np.identity(3)], 5, np.ones((5,6))),
+        (np.zeros(6), [np.identity(2), np.identity(3)], 6, np.zeros((6,6))),
+        (np.zeros(3), [np.identity(3), np.identity(1)], 6, np.zeros((6,3))),
+        (np.zeros((4,6)), [np.identity(2),np.identity(3)], 6, np.zeros((6,4,6))),
+        (
+            np.array([[1,2,3,4],[3,4,5,6],[6,7,8,9],[7,8,9,1]]),
+            [
+                np.array([[1., 0.5], [0.5, 2]]),
+                np.array([[1., 0.4], [0.4, 2]]),
+            ],
+            2,
+            np.array([
+                        [[1,2,3,4],[3,4,5,6],[6,7,8,9],[7,8,9,1]],
+                        [[1,2,3,4],[3,4,5,6],[6,7,8,9],[7,8,9,1]]
+                    ]),
+        )
+    ],
+)
+def test_kronecker_normal_moments(mu, covs, size, expected):
+    with Model() as model:
+        KroneckerNormal("x", mu=mu, covs=covs, size=size)
+    assert_moment_is_expected(model, expected)
