@@ -112,15 +112,14 @@ def find_optim_prior(
     if not opt.success:
         raise ValueError("Optimization of parameters failed.")
 
+    # save optimal parameters
+    opt_params = {
+        param_name: param_value for param_name, param_value in zip(init_guess.keys(), opt.x)
+    }
     if fixed_params is not None:
-        opt_params = {
-            param_name: param_value for param_name, param_value in zip(init_guess.keys(), opt.x)
-        } | fixed_params
-    else:
-        opt_params = {
-            param_name: param_value for param_name, param_value in zip(init_guess.keys(), opt.x)
-        }
+        opt_params.update(fixed_params)
 
+    # check mass in interval is not too far from `mass`
     opt_dist = pm_dist.dist(**opt_params)
     mass_in_interval = (
         pm.math.exp(pm.logcdf(opt_dist, upper)) - pm.math.exp(pm.logcdf(opt_dist, lower))
