@@ -69,15 +69,9 @@ def find_optim_prior(
     The optimized distribution parameters as a dictionary with the parameters'
     name as key and the optimized value as value.
     """
-    if len(init_guess) > 2:
-        if (fixed_params is None) or (len(fixed_params) < (len(pm_dist.rv_op.ndims_params) - 2)):
-            warnings.warn(
-                f"It seems like {pm_dist} has {len(pm_dist.rv_op.ndims_params)} parameters. "
-                "Note that `pm.find_optim_prior` can only optimize two parameters, so there may "
-                "not be a unique solution in your use-case. "
-                f"Consider fixing {len(pm_dist.rv_op.ndims_params) - 2} parameters in the "
-                f"`fixed_params` dictionary. "
-            )
+    # exit when any parameter is not scalar:
+    if np.any(np.asarray(pm_dist.rv_op.ndims_params) != 0):
+        raise NotImplementedError
 
     dist_params = aet.vector("dist_params")
     params_to_optim = {
@@ -116,14 +110,24 @@ def find_optim_prior(
         raise ValueError("Optimization of parameters failed.")
 
     if fixed_params is not None:
-        return {
+        opt_params = {
             param_name: param_value for param_name, param_value in zip(init_guess.keys(), opt.x)
         } | fixed_params
     else:
-        return {
+        opt_params = {
             param_name: param_value for param_name, param_value in zip(init_guess.keys(), opt.x)
         }
 
+    opt_dist = pm_dist.dist(**opt_params)
+    mass_in_interval = (
+        pm.math.exp(pm.logcdf(opt_dist, upper)) - pm.math.exp(pm.logcdf(opt_dist, lower))
+    ).eval()
+    if (np.abs(mass_in_interval - mass)) >= 0.01:
+        warnings.warn(
+            f"Final optimization has {mass_in_interval * 100:.0f}% of probability mass between "
+            f"{lower} and {upper} instead of the requested {mass * 100:.0f}%."
+            "You may need to use a more flexible distribution, change the fixed paramaters in the "
+            "`fixed_params` dictionary, or provide better initial guesses."
+        )
 
-# tests
-# add warning when mass is lower than expected -- try another initial guess?
+    return opt_params
