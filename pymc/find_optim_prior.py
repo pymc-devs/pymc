@@ -71,7 +71,10 @@ def find_optim_prior(
     """
     # exit when any parameter is not scalar:
     if np.any(np.asarray(pm_dist.rv_op.ndims_params) != 0):
-        raise NotImplementedError
+        raise NotImplementedError(
+            "`pm.find_optim_prior` does not work with non-scalar parameters yet.\n"
+            "Feel free to open a pull request on PyMC repo if you really need this feature."
+        )
 
     dist_params = aet.vector("dist_params")
     params_to_optim = {
@@ -90,7 +93,7 @@ def find_optim_prior(
     except AttributeError:
         raise AttributeError(
             f"You cannot use `find_optim_prior` with {pm_dist} -- it doesn't have a logcdf "
-            "method yet. Open an issue or, even better, a pull request on PyMC repo if you really "
+            "method yet.\nOpen an issue or, even better, a pull request on PyMC repo if you really "
             "need it."
         )
 
@@ -125,8 +128,8 @@ def find_optim_prior(
     if (np.abs(mass_in_interval - mass)) >= 0.01:
         warnings.warn(
             f"Final optimization has {mass_in_interval * 100:.0f}% of probability mass between "
-            f"{lower} and {upper} instead of the requested {mass * 100:.0f}%."
-            "You may need to use a more flexible distribution, change the fixed paramaters in the "
+            f"{lower} and {upper} instead of the requested {mass * 100:.0f}%.\n"
+            "You may need to use a more flexible distribution, change the fixed parameters in the "
             "`fixed_params` dictionary, or provide better initial guesses."
         )
 
