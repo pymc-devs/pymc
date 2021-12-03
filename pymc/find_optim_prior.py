@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 from typing import Dict, Optional
 
@@ -70,17 +71,13 @@ def find_optim_prior(
     """
     if len(init_guess) > 2:
         if (fixed_params is None) or (len(fixed_params) < (len(pm_dist.rv_op.ndims_params) - 2)):
-            raise NotImplementedError(
-                "This function can only optimize two parameters. "
-                f"{pm_dist} has {len(pm_dist.rv_op.ndims_params)} parameters. "
-                f"You need to fix {len(pm_dist.rv_op.ndims_params) - 2} parameters in the "
-                "`fixed_params` dictionary."
+            warnings.warn(
+                f"It seems like {pm_dist} has {len(pm_dist.rv_op.ndims_params)} parameters. "
+                "Note that `pm.find_optim_prior` can only optimize two parameters, so there may "
+                "not be a unique solution in your use-case. "
+                f"Consider fixing {len(pm_dist.rv_op.ndims_params) - 2} parameters in the "
+                f"`fixed_params` dictionary. "
             )
-    elif (len(init_guess) < 2) and (len(init_guess) < len(pm_dist.rv_op.ndims_params)):
-        raise ValueError(
-            f"{pm_dist} has {len(pm_dist.rv_op.ndims_params)} parameters, but you provided only "
-            f"{len(init_guess)} initial guess. You need to provide 2."
-        )
 
     dist_params = aet.vector("dist_params")
     params_to_optim = {
@@ -103,8 +100,7 @@ def find_optim_prior(
             "need it."
         )
 
-    alpha = 1 - mass
-    out = [logcdf_lower - np.log(alpha / 2), logcdf_upper - np.log(1 - alpha / 2)]
+    out = pm.math.logdiffexp(logcdf_upper, logcdf_lower) - np.log(mass)
     logcdf = aesara.function([dist_params, lower_, upper_], out)
 
     try:
@@ -127,3 +123,7 @@ def find_optim_prior(
         return {
             param_name: param_value for param_name, param_value in zip(init_guess.keys(), opt.x)
         }
+
+
+# tests
+# add warning when mass is lower than expected -- try another initial guess?
