@@ -19,14 +19,14 @@ import jax
 import numpy as np
 import pandas as pd
 
-from aesara.assert_op import Assert
+from aeppl.logprob import CheckParameterValue
 from aesara.compile import SharedVariable
 from aesara.graph.basic import clone_replace, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
+from aesara.raise_op import Assert
 
 from pymc import Model, modelcontext
-from pymc.aesaraf import compile_pymc
 from pymc.backends.arviz import find_observations
 from pymc.distributions import logpt
 from pymc.util import get_default_varnames
@@ -35,6 +35,7 @@ warnings.warn("This module is experimental.")
 
 
 @jax_funcify.register(Assert)
+@jax_funcify.register(CheckParameterValue)
 def jax_funcify_Assert(op, **kwargs):
     # Jax does not allow assert whose values aren't known during JIT compilation
     # within it's JIT-ed code. Hence we need to make a simple pass through
