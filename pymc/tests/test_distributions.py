@@ -1413,6 +1413,7 @@ class TestMatchesScipy:
             with pytest.raises(ValueError, match=f"Incompatible parametrization. {expected}"):
                 NegativeBinomial("x", mu=mu, p=p, alpha=alpha, n=n)
 
+    @pytest.mark.xfail(reason="Aeppl Laplace does not have a CheckParameterValue for b")
     def test_laplace(self):
         self.check_logp(
             Laplace,
