@@ -463,8 +463,12 @@ def discrete_weibull_logpmf(value, q, beta):
     )
 
 
-def dirichlet_logpdf(value, a):
-    return floatX((-betafn(a) + logpow(value, a - 1).sum(-1)).sum())
+def _dirichlet_logpdf(value, a):
+    # scipy.stats.dirichlet.logpdf suffers from numerical precision issues
+    return -betafn(a) + logpow(value, a - 1).sum()
+
+
+dirichlet_logpdf = np.vectorize(_dirichlet_logpdf, signature="(n),(n)->()")
 
 
 def categorical_logpdf(value, p):
@@ -2101,32 +2105,34 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_dirichlet(self, n):
-        self.check_logp(Dirichlet, Simplex(n), {"a": Vector(Rplus, n)}, dirichlet_logpdf)
+        self.check_logp(
+            Dirichlet,
+            Simplex(n),
+            {"a": Vector(Rplus, n)},
+            dirichlet_logpdf,
+        )
 
-    @pytest.mark.parametrize("dist_shape", [(1, 2), (2, 4, 3)])
-    def test_dirichlet_with_batch_shapes(self, dist_shape):
-        a = np.ones(dist_shape)
-        with pm.Model() as model:
-            d = pm.Dirichlet("d", a=a)
+    @pytest.mark.parametrize(
+        "a",
+        [
+            ([2, 3, 5]),
+            ([[2, 3, 5], [9, 19, 3]]),
+            (np.abs(np.random.randn(2, 2, 4)) + 1),
+        ],
+    )
+    @pytest.mark.parametrize("size", [2, (1, 2), (2, 4, 3)])
+    def test_dirichlet_vectorized(self, a, size):
+        a = floatX(np.array(a))
 
-        # Generate sample points to test
-        d_value = d.tag.value_var
-        d_point = d.eval().astype("float64")
-        d_point /= d_point.sum(axis=-1)[..., None]
+        dir = pm.Dirichlet.dist(a=a, size=size)
+        vals = dir.eval()
 
-        if hasattr(d_value.tag, "transform"):
-            d_point_trans = d_value.tag.transform.forward(
-                at.as_tensor(d_point), *d.owner.inputs
-            ).eval()
-        else:
-            d_point_trans = d_point
-
-        pymc_res = logpt(d, d_point_trans, jacobian=False, sum=False).eval()
-        scipy_res = np.empty_like(pymc_res)
-        for idx in np.ndindex(a.shape[:-1]):
-            scipy_res[idx] = scipy.stats.dirichlet(a[idx]).logpdf(d_point[idx])
-
-        assert_almost_equal(pymc_res, scipy_res)
+        assert_almost_equal(
+            dirichlet_logpdf(vals, a),
+            pm.logp(dir, vals).eval(),
+            decimal=4,
+            err_msg=f"vals={vals}",
+        )
 
     def test_dirichlet_shape(self):
         a = at.as_tensor_variable(np.r_[1, 2])
@@ -2135,14 +2141,6 @@ class TestMatchesScipy:
 
         with pytest.warns(DeprecationWarning), aesara.change_flags(compute_test_value="ignore"):
             dir_rv = Dirichlet.dist(at.vector())
-
-    def test_dirichlet_2D(self):
-        self.check_logp(
-            Dirichlet,
-            MultiSimplex(2, 2),
-            {"a": Vector(Vector(Rplus, 2), 2)},
-            dirichlet_logpdf,
-        )
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_multinomial(self, n):
