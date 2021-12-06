@@ -26,7 +26,7 @@ import numpy as np
 
 from aeppl.logprob import _logprob, logcdf
 from aesara.assert_op import Assert
-from aesara.graph.basic import Apply
+from aesara.graph.basic import Apply, Variable
 from aesara.graph.op import Op
 from aesara.tensor import gammaln
 from aesara.tensor.extra_ops import broadcast_shape
@@ -230,13 +230,24 @@ def get_tau_sigma(tau=None, sigma=None):
             sigma = 1.0
             tau = 1.0
         else:
-            tau = sigma ** -2.0
+            if isinstance(sigma, Variable):
+                sigma_ = check_parameters(sigma, sigma > 0, msg="sigma > 0")
+            else:
+                assert np.all(np.asarray(sigma) > 0)
+                sigma_ = sigma
+            tau = sigma_ ** -2.0
 
     else:
         if sigma is not None:
             raise ValueError("Can't pass both tau and sigma")
         else:
-            sigma = tau ** -0.5
+            if isinstance(tau, Variable):
+                tau_ = check_parameters(tau, tau > 0, msg="tau > 0")
+            else:
+                assert np.all(np.asarray(tau) > 0)
+                tau_ = tau
+
+            sigma = tau_ ** -0.5
 
     return floatX(tau), floatX(sigma)
 
@@ -2282,6 +2293,10 @@ class Gamma(PositiveContinuous):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
+            if isinstance(sigma, Variable):
+                sigma = check_parameters(sigma, sigma > 0, msg="sigma > 0")
+            else:
+                assert np.all(np.asarray(sigma) > 0)
             alpha = mu ** 2 / sigma ** 2
             beta = mu / sigma ** 2
         else:
@@ -2406,6 +2421,10 @@ class InverseGamma(PositiveContinuous):
             else:
                 beta = 1
         elif (mu is not None) and (sigma is not None):
+            if isinstance(sigma, Variable):
+                sigma = check_parameters(sigma, sigma > 0, msg="sigma > 0")
+            else:
+                assert np.all(np.asarray(sigma) > 0)
             alpha = (2 * sigma ** 2 + mu ** 2) / sigma ** 2
             beta = mu * (mu ** 2 + sigma ** 2) / sigma ** 2
         else:
