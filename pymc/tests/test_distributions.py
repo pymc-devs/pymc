@@ -48,7 +48,7 @@ from aesara.graph.basic import ancestors
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 from numpy import array, inf, log
-from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal
 from scipy import integrate
 from scipy.special import erf, gammaln, logit
 
@@ -325,16 +325,6 @@ def integrate_nd(f, domain, shape, dtype):
         )[0]
     else:
         raise ValueError("Dont know how to integrate shape: " + str(shape))
-
-
-def multinomial_logpdf(value, n, p):
-    if value.sum() == n and (0 <= value).all() and (value <= n).all():
-        logpdf = scipy.special.gammaln(n + 1)
-        logpdf -= scipy.special.gammaln(value + 1).sum()
-        logpdf += logpow(p, value).sum()
-        return logpdf
-    else:
-        return -inf
 
 
 def _dirichlet_multinomial_logpmf(value, n, a):
@@ -2157,7 +2147,10 @@ class TestMatchesScipy:
     @pytest.mark.parametrize("n", [2, 3])
     def test_multinomial(self, n):
         self.check_logp(
-            Multinomial, Vector(Nat, n), {"p": Simplex(n), "n": Nat}, multinomial_logpdf
+            Multinomial,
+            Vector(Nat, n),
+            {"p": Simplex(n), "n": Nat},
+            lambda value, n, p: scipy.stats.multinomial.logpmf(value, n, p),
         )
 
     @pytest.mark.parametrize(
@@ -2187,106 +2180,36 @@ class TestMatchesScipy:
 
         assert m.eval().shape == size + p.shape
 
-    def test_multinomial_vec(self):
-        vals = np.array([[2, 4, 4], [3, 3, 4]])
-        p = np.array([0.2, 0.3, 0.5])
-        n = 10
+    @pytest.mark.parametrize("n", [(10), ([10, 11]), ([[5, 6], [10, 11]])])
+    @pytest.mark.parametrize(
+        "p",
+        [
+            ([0.2, 0.3, 0.5]),
+            ([[0.2, 0.3, 0.5], [0.9, 0.09, 0.01]]),
+            (np.abs(np.random.randn(2, 2, 4))),
+        ],
+    )
+    @pytest.mark.parametrize("size", [1, 2, (2, 3)])
+    def test_multinomial_vectorized(self, n, p, size):
+        n = intX(np.array(n))
+        p = floatX(np.array(p))
+        p /= p.sum(axis=-1, keepdims=True)
 
-        with Model() as model_single:
-            Multinomial("m", n=n, p=p)
-
-        with Model() as model_many:
-            Multinomial("m", n=n, p=p, size=2)
+        mn = pm.Multinomial.dist(n=n, p=p, size=size)
+        vals = mn.eval()
 
         assert_almost_equal(
             scipy.stats.multinomial.logpmf(vals, n, p),
-            np.asarray([model_single.fastlogp({"m": val}) for val in vals]),
+            pm.logp(mn, vals).eval(),
             decimal=4,
+            err_msg=f"vals={vals}",
         )
-
-        assert_almost_equal(
-            scipy.stats.multinomial.logpmf(vals, n, p),
-            logp(model_many.m, vals).eval().squeeze(),
-            decimal=4,
-        )
-
-        assert_almost_equal(
-            sum(model_single.fastlogp({"m": val}) for val in vals),
-            model_many.fastlogp({"m": vals}),
-            decimal=4,
-        )
-
-    def test_multinomial_vec_1d_n(self):
-        vals = np.array([[2, 4, 4], [4, 3, 4]])
-        p = np.array([0.2, 0.3, 0.5])
-        ns = np.array([10, 11])
-
-        with Model() as model:
-            Multinomial("m", n=ns, p=p)
-
-        assert_almost_equal(
-            sum(multinomial_logpdf(val, n, p) for val, n in zip(vals, ns)),
-            model.fastlogp({"m": vals}),
-            decimal=4,
-        )
-
-    def test_multinomial_vec_1d_n_2d_p(self):
-        vals = np.array([[2, 4, 4], [4, 3, 4]])
-        ps = np.array([[0.2, 0.3, 0.5], [0.9, 0.09, 0.01]])
-        ns = np.array([10, 11])
-
-        with Model() as model:
-            Multinomial("m", n=ns, p=ps)
-
-        assert_almost_equal(
-            sum(multinomial_logpdf(val, n, p) for val, n, p in zip(vals, ns, ps)),
-            model.fastlogp({"m": vals}),
-            decimal=4,
-        )
-
-    def test_multinomial_vec_2d_p(self):
-        vals = np.array([[2, 4, 4], [3, 3, 4]])
-        ps = np.array([[0.2, 0.3, 0.5], [0.3, 0.3, 0.4]])
-        n = 10
-
-        with Model() as model:
-            Multinomial("m", n=n, p=ps)
-
-        assert_almost_equal(
-            sum(multinomial_logpdf(val, n, p) for val, p in zip(vals, ps)),
-            model.fastlogp({"m": vals}),
-            decimal=4,
-        )
-
-    def test_batch_multinomial(self):
-        n = 10
-        vals = intX(np.zeros((4, 5, 3)))
-        p = floatX(np.zeros_like(vals))
-        inds = np.random.randint(vals.shape[-1], size=vals.shape[:-1])[..., None]
-        np.put_along_axis(vals, inds, n, axis=-1)
-        np.put_along_axis(p, inds, 1, axis=-1)
-
-        dist = Multinomial.dist(n=n, p=p)
-        logp_mn = at.exp(pm.logp(dist, vals)).eval()
-        assert_almost_equal(
-            logp_mn,
-            np.ones(vals.shape[:-1]),
-            decimal=select_by_precision(float64=6, float32=3),
-        )
-
-        dist = Multinomial.dist(n=n, p=p, size=2)
-        sample = dist.eval()
-        assert_allclose(sample, np.stack([vals, vals], axis=0))
 
     def test_multinomial_zero_probs(self):
         # test multinomial accepts 0 probabilities / observations:
-        value = aesara.shared(np.array([0, 0, 100], dtype=int))
-        logp = pm.Multinomial.logp(value=value, n=100, p=at.constant([0.0, 0.0, 1.0]))
-        logp_fn = aesara.function(inputs=[], outputs=logp)
-        assert logp_fn() >= 0
-
-        value.set_value(np.array([50, 50, 0], dtype=int))
-        assert np.isneginf(logp_fn())
+        mn = pm.Multinomial.dist(n=100, p=[0.0, 0.0, 1.0])
+        assert pm.logp(mn, np.array([0, 0, 100])).eval() >= 0
+        assert pm.logp(mn, np.array([50, 50, 0])).eval() == -np.inf
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_dirichlet_multinomial(self, n):
