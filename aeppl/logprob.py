@@ -202,7 +202,9 @@ def exponential_logprob(op, values, *inputs, **kwargs):
 def laplace_logprob(op, values, *inputs, **kwargs):
     (value,) = values
     mu, b = inputs[3:]
-    return -at.log(2 * b) - at.abs_(value - mu) / b
+    res = -at.log(2 * b) - at.abs_(value - mu) / b
+    res = CheckParameterValue("b > 0")(res, at.all(at.gt(b, 0.0)))
+    return res
 
 
 @_logprob.register(arb.LogNormalRV)
