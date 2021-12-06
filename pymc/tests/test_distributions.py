@@ -2134,14 +2134,6 @@ class TestMatchesScipy:
             err_msg=f"vals={vals}",
         )
 
-    def test_dirichlet_shape(self):
-        a = at.as_tensor_variable(np.r_[1, 2])
-        dir_rv = Dirichlet.dist(a)
-        assert dir_rv.shape.eval() == (2,)
-
-        with pytest.warns(DeprecationWarning), aesara.change_flags(compute_test_value="ignore"):
-            dir_rv = Dirichlet.dist(at.vector())
-
     @pytest.mark.parametrize("n", [2, 3])
     def test_multinomial(self, n):
         self.check_logp(
@@ -2150,33 +2142,6 @@ class TestMatchesScipy:
             {"p": Simplex(n), "n": Nat},
             lambda value, n, p: scipy.stats.multinomial.logpmf(value, n, p),
         )
-
-    @pytest.mark.parametrize(
-        "p, size, n",
-        [
-            [[0.25, 0.25, 0.25, 0.25], (4,), 2],
-            [[0.25, 0.25, 0.25, 0.25], (1, 4), 3],
-            # 3: expect to fail
-            # [[.25, .25, .25, .25], (10, 4)],
-            [[0.25, 0.25, 0.25, 0.25], (10, 1, 4), 5],
-            # 5: expect to fail
-            # [[[.25, .25, .25, .25]], (2, 4), [7, 11]],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), 13],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (1, 2, 4), [23, 29]],
-            [
-                [[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]],
-                (10, 2, 4),
-                [31, 37],
-            ],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), [17, 19]],
-        ],
-    )
-    def test_multinomial_random(self, p, size, n):
-        p = np.asarray(p)
-        with Model() as model:
-            m = Multinomial("m", n=n, p=p, size=size)
-
-        assert m.eval().shape == size + p.shape
 
     @pytest.mark.parametrize("n", [(10), ([10, 11]), ([[5, 6], [10, 11]])])
     @pytest.mark.parametrize(

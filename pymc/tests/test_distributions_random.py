@@ -255,18 +255,6 @@ class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
     default_shape = (1,)
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestZeroInflatedNegativeBinomial(BaseTestCases.BaseTestCase):
-    distribution = pm.ZeroInflatedNegativeBinomial
-    params = {"mu": 1.0, "alpha": 1.0, "psi": 0.3}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestZeroInflatedBinomial(BaseTestCases.BaseTestCase):
-    distribution = pm.ZeroInflatedBinomial
-    params = {"n": 10, "p": 0.6, "psi": 0.3}
-
-
 class BaseTestDistribution(SeededTest):
     """
     This class provides a base for tests that new RandomVariables are correctly
