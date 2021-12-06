@@ -2172,6 +2172,18 @@ class TestMatchesScipy:
             dirichlet_logpdf,
         )
 
+    def test_dirichlet_invalid(self):
+        # Test non-scalar invalid parameters/values
+        value = np.array([[0.1, 0.2, 0.7], [0.3, 0.3, 0.4]])
+
+        invalid_dist = Dirichlet.dist(a=[-1, 1, 2], size=2)
+        with pytest.raises(ParameterValueError):
+            pm.logp(invalid_dist, value).eval()
+
+        value[1] -= 1
+        valid_dist = Dirichlet.dist(a=[1, 1, 1])
+        assert np.all(np.isfinite(pm.logp(valid_dist, value).eval()) == np.array([True, False]))
+
     @pytest.mark.parametrize(
         "a",
         [
@@ -2202,6 +2214,20 @@ class TestMatchesScipy:
             {"p": Simplex(n), "n": Nat},
             lambda value, n, p: scipy.stats.multinomial.logpmf(value, n, p),
         )
+
+    def test_multinomial_invalid(self):
+        # Test non-scalar invalid parameters/values
+        value = np.array([[1, 2, 2], [4, 0, 1]])
+
+        invalid_dist = Multinomial.dist(n=5, p=[-1, 1, 1], size=2)
+        # TODO: Multinomial normalizes p, so it is impossible to trigger p checks
+        # with pytest.raises(ParameterValueError):
+        with does_not_raise():
+            pm.logp(invalid_dist, value).eval()
+
+        value[1] -= 1
+        valid_dist = Multinomial.dist(n=5, p=np.ones(3) / 3)
+        assert np.all(np.isfinite(pm.logp(valid_dist, value).eval()) == np.array([True, False]))
 
     @pytest.mark.parametrize("n", [(10), ([10, 11]), ([[5, 6], [10, 11]])])
     @pytest.mark.parametrize(
@@ -2242,6 +2268,18 @@ class TestMatchesScipy:
             {"a": Vector(Rplus, n), "n": Nat},
             dirichlet_multinomial_logpmf,
         )
+
+    def test_dirichlet_multinomial_invalid(self):
+        # Test non-scalar invalid parameters/values
+        value = np.array([[1, 2, 2], [4, 0, 1]])
+
+        invalid_dist = DirichletMultinomial.dist(n=5, a=[-1, 1, 1], size=2)
+        with pytest.raises(ParameterValueError):
+            pm.logp(invalid_dist, value).eval()
+
+        value[1] -= 1
+        valid_dist = DirichletMultinomial.dist(n=5, a=[1, 1, 1])
+        assert np.all(np.isfinite(pm.logp(valid_dist, value).eval()) == np.array([True, False]))
 
     def test_dirichlet_multinomial_matches_beta_binomial(self):
         a, b, n = 2, 1, 5
