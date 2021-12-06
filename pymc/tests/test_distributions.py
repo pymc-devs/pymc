@@ -22,6 +22,7 @@ import numpy.random as nr
 
 from aeppl.logprob import ParameterValueError
 
+from pymc.distributions.continuous import get_tau_sigma
 from pymc.util import UNSET
 
 try:
@@ -120,7 +121,6 @@ from pymc.distributions import (
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
-    continuous,
     logcdf,
     logp,
     logpt,
@@ -2289,8 +2289,19 @@ class TestMatchesScipy:
         self.checkd(DensityDist, R, {}, extra_args={"logp": logp})
 
     def test_get_tau_sigma(self):
-        sigma = np.array([2])
-        assert_almost_equal(continuous.get_tau_sigma(sigma=sigma), [1.0 / sigma ** 2, sigma])
+        sigma = np.array(2)
+        assert_almost_equal(get_tau_sigma(sigma=sigma), [1.0 / sigma ** 2, sigma])
+
+        tau = np.array(2)
+        assert_almost_equal(get_tau_sigma(tau=tau), [tau, tau ** -0.5])
+
+        tau, _ = get_tau_sigma(sigma=at.constant(-2))
+        with pytest.raises(ParameterValueError):
+            tau.eval()
+
+        _, sigma = get_tau_sigma(tau=at.constant(-2))
+        with pytest.raises(ParameterValueError):
+            sigma.eval()
 
     @pytest.mark.parametrize(
         "value,mu,sigma,nu,logp",

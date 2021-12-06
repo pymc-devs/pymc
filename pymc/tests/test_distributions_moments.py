@@ -164,8 +164,8 @@ def test_normal_moment(mu, sigma, size, expected):
     [
         (1, None, 1),
         (1, 5, np.ones(5)),
-        (np.arange(5), None, np.arange(5)),
-        (np.arange(5), (2, 5), np.full((2, 5), np.arange(5))),
+        (np.arange(1, 6), None, np.arange(1, 6)),
+        (np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
     ],
 )
 def test_halfnormal_moment(sigma, size, expected):
@@ -179,7 +179,7 @@ def test_halfnormal_moment(sigma, size, expected):
     [
         (1, 1, None, 1),
         (1, 1, 5, np.ones(5)),
-        (1, np.arange(5), (2, 5), np.full((2, 5), np.arange(5))),
+        (1, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
         (np.arange(1, 6), 1, None, np.full(5, 1)),
     ],
 )
