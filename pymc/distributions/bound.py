@@ -12,9 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara.tensor as at
 import numpy as np
 
-from aeppl.logprob import logprob
 from aesara.tensor import as_tensor_variable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
@@ -23,6 +23,7 @@ from pymc.aesaraf import floatX, intX
 from pymc.distributions.continuous import BoundedContinuous
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import Continuous, Discrete
+from pymc.distributions.logprob import logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.model import modelcontext
 
@@ -67,8 +68,17 @@ class _ContinuousBounded(BoundedContinuous):
         -------
         TensorVariable
         """
-        logp = logprob(distribution, value)
-        return check_parameters(logp, (value >= lower), (value <= upper))
+        res = at.switch(
+            at.or_(at.lt(value, lower), at.gt(value, upper)),
+            -np.inf,
+            logp(distribution, value),
+        )
+
+        return check_parameters(
+            res,
+            lower <= upper,
+            msg="lower <= upper",
+        )
 
 
 class DiscreteBoundRV(BoundRV):
@@ -107,8 +117,17 @@ class _DiscreteBounded(Discrete):
         -------
         TensorVariable
         """
-        logp = logprob(distribution, value)
-        return check_parameters(logp, (value >= lower), (value <= upper))
+        res = at.switch(
+            at.or_(at.lt(value, lower), at.gt(value, upper)),
+            -np.inf,
+            logp(distribution, value),
+        )
+
+        return check_parameters(
+            res,
+            lower <= upper,
+            msg="lower <= upper",
+        )
 
 
 class Bound:

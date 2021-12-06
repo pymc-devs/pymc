@@ -254,9 +254,6 @@ class MvNormal(Continuous):
         norm = -0.5 * k * pm.floatX(np.log(2 * np.pi))
         return check_parameters(norm - 0.5 * quaddist - logdet, ok)
 
-    def _distr_parameters_for_repr(self):
-        return ["mu", "cov"]
-
 
 class MvStudentTRV(RandomVariable):
     name = "multivariate_studentt"
@@ -380,10 +377,13 @@ class MvStudentT(Continuous):
 
         norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * at.log(nu * np.pi)
         inner = -(nu + k) / 2.0 * at.log1p(quaddist / nu)
-        return check_parameters(norm + inner - logdet, ok)
+        res = norm + inner - logdet
 
-    def _distr_parameters_for_repr(self):
-        return ["nu", "mu", "cov"]
+        return check_parameters(
+            res,
+            ok,
+            nu > 0,
+        )
 
 
 class Dirichlet(Continuous):
@@ -448,15 +448,20 @@ class Dirichlet(Continuous):
         TensorVariable
         """
         # only defined for sum(value) == 1
-        return check_parameters(
-            at.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(at.sum(a, axis=-1)),
-            value >= 0,
-            value <= 1,
-            a > 0,
+        res = at.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(at.sum(a, axis=-1))
+        res = at.switch(
+            at.or_(
+                at.any(at.lt(value, 0), axis=-1),
+                at.any(at.gt(value, 1), axis=-1),
+            ),
+            -np.inf,
+            res,
         )
-
-    def _distr_parameters_for_repr(self):
-        return ["a"]
+        return check_parameters(
+            res,
+            a > 0,
+            msg="a > 0",
+        )
 
 
 class MultinomialRV(MultinomialRV):
@@ -553,13 +558,19 @@ class Multinomial(Discrete):
         -------
         TensorVariable
         """
+
+        res = factln(n) + at.sum(-factln(value) + logpow(p, value), axis=-1)
+        res = at.switch(
+            at.or_(at.any(at.lt(value, 0), axis=-1), at.neq(at.sum(value, axis=-1), n)),
+            -np.inf,
+            res,
+        )
         return check_parameters(
-            factln(n) + at.sum(-factln(value) + logpow(p, value), axis=-1),
-            value >= 0,
-            at.eq(at.sum(value, axis=-1), n),
+            res,
             p <= 1,
             at.eq(at.sum(p, axis=-1), 1),
             at.ge(n, 0),
+            msg="p <= 1, sum(p) = 1, n >= 0",
         )
 
 
@@ -657,16 +668,22 @@ class DirichletMultinomial(Discrete):
         sum_a = a.sum(axis=-1)
         const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
         series = gammaln(value + a) - (gammaln(value + 1) + gammaln(a))
-        result = const + series.sum(axis=-1)
+        res = const + series.sum(axis=-1)
 
-        # Bounds checking to confirm parameters and data meet all constraints
-        # and that each observation value_i sums to n_i.
+        res = at.switch(
+            at.or_(
+                at.any(at.lt(value, 0), axis=-1),
+                at.neq(at.sum(value, axis=-1), n),
+            ),
+            -np.inf,
+            res,
+        )
+
         return check_parameters(
-            result,
-            value >= 0,
+            res,
             a > 0,
             n >= 0,
-            at.eq(value.sum(axis=-1), n),
+            msg="a > 0, n >= 0",
         )
 
 
@@ -1230,9 +1247,6 @@ class _LKJCholeskyCov(Continuous):
         #     samples = np.reshape(samples, size + sample_shape)
         # return samples
 
-    def _distr_parameters_for_repr(self):
-        return ["eta", "n"]
-
 
 def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=True, *args, **kwargs):
     r"""Wrapper function for covariance matrix with LKJ distributed correlations.
@@ -1538,9 +1552,6 @@ class LKJCorr(Continuous):
             eta > 0,
         )
 
-    def _distr_parameters_for_repr(self):
-        return ["eta", "n"]
-
 
 class MatrixNormalRV(RandomVariable):
     name = "matrixnormal"
@@ -1778,9 +1789,6 @@ class MatrixNormal(Continuous):
         norm = -0.5 * m * n * pm.floatX(np.log(2 * np.pi))
         return norm - 0.5 * trquaddist - m * half_collogdet - n * half_rowlogdet
 
-    def _distr_parameters_for_repr(self):
-        return ["mu"]
-
 
 class KroneckerNormalRV(RandomVariable):
     name = "kroneckernormal"
@@ -1970,9 +1978,6 @@ class KroneckerNormal(Continuous):
         a = -(quad + logdet + N * at.log(2 * np.pi)) / 2.0
         return a
 
-    def _distr_parameters_for_repr(self):
-        return ["mu"]
-
 
 class CARRV(RandomVariable):
     name = "car"
@@ -2146,4 +2151,5 @@ class CAR(Continuous):
             alpha <= 1,
             alpha >= -1,
             tau > 0,
+            msg="-1 <= alpha <= 1, tau > 0",
         )
