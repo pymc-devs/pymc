@@ -634,6 +634,7 @@ class TestMatchesScipy:
         n_samples=100,
         extra_args=None,
         scipy_args=None,
+        skip_paramdomain_outside_edge_test=False,
     ):
         """
         Generic test for PyMC logp methods
@@ -679,14 +680,39 @@ class TestMatchesScipy:
             args.update(scipy_args)
             return scipy_logp(**args)
 
+        def _model_input_dict(model, param_vars, pt):
+            """Create a dict with only the necessary, transformed logp inputs."""
+            pt_d = {}
+            for k, v in pt.items():
+                rv_var = model.named_vars.get(k)
+                nv = param_vars.get(k, rv_var)
+                nv = getattr(nv.tag, "value_var", nv)
+
+                transform = getattr(nv.tag, "transform", None)
+                if transform:
+                    # todo: the compiled graph behind this should be cached and
+                    # reused (if it isn't already).
+                    v = transform.forward(rv_var, v).eval()
+
+                if nv.name in param_vars:
+                    # update the shared parameter variables in `param_vars`
+                    param_vars[nv.name].set_value(v)
+                else:
+                    # create an argument entry for the (potentially
+                    # transformed) "value" variable
+                    pt_d[nv.name] = v
+
+            return pt_d
+
         model, param_vars = build_model(pymc_dist, domain, paramdomains, extra_args)
         logp_pymc = model.fastlogp_nojac
 
+        # Test supported value and parameters domain matches scipy
         domains = paramdomains.copy()
         domains["value"] = domain
         for pt in product(domains, n_samples=n_samples):
             pt = dict(pt)
-            pt_d = self._model_input_dict(model, param_vars, pt)
+            pt_d = _model_input_dict(model, param_vars, pt)
             pt_logp = Point(pt_d, model=model)
             pt_ref = Point(pt, filter_model_vars=False, model=model)
             assert_almost_equal(
@@ -696,29 +722,58 @@ class TestMatchesScipy:
                 err_msg=str(pt),
             )
 
-    def _model_input_dict(self, model, param_vars, pt):
-        """Create a dict with only the necessary, transformed logp inputs."""
-        pt_d = {}
-        for k, v in pt.items():
-            rv_var = model.named_vars.get(k)
-            nv = param_vars.get(k, rv_var)
-            nv = getattr(nv.tag, "value_var", nv)
+        valid_value = domain.vals[0]
+        valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
+        valid_dist = pymc_dist.dist(**valid_params, **extra_args)
 
-            transform = getattr(nv.tag, "transform", None)
-            if transform:
-                # todo: the compiled graph behind this should be cached and
-                # reused (if it isn't already).
-                v = transform.forward(rv_var, v).eval()
+        # Test pymc distribution raises ParameterValueError for scalar parameters outside
+        # the supported domain edges (excluding edges)
+        if not skip_paramdomain_outside_edge_test:
+            # Step1: collect potential invalid parameters
+            invalid_params = {param: [None, None] for param in paramdomains}
+            for param, paramdomain in paramdomains.items():
+                if np.ndim(paramdomain.lower) != 0:
+                    continue
+                if np.isfinite(paramdomain.lower):
+                    invalid_params[param][0] = paramdomain.lower - 1
+                if np.isfinite(paramdomain.upper):
+                    invalid_params[param][1] = paramdomain.upper + 1
 
-            if nv.name in param_vars:
-                # update the shared parameter variables in `param_vars`
-                param_vars[nv.name].set_value(v)
-            else:
-                # create an argument entry for the (potentially
-                # transformed) "value" variable
-                pt_d[nv.name] = v
+            # Step2: test invalid parameters, one a time
+            for invalid_param, invalid_edges in invalid_params.items():
+                for invalid_edge in invalid_edges:
+                    if invalid_edge is None:
+                        continue
+                    test_params = valid_params.copy()  # Shallow copy should be okay
+                    test_params[invalid_param] = at.as_tensor_variable(invalid_edge)
+                    # We need to remove `Assert`s introduced by checks like
+                    # `assert_negative_support` and disable test values;
+                    # otherwise, we won't be able to create the `RandomVariable`
+                    with aesara.config.change_flags(compute_test_value="off"):
+                        invalid_dist = pymc_dist.dist(**test_params, **extra_args)
+                    with aesara.config.change_flags(mode=Mode("py")):
+                        with pytest.raises(ParameterValueError):
+                            logp(invalid_dist, valid_value).eval()
+                            pytest.fail(f"test_params={test_params}, valid_value={valid_value}")
 
-        return pt_d
+        # Test that values outside of scalar domain support evaluate to -np.inf
+        if np.ndim(domain.lower) != 0:
+            return
+        invalid_values = [None, None]
+        if np.isfinite(domain.lower):
+            invalid_values[0] = domain.lower - 1
+        if np.isfinite(domain.upper):
+            invalid_values[1] = domain.upper + 1
+
+        for invalid_value in invalid_values:
+            if invalid_value is None:
+                continue
+            with aesara.config.change_flags(mode=Mode("py")):
+                assert_equal(
+                    logp(valid_dist, invalid_value).eval(),
+                    -np.inf,
+                    err_msg=str(invalid_value),
+                )
 
     def check_logcdf(
         self,
@@ -826,7 +881,7 @@ class TestMatchesScipy:
                 for invalid_edge in invalid_edges:
                     if invalid_edge is not None:
                         test_params = valid_params.copy()  # Shallow copy should be okay
-                        test_params[invalid_param] = invalid_edge
+                        test_params[invalid_param] = at.as_tensor_variable(invalid_edge)
                         # We need to remove `Assert`s introduced by checks like
                         # `assert_negative_support` and disable test values;
                         # otherwise, we won't be able to create the
@@ -934,6 +989,7 @@ class TestMatchesScipy:
             Runif,
             {"lower": -Rplusunif, "upper": Rplusunif},
             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower),
+            skip_paramdomain_outside_edge_test=True,
         )
         self.check_logcdf(
             Uniform,
@@ -954,6 +1010,7 @@ class TestMatchesScipy:
             Runif,
             {"lower": -Rplusunif, "c": Runif, "upper": Rplusunif},
             lambda value, c, lower, upper: sp.triang.logpdf(value, c - lower, lower, upper - lower),
+            skip_paramdomain_outside_edge_test=True,
         )
         self.check_logcdf(
             Triangular,
@@ -1007,6 +1064,7 @@ class TestMatchesScipy:
             Rdunif,
             {"lower": -Rplusdunif, "upper": Rplusdunif},
             lambda value, lower, upper: sp.randint.logpmf(value, lower, upper + 1),
+            skip_paramdomain_outside_edge_test=True,
         )
         self.check_logcdf(
             DiscreteUniform,
@@ -1017,7 +1075,7 @@ class TestMatchesScipy:
         )
         self.check_selfconsistency_discrete_logcdf(
             DiscreteUniform,
-            Rdunif,
+            Domain([-10, 0, 10], "int64"),
             {"lower": -Rplusdunif, "upper": Rplusdunif},
         )
         # Custom logp / logcdf check for invalid parameters
@@ -1029,7 +1087,7 @@ class TestMatchesScipy:
                 logcdf(invalid_dist, 2).eval()
 
     def test_flat(self):
-        self.check_logp(Flat, Runif, {}, lambda value: 0)
+        self.check_logp(Flat, R, {}, lambda value: 0)
         with Model():
             x = Flat("a")
         self.check_logcdf(Flat, R, {}, lambda value: np.log(0.5))
@@ -1074,6 +1132,7 @@ class TestMatchesScipy:
             {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig, "upper": Rplusbig},
             scipy_logp,
             decimal=select_by_precision(float64=6, float32=1),
+            skip_paramdomain_outside_edge_test=True,
         )
 
         self.check_logp(
@@ -1082,6 +1141,7 @@ class TestMatchesScipy:
             {"mu": R, "sigma": Rplusbig, "upper": Rplusbig},
             functools.partial(scipy_logp, lower=-np.inf),
             decimal=select_by_precision(float64=6, float32=1),
+            skip_paramdomain_outside_edge_test=True,
         )
 
         self.check_logp(
@@ -1090,6 +1150,7 @@ class TestMatchesScipy:
             {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig},
             functools.partial(scipy_logp, upper=np.inf),
             decimal=select_by_precision(float64=6, float32=1),
+            skip_paramdomain_outside_edge_test=True,
         )
 
     def test_half_normal(self):
@@ -1679,13 +1740,13 @@ class TestMatchesScipy:
         self.check_logp(
             DiscreteWeibull,
             Nat,
-            {"q": Unit, "beta": Rplusdunif},
+            {"q": Unit, "beta": NatSmall},
             discrete_weibull_logpmf,
         )
         self.check_selfconsistency_discrete_logcdf(
             DiscreteWeibull,
             Nat,
-            {"q": Unit, "beta": Rplusdunif},
+            {"q": Unit, "beta": NatSmall},
         )
 
     def test_poisson(self):
@@ -2088,7 +2149,7 @@ class TestMatchesScipy:
         self.check_logp(
             Wishart,
             PdMatrix(n),
-            {"nu": Domain([3, 4, 2000]), "V": PdMatrix(n)},
+            {"nu": Domain([0, 3, 4, np.inf], "int64"), "V": PdMatrix(n)},
             lambda value, nu, V: scipy.stats.wishart.logpdf(value, np.int(nu), V),
         )
 
@@ -2255,7 +2316,7 @@ class TestMatchesScipy:
     def test_categorical(self, n):
         self.check_logp(
             Categorical,
-            Domain(range(n), dtype="int64", edges=(None, None)),
+            Domain(range(n), dtype="int64", edges=(0, n)),
             {"p": Simplex(n)},
             lambda value, p: categorical_logpdf(value, p),
         )
@@ -2368,8 +2429,8 @@ class TestMatchesScipy:
     def test_vonmises(self):
         self.check_logp(
             VonMises,
-            R,
-            {"mu": Circ, "kappa": Rplus},
+            Circ,
+            {"mu": R, "kappa": Rplus},
             lambda value, mu, kappa: floatX(sp.vonmises.logpdf(value, kappa, loc=mu)),
         )
 
