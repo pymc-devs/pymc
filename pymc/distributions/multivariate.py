@@ -507,13 +507,11 @@ class Multinomial(Discrete):
 
     Parameters
     ----------
-    n: int or array
-        Number of trials (n > 0). If n is an array its shape must be (N,) with
-        N = p.shape[0]
-    p: one- or two-dimensional array
-        Probability of each one of the different outcomes. Elements must
-        be non-negative and sum to 1 along the last axis. They will be
-        automatically rescaled otherwise.
+    n: int
+        Number of trials (n > 0)
+    p: vector
+        Probability of each one of the different outcomes. Elements must be non-negative
+        and sum to 1 along the last axis. They will be automatically rescaled otherwise.
     """
     rv_op = multinomial
 
