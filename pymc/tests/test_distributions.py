@@ -152,15 +152,20 @@ LKJ_CASES = get_lkj_cases()
 
 
 class Domain:
-    def __init__(self, vals, dtype=None, edges=None, shape=None):
-        avals = array(vals, dtype=dtype)
-        if dtype is None and not str(avals.dtype).startswith("int"):
-            avals = avals.astype(aesara.config.floatX)
-        vals = [array(v, dtype=avals.dtype) for v in vals]
+    def __init__(self, vals, dtype=aesara.config.floatX, edges=None, shape=None):
+        # Infinity values must be kept as floats
+        vals = [array(v, dtype=dtype) if np.all(np.isfinite(v)) else floatX(v) for v in vals]
 
         if edges is None:
             edges = array(vals[0]), array(vals[-1])
             vals = vals[1:-1]
+        else:
+            edges = list(edges)
+            if edges[0] is None:
+                edges[0] = np.full_like(vals[0], -np.inf)
+            if edges[1] is None:
+                edges[1] = np.full_like(vals[0], np.inf)
+            edges = tuple(edges)
 
         if not vals:
             raise ValueError(
@@ -170,13 +175,12 @@ class Domain:
             )
 
         if shape is None:
-            shape = avals[0].shape
+            shape = vals[0].shape
 
         self.vals = vals
         self.shape = shape
-
         self.lower, self.upper = edges
-        self.dtype = avals.dtype
+        self.dtype = dtype
 
     def __add__(self, other):
         return Domain(
@@ -251,17 +255,17 @@ Unit = Domain([0, 0.001, 0.1, 0.5, 0.75, 0.99, 1])
 
 Circ = Domain([-np.pi, -2.1, -1, -0.01, 0.0, 0.01, 1, 2.1, np.pi])
 
-Runif = Domain([-1, -0.4, 0, 0.4, 1])
-Rdunif = Domain([-10, 0, 10.0])
+Runif = Domain([-np.inf, -0.4, 0, 0.4, np.inf])
+Rdunif = Domain([-np.inf, -1, 0, 1, np.inf], "int64")
 Rplusunif = Domain([0, 0.5, inf])
-Rplusdunif = Domain([2, 10, 100], "int64")
+Rplusdunif = Domain([0, 10, np.inf], "int64")
 
-I = Domain([-1000, -3, -2, -1, 0, 1, 2, 3, 1000], "int64")
+I = Domain([-np.inf, -3, -2, -1, 0, 1, 2, 3, np.inf], "int64")
 
-NatSmall = Domain([0, 3, 4, 5, 1000], "int64")
-Nat = Domain([0, 1, 2, 3, 2000], "int64")
-NatBig = Domain([0, 1, 2, 3, 5000, 50000], "int64")
-PosNat = Domain([1, 2, 3, 2000], "int64")
+NatSmall = Domain([0, 3, 4, 5, np.inf], "int64")
+Nat = Domain([0, 1, 2, 3, np.inf], "int64")
+NatBig = Domain([0, 1, 2, 3, 5000, np.inf], "int64")
+PosNat = Domain([1, 2, 3, np.inf], "int64")
 
 Bool = Domain([0, 0, 1, 1], "int64")
 
@@ -523,20 +527,16 @@ def orderedprobit_logpdf(value, eta, cutpoints):
     return np.where(np.all(ps >= 0), np.log(p), -np.inf)
 
 
-class Simplex:
-    def __init__(self, n):
-        self.vals = list(simplex_values(n))
-        self.shape = (n,)
-        self.dtype = Unit.dtype
+def Simplex(n):
+    return Domain(simplex_values(n), shape=(n,), dtype=Unit.dtype, edges=(None, None))
 
 
-class MultiSimplex:
-    def __init__(self, n_dependent, n_independent):
-        self.vals = []
-        for simplex_value in itertools.product(simplex_values(n_dependent), repeat=n_independent):
-            self.vals.append(np.vstack(simplex_value))
-        self.shape = (n_independent, n_dependent)
-        self.dtype = Unit.dtype
+def MultiSimplex(n_dependent, n_independent):
+    vals = []
+    for simplex_value in itertools.product(simplex_values(n_dependent), repeat=n_independent):
+        vals.append(np.vstack(simplex_value))
+
+    return Domain(vals, dtype=Unit.dtype, shape=(n_independent, n_dependent))
 
 
 def PdMatrix(n):
@@ -811,18 +811,15 @@ class TestMatchesScipy:
         valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
         valid_dist = pymc_dist.dist(**valid_params)
 
-        # Natural domains do not have inf as the upper edge, but should also be ignored
-        nat_domains = (NatSmall, Nat, NatBig, PosNat)
-
-        # Test pymc distribution gives -inf for parameters outside the
-        # supported domain edges (excluding edgse)
+        # Test pymc distribution raises ParameterValueError for parameters outside the
+        # supported domain edges (excluding edges)
         if not skip_paramdomain_outside_edge_test:
             # Step1: collect potential invalid parameters
             invalid_params = {param: [None, None] for param in paramdomains}
             for param, paramdomain in paramdomains.items():
                 if np.isfinite(paramdomain.lower):
                     invalid_params[param][0] = paramdomain.lower - 1
-                if np.isfinite(paramdomain.upper) and paramdomain not in nat_domains:
+                if np.isfinite(paramdomain.upper):
                     invalid_params[param][1] = paramdomain.upper + 1
             # Step2: test invalid parameters, one a time
             for invalid_param, invalid_edges in invalid_params.items():
@@ -851,7 +848,7 @@ class TestMatchesScipy:
                 )
 
         # Test that values above domain edge evaluate to 0
-        if domain not in nat_domains and np.isfinite(domain.upper):
+        if np.isfinite(domain.upper):
             above_domain = domain.upper + 1
             with aesara.config.change_flags(mode=Mode("py")):
                 assert_equal(
