@@ -626,17 +626,12 @@ class DirichletMultinomial(Discrete):
 
     Parameters
     ----------
-    n : int or array
-        Total counts in each replicate. If n is an array its shape must be (N,)
-        with N = a.shape[0]
+    n : int
+        Total counts in each replicate.
 
-    a : one- or two-dimensional array
-        Dirichlet parameter. Elements must be strictly positive.
-        The number of categories is given by the length of the last axis.
-
-    shape : integer tuple
-        Describes shape of distribution. For example if n=array([5, 10]), and
-        a=array([1, 1, 1]), shape should be (2, 3).
+    a : vector
+        Dirichlet alpha parameter. Elements must be strictly positive. The number of
+        categories is given by the length of the last axis.
     """
     rv_op = dirichlet_multinomial
 
@@ -661,15 +656,10 @@ class DirichletMultinomial(Discrete):
         -------
         TensorVariable
         """
-        if value.ndim >= 1:
-            n = at.shape_padright(n)
-            if a.ndim > 1:
-                a = at.shape_padleft(a)
-
-        sum_a = a.sum(axis=-1, keepdims=True)
+        sum_a = a.sum(axis=-1)
         const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
         series = gammaln(value + a) - (gammaln(value + 1) + gammaln(a))
-        result = const + series.sum(axis=-1, keepdims=True)
+        result = const + series.sum(axis=-1)
 
         # Bounds checking to confirm parameters and data meet all constraints
         # and that each observation value_i sums to n_i.
@@ -678,12 +668,9 @@ class DirichletMultinomial(Discrete):
             value >= 0,
             a > 0,
             n >= 0,
-            at.eq(value.sum(axis=-1, keepdims=True), n),
+            at.eq(value.sum(axis=-1), n),
             broadcast_conditions=False,
         )
-
-    def _distr_parameters_for_repr(self):
-        return ["n", "a"]
 
 
 class _OrderedMultinomial(Multinomial):
