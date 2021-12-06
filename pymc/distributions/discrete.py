@@ -135,13 +135,14 @@ class Binomial(Discrete):
         -------
         TensorVariable
         """
-        return check_parameters(
+
+        res = at.switch(
+            at.or_(at.lt(value, 0), at.gt(value, n)),
+            -np.inf,
             binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
-            0 <= value,
-            value <= n,
-            0 <= p,
-            p <= 1,
         )
+
+        return check_parameters(res, 0 < n, 0 <= p, p <= 1, msg="n > 0, 0 <= p <= 1")
 
     def logcdf(value, n, p):
         """
@@ -160,16 +161,22 @@ class Binomial(Discrete):
         """
         value = at.floor(value)
 
-        return check_parameters(
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
             at.switch(
                 at.lt(value, n),
                 at.log(at.betainc(n - value, value + 1, 1 - p)),
                 0,
             ),
-            0 <= value,
+        )
+
+        return check_parameters(
+            res,
             0 < n,
             0 <= p,
             p <= 1,
+            msg="n > 0, 0 <= p <= 1",
         )
 
 
@@ -258,13 +265,12 @@ class BetaBinomial(Discrete):
         -------
         TensorVariable
         """
-        return check_parameters(
+        res = at.switch(
+            at.or_(at.lt(value, 0), at.gt(value, n)),
+            -np.inf,
             binomln(n, value) + betaln(value + alpha, n - value + beta) - betaln(alpha, beta),
-            value >= 0,
-            value <= n,
-            alpha > 0,
-            beta > 0,
         )
+        return check_parameters(res, n >= 0, alpha > 0, beta > 0, msg="n >= 0, alpha > 0, beta > 0")
 
     def logcdf(value, n, alpha, beta):
         """
@@ -287,21 +293,22 @@ class BetaBinomial(Discrete):
             )
 
         safe_lower = at.switch(at.lt(value, 0), value, 0)
-
-        return check_parameters(
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
             at.switch(
                 at.lt(value, n),
                 at.logsumexp(
-                    BetaBinomial.logp(at.arange(safe_lower, value + 1), n, alpha, beta),
+                    logp(
+                        BetaBinomial.dist(alpha=alpha, beta=beta, n=n),
+                        at.arange(safe_lower, value + 1),
+                    ),
                     keepdims=False,
                 ),
                 0,
             ),
-            0 <= value,
-            0 <= n,
-            0 < alpha,
-            0 < beta,
         )
+        return check_parameters(res, 0 <= n, 0 < alpha, 0 < beta, msg="n >= 0, alpha > 0, beta > 0")
 
 
 class Bernoulli(Discrete):
@@ -383,13 +390,13 @@ class Bernoulli(Discrete):
         TensorVariable
         """
 
-        return check_parameters(
+        res = at.switch(
+            at.or_(at.lt(value, 0), at.gt(value, 1)),
+            -np.inf,
             at.switch(value, at.log(p), at.log1p(-p)),
-            value >= 0,
-            value <= 1,
-            p >= 0,
-            p <= 1,
         )
+
+        return check_parameters(res, p >= 0, p <= 1, msg="0 <= p <= 1")
 
     def logcdf(value, p):
         """
@@ -406,17 +413,16 @@ class Bernoulli(Discrete):
         -------
         TensorVariable
         """
-
-        return check_parameters(
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
             at.switch(
                 at.lt(value, 1),
                 at.log1p(-p),
                 0,
             ),
-            0 <= value,
-            0 <= p,
-            p <= 1,
         )
+        return check_parameters(res, 0 <= p, p <= 1, msg="0 <= p <= 1")
 
 
 class DiscreteWeibullRV(RandomVariable):
@@ -496,13 +502,14 @@ class DiscreteWeibull(Discrete):
         -------
         TensorVariable
         """
-        return check_parameters(
+
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
             at.log(at.power(q, at.power(value, beta)) - at.power(q, at.power(value + 1, beta))),
-            0 <= value,
-            0 < q,
-            q < 1,
-            0 < beta,
         )
+
+        return check_parameters(res, 0 < q, q < 1, 0 < beta, msg="0 < q < 1, beta > 0")
 
     def logcdf(value, q, beta):
         """
@@ -519,13 +526,13 @@ class DiscreteWeibull(Discrete):
         -------
         TensorVariable
         """
-        return check_parameters(
+
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
             at.log1p(-at.power(q, at.power(value + 1, beta))),
-            0 <= value,
-            0 < q,
-            q < 1,
-            0 < beta,
         )
+        return check_parameters(res, 0 < q, q < 1, 0 < beta, msg="0 < q < 1, beta > 0")
 
 
 class Poisson(Discrete):
@@ -599,7 +606,12 @@ class Poisson(Discrete):
         -------
         TensorVariable
         """
-        log_prob = check_parameters(logpow(mu, value) - factln(value) - mu, mu >= 0, value >= 0)
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
+            logpow(mu, value) - factln(value) - mu,
+        )
+        log_prob = check_parameters(res, mu >= 0, msg="mu >= 0")
         # Return zero when mu and value are both zero
         return at.switch(at.eq(mu, 0) * at.eq(value, 0), 0, log_prob)
 
@@ -623,11 +635,15 @@ class Poisson(Discrete):
         safe_mu = at.switch(at.lt(mu, 0), 0, mu)
         safe_value = at.switch(at.lt(value, 0), 0, value)
 
-        return check_parameters(
-            at.log(at.gammaincc(safe_value + 1, safe_mu)),
-            0 <= value,
-            0 <= mu,
+        res = (
+            at.switch(
+                at.lt(value, 0),
+                -np.inf,
+                at.log(at.gammaincc(safe_value + 1, safe_mu)),
+            ),
         )
+
+        return check_parameters(res, 0 <= mu, msg="mu >= 0")
 
 
 class NegativeBinomial(Discrete):
@@ -743,13 +759,22 @@ class NegativeBinomial(Discrete):
         """
         alpha = n
         mu = alpha * (1 - p) / p
+
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
+            (
+                binomln(value + alpha - 1, value)
+                + logpow(mu / (mu + alpha), value)
+                + logpow(alpha / (mu + alpha), alpha)
+            ),
+        )
+
         negbinom = check_parameters(
-            binomln(value + alpha - 1, value)
-            + logpow(mu / (mu + alpha), value)
-            + logpow(alpha / (mu + alpha), alpha),
-            value >= 0,
+            res,
             mu > 0,
             alpha > 0,
+            msg="mu > 0, alpha > 0",
         )
 
         # Return Poisson when alpha gets very large.
@@ -770,12 +795,17 @@ class NegativeBinomial(Discrete):
         -------
         TensorVariable
         """
-        return check_parameters(
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
             at.log(at.betainc(n, at.floor(value) + 1, p)),
-            0 <= value,
+        )
+        return check_parameters(
+            res,
             0 < n,
             0 <= p,
             p <= 1,
+            msg="0 < n, 0 <= p <= 1",
         )
 
 
@@ -844,11 +874,18 @@ class Geometric(Discrete):
         -------
         TensorVariable
         """
-        return check_parameters(
+
+        res = at.switch(
+            at.lt(value, 1),
+            -np.inf,
             at.log(p) + logpow(1 - p, value - 1),
+        )
+
+        return check_parameters(
+            res,
             0 <= p,
             p <= 1,
-            value >= 1,
+            msg="0 <= p <= 1",
         )
 
     def logcdf(value, p):
@@ -867,11 +904,16 @@ class Geometric(Discrete):
         TensorVariable
         """
 
-        return check_parameters(
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
             at.log1mexp(at.log1p(-p) * value),
-            0 <= value,
+        )
+        return check_parameters(
+            res,
             0 <= p,
             p <= 1,
+            msg="0 <= p <= 1",
         )
 
 
@@ -965,7 +1007,18 @@ class HyperGeometric(Discrete):
         # value in [max(0, n - N + k), min(k, n)]
         lower = at.switch(at.gt(n - tot + good, 0), n - tot + good, 0)
         upper = at.switch(at.lt(good, n), good, n)
-        return check_parameters(result, lower <= value, value <= upper)
+
+        res = at.switch(
+            at.lt(value, lower),
+            -np.inf,
+            at.switch(
+                at.le(value, upper),
+                result,
+                -np.inf,
+            ),
+        )
+
+        return check_parameters(res, lower <= upper, msg="lower <= upper")
 
     def logcdf(value, good, bad, n):
         """
@@ -991,7 +1044,9 @@ class HyperGeometric(Discrete):
         # TODO: Use lower upper in locgdf for smarter logsumexp?
         safe_lower = at.switch(at.lt(value, 0), value, 0)
 
-        return check_parameters(
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
             at.switch(
                 at.lt(value, n),
                 at.logsumexp(
@@ -1000,12 +1055,16 @@ class HyperGeometric(Discrete):
                 ),
                 0,
             ),
-            0 <= value,
+        )
+
+        return check_parameters(
+            res,
             0 < N,
             0 <= good,
             0 <= n,
             good <= N,
             n <= N,
+            msg="N > 0, 0 <= good <= N, 0 <= n <= N",
         )
 
 
@@ -1092,11 +1151,12 @@ class DiscreteUniform(Discrete):
         -------
         TensorVariable
         """
-        return check_parameters(
+        res = at.switch(
+            at.or_(at.lt(value, lower), at.gt(value, upper)),
+            -np.inf,
             at.fill(value, -at.log(upper - lower + 1)),
-            lower <= value,
-            value <= upper,
         )
+        return check_parameters(res, lower <= upper, msg="lower <= upper")
 
     def logcdf(value, lower, upper):
         """
@@ -1114,15 +1174,17 @@ class DiscreteUniform(Discrete):
         TensorVariable
         """
 
-        return check_parameters(
+        res = at.switch(
+            at.le(value, lower),
+            -np.inf,
             at.switch(
                 at.lt(value, upper),
                 at.log(at.minimum(at.floor(value), upper) - lower + 1) - at.log(upper - lower + 1),
                 0,
             ),
-            lower <= value,
-            lower <= upper,
         )
+
+        return check_parameters(res, lower <= upper, msg="lower <= upper")
 
 
 class Categorical(Discrete):
@@ -1205,12 +1267,14 @@ class Categorical(Discrete):
         else:
             a = at.log(p[value_clip])
 
-        return check_parameters(
+        res = at.switch(
+            at.or_(at.lt(value, 0), at.gt(value, k - 1)),
+            -np.inf,
             a,
-            value >= 0,
-            value <= (k - 1),
-            at.all(p_ >= 0, axis=-1),
-            at.all(p <= 1, axis=-1),
+        )
+
+        return check_parameters(
+            res, at.all(p_ >= 0, axis=-1), at.all(p <= 1, axis=-1), msg="0 <= p <=1"
         )
 
 
@@ -1267,9 +1331,10 @@ class Constant(Discrete):
         -------
         TensorVariable
         """
-        return check_parameters(
-            at.zeros_like(value),
+        return at.switch(
             at.eq(value, c),
+            at.zeros_like(value),
+            -np.inf,
         )
 
 
@@ -1368,18 +1433,20 @@ class ZeroInflatedPoisson(Discrete):
         TensorVariable
         """
 
-        logp_val = at.switch(
+        res = at.switch(
             at.gt(value, 0),
             at.log(psi) + logp(Poisson.dist(mu=theta), value),
             at.logaddexp(at.log1p(-psi), at.log(psi) - theta),
         )
 
+        res = at.switch(at.lt(value, 0), -np.inf, res)
+
         return check_parameters(
-            logp_val,
-            0 <= value,
+            res,
             0 <= psi,
             psi <= 1,
             0 <= theta,
+            msg="0 <= psi <= 1, theta >= 0",
         )
 
     def logcdf(value, psi, theta):
@@ -1398,15 +1465,17 @@ class ZeroInflatedPoisson(Discrete):
         TensorVariable
         """
 
-        return check_parameters(
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
             at.logaddexp(
                 at.log1p(-psi),
                 at.log(psi) + logcdf(Poisson.dist(mu=theta), value),
             ),
-            0 <= value,
-            0 <= psi,
-            psi <= 1,
-            0 <= theta,
+        )
+
+        return check_parameters(
+            res, 0 <= psi, psi <= 1, 0 <= theta, msg="0 <= psi <= 1, theta >= 0"
         )
 
 
@@ -1507,20 +1576,25 @@ class ZeroInflatedBinomial(Discrete):
         TensorVariable
         """
 
-        logp_val = at.switch(
+        res = at.switch(
             at.gt(value, 0),
             at.log(psi) + logp(Binomial.dist(n=n, p=p), value),
             at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
         )
 
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
+            res,
+        )
+
         return check_parameters(
-            logp_val,
-            0 <= value,
-            value <= n,
+            res,
             0 <= psi,
             psi <= 1,
             0 <= p,
             p <= 1,
+            msg="0 <= psi <= 1, 0 <= p <= 1",
         )
 
     def logcdf(value, psi, n, p):
@@ -1538,18 +1612,22 @@ class ZeroInflatedBinomial(Discrete):
         -------
         TensorVariable
         """
-
-        return check_parameters(
+        res = at.switch(
+            at.or_(at.lt(value, 0), at.gt(value, n)),
+            -np.inf,
             at.logaddexp(
                 at.log1p(-psi),
                 at.log(psi) + logcdf(Binomial.dist(n=n, p=p), value),
             ),
-            0 <= value,
-            value <= n,
+        )
+
+        return check_parameters(
+            res,
             0 <= psi,
             psi <= 1,
             0 <= p,
             p <= 1,
+            msg="0 <= psi <= 1, 0 <= p <= 1",
         )
 
 
@@ -1683,18 +1761,26 @@ class ZeroInflatedNegativeBinomial(Discrete):
         TensorVariable
         """
 
+        res = at.switch(
+            at.gt(value, 0),
+            at.log(psi) + logp(NegativeBinomial.dist(n=n, p=p), value),
+            at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
+        )
+
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
+            res,
+        )
+
         return check_parameters(
-            at.switch(
-                at.gt(value, 0),
-                at.log(psi) + logp(NegativeBinomial.dist(n=n, p=p), value),
-                at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
-            ),
-            0 <= value,
+            res,
             0 <= psi,
             psi <= 1,
             0 < n,
             0 <= p,
             p <= 1,
+            msg="0 <= psi <= 1, n > 0, 0 <= p <= 1",
         )
 
     def logcdf(value, psi, n, p):
@@ -1712,16 +1798,23 @@ class ZeroInflatedNegativeBinomial(Discrete):
         -------
         TensorVariable
         """
-        return check_parameters(
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
             at.logaddexp(
-                at.log1p(-psi), at.log(psi) + logcdf(NegativeBinomial.dist(n=n, p=p), value)
+                at.log1p(-psi),
+                at.log(psi) + logcdf(NegativeBinomial.dist(n=n, p=p), value),
             ),
-            0 <= value,
+        )
+
+        return check_parameters(
+            res,
             0 <= psi,
             psi <= 1,
             0 < n,
             0 < p,
             p <= 1,
+            msg="0 <= psi <= 1, n > 0, 0 < p <= 1",
         )
 
 
