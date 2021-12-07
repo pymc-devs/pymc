@@ -118,7 +118,7 @@ After implementing the new `RandomVariable` `Op`, it's time to make use of it in
 PyMC 4.x works in a very {term}`functional <Functional Programming>` way, and the `distribution` classes are there mostly to facilitate porting the `PyMC3` v3.x code to the new `PyMC` v4.x version, add PyMC API features and keep related methods organized together.
 In practice, they take care of:
 
-1. Linking ({term}`Dispatching`) a rv_op class with the corresponding logp and logcdf methods.
+1. Linking ({term}`Dispatching`) a rv_op class with the corresponding `get_moment`, `logp` and `logcdf` methods.
 1. Defining a standard transformation (for continuous distributions) that converts a bounded variable domain (e.g., positive line) to an unbounded domain (i.e., the real line), which many samplers prefer.
 1. Validating the parametrization of a distribution and converting non-symbolic inputs (i.e., numeric literals or numpy arrays) to symbolic variables.
 1. Converting multiple alternative parametrizations to the standard parametrization that the `RandomVariable` is defined in terms of.
@@ -152,6 +152,14 @@ class Blah(PositiveContinuous):
         # The first value-only argument should be a list of the parameters that
         # the rv_op needs in order to be instantiated
         return super().dist([param1, param2], **kwargs)
+
+    # get_moment returns the stable moment from which to start sampling for the
+    # distribution given the implicit `rv`, `size` and `param1` ... `paramN`
+    def get_moment(rv, size, param1, param2):
+        moment, _ = at.broadcast_arrays(param1, param2)
+        if not rv_size_is_none(size):
+            moment = at.full(size, moment)
+        return moment
 
     # Logp returns a symbolic expression for the logp evaluation of the variable
     # given the `value` of the variable and the parameters `param1` ... `paramN`
@@ -188,6 +196,8 @@ Some notes:
    overriding `__new__`.
 1. As mentioned above, `PyMC` v4.x works in a very {term}`functional <Functional Programming>` way, and all the information that is needed in the `logp` and `logcdf` methods is expected to be "carried" via the `RandomVariable` inputs. You may pass numerical arguments that are not strictly needed for the `rng_fn` method but are used in the `logp` and `logcdf` methods. Just keep in mind whether this affects the correct shape inference behavior of the `RandomVariable`. If specialized non-numeric information is needed you might need to define your custom`_logp` and `_logcdf` {term}`Dispatching` functions, but this should be done as a last resort.
 1. The `logcdf` method is not a requirement, but it's a nice plus!
+1. Currently only one moment is supported in the `get_moment` method, and probably the "higher-order" one is the most useful (that is `mean` > `median` > `mode`)... You might need to truncate the moment if you are dealing with a discrete distribution.
+1. When creating the `get_moment` method, we have to be careful with `size != None` and broadcast properly when some parameters that are not used in the moment may nevertheless inform about the shape of the distribution. E.g. `pm.Normal.dist(mu=0, sigma=np.arange(1, 6))` returns a moment of `[mu, mu, mu, mu, mu]`.
 
 For a quick check that things are working you can try the following:
 
@@ -201,6 +211,10 @@ blah = pm.Blah.dist([0, 0], [1, 2])
 # Test that the returned blah_op is still working fine
 blah.eval()
 # array([0.62778803, 1.95165513])
+
+# Test the get_moment
+pm.distributions.distribution.get_moment(blah).eval()
+# array([0.5, 1. ])
 
 # Test the logp
 pm.logp(blah, [1.5, 1.5]).eval()
@@ -350,8 +364,56 @@ def test_blah_logcdf(self):
 
 ```
 
+## 5. Adding tests for the `get_moment` method
 
-## 5. Documenting the new `Distribution`
+Tests for the `get_moment` method are contained in `pymc/tests/test_distributions_moments.py`, and check if:
+1. Moments return `expected` values 
+1. Moments have the expected size and shape
+
+```python
+
+import pytest
+from pymc.distributions import Blah
+from pymc.initial_point import make_initial_point_fn
+
+def assert_moment_is_expected(model, expected):
+    fn = make_initial_point_fn(
+        model=model,
+        return_transformed=False,
+        default_strategy="moment",
+    )
+    result = fn(0)["x"]
+    expected = np.asarray(expected)
+    try:
+        random_draw = model["x"].eval()
+    except NotImplementedError:
+        random_draw = result
+    assert result.shape == expected.shape == random_draw.shape
+    assert np.allclose(result, expected)
+
+
+@pytest.mark.parametrize(
+    "param1, param2, size, expected",
+    [
+        (0, 1, None, 0),
+        (0, np.ones(5), None, np.zeros(5)),
+        (np.arange(5), 1, None, np.arange(5)),
+        (np.arange(5), np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(5))),
+    ],
+)
+def test_blah_moment(param1, param2, size, expected):
+    with Model() as model:
+        Blah("x", param1=param1, param2=param2, size=size)
+    assert_moment_is_expected(model, expected)
+
+```
+
+Here are some details worth keeping in mind:
+
+1. In the case where you have to manually broadcast the parameters with each other it's important to add test conditions that would fail if you were not to do that. A straightforward way to do this is to make the used parameter a scalar, the unused one(s) a vector (one at a time) and size `None`. 
+1. In other words, make sure to test different combinations of size and broadcasting to cover these cases.
+
+## 6. Documenting the new `Distribution`
 
 New distributions should have a rich docstring, following the same format as that of previously implemented distributions.
 It generally looks something like this:
