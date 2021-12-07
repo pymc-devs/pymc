@@ -154,7 +154,7 @@ def test_find_optim_prior():
         )
     assert len(record) == 0
     np.testing.assert_allclose(
-        list(opt_params.values()), np.array([8.506023352404027, 37.59626616198404])
+        list(opt_params.values()), np.array([8.506023352404027, 37.59626616198404]), rtol=1e-03
     )
 
     # Normal, normal case
@@ -164,7 +164,7 @@ def test_find_optim_prior():
         )
     assert len(record) == 0
     np.testing.assert_allclose(
-        list(opt_params.values()), np.array([170.76059047372624, 5.542895384602784])
+        list(opt_params.values()), np.array([170.76059047372624, 5.542895384602784]), rtol=1e-03
     )
 
     # Student, works as expected
@@ -180,7 +180,9 @@ def test_find_optim_prior():
     assert len(record) == 0
     assert "nu" in opt_params
     np.testing.assert_allclose(
-        list(opt_params.values()), np.array([0.24995405785756986, 0.06343501657095188, 7])
+        list(opt_params.values()),
+        np.array([0.24995405785756986, 0.06343501657095188, 7]),
+        rtol=1e-03,
     )
 
     # Student not deterministic but without warning
@@ -200,7 +202,9 @@ def test_find_optim_prior():
             pm.Binomial, lower=2, upper=8, mass=MASS, init_guess={"p": 0.5}, fixed_params={"n": 10}
         )
     assert len(record) == 0
-    np.testing.assert_allclose(list(opt_params.values()), np.array([0.5575067955294625, 10]))
+    np.testing.assert_allclose(
+        list(opt_params.values()), np.array([0.5575067955294625, 10]), rtol=1e-03
+    )
 
     # Exponential without warning
     with pytest.warns(None) as record:
@@ -208,7 +212,9 @@ def test_find_optim_prior():
             pm.Exponential, lower=0, upper=1, mass=MASS, init_guess={"lam": 1}
         )
     assert len(record) == 0
-    np.testing.assert_allclose(list(opt_params.values()), np.array([2.9957322673241604]))
+    np.testing.assert_allclose(
+        list(opt_params.values()), np.array([2.9957322673241604]), rtol=1e-03
+    )
 
     # Exponential too constraining
     with pytest.warns(UserWarning, match="instead of the requested 95%"):
