@@ -284,9 +284,8 @@ class Factor:
         """Compiled log probability density function"""
         return self.model.fn(self.logpt)
 
-    @property
-    def logp_elemwise(self):
-        return self.model.fn(self.logp_elemwiset)
+    def logp_elemwise(self, vars=None, jacobian=True):
+        return self.model.fn(self.logp_elemwiset(vars=vars, jacobian=jacobian))
 
     def dlogp(self, vars=None):
         """Compiled log probability density gradient function"""
@@ -727,6 +726,66 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             var: ip[var.name] for var in extra_vars if var in input_vars and var not in grad_vars
         }
         return ValueGradFunction(costs, grad_vars, extra_vars_and_values, **kwargs)
+
+    def logp_elemwiset(
+        self,
+        vars: Optional[Union[Variable, List[Variable]]] = None,
+        jacobian: bool = True,
+    ) -> List[Variable]:
+        """Elemwise log-probability of the model.
+
+        Parameters
+        ----------
+        vars: list of random variables or potential terms, optional
+            Compute the gradient with respect to those variables. If None, use all
+            free and observed random variables, as well as potential terms in model.
+        jacobian
+            Whether to include jacobian terms in logprob graph. Defaults to True.
+
+        Returns
+        -------
+        Elemwise logp terms for ecah requested variable, in the same order of input.
+        """
+        if vars is None:
+            vars = self.free_RVs + self.observed_RVs + self.potentials
+        elif not isinstance(vars, (list, tuple)):
+            vars = [vars]
+
+        # We need to separate random variables from potential terms, and remember their
+        # original order so that we can merge them together in the same order at the end
+        rv_values = {}
+        potentials = []
+        rv_order, potential_order = [], []
+        for i, var in enumerate(vars):
+            value_var = self.rvs_to_values.get(var)
+            if value_var is not None:
+                rv_values[var] = value_var
+                rv_order.append(i)
+            else:
+                if var in self.potentials:
+                    potentials.append(var)
+                    potential_order.append(i)
+                else:
+                    raise ValueError(
+                        f"Requested variable {var} not found among the model variables"
+                    )
+
+        rv_logps = []
+        if rv_values:
+            rv_logps = logpt(list(rv_values.keys()), rv_values, sum=False, jacobian=jacobian)
+            if not isinstance(rv_logps, list):
+                rv_logps = [rv_logps]
+
+        # Replace random variables by their value variables in potential terms
+        potential_logps = []
+        if potentials:
+            potential_logps, _ = rvs_to_value_vars(potentials, apply_transforms=True)
+
+        logp_elemwise = [None] * len(vars)
+        for logp_order, logp in zip((rv_order + potential_order), (rv_logps + potential_logps)):
+            logp_elemwise[logp_order] = logp
+
+        return logp_elemwise
 
     @property
     def logpt(self):
