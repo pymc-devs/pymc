@@ -282,5 +282,9 @@ def logpt_sum(*args, **kwargs):
     Subclasses can use this to improve the speed of logp evaluations
     if only the sum of the logp values is needed.
     """
-    # TODO: Deprecate this
+    warnings.warn(
+        "logpt_sum has been deprecated, you can use logpt instead, which now defaults"
+        "to the same behavior of logpt_sum",
+        DeprecationWarning,
+    )
     return logpt(*args, sum=True, **kwargs)
