@@ -1275,7 +1275,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
             observed_rv_var.tag.observations = nonmissing_data
 
-            self.create_value_var(observed_rv_var, transform)
+            self.create_value_var(observed_rv_var, transform=None, value_var=nonmissing_data)
             self.add_random_variable(observed_rv_var, dims)
             self.observed_RVs.append(observed_rv_var)
 
@@ -1285,22 +1285,21 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
             rv_var = Deterministic(name, rv_var, self, dims, auto=True)
 
-        elif sps.issparse(data):
-            data = sparse.basic.as_sparse(data, name=name)
-            rv_var.tag.observations = data
-            self.create_value_var(rv_var, transform)
-            self.add_random_variable(rv_var, dims)
-            self.observed_RVs.append(rv_var)
         else:
-            data = at.as_tensor_variable(data, name=name)
+            if sps.issparse(data):
+                data = sparse.basic.as_sparse(data, name=name)
+            else:
+                data = at.as_tensor_variable(data, name=name)
             rv_var.tag.observations = data
-            self.create_value_var(rv_var, transform)
+            self.create_value_var(rv_var, transform=None, value_var=data)
             self.add_random_variable(rv_var, dims)
             self.observed_RVs.append(rv_var)
 
         return rv_var
 
-    def create_value_var(self, rv_var: TensorVariable, transform: Any) -> TensorVariable:
+    def create_value_var(
+        self, rv_var: TensorVariable, transform: Any, value_var: Optional[Variable] = None
+    ) -> TensorVariable:
         """Create a ``TensorVariable`` that will be used as the random
         variable's "value" in log-likelihood graphs.
 
@@ -1311,12 +1310,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         this branch of the conditional.
 
         """
-        value_var = rv_var.type()
+        if value_var is None:
+            value_var = rv_var.type()
+            value_var.name = rv_var.name
 
         if aesara.config.compute_test_value != "off":
             value_var.tag.test_value = rv_var.tag.test_value
-
-        value_var.name = rv_var.name
 
         rv_var.tag.value_var = value_var
 
