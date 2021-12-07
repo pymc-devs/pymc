@@ -1239,6 +1239,11 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             )
             warnings.warn(impute_message, ImputationWarning)
 
+            if rv_var.owner.op.ndim_supp > 0:
+                raise NotImplementedError(
+                    f"Automatic inputation is only supported for univariate RandomVariables, but {rv_var} is multivariate"
+                )
+
             # We can get a random variable comprised of only the unobserved
             # entries by lifting the indices through the `RandomVariable` `Op`.
 

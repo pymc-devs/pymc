@@ -19,7 +19,7 @@ import pytest
 
 from numpy import array, ma
 
-from pymc.distributions import Gamma, Normal, Uniform
+from pymc.distributions import Dirichlet, Gamma, Normal, Uniform
 from pymc.exceptions import ImputationWarning
 from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive, sample_prior_predictive
@@ -163,3 +163,28 @@ def test_missing_logp():
     m_missing_logp = m_missing.logp({"theta1_missing": [2, 4], "theta2_missing": [0, 1, 3]})
 
     assert m_logp == m_missing_logp
+
+
+def test_missing_multivariate():
+    """Test model with missing variables whose transform changes base shape still works"""
+
+    with Model() as m_miss:
+        with pytest.raises(
+            NotImplementedError,
+            match="Automatic inputation is only supported for univariate RandomVariables",
+        ):
+            x = Dirichlet(
+                "x", a=[1, 2, 3], observed=np.array([[0.3, 0.3, 0.4], [np.nan, np.nan, np.nan]])
+            )
+
+    # TODO: Test can be used when local_subtensor_rv_lift supports multivariate distributions
+    # from pymc.distributions.transforms import simplex
+    #
+    # with Model() as m_unobs:
+    #     x = Dirichlet("x", a=[1, 2, 3])
+    #
+    # inp_vals = simplex.forward(np.array([0.3, 0.3, 0.4])).eval()
+    # assert np.isclose(
+    #     m_miss.logp({"x_missing_simplex__": inp_vals}),
+    #     m_unobs.logp_nojac({"x_simplex__": inp_vals}) * 2,
+    # )
