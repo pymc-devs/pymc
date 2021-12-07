@@ -19,8 +19,7 @@ import pytest
 
 from numpy import array, ma
 
-from pymc.distributions.continuous import Gamma, Normal, Uniform
-from pymc.distributions.transforms import interval
+from pymc.distributions import Gamma, Normal, Uniform
 from pymc.exceptions import ImputationWarning
 from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive, sample_prior_predictive
@@ -94,10 +93,10 @@ def test_interval_missing_observations():
         with pytest.warns(ImputationWarning):
             theta2 = Normal("theta2", mu=theta1, observed=obs2, rng=rng)
 
-        assert "theta1_observed_interval__" in model.named_vars
+        assert "theta1_observed" in model.named_vars
         assert "theta1_missing_interval__" in model.named_vars
-        assert isinstance(
-            model.rvs_to_values[model.named_vars["theta1_observed"]].tag.transform, interval
+        assert not hasattr(
+            model.rvs_to_values[model.named_vars["theta1_observed"]].tag, "transform"
         )
 
         prior_trace = sample_prior_predictive(return_inferencedata=False)

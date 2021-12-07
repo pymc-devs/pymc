@@ -409,12 +409,12 @@ class TestSimulator(SeededTest):
         a_val = m.rvs_to_values[a]
         sim1_val = m.rvs_to_values[sim1]
         logp_sim1 = pm.logpt(sim1, sim1_val)
-        logp_sim1_fn = aesara.function([sim1_val, a_val], logp_sim1)
+        logp_sim1_fn = aesara.function([a_val], logp_sim1)
 
         b_val = m.rvs_to_values[b]
         sim2_val = m.rvs_to_values[sim2]
         logp_sim2 = pm.logpt(sim2, sim2_val)
-        logp_sim2_fn = aesara.function([sim2_val, b_val], logp_sim2)
+        logp_sim2_fn = aesara.function([b_val], logp_sim2)
 
         assert any(
             node for node in logp_sim1_fn.maker.fgraph.toposort() if isinstance(node.op, SortOp)
