@@ -83,9 +83,9 @@ def find_optim_prior(
     lower_, upper_ = aet.scalars("lower", "upper")
 
     if fixed_params is not None:
-        dist_ = pm_dist.dist(**(params_to_optim | fixed_params))
-    else:
-        dist_ = pm_dist.dist(**params_to_optim)
+        params_to_optim.update(fixed_params)
+
+    dist_ = pm_dist.dist(**params_to_optim)
 
     try:
         logcdf_lower = pm.logcdf(dist_, lower_)
