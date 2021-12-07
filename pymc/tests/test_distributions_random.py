@@ -46,7 +46,7 @@ from pymc.aesaraf import change_rv_size, floatX, intX
 from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc.distributions.dist_math import clipped_beta_rvs
-from pymc.distributions.logprob import logpt
+from pymc.distributions.logprob import logp
 from pymc.distributions.multivariate import _OrderedMultinomial, quaddist_matrix
 from pymc.distributions.shape_utils import to_tuple
 from pymc.tests.helpers import SeededTest, select_by_precision
@@ -1639,8 +1639,8 @@ class TestMatrixNormal(BaseTestDistribution):
                 rowcov=np.eye(3),
                 colcov=np.eye(3),
             )
-            with pytest.raises(TypeError):
-                logpt(matrixnormal, aesara.tensor.ones((3, 3, 3)))
+            with pytest.raises(ValueError):
+                logp(matrixnormal, aesara.tensor.ones((3, 3, 3)))
 
         with pm.Model():
             with pytest.warns(FutureWarning):
@@ -1869,7 +1869,7 @@ class TestDensityDist:
             pm.DensityDist(
                 "density_dist",
                 mu,
-                logp=lambda value, mu: logpt(pm.Normal.dist(mu, 1, size=100), value),
+                logp=lambda value, mu: logp(pm.Normal.dist(mu, 1, size=100), value),
                 observed=np.random.randn(100),
                 initval=0,
             )

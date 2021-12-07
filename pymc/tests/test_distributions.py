@@ -2628,9 +2628,11 @@ class TestBound:
         assert logpt(InfBoundedNormal, 0).eval() != -np.inf
         assert logpt(InfBoundedNormal, 11).eval() != -np.inf
 
-        value = at.dscalar("x")
+        value = model.rvs_to_values[LowerNormalTransform]
         assert logpt(LowerNormalTransform, value).eval({value: -1}) != -np.inf
+        value = model.rvs_to_values[UpperNormalTransform]
         assert logpt(UpperNormalTransform, value).eval({value: 1}) != -np.inf
+        value = model.rvs_to_values[BoundedNormalTransform]
         assert logpt(BoundedNormalTransform, value).eval({value: 0}) != -np.inf
         assert logpt(BoundedNormalTransform, value).eval({value: 11}) != -np.inf
 
