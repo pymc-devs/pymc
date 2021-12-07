@@ -123,7 +123,7 @@ def _get_log_likelihood(model, samples):
     "Compute log-likelihood for all observations"
     data = {}
     for v in model.observed_RVs:
-        logp_v = replace_shared_variables([logpt(v)])
+        logp_v = replace_shared_variables([model.logp_elemwiset(v)[0]])
         fgraph = FunctionGraph(model.value_vars, logp_v, clone=False)
         optimize_graph(fgraph, include=["fast_run"], exclude=["cxx_only", "BlasOpt"])
         jax_fn = jax_funcify(fgraph)
