@@ -276,18 +276,6 @@ def logcdf(rv, value):
     return logcdf_aeppl(rv, value)
 
 
-@singledispatch
-def _logcdf(op, values, *args, **kwargs):
-    """Create a log-CDF graph.
-
-    This function dispatches on the type of `op`, which should be a subclass
-    of `RandomVariable`.  If you want to implement new log-CDF graphs
-    for a `RandomVariable`, register a new function on this dispatcher.
-
-    """
-    raise NotImplementedError()
-
-
 def logpt_sum(*args, **kwargs):
     """Return the sum of the logp values for the given observations.
 
