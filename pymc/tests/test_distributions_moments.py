@@ -805,14 +805,14 @@ def test_categorical_moment(p, size, expected):
     "x_points, pdf_points, size, expected",
     [
         (np.array([-1, 1]), np.array([0.4, 0.6]), None, 0.2),
-        (np.array([-4, -1, 3, 9, 19]), np.array([0.1 , 0.15, 0.2 , 0.25, 0.3 ]), None, 8),
-        # (np.array([-22, -4, 0, 8, 13]), np.tile(1 / 5, 5), (5, 3), -np.ones((5, 3))),
-        # (
-        #     np.arange(-100, 10),
-        #     np.arange(1, 111) / 6105,
-        #     (2, 5, 3),
-        #     np.broadcast_to(-82 / 3, (2, 5, 3)),
-        # ),
+        (np.array([-4, -1, 3, 9, 19]), np.array([0.1 , 0.15, 0.2 , 0.25, 0.3]), None, 1.5458937198067635),
+        (np.array([-22, -4, 0, 8, 13]), np.tile(1 / 5, 5), (5, 3), np.full((5, 3), -0.14285714285714296)),
+        (
+            np.arange(-100, 10),
+            np.arange(1, 111) / 6105,
+            (2, 5, 3),
+            np.full((2, 5, 3), -27.584097859327223),
+        ),
     ],
 )
 def test_interpolated_moment(x_points, pdf_points, size, expected):

@@ -272,6 +272,7 @@ def make_initial_point_expression(
         if isinstance(strategy, str):
             if strategy == "moment":
                 value = get_moment(variable)
+                print(value.eval())
             elif strategy == "prior":
                 value = variable
             else:
