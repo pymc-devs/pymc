@@ -1276,6 +1276,16 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 clone=False,
             )
             (observed_rv_var,) = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
+            # Make a clone of the RV, but change the rng so that observed and missing
+            # are not treated as equivalent nodes by aesara. This would happen if the
+            # size of the masked and unmasked array happened to coincide
+            _, size, _, *inps = observed_rv_var.owner.inputs
+            rng = self.model.next_rng()
+            observed_rv_var = observed_rv_var.owner.op(*inps, size=size, rng=rng)
+            # Add default_update to new rng
+            new_rng = observed_rv_var.owner.outputs[0]
+            observed_rv_var.update = (rng, new_rng)
+            rng.default_update = new_rng
             observed_rv_var.name = f"{name}_observed"
 
             observed_rv_var.tag.observations = nonmissing_data
