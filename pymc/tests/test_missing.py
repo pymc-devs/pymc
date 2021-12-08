@@ -18,8 +18,10 @@ import pandas as pd
 import pytest
 import scipy.stats
 
+from aesara.graph import graph_inputs
 from numpy import array, ma
 
+from pymc import logpt
 from pymc.distributions import Dirichlet, Gamma, Normal, Uniform
 from pymc.exceptions import ImputationWarning
 from pymc.model import Model
@@ -207,3 +209,26 @@ def test_missing_vector_parameter():
         m.logp({"x_missing": np.array([-10, 10, -10, 10])}),
         scipy.stats.norm(scale=0.1).logpdf(0) * 6,
     )
+
+
+def test_missing_symmetric():
+    """Check that logpt works when partially observed variable have equal observed and
+    unobserved dimensions.
+
+    This would fail in a previous implementation because the two variables would be
+    equivalent and one of them would be discarded during MergeOptimization while
+    buling the logpt graph
+    """
+    with Model() as m:
+        x = Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
+
+    x_obs_rv = m["x_observed"]
+    x_obs_vv = m.rvs_to_values[x_obs_rv]
+
+    x_unobs_rv = m["x_missing"]
+    x_unobs_vv = m.rvs_to_values[x_unobs_rv]
+
+    logp = logpt([x_obs_rv, x_unobs_rv], {x_obs_rv: x_obs_vv, x_unobs_rv: x_unobs_vv})
+    logp_inputs = list(graph_inputs([logp]))
+    assert x_obs_vv in logp_inputs
+    assert x_unobs_vv in logp_inputs
