@@ -597,16 +597,6 @@ class Marginal(Base):
 
 
 @conditioned_vars(["X", "Xu", "y", "sigma"])
-class MarginalSparse(MarginalApprox):
-    def __init__(self, approx="VFE", *, mean_func=Zero(), cov_func=Constant(0.0)):
-        warnings.warn(
-            "gp.MarginalSparse has been renamed to gp.MarginalApprox.",
-            FutureWarning,
-        )
-        super().__init__(mean_func=mean_func, cov_func=cov_func, approx=approx)
-
-
-@conditioned_vars(["X", "Xu", "y", "sigma"])
 class MarginalApprox(Marginal):
     R"""
     Approximate marginal Gaussian process.
@@ -878,6 +868,16 @@ class MarginalApprox(Marginal):
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens, jitter)
         return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
+
+
+@conditioned_vars(["X", "Xu", "y", "sigma"])
+class MarginalSparse(MarginalApprox):
+    def __init__(self, approx="VFE", *, mean_func=Zero(), cov_func=Constant(0.0)):
+        warnings.warn(
+            "gp.MarginalSparse has been renamed to gp.MarginalApprox.",
+            FutureWarning,
+        )
+        super().__init__(mean_func=mean_func, cov_func=cov_func, approx=approx)
 
 
 @conditioned_vars(["Xs", "f"])
