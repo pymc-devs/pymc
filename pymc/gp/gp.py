@@ -600,7 +600,7 @@ class Marginal(Base):
 class MarginalSparse(MarginalApprox):
     def __init__(self, approx="VFE", *, mean_func=Zero(), cov_func=Constant(0.0)):
         warnings.warn(
-            "gp.MarginalSparse has been renamed to gp.MarginalApprox."
+            "gp.MarginalSparse has been renamed to gp.MarginalApprox.",
             FutureWarning,
         )
         super().__init__(mean_func=mean_func, cov_func=cov_func, approx=approx)
