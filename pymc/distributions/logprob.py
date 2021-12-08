@@ -15,7 +15,7 @@ import warnings
 
 from collections.abc import Mapping
 from functools import singledispatch
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import aesara.tensor as at
 import numpy as np
@@ -119,7 +119,7 @@ subtensor_types = (
 
 
 def logpt(
-    var: TensorVariable,
+    var: Union[TensorVariable, List[TensorVariable]],
     rv_values: Optional[Union[TensorVariable, Dict[TensorVariable, TensorVariable]]] = None,
     *,
     jacobian: bool = True,
@@ -127,7 +127,7 @@ def logpt(
     transformed: bool = True,
     sum: bool = True,
     **kwargs,
-) -> TensorVariable:
+) -> Union[TensorVariable, List[TensorVariable]]:
     """Create a measure-space (i.e. log-likelihood) graph for a random variable
     or a list of random variables at a given point.
 
@@ -154,7 +154,7 @@ def logpt(
     transformed
         Apply transforms.
     sum
-        Sum the log-likelihood.
+        Sum the log-likelihood or return each term as a separate list item.
 
     """
     # TODO: In future when we drop support for tag.value_var most of the following
@@ -241,7 +241,13 @@ def logpt(
     if sum:
         logp_var = at.sum([at.sum(factor) for factor in logp_var_dict.values()])
     else:
-        logp_var = at.add(*logp_var_dict.values())
+        logp_var = list(logp_var_dict.values())
+        # TODO: deprecate special behavior when only one variable is requested and
+        #  always return a list. This is here for backwards compatibility as logpt
+        #  started as a replacement to factor.logpt, but it should now be considered an
+        #  internal function reached only via model.logp* methods.
+        if len(logp_var) == 1:
+            logp_var = logp_var[0]
 
     return logp_var
 
