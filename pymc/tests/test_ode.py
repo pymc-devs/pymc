@@ -173,7 +173,6 @@ class TestSensitivityInitialCondition:
         np.testing.assert_array_equal(np.ravel(model5_sens_ic), model5._sens_ic)
 
 
-@pytest.mark.xfail(condition=IS_WINDOWS, reason="https://github.com/pymc-devs/aesara/issues/390")
 def test_logp_scalar_ode():
     """Test the computation of the log probability for these models"""
 
@@ -270,9 +269,6 @@ class TestDiffEqModel:
         assert op_1 != op_other
         return
 
-    @pytest.mark.xfail(
-        condition=IS_WINDOWS, reason="https://github.com/pymc-devs/aesara/issues/390"
-    )
     def test_scalar_ode_1_param(self):
         """Test running model for a scalar ODE with 1 parameter"""
 
@@ -301,9 +297,6 @@ class TestDiffEqModel:
         assert idata.posterior["y0"].shape == (1, 100)
         assert idata.posterior["sigma"].shape == (1, 100)
 
-    @pytest.mark.xfail(
-        condition=IS_WINDOWS, reason="https://github.com/pymc-devs/aesara/issues/390"
-    )
     def test_scalar_ode_2_param(self):
         """Test running model for a scalar ODE with 2 parameters"""
 
