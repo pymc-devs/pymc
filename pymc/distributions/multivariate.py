@@ -406,8 +406,9 @@ class Dirichlet(Continuous):
 
     Parameters
     ----------
-    a: array
-        Concentration parameters (a > 0).
+    a: float array
+        Concentration parameters (a > 0). The number of categories is given by the
+        length of the last axis.
     """
     rv_op = dirichlet
 
@@ -508,10 +509,11 @@ class Multinomial(Discrete):
     Parameters
     ----------
     n: int
-        Number of trials (n > 0)
-    p: vector
-        Probability of each one of the different outcomes. Elements must be non-negative
-        and sum to 1 along the last axis. They will be automatically rescaled otherwise.
+        Total counts in each replicate (n > 0).
+    p: float array
+        Probability of each one of the different outcomes (0 <= p <= 1). The number of
+        categories is given by the length of the last axis. Elements are expected to sum
+        to 1 along the last axis, and they will be automatically rescaled otherwise.
     """
     rv_op = multinomial
 
@@ -625,11 +627,11 @@ class DirichletMultinomial(Discrete):
     Parameters
     ----------
     n : int
-        Total counts in each replicate.
+        Total counts in each replicate (n > 0).
 
-    a : vector
-        Dirichlet alpha parameter. Elements must be strictly positive. The number of
-        categories is given by the length of the last axis.
+    a : float array
+        Dirichlet concentration parameters (a > 0). The number of categories is given by
+        the length of the last axis.
     """
     rv_op = dirichlet_multinomial
 
