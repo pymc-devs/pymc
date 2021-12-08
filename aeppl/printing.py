@@ -7,7 +7,6 @@ from typing import Optional, Union
 
 import aesara
 import aesara.tensor as at
-from aesara.assert_op import Assert
 from aesara.compile.function.types import Function
 from aesara.graph.basic import Constant, Variable
 from aesara.graph.fg import FunctionGraph
@@ -19,6 +18,7 @@ from aesara.printing import (
     PrinterState,
 )
 from aesara.printing import pprint as at_pprint
+from aesara.raise_op import Assert
 from aesara.scalar.basic import Add, Mul
 from aesara.tensor.basic_opt import ShapeFeature
 from aesara.tensor.elemwise import Elemwise
