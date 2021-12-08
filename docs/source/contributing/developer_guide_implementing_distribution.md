@@ -4,7 +4,7 @@ This guide provides an overview on how to implement a distribution for version 4
 It is designed for developers who wish to add a new distribution to the library.
 Users will not be aware of all this complexity and should instead make use of helper methods such as (TODO).
 
-PyMC {class}`~pymc.distributions.Distribution` build on top of Aesara's {class}`~aesara.tensor.random.op.RandomVariable`, and implement `logp` and `logcdf` methods as well as other initialization and validation helpers, most notably `shape/dims`, alternative parametrizations, and default `transforms`.
+PyMC {class}`~pymc.distributions.Distribution` build on top of Aesara's {class}`~aesara.tensor.random.op.RandomVariable`, and implement `logp`, `logcdf` and `get_moment` methods as well as other initialization and validation helpers, most notably `shape/dims`, alternative parametrizations, and default `transforms`.
 
 Here is a summary check-list of the steps needed to implement a new distribution.
 Each section will be expanded below:
@@ -12,7 +12,7 @@ Each section will be expanded below:
 1. Creating a new `RandomVariable` `Op`
 1. Implementing the corresponding `Distribution` class
 1. Adding tests for the new `RandomVariable`
-1. Adding tests for the `logp` / `logcdf` methods
+1. Adding tests for `logp` / `logcdf` and `get_moment` methods
 1. Documenting the new `Distribution`.
 
 This guide does not attempt to explain the rationale behind the `Distributions` current implementation, and details are provided only insofar as they help to implement new "standard" distributions.
@@ -204,6 +204,7 @@ For a quick check that things are working you can try the following:
 ```python
 
 import pymc as pm
+from pm.distributions.distribution import get_moment
 
 # pm.blah = pm.Uniform in this example
 blah = pm.Blah.dist([0, 0], [1, 2])
@@ -213,7 +214,7 @@ blah.eval()
 # array([0.62778803, 1.95165513])
 
 # Test the get_moment
-pm.distributions.distribution.get_moment(blah).eval()
+get_moment(blah).eval()
 # array([0.5, 1. ])
 
 # Test the logp
@@ -366,7 +367,8 @@ def test_blah_logcdf(self):
 
 ## 5. Adding tests for the `get_moment` method
 
-Tests for the `get_moment` method are contained in `pymc/tests/test_distributions_moments.py`, and check if:
+Tests for the `get_moment` method are contained in `pymc/tests/test_distributions_moments.py`, and make use of the function `assert_moment_is_expected` 
+which checks if:
 1. Moments return `expected` values 
 1. Moments have the expected size and shape
 
@@ -374,23 +376,6 @@ Tests for the `get_moment` method are contained in `pymc/tests/test_distribution
 
 import pytest
 from pymc.distributions import Blah
-from pymc.initial_point import make_initial_point_fn
-
-def assert_moment_is_expected(model, expected):
-    fn = make_initial_point_fn(
-        model=model,
-        return_transformed=False,
-        default_strategy="moment",
-    )
-    result = fn(0)["x"]
-    expected = np.asarray(expected)
-    try:
-        random_draw = model["x"].eval()
-    except NotImplementedError:
-        random_draw = result
-    assert result.shape == expected.shape == random_draw.shape
-    assert np.allclose(result, expected)
-
 
 @pytest.mark.parametrize(
     "param1, param2, size, expected",
