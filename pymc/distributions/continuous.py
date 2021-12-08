@@ -3689,13 +3689,8 @@ class Interpolated(BoundedContinuous):
     def get_moment(rv, size, x_points, pdf_points, cdf_points):
         # cdf_points argument is unused
         # moment = at.as_tensor(0.)
-        print(x_points)
-        print("")
-        for pdf in pdf_points.eval():
-            print(pdf)
-        print("")
         moment = at.sum(at.mul(x_points, pdf_points))
-        print(moment.eval())
+
         if not rv_size_is_none(size):
             moment = at.full(size, moment)
 
