@@ -1091,7 +1091,8 @@ def test_rice_moment(nu, sigma, size, expected):
 
 
 @pytest.mark.parametrize(
-    "alpha, K, size, expected", [(3, 11, None, (3 / 4) ** np.arange(12) * 1 / 3)]
+    "alpha, K, size, expected",
+    [(3, 11, None, np.append((3 / 4) ** np.arange(11) * 1 / 4, (3 / 4) ** 11))],
 )
 def test_stickbreakingweights_moment(alpha, K, size, expected):
     with Model() as model:

@@ -2194,7 +2194,7 @@ class StickBreakingWeightsRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, alpha, K, size):
         if K < 0:
-            raise ValueError("K needs to be a positive integer.")
+            raise ValueError(f"K needs to be a positive integer, but K = {K}.")
 
         if np.ndim(alpha) > 0:
             raise ValueError("The concentration parameter needs to be a scalar.")
@@ -2252,10 +2252,12 @@ class StickBreakingWeights(Continuous):
         return super().dist([alpha, K], **kwargs)
 
     def get_moment(rv, size, alpha, K):
-        moment = (alpha / (1 + alpha)) ** at.arange(K + 1)
+        moment = (alpha / (1 + alpha)) ** at.arange(K)
         moment *= 1 / (1 + alpha)
+        moment = at.concatenate([moment, [(alpha / (1 + alpha)) ** K]], axis=-1)
         if not rv_size_is_none(size):
             moment = at.full(*size + (K + 1,), moment)
+
         return moment
 
     def logp(value, alpha, K):
