@@ -548,7 +548,9 @@ The log of past election processes is kept on [Discourse](https://discourse.pymc
   Voting is blind and mediated by either an application or a third party like NumFOCUS.
   Each voter can vote zero or more times, once per each candidate.
   As this is not about ranking but about capabilities,
-  voters vote on a yes/abstain/no basis per candidate -- “would I trust this person to lead PyMC?”.
+  voters vote on a yes/abstain/no basis per candidate --
+  “Should this person be on the Steering Council?
+  Would I trust this person to lead PyMC?”.
   The absence of vote is considered abstain.
 * Candidates are evaluated independently,
   each candidate having 60% or more of yes votes and less or
