@@ -367,9 +367,9 @@ def test_blah_logcdf(self):
 
 ## 5. Adding tests for the `get_moment` method
 
-Tests for the `get_moment` method are contained in `pymc/tests/test_distributions_moments.py`, and make use of the function `assert_moment_is_expected` 
+Tests for the `get_moment` method are contained in `pymc/tests/test_distributions_moments.py`, and make use of the function `assert_moment_is_expected`
 which checks if:
-1. Moments return `expected` values 
+1. Moments return `expected` values
 1. Moments have the expected size and shape
 
 ```python
@@ -395,7 +395,7 @@ def test_blah_moment(param1, param2, size, expected):
 
 Here are some details worth keeping in mind:
 
-1. In the case where you have to manually broadcast the parameters with each other it's important to add test conditions that would fail if you were not to do that. A straightforward way to do this is to make the used parameter a scalar, the unused one(s) a vector (one at a time) and size `None`. 
+1. In the case where you have to manually broadcast the parameters with each other it's important to add test conditions that would fail if you were not to do that. A straightforward way to do this is to make the used parameter a scalar, the unused one(s) a vector (one at a time) and size `None`.
 1. In other words, make sure to test different combinations of size and broadcasting to cover these cases.
 
 ## 6. Documenting the new `Distribution`
