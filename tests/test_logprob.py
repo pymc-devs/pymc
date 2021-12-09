@@ -14,6 +14,19 @@ from aeppl.logprob import ParameterValueError, logcdf, logprob
 #         yield
 
 
+def scipy_logprob(obs, p):
+    if p.ndim > 1:
+        if p.ndim > obs.ndim:
+            obs = obs[((None,) * (p.ndim - obs.ndim) + (Ellipsis,))]
+        elif p.ndim < obs.ndim:
+            p = p[((None,) * (obs.ndim - p.ndim) + (Ellipsis,))]
+
+        pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
+        return np.log(np.take_along_axis(p.transpose(pattern), obs, 0))
+    else:
+        return np.log(p[obs])
+
+
 def create_aesara_params(dist_params, obs, size):
     dist_params_at = []
     for p in dist_params:
@@ -878,18 +891,6 @@ def test_categorical_logprob(dist_params, obs, size, exc_type, chk_bcast):
     x = at.random.categorical(*dist_params_at, size=size_at)
 
     cm = contextlib.suppress() if not exc_type else pytest.raises(exc_type)
-
-    def scipy_logprob(obs, p):
-        if p.ndim > 1:
-            if p.ndim > obs.ndim:
-                obs = obs[((None,) * (p.ndim - obs.ndim) + (Ellipsis,))]
-            elif p.ndim < obs.ndim:
-                p = p[((None,) * (obs.ndim - p.ndim) + (Ellipsis,))]
-
-            pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
-            return np.log(np.take_along_axis(p.transpose(pattern), obs, 0))
-        else:
-            return np.log(p[obs])
 
     with cm:
         scipy_logprob_tester(
