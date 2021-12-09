@@ -3,6 +3,7 @@ from typing import List, Optional
 import aesara.tensor as at
 import numpy as np
 from aesara.compile.builders import OpFromGraph
+from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Apply
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.opt import local_optimizer, pre_greedy_local_optimizer
@@ -56,9 +57,6 @@ class MixtureRV(OpFromGraph):
         new_node = mixture_op(*inputs)
 
         return new_node.owner
-
-    def get_non_shared_inputs(self, inputs):
-        return inputs[: len(self.shared_inputs)]
 
 
 MeasurableVariable.register(MixtureRV)
@@ -164,9 +162,9 @@ def mixture_replace(fgraph, node):
 
 
 @_logprob.register(MixtureRV)
-def logprob_MixtureRV(op, values, *inputs, name=None, **kwargs):
+def logprob_MixtureRV(op, values, *all_inputs, name=None, **kwargs):
     (value,) = values
-    inputs = op.get_non_shared_inputs(inputs)
+    inputs = tuple(i for i in all_inputs if not isinstance(i, SharedVariable))
 
     subtensor_node = op.outputs[0].owner
     num_indices = len(subtensor_node.inputs) - 1
