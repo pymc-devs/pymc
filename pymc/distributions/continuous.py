@@ -3686,6 +3686,15 @@ class Interpolated(BoundedContinuous):
 
         return super().dist([x_points, pdf_points, cdf_points], **kwargs)
 
+    def get_moment(rv, size, x_points, pdf_points, cdf_points):
+        # cdf_points argument is unused
+        moment = at.sum(at.mul(x_points, pdf_points))
+
+        if not rv_size_is_none(size):
+            moment = at.full(size, moment)
+
+        return moment
+
     def logp(value, x_points, pdf_points, cdf_points):
         """
         Calculate log-probability of Interpolated distribution at specified value.
