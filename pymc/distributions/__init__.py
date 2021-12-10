@@ -95,6 +95,7 @@ from pymc.distributions.multivariate import (
     MvNormal,
     MvStudentT,
     OrderedMultinomial,
+    StickBreakingWeights,
     Wishart,
     WishartBartlett,
 )

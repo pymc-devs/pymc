@@ -474,6 +474,8 @@ def _dirichlet_logpdf(value, a):
 
 dirichlet_logpdf = np.vectorize(_dirichlet_logpdf, signature="(n),(n)->()")
 
+def stickbreakingweights_logpdf(value, alpha):
+    return floatX(1)
 
 def categorical_logpdf(value, p):
     if value >= 0 and value <= len(p):
@@ -2122,6 +2124,32 @@ class TestMatchesScipy:
         value[1] -= 1
         valid_dist = Dirichlet.dist(a=[1, 1, 1])
         assert np.all(np.isfinite(pm.logp(valid_dist, value).eval()) == np.array([True, False]))
+
+    @pytest.mark.parametrize("n", [1, 2, 3])
+    def test_stickbreakingweights(self, n):
+        self.check_logp(StickBreakingWeights, Simplex(n), {"alpha": Rplus}, sbw_logpdf)
+
+    def test_stickbreakingweights_shape(self):
+        alpha = at.as_tensor_variable(np.r_[1, 2])
+        sbw_rv = StickBreakingWeights.dist(alpha)
+        assert sbw_rv.shape.eval() == (2,)
+
+        with pytest.warns(DeprecationWarning), aesara.change_flags(compute_test_value="ignore"):
+            sbw_rv = StickBreakingWeights.dist(at.vector())
+
+    def test_dirichlet_2D(self):
+        self.check_logp(
+            StickBreakingWeights,
+            MultiSimplex(2, 2),
+            {"alpha": Vector(Vector(Rplus, 2), 2)},
+            dirichlet_logpdf,
+        )
+
+    @pytest.mark.parametrize("n", [2, 3])
+    def test_multinomial(self, n):
+        self.check_logp(
+            Multinomial, Vector(Nat, n), {"p": Simplex(n), "n": Nat}, multinomial_logpdf
+        )
 
     @pytest.mark.parametrize(
         "a",

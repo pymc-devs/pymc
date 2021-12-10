@@ -67,6 +67,7 @@ __all__ = [
     "MatrixNormal",
     "KroneckerNormal",
     "CAR",
+    "StickBreakingWeights",
 ]
 
 # Step methods and advi do not catch LinAlgErrors at the
@@ -2166,4 +2167,91 @@ class CAR(Continuous):
             alpha >= -1,
             tau > 0,
             msg="-1 <= alpha <= 1, tau > 0",
+        )
+
+
+class StickBreakingWeightsRV(RandomVariable):
+    name = "stick_breaking_weights"
+    ndim_supp = 1
+    ndims_params = [0]
+    dtype = "floatX"
+    _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
+    
+    def __call__(self, alpha=1., size=None, **kwargs):
+        return super().__call__(alpha, size=size, **kwargs)
+
+    def _infer_shape(self, size, dist_params, param_shapes=None):
+        if isinstance(size, int):
+            return size
+        else:
+            return tuple(size[:-1]) + tuple(size[-1] + 1,)
+    
+    @classmethod
+    def rng_fn(cls, rng, alpha, size):
+        if size is None:
+            raise ValueError("size cannot be None because K is inferred from size")
+            
+        if isinstance(size, int):
+            size = (size,)
+            
+        betas = rng.beta(1, alpha, size=size) # adapt this to vector alpha
+        
+        sticks = np.concatenate(
+            (
+                np.ones(shape=(size[:-1] + (1,))),
+                np.cumprod(1 - betas[..., :-1], axis=-1),
+            ),
+            axis=-1,
+        )
+        
+        weights = sticks * betas
+        weights = np.concatenate(
+            (
+                weights,
+                1 - weights.sum(axis=-1)[..., np.newaxis]
+            ),
+            axis=-1,
+        )
+
+        return weights
+    
+
+stickbreakingweights = StickBreakingWeightsRV()
+
+
+class StickBreakingWeights(Continuous):
+    rv_op = stickbreakingweights
+    
+    def __new__(cls, name, *args, **kwargs):
+        kwargs.setdefault("transform", transforms.stick_breaking)
+        return super().__new__(cls, name, *args, **kwargs)
+
+    @classmethod
+    def dist(cls, alpha, *args, **kwargs):
+        alpha = at.as_tensor_variable(floatX(alpha))
+
+        assert_negative_support(alpha, "alpha", "StickBreakingWeights")
+
+        return super().dist([alpha], **kwargs)
+
+    def logp(value, alpha):
+        K = floatX(value.shape[-1])
+        
+        logp = -at.sum(
+            at.log(
+                at.cumsum(
+                    value[..., ::-1],
+                    axis=-1,
+                )
+            ),
+            axis=-1,
+        )
+        logp -= -K * betaln(1, alpha)
+        logp += alpha * at.log(value[..., -1]) # check this
+
+        return bound(
+            logp,
+            alpha > 0,
+            at.all(value >= 0),
+            at.all(value <= 1),
         )
