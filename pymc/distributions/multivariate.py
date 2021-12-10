@@ -44,11 +44,13 @@ import pymc as pm
 from pymc.aesaraf import floatX, intX
 from pymc.distributions import transforms
 from pymc.distributions.continuous import ChiSquared, Normal, assert_negative_support
-<<<<<<< HEAD
-from pymc.distributions.dist_math import check_parameters, factln, logpow, multigammaln
-=======
-from pymc.distributions.dist_math import betaln, bound, factln, logpow, multigammaln
->>>>>>> 36c8fe0b (Moment and random tests failing...)
+from pymc.distributions.dist_math import (
+    betaln,
+    check_parameters,
+    factln,
+    logpow,
+    multigammaln,
+)
 from pymc.distributions.distribution import Continuous, Discrete
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
@@ -2256,7 +2258,15 @@ class StickBreakingWeights(Continuous):
         moment *= 1 / (1 + alpha)
         moment = at.concatenate([moment, [(alpha / (1 + alpha)) ** K]], axis=-1)
         if not rv_size_is_none(size):
-            moment = at.full(*size + (K + 1,), moment)
+            moment_size = at.concatenate(
+                [
+                    size,
+                    [
+                        K + 1,
+                    ],
+                ]
+            )
+            moment = at.full(moment_size, moment)
 
         return moment
 
@@ -2273,7 +2283,7 @@ class StickBreakingWeights(Continuous):
         logp += -(K - 1) * betaln(1, alpha)
         logp += alpha * at.log(value[..., -1])  # check this
 
-        return bound(
+        return check_parameters(
             logp,
             alpha > 0,
             K > 0,

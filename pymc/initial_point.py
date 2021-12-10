@@ -173,7 +173,6 @@ def make_initial_point_fn(
         default_strategy=default_strategy,
         return_transformed=return_transformed,
     )
-    # print("make_initial_point_fn", initial_values[0].eval())
 
     # Replace original rng shared variables so that we don't mess with them
     # when calling the final seeded function

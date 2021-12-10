@@ -2124,13 +2124,24 @@ class TestMatchesScipy:
         valid_dist = Dirichlet.dist(a=[1, 1, 1])
         assert np.all(np.isfinite(pm.logp(valid_dist, value).eval()) == np.array([True, False]))
 
-    @pytest.mark.parametrize("n", [1, 2, 3])
-    def test_stickbreakingweights(self, n):
-        self.check_logp(
-            StickBreakingWeights,  # pymc_dist
-            Simplex(n),  # domain
-            {"alpha": Rplus},  # paramdomains
-            sbw_logpdf,  # precompute values as in ex-gaussian dist
+    @pytest.mark.parametrize(
+        "value,alpha,K,logp",
+        [
+            (np.array([5, 4, 3, 2, 1]) / 15, 0.5, 4, 2.2057773112876893),
+            (np.tile(1, 13) / 13, 2, 12, 13.286898065112881),
+            (np.array([0.001] * 10 + [0.99]), 0.1, 10, -20.66907735582068),
+            (np.append(0.5 ** np.arange(1, 20), 0.5 ** 20), 5, 19, 92.59518981534681),
+        ],
+    )
+    def test_stickbreakingweights(self, value, alpha, K, logp):
+        with Model() as model:
+            StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
+        pt = {"sbw": value}
+        assert_almost_equal(
+            model.fastlogp(pt),
+            logp,
+            decimal=select_by_precision(float64=6, float32=2),
+            err_msg=str(pt),
         )
 
     @pytest.mark.parametrize("n", [2, 3])
