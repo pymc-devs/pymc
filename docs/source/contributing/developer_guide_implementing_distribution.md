@@ -207,24 +207,24 @@ For a quick check that things are working you can try the following:
 import pymc as pm
 from pymc.distributions.distribution import get_moment
 
-# pm.blah = pm.Uniform in this example
-blah = pm.Blah.dist([0, 0], [1, 2])
+# pm.blah = pm.Normal in this example
+blah = pm.Normal.dist(mu = 0, sigma = 1)
 
 # Test that the returned blah_op is still working fine
 blah.eval()
-# array([0.62778803, 1.95165513])
+# array(-1.01397228)
 
-# Test the get_moment
+# Test the get_moment method
 get_moment(blah).eval()
-# array([0.5, 1. ])
+# array(0.)
 
-# Test the logp
-pm.logp(blah, [1.5, 1.5]).eval()
-# array([       -inf, -0.69314718])
+# Test the logp method
+pm.logp(blah, [-0.5, 1.5]).eval()
+# array([-1.04393853, -2.04393853])
 
-# Test the logcdf
-pm.logcdf(blah, [1.5, 1.5]).eval()
-# array([ 0.        , -0.28768207])
+# Test the logcdf method
+pm.logcdf(blah, [-0.5, 1.5]).eval()
+# array([-1.17591177, -0.06914345])
 ```
 
 ## 3. Adding tests for the new `RandomVariable`
