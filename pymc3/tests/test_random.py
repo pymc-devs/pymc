@@ -44,8 +44,8 @@ def test_draw_value():
 
     assert _draw_value(5) == 5
     assert _draw_value(5.0) == 5
-    assert isinstance(_draw_value(5.0), type(5.0))
-    assert isinstance(_draw_value(5), type(5))
+    assert isinstance(_draw_value(5.0), float)
+    assert isinstance(_draw_value(5), int)
 
     with pm.Model():
         mu = 2 * tt.constant(np.array([5.0, 6.0])) + theano.shared(np.array(5))

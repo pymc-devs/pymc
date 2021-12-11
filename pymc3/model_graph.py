@@ -84,7 +84,7 @@ class ModelGraph:
                 if self.transform_map[p] != var.name:
                     keep.add(self.transform_map[p])
             else:
-                raise AssertionError("Do not know what to do with {}".format(get_var_name(p)))
+                raise AssertionError(f"Do not know what to do with {get_var_name(p)}")
         return keep
 
     def get_parents(self, var: Tensor) -> Set[VarName]:

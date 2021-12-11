@@ -723,7 +723,7 @@ class ValueGradFunction:
 
         if array.shape != (self.size,):
             raise ValueError(
-                "Invalid shape for array. Must be {} but is {}.".format((self.size,), array.shape)
+                f"Invalid shape for array. Must be {(self.size,)} but is {array.shape}."
             )
 
         if grad_out is None:
