@@ -263,7 +263,7 @@ class MvStudentTRV(RandomVariable):
     _print_name = ("MvStudentT", "\\operatorname{MvStudentT}")
 
     def make_node(self, rng, size, dtype, nu, mu, cov):
-        nu = at.as_tensor_variable(floatX(nu))
+        nu = at.as_tensor_variable(nu)
         if not nu.ndim == 0:
             raise ValueError("nu must be a scalar (ndim=0).")
 
