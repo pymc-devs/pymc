@@ -4,7 +4,8 @@ This guide provides an overview on how to implement a distribution for version 4
 It is designed for developers who wish to add a new distribution to the library.
 Users will not be aware of all this complexity and should instead make use of helper methods such as (TODO).
 
-PyMC {class}`~pymc.distributions.Distribution` build on top of Aesara's {class}`~aesara.tensor.random.op.RandomVariable`, and implement `logp`, `logcdf` and `get_moment` methods as well as other initialization and validation helpers, most notably `shape/dims`, alternative parametrizations, and default `transforms`.
+PyMC {class}`~pymc.distributions.Distribution` builds on top of Aesara's {class}`~aesara.tensor.random.op.RandomVariable`, and implements `logp`, `logcdf` and `get_moment` methods as well as other initialization and validation helpers.
+Most notably `shape/dims` kwargs, alternative parametrizations, and default `transforms`.
 
 Here is a summary check-list of the steps needed to implement a new distribution.
 Each section will be expanded below:
@@ -153,8 +154,8 @@ class Blah(PositiveContinuous):
         # the rv_op needs in order to be instantiated
         return super().dist([param1, param2], **kwargs)
 
-    # get_moment returns the stable moment from which to start sampling for the
-    # distribution given the implicit `rv`, `size` and `param1` ... `paramN`
+    # get_moment returns a symbolic expression for the stable moment from which to start sampling
+    # the variable, given the implicit `rv`, `size` and `param1` ... `paramN`
     def get_moment(rv, size, param1, param2):
         moment, _ = at.broadcast_arrays(param1, param2)
         if not rv_size_is_none(size):
@@ -204,7 +205,7 @@ For a quick check that things are working you can try the following:
 ```python
 
 import pymc as pm
-from pm.distributions.distribution import get_moment
+from pymc.distributions.distribution import get_moment
 
 # pm.blah = pm.Uniform in this example
 blah = pm.Blah.dist([0, 0], [1, 2])
@@ -369,7 +370,7 @@ def test_blah_logcdf(self):
 
 Tests for the `get_moment` method are contained in `pymc/tests/test_distributions_moments.py`, and make use of the function `assert_moment_is_expected`
 which checks if:
-1. Moments return `expected` values
+1. Moments return the `expected` values
 1. Moments have the expected size and shape
 
 ```python
