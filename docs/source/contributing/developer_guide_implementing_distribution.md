@@ -208,7 +208,7 @@ import pymc as pm
 from pymc.distributions.distribution import get_moment
 
 # pm.blah = pm.Normal in this example
-blah = pm.Normal.dist(mu = 0, sigma = 1)
+blah = pm.blah.dist(mu = 0, sigma = 1)
 
 # Test that the returned blah_op is still working fine
 blah.eval()
