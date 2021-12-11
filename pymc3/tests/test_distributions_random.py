@@ -934,6 +934,10 @@ class TestScalarParameterSamples(SeededTest):
                     ref_rand=ref_rand_chol_transpose,
                 )
 
+    @pytest.mark.xfail(
+        condition=sys.platform.startswith("win"),
+        reason="Compilation problems. See https://github.com/pymc-devs/pymc/issues/5253",
+    )
     def test_kronecker_normal(self):
         def ref_rand(size, mu, covs, sigma):
             cov = pm.math.kronecker(covs[0], covs[1]).eval()
