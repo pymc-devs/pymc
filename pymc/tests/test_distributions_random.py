@@ -13,6 +13,7 @@
 #   limitations under the License.
 import functools
 import itertools
+import re
 
 from typing import Callable, List, Optional
 
@@ -1115,7 +1116,19 @@ class TestMvStudentTCov(BaseTestDistribution):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
         "check_rv_size",
+        "test_errors",
     ]
+
+    def test_errors(self):
+        msg = "nu must be a scalar (ndim=0)."
+        with pm.Model():
+            with pytest.raises(ValueError, match=re.escape(msg)):
+                mvstudentt = pm.MvStudentT(
+                    "mvstudentt",
+                    nu=np.array([1, 2]),
+                    mu=np.ones(2),
+                    cov=np.full((2, 2), np.ones(2)),
+                )
 
 
 class TestMvStudentTChol(BaseTestDistribution):

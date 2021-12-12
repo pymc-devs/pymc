@@ -262,6 +262,13 @@ class MvStudentTRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("MvStudentT", "\\operatorname{MvStudentT}")
 
+    def make_node(self, rng, size, dtype, nu, mu, cov):
+        nu = at.as_tensor_variable(nu)
+        if not nu.ndim == 0:
+            raise ValueError("nu must be a scalar (ndim=0).")
+
+        return super().make_node(rng, size, dtype, nu, mu, cov)
+
     def __call__(self, nu, mu=None, cov=None, size=None, **kwargs):
 
         dtype = aesara.config.floatX if self.dtype == "floatX" else self.dtype
