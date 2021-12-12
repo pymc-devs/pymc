@@ -5,7 +5,7 @@ channels:
 dependencies:
  # base dependencies (see install guide for Windows)
 - aeppl=0.0.18
-- aesara>=2.2.6
+- aesara=2.3.2
 - arviz>=0.11.4
 - cachetools>=4.2.1
 - cloudpickle
