@@ -194,7 +194,7 @@ def build_gallery(srcdir, gallery):
     with open(table_of_contents_file) as toc:
         table_of_contents = toc.read()
 
-    js_contents = "Gallery.examples = {}\n{}".format(json.dumps(data), table_of_contents)
+    js_contents = f"Gallery.examples = {json.dumps(data)}\n{table_of_contents}"
 
     with open(js_file, "w") as js:
         js.write(js_contents)

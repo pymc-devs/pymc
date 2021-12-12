@@ -63,7 +63,7 @@ def __set_compiler_flags():
 
 
 def _hotfix_theano_printing():
-    """ This is a workaround for https://github.com/pymc-devs/aesara/issues/309 """
+    """This is a workaround for https://github.com/pymc-devs/aesara/issues/309"""
     try:
         import pydot
         import theano.printing

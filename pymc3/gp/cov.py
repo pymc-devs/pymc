@@ -155,7 +155,7 @@ class Covariance:
 class Combination(Covariance):
     def __init__(self, factor_list):
         input_dim = max(
-            [factor.input_dim for factor in factor_list if isinstance(factor, Covariance)]
+            factor.input_dim for factor in factor_list if isinstance(factor, Covariance)
         )
         super().__init__(input_dim=input_dim)
         self.factor_list = []
