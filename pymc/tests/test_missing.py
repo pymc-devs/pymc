@@ -16,6 +16,7 @@ import aesara
 import numpy as np
 import pandas as pd
 import pytest
+import scipy.stats
 
 from numpy import array, ma
 
@@ -188,3 +189,21 @@ def test_missing_multivariate():
     #     m_miss.logp({"x_missing_simplex__": inp_vals}),
     #     m_unobs.logp_nojac({"x_simplex__": inp_vals}) * 2,
     # )
+
+
+def test_missing_vector_parameter():
+    with Model() as m:
+        x = Normal(
+            "x",
+            np.array([-10, 10]),
+            0.1,
+            observed=np.array([[np.nan, 10], [-10, np.nan], [np.nan, np.nan]]),
+        )
+    x_draws = x.eval()
+    assert x_draws.shape == (3, 2)
+    assert np.all(x_draws[:, 0] < 0)
+    assert np.all(x_draws[:, 1] > 0)
+    assert np.isclose(
+        m.logp({"x_missing": np.array([-10, 10, -10, 10])}),
+        scipy.stats.norm(scale=0.1).logpdf(0) * 6,
+    )
