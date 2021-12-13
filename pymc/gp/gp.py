@@ -659,8 +659,8 @@ class MarginalApprox(Marginal):
     -   Titsias, M. (2009). Variational Learning of Inducing Variables in
         Sparse Gaussian Processes.
 
-    -   Bauer, M., van der Wilk, M., and Rasmussen, C. E. (2016). Understanding 
-        Probabilistic Sparse Gaussian Process Approximations
+    -   Bauer, M., van der Wilk, M., and Rasmussen, C. E. (2016). Understanding
+        Probabilistic Sparse Gaussian Process Approximations.
     """
 
     _available_approx = ("FITC", "VFE", "DTC")
