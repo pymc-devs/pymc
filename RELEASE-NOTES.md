@@ -15,7 +15,7 @@ We plan to get these working again, but at this point their inner workings have 
 - Timeseries distributions (see [#4642](https://github.com/pymc-devs/pymc/issues/4642))
 - Mixture distributions (see [#4781](https://github.com/pymc-devs/pymc/issues/4781))
 - Cholesky distributions (see WIP PR [#4784](https://github.com/pymc-devs/pymc/pull/4784))
-- Variational inference submodule (WIP PR [#4582](https://github.com/pymc-devs/pymc/pull/4582))
+- Variational inference submodule (see WIP PR [#4582](https://github.com/pymc-devs/pymc/pull/4582))
 - Elliptical slice sampling (see [#5137](https://github.com/pymc-devs/pymc/issues/5137))
 - `BaseStochasticGradient` (see [#5138](https://github.com/pymc-devs/pymc/issues/5138))
 - `pm.sample_posterior_predictive_w` (see [#4807](https://github.com/pymc-devs/pymc/issues/4807))
