@@ -1944,7 +1944,7 @@ class KroneckerNormal(Continuous):
             moment_size = at.concatenate([size, mu.shape])
             mean = at.full(moment_size, mu)
         return mean
-    
+
     def logp(value, mu, sigma, *covs):
         """
         Calculate log-probability of Multivariate Normal distribution

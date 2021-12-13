@@ -34,8 +34,8 @@ from pymc.distributions import (
     HyperGeometric,
     Interpolated,
     InverseGamma,
-    Kumaraswamy,
     KroneckerNormal,
+    Kumaraswamy,
     Laplace,
     Logistic,
     LogitNormal,
@@ -111,7 +111,6 @@ def test_all_distributions_have_moments():
         dist_module.discrete.DiscreteWeibull,
         dist_module.multivariate.CAR,
         dist_module.multivariate.DirichletMultinomial,
-        dist_module.multivariate.KroneckerNormal,
         dist_module.multivariate.Wishart,
     }
 
@@ -1318,26 +1317,28 @@ def test_simulator_moment(mu, sigma, size):
 
     assert np.all(np.abs((result - expected_sample_mean) / expected_sample_mean_std) < cutoff)
 
+
 @pytest.mark.parametrize(
     "mu, covs, size, expected",
     [
         (np.ones(1), [np.identity(1), np.identity(1)], None, np.ones(1)),
-        (np.ones(6), [np.identity(2), np.identity(3)], 5, np.ones((5,6))),
-        (np.zeros(6), [np.identity(2), np.identity(3)], 6, np.zeros((6,6))),
-        (np.zeros(3), [np.identity(3), np.identity(1)], 6, np.zeros((6,3))),
-        (np.zeros((4,6)), [np.identity(2),np.identity(3)], 6, np.zeros((6,4,6))),
+        (np.ones(6), [np.identity(2), np.identity(3)], 5, np.ones((5, 6))),
+        (np.zeros(6), [np.identity(2), np.identity(3)], 6, np.zeros((6, 6))),
+        (np.zeros(3), [np.identity(3), np.identity(1)], 6, np.zeros((6, 3))),
         (
-            np.array([[1,2,3,4],[3,4,5,6],[6,7,8,9],[7,8,9,1]]),
+            np.array([1, 2, 3, 4]),
             [
-                np.array([[1., 0.5], [0.5, 2]]),
-                np.array([[1., 0.4], [0.4, 2]]),
+                np.array([[1.0, 0.5], [0.5, 2]]),
+                np.array([[1.0, 0.4], [0.4, 2]]),
             ],
             2,
-            np.array([
-                        [[1,2,3,4],[3,4,5,6],[6,7,8,9],[7,8,9,1]],
-                        [[1,2,3,4],[3,4,5,6],[6,7,8,9],[7,8,9,1]]
-                    ]),
-        )
+            np.array(
+                [
+                    [1, 2, 3, 4],
+                    [1, 2, 3, 4],
+                ]
+            ),
+        ),
     ],
 )
 def test_kronecker_normal_moments(mu, covs, size, expected):
