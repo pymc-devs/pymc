@@ -84,7 +84,7 @@ from pymc.data import *
 from pymc.distributions import *
 from pymc.distributions import transforms
 from pymc.exceptions import *
-from pymc.find_optim_prior import find_optim_prior
+from pymc.func_utils import find_optim_prior
 from pymc.math import (
     expand_packed_triangular,
     invlogit,
