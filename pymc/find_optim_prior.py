@@ -76,7 +76,9 @@ def find_optim_prior(
             "Feel free to open a pull request on PyMC repo if you really need this feature."
         )
 
-    dist_params = aet.vector("dist_params", dtype=aesara.config.floatX)
+    # force float64 config
+    aesara.config.floatX = "float64"
+    dist_params = aet.vector("dist_params")
     params_to_optim = {
         arg_name: dist_params[i] for arg_name, i in zip(init_guess.keys(), range(len(init_guess)))
     }
