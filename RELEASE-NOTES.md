@@ -53,6 +53,7 @@ All of the above apply to:
   - The `is_observed` arguement for `gp.Marginal*` implementations has been deprecated.
   - In the gp.utils file, the `kmeans_inducing_points` function now passes through `kmeans_kwargs` to scipy's k-means function.
   - The function `replace_with_values` function has been added to `gp.utils`.
+  - `MarginalSparse` has been renamed `MarginalApprox`.
 - ...
 
 ### Expected breaks
