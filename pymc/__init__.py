@@ -59,9 +59,6 @@ def _check_install_compatibilitites():
 
 
 _check_install_compatibilitites()
-_log.info(
-    "You are running the v4 development version of PyMC which currently still lacks key features. You probably want to use the stable v3 instead which you can either install via conda or find on the v3 GitHub branch: https://github.com/pymc-devs/pymc/tree/v3"
-)
 
 
 def __set_compiler_flags():
