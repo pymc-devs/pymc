@@ -7,8 +7,21 @@ Instead update the vNext section until 4.0.0 is out.
 ⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠
 -->
 
-## PyMC vNext (4.0.0-beta1 → 4.0.0-beta2 → 4.0.0)
+## PyMC vNext (4.0.0b1 → 4.0.0b2 → 4.0.0)
 ⚠ The changes below are the delta between the upcoming releases `v3.11.5` →...→ `v4.0.0`.
+
+### No-yet working features
+We plan to get these working again, but at this point their inner workings have not been refactored.
+- Timeseries distributions (see [#4642](https://github.com/pymc-devs/pymc/issues/4642))
+- Mixture distributions (see [#4781](https://github.com/pymc-devs/pymc/issues/4781))
+- Cholesky distributions (see WIP PR [#4784](https://github.com/pymc-devs/pymc/pull/4784))
+- Variational inference submodule (see WIP PR [#4582](https://github.com/pymc-devs/pymc/pull/4582))
+- Elliptical slice sampling (see [#5137](https://github.com/pymc-devs/pymc/issues/5137))
+- `BaseStochasticGradient` (see [#5138](https://github.com/pymc-devs/pymc/issues/5138))
+- `pm.sample_posterior_predictive_w` (see [#4807](https://github.com/pymc-devs/pymc/issues/4807))
+- Partially observed Multivariate distributions (see [#5260](https://github.com/pymc-devs/pymc/issues/5260))
+
+Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) for a potentially more complete list.
 
 ### Unexpected breaking changes (action needed)
 + New API is not available in `v3.11.5`.
@@ -16,7 +29,7 @@ Instead update the vNext section until 4.0.0 is out.
 
 All of the above apply to:
 
-- ⚠ The library is now named, installed and imported as "pymc".
+- ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
 - `pm.Distribution(...).logp(x)` is now `pm.logp(pm.Distribution(...), x)`
 - `pm.Distribution(...).logcdf(x)` is now `pm.logcdf(pm.Distribution(...), x)`
@@ -42,6 +55,9 @@ All of the above apply to:
 - `pm.DensityDist` no longer accepts the `logp` as its first position argument. It is now an optional keyword argument. If you pass a callable as the first positional argument, a `TypeError` will be raised (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
 - `pm.DensityDist` now accepts distribution parameters as positional arguments. Passing them as a dictionary in the `observed` keyword argument is no longer supported and will raise an error (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
 - The signature of the `logp` and `random` functions that can be passed into a `pm.DensityDist` has been changed (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
+- Changes to the Gaussian process (`gp`) submodule:
+  - The `gp.prior(..., shape=...)` kwarg was renamed to `size`.
+  - Multiple methods including `gp.prior` now require explicit kwargs.
 - Changes to the BART implementation:
   - A BART variable can be combined with other random variables. The `inv_link` argument has been removed (see [4914](https://github.com/pymc-devs/pymc3/pull/4914)).
   - Moved BART to its own module (see [5058](https://github.com/pymc-devs/pymc3/pull/5058)).
