@@ -29,7 +29,7 @@ Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) fo
 
 All of the above apply to:
 
-- ⚠ The library is now named, installed and imported as "pymc".
+- ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
 - `pm.Distribution(...).logp(x)` is now `pm.logp(pm.Distribution(...), x)`
 - `pm.Distribution(...).logcdf(x)` is now `pm.logcdf(pm.Distribution(...), x)`
@@ -57,6 +57,7 @@ All of the above apply to:
 - The signature of the `logp` and `random` functions that can be passed into a `pm.DensityDist` has been changed (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
 - Changes to the Gaussian process (`gp`) submodule:
   - The `gp.prior(..., shape=...)` kwarg was renamed to `size`.
+  - Multiple methods including `gp.prior` now require explicit kwargs.
 - Changes to the BART implementation:
   - A BART variable can be combined with other random variables. The `inv_link` argument has been removed (see [4914](https://github.com/pymc-devs/pymc3/pull/4914)).
   - Moved BART to its own module (see [5058](https://github.com/pymc-devs/pymc3/pull/5058)).
