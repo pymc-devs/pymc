@@ -58,6 +58,123 @@ Choose a category from [existing categories](https://github.com/pymc-devs/pymc/w
 Authors should list people who authored, adapted or updated the notebook. See {ref}`jupyter_authors`
 for more details.
 
+## Extra dependencies
+If the notebook uses libraries that are not PyMC dependencies, these extra dependencies should
+be indicated together with some advise on how to install them.
+This ensures readers know what they'll need to install beforehand and can for example
+decide between running it locally or on binder.
+
+To make things easier for notebook writers and maintainers, pymc-examples contains
+a template for this that warns about the extra dependencies and provides specific
+installation instructions inside a dropdown.
+
+Thus, notebooks with extra dependencies should:
+
+1.  list the extra dependencies as notebook metadata using the `myst_substitutions` category
+    and then either the `extra_dependencies` or the `pip_dependencies` and `conda_dependencies`.
+    In addition, there is also an `extra_install_notes` to include custom text inside the dropdown.
+
+    * notebook metadata can be edited from the menubar `Edit` -> `Edit notebook metadata`
+      in the dropdown
+
+      This will open a window with json formatted text that might look a bit like:
+
+      ::::{tab-set}
+      :::{tab-item} No myst_substitutions
+
+      ```json
+      {
+        "kernelspec": {
+          "name": "python3",
+          "display_name": "Python 3 (ipykernel)",
+          "language": "python"
+        },
+        "language_info": {
+          "name": "python",
+          "version": "3.9.7",
+          "mimetype": "text/x-python",
+          "codemirror_mode": {
+            "name": "ipython",
+            "version": 3
+          },
+          "pygments_lexer": "ipython3",
+          "nbconvert_exporter": "python",
+          "file_extension": ".py"
+        }
+      }
+      ```
+      :::
+
+      :::{tab-item} extra_dependencies key
+
+      ```{code-block} json
+      :emphasize-lines: 19-21
+      {
+        "kernelspec": {
+          "name": "python3",
+          "display_name": "Python 3 (ipykernel)",
+          "language": "python"
+        },
+        "language_info": {
+          "name": "python",
+          "version": "3.9.7",
+          "mimetype": "text/x-python",
+          "codemirror_mode": {
+            "name": "ipython",
+            "version": 3
+          },
+          "pygments_lexer": "ipython3",
+          "nbconvert_exporter": "python",
+          "file_extension": ".py"
+        },
+        "myst_substitutions": {
+          "extra_dependencies": "bambi seaborn"
+        }
+      }
+      ```
+      :::
+
+      :::{tab-item} pip and conda specific keys
+      ```{code-block} json
+      :emphasize-lines: 19-22
+      {
+        "kernelspec": {
+          "name": "python3",
+          "display_name": "Python 3 (ipykernel)",
+          "language": "python"
+        },
+        "language_info": {
+          "name": "python",
+          "version": "3.9.7",
+          "mimetype": "text/x-python",
+          "codemirror_mode": {
+            "name": "ipython",
+            "version": 3
+          },
+          "pygments_lexer": "ipython3",
+          "nbconvert_exporter": "python",
+          "file_extension": ".py"
+        },
+        "myst_substitutions": {
+          "pip_dependencies": "graphviz",
+          "conda_dependencies": "python-graphviz",
+        }
+      }
+      ```
+
+      The pip and conda spcific keys overwrite the `extra_installs` one, so it doesn't make
+      sense to use `extra_installs` is using them. Either both pip and conda substitutions
+      are defined or none of them is.
+      :::
+      ::::
+
+1.  include the warning and installation advise template with the following markdown:
+
+    ```markdown
+    :::{include} ../extra_installs.md
+    :::
+    ```
+
 ## Code preamble
 
 In a cell just below the cell where you imported matplotlib and/or ArviZ (usually the first one),
@@ -185,7 +302,7 @@ References can be cited twice within a single notebook. Two common reference for
 
 which can be added inline, within the text itself. At the end of the notebook, add the bibliography with the following markdown
 
-```
+```markdown
 ## References
 
 :::{bibliography}
@@ -195,7 +312,7 @@ which can be added inline, within the text itself. At the end of the notebook, a
 
 or alternatively, if you wanted to add extra references that have not been cited within the text, use:
 
-```
+```markdown
 ## References
 
 :::{bibliography}
