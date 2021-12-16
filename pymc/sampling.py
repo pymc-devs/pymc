@@ -1541,7 +1541,7 @@ def sample_posterior_predictive(
     model: Optional[Model] = None,
     var_names: Optional[List[str]] = None,
     size: Optional[int] = None,
-    keep_size: Optional[bool] = False,
+    keep_size: Optional[bool] = True,
     random_seed=None,
     progressbar: bool = True,
     mode: Optional[Union[str, Mode]] = None,
@@ -1571,7 +1571,7 @@ def sample_posterior_predictive(
         The number of random draws from the distribution specified by the parameters in each
         sample of the trace. Not recommended unless more than ndraws times nchains posterior
         predictive samples are needed.
-    keep_size : bool, optional
+    keep_size : bool, default True
         Force posterior predictive sample to have the same shape as posterior and sample stats
         data: ``(nchains, ndraws, ...)``. Overrides samples and size parameters.
     random_seed : int
@@ -1582,9 +1582,8 @@ def sample_posterior_predictive(
         time until completion ("expected time of arrival"; ETA).
     mode:
         The mode used by ``aesara.function`` to compile the graph.
-    return_inferencedata : bool
+    return_inferencedata : bool, default True
         Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
-        Defaults to True.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
 

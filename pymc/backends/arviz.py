@@ -167,6 +167,12 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                     )
             self.ntune = len(self.trace) - self.ndraws
             self.posterior_trace, self.warmup_trace = self.split_trace()
+        elif posterior_predictive is not None:
+            aelem = next(iter(posterior_predictive.values()))
+            self.nchains, self.ndraws = aelem.shape[:2]
+        elif predictions is not None:
+            aelem = next(iter(predictions.values()))
+            self.nchains, self.ndraws = aelem.shape[:2]
         else:
             self.nchains = self.ndraws = 0
 
@@ -175,29 +181,11 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         self.log_likelihood = log_likelihood
         self.predictions = predictions
 
-        def arbitrary_element(dct: Dict[Any, np.ndarray]) -> np.ndarray:
-            return next(iter(dct.values()))
-
-        if trace is None:
-            # if you have a posterior_predictive built with keep_dims,
-            # you'll lose here, but there's nothing I can do about that.
-            self.nchains = 1
-            get_from = None
-            if predictions is not None:
-                get_from = predictions
-            elif posterior_predictive is not None:
-                get_from = posterior_predictive
-            elif prior is not None:
-                get_from = prior
-            if get_from is None:
-                # pylint: disable=line-too-long
-                raise ValueError(
-                    "When constructing InferenceData must have at least"
-                    " one of trace, prior, posterior_predictive or predictions."
-                )
-
-            aelem = arbitrary_element(get_from)
-            self.ndraws = aelem.shape[0]
+        if all(elem is None for elem in (trace, predictions, posterior_predictive, prior)):
+            raise ValueError(
+                "When constructing InferenceData must have at least"
+                " one of trace, prior, posterior_predictive or predictions."
+            )
 
         self.coords = {**self.model.coords, **(coords or {})}
         self.coords = {
@@ -400,14 +388,10 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         """Take Dict of variables to numpy ndarrays (samples) and translate into dataset."""
         data = {}
         for k, ary in dct.items():
-            shape = ary.shape
-            if shape[0] == self.nchains and shape[1] == self.ndraws:
+            if (ary.shape[0] == self.nchains) and (ary.shape[1] == self.ndraws):
                 data[k] = ary
-            elif shape[0] == self.nchains * self.ndraws:
-                data[k] = ary.reshape((self.nchains, self.ndraws, *shape[1:]))
             else:
                 data[k] = np.expand_dims(ary, 0)
-                # pylint: disable=line-too-long
                 _log.warning(
                     "posterior predictive variable %s's shape not compatible with number of chains and draws. "
                     "This can mean that some draws or even whole chains are not represented.",
@@ -648,14 +632,18 @@ def predictions_to_inference_data(
         raise ValueError(
             "Do not pass True for inplace unless passing" "an existing InferenceData as idata_orig"
         )
-    new_idata = InferenceDataConverter(
+    converter = InferenceDataConverter(
         trace=posterior_trace,
         predictions=predictions,
         model=model,
         coords=coords,
         dims=dims,
         log_likelihood=False,
-    ).to_inference_data()
+    )
+    if hasattr(idata_orig, "posterior"):
+        converter.nchains = idata_orig.posterior.dims["chain"]
+        converter.ndraws = idata_orig.posterior.dims["draw"]
+    new_idata = converter.to_inference_data()
     if idata_orig is None:
         return new_idata
     elif inplace:
