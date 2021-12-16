@@ -1,129 +1,42 @@
-****************************************************************
-Transformations of a random variable from one space to another
-****************************************************************
+***************
+Transformations
+***************
 
-Note that for convenience these entities can be addressed as
-``pm.transforms.``\ *X* for any name *X*, although they are actually
-implemented as ``pm.distributions.transforms.``\ *X*.
-
-.. currentmodule:: pymc.distributions.transforms
-
-
-.. contents ::
-
-..
-   .. autosummary::
-
-   Transform
-   stick_breaking
-   logodds
-   interval
-   log_exp_m1
-   ordered
-   log
-   sum_to_1
-   circular
-   CholeskyCovPacked
-   Chain
-
-
+.. currentmodule:: pymc.transforms
 
 Transform Instances
 ~~~~~~~~~~~~~~~~~~~
 
 Transform instances are the entities that should be used in the
-``transform`` parameter to a random variable constructor.  These are
-initialized instances of the Transform Classes, which are described
-below.
+``transform`` parameter to a random variable constructor.
 
-.. glossary::
+.. autosummary::
+   :toctree: generated
 
-``stick_breaking``
-    Instantiation of :class:`~pymc.distributions.transforms.StickBreaking`
-    :class:`~pymc.distributions.transforms.Transform` class for use in the ``transform``
-    argument of a random variable.
-
-``logodds``
-    Instantiation of
-    :class:`~pymc.distributions.transforms.LogOdds` :class:`~pymc.distributions.transforms.Transform` class
-    for use in the ``transform`` argument of a random variable.
-
-``interval``
-    Alias of
-    :class:`~pymc.distributions.transforms.Interval` :class:`~pymc.distributions.transforms.Transform` class
-    for use in the ``transform`` argument of a random variable.
-
-``log_exp_m1``
-    Instantiation of
-    :class:`~pymc.distributions.transforms.LogExpM1` :class:`~pymc.distributions.transforms.Transform` class
-    for use in the ``transform`` argument of a random variable.
-
-``lowerbound``
-    Alias of
-    :class:`~pymc.distributions.transforms.LowerBound` :class:`~pymc.distributions.transforms.Transform` class
-    for use in the ``transform`` argument of a random variable.
-
-``upperbound``
-    Alias of
-    :class:`~pymc.distributions.transforms.UpperBound` :class:`~pymc.distributions.transforms.Transform` class
-    for use in the ``transform`` argument of a random variable.
-
-``ordered``
-    Instantiation of
-    :class:`~pymc.distributions.transforms.Ordered` :class:`~pymc.distributions.transforms.Transform` class
-    for use in the ``transform`` argument of a random variable.
-
-``log``
-    Instantiation of
-    :class:`~pymc.distributions.transforms.Log` :class:`~pymc.distributions.transforms.Transform` class
-    for use in the ``transform`` argument of a random variable.
-
-
-``sum_to_1``
-    Instantiation of
-    :class:`~pymc.distributions.transforms.SumTo1` :class:`~pymc.distributions.transforms.Transform` class
-    for use in the ``transform`` argument of a random variable.
-
-
-``circular``
-    Instantiation of
-    :class:`~pymc.distributions.transforms.Circular` :class:`~pymc.distributions.transforms.Transform` class
-    for use in the ``transform`` argument of a random variable.
-
-Transform Base Classes
-~~~~~~~~~~~~~~~~~~~~~~
-
-Typically the programmer will not use these directly.
-
-.. autoclass::  Transform
-    :members:
-
+    simplex
+    logodds
+    interval
+    log_exp_m1
+    ordered
+    log
+    sum_to_1
+    circular
 
 Transform Composition Classes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: Chain
-    :members:
-.. autoclass:: CholeskyCovPacked
-    :members:
+.. autosummary::
+   :toctree: generated
 
+    Chain
+    CholeskyCovPacked
 
 Specific Transform Classes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass::  Log
-    :members:
-.. autoclass::  LogExpM1
-    :members:
-.. autoclass::  LogOdds
-    :members:
-.. autoclass::  Interval
-    :members:
-.. autoclass::  Ordered
-    :members:
-.. autoclass::  SumTo1
-    :members:
-.. autoclass::  StickBreaking
-    :members:
-.. autoclass::  Circular
-    :members:
+.. autosummary::
+   :toctree: generated
+
+    LogExpM1
+    Ordered
+    SumTo1

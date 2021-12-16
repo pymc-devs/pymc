@@ -4,10 +4,8 @@ Simulator
 
 .. currentmodule:: pymc.distributions.simulator
 .. autosummary::
+   :toctree: generated
 
    SimulatorRV
    Simulator
    KullbackLiebler
-
-.. automodule:: pymc.distributions.simulator
-   :members:
