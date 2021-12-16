@@ -2,7 +2,7 @@
 Timeseries
 **********
 
-.. currentmodule:: pymc.distributions.timeseries
+.. currentmodule:: pymc
 .. autosummary::
    :toctree: generated
 

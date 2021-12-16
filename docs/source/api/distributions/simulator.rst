@@ -2,7 +2,7 @@
 Simulator
 **********
 
-.. currentmodule:: pymc.distributions.simulator
+.. currentmodule:: pymc
 .. autosummary::
    :toctree: generated
 

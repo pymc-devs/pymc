@@ -118,7 +118,7 @@ exclude_patterns = [
 # myst and panels config
 jupyter_execute_notebooks = "off"
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "substitution"]
-myst_heading_anchors = 0
+myst_heading_anchors = None
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -191,7 +191,6 @@ html_theme_options = {
     "navbar_end": ["search-field.html", "navbar-icon-links.html"],
     "search_bar_text": "Search...",
     "use_edit_page_button": False,  # TODO: see how to skip of fix for generated pages
-    "externalrefs": True,
     "google_analytics_id": "UA-176578023-1",
 }
 html_context = {

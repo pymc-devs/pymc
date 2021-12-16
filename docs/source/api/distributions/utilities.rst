@@ -4,10 +4,10 @@ Distribution utilities
 
 .. currentmodule:: pymc
 .. autosummary::
-   :toctree: generated
+   :toctree: generated/
 
-  Distribution
-  Discrete
-  Continuous
-  NoDistribution
-  DensityDist
+    Distribution
+    Discrete
+    Continuous
+    NoDistribution
+    DensityDist
