@@ -164,48 +164,48 @@ def factorized_joint_logprob(
             )
             continue
 
-        q_rv_value_vars = [
+        q_value_vars = [
             replacements[q_rv_var]
             for q_rv_var in outputs
             if not getattr(q_rv_var.tag, "ignore_logprob", False)
         ]
 
-        if not q_rv_value_vars:
+        if not q_value_vars:
             continue
 
         # Replace `RandomVariable`s in the inputs with value variables.
         # Also, store the results in the `replacements` map for the nodes
         # that follow.
         remapped_vars, _ = rvs_to_value_vars(
-            q_rv_value_vars + list(node.inputs),
+            q_value_vars + list(node.inputs),
             initial_replacements=replacements,
         )
-        q_rv_value_vars = remapped_vars[: len(q_rv_value_vars)]
-        value_var_inputs = remapped_vars[len(q_rv_value_vars) :]
+        q_value_vars = remapped_vars[: len(q_value_vars)]
+        q_rv_inputs = remapped_vars[len(q_value_vars) :]
 
         q_logprob_vars = _logprob(
             node.op,
-            q_rv_value_vars,
-            *value_var_inputs,
+            q_value_vars,
+            *q_rv_inputs,
             **kwargs,
         )
 
         if not isinstance(q_logprob_vars, (list, tuple)):
             q_logprob_vars = [q_logprob_vars]
 
-        for q_rv_var, q_logprob_var in zip(q_rv_value_vars, q_logprob_vars):
+        for q_value_var, q_logprob_var in zip(q_value_vars, q_logprob_vars):
 
-            q_rv_var = original_values[q_rv_var]
+            q_value_var = original_values[q_value_var]
 
-            if q_rv_var.name:
-                q_logprob_var.name = f"{q_rv_var.name}_logprob"
+            if q_value_var.name:
+                q_logprob_var.name = f"{q_value_var.name}_logprob"
 
-            if q_rv_var in logprob_vars:
+            if q_value_var in logprob_vars:
                 raise ValueError(
-                    f"More than one logprob factor was assigned to the value var {q_rv_var}"
+                    f"More than one logprob factor was assigned to the value var {q_value_var}"
                 )
 
-            logprob_vars[q_rv_var] = q_logprob_var
+            logprob_vars[q_value_var] = q_logprob_var
 
         # Recompute test values for the changes introduced by the
         # replacements above.
