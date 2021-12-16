@@ -151,6 +151,7 @@ todo_include_todos = False
 intersphinx_mapping = {
     "arviz": ("https://arviz-devs.github.io/arviz/", None),
     "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
+    "aeppl": ("https://aesara-devs.github.io/aeppl/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "nb": ("https://pymc-examples.readthedocs.io/en/latest/", None),
 }
