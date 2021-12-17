@@ -34,7 +34,7 @@ but for their API documentation please refer to the :ref:`ArviZ documentation <a
 but for their API documentation please refer to the :ref:`ArviZ documentation <arviz:stats_api>`.
 
 ArviZ is a dependency of PyMC and so, in addition to the locations described above,
-importing arviz and using ``arviz.<function>`` will also work without any extra installation.
+importing ArviZ and using ``arviz.<function>`` will also work without any extra installation.
 
 Generalized Linear Models (GLMs)
 --------------------------------
@@ -42,7 +42,7 @@ Generalized Linear Models (GLMs)
 Generalized Linear Models are delegated to the
 `Bambi <https://bambinos.github.io/bambi>`_.
 library, a high-level Bayesian model-building
-interface built on top of the PyMC.
+interface built on top of PyMC.
 
 Bambi is not a dependency of PyMC and should be installed in addition to PyMC
 to use it to generate PyMC models via formula syntax.
