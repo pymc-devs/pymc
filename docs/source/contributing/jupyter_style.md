@@ -31,7 +31,7 @@ the repository where the notebook is in (pymc or pymc-examples).
 Choosing variable names can sometimes be difficult, tedious or annoying.
 In case it helps, the dropdown below has some suggestions so you can focus on writing the actual content
 
-::::::{dropdown} Variable name suggestions
+:::::::{dropdown} Variable name suggestions
 :icon: light-bulb
 
 **Models and sampling results**
@@ -76,7 +76,8 @@ In case it helps, the dropdown below has some suggestions so you can focus on wr
 
   ::::{tab-set}
   :::{tab-item} Local `ax` variables
-  ```
+  ```{code-block} python
+  :emphasize-lines: 3, 7
   fig, axs = pyplot.subplots()
 
   ax = axs[0, 1]
@@ -126,7 +127,8 @@ In case it helps, the dropdown below has some suggestions so you can focus on wr
 * When looping, if you need to store a variable after subsetting with the loop index,
   append the index variable used for looping to the original variable name:
 
-  ```
+  ```{code-block} python
+  :emphasize-lines: 4, 6
   variable = np.array(...)
   x = np.array(...)
   for i in range(N):
@@ -136,7 +138,7 @@ In case it helps, the dropdown below has some suggestions so you can focus on wr
           ...
   ```
 
-::::::
+:::::::
 
 ## First cell
 The first cell of all example notebooks should have a MyST target, a level 1 markdown title (that is a title with a single `#`) followed by the post directive.
@@ -437,12 +439,14 @@ Once you're finished with your NB, add a very last cell with [the watermark pack
 
 ```python
 %load_ext watermark
-%watermark -n -u -v -iv -w -p theano,xarray
+%watermark -n -u -v -iv -w -p aesara,xarray
 ```
 
 This second to last code cell should be preceded by a markdown cell with the `## Watermark` title only so it appears in the table of contents.
 
-`watermark` should be in your virtual environment if you installed our `requirements-dev.txt`. Otherwise, just run `pip install watermark`. The `p` flag is optional but should be added if Theano (or Aesara if in `v4`) or xarray are not imported explicitly.
+`watermark` should be in your virtual environment if you installed our `requirements-dev.txt`.
+Otherwise, just run `pip install watermark`.
+The `p` flag is optional but should be added if Aesara or xarray are not imported explicitly.
 This will also be checked by `pre-commit` (because we all forget to do things sometimes 😳).
 
 ## Epilogue
