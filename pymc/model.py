@@ -514,9 +514,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
-    a class based model you should inherit from :class:`~.Model` and
-    override :meth:`~.__init__` with arbitrary definitions (do not
-    forget to call base class :meth:`__init__` first).
+    a class based model you should inherit from :class:`~pymc.Model` and
+    override the `__init__` method with arbitrary definitions (do not
+    forget to call base class :meth:`pymc.Model.__init__` first).
 
     Parameters
     ----------
@@ -599,6 +599,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         with Model() as model:
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
+
     """
 
     if TYPE_CHECKING:
