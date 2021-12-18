@@ -272,7 +272,7 @@ Thus, notebooks with extra dependencies should:
       ```
 
       The pip and conda spcific keys overwrite the `extra_installs` one, so it doesn't make
-      sense to use `extra_installs` is using them. Either both pip and conda substitutions
+      sense to use `extra_installs` if using them. Either both pip and conda substitutions
       are defined or none of them is.
       :::
       ::::
