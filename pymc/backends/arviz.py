@@ -155,6 +155,15 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                     "sampling_time": trace.report.t_sampling,
                     "tuning_steps": trace.report.n_tune,
                 }
+            else:
+                self.ndraws = len(trace)
+                if self.save_warmup:
+                    warnings.warn(
+                        "Warmup samples will be stored in posterior group and will not be"
+                        " excluded from stats and diagnostics."
+                        " Do not slice the trace manually before conversion",
+                        UserWarning,
+                    )
             self.ntune = len(self.trace) - self.ndraws
             self.posterior_trace, self.warmup_trace = self.split_trace()
         else:
