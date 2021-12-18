@@ -155,15 +155,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                     "sampling_time": trace.report.t_sampling,
                     "tuning_steps": trace.report.n_tune,
                 }
-            else:
-                self.ndraws = len(trace)
-                if self.save_warmup:
-                    warnings.warn(
-                        "Warmup samples will be stored in posterior group and will not be"
-                        " excluded from stats and diagnostics."
-                        " Do not slice the trace manually before conversion",
-                        UserWarning,
-                    )
             self.ntune = len(self.trace) - self.ndraws
             self.posterior_trace, self.warmup_trace = self.split_trace()
         else:
@@ -596,6 +587,7 @@ def predictions_to_inference_data(
     predictions: Dict[str, np.ndarray]
         The predictions are the return value of :func:`~pymc.sample_posterior_predictive`,
         a dictionary of strings (variable names) to numpy ndarrays (draws).
+        Requires the arrays to follow the convention ``chain, draw, *shape``.
     posterior_trace: MultiTrace
         This should be a trace that has been thinned appropriately for
         ``pymc.sample_posterior_predictive``. Specifically, any variable whose shape is
@@ -635,6 +627,9 @@ def predictions_to_inference_data(
     if hasattr(idata_orig, "posterior"):
         converter.nchains = idata_orig.posterior.dims["chain"]
         converter.ndraws = idata_orig.posterior.dims["draw"]
+    else:
+        aelem = next(iter(predictions.values()))
+        converter.nchains, converter.ndraws = aelem.shape[:2]
     new_idata = converter.to_inference_data()
     if idata_orig is None:
         return new_idata

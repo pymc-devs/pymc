@@ -49,7 +49,7 @@ class TestData(SeededTest):
 
             prior_trace0 = pm.sample_prior_predictive(1000)
             idata = pm.sample(1000, init=None, tune=1000, chains=1)
-            pp_trace0 = pm.sample_posterior_predictive(idata, 1000)
+            pp_trace0 = pm.sample_posterior_predictive(idata)
 
             x_shared.set_value(x_pred)
             prior_trace1 = pm.sample_prior_predictive(1000)

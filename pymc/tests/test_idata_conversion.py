@@ -87,7 +87,7 @@ class TestDataPyMC:
         with data.model:
             prior = pm.sample_prior_predictive(return_inferencedata=False)
             posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, return_inferencedata=False
+                data.obj, keep_size=True, return_inferencedata=False
             )
 
             idata = to_inference_data(
@@ -109,7 +109,7 @@ class TestDataPyMC:
     ) -> Tuple[InferenceData, Dict[str, np.ndarray]]:
         with data.model:
             posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, return_inferencedata=False
+                data.obj, keep_size=True, return_inferencedata=False
             )
             idata = predictions_to_inference_data(
                 posterior_predictive,
