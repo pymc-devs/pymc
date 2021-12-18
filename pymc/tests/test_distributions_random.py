@@ -1875,9 +1875,8 @@ class TestDensityDist:
             )
             idata = pm.sample(tune=50, draws=100, cores=1, step=pm.Metropolis())
 
-        samples = 500
         with pytest.raises(NotImplementedError):
-            pm.sample_posterior_predictive(idata, samples=samples, model=model, size=100)
+            pm.sample_posterior_predictive(idata, model=model)
 
     @pytest.mark.parametrize("size", [(), (3,), (3, 2)], ids=str)
     def test_density_dist_with_random_multivariate(self, size):

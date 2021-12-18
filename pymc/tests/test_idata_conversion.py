@@ -207,18 +207,16 @@ class TestDataPyMC:
             posterior_predictive = pm.sample_posterior_predictive(
                 data.obj, 370, return_inferencedata=False, keep_size=False
             )
-            inference_data = to_inference_data(
-                trace=data.obj,
-                posterior_predictive=posterior_predictive,
-                coords={"school": np.arange(eight_schools_params["J"])},
-                dims={"theta": ["school"], "eta": ["school"]},
-            )
+            with pytest.warns(UserWarning, match="shape of variables"):
+                inference_data = to_inference_data(
+                    trace=data.obj,
+                    posterior_predictive=posterior_predictive,
+                    coords={"school": np.arange(eight_schools_params["J"])},
+                    dims={"theta": ["school"], "eta": ["school"]},
+                )
 
-        records = caplog.records
         shape = inference_data.posterior_predictive.obs.shape
         assert np.all([obs_s == s for obs_s, s in zip(shape, (1, 370, eight_schools_params["J"]))])
-        assert len(records) == 1
-        assert records[0].levelname == "WARNING"
 
     @pytest.mark.parametrize("use_context", [True, False])
     def test_autodetect_coords_from_model(self, use_context):

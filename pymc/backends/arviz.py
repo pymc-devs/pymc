@@ -138,7 +138,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         dims: Optional[DimSpec] = None,
         model=None,
         save_warmup: Optional[bool] = None,
-        density_dist_obs: bool = True,
     ):
 
         self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
@@ -167,12 +166,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                     )
             self.ntune = len(self.trace) - self.ndraws
             self.posterior_trace, self.warmup_trace = self.split_trace()
-        elif posterior_predictive is not None:
-            aelem = next(iter(posterior_predictive.values()))
-            self.nchains, self.ndraws = aelem.shape[:2]
-        elif predictions is not None:
-            aelem = next(iter(predictions.values()))
-            self.nchains, self.ndraws = aelem.shape[:2]
         else:
             self.nchains = self.ndraws = 0
 
@@ -183,7 +176,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
 
         if all(elem is None for elem in (trace, predictions, posterior_predictive, prior)):
             raise ValueError(
-                "When constructing InferenceData must have at least"
+                "When constructing InferenceData you must pass at least"
                 " one of trace, prior, posterior_predictive or predictions."
             )
 
@@ -202,7 +195,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             }
             self.dims = {**model_dims, **self.dims}
 
-        self.density_dist_obs = density_dist_obs
         self.observations = find_observations(self.model)
 
     def split_trace(self) -> Tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
@@ -384,30 +376,35 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             ),
         )
 
-    def translate_posterior_predictive_dict_to_xarray(self, dct) -> xr.Dataset:
+    def translate_posterior_predictive_dict_to_xarray(self, dct, kind) -> xr.Dataset:
         """Take Dict of variables to numpy ndarrays (samples) and translate into dataset."""
         data = {}
+        warning_vars = []
         for k, ary in dct.items():
             if (ary.shape[0] == self.nchains) and (ary.shape[1] == self.ndraws):
                 data[k] = ary
             else:
                 data[k] = np.expand_dims(ary, 0)
-                _log.warning(
-                    "posterior predictive variable %s's shape not compatible with number of chains and draws. "
-                    "This can mean that some draws or even whole chains are not represented.",
-                    k,
-                )
+                warning_vars.append(k)
+        warnings.warn(
+            f"The shape of variables {', '.join(warning_vars)} in {kind} group is not compatible "
+            "with number of chains and draws. The automatic dimension naming might not have worked. "
+            "This can also mean that some draws or even whole chains are not represented.",
+            UserWarning,
+        )
         return dict_to_dataset(data, library=pymc, coords=self.coords, dims=self.dims)
 
     @requires(["posterior_predictive"])
     def posterior_predictive_to_xarray(self):
         """Convert posterior_predictive samples to xarray."""
-        return self.translate_posterior_predictive_dict_to_xarray(self.posterior_predictive)
+        return self.translate_posterior_predictive_dict_to_xarray(
+            self.posterior_predictive, "posterior_predictive"
+        )
 
     @requires(["predictions"])
     def predictions_to_xarray(self):
         """Convert predictions (out of sample predictions) to xarray."""
-        return self.translate_posterior_predictive_dict_to_xarray(self.predictions)
+        return self.translate_posterior_predictive_dict_to_xarray(self.predictions, "predictions")
 
     def priors_to_xarray(self):
         """Convert prior samples (and if possible prior predictive too) to xarray."""
@@ -529,7 +526,6 @@ def to_inference_data(
     dims: Optional[DimSpec] = None,
     model: Optional["Model"] = None,
     save_warmup: Optional[bool] = None,
-    density_dist_obs: bool = True,
 ) -> InferenceData:
     """Convert pymc data into an InferenceData object.
 
@@ -562,9 +558,6 @@ def to_inference_data(
     save_warmup : bool, optional
         Save warmup iterations InferenceData object. If not defined, use default
         defined by the rcParams.
-    density_dist_obs : bool, default True
-        Store variables passed with ``observed`` arg to
-        :class:`~pymc.distributions.DensityDist` in the generated InferenceData.
 
     Returns
     -------
@@ -582,7 +575,6 @@ def to_inference_data(
         dims=dims,
         model=model,
         save_warmup=save_warmup,
-        density_dist_obs=density_dist_obs,
     ).to_inference_data()
 
 
