@@ -28,6 +28,115 @@ the repository where the notebook is in (pymc or pymc-examples).
 
 * When using non meaningful names such as single letters, add bullet points with a 1-2 sentence description of each variable below the equation where they are first introduced.
 
+Choosing variable names can sometimes be difficult, tedious or annoying.
+In case it helps, the dropdown below has some suggestions so you can focus on writing the actual content
+
+::::::{dropdown} Variable name suggestions
+:icon: light-bulb
+
+**Models and sampling results**
+* Use `idata` for sampling results, always containing a variable of type InferenceData
+* Store inferecedata groups as variables to ease writing and reading of code operating on sampling results.
+  Use underscore separated 3-5 word abbreviations or the group name. Some examples of `abbrebiation`/`group_name`:
+  `post`/`posterior`, `const`/`constant_data`, `post_pred`/`posterior_predictive` or `obs_data`/`observed_data`
+* For stats and diagnostics, use the ArviZ function name as variable name: `ess = az.ess(...)`, `loo = az.loo(...)`
+* If there are multiple models in a notebook, assign a prefix to each model,
+  and use it throughout to identify which variables map to each model.
+  Taking the famous eight school as example, with a `centered` and `non_centered` model
+  to compare parametrizations, use `centered_model` (pm.Model object), `centered_idata`, `centered_post`, `centered_ess`... and `non_centered_model`, `non_centered_idata`...
+
+**Dimension and random variable names**
+* Use singular dimension names, following ArviZ `chain` and `draw`.
+  For example `sample`, `cluster`, `axis`, `component`, `forest`, `time`...
+* If you can't think of a meaningful name for the dimension representing the number of observations such as time, fall back to `obs_id`
+* For matrix dimensions, as xarray doesn't allow repeated dimension names, add a `_bis` suffix. i.e. `param, param_bis`
+* For the dimension resulting from stacking `chain` and `draw` use `sample`, that is `.stack(sample=("chain", "draw"))`
+* We often need to encode a categorical variable as integers. add `_idx` to the name of the variable it's encoding.
+  i.e. from `floor` and `county` to `floor_idx` and `county_idx`.
+* To avoid clashes and overwriting variables when using `pm.Data`, use the following pattern:
+
+  ```
+  x = np.array(...)
+  with pm.Model():
+      x_ = pm.Data("x", x)
+      ...
+  ```
+
+  This avoids overwriting the original `x` while having `idata.constant_data["x"]`,
+  and within the model `x_` is still available to play the role of `x`.
+  Otherwise, always try to use the same variable name as the string name given to the PyMC random variable.
+
+**Plotting**
+* Matplotlib figures and axes. Use:
+  * `fig` for matplotlib figures
+  * `ax` for a single matplotib axes object
+  * `axs` for arrays of matplotlib axes objects
+
+  When manually working with multiple matplotlib axes, use local `ax` variables:
+
+  ::::{tab-set}
+  :::{tab-item} Local `ax` variables
+  ```
+  fig, axs = pyplot.subplots()
+
+  ax = axs[0, 1]
+  ax.plot(...)
+  ax.set(...)
+
+  ax = axs[1, 2]
+  ax.scatter(...)
+  ```
+  :::
+  :::{tab-item} Instead of subsetting every time
+  ```
+  fig, axs = pyplot.subplots()
+
+  axs[0, 1].plot(...)
+  axs[0, 1].set(...)
+
+  axs[1. 2].scatter(...)
+  ```
+  :::
+  ::::
+
+  This makes editing the code if restructuring the subplots easier, only one change per subplot
+  is needed instead of one change per matplotlib function call.
+
+* It is often useful to make a numpy linspace into an {class}`~xarray.DataArray`
+  for xarray to handle aligning and broadcasing automatically and ease computation.
+  * If a dimension name is needed, use `x_plot`
+  * If a variable name is needed for the original array and DataArray to coexist, add `_da` suffix
+
+  Thus, ending up with code like:
+
+  ```
+  x = xr.DataArray(np.linspace(0, 10, 100), dims=["x_plot"])
+  # or
+  x = np.linspace(0, 10, 100)
+  x_da = xr.DataArray(x)
+  ```
+
+**Looping**
+* When using enumerate, take the first letter of the variable as the count:
+
+  ```
+  for p, person in enumerate(persons)
+  ```
+
+* When looping, if you need to store a variable after subsetting with the loop index,
+  append the index variable used for looping to the original variable name:
+
+  ```
+  variable = np.array(...)
+  x = np.array(...)
+  for i in range(N):
+      variable_i = variable[i]
+      for j in range(K):
+          x_j = x[j]
+          ...
+  ```
+
+::::::
 
 ## First cell
 The first cell of all example notebooks should have a MyST target, a level 1 markdown title (that is a title with a single `#`) followed by the post directive.
