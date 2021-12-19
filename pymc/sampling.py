@@ -1605,6 +1605,17 @@ def sample_posterior_predictive(
     arviz.InferenceData or Dict
         An ArviZ ``InferenceData`` object containing the posterior predictive samples (default), or
         a dictionary with variable names as keys, and samples as numpy arrays.
+
+    Examples
+    --------
+    Thin a sampled inferencedata by keeping 1 out of every 5 draws
+    before passing it to sample_posterior_predictive
+
+    .. code:: python
+
+        thinned_idata = idata.sel(draw=slice(None, None, 5))
+        with model:
+            idata.extend(pymc.sample_posterior_predictive(thinned_idata))
     """
 
     _trace: Union[MultiTrace, PointList]

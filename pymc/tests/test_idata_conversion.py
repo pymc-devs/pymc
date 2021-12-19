@@ -218,6 +218,25 @@ class TestDataPyMC:
         shape = inference_data.posterior_predictive.obs.shape
         assert np.all([obs_s == s for obs_s, s in zip(shape, (1, 370, eight_schools_params["J"]))])
 
+    def test_posterior_predictive_thinned(self, data):
+        with data.model:
+            idata = pm.sample(tune=5, draws=20, chains=2, return_inferencedata=True)
+            thinned_idata = idata.sel(draw=slice(None, None, 4))
+            idata.extend(pm.sample_posterior_predictive(thinned_idata))
+        test_dict = {
+            "posterior": ["mu", "tau", "eta", "theta"],
+            "sample_stats": ["diverging", "lp", "~log_likelihood"],
+            "log_likelihood": ["obs"],
+            "posterior_predictive": ["obs"],
+            "observed_data": ["obs"],
+        }
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
+        assert idata.posterior.dims["chain"] == 2
+        assert idata.posterior.dims["draw"] == 20
+        assert idata.posterior_predictive.dims["chain"] == 2
+        assert idata.posterior_predictive.dims["draw"] == 5
+
     @pytest.mark.parametrize("use_context", [True, False])
     def test_autodetect_coords_from_model(self, use_context):
         df_data = pd.DataFrame(columns=["date"]).set_index("date")
