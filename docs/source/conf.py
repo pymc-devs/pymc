@@ -158,6 +158,8 @@ intersphinx_mapping = {
     "aeppl": ("https://aesara-devs.github.io/aeppl/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "nb": ("https://pymc-examples.readthedocs.io/en/latest/", None),
+    "myst": ("https://myst-parser.readthedocs.io/en/latest", None),
+    "myst-nb": ("https://myst-nb.readthedocs.io/en/latest/", None),
 }
 
 
