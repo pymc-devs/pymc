@@ -118,6 +118,10 @@ exclude_patterns = [
 # myst and panels config
 jupyter_execute_notebooks = "off"
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "substitution"]
+myst_substitutions = {
+    "version_slug": rtd_version,
+}
+panels_add_bootstrap_css = False
 myst_heading_anchors = None
 
 # The reST default role (used for this markup: `text`) to use for all
