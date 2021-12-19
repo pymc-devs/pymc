@@ -308,7 +308,8 @@ Thus, notebooks with extra dependencies should:
       :::
       ::::
 
-1.  include the warning and installation advise template with the following markdown:
+1.  include the warning and installation advise template with the following markdown right before
+    the extra dependencies are imported:
 
     ```markdown
     :::{include} ../extra_installs.md
