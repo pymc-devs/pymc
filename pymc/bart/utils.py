@@ -187,7 +187,7 @@ def plot_dependence(
         y_pred = []
         if kind == "pdp":
             if xs_interval == "linear":
-                new_X_i = np.linspace(X[:, i].min(), X[:, i].max(), xs_values)
+                new_X_i = np.linspace(np.nanmin(X[:, i]), np.nanmax(X[:, i]), xs_values)
             elif xs_interval == "quantiles":
                 new_X_i = np.quantile(X[:, i], q=xs_values)
             elif xs_interval == "insample":
@@ -229,7 +229,7 @@ def plot_dependence(
                     smooth_kwargs = {}
                 smooth_kwargs.setdefault("window_length", 55)
                 smooth_kwargs.setdefault("polyorder", 2)
-                x_data = np.linspace(new_X_target[i].min(), new_X_target[i].max(), 200)
+                x_data = np.linspace(np.nanmin(new_X_target[i]), np.nanmax(new_X_target[i]), 200)
                 x_data[0] = (x_data[0] + x_data[1]) / 2
                 if kind == "pdp":
                     interp = griddata(new_X_target[i], new_Y[i].mean(0), x_data)
