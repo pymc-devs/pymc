@@ -1692,9 +1692,9 @@ def sample_posterior_predictive(
     vars_to_sample = list(get_default_varnames(vars_, include_transformed=False))
 
     if not vars_to_sample:
-        if return_inferencedata and not extend:
+        if return_inferencedata and not extend_inferencedata:
             return None
-        elif return_inferencedata and extend:
+        elif return_inferencedata and extend_inferencedata:
             return trace
         return {}
 
