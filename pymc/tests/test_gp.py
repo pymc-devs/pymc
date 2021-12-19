@@ -840,9 +840,9 @@ class TestMarginalVsLatent:
         npt.assert_allclose(latent_logp, self.logp, atol=5)
 
 
-class TestMarginalVsMarginalSparse:
+class TestMarginalVsMarginalApprox:
     R"""
-    Compare logp of models Marginal and MarginalSparse.
+    Compare logp of models Marginal and MarginalApprox.
     Should be nearly equal when inducing points are same as inputs.
     """
 
@@ -871,7 +871,7 @@ class TestMarginalVsMarginalSparse:
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.MarginalSparse(mean_func=mean_func, cov_func=cov_func, approx=approx)
+            gp = pm.gp.MarginalApprox(mean_func=mean_func, cov_func=cov_func, approx=approx)
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
             p = gp.conditional("p", self.Xnew)
         approx_logp = model.logp({"f": self.y, "p": self.pnew})
@@ -882,7 +882,7 @@ class TestMarginalVsMarginalSparse:
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.MarginalSparse(mean_func=mean_func, cov_func=cov_func, approx=approx)
+            gp = pm.gp.MarginalApprox(mean_func=mean_func, cov_func=cov_func, approx=approx)
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
             mu1, var1 = self.gp.predict(self.Xnew, diag=True)
             mu2, var2 = gp.predict(self.Xnew, diag=True)
@@ -893,7 +893,7 @@ class TestMarginalVsMarginalSparse:
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.MarginalSparse(mean_func=mean_func, cov_func=cov_func, approx="DTC")
+            gp = pm.gp.MarginalApprox(mean_func=mean_func, cov_func=cov_func, approx="DTC")
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
             mu1, cov1 = self.gp.predict(self.Xnew, pred_noise=True)
             mu2, cov2 = gp.predict(self.Xnew, pred_noise=True)
@@ -945,17 +945,17 @@ class TestGPAdditive:
         npt.assert_allclose(logp1, logp2, atol=0, rtol=1e-2)
 
     @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
-    def testAdditiveMarginalSparse(self, approx):
+    def testAdditiveMarginalApprox(self, approx):
         Xu = np.random.randn(10, 3)
         sigma = 0.1
         with pm.Model() as model1:
-            gp1 = pm.gp.MarginalSparse(
+            gp1 = pm.gp.MarginalApprox(
                 mean_func=self.means[0], cov_func=self.covs[0], approx=approx
             )
-            gp2 = pm.gp.MarginalSparse(
+            gp2 = pm.gp.MarginalApprox(
                 mean_func=self.means[1], cov_func=self.covs[1], approx=approx
             )
-            gp3 = pm.gp.MarginalSparse(
+            gp3 = pm.gp.MarginalApprox(
                 mean_func=self.means[2], cov_func=self.covs[2], approx=approx
             )
 
@@ -964,7 +964,7 @@ class TestGPAdditive:
             model1_logp = model1.logp({"fsum": self.y})
 
         with pm.Model() as model2:
-            gptot = pm.gp.MarginalSparse(
+            gptot = pm.gp.MarginalApprox(
                 mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs), approx=approx
             )
             fsum = gptot.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
@@ -1017,15 +1017,15 @@ class TestGPAdditive:
         # cant add different approximations
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            gp1 = pm.gp.MarginalSparse(cov_func=cov_func, approx="DTC")
-            gp2 = pm.gp.MarginalSparse(cov_func=cov_func, approx="FITC")
+            gp1 = pm.gp.MarginalApprox(cov_func=cov_func, approx="DTC")
+            gp2 = pm.gp.MarginalApprox(cov_func=cov_func, approx="FITC")
             with pytest.raises(Exception) as e_info:
                 gp1 + gp2
 
     def testAdditiveTypeRaises1(self):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            gp1 = pm.gp.MarginalSparse(cov_func=cov_func, approx="DTC")
+            gp1 = pm.gp.MarginalApprox(cov_func=cov_func, approx="DTC")
             gp2 = pm.gp.Marginal(cov_func=cov_func)
             with pytest.raises(Exception) as e_info:
                 gp1 + gp2

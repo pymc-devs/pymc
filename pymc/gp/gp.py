@@ -35,7 +35,7 @@ from pymc.gp.util import (
 )
 from pymc.math import cartesian, kron_diag, kron_dot, kron_solve_lower, kron_solve_upper
 
-__all__ = ["Latent", "Marginal", "TP", "MarginalSparse", "LatentKron", "MarginalKron"]
+__all__ = ["Latent", "Marginal", "TP", "MarginalApprox", "LatentKron", "MarginalKron"]
 
 
 class Base:
@@ -597,11 +597,11 @@ class Marginal(Base):
 
 
 @conditioned_vars(["X", "Xu", "y", "sigma"])
-class MarginalSparse(Marginal):
+class MarginalApprox(Marginal):
     R"""
     Approximate marginal Gaussian process.
 
-    The `gp.MarginalSparse` class is an implementation of the sum of a GP
+    The `gp.MarginalApprox` class is an implementation of the sum of a GP
     prior and additive noise.  It has `marginal_likelihood`, `conditional`
     and `predict` methods.  This GP implementation can be used to
     implement regression on data that is normally distributed.  The
@@ -619,6 +619,7 @@ class MarginalSparse(Marginal):
         The mean function.  Defaults to zero.
     approx: string
         The approximation to use.  Must be one of `VFE`, `FITC` or `DTC`.
+        Default is VFE.
 
     Examples
     --------
@@ -635,7 +636,7 @@ class MarginalSparse(Marginal):
             cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
 
             # Specify the GP.  The default mean function is `Zero`.
-            gp = pm.gp.MarginalSparse(cov_func=cov_func, approx="FITC")
+            gp = pm.gp.MarginalApprox(cov_func=cov_func, approx="FITC")
 
             # Place a GP prior over the function f.
             sigma = pm.HalfCauchy("sigma", beta=3)
@@ -657,11 +658,14 @@ class MarginalSparse(Marginal):
 
     -   Titsias, M. (2009). Variational Learning of Inducing Variables in
         Sparse Gaussian Processes.
+
+    -   Bauer, M., van der Wilk, M., and Rasmussen, C. E. (2016). Understanding
+        Probabilistic Sparse Gaussian Process Approximations.
     """
 
     _available_approx = ("FITC", "VFE", "DTC")
 
-    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), approx="FITC"):
+    def __init__(self, approx="VFE", *, mean_func=Zero(), cov_func=Constant(0.0)):
         if approx not in self._available_approx:
             raise NotImplementedError(approx)
         self.approx = approx
@@ -864,6 +868,16 @@ class MarginalSparse(Marginal):
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens, jitter)
         return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
+
+
+@conditioned_vars(["X", "Xu", "y", "sigma"])
+class MarginalSparse(MarginalApprox):
+    def __init__(self, approx="VFE", *, mean_func=Zero(), cov_func=Constant(0.0)):
+        warnings.warn(
+            "gp.MarginalSparse has been renamed to gp.MarginalApprox.",
+            FutureWarning,
+        )
+        super().__init__(mean_func=mean_func, cov_func=cov_func, approx=approx)
 
 
 @conditioned_vars(["Xs", "f"])

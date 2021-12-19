@@ -54,7 +54,7 @@ Learn Bayesian statistics with a book together with PyMC
 -  `Bayesian Analysis with Python  <https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python-second-edition>`__ (second edition) by Osvaldo Martin: Great introductory book. (`code <https://github.com/aloctavodia/BAP>`__ and errata).
 
 Audio & Video
-----------
+-------------
 
 - Here is a `YouTube playlist <https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy>`__ gathering several talks on PyMC.
 - You can also find all the talks given at **PyMCon 2020** `here <https://discourse.pymc.io/c/pymcon/2020talks/15>`__.

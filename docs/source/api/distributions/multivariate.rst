@@ -2,8 +2,9 @@
 Multivariate
 ************
 
-.. currentmodule:: pymc.distributions.multivariate
+.. currentmodule:: pymc
 .. autosummary::
+   :toctree: generated
 
    MvNormal
    MvStudentT
@@ -18,6 +19,3 @@ Multivariate
    MatrixNormal
    KroneckerNormal
    CAR
-
-.. automodule:: pymc.distributions.multivariate
-   :members:

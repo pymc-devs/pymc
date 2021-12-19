@@ -157,10 +157,38 @@ class Chain(RVTransform):
 
 
 simplex = Simplex()
+
 logodds = LogOddsTransform()
+logodds.__doc__ = """
+Instantiation of :class:`aeppl.transforms.LogOddsTransform`
+for use in the ``transform`` argument of a random variable."""
+
 interval = IntervalTransform
+interval.__doc__ = """
+Instantiation of :class:`aeppl.transforms.IntervalTransform`
+for use in the ``transform`` argument of a random variable."""
+
 log_exp_m1 = LogExpM1()
+log_exp_m1.__doc__ = """
+Instantiation of :class:`pymc.transforms.LogExpM1`
+for use in the ``transform`` argument of a random variable."""
+
 ordered = Ordered()
+ordered.__doc__ = """
+Instantiation of :class:`pymc.transforms.Ordered`
+for use in the ``transform`` argument of a random variable."""
+
 log = LogTransform()
+log.__doc__ = """
+Instantiation of :class:`aeppl.transforms.LogTransform`
+for use in the ``transform`` argument of a random variable."""
+
 sum_to_1 = SumTo1()
+sum_to_1.__doc__ = """
+Instantiation of :class:`pymc.transforms.SumTo1`
+for use in the ``transform`` argument of a random variable."""
+
 circular = CircularTransform()
+circular.__doc__ = """
+Instantiation of :class:`aeppl.transforms.CircularTransform`
+for use in the ``transform`` argument of a random variable."""
