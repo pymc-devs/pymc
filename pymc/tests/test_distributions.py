@@ -2739,9 +2739,10 @@ class TestBound:
             bound_shaped = Bound("boundedshaped", dist, lower=1, upper=10, shape=(3, 5))
             bound_dims = Bound("boundeddims", dist, lower=1, upper=10, dims="sample")
 
-        dist_size = m.initial_point["boundedsized_interval__"].shape
-        dist_shape = m.initial_point["boundedshaped_interval__"].shape
-        dist_dims = m.initial_point["boundeddims_interval__"].shape
+        initial_point = m.recompute_initial_point()
+        dist_size = initial_point["boundedsized_interval__"].shape
+        dist_shape = initial_point["boundedshaped_interval__"].shape
+        dist_dims = initial_point["boundeddims_interval__"].shape
 
         assert dist_size == (4, 5)
         assert dist_shape == (3, 5)

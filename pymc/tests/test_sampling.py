@@ -490,7 +490,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.initial_point], samples=10, return_inferencedata=False
+                [model.recompute_initial_point()], samples=10, return_inferencedata=False
             )
             # # deprecated argument is not introduced to fast version [2019/08/20:rpg]
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"], return_inferencedata=False)
@@ -549,7 +549,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.initial_point], return_inferencedata=False, samples=10
+                [model.recompute_initial_point()], return_inferencedata=False, samples=10
             )
             ppc = pm.sample_posterior_predictive(
                 trace, return_inferencedata=False, samples=12, var_names=[]
@@ -647,7 +647,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.initial_point], return_inferencedata=False, samples=10
+                [model.recompute_initial_point()], return_inferencedata=False, samples=10
             )
             assert ppc0 == {}
             ppc = pm.sample_posterior_predictive(

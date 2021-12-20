@@ -286,8 +286,9 @@ class TestValueGradFunction(unittest.TestCase):
             step = pm.NUTS()
 
         func = step._logp_dlogp_func
-        func.set_extra_values(m.initial_point)
-        q = func.dict_to_array(m.initial_point)
+        initial_point = m.recompute_initial_point()
+        func.set_extra_values(initial_point)
+        q = func.dict_to_array(initial_point)
         logp, dlogp = func(q)
         assert logp.size == 1
         assert dlogp.size == 4
