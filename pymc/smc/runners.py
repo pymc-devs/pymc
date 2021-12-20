@@ -1,25 +1,7 @@
-import logging
 import multiprocessing as mp
-import time
-import warnings
-
-from collections import defaultdict
-from collections.abc import Iterable
 from itertools import repeat
-
 import cloudpickle
-import numpy as np
-
-from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
-
-import pymc
-
-from pymc.backends.arviz import dict_to_dataset, to_inference_data
-from pymc.backends.base import MultiTrace
-from pymc.model import modelcontext
-from pymc.parallel_sampling import _cpu_count
-from pymc.smc.smc import IMH
 
 
 def run_chains_parallel(chains, progressbar, to_run, params, random_seed, kernel_kwargs, cores):
@@ -56,7 +38,6 @@ def _apply_args_and_kwargs(fn, args, kwargs):
 
 
 def run_chains_sequential(chains, progressbar, to_run, params, random_seed, kernel_kwargs):
-    #TODO maybe reorder parameters
     results = []
     pbar = progress_bar((), total=100 * chains, display=progressbar)
     pbar.update(0)

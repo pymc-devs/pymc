@@ -222,7 +222,7 @@ def sample_smc(
     )
 
     t1 = time.time()
-    results = None
+    
     if cores > 1:
         results = run_chains_parallel(chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs, cores)
     else:
