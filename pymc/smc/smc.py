@@ -246,21 +246,18 @@ class SMC_KERNEL(ABC):
             new_beta = (low_beta + up_beta) / 2.0
             log_weights_un = (new_beta - old_beta) * self.likelihood_logp  #p(theta|y)^CHARLY beta but why old beta is here?
             log_weights = log_weights_un - logsumexp(log_weights_un)
-
             ESS = int(np.exp(-logsumexp(log_weights * 2)))
-
             if ESS == rN:
                 break
             elif ESS < rN:
                 up_beta = new_beta
             else:
                 low_beta = new_beta
-
         if new_beta >= 1:
             new_beta = 1
             log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
-            # CHARLY why again?
+
 
         self.beta = new_beta
         self.weights = np.exp(log_weights)

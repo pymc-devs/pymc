@@ -108,14 +108,6 @@ class TestSMC(SeededTest):
         assert np.isclose(smc.prior_logp_func(floatX(np.array([0.51]))), np.log(0.7))
         assert smc.prior_logp_func(floatX(np.array([1.51]))) == -np.inf
 
-    def test_mh_kernel(self):
-        with pm.Model() as m:
-            z = pm.Bernoulli("z", p=0.7)
-            like = pm.Potential("like", z * 1.0)
-
-        smc = MH(model=m)
-        smc.tune()
-
     def test_unobserved_discrete(self):
         n = 10
         rng = self.get_random_state()
@@ -162,7 +154,7 @@ class TestSMC(SeededTest):
                 "b_log__": np.abs(np.random.normal(0, 10, size=500)),
             }
             trace = pm.sample_smc(500, chains=1, start=start)
-            #TODO what's the assertion here?
+
 
     def test_kernel_kwargs(self):
         with self.fast_model:
