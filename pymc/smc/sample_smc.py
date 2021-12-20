@@ -13,19 +13,16 @@
 #   limitations under the License.
 
 import logging
-import multiprocessing as mp
 import time
 import warnings
 
 from collections import defaultdict
 from collections.abc import Iterable
-from itertools import repeat
-from pymc.smc.utils import run_chains_parallel, run_chains_sequential
+from pymc.smc.runners import run_chains_parallel, run_chains_sequential
 import cloudpickle
 import numpy as np
 
 from arviz import InferenceData
-from fastprogress.fastprogress import progress_bar
 
 import pymc
 
@@ -222,7 +219,7 @@ def sample_smc(
     )
 
     t1 = time.time()
-    
+
     if cores > 1:
         results = run_chains_parallel(chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs, cores)
     else:
