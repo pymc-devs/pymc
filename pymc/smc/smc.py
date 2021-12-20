@@ -244,7 +244,7 @@ class SMC_KERNEL(ABC):
 
         while up_beta - low_beta > 1e-6:
             new_beta = (low_beta + up_beta) / 2.0
-            log_weights_un = (new_beta - old_beta) * self.likelihood_logp  #p(theta|y)^CHARLY beta but why old beta is here?
+            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
             ESS = int(np.exp(-logsumexp(log_weights * 2)))
             if ESS == rN:
@@ -257,7 +257,6 @@ class SMC_KERNEL(ABC):
             new_beta = 1
             log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
-
 
         self.beta = new_beta
         self.weights = np.exp(log_weights)
@@ -308,10 +307,9 @@ class SMC_KERNEL(ABC):
         }
 
     def _posterior_to_trace(self, chain=0) -> NDArray:
-        # CHARLY WHY IS THIS PRIVATE? used from sample_smc
         """Save results into a PyMC trace
 
-        This method shoud not be overwritten.
+        This method should not be overwritten.
         """
         lenght_pos = len(self.tempered_posterior)
         varnames = [v.name for v in self.variables]
@@ -395,7 +393,6 @@ class IMH(SMC_KERNEL):
         # This variable is updated at the end of the loop with the entries from the accepted
         # transitions, which is equivalent to recomputing it in every iteration of the loop.
         backward_logp = self.proposal_dist.logpdf(self.tempered_posterior)
-
         for n_step in range(self.n_steps):
             proposal = floatX(self.proposal_dist.rvs(size=self.draws, random_state=self.rng))
             proposal = proposal.reshape(len(proposal), -1)
@@ -507,18 +504,16 @@ class MH(SMC_KERNEL):
         """Metropolis-Hastings perturbation."""
         ac_ = np.empty((self.n_steps, self.draws))
         log_R = np.log(self.rng.random((self.n_steps, self.draws)))
-
         for n_step in range(self.n_steps):
             proposal = floatX(
                 self.tempered_posterior
                 + self.proposal_dist(num_draws=self.draws, rng=self.rng)
                 * self.proposal_scales[:, None]
             )
-
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])
-            proposal_logp = pl + ll * self.beta
 
+            proposal_logp = pl + ll * self.beta
             accepted = log_R[n_step] < (proposal_logp - self.tempered_posterior_logp)
 
             ac_[n_step] = accepted

@@ -337,7 +337,7 @@ def _sample_smc_int(
         progressbar.comment = f"{getattr(progressbar, 'base_comment', '')} Stage: 0 Beta: 0"
         progressbar.update_bar(getattr(progressbar, "offset", 0) + 0)
 
-    smc._initialize_kernel() # TODO THIS CALLS A PRIVATE METHOD
+    smc._initialize_kernel()
     smc.setup_kernel()
 
     stage = 0

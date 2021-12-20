@@ -155,7 +155,6 @@ class TestSMC(SeededTest):
             }
             trace = pm.sample_smc(500, chains=1, start=start)
 
-
     def test_kernel_kwargs(self):
         with self.fast_model:
             trace = pm.sample_smc(
