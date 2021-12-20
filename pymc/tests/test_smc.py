@@ -294,9 +294,11 @@ class TestSimulator(SeededTest):
         assert self.count_rvs(self.SMABC_test.logpt) == 1
 
         with self.SMABC_test:
-            trace = pm.sample_smc(draws=1000, return_inferencedata=False)
+            trace = pm.sample_smc(draws=1000, chains=1, return_inferencedata=False)
             pr_p = pm.sample_prior_predictive(1000, return_inferencedata=False)
-            po_p = pm.sample_posterior_predictive(trace, 1000, return_inferencedata=False)
+            po_p = pm.sample_posterior_predictive(
+                trace, keep_size=False, return_inferencedata=False
+            )
 
         assert abs(self.data.mean() - trace["a"].mean()) < 0.05
         assert abs(self.data.std() - trace["b"].mean()) < 0.05

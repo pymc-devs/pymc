@@ -231,15 +231,13 @@ def biwrap(wrapper):
 
 
 def dataset_to_point_list(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
-    # grab posterior samples for each variable
-    _samples: Dict[str, np.ndarray] = {vn: ds[vn].values for vn in ds.keys()}
     # make dicts
     points: List[Dict[str, np.ndarray]] = []
     vn: str
-    s: np.ndarray
+    da: "xarray.DataArray"
     for c in ds.chain:
         for d in ds.draw:
-            points.append({vn: s[c, d] for vn, s in _samples.items()})
+            points.append({vn: da.sel(chain=c, draw=d).values for vn, da in ds.items()})
     # use the list of points
     return points
 

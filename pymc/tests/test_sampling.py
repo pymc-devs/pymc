@@ -793,10 +793,10 @@ class TestSamplePPC(SeededTest):
             p = pm.Potential("p", a + 1)
             obs = pm.Normal("obs", a, 1, observed=5)
 
-        trace = az_from_dict({"a": np.random.rand(10)})
+        trace = az_from_dict({"a": np.random.rand(5)})
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
-                pm.sample_posterior_predictive(trace, samples=5)
+                pm.sample_posterior_predictive(trace)
 
 
 class TestSamplePPCW(SeededTest):

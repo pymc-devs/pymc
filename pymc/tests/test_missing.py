@@ -133,7 +133,7 @@ def test_interval_missing_observations():
 
         # Make sure that the observed values are newly generated samples and that
         # the observed and deterministic matche
-        pp_trace = sample_posterior_predictive(trace, return_inferencedata=False)
+        pp_trace = sample_posterior_predictive(trace, return_inferencedata=False, keep_size=False)
         assert np.all(np.var(pp_trace["theta1"], 0) > 0.0)
         assert np.all(np.var(pp_trace["theta2"], 0) > 0.0)
         assert np.mean(pp_trace["theta1"][:, ~obs1.mask] - pp_trace["theta1_observed"]) == 0.0
