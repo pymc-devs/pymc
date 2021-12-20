@@ -57,7 +57,7 @@ from pymc.aesaraf import (
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
-from pymc.distributions import logp_transform, logpt, logpt_sum
+from pymc.distributions import logp_transform, logpt
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
 from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
@@ -1701,13 +1701,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         return Series(
             {
-                rv.name: np.round(
-                    np.asarray(
-                        self.fn(logpt_sum(rv, getattr(rv.tag, "observations", None)))(point)
-                    ),
-                    round_vals,
+                rv.name: np.round(np.asarray(logp), round_vals)
+                for rv, logp in zip(
+                    self.basic_RVs,
+                    self.fn(
+                        [at.sum(factor) for factor in self.logp_elemwiset(vars=self.basic_RVs)]
+                    )(point),
                 )
-                for rv in self.basic_RVs
             },
             name="Log-probability of test_point",
         )
