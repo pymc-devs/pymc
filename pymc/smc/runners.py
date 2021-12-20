@@ -1,6 +1,9 @@
 import multiprocessing as mp
+
 from itertools import repeat
+
 import cloudpickle
+
 from fastprogress.fastprogress import progress_bar
 
 
@@ -44,8 +47,5 @@ def run_chains_sequential(chains, progressbar, to_run, params, random_seed, kern
     for chain in range(chains):
         pbar.offset = 100 * chain
         pbar.base_comment = f"Chain: {chain + 1}/{chains}"
-        results.append(
-            to_run(*params, random_seed[chain], chain, pbar, **kernel_kwargs)
-        )
+        results.append(to_run(*params, random_seed[chain], chain, pbar, **kernel_kwargs))
     return results
-

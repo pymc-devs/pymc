@@ -18,7 +18,7 @@ import warnings
 
 from collections import defaultdict
 from collections.abc import Iterable
-from pymc.smc.runners import run_chains_parallel, run_chains_sequential
+
 import cloudpickle
 import numpy as np
 
@@ -30,6 +30,7 @@ from pymc.backends.arviz import dict_to_dataset, to_inference_data
 from pymc.backends.base import MultiTrace
 from pymc.model import modelcontext
 from pymc.parallel_sampling import _cpu_count
+from pymc.smc.runners import run_chains_parallel, run_chains_sequential
 from pymc.smc.smc import IMH
 
 
@@ -221,9 +222,13 @@ def sample_smc(
     t1 = time.time()
 
     if cores > 1:
-        results = run_chains_parallel(chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs, cores)
+        results = run_chains_parallel(
+            chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs, cores
+        )
     else:
-        results = run_chains_sequential(chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs)
+        results = run_chains_sequential(
+            chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs
+        )
     (
         traces,
         sample_stats,
@@ -233,16 +238,32 @@ def sample_smc(
     trace = MultiTrace(traces)
 
     _t_sampling = time.time() - t1
-    sample_stats, idata = _save_sample_stats(sample_settings, sample_stats, chains,
-                                             trace, return_inferencedata,
-                                             _t_sampling, idata_kwargs, model)
+    sample_stats, idata = _save_sample_stats(
+        sample_settings,
+        sample_stats,
+        chains,
+        trace,
+        return_inferencedata,
+        _t_sampling,
+        idata_kwargs,
+        model,
+    )
 
     if compute_convergence_checks:
         _compute_convergence_checks(idata, draws, model, trace)
     return idata if return_inferencedata else trace
 
 
-def _save_sample_stats(sample_settings, sample_stats, chains, trace, return_inferencedata, _t_sampling, idata_kwargs, model):
+def _save_sample_stats(
+    sample_settings,
+    sample_stats,
+    chains,
+    trace,
+    return_inferencedata,
+    _t_sampling,
+    idata_kwargs,
+    model,
+):
     sample_settings_dict = sample_settings[0]
     sample_settings_dict["_t_sampling"] = _t_sampling
     sample_stats_dict = sample_stats[0]
@@ -370,8 +391,3 @@ def _sample_smc_int(
         results = cloudpickle.dumps(results)
 
     return results
-
-
-
-
-
