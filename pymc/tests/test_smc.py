@@ -31,7 +31,7 @@ import pymc as pm
 
 from pymc.aesaraf import floatX
 from pymc.backends.base import MultiTrace
-from pymc.smc.smc import IMH, MH
+from pymc.smc.smc import IMH
 from pymc.tests.helpers import SeededTest, assert_random_state_equal
 
 
