@@ -151,6 +151,8 @@ class SMC_KERNEL(ABC):
 
         self.draws = draws
         self.start = start
+        if threshold < 0 or threshold > 1:
+            raise ValueError(f"Threshold value {threshold} must be between 0 and 1")
         self.threshold = threshold
         self.model = model
         self.rng = np.random.default_rng(seed=random_seed)
@@ -192,7 +194,6 @@ class SMC_KERNEL(ABC):
         initial_point = self.model.recompute_initial_point(seed=self.rng.integers(2 ** 30))
         for v in self.variables:
             self.var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
-
         # Create particles bijection map
         if self.start:
             init_rnd = self.start
@@ -203,6 +204,7 @@ class SMC_KERNEL(ABC):
         for i in range(self.draws):
             point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
             population.append(DictToArrayBijection.map(point).data)
+
         self.tempered_posterior = np.array(floatX(population))
 
         # Initialize prior and likelihood log probabilities
@@ -228,30 +230,36 @@ class SMC_KERNEL(ABC):
     def update_beta_and_weights(self):
         """Calculate the next inverse temperature (beta)
 
-        The importance weights based on two sucesive tempered likelihoods (i.e.
+        The importance weights based on two successive tempered likelihoods (i.e.
         two successive values of beta) and updates the marginal likelihood estimate.
         """
         self.iteration += 1
 
         low_beta = old_beta = self.beta
         up_beta = 2.0
+
         rN = int(len(self.likelihood_logp) * self.threshold)
 
         while up_beta - low_beta > 1e-6:
             new_beta = (low_beta + up_beta) / 2.0
-            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
+            log_weights_un = (new_beta - old_beta) * self.likelihood_logp  #p(theta|y)^CHARLY beta but why old beta is here?
             log_weights = log_weights_un - logsumexp(log_weights_un)
-            ESS = int(np.exp(-logsumexp(log_weights * 2)))
+
+            ESS = int(np.exp(-logsumexp(log_weights * 2))) # importance sampling EFF.
+
+            # BISECTION METHOD FOR ESS?
             if ESS == rN:
                 break
             elif ESS < rN:
                 up_beta = new_beta
             else:
                 low_beta = new_beta
+
         if new_beta >= 1:
             new_beta = 1
             log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
+            # CHARLY why again?
 
         self.beta = new_beta
         self.weights = np.exp(log_weights)
@@ -268,6 +276,7 @@ class SMC_KERNEL(ABC):
         self.tempered_posterior = self.tempered_posterior[self.resampling_indexes]
         self.prior_logp = self.prior_logp[self.resampling_indexes]
         self.likelihood_logp = self.likelihood_logp[self.resampling_indexes]
+
         self.tempered_posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
 
     def tune(self):
@@ -301,6 +310,7 @@ class SMC_KERNEL(ABC):
         }
 
     def _posterior_to_trace(self, chain=0) -> NDArray:
+        # CHARLY WHY IS THIS PRIVATE? used from sample_smc
         """Save results into a PyMC trace
 
         This method shoud not be overwritten.
@@ -387,6 +397,7 @@ class IMH(SMC_KERNEL):
         # This variable is updated at the end of the loop with the entries from the accepted
         # transitions, which is equivalent to recomputing it in every iteration of the loop.
         backward_logp = self.proposal_dist.logpdf(self.tempered_posterior)
+
         for n_step in range(self.n_steps):
             proposal = floatX(self.proposal_dist.rvs(size=self.draws, random_state=self.rng))
             proposal = proposal.reshape(len(proposal), -1)
@@ -395,7 +406,7 @@ class IMH(SMC_KERNEL):
 
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])
-            proposal_logp = pl + ll * self.beta
+            proposal_logp = pl + ll * self.beta # this
             accepted = log_R[n_step] < (
                 (proposal_logp + backward_logp) - (self.tempered_posterior_logp + forward_logp)
             )
@@ -497,18 +508,19 @@ class MH(SMC_KERNEL):
     def mutate(self):
         """Metropolis-Hastings perturbation."""
         ac_ = np.empty((self.n_steps, self.draws))
-
         log_R = np.log(self.rng.random((self.n_steps, self.draws)))
+
         for n_step in range(self.n_steps):
             proposal = floatX(
                 self.tempered_posterior
                 + self.proposal_dist(num_draws=self.draws, rng=self.rng)
                 * self.proposal_scales[:, None]
             )
+
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])
-
             proposal_logp = pl + ll * self.beta
+
             accepted = log_R[n_step] < (proposal_logp - self.tempered_posterior_logp)
 
             ac_[n_step] = accepted

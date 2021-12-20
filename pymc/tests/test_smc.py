@@ -31,18 +31,18 @@ import pymc as pm
 
 from pymc.aesaraf import floatX
 from pymc.backends.base import MultiTrace
-from pymc.smc.smc import IMH
+from pymc.smc.smc import IMH, MH
 from pymc.tests.helpers import SeededTest, assert_random_state_equal
 
 
 class TestSMC(SeededTest):
-    """Tests for the default SMC kernel"""
+    """Tests for the defa ult SMC kernel"""
 
     def setup_class(self):
         super().setup_class()
         self.samples = 1000
         n = 4
-        mu1 = np.ones(n) * (1.0 / 2)
+        mu1 = np.ones(n) * 0.5
         mu2 = -mu1
 
         stdev = 0.1
@@ -68,7 +68,7 @@ class TestSMC(SeededTest):
 
         with pm.Model() as self.SMC_test:
             X = pm.Uniform("X", lower=-2, upper=2.0, shape=n)
-            llk = pm.Potential("muh", two_gaussians(X))
+            llk = pm.Potential("muh", two_gaussians(X)) #Wasn't it easier to use a mixture model directly?
 
         self.muref = mu1
 
@@ -80,8 +80,7 @@ class TestSMC(SeededTest):
         initial_rng_state = np.random.get_state()
         with self.SMC_test:
             mtrace = pm.sample_smc(draws=self.samples, return_inferencedata=False)
-        assert_random_state_equal(initial_rng_state, np.random.get_state())
-
+        assert_random_state_equal(initial_rng_state, np.random.get_state())  # TODO: why this? maybe to verify that nothing was sampled?
         x = mtrace["X"]
         mu1d = np.abs(x).mean(axis=0)
         np.testing.assert_allclose(self.muref, mu1d, rtol=0.0, atol=0.03)
@@ -106,10 +105,20 @@ class TestSMC(SeededTest):
         assert np.isclose(smc.prior_logp_func(floatX(np.array([0.51]))), np.log(0.7))
         assert smc.prior_logp_func(floatX(np.array([1.51]))) == -np.inf
 
+    def test_mh_kernel(self):
+        with pm.Model() as m:
+            z = pm.Bernoulli("z", p=0.7)
+            like = pm.Potential("like", z * 1.0)
+
+        smc = MH(model=m)
+        smc.tune()
+
     def test_unobserved_discrete(self):
+        """
+
+        """
         n = 10
         rng = self.get_random_state()
-
         z_true = np.zeros(n, dtype=int)
         z_true[int(n / 2) :] = 1
         y = st.norm(np.array([-1, 1])[z_true], 0.25).rvs(random_state=rng)
@@ -124,6 +133,10 @@ class TestSMC(SeededTest):
         assert np.all(np.median(trace["z"], axis=0) == z_true)
 
     def test_marginal_likelihood(self):
+        """
+        Verifies that the log marginal likelihood function
+        can be correctly computed for a Beta-Bernoulli model.
+        """
         data = np.repeat([1, 0], [50, 50])
         marginals = []
         a_prior_0, b_prior_0 = 1.0, 1.0
@@ -135,6 +148,7 @@ class TestSMC(SeededTest):
                 y = pm.Bernoulli("y", a, observed=data)
                 trace = pm.sample_smc(2000, return_inferencedata=False)
                 marginals.append(trace.report.log_marginal_likelihood)
+
         # compare to the analytical result
         assert abs(np.exp(np.nanmean(marginals[1]) - np.nanmean(marginals[0])) - 4.0) <= 1
 
@@ -148,6 +162,7 @@ class TestSMC(SeededTest):
                 "b_log__": np.abs(np.random.normal(0, 10, size=500)),
             }
             trace = pm.sample_smc(500, chains=1, start=start)
+            #TODO what's the assertion here?
 
     def test_kernel_kwargs(self):
         with self.fast_model:
