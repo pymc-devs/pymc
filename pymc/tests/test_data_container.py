@@ -34,7 +34,7 @@ class TestData(SeededTest):
         with pm.Model() as model:
             X = pm.Data("X", data_values)
             pm.Normal("y", 0, 1, observed=X)
-            model.logp(model.initial_point)
+            model.logp(model.recompute_initial_point())
 
     def test_sample(self):
         x = np.random.normal(size=100)

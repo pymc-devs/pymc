@@ -1538,7 +1538,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """
         f = self.makefn(outs, profile=profile, *args, **kwargs)
         if point is None:
-            point = self.initial_point
+            point = self.recompute_initial_point()
 
         for _ in range(n):
             f(**point)
@@ -1697,7 +1697,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         Pandas Series
         """
         if point is None:
-            point = self.initial_point
+            point = self.recompute_initial_point()
 
         return Series(
             {
