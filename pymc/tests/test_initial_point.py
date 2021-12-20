@@ -17,6 +17,8 @@ import cloudpickle
 import numpy as np
 import pytest
 
+from aesara.tensor.random.op import RandomVariable
+
 import pymc as pm
 
 from pymc.distributions.distribution import get_moment
@@ -254,6 +256,30 @@ class TestMoment:
             assert not hasattr(rv.tag, "test_value")
             assert tuple(get_moment(rv).shape.eval()) == (4, 3)
         pass
+
+    def test_moment_not_implemented_fallback(self):
+        class MyNormalRV(RandomVariable):
+            name = "my_normal"
+            ndim_supp = 0
+            ndims_params = [0, 0]
+            dtype = "floatX"
+
+            @classmethod
+            def rng_fn(cls, rng, mu, sigma, size):
+                return np.pi
+
+        class MyNormalDistribution(pm.Normal):
+            rv_op = MyNormalRV()
+
+        with pm.Model() as m:
+            x = MyNormalDistribution("x", 0, 1, initval="moment")
+
+        with pytest.warns(
+            UserWarning, match="Moment not defined for variable x of type MyNormalRV"
+        ):
+            res = m.recompute_initial_point()
+
+        assert np.isclose(res["x"], np.pi)
 
 
 def test_pickling_issue_5090():

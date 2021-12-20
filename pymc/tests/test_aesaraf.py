@@ -23,6 +23,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sps
 
+from aeppl.logprob import ParameterValueError
 from aesara.graph.basic import Constant, Variable, ancestors, equal_computations
 from aesara.tensor.random.basic import normal, uniform
 from aesara.tensor.random.op import RandomVariable
@@ -35,12 +36,14 @@ import pymc as pm
 from pymc.aesaraf import (
     _conversion_map,
     change_rv_size,
+    compile_pymc,
     extract_obs_data,
     pandas_to_array,
     rvs_to_value_vars,
     take_along_axis,
     walk_model,
 )
+from pymc.distributions.dist_math import check_parameters
 from pymc.exceptions import ShapeError
 from pymc.vartypes import int_types
 
@@ -550,3 +553,24 @@ def test_rvs_to_value_vars_nested():
         after = aesara.clone_replace(m.free_RVs)
 
         assert equal_computations(before, after)
+
+
+def test_check_bounds_flag():
+    """Test that CheckParameterValue Ops are replaced or removed when using compile_pymc"""
+    logp = at.ones(3)
+    cond = np.array([1, 0, 1])
+    bound = check_parameters(logp, cond)
+
+    with pm.Model() as m:
+        pass
+
+    with pytest.raises(ParameterValueError):
+        aesara.function([], bound)()
+
+    m.check_bounds = False
+    with m:
+        assert np.all(compile_pymc([], bound)() == 1)
+
+    m.check_bounds = True
+    with m:
+        assert np.all(compile_pymc([], bound)() == -np.inf)

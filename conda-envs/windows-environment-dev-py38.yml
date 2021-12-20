@@ -4,8 +4,8 @@ channels:
 - defaults
 dependencies:
  # base dependencies (see install guide for Windows)
-- aeppl>=0.0.17
-- aesara>=2.2.6
+- aeppl=0.0.18
+- aesara=2.3.2
 - arviz>=0.11.4
 - cachetools>=4.2.1
 - cloudpickle
@@ -27,8 +27,8 @@ dependencies:
 - pytest-cov>=2.5
 - pytest>=3.0
 - sphinx-autobuild>=0.7
+- sphinx-copybutton
 - sphinx-notfound-page
-- sphinx-panels
 - sphinx>=1.5
 - watermark
 - pip:

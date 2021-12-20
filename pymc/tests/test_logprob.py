@@ -144,7 +144,8 @@ def test_logpt_subtensor():
     I_value_var = I_rv.type()
     I_value_var.name = "I_value"
 
-    A_idx_logp = logpt(A_idx, {A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False)
+    A_idx_logps = logpt(A_idx, {A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False)
+    A_idx_logp = at.add(*A_idx_logps)
 
     logp_vals_fn = aesara.function([A_idx_value_var, I_value_var], A_idx_logp)
 

@@ -48,7 +48,7 @@ from aesara.tensor.var import TensorVariable
 from pandas import Series
 
 from pymc.aesaraf import (
-    compile_rv_inplace,
+    compile_pymc,
     floatX,
     gradient,
     hessian,
@@ -285,9 +285,8 @@ class Factor:
         """Compiled log probability density function"""
         return self.model.fn(self.logpt)
 
-    @property
-    def logp_elemwise(self):
-        return self.model.fn(self.logp_elemwiset)
+    def logp_elemwise(self, vars=None, jacobian=True):
+        return self.model.fn(self.logp_elemwiset(vars=vars, jacobian=jacobian))
 
     def dlogp(self, vars=None):
         """Compiled log probability density gradient function"""
@@ -463,7 +462,7 @@ class ValueGradFunction:
 
         inputs = grad_vars
 
-        self._aesara_function = compile_rv_inplace(inputs, outputs, givens=givens, **kwargs)
+        self._aesara_function = compile_pymc(inputs, outputs, givens=givens, **kwargs)
 
     def set_weights(self, values):
         if values.shape != (self._n_costs - 1,):
@@ -516,9 +515,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
-    a class based model you should inherit from :class:`~.Model` and
-    override :meth:`~.__init__` with arbitrary definitions (do not
-    forget to call base class :meth:`__init__` first).
+    a class based model you should inherit from :class:`~pymc.Model` and
+    override the `__init__` method with arbitrary definitions (do not
+    forget to call base class :meth:`pymc.Model.__init__` first).
 
     Parameters
     ----------
@@ -601,6 +600,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         with Model() as model:
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
+
     """
 
     if TYPE_CHECKING:
@@ -728,6 +728,66 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             var: ip[var.name] for var in extra_vars if var in input_vars and var not in grad_vars
         }
         return ValueGradFunction(costs, grad_vars, extra_vars_and_values, **kwargs)
+
+    def logp_elemwiset(
+        self,
+        vars: Optional[Union[Variable, List[Variable]]] = None,
+        jacobian: bool = True,
+    ) -> List[Variable]:
+        """Elemwise log-probability of the model.
+
+        Parameters
+        ----------
+        vars: list of random variables or potential terms, optional
+            Compute the gradient with respect to those variables. If None, use all
+            free and observed random variables, as well as potential terms in model.
+        jacobian
+            Whether to include jacobian terms in logprob graph. Defaults to True.
+
+        Returns
+        -------
+        Elemwise logp terms for ecah requested variable, in the same order of input.
+        """
+        if vars is None:
+            vars = self.free_RVs + self.observed_RVs + self.potentials
+        elif not isinstance(vars, (list, tuple)):
+            vars = [vars]
+
+        # We need to separate random variables from potential terms, and remember their
+        # original order so that we can merge them together in the same order at the end
+        rv_values = {}
+        potentials = []
+        rv_order, potential_order = [], []
+        for i, var in enumerate(vars):
+            value_var = self.rvs_to_values.get(var)
+            if value_var is not None:
+                rv_values[var] = value_var
+                rv_order.append(i)
+            else:
+                if var in self.potentials:
+                    potentials.append(var)
+                    potential_order.append(i)
+                else:
+                    raise ValueError(
+                        f"Requested variable {var} not found among the model variables"
+                    )
+
+        rv_logps = []
+        if rv_values:
+            rv_logps = logpt(list(rv_values.keys()), rv_values, sum=False, jacobian=jacobian)
+            if not isinstance(rv_logps, list):
+                rv_logps = [rv_logps]
+
+        # Replace random variables by their value variables in potential terms
+        potential_logps = []
+        if potentials:
+            potential_logps, _ = rvs_to_value_vars(potentials, apply_transforms=True)
+
+        logp_elemwise = [None] * len(vars)
+        for logp_order, logp in zip((rv_order + potential_order), (rv_logps + potential_logps)):
+            logp_elemwise[logp_order] = logp
+
+        return logp_elemwise
 
     @property
     def logpt(self):
@@ -1241,6 +1301,11 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             )
             warnings.warn(impute_message, ImputationWarning)
 
+            if rv_var.owner.op.ndim_supp > 0:
+                raise NotImplementedError(
+                    f"Automatic inputation is only supported for univariate RandomVariables, but {rv_var} is multivariate"
+                )
+
             # We can get a random variable comprised of only the unobserved
             # entries by lifting the indices through the `RandomVariable` `Op`.
 
@@ -1273,11 +1338,21 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 clone=False,
             )
             (observed_rv_var,) = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
+            # Make a clone of the RV, but change the rng so that observed and missing
+            # are not treated as equivalent nodes by aesara. This would happen if the
+            # size of the masked and unmasked array happened to coincide
+            _, size, _, *inps = observed_rv_var.owner.inputs
+            rng = self.model.next_rng()
+            observed_rv_var = observed_rv_var.owner.op(*inps, size=size, rng=rng)
+            # Add default_update to new rng
+            new_rng = observed_rv_var.owner.outputs[0]
+            observed_rv_var.update = (rng, new_rng)
+            rng.default_update = new_rng
             observed_rv_var.name = f"{name}_observed"
 
             observed_rv_var.tag.observations = nonmissing_data
 
-            self.create_value_var(observed_rv_var, transform)
+            self.create_value_var(observed_rv_var, transform=None, value_var=nonmissing_data)
             self.add_random_variable(observed_rv_var, dims)
             self.observed_RVs.append(observed_rv_var)
 
@@ -1287,22 +1362,21 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
             rv_var = Deterministic(name, rv_var, self, dims, auto=True)
 
-        elif sps.issparse(data):
-            data = sparse.basic.as_sparse(data, name=name)
-            rv_var.tag.observations = data
-            self.create_value_var(rv_var, transform)
-            self.add_random_variable(rv_var, dims)
-            self.observed_RVs.append(rv_var)
         else:
-            data = at.as_tensor_variable(data, name=name)
+            if sps.issparse(data):
+                data = sparse.basic.as_sparse(data, name=name)
+            else:
+                data = at.as_tensor_variable(data, name=name)
             rv_var.tag.observations = data
-            self.create_value_var(rv_var, transform)
+            self.create_value_var(rv_var, transform=None, value_var=data)
             self.add_random_variable(rv_var, dims)
             self.observed_RVs.append(rv_var)
 
         return rv_var
 
-    def create_value_var(self, rv_var: TensorVariable, transform: Any) -> TensorVariable:
+    def create_value_var(
+        self, rv_var: TensorVariable, transform: Any, value_var: Optional[Variable] = None
+    ) -> TensorVariable:
         """Create a ``TensorVariable`` that will be used as the random
         variable's "value" in log-likelihood graphs.
 
@@ -1313,12 +1387,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         this branch of the conditional.
 
         """
-        value_var = rv_var.type()
+        if value_var is None:
+            value_var = rv_var.type()
+            value_var.name = rv_var.name
 
         if aesara.config.compute_test_value != "off":
             value_var.tag.test_value = rv_var.tag.test_value
-
-        value_var.name = rv_var.name
 
         rv_var.tag.value_var = value_var
 
@@ -1402,7 +1476,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         Compiled Aesara function
         """
         with self:
-            return compile_rv_inplace(
+            return compile_pymc(
                 self.value_vars,
                 outs,
                 allow_input_downcast=True,
@@ -1630,7 +1704,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return Series(
             {
                 rv.name: np.round(
-                    self.fn(logpt_sum(rv, getattr(rv.tag, "observations", None)))(point),
+                    np.asarray(
+                        self.fn(logpt_sum(rv, getattr(rv.tag, "observations", None)))(point)
+                    ),
                     round_vals,
                 )
                 for rv in self.basic_RVs

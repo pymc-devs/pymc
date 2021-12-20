@@ -30,7 +30,7 @@ def test_leaf_node():
 
 
 def test_bart_vi():
-    X = np.random.normal(0, 1, size=(3, 250)).T
+    X = np.random.normal(0, 1, size=(250, 3))
     Y = np.random.normal(0, 1, size=250)
     X[:, 0] = np.random.normal(Y, 0.1)
 
@@ -50,7 +50,7 @@ def test_bart_vi():
 
 
 def test_missing_data():
-    X = np.random.normal(0, 1, size=(2, 50)).T
+    X = np.random.normal(0, 1, size=(50, 2))
     Y = np.random.normal(0, 1, size=50)
     X[10:20, 0] = np.nan
 
@@ -79,11 +79,13 @@ def test_random_fn():
 
 
 class TestUtils:
-    X = np.random.normal(0, 1, size=(2, 50)).T
+    X_norm = np.random.normal(0, 1, size=(50, 2))
+    X_binom = np.random.binomial(1, 0.5, size=(50, 1))
+    X = np.hstack([X_norm, X_binom])
     Y = np.random.normal(0, 1, size=50)
 
     with pm.Model() as model:
-        mu = pm.BART("mu", X, Y, m=10, response="mix")
+        mu = pm.BART("mu", X, Y, m=10)
         sigma = pm.HalfNormal("sigma", 1)
         y = pm.Normal("y", mu, sigma, observed=Y)
         idata = pm.sample(random_seed=3415)
@@ -107,6 +109,7 @@ class TestUtils:
                 "samples": 2,
                 "xs_interval": "quantiles",
                 "xs_values": [0.25, 0.5, 0.75],
+                "var_discrete": [3],
             },
             {"kind": "ice", "instances": 2},
             {"var_idx": [0], "rug": False, "smooth": False, "color": "k"},
