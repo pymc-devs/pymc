@@ -20,7 +20,7 @@ import warnings
 from collections import defaultdict
 from collections.abc import Iterable
 from itertools import repeat
-
+from pymc.smc.utils import run_chains_parallel, run_chains_sequential
 import cloudpickle
 import numpy as np
 
@@ -222,37 +222,11 @@ def sample_smc(
     )
 
     t1 = time.time()
+    results = None
     if cores > 1:
-        pbar = progress_bar((), total=100, display=progressbar)
-        pbar.update(0)
-        pbars = [pbar] + [None] * (chains - 1)
-
-        pool = mp.Pool(cores)
-
-        # "manually" (de)serialize params before/after multiprocessing
-        params = tuple(cloudpickle.dumps(p) for p in params)
-        kernel_kwargs = {key: cloudpickle.dumps(value) for key, value in kernel_kwargs.items()}
-        results = _starmap_with_kwargs(
-            pool,
-            _sample_smc_int,
-            [(*params, random_seed[chain], chain, pbars[chain]) for chain in range(chains)],
-            repeat(kernel_kwargs),
-        )
-        results = tuple(cloudpickle.loads(r) for r in results)
-        pool.close()
-        pool.join()
-
+        results = run_chains_parallel(chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs, cores)
     else:
-        results = []
-        pbar = progress_bar((), total=100 * chains, display=progressbar)
-        pbar.update(0)
-        for chain in range(chains):
-            pbar.offset = 100 * chain
-            pbar.base_comment = f"Chain: {chain+1}/{chains}"
-            results.append(
-                _sample_smc_int(*params, random_seed[chain], chain, pbar, **kernel_kwargs)
-            )
-
+        results = run_chains_sequential(chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs)
     (
         traces,
         sample_stats,
@@ -260,14 +234,22 @@ def sample_smc(
     ) = zip(*results)
 
     trace = MultiTrace(traces)
-    idata = None
 
-    # Save sample_stats
     _t_sampling = time.time() - t1
+    sample_stats, idata = _save_sample_stats(sample_settings, sample_stats, chains,
+                                             trace, return_inferencedata,
+                                             _t_sampling, idata_kwargs, model)
+
+    if compute_convergence_checks:
+        _compute_convergence_checks(idata, draws, model, trace)
+    return idata if return_inferencedata else trace
+
+
+def _save_sample_stats(sample_settings, sample_stats, chains, trace, return_inferencedata, _t_sampling, idata_kwargs, model):
     sample_settings_dict = sample_settings[0]
     sample_settings_dict["_t_sampling"] = _t_sampling
-
     sample_stats_dict = sample_stats[0]
+
     if chains > 1:
         # Collect the stat values from each chain in a single list
         for stat in sample_stats[0].keys():
@@ -281,6 +263,7 @@ def sample_smc(
             setattr(trace.report, stat, value)
         for stat, value in sample_settings_dict.items():
             setattr(trace.report, stat, value)
+        idata = None
     else:
         for stat, value in sample_stats_dict.items():
             if chains > 1:
@@ -303,19 +286,20 @@ def sample_smc(
         idata = to_inference_data(trace, **ikwargs)
         idata = InferenceData(**idata, sample_stats=sample_stats)
 
-    if compute_convergence_checks:
-        if draws < 100:
-            warnings.warn(
-                "The number of samples is too small to check convergence reliably.",
-                stacklevel=2,
-            )
-        else:
-            if idata is None:
-                idata = to_inference_data(trace, log_likelihood=False)
-            trace.report._run_convergence_checks(idata, model)
-    trace.report._log_summary()
+    return sample_stats, idata
 
-    return idata if return_inferencedata else trace
+
+def _compute_convergence_checks(idata, draws, model, trace):
+    if draws < 100:
+        warnings.warn(
+            "The number of samples is too small to check convergence reliably.",
+            stacklevel=2,
+        )
+    else:
+        if idata is None:
+            idata = to_inference_data(trace, log_likelihood=False)
+        trace.report._run_convergence_checks(idata, model)
+    trace.report._log_summary()
 
 
 def _sample_smc_int(
@@ -356,7 +340,7 @@ def _sample_smc_int(
         progressbar.comment = f"{getattr(progressbar, 'base_comment', '')} Stage: 0 Beta: 0"
         progressbar.update_bar(getattr(progressbar, "offset", 0) + 0)
 
-    smc._initialize_kernel()
+    smc._initialize_kernel() # TODO THIS CALLS A PRIVATE METHOD
     smc.setup_kernel()
 
     stage = 0
@@ -391,12 +375,6 @@ def _sample_smc_int(
     return results
 
 
-def _starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):
-    # Helper function to allow kwargs with Pool.starmap
-    # Copied from https://stackoverflow.com/a/53173433/13311693
-    args_for_starmap = zip(repeat(fn), args_iter, kwargs_iter)
-    return pool.starmap(_apply_args_and_kwargs, args_for_starmap)
 
 
-def _apply_args_and_kwargs(fn, args, kwargs):
-    return fn(*args, **kwargs)
+

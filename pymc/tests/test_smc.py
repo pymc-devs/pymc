@@ -36,7 +36,7 @@ from pymc.tests.helpers import SeededTest, assert_random_state_equal
 
 
 class TestSMC(SeededTest):
-    """Tests for the defa ult SMC kernel"""
+    """Tests for the default SMC kernel"""
 
     def setup_class(self):
         super().setup_class()
@@ -54,6 +54,9 @@ class TestSMC(SeededTest):
         w2 = 1 - stdev
 
         def two_gaussians(x):
+            """
+            Mixture of gaussians likelihood
+            """
             log_like1 = (
                 -0.5 * n * at.log(2 * np.pi)
                 - 0.5 * at.log(dsigma)
@@ -68,7 +71,7 @@ class TestSMC(SeededTest):
 
         with pm.Model() as self.SMC_test:
             X = pm.Uniform("X", lower=-2, upper=2.0, shape=n)
-            llk = pm.Potential("muh", two_gaussians(X)) #Wasn't it easier to use a mixture model directly?
+            llk = pm.Potential("muh", two_gaussians(X))
 
         self.muref = mu1
 
@@ -114,9 +117,6 @@ class TestSMC(SeededTest):
         smc.tune()
 
     def test_unobserved_discrete(self):
-        """
-
-        """
         n = 10
         rng = self.get_random_state()
         z_true = np.zeros(n, dtype=int)

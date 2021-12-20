@@ -232,6 +232,8 @@ class SMC_KERNEL(ABC):
 
         The importance weights based on two successive tempered likelihoods (i.e.
         two successive values of beta) and updates the marginal likelihood estimate.
+
+        ESS is calculated for importance sampling. BDA 3rd ed. eq 10.4
         """
         self.iteration += 1
 
@@ -245,9 +247,8 @@ class SMC_KERNEL(ABC):
             log_weights_un = (new_beta - old_beta) * self.likelihood_logp  #p(theta|y)^CHARLY beta but why old beta is here?
             log_weights = log_weights_un - logsumexp(log_weights_un)
 
-            ESS = int(np.exp(-logsumexp(log_weights * 2))) # importance sampling EFF.
+            ESS = int(np.exp(-logsumexp(log_weights * 2)))
 
-            # BISECTION METHOD FOR ESS?
             if ESS == rN:
                 break
             elif ESS < rN:
@@ -406,7 +407,7 @@ class IMH(SMC_KERNEL):
 
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])
-            proposal_logp = pl + ll * self.beta # this
+            proposal_logp = pl + ll * self.beta
             accepted = log_R[n_step] < (
                 (proposal_logp + backward_logp) - (self.tempered_posterior_logp + forward_logp)
             )
