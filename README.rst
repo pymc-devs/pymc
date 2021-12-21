@@ -10,7 +10,7 @@ focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
-Check out the `PyMC overview <https://docs.pymc.io/en/stable/pymc-examples/examples/pymc_overview.html>`__,  or
+Check out the `PyMC overview <https://docs.pymc.io/en/stable/learn/examples/pymc_overview.html>`__,  or
 `interact with live examples <https://mybinder.org/v2/gh/pymc-devs/pymc/main?filepath=%2Fdocs%2Fsource%2Fnotebooks>`__
 using Binder!
 For questions on PyMC, head on over to our `PyMC Discourse <https://discourse.pymc.io/>`__ forum.
