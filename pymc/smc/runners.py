@@ -29,17 +29,6 @@ def run_chains_parallel(chains, progressbar, to_run, params, random_seed, kernel
     return results
 
 
-def _starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):
-    # Helper function to allow kwargs with Pool.starmap
-    # Copied from https://stackoverflow.com/a/53173433/13311693
-    args_for_starmap = zip(repeat(fn), args_iter, kwargs_iter)
-    return pool.starmap(_apply_args_and_kwargs, args_for_starmap)
-
-
-def _apply_args_and_kwargs(fn, args, kwargs):
-    return fn(*args, **kwargs)
-
-
 def run_chains_sequential(chains, progressbar, to_run, params, random_seed, kernel_kwargs):
     results = []
     pbar = progress_bar((), total=100 * chains, display=progressbar)
@@ -49,3 +38,14 @@ def run_chains_sequential(chains, progressbar, to_run, params, random_seed, kern
         pbar.base_comment = f"Chain: {chain + 1}/{chains}"
         results.append(to_run(*params, random_seed[chain], chain, pbar, **kernel_kwargs))
     return results
+
+
+def _starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):
+    # Helper function to allow kwargs with Pool.starmap
+    # Copied from https://stackoverflow.com/a/53173433/13311693
+    args_for_starmap = zip(repeat(fn), args_iter, kwargs_iter)
+    return pool.starmap(_apply_args_and_kwargs, args_for_starmap)
+
+
+def _apply_args_and_kwargs(fn, args, kwargs):
+    return fn(*args, **kwargs)
