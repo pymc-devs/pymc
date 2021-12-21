@@ -1193,7 +1193,21 @@ class TestStickBreakingWeights(BaseTestDistribution):
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",
+        "check_basic_properties",
     ]
+
+    def check_basic_properties(self):
+        default_rng = aesara.shared(np.random.default_rng(1234))
+        draws = pm.StickBreakingWeights.dist(
+            alpha=3.5,
+            K=19,
+            size=(2, 3, 5),
+            rng=default_rng,
+        )
+
+        assert np.allclose(draws.sum(-1).eval(), 1)
+        assert np.all(draws.eval() >= 0)
+        assert np.all(draws.eval() <= 1)
 
 
 class TestMultinomial(BaseTestDistribution):

@@ -2183,8 +2183,20 @@ class StickBreakingWeightsRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
 
-    def __call__(self, alpha=1.0, K=10, size=None, **kwargs):
-        return super().__call__(alpha, K, size=size, **kwargs)
+    def make_node(self, rng, size, dtype, alpha, K):
+
+        alpha = at.as_tensor_variable(alpha)
+        K = at.as_tensor_variable(intX(K))
+
+        # if at.lt(K, 0):
+        #     print(at.lt(K, 0).eval())
+        #     print(K.eval() < 0)
+        #     raise ValueError("K needs to be positive.")
+
+        if alpha.ndim > 0:
+            raise ValueError("The concentration parameter needs to be a scalar.")
+
+        return super().make_node(rng, size, dtype, alpha, K)
 
     def _infer_shape(self, size, dist_params, param_shapes=None):
         alpha, K = dist_params
@@ -2195,12 +2207,6 @@ class StickBreakingWeightsRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, alpha, K, size):
-        if K < 0:
-            raise ValueError(f"K needs to be a positive integer, but K = {K}.")
-
-        if np.ndim(alpha) > 0:
-            raise ValueError("The concentration parameter needs to be a scalar.")
-
         if size is None:
             size = (K,)
         elif isinstance(size, int):
@@ -2208,7 +2214,7 @@ class StickBreakingWeightsRV(RandomVariable):
         else:
             size = tuple(size) + (K,)
 
-        betas = rng.beta(1, alpha, size=size)  # adapt this to vector alpha
+        betas = rng.beta(1, alpha, size=size)
 
         sticks = np.concatenate(
             (
@@ -2281,13 +2287,26 @@ class StickBreakingWeights(Continuous):
             axis=-1,
         )
         logp += -(K - 1) * betaln(1, alpha)
-        logp += alpha * at.log(value[..., -1])  # check this
+        logp += alpha * at.log(value[..., -1])
+
+        logp = at.switch(
+            at.or_(
+                at.any(
+                    at.and_(at.le(value, 0), at.ge(value, 1)),
+                    axis=-1,
+                ),
+                at.or_(
+                    at.bitwise_not(at.allclose(value.sum(-1), 1)),
+                    at.neq(value.shape[-1], K + 1),
+                ),
+            ),
+            -np.inf,
+            logp,
+        )
 
         return check_parameters(
             logp,
             alpha > 0,
             K > 0,
-            at.all(value >= 0),
-            at.all(value <= 1),
-            at.allclose(value.sum(axis=-1), 1),
+            msg="alpha > 0, K > 0, 0 <= value <= 1, sum(value) == 1",
         )
