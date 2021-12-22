@@ -30,10 +30,12 @@ from pymc.math import (
     kronecker,
     log1mexp,
     log1mexp_numpy,
+    log_softmax,
     logdet,
     logdiffexp,
     logdiffexp_numpy,
     probit,
+    softmax,
 )
 from pymc.tests.helpers import SeededTest, verify_grad
 
@@ -265,3 +267,24 @@ def test_invlogit_deprecation_warning():
     assert not record
 
     assert np.isclose(res, res_zero_eps)
+
+
+@pytest.mark.parametrize(
+    "aesara_function, pymc_wrapper",
+    [
+        (at.nnet.softmax, softmax),
+        (at.nnet.logsoftmax, log_softmax),
+    ],
+)
+def test_softmax_logsoftmax_no_warnings(aesara_function, pymc_wrapper):
+    """Test that wrappers for aesara functions do not issue Warnings"""
+
+    vector = at.vector("vector")
+    with pytest.warns(None) as record:
+        aesara_function(vector)
+    warnings = {warning.category for warning in record.list}
+    assert warnings == {UserWarning, FutureWarning}
+
+    with pytest.warns(None) as record:
+        pymc_wrapper(vector)
+    assert not record
