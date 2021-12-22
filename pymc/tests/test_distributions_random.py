@@ -13,6 +13,7 @@
 #   limitations under the License.
 import functools
 import itertools
+import re
 
 from typing import Callable, List, Optional
 
@@ -45,7 +46,7 @@ from pymc.aesaraf import change_rv_size, floatX, intX
 from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc.distributions.dist_math import clipped_beta_rvs
-from pymc.distributions.logprob import logpt
+from pymc.distributions.logprob import logp
 from pymc.distributions.multivariate import _OrderedMultinomial, quaddist_matrix
 from pymc.distributions.shape_utils import to_tuple
 from pymc.tests.helpers import SeededTest, select_by_precision
@@ -253,18 +254,6 @@ class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
     distribution = pm.GaussianRandomWalk
     params = {"mu": 1.0, "sigma": 1.0}
     default_shape = (1,)
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestZeroInflatedNegativeBinomial(BaseTestCases.BaseTestCase):
-    distribution = pm.ZeroInflatedNegativeBinomial
-    params = {"mu": 1.0, "alpha": 1.0, "psi": 0.3}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestZeroInflatedBinomial(BaseTestCases.BaseTestCase):
-    distribution = pm.ZeroInflatedBinomial
-    params = {"n": 10, "p": 0.6, "psi": 0.3}
 
 
 class BaseTestDistribution(SeededTest):
@@ -1127,7 +1116,19 @@ class TestMvStudentTCov(BaseTestDistribution):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
         "check_rv_size",
+        "test_errors",
     ]
+
+    def test_errors(self):
+        msg = "nu must be a scalar (ndim=0)."
+        with pm.Model():
+            with pytest.raises(ValueError, match=re.escape(msg)):
+                mvstudentt = pm.MvStudentT(
+                    "mvstudentt",
+                    nu=np.array([1, 2]),
+                    mu=np.ones(2),
+                    cov=np.full((2, 2), np.ones(2)),
+                )
 
 
 class TestMvStudentTChol(BaseTestDistribution):
@@ -1638,8 +1639,8 @@ class TestMatrixNormal(BaseTestDistribution):
                 rowcov=np.eye(3),
                 colcov=np.eye(3),
             )
-            with pytest.raises(TypeError):
-                logpt(matrixnormal, aesara.tensor.ones((3, 3, 3)))
+            with pytest.raises(ValueError):
+                logp(matrixnormal, aesara.tensor.ones((3, 3, 3)))
 
         with pm.Model():
             with pytest.warns(FutureWarning):
@@ -1868,7 +1869,7 @@ class TestDensityDist:
             pm.DensityDist(
                 "density_dist",
                 mu,
-                logp=lambda value, mu: logpt(pm.Normal.dist(mu, 1, size=100), value),
+                logp=lambda value, mu: logp(pm.Normal.dist(mu, 1, size=100), value),
                 observed=np.random.randn(100),
                 initval=0,
             )

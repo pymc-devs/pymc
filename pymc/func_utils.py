@@ -15,7 +15,6 @@ import warnings
 
 from typing import Dict, Optional
 
-import aesara
 import aesara.tensor as aet
 import numpy as np
 
@@ -27,7 +26,7 @@ __all__ = ["find_optim_prior"]
 
 
 def find_optim_prior(
-    pm_dist: pm.Distribution,
+    distribution: pm.Distribution,
     lower: float,
     upper: float,
     init_guess: Dict[str, float],
@@ -43,7 +42,7 @@ def find_optim_prior(
 
     Parameters
     ----------
-    pm_dist : pm.Distribution
+    distribution : pm.Distribution
         PyMC distribution you want to set a prior on.
         Needs to have a ``logcdf`` method implemented in PyMC.
     lower : float
@@ -69,48 +68,48 @@ def find_optim_prior(
     The optimized distribution parameters as a dictionary with the parameters'
     name as key and the optimized value as value.
     """
+    # TODO: Add user friendly ValueError for this check
+    assert 0.01 < mass < 0.99
+
     # exit when any parameter is not scalar:
-    if np.any(np.asarray(pm_dist.rv_op.ndims_params) != 0):
+    if np.any(np.asarray(distribution.rv_op.ndims_params) != 0):
         raise NotImplementedError(
             "`pm.find_optim_prior` does not work with non-scalar parameters yet.\n"
             "Feel free to open a pull request on PyMC repo if you really need this feature."
         )
 
-    # force float64 config
-    aesara.config.floatX = "float64"
     dist_params = aet.vector("dist_params")
     params_to_optim = {
         arg_name: dist_params[i] for arg_name, i in zip(init_guess.keys(), range(len(init_guess)))
     }
-    lower_, upper_ = aet.scalars("lower", "upper")
 
     if fixed_params is not None:
         params_to_optim.update(fixed_params)
 
-    dist_ = pm_dist.dist(**params_to_optim)
+    dist = distribution.dist(**params_to_optim)
 
     try:
-        logcdf_lower = pm.logcdf(dist_, lower_)
-        logcdf_upper = pm.logcdf(dist_, upper_)
+        logcdf_lower = pm.logcdf(dist, pm.floatX(lower))
+        logcdf_upper = pm.logcdf(dist, pm.floatX(upper))
     except AttributeError:
         raise AttributeError(
-            f"You cannot use `find_optim_prior` with {pm_dist} -- it doesn't have a logcdf "
+            f"You cannot use `find_optim_prior` with {distribution} -- it doesn't have a logcdf "
             "method yet.\nOpen an issue or, even better, a pull request on PyMC repo if you really "
             "need it."
         )
 
-    out = pm.math.logdiffexp(logcdf_upper, logcdf_lower) - np.log(mass)
-    logcdf = aesara.function([dist_params, lower_, upper_], out)
+    cdf_error = (pm.math.exp(logcdf_upper) - pm.math.exp(logcdf_lower)) - mass
+    cdf_error_fn = pm.aesaraf.compile_pymc([dist_params], cdf_error, allow_input_downcast=True)
 
     try:
-        symb_grad = aet.as_tensor_variable([pm.gradient(o, [dist_params]) for o in out])
-        jac = aesara.function([dist_params, lower_, upper_], symb_grad)
-
+        aesara_jac = pm.gradient(cdf_error, [dist_params])
+        jac = pm.aesaraf.compile_pymc([dist_params], aesara_jac, allow_input_downcast=True)
     # when PyMC cannot compute the gradient
+    # TODO: use specific gradient not implemented exception
     except Exception:
         jac = "2-point"
 
-    opt = optimize.least_squares(logcdf, x0=list(init_guess.values()), jac=jac, args=(lower, upper))
+    opt = optimize.least_squares(cdf_error_fn, x0=list(init_guess.values()), jac=jac)
     if not opt.success:
         raise ValueError("Optimization of parameters failed.")
 
@@ -122,7 +121,7 @@ def find_optim_prior(
         opt_params.update(fixed_params)
 
     # check mass in interval is not too far from `mass`
-    opt_dist = pm_dist.dist(**opt_params)
+    opt_dist = distribution.dist(**opt_params)
     mass_in_interval = (
         pm.math.exp(pm.logcdf(opt_dist, upper)) - pm.math.exp(pm.logcdf(opt_dist, lower))
     ).eval()

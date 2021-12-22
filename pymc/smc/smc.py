@@ -24,7 +24,7 @@ from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
 from pymc.aesaraf import (
-    compile_rv_inplace,
+    compile_pymc,
     floatX,
     inputvars,
     join_nonshared_inputs,
@@ -570,6 +570,6 @@ def _logp_forw(point, out_vars, in_vars, shared):
         in_vars = new_in_vars
 
     out_list, inarray0 = join_nonshared_inputs(point, out_vars, in_vars, shared)
-    f = compile_rv_inplace([inarray0], out_list[0])
+    f = compile_pymc([inarray0], out_list[0])
     f.trust_input = True
     return f

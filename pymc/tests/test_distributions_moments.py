@@ -8,7 +8,6 @@ from scipy import special
 
 import pymc as pm
 
-from pymc import Simulator
 from pymc.distributions import (
     AsymmetricLaplace,
     Bernoulli,
@@ -33,6 +32,7 @@ from pymc.distributions import (
     HalfNormal,
     HalfStudentT,
     HyperGeometric,
+    Interpolated,
     InverseGamma,
     Kumaraswamy,
     Laplace,
@@ -49,22 +49,85 @@ from pymc.distributions import (
     Poisson,
     PolyaGamma,
     Rice,
+    Simulator,
     SkewNormal,
     StudentT,
     Triangular,
     TruncatedNormal,
     Uniform,
+    VonMises,
     Wald,
     Weibull,
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
 )
-from pymc.distributions.distribution import get_moment
+from pymc.distributions.distribution import _get_moment, get_moment
+from pymc.distributions.logprob import logpt
 from pymc.distributions.multivariate import MvNormal
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
+
+
+def test_all_distributions_have_moments():
+    import pymc.distributions as dist_module
+
+    from pymc.distributions.distribution import DistributionMeta
+
+    dists = (getattr(dist_module, dist) for dist in dist_module.__all__)
+    dists = (dist for dist in dists if isinstance(dist, DistributionMeta))
+    missing_moments = {
+        dist for dist in dists if type(getattr(dist, "rv_op", None)) not in _get_moment.registry
+    }
+
+    # Ignore super classes
+    missing_moments -= {
+        dist_module.Distribution,
+        dist_module.Discrete,
+        dist_module.Continuous,
+        dist_module.NoDistribution,
+        dist_module.DensityDist,
+        dist_module.simulator.Simulator,
+    }
+
+    # Distributions that have not been refactored for V4 yet
+    not_implemented = {
+        dist_module.multivariate.LKJCorr,
+        dist_module.mixture.Mixture,
+        dist_module.mixture.MixtureSameFamily,
+        dist_module.mixture.NormalMixture,
+        dist_module.timeseries.AR,
+        dist_module.timeseries.AR1,
+        dist_module.timeseries.GARCH11,
+        dist_module.timeseries.GaussianRandomWalk,
+        dist_module.timeseries.MvGaussianRandomWalk,
+        dist_module.timeseries.MvStudentTRandomWalk,
+    }
+
+    # Distributions that have been refactored but don't yet have moments
+    not_implemented |= {
+        dist_module.discrete.DiscreteWeibull,
+        dist_module.multivariate.CAR,
+        dist_module.multivariate.DirichletMultinomial,
+        dist_module.multivariate.KroneckerNormal,
+        dist_module.multivariate.Wishart,
+    }
+
+    unexpected_implemented = not_implemented - missing_moments
+    if unexpected_implemented:
+        raise Exception(
+            f"Distributions {unexpected_implemented} have a `get_moment` implemented. "
+            "This test must be updated to expect this."
+        )
+
+    unexpected_not_implemented = missing_moments - not_implemented
+    if unexpected_not_implemented:
+        raise NotImplementedError(
+            f"Unexpected by this test, distributions {unexpected_not_implemented} do "
+            "not have a `get_moment` implementation. Either add a moment or filter "
+            "these distributions in this test."
+        )
 
 
 def test_rv_size_is_none():
@@ -83,20 +146,25 @@ def test_rv_size_is_none():
     assert not rv_size_is_none(rv.owner.inputs[1])
 
 
-def assert_moment_is_expected(model, expected):
+def assert_moment_is_expected(model, expected, check_finite_logp=True):
     fn = make_initial_point_fn(
         model=model,
         return_transformed=False,
         default_strategy="moment",
     )
-    result = fn(0)["x"]
+    moment = fn(0)["x"]
     expected = np.asarray(expected)
     try:
         random_draw = model["x"].eval()
     except NotImplementedError:
-        random_draw = result
-    assert result.shape == expected.shape == random_draw.shape
-    assert np.allclose(result, expected)
+        random_draw = moment
+
+    assert moment.shape == expected.shape == random_draw.shape
+    assert np.allclose(moment, expected)
+
+    if check_finite_logp:
+        logp_moment = logpt(model["x"], at.constant(moment), transformed=False).eval()
+        assert np.isfinite(logp_moment)
 
 
 @pytest.mark.parametrize(
@@ -162,8 +230,8 @@ def test_normal_moment(mu, sigma, size, expected):
     [
         (1, None, 1),
         (1, 5, np.ones(5)),
-        (np.arange(5), None, np.arange(5)),
-        (np.arange(5), (2, 5), np.full((2, 5), np.arange(5))),
+        (np.arange(1, 6), None, np.arange(1, 6)),
+        (np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
     ],
 )
 def test_halfnormal_moment(sigma, size, expected):
@@ -177,7 +245,7 @@ def test_halfnormal_moment(sigma, size, expected):
     [
         (1, 1, None, 1),
         (1, 1, 5, np.ones(5)),
-        (1, np.arange(5), (2, 5), np.full((2, 5), np.arange(5))),
+        (1, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
         (np.arange(1, 6), 1, None, np.full(5, 1)),
     ],
 )
@@ -187,14 +255,13 @@ def test_halfstudentt_moment(nu, sigma, size, expected):
     assert_moment_is_expected(model, expected)
 
 
-@pytest.mark.skip(reason="aeppl interval transform fails when both edges are None")
 @pytest.mark.parametrize(
     "mu, sigma, lower, upper, size, expected",
     [
-        (0.9, 1, -1, 1, None, 0),
-        (0.9, 1, -np.inf, np.inf, 5, np.full(5, 0.9)),
+        (0.9, 1, -5, 5, None, 0),
+        (1, np.ones(5), -10, np.inf, None, np.full(5, -9)),
         (np.arange(5), 1, None, 10, (2, 5), np.full((2, 5), 9)),
-        (1, np.ones(5), -10, np.inf, None, np.full((2, 5), -9)),
+        (1, 1, [-np.inf, -np.inf, -np.inf], 10, None, np.full(3, 9)),
     ],
 )
 def test_truncatednormal_moment(mu, sigma, lower, upper, size, expected):
@@ -369,11 +436,11 @@ def test_lognormal_moment(mu, sigma, size, expected):
     [
         (1, None, 1),
         (1, 5, np.ones(5)),
-        (np.arange(5), None, np.arange(5)),
+        (np.arange(1, 5), None, np.arange(1, 5)),
         (
-            np.arange(5),
-            (2, 5),
-            np.full((2, 5), np.arange(5)),
+            np.arange(1, 5),
+            (2, 4),
+            np.full((2, 4), np.arange(1, 5)),
         ),
     ],
 )
@@ -435,6 +502,21 @@ def test_inverse_gamma_moment(alpha, beta, size, expected):
 def test_pareto_moment(alpha, m, size, expected):
     with Model() as model:
         Pareto("x", alpha=alpha, m=m, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "mu, kappa, size, expected",
+    [
+        (0, 1, None, 0),
+        (0, np.ones(4), None, np.zeros(4)),
+        (np.arange(4), 0.5, None, np.arange(4)),
+        (np.arange(4), np.arange(1, 5), (2, 4), np.full((2, 4), np.arange(4))),
+    ],
+)
+def test_vonmises_moment(mu, kappa, size, expected):
+    with Model() as model:
+        VonMises("x", mu=mu, kappa=kappa, size=size)
     assert_moment_is_expected(model, expected)
 
 
@@ -600,11 +682,11 @@ def test_logistic_moment(mu, s, size, expected):
 @pytest.mark.parametrize(
     "mu, nu, sigma, size, expected",
     [
-        (1, 1, None, None, 2),
+        (1, 1, 1, None, 2),
         (1, 1, np.ones((2, 5)), None, np.full([2, 5], 2)),
-        (1, 1, None, 5, np.full(5, 2)),
-        (1, np.arange(1, 6), None, None, np.arange(2, 7)),
-        (1, np.arange(1, 6), None, (2, 5), np.full((2, 5), np.arange(2, 7))),
+        (1, 1, 3, 5, np.full(5, 2)),
+        (1, np.arange(1, 6), 5, None, np.arange(2, 7)),
+        (1, np.arange(1, 6), 1, (2, 5), np.full((2, 5), np.arange(2, 7))),
     ],
 )
 def test_exgaussian_moment(mu, nu, sigma, size, expected):
@@ -785,6 +867,36 @@ def test_categorical_moment(p, size, expected):
 
 
 @pytest.mark.parametrize(
+    "x_points, pdf_points, size, expected",
+    [
+        (np.array([-1, 1]), np.array([0.4, 0.6]), None, 0.2),
+        (
+            np.array([-4, -1, 3, 9, 19]),
+            np.array([0.1, 0.15, 0.2, 0.25, 0.3]),
+            None,
+            1.5458937198067635,
+        ),
+        (
+            np.array([-22, -4, 0, 8, 13]),
+            np.tile(1 / 5, 5),
+            (5, 3),
+            np.full((5, 3), -0.14285714285714296),
+        ),
+        (
+            np.arange(-100, 10),
+            np.arange(1, 111) / 6105,
+            (2, 5, 3),
+            np.full((2, 5, 3), -27.584097859327223),
+        ),
+    ],
+)
+def test_interpolated_moment(x_points, pdf_points, size, expected):
+    with Model() as model:
+        Interpolated("x", x_points=x_points, pdf_points=pdf_points, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
     "mu, cov, size, expected",
     [
         (np.ones(1), np.identity(1), None, np.ones(1)),
@@ -814,8 +926,10 @@ def test_categorical_moment(p, size, expected):
 )
 def test_mv_normal_moment(mu, cov, size, expected):
     with Model() as model:
-        MvNormal("x", mu=mu, cov=cov, size=size)
-    assert_moment_is_expected(model, expected)
+        x = MvNormal("x", mu=mu, cov=cov, size=size)
+
+    # MvNormal logp is only impemented for up to 2D variables
+    assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
 
 
 @pytest.mark.parametrize(
@@ -851,8 +965,10 @@ rand2d = np.random.rand(2, 3)
 )
 def test_mvstudentt_moment(nu, mu, cov, size, expected):
     with Model() as model:
-        MvStudentT("x", nu=nu, mu=mu, cov=cov, size=size)
-    assert_moment_is_expected(model, expected)
+        x = MvStudentT("x", nu=nu, mu=mu, cov=cov, size=size)
+
+    # MvStudentT logp is only impemented for up to 2D variables
+    assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
 
 
 def check_matrixnormal_moment(mu, rowchol, colchol, size, expected):
@@ -988,7 +1104,7 @@ def test_density_dist_default_moment_univariate(get_moment, size, expected):
         get_moment = lambda rv, size, *rv_inputs: 5 * at.ones(size, dtype=rv.dtype)
     with Model() as model:
         DensityDist("x", get_moment=get_moment, size=size)
-    assert_moment_is_expected(model, expected)
+    assert_moment_is_expected(model, expected, check_finite_logp=False)
 
 
 @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)

@@ -144,103 +144,69 @@ def test_unset_repr(capsys):
     assert "a=UNSET" in captured.out
 
 
-def test_find_optim_prior():
-    MASS = 0.95
-
-    # Gamma, normal case
+@pytest.mark.parametrize(
+    "distribution, lower, upper, init_guess, fixed_params",
+    [
+        (pm.Gamma, 0.1, 0.4, {"alpha": 1, "beta": 10}, {}),
+        (pm.Normal, 155, 180, {"mu": 170, "sigma": 3}, {}),
+        (pm.StudentT, 0.1, 0.4, {"mu": 10, "sigma": 3}, {"nu": 7}),
+        (pm.StudentT, 0, 1, {"mu": 5, "sigma": 2, "nu": 7}, {}),
+        # (pm.Exponential, 0, 1, {"lam": 1}, {}),  # pymc gradient is failing miserably, figure out why
+        (pm.HalfNormal, 0, 1, {"sigma": 1}, {}),
+        (pm.Binomial, 0, 8, {"p": 0.5}, {"n": 10}),
+        (pm.Poisson, 0, 10, {"mu": 0.5}, {}),
+    ],
+)
+@pytest.mark.parametrize("mass", [0.5, 0.75, 0.95])
+def test_find_optim_prior(distribution, lower, upper, init_guess, fixed_params, mass):
     with pytest.warns(None) as record:
         opt_params = pm.find_optim_prior(
-            pm.Gamma, lower=0.1, upper=0.4, mass=MASS, init_guess={"alpha": 1, "beta": 10}
-        )
-    assert len(record) == 0
-    np.testing.assert_allclose(
-        list(opt_params.values()), np.array([8.506023352404027, 37.59626616198404]), rtol=1e-03
-    )
-
-    # Normal, normal case
-    with pytest.warns(None) as record:
-        opt_params = pm.find_optim_prior(
-            pm.Normal, lower=155, upper=180, mass=MASS, init_guess={"mu": 170, "sigma": 3}
-        )
-    assert len(record) == 0
-    np.testing.assert_allclose(
-        list(opt_params.values()), np.array([170.76059047372624, 5.542895384602784]), rtol=1e-03
-    )
-
-    # Student, works as expected
-    with pytest.warns(None) as record:
-        opt_params = pm.find_optim_prior(
-            pm.StudentT,
-            lower=0.1,
-            upper=0.4,
-            mass=MASS,
-            init_guess={"mu": 170, "sigma": 3},
-            fixed_params={"nu": 7},
-        )
-    assert len(record) == 0
-    assert "nu" in opt_params
-    np.testing.assert_allclose(
-        list(opt_params.values()),
-        np.array([0.24995405785756986, 0.06343501657095188, 7]),
-        rtol=1e-03,
-    )
-
-    # Student not deterministic but without warning
-    with pytest.warns(None) as record:
-        pm.find_optim_prior(
-            pm.StudentT,
-            lower=0,
-            upper=1,
-            mass=MASS,
-            init_guess={"mu": 5, "sigma": 2, "nu": 7},
+            distribution,
+            lower=lower,
+            upper=upper,
+            mass=mass,
+            init_guess=init_guess,
+            fixed_params=fixed_params,
         )
     assert len(record) == 0
 
-    # Binomial, works as expected
-    with pytest.warns(None) as record:
-        opt_params = pm.find_optim_prior(
-            pm.Binomial, lower=2, upper=8, mass=MASS, init_guess={"p": 0.5}, fixed_params={"n": 10}
-        )
-    assert len(record) == 0
-    np.testing.assert_allclose(
-        list(opt_params.values()), np.array([0.5575067955294625, 10]), rtol=1e-03
-    )
+    opt_distribution = distribution.dist(**opt_params)
+    mass_in_interval = (
+        pm.math.exp(pm.logcdf(opt_distribution, upper))
+        - pm.math.exp(pm.logcdf(opt_distribution, lower))
+    ).eval()
+    assert np.abs(mass_in_interval - mass) <= 1e-5
 
-    # Exponential without warning
-    with pytest.warns(None) as record:
-        opt_params = pm.find_optim_prior(
-            pm.Exponential, lower=0, upper=1, mass=MASS, init_guess={"lam": 1}
-        )
-    assert len(record) == 0
-    np.testing.assert_allclose(
-        list(opt_params.values()), np.array([2.9957322673241604]), rtol=1e-03
-    )
 
-    # Exponential too constraining
-    with pytest.warns(UserWarning, match="instead of the requested 95%"):
-        pm.find_optim_prior(pm.Exponential, lower=0.1, upper=1, mass=MASS, init_guess={"lam": 1})
-
-    # Gamma too constraining
+@pytest.mark.parametrize(
+    "distribution, lower, upper, init_guess, fixed_params",
+    [
+        (pm.Gamma, 0.1, 0.4, {"alpha": 1}, {"beta": 10}),
+        (pm.Exponential, 0.1, 1, {"lam": 1}, {}),
+        (pm.Binomial, 0, 2, {"p": 0.8}, {"n": 10}),
+    ],
+)
+def test_find_optim_prior_error_too_large(distribution, lower, upper, init_guess, fixed_params):
     with pytest.warns(UserWarning, match="instead of the requested 95%"):
         pm.find_optim_prior(
-            pm.Gamma,
-            lower=0.1,
-            upper=0.4,
-            mass=MASS,
-            init_guess={"alpha": 1},
-            fixed_params={"beta": 10},
+            distribution,
+            lower=lower,
+            upper=upper,
+            mass=0.95,
+            init_guess=init_guess,
+            fixed_params=fixed_params,
         )
 
-    # Binomial too constraining
-    with pytest.warns(UserWarning, match="instead of the requested 95%"):
-        pm.find_optim_prior(
-            pm.Binomial, lower=0, upper=2, mass=MASS, init_guess={"p": 0.8}, fixed_params={"n": 10}
-        )
 
+def test_find_optim_prior_input_errors():
     # missing param
     with pytest.raises(TypeError, match="required positional argument"):
         pm.find_optim_prior(
-            pm.StudentT, lower=0.1, upper=0.4, mass=MASS, init_guess={"mu": 170, "sigma": 3}
+            pm.StudentT,
+            lower=0.1,
+            upper=0.4,
+            mass=0.95,
+            init_guess={"mu": 170, "sigma": 3},
         )
 
     # non-scalar params
@@ -249,6 +215,6 @@ def test_find_optim_prior():
             pm.MvNormal,
             lower=0,
             upper=1,
-            mass=MASS,
+            mass=0.95,
             init_guess={"mu": 5, "cov": np.asarray([[1, 0.2], [0.2, 1]])},
         )

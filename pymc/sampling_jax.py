@@ -19,14 +19,14 @@ import jax
 import numpy as np
 import pandas as pd
 
-from aesara.assert_op import Assert
+from aeppl.logprob import CheckParameterValue
 from aesara.compile import SharedVariable
 from aesara.graph.basic import clone_replace, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
+from aesara.raise_op import Assert
 
 from pymc import Model, modelcontext
-from pymc.aesaraf import compile_rv_inplace
 from pymc.backends.arviz import find_observations
 from pymc.distributions import logpt
 from pymc.util import get_default_varnames
@@ -35,6 +35,7 @@ warnings.warn("This module is experimental.")
 
 
 @jax_funcify.register(Assert)
+@jax_funcify.register(CheckParameterValue)
 def jax_funcify_Assert(op, **kwargs):
     # Jax does not allow assert whose values aren't known during JIT compilation
     # within it's JIT-ed code. Hence we need to make a simple pass through
@@ -122,7 +123,7 @@ def _get_log_likelihood(model, samples):
     "Compute log-likelihood for all observations"
     data = {}
     for v in model.observed_RVs:
-        logp_v = replace_shared_variables([logpt(v)])
+        logp_v = replace_shared_variables([model.logp_elemwiset(v)[0]])
         fgraph = FunctionGraph(model.value_vars, logp_v, clone=False)
         optimize_graph(fgraph, include=["fast_run"], exclude=["cxx_only", "BlasOpt"])
         jax_fn = jax_funcify(fgraph)
@@ -141,6 +142,7 @@ def sample_numpyro_nuts(
     var_names=None,
     progress_bar=True,
     keep_untransformed=False,
+    chain_method="parallel",
 ):
     from numpyro.infer import MCMC, NUTS
 
@@ -188,7 +190,7 @@ def sample_numpyro_nuts(
         num_samples=draws,
         num_chains=chains,
         postprocess_fn=None,
-        chain_method="parallel",
+        chain_method=chain_method,
         progress_bar=progress_bar,
     )
 

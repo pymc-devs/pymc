@@ -31,7 +31,7 @@ from scipy import stats
 
 import pymc as pm
 
-from pymc.aesaraf import compile_rv_inplace
+from pymc.aesaraf import compile_pymc
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
@@ -1016,7 +1016,7 @@ class TestSamplePriorPredictive(SeededTest):
             a = pm.Uniform("a", lower=0, upper=1, size=10)
             b = pm.Binomial("b", n=1, p=a, size=10)
 
-        b_sampler = compile_rv_inplace([], b, mode="FAST_RUN")
+        b_sampler = compile_pymc([], b, mode="FAST_RUN")
         avg = np.stack([b_sampler() for i in range(10000)]).mean(0)
         npt.assert_array_almost_equal(avg, 0.5 * np.ones((10,)), decimal=2)
 

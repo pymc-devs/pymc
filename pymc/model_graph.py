@@ -16,6 +16,7 @@ import warnings
 from collections import defaultdict, deque
 from typing import Dict, Iterator, NewType, Optional, Set
 
+from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import walk
 from aesara.tensor.random.op import RandomVariable
@@ -159,6 +160,9 @@ class ModelGraph:
 
         graph.node(var_name.replace(":", "&"), **kwargs)
 
+    def _eval(self, var):
+        return function([], var, mode="FAST_COMPILE")()
+
     def get_plates(self):
         """Rough but surprisingly accurate plate detection.
 
@@ -174,11 +178,11 @@ class ModelGraph:
             v = self.model[var_name]
             if var_name in self.model.RV_dims:
                 plate_label = " x ".join(
-                    f"{d} ({self.model.dim_lengths[d].eval()})"
+                    f"{d} ({self._eval(self.model.dim_lengths[d])})"
                     for d in self.model.RV_dims[var_name]
                 )
             else:
-                plate_label = " x ".join(map(str, v.shape.eval()))
+                plate_label = " x ".join(map(str, self._eval(v.shape)))
             plates[plate_label].add(var_name)
         return plates
 
