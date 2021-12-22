@@ -42,7 +42,7 @@ class TestSMC(SeededTest):
         super().setup_class()
         self.samples = 1000
         n = 4
-        mu1 = np.ones(n) * (1.0 / 2)
+        mu1 = np.ones(n) * 0.5
         mu2 = -mu1
 
         stdev = 0.1
@@ -54,6 +54,9 @@ class TestSMC(SeededTest):
         w2 = 1 - stdev
 
         def two_gaussians(x):
+            """
+            Mixture of gaussians likelihood
+            """
             log_like1 = (
                 -0.5 * n * at.log(2 * np.pi)
                 - 0.5 * at.log(dsigma)
@@ -80,8 +83,9 @@ class TestSMC(SeededTest):
         initial_rng_state = np.random.get_state()
         with self.SMC_test:
             mtrace = pm.sample_smc(draws=self.samples, return_inferencedata=False)
-        assert_random_state_equal(initial_rng_state, np.random.get_state())
-
+        assert_random_state_equal(
+            initial_rng_state, np.random.get_state()
+        )  # TODO: why this? maybe to verify that nothing was sampled?
         x = mtrace["X"]
         mu1d = np.abs(x).mean(axis=0)
         np.testing.assert_allclose(self.muref, mu1d, rtol=0.0, atol=0.03)
@@ -109,7 +113,6 @@ class TestSMC(SeededTest):
     def test_unobserved_discrete(self):
         n = 10
         rng = self.get_random_state()
-
         z_true = np.zeros(n, dtype=int)
         z_true[int(n / 2) :] = 1
         y = st.norm(np.array([-1, 1])[z_true], 0.25).rvs(random_state=rng)
@@ -124,6 +127,10 @@ class TestSMC(SeededTest):
         assert np.all(np.median(trace["z"], axis=0) == z_true)
 
     def test_marginal_likelihood(self):
+        """
+        Verifies that the log marginal likelihood function
+        can be correctly computed for a Beta-Bernoulli model.
+        """
         data = np.repeat([1, 0], [50, 50])
         marginals = []
         a_prior_0, b_prior_0 = 1.0, 1.0
@@ -135,6 +142,7 @@ class TestSMC(SeededTest):
                 y = pm.Bernoulli("y", a, observed=data)
                 trace = pm.sample_smc(2000, return_inferencedata=False)
                 marginals.append(trace.report.log_marginal_likelihood)
+
         # compare to the analytical result
         assert abs(np.exp(np.nanmean(marginals[1]) - np.nanmean(marginals[0])) - 4.0) <= 1
 
