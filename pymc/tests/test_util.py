@@ -209,6 +209,28 @@ def test_find_optim_prior_input_errors():
             init_guess={"mu": 170, "sigma": 3},
         )
 
+    # mass too high
+    with pytest.raises(AssertionError, match="has to be between 0.01 and 0.99"):
+        pm.find_optim_prior(
+            pm.StudentT,
+            lower=0.1,
+            upper=0.4,
+            mass=0.995,
+            init_guess={"mu": 170, "sigma": 3},
+            fixed_params={"nu": 7},
+        )
+
+    # mass too low
+    with pytest.raises(AssertionError, match="has to be between 0.01 and 0.99"):
+        pm.find_optim_prior(
+            pm.StudentT,
+            lower=0.1,
+            upper=0.4,
+            mass=0.005,
+            init_guess={"mu": 170, "sigma": 3},
+            fixed_params={"nu": 7},
+        )
+
     # non-scalar params
     with pytest.raises(NotImplementedError, match="does not work with non-scalar parameters yet"):
         pm.find_optim_prior(

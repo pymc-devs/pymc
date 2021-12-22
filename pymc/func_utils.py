@@ -68,8 +68,10 @@ def find_optim_prior(
     The optimized distribution parameters as a dictionary with the parameters'
     name as key and the optimized value as value.
     """
-    # TODO: Add user friendly ValueError for this check
-    assert 0.01 < mass < 0.99
+    assert 0.01 <= mass <= 0.99, (
+        "This function optimizes the mass of the given distribution +/- "
+        f"1%, so `mass` has to be between 0.01 and 0.99. You provided {mass}."
+    )
 
     # exit when any parameter is not scalar:
     if np.any(np.asarray(distribution.rv_op.ndims_params) != 0):
@@ -125,7 +127,7 @@ def find_optim_prior(
     mass_in_interval = (
         pm.math.exp(pm.logcdf(opt_dist, upper)) - pm.math.exp(pm.logcdf(opt_dist, lower))
     ).eval()
-    if (np.abs(mass_in_interval - mass)) >= 0.01:
+    if (np.abs(mass_in_interval - mass)) > 0.01:
         warnings.warn(
             f"Final optimization has {mass_in_interval * 100:.0f}% of probability mass between "
             f"{lower} and {upper} instead of the requested {mass * 100:.0f}%.\n"
