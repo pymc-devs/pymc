@@ -211,6 +211,22 @@ def invlogit(x, eps=None):
     return at.sigmoid(x)
 
 
+def softmax(x, axis=None):
+    # Ignore vector case UserWarning issued by Aesara. This can be removed once Aesara
+    # drops that warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        return at.nnet.softmax(x, axis=axis)
+
+
+def log_softmax(x, axis=None):
+    # Ignore vector case UserWarning issued by Aesara. This can be removed once Aesara
+    # drops that warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        return at.nnet.logsoftmax(x, axis=axis)
+
+
 def logbern(log_p):
     if np.isnan(log_p):
         raise FloatingPointError("log_p can't be nan.")
