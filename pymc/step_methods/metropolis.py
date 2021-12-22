@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 import numpy.random as nr
 import scipy.linalg
+import scipy.special
 
 from aesara.graph.fg import MissingInputError
 from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
@@ -608,7 +609,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if candidate_cat != given_cat:
                 q.data[dim] = candidate_cat
                 log_probs[candidate_cat] = logp(q)
-        probs = softmax(log_probs)
+        probs = scipy.special.softmax(log_probs, axis=0)
         prob_curr, probs[given_cat] = probs[given_cat], 0.0
         probs /= 1.0 - prob_curr
         proposed_cat = nr.choice(candidates, p=probs)
@@ -993,11 +994,6 @@ def sample_except(limit, excluded):
     if candidate >= excluded:
         candidate += 1
     return candidate
-
-
-def softmax(x):
-    e_x = np.exp(x - np.max(x))
-    return e_x / np.sum(e_x, axis=0)
 
 
 def delta_logp(point, logp, vars, shared):
