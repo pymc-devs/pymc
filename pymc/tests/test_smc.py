@@ -83,9 +83,9 @@ class TestSMC(SeededTest):
         initial_rng_state = np.random.get_state()
         with self.SMC_test:
             mtrace = pm.sample_smc(draws=self.samples, return_inferencedata=False)
-        assert_random_state_equal(
-            initial_rng_state, np.random.get_state()
-        )  # TODO: why this? maybe to verify that nothing was sampled?
+
+        # Verify sampling was done from a non-default generator
+        assert_random_state_equal(initial_rng_state, np.random.get_state())
         x = mtrace["X"]
         mu1d = np.abs(x).mean(axis=0)
         np.testing.assert_allclose(self.muref, mu1d, rtol=0.0, atol=0.03)
