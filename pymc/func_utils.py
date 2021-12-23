@@ -129,7 +129,7 @@ def find_optim_prior(
     ).eval()
     if (np.abs(mass_in_interval - mass)) > 0.01:
         warnings.warn(
-            f"Final optimization has {mass_in_interval * 100:.0f}% of probability mass between "
+            f"Final optimization has {(mass_in_interval if mass_in_interval.ndim < 1 else mass_in_interval[0])* 100:.0f}% of probability mass between "
             f"{lower} and {upper} instead of the requested {mass * 100:.0f}%.\n"
             "You may need to use a more flexible distribution, change the fixed parameters in the "
             "`fixed_params` dictionary, or provide better initial guesses."
