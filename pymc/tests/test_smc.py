@@ -84,7 +84,7 @@ class TestSMC(SeededTest):
         with self.SMC_test:
             mtrace = pm.sample_smc(draws=self.samples, return_inferencedata=False)
 
-        # Verify sampling was done from a non-default generator
+        # Verify sampling was done with a non-global random generator
         assert_random_state_equal(initial_rng_state, np.random.get_state())
         x = mtrace["X"]
         mu1d = np.abs(x).mean(axis=0)
