@@ -1699,17 +1699,16 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if point is None:
             point = self.recompute_initial_point()
 
+        factors = self.basic_RVs + self.potentials
         return Series(
             {
-                rv.name: np.round(np.asarray(logp), round_vals)
-                for rv, logp in zip(
-                    self.basic_RVs,
-                    self.fn(
-                        [at.sum(factor) for factor in self.logp_elemwiset(vars=self.basic_RVs)]
-                    )(point),
+                factor.name: np.round(np.asarray(factor_logp), round_vals)
+                for factor, factor_logp in zip(
+                    factors,
+                    self.fn([at.sum(factor) for factor in self.logp_elemwiset(factors)])(point),
                 )
             },
-            name="Log-probability of test_point",
+            name="Point log-probability",
         )
 
 
