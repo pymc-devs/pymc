@@ -67,9 +67,12 @@ Fit your model using gradient-based MCMC algorithms like NUTS, using ADVI for fa
 ```{code-block} python
 ---
 ---
+    import numpy as np
     import pymc as pm
 
-    X, y = linear_training_data()
+    X = np.random.normal(size=100)
+    y = np.random.normal(X) * 1.2
+
     with pm.Model() as linear_model:
         weights = pm.Normal("weights", mu=0, sigma=1)
         noise = pm.Gamma("noise", alpha=2, beta=1)
