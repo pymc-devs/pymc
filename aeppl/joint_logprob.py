@@ -160,7 +160,7 @@ def factorized_joint_logprob(
         ):
             warnings.warn(
                 "Found a random variable that was neither among the observations "
-                f"nor the conditioned variables: {node}"
+                f"nor the conditioned variables: {node.outputs}"
             )
             continue
 
