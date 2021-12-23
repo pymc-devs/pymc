@@ -533,6 +533,15 @@ def test_point_logps():
     assert "a" in logp_vals.keys()
 
 
+def test_point_logps_potential():
+    with pm.Model() as model:
+        x = pm.Flat("x", initval=1)
+        y = pm.Potential("y", x * 2)
+
+    logps = model.point_logps()
+    assert np.isclose(logps["y"], 2)
+
+
 class TestShapeEvaluation:
     def test_eval_rv_shapes(self):
         with pm.Model(
