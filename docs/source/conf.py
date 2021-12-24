@@ -87,6 +87,8 @@ if os.environ.get("READTHEDOCS", False):
     rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
     if "." not in rtd_version and rtd_version.lower() != "stable":
         version = "dev"
+else:
+    rtd_version = "local"
 # The full version, including alpha/beta/rc tags.
 release = version
 
