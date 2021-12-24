@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
 import numpy as np
 import pytest
 
@@ -152,13 +151,7 @@ def test_unset_repr(capsys):
         (pm.Normal, 155, 180, {"mu": 170, "sigma": 3}, {}),
         (pm.StudentT, 0.1, 0.4, {"mu": 10, "sigma": 3}, {"nu": 7}),
         (pm.StudentT, 0, 1, {"mu": 5, "sigma": 2, "nu": 7}, {}),
-        (
-            pm.Exponential,
-            0,
-            1,
-            {"lam": 1},
-            {},
-        ),  # pymc gradient is failing miserably, figure out why
+        (pm.Exponential, 0, 1, {"lam": 1}, {}),
         (pm.HalfNormal, 0, 1, {"sigma": 1}, {}),
         (pm.Binomial, 0, 8, {"p": 0.5}, {"n": 10}),
     ],
@@ -173,6 +166,34 @@ def test_find_optim_prior(distribution, lower, upper, init_guess, fixed_params, 
             mass=mass,
             init_guess=init_guess,
             fixed_params=fixed_params,
+        )
+    assert len(record) == 0
+
+    opt_distribution = distribution.dist(**opt_params)
+    mass_in_interval = (
+        pm.math.exp(pm.logcdf(opt_distribution, upper))
+        - pm.math.exp(pm.logcdf(opt_distribution, lower))
+    ).eval()
+    assert np.abs(mass_in_interval - mass) <= 1e-5
+
+
+# test Poisson separately -- hard to optimize precisely when float32
+@pytest.mark.parametrize(
+    "lower, upper, init_guess",
+    [
+        (1, 15, {"mu": 10}),
+        (19, 41, {"mu": 30}),
+    ],
+)
+def test_optim_prior_poisson(lower, upper, init_guess):
+    distribution = pm.Poisson
+    mass = 0.95
+    with pytest.warns(None) as record:
+        opt_params = pm.find_optim_prior(
+            distribution,
+            lower=lower,
+            upper=upper,
+            init_guess=init_guess,
         )
     assert len(record) == 0
 
@@ -246,42 +267,3 @@ def test_find_optim_prior_input_errors():
             mass=0.95,
             init_guess={"mu": 5, "cov": np.asarray([[1, 0.2], [0.2, 1]])},
         )
-
-
-# test Poisson separately -- it's discrete and very hard to optimize precisely
-distribution = pm.Poisson
-lower = 0
-upper = 10
-if aesara.config.floatX == "float64":
-
-    @pytest.mark.parametrize("mass", [0.5, 0.75, 0.95])
-    def test_optim_prior_poisson64(mass):
-        with pytest.warns(None) as record:
-            opt_params = pm.find_optim_prior(
-                distribution,
-                lower=lower,
-                upper=upper,
-                mass=mass,
-                init_guess={"mu": 0.5},
-            )
-        assert len(record) == 0
-
-        opt_distribution = distribution.dist(**opt_params)
-        mass_in_interval = (
-            pm.math.exp(pm.logcdf(opt_distribution, upper))
-            - pm.math.exp(pm.logcdf(opt_distribution, lower))
-        ).eval()
-        assert np.abs(mass_in_interval - mass) <= 1e-5
-
-elif aesara.config.floatX == "float32":
-
-    @pytest.mark.parametrize("mass", [0.5, 0.75, 0.95])
-    def test_optim_prior_poisson32(mass):
-        with pytest.warns(UserWarning, match="instead of the requested 95%"):
-            pm.find_optim_prior(
-                distribution,
-                lower=lower,
-                upper=upper,
-                mass=0.95,
-                init_guess={"mu": 0.5},
-            )
