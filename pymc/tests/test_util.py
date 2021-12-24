@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import numpy as np
 import pytest
 
@@ -154,7 +155,6 @@ def test_unset_repr(capsys):
         # (pm.Exponential, 0, 1, {"lam": 1}, {}),  # pymc gradient is failing miserably, figure out why
         (pm.HalfNormal, 0, 1, {"sigma": 1}, {}),
         (pm.Binomial, 0, 8, {"p": 0.5}, {"n": 10}),
-        (pm.Poisson, 0, 10, {"mu": 0.5}, {}),
     ],
 )
 @pytest.mark.parametrize("mass", [0.5, 0.75, 0.95])
@@ -240,3 +240,41 @@ def test_find_optim_prior_input_errors():
             mass=0.95,
             init_guess={"mu": 5, "cov": np.asarray([[1, 0.2], [0.2, 1]])},
         )
+
+
+distribution = pm.Poisson
+lower = 0
+upper = 10
+if aesara.config.floatX == "float64":
+
+    @pytest.mark.parametrize("mass", [0.5, 0.75, 0.95])
+    def test_optim_prior_poisson64(mass):
+        with pytest.warns(None) as record:
+            opt_params = pm.find_optim_prior(
+                distribution,
+                lower=lower,
+                upper=upper,
+                mass=mass,
+                init_guess={"mu": 0.5},
+            )
+        assert len(record) == 0
+
+        opt_distribution = distribution.dist(**opt_params)
+        mass_in_interval = (
+            pm.math.exp(pm.logcdf(opt_distribution, upper))
+            - pm.math.exp(pm.logcdf(opt_distribution, lower))
+        ).eval()
+        assert np.abs(mass_in_interval - mass) <= 1e-5
+
+elif aesara.config.floatX == "float32":
+
+    @pytest.mark.parametrize("mass", [0.5, 0.75, 0.95])
+    def test_optim_prior_poisson32(mass):
+        with pytest.warns(UserWarning, match="instead of the requested 95%"):
+            pm.find_optim_prior(
+                distribution,
+                lower=lower,
+                upper=upper,
+                mass=0.95,
+                init_guess={"mu": 0.5},
+            )
