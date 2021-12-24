@@ -103,13 +103,17 @@ def find_optim_prior(
     cdf_error = (pm.math.exp(logcdf_upper) - pm.math.exp(logcdf_lower)) - mass
     cdf_error_fn = pm.aesaraf.compile_pymc([dist_params], cdf_error, allow_input_downcast=True)
 
-    try:
-        aesara_jac = pm.gradient(cdf_error, [dist_params])
-        jac = pm.aesaraf.compile_pymc([dist_params], aesara_jac, allow_input_downcast=True)
-    # when PyMC cannot compute the gradient
-    # TODO: use specific gradient not implemented exception
-    except Exception:
+    # PyMC Exponential gradient is failing miserably, need to figure out why
+    if distribution == pm.Exponential:
         jac = "2-point"
+    else:
+        try:
+            aesara_jac = pm.gradient(cdf_error, [dist_params])
+            jac = pm.aesaraf.compile_pymc([dist_params], aesara_jac, allow_input_downcast=True)
+        # when PyMC cannot compute the gradient
+        # TODO: use specific gradient, not implemented exception
+        except Exception:
+            jac = "2-point"
 
     opt = optimize.least_squares(cdf_error_fn, x0=list(init_guess.values()), jac=jac)
     if not opt.success:

@@ -152,7 +152,13 @@ def test_unset_repr(capsys):
         (pm.Normal, 155, 180, {"mu": 170, "sigma": 3}, {}),
         (pm.StudentT, 0.1, 0.4, {"mu": 10, "sigma": 3}, {"nu": 7}),
         (pm.StudentT, 0, 1, {"mu": 5, "sigma": 2, "nu": 7}, {}),
-        # (pm.Exponential, 0, 1, {"lam": 1}, {}),  # pymc gradient is failing miserably, figure out why
+        (
+            pm.Exponential,
+            0,
+            1,
+            {"lam": 1},
+            {},
+        ),  # pymc gradient is failing miserably, figure out why
         (pm.HalfNormal, 0, 1, {"sigma": 1}, {}),
         (pm.Binomial, 0, 8, {"p": 0.5}, {"n": 10}),
     ],
@@ -242,6 +248,7 @@ def test_find_optim_prior_input_errors():
         )
 
 
+# test Poisson separately -- it's discrete and very hard to optimize precisely
 distribution = pm.Poisson
 lower = 0
 upper = 10
