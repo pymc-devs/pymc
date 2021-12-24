@@ -386,12 +386,13 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             else:
                 data[k] = np.expand_dims(ary, 0)
                 warning_vars.append(k)
-        warnings.warn(
-            f"The shape of variables {', '.join(warning_vars)} in {kind} group is not compatible "
-            "with number of chains and draws. The automatic dimension naming might not have worked. "
-            "This can also mean that some draws or even whole chains are not represented.",
-            UserWarning,
-        )
+        if warning_vars:
+            warnings.warn(
+                f"The shape of variables {', '.join(warning_vars)} in {kind} group is not compatible "
+                "with number of chains and draws. The automatic dimension naming might not have worked. "
+                "This can also mean that some draws or even whole chains are not represented.",
+                UserWarning,
+            )
         return dict_to_dataset(data, library=pymc, coords=self.coords, dims=self.dims)
 
     @requires(["posterior_predictive"])
