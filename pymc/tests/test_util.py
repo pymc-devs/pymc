@@ -202,7 +202,7 @@ def test_optim_prior_poisson(lower, upper, init_guess):
         pm.math.exp(pm.logcdf(opt_distribution, upper))
         - pm.math.exp(pm.logcdf(opt_distribution, lower))
     ).eval()
-    assert np.abs(mass_in_interval - mass) <= 1e-5
+    assert np.abs(mass_in_interval - mass) <= 1e-2  # reduce to 1% tolerance for float32
 
 
 @pytest.mark.parametrize(
