@@ -159,7 +159,7 @@ def test_unset_repr(capsys):
 @pytest.mark.parametrize("mass", [0.5, 0.75, 0.95])
 def test_find_optim_prior(distribution, lower, upper, init_guess, fixed_params, mass):
     with pytest.warns(None) as record:
-        opt_params = pm.find_optim_prior(
+        opt_params = pm.find_constrained_prior(
             distribution,
             lower=lower,
             upper=upper,
@@ -189,7 +189,7 @@ def test_optim_prior_poisson(lower, upper, init_guess):
     distribution = pm.Poisson
     mass = 0.95
     with pytest.warns(None) as record:
-        opt_params = pm.find_optim_prior(
+        opt_params = pm.find_constrained_prior(
             distribution,
             lower=lower,
             upper=upper,
@@ -215,7 +215,7 @@ def test_optim_prior_poisson(lower, upper, init_guess):
 )
 def test_find_optim_prior_error_too_large(distribution, lower, upper, init_guess, fixed_params):
     with pytest.warns(UserWarning, match="instead of the requested 95%"):
-        pm.find_optim_prior(
+        pm.find_constrained_prior(
             distribution,
             lower=lower,
             upper=upper,
@@ -228,7 +228,7 @@ def test_find_optim_prior_error_too_large(distribution, lower, upper, init_guess
 def test_find_optim_prior_input_errors():
     # missing param
     with pytest.raises(TypeError, match="required positional argument"):
-        pm.find_optim_prior(
+        pm.find_constrained_prior(
             pm.StudentT,
             lower=0.1,
             upper=0.4,
@@ -238,7 +238,7 @@ def test_find_optim_prior_input_errors():
 
     # mass too high
     with pytest.raises(AssertionError, match="has to be between 0.01 and 0.99"):
-        pm.find_optim_prior(
+        pm.find_constrained_prior(
             pm.StudentT,
             lower=0.1,
             upper=0.4,
@@ -249,7 +249,7 @@ def test_find_optim_prior_input_errors():
 
     # mass too low
     with pytest.raises(AssertionError, match="has to be between 0.01 and 0.99"):
-        pm.find_optim_prior(
+        pm.find_constrained_prior(
             pm.StudentT,
             lower=0.1,
             upper=0.4,
@@ -260,7 +260,7 @@ def test_find_optim_prior_input_errors():
 
     # non-scalar params
     with pytest.raises(NotImplementedError, match="does not work with non-scalar parameters yet"):
-        pm.find_optim_prior(
+        pm.find_constrained_prior(
             pm.MvNormal,
             lower=0,
             upper=1,

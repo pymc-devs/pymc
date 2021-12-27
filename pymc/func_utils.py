@@ -22,10 +22,10 @@ from scipy import optimize
 
 import pymc as pm
 
-__all__ = ["find_optim_prior"]
+__all__ = ["find_constrained_prior"]
 
 
-def find_optim_prior(
+def find_constrained_prior(
     distribution: pm.Distribution,
     lower: float,
     upper: float,
@@ -76,7 +76,7 @@ def find_optim_prior(
     # exit when any parameter is not scalar:
     if np.any(np.asarray(distribution.rv_op.ndims_params) != 0):
         raise NotImplementedError(
-            "`pm.find_optim_prior` does not work with non-scalar parameters yet.\n"
+            "`pm.find_constrained_prior` does not work with non-scalar parameters yet.\n"
             "Feel free to open a pull request on PyMC repo if you really need this feature."
         )
 
@@ -95,7 +95,7 @@ def find_optim_prior(
         logcdf_upper = pm.logcdf(dist, pm.floatX(upper))
     except AttributeError:
         raise AttributeError(
-            f"You cannot use `find_optim_prior` with {distribution} -- it doesn't have a logcdf "
+            f"You cannot use `find_constrained_prior` with {distribution} -- it doesn't have a logcdf "
             "method yet.\nOpen an issue or, even better, a pull request on PyMC repo if you really "
             "need it."
         )
