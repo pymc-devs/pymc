@@ -157,7 +157,7 @@ def test_unset_repr(capsys):
     ],
 )
 @pytest.mark.parametrize("mass", [0.5, 0.75, 0.95])
-def test_find_optim_prior(distribution, lower, upper, init_guess, fixed_params, mass):
+def test_find_constrained_prior(distribution, lower, upper, init_guess, fixed_params, mass):
     with pytest.warns(None) as record:
         opt_params = pm.find_constrained_prior(
             distribution,
@@ -185,7 +185,7 @@ def test_find_optim_prior(distribution, lower, upper, init_guess, fixed_params, 
         (19, 41, {"mu": 30}),
     ],
 )
-def test_optim_prior_poisson(lower, upper, init_guess):
+def test_constrained_prior_poisson(lower, upper, init_guess):
     distribution = pm.Poisson
     mass = 0.95
     with pytest.warns(None) as record:
@@ -213,7 +213,9 @@ def test_optim_prior_poisson(lower, upper, init_guess):
         (pm.Binomial, 0, 2, {"p": 0.8}, {"n": 10}),
     ],
 )
-def test_find_optim_prior_error_too_large(distribution, lower, upper, init_guess, fixed_params):
+def test_find_constrained_prior_error_too_large(
+    distribution, lower, upper, init_guess, fixed_params
+):
     with pytest.warns(UserWarning, match="instead of the requested 95%"):
         pm.find_constrained_prior(
             distribution,
@@ -225,7 +227,7 @@ def test_find_optim_prior_error_too_large(distribution, lower, upper, init_guess
         )
 
 
-def test_find_optim_prior_input_errors():
+def test_find_constrained_prior_input_errors():
     # missing param
     with pytest.raises(TypeError, match="required positional argument"):
         pm.find_constrained_prior(
