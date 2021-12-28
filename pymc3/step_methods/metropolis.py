@@ -105,7 +105,7 @@ class SettingNotFoundInAttribute(BaseException):
 class SettingsResetter:
     """Stores a copy of initial settings so they can be reset on call"""
 
-    initial_settings: dict[str, Any]
+    initial_settings: Dict[str, Any]
 
     def __init__(self, step_method: Any, *settings: str):
         try:
