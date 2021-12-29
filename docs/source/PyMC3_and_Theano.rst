@@ -36,7 +36,7 @@ arbitrarily chosen) function
 
 First, we need to define symbolic variables for our inputs (this
 is similar to eg SymPy's `Symbol`)::
-    
+
     import pymc as pm
     import numpy
     import theano
