@@ -32,6 +32,20 @@ __all__ = [
     "MvStudentTRandomWalk",
 ]
 
+class GaussianRandomWalkRV(RandomVariable):
+    name = "GaussianRandomWalk"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
+
+    @classmethod
+    def rng_fn(cls, rng, mu, sigma, tau, size):
+        rv, updates = aesara.scan(
+                fn=lambda prev_value: rng.normal(prev_value + mu, sigma),
+                outputs_info=np.array(0.0),
+                n_steps=size)
+        return rv
 
 class AR1(distribution.Continuous):
     """
