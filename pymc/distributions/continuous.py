@@ -1596,7 +1596,7 @@ class AsymmetricLaplaceRV(RandomVariable):
     _print_name = ("AsymmetricLaplace", "\\operatorname{AsymmetricLaplace}")
 
     @classmethod
-    def rng_fn(cls, rng, b, kappa, mu, size=None)-> np.ndarray:
+    def rng_fn(cls, rng, b, kappa, mu, size=None) -> np.ndarray:
         u = rng.uniform(size=size)
         switch = kappa ** 2 / (1 + kappa ** 2)
         non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
@@ -1811,7 +1811,7 @@ class StudentTRV(RandomVariable):
     _print_name = ("StudentT", "\\operatorname{StudentT}")
 
     @classmethod
-    def rng_fn(cls, rng, nu, mu, sigma, size=None)-> np.ndarray:
+    def rng_fn(cls, rng, nu, mu, sigma, size=None) -> np.ndarray:
         return stats.t.rvs(nu, mu, sigma, size=size, random_state=rng)
 
 
@@ -2538,7 +2538,7 @@ class WeibullBetaRV(WeibullRV):
     ndims_params = [0, 0]
 
     @classmethod
-    def rng_fn(cls, rng, alpha, beta, size)-> np.ndarray:
+    def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
         return beta * rng.weibull(alpha, size=size)
 
 
@@ -2642,7 +2642,7 @@ class HalfStudentTRV(RandomVariable):
     _print_name = ("HalfStudentT", "\\operatorname{HalfStudentT}")
 
     @classmethod
-    def rng_fn(cls, rng, nu, sigma, size=None)-> np.ndarray:
+    def rng_fn(cls, rng, nu, sigma, size=None) -> np.ndarray:
         return np.abs(stats.t.rvs(nu, sigma, size=size, random_state=rng))
 
 
@@ -2770,7 +2770,7 @@ class ExGaussianRV(RandomVariable):
     _print_name = ("ExGaussian", "\\operatorname{ExGaussian}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, sigma, nu, size=None)-> np.ndarray:
+    def rng_fn(cls, rng, mu, sigma, nu, size=None) -> np.ndarray:
         return rng.normal(mu, sigma, size=size) + rng.exponential(scale=nu, size=size)
 
 
@@ -3007,7 +3007,7 @@ class SkewNormalRV(RandomVariable):
     _print_name = ("SkewNormal", "\\operatorname{SkewNormal}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, sigma, alpha, size=None)-> np.ndarray:
+    def rng_fn(cls, rng, mu, sigma, alpha, size=None) -> np.ndarray:
         return stats.skewnorm.rvs(a=alpha, loc=mu, scale=sigma, size=size, random_state=rng)
 
 
@@ -3333,7 +3333,7 @@ class RiceRV(RandomVariable):
     _print_name = ("Rice", "\\operatorname{Rice}")
 
     @classmethod
-    def rng_fn(cls, rng, b, sigma, size=None)-> np.ndarray:
+    def rng_fn(cls, rng, b, sigma, size=None) -> np.ndarray:
         return stats.rice.rvs(b=b, scale=sigma, size=size, random_state=rng)
 
 
@@ -3560,7 +3560,7 @@ class LogitNormalRV(RandomVariable):
     _print_name = ("logitNormal", "\\operatorname{logitNormal}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, sigma, size=None)-> np.ndarray:
+    def rng_fn(cls, rng, mu, sigma, size=None) -> np.ndarray:
         return expit(stats.norm.rvs(loc=mu, scale=sigma, size=size, random_state=rng))
 
 
@@ -3684,7 +3684,7 @@ class InterpolatedRV(RandomVariable):
     _print_name = ("Interpolated", "\\operatorname{Interpolated}")
 
     @classmethod
-    def rng_fn(cls, rng, x, pdf, cdf, size=None)-> np.ndarray:
+    def rng_fn(cls, rng, x, pdf, cdf, size=None) -> np.ndarray:
         p = rng.uniform(size=size)
         return _interpolated_argcdf(p, pdf, cdf, x)
 
@@ -3821,7 +3821,7 @@ class MoyalRV(RandomVariable):
     _print_name = ("Moyal", "\\operatorname{Moyal}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, sigma, size=None)-> np.ndarray:
+    def rng_fn(cls, rng, mu, sigma, size=None) -> np.ndarray:
         return stats.moyal.rvs(mu, sigma, size=size, random_state=rng)
 
 
@@ -3948,7 +3948,7 @@ class PolyaGammaRV(RandomVariable):
         return super().__call__(h, z, size=size, **kwargs)
 
     @classmethod
-    def rng_fn(cls, rng, h, z, size=None)-> np.ndarray:
+    def rng_fn(cls, rng, h, z, size=None) -> np.ndarray:
         """
         Generate a random sample from the distribution with the given parameters
 
