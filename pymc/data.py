@@ -19,7 +19,7 @@ import pkgutil
 import urllib.request
 
 from copy import copy
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 import aesara
 import aesara.tensor as at
@@ -463,6 +463,45 @@ def align_minibatches(batches=None):
                 rng.seed()
 
 
+def determine_coords(model, value, dims: Optional[Sequence[str]] = None) -> Dict[str, Sequence]:
+    """Determines coordinate values from data or the model (via ``dims``)."""
+    coords = {}
+
+    # If value is a df or a series, we interpret the index as coords:
+    if isinstance(value, (pd.Series, pd.DataFrame)):
+        dim_name = None
+        if dims is not None:
+            dim_name = dims[0]
+        if dim_name is None and value.index.name is not None:
+            dim_name = value.index.name
+        if dim_name is not None:
+            coords[dim_name] = value.index
+
+    # If value is a df, we also interpret the columns as coords:
+    if isinstance(value, pd.DataFrame):
+        dim_name = None
+        if dims is not None:
+            dim_name = dims[1]
+        if dim_name is None and value.columns.name is not None:
+            dim_name = value.columns.name
+        if dim_name is not None:
+            coords[dim_name] = value.columns
+
+    if isinstance(value, np.ndarray) and dims is not None:
+        if len(dims) != value.ndim:
+            raise pm.exceptions.ShapeError(
+                "Invalid data shape. The rank of the dataset must match the " "length of `dims`.",
+                actual=value.shape,
+                expected=value.ndim,
+            )
+        for size, dim in zip(value.shape, dims):
+            coord = model.coords.get(dim, None)
+            if coord is None:
+                coords[dim] = pd.RangeIndex(size, name=dim)
+
+    return coords
+
+
 class Data:
     """Data container class that wraps :func:`aesara.shared` and lets
     the model be aware of its inputs and outputs.
@@ -516,10 +555,10 @@ class Data:
 
     def __new__(
         self,
-        name,
+        name: str,
         value,
         *,
-        dims=None,
+        dims: Optional[Sequence[str]] = None,
         export_index_as_coords=False,
         **kwargs,
     ):
@@ -549,7 +588,7 @@ class Data:
                 expected=shared_object.ndim,
             )
 
-        coords = self.set_coords(model, value, dims)
+        coords = determine_coords(model, value, dims)
 
         if export_index_as_coords:
             model.add_coords(coords)
@@ -559,58 +598,6 @@ class Data:
                 if not dname in model.dim_lengths:
                     model.add_coord(dname, values=None, length=shared_object.shape[d])
 
-        # To draw the node for this variable in the graphviz Digraph we need
-        # its shape.
-        # XXX: This needs to be refactored
-        # shared_object.dshape = tuple(shared_object.shape.eval())
-        # if dims is not None:
-        #     shape_dims = model.shape_from_dims(dims)
-        #     if shared_object.dshape != shape_dims:
-        #         raise pm.exceptions.ShapeError(
-        #             "Data shape does not match with specified `dims`.",
-        #             actual=shared_object.dshape,
-        #             expected=shape_dims,
-        #         )
-
         model.add_random_variable(shared_object, dims=dims)
 
         return shared_object
-
-    @staticmethod
-    def set_coords(model, value, dims=None) -> Dict[str, Sequence]:
-        coords = {}
-
-        # If value is a df or a series, we interpret the index as coords:
-        if isinstance(value, (pd.Series, pd.DataFrame)):
-            dim_name = None
-            if dims is not None:
-                dim_name = dims[0]
-            if dim_name is None and value.index.name is not None:
-                dim_name = value.index.name
-            if dim_name is not None:
-                coords[dim_name] = value.index
-
-        # If value is a df, we also interpret the columns as coords:
-        if isinstance(value, pd.DataFrame):
-            dim_name = None
-            if dims is not None:
-                dim_name = dims[1]
-            if dim_name is None and value.columns.name is not None:
-                dim_name = value.columns.name
-            if dim_name is not None:
-                coords[dim_name] = value.columns
-
-        if isinstance(value, np.ndarray) and dims is not None:
-            if len(dims) != value.ndim:
-                raise pm.exceptions.ShapeError(
-                    "Invalid data shape. The rank of the dataset must match the "
-                    "length of `dims`.",
-                    actual=value.shape,
-                    expected=value.ndim,
-                )
-            for size, dim in zip(value.shape, dims):
-                coord = model.coords.get(dim, None)
-                if coord is None:
-                    coords[dim] = pd.RangeIndex(size, name=dim)
-
-        return coords
