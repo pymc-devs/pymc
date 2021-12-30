@@ -71,8 +71,8 @@ class TestData(SeededTest):
 
     def test_sample_posterior_predictive_after_set_data(self):
         with pm.Model() as model:
-            x = pm.Data("x", [1.0, 2.0, 3.0])
-            y = pm.Data("y", [1.0, 2.0, 3.0])
+            x = pm.MutableData("x", [1.0, 2.0, 3.0])
+            y = pm.ConstantData("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
             pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y)
             trace = pm.sample(

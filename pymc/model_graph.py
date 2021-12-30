@@ -20,7 +20,7 @@ from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import walk
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.var import TensorVariable
+from aesara.tensor.var import TensorConstant, TensorVariable
 
 import pymc as pm
 
@@ -133,7 +133,7 @@ class ModelGraph:
             shape = "octagon"
             style = "filled"
             label = f"{var_name}\n~\nPotential"
-        elif isinstance(v, SharedVariable):
+        elif isinstance(v, (SharedVariable, TensorConstant)):
             shape = "box"
             style = "rounded, filled"
             label = f"{var_name}\n~\nData"
