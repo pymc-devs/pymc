@@ -3008,7 +3008,9 @@ class SkewNormalRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, mu, sigma, alpha, size=None) -> np.ndarray:
-        return np.asarray(stats.skewnorm.rvs(a=alpha, loc=mu, scale=sigma, size=size, random_state=rng))
+        return np.asarray(
+            stats.skewnorm.rvs(a=alpha, loc=mu, scale=sigma, size=size, random_state=rng)
+        )
 
 
 skewnormal = SkewNormalRV()
@@ -3976,7 +3978,9 @@ class PolyaGammaRV(RandomVariable):
         """
         # handle the kind of rng passed to the sampler
         bg = rng._bit_generator if isinstance(rng, np.random.RandomState) else rng
-        return np.asarray(random_polyagamma(h, z, size=size, random_state=bg).astype(aesara.config.floatX))
+        return np.asarray(
+            random_polyagamma(h, z, size=size, random_state=bg).astype(aesara.config.floatX)
+        )
 
 
 polyagamma = PolyaGammaRV()
