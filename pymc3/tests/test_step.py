@@ -60,12 +60,12 @@ from pymc3.step_methods import (
     Slice,
     UniformProposal,
 )
-from pymc3.step_methods.metropolis import (
-    BinaryMetropolis,
+from pymc3.step_methods.metropolis import BinaryMetropolis
+from pymc3.step_methods.mlda import extract_Q_estimate
+from pymc3.step_methods.settings_resetter import (
     SettingNotFoundInAttribute,
     SettingsResetter,
 )
-from pymc3.step_methods.mlda import extract_Q_estimate
 from pymc3.tests.checks import close_to
 from pymc3.tests.helpers import select_by_precision
 from pymc3.tests.models import (
@@ -1877,3 +1877,17 @@ class TestMLDA:
                         )
                         assert Q_1_0.mean(axis=1) == 0.0
                         assert Q_2_1.mean(axis=1) == 0.0
+
+
+class TestSlice:
+    def test_reset_tuning(self):
+        with Model() as _:
+            Normal("N")
+            w = 0.01
+            slicer = Slice(w=w, tune=True)
+            for _ in range(3):
+                slicer.w *= 2
+                slicer.tune = False
+                slicer.reset_tuning()
+                assert slicer.w == w
+                assert slicer.tune

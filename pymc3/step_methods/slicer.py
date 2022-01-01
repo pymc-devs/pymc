@@ -53,6 +53,7 @@ class Slice(ArrayStep):
         self.w = w
         self.tune = tune
         self.n_tunes = 0.0
+        self._settings_resetter = SettingsResetter(self, "tune", "n_tunes", "w")
         self.iter_limit = iter_limit
 
         if vars is None:
@@ -119,3 +120,6 @@ class Slice(ArrayStep):
                 return Competence.PREFERRED
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
+
+    def reset_tuning(self):
+        self._settings_resetter(self)
