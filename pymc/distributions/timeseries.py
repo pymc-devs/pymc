@@ -12,7 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from typing import List, Optional, Tuple, Union
+
 import aesara.tensor as at
+from aesara.tensor.random.basic import RandomVariable
+
 import numpy as np
 
 from aesara import scan
@@ -32,6 +36,7 @@ __all__ = [
     "MvStudentTRandomWalk",
 ]
 
+
 class GaussianRandomWalkRV(RandomVariable):
     name = "GaussianRandomWalk"
     ndim_supp = 0
@@ -40,12 +45,12 @@ class GaussianRandomWalkRV(RandomVariable):
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, sigma, tau, size):
-        rv, updates = aesara.scan(
-                fn=lambda prev_value: rng.normal(prev_value + mu, sigma),
-                outputs_info=np.array(0.0),
-                n_steps=size)
-        return rv
+    def rng_fn(cls, rng: np.random.RandomState,
+                    mu: Union[np.ndarray, float],
+                    sigma: Union[np.ndarray, float],
+                    size: int):
+        return np.cumsum(rng.normal(mu, sigma, size))
+
 
 class AR1(distribution.Continuous):
     """
