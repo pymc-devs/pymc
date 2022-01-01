@@ -23,7 +23,18 @@ import warnings
 
 from collections import defaultdict
 from copy import copy
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, cast
+from typing import (
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 import aesara.gradient as tg
 import cloudpickle
@@ -700,7 +711,7 @@ def _sample_many(
     step,
     callback=None,
     **kwargs,
-):
+) -> MultiTrace:
     """Samples all chains sequentially.
 
     Parameters
@@ -760,7 +771,7 @@ def _sample_population(
     progressbar: bool = True,
     parallelize=False,
     **kwargs,
-):
+) -> MultiTrace:
     """Performs sampling of a population of chains using the ``PopulationStepper``.
 
     Parameters
@@ -823,7 +834,7 @@ def _sample(
     model: Optional[Model] = None,
     callback=None,
     **kwargs,
-):
+) -> MultiTrace:
     """Main iteration for singleprocess sampling.
 
     Multiple step methods are supported via compound step methods.
@@ -853,8 +864,8 @@ def _sample(
 
     Returns
     -------
-    strace : pymc.backends.base.BaseTrace
-        A ``BaseTrace`` object that contains the samples for this chain.
+    strace : MultiTrace
+        A ``MultiTrace`` object that contains the samples for this chain.
     """
     skip_first = kwargs.get("skip_first", 0)
 
@@ -888,7 +899,7 @@ def iter_sample(
     model: Optional[Model] = None,
     random_seed: Optional[Union[int, List[int]]] = None,
     callback=None,
-):
+) -> Iterator[MultiTrace]:
     """Generate a trace on each iteration using the given step method.
 
     Multiple step methods ared supported via compound step methods.  Returns the
@@ -947,7 +958,7 @@ def _iter_sample(
     model=None,
     random_seed=None,
     callback=None,
-):
+) -> Iterator[Tuple[Backend, bool]]:
     """Generator for sampling one chain. (Used in singleprocess sampling.)
 
     Parameters
@@ -1207,7 +1218,7 @@ def _prepare_iter_population(
     model=None,
     random_seed=None,
     progressbar=True,
-):
+) -> Iterator[Sequence[BaseTrace]]:
     """Prepare a PopulationStepper and traces for population sampling.
 
     Parameters
@@ -1287,7 +1298,9 @@ def _prepare_iter_population(
     return _iter_population(draws, tune, popstep, steppers, traces, population)
 
 
-def _iter_population(draws, tune, popstep, steppers, traces, points):
+def _iter_population(
+    draws: int, tune: int, popstep: PopulationStepper, steppers, traces: Sequence[BaseTrace], points
+) -> Iterator[Sequence[BaseTrace]]:
     """Iterate a ``PopulationStepper``.
 
     Parameters
@@ -1393,14 +1406,14 @@ def _mp_sample(
     discard_tuned_samples=True,
     mp_ctx=None,
     **kwargs,
-):
+) -> MultiTrace:
     """Main iteration for multiprocess sampling.
 
     Parameters
     ----------
     draws : int
         The number of samples to draw
-    tune : int, optional
+    tune : int
         Number of iterations to tune, if applicable (defaults to None)
     step : function
         Step function
@@ -1501,7 +1514,7 @@ def _mp_sample(
             trace.close()
 
 
-def _choose_chains(traces, tune):
+def _choose_chains(traces: Sequence[BaseTrace], tune: Optional[int]) -> Tuple[List[BaseTrace], int]:
     """
     Filter and slice traces such that (n_traces * len(shortest_trace)) is maximized.
 
@@ -1514,7 +1527,7 @@ def _choose_chains(traces, tune):
         tune = 0
 
     if not traces:
-        return []
+        raise ValueError("No traces to slice.")
 
     lengths = [max(0, len(trace) - tune) for trace in traces]
     if not sum(lengths):
