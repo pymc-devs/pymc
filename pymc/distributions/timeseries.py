@@ -15,11 +15,10 @@
 from typing import List, Optional, Tuple, Union
 
 import aesara.tensor as at
-from aesara.tensor.random.basic import RandomVariable
-
 import numpy as np
 
 from aesara import scan
+from aesara.tensor.random.basic import RandomVariable
 from scipy import stats
 
 from pymc.distributions import distribution, multivariate
