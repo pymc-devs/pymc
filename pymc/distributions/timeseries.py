@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import List, Optional, Tuple, Union
+from typing import Union
 
 import aesara.tensor as at
 import numpy as np
