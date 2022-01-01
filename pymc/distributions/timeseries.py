@@ -45,10 +45,13 @@ class GaussianRandomWalkRV(RandomVariable):
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
 
     @classmethod
-    def rng_fn(cls, rng: np.random.RandomState,
-                    mu: Union[np.ndarray, float],
-                    sigma: Union[np.ndarray, float],
-                    size: int):
+    def rng_fn(
+        cls,
+        rng: np.random.RandomState,
+        mu: Union[np.ndarray, float],
+        sigma: Union[np.ndarray, float],
+        size: int,
+    ):
         return np.cumsum(rng.normal(mu, sigma, size))
 
 
