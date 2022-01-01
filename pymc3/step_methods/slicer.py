@@ -19,6 +19,7 @@ import numpy.random as nr
 
 from pymc3.model import modelcontext
 from pymc3.step_methods.arraystep import ArrayStep, Competence
+from pymc3.step_methods.settings_resetter import SettingsResetter
 from pymc3.theanof import inputvars
 from pymc3.vartypes import continuous_types
 
