@@ -37,6 +37,11 @@ __all__ = [
 
 
 class GaussianRandomWalkRV(RandomVariable):
+    """
+    GaussianRandomWalk Random Variable
+
+
+    """
     name = "GaussianRandomWalk"
     ndim_supp = 0
     ndims_params = [0, 0, 0]
@@ -49,9 +54,33 @@ class GaussianRandomWalkRV(RandomVariable):
         rng: np.random.RandomState,
         mu: Union[np.ndarray, float],
         sigma: Union[np.ndarray, float],
+        init: float,
         size: int,
-    ):
-        return np.cumsum(rng.normal(mu, sigma, size))
+    ) -> np.ndarray:
+        """Gaussian Random Walk randon function
+
+        Parameters
+        ----------
+        rng: np.random.RandomState
+           Numpy random number generator
+        mu: np.ndarray
+           Random walk mean
+        sigma: np.ndarray
+            Standard deviation of innovation (sigma > 0)
+        init: float
+            Initialization value for GaussianRandomWalk
+        size: int
+            Length of random walk
+
+        Notes
+        -----
+        Currently does not support init distribution
+
+        Returns
+        -------
+        np.ndarray
+        """
+        return init + np.cumsum(rng.normal(mu, sigma, size))
 
 
 class AR1(distribution.Continuous):
@@ -223,6 +252,7 @@ class GaussianRandomWalk(distribution.Continuous):
     """
 
     def __init__(self, tau=None, init=None, sigma=None, mu=0.0, sd=None, *args, **kwargs):
+        raise Exception("Deprecated Randomwalk distribution")
         kwargs.setdefault("shape", 1)
         super().__init__(*args, **kwargs)
         if sum(self.shape) == 0:

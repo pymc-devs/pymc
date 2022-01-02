@@ -17,15 +17,29 @@ import pytest
 
 from pymc.aesaraf import floatX
 from pymc.distributions.continuous import Flat, Normal
-from pymc.distributions.timeseries import AR, AR1, GARCH11, EulerMaruyama
+from pymc.distributions.timeseries import AR, AR1, GARCH11, EulerMaruyama, GaussianRandomWalkRV
 from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
 
 # pytestmark = pytest.mark.usefixtures("seeded_test")
-pytestmark = pytest.mark.xfail(reason="Timeseries not refactored")
 
 
+def test_grw_rv_op():
+    """Basic test for GRW RV op"""
+    init = 1
+    mu = 3
+    sd = .0000001
+    size = 4
+
+    rng = np.random.default_rng()
+    grw = GaussianRandomWalkRV.rng_fn(rng, mu, sd, init, size)
+    np.testing.assert_almost_equal(grw[-1], 13)
+    assert grw.shape[0] == size
+
+
+
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_AR():
     # AR1
     data = np.array([0.3, 1, 2, 3, 4])
@@ -62,7 +76,7 @@ def test_AR():
     reg_like = t["z"].logp({"z": data[2:], "y": data})
     np.testing.assert_allclose(ar_like, reg_like)
 
-
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_AR_nd():
     # AR2 multidimensional
     p, T, n = 3, 100, 5
@@ -82,6 +96,7 @@ def test_AR_nd():
     )
 
 
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_GARCH11():
     # test data ~ N(0, 1)
     data = np.array(
@@ -142,6 +157,7 @@ def _gen_sde_path(sde, pars, dt, n, x0):
     return np.array(xs)
 
 
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_linear():
     lam = -0.78
     sig2 = 5e-3
