@@ -17,6 +17,7 @@ import pandas as pd
 import pytest
 
 from aesara import shared
+from aesara.compile.sharedvalue import SharedVariable
 from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorVariable
 
@@ -32,7 +33,7 @@ class TestData(SeededTest):
     def test_deterministic(self):
         data_values = np.array([0.5, 0.4, 5, 2])
         with pm.Model() as model:
-            X = pm.Data("X", data_values)
+            X = pm.MutableData("X", data_values)
             pm.Normal("y", 0, 1, observed=X)
             model.logp(model.recompute_initial_point())
 
@@ -43,7 +44,7 @@ class TestData(SeededTest):
         x_pred = np.linspace(-3, 3, 200, dtype="float32")
 
         with pm.Model():
-            x_shared = pm.Data("x_shared", x)
+            x_shared = pm.MutableData("x_shared", x)
             b = pm.Normal("b", 0.0, 10.0)
             pm.Normal("obs", b * x_shared, np.sqrt(1e-2), observed=y)
 
@@ -95,8 +96,8 @@ class TestData(SeededTest):
 
     def test_sample_after_set_data(self):
         with pm.Model() as model:
-            x = pm.Data("x", [1.0, 2.0, 3.0])
-            y = pm.Data("y", [1.0, 2.0, 3.0])
+            x = pm.MutableData("x", [1.0, 2.0, 3.0])
+            y = pm.MutableData("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
             pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y)
             pm.sample(
@@ -131,8 +132,8 @@ class TestData(SeededTest):
         See https://github.com/pymc-devs/pymc/issues/3813
         """
         with pm.Model() as model:
-            index = pm.Data("index", [2, 0, 1, 0, 2])
-            y = pm.Data("y", [1.0, 2.0, 3.0, 2.0, 1.0])
+            index = pm.MutableData("index", [2, 0, 1, 0, 2])
+            y = pm.MutableData("y", [1.0, 2.0, 3.0, 2.0, 1.0])
             alpha = pm.Normal("alpha", 0, 1.5, size=3)
             pm.Normal("obs", alpha[index], np.sqrt(1e-2), observed=y)
 
@@ -163,7 +164,7 @@ class TestData(SeededTest):
         See https://github.com/pymc-devs/pymc/issues/3842
         """
         with pm.Model() as m:
-            x = pm.Data("x", [1.0, 2.0, 3.0])
+            x = pm.MutableData("x", [1.0, 2.0, 3.0])
             y = pm.Normal("y", mu=x, size=(2, 3))
             assert y.eval().shape == (2, 3)
             idata = pm.sample(
@@ -221,7 +222,7 @@ class TestData(SeededTest):
 
     def test_creation_of_data_outside_model_context(self):
         with pytest.raises((IndexError, TypeError)) as error:
-            pm.Data("data", [1.1, 2.2, 3.3])
+            pm.ConstantData("data", [1.1, 2.2, 3.3])
         error.match("No model on context stack")
 
     def test_set_data_to_non_data_container_variables(self):
@@ -244,8 +245,8 @@ class TestData(SeededTest):
     @pytest.mark.xfail(reason="Depends on ModelGraph")
     def test_model_to_graphviz_for_model_with_data_container(self):
         with pm.Model() as model:
-            x = pm.Data("x", [1.0, 2.0, 3.0])
-            y = pm.Data("y", [1.0, 2.0, 3.0])
+            x = pm.ConstantData("x", [1.0, 2.0, 3.0])
+            y = pm.MutableData("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
             obs_sigma = floatX(np.sqrt(1e-2))
             pm.Normal("obs", beta * x, obs_sigma, observed=y)
@@ -262,12 +263,14 @@ class TestData(SeededTest):
                 pm.model_to_graphviz(model, formatting=formatting)
 
         exp_without = [
-            'x [label="x\n~\nData" shape=box style="rounded, filled"]',
+            'x [label="x\n~\nConstantData" shape=box style="rounded, filled"]',
+            'y [label="x\n~\nMutableData" shape=box style="rounded, filled"]',
             'beta [label="beta\n~\nNormal"]',
             'obs [label="obs\n~\nNormal" style=filled]',
         ]
         exp_with = [
-            'x [label="x\n~\nData" shape=box style="rounded, filled"]',
+            'x [label="x\n~\nConstantData" shape=box style="rounded, filled"]',
+            'y [label="x\n~\nMutableData" shape=box style="rounded, filled"]',
             'beta [label="beta\n~\nNormal(mu=0.0, sigma=10.0)"]',
             f'obs [label="obs\n~\nNormal(mu=f(f(beta), x), sigma={obs_sigma})" style=filled]',
         ]
@@ -290,7 +293,7 @@ class TestData(SeededTest):
         }
         # pass coordinates explicitly, use numpy array in Data container
         with pm.Model(coords=coords) as pmodel:
-            pm.Data("observations", data, dims=("rows", "columns"))
+            pm.MutableData("observations", data, dims=("rows", "columns"))
 
         assert "rows" in pmodel.coords
         assert pmodel.coords["rows"] == ("R1", "R2", "R3", "R4", "R5")
@@ -310,7 +313,7 @@ class TestData(SeededTest):
         Their lengths are then automatically linked to the corresponding Tensor dimension.
         """
         with pm.Model() as pmodel:
-            intensity = pm.Data("intensity", np.ones((2, 3)), dims=("row", "column"))
+            intensity = pm.MutableData("intensity", np.ones((2, 3)), dims=("row", "column"))
             assert "row" in pmodel.dim_lengths
             assert "column" in pmodel.dim_lengths
             assert isinstance(pmodel.dim_lengths["row"], TensorVariable)
@@ -327,7 +330,7 @@ class TestData(SeededTest):
             # Imply a dimension through RV params
             pm.Normal("n", mu=[1, 2, 3], dims="city")
             # _Use_ the dimension for a data variable
-            inhabitants = pm.Data("inhabitants", [100, 200, 300], dims="city")
+            inhabitants = pm.MutableData("inhabitants", [100, 200, 300], dims="city")
 
             # Attempting to re-size the dimension through the data variable would
             # cause shape problems in InferenceData conversion, because the RV remains (3,).
@@ -343,7 +346,7 @@ class TestData(SeededTest):
             name="sales",
         )
         with pm.Model() as pmodel:
-            pm.Data("sales", ser_sales, dims="date", export_index_as_coords=True)
+            pm.ConstantData("sales", ser_sales, dims="date", export_index_as_coords=True)
 
         assert "date" in pmodel.coords
         assert len(pmodel.coords["date"]) == 22
@@ -360,7 +363,9 @@ class TestData(SeededTest):
 
         # infer coordinates from index and columns of the DataFrame
         with pm.Model() as pmodel:
-            pm.Data("observations", df_data, dims=("rows", "columns"), export_index_as_coords=True)
+            pm.ConstantData(
+                "observations", df_data, dims=("rows", "columns"), export_index_as_coords=True
+            )
 
         assert "rows" in pmodel.coords
         assert "columns" in pmodel.coords
@@ -370,14 +375,21 @@ class TestData(SeededTest):
         strict_value = True
         allow_downcast_value = False
         with pm.Model():
-            data = pm.Data(
-                "data",
+            data = pm.MutableData(
+                "mdata",
                 value=[[1.0], [2.0], [3.0]],
                 strict=strict_value,
                 allow_downcast=allow_downcast_value,
             )
         assert data.container.strict is strict_value
         assert data.container.allow_downcast is allow_downcast_value
+
+    def test_data_mutable_default_warning(self):
+        with pm.Model():
+            with pytest.warns(FutureWarning, match="`mutable` kwarg was not specified"):
+                data = pm.Data("x", [1, 2, 3])
+            assert isinstance(data, SharedVariable)
+        pass
 
 
 def test_data_naming():
@@ -386,7 +398,7 @@ def test_data_naming():
     not given model-relative names.
     """
     with pm.Model("named_model") as model:
-        x = pm.Data("x", [1.0, 2.0, 3.0])
+        x = pm.ConstantData("x", [1.0, 2.0, 3.0])
         y = pm.Normal("y")
     assert y.name == "named_model_y"
     assert x.name == "named_model_x"

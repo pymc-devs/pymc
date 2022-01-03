@@ -17,6 +17,7 @@ import io
 import os
 import pkgutil
 import urllib.request
+import warnings
 
 from copy import copy
 from typing import Any, Dict, List, Optional, Sequence, Union
@@ -30,6 +31,7 @@ from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Apply
 from aesara.tensor.type import TensorType
 from aesara.tensor.var import TensorConstant, TensorVariable
+from packaging import version
 
 import pymc as pm
 
@@ -555,7 +557,7 @@ def Data(
     *,
     dims: Optional[Sequence[str]] = None,
     export_index_as_coords=False,
-    mutable: bool = True,
+    mutable: Optional[bool] = None,
     **kwargs,
 ) -> Union[SharedVariable, TensorConstant]:
     """Data container that registers a data variable with the model.
@@ -570,6 +572,11 @@ def Data(
         The name for this variable
     value: {List, np.ndarray, pd.Series, pd.Dataframe}
         A value to associate with this variable
+    mutable : bool, optional
+        Switches between creating a ``SharedVariable`` (``mutable=True``, default)
+        vs. creating a ``TensorConstant`` (``mutable=False``).
+        Consider using ``pm.ConstantData`` or ``pm.MutableData`` as less verbose
+        alternatives to ``pm.Data(..., mutable=...)``.
     dims: {str, tuple of str}, optional, default=None
         Dimension names of the random variables (as opposed to the shapes of these
         random variables). Use this when `value` is a pandas Series or DataFrame. The
@@ -592,7 +599,7 @@ def Data(
     >>> observed_data = [mu + np.random.randn(20) for mu in true_mu]
 
     >>> with pm.Model() as model:
-    ...     data = pm.Data('data', observed_data[0])
+    ...     data = pm.MutableData('data', observed_data[0])
     ...     mu = pm.Normal('mu', 0, 10)
     ...     pm.Normal('y', mu=mu, sigma=1, observed=data)
 
@@ -626,6 +633,18 @@ def Data(
     # `pandas_to_array` takes care of parameter `value` and
     # transforms it to something digestible for Aesara.
     arr = pandas_to_array(value)
+
+    if mutable is None:
+        current = version.Version(pm.__version__)
+        mutable = current.major == 4 and current.minor < 1
+        if mutable:
+            warnings.warn(
+                "The `mutable` kwarg was not specified. Currently it defaults to `pm.Data(mutable=True)`,"
+                " which is equivalent to using `pm.MutableData()`."
+                " In v4.1.0 the default will change to `pm.Data(mutable=False)`, equivalent to `pm.ConstantData`."
+                " Set `pm.Data(..., mutable=False/True)`, or use `pm.ConstantData`/`pm.MutableData`.",
+                FutureWarning,
+            )
     if mutable:
         x = aesara.shared(arr, name, **kwargs)
     else:

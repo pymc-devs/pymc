@@ -133,10 +133,14 @@ class ModelGraph:
             shape = "octagon"
             style = "filled"
             label = f"{var_name}\n~\nPotential"
-        elif isinstance(v, (SharedVariable, TensorConstant)):
+        elif isinstance(v, TensorConstant):
             shape = "box"
             style = "rounded, filled"
-            label = f"{var_name}\n~\nData"
+            label = f"{var_name}\n~\nConstantData"
+        elif isinstance(v, SharedVariable):
+            shape = "box"
+            style = "rounded, filled"
+            label = f"{var_name}\n~\nMutableData"
         elif v.owner and isinstance(v.owner.op, RandomVariable):
             shape = "ellipse"
             if hasattr(v.tag, "observations"):

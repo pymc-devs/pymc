@@ -955,7 +955,7 @@ class TestSamplePriorPredictive(SeededTest):
         observed = np.random.normal(10, 1, size=200)
         with pm.Model():
             # Use a prior that's way off to show we're ignoring the observed variables
-            observed_data = pm.Data("observed_data", observed)
+            observed_data = pm.MutableData("observed_data", observed)
             mu = pm.Normal("mu", mu=-100, sigma=1)
             positive_mu = pm.Deterministic("positive_mu", np.abs(mu))
             z = -1 - positive_mu
