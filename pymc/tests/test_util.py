@@ -154,6 +154,8 @@ def test_unset_repr(capsys):
         # (pm.Exponential, 0, 1, {"lam": 1}, {}), PyMC Exponential gradient is failing miserably, need to figure out why
         (pm.HalfNormal, 0, 1, {"sigma": 1}, {}),
         (pm.Binomial, 0, 8, {"p": 0.5}, {"n": 10}),
+        (pm.Poisson, 1, 15, {"mu": 10}, {}),
+        (pm.Poisson, 19, 41, {"mu": 30}, {}),
     ],
 )
 @pytest.mark.parametrize("mass", [0.5, 0.75, 0.95])
@@ -185,26 +187,6 @@ def test_find_constrained_prior(distribution, lower, upper, init_guess, fixed_pa
         (19, 41, {"mu": 30}),
     ],
 )
-def test_constrained_prior_poisson(lower, upper, init_guess):
-    distribution = pm.Poisson
-    mass = 0.95
-    with pytest.warns(None) as record:
-        opt_params = pm.find_constrained_prior(
-            distribution,
-            lower=lower,
-            upper=upper,
-            init_guess=init_guess,
-        )
-    assert len(record) == 0
-
-    opt_distribution = distribution.dist(**opt_params)
-    mass_in_interval = (
-        pm.math.exp(pm.logcdf(opt_distribution, upper))
-        - pm.math.exp(pm.logcdf(opt_distribution, lower))
-    ).eval()
-    assert np.abs(mass_in_interval - mass) <= 1e-2  # reduce to 1% tolerance for float32
-
-
 @pytest.mark.parametrize(
     "distribution, lower, upper, init_guess, fixed_params",
     [
