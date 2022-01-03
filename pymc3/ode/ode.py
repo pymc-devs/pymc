@@ -136,7 +136,7 @@ class DifferentialEquation(Op):
 
     def make_node(self, y0, theta):
         inputs = (y0, theta)
-        _log.debug("make_node for inputs {}".format(hash(inputs)))
+        _log.debug(f"make_node for inputs {hash(inputs)}")
         states = self._otypes[0]()
         sens = self._otypes[1]()
 
@@ -220,7 +220,7 @@ class DifferentialEquation(Op):
         return output_shapes
 
     def grad(self, inputs, output_grads):
-        _log.debug("grad w.r.t. inputs {}".format(hash(tuple(inputs))))
+        _log.debug(f"grad w.r.t. inputs {hash(tuple(inputs))}")
 
         # fetch symbolic sensitivity output node from cache
         ihash = hash(tuple(inputs))

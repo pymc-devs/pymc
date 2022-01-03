@@ -280,7 +280,7 @@ def multinomial_logpdf(value, n, p):
 
 
 def dirichlet_multinomial_logpmf(value, n, a):
-    value, n, a = [np.asarray(x) for x in [value, n, a]]
+    value, n, a = (np.asarray(x) for x in [value, n, a])
     assert value.ndim == 1
     assert n.ndim == 0
     assert a.shape == value.shape
@@ -1875,7 +1875,7 @@ class TestMatchesScipy:
         )
 
         assert_almost_equal(
-            sum([model_single.fastlogp({"m": val}) for val in vals]),
+            sum(model_single.fastlogp({"m": val}) for val in vals),
             model_many.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -1889,7 +1889,7 @@ class TestMatchesScipy:
             Multinomial("m", n=ns, p=p, shape=vals.shape)
 
         assert_almost_equal(
-            sum([multinomial_logpdf(val, n, p) for val, n in zip(vals, ns)]),
+            sum(multinomial_logpdf(val, n, p) for val, n in zip(vals, ns)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -1903,7 +1903,7 @@ class TestMatchesScipy:
             Multinomial("m", n=ns, p=ps, shape=vals.shape)
 
         assert_almost_equal(
-            sum([multinomial_logpdf(val, n, p) for val, n, p in zip(vals, ns, ps)]),
+            sum(multinomial_logpdf(val, n, p) for val, n, p in zip(vals, ns, ps)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -1917,7 +1917,7 @@ class TestMatchesScipy:
             Multinomial("m", n=n, p=ps, shape=vals.shape)
 
         assert_almost_equal(
-            sum([multinomial_logpdf(val, n, p) for val, p in zip(vals, ps)]),
+            sum(multinomial_logpdf(val, n, p) for val, p in zip(vals, ps)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2009,7 +2009,7 @@ class TestMatchesScipy:
         )
 
         assert_almost_equal(
-            sum([model_single.fastlogp({"m": val}) for val in vals]),
+            sum(model_single.fastlogp({"m": val}) for val in vals),
             model_many.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2023,7 +2023,7 @@ class TestMatchesScipy:
             DirichletMultinomial("m", n=ns, a=a, shape=vals.shape)
 
         assert_almost_equal(
-            sum([dirichlet_multinomial_logpmf(val, n, a) for val, n in zip(vals, ns)]),
+            sum(dirichlet_multinomial_logpmf(val, n, a) for val, n in zip(vals, ns)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2037,7 +2037,7 @@ class TestMatchesScipy:
             DirichletMultinomial("m", n=ns, a=as_, shape=vals.shape)
 
         assert_almost_equal(
-            sum([dirichlet_multinomial_logpmf(val, n, a) for val, n, a in zip(vals, ns, as_)]),
+            sum(dirichlet_multinomial_logpmf(val, n, a) for val, n, a in zip(vals, ns, as_)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )
@@ -2051,7 +2051,7 @@ class TestMatchesScipy:
             DirichletMultinomial("m", n=n, a=as_, shape=vals.shape)
 
         assert_almost_equal(
-            sum([dirichlet_multinomial_logpmf(val, n, a) for val, a in zip(vals, as_)]),
+            sum(dirichlet_multinomial_logpmf(val, n, a) for val, a in zip(vals, as_)),
             model.fastlogp({"m": vals}),
             decimal=4,
         )

@@ -24,6 +24,8 @@ from typing import TYPE_CHECKING
 
 import dill
 
+from deprecat.sphinx import deprecat
+
 if TYPE_CHECKING:
     from typing import Optional, Callable
 
@@ -67,6 +69,7 @@ vectorized_ppc = contextvars.ContextVar(
 )  # type: contextvars.ContextVar[Optional[Callable]]
 
 PLATFORM = sys.platform
+UNSET = object()
 
 
 class _Unpickling:
@@ -95,7 +98,7 @@ class Distribution:
         data = kwargs.pop("observed", None)
         cls.data = data
         if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
-            raise TypeError("observed needs to be data but got: {}".format(type(data)))
+            raise TypeError(f"observed needs to be data but got: {type(data)}")
         total_size = kwargs.pop("total_size", None)
 
         dims = kwargs.pop("dims", None)
@@ -130,15 +133,54 @@ class Distribution:
         dist.__init__(*args, **kwargs)
         return dist
 
+    @deprecat(
+        deprecated_args={
+            "testval": dict(version="3.11.5", reason="replaced by `initval` in PyMC 4.0.0"),
+        }
+    )
     def __init__(
-        self, shape, dtype, testval=None, defaults=(), transform=None, broadcastable=None, dims=None
+        self,
+        shape,
+        dtype,
+        initval=None,
+        defaults=(),
+        transform=None,
+        broadcastable=None,
+        dims=None,
+        *,
+        testval=UNSET,
     ):
+        """Creates a PyMC distribution object.
+
+        Parameters
+        ----------
+        shape : tuple
+            Output shape of the RV.
+            Forwarded to the Theano TensorType of this RV.
+        dtype
+            Forwarded to the Theano TensorType of this RV.
+        initval : np.ndarray
+            Initial value for this RV.
+            In PyMC 4.0.0 this will no longer assign test values to the tensors.
+        defaults : tuple
+        transform : pm.Transform
+        broadcastable : tuple
+            Forwarded to the Theano TensorType of this RV.
+        dims : tuple
+            Ignored.
+        testval : np.ndarray
+            The old way of specifying initial values assigning test-values.
+        """
+        # Handle deprecated kwargs
+        if testval is not UNSET:
+            initval = testval
+
         self.shape = np.atleast_1d(shape)
         if False in (np.floor(self.shape) == self.shape):
             raise TypeError("Expected int elements in shape")
         self.dtype = dtype
         self.type = TensorType(self.dtype, self.shape, broadcastable)
-        self.testval = testval
+        self.testval = initval
         self.defaults = defaults
         self.transform = transform
 
@@ -288,7 +330,7 @@ class NoDistribution(Distribution):
         **kwargs,
     ):
         super().__init__(
-            shape=shape, dtype=dtype, testval=testval, defaults=defaults, *args, **kwargs
+            shape=shape, dtype=dtype, initval=testval, defaults=defaults, *args, **kwargs
         )
         self.parent_dist = parent_dist
 
@@ -353,16 +395,22 @@ class DensityDist(Distribution):
 
     """
 
+    @deprecat(
+        deprecated_args={
+            "testval": dict(version="3.11.5", reason="replaced by `initval` in PyMC 4.0.0"),
+        }
+    )
     def __init__(
         self,
         logp,
         shape=(),
         dtype=None,
-        testval=0,
+        initval=0,
         random=None,
         wrap_random_with_dist_shape=True,
         check_shape_in_random=True,
         *args,
+        testval=UNSET,
         **kwargs,
     ):
         """
@@ -379,8 +427,8 @@ class DensityDist(Distribution):
             a value here.
         dtype: None, str (Optional)
             The dtype of the distribution.
-        testval: number or array (Optional)
-            The ``testval`` of the RV's tensor that follow the ``DensityDist``
+        initval: number or array (Optional)
+            The ``initval`` of the RV's tensor that follow the ``DensityDist``
             distribution.
         random: None or callable (Optional)
             If ``None``, no random method is attached to the ``DensityDist``
@@ -403,6 +451,8 @@ class DensityDist(Distribution):
             If ``True``, the shape of the random samples generate in the
             ``random`` method is checked with the expected return shape. This
             test is only performed if ``wrap_random_with_dist_shape is False``.
+        testval : np.ndarray
+            The old way of specifying initial values assigning test-values.
         args, kwargs: (Optional)
             These are passed to the parent class' ``__init__``.
 
@@ -525,9 +575,13 @@ class DensityDist(Distribution):
                 assert prior.shape == (10, 100, 3)
 
         """
+        # Handle deprecated kwargs
+        if testval is not UNSET:
+            initval = testval
+
         if dtype is None:
             dtype = theano.config.floatX
-        super().__init__(shape, dtype, testval, *args, **kwargs)
+        super().__init__(shape, dtype, initval, *args, **kwargs)
         self.logp = logp
         if type(self.logp) == types.MethodType:
             if PLATFORM != "linux":

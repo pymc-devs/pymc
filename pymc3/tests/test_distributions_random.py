@@ -216,7 +216,7 @@ class BaseTestCases:
             self.model = pm.Model()
 
         def get_random_variable(self, shape, with_vector_params=False, name=None):
-            """ Creates a RandomVariable of the parametrized distribution. """
+            """Creates a RandomVariable of the parametrized distribution."""
             if with_vector_params:
                 params = {
                     key: value * np.ones(self.shape, dtype=np.dtype(type(value)))
@@ -240,7 +240,7 @@ class BaseTestCases:
 
         @staticmethod
         def sample_random_variable(random_variable, size):
-            """ Draws samples from a RandomVariable using its .random() method. """
+            """Draws samples from a RandomVariable using its .random() method."""
             try:
                 if size is None:
                     return random_variable.random()
@@ -255,7 +255,7 @@ class BaseTestCases:
         @pytest.mark.parametrize("size", [None, (), 1, (1,), 5, (4, 5)], ids=str)
         @pytest.mark.parametrize("shape", [None, ()], ids=str)
         def test_scalar_distribution_shape(self, shape, size):
-            """ Draws samples of different [size] from a scalar [shape] RV. """
+            """Draws samples of different [size] from a scalar [shape] RV."""
             rv = self.get_random_variable(shape)
             exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
             exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
@@ -275,7 +275,7 @@ class BaseTestCases:
             "shape", [None, (), (1,), (1, 1), (1, 2), (10, 11, 1), (9, 10, 2)], ids=str
         )
         def test_scalar_sample_shape(self, shape, size):
-            """ Draws samples of scalar [size] from a [shape] RV. """
+            """Draws samples of scalar [size] from a [shape] RV."""
             rv = self.get_random_variable(shape)
             exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
             exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
@@ -934,6 +934,10 @@ class TestScalarParameterSamples(SeededTest):
                     ref_rand=ref_rand_chol_transpose,
                 )
 
+    @pytest.mark.xfail(
+        condition=sys.platform.startswith("win"),
+        reason="Compilation problems. See https://github.com/pymc-devs/pymc/issues/5253",
+    )
     def test_kronecker_normal(self):
         def ref_rand(size, mu, covs, sigma):
             cov = pm.math.kronecker(covs[0], covs[1]).eval()
