@@ -17,7 +17,13 @@ import pytest
 
 from pymc.aesaraf import floatX
 from pymc.distributions.continuous import Flat, Normal
-from pymc.distributions.timeseries import AR, AR1, GARCH11, EulerMaruyama, GaussianRandomWalkRV
+from pymc.distributions.timeseries import (
+    AR,
+    AR1,
+    GARCH11,
+    EulerMaruyama,
+    GaussianRandomWalkRV,
+)
 from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
@@ -29,14 +35,13 @@ def test_grw_rv_op():
     """Basic test for GRW RV op"""
     init = 1
     mu = 3
-    sd = .0000001
+    sd = 0.0000001
     size = 4
 
     rng = np.random.default_rng()
     grw = GaussianRandomWalkRV.rng_fn(rng, mu, sd, init, size)
     np.testing.assert_almost_equal(grw[-1], 13)
     assert grw.shape[0] == size
-
 
 
 @pytest.mark.xfail(reason="Timeseries not refactored")
@@ -75,6 +80,7 @@ def test_AR():
     ar_like = t["y"].logp({"z": data[2:], "y": data})
     reg_like = t["z"].logp({"z": data[2:], "y": data})
     np.testing.assert_allclose(ar_like, reg_like)
+
 
 @pytest.mark.xfail(reason="Timeseries not refactored")
 def test_AR_nd():

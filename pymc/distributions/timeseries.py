@@ -42,6 +42,7 @@ class GaussianRandomWalkRV(RandomVariable):
 
 
     """
+
     name = "GaussianRandomWalk"
     ndim_supp = 0
     ndims_params = [0, 0, 0]
