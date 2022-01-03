@@ -255,7 +255,7 @@ class TestDataPyMC:
             )
 
             data_dims = ("date", "city")
-            data = pm.Data("data", df_data, dims=data_dims)
+            data = pm.ConstantData("data", df_data, dims=data_dims)
             _ = pm.Normal("likelihood", mu=city_temperature, sd=0.5, observed=data, dims=data_dims)
 
             trace = pm.sample(
@@ -281,14 +281,14 @@ class TestDataPyMC:
         np.testing.assert_array_equal(idata.observed_data.coords["city"], coords["city"])
 
     def test_ovewrite_model_coords_dims(self):
-        """Check coords and dims from model object can be partially overwrited."""
+        """Check coords and dims from model object can be partially overwritten."""
         dim1 = ["a", "b"]
         new_dim1 = ["c", "d"]
         coords = {"dim1": dim1, "dim2": ["c1", "c2"]}
         x_data = np.arange(4).reshape((2, 2))
         y = x_data + np.random.normal(size=(2, 2))
         with pm.Model(coords=coords):
-            x = pm.Data("x", x_data, dims=("dim1", "dim2"))
+            x = pm.ConstantData("x", x_data, dims=("dim1", "dim2"))
             beta = pm.Normal("beta", 0, 1, dims="dim1")
             _ = pm.Normal("obs", x * beta, 1, observed=y, dims=("dim1", "dim2"))
             trace = pm.sample(100, tune=100, return_inferencedata=False)
@@ -466,8 +466,8 @@ class TestDataPyMC:
     def test_constant_data(self, use_context):
         """Test constant_data group behaviour."""
         with pm.Model() as model:
-            x = pm.Data("x", [1.0, 2.0, 3.0])
-            y = pm.Data("y", [1.0, 2.0, 3.0])
+            x = pm.ConstantData("x", [1.0, 2.0, 3.0])
+            y = pm.MutableData("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
             trace = pm.sample(100, chains=2, tune=100, return_inferencedata=False)
@@ -483,8 +483,8 @@ class TestDataPyMC:
 
     def test_predictions_constant_data(self):
         with pm.Model():
-            x = pm.Data("x", [1.0, 2.0, 3.0])
-            y = pm.Data("y", [1.0, 2.0, 3.0])
+            x = pm.ConstantData("x", [1.0, 2.0, 3.0])
+            y = pm.MutableData("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
             trace = pm.sample(100, tune=100, return_inferencedata=False)
@@ -495,8 +495,8 @@ class TestDataPyMC:
         assert not fails
 
         with pm.Model():
-            x = pm.Data("x", [1.0, 2.0])
-            y = pm.Data("y", [1.0, 2.0])
+            x = pm.MutableData("x", [1.0, 2.0])
+            y = pm.ConstantData("y", [1.0, 2.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
             predictive_trace = pm.sample_posterior_predictive(
@@ -519,8 +519,8 @@ class TestDataPyMC:
 
     def test_no_trace(self):
         with pm.Model() as model:
-            x = pm.Data("x", [1.0, 2.0, 3.0])
-            y = pm.Data("y", [1.0, 2.0, 3.0])
+            x = pm.ConstantData("x", [1.0, 2.0, 3.0])
+            y = pm.MutableData("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
             idata = pm.sample(100, tune=100)
@@ -553,8 +553,8 @@ class TestDataPyMC:
     def test_priors_separation(self, use_context):
         """Test model is enough to get prior, prior predictive and observed_data."""
         with pm.Model() as model:
-            x = pm.Data("x", [1.0, 2.0, 3.0])
-            y = pm.Data("y", [1.0, 2.0, 3.0])
+            x = pm.MutableData("x", [1.0, 2.0, 3.0])
+            y = pm.ConstantData("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
             prior = pm.sample_prior_predictive(return_inferencedata=False)

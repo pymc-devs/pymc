@@ -1114,7 +1114,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     ):
         """Changes the values of a data variable in the model.
 
-        In contrast to pm.Data().set_value, this method can also
+        In contrast to pm.MutableData().set_value, this method can also
         update the corresponding coordinates.
 
         Parameters
@@ -1131,7 +1131,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         shared_object = self[name]
         if not isinstance(shared_object, SharedVariable):
             raise TypeError(
-                f"The variable `{name}` must be a `SharedVariable` (e.g. `pymc.Data`) to allow updating. "
+                f"The variable `{name}` must be a `SharedVariable`"
+                " (created through `pm.MutableData()` or `pm.Data(mutable=True)`) to allow updating. "
                 f"The current type is: {type(shared_object)}"
             )
 
@@ -1156,7 +1157,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             length_changed = new_length != old_length
 
             # Reject resizing if we already know that it would create shape problems.
-            # NOTE: If there are multiple pm.Data containers sharing this dim, but the user only
+            # NOTE: If there are multiple pm.MutableData containers sharing this dim, but the user only
             #       changes the values for one of them, they will run into shape problems nonetheless.
             length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
             if not isinstance(length_belongs_to, SharedVariable) and length_changed:
@@ -1735,8 +1736,8 @@ def set_data(new_data, model=None):
 
         >>> import pymc as pm
         >>> with pm.Model() as model:
-        ...     x = pm.Data('x', [1., 2., 3.])
-        ...     y = pm.Data('y', [1., 2., 3.])
+        ...     x = pm.MutableData('x', [1., 2., 3.])
+        ...     y = pm.MutableData('y', [1., 2., 3.])
         ...     beta = pm.Normal('beta', 0, 1)
         ...     obs = pm.Normal('obs', x * beta, 1, observed=y)
         ...     idata = pm.sample(1000, tune=1000)
