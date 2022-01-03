@@ -179,14 +179,6 @@ def test_find_constrained_prior(distribution, lower, upper, init_guess, fixed_pa
     assert np.abs(mass_in_interval - mass) <= 1e-5
 
 
-# test Poisson separately -- hard to optimize precisely when float32
-@pytest.mark.parametrize(
-    "lower, upper, init_guess",
-    [
-        (1, 15, {"mu": 10}),
-        (19, 41, {"mu": 30}),
-    ],
-)
 @pytest.mark.parametrize(
     "distribution, lower, upper, init_guess, fixed_params",
     [
