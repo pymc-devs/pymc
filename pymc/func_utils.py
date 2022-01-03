@@ -108,7 +108,7 @@ def find_constrained_prior(
         aesara_jac = pm.gradient(cdf_error, [dist_params])
         jac = pm.aesaraf.compile_pymc([dist_params], aesara_jac, allow_input_downcast=True)
     # when PyMC cannot compute the gradient
-    except (NotImplementedError, NullTypeGradError, TypeError):
+    except (NotImplementedError, NullTypeGradError):
         jac = "2-point"
 
     opt = optimize.least_squares(cdf_error_fn, x0=list(init_guess.values()), jac=jac)
