@@ -2,7 +2,7 @@
 
 This guide provides an overview on how to implement a distribution for version 4 of PyMC.
 It is designed for developers who wish to add a new distribution to the library.
-Users will not be aware of all this complexity and should instead make use of helper methods such as (TODO).
+Users will not be aware of all this complexity and should instead make use of helper methods such as `~pymc.distributions.DensityDist`.
 
 PyMC {class}`~pymc.distributions.Distribution` builds on top of Aesara's {class}`~aesara.tensor.random.op.RandomVariable`, and implements `logp`, `logcdf` and `get_moment` methods as well as other initialization and validation helpers.
 Most notably `shape/dims` kwargs, alternative parametrizations, and default `transforms`.

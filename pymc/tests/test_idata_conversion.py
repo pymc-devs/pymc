@@ -72,16 +72,13 @@ class TestDataPyMC:
                 data.obj, return_inferencedata=False
             )
 
-        return (
-            to_inference_data(
-                trace=data.obj,
-                prior=prior,
-                posterior_predictive=posterior_predictive,
-                coords={"school": np.arange(eight_schools_params["J"])},
-                dims={"theta": ["school"], "eta": ["school"]},
-                model=data.model,
-            ),
-            posterior_predictive,
+        return to_inference_data(
+            trace=data.obj,
+            prior=prior,
+            posterior_predictive=posterior_predictive,
+            coords={"school": np.arange(eight_schools_params["J"])},
+            dims={"theta": ["school"], "eta": ["school"]},
+            model=data.model,
         )
 
     def get_predictions_inference_data(
@@ -90,7 +87,7 @@ class TestDataPyMC:
         with data.model:
             prior = pm.sample_prior_predictive(return_inferencedata=False)
             posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, return_inferencedata=False
+                data.obj, keep_size=True, return_inferencedata=False
             )
 
             idata = to_inference_data(
@@ -112,7 +109,7 @@ class TestDataPyMC:
     ) -> Tuple[InferenceData, Dict[str, np.ndarray]]:
         with data.model:
             posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, return_inferencedata=False
+                data.obj, keep_size=True, return_inferencedata=False
             )
             idata = predictions_to_inference_data(
                 posterior_predictive,
@@ -124,7 +121,7 @@ class TestDataPyMC:
         return idata, posterior_predictive
 
     def test_to_idata(self, data, eight_schools_params, chains, draws):
-        inference_data, posterior_predictive = self.get_inference_data(data, eight_schools_params)
+        inference_data = self.get_inference_data(data, eight_schools_params)
         test_dict = {
             "posterior": ["mu", "tau", "eta", "theta"],
             "sample_stats": ["diverging", "lp", "~log_likelihood"],
@@ -136,13 +133,6 @@ class TestDataPyMC:
         }
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
-        for key, values in posterior_predictive.items():
-            ivalues = inference_data.posterior_predictive[key]
-            for chain in range(chains):
-                assert np.all(
-                    np.isclose(ivalues[chain], values[chain * draws : (chain + 1) * draws])
-                )
-
         chains = inference_data.posterior.dims["chain"]
         draws = inference_data.posterior.dims["draw"]
         obs = inference_data.observed_data["obs"]
@@ -160,15 +150,13 @@ class TestDataPyMC:
         }
 
         # check adding non-destructively
-        inference_data, posterior_predictive = self.get_predictions_inference_data(
-            data, eight_schools_params, False
-        )
+        inference_data, _ = self.get_predictions_inference_data(data, eight_schools_params, False)
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
-        for key, values in posterior_predictive.items():
-            ivalues = inference_data.predictions[key]
-            assert ivalues.shape[0] == 1  # one chain in predictions
-            assert np.all(np.isclose(ivalues[0], values))
+        for key, ivalues in inference_data.predictions.items():
+            assert (
+                len(ivalues["chain"]) == inference_data.posterior.dims["chain"]
+            )  # same chains as in posterior
 
         # check adding in place
         inference_data, posterior_predictive = self.get_predictions_inference_data(
@@ -176,10 +164,10 @@ class TestDataPyMC:
         )
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
-        for key, values in posterior_predictive.items():
-            ivalues = inference_data.predictions[key]
-            assert ivalues.shape[0] == 1  # one chain in predictions
-            assert np.all(np.isclose(ivalues[0], values))
+        for key, ivalues in inference_data.predictions.items():
+            assert (
+                len(ivalues["chain"]) == inference_data.posterior.dims["chain"]
+            )  # same chains as in posterior
 
     def test_predictions_to_idata_new(self, data, eight_schools_params):
         # check creating new
@@ -195,19 +183,7 @@ class TestDataPyMC:
         assert not fails
         for key, values in posterior_predictive.items():
             ivalues = inference_data.predictions[key]
-            # could the following better be done by simply flattening both the ivalues
-            # and the values?
-            if len(ivalues.shape) == 3:
-                ivalues_arr = np.reshape(
-                    ivalues.values, (ivalues.shape[0] * ivalues.shape[1], ivalues.shape[2])
-                )
-            elif len(ivalues.shape) == 2:
-                ivalues_arr = np.reshape(ivalues.values, (ivalues.shape[0] * ivalues.shape[1]))
-            else:
-                raise ValueError(f"Unexpected values shape for variable {key}")
-            assert (ivalues.shape[0] == 2) and (ivalues.shape[1] == 500)
-            assert values.shape[0] == 1000
-            assert np.all(np.isclose(ivalues_arr, values))
+            assert (len(ivalues["chain"]) == 2) and (len(ivalues["draw"]) == 500)
 
     def test_posterior_predictive_keep_size(self, data, chains, draws, eight_schools_params):
         with data.model:
@@ -229,20 +205,37 @@ class TestDataPyMC:
     def test_posterior_predictive_warning(self, data, eight_schools_params, caplog):
         with data.model:
             posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, 370, return_inferencedata=False
+                data.obj, 370, return_inferencedata=False, keep_size=False
             )
-            inference_data = to_inference_data(
-                trace=data.obj,
-                posterior_predictive=posterior_predictive,
-                coords={"school": np.arange(eight_schools_params["J"])},
-                dims={"theta": ["school"], "eta": ["school"]},
-            )
+            with pytest.warns(UserWarning, match="shape of variables"):
+                inference_data = to_inference_data(
+                    trace=data.obj,
+                    posterior_predictive=posterior_predictive,
+                    coords={"school": np.arange(eight_schools_params["J"])},
+                    dims={"theta": ["school"], "eta": ["school"]},
+                )
 
-        records = caplog.records
         shape = inference_data.posterior_predictive.obs.shape
         assert np.all([obs_s == s for obs_s, s in zip(shape, (1, 370, eight_schools_params["J"]))])
-        assert len(records) == 1
-        assert records[0].levelname == "WARNING"
+
+    def test_posterior_predictive_thinned(self, data):
+        with data.model:
+            idata = pm.sample(tune=5, draws=20, chains=2, return_inferencedata=True)
+            thinned_idata = idata.sel(draw=slice(None, None, 4))
+            idata.extend(pm.sample_posterior_predictive(thinned_idata))
+        test_dict = {
+            "posterior": ["mu", "tau", "eta", "theta"],
+            "sample_stats": ["diverging", "lp", "~log_likelihood"],
+            "log_likelihood": ["obs"],
+            "posterior_predictive": ["obs"],
+            "observed_data": ["obs"],
+        }
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
+        assert idata.posterior.dims["chain"] == 2
+        assert idata.posterior.dims["draw"] == 20
+        assert idata.posterior_predictive.dims["chain"] == 2
+        assert idata.posterior_predictive.dims["draw"] == 5
 
     @pytest.mark.parametrize("use_context", [True, False])
     def test_autodetect_coords_from_model(self, use_context):

@@ -1,19 +1,13 @@
-*******************************************
-Distribution utility classes and functions
-*******************************************
+**********************
+Distribution utilities
+**********************
 
-.. currentmodule:: pymc.distributions
+.. currentmodule:: pymc
 .. autosummary::
+   :toctree: generated/
 
-  Distribution
-  Discrete
-  Continuous
-  NoDistribution
-  DensityDist
-
-.. autoclass:: Distribution
-.. autoclass:: Discrete
-.. autoclass:: Continuous
-.. autoclass:: NoDistribution
-.. autoclass:: DensityDist
-    :members:
+    Distribution
+    Discrete
+    Continuous
+    NoDistribution
+    DensityDist

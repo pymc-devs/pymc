@@ -26,7 +26,7 @@ class TestShared(SeededTest):
             data_values = np.array([0.5, 0.4, 5, 2])
             X = aesara.shared(np.asarray(data_values, dtype=aesara.config.floatX), borrow=True)
             pm.Normal("y", 0, 1, observed=X)
-            model.logp(model.initial_point)
+            model.logp(model.recompute_initial_point())
 
     def test_sample(self):
         x = np.random.normal(size=100)
@@ -42,11 +42,11 @@ class TestShared(SeededTest):
             prior_trace0 = pm.sample_prior_predictive(1000)
 
             idata = pm.sample(1000, init=None, tune=1000, chains=1)
-            pp_trace0 = pm.sample_posterior_predictive(idata, 1000)
+            pp_trace0 = pm.sample_posterior_predictive(idata)
 
             x_shared.set_value(x_pred)
             prior_trace1 = pm.sample_prior_predictive(1000)
-            pp_trace1 = pm.sample_posterior_predictive(idata, 1000)
+            pp_trace1 = pm.sample_posterior_predictive(idata)
 
         assert prior_trace0.prior["b"].shape == (1, 1000)
         assert prior_trace0.prior_predictive["obs"].shape == (1, 1000, 100)

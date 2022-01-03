@@ -67,9 +67,12 @@ Fit your model using gradient-based MCMC algorithms like NUTS, using ADVI for fa
 ```{code-block} python
 ---
 ---
+    import numpy as np
     import pymc as pm
 
-    X, y = linear_training_data()
+    X = np.random.normal(size=100)
+    y = np.random.normal(X) * 1.2
+
     with pm.Model() as linear_model:
         weights = pm.Normal("weights", mu=0, sigma=1)
         noise = pm.Gamma("noise", alpha=2, beta=1)
@@ -143,7 +146,7 @@ Use this to cite the library:
 
 Salvatier J., Wiecki T.V., Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ Computer Science 2:e55 [DOI: 10.7717/peerj-cs.55.](https://doi.org/10.7717/peerj-cs.55)
 
-For detailed advise on citing PyMC go to {ref
+For detailed advise on citing PyMC go to {ref}`citing_pymc`.
 See [Google Scholar](https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&cites=6936955228135731011) for a continuously updated list of papers citing PyMC3.
 
 :::{toctree}

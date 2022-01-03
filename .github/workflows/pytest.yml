@@ -46,7 +46,6 @@ jobs:
             --ignore=pymc/tests/test_dist_math.py
             --ignore=pymc/tests/test_minibatches.py
             --ignore=pymc/tests/test_pickling.py
-            --ignore=pymc/tests/test_plots.py
             --ignore=pymc/tests/test_updates.py
             --ignore=pymc/tests/test_gp.py
             --ignore=pymc/tests/test_model.py
@@ -68,7 +67,6 @@ jobs:
             pymc/tests/test_dist_math.py
             pymc/tests/test_minibatches.py
             pymc/tests/test_pickling.py
-            pymc/tests/test_plots.py
             pymc/tests/test_updates.py
             pymc/tests/test_transforms.py
 

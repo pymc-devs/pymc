@@ -23,7 +23,18 @@ import warnings
 
 from collections import defaultdict
 from copy import copy
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, cast
+from typing import (
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 import aesara.gradient as tg
 import cloudpickle
@@ -700,7 +711,7 @@ def _sample_many(
     step,
     callback=None,
     **kwargs,
-):
+) -> MultiTrace:
     """Samples all chains sequentially.
 
     Parameters
@@ -760,7 +771,7 @@ def _sample_population(
     progressbar: bool = True,
     parallelize=False,
     **kwargs,
-):
+) -> MultiTrace:
     """Performs sampling of a population of chains using the ``PopulationStepper``.
 
     Parameters
@@ -823,7 +834,7 @@ def _sample(
     model: Optional[Model] = None,
     callback=None,
     **kwargs,
-):
+) -> MultiTrace:
     """Main iteration for singleprocess sampling.
 
     Multiple step methods are supported via compound step methods.
@@ -853,8 +864,8 @@ def _sample(
 
     Returns
     -------
-    strace : pymc.backends.base.BaseTrace
-        A ``BaseTrace`` object that contains the samples for this chain.
+    strace : MultiTrace
+        A ``MultiTrace`` object that contains the samples for this chain.
     """
     skip_first = kwargs.get("skip_first", 0)
 
@@ -888,7 +899,7 @@ def iter_sample(
     model: Optional[Model] = None,
     random_seed: Optional[Union[int, List[int]]] = None,
     callback=None,
-):
+) -> Iterator[MultiTrace]:
     """Generate a trace on each iteration using the given step method.
 
     Multiple step methods ared supported via compound step methods.  Returns the
@@ -947,7 +958,7 @@ def _iter_sample(
     model=None,
     random_seed=None,
     callback=None,
-):
+) -> Iterator[Tuple[Backend, bool]]:
     """Generator for sampling one chain. (Used in singleprocess sampling.)
 
     Parameters
@@ -1207,7 +1218,7 @@ def _prepare_iter_population(
     model=None,
     random_seed=None,
     progressbar=True,
-):
+) -> Iterator[Sequence[BaseTrace]]:
     """Prepare a PopulationStepper and traces for population sampling.
 
     Parameters
@@ -1287,7 +1298,9 @@ def _prepare_iter_population(
     return _iter_population(draws, tune, popstep, steppers, traces, population)
 
 
-def _iter_population(draws, tune, popstep, steppers, traces, points):
+def _iter_population(
+    draws: int, tune: int, popstep: PopulationStepper, steppers, traces: Sequence[BaseTrace], points
+) -> Iterator[Sequence[BaseTrace]]:
     """Iterate a ``PopulationStepper``.
 
     Parameters
@@ -1393,14 +1406,14 @@ def _mp_sample(
     discard_tuned_samples=True,
     mp_ctx=None,
     **kwargs,
-):
+) -> MultiTrace:
     """Main iteration for multiprocess sampling.
 
     Parameters
     ----------
     draws : int
         The number of samples to draw
-    tune : int, optional
+    tune : int
         Number of iterations to tune, if applicable (defaults to None)
     step : function
         Step function
@@ -1501,7 +1514,7 @@ def _mp_sample(
             trace.close()
 
 
-def _choose_chains(traces, tune):
+def _choose_chains(traces: Sequence[BaseTrace], tune: Optional[int]) -> Tuple[List[BaseTrace], int]:
     """
     Filter and slice traces such that (n_traces * len(shortest_trace)) is maximized.
 
@@ -1514,7 +1527,7 @@ def _choose_chains(traces, tune):
         tune = 0
 
     if not traces:
-        return []
+        raise ValueError("No traces to slice.")
 
     lengths = [max(0, len(trace) - tune) for trace in traces]
     if not sum(lengths):
@@ -1541,11 +1554,13 @@ def sample_posterior_predictive(
     model: Optional[Model] = None,
     var_names: Optional[List[str]] = None,
     size: Optional[int] = None,
-    keep_size: Optional[bool] = False,
+    keep_size: Optional[bool] = None,
     random_seed=None,
     progressbar: bool = True,
     mode: Optional[Union[str, Mode]] = None,
     return_inferencedata=True,
+    extend_inferencedata=False,
+    predictions=False,
     idata_kwargs: dict = None,
 ) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate posterior predictive samples from a model given a trace.
@@ -1557,21 +1572,25 @@ def sample_posterior_predictive(
         or xarray.Dataset (eg. InferenceData.posterior or InferenceData.prior)
     samples : int
         Number of posterior predictive samples to generate. Defaults to one posterior predictive
-        sample per posterior sample, that is, the number of draws times the number of chains. It
-        is not recommended to modify this value; when modified, some chains may not be represented
-        in the posterior predictive sample.
+        sample per posterior sample, that is, the number of draws times the number of chains.
+
+        It is not recommended to modify this value; when modified, some chains may not be
+        represented in the posterior predictive sample. Instead, in cases when generating
+        posterior predictive samples is too expensive to do it once per posterior sample,
+        the recommended approach is to thin the ``trace`` argument
+        before passing it to ``sample_posterior_predictive``. In such cases it
+        might be advisable to set ``extend_inferencedata`` to ``False`` and extend
+        the inferencedata manually afterwards.
     model : Model (optional if in ``with`` context)
-        Model used to generate ``trace``
-    vars : iterable
-        Variables for which to compute the posterior predictive samples.
-        Deprecated: please use ``var_names`` instead.
+        Model to be used to generate the posterior predictive samples. It will
+        generally be the model used to generate the ``trace``, but it doesn't need to be.
     var_names : Iterable[str]
         Names of variables for which to compute the posterior predictive samples.
     size : int
         The number of random draws from the distribution specified by the parameters in each
         sample of the trace. Not recommended unless more than ndraws times nchains posterior
         predictive samples are needed.
-    keep_size : bool, optional
+    keep_size : bool, default True
         Force posterior predictive sample to have the same shape as posterior and sample stats
         data: ``(nchains, ndraws, ...)``. Overrides samples and size parameters.
     random_seed : int
@@ -1582,17 +1601,34 @@ def sample_posterior_predictive(
         time until completion ("expected time of arrival"; ETA).
     mode:
         The mode used by ``aesara.function`` to compile the graph.
-    return_inferencedata : bool
+    return_inferencedata : bool, default True
         Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
-        Defaults to True.
+    extend_inferencedata : bool, default False
+        Whether to automatically use :meth:`arviz.InferenceData.extend` to add the posterior predictive samples to
+        ``trace`` or not. If True, ``trace`` is modified inplace but still returned.
+    predictions : bool, default False
+        Choose the function used to convert the samples to inferencedata. See ``idata_kwargs``
+        for more details.
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data`
+        Keyword arguments for :func:`pymc.to_inference_data` if ``predictions=False`` or to
+        :func:`pymc.predictions_to_inference_data` otherwise.
 
     Returns
     -------
     arviz.InferenceData or Dict
         An ArviZ ``InferenceData`` object containing the posterior predictive samples (default), or
         a dictionary with variable names as keys, and samples as numpy arrays.
+
+    Examples
+    --------
+    Thin a sampled inferencedata by keeping 1 out of every 5 draws
+    before passing it to sample_posterior_predictive
+
+    .. code:: python
+
+        thinned_idata = idata.sel(draw=slice(None, None, 5))
+        with model:
+            idata.extend(pymc.sample_posterior_predictive(thinned_idata))
     """
 
     _trace: Union[MultiTrace, PointList]
@@ -1602,6 +1638,12 @@ def sample_posterior_predictive(
         _trace = dataset_to_point_list(trace)
     else:
         _trace = trace
+
+    if keep_size is None:
+        # This will allow users to set return_inferencedata=False and
+        # automatically get the old behaviour instead of needing to
+        # set both return_inferencedata and keep_size to False
+        keep_size = return_inferencedata
 
     nchain: int
     len_trace: int
@@ -1615,7 +1657,10 @@ def sample_posterior_predictive(
             nchain = 1
 
     if keep_size and samples is not None:
-        raise IncorrectArgumentsError("Should not specify both keep_size and samples arguments")
+        raise IncorrectArgumentsError(
+            "Should not specify both keep_size and samples arguments. "
+            "See the docstring of the samples argument for more details."
+        )
     if keep_size and size is not None:
         raise IncorrectArgumentsError("Should not specify both keep_size and size arguments")
 
@@ -1671,6 +1716,10 @@ def sample_posterior_predictive(
     vars_to_sample = list(get_default_varnames(vars_, include_transformed=False))
 
     if not vars_to_sample:
+        if return_inferencedata and not extend_inferencedata:
+            return None
+        elif return_inferencedata and extend_inferencedata:
+            return trace
         return {}
 
     if not hasattr(_trace, "varnames"):
@@ -1746,7 +1795,18 @@ def sample_posterior_predictive(
     ikwargs = dict(model=model)
     if idata_kwargs:
         ikwargs.update(idata_kwargs)
-    return pm.to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
+    if predictions:
+        if extend_inferencedata:
+            ikwargs.setdefault("idata_orig", trace)
+        return pm.predictions_to_inference_data(ppc_trace, **ikwargs)
+    converter = pm.backends.arviz.InferenceDataConverter(posterior_predictive=ppc_trace, **ikwargs)
+    converter.nchains = nchain
+    converter.ndraws = len_trace
+    idata_pp = converter.to_inference_data()
+    if extend_inferencedata:
+        trace.extend(idata_pp)
+        return trace
+    return idata_pp
 
 
 def sample_posterior_predictive_w(

@@ -151,6 +151,8 @@ class SMC_KERNEL(ABC):
 
         self.draws = draws
         self.start = start
+        if threshold < 0 or threshold > 1:
+            raise ValueError(f"Threshold value {threshold} must be between 0 and 1")
         self.threshold = threshold
         self.model = model
         self.rng = np.random.default_rng(seed=random_seed)
@@ -192,7 +194,6 @@ class SMC_KERNEL(ABC):
         initial_point = self.model.recompute_initial_point(seed=self.rng.integers(2 ** 30))
         for v in self.variables:
             self.var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
-
         # Create particles bijection map
         if self.start:
             init_rnd = self.start
@@ -203,6 +204,7 @@ class SMC_KERNEL(ABC):
         for i in range(self.draws):
             point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
             population.append(DictToArrayBijection.map(point).data)
+
         self.tempered_posterior = np.array(floatX(population))
 
         # Initialize prior and likelihood log probabilities
@@ -228,13 +230,16 @@ class SMC_KERNEL(ABC):
     def update_beta_and_weights(self):
         """Calculate the next inverse temperature (beta)
 
-        The importance weights based on two sucesive tempered likelihoods (i.e.
+        The importance weights based on two successive tempered likelihoods (i.e.
         two successive values of beta) and updates the marginal likelihood estimate.
+
+        ESS is calculated for importance sampling. BDA 3rd ed. eq 10.4
         """
         self.iteration += 1
 
         low_beta = old_beta = self.beta
         up_beta = 2.0
+
         rN = int(len(self.likelihood_logp) * self.threshold)
 
         while up_beta - low_beta > 1e-6:
@@ -268,6 +273,7 @@ class SMC_KERNEL(ABC):
         self.tempered_posterior = self.tempered_posterior[self.resampling_indexes]
         self.prior_logp = self.prior_logp[self.resampling_indexes]
         self.likelihood_logp = self.likelihood_logp[self.resampling_indexes]
+
         self.tempered_posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
 
     def tune(self):
@@ -303,7 +309,7 @@ class SMC_KERNEL(ABC):
     def _posterior_to_trace(self, chain=0) -> NDArray:
         """Save results into a PyMC trace
 
-        This method shoud not be overwritten.
+        This method should not be overwritten.
         """
         lenght_pos = len(self.tempered_posterior)
         varnames = [v.name for v in self.variables]
@@ -497,7 +503,6 @@ class MH(SMC_KERNEL):
     def mutate(self):
         """Metropolis-Hastings perturbation."""
         ac_ = np.empty((self.n_steps, self.draws))
-
         log_R = np.log(self.rng.random((self.n_steps, self.draws)))
         for n_step in range(self.n_steps):
             proposal = floatX(

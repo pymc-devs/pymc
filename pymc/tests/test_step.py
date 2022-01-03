@@ -528,7 +528,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             x = Normal("x", mu=0, sigma=1)
             y = Normal("y", mu=x, sigma=1, observed=1)
             if step_method.__name__ == "NUTS":
-                step = step_method(scaling=model.initial_point)
+                step = step_method(scaling=model.recompute_initial_point())
                 idata = sample(
                     0, tune=n_steps, discard_tuned_samples=False, step=step, random_seed=1, chains=1
                 )
@@ -641,7 +641,7 @@ class TestMetropolisProposal:
     def test_proposal_choice(self):
         _, model, _ = mv_simple()
         with model:
-            initial_point = model.initial_point
+            initial_point = model.recompute_initial_point()
             initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
 
             s = np.ones(initial_point_size)
@@ -1055,7 +1055,7 @@ class TestMLDA:
             assert sampler.base_proposal_dist is None
             assert isinstance(sampler.step_method_below.proposal_dist, UniformProposal)
 
-            initial_point = model.initial_point
+            initial_point = model.recompute_initial_point()
             initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
             s = np.ones(initial_point_size)
             sampler = MLDA(coarse_models=[model_coarse], base_sampler="Metropolis", base_S=s)
@@ -1090,7 +1090,7 @@ class TestMLDA:
         _, model_coarse, _ = mv_simple_coarse()
         _, model_very_coarse, _ = mv_simple_very_coarse()
         with model:
-            initial_point = model.initial_point
+            initial_point = model.recompute_initial_point()
             initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
             s = np.ones(initial_point_size) + 2.0
             sampler = MLDA(

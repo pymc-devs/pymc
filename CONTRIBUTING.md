@@ -146,9 +146,9 @@ docker exec -it pymc jupyter notebook list
 ## Style guide
 
 We have configured a pre-commit hook that checks for `black`-compliant code style.
-We encourage you to configure the pre-commit hook as described in the [PyMC Python Code Style Wiki Page](https://github.com/pymc-devs/pymc/wiki/Python-Code-Style), because it will automatically enforce the code style on your commits.
+We encourage you to configure the pre-commit hook as described in the [PyMC Python Code Style Wiki Page](https://docs.pymc.io/en/latest/contributing/python_style.html), because it will automatically enforce the code style on your commits.
 
-Similarly, consult the [PyMC's Jupyter Notebook Style](https://github.com/pymc-devs/pymc/wiki/PyMC-Jupyter-Notebook-Style-Guide) guides for notebooks.
+Similarly, consult the [PyMC's Jupyter Notebook Style](https://docs.pymc.io/en/latest/contributing/jupyter_style.html) guides for notebooks.
 
 For documentation strings, we *prefer* [numpy style](https://numpydoc.readthedocs.io/en/latest/format.html) to comply with the style that predominates in our upstream dependencies.
 

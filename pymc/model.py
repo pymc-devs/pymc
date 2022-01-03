@@ -57,7 +57,7 @@ from pymc.aesaraf import (
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
-from pymc.distributions import logp_transform, logpt, logpt_sum
+from pymc.distributions import logp_transform, logpt
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
 from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
@@ -514,9 +514,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
-    a class based model you should inherit from :class:`~.Model` and
-    override :meth:`~.__init__` with arbitrary definitions (do not
-    forget to call base class :meth:`__init__` first).
+    a class based model you should inherit from :class:`~pymc.Model` and
+    override the `__init__` method with arbitrary definitions (do not
+    forget to call base class :meth:`pymc.Model.__init__` first).
 
     Parameters
     ----------
@@ -599,6 +599,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         with Model() as model:
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
+
     """
 
     if TYPE_CHECKING:
@@ -1537,7 +1538,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """
         f = self.makefn(outs, profile=profile, *args, **kwargs)
         if point is None:
-            point = self.initial_point
+            point = self.recompute_initial_point()
 
         for _ in range(n):
             f(**point)
@@ -1696,19 +1697,18 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         Pandas Series
         """
         if point is None:
-            point = self.initial_point
+            point = self.recompute_initial_point()
 
+        factors = self.basic_RVs + self.potentials
         return Series(
             {
-                rv.name: np.round(
-                    np.asarray(
-                        self.fn(logpt_sum(rv, getattr(rv.tag, "observations", None)))(point)
-                    ),
-                    round_vals,
+                factor.name: np.round(np.asarray(factor_logp), round_vals)
+                for factor, factor_logp in zip(
+                    factors,
+                    self.fn([at.sum(factor) for factor in self.logp_elemwiset(factors)])(point),
                 )
-                for rv in self.basic_RVs
             },
-            name="Log-probability of test_point",
+            name="Point log-probability",
         )
 
 

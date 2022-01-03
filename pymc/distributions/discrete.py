@@ -635,12 +635,10 @@ class Poisson(Discrete):
         safe_mu = at.switch(at.lt(mu, 0), 0, mu)
         safe_value = at.switch(at.lt(value, 0), 0, value)
 
-        res = (
-            at.switch(
-                at.lt(value, 0),
-                -np.inf,
-                at.log(at.gammaincc(safe_value + 1, safe_mu)),
-            ),
+        res = at.switch(
+            at.lt(value, 0),
+            -np.inf,
+            at.log(at.gammaincc(safe_value + 1, safe_mu)),
         )
 
         return check_parameters(res, 0 <= mu, msg="mu >= 0")

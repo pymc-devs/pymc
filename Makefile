@@ -5,7 +5,8 @@
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
-BUILDDIR      = _build
+SOURCEDIR     = docs/source
+BUILDDIR      = docs/_build
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -51,9 +52,11 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/*
+	rm -rf $(SOURCEDIR)/api/**/generated
+	rm -rf docs/jupyter_execute
 
 html:
-	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	$(SPHINXBUILD) $(SOURCEDIR) $(BUILDDIR) -b html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 

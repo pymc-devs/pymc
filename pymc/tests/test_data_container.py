@@ -34,7 +34,7 @@ class TestData(SeededTest):
         with pm.Model() as model:
             X = pm.Data("X", data_values)
             pm.Normal("y", 0, 1, observed=X)
-            model.logp(model.initial_point)
+            model.logp(model.recompute_initial_point())
 
     def test_sample(self):
         x = np.random.normal(size=100)
@@ -49,11 +49,11 @@ class TestData(SeededTest):
 
             prior_trace0 = pm.sample_prior_predictive(1000)
             idata = pm.sample(1000, init=None, tune=1000, chains=1)
-            pp_trace0 = pm.sample_posterior_predictive(idata, 1000)
+            pp_trace0 = pm.sample_posterior_predictive(idata)
 
             x_shared.set_value(x_pred)
             prior_trace1 = pm.sample_prior_predictive(1000)
-            pp_trace1 = pm.sample_posterior_predictive(idata, samples=1000)
+            pp_trace1 = pm.sample_posterior_predictive(idata)
 
         assert prior_trace0.prior["b"].shape == (1, 1000)
         assert prior_trace0.prior_predictive["obs"].shape == (1, 1000, 100)
@@ -118,11 +118,11 @@ class TestData(SeededTest):
                 chains=1,
                 compute_convergence_checks=False,
             )
-            pp_trace = pm.sample_posterior_predictive(new_idata, 1000)
+            pp_trace = pm.sample_posterior_predictive(new_idata)
 
         assert pp_trace.posterior_predictive["obs"].shape == (1, 1000, 3)
         np.testing.assert_allclose(
-            new_y, pp_trace.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
+            new_y, pp_trace.posterior_predictive["obs"].mean(("chain", "draw")), atol=0.015
         )
 
     def test_shared_data_as_index(self):
@@ -150,7 +150,7 @@ class TestData(SeededTest):
         new_y = [5.0, 6.0, 9.0]
         with model:
             pm.set_data(new_data={"index": new_index, "y": new_y})
-            pp_trace = pm.sample_posterior_predictive(idata, 1000, var_names=["alpha", "obs"])
+            pp_trace = pm.sample_posterior_predictive(idata, var_names=["alpha", "obs"])
 
         assert prior_trace.prior["alpha"].shape == (1, 1000, 3)
         assert idata.posterior["alpha"].shape == (1, 1000, 3)
