@@ -260,8 +260,6 @@ def mixture_replace(fgraph, node):
 
     mixing_indices = node.inputs[1:]
 
-    mixture_value_var = rv_map_feature.rv_values[old_mixture_rv]
-
     # We loop through mixture components and collect all the array elements
     # that belong to each one (by way of their indices).
     mixture_rvs = []
@@ -299,8 +297,6 @@ def mixture_replace(fgraph, node):
 
     if old_mixture_rv.name:
         new_mixture_rv.name = f"{old_mixture_rv.name}-mixture"
-
-    rv_map_feature.update_rv_maps(old_mixture_rv, mixture_value_var, new_mixture_rv)
 
     return [new_mixture_rv]
 
