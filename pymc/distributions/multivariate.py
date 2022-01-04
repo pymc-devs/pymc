@@ -1938,6 +1938,13 @@ class KroneckerNormal(Continuous):
         # mean = median = mode = mu
         return super().dist([mu, sigma, *covs], **kwargs)
 
+    def get_moment(rv, size, mu, covs, chols, evds):
+        mean = mu
+        if not rv_size_is_none(size):
+            moment_size = at.concatenate([size, mu.shape])
+            mean = at.full(moment_size, mu)
+        return mean
+
     def logp(value, mu, sigma, *covs):
         """
         Calculate log-probability of Multivariate Normal distribution

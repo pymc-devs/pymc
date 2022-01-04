@@ -549,7 +549,7 @@ class TestShapeEvaluation:
                 "city": ["Sydney", "Las Vegas", "Düsseldorf"],
             }
         ) as pmodel:
-            pm.Data("budget", [1, 2, 3, 4], dims="year")
+            pm.MutableData("budget", [1, 2, 3, 4], dims="year")
             pm.Normal("untransformed", size=(1, 2))
             pm.Uniform("transformed", size=(7,))
             obs = pm.Uniform("observed", size=(3,), observed=[0.1, 0.2, 0.3])

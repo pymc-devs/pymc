@@ -42,6 +42,7 @@ import numpy as np
 import xarray
 
 from aesara.compile.mode import Mode
+from aesara.graph.basic import Constant
 from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
@@ -1728,7 +1729,7 @@ def sample_posterior_predictive(
             for rv in walk_model(vars_to_sample, walk_past_rvs=True)
             if rv not in vars_to_sample
             and rv in model.named_vars.values()
-            and not isinstance(rv, SharedVariable)
+            and not isinstance(rv, (Constant, SharedVariable))
         ]
         if inputs_and_names:
             inputs, input_names = zip(*inputs_and_names)
@@ -1739,7 +1740,7 @@ def sample_posterior_predictive(
         input_names = [
             n
             for n in _trace.varnames
-            if n not in output_names and not isinstance(model[n], SharedVariable)
+            if n not in output_names and not isinstance(model[n], (Constant, SharedVariable))
         ]
         inputs = [model[n] for n in input_names]
 
@@ -2067,7 +2068,7 @@ def sample_prior_predictive(
             names.append(rv_var.name)
             vars_to_sample.append(rv_var)
 
-    inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, SharedVariable)]
+    inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, (Constant, SharedVariable))]
 
     sampler_fn = compile_pymc(
         inputs, vars_to_sample, allow_input_downcast=True, accept_inplace=True, mode=mode

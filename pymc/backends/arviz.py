@@ -454,7 +454,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         """Convert constant data to xarray."""
         # For constant data, we are concerned only with deterministics and
         # data.  The constant data vars must be either pm.Data
-        # (TensorSharedVariable) or pm.Deterministic
+        # (TensorConstant/SharedVariable) or pm.Deterministic
         constant_data_vars = {}  # type: Dict[str, Var]
 
         def is_data(name, var) -> bool:
