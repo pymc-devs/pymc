@@ -68,6 +68,31 @@ def find_constrained_prior(
     -------
     The optimized distribution parameters as a dictionary with the parameters'
     name as key and the optimized value as value.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        # get parameters obeying constraints
+        opt_params = pm.find_constrained_prior(
+            pm.Gamma, lower=0.1, upper=0.4, mass=0.75, init_guess={"alpha": 1, "beta": 10}
+        )
+
+        # use these parameters to draw random samples
+        samples = pm.Gamma.dist(**opt_params, size=100).eval()
+
+        # use these parameters in a model
+        with pm.Model():
+            x = pm.Gamma('x', **opt_params)
+
+        # specify fixed values before optimization
+        opt_params = pm.find_constrained_prior(
+            pm.StudentT,
+            lower=0,
+            upper=1,
+            init_guess={"mu": 5, "sigma": 2},
+            fixed_params={"nu": 7},
+        )
     """
     assert 0.01 <= mass <= 0.99, (
         "This function optimizes the mass of the given distribution +/- "
