@@ -2701,7 +2701,7 @@ class TestBound:
             with pytest.raises(ValueError, match=msg):
                 pm.Bound("bound", x, dims="random_dims")
 
-        msg = "The distribution passed into `Bound` was already registered"
+        msg = "The dist x was already registered in the current model"
         with pm.Model() as m:
             x = pm.Normal("x", 0, 1)
             with pytest.raises(ValueError, match=msg):
