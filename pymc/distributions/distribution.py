@@ -26,6 +26,7 @@ import aesara
 from aeppl.logprob import _logcdf, _logprob
 from aesara import tensor as at
 from aesara.tensor.basic import as_tensor_variable
+from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.var import TensorVariable
@@ -626,6 +627,12 @@ def get_moment(rv: TensorVariable) -> TensorVariable:
     for which the value is to be derived.
     """
     return _get_moment(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
+
+
+@_get_moment.register(Elemwise)
+def _get_moment_elemwise(op, rv, *dist_params):
+    """For Elemwise Ops, dispatch on respective scalar_op"""
+    return _get_moment(op.scalar_op, rv, *dist_params)
 
 
 class Discrete(Distribution):

@@ -332,3 +332,20 @@ def locally_cachedmethod(f):
         return cf
 
     return cachedmethod(self_cache_fn(f.__name__), key=hash_key)(f)
+
+
+def check_dist_not_registered(dist, model=None):
+    """Check that a dist is not registered in the model already"""
+    from pymc.model import modelcontext
+
+    try:
+        model = modelcontext(None)
+    except TypeError:
+        pass
+    else:
+        if dist in model.basic_RVs:
+            raise ValueError(
+                f"The dist {dist} was already registered in the current model.\n"
+                f"You should use an unregistered (unnamed) distribution created via "
+                f"the `.dist()` API instead, such as:\n`dist=pm.Normal.dist(0, 1)`"
+            )
