@@ -20,6 +20,7 @@ samples from probability distributions for stochastic nodes in PyMC.
 
 import warnings
 
+from functools import partial
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -612,6 +613,8 @@ def maybe_resize(
     ndim_supp,
     shape,
     size,
+    *,
+    change_rv_size_fn=partial(change_rv_size, expand=True),
     **kwargs,
 ):
     """Resize a distribution if necessary.
@@ -635,6 +638,8 @@ def maybe_resize(
         A tuple specifying the final shape of a distribution
     size : tuple
         A tuple specifying the size of a distribution
+    change_rv_size_fn: callable
+        A function that returns an equivalent RV with a different size
 
     Returns
     -------
@@ -647,7 +652,7 @@ def maybe_resize(
     if shape is not None and ndims_unexpected:
         if Ellipsis in shape:
             # Resize and we're done!
-            rv_out = change_rv_size(rv_var=rv_out, new_size=shape[:-1], expand=True)
+            rv_out = change_rv_size_fn(rv_var=rv_out, new_size=shape[:-1])
         else:
             # This is rare, but happens, for example, with MvNormal(np.ones((2, 3)), np.eye(3), shape=(2, 3)).
             # Recreate the RV without passing `size` to created it with just the implied dimensions.
@@ -656,7 +661,7 @@ def maybe_resize(
             # Now resize by any remaining "extra" dimensions that were not implied from support and parameters
             if rv_out.ndim < ndim_expected:
                 expand_shape = shape[: ndim_expected - rv_out.ndim]
-                rv_out = change_rv_size(rv_var=rv_out, new_size=expand_shape, expand=True)
+                rv_out = change_rv_size_fn(rv_var=rv_out, new_size=expand_shape)
             if not rv_out.ndim == ndim_expected:
                 raise ShapeError(
                     f"Failed to create the RV with the expected dimensionality. "
