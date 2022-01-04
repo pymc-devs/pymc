@@ -7,6 +7,7 @@ Distribution utilities
    :toctree: generated/
 
     Distribution
+    SymbolicDistribution
     Discrete
     Continuous
     NoDistribution
