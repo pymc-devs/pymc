@@ -3275,3 +3275,73 @@ def test_density_dist_multivariate_logp(size):
         ).shape
         == to_tuple(size)
     )
+
+
+class TestCensored:
+    @pytest.mark.parametrize("censored", (False, True))
+    def test_censored_workflow(self, censored):
+        # Based on pymc-examples/censored_data
+        rng = np.random.default_rng(1234)
+        size = 500
+        true_mu = 13.0
+        true_sigma = 5.0
+
+        # Set censoring limits
+        low = 3.0
+        high = 16.0
+
+        # Draw censored samples
+        data = rng.normal(true_mu, true_sigma, size)
+        data[data <= low] = low
+        data[data >= high] = high
+
+        with pm.Model(rng_seeder=17092021) as m:
+            mu = pm.Normal(
+                "mu",
+                mu=((high - low) / 2) + low,
+                sigma=(high - low) / 2.0,
+                initval="moment",
+            )
+            sigma = pm.HalfNormal("sigma", sigma=(high - low) / 2.0, initval="moment")
+            observed = pm.Censored(
+                "observed",
+                pm.Normal.dist(mu=mu, sigma=sigma),
+                lower=low if censored else None,
+                upper=high if censored else None,
+                observed=data,
+            )
+
+            prior_pred = pm.sample_prior_predictive()
+            posterior = pm.sample(tune=500, draws=500)
+            posterior_pred = pm.sample_posterior_predictive(posterior)
+
+        expected = True if censored else False
+        assert (9 < prior_pred.prior_predictive.mean() < 10) == expected
+        assert (13 < posterior.posterior["mu"].mean() < 14) == expected
+        assert (4.5 < posterior.posterior["sigma"].mean() < 5.5) == expected
+        assert (12 < posterior_pred.posterior_predictive.mean() < 13) == expected
+
+    def test_censored_invalid_dist(self):
+        with pm.Model():
+            invalid_dist = pm.Normal
+            with pytest.raises(
+                ValueError,
+                match=r"Censoring dist must be a distribution created via the",
+            ):
+                x = pm.Censored("x", invalid_dist, lower=None, upper=None)
+
+        with pm.Model():
+            mv_dist = pm.Dirichlet.dist(a=[1, 1, 1])
+            with pytest.raises(
+                NotImplementedError,
+                match="Censoring of multivariate distributions has not been implemented yet",
+            ):
+                x = pm.Censored("x", mv_dist, lower=None, upper=None)
+
+        with pm.Model():
+            registered_dist = pm.Normal("dist")
+            with pytest.raises(
+                ValueError,
+                match="The dist dist was already registered in the current model",
+            ):
+                x = pm.Censored("x", registered_dist, lower=None, upper=None)
