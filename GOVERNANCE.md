@@ -195,20 +195,20 @@ Contributors don't need to be part of any dedicated team.
 * Eelke Spaak (dev)
 * Eric Ma (dev - PyMC Labs)
 * George Ho (dev)
-* Junpeng Lao (dev)
+* Junpeng Lao (dev, discourse)
 * Luciano Paz (dev - PyMC Labs)
 * Marco E. Gorelli (dev, docs)
 * Martina Cantaro (docs)
 * Maxim Kochurov (dev - PyMC Labs)
 * Meenal Jhajharia (docs)
 * Michael Osthege (dev)
-* Oriol Abril-Pla (docs)
+* Oriol Abril-Pla (docs, discourse)
 * Osvaldo Martin (dev, docs)
-* Ravin Kumar (dev, docs)
-* Ricardo Vieira (dev)
+* Ravin Kumar (dev, discourse, docs)
+* Ricardo Vieira (dev, discourse)
 * Robert P. Goldman (dev)
 * Sayam Kumar (dev, docs)
-* Thomas Wiecki (dev - PyMC Labs)
+* Thomas Wiecki (dev, discourse - PyMC Labs)
 
 ## Steering Council
 
@@ -253,13 +253,13 @@ In particular, the Council may:
 The current Steering Council membership comprises:
 
 - Chris Fonnesbeck (dev, docs)
-- Junpeng Lao (dev)
-- Oriol Abril-Pla (docs)
-- Ravin Kumar (dev, docs)
-- Thomas Wiecki (dev - PyMC Labs)
+- Junpeng Lao (dev, discourse)
+- Oriol Abril-Pla (docs, discourse)
+- Ravin Kumar (dev, discourse, docs)
+- Thomas Wiecki (dev, discourse - PyMC Labs)
 
 Note that as explained in the [community architecture section](#community-and-team-architecture)
-and as indicated again in the description of the Steering Council right above,
+and as indicated again in the description of the Steering Council above,
 Council members are first and foremost Core Contributors, and have no special
 power or privilege in everyday activities.
 To emphasize that, Steering Council members are listed both in the current core
@@ -604,7 +604,7 @@ The dedicated teams are work units with two main objectives: better
 distributing the work related to The Project, and to better showcase all the different tasks
 involved in The Project to attract more diverse Contributors.
 
-The PyMC project currently counts with the Developer, Documentation and Discourse teams.
+The PyMC project currently has Developer, Documentation and Discourse teams.
 Team members can be part of one, some or none of these dedicated teams.
 
 Team members are expected to participate and join these dedicated teams
@@ -649,7 +649,7 @@ permissions to the relevant services based on their roles
 and dedicated team affiliations.
 
 #### GitHub
-Two of the teams are currently structured about GitHub centric tasks, so the
+Two of the teams are currently structured about GitHub-centric tasks, so the
 permissions on GitHub repositories is mapped to team membership and role
 within the team. The team defines to which repositories the permissions
 are given, the role defines the type of permissions given:
