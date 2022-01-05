@@ -4,13 +4,8 @@ sphinx:
     configuration: docs/source/conf.py
 
 python:
-   version: "3.7"
+   version: "3.8"
    install:
    - requirements: requirements-dev.txt
    - method: pip
      path: .
-
-
-submodules:
-    include: all
-    recursive: true
