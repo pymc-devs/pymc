@@ -139,10 +139,10 @@ jobs:
           conda activate pymc-test-py37
           python -m pytest -vv --cov=pymc --cov-append --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v2
         with:
-          env_vars: OS,PYTHON
-          name: codecov-umbrella
+          env_vars: TEST_SUBSET
+          name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
   windows:
     strategy:
