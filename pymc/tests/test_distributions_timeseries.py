@@ -22,7 +22,7 @@ from pymc.distributions.timeseries import (
     AR1,
     GARCH11,
     EulerMaruyama,
-    GaussianRandomWalkRV,
+    gaussianrandomwalk,
 )
 from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive
@@ -38,8 +38,7 @@ def test_grw_rv_op():
     sd = 0.0000001
     size = 4
 
-    rng = np.random.default_rng()
-    grw = GaussianRandomWalkRV.rng_fn(rng, mu, sd, init, size)
+    grw = gaussianrandomwalk(mu, sd, init, size).eval()
     np.testing.assert_almost_equal(grw[-1], 13)
     assert grw.shape[0] == size
 

@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import Union
+from typing import Optional, Union
 
 import aesara.tensor as at
 import numpy as np
@@ -39,13 +39,11 @@ __all__ = [
 class GaussianRandomWalkRV(RandomVariable):
     """
     GaussianRandomWalk Random Variable
-
-
     """
 
     name = "GaussianRandomWalk"
     ndim_supp = 0
-    ndims_params = [0, 0, 0]
+    ndims_params = [0, 0, 0, 0]
     dtype = "floatX"
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
 
@@ -81,7 +79,10 @@ class GaussianRandomWalkRV(RandomVariable):
         -------
         np.ndarray
         """
-        return init + np.cumsum(rng.normal(mu, sigma, size))
+        return init + np.cumsum(rng.normal(loc=mu, scale=sigma, size=size))
+
+
+gaussianrandomwalk = GaussianRandomWalkRV()
 
 
 class AR1(distribution.Continuous):
@@ -251,6 +252,23 @@ class GaussianRandomWalk(distribution.Continuous):
     init : pymc.Distribution, optional
         distribution for initial value (Defaults to Flat())
     """
+
+    rv_op = gaussianrandomwalk
+
+    @classmethod
+    def dist(
+        cls,
+        mu: Optional[Union[np.ndarray, float]] = None,
+        sigma: Optional[Union[np.ndarray, float]] = None,
+        init: float = None,
+        size: int = None,
+        *args,
+        **kwargs
+    ) -> RandomVariable:
+
+        # Still working on this. The RV op is my current blocker
+        raise NotImplementedError
+        return
 
     def __init__(self, tau=None, init=None, sigma=None, mu=0.0, sd=None, *args, **kwargs):
         raise Exception("Deprecated Randomwalk distribution")
