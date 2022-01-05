@@ -308,10 +308,10 @@ def logprob_MixtureRV(
     (value,) = values
 
     join_axis = inputs[0]
-    indices = inputs[1 : op.indices_end_idx]
+    indices = cast(TensorVariable, inputs[1 : op.indices_end_idx])
     comp_rvs = cast(TensorVariable, inputs[op.indices_end_idx :])
 
-    if value.ndim > 0:
+    if not (len(indices) == 1 and indices[0].ndim == 0):
         join_axis_val = get_constant_value(join_axis).item()
 
         original_shape = shape_tuple(comp_rvs[0])
@@ -344,7 +344,7 @@ def logprob_MixtureRV(
             logp_val += ifelse(
                 at.eq(indices[0], i),
                 comp_logp,
-                at.as_tensor(0.0, dtype=comp_logp.dtype),
+                at.zeros_like(value),
             )
 
     return logp_val
