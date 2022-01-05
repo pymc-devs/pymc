@@ -38,8 +38,8 @@ def test_grw_rv_op():
     sd = 0.0000001
     size = 4
 
-    grw = gaussianrandomwalk(mu, sd, init, size).eval()
-    np.testing.assert_almost_equal(grw[-1], 13)
+    grw = gaussianrandomwalk(mu, sd, init, size=size).eval()
+    np.testing.assert_almost_equal(grw[-1], 13, decimal=4)
     assert grw.shape[0] == size
 
 
