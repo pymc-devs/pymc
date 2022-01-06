@@ -303,8 +303,13 @@ class GaussianRandomWalk(distribution.Continuous):
             outputs_info=np.array(0.0),
             n_steps=size,
         )
+        from aeppl import joint_logprob
 
-        return self.init.logp(x)
+        vv = rv.clone()
+        logp = joint_logprob({rv: vv})
+
+        # Question: Is value one scalar value or the whole series?
+        return logp.eval({vv: value})
 
 
 class GARCH11(distribution.Continuous):
