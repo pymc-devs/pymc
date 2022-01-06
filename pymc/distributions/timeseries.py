@@ -19,7 +19,6 @@ import numpy as np
 
 from aesara import scan
 from aesara.tensor.random.basic import RandomVariable
-from scipy import stats
 
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
@@ -267,34 +266,26 @@ class GaussianRandomWalk(distribution.Continuous):
     ) -> RandomVariable:
 
         # Still working on this. The RV op is my current blocker
-        raise NotImplementedError
-        return
+        return super().dist([mu, sigma, init], **kwargs)
 
-    def __init__(self, tau=None, init=None, sigma=None, mu=0.0, sd=None, *args, **kwargs):
-        raise Exception("Deprecated Randomwalk distribution")
-        kwargs.setdefault("shape", 1)
-        super().__init__(*args, **kwargs)
-        if sum(self.shape) == 0:
-            raise TypeError("GaussianRandomWalk must be supplied a non-zero shape argument!")
-        if sd is not None:
-            sigma = sd
-        tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.tau = at.as_tensor_variable(tau)
-        sigma = at.as_tensor_variable(sigma)
-        self.sigma = self.sd = sigma
-        self.mu = at.as_tensor_variable(mu)
-        self.init = init or Flat.dist()
-        self.mean = at.as_tensor_variable(0.0)
+    # TODO: Add typehints
+    def get_moment(
+        self,
+        size: Optional[Union[np.ndarray, float]],
+        mu: Optional[Union[np.ndarray, float]],
+        sigma: Optional[Union[np.ndarray, float]],
+        init: Optional[Union[np.ndarray, float]],
+    ):
+        moment = mu * size + init
+        return moment
 
-    def _mu_and_sigma(self, mu, sigma):
-        """Helper to get mu and sigma if they are high dimensional."""
-        if sigma.ndim > 0:
-            sigma = sigma[1:]
-        if mu.ndim > 0:
-            mu = mu[1:]
-        return mu, sigma
-
-    def logp(self, x):
+    def logp(
+        value,
+        mu: Optional[Union[np.ndarray, float]],
+        sigma: Optional[Union[np.ndarray, float]],
+        init: Optional[Union[np.ndarray, float]],
+        size: Optional[Union[np.ndarray, float]],
+    ):
         """
         Calculate log-probability of Gaussian Random Walk distribution at specified value.
 
@@ -307,64 +298,13 @@ class GaussianRandomWalk(distribution.Continuous):
         -------
         TensorVariable
         """
-        if x.ndim > 0:
-            x_im1 = x[:-1]
-            x_i = x[1:]
-            mu, sigma = self._mu_and_sigma(self.mu, self.sigma)
-            innov_like = Normal.dist(mu=x_im1 + mu, sigma=sigma).logp(x_i)
-            return self.init.logp(x[0]) + at.sum(innov_like)
+        rv, updates = aesara.scan(
+            fn=lambda prev_value: rng.normal(prev_value + mu, sigma),
+            outputs_info=np.array(0.0),
+            n_steps=size,
+        )
+
         return self.init.logp(x)
-
-    def random(self, point=None, size=None):
-        """Draw random values from GaussianRandomWalk.
-
-        Parameters
-        ----------
-        point : dict or Point, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size : int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # sigma, mu = distribution.draw_values([self.sigma, self.mu], point=point, size=size)
-        # return distribution.generate_samples(
-        #     self._random,
-        #     sigma=sigma,
-        #     mu=mu,
-        #     size=size,
-        #     dist_shape=self.shape,
-        #     not_broadcast_kwargs={"sample_shape": to_tuple(size)},
-        # )
-        pass
-
-    def _random(self, sigma, mu, size, sample_shape):
-        """Implement a Gaussian random walk as a cumulative sum of normals.
-        axis = len(size) - 1 denotes the axis along which cumulative sum would be calculated.
-        This might need to be corrected in future when issue #4010 is fixed.
-        """
-        if size[len(sample_shape)] == sample_shape:
-            axis = len(sample_shape)
-        else:
-            axis = len(size) - 1
-        rv = stats.norm(mu, sigma)
-        data = rv.rvs(size).cumsum(axis=axis)
-        data = np.array(data)
-
-        # the following lines center the random walk to start at the origin.
-        if len(data.shape) > 1:
-            for i in range(data.shape[0]):
-                data[i] = data[i] - data[i][0]
-        else:
-            data = data - data[0]
-        return data
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "sigma"]
 
 
 class GARCH11(distribution.Continuous):
