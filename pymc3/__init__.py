@@ -18,8 +18,30 @@ __version__ = "3.11.4"
 import logging
 import multiprocessing as mp
 import platform
+import warnings
 
+import numpy.distutils
 import semver
+
+# Workaround for Theano bug that tries to access blas_opt_info;
+#  must be done before importing theano.
+# https://github.com/pymc-devs/pymc/issues/5310
+# Copied from theano/link/c/cmodule.py: default_blas_ldflags()
+if (
+    hasattr(numpy.distutils, "__config__")
+    and numpy.distutils.__config__
+    and not hasattr(numpy.distutils.__config__, "blas_opt_info")
+):
+    import numpy.distutils.system_info  # noqa
+
+    # We need to catch warnings as in some cases NumPy print
+    # stuff that we don't want the user to see.
+    with warnings.catch_warnings(record=True):
+        numpy.distutils.system_info.system_info.verbosity = 0
+        blas_info = numpy.distutils.system_info.get_info("blas_opt")
+
+    numpy.distutils.__config__.blas_opt_info = blas_info
+
 import theano
 
 _log = logging.getLogger("pymc3")
