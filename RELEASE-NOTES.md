@@ -6,6 +6,9 @@
 + The `pm.Distribution(testval=...)` kwarg was deprecated and will be replaced by `pm.Distribution(initval=...)`in `pymc >=4` (see [#5226](https://github.com/pymc-devs/pymc/pulls/5226)).
 + The `pm.sample(start=...)` kwarg was deprecated and will be replaced by `pm.sample(initvals=...)`in `pymc >=4` (see [#5226](https://github.com/pymc-devs/pymc/pulls/5226)).
 
+### Bugfixes
++ A hotfix is applied on import to remain compatible with NumPy 1.22 (see [#5316](https://github.com/pymc-devs/pymc/pull/5316)).
+
 ## PyMC3 3.11.4 (20 August 2021)
 
 ### New Features
