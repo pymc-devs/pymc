@@ -113,21 +113,15 @@ def find_MAP(
 
     # TODO: If the mapping is fixed, we can simply create graphs for the
     # mapping and avoid all this bijection overhead
-    def logp_func(x):
-        return DictToArrayBijection.mapf(model.compile_logp(jacobian=False))(
-            RaveledVars(x, x0.point_map_info)
-        )
+    compiled_logp_func = DictToArrayBijection.mapf(model.compile_logp(jacobian=False))
+    logp_func = lambda x: compiled_logp_func(RaveledVars(x, x0.point_map_info))
 
     rvs = [model.values_to_rvs[value] for value in vars]
     try:
         # This might be needed for calls to `dlogp_func`
         # start_map_info = tuple((v.name, v.shape, v.dtype) for v in vars)
-
-        def dlogp_func(x):
-            return DictToArrayBijection.mapf(model.compile_dlogp(rvs, jacobian=False))(
-                RaveledVars(x, x0.point_map_info)
-            )
-
+        compiled_dlogp_func = DictToArrayBijection.mapf(model.compile_dlogp(rvs, jacobian=False))
+        dlogp_func = lambda x: compiled_dlogp_func(RaveledVars(x, x0.point_map_info))
         compute_gradient = True
     except (AttributeError, NotImplementedError, tg.NullTypeGradError):
         compute_gradient = False
