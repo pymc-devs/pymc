@@ -30,7 +30,7 @@ A great introductory book written by a maintainer of PyMC. It provides a hands-o
 ### {octicon}`mortar-board;1em;sd-text-info` Tutorial notebooks
 
 #### Getting started
-The {ref}`getting_started` notebook in our documentation shows the PyMC 4.0 code in action
+The {ref}`pymc_overview` notebook in our documentation shows the PyMC 4.0 code in action
 
 #### General Linear Models: Linear regression
 

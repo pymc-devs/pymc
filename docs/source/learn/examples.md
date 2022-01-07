@@ -33,7 +33,7 @@ TODO add categories to all notebooks
 :hidden:
 :maxdepth: 1
 
-examples/getting_started
+examples/pymc_overview
 examples/GLM_linear
 examples/model_comparison
 examples/posterior_predictive
