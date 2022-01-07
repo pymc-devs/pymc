@@ -95,6 +95,9 @@ def find_MAP(
         vars = model.cont_vars
         if not vars:
             raise ValueError("Model has no unobserved continuous variables.")
+    else:
+        vars = [model.rvs_to_values.get(var, var) for var in vars]
+
     vars = inputvars(vars)
     disc_vars = list(typefilter(vars, discrete_types))
     allinmodel(vars, model)
