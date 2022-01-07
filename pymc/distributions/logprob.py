@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import warnings
 
 from collections.abc import Mapping
 from functools import singledispatch
@@ -118,7 +117,7 @@ subtensor_types = (
 )
 
 
-def logpt(
+def joint_logpt(
     var: Union[TensorVariable, List[TensorVariable]],
     rv_values: Optional[Union[TensorVariable, Dict[TensorVariable, TensorVariable]]] = None,
     *,
@@ -264,17 +263,3 @@ def logcdf(rv, value):
 
     value = at.as_tensor_variable(value, dtype=rv.dtype)
     return logcdf_aeppl(rv, value)
-
-
-def logpt_sum(*args, **kwargs):
-    """Return the sum of the logp values for the given observations.
-
-    Subclasses can use this to improve the speed of logp evaluations
-    if only the sum of the logp values is needed.
-    """
-    warnings.warn(
-        "logpt_sum has been deprecated, you can use logpt instead, which now defaults"
-        "to the same behavior of logpt_sum",
-        DeprecationWarning,
-    )
-    return logpt(*args, sum=True, **kwargs)

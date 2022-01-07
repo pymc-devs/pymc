@@ -21,7 +21,7 @@ import scipy.stats
 from aesara.graph import graph_inputs
 from numpy import array, ma
 
-from pymc import logpt
+from pymc import joint_logpt
 from pymc.distributions import Dirichlet, Gamma, Normal, Uniform
 from pymc.exceptions import ImputationWarning
 from pymc.model import Model
@@ -41,7 +41,7 @@ def test_missing(data):
     assert "y_missing" in model.named_vars
 
     test_point = model.recompute_initial_point()
-    assert not np.isnan(model.logp(test_point))
+    assert not np.isnan(model.compile_logp()(test_point))
 
     with model:
         prior_trace = sample_prior_predictive(return_inferencedata=False)
@@ -59,7 +59,7 @@ def test_missing_with_predictors():
     assert "y_missing" in model.named_vars
 
     test_point = model.recompute_initial_point()
-    assert not np.isnan(model.logp(test_point))
+    assert not np.isnan(model.compile_logp()(test_point))
 
     with model:
         prior_trace = sample_prior_predictive(return_inferencedata=False)
@@ -144,13 +144,13 @@ def test_double_counting():
     with Model(check_bounds=False) as m1:
         x = Gamma("x", 1, 1, size=4)
 
-    logp_val = m1.logp({"x_log__": np.array([0, 0, 0, 0])})
+    logp_val = m1.compile_logp()({"x_log__": np.array([0, 0, 0, 0])})
     assert logp_val == -4.0
 
     with Model(check_bounds=False) as m2:
         x = Gamma("x", 1, 1, observed=[1, 1, 1, np.nan])
 
-    logp_val = m2.logp({"x_missing_log__": np.array([0])})
+    logp_val = m2.compile_logp()({"x_missing_log__": np.array([0])})
     assert logp_val == -4.0
 
 
@@ -158,12 +158,14 @@ def test_missing_logp():
     with Model() as m:
         theta1 = Normal("theta1", 0, 5, observed=[0, 1, 2, 3, 4])
         theta2 = Normal("theta2", mu=theta1, observed=[0, 1, 2, 3, 4])
-    m_logp = m.logp()
+    m_logp = m.compile_logp()({})
 
     with Model() as m_missing:
         theta1 = Normal("theta1", 0, 5, observed=np.array([0, 1, np.nan, 3, np.nan]))
         theta2 = Normal("theta2", mu=theta1, observed=np.array([np.nan, np.nan, 2, np.nan, 4]))
-    m_missing_logp = m_missing.logp({"theta1_missing": [2, 4], "theta2_missing": [0, 1, 3]})
+    m_missing_logp = m_missing.compile_logp()(
+        {"theta1_missing": [2, 4], "theta2_missing": [0, 1, 3]}
+    )
 
     assert m_logp == m_missing_logp
 
@@ -188,8 +190,8 @@ def test_missing_multivariate():
     #
     # inp_vals = simplex.forward(np.array([0.3, 0.3, 0.4])).eval()
     # assert np.isclose(
-    #     m_miss.logp({"x_missing_simplex__": inp_vals}),
-    #     m_unobs.logp_nojac({"x_simplex__": inp_vals}) * 2,
+    #     m_miss.compile_logp()({"x_missing_simplex__": inp_vals}),
+    #     m_unobs.compile_logp(jacobian=False)({"x_simplex__": inp_vals}) * 2,
     # )
 
 
@@ -206,7 +208,7 @@ def test_missing_vector_parameter():
     assert np.all(x_draws[:, 0] < 0)
     assert np.all(x_draws[:, 1] > 0)
     assert np.isclose(
-        m.logp({"x_missing": np.array([-10, 10, -10, 10])}),
+        m.compile_logp()({"x_missing": np.array([-10, 10, -10, 10])}),
         scipy.stats.norm(scale=0.1).logpdf(0) * 6,
     )
 
@@ -228,7 +230,7 @@ def test_missing_symmetric():
     x_unobs_rv = m["x_missing"]
     x_unobs_vv = m.rvs_to_values[x_unobs_rv]
 
-    logp = logpt([x_obs_rv, x_unobs_rv], {x_obs_rv: x_obs_vv, x_unobs_rv: x_unobs_vv})
+    logp = joint_logpt([x_obs_rv, x_unobs_rv], {x_obs_rv: x_obs_vv, x_unobs_rv: x_unobs_vv})
     logp_inputs = list(graph_inputs([logp]))
     assert x_obs_vv in logp_inputs
     assert x_unobs_vv in logp_inputs

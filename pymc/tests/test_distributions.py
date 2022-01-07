@@ -121,10 +121,9 @@ from pymc.distributions import (
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
+    joint_logpt,
     logcdf,
     logp,
-    logpt,
-    logpt_sum,
 )
 from pymc.distributions.shape_utils import to_tuple
 from pymc.math import kronecker
@@ -602,7 +601,7 @@ def test_hierarchical_logpt():
         x = pm.Uniform("x", lower=0, upper=1)
         y = pm.Uniform("y", lower=0, upper=x)
 
-    logpt_ancestors = list(ancestors([m.logpt]))
+    logpt_ancestors = list(ancestors([m.logpt()]))
     ops = {a.owner.op for a in logpt_ancestors if a.owner}
     assert len(ops) > 0
     assert not any(isinstance(o, RandomVariable) for o in ops)
@@ -617,7 +616,7 @@ def test_hierarchical_obs_logpt():
         x = pm.Uniform("x", 0, 1, observed=obs)
         pm.Uniform("y", x, 2, observed=obs)
 
-    logpt_ancestors = list(ancestors([model.logpt]))
+    logpt_ancestors = list(ancestors([model.logpt()]))
     ops = {a.owner.op for a in logpt_ancestors if a.owner}
     assert len(ops) > 0
     assert not any(isinstance(o, RandomVariable) for o in ops)
@@ -705,7 +704,7 @@ class TestMatchesScipy:
             return pt_d
 
         model, param_vars = build_model(pymc_dist, domain, paramdomains, extra_args)
-        logp_pymc = model.fastlogp_nojac
+        logp_pymc = model.compile_logp(jacobian=False)
 
         # Test supported value and parameters domain matches scipy
         domains = paramdomains.copy()
@@ -839,7 +838,7 @@ class TestMatchesScipy:
             model, param_vars = build_model(pymc_dist, domain, paramdomains)
             rv = model["value"]
             value = model.rvs_to_values[rv]
-            pymc_logcdf = model.fastfn(logcdf(rv, value))
+            pymc_logcdf = model.compile_fn(logcdf(rv, value))
 
             if decimal is None:
                 decimal = select_by_precision(float64=6, float32=3)
@@ -944,8 +943,8 @@ class TestMatchesScipy:
         model, param_vars = build_model(distribution, domain, paramdomains)
         rv = model["value"]
         value = model.rvs_to_values[rv]
-        dist_logcdf = model.fastfn(logcdf(rv, value))
-        dist_logp = model.fastfn(logp(rv, value))
+        dist_logcdf = model.compile_fn(logcdf(rv, value))
+        dist_logp = model.compile_fn(logp(rv, value))
 
         for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
@@ -1232,7 +1231,7 @@ class TestMatchesScipy:
             Wald("wald", mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
         pt = {"wald": value}
         decimals = select_by_precision(float64=6, float32=1)
-        assert_almost_equal(model.fastlogp(pt), logp, decimal=decimals, err_msg=str(pt))
+        assert_almost_equal(model.compile_logp()(pt), logp, decimal=decimals, err_msg=str(pt))
 
     def test_beta_logp(self):
         self.check_logp(
@@ -2162,7 +2161,7 @@ class TestMatchesScipy:
 
         pt = {"lkj": x}
         decimals = select_by_precision(float64=6, float32=4)
-        assert_almost_equal(model.fastlogp(pt), lp, decimal=decimals, err_msg=str(pt))
+        assert_almost_equal(model.compile_logp()(pt), lp, decimal=decimals, err_msg=str(pt))
 
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_dirichlet(self, n):
@@ -2423,7 +2422,7 @@ class TestMatchesScipy:
             ExGaussian("eg", mu=mu, sigma=sigma, nu=nu)
         pt = {"eg": value}
         assert_almost_equal(
-            model.fastlogp(pt),
+            model.compile_logp()(pt),
             logp,
             decimal=select_by_precision(float64=6, float32=2),
             err_msg=str(pt),
@@ -2596,11 +2595,11 @@ class TestMatchesScipy:
             x = pm.Interpolated("x", x_points, pdf_points, transform=transform)
 
         if transform is UNSET:
-            assert np.isfinite(m.logp({"x_interval__": -1.0}))
-            assert np.isfinite(m.logp({"x_interval__": 11.0}))
+            assert np.isfinite(m.compile_logp()({"x_interval__": -1.0}))
+            assert np.isfinite(m.compile_logp()({"x_interval__": 11.0}))
         else:
-            assert not np.isfinite(m.logp({"x": -1.0}))
-            assert not np.isfinite(m.logp({"x": 11.0}))
+            assert not np.isfinite(m.compile_logp()({"x": -1.0}))
+            assert not np.isfinite(m.compile_logp()({"x": 11.0}))
 
 
 class TestBound:
@@ -2618,29 +2617,29 @@ class TestBound:
             UpperNormalTransform = Bound("uppertrans", dist, upper=10)
             BoundedNormalTransform = Bound("boundedtrans", dist, lower=1, upper=10)
 
-        assert logpt(LowerNormal, -1).eval() == -np.inf
-        assert logpt(UpperNormal, 1).eval() == -np.inf
-        assert logpt(BoundedNormal, 0).eval() == -np.inf
-        assert logpt(BoundedNormal, 11).eval() == -np.inf
+        assert joint_logpt(LowerNormal, -1).eval() == -np.inf
+        assert joint_logpt(UpperNormal, 1).eval() == -np.inf
+        assert joint_logpt(BoundedNormal, 0).eval() == -np.inf
+        assert joint_logpt(BoundedNormal, 11).eval() == -np.inf
 
-        assert logpt(UnboundedNormal, 0).eval() != -np.inf
-        assert logpt(UnboundedNormal, 11).eval() != -np.inf
-        assert logpt(InfBoundedNormal, 0).eval() != -np.inf
-        assert logpt(InfBoundedNormal, 11).eval() != -np.inf
+        assert joint_logpt(UnboundedNormal, 0).eval() != -np.inf
+        assert joint_logpt(UnboundedNormal, 11).eval() != -np.inf
+        assert joint_logpt(InfBoundedNormal, 0).eval() != -np.inf
+        assert joint_logpt(InfBoundedNormal, 11).eval() != -np.inf
 
         value = model.rvs_to_values[LowerNormalTransform]
-        assert logpt(LowerNormalTransform, value).eval({value: -1}) != -np.inf
+        assert joint_logpt(LowerNormalTransform, value).eval({value: -1}) != -np.inf
         value = model.rvs_to_values[UpperNormalTransform]
-        assert logpt(UpperNormalTransform, value).eval({value: 1}) != -np.inf
+        assert joint_logpt(UpperNormalTransform, value).eval({value: 1}) != -np.inf
         value = model.rvs_to_values[BoundedNormalTransform]
-        assert logpt(BoundedNormalTransform, value).eval({value: 0}) != -np.inf
-        assert logpt(BoundedNormalTransform, value).eval({value: 11}) != -np.inf
+        assert joint_logpt(BoundedNormalTransform, value).eval({value: 0}) != -np.inf
+        assert joint_logpt(BoundedNormalTransform, value).eval({value: 11}) != -np.inf
 
         ref_dist = Normal.dist(mu=0, sigma=1)
-        assert np.allclose(logpt(UnboundedNormal, 5).eval(), logpt(ref_dist, 5).eval())
-        assert np.allclose(logpt(LowerNormal, 5).eval(), logpt(ref_dist, 5).eval())
-        assert np.allclose(logpt(UpperNormal, -5).eval(), logpt(ref_dist, 5).eval())
-        assert np.allclose(logpt(BoundedNormal, 5).eval(), logpt(ref_dist, 5).eval())
+        assert np.allclose(joint_logpt(UnboundedNormal, 5).eval(), joint_logpt(ref_dist, 5).eval())
+        assert np.allclose(joint_logpt(LowerNormal, 5).eval(), joint_logpt(ref_dist, 5).eval())
+        assert np.allclose(joint_logpt(UpperNormal, -5).eval(), joint_logpt(ref_dist, 5).eval())
+        assert np.allclose(joint_logpt(BoundedNormal, 5).eval(), joint_logpt(ref_dist, 5).eval())
 
     def test_discrete(self):
         with Model() as model:
@@ -2650,19 +2649,19 @@ class TestBound:
             UpperPoisson = Bound("upper", dist, upper=10)
             BoundedPoisson = Bound("bounded", dist, lower=1, upper=10)
 
-        assert logpt(LowerPoisson, 0).eval() == -np.inf
-        assert logpt(UpperPoisson, 11).eval() == -np.inf
-        assert logpt(BoundedPoisson, 0).eval() == -np.inf
-        assert logpt(BoundedPoisson, 11).eval() == -np.inf
+        assert joint_logpt(LowerPoisson, 0).eval() == -np.inf
+        assert joint_logpt(UpperPoisson, 11).eval() == -np.inf
+        assert joint_logpt(BoundedPoisson, 0).eval() == -np.inf
+        assert joint_logpt(BoundedPoisson, 11).eval() == -np.inf
 
-        assert logpt(UnboundedPoisson, 0).eval() != -np.inf
-        assert logpt(UnboundedPoisson, 11).eval() != -np.inf
+        assert joint_logpt(UnboundedPoisson, 0).eval() != -np.inf
+        assert joint_logpt(UnboundedPoisson, 11).eval() != -np.inf
 
         ref_dist = Poisson.dist(mu=4)
-        assert np.allclose(logpt(UnboundedPoisson, 5).eval(), logpt(ref_dist, 5).eval())
-        assert np.allclose(logpt(LowerPoisson, 5).eval(), logpt(ref_dist, 5).eval())
-        assert np.allclose(logpt(UpperPoisson, 5).eval(), logpt(ref_dist, 5).eval())
-        assert np.allclose(logpt(BoundedPoisson, 5).eval(), logpt(ref_dist, 5).eval())
+        assert np.allclose(joint_logpt(UnboundedPoisson, 5).eval(), joint_logpt(ref_dist, 5).eval())
+        assert np.allclose(joint_logpt(LowerPoisson, 5).eval(), joint_logpt(ref_dist, 5).eval())
+        assert np.allclose(joint_logpt(UpperPoisson, 5).eval(), joint_logpt(ref_dist, 5).eval())
+        assert np.allclose(joint_logpt(BoundedPoisson, 5).eval(), joint_logpt(ref_dist, 5).eval())
 
     def create_invalid_distribution(self):
         class MyNormal(RandomVariable):
@@ -2766,19 +2765,19 @@ class TestBound:
             UpperPoisson = Bound("upper", dist, upper=[np.inf, 10], transform=None)
             BoundedPoisson = Bound("bounded", dist, lower=[1, 2], upper=[9, 10], transform=None)
 
-        first, second = logpt(LowerPoisson, [0, 0], sum=False).eval()
+        first, second = joint_logpt(LowerPoisson, [0, 0], sum=False).eval()
         assert first == -np.inf
         assert second != -np.inf
 
-        first, second = logpt(UpperPoisson, [11, 11], sum=False).eval()
+        first, second = joint_logpt(UpperPoisson, [11, 11], sum=False).eval()
         assert first != -np.inf
         assert second == -np.inf
 
-        first, second = logpt(BoundedPoisson, [1, 1], sum=False).eval()
+        first, second = joint_logpt(BoundedPoisson, [1, 1], sum=False).eval()
         assert first != -np.inf
         assert second == -np.inf
 
-        first, second = logpt(BoundedPoisson, [10, 10], sum=False).eval()
+        first, second = joint_logpt(BoundedPoisson, [10, 10], sum=False).eval()
         assert first == -np.inf
         assert second != -np.inf
 
@@ -3027,8 +3026,8 @@ def test_orderedlogistic_dimensions(shape):
             p=p,
             observed=obs,
         )
-    ologp = logpt_sum(ol, np.ones_like(obs)).eval() * loge
-    clogp = logpt_sum(c, np.ones_like(obs)).eval() * loge
+    ologp = joint_logpt(ol, np.ones_like(obs), sum=True).eval() * loge
+    clogp = joint_logpt(c, np.ones_like(obs), sum=True).eval() * loge
     expected = -np.prod((size,) + shape)
 
     assert c.owner.inputs[3].ndim == (len(shape) + 1)
@@ -3171,15 +3170,15 @@ class TestBugfixes:
         # https://github.com/pymc-devs/pymc/issues/4499
         with pm.Model(check_bounds=False) as m:
             x = pm.Uniform("x", 0, 2, size=10, transform=None)
-        assert_almost_equal(m.logp({"x": np.ones(10)}), -np.log(2) * 10)
+        assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
 
         with pm.Model(check_bounds=False) as m:
             x = pm.DiscreteUniform("x", 0, 1, size=10)
-        assert_almost_equal(m.logp({"x": np.ones(10)}), -np.log(2) * 10)
+        assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
 
         with pm.Model(check_bounds=False) as m:
             x = pm.Constant("x", 1, size=10)
-        assert_almost_equal(m.logp({"x": np.ones(10)}), 0 * 10)
+        assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), 0 * 10)
 
 
 def test_serialize_density_dist():
@@ -3268,7 +3267,7 @@ def test_density_dist_multivariate_logp(size):
     a_val = np.random.normal(loc=mu_val, scale=1, size=to_tuple(size) + (supp_shape,)).astype(
         aesara.config.floatX
     )
-    log_densityt = pm.logpt(a, a.tag.value_var, sum=False)
+    log_densityt = joint_logpt(a, a.tag.value_var, sum=False)
     assert (
         log_densityt.eval(
             {a.tag.value_var: a_val, mu.tag.value_var: mu_val},

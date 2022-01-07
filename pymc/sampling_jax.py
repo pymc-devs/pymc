@@ -28,7 +28,6 @@ from aesara.raise_op import Assert
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_observations
-from pymc.distributions import logpt
 from pymc.util import get_default_varnames
 
 warnings.warn("This module is experimental.")
@@ -73,7 +72,7 @@ def replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariable
 def get_jaxified_logp(model: Model) -> Callable:
     """Compile model.logpt into an optimized jax function"""
 
-    logpt = replace_shared_variables([model.logpt])[0]
+    logpt = replace_shared_variables([model.logpt()])[0]
 
     logpt_fgraph = FunctionGraph(outputs=[logpt], clone=False)
     optimize_graph(logpt_fgraph, include=["fast_run"], exclude=["cxx_only", "BlasOpt"])
@@ -123,7 +122,7 @@ def _get_log_likelihood(model, samples):
     "Compute log-likelihood for all observations"
     data = {}
     for v in model.observed_RVs:
-        logp_v = replace_shared_variables([model.logp_elemwiset(v)[0]])
+        logp_v = replace_shared_variables([model.logpt(v, sum=False)[0]])
         fgraph = FunctionGraph(model.value_vars, logp_v, clone=False)
         optimize_graph(fgraph, include=["fast_run"], exclude=["cxx_only", "BlasOpt"])
         jax_fn = jax_funcify(fgraph)

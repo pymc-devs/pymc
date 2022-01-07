@@ -22,6 +22,7 @@ from sys import modules
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     List,
     Optional,
@@ -57,7 +58,7 @@ from pymc.aesaraf import (
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
-from pymc.distributions import logp_transform, logpt
+from pymc.distributions import joint_logpt, logp_transform
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
 from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
@@ -73,15 +74,12 @@ from pymc.vartypes import continuous_types, discrete_types, typefilter
 
 __all__ = [
     "Model",
-    "Factor",
-    "compilef",
-    "fn",
-    "fastfn",
     "modelcontext",
-    "Point",
     "Deterministic",
     "Potential",
     "set_data",
+    "Point",
+    "compile_fn",
 ]
 
 FlatView = collections.namedtuple("FlatView", "input, replacements")
@@ -271,90 +269,6 @@ def modelcontext(model: Optional["Model"]) -> "Model":
     return model
 
 
-class Factor:
-    """Common functionality for objects with a log probability density
-    associated with them.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    @property
-    def logp(self):
-        """Compiled log probability density function"""
-        return self.model.fn(self.logpt)
-
-    def logp_elemwise(self, vars=None, jacobian=True):
-        return self.model.fn(self.logp_elemwiset(vars=vars, jacobian=jacobian))
-
-    def dlogp(self, vars=None):
-        """Compiled log probability density gradient function"""
-        return self.model.fn(gradient(self.logpt, vars))
-
-    def d2logp(self, vars=None):
-        """Compiled log probability density hessian function"""
-        return self.model.fn(hessian(self.logpt, vars))
-
-    @property
-    def logp_nojac(self):
-        return self.model.fn(self.logp_nojact)
-
-    def dlogp_nojac(self, vars=None):
-        """Compiled log density gradient function, without jacobian terms."""
-        return self.model.fn(gradient(self.logp_nojact, vars))
-
-    def d2logp_nojac(self, vars=None):
-        """Compiled log density hessian function, without jacobian terms."""
-        return self.model.fn(hessian(self.logp_nojact, vars))
-
-    @property
-    def fastlogp(self):
-        """Compiled log probability density function"""
-        return self.model.fastfn(self.logpt)
-
-    def fastdlogp(self, vars=None):
-        """Compiled log probability density gradient function"""
-        return self.model.fastfn(gradient(self.logpt, vars))
-
-    def fastd2logp(self, vars=None):
-        """Compiled log probability density hessian function"""
-        return self.model.fastfn(hessian(self.logpt, vars))
-
-    @property
-    def fastlogp_nojac(self):
-        return self.model.fastfn(self.logp_nojact)
-
-    def fastdlogp_nojac(self, vars=None):
-        """Compiled log density gradient function, without jacobian terms."""
-        return self.model.fastfn(gradient(self.logp_nojact, vars))
-
-    def fastd2logp_nojac(self, vars=None):
-        """Compiled log density hessian function, without jacobian terms."""
-        return self.model.fastfn(hessian(self.logp_nojact, vars))
-
-    @property
-    def logpt(self):
-        """Aesara scalar of log-probability of the model"""
-        if getattr(self, "total_size", None) is not None:
-            logp = self.logp_sum_unscaledt * self.scaling
-        else:
-            logp = self.logp_sum_unscaledt
-        if self.name is not None:
-            logp.name = f"__logp_{self.name}"
-        return logp
-
-    @property
-    def logp_nojact(self):
-        """Aesara scalar of log-probability, excluding jacobian terms."""
-        if getattr(self, "total_size", None) is not None:
-            logp = at.sum(self.logp_nojac_unscaledt) * self.scaling
-        else:
-            logp = at.sum(self.logp_nojac_unscaledt)
-        if self.name is not None:
-            logp.name = f"__logp_{self.name}"
-        return logp
-
-
 class ValueGradFunction:
     """Create an Aesara function that computes a value and its gradient.
 
@@ -510,7 +424,7 @@ class ValueGradFunction:
         return self._aesara_function.profile
 
 
-class Model(Factor, WithMemoization, metaclass=ContextMeta):
+class Model(WithMemoization, metaclass=ContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
@@ -721,7 +635,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             #  where the potential terms are added to the observations?
             costs = [self.varlogpt + self.potentiallogpt, self.observedlogpt]
         else:
-            costs = [self.logpt]
+            costs = [self.logpt()]
 
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
         extra_vars = [self.rvs_to_values.get(var, var) for var in self.free_RVs]
@@ -731,11 +645,37 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         }
         return ValueGradFunction(costs, grad_vars, extra_vars_and_values, **kwargs)
 
-    def logp_elemwiset(
+    def compile_logp(
         self,
-        vars: Optional[Union[Variable, List[Variable]]] = None,
+        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
-    ) -> List[Variable]:
+        sum: bool = True,
+    ):
+        """Compiled log probability density function"""
+        return self.model.compile_fn(self.logpt(vars=vars, jacobian=jacobian, sum=sum))
+
+    def compile_dlogp(
+        self,
+        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        jacobian: bool = True,
+    ):
+        """Compiled log probability density gradient function"""
+        return self.model.compile_fn(self.dlogpt(vars=vars, jacobian=jacobian))
+
+    def compile_d2logp(
+        self,
+        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        jacobian: bool = True,
+    ):
+        """Compiled log probability density hessian function"""
+        return self.model.compile_fn(self.d2logpt(vars=vars, jacobian=jacobian))
+
+    def logpt(
+        self,
+        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        jacobian: bool = True,
+        sum: bool = True,
+    ) -> Union[Variable, List[Variable]]:
         """Elemwise log-probability of the model.
 
         Parameters
@@ -743,12 +683,15 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         vars: list of random variables or potential terms, optional
             Compute the gradient with respect to those variables. If None, use all
             free and observed random variables, as well as potential terms in model.
-        jacobian
+        jacobian:
             Whether to include jacobian terms in logprob graph. Defaults to True.
+        sum:
+            Whether to sum all logp terms or return elemwise logp for each variable.
+            Defaults to True.
 
         Returns
         -------
-        Elemwise logp terms for ecah requested variable, in the same order of input.
+        Logp graph(s)
         """
         if vars is None:
             vars = self.free_RVs + self.observed_RVs + self.potentials
@@ -776,7 +719,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         rv_logps = []
         if rv_values:
-            rv_logps = logpt(list(rv_values.keys()), rv_values, sum=False, jacobian=jacobian)
+            rv_logps = joint_logpt(list(rv_values.keys()), rv_values, sum=False, jacobian=jacobian)
             if not isinstance(rv_logps, list):
                 rv_logps = [rv_logps]
 
@@ -785,82 +728,93 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if potentials:
             potential_logps, _ = rvs_to_value_vars(potentials, apply_transforms=True)
 
-        logp_elemwise = [None] * len(vars)
+        logp_factors = [None] * len(vars)
         for logp_order, logp in zip((rv_order + potential_order), (rv_logps + potential_logps)):
-            logp_elemwise[logp_order] = logp
+            logp_factors[logp_order] = logp
 
-        return logp_elemwise
+        if not sum:
+            return logp_factors
 
-    @property
-    def logpt(self):
-        """Aesara scalar of log-probability of the model"""
-        logp_var = self.varlogpt + self.datalogpt
-
+        logp_scalar = at.sum([at.sum(factor) for factor in logp_factors])
+        logp_scalar_name = "__logp" if jacobian else "__logp_nojac"
         if self.name:
-            logp_var.name = f"__logp_{self.name}"
+            logp_scalar_name = f"{logp_scalar_name}_{self.name}"
+        logp_scalar.name = logp_scalar_name
+        return logp_scalar
+
+    def dlogpt(
+        self,
+        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        jacobian: bool = True,
+    ) -> Variable:
+        if vars is None:
+            value_vars = None
         else:
-            logp_var.name = "__logp"
-        return logp_var
+            if not isinstance(vars, (list, tuple)):
+                vars = [vars]
+
+            value_vars = []
+            for i, var in enumerate(vars):
+                value_var = self.rvs_to_values.get(var)
+                if value_var is not None:
+                    value_vars.append(value_var)
+                else:
+                    raise ValueError(
+                        f"Requested variable {var} not found among the model variables"
+                    )
+
+        cost = self.logpt(jacobian=jacobian)
+        return gradient(cost, value_vars)
+
+    def d2logpt(
+        self,
+        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        jacobian: bool = True,
+    ) -> Variable:
+        if vars is None:
+            value_vars = None
+        else:
+            if not isinstance(vars, (list, tuple)):
+                vars = [vars]
+
+            value_vars = []
+            for i, var in enumerate(vars):
+                value_var = self.rvs_to_values.get(var)
+                if value_var is not None:
+                    value_vars.append(value_var)
+                else:
+                    raise ValueError(
+                        f"Requested variable {var} not found among the model variables"
+                    )
+
+        cost = self.logpt(jacobian=jacobian)
+        return hessian(cost, value_vars)
 
     @property
-    def logp_nojact(self):
-        """Aesara scalar of log-probability of the model but without the jacobian
-        if transformed Random Variable is presented.
-
-        Note that if there is no transformed variable in the model, logp_nojact
-        will be the same as logpt as there is no need for Jacobian correction.
-        """
-        logp_var = self.varlogp_nojact + self.datalogpt
-
-        if self.name:
-            logp_var.name = f"__logp_nojac_{self.name}"
-        else:
-            logp_var.name = "__logp_nojac"
-        return logp_var
-
-    @property
-    def datalogpt(self):
+    def datalogpt(self) -> Variable:
         """Aesara scalar of log-probability of the observed variables and
         potential terms"""
         return self.observedlogpt + self.potentiallogpt
 
     @property
-    def varlogpt(self):
+    def varlogpt(self) -> Variable:
         """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic)."""
-        rv_values = {}
-        for var in self.free_RVs:
-            rv_values[var] = self.rvs_to_values[var]
-        if rv_values:
-            return logpt(self.free_RVs, rv_values)
-        else:
-            return 0
+        return self.logpt(vars=self.free_RVs)
 
     @property
-    def varlogp_nojact(self):
+    def varlogp_nojact(self) -> Variable:
         """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic) without jacobian term."""
-        rv_values = {}
-        for var in self.free_RVs:
-            rv_values[var] = self.rvs_to_values[var]
-        if rv_values:
-            return logpt(self.free_RVs, rv_values, jacobian=False)
-        else:
-            return 0
+        return self.logpt(vars=self.free_RVs, jacobian=False)
 
     @property
-    def observedlogpt(self):
+    def observedlogpt(self) -> Variable:
         """Aesara scalar of log-probability of the observed variables"""
-        obs_values = {}
-        for obs in self.observed_RVs:
-            obs_values[obs] = obs.tag.observations
-        if obs_values:
-            return logpt(self.observed_RVs, obs_values)
-        else:
-            return 0
+        return self.logpt(vars=self.observed_RVs)
 
     @property
-    def potentiallogpt(self):
+    def potentiallogpt(self) -> Variable:
         """Aesara scalar of log-probability of the Potential terms"""
         # Convert random variables in Potential expression into their log-likelihood
         # inputs and apply their transforms, if any
@@ -868,7 +822,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if potentials:
             return at.sum([at.sum(factor) for factor in potentials])
         else:
-            return 0
+            return at.constant(0.0)
 
     @property
     def vars(self):
@@ -1464,63 +1418,48 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             except KeyError:
                 raise e
 
-    def makefn(self, outs, mode=None, *args, **kwargs):
-        """Compiles an Aesara function which returns ``outs`` and takes the variable
-        ancestors of ``outs`` as inputs.
+    def compile_fn(
+        self,
+        outs: Sequence[Variable],
+        *,
+        inputs: Optional[Sequence[Variable]] = None,
+        mode=None,
+        point_fn: bool = True,
+        **kwargs,
+    ) -> Union["PointFunc", Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
+        """Compiles an Aesara function
 
         Parameters
         ----------
         outs: Aesara variable or iterable of Aesara variables
+        inputs: Aesara input variables, defaults to aesaraf.inputvars(outs).
         mode: Aesara compilation mode, default=None
+        point_fn:
+            Whether to wrap the compiled function in a PointFunc, which takes a Point
+            dictionary with model variable names and values as input.
 
         Returns
         -------
         Compiled Aesara function
         """
+        if inputs is None:
+            inputs = inputvars(outs)
+
         with self:
-            return compile_pymc(
-                self.value_vars,
+            fn = compile_pymc(
+                inputs,
                 outs,
                 allow_input_downcast=True,
-                on_unused_input="ignore",
                 accept_inplace=True,
                 mode=mode,
-                *args,
                 **kwargs,
             )
 
-    def fn(self, outs, mode=None, *args, **kwargs):
-        """Compiles an Aesara function which returns the values of ``outs``
-        and takes values of model vars as arguments.
+        if point_fn:
+            return PointFunc(fn)
+        return fn
 
-        Parameters
-        ----------
-        outs: Aesara variable or iterable of Aesara variables
-        mode: Aesara compilation mode
-
-        Returns
-        -------
-        Compiled Aesara function
-        """
-        return LoosePointFunc(self.makefn(outs, mode, *args, **kwargs), self)
-
-    def fastfn(self, outs, mode=None, *args, **kwargs):
-        """Compiles an Aesara function which returns ``outs`` and takes values
-        of model vars as a dict as an argument.
-
-        Parameters
-        ----------
-        outs: Aesara variable or iterable of Aesara variables
-        mode: Aesara compilation mode
-
-        Returns
-        -------
-        Compiled Aesara function as point function.
-        """
-        f = self.makefn(outs, mode, *args, **kwargs)
-        return FastPointFunc(f)
-
-    def profile(self, outs, n=1000, point=None, profile=True, *args, **kwargs):
+    def profile(self, outs, *, n=1000, point=None, profile=True, **kwargs):
         """Compiles and profiles an Aesara function which returns ``outs`` and
         takes values of model vars as a dict as an argument.
 
@@ -1540,7 +1479,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         ProfileStats
             Use .summary() to print stats.
         """
-        f = self.makefn(outs, profile=profile, *args, **kwargs)
+        kwargs.setdefault("on_unused_input", "ignore")
+        f = self.compile_fn(outs, inputs=self.value_vars, point_fn=False, profile=profile, **kwargs)
         if point is None:
             point = self.recompute_initial_point()
 
@@ -1709,7 +1649,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 factor.name: np.round(np.asarray(factor_logp), round_vals)
                 for factor, factor_logp in zip(
                     factors,
-                    self.fn([at.sum(factor) for factor in self.logp_elemwiset(factors)])(point),
+                    self.compile_fn([at.sum(factor) for factor in self.logpt(factors, sum=False)])(
+                        point
+                    ),
                 )
             },
             name="Point log-probability",
@@ -1761,39 +1703,22 @@ def set_data(new_data, model=None):
         model.set_data(variable_name, new_value)
 
 
-def fn(outs, mode=None, model=None, *args, **kwargs):
-    """Compiles an Aesara function which returns the values of ``outs`` and
-    takes values of model vars as arguments.
-
-    Parameters
-    ----------
-    outs: Aesara variable or iterable of Aesara variables
-    mode: Aesara compilation mode, default=None
-    model: Model, default=None
-
-    Returns
-    -------
-    Compiled Aesara function
-    """
-    model = modelcontext(model)
-    return model.fn(outs, mode, *args, **kwargs)
-
-
-def fastfn(outs, mode=None, model=None):
+def compile_fn(outs, mode=None, point_fn=True, model=None, **kwargs):
     """Compiles an Aesara function which returns ``outs`` and takes values of model
     vars as a dict as an argument.
-
     Parameters
     ----------
     outs: Aesara variable or iterable of Aesara variables
     mode: Aesara compilation mode
-
+    point_fn:
+        Whether to wrap the compiled function in a PointFunc, which takes a Point
+        dictionary with model variable names and values as input.
     Returns
     -------
     Compiled Aesara function as point function.
     """
     model = modelcontext(model)
-    return model.fastfn(outs, mode)
+    return model.compile_fn(outs, mode, point_fn=point_fn, **kwargs)
 
 
 def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
@@ -1820,7 +1745,7 @@ def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
     }
 
 
-class FastPointFunc:
+class PointFunc:
     """Wraps so a function so it takes a dict of arguments instead of arguments."""
 
     def __init__(self, f):
@@ -1828,22 +1753,6 @@ class FastPointFunc:
 
     def __call__(self, state):
         return self.f(**state)
-
-
-class LoosePointFunc:
-    """Wraps so a function so it takes a dict of arguments instead of arguments
-    but can still take arguments."""
-
-    def __init__(self, f, model):
-        self.f = f
-        self.model = model
-
-    def __call__(self, *args, **kwargs):
-        point = Point(model=self.model, *args, filter_model_vars=True, **kwargs)
-        return self.f(**point)
-
-
-compilef = fastfn
 
 
 def Deterministic(name, var, model=None, dims=None, auto=False):

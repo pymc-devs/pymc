@@ -216,7 +216,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
             has_gradient = var.dtype not in discrete_types
             if has_gradient:
                 try:
-                    tg.grad(model.logpt, var)
+                    tg.grad(model.logpt(), var)
                 except (NotImplementedError, tg.NullTypeGradError):
                     has_gradient = False
             # select the best method

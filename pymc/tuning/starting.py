@@ -114,14 +114,17 @@ def find_MAP(
     # TODO: If the mapping is fixed, we can simply create graphs for the
     # mapping and avoid all this bijection overhead
     def logp_func(x):
-        return DictToArrayBijection.mapf(model.fastlogp_nojac)(RaveledVars(x, x0.point_map_info))
+        return DictToArrayBijection.mapf(model.compile_logp(jacobian=False))(
+            RaveledVars(x, x0.point_map_info)
+        )
 
+    rvs = [model.values_to_rvs[value] for value in vars]
     try:
         # This might be needed for calls to `dlogp_func`
         # start_map_info = tuple((v.name, v.shape, v.dtype) for v in vars)
 
         def dlogp_func(x):
-            return DictToArrayBijection.mapf(model.fastdlogp_nojac(vars))(
+            return DictToArrayBijection.mapf(model.compile_dlogp(rvs, jacobian=False))(
                 RaveledVars(x, x0.point_map_info)
             )
 
@@ -166,7 +169,7 @@ def find_MAP(
     vars = get_default_varnames(model.unobserved_value_vars, include_transformed)
     mx = {
         var.name: value
-        for var, value in zip(vars, model.fastfn(vars)(DictToArrayBijection.rmap(mx0)))
+        for var, value in zip(vars, model.compile_fn(vars)(DictToArrayBijection.rmap(mx0)))
     }
 
     if return_raw:

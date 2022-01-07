@@ -65,7 +65,7 @@ class BaseTrace(ABC):
 
         self.vars = vars
         self.varnames = [var.name for var in vars]
-        self.fn = model.fastfn(vars)
+        self.fn = model.compile_fn(vars, inputs=model.value_vars, on_unused_input="ignore")
 
         # Get variable shapes. Most backends will need this
         # information.

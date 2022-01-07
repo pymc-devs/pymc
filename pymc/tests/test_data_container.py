@@ -24,7 +24,6 @@ from aesara.tensor.var import TensorVariable
 import pymc as pm
 
 from pymc.aesaraf import floatX
-from pymc.distributions import logpt
 from pymc.exceptions import ShapeError
 from pymc.tests.helpers import SeededTest
 
@@ -35,7 +34,7 @@ class TestData(SeededTest):
         with pm.Model() as model:
             X = pm.MutableData("X", data_values)
             pm.Normal("y", 0, 1, observed=X)
-            model.logp(model.recompute_initial_point())
+            model.compile_logp()(model.recompute_initial_point())
 
     def test_sample(self):
         x = np.random.normal(size=100)
@@ -206,8 +205,10 @@ class TestData(SeededTest):
             shared_var = shared(5.0)
             v = pm.Normal("v", mu=shared_var, size=1)
 
+        m_logp_fn = m.compile_logp()
+
         np.testing.assert_allclose(
-            logpt(v, np.r_[5.0]).eval(),
+            m_logp_fn({"v": np.r_[5.0]}),
             -0.91893853,
             rtol=1e-5,
         )
@@ -215,7 +216,7 @@ class TestData(SeededTest):
         shared_var.set_value(10.0)
 
         np.testing.assert_allclose(
-            logpt(v, np.r_[10.0]).eval(),
+            m_logp_fn({"v": np.r_[10.0]}),
             -0.91893853,
             rtol=1e-5,
         )

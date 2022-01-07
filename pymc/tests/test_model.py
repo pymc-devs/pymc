@@ -25,6 +25,7 @@ import numpy.testing as npt
 import pandas as pd
 import pytest
 import scipy.sparse as sps
+import scipy.stats as st
 
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorConstant
@@ -33,7 +34,7 @@ import pymc as pm
 
 from pymc import Deterministic, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.distributions import Normal, logpt_sum, transforms
+from pymc.distributions import Normal, transforms
 from pymc.exceptions import ShapeError
 from pymc.model import Point, ValueGradFunction
 from pymc.tests.helpers import SeededTest
@@ -327,7 +328,7 @@ class TestValueGradFunction(unittest.TestCase):
             obs = pm.Bernoulli("obs", p=p, observed=data)
 
         npt.assert_allclose(
-            logpt_sum(obs).eval({p.tag.value_var: pm.floatX(np.array(0.0))}),
+            m.compile_logp(obs)({"p_logodds__": pm.floatX(np.array(0.0))}),
             np.log(0.5) * 10,
         )
 
@@ -343,7 +344,7 @@ class TestValueGradFunction(unittest.TestCase):
             mu = pm.Normal("mu", 0, 5)
             obs = pm.TruncatedNormal("obs", mu=mu, sigma=1, lower=-1, upper=2, observed=data)
 
-        npt.assert_allclose(m.dlogp([m.rvs_to_values[mu]])({"mu": 0}), 2.499424682024436, rtol=1e-5)
+        npt.assert_allclose(m.compile_dlogp(mu)({"mu": 0}), 2.499424682024436, rtol=1e-5)
 
 
 def test_multiple_observed_rv():
@@ -665,3 +666,78 @@ def test_nested_model_coords():
     assert m1.coords is m2.coords
     assert m1.dim_lengths is m2.dim_lengths
     assert set(m2.RV_dims) < set(m1.RV_dims)
+
+
+@pytest.mark.parametrize("jacobian", [True, False])
+def test_model_logp(jacobian):
+    with pm.Model() as m:
+        x = pm.Normal("x", 0, 1, size=2)
+        y = pm.LogNormal("y", 0, 1, size=2)
+
+    test_vals = np.array([0.0, 1.0])
+
+    expected_x_logp = st.norm().logpdf(test_vals)
+    expected_y_logp = expected_x_logp.copy()
+    if not jacobian:
+        expected_y_logp -= np.array([0.0, 1.0])
+
+    x_logp, y_logp = m.compile_logp(sum=False, jacobian=jacobian)(
+        {"x": test_vals, "y_log__": test_vals}
+    )
+    assert np.all(np.isclose(x_logp, expected_x_logp))
+    assert np.all(np.isclose(y_logp, expected_y_logp))
+
+    x_logp2 = m.compile_logp(vars=[x], sum=False, jacobian=jacobian)({"x": test_vals})
+    assert np.all(np.isclose(x_logp2, expected_x_logp))
+
+    y_logp2 = m.compile_logp(vars=[y], sum=False, jacobian=jacobian)({"y_log__": test_vals})
+    assert np.all(np.isclose(y_logp2, expected_y_logp))
+
+    logp_sum = m.compile_logp(sum=True, jacobian=jacobian)({"x": test_vals, "y_log__": test_vals})
+    assert np.isclose(logp_sum, expected_x_logp.sum() + expected_y_logp.sum())
+
+
+@pytest.mark.parametrize("jacobian", [True, False])
+def test_model_dlogp(jacobian):
+    with pm.Model() as m:
+        x = pm.Normal("x", 0, 1, size=2)
+        y = pm.LogNormal("y", 0, 1, size=2)
+
+    test_vals = np.array([0.0, -1.0])
+    state = {"x": test_vals, "y_log__": test_vals}
+
+    expected_x_dlogp = expected_y_dlogp = np.array([0.0, 1.0])
+    if not jacobian:
+        expected_y_dlogp = np.array([-1.0, 0.0])
+
+    dlogps = m.compile_dlogp(jacobian=jacobian)(state)
+    assert np.all(np.isclose(dlogps[:2], expected_x_dlogp))
+    assert np.all(np.isclose(dlogps[2:], expected_y_dlogp))
+
+    x_dlogp2 = m.compile_dlogp(vars=[x], jacobian=jacobian)(state)
+    assert np.all(np.isclose(x_dlogp2, expected_x_dlogp))
+
+    y_dlogp2 = m.compile_dlogp(vars=[y], jacobian=jacobian)(state)
+    assert np.all(np.isclose(y_dlogp2, expected_y_dlogp))
+
+
+@pytest.mark.parametrize("jacobian", [True, False])
+def test_model_d2logp(jacobian):
+    with pm.Model() as m:
+        x = pm.Normal("x", 0, 1, size=2)
+        y = pm.LogNormal("y", 0, 1, size=2)
+
+    test_vals = np.array([0.0, -1.0])
+    state = {"x": test_vals, "y_log__": test_vals}
+
+    expected_x_d2logp = expected_y_d2logp = np.eye(2)
+
+    dlogps = m.compile_d2logp(jacobian=jacobian)(state)
+    assert np.all(np.isclose(dlogps[:2, :2], expected_x_d2logp))
+    assert np.all(np.isclose(dlogps[2:, 2:], expected_y_d2logp))
+
+    x_dlogp2 = m.compile_d2logp(vars=[x], jacobian=jacobian)(state)
+    assert np.all(np.isclose(x_dlogp2, expected_x_d2logp))
+
+    y_dlogp2 = m.compile_d2logp(vars=[y], jacobian=jacobian)(state)
+    assert np.all(np.isclose(y_dlogp2, expected_y_d2logp))

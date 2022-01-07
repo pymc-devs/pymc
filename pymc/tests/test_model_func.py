@@ -25,14 +25,14 @@ tol = 2.0 ** -11
 
 def test_logp():
     start, model, (mu, sig) = simple_model()
-    lp = model.fastlogp
+    lp = model.compile_logp()
     lp(start)
     close_to(lp(start), sp.norm.logpdf(start["x"], mu, sig).sum(), tol)
 
 
 def test_dlogp():
     start, model, (mu, sig) = simple_model()
-    dlogp = model.fastdlogp()
+    dlogp = model.compile_dlogp()
     close_to(dlogp(start), -(start["x"] - mu) / sig ** 2, 1.0 / sig ** 2 / 100.0)
 
 
