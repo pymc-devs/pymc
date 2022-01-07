@@ -24,7 +24,6 @@ from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
 import pymc
 
 from pymc.aesaraf import extract_obs_data
-from pymc.distributions import logpt
 from pymc.model import modelcontext
 from pymc.util import get_default_varnames
 
@@ -139,7 +138,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         dims: Optional[DimSpec] = None,
         model=None,
         save_warmup: Optional[bool] = None,
-        density_dist_obs: bool = True,
     ):
 
         self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
@@ -176,29 +174,11 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         self.log_likelihood = log_likelihood
         self.predictions = predictions
 
-        def arbitrary_element(dct: Dict[Any, np.ndarray]) -> np.ndarray:
-            return next(iter(dct.values()))
-
-        if trace is None:
-            # if you have a posterior_predictive built with keep_dims,
-            # you'll lose here, but there's nothing I can do about that.
-            self.nchains = 1
-            get_from = None
-            if predictions is not None:
-                get_from = predictions
-            elif posterior_predictive is not None:
-                get_from = posterior_predictive
-            elif prior is not None:
-                get_from = prior
-            if get_from is None:
-                # pylint: disable=line-too-long
-                raise ValueError(
-                    "When constructing InferenceData must have at least"
-                    " one of trace, prior, posterior_predictive or predictions."
-                )
-
-            aelem = arbitrary_element(get_from)
-            self.ndraws = aelem.shape[0]
+        if all(elem is None for elem in (trace, predictions, posterior_predictive, prior)):
+            raise ValueError(
+                "When constructing InferenceData you must pass at least"
+                " one of trace, prior, posterior_predictive or predictions."
+            )
 
         self.coords = {**self.model.coords, **(coords or {})}
         self.coords = {
@@ -215,7 +195,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             }
             self.dims = {**model_dims, **self.dims}
 
-        self.density_dist_obs = density_dist_obs
         self.observations = find_observations(self.model)
 
     def split_trace(self) -> Tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
@@ -264,11 +243,15 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         if self.model is None:
             return None
 
+        # TODO: We no longer need one function per observed variable
         if self.log_likelihood is True:
-            cached = [(var, self.model.fn(logpt(var))) for var in self.model.observed_RVs]
+            cached = [
+                (var, self.model.fn(self.model.logp_elemwiset(var)[0]))
+                for var in self.model.observed_RVs
+            ]
         else:
             cached = [
-                (var, self.model.fn(logpt(var)))
+                (var, self.model.fn(self.model.logp_elemwiset(var)[0]))
                 for var in self.model.observed_RVs
                 if var.name in self.log_likelihood
             ]
@@ -393,34 +376,36 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             ),
         )
 
-    def translate_posterior_predictive_dict_to_xarray(self, dct) -> xr.Dataset:
+    def translate_posterior_predictive_dict_to_xarray(self, dct, kind) -> xr.Dataset:
         """Take Dict of variables to numpy ndarrays (samples) and translate into dataset."""
         data = {}
+        warning_vars = []
         for k, ary in dct.items():
-            shape = ary.shape
-            if shape[0] == self.nchains and shape[1] == self.ndraws:
+            if (ary.shape[0] == self.nchains) and (ary.shape[1] == self.ndraws):
                 data[k] = ary
-            elif shape[0] == self.nchains * self.ndraws:
-                data[k] = ary.reshape((self.nchains, self.ndraws, *shape[1:]))
             else:
                 data[k] = np.expand_dims(ary, 0)
-                # pylint: disable=line-too-long
-                _log.warning(
-                    "posterior predictive variable %s's shape not compatible with number of chains and draws. "
-                    "This can mean that some draws or even whole chains are not represented.",
-                    k,
-                )
+                warning_vars.append(k)
+        if warning_vars:
+            warnings.warn(
+                f"The shape of variables {', '.join(warning_vars)} in {kind} group is not compatible "
+                "with number of chains and draws. The automatic dimension naming might not have worked. "
+                "This can also mean that some draws or even whole chains are not represented.",
+                UserWarning,
+            )
         return dict_to_dataset(data, library=pymc, coords=self.coords, dims=self.dims)
 
     @requires(["posterior_predictive"])
     def posterior_predictive_to_xarray(self):
         """Convert posterior_predictive samples to xarray."""
-        return self.translate_posterior_predictive_dict_to_xarray(self.posterior_predictive)
+        return self.translate_posterior_predictive_dict_to_xarray(
+            self.posterior_predictive, "posterior_predictive"
+        )
 
     @requires(["predictions"])
     def predictions_to_xarray(self):
         """Convert predictions (out of sample predictions) to xarray."""
-        return self.translate_posterior_predictive_dict_to_xarray(self.predictions)
+        return self.translate_posterior_predictive_dict_to_xarray(self.predictions, "predictions")
 
     def priors_to_xarray(self):
         """Convert prior samples (and if possible prior predictive too) to xarray."""
@@ -469,7 +454,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         """Convert constant data to xarray."""
         # For constant data, we are concerned only with deterministics and
         # data.  The constant data vars must be either pm.Data
-        # (TensorSharedVariable) or pm.Deterministic
+        # (TensorConstant/SharedVariable) or pm.Deterministic
         constant_data_vars = {}  # type: Dict[str, Var]
 
         def is_data(name, var) -> bool:
@@ -542,7 +527,6 @@ def to_inference_data(
     dims: Optional[DimSpec] = None,
     model: Optional["Model"] = None,
     save_warmup: Optional[bool] = None,
-    density_dist_obs: bool = True,
 ) -> InferenceData:
     """Convert pymc data into an InferenceData object.
 
@@ -575,9 +559,6 @@ def to_inference_data(
     save_warmup : bool, optional
         Save warmup iterations InferenceData object. If not defined, use default
         defined by the rcParams.
-    density_dist_obs : bool, default True
-        Store variables passed with ``observed`` arg to
-        :class:`~pymc.distributions.DensityDist` in the generated InferenceData.
 
     Returns
     -------
@@ -595,7 +576,6 @@ def to_inference_data(
         dims=dims,
         model=model,
         save_warmup=save_warmup,
-        density_dist_obs=density_dist_obs,
     ).to_inference_data()
 
 
@@ -617,6 +597,7 @@ def predictions_to_inference_data(
     predictions: Dict[str, np.ndarray]
         The predictions are the return value of :func:`~pymc.sample_posterior_predictive`,
         a dictionary of strings (variable names) to numpy ndarrays (draws).
+        Requires the arrays to follow the convention ``chain, draw, *shape``.
     posterior_trace: MultiTrace
         This should be a trace that has been thinned appropriately for
         ``pymc.sample_posterior_predictive``. Specifically, any variable whose shape is
@@ -645,14 +626,21 @@ def predictions_to_inference_data(
         raise ValueError(
             "Do not pass True for inplace unless passing" "an existing InferenceData as idata_orig"
         )
-    new_idata = InferenceDataConverter(
+    converter = InferenceDataConverter(
         trace=posterior_trace,
         predictions=predictions,
         model=model,
         coords=coords,
         dims=dims,
         log_likelihood=False,
-    ).to_inference_data()
+    )
+    if hasattr(idata_orig, "posterior"):
+        converter.nchains = idata_orig.posterior.dims["chain"]
+        converter.ndraws = idata_orig.posterior.dims["draw"]
+    else:
+        aelem = next(iter(predictions.values()))
+        converter.nchains, converter.ndraws = aelem.shape[:2]
+    new_idata = converter.to_inference_data()
     if idata_orig is None:
         return new_idata
     elif inplace:

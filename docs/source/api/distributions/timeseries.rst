@@ -2,8 +2,10 @@
 Timeseries
 **********
 
-.. currentmodule:: pymc.distributions.timeseries
+.. currentmodule:: pymc
 .. autosummary::
+   :toctree: generated
+
     AR1
     AR
     GaussianRandomWalk
@@ -11,6 +13,3 @@ Timeseries
     EulerMaruyama
     MvGaussianRandomWalk
     MvStudentTRandomWalk
-
-.. automodule:: pymc.distributions.timeseries
-   :members:

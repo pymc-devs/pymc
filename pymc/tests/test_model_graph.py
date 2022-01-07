@@ -44,9 +44,9 @@ def radon_model():
 
         # Anonymous SharedVariables don't show up
         floor_measure = aesara.shared(floor_measure)
-        floor_measure_offset = pm.Data("floor_measure_offset", 1)
+        floor_measure_offset = pm.MutableData("floor_measure_offset", 1)
         y_hat = a + b * floor_measure + floor_measure_offset
-        log_radon = pm.Data("log_radon", np.random.normal(1, 1, size=n_homes))
+        log_radon = pm.MutableData("log_radon", np.random.normal(1, 1, size=n_homes))
         y_like = pm.Normal("y_like", mu=y_hat, sigma=sigma_y, observed=log_radon)
 
     compute_graph = {
@@ -104,13 +104,13 @@ def model_with_dims():
 
         population = pm.HalfNormal("population", sd=5, dims=("city"))
 
-        time = pm.Data("year", [2014, 2015, 2016], dims="year")
+        time = pm.ConstantData("year", [2014, 2015, 2016], dims="year")
 
         n = pm.Deterministic(
             "tax revenue", economics * population[None, :] * time[:, None], dims=("year", "city")
         )
 
-        yobs = pm.Data("observed", np.ones((3, 4)))
+        yobs = pm.MutableData("observed", np.ones((3, 4)))
         L = pm.Normal("L", n, observed=yobs)
 
     compute_graph = {

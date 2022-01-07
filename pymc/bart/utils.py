@@ -56,6 +56,7 @@ def plot_dependence(
     xs_interval="linear",
     xs_values=None,
     var_idx=None,
+    var_discrete=None,
     samples=50,
     instances=10,
     random_seed=None,
@@ -89,6 +90,7 @@ def plot_dependence(
         Method used to compute the values X used to evaluate the predicted function. "linear",
         evenly spaced values in the range of X. "quantiles", the evaluation is done at the specified
         quantiles of X. "insample", the evaluation is done at the values of X.
+        For discrete variables these options are ommited.
     xs_values : int or list
         Values of X used to evaluate the predicted function. If ``xs_interval="linear"`` number of
         points in the evenly spaced grid. If ``xs_interval="quantiles"``quantile or sequence of
@@ -96,6 +98,8 @@ def plot_dependence(
         Ignored when ``xs_interval="insample"``.
     var_idx : list
         List of the indices of the covariate for which to compute the pdp or ice.
+    var_discrete : list
+        List of the indices of the covariate treated as discrete.
     samples : int
         Number of posterior samples used in the predictions. Defaults to 50
     instances : int
@@ -161,6 +165,8 @@ def plot_dependence(
 
     if var_idx is None:
         var_idx = indices
+    if var_discrete is None:
+        var_discrete = []
 
     if X_names:
         X_labels = [X_names[idx] for idx in var_idx]
@@ -178,6 +184,7 @@ def plot_dependence(
 
     new_Y = []
     new_X_target = []
+    y_mins = []
 
     new_X = np.zeros_like(X)
     idx_s = list(range(X.shape[0]))
@@ -186,12 +193,15 @@ def plot_dependence(
         indices_mi.pop(i)
         y_pred = []
         if kind == "pdp":
-            if xs_interval == "linear":
-                new_X_i = np.linspace(X[:, i].min(), X[:, i].max(), xs_values)
-            elif xs_interval == "quantiles":
-                new_X_i = np.quantile(X[:, i], q=xs_values)
-            elif xs_interval == "insample":
-                new_X_i = X[:, i]
+            if i in var_discrete:
+                new_X_i = np.unique(X[:, i])
+            else:
+                if xs_interval == "linear":
+                    new_X_i = np.linspace(np.nanmin(X[:, i]), np.nanmax(X[:, i]), xs_values)
+                elif xs_interval == "quantiles":
+                    new_X_i = np.quantile(X[:, i], q=xs_values)
+                elif xs_interval == "insample":
+                    new_X_i = X[:, i]
 
             for x_i in new_X_i:
                 new_X[:, indices_mi] = X[:, indices_mi]
@@ -204,6 +214,7 @@ def plot_dependence(
                 new_X[:, indices_mi] = X[:, indices_mi][instance]
                 y_pred.append(np.mean(predict(idata, rng, X_new=new_X, size=samples), 0))
             new_X_target.append(new_X[:, i])
+        y_mins.append(np.min(y_pred))
         new_Y.append(np.array(y_pred).T)
 
     if ax is None:
@@ -212,24 +223,39 @@ def plot_dependence(
         elif grid == "wide":
             fig, axes = plt.subplots(1, len(var_idx), sharey=sharey, figsize=figsize)
         elif isinstance(grid, tuple):
-            _, axes = plt.subplots(grid[0], grid[1], sharey=sharey, figsize=figsize)
+            fig, axes = plt.subplots(grid[0], grid[1], sharey=sharey, figsize=figsize)
         axes = np.ravel(axes)
     else:
         axes = [ax]
-
-    if rug:
-        lb = np.min(new_Y)
+        fig = ax.get_figure()
 
     for i, ax in enumerate(axes):
         if i >= len(var_idx):
             ax.set_axis_off()
+            fig.delaxes(ax)
         else:
-            if smooth:
+            var = var_idx[i]
+            if var in var_discrete:
+                if kind == "pdp":
+                    y_means = new_Y[i].mean(0)
+                    hdi = az.hdi(new_Y[i])
+                    ax.errorbar(
+                        new_X_target[i],
+                        y_means,
+                        (y_means - hdi[:, 0], hdi[:, 1] - y_means),
+                        fmt=".",
+                        color=color,
+                    )
+                else:
+                    ax.plot(new_X_target[i], new_Y[i], ".", color=color, alpha=alpha)
+                    ax.plot(new_X_target[i], new_Y[i].mean(1), "o", color=color_mean)
+                ax.set_xticks(new_X_target[i])
+            elif smooth:
                 if smooth_kwargs is None:
                     smooth_kwargs = {}
                 smooth_kwargs.setdefault("window_length", 55)
                 smooth_kwargs.setdefault("polyorder", 2)
-                x_data = np.linspace(new_X_target[i].min(), new_X_target[i].max(), 200)
+                x_data = np.linspace(np.nanmin(new_X_target[i]), np.nanmax(new_X_target[i]), 200)
                 x_data[0] = (x_data[0] + x_data[1]) / 2
                 if kind == "pdp":
                     interp = griddata(new_X_target[i], new_Y[i].mean(0), x_data)
@@ -263,8 +289,10 @@ def plot_dependence(
                     ax.plot(new_X_target[i][idx], new_Y[i][idx].mean(1), color=color_mean)
 
             if rug:
-                ax.plot(X[:, i], np.full_like(X[:, i], lb), "k|")
+                lb = np.min(y_mins)
+                ax.plot(X[:, var], np.full_like(X[:, var], lb), "k|")
 
             ax.set_xlabel(X_labels[i])
-    ax.get_figure().text(-0.05, 0.5, Y_label, va="center", rotation="vertical", fontsize=15)
+
+    fig.text(-0.05, 0.5, Y_label, va="center", rotation="vertical", fontsize=15)
     return axes

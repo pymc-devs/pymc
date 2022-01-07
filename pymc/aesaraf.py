@@ -30,9 +30,11 @@ import aesara.tensor as at
 import numpy as np
 import scipy.sparse as sps
 
+from aeppl.logprob import CheckParameterValue
 from aesara import config, scalar
 from aesara.compile.mode import Mode, get_mode
 from aesara.gradient import grad
+from aesara.graph import local_optimizer
 from aesara.graph.basic import (
     Apply,
     Constant,
@@ -899,11 +901,65 @@ def take_along_axis(arr, indices, axis=0):
     return arr[_make_along_axis_idx(arr_shape, indices, _axis)]
 
 
-def compile_rv_inplace(inputs, outputs, mode=None, **kwargs):
-    """Use ``aesara.function`` with the random_make_inplace optimization always enabled.
+@local_optimizer(tracks=[CheckParameterValue])
+def local_remove_check_parameter(fgraph, node):
+    """Rewrite that removes Aeppl's CheckParameterValue
 
-    Using this function ensures that compiled functions containing random
-    variables will produce new samples on each call.
+    This is used when compile_rv_inplace
+    """
+    if isinstance(node.op, CheckParameterValue):
+        return [node.inputs[0]]
+
+
+@local_optimizer(tracks=[CheckParameterValue])
+def local_check_parameter_to_ninf_switch(fgraph, node):
+    if isinstance(node.op, CheckParameterValue):
+        logp_expr, *logp_conds = node.inputs
+        if len(logp_conds) > 1:
+            logp_cond = at.all(logp_conds)
+        else:
+            (logp_cond,) = logp_conds
+        out = at.switch(logp_cond, logp_expr, -np.inf)
+        out.name = node.op.msg
+
+        if out.dtype != node.outputs[0].dtype:
+            out = at.cast(out, node.outputs[0].dtype)
+
+        return [out]
+
+
+aesara.compile.optdb["canonicalize"].register(
+    "local_remove_check_parameter",
+    local_remove_check_parameter,
+    use_db_name_as_tag=False,
+)
+
+aesara.compile.optdb["canonicalize"].register(
+    "local_check_parameter_to_ninf_switch",
+    local_check_parameter_to_ninf_switch,
+    use_db_name_as_tag=False,
+)
+
+
+def compile_pymc(inputs, outputs, mode=None, **kwargs):
+    """Use ``aesara.function`` with specialized pymc rewrites always enabled.
+
+    Included rewrites
+    -----------------
+    random_make_inplace
+        Ensures that compiled functions containing random variables will produce new
+        samples on each call.
+    local_check_parameter_to_ninf_switch
+        Replaces Aeppl's CheckParameterValue assertions is logp expressions with Switches
+        that return -inf in place of the assert.
+
+    Optional rewrites
+    -----------------
+    local_remove_check_parameter
+        Replaces Aeppl's CheckParameterValue assertions is logp expressions. This is used
+        as an alteranative to the default local_check_parameter_to_ninf_switch whenenver
+        this function is called within a model context and the model `check_bounds` flag
+        is set to False.
     """
 
     # Avoid circular dependency
@@ -921,8 +977,20 @@ def compile_rv_inplace(inputs, outputs, mode=None, **kwargs):
         if not hasattr(rng, "default_update"):
             rng.default_update = rv.owner.outputs[0]
 
+    # If called inside a model context, see if check_bounds flag is set to False
+    try:
+        from pymc.model import modelcontext
+
+        model = modelcontext(None)
+        check_bounds = model.check_bounds
+    except TypeError:
+        check_bounds = True
+    check_parameter_opt = (
+        "local_check_parameter_to_ninf_switch" if check_bounds else "local_remove_check_parameter"
+    )
+
     mode = get_mode(mode)
-    opt_qry = mode.provided_optimizer.including("random_make_inplace")
+    opt_qry = mode.provided_optimizer.including("random_make_inplace", check_parameter_opt)
     mode = Mode(linker=mode.linker, optimizer=opt_qry)
     aesara_function = aesara.function(inputs, outputs, mode=mode, **kwargs)
     return aesara_function

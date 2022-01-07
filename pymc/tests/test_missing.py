@@ -16,11 +16,13 @@ import aesara
 import numpy as np
 import pandas as pd
 import pytest
+import scipy.stats
 
+from aesara.graph import graph_inputs
 from numpy import array, ma
 
-from pymc.distributions.continuous import Gamma, Normal, Uniform
-from pymc.distributions.transforms import interval
+from pymc import logpt
+from pymc.distributions import Dirichlet, Gamma, Normal, Uniform
 from pymc.exceptions import ImputationWarning
 from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive, sample_prior_predictive
@@ -38,7 +40,7 @@ def test_missing(data):
 
     assert "y_missing" in model.named_vars
 
-    test_point = model.initial_point
+    test_point = model.recompute_initial_point()
     assert not np.isnan(model.logp(test_point))
 
     with model:
@@ -56,7 +58,7 @@ def test_missing_with_predictors():
 
     assert "y_missing" in model.named_vars
 
-    test_point = model.initial_point
+    test_point = model.recompute_initial_point()
     assert not np.isnan(model.logp(test_point))
 
     with model:
@@ -94,10 +96,10 @@ def test_interval_missing_observations():
         with pytest.warns(ImputationWarning):
             theta2 = Normal("theta2", mu=theta1, observed=obs2, rng=rng)
 
-        assert "theta1_observed_interval__" in model.named_vars
+        assert "theta1_observed" in model.named_vars
         assert "theta1_missing_interval__" in model.named_vars
-        assert isinstance(
-            model.rvs_to_values[model.named_vars["theta1_observed"]].tag.transform, interval
+        assert not hasattr(
+            model.rvs_to_values[model.named_vars["theta1_observed"]].tag, "transform"
         )
 
         prior_trace = sample_prior_predictive(return_inferencedata=False)
@@ -131,7 +133,7 @@ def test_interval_missing_observations():
 
         # Make sure that the observed values are newly generated samples and that
         # the observed and deterministic matche
-        pp_trace = sample_posterior_predictive(trace, return_inferencedata=False)
+        pp_trace = sample_posterior_predictive(trace, return_inferencedata=False, keep_size=False)
         assert np.all(np.var(pp_trace["theta1"], 0) > 0.0)
         assert np.all(np.var(pp_trace["theta2"], 0) > 0.0)
         assert np.mean(pp_trace["theta1"][:, ~obs1.mask] - pp_trace["theta1_observed"]) == 0.0
@@ -164,3 +166,69 @@ def test_missing_logp():
     m_missing_logp = m_missing.logp({"theta1_missing": [2, 4], "theta2_missing": [0, 1, 3]})
 
     assert m_logp == m_missing_logp
+
+
+def test_missing_multivariate():
+    """Test model with missing variables whose transform changes base shape still works"""
+
+    with Model() as m_miss:
+        with pytest.raises(
+            NotImplementedError,
+            match="Automatic inputation is only supported for univariate RandomVariables",
+        ):
+            x = Dirichlet(
+                "x", a=[1, 2, 3], observed=np.array([[0.3, 0.3, 0.4], [np.nan, np.nan, np.nan]])
+            )
+
+    # TODO: Test can be used when local_subtensor_rv_lift supports multivariate distributions
+    # from pymc.distributions.transforms import simplex
+    #
+    # with Model() as m_unobs:
+    #     x = Dirichlet("x", a=[1, 2, 3])
+    #
+    # inp_vals = simplex.forward(np.array([0.3, 0.3, 0.4])).eval()
+    # assert np.isclose(
+    #     m_miss.logp({"x_missing_simplex__": inp_vals}),
+    #     m_unobs.logp_nojac({"x_simplex__": inp_vals}) * 2,
+    # )
+
+
+def test_missing_vector_parameter():
+    with Model() as m:
+        x = Normal(
+            "x",
+            np.array([-10, 10]),
+            0.1,
+            observed=np.array([[np.nan, 10], [-10, np.nan], [np.nan, np.nan]]),
+        )
+    x_draws = x.eval()
+    assert x_draws.shape == (3, 2)
+    assert np.all(x_draws[:, 0] < 0)
+    assert np.all(x_draws[:, 1] > 0)
+    assert np.isclose(
+        m.logp({"x_missing": np.array([-10, 10, -10, 10])}),
+        scipy.stats.norm(scale=0.1).logpdf(0) * 6,
+    )
+
+
+def test_missing_symmetric():
+    """Check that logpt works when partially observed variable have equal observed and
+    unobserved dimensions.
+
+    This would fail in a previous implementation because the two variables would be
+    equivalent and one of them would be discarded during MergeOptimization while
+    buling the logpt graph
+    """
+    with Model() as m:
+        x = Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
+
+    x_obs_rv = m["x_observed"]
+    x_obs_vv = m.rvs_to_values[x_obs_rv]
+
+    x_unobs_rv = m["x_missing"]
+    x_unobs_vv = m.rvs_to_values[x_unobs_rv]
+
+    logp = logpt([x_obs_rv, x_unobs_rv], {x_obs_rv: x_obs_vv, x_unobs_rv: x_unobs_vv})
+    logp_inputs = list(graph_inputs([logp]))
+    assert x_obs_vv in logp_inputs
+    assert x_unobs_vv in logp_inputs

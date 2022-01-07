@@ -23,7 +23,7 @@ from aesara.tensor.var import TensorConstant
 import pymc as pm
 import pymc.distributions.transforms as tr
 
-from pymc.aesaraf import jacobian
+from pymc.aesaraf import floatX, jacobian
 from pymc.distributions import logpt
 from pymc.tests.checks import close_to, close_to_logical
 from pymc.tests.helpers import SeededTest
@@ -285,40 +285,46 @@ class TestElementWiseLogp(SeededTest):
 
     def check_transform_elementwise_logp(self, model):
         x = model.free_RVs[0]
-        x0 = x.tag.value_var
-        assert x.ndim == logpt(x, sum=False).ndim
+        x_val_transf = x.tag.value_var
 
-        pt = model.initial_point
-        array = np.random.randn(*pt[x0.name].shape)
-        transform = x0.tag.transform
-        logp_notrans = logpt(x, transform.backward(array, *x.owner.inputs), transformed=False)
+        pt = model.recompute_initial_point(0)
+        test_array_transf = floatX(np.random.randn(*pt[x_val_transf.name].shape))
+        transform = x_val_transf.tag.transform
+        test_array_untransf = transform.backward(test_array_transf, *x.owner.inputs).eval()
 
-        jacob_det = transform.log_jac_det(aesara.shared(array), *x.owner.inputs)
-        assert logpt(x, sum=False).ndim == jacob_det.ndim
+        # Create input variable with same dimensionality as untransformed test_array
+        x_val_untransf = at.constant(test_array_untransf).type()
 
-        v1 = logpt(x, array, jacobian=False).eval()
-        v2 = logp_notrans.eval()
+        jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
+        assert logpt(x, sum=False).ndim == x.ndim == jacob_det.ndim
+
+        v1 = logpt(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
+        v2 = logpt(x, x_val_untransf, transformed=False).eval({x_val_untransf: test_array_untransf})
         close_to(v1, v2, tol)
 
-    def check_vectortransform_elementwise_logp(self, model, vect_opt=0):
+    def check_vectortransform_elementwise_logp(self, model):
         x = model.free_RVs[0]
-        x0 = x.tag.value_var
-        # TODO: For some reason the ndim relations
-        # dont hold up here. But final log-probablity
-        # values are what we expected.
-        # assert (x.ndim - 1) == logpt(x, sum=False).ndim
+        x_val_transf = x.tag.value_var
 
-        pt = model.initial_point
-        array = np.random.randn(*pt[x0.name].shape)
-        transform = x0.tag.transform
-        logp_nojac = logpt(x, transform.backward(array, *x.owner.inputs), transformed=False)
+        pt = model.recompute_initial_point(0)
+        test_array_transf = floatX(np.random.randn(*pt[x_val_transf.name].shape))
+        transform = x_val_transf.tag.transform
+        test_array_untransf = transform.backward(test_array_transf, *x.owner.inputs).eval()
 
-        jacob_det = transform.log_jac_det(aesara.shared(array), *x.owner.inputs)
-        # assert logpt(x).ndim == jacob_det.ndim
+        # Create input variable with same dimensionality as untransformed test_array
+        x_val_untransf = at.constant(test_array_untransf).type()
 
+        jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
+        # Original distribution is univariate
+        if x.owner.op.ndim_supp == 0:
+            assert logpt(x, sum=False).ndim == x.ndim == (jacob_det.ndim + 1)
+        # Original distribution is multivariate
+        else:
+            assert logpt(x, sum=False).ndim == (x.ndim - 1) == jacob_det.ndim
+
+        a = logpt(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
+        b = logpt(x, x_val_untransf, transformed=False).eval({x_val_untransf: test_array_untransf})
         # Hack to get relative tolerance
-        a = logpt(x, array.astype(aesara.config.floatX), jacobian=False).eval()
-        b = logp_nojac.eval()
         close_to(a, b, np.abs(0.5 * (a + b) * tol))
 
     @pytest.mark.parametrize(
@@ -406,7 +412,7 @@ class TestElementWiseLogp(SeededTest):
     )
     def test_dirichlet(self, a, size):
         model = self.build_model(pm.Dirichlet, {"a": a}, size=size, transform=tr.simplex)
-        self.check_vectortransform_elementwise_logp(model, vect_opt=1)
+        self.check_vectortransform_elementwise_logp(model)
 
     def test_normal_ordered(self):
         model = self.build_model(
@@ -416,7 +422,7 @@ class TestElementWiseLogp(SeededTest):
             initval=np.asarray([-1.0, 1.0, 4.0]),
             transform=tr.ordered,
         )
-        self.check_vectortransform_elementwise_logp(model, vect_opt=0)
+        self.check_vectortransform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
         "sd,size",
@@ -434,7 +440,7 @@ class TestElementWiseLogp(SeededTest):
             initval=initval,
             transform=tr.Chain([tr.log, tr.ordered]),
         )
-        self.check_vectortransform_elementwise_logp(model, vect_opt=0)
+        self.check_vectortransform_elementwise_logp(model)
 
     @pytest.mark.parametrize("lam,size", [(2.5, (2,)), (np.ones(3), (4, 3))])
     def test_exponential_ordered(self, lam, size):
@@ -446,7 +452,7 @@ class TestElementWiseLogp(SeededTest):
             initval=initval,
             transform=tr.Chain([tr.log, tr.ordered]),
         )
-        self.check_vectortransform_elementwise_logp(model, vect_opt=0)
+        self.check_vectortransform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
         "a,b,size",
@@ -468,7 +474,7 @@ class TestElementWiseLogp(SeededTest):
             initval=initval,
             transform=tr.Chain([tr.logodds, tr.ordered]),
         )
-        self.check_vectortransform_elementwise_logp(model, vect_opt=0)
+        self.check_vectortransform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
         "lower,upper,size",
@@ -491,7 +497,7 @@ class TestElementWiseLogp(SeededTest):
             initval=initval,
             transform=tr.Chain([interval, tr.ordered]),
         )
-        self.check_vectortransform_elementwise_logp(model, vect_opt=1)
+        self.check_vectortransform_elementwise_logp(model)
 
     @pytest.mark.parametrize("mu,kappa,size", [(0.0, 1.0, (2,)), (np.zeros(3), np.ones(3), (4, 3))])
     def test_vonmises_ordered(self, mu, kappa, size):
@@ -503,7 +509,7 @@ class TestElementWiseLogp(SeededTest):
             initval=initval,
             transform=tr.Chain([tr.circular, tr.ordered]),
         )
-        self.check_vectortransform_elementwise_logp(model, vect_opt=0)
+        self.check_vectortransform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
         "lower,upper,size,transform",
@@ -522,7 +528,7 @@ class TestElementWiseLogp(SeededTest):
             initval=initval,
             transform=transform,
         )
-        self.check_vectortransform_elementwise_logp(model, vect_opt=1)
+        self.check_vectortransform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
         "mu,cov,size,shape",
@@ -536,7 +542,7 @@ class TestElementWiseLogp(SeededTest):
         model = self.build_model(
             pm.MvNormal, {"mu": mu, "cov": cov}, size=size, initval=initval, transform=tr.ordered
         )
-        self.check_vectortransform_elementwise_logp(model, vect_opt=1)
+        self.check_vectortransform_elementwise_logp(model)
 
 
 def test_triangular_transform():

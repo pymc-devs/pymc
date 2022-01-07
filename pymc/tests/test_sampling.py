@@ -31,7 +31,7 @@ from scipy import stats
 
 import pymc as pm
 
-from pymc.aesaraf import compile_rv_inplace
+from pymc.aesaraf import compile_pymc
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
@@ -490,7 +490,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.initial_point], samples=10, return_inferencedata=False
+                [model.recompute_initial_point()], samples=10, return_inferencedata=False
             )
             # # deprecated argument is not introduced to fast version [2019/08/20:rpg]
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"], return_inferencedata=False)
@@ -549,7 +549,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.initial_point], return_inferencedata=False, samples=10
+                [model.recompute_initial_point()], return_inferencedata=False, samples=10
             )
             ppc = pm.sample_posterior_predictive(
                 trace, return_inferencedata=False, samples=12, var_names=[]
@@ -647,7 +647,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.initial_point], return_inferencedata=False, samples=10
+                [model.recompute_initial_point()], return_inferencedata=False, samples=10
             )
             assert ppc0 == {}
             ppc = pm.sample_posterior_predictive(
@@ -793,10 +793,10 @@ class TestSamplePPC(SeededTest):
             p = pm.Potential("p", a + 1)
             obs = pm.Normal("obs", a, 1, observed=5)
 
-        trace = az_from_dict({"a": np.random.rand(10)})
+        trace = az_from_dict({"a": np.random.rand(5)})
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
-                pm.sample_posterior_predictive(trace, samples=5)
+                pm.sample_posterior_predictive(trace)
 
 
 class TestSamplePPCW(SeededTest):
@@ -955,7 +955,7 @@ class TestSamplePriorPredictive(SeededTest):
         observed = np.random.normal(10, 1, size=200)
         with pm.Model():
             # Use a prior that's way off to show we're ignoring the observed variables
-            observed_data = pm.Data("observed_data", observed)
+            observed_data = pm.MutableData("observed_data", observed)
             mu = pm.Normal("mu", mu=-100, sigma=1)
             positive_mu = pm.Deterministic("positive_mu", np.abs(mu))
             z = -1 - positive_mu
@@ -1016,7 +1016,7 @@ class TestSamplePriorPredictive(SeededTest):
             a = pm.Uniform("a", lower=0, upper=1, size=10)
             b = pm.Binomial("b", n=1, p=a, size=10)
 
-        b_sampler = compile_rv_inplace([], b, mode="FAST_RUN")
+        b_sampler = compile_pymc([], b, mode="FAST_RUN")
         avg = np.stack([b_sampler() for i in range(10000)]).mean(0)
         npt.assert_array_almost_equal(avg, 0.5 * np.ones((10,)), decimal=2)
 

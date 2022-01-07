@@ -19,14 +19,17 @@ Created on Mar 7, 2011
 """
 import warnings
 
+from typing import Iterable
+
 import aesara
 import aesara.tensor as at
 import numpy as np
 import scipy.linalg
 import scipy.stats
 
+from aeppl.logprob import CheckParameterValue
 from aesara.compile.builders import OpFromGraph
-from aesara.graph.basic import Apply
+from aesara.graph.basic import Apply, Variable
 from aesara.graph.op import Op
 from aesara.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from aesara.tensor import gammaln
@@ -46,59 +49,22 @@ _beta_clip_values = {
 }
 
 
-def bound(logp, *conditions, broadcast_conditions=True):
+def check_parameters(logp: Variable, *conditions: Iterable[Variable], msg: str = ""):
     """
-    Bounds a log probability density with several conditions.
-    When conditions are not met, the logp values are replaced by -inf.
+    Wrap a log probability graph in a CheckParameterValue that asserts several
+    conditions are True. When conditions are not met a ParameterValueError assertion is
+    raised, with an optional custom message defined by `msg`
 
-    Note that bound should not be used to enforce the logic of the logp under the normal
-    support as it can be disabled by the user via check_bounds = False in pm.Model()
-
-    Parameters
-    ----------
-    logp: float
-    *conditions: booleans
-    broadcast_conditions: bool (optional, default=True)
-        If True, conditions are broadcasted and applied element-wise to each value in logp.
-        If False, conditions are collapsed via at.all(). As a consequence the entire logp
-        array is either replaced by -inf or unchanged.
-
-        Setting broadcasts_conditions to False is necessary for most (all?) multivariate
-        distributions where the dimensions of the conditions do not unambigously match
-        that of the logp.
-
-    Returns
-    -------
-    logp with elements set to -inf where any condition is False
+    Note that check_parameter should not be used to enforce the logic of the logp
+    expression under the normal parameter support as it can be disabled by the user via
+    check_bounds = False in pm.Model()
     """
-
-    # If called inside a model context, see if bounds check is disabled
-    try:
-        from pymc.model import modelcontext
-
-        model = modelcontext(None)
-        if not model.check_bounds:
-            return logp
-    except TypeError:
-        pass  # no model found
-
-    if broadcast_conditions:
-        alltrue = alltrue_elemwise
-    else:
-        alltrue = alltrue_scalar
-
-    return at.switch(alltrue(conditions), logp, -np.inf)
-
-
-def alltrue_elemwise(vals):
-    ret = 1
-    for c in vals:
-        ret = ret * (1 * c)
-    return ret
-
-
-def alltrue_scalar(vals):
-    return at.all([at.all(1 * val) for val in vals])
+    # at.all does not accept True/False, but accepts np.array(True)/np.array(False)
+    conditions = [
+        cond if (cond is not True and cond is not False) else np.array(cond) for cond in conditions
+    ]
+    all_true_scalar = at.all([at.all(cond) for cond in conditions])
+    return CheckParameterValue(msg)(logp, all_true_scalar)
 
 
 def logpow(x, m):

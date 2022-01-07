@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import functools
+import warnings
 
 from typing import Callable, Dict, List, Optional, Sequence, Set, Union
 
@@ -23,7 +24,7 @@ from aesara.graph.basic import Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.var import TensorVariable
 
-from pymc.aesaraf import compile_rv_inplace
+from pymc.aesaraf import compile_pymc
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
 StartDict = Dict[Union[Variable, str], Union[np.ndarray, Variable, str]]
@@ -131,7 +132,7 @@ def make_initial_point_fn(
     model,
     overrides: Optional[StartDict] = None,
     jitter_rvs: Optional[Set[TensorVariable]] = None,
-    default_strategy: str = "prior",
+    default_strategy: str = "moment",
     return_transformed: bool = True,
 ) -> Callable:
     """Create seeded function that computes initial values for all free model variables.
@@ -185,9 +186,7 @@ def make_initial_point_fn(
             new_rng = np.random.Generator(np.random.PCG64())
         new_rng_nodes.append(aesara.shared(new_rng))
     graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
-    func = compile_rv_inplace(
-        inputs=[], outputs=graph.outputs, mode=aesara.compile.mode.FAST_COMPILE
-    )
+    func = compile_pymc(inputs=[], outputs=graph.outputs, mode=aesara.compile.mode.FAST_COMPILE)
 
     varnames = []
     for var in model.free_RVs:
@@ -228,7 +227,7 @@ def make_initial_point_expression(
     rvs_to_values: Dict[TensorVariable, TensorVariable],
     initval_strategies: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]],
     jitter_rvs: Set[TensorVariable] = None,
-    default_strategy: str = "prior",
+    default_strategy: str = "moment",
     return_transformed: bool = False,
 ) -> List[TensorVariable]:
     """Creates the tensor variables that need to be evaluated to obtain an initial point.
@@ -271,7 +270,19 @@ def make_initial_point_expression(
 
         if isinstance(strategy, str):
             if strategy == "moment":
-                value = get_moment(variable)
+                try:
+                    value = get_moment(variable)
+                except NotImplementedError:
+                    warnings.warn(
+                        f"Moment not defined for variable {variable} of type "
+                        f"{variable.owner.op.__class__.__name__}, defaulting to "
+                        f"a draw from the prior. This can lead to difficulties "
+                        f"during tuning. You can manually define an initval or "
+                        f"implement a get_moment dispatched function for this "
+                        f"distribution.",
+                        UserWarning,
+                    )
+                    value = variable
             elif strategy == "prior":
                 value = variable
             else:

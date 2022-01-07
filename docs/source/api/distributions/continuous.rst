@@ -2,8 +2,9 @@
 Continuous
 **********
 
-.. currentmodule:: pymc.distributions.continuous
+.. currentmodule:: pymc
 .. autosummary::
+   :toctree: generated/
 
    Uniform
    Flat
@@ -38,6 +39,3 @@ Continuous
    Moyal
    AsymmetricLaplace
    PolyaGamma
-
-.. automodule:: pymc.distributions.continuous
-   :members:

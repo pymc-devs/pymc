@@ -315,7 +315,7 @@ class TestShapeDimsSize:
     @pytest.mark.xfail(reason="Simultaneous use of size and dims is not implemented")
     def test_data_defined_size_dimension_can_register_dimname(self):
         with pm.Model() as pmodel:
-            x = pm.Data("x", [[1, 2, 3, 4]], dims=("first", "second"))
+            x = pm.ConstantData("x", [[1, 2, 3, 4]], dims=("first", "second"))
             assert "first" in pmodel.dim_lengths
             assert "second" in pmodel.dim_lengths
             # two dimensions are implied; a "third" dimension is created
@@ -325,7 +325,7 @@ class TestShapeDimsSize:
 
     def test_can_resize_data_defined_size(self):
         with pm.Model() as pmodel:
-            x = pm.Data("x", [[1, 2, 3, 4]], dims=("first", "second"))
+            x = pm.MutableData("x", [[1, 2, 3, 4]], dims=("first", "second"))
             y = pm.Normal("y", mu=0, dims=("first", "second"))
             z = pm.Normal("z", mu=y, observed=np.ones((1, 4)))
             assert x.eval().shape == (1, 4)

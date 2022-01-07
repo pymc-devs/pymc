@@ -13,4 +13,12 @@
 #   limitations under the License.
 
 from pymc.gp import cov, mean, util
-from pymc.gp.gp import TP, Latent, LatentKron, Marginal, MarginalKron, MarginalSparse
+from pymc.gp.gp import (
+    TP,
+    Latent,
+    LatentKron,
+    Marginal,
+    MarginalApprox,
+    MarginalKron,
+    MarginalSparse,
+)

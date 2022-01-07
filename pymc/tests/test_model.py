@@ -286,8 +286,9 @@ class TestValueGradFunction(unittest.TestCase):
             step = pm.NUTS()
 
         func = step._logp_dlogp_func
-        func.set_extra_values(m.initial_point)
-        q = func.dict_to_array(m.initial_point)
+        initial_point = m.recompute_initial_point()
+        func.set_extra_values(initial_point)
+        q = func.dict_to_array(initial_point)
         logp, dlogp = func(q)
         assert logp.size == 1
         assert dlogp.size == 4
@@ -532,6 +533,15 @@ def test_point_logps():
     assert "a" in logp_vals.keys()
 
 
+def test_point_logps_potential():
+    with pm.Model() as model:
+        x = pm.Flat("x", initval=1)
+        y = pm.Potential("y", x * 2)
+
+    logps = model.point_logps()
+    assert np.isclose(logps["y"], 2)
+
+
 class TestShapeEvaluation:
     def test_eval_rv_shapes(self):
         with pm.Model(
@@ -539,7 +549,7 @@ class TestShapeEvaluation:
                 "city": ["Sydney", "Las Vegas", "Düsseldorf"],
             }
         ) as pmodel:
-            pm.Data("budget", [1, 2, 3, 4], dims="year")
+            pm.MutableData("budget", [1, 2, 3, 4], dims="year")
             pm.Normal("untransformed", size=(1, 2))
             pm.Uniform("transformed", size=(7,))
             obs = pm.Uniform("observed", size=(3,), observed=[0.1, 0.2, 0.3])

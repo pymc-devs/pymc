@@ -44,7 +44,7 @@ import pymc as pm
 from pymc.aesaraf import floatX, intX
 from pymc.distributions import transforms
 from pymc.distributions.continuous import ChiSquared, Normal, assert_negative_support
-from pymc.distributions.dist_math import bound, factln, logpow, multigammaln
+from pymc.distributions.dist_math import check_parameters, factln, logpow, multigammaln
 from pymc.distributions.distribution import Continuous, Discrete
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
@@ -252,10 +252,7 @@ class MvNormal(Continuous):
         quaddist, logdet, ok = quaddist_parse(value, mu, cov)
         k = floatX(value.shape[-1])
         norm = -0.5 * k * pm.floatX(np.log(2 * np.pi))
-        return bound(norm - 0.5 * quaddist - logdet, ok)
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "cov"]
+        return check_parameters(norm - 0.5 * quaddist - logdet, ok)
 
 
 class MvStudentTRV(RandomVariable):
@@ -264,6 +261,13 @@ class MvStudentTRV(RandomVariable):
     ndims_params = [0, 1, 2]
     dtype = "floatX"
     _print_name = ("MvStudentT", "\\operatorname{MvStudentT}")
+
+    def make_node(self, rng, size, dtype, nu, mu, cov):
+        nu = at.as_tensor_variable(nu)
+        if not nu.ndim == 0:
+            raise ValueError("nu must be a scalar (ndim=0).")
+
+        return super().make_node(rng, size, dtype, nu, mu, cov)
 
     def __call__(self, nu, mu=None, cov=None, size=None, **kwargs):
 
@@ -380,10 +384,13 @@ class MvStudentT(Continuous):
 
         norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * at.log(nu * np.pi)
         inner = -(nu + k) / 2.0 * at.log1p(quaddist / nu)
-        return bound(norm + inner - logdet, ok)
+        res = norm + inner - logdet
 
-    def _distr_parameters_for_repr(self):
-        return ["nu", "mu", "cov"]
+        return check_parameters(
+            res,
+            ok,
+            nu > 0,
+        )
 
 
 class Dirichlet(Continuous):
@@ -406,8 +413,9 @@ class Dirichlet(Continuous):
 
     Parameters
     ----------
-    a: array
-        Concentration parameters (a > 0).
+    a: float array
+        Concentration parameters (a > 0). The number of categories is given by the
+        length of the last axis.
     """
     rv_op = dirichlet
 
@@ -447,16 +455,20 @@ class Dirichlet(Continuous):
         TensorVariable
         """
         # only defined for sum(value) == 1
-        return bound(
-            at.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(at.sum(a, axis=-1)),
-            at.all(value >= 0),
-            at.all(value <= 1),
-            at.all(a > 0),
-            broadcast_conditions=False,
+        res = at.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(at.sum(a, axis=-1))
+        res = at.switch(
+            at.or_(
+                at.any(at.lt(value, 0), axis=-1),
+                at.any(at.gt(value, 1), axis=-1),
+            ),
+            -np.inf,
+            res,
         )
-
-    def _distr_parameters_for_repr(self):
-        return ["a"]
+        return check_parameters(
+            res,
+            a > 0,
+            msg="a > 0",
+        )
 
 
 class MultinomialRV(MultinomialRV):
@@ -507,13 +519,12 @@ class Multinomial(Discrete):
 
     Parameters
     ----------
-    n: int or array
-        Number of trials (n > 0). If n is an array its shape must be (N,) with
-        N = p.shape[0]
-    p: one- or two-dimensional array
-        Probability of each one of the different outcomes. Elements must
-        be non-negative and sum to 1 along the last axis. They will be
-        automatically rescaled otherwise.
+    n: int
+        Total counts in each replicate (n > 0).
+    p: float array
+        Probability of each one of the different outcomes (0 <= p <= 1). The number of
+        categories is given by the length of the last axis. Elements are expected to sum
+        to 1 along the last axis, and they will be automatically rescaled otherwise.
     """
     rv_op = multinomial
 
@@ -554,14 +565,19 @@ class Multinomial(Discrete):
         -------
         TensorVariable
         """
-        return bound(
-            factln(n) + at.sum(-factln(value) + logpow(p, value), axis=-1),
-            at.all(value >= 0),
-            at.all(at.eq(at.sum(value, axis=-1), n)),
-            at.all(p <= 1),
-            at.all(at.eq(at.sum(p, axis=-1), 1)),
-            at.all(at.ge(n, 0)),
-            broadcast_conditions=False,
+
+        res = factln(n) + at.sum(-factln(value) + logpow(p, value), axis=-1)
+        res = at.switch(
+            at.or_(at.any(at.lt(value, 0), axis=-1), at.neq(at.sum(value, axis=-1), n)),
+            -np.inf,
+            res,
+        )
+        return check_parameters(
+            res,
+            p <= 1,
+            at.eq(at.sum(p, axis=-1), 1),
+            at.ge(n, 0),
+            msg="p <= 1, sum(p) = 1, n >= 0",
         )
 
 
@@ -613,7 +629,7 @@ class DirichletMultinomial(Discrete):
     .. math::
 
         f(x \mid n, a) = \frac{\Gamma(n + 1)\Gamma(\sum a_k)}
-                              {\Gamma(\n + \sum a_k)}
+                              {\Gamma(n + \sum a_k)}
                          \prod_{k=1}^K
                          \frac{\Gamma(x_k +  a_k)}
                               {\Gamma(x_k + 1)\Gamma(a_k)}
@@ -626,17 +642,12 @@ class DirichletMultinomial(Discrete):
 
     Parameters
     ----------
-    n : int or array
-        Total counts in each replicate. If n is an array its shape must be (N,)
-        with N = a.shape[0]
+    n : int
+        Total counts in each replicate (n > 0).
 
-    a : one- or two-dimensional array
-        Dirichlet parameter. Elements must be strictly positive.
-        The number of categories is given by the length of the last axis.
-
-    shape : integer tuple
-        Describes shape of distribution. For example if n=array([5, 10]), and
-        a=array([1, 1, 1]), shape should be (2, 3).
+    a : float array
+        Dirichlet concentration parameters (a > 0). The number of categories is given by
+        the length of the last axis.
     """
     rv_op = dirichlet_multinomial
 
@@ -661,29 +672,26 @@ class DirichletMultinomial(Discrete):
         -------
         TensorVariable
         """
-        if value.ndim >= 1:
-            n = at.shape_padright(n)
-            if a.ndim > 1:
-                a = at.shape_padleft(a)
-
-        sum_a = a.sum(axis=-1, keepdims=True)
+        sum_a = a.sum(axis=-1)
         const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
         series = gammaln(value + a) - (gammaln(value + 1) + gammaln(a))
-        result = const + series.sum(axis=-1, keepdims=True)
+        res = const + series.sum(axis=-1)
 
-        # Bounds checking to confirm parameters and data meet all constraints
-        # and that each observation value_i sums to n_i.
-        return bound(
-            result,
-            value >= 0,
-            a > 0,
-            n >= 0,
-            at.eq(value.sum(axis=-1, keepdims=True), n),
-            broadcast_conditions=False,
+        res = at.switch(
+            at.or_(
+                at.any(at.lt(value, 0), axis=-1),
+                at.neq(at.sum(value, axis=-1), n),
+            ),
+            -np.inf,
+            res,
         )
 
-    def _distr_parameters_for_repr(self):
-        return ["n", "a"]
+        return check_parameters(
+            res,
+            a > 0,
+            n >= 0,
+            msg="a > 0, n >= 0",
+        )
 
 
 class _OrderedMultinomial(Multinomial):
@@ -950,7 +958,7 @@ class Wishart(Continuous):
         IVI = det(V)
         IXI = det(X)
 
-        return bound(
+        return check_parameters(
             (
                 (nu - p - 1) * at.log(IXI)
                 - trace(matrix_inverse(V).dot(X))
@@ -962,7 +970,6 @@ class Wishart(Continuous):
             matrix_pos_def(X),
             at.eq(X, X.T),
             nu > (p - 1),
-            broadcast_conditions=False,
         )
 
 
@@ -1246,9 +1253,6 @@ class _LKJCholeskyCov(Continuous):
         # else:
         #     samples = np.reshape(samples, size + sample_shape)
         # return samples
-
-    def _distr_parameters_for_repr(self):
-        return ["eta", "n"]
 
 
 def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=True, *args, **kwargs):
@@ -1547,17 +1551,13 @@ class LKJCorr(Continuous):
 
         result = _lkj_normalizing_constant(eta, n)
         result += (eta - 1.0) * at.log(det(X))
-        return bound(
+        return check_parameters(
             result,
             X >= -1,
             X <= 1,
             matrix_pos_def(X),
             eta > 0,
-            broadcast_conditions=False,
         )
-
-    def _distr_parameters_for_repr(self):
-        return ["eta", "n"]
 
 
 class MatrixNormalRV(RandomVariable):
@@ -1796,9 +1796,6 @@ class MatrixNormal(Continuous):
         norm = -0.5 * m * n * pm.floatX(np.log(2 * np.pi))
         return norm - 0.5 * trquaddist - m * half_collogdet - n * half_rowlogdet
 
-    def _distr_parameters_for_repr(self):
-        return ["mu"]
-
 
 class KroneckerNormalRV(RandomVariable):
     name = "kroneckernormal"
@@ -1941,6 +1938,13 @@ class KroneckerNormal(Continuous):
         # mean = median = mode = mu
         return super().dist([mu, sigma, *covs], **kwargs)
 
+    def get_moment(rv, size, mu, covs, chols, evds):
+        mean = mu
+        if not rv_size_is_none(size):
+            moment_size = at.concatenate([size, mu.shape])
+            mean = at.full(moment_size, mu)
+        return mean
+
     def logp(value, mu, sigma, *covs):
         """
         Calculate log-probability of Multivariate Normal distribution
@@ -1987,9 +1991,6 @@ class KroneckerNormal(Continuous):
 
         a = -(quad + logdet + N * at.log(2 * np.pi)) / 2.0
         return a
-
-    def _distr_parameters_for_repr(self):
-        return ["mu"]
 
 
 class CARRV(RandomVariable):
@@ -2159,9 +2160,10 @@ class CAR(Continuous):
 
         tau_dot_delta = D[None, :] * delta - alpha * Wdelta
         logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
-        return bound(
+        return check_parameters(
             0.5 * (logtau + logdet - logquad),
-            at.all(alpha <= 1),
-            at.all(alpha >= -1),
+            alpha <= 1,
+            alpha >= -1,
             tau > 0,
+            msg="-1 <= alpha <= 1, tau > 0",
         )
