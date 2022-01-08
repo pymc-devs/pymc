@@ -232,9 +232,9 @@ class Distribution(metaclass=DistributionMeta):
         # `dims` are only available with this API, because `.dist()` can be used
         # without a modelcontext and dims are not tracked at the Aesara level.
         if dims is not None:
-            ndim_resize, resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
+            resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
         elif observed is not None:
-            ndim_resize, resize_shape, observed = resize_from_observed(observed, ndim_actual)
+            resize_shape, observed = resize_from_observed(observed, ndim_actual)
 
         if resize_shape:
             # A batch size was specified through `dims`, or implied by `observed`.
@@ -482,9 +482,9 @@ class SymbolicDistribution:
         # # `dims` are only available with this API, because `.dist()` can be used
         # # without a modelcontext and dims are not tracked at the Aesara level.
         if dims is not None:
-            ndim_resize, resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
+            resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
         elif observed is not None:
-            ndim_resize, resize_shape, observed = resize_from_observed(observed, ndim_actual)
+            resize_shape, observed = resize_from_observed(observed, ndim_actual)
 
         if resize_shape:
             # A batch size was specified through `dims`, or implied by `observed`.
