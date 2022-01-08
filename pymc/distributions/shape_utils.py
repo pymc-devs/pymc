@@ -427,7 +427,7 @@ StrongDims = Sequence[Union[str, None]]
 StrongSize = Union[TensorVariable, Tuple[Union[int, TensorVariable], ...]]
 
 
-def convert_dims(dims: Dims) -> Optional[WeakDims]:
+def convert_dims(dims: Optional[Dims]) -> Optional[WeakDims]:
     """Process a user-provided dims variable into None or a valid dims tuple."""
     if dims is None:
         return None
