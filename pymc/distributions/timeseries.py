@@ -298,18 +298,13 @@ class GaussianRandomWalk(distribution.Continuous):
         -------
         TensorVariable
         """
-        rv, updates = aesara.scan(
-            fn=lambda prev_value: rng.normal(prev_value + mu, sigma),
-            outputs_info=np.array(0.0),
-            n_steps=size,
-        )
-        from aeppl import joint_logprob
 
-        vv = rv.clone()
-        logp = joint_logprob({rv: vv})
-
-        # Question: Is value one scalar value or the whole series?
-        return logp.eval({vv: value})
+        innit_logp = pm.logp(pm.Normal.dist(mu, sigma), value[:1] - init)
+        # https: // aesara.readthedocs.io / en / latest / library / tensor / extra_ops.html?highlight = at.diff
+        innov_logp = pm.logp(pm.Normal.dist(mu, sigma), at.diff(value))
+        # https: // numpy.org/doc/stable/ reference / generated / numpy.concatenate.html
+        total_logp = at.concatenate([innit_logp, innov_logp])
+        return total_logp
 
 
 class GARCH11(distribution.Continuous):
