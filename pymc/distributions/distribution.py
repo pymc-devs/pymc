@@ -213,16 +213,6 @@ class Distribution(metaclass=DistributionMeta):
         if rng is None:
             rng = model.next_rng()
 
-        if dims is not None and "shape" in kwargs:
-            raise ValueError(
-                f"Passing both `dims` ({dims}) and `shape` ({kwargs['shape']}) is not supported!"
-            )
-        if dims is not None and "size" in kwargs:
-            raise ValueError(
-                f"Passing both `dims` ({dims}) and `size` ({kwargs['size']}) is not supported!"
-            )
-        dims = convert_dims(dims)
-
         # Create the RV without dims information, because that's not something tracked at the Aesara level.
         # If necessary we'll later replicate to a different size implied by already known dims.
         rv_out = cls.dist(*args, rng=rng, **kwargs)
@@ -231,8 +221,14 @@ class Distribution(metaclass=DistributionMeta):
 
         # `dims` are only available with this API, because `.dist()` can be used
         # without a modelcontext and dims are not tracked at the Aesara level.
+        dims = convert_dims(dims)
+        dims_can_resize = kwargs.get("shape", None) is None and kwargs.get("size", None) is None
         if dims is not None:
-            resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
+            if dims_can_resize:
+                resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
+            elif Ellipsis in dims:
+                # Replace ... with None entries to match the actual dimensionality.
+                dims = (*dims[:-1], *[None] * ndim_actual)[:ndim_actual]
         elif observed is not None:
             resize_shape, observed = resize_from_observed(observed, ndim_actual)
 
@@ -456,16 +452,6 @@ class SymbolicDistribution:
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
-        if dims is not None and "shape" in kwargs:
-            raise ValueError(
-                f"Passing both `dims` ({dims}) and `shape` ({kwargs['shape']}) is not supported!"
-            )
-        if dims is not None and "size" in kwargs:
-            raise ValueError(
-                f"Passing both `dims` ({dims}) and `size` ({kwargs['size']}) is not supported!"
-            )
-        dims = convert_dims(dims)
-
         if rngs is None:
             # Create a temporary rv to obtain number of rngs needed
             temp_graph = cls.dist(*args, rngs=None, **kwargs)
@@ -481,8 +467,14 @@ class SymbolicDistribution:
 
         # # `dims` are only available with this API, because `.dist()` can be used
         # # without a modelcontext and dims are not tracked at the Aesara level.
+        dims = convert_dims(dims)
+        dims_can_resize = kwargs.get("shape", None) is None and kwargs.get("size", None) is None
         if dims is not None:
-            resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
+            if dims_can_resize:
+                resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
+            elif Ellipsis in dims:
+                # Replace ... with None entries to match the actual dimensionality.
+                dims = (*dims[:-1], *[None] * ndim_actual)[:ndim_actual]
         elif observed is not None:
             resize_shape, observed = resize_from_observed(observed, ndim_actual)
 
