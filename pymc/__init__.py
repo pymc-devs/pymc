@@ -18,8 +18,7 @@ __version__ = "4.0.0b1"
 import logging
 import multiprocessing as mp
 import platform
-import theano
-import pymc3
+
 _log = logging.getLogger("pymc")
 
 if not logging.root.handlers:
