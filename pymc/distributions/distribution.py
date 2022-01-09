@@ -19,12 +19,14 @@ import warnings
 
 from abc import ABCMeta
 from functools import singledispatch
-from typing import Callable, Iterable, Optional, Sequence
+from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
 
 import aesara
+import numpy as np
 
 from aeppl.logprob import _logcdf, _logprob
 from aesara import tensor as at
+from aesara.graph.basic import Variable
 from aesara.tensor.basic import as_tensor_variable
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
@@ -36,6 +38,8 @@ from pymc.distributions.shape_utils import (
     Dims,
     Shape,
     Size,
+    StrongShape,
+    WeakDims,
     convert_dims,
     convert_shape,
     convert_size,
@@ -133,6 +137,37 @@ def _make_nice_attr_error(oldcode: str, newcode: str):
     return fn
 
 
+def _make_rv_and_resize_shape(
+    *,
+    cls,
+    dims: Optional[Dims],
+    model,
+    observed,
+    args,
+    **kwargs,
+) -> Tuple[Variable, Optional[WeakDims], Optional[Union[np.ndarray, Variable]], StrongShape]:
+    """Creates the RV and processes dims or observed to determine a resize shape."""
+    # Create the RV without dims information, because that's not something tracked at the Aesara level.
+    # If necessary we'll later replicate to a different size implied by already known dims.
+    rv_out = cls.dist(*args, **kwargs)
+    ndim_actual = rv_out.ndim
+    resize_shape = None
+
+    # # `dims` are only available with this API, because `.dist()` can be used
+    # # without a modelcontext and dims are not tracked at the Aesara level.
+    dims = convert_dims(dims)
+    dims_can_resize = kwargs.get("shape", None) is None and kwargs.get("size", None) is None
+    if dims is not None:
+        if dims_can_resize:
+            resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
+        elif Ellipsis in dims:
+            # Replace ... with None entries to match the actual dimensionality.
+            dims = (*dims[:-1], *[None] * ndim_actual)[:ndim_actual]
+    elif observed is not None:
+        resize_shape, observed = resize_from_observed(observed, ndim_actual)
+    return rv_out, dims, observed, resize_shape
+
+
 class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
@@ -213,28 +248,11 @@ class Distribution(metaclass=DistributionMeta):
         if rng is None:
             rng = model.next_rng()
 
-        if dims is not None and "shape" in kwargs:
-            raise ValueError(
-                f"Passing both `dims` ({dims}) and `shape` ({kwargs['shape']}) is not supported!"
-            )
-        if dims is not None and "size" in kwargs:
-            raise ValueError(
-                f"Passing both `dims` ({dims}) and `size` ({kwargs['size']}) is not supported!"
-            )
-        dims = convert_dims(dims)
-
-        # Create the RV without dims information, because that's not something tracked at the Aesara level.
-        # If necessary we'll later replicate to a different size implied by already known dims.
-        rv_out = cls.dist(*args, rng=rng, **kwargs)
-        ndim_actual = rv_out.ndim
-        resize_shape = None
-
-        # `dims` are only available with this API, because `.dist()` can be used
-        # without a modelcontext and dims are not tracked at the Aesara level.
-        if dims is not None:
-            ndim_resize, resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
-        elif observed is not None:
-            ndim_resize, resize_shape, observed = resize_from_observed(observed, ndim_actual)
+        # Create the RV and process dims and observed to determine
+        # a shape by which the created RV may need to be resized.
+        rv_out, dims, observed, resize_shape = _make_rv_and_resize_shape(
+            cls=cls, dims=dims, model=model, observed=observed, args=args, rng=rng, **kwargs
+        )
 
         if resize_shape:
             # A batch size was specified through `dims`, or implied by `observed`.
@@ -456,16 +474,6 @@ class SymbolicDistribution:
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
-        if dims is not None and "shape" in kwargs:
-            raise ValueError(
-                f"Passing both `dims` ({dims}) and `shape` ({kwargs['shape']}) is not supported!"
-            )
-        if dims is not None and "size" in kwargs:
-            raise ValueError(
-                f"Passing both `dims` ({dims}) and `size` ({kwargs['size']}) is not supported!"
-            )
-        dims = convert_dims(dims)
-
         if rngs is None:
             # Create a temporary rv to obtain number of rngs needed
             temp_graph = cls.dist(*args, rngs=None, **kwargs)
@@ -473,18 +481,11 @@ class SymbolicDistribution:
         elif not isinstance(rngs, (list, tuple)):
             rngs = [rngs]
 
-        # Create the RV without dims information, because that's not something tracked at the Aesara level.
-        # If necessary we'll later replicate to a different size implied by already known dims.
-        rv_out = cls.dist(*args, rngs=rngs, **kwargs)
-        ndim_actual = rv_out.ndim
-        resize_shape = None
-
-        # # `dims` are only available with this API, because `.dist()` can be used
-        # # without a modelcontext and dims are not tracked at the Aesara level.
-        if dims is not None:
-            ndim_resize, resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
-        elif observed is not None:
-            ndim_resize, resize_shape, observed = resize_from_observed(observed, ndim_actual)
+        # Create the RV and process dims and observed to determine
+        # a shape by which the created RV may need to be resized.
+        rv_out, dims, observed, resize_shape = _make_rv_and_resize_shape(
+            cls=cls, dims=dims, model=model, observed=observed, args=args, rngs=rngs, **kwargs
+        )
 
         if resize_shape:
             # A batch size was specified through `dims`, or implied by `observed`.
