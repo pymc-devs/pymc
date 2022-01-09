@@ -28,39 +28,6 @@ if not logging.root.handlers:
         _log.addHandler(handler)
 
 
-def _check_install_compatibilitites():
-    try:
-        import theano
-
-        _log.warning(
-            "!" * 60
-            + f"\nYour Python environment has Theano(-PyMC) {theano.__version__} installed, "
-            + f"but you are importing PyMC {__version__} which uses Aesara as its backend."
-            + f"\nFor PyMC {__version__} to work as expected you should uninstall Theano(-PyMC)."
-            + "\nSee https://github.com/pymc-devs/pymc/wiki for update instructions.\n"
-            + "!" * 60
-        )
-    except ImportError:
-        pass
-
-    try:
-        import pymc3
-
-        _log.warning(
-            "!" * 60
-            + f"\nYou are importing PyMC {__version__}, but your environment also has"
-            + f" the legacy version PyMC3 {pymc3.__version__} installed."
-            + f"\nFor PyMC {__version__} to work as expected you should uninstall PyMC3."
-            + "\nSee https://github.com/pymc-devs/pymc/wiki for update instructions.\n"
-            + "!" * 60
-        )
-    except ImportError:
-        pass
-
-
-_check_install_compatibilitites()
-
-
 def __set_compiler_flags():
     # Workarounds for Aesara compiler problems on various platforms
     import aesara
