@@ -1449,6 +1449,11 @@ class Exponential(PositiveContinuous):
     Variance  :math:`\dfrac{1}{\lambda^2}`
     ========  ============================
 
+    Notes
+    -----
+    Logp calculation is defined in aeppl.logprob
+    https://github.com/aesara-devs/aeppl/blob/main/aeppl/logprob.py
+
     Parameters
     ----------
     lam: float
