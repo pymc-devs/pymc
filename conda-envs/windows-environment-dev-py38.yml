@@ -11,7 +11,7 @@ dependencies:
 - cloudpickle
 - fastprogress>=0.2.0
 - h5py
-- numpy>=1.15.0
+- numpy>=1.15.0,<1.22.0
 - pandas
 - pip
 - python=3.8
