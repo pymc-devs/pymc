@@ -412,7 +412,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         if self.prior is None:
             return {"prior": None, "prior_predictive": None}
         if self.observations is not None:
-            prior_predictive_vars = list(self.observations.keys())
+            prior_predictive_vars = list(set(self.observations).intersection(self.prior))
             prior_vars = [key for key in self.prior.keys() if key not in prior_predictive_vars]
         else:
             prior_vars = list(self.prior.keys())

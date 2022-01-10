@@ -572,6 +572,17 @@ class TestDataPyMC:
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
 
+    def test_conversion_from_variables_subset(self):
+        """This is a regression test for issue #5337."""
+        with pm.Model() as model:
+            x = pm.Normal("x")
+            pm.Normal("y", x, observed=5)
+            idata = pm.sample(
+                tune=10, draws=20, chains=1, step=pm.Metropolis(), compute_convergence_checks=False
+            )
+            pm.sample_posterior_predictive(idata, var_names=["x"])
+            pm.sample_prior_predictive(var_names=["x"])
+
     def test_multivariate_observations(self):
         coords = {"direction": ["x", "y", "z"], "experiment": np.arange(20)}
         data = np.random.multinomial(20, [0.2, 0.3, 0.5], size=20)
