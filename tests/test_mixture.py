@@ -162,6 +162,46 @@ def test_hetero_mixture_binomial(p_val, size):
 @pytest.mark.parametrize(
     "X_args, Y_args, Z_args, p_val, comp_size, idx_size, extra_indices, join_axis",
     [
+        # Scalar mixture components, scalar index
+        (
+            (
+                np.array(0, dtype=aesara.config.floatX),
+                np.array(1, dtype=aesara.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=aesara.config.floatX),
+                np.array(0.5, dtype=aesara.config.floatX),
+            ),
+            (
+                np.array(100, dtype=aesara.config.floatX),
+                np.array(1, dtype=aesara.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=aesara.config.floatX),
+            (),
+            (),
+            (),
+            0,
+        ),
+        # Scalar mixture components, vector index
+        (
+            (
+                np.array(0, dtype=aesara.config.floatX),
+                np.array(1, dtype=aesara.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=aesara.config.floatX),
+                np.array(0.5, dtype=aesara.config.floatX),
+            ),
+            (
+                np.array(100, dtype=aesara.config.floatX),
+                np.array(1, dtype=aesara.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=aesara.config.floatX),
+            (),
+            (6,),
+            (),
+            0,
+        ),
         (
             (
                 np.array([0, -100], dtype=aesara.config.floatX),

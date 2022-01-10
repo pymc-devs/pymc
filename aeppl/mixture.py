@@ -307,14 +307,27 @@ def logprob_MixtureRV(
 ):
     (value,) = values
 
-    join_axis = inputs[0]
+    join_axis = cast(Variable, inputs[0])
     indices = cast(TensorVariable, inputs[1 : op.indices_end_idx])
     comp_rvs = cast(TensorVariable, inputs[op.indices_end_idx :])
 
-    if not (len(indices) == 1 and indices[0].ndim == 0):
-        join_axis_val = get_constant_value(join_axis).item()
+    assert len(indices) > 0
 
-        original_shape = shape_tuple(comp_rvs[0])
+    if len(indices) > 1 or indices[0].ndim > 0:
+        if isinstance(join_axis.type, NoneTypeT):
+            # `join_axis` will be `NoneConst` if the "join" was a `MakeVector`
+            # (i.e. scalar measurable variables were combined to make a
+            # vector).
+            # Since some form of advanced indexing is necessarily occurring, we
+            # need to reformat the MakeVector arguments so that they fit the
+            # `Join` format expected by the logic below.
+            join_axis_val = 0
+            comp_rvs = [comp[None] for comp in comp_rvs]
+            original_shape = (len(comp_rvs),)
+        else:
+            join_axis_val = get_constant_value(join_axis).item()
+            original_shape = shape_tuple(comp_rvs[0])
+
         bcast_indices = expand_indices(indices, original_shape)
 
         logp_val = at.empty(bcast_indices[0].shape)
@@ -332,7 +345,7 @@ def logprob_MixtureRV(
             # Could we construct this form earlier and
             # do the lifting for everything at once, instead of
             # this intentional one-off?
-            rv_m = rv_pull_down(rv[m_indices])
+            rv_m = rv_pull_down(rv[m_indices] if m_indices else rv)
             val_m = value[idx_m_on_axis]
             logp_m = logprob(rv_m, val_m)
             logp_val = at.set_subtensor(logp_val[idx_m_on_axis], logp_m)
