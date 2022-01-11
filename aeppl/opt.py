@@ -178,13 +178,16 @@ def naive_bcast_rv_lift(fgraph, node):
 
     bcast_shape = node.inputs[1:]
 
-    assert len(bcast_shape) > 0
-
     rv_var = node.inputs[0]
     rv_node = rv_var.owner
 
     if hasattr(fgraph, "dont_touch_vars") and rv_var in fgraph.dont_touch_vars:
         return None  # pragma: no cover
+
+    if not bcast_shape:
+        # The `BroadcastTo` is broadcasting a scalar to a scalar (i.e. doing nothing)
+        assert rv_var.ndim == 0
+        return [rv_var]
 
     size_lift_res = local_rv_size_lift.transform(fgraph, rv_node)
     if size_lift_res is None:
