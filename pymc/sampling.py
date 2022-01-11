@@ -96,6 +96,7 @@ __all__ = [
     "sample_posterior_predictive_w",
     "init_nuts",
     "sample_prior_predictive",
+    "draw",
 ]
 
 STEP_METHODS = (
