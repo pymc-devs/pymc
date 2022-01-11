@@ -2114,8 +2114,31 @@ def draw(
 
     Returns
     -------
+    Dict[str, np.ndarray]
         A dictionary with variable names as keys and drawn samples as numpy arrays.
+    
+    Examples
+    --------
+    .. code-block:: python    
+        # Draw samples for one variable 
+        with pm.Model():
+            x = pm.Normal("x")
+        x_draws = pm.draw(x)
+        assert x_draws["x"].shape == (500,)
+
+        # Draw 1000 samples for several variables
+        with pm.Model():
+            x = pm.Normal("x")
+            y = pm.Normal("y", shape=10)
+            z = pm.Uniform("z", shape=5)
+
+        num_draws = 1000
+        draws = pm.draw([x, y, z], draws=num_draws)
+        assert draws["x"].shape == (num_draws,)
+        assert draws["y"].shape == (num_draws, 10)
+        assert draws["z"].shape == (num_draws, 5)
     """
+    
     if vars is None:
         raise AssertionError("Must include at least one variable")
 
