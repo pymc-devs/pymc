@@ -1215,7 +1215,6 @@ def test_sample_deterministic():
 
 
 class TestDraw(SeededTest):
-
     def test_draw_one_variable(self):
 
         with pm.Model() as model:
@@ -1224,16 +1223,14 @@ class TestDraw(SeededTest):
         x_draws = pm.draw(x)
         assert x_draws["x"].shape == (500,)
 
-
     def test_draw_one_variable_with_number_draws(self):
 
         with pm.Model() as model:
             x = pm.Normal("x")
 
-        num_draws = 100            
+        num_draws = 100
         x_draws = pm.draw(x, draws=num_draws)
         assert x_draws["x"].shape == (num_draws,)
-
 
     def test_draw_variables(self):
 
@@ -1243,33 +1240,30 @@ class TestDraw(SeededTest):
             z = pm.Uniform("z", shape=5)
 
         num_draws = 1000
-        # Draw samples of a list variables            
+        # Draw samples of a list variables
         draws = pm.draw([x, y, z], draws=num_draws)
         assert draws["x"].shape == (num_draws,)
         assert draws["y"].shape == (num_draws, 10)
         assert draws["z"].shape == (num_draws, 5)
 
-        # Draw samples of a tuple variables            
+        # Draw samples of a tuple variables
         draws = pm.draw((x, y, z), draws=num_draws)
         assert draws["x"].shape == (num_draws,)
         assert draws["y"].shape == (num_draws, 10)
         assert draws["z"].shape == (num_draws, 5)
 
-
     def test_multivariate(self):
         with pm.Model() as model:
             mln = pm.Multinomial("mln", n=5, p=np.array([0.25, 0.25, 0.25, 0.25]))
-            
+
         mln_draws = pm.draw(mln, draws=100)
         assert mln_draws != (100, 4)
-
 
     def test_shape_edgecase(self):
         with pm.Model():
             mu = pm.Normal("mu", size=5)
             sd = pm.Uniform("sd", lower=2, upper=3)
             x = pm.Normal("x", mu=mu, sigma=sd, size=5)
-        
+
         x_draws = pm.draw(x, draws=50)
         assert x_draws["x"].shape == (50, 5)
-

@@ -2094,14 +2094,9 @@ def sample_prior_predictive(
     return pm.to_inference_data(prior=prior, **ikwargs)
 
 
-def draw(
-    vars,
-    draws=500,
-    mode=None,
-    **kwargs
-) -> Dict[str, np.ndarray]:
+def draw(vars, draws=500, mode=None, **kwargs) -> Dict[str, np.ndarray]:
     """Draw samples for one variable or a list of variables
-    
+
     Parameters
     ----------
     vars : Iterable[TensorVariable]
@@ -2110,18 +2105,18 @@ def draw(
         Number of samples needed to draw. Detaults to 500.
     mode:
         The mode used by ``aesara.function`` to compile the graph.
-    kwargs: 
+    kwargs:
         Keyword arguments for :func:`pymc.aesara.compile_pymc`
 
     Returns
     -------
     Dict[str, np.ndarray]
         A dictionary with variable names as keys and drawn samples as numpy arrays.
-    
+
     Examples
     --------
-    .. code-block:: python    
-        # Draw samples for one variable 
+    .. code-block:: python
+        # Draw samples for one variable
         with pm.Model():
             x = pm.Normal("x")
         x_draws = pm.draw(x)
@@ -2139,7 +2134,7 @@ def draw(
         assert draws["y"].shape == (num_draws, 10)
         assert draws["z"].shape == (num_draws, 5)
     """
-    
+
     if vars is None:
         raise AssertionError("Must include at least one variable")
 
@@ -2149,7 +2144,7 @@ def draw(
         vars = [vars]
 
     draw_fn = compile_pymc(inputs=[], outputs=vars, mode=mode, **kwargs)
-    
+
     values = zip(*(draw_fn() for _ in range(draws)))
 
     names = [var.name for var in vars]
