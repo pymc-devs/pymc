@@ -2093,6 +2093,50 @@ def sample_prior_predictive(
     return pm.to_inference_data(prior=prior, **ikwargs)
 
 
+def draw(
+    vars,
+    draws=500,
+    mode=None,
+    **kwargs
+) -> Dict[str, np.ndarray]:
+    """Draw samples for one variable or a list of variables
+    
+    Parameters
+    ----------
+    vars : Iterable[TensorVariable]
+        A variable or a list of variables for which to draw samples.
+    draws : int
+        Number of samples needed to draw. Detaults to 500.
+    mode:
+        The mode used by ``aesara.function`` to compile the graph.
+    kwargs: 
+        Keyword arguments for :func:`pymc.aesara.compile_pymc`
+
+    Returns
+    -------
+        A dictionary with variable names as keys and drawn samples as numpy arrays.
+    """
+    if vars is None:
+        raise AssertionError("Must include at least one variable")
+
+    if isinstance(vars, tuple):
+        vars = list(vars)
+    elif not isinstance(vars, list):
+        vars = [vars]
+
+    draw_fn = compile_pymc(inputs=[], outputs=vars, mode=mode, **kwargs)
+    
+    values = zip(*(draw_fn() for _ in range(draws)))
+
+    names = [var.name for var in vars]
+    drawn_data = {k: np.stack(v) for k, v in zip(names, values)}
+
+    if drawn_data is None:
+        raise AssertionError("No variables drawed")
+
+    return drawn_data
+
+
 def _init_jitter(
     model: Model,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
