@@ -31,7 +31,6 @@ from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Apply
 from aesara.tensor.type import TensorType
 from aesara.tensor.var import TensorConstant, TensorVariable
-from packaging import version
 
 import pymc as pm
 
@@ -635,8 +634,8 @@ def Data(
     arr = pandas_to_array(value)
 
     if mutable is None:
-        current = version.Version(pm.__version__)
-        mutable = current.major == 4 and current.minor < 1
+        major, minor = [int(v) for v in pm.__version__.split(".")[:2]]
+        mutable = major == 4 and minor < 1
         if mutable:
             warnings.warn(
                 "The `mutable` kwarg was not specified. Currently it defaults to `pm.Data(mutable=True)`,"
