@@ -27,6 +27,7 @@ import pytest
 from aesara import shared
 from arviz import InferenceData
 from arviz import from_dict as az_from_dict
+from numpy.testing._private.utils import assert_array_equal
 from scipy import stats
 
 import pymc as pm
@@ -1216,25 +1217,21 @@ def test_sample_deterministic():
 
 class TestDraw(SeededTest):
     def test_draw_one_variable(self):
-
-        with pm.Model() as model:
+        with pm.Model():
             x = pm.Normal("x")
 
         x_draws = pm.draw(x)
-        assert x_draws["x"].shape == (500,)
+        assert x_draws.shape == (1,)
 
-    def test_draw_one_variable_with_number_draws(self):
-
-        with pm.Model() as model:
+        with pm.Model():
             x = pm.Normal("x")
 
         num_draws = 100
         x_draws = pm.draw(x, draws=num_draws)
-        assert x_draws["x"].shape == (num_draws,)
+        assert x_draws.shape == (num_draws,)
 
-    def test_draw_variables(self):
-
-        with pm.Model() as model:
+    def test_draw_several_variables(self):
+        with pm.Model():
             x = pm.Normal("x")
             y = pm.Normal("y", shape=10)
             z = pm.Uniform("z", shape=5)
@@ -1242,28 +1239,28 @@ class TestDraw(SeededTest):
         num_draws = 1000
         # Draw samples of a list variables
         draws = pm.draw([x, y, z], draws=num_draws)
-        assert draws["x"].shape == (num_draws,)
-        assert draws["y"].shape == (num_draws, 10)
-        assert draws["z"].shape == (num_draws, 5)
+        assert draws[0].shape == (num_draws,)
+        assert draws[1].shape == (num_draws, 10)
+        assert draws[2].shape == (num_draws, 5)
 
         # Draw samples of a tuple variables
         draws = pm.draw((x, y, z), draws=num_draws)
-        assert draws["x"].shape == (num_draws,)
-        assert draws["y"].shape == (num_draws, 10)
-        assert draws["z"].shape == (num_draws, 5)
+        assert draws[0].shape == (num_draws,)
+        assert draws[1].shape == (num_draws, 10)
+        assert draws[2].shape == (num_draws, 5)
 
     def test_multivariate(self):
-        with pm.Model() as model:
+        with pm.Model():
             mln = pm.Multinomial("mln", n=5, p=np.array([0.25, 0.25, 0.25, 0.25]))
 
         mln_draws = pm.draw(mln, draws=100)
-        assert mln_draws != (100, 4)
+        assert mln_draws.shape == (100, 4)
 
-    def test_shape_edgecase(self):
+    def test_draw_different_samples(self):
         with pm.Model():
-            mu = pm.Normal("mu", size=5)
-            sd = pm.Uniform("sd", lower=2, upper=3)
-            x = pm.Normal("x", mu=mu, sigma=sd, size=5)
+            x = pm.Normal("x")
 
-        x_draws = pm.draw(x, draws=50)
-        assert x_draws["x"].shape == (50, 5)
+        x_draws_1 = pm.draw(x, 100)
+        x_draws_2 = pm.draw(x, 100)
+        # Check if the draw function will draw different samples each time
+        npt.assert_raises(AssertionError, assert_array_equal, x_draws_1, x_draws_2)

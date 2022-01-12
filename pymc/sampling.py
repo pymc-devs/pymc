@@ -42,7 +42,7 @@ import numpy as np
 import xarray
 
 from aesara.compile.mode import Mode
-from aesara.graph.basic import Constant
+from aesara.graph.basic import Constant, Variable
 from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
@@ -2094,64 +2094,69 @@ def sample_prior_predictive(
     return pm.to_inference_data(prior=prior, **ikwargs)
 
 
-def draw(vars, draws=500, mode=None, **kwargs) -> Dict[str, np.ndarray]:
+def draw(
+    vars: Union[Variable, Sequence[Variable]],
+    draws=1,
+    mode: Optional[Union[str, Mode]] = None,
+    **kwargs,
+) -> List[np.ndarray]:
     """Draw samples for one variable or a list of variables
 
     Parameters
     ----------
-    vars : Iterable[TensorVariable]
+    vars : Union[Variable, Sequence[Variable]]
         A variable or a list of variables for which to draw samples.
     draws : int
         Number of samples needed to draw. Detaults to 500.
-    mode:
+    mode : Optional[Union[str, Mode]]
         The mode used by ``aesara.function`` to compile the graph.
     kwargs:
         Keyword arguments for :func:`pymc.aesara.compile_pymc`
 
     Returns
     -------
-    Dict[str, np.ndarray]
-        A dictionary with variable names as keys and drawn samples as numpy arrays.
+    List[np.ndarray]
+        A list of numpy arrays.
 
     Examples
     --------
     .. code-block:: python
+        import pymc as pm
+
         # Draw samples for one variable
         with pm.Model():
             x = pm.Normal("x")
-        x_draws = pm.draw(x)
-        assert x_draws["x"].shape == (500,)
+        x_draws = pm.draw(x, draws=100)
+        print(x_draws.shape)
 
         # Draw 1000 samples for several variables
         with pm.Model():
             x = pm.Normal("x")
             y = pm.Normal("y", shape=10)
             z = pm.Uniform("z", shape=5)
-
         num_draws = 1000
+        # Draw samples of a list variables
         draws = pm.draw([x, y, z], draws=num_draws)
-        assert draws["x"].shape == (num_draws,)
-        assert draws["y"].shape == (num_draws, 10)
-        assert draws["z"].shape == (num_draws, 5)
+        assert draws[0].shape == (num_draws,)
+        assert draws[1].shape == (num_draws, 10)
+        assert draws[2].shape == (num_draws, 5)
     """
 
     if vars is None:
         raise AssertionError("Must include at least one variable")
 
-    if isinstance(vars, tuple):
-        vars = list(vars)
-    elif not isinstance(vars, list):
+    if not isinstance(vars, (list, tuple)):
         vars = [vars]
 
     draw_fn = compile_pymc(inputs=[], outputs=vars, mode=mode, **kwargs)
 
-    values = zip(*(draw_fn() for _ in range(draws)))
+    drawn_values = zip(*(draw_fn() for _ in range(draws)))
 
-    names = [var.name for var in vars]
-    drawn_data = {k: np.stack(v) for k, v in zip(names, values)}
+    drawn_data = [np.stack(v) for v in drawn_values]
 
-    if drawn_data is None:
-        raise AssertionError("No variables drawed")
+    # If only one variable, return the numpy array instead of a list of numpy arrays
+    if len(drawn_data) == 1:
+        return drawn_data[0]
 
     return drawn_data
 
