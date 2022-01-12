@@ -7,6 +7,8 @@ from aesara.graph.features import Feature
 from aesara.graph.op import compute_test_value
 from aesara.graph.opt import local_optimizer
 from aesara.graph.optdb import EquilibriumDB, SequenceDB
+from aesara.tensor.basic_opt import register_canonicalize, register_useless
+from aesara.tensor.elemwise import DimShuffle, Elemwise
 from aesara.tensor.extra_ops import BroadcastTo
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.opt import (
@@ -25,6 +27,7 @@ from aesara.tensor.subtensor import (
 from aesara.tensor.var import TensorVariable
 
 from aeppl.abstract import MeasurableVariable
+from aeppl.dists import DiracDelta
 from aeppl.utils import indices_from_subtensor
 
 inc_subtensor_ops = (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
@@ -103,6 +106,38 @@ class PreserveRVMappings(Feature):
         r_value_var = self.rv_values.pop(r, None)
         if r_value_var is not None:
             self.rv_values[new_r] = r_value_var
+
+
+@register_canonicalize
+@local_optimizer((Elemwise, BroadcastTo, DimShuffle) + subtensor_ops)
+def local_lift_DiracDelta(fgraph, node):
+    r"""Lift basic `Op`\s through `DiracDelta`\s."""
+
+    if len(node.outputs) > 1:
+        return
+
+    # Only handle scalar `Elemwise` `Op`s
+    if isinstance(node.op, Elemwise) and len(node.inputs) != 1:
+        return
+
+    dd_inp = node.inputs[0]
+
+    if dd_inp.owner is None or not isinstance(dd_inp.owner.op, DiracDelta):
+        return
+
+    dd_val = dd_inp.owner.inputs[0]
+
+    new_value_node = node.op.make_node(dd_val, *node.inputs[1:])
+    new_node = dd_inp.owner.op.make_node(new_value_node.outputs[0])
+    return new_node.outputs
+
+
+@register_useless
+@local_optimizer((DiracDelta,))
+def local_remove_DiracDelta(fgraph, node):
+    r"""Remove `DiracDelta`\s."""
+    dd_val = node.inputs[0]
+    return [dd_val]
 
 
 @local_optimizer(inc_subtensor_ops)

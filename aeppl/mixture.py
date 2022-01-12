@@ -21,7 +21,12 @@ from aesara.tensor.var import TensorVariable
 
 from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
 from aeppl.logprob import _logprob, logprob
-from aeppl.opt import naive_bcast_rv_lift, rv_sinking_db, subtensor_ops
+from aeppl.opt import (
+    local_lift_DiracDelta,
+    naive_bcast_rv_lift,
+    rv_sinking_db,
+    subtensor_ops,
+)
 from aeppl.utils import get_constant_value
 
 
@@ -160,6 +165,7 @@ def rv_pull_down(x: TensorVariable, dont_touch_vars=None) -> TensorVariable:
             local_dimshuffle_rv_lift,
             local_subtensor_rv_lift,
             naive_bcast_rv_lift,
+            local_lift_DiracDelta,
         ],
         x,
     )

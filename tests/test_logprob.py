@@ -6,6 +6,7 @@ import pytest
 import scipy.stats as stats
 from aesara import function
 
+from aeppl.dists import dirac_delta
 from aeppl.logprob import ParameterValueError, logcdf, logprob
 
 # @pytest.fixture(scope="module", autouse=True)
@@ -1020,3 +1021,24 @@ def test_CheckParameter():
     x_logp_fn = function([sigma], x_logp)
     with pytest.raises(ParameterValueError, match="sigma > 0"):
         x_logp_fn(-1)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs",
+    [
+        ((np.array(0, dtype=np.float64),), np.array([0, 0.5, 1, -1], dtype=np.float64)),
+        ((np.array([0, 0], dtype=np.int64),), np.array(0, dtype=np.int64)),
+    ],
+)
+def test_dirac_delta_logprob(dist_params, obs):
+
+    dist_params_at, obs_at, _ = create_aesara_params(dist_params, obs, ())
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = dirac_delta(*dist_params_at)
+
+    @np.vectorize
+    def scipy_logprob(obs, c):
+        return 0.0 if obs == c else -np.inf
+
+    scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logprob)

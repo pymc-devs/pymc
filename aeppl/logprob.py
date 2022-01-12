@@ -9,7 +9,7 @@ from aesara.raise_op import CheckAndRaise
 from aesara.tensor.slinalg import Cholesky, solve_lower_triangular
 from aesara.tensor.var import TensorVariable
 
-# from aesara.tensor.xlogx import xlogy0
+from aeppl.dists import DiracDelta
 
 
 class ParameterValueError(ValueError):
@@ -596,3 +596,13 @@ def multinomial_logprob(op, values, *inputs, **kwargs):
         at.all(at.ge(n, 0)),
     )
     return res
+
+
+@_logprob.register(DiracDelta)
+def diracdelta_logprob(op, values, *inputs, **kwargs):
+    (values,) = values
+    (const_value,) = inputs
+    values, const_value = at.broadcast_arrays(values, const_value)
+    return at.switch(
+        at.isclose(values, const_value, rtol=op.rtol, atol=op.atol), 0.0, -np.inf
+    )

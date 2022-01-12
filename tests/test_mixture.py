@@ -677,3 +677,28 @@ def test_expand_indices_newaxis(A_parts, indices):
     exp_res = A[indices].eval()
     res = A[full_indices].eval()
     assert np.array_equal(res, exp_res)
+
+
+def test_mixture_with_DiracDelta():
+    from aeppl.dists import dirac_delta
+
+    srng = at.random.RandomStream(29833)
+
+    X_rv = srng.normal(0, 1, name="X")
+    Y_rv = dirac_delta(0.0)
+    Y_rv.name = "Y"
+
+    I_rv = srng.categorical([0.5, 0.5], size=4)
+
+    i_vv = I_rv.clone()
+    i_vv.name = "i"
+
+    M_rv = at.stack([X_rv, Y_rv])[I_rv]
+    M_rv.name = "M"
+
+    m_vv = M_rv.clone()
+    m_vv.name = "m"
+
+    logp_res = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
+
+    assert m_vv in logp_res
