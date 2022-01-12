@@ -628,10 +628,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         rng_seeder: Optional[Union[int, np.random.RandomState]] = None,
     ):
         self.name = name
-        self._coords = {}
-        self._RV_dims = {}
-        self._dim_lengths = {}
-        self.add_coords(coords)
         self.check_bounds = check_bounds
 
         if rng_seeder is None:
@@ -654,6 +650,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.auto_deterministics = treelist(parent=self.parent.auto_deterministics)
             self.deterministics = treelist(parent=self.parent.deterministics)
             self.potentials = treelist(parent=self.parent.potentials)
+            self._coords = self.parent._coords
+            self._RV_dims = treedict(parent=self.parent._RV_dims)
+            self._dim_lengths = self.parent._dim_lengths
         else:
             self.named_vars = treedict()
             self.values_to_rvs = treedict()
@@ -663,6 +662,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.auto_deterministics = treelist()
             self.deterministics = treelist()
             self.potentials = treelist()
+            self._coords = {}
+            self._RV_dims = treedict()
+            self._dim_lengths = {}
+        self.add_coords(coords)
 
         from pymc.printing import str_for_model
 
