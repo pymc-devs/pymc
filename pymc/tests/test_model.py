@@ -651,3 +651,17 @@ def test_datalogpt_multiple_shapes():
     # This would raise a TypeError, see #4803 and #4804
     x_val = m.rvs_to_values[x]
     m.datalogpt.eval({x_val: 0})
+
+
+def test_nested_model_coords():
+    COORDS = {"dim": range(10)}
+    with pm.Model(name="m1", coords=COORDS) as m1:
+        a = pm.Normal("a")
+        with pm.Model(name="m2") as m2:
+            b = pm.Normal("b")
+            c = pm.HalfNormal("c")
+            d = pm.Normal("d", b, c, dims="dim")
+        e = pm.Normal("e", a + d, dims="dim")
+    assert m1.coords is m2.coords
+    assert m1.dim_lengths is m2.dim_lengths
+    assert set(m2.RV_dims) < set(m1.RV_dims)
