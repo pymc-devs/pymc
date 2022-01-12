@@ -145,6 +145,7 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - `math.log1mexp` and `math.log1mexp_numpy` will expect negative inputs in the future. A `FutureWarning` is now raised unless `negative_input=True` is set (see [#4860](https://github.com/pymc-devs/pymc/pull/4860)).
 - Changed name of `Lognormal` distribution to `LogNormal` to harmonize CamelCase usage for distribution names.
 - Attempt to iterate over MultiTrace will raise NotImplementedError.
+- Removed silent normalisation of `p` parameters in Categorical and Multinomial distributions (see [#5370](https://github.com/pymc-devs/pymc/pull/5370)).
 - ...
 
 

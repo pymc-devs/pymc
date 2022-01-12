@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 import aesara.tensor as at
 import numpy as np
 
@@ -1233,7 +1235,16 @@ class Categorical(Discrete):
 
     @classmethod
     def dist(cls, p, **kwargs):
-
+        if isinstance(p, np.ndarray) or isinstance(p, list):
+            if (np.asarray(p) < 0).any():
+                raise ValueError(f"Negative `p` parameters are not valid, got: {p}")
+            p_sum = np.sum([p], axis=-1)
+            if not np.all(np.isclose(p_sum, 1.0)):
+                warnings.warn(
+                    f"`p` parameters sum to {p_sum}, instead of 1.0. They will be automatically rescaled. You can rescale them directly to get rid of this warning.",
+                    UserWarning,
+                )
+                p = p / at.sum(p, axis=-1, keepdims=True)
         p = at.as_tensor_variable(floatX(p))
         return super().dist([p], **kwargs)
 
@@ -1256,7 +1267,6 @@ class Categorical(Discrete):
         """
         k = at.shape(p)[-1]
         p_ = p
-        p = p_ / at.sum(p_, axis=-1, keepdims=True)
         value_clip = at.clip(value, 0, k - 1)
 
         if p.ndim > 1:
