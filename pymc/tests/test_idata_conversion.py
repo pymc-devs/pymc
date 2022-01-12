@@ -531,6 +531,7 @@ class TestDataPyMC:
         data = np.random.multinomial(20, [0.2, 0.3, 0.5], size=20)
         with pm.Model(coords=coords):
             p = pm.Beta("p", 1, 1, size=(3,))
+            p = p / p.sum()
             pm.Multinomial("y", 20, p, dims=("experiment", "direction"), observed=data)
             idata = pm.sample(draws=50, chains=2, tune=100, return_inferencedata=True)
         test_dict = {

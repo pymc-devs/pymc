@@ -537,10 +537,18 @@ class Multinomial(Discrete):
 
     @classmethod
     def dist(cls, n, p, *args, **kwargs):
-        p = p / at.sum(p, axis=-1, keepdims=True)
+        if isinstance(p, np.ndarray) or isinstance(p, list):
+            if (np.asarray(p) < 0).any():
+                raise ValueError(f"Negative `p` parameters are not valid, got: {p}")
+            p_sum = np.sum([p], axis=-1)
+            if not np.all(np.isclose(p_sum, 1.0)):
+                warnings.warn(
+                    f"`p` parameters sum up to {p_sum}, instead of 1.0. They will be automatically rescaled. You can rescale them directly to get rid of this warning.",
+                    UserWarning,
+                )
+                p = p / at.sum(p, axis=-1, keepdims=True)
         n = at.as_tensor_variable(n)
         p = at.as_tensor_variable(p)
-
         return super().dist([n, p], *args, **kwargs)
 
     def get_moment(rv, size, n, p):
@@ -582,7 +590,7 @@ class Multinomial(Discrete):
         return check_parameters(
             res,
             p <= 1,
-            at.eq(at.sum(p, axis=-1), 1),
+            at.isclose(at.sum(p, axis=-1), 1),
             at.ge(n, 0),
             msg="p <= 1, sum(p) = 1, n >= 0",
         )
