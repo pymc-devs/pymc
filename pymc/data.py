@@ -634,7 +634,7 @@ def Data(
     arr = pandas_to_array(value)
 
     if mutable is None:
-        major, minor = [int(v) for v in pm.__version__.split(".")[:2]]
+        major, minor = (int(v) for v in pm.__version__.split(".")[:2])
         mutable = major == 4 and minor < 1
         if mutable:
             warnings.warn(
