@@ -2104,13 +2104,13 @@ def draw(
 
     Parameters
     ----------
-    vars : Union[Variable, Sequence[Variable]]
+    vars
         A variable or a list of variables for which to draw samples.
     draws : int
         Number of samples needed to draw. Detaults to 500.
-    mode : Optional[Union[str, Mode]]
+    mode
         The mode used by ``aesara.function`` to compile the graph.
-    kwargs:
+    **kwargs
         Keyword arguments for :func:`pymc.aesara.compile_pymc`
 
     Returns
@@ -2120,26 +2120,27 @@ def draw(
 
     Examples
     --------
-    .. code-block:: python
-        import pymc as pm
+        .. code-block:: python
 
-        # Draw samples for one variable
-        with pm.Model():
-            x = pm.Normal("x")
-        x_draws = pm.draw(x, draws=100)
-        print(x_draws.shape)
+            import pymc as pm
 
-        # Draw 1000 samples for several variables
-        with pm.Model():
-            x = pm.Normal("x")
-            y = pm.Normal("y", shape=10)
-            z = pm.Uniform("z", shape=5)
-        num_draws = 1000
-        # Draw samples of a list variables
-        draws = pm.draw([x, y, z], draws=num_draws)
-        assert draws[0].shape == (num_draws,)
-        assert draws[1].shape == (num_draws, 10)
-        assert draws[2].shape == (num_draws, 5)
+            # Draw samples for one variable
+            with pm.Model():
+                x = pm.Normal("x")
+            x_draws = pm.draw(x, draws=100)
+            print(x_draws.shape)
+
+            # Draw 1000 samples for several variables
+            with pm.Model():
+                x = pm.Normal("x")
+                y = pm.Normal("y", shape=10)
+                z = pm.Uniform("z", shape=5)
+            num_draws = 1000
+            # Draw samples of a list variables
+            draws = pm.draw([x, y, z], draws=num_draws)
+            assert draws[0].shape == (num_draws,)
+            assert draws[1].shape == (num_draws, 10)
+            assert draws[2].shape == (num_draws, 5)
     """
 
     if not isinstance(vars, (list, tuple)):
