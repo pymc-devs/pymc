@@ -42,7 +42,7 @@ If you already know about Bayesian statistics:
 
 -  `API quickstart guide <https://docs.pymc.io/en/stable/pymc-examples/examples/pymc3_howto/api_quickstart.html>`__
 -  The `PyMC tutorial <https://docs.pymc.io/en/latest/learn/examples/pymc_overview.html>`__
--  `PyMC examples <https://docs.pymc.io/nb_examples/index.html>`__ and the `API reference <https://docs.pymc.io/en/stable/api.html>`__
+-  `PyMC examples <https://docs.pymc.io/projects/examples/en/latest/>`__ and the `API reference <https://docs.pymc.io/en/stable/api.html>`__
 
 Learn Bayesian statistics with a book together with PyMC
 --------------------------------------------------------
