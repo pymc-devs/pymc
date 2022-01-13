@@ -2062,12 +2062,6 @@ def sample_prior_predictive(
         names.append(name)
         vars_to_sample.append(transformed_rv_var)
 
-        # If the user asked for the transformed variable in var_names, but not the
-        # original RV, we add it manually here
-        if rv_var.name not in names:
-            names.append(rv_var.name)
-            vars_to_sample.append(rv_var)
-
     inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, (Constant, SharedVariable))]
 
     sampler_fn = compile_pymc(
