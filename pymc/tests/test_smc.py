@@ -144,7 +144,16 @@ class TestSMC(SeededTest):
                 marginals.append(trace.report.log_marginal_likelihood)
 
         # compare to the analytical result
-        assert abs(np.exp(np.nanmean(marginals[1]) - np.nanmean(marginals[0])) - 4.0) <= 1
+        assert (
+            np.abs(
+                np.exp(
+                    np.nanmean(np.array(marginals[1], dtype=float))
+                    - np.nanmean(np.array(marginals[0], dtype=float))
+                    - 4.0
+                )
+            )
+            <= 1
+        )
 
     def test_start(self):
         with pm.Model() as model:
