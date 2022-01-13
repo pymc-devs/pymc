@@ -210,13 +210,14 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
     # Use competence classmethods to select step methods for remaining
     # variables
     selected_steps = defaultdict(list)
+    model_logpt = model.logpt()
     for var in model.value_vars:
         if var not in assigned_vars:
             # determine if a gradient can be computed
             has_gradient = var.dtype not in discrete_types
             if has_gradient:
                 try:
-                    tg.grad(model.logpt(), var)
+                    tg.grad(model_logpt, var)
                 except (NotImplementedError, tg.NullTypeGradError):
                     has_gradient = False
             # select the best method
