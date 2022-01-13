@@ -2147,16 +2147,13 @@ def draw(
         vars = [vars]
 
     draw_fn = compile_pymc(inputs=[], outputs=vars, mode=mode, **kwargs)
-
     drawn_values = zip(*(draw_fn() for _ in range(draws)))
-
-    drawn_data = [np.stack(v) for v in drawn_values]
+    drawn_values = [np.stack(v) for v in drawn_values]
 
     # If only one variable, return the numpy array instead of a list of numpy arrays
-    if len(drawn_data) == 1:
-        return drawn_data[0]
-
-    return drawn_data
+    if draws == 1:
+        return drawn_values[0]
+    return drawn_values
 
 
 def _init_jitter(
