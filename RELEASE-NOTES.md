@@ -33,9 +33,8 @@ All of the above apply to:
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
 - `pm.Distribution(...).logp(x)` is now `pm.logp(pm.Distribution(...), x)`.
 - `pm.Distribution(...).logcdf(x)` is now `pm.logcdf(pm.Distribution(...), x)`.
-- `pm.Distribution(...).random()` is now `pm.Distribution(...).eval()`.
-- `pm.draw(...)` is added to draw samples of a variable or a list of variables.
-- `pm.draw_values(...)` and `pm.generate_samples(...)` were removed. The tensors can now be evaluated with `pm.draw(x)` instead of `x.eval()`.
+- `pm.Distribution(...).random(size=x)` is now `pm.draw(pm.Distribution(...), draws=x)`.
+- `pm.draw_values(...)` and `pm.generate_samples(...)` were removed.
 - `pm.fast_sample_posterior_predictive` was removed.
 - `pm.sample_prior_predictive`, `pm.sample_posterior_predictive` and `pm.sample_posterior_predictive_w` now return an `InferenceData` object by default, instead of a dictionary (see [#5073](https://github.com/pymc-devs/pymc/pull/5073)).
 - `pm.sample_prior_predictive` no longer returns transformed variable values by default. Pass them by name in `var_names` if you want to obtain these draws (see [4769](https://github.com/pymc-devs/pymc/pull/4769)).
