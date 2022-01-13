@@ -42,7 +42,7 @@ import numpy as np
 import xarray
 
 from aesara.compile.mode import Mode
-from aesara.graph.basic import Constant
+from aesara.graph.basic import Constant, Variable
 from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
@@ -96,6 +96,7 @@ __all__ = [
     "sample_posterior_predictive_w",
     "init_nuts",
     "sample_prior_predictive",
+    "draw",
 ]
 
 STEP_METHODS = (
@@ -2091,6 +2092,70 @@ def sample_prior_predictive(
     if idata_kwargs:
         ikwargs.update(idata_kwargs)
     return pm.to_inference_data(prior=prior, **ikwargs)
+
+
+def draw(
+    vars: Union[Variable, Sequence[Variable]],
+    draws: int = 1,
+    mode: Optional[Union[str, Mode]] = None,
+    **kwargs,
+) -> Union[np.ndarray, List[np.ndarray]]:
+    """Draw samples for one variable or a list of variables
+
+    Parameters
+    ----------
+    vars
+        A variable or a list of variables for which to draw samples.
+    draws : int
+        Number of samples needed to draw. Detaults to 500.
+    mode
+        The mode used by ``aesara.function`` to compile the graph.
+    **kwargs
+        Keyword arguments for :func:`pymc.aesara.compile_pymc`
+
+    Returns
+    -------
+    List[np.ndarray]
+        A list of numpy arrays.
+
+    Examples
+    --------
+        .. code-block:: python
+
+            import pymc as pm
+
+            # Draw samples for one variable
+            with pm.Model():
+                x = pm.Normal("x")
+            x_draws = pm.draw(x, draws=100)
+            print(x_draws.shape)
+
+            # Draw 1000 samples for several variables
+            with pm.Model():
+                x = pm.Normal("x")
+                y = pm.Normal("y", shape=10)
+                z = pm.Uniform("z", shape=5)
+            num_draws = 1000
+            # Draw samples of a list variables
+            draws = pm.draw([x, y, z], draws=num_draws)
+            assert draws[0].shape == (num_draws,)
+            assert draws[1].shape == (num_draws, 10)
+            assert draws[2].shape == (num_draws, 5)
+    """
+
+    draw_fn = compile_pymc(inputs=[], outputs=vars, mode=mode, **kwargs)
+
+    if draws == 1:
+        return draw_fn()
+
+    # Single variable output
+    if not isinstance(vars, (list, tuple)):
+        drawn_values = (draw_fn() for _ in range(draws))
+        return np.stack(drawn_values)
+
+    # Multiple variable output
+    drawn_values = zip(*(draw_fn() for _ in range(draws)))
+    return [np.stack(v) for v in drawn_values]
 
 
 def _init_jitter(
