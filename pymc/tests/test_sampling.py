@@ -27,7 +27,6 @@ import pytest
 from aesara import shared
 from arviz import InferenceData
 from arviz import from_dict as az_from_dict
-from numpy.testing._private.utils import assert_array_equal
 from scipy import stats
 
 import pymc as pm
@@ -1223,13 +1222,6 @@ class TestDraw(SeededTest):
         x_draws = pm.draw(x)
         assert x_draws.shape == (1,)
 
-        with pm.Model():
-            x = pm.Normal("x")
-
-        num_draws = 100
-        x_draws = pm.draw(x, draws=num_draws)
-        assert x_draws.shape == (num_draws,)
-
     def test_draw_several_variables(self):
         with pm.Model():
             x = pm.Normal("x")
@@ -1263,4 +1255,4 @@ class TestDraw(SeededTest):
         x_draws_1 = pm.draw(x, 100)
         x_draws_2 = pm.draw(x, 100)
         # Check if the draw function will draw different samples each time
-        npt.assert_raises(AssertionError, assert_array_equal, x_draws_1, x_draws_2)
+        assert not np.all(np.isclose(x_draws_1, x_draws_2))
