@@ -177,10 +177,7 @@ def test_logodds():
 
 
 def test_lowerbound():
-    def transform_params(*inputs):
-        return 0.0, None
-
-    trans = tr.interval(transform_params)
+    trans = tr.Interval(0.0, None)
     check_transform(trans, Rplusbig)
 
     check_jacobian_det(trans, Rplusbig, elemwise=True)
@@ -191,10 +188,7 @@ def test_lowerbound():
 
 
 def test_upperbound():
-    def transform_params(*inputs):
-        return None, 0.0
-
-    trans = tr.interval(transform_params)
+    trans = tr.Interval(None, 0.0)
     check_transform(trans, Rminusbig)
 
     check_jacobian_det(trans, Rminusbig, elemwise=True)
@@ -208,10 +202,7 @@ def test_interval():
     for a, b in [(-4, 5.5), (0.1, 0.7), (-10, 4.3)]:
         domain = Unit * np.float64(b - a) + np.float64(a)
 
-        def transform_params(z=a, y=b):
-            return z, y
-
-        trans = tr.interval(transform_params)
+        trans = tr.Interval(a, b)
         check_transform(trans, domain)
 
         check_jacobian_det(trans, domain, elemwise=True)
@@ -375,7 +366,7 @@ class TestElementWiseLogp(SeededTest):
             upper = at.as_tensor_variable(upper) if upper is not None else None
             return lower, upper
 
-        interval = tr.interval(transform_params)
+        interval = tr.Interval(bounds_fn=transform_params)
         model = self.build_model(
             pm.Uniform, {"lower": lower, "upper": upper}, size=size, transform=interval
         )
@@ -396,7 +387,7 @@ class TestElementWiseLogp(SeededTest):
             upper = at.as_tensor_variable(upper) if upper is not None else None
             return lower, upper
 
-        interval = tr.interval(transform_params)
+        interval = tr.Interval(bounds_fn=transform_params)
         model = self.build_model(
             pm.Triangular, {"lower": lower, "c": c, "upper": upper}, size=size, transform=interval
         )
@@ -491,7 +482,7 @@ class TestElementWiseLogp(SeededTest):
             upper = at.as_tensor_variable(upper) if upper is not None else None
             return lower, upper
 
-        interval = tr.interval(transform_params)
+        interval = tr.Interval(bounds_fn=transform_params)
 
         initval = np.sort(np.abs(np.random.rand(*size)))
         model = self.build_model(
@@ -556,3 +547,13 @@ def test_triangular_transform():
     transform = x.tag.value_var.tag.transform
     assert np.isclose(transform.backward(-np.inf, *x.owner.inputs).eval(), 0)
     assert np.isclose(transform.backward(np.inf, *x.owner.inputs).eval(), 2)
+
+
+def test_interval_transform_raises():
+    with pytest.raises(ValueError, match="Lower and upper interval bounds cannot both be None"):
+        tr.Interval(None, None)
+
+    with pytest.raises(ValueError, match="Interval bounds must be constant values"):
+        tr.Interval(at.constant(5) + 1, None)
+
+    assert tr.Interval(at.constant(5), None)

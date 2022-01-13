@@ -195,7 +195,7 @@ class BoundedContinuous(Continuous):
 
             return lower, upper
 
-        return transforms.interval(transform_params)
+        return transforms.Interval(bounds_fn=transform_params)
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):
@@ -3758,7 +3758,7 @@ class Interpolated(BoundedContinuous):
                 _, _, _, x_points, _, _ = params
                 return floatX(x_points[0]), floatX(x_points[-1])
 
-            kwargs["transform"] = transforms.interval(transform_params)
+            kwargs["transform"] = transforms.Interval(bounds_fn=transform_params)
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod
