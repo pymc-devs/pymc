@@ -50,7 +50,7 @@ from aesara.compile.mode import Mode
 from aesara.graph.basic import ancestors
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
-from numpy import array, inf, log
+from numpy import array, inf
 from numpy.testing import assert_almost_equal, assert_equal
 from scipy import integrate
 from scipy.special import erf, gammaln, logit
@@ -71,7 +71,6 @@ from pymc.distributions import (
     Cauchy,
     ChiSquared,
     Constant,
-    DensityDist,
     Dirichlet,
     DirichletMultinomial,
     DiscreteUniform,
@@ -963,25 +962,6 @@ class TestMatchesScipy:
                     err_msg=str(pt),
                 )
 
-    def check_int_to_1(self, model, value, domain, paramdomains, n_samples=10):
-        pdf = model.fastfn(exp(model.logpt))
-        for pt in product(paramdomains, n_samples=n_samples):
-            pt = Point(pt, value=value.tag.test_value, model=model)
-            bij = DictToVarBijection(value, (), pt)
-            pdfx = bij.mapf(pdf)
-            area = integrate_nd(pdfx, domain, value.dshape, value.dtype)
-            assert_almost_equal(area, 1, err_msg=str(pt))
-
-    def checkd(self, distfam, valuedomain, vardomains, checks=None, extra_args=None):
-        if checks is None:
-            checks = (self.check_int_to_1,)
-
-        if extra_args is None:
-            extra_args = {}
-        m = build_model(distfam, valuedomain, vardomains, extra_args=extra_args)
-        for check in checks:
-            check(m, m.named_vars["value"], valuedomain, vardomains)
-
     def test_uniform(self):
         self.check_logp(
             Uniform,
@@ -1664,15 +1644,6 @@ class TestMatchesScipy:
             {"n": NatSmall, "p": Unit},
         )
 
-    @pytest.mark.xfail(reason="checkd tests have not been refactored")
-    @pytest.mark.skipif(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    def test_beta_binomial_distribution(self):
-        self.checkd(
-            BetaBinomial,
-            Nat,
-            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
-        )
-
     def test_beta_binomial(self):
         self.check_logp(
             BetaBinomial,
@@ -1771,18 +1742,6 @@ class TestMatchesScipy:
     def test_constantdist(self):
         self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
 
-    @pytest.mark.xfail(reason="Test has not been refactored")
-    @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
-        reason="Fails on float32 due to inf issues",
-    )
-    def test_zeroinflatedpoisson_distribution(self):
-        self.checkd(
-            ZeroInflatedPoisson,
-            Nat,
-            {"theta": Rplus, "psi": Unit},
-        )
-
     def test_zeroinflatedpoisson(self):
         def logp_fn(value, psi, theta):
             if value == 0:
@@ -1811,18 +1770,6 @@ class TestMatchesScipy:
             ZeroInflatedPoisson,
             Nat,
             {"theta": Rplus, "psi": Unit},
-        )
-
-    @pytest.mark.xfail(reason="Test not refactored yet")
-    @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
-        reason="Fails on float32 due to inf issues",
-    )
-    def test_zeroinflatednegativebinomial_distribution(self):
-        self.checkd(
-            ZeroInflatedNegativeBinomial,
-            Nat,
-            {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
         )
 
     def test_zeroinflatednegativebinomial(self):
@@ -1871,14 +1818,6 @@ class TestMatchesScipy:
             ZeroInflatedNegativeBinomial,
             Nat,
             {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
-        )
-
-    @pytest.mark.xfail(reason="Test not refactored yet")
-    def test_zeroinflatedbinomial_distribution(self):
-        self.checkd(
-            ZeroInflatedBinomial,
-            Nat,
-            {"n": NatSmall, "p": Unit, "psi": Unit},
         )
 
     def test_zeroinflatedbinomial(self):
@@ -2376,13 +2315,6 @@ class TestMatchesScipy:
             {"eta": Runif, "cutpoints": UnitSortedVector(n - 1)},
             lambda value, eta, cutpoints: orderedprobit_logpdf(value, eta, cutpoints),
         )
-
-    @pytest.mark.xfail(reason="checkd tests have not been refactored")
-    def test_densitydist(self):
-        def logp(x):
-            return -log(2 * 0.5) - abs(x - 0.5) / 0.5
-
-        self.checkd(DensityDist, R, {}, extra_args={"logp": logp})
 
     def test_get_tau_sigma(self):
         sigma = np.array(2)
