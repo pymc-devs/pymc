@@ -165,6 +165,9 @@ class Chain(RVTransform):
 
 
 simplex = Simplex()
+simplex.__doc__ = """
+Instantiation of :class:`aeppl.transforms.Simplex`
+for use in the ``transform`` argument of a random variable."""
 
 logodds = LogOddsTransform()
 logodds.__doc__ = """
