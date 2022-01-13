@@ -327,11 +327,13 @@ class TestSample(SeededTest):
 
         np.testing.assert_allclose(idata.posterior["y"], idata.posterior["x"] + 100)
 
-    def test_transform_with_rv_depenency(self):
+    def test_transform_with_rv_dependency(self):
         # Test that untransformed variables that depend on upstream variables are properly handled
         with pm.Model() as m:
             x = pm.HalfNormal("x", observed=1)
-            transform = pm.transforms.IntervalTransform(lambda *inputs: (inputs[-2], inputs[-1]))
+            transform = pm.distributions.transforms.Interval(
+                bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
+            )
             y = pm.Uniform("y", lower=0, upper=x, transform=transform)
             trace = pm.sample(tune=10, draws=50, return_inferencedata=False, random_seed=336)
 

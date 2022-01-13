@@ -62,7 +62,7 @@ from pymc.distributions.shape_utils import (
     rv_size_is_none,
     to_tuple,
 )
-from pymc.distributions.transforms import interval
+from pymc.distributions.transforms import Interval
 from pymc.math import kron_diag, kron_dot
 from pymc.util import UNSET, check_dist_not_registered
 
@@ -1554,7 +1554,7 @@ class LKJCorr(BoundedContinuous):
     def __new__(cls, *args, **kwargs):
         transform = kwargs.get("transform", UNSET)
         if transform is UNSET:
-            kwargs["transform"] = interval(lambda *args: (floatX(-1.0), floatX(1.0)))
+            kwargs["transform"] = Interval(floatX(-1.0), floatX(1.0))
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod

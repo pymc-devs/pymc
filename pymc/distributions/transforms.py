@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import aesara.tensor as at
+import numpy as np
 
 from aeppl.transforms import (
     CircularTransform,
@@ -27,7 +28,7 @@ __all__ = [
     "RVTransform",
     "simplex",
     "logodds",
-    "interval",
+    "Interval",
     "log_exp_m1",
     "ordered",
     "log",
@@ -174,10 +175,87 @@ logodds.__doc__ = """
 Instantiation of :class:`aeppl.transforms.LogOddsTransform`
 for use in the ``transform`` argument of a random variable."""
 
-interval = IntervalTransform
-interval.__doc__ = """
-Instantiation of :class:`aeppl.transforms.IntervalTransform`
-for use in the ``transform`` argument of a random variable."""
+
+class Interval(IntervalTransform):
+    """Wrapper around  :class:`aeppl.transforms.IntervalTransform` for use in the
+    ``transform`` argument of a random variable.
+
+    Parameters
+    ----------
+    lower : int, float, or None
+        Lower bound of the interval transform. Must be a constant value. If ``None``, the
+        interval is not bounded below.
+    upper : int, float or None
+        Upper bound of the interval transfrom. Must be a finite value. If ``None``, the
+        interval is not bounded above.
+    bounds_fn : callable
+        Alternative to lower and upper. Must return a tuple of lower and upper bounds
+        as a symbolic function of the respective distribution inputs. If lower or
+        upper is ``None``, the interval is unbounded on that edge.
+
+        .. warning:: Expressions returned by `bounds_fn` should depend only on the
+            distribution inputs or other constants. Expressions that depend on other
+            symbolic variables, including nonlocal variables defined in the model
+            context will likely break sampling.
+
+
+    Examples
+    --------
+    .. code-block:: python
+
+        # Create an interval transform between -1 and +1
+        with pm.Model():
+            interval = pm.distributions.transforms.Interval(lower=-1, upper=1)
+            x = pm.Normal("x", transform=interval)
+
+    .. code-block:: python
+
+        # Create an interval transform between -1 and +1 using a callable
+        def get_bounds(rng, size, dtype, loc, scale):
+            return 0, None
+
+        with pm.Model():
+            interval = pm.distributions.transforms.Interval(bouns_fn=get_bounds)
+            x = pm.Normal("x", transform=interval)
+
+    .. code-block:: python
+
+        # Create a lower bounded interval transform based on a distribution parameter
+        def get_bounds(rng, size, dtype, loc, scale):
+            return loc, None
+
+        interval = pm.distributions.transforms.Interval(bounds_fn=get_bounds)
+
+        with pm.Model():
+            loc = pm.Normal("loc")
+            x = pm.Normal("x", mu=loc, sigma=2, transform=interval)
+    """
+
+    def __init__(self, lower=None, upper=None, *, bounds_fn=None):
+        if bounds_fn is None:
+            try:
+                bounds = tuple(
+                    None if bound is None else at.constant(bound, ndim=0).data
+                    for bound in (lower, upper)
+                )
+            except (ValueError, TypeError):
+                raise ValueError(
+                    "Interval bounds must be constant values. If you need expressions that "
+                    "depend on symbolic variables use `args_fn`"
+                )
+
+            lower, upper = (
+                None if (bound is None or np.isinf(bound)) else bound for bound in bounds
+            )
+
+            if lower is None and upper is None:
+                raise ValueError("Lower and upper interval bounds cannot both be None")
+
+            def bounds_fn(*rv_inputs):
+                return lower, upper
+
+        super().__init__(args_fn=bounds_fn)
+
 
 log_exp_m1 = LogExpM1()
 log_exp_m1.__doc__ = """
