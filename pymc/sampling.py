@@ -2142,9 +2142,6 @@ def draw(
         assert draws[2].shape == (num_draws, 5)
     """
 
-    if vars is None:
-        raise AssertionError("Must include at least one variable")
-
     if not isinstance(vars, (list, tuple)):
         vars = [vars]
 
