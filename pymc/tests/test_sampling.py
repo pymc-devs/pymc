@@ -1215,38 +1215,51 @@ def test_sample_deterministic():
 
 
 class TestDraw(SeededTest):
-    def test_draw_one_variable(self):
+    def test_univariate(self):
         with pm.Model():
             x = pm.Normal("x")
 
         x_draws = pm.draw(x)
-        assert x_draws.shape == (1,)
+        assert x_draws.shape == ()
 
-    def test_draw_several_variables(self):
-        with pm.Model():
-            x = pm.Normal("x")
-            y = pm.Normal("y", shape=10)
-            z = pm.Uniform("z", shape=5)
+        (x_draws,) = pm.draw([x])
+        assert x_draws.shape == ()
 
-        num_draws = 1000
-        # Draw samples of a list variables
-        draws = pm.draw([x, y, z], draws=num_draws)
-        assert draws[0].shape == (num_draws,)
-        assert draws[1].shape == (num_draws, 10)
-        assert draws[2].shape == (num_draws, 5)
+        x_draws = pm.draw(x, draws=10)
+        assert x_draws.shape == (10,)
 
-        # Draw samples of a tuple variables
-        draws = pm.draw((x, y, z), draws=num_draws)
-        assert draws[0].shape == (num_draws,)
-        assert draws[1].shape == (num_draws, 10)
-        assert draws[2].shape == (num_draws, 5)
+        (x_draws,) = pm.draw([x], draws=10)
+        assert x_draws.shape == (10,)
 
     def test_multivariate(self):
         with pm.Model():
             mln = pm.Multinomial("mln", n=5, p=np.array([0.25, 0.25, 0.25, 0.25]))
 
-        mln_draws = pm.draw(mln, draws=100)
-        assert mln_draws.shape == (100, 4)
+        mln_draws = pm.draw(mln, draws=1)
+        assert mln_draws.shape == (4,)
+
+        (mln_draws,) = pm.draw([mln], draws=1)
+        assert mln_draws.shape == (4,)
+
+        mln_draws = pm.draw(mln, draws=10)
+        assert mln_draws.shape == (10, 4)
+
+        (mln_draws,) = pm.draw([mln], draws=10)
+        assert mln_draws.shape == (10, 4)
+
+    def test_multiple_variables(self):
+        with pm.Model():
+            x = pm.Normal("x")
+            y = pm.Normal("y", shape=10)
+            z = pm.Uniform("z", shape=5)
+            w = pm.Dirichlet("w", a=[1, 1, 1])
+
+        num_draws = 100
+        draws = pm.draw((x, y, z, w), draws=num_draws)
+        assert draws[0].shape == (num_draws,)
+        assert draws[1].shape == (num_draws, 10)
+        assert draws[2].shape == (num_draws, 5)
+        assert draws[3].shape == (num_draws, 3)
 
     def test_draw_different_samples(self):
         with pm.Model():
@@ -1254,5 +1267,4 @@ class TestDraw(SeededTest):
 
         x_draws_1 = pm.draw(x, 100)
         x_draws_2 = pm.draw(x, 100)
-        # Check if the draw function will draw different samples each time
         assert not np.all(np.isclose(x_draws_1, x_draws_2))

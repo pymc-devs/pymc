@@ -2143,17 +2143,19 @@ def draw(
             assert draws[2].shape == (num_draws, 5)
     """
 
-    if not isinstance(vars, (list, tuple)):
-        vars = [vars]
-
     draw_fn = compile_pymc(inputs=[], outputs=vars, mode=mode, **kwargs)
-    drawn_values = zip(*(draw_fn() for _ in range(draws)))
-    drawn_values = [np.stack(v) for v in drawn_values]
 
-    # If only one variable, return the numpy array instead of a list of numpy arrays
     if draws == 1:
-        return drawn_values[0]
-    return drawn_values
+        return draw_fn()
+
+    # Single variable output
+    if not isinstance(vars, (list, tuple)):
+        drawn_values = (draw_fn() for _ in range(draws))
+        return np.stack(drawn_values)
+
+    # Multiple variable output
+    drawn_values = zip(*(draw_fn() for _ in range(draws)))
+    return [np.stack(v) for v in drawn_values]
 
 
 def _init_jitter(
