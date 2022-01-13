@@ -49,7 +49,6 @@ jobs:
             --ignore=pymc/tests/test_updates.py
             --ignore=pymc/tests/test_gp.py
             --ignore=pymc/tests/test_model.py
-            --ignore=pymc/tests/test_model_func.py
             --ignore=pymc/tests/test_ode.py
             --ignore=pymc/tests/test_posdef_sym.py
             --ignore=pymc/tests/test_quadpotential.py
@@ -82,7 +81,6 @@ jobs:
             pymc/tests/test_distributions_timeseries.py
             pymc/tests/test_gp.py
             pymc/tests/test_model.py
-            pymc/tests/test_model_func.py
             pymc/tests/test_model_graph.py
             pymc/tests/test_ode.py
             pymc/tests/test_posdef_sym.py
@@ -166,7 +164,6 @@ jobs:
             pymc/tests/test_ode.py
           - |
             pymc/tests/test_model.py
-            pymc/tests/test_model_func.py
             pymc/tests/test_modelcontext.py
             pymc/tests/test_model_graph.py
             pymc/tests/test_pickling.py

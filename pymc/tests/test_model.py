@@ -741,3 +741,12 @@ def test_model_d2logp(jacobian):
 
     y_dlogp2 = m.compile_d2logp(vars=[y], jacobian=jacobian)(state)
     assert np.all(np.isclose(y_dlogp2, expected_y_d2logp))
+
+
+def test_deterministic():
+    with pm.Model() as model:
+        x = pm.Normal("x", 0, 1)
+        y = pm.Deterministic("y", x ** 2)
+
+    assert model.y == y
+    assert model["y"] == y
