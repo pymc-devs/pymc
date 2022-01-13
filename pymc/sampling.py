@@ -2096,10 +2096,10 @@ def sample_prior_predictive(
 
 def draw(
     vars: Union[Variable, Sequence[Variable]],
-    draws=1,
+    draws: int = 1,
     mode: Optional[Union[str, Mode]] = None,
     **kwargs,
-) -> List[np.ndarray]:
+) -> Union[np.ndarray, List[np.ndarray]]:
     """Draw samples for one variable or a list of variables
 
     Parameters
