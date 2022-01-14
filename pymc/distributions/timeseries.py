@@ -269,15 +269,15 @@ class GaussianRandomWalk(distribution.Continuous):
         return super().dist([mu, sigma, init], **kwargs)
 
     # TODO: Add typehints
-    def get_moment(
-        self,
-        size: Optional[Union[np.ndarray, float]],
-        mu: Optional[Union[np.ndarray, float]],
-        sigma: Optional[Union[np.ndarray, float]],
-        init: Optional[Union[np.ndarray, float]],
-    ):
-        moment = mu * size + init
-        return moment
+    # def get_moment(
+    #     self,
+    #     size: Optional[Union[np.ndarray, float]],
+    #     mu: Optional[Union[np.ndarray, float]],
+    #     sigma: Optional[Union[np.ndarray, float]],
+    #     init: Optional[Union[np.ndarray, float]],
+    # ):
+    #     moment = mu * size + init
+    #     return moment
 
     def logp(
         value,
@@ -285,7 +285,7 @@ class GaussianRandomWalk(distribution.Continuous):
         sigma: Optional[Union[np.ndarray, float]],
         init: Optional[Union[np.ndarray, float]],
         size: Optional[Union[np.ndarray, float]],
-    ):
+    ) -> at.TensorVariable:
         """
         Calculate log-probability of Gaussian Random Walk distribution at specified value.
 
@@ -298,12 +298,21 @@ class GaussianRandomWalk(distribution.Continuous):
         -------
         TensorVariable
         """
+        import pymc as pm
+
+        # Implement using AePPL
+        # I need to create a graph that calculates the logp of GRW
+        # I can use AePPL or PyMC to do it
+
+        res = -0.5 * at.pow((value - mu) / sigma, 2) - at.log(at.sqrt(2.0 * np.pi)) - at.log(sigma)
+        res = CheckParameterValue("sigma > 0")(res, at.all(at.gt(sigma, 0.0)))
 
         innit_logp = pm.logp(pm.Normal.dist(mu, sigma), value[:1] - init)
         # https: // aesara.readthedocs.io / en / latest / library / tensor / extra_ops.html?highlight = at.diff
         innov_logp = pm.logp(pm.Normal.dist(mu, sigma), at.diff(value))
         # https: // numpy.org/doc/stable/ reference / generated / numpy.concatenate.html
         total_logp = at.concatenate([innit_logp, innov_logp])
+
         return total_logp
 
 
