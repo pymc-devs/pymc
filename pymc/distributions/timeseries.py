@@ -22,6 +22,7 @@ from aesara.tensor.random.basic import RandomVariable
 
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
+from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.shape_utils import to_tuple
 
 __all__ = [
@@ -297,11 +298,6 @@ class GaussianRandomWalk(distribution.Continuous):
         -------
         TensorVariable
         """
-        import pymc as pm
-
-        # Implement using AePPL
-        # I need to create a graph that calculates the logp of GRW
-        # I can use AePPL or PyMC to do it
 
         def normal_logp(value, mu, sigma):
             logp = (
@@ -315,21 +311,13 @@ class GaussianRandomWalk(distribution.Continuous):
         init_logp = normal_logp(value[0] - init, mu, sigma)
 
         # Create logp calculation graph for innovations
-        stationary_vals = at.diff(value[1:]) - init
+        stationary_vals = at.diff(value[1:])
         innov_logp = normal_logp(stationary_vals, mu, sigma)
 
-        """ A bunch of stuff that can be ignored
-        innit_logp = pm.logp(pm.Normal.dist(mu, sigma), value[:1] - init)
-        # https: // aesara.readthedocs.io / en / latest / library / tensor / extra_ops.html?highlight = at.diff
-        innov_logp = pm.logp(pm.Normal.dist(mu, sigma), at.diff(value))
-        # https: // numpy.org/doc/stable/ reference / generated / numpy.concatenate.html
-        """
-
-        # Return both calculation logps in a vector. This is fine because somewhere
-        # down the line these will be summed together
+        # Return both calculation logps in a vector
         total_logp = at.concatenate([init_logp, innov_logp])
-        # total_logp = at.sum([init_logp, innov_logp], keepdims=False)
 
+        total_logp = check_parameters(total_logp, sigma > 0, msg="sigma > 0")
         return total_logp
 
 
