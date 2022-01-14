@@ -311,7 +311,7 @@ class GaussianRandomWalk(distribution.Continuous):
         init_logp = normal_logp(value[0] - init, mu, sigma)
 
         # Create logp calculation graph for innovations
-        stationary_vals = at.diff(value[1:])
+        stationary_vals = at.diff(value)
         innov_logp = normal_logp(stationary_vals, mu, sigma)
 
         # Return both calculation logps in a vector
