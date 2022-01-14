@@ -43,6 +43,24 @@ def test_grw_rv_op():
     assert grw.shape[0] == size
 
 
+def test_grw_log():
+    vals = [1, 2]
+    mu = 0
+    sd = 1
+    init = 0
+
+    import pymc as pm
+
+    from pymc.distributions.timeseries import GaussianRandomWalk
+
+    with pm.Model():
+        grw = GaussianRandomWalk("grw", mu, sd, init, size=2)
+
+    logp = pm.logp(grw, vals)
+
+    assert logp
+
+
 @pytest.mark.xfail(reason="Timeseries not refactored")
 def test_AR():
     # AR1

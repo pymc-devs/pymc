@@ -312,7 +312,7 @@ class GaussianRandomWalk(distribution.Continuous):
             return logp
 
         # Create logp calculation graph the inital time point
-        innit_logp = normal_logp(value[0] - init, mu, sigma)
+        init_logp = normal_logp(value[0] - init, mu, sigma)
 
         # Create logp calculation graph for innovations
         stationary_vals = at.diff(value[1:]) - init
@@ -327,7 +327,8 @@ class GaussianRandomWalk(distribution.Continuous):
 
         # Return both calculation logps in a vector. This is fine because somewhere
         # down the line these will be summed together
-        total_logp = at.concatenate([innit_logp, innov_logp])
+        total_logp = at.concatenate([init_logp, innov_logp])
+        # total_logp = at.sum([init_logp, innov_logp], keepdims=False)
 
         return total_logp
 
