@@ -27,7 +27,6 @@ class TestShared(SeededTest):
             data_values = np.array([0.5, 0.4, 5, 2])
             X = aesara.shared(np.asarray(data_values, dtype=aesara.config.floatX), borrow=True)
             pm.Normal("y", 0, 1, observed=X)
-            # TODO: This should assert something
             assert np.all(
                 np.isclose(model.compile_logp(sum=False)({}), st.norm().logpdf(data_values))
             )

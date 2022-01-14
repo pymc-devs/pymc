@@ -651,7 +651,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian: bool = True,
         sum: bool = True,
     ):
-        """Compiled log probability density function"""
+        """Compiled log probability density function.
+
+        Parameters
+        ----------
+        vars: list of random variables or potential terms, optional
+            Compute the gradient with respect to those variables. If None, use all
+            free and observed random variables, as well as potential terms in model.
+        jacobian:
+            Whether to include jacobian terms in logprob graph. Defaults to True.
+        sum:
+            Whether to sum all logp terms or return elemwise logp for each variable.
+            Defaults to True.
+        """
         return self.model.compile_fn(self.logpt(vars=vars, jacobian=jacobian, sum=sum))
 
     def compile_dlogp(
@@ -659,7 +671,16 @@ class Model(WithMemoization, metaclass=ContextMeta):
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
     ):
-        """Compiled log probability density gradient function"""
+        """Compiled log probability density gradient function.
+
+        Parameters
+        ----------
+        vars: list of random variables or potential terms, optional
+            Compute the gradient with respect to those variables. If None, use all
+            free and observed random variables, as well as potential terms in model.
+        jacobian:
+            Whether to include jacobian terms in logprob graph. Defaults to True.
+        """
         return self.model.compile_fn(self.dlogpt(vars=vars, jacobian=jacobian))
 
     def compile_d2logp(
@@ -667,7 +688,16 @@ class Model(WithMemoization, metaclass=ContextMeta):
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
     ):
-        """Compiled log probability density hessian function"""
+        """Compiled log probability density hessian function.
+
+        Parameters
+        ----------
+        vars: list of random variables or potential terms, optional
+            Compute the gradient with respect to those variables. If None, use all
+            free and observed random variables, as well as potential terms in model.
+        jacobian:
+            Whether to include jacobian terms in logprob graph. Defaults to True.
+        """
         return self.model.compile_fn(self.d2logpt(vars=vars, jacobian=jacobian))
 
     def logpt(
@@ -747,6 +777,20 @@ class Model(WithMemoization, metaclass=ContextMeta):
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
     ) -> Variable:
+        """Gradient of the models log-probability w.r.t. ``vars``.
+
+        Parameters
+        ----------
+        vars: list of random variables or potential terms, optional
+            Compute the gradient with respect to those variables. If None, use all
+            free and observed random variables, as well as potential terms in model.
+        jacobian:
+            Whether to include jacobian terms in logprob graph. Defaults to True.
+
+        Returns
+        -------
+        dlogp graph
+        """
         if vars is None:
             value_vars = None
         else:
@@ -771,6 +815,20 @@ class Model(WithMemoization, metaclass=ContextMeta):
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
     ) -> Variable:
+        """Hessian of the models log-probability w.r.t. ``vars``.
+
+        Parameters
+        ----------
+        vars: list of random variables or potential terms, optional
+            Compute the gradient with respect to those variables. If None, use all
+            free and observed random variables, as well as potential terms in model.
+        jacobian:
+            Whether to include jacobian terms in logprob graph. Defaults to True.
+
+        Returns
+        -------
+        d²logp graph
+        """
         if vars is None:
             value_vars = None
         else:
