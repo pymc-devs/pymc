@@ -246,12 +246,26 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         # TODO: We no longer need one function per observed variable
         if self.log_likelihood is True:
             cached = [
-                (var, self.model.fn(self.model.logp_elemwiset(var)[0]))
+                (
+                    var,
+                    self.model.compile_fn(
+                        self.model.logpt(var, sum=False)[0],
+                        inputs=self.model.value_vars,
+                        on_unused_input="ignore",
+                    ),
+                )
                 for var in self.model.observed_RVs
             ]
         else:
             cached = [
-                (var, self.model.fn(self.model.logp_elemwiset(var)[0]))
+                (
+                    var,
+                    self.model.compile_fn(
+                        self.model.logpt(var, sum=False)[0],
+                        inputs=self.model.value_vars,
+                        on_unused_input="ignore",
+                    ),
+                )
                 for var in self.model.observed_RVs
                 if var.name in self.log_likelihood
             ]

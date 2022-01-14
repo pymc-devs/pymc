@@ -811,7 +811,7 @@ class TestMarginalVsLatent:
             gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
             f = gp.marginal_likelihood("f", X, y, noise=0.0)
             p = gp.conditional("p", Xnew)
-        self.logp = model.logp({"p": pnew})
+        self.logp = model.compile_logp()({"p": pnew})
         self.X = X
         self.Xnew = Xnew
         self.y = y
@@ -824,7 +824,7 @@ class TestMarginalVsLatent:
             gp = pm.gp.Latent(mean_func=mean_func, cov_func=cov_func)
             f = gp.prior("f", self.X, reparameterize=False)
             p = gp.conditional("p", self.Xnew)
-        latent_logp = model.logp({"f": self.y, "p": self.pnew})
+        latent_logp = model.compile_logp()({"f": self.y, "p": self.pnew})
         npt.assert_allclose(latent_logp, self.logp, atol=0, rtol=1e-2)
 
     def testLatent2(self):
@@ -836,7 +836,7 @@ class TestMarginalVsLatent:
             p = gp.conditional("p", self.Xnew)
         chol = np.linalg.cholesky(cov_func(self.X).eval())
         y_rotated = np.linalg.solve(chol, self.y - 0.5)
-        latent_logp = model.logp({"f_rotated_": y_rotated, "p": self.pnew})
+        latent_logp = model.compile_logp()({"f_rotated_": y_rotated, "p": self.pnew})
         npt.assert_allclose(latent_logp, self.logp, atol=5)
 
 
@@ -858,7 +858,7 @@ class TestMarginalVsMarginalApprox:
             sigma = 0.1
             f = gp.marginal_likelihood("f", X, y, noise=sigma)
             p = gp.conditional("p", Xnew)
-        self.logp = model.logp({"p": pnew})
+        self.logp = model.compile_logp()({"p": pnew})
         self.X = X
         self.Xnew = Xnew
         self.y = y
@@ -874,7 +874,7 @@ class TestMarginalVsMarginalApprox:
             gp = pm.gp.MarginalApprox(mean_func=mean_func, cov_func=cov_func, approx=approx)
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
             p = gp.conditional("p", self.Xnew)
-        approx_logp = model.logp({"f": self.y, "p": self.pnew})
+        approx_logp = model.compile_logp()({"p": self.pnew})
         npt.assert_allclose(approx_logp, self.logp, atol=0, rtol=1e-2)
 
     @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
@@ -922,14 +922,14 @@ class TestGPAdditive:
 
             gpsum = gp1 + gp2 + gp3
             fsum = gpsum.marginal_likelihood("f", self.X, self.y, noise=self.noise)
-            model1_logp = model1.logp({"fsum": self.y})
+            model1_logp = model1.compile_logp()({})
 
         with pm.Model() as model2:
             gptot = pm.gp.Marginal(
                 mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs)
             )
             fsum = gptot.marginal_likelihood("f", self.X, self.y, noise=self.noise)
-            model2_logp = model2.logp({"fsum": self.y})
+            model2_logp = model2.compile_logp()({})
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 
         with model1:
@@ -940,8 +940,8 @@ class TestGPAdditive:
             fp2 = gptot.conditional("fp2", self.Xnew)
 
         fp = np.random.randn(self.Xnew.shape[0])
-        logp1 = model1.logp({"fp1": fp})
-        logp2 = model2.logp({"fp2": fp})
+        logp1 = model1.compile_logp()({"fp1": fp})
+        logp2 = model2.compile_logp()({"fp2": fp})
         npt.assert_allclose(logp1, logp2, atol=0, rtol=1e-2)
 
     @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
@@ -961,14 +961,14 @@ class TestGPAdditive:
 
             gpsum = gp1 + gp2 + gp3
             fsum = gpsum.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
-            model1_logp = model1.logp({"fsum": self.y})
+            model1_logp = model1.compile_logp()({})
 
         with pm.Model() as model2:
             gptot = pm.gp.MarginalApprox(
                 mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs), approx=approx
             )
             fsum = gptot.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
-            model2_logp = model2.logp({"fsum": self.y})
+            model2_logp = model2.compile_logp()({})
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 
         with model1:
@@ -982,8 +982,8 @@ class TestGPAdditive:
 
         fp = np.random.randn(self.Xnew.shape[0])
 
-        model1_logp = model1.logp({"fp1": fp, "fsum": self.y})
-        model2_logp = model2.logp({"fp2": fp, "fsum": self.y})
+        model1_logp = model1.compile_logp()({"fp1": fp})
+        model2_logp = model2.compile_logp()({"fp2": fp})
 
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 
@@ -995,12 +995,12 @@ class TestGPAdditive:
 
             gpsum = gp1 + gp2 + gp3
             fsum = gpsum.prior("fsum", self.X, reparameterize=False)
-            model1_logp = model1.logp({"fsum": self.y})
+            model1_logp = model1.compile_logp()({"fsum": self.y})
 
         with pm.Model() as model2:
             gptot = pm.gp.Latent(mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs))
             fsum = gptot.prior("fsum", self.X, reparameterize=False)
-            model2_logp = model2.logp({"fsum": self.y})
+            model2_logp = model2.compile_logp()({"fsum": self.y})
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 
         with model1:
@@ -1009,8 +1009,8 @@ class TestGPAdditive:
             fp2 = gptot.conditional("fp2", self.Xnew)
 
         fp = np.random.randn(self.Xnew.shape[0])
-        logp1 = model1.logp({"fsum": self.y, "fp1": fp})
-        logp2 = model2.logp({"fsum": self.y, "fp2": fp})
+        logp1 = model1.compile_logp()({"fsum": self.y, "fp1": fp})
+        logp2 = model2.compile_logp()({"fsum": self.y, "fp2": fp})
         npt.assert_allclose(logp1, logp2, atol=0, rtol=1e-2)
 
     def testAdditiveSparseRaises(self):
@@ -1055,7 +1055,7 @@ class TestTP:
             gp = pm.gp.Latent(cov_func=cov_func)
             f = gp.prior("f", X, reparameterize=False)
             p = gp.conditional("p", Xnew)
-        self.gp_latent_logp = model1.logp({"f": y, "p": pnew})
+        self.gp_latent_logp = model1.compile_logp()({"f": y, "p": pnew})
         self.X = X
         self.y = y
         self.Xnew = Xnew
@@ -1068,7 +1068,7 @@ class TestTP:
             tp = pm.gp.TP(cov_func=cov_func, nu=self.nu)
             f = tp.prior("f", self.X, reparameterize=False)
             p = tp.conditional("p", self.Xnew)
-        tp_logp = model.logp({"f": self.y, "p": self.pnew})
+        tp_logp = model.compile_logp()({"f": self.y, "p": self.pnew})
         npt.assert_allclose(self.gp_latent_logp, tp_logp, atol=0, rtol=1e-2)
 
     def testTPvsLatentReparameterized(self):
@@ -1079,7 +1079,7 @@ class TestTP:
             p = tp.conditional("p", self.Xnew)
         chol = np.linalg.cholesky(cov_func(self.X).eval())
         f_rotated = np.linalg.solve(chol, self.y)
-        tp_logp = model.logp({"f_rotated_": f_rotated, "p": self.pnew})
+        tp_logp = model.compile_logp()({"f_rotated_": f_rotated, "p": self.pnew})
         npt.assert_allclose(self.gp_latent_logp, tp_logp, atol=0, rtol=1e-2)
 
     def testAdditiveTPRaises(self):
@@ -1122,14 +1122,14 @@ class TestLatentKron:
             p = gp.conditional("p", self.Xnew)
         chol = np.linalg.cholesky(cov_func(self.X).eval())
         self.y_rotated = np.linalg.solve(chol, self.y - 0.5)
-        self.logp = latent_model.logp({"f_rotated_": self.y_rotated, "p": self.pnew})
+        self.logp = latent_model.compile_logp()({"f_rotated_": self.y_rotated, "p": self.pnew})
 
     def testLatentKronvsLatent(self):
         with pm.Model() as kron_model:
             kron_gp = pm.gp.LatentKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
             f = kron_gp.prior("f", self.Xs)
             p = kron_gp.conditional("p", self.Xnew)
-        kronlatent_logp = kron_model.logp({"f_rotated_": self.y_rotated, "p": self.pnew})
+        kronlatent_logp = kron_model.compile_logp()({"f_rotated_": self.y_rotated, "p": self.pnew})
         npt.assert_allclose(kronlatent_logp, self.logp, atol=0, rtol=1e-3)
 
     def testLatentKronRaisesAdditive(self):
@@ -1178,7 +1178,7 @@ class TestMarginalKron:
             f = gp.marginal_likelihood("f", self.X, self.y, noise=self.sigma)
             p = gp.conditional("p", self.Xnew)
             self.mu, self.cov = gp.predict(self.Xnew)
-        self.logp = model.logp({"p": self.pnew})
+        self.logp = model.compile_logp()({"p": self.pnew})
 
     def testMarginalKronvsMarginalpredict(self):
         with pm.Model() as kron_model:
@@ -1197,7 +1197,7 @@ class TestMarginalKron:
             kron_gp = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
             f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma)
             p = kron_gp.conditional("p", self.Xnew)
-        kron_logp = kron_model.logp({"p": self.pnew})
+        kron_logp = kron_model.compile_logp()({"p": self.pnew})
         npt.assert_allclose(kron_logp, self.logp, atol=0, rtol=1e-2)
 
     def testMarginalKronRaises(self):

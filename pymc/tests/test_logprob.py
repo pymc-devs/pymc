@@ -31,7 +31,7 @@ from aesara.tensor.subtensor import (
 from pymc.aesaraf import floatX, walk_model
 from pymc.distributions.continuous import HalfFlat, Normal, TruncatedNormal, Uniform
 from pymc.distributions.discrete import Bernoulli
-from pymc.distributions.logprob import logcdf, logp, logpt
+from pymc.distributions.logprob import joint_logpt, logcdf, logp
 from pymc.model import Model, Potential
 from pymc.tests.helpers import select_by_precision
 
@@ -41,7 +41,7 @@ def assert_no_rvs(var):
     return var
 
 
-def test_logpt_basic():
+def test_joint_logpt_basic():
     """Make sure we can compute a log-likelihood for a hierarchical model with transforms."""
 
     with Model() as m:
@@ -58,7 +58,7 @@ def test_logpt_basic():
 
     c_value_var = m.rvs_to_values[c]
 
-    b_logp = logpt(b, b_value_var, sum=False)
+    b_logp = joint_logpt(b, b_value_var, sum=False)
 
     res_ancestors = list(walk_model((b_logp,), walk_past_rvs=True))
     res_rv_ancestors = [
@@ -81,7 +81,7 @@ def test_logpt_basic():
         ((np.array([0, 1, 4]), np.array([0, 1, 4])), (5, 5)),
     ],
 )
-def test_logpt_incsubtensor(indices, size):
+def test_joint_logpt_incsubtensor(indices, size):
     """Make sure we can compute a log-likelihood for ``Y[idx] = data`` where ``Y`` is univariate."""
 
     mu = floatX(np.power(10, np.arange(np.prod(size)))).reshape(size)
@@ -102,7 +102,7 @@ def test_logpt_incsubtensor(indices, size):
     a_idx_value_var = a_idx.type()
     a_idx_value_var.name = "a_idx_value"
 
-    a_idx_logp = logpt(a_idx, {a_idx: a_value_var}, sum=False)
+    a_idx_logp = joint_logpt(a_idx, {a_idx: a_value_var}, sum=False)
 
     logp_vals = a_idx_logp.eval({a_value_var: a_val})
 
@@ -116,7 +116,7 @@ def test_logpt_incsubtensor(indices, size):
     np.testing.assert_almost_equal(logp_vals, exp_obs_logps)
 
 
-def test_logpt_subtensor():
+def test_joint_logpt_subtensor():
     """Make sure we can compute a log-likelihood for ``Y[I]`` where ``Y`` and ``I`` are random variables."""
 
     size = 5
@@ -144,7 +144,7 @@ def test_logpt_subtensor():
     I_value_var = I_rv.type()
     I_value_var.name = "I_value"
 
-    A_idx_logps = logpt(A_idx, {A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False)
+    A_idx_logps = joint_logpt(A_idx, {A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False)
     A_idx_logp = at.add(*A_idx_logps)
 
     logp_vals_fn = aesara.function([A_idx_value_var, I_value_var], A_idx_logp)
@@ -201,7 +201,7 @@ def test_logcdf_transformed_argument():
     sigma_value = np.exp(sigma_value_log)
     x_value = 0.5
 
-    observed = m.logp_nojac({"sigma_log__": sigma_value_log, "x": x_value})
+    observed = m.compile_logp(jacobian=False)({"sigma_log__": sigma_value_log, "x": x_value})
     expected = logp(TruncatedNormal.dist(0, sigma_value, lower=None, upper=1.0), x_value).eval()
     assert np.isclose(observed, expected)
 
@@ -214,6 +214,6 @@ def test_model_unchanged_logprob_access():
 
     original_inputs = set(aesara.graph.graph_inputs([c]))
     # Extract model.logpt
-    model.logpt
+    model.logpt()
     new_inputs = set(aesara.graph.graph_inputs([c]))
     assert original_inputs == new_inputs

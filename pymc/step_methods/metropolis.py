@@ -202,7 +202,7 @@ class Metropolis(ArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
         super().__init__(vars, shared)
 
     def reset_tuning(self):
@@ -340,7 +340,7 @@ class BinaryMetropolis(ArrayStep):
         if not all([v.dtype in pm.discrete_types for v in vars]):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
 
-        super().__init__(vars, [model.fastlogp])
+        super().__init__(vars, [model.compile_logp()])
 
     def astep(self, q0: RaveledVars, logp) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
 
@@ -441,7 +441,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         if not all([v.dtype in pm.discrete_types for v in vars]):
             raise ValueError("All variables must be binary for BinaryGibbsMetropolis")
 
-        super().__init__(vars, [model.fastlogp])
+        super().__init__(vars, [model.compile_logp()])
 
     def astep(self, q0: RaveledVars, logp: Callable[[RaveledVars], np.ndarray]) -> RaveledVars:
 
@@ -527,7 +527,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if isinstance(distr, CategoricalRV):
                 k_graph = rv_var.owner.inputs[3].shape[-1]
                 (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
-                k = model.fn(k_graph)(initial_point)
+                k = model.compile_fn(k_graph, inputs=model.value_vars, on_unused_input="ignore")(
+                    initial_point
+                )
             elif isinstance(distr, BernoulliRV):
                 k = 2
             else:
@@ -554,7 +556,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         else:
             raise ValueError("Argument 'proposal' should either be 'uniform' or 'proportional'")
 
-        super().__init__(vars, [model.fastlogp])
+        super().__init__(vars, [model.compile_logp()])
 
     def astep_unif(self, q0: RaveledVars, logp) -> RaveledVars:
 
@@ -742,7 +744,7 @@ class DEMetropolis(PopulationArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
         super().__init__(vars, shared)
 
     def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
@@ -905,7 +907,7 @@ class DEMetropolisZ(ArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
         super().__init__(vars, shared)
 
     def reset_tuning(self):
