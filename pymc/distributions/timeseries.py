@@ -281,7 +281,7 @@ class GaussianRandomWalk(distribution.Continuous):
     #     return moment
 
     def logp(
-        value,
+        value: Union[at.TensorVariable, at.TensorConstant],
         mu: Union[at.TensorVariable, at.TensorConstant],
         sigma: Union[at.TensorVariable, at.TensorConstant],
         init: Union[at.TensorVariable, at.TensorConstant],
