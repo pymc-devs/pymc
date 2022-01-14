@@ -281,10 +281,9 @@ class GaussianRandomWalk(distribution.Continuous):
 
     def logp(
         value,
-        mu: Optional[Union[np.ndarray, float]],
-        sigma: Optional[Union[np.ndarray, float]],
-        init: Optional[Union[np.ndarray, float]],
-        size: Optional[Union[np.ndarray, float]],
+        mu: Union[at.TensorVariable, at.TensorConstant],
+        sigma: Union[at.TensorVariable, at.TensorConstant],
+        init: Union[at.TensorVariable, at.TensorConstant],
     ) -> at.TensorVariable:
         """
         Calculate log-probability of Gaussian Random Walk distribution at specified value.
@@ -304,13 +303,30 @@ class GaussianRandomWalk(distribution.Continuous):
         # I need to create a graph that calculates the logp of GRW
         # I can use AePPL or PyMC to do it
 
-        res = -0.5 * at.pow((value - mu) / sigma, 2) - at.log(at.sqrt(2.0 * np.pi)) - at.log(sigma)
-        res = CheckParameterValue("sigma > 0")(res, at.all(at.gt(sigma, 0.0)))
+        def normal_logp(value, mu, sigma):
+            logp = (
+                -0.5 * at.pow((value - mu) / sigma, 2)
+                - at.log(at.sqrt(2.0 * np.pi))
+                - at.log(sigma)
+            )
+            return logp
 
+        # Create logp calculation graph the inital time point
+        innit_logp = normal_logp(value[0] - init, mu, sigma)
+
+        # Create logp calculation graph for innovations
+        stationary_vals = at.diff(value[1:]) - init
+        innov_logp = normal_logp(stationary_vals, mu, sigma)
+
+        """ A bunch of stuff that can be ignored
         innit_logp = pm.logp(pm.Normal.dist(mu, sigma), value[:1] - init)
         # https: // aesara.readthedocs.io / en / latest / library / tensor / extra_ops.html?highlight = at.diff
         innov_logp = pm.logp(pm.Normal.dist(mu, sigma), at.diff(value))
         # https: // numpy.org/doc/stable/ reference / generated / numpy.concatenate.html
+        """
+
+        # Return both calculation logps in a vector. This is fine because somewhere
+        # down the line these will be summed together
         total_logp = at.concatenate([innit_logp, innov_logp])
 
         return total_logp
