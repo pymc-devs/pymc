@@ -47,3 +47,9 @@ or, if you just want to manually run them on a subset of files,
 ```bash
 pre-commit run --files <file_1> <file_2> ... <file_n>
 ```
+
+You can also run `pre-commit` in a Pull Request by adding the comment.
+```bash
+/pre-commit-run
+```
+A github bot will then update the format of your files.
