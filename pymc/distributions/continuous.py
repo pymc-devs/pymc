@@ -85,7 +85,7 @@ from pymc.distributions.dist_math import (
     normal_lcdf,
     zvalue,
 )
-from pymc.distributions.distribution import Continuous
+from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.math import invlogit, logdiffexp, logit
 from pymc.util import UNSET
@@ -692,12 +692,12 @@ class TruncatedNormal(BoundedContinuous):
     @classmethod
     def dist(
         cls,
-        mu: Optional[Union[float, np.ndarray]] = None,
-        sigma: Optional[Union[float, np.ndarray]] = None,
-        tau: Optional[Union[float, np.ndarray]] = None,
-        sd: Optional[Union[float, np.ndarray]] = None,
-        lower: Optional[Union[float, np.ndarray]] = None,
-        upper: Optional[Union[float, np.ndarray]] = None,
+        mu: Optional[DIST_PARAMETER_TYPES] = None,
+        sigma: Optional[DIST_PARAMETER_TYPES] = None,
+        tau: Optional[DIST_PARAMETER_TYPES] = None,
+        sd: Optional[DIST_PARAMETER_TYPES] = None,
+        lower: Optional[DIST_PARAMETER_TYPES] = None,
+        upper: Optional[DIST_PARAMETER_TYPES] = None,
         transform: str = "auto",
         *args,
         **kwargs,

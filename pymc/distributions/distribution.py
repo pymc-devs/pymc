@@ -61,6 +61,8 @@ __all__ = [
     "NoDistribution",
 ]
 
+DIST_PARAMETER_TYPES = Union[np.ndarray, int, float, TensorVariable]
+
 vectorized_ppc = contextvars.ContextVar(
     "vectorized_ppc", default=None
 )  # type: contextvars.ContextVar[Optional[Callable]]
