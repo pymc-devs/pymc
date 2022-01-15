@@ -281,10 +281,10 @@ class GaussianRandomWalk(distribution.Continuous):
     #     return moment
 
     def logp(
-        value: Union[at.TensorVariable, at.TensorConstant],
-        mu: Union[at.TensorVariable, at.TensorConstant],
-        sigma: Union[at.TensorVariable, at.TensorConstant],
-        init: Union[at.TensorVariable, at.TensorConstant],
+        value: at.Variable,
+        mu: at.Variable,
+        sigma: at.Variable,
+        init: at.Variable,
     ) -> at.TensorVariable:
         """
         Calculate log-probability of Gaussian Random Walk distribution at specified value.
