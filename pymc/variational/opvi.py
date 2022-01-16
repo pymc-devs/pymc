@@ -853,7 +853,6 @@ class Group(WithMemoization):
         self.user_params = params
         self._user_params = None
         self.replacements = collections.OrderedDict()
-        self.value_replacements = collections.OrderedDict()
         self.ordering = collections.OrderedDict()
         # save this stuff to use in __init_group__ later
         self._kwargs = kwargs
@@ -979,9 +978,7 @@ class Group(WithMemoization):
         # so I have to to it by myself
 
         # 1) we need initial point (transformed space)
-        model_initial_point = self.model.initial_point
-        _, replace_to_value_vars = rvs_to_value_vars(self.group, apply_transforms=True)
-        self.value_replacements.update(replace_to_value_vars)
+        model_initial_point = self.model.recompute_initial_point(0)
         # 2) we'll work with a single group, a subset of the model
         # here we need to create a mapping to replace value_vars with slices from the approximation
         start_idx = 0
@@ -1180,7 +1177,6 @@ class Group(WithMemoization):
 
     def to_flat_input(self, node):
         """*Dev* - replace vars with flattened view stored in `self.inputs`"""
-        node = aesara.clone_replace(node, self.value_replacements)
         return aesara.clone_replace(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node):
@@ -1484,13 +1480,6 @@ class Approximation(WithMemoization):
         return self.datalogp / self.symbolic_normalizing_constant
 
     @property
-    def value_replacements(self):
-        """*Dev* - all replacements from groups to replace PyMC random variables with approximation"""
-        return collections.OrderedDict(
-            itertools.chain.from_iterable(g.value_replacements.items() for g in self.groups)
-        )
-
-    @property
     def replacements(self):
         """*Dev* - all replacements from groups to replace PyMC random variables with approximation"""
         return collections.OrderedDict(
@@ -1553,7 +1542,7 @@ class Approximation(WithMemoization):
     def to_flat_input(self, node, more_replacements=None):
         """*Dev* - replace vars with flattened view stored in `self.inputs`"""
         more_replacements = more_replacements or {}
-        node = aesara.clone_replace(node, {**self.value_replacements, **more_replacements})
+        node = aesara.clone_replace(node, more_replacements)
         return aesara.clone_replace(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node, more_replacements=None):
@@ -1609,12 +1598,17 @@ class Approximation(WithMemoization):
         sampled node(s) with replacements
         """
         node_in = node
+        if not isinstance(node, (list, tuple)):
+            node = [node]
+        node, _ = rvs_to_value_vars(
+            node, apply_transforms=True, initial_replacements=more_replacements
+        )
+        if not isinstance(node_in, (list, tuple)):
+            node = node[0]
         if size is None:
-            node_out = self.symbolic_single_sample(node, more_replacements=more_replacements)
+            node_out = self.symbolic_single_sample(node)
         else:
-            node_out = self.symbolic_sample_over_posterior(
-                node, more_replacements=more_replacements
-            )
+            node_out = self.symbolic_sample_over_posterior(node)
         node_out = self.set_size_and_deterministic(node_out, size, deterministic)
         try_to_set_test_value(node_in, node_out, size)
         return node_out
