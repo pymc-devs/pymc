@@ -41,7 +41,7 @@ def test_missing(data):
     assert "y_missing" in model.named_vars
 
     test_point = model.compute_initial_point()
-    assert not np.isnan(model.compile_logp(test_point))
+    assert not np.isnan(model.compile_logp()(test_point))
 
     with model:
         prior_trace = sample_prior_predictive(return_inferencedata=False)
@@ -59,7 +59,7 @@ def test_missing_with_predictors():
     assert "y_missing" in model.named_vars
 
     test_point = model.compute_initial_point()
-    assert not np.isnan(model.compile_logp(test_point))
+    assert not np.isnan(model.compile_logp()(test_point))
 
     with model:
         prior_trace = sample_prior_predictive(return_inferencedata=False)
