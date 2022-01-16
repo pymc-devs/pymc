@@ -12,8 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc as pm
-
 from pymc.tests.models import simple_model
 
 
@@ -22,12 +20,12 @@ class TestProfile:
         _, self.model, _ = simple_model()
 
     def test_profile_model(self):
-        assert self.model.profile(self.model.logpt).fct_call_time > 0
+        assert self.model.profile(self.model.logpt()).fct_call_time > 0
 
     def test_profile_variable(self):
         rv = self.model.basic_RVs[0]
-        assert self.model.profile(pm.logpt(rv, self.model.rvs_to_values[rv])).fct_call_time
+        assert self.model.profile(self.model.logpt(vars=[rv], sum=False)).fct_call_time
 
     def test_profile_count(self):
         count = 1005
-        assert self.model.profile(self.model.logpt, n=count).fct_callcount == count
+        assert self.model.profile(self.model.logpt(), n=count).fct_callcount == count

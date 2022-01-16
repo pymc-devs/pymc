@@ -200,7 +200,7 @@ def test_logp_scalar_ode():
     with pm.Model() as model_1:
         forward = ode_model(theta=[alpha], y0=[y0])
         y = pm.Normal("y", mu=forward, sd=1, observed=yobs)
-    pymc_logp = model_1.logp()
+    pymc_logp = model_1.compile_logp()({})
 
     np.testing.assert_allclose(manual_logp, pymc_logp)
 

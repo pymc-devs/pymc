@@ -39,7 +39,7 @@ jobs:
     - name: Publish to PyPI
       run: |
         twine check dist/*
-        twine upload --repository pypi --username __token__ --password ${PYPI_TOKEN_PYMC} dist/*
+        twine upload --repository pypi --username __token__ --password ${PYPI_TOKEN} dist/*
   test-install-job:
     needs: release-job
     runs-on: ubuntu-latest

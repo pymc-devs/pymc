@@ -34,7 +34,7 @@ repos:
       args: [--rcfile=.pylintrc]
       files: ^pymc/
 - repo: https://github.com/MarcoGorelli/madforhooks
-  rev: 0.2.1
+  rev: 0.3.0
   hooks:
     - id: no-print-statements
       files: ^pymc/

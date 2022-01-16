@@ -967,7 +967,7 @@ def compile_pymc(inputs, outputs, mode=None, **kwargs):
 
     # Set the default update of a NoDistribution RNG so that it is automatically
     # updated after every function call
-    output_to_list = outputs if isinstance(outputs, list) else [outputs]
+    output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
     for rv in (
         node
         for node in walk_model(output_to_list, walk_past_rvs=True)

@@ -1030,8 +1030,13 @@ class TestNutsCheckTrace:
 
         # Assert model logp is computed correctly: computing post-sampling
         # and tracking while sampling should give same results.
+        model_logp_fn = model.compile_logp()
         model_logp_ = np.array(
-            [model.logp(trace.point(i, chain=c)) for c in trace.chains for i in range(len(trace))]
+            [
+                model_logp_fn(trace.point(i, chain=c))
+                for c in trace.chains
+                for i in range(len(trace))
+            ]
         )
         assert (trace.model_logp == model_logp_).all()
 

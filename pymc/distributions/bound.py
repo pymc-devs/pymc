@@ -26,6 +26,7 @@ from pymc.distributions.distribution import Continuous, Discrete
 from pymc.distributions.logprob import logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.model import modelcontext
+from pymc.util import check_dist_not_registered
 
 __all__ = ["Bound"]
 
@@ -144,8 +145,9 @@ class Bound:
 
     Parameters
     ----------
-    distribution: pymc distribution
-        Distribution to be transformed into a bounded distribution.
+    dist: PyMC unnamed distribution
+        Distribution to be transformed into a bounded distribution created via the
+        `.dist()` API.
     lower: float or array like, optional
         Lower bound of the distribution.
     upper: float or array like, optional
@@ -156,15 +158,15 @@ class Bound:
     .. code-block:: python
 
         with pm.Model():
-            normal_dist = Normal.dist(mu=0.0, sigma=1.0, initval=-0.5)
-            negative_normal = pm.Bound(normal_dist, upper=0.0)
+            normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
+            negative_normal = pm.Bound("negative_normal", normal_dist, upper=0.0)
 
     """
 
     def __new__(
         cls,
         name,
-        distribution,
+        dist,
         lower=None,
         upper=None,
         size=None,
@@ -174,7 +176,7 @@ class Bound:
         **kwargs,
     ):
 
-        cls._argument_checks(distribution, **kwargs)
+        cls._argument_checks(dist, **kwargs)
 
         if dims is not None:
             model = modelcontext(None)
@@ -185,12 +187,12 @@ class Bound:
                 raise ValueError("Given dims do not exist in model coordinates.")
 
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval)
-        distribution.tag.ignore_logprob = True
+        dist.tag.ignore_logprob = True
 
-        if isinstance(distribution.owner.op, Continuous):
+        if isinstance(dist.owner.op, Continuous):
             res = _ContinuousBounded(
                 name,
-                [distribution, lower, upper],
+                [dist, lower, upper],
                 initval=floatX(initval),
                 size=size,
                 shape=shape,
@@ -199,7 +201,7 @@ class Bound:
         else:
             res = _DiscreteBounded(
                 name,
-                [distribution, lower, upper],
+                [dist, lower, upper],
                 initval=intX(initval),
                 size=size,
                 shape=shape,
@@ -210,7 +212,7 @@ class Bound:
     @classmethod
     def dist(
         cls,
-        distribution,
+        dist,
         lower=None,
         upper=None,
         size=None,
@@ -218,12 +220,12 @@ class Bound:
         **kwargs,
     ):
 
-        cls._argument_checks(distribution, **kwargs)
+        cls._argument_checks(dist, **kwargs)
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval=None)
-        distribution.tag.ignore_logprob = True
-        if isinstance(distribution.owner.op, Continuous):
+        dist.tag.ignore_logprob = True
+        if isinstance(dist.owner.op, Continuous):
             res = _ContinuousBounded.dist(
-                [distribution, lower, upper],
+                [dist, lower, upper],
                 size=size,
                 shape=shape,
                 **kwargs,
@@ -231,7 +233,7 @@ class Bound:
             res.tag.test_value = floatX(initval)
         else:
             res = _DiscreteBounded.dist(
-                [distribution, lower, upper],
+                [dist, lower, upper],
                 size=size,
                 shape=shape,
                 **kwargs,
@@ -240,7 +242,7 @@ class Bound:
         return res
 
     @classmethod
-    def _argument_checks(cls, distribution, **kwargs):
+    def _argument_checks(cls, dist, **kwargs):
         if "observed" in kwargs:
             raise ValueError(
                 "Observed Bound distributions are not supported. "
@@ -249,7 +251,7 @@ class Bound:
                 "with the cumulative probability function."
             )
 
-        if not isinstance(distribution, TensorVariable):
+        if not isinstance(dist, TensorVariable):
             raise ValueError(
                 "Passing a distribution class to `Bound` is no longer supported.\n"
                 "Please pass the output of a distribution instantiated via the "
@@ -257,26 +259,14 @@ class Bound:
                 '`pm.Bound("bound", pm.Normal.dist(0, 1), lower=0)`'
             )
 
-        try:
-            model = modelcontext(None)
-        except TypeError:
-            pass
-        else:
-            if distribution in model.basic_RVs:
-                raise ValueError(
-                    f"The distribution passed into `Bound` was already registered "
-                    f"in the current model.\nYou should pass an unregistered "
-                    f"(unnamed) distribution created via the `.dist()` API, such as:\n"
-                    f'`pm.Bound("bound", pm.Normal.dist(0, 1), lower=0)`'
-                )
+        check_dist_not_registered(dist)
 
-        if distribution.owner.op.ndim_supp != 0:
+        if dist.owner.op.ndim_supp != 0:
             raise NotImplementedError("Bounding of MultiVariate RVs is not yet supported.")
 
-        if not isinstance(distribution.owner.op, (Discrete, Continuous)):
+        if not isinstance(dist.owner.op, (Discrete, Continuous)):
             raise ValueError(
-                f"`distribution` {distribution} must be a Discrete or Continuous"
-                " distribution subclass"
+                f"`distribution` {dist} must be a Discrete or Continuous" " distribution subclass"
             )
 
     @classmethod

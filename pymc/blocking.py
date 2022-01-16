@@ -48,10 +48,10 @@ class DictToArrayBijection:
         vars_info = tuple((v, k, v.shape, v.dtype) for k, v in var_dict.items())
         raveled_vars = [v[0].ravel() for v in vars_info]
         if raveled_vars:
-            res = np.concatenate(raveled_vars)
+            result = np.concatenate(raveled_vars)
         else:
-            res = np.array([])
-        return RaveledVars(res, tuple(v[1:] for v in vars_info))
+            result = np.array([])
+        return RaveledVars(result, tuple(v[1:] for v in vars_info))
 
     @staticmethod
     def rmap(
@@ -69,9 +69,9 @@ class DictToArrayBijection:
 
         """
         if start_point:
-            res = dict(start_point)
+            result = dict(start_point)
         else:
-            res = {}
+            result = {}
 
         if not isinstance(array, RaveledVars):
             raise TypeError("`array` must be a `RaveledVars` type")
@@ -80,10 +80,10 @@ class DictToArrayBijection:
         for name, shape, dtype in array.point_map_info:
             arr_len = np.prod(shape, dtype=int)
             var = array.data[last_idx : last_idx + arr_len].reshape(shape).astype(dtype)
-            res[name] = var
+            result[name] = var
             last_idx += arr_len
 
-        return res
+        return result
 
     @classmethod
     def mapf(cls, f: Callable[[PointType], T], start_point: Optional[PointType] = None) -> T:

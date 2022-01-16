@@ -20,6 +20,7 @@ samples from probability distributions for stochastic nodes in PyMC.
 
 import warnings
 
+from functools import partial
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -426,7 +427,7 @@ StrongDims = Sequence[Union[str, None]]
 StrongSize = Union[TensorVariable, Tuple[Union[int, TensorVariable], ...]]
 
 
-def convert_dims(dims: Dims) -> Optional[WeakDims]:
+def convert_dims(dims: Optional[Dims]) -> Optional[WeakDims]:
     """Process a user-provided dims variable into None or a valid dims tuple."""
     if dims is None:
         return None
@@ -486,9 +487,7 @@ def convert_size(size: Size) -> Optional[StrongSize]:
     return size
 
 
-def resize_from_dims(
-    dims: WeakDims, ndim_implied: int, model
-) -> Tuple[int, StrongSize, StrongDims]:
+def resize_from_dims(dims: WeakDims, ndim_implied: int, model) -> Tuple[StrongSize, StrongDims]:
     """Determines a potential resize shape from a `dims` tuple.
 
     Parameters
@@ -502,10 +501,10 @@ def resize_from_dims(
 
     Returns
     -------
-    ndim_resize : int
-        Number of dimensions that should be added through resizing.
     resize_shape : array-like
-        The shape of the new dimensions.
+        Shape of new dimensions that should be prepended.
+    dims : tuple of (str or None)
+        Names or None for all dimensions after resizing.
     """
     if Ellipsis in dims:
         # Auto-complete the dims tuple to the full length.
@@ -524,12 +523,12 @@ def resize_from_dims(
 
     # The numeric/symbolic resize tuple can be created using model.RV_dim_lengths
     resize_shape = tuple(model.dim_lengths[dname] for dname in dims[:ndim_resize])
-    return ndim_resize, resize_shape, dims
+    return resize_shape, dims
 
 
 def resize_from_observed(
     observed, ndim_implied: int
-) -> Tuple[int, StrongSize, Union[np.ndarray, Variable]]:
+) -> Tuple[StrongSize, Union[np.ndarray, Variable]]:
     """Determines a potential resize shape from observations.
 
     Parameters
@@ -541,10 +540,8 @@ def resize_from_observed(
 
     Returns
     -------
-    ndim_resize : int
-        Number of dimensions that should be added through resizing.
     resize_shape : array-like
-        The shape of the new dimensions.
+        Shape of new dimensions that should be prepended.
     observed : scalar, array-like
         Observations as numpy array or `Variable`.
     """
@@ -552,7 +549,7 @@ def resize_from_observed(
         observed = pandas_to_array(observed)
     ndim_resize = observed.ndim - ndim_implied
     resize_shape = tuple(observed.shape[d] for d in range(ndim_resize))
-    return ndim_resize, resize_shape, observed
+    return resize_shape, observed
 
 
 def find_size(shape=None, size=None, ndim_supp=None):
@@ -612,6 +609,8 @@ def maybe_resize(
     ndim_supp,
     shape,
     size,
+    *,
+    change_rv_size_fn=partial(change_rv_size, expand=True),
     **kwargs,
 ):
     """Resize a distribution if necessary.
@@ -635,6 +634,8 @@ def maybe_resize(
         A tuple specifying the final shape of a distribution
     size : tuple
         A tuple specifying the size of a distribution
+    change_rv_size_fn: callable
+        A function that returns an equivalent RV with a different size
 
     Returns
     -------
@@ -647,7 +648,7 @@ def maybe_resize(
     if shape is not None and ndims_unexpected:
         if Ellipsis in shape:
             # Resize and we're done!
-            rv_out = change_rv_size(rv_var=rv_out, new_size=shape[:-1], expand=True)
+            rv_out = change_rv_size_fn(rv_var=rv_out, new_size=shape[:-1])
         else:
             # This is rare, but happens, for example, with MvNormal(np.ones((2, 3)), np.eye(3), shape=(2, 3)).
             # Recreate the RV without passing `size` to created it with just the implied dimensions.
@@ -656,7 +657,7 @@ def maybe_resize(
             # Now resize by any remaining "extra" dimensions that were not implied from support and parameters
             if rv_out.ndim < ndim_expected:
                 expand_shape = shape[: ndim_expected - rv_out.ndim]
-                rv_out = change_rv_size(rv_var=rv_out, new_size=expand_shape, expand=True)
+                rv_out = change_rv_size_fn(rv_var=rv_out, new_size=expand_shape)
             if not rv_out.ndim == ndim_expected:
                 raise ShapeError(
                     f"Failed to create the RV with the expected dimensionality. "

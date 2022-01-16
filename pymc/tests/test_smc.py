@@ -144,7 +144,16 @@ class TestSMC(SeededTest):
                 marginals.append(trace.report.log_marginal_likelihood)
 
         # compare to the analytical result
-        assert abs(np.exp(np.nanmean(marginals[1]) - np.nanmean(marginals[0])) - 4.0) <= 1
+        assert (
+            np.abs(
+                np.exp(
+                    np.nanmean(np.array(marginals[1], dtype=float))
+                    - np.nanmean(np.array(marginals[0], dtype=float))
+                    - 4.0
+                )
+            )
+            <= 1
+        )
 
     def test_start(self):
         with pm.Model() as model:
@@ -299,7 +308,7 @@ class TestSimulator(SeededTest):
             s = pm.Simulator("s", self.normal_sim, a, b, observed=self.data)
 
     def test_one_gaussian(self):
-        assert self.count_rvs(self.SMABC_test.logpt) == 1
+        assert self.count_rvs(self.SMABC_test.logpt()) == 1
 
         with self.SMABC_test:
             trace = pm.sample_smc(draws=1000, chains=1, return_inferencedata=False)
@@ -333,7 +342,7 @@ class TestSimulator(SeededTest):
                 observed=self.data,
             )
 
-        assert self.count_rvs(m.logpt) == 1
+        assert self.count_rvs(m.logpt()) == 1
 
         with m:
             pm.sample_smc(draws=100)
@@ -354,7 +363,7 @@ class TestSimulator(SeededTest):
                 sum_stat=self.quantiles,
                 observed=scalar_data,
             )
-        assert self.count_rvs(m.logpt) == 1
+        assert self.count_rvs(m.logpt()) == 1
 
         with pm.Model() as m:
             s = pm.Simulator(
@@ -366,10 +375,10 @@ class TestSimulator(SeededTest):
                 sum_stat="mean",
                 observed=scalar_data,
             )
-        assert self.count_rvs(m.logpt) == 1
+        assert self.count_rvs(m.logpt()) == 1
 
     def test_model_with_potential(self):
-        assert self.count_rvs(self.SMABC_potential.logpt) == 1
+        assert self.count_rvs(self.SMABC_potential.logpt()) == 1
 
         with self.SMABC_potential:
             trace = pm.sample_smc(draws=100, chains=1, return_inferencedata=False)
@@ -413,17 +422,17 @@ class TestSimulator(SeededTest):
                 observed=data2,
             )
 
-        assert self.count_rvs(m.logpt) == 2
+        assert self.count_rvs(m.logpt()) == 2
 
         # Check that the logps use the correct methods
         a_val = m.rvs_to_values[a]
         sim1_val = m.rvs_to_values[sim1]
-        logp_sim1 = pm.logpt(sim1, sim1_val)
+        logp_sim1 = pm.joint_logpt(sim1, sim1_val)
         logp_sim1_fn = aesara.function([a_val], logp_sim1)
 
         b_val = m.rvs_to_values[b]
         sim2_val = m.rvs_to_values[sim2]
-        logp_sim2 = pm.logpt(sim2, sim2_val)
+        logp_sim2 = pm.joint_logpt(sim2, sim2_val)
         logp_sim2_fn = aesara.function([b_val], logp_sim2)
 
         assert any(
@@ -463,7 +472,7 @@ class TestSimulator(SeededTest):
                 observed=data,
             )
 
-        assert self.count_rvs(m.logpt) == 2
+        assert self.count_rvs(m.logpt()) == 2
 
         with m:
             trace = pm.sample_smc(return_inferencedata=False)
