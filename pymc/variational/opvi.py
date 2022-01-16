@@ -1598,11 +1598,11 @@ class Approximation(WithMemoization):
         sampled node(s) with replacements
         """
         node_in = node
+        if more_replacements:
+            node = aesara.clone_replace(node, more_replacements)
         if not isinstance(node, (list, tuple)):
             node = [node]
-        node, _ = rvs_to_value_vars(
-            node, apply_transforms=True, initial_replacements=more_replacements
-        )
+        node, _ = rvs_to_value_vars(node, apply_transforms=True)
         if not isinstance(node_in, (list, tuple)):
             node = node[0]
         if size is None:
