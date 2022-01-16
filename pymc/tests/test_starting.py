@@ -46,7 +46,7 @@ def test_accuracy_non_normal():
         close_to(newstart["x"], mu, select_by_precision(float64=1e-5, float32=1e-4))
 
 
-@pytest.mark.xfail(reason="find_MAP fails with derivatives")
+@pytest.mark.xfail(reason="first call to find_MAP is failing")
 def test_find_MAP_discrete():
     tol = 2.0 ** -11
     alpha = 4
@@ -68,15 +68,12 @@ def test_find_MAP_discrete():
     assert map_est2["ss"] == 14
 
 
-@pytest.mark.xfail(reason="find_MAP fails with derivatives")
 def test_find_MAP_no_gradient():
     _, model = simple_arbitrary_det()
     with model:
         find_MAP()
 
 
-@pytest.mark.skip(reason="test is slow because it's failing")
-@pytest.mark.xfail(reason="find_MAP fails with derivatives")
 def test_find_MAP():
     tol = 2.0 ** -11  # 16 bit machine epsilon, a low bar
     data = np.random.randn(100)

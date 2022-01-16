@@ -293,6 +293,47 @@ class TestShapeDimsSize:
                     else:
                         raise NotImplementedError("Invalid test case parametrization.")
 
+    @pytest.mark.parametrize("ellipsis_in", ["none", "shape", "dims", "both"])
+    def test_simultaneous_shape_and_dims(self, ellipsis_in):
+        with pm.Model() as pmodel:
+            x = pm.ConstantData("x", [1, 2, 3], dims="ddata")
+
+            if ellipsis_in == "none":
+                # The shape and dims tuples correspond to each other.
+                # Note: No checks are performed that implied shape (x), shape and dims actually match.
+                y = pm.Normal("y", mu=x, shape=(2, 3), dims=("dshape", "ddata"))
+                assert pmodel.RV_dims["y"] == ("dshape", "ddata")
+            elif ellipsis_in == "shape":
+                y = pm.Normal("y", mu=x, shape=(2, ...), dims=("dshape", "ddata"))
+                assert pmodel.RV_dims["y"] == ("dshape", "ddata")
+            elif ellipsis_in == "dims":
+                y = pm.Normal("y", mu=x, shape=(2, 3), dims=("dshape", ...))
+                assert pmodel.RV_dims["y"] == ("dshape", None)
+            elif ellipsis_in == "both":
+                y = pm.Normal("y", mu=x, shape=(2, ...), dims=("dshape", ...))
+                assert pmodel.RV_dims["y"] == ("dshape", None)
+
+            assert "dshape" in pmodel.dim_lengths
+            assert y.eval().shape == (2, 3)
+
+    @pytest.mark.parametrize("with_dims_ellipsis", [False, True])
+    def test_simultaneous_size_and_dims(self, with_dims_ellipsis):
+        with pm.Model() as pmodel:
+            x = pm.ConstantData("x", [1, 2, 3], dims="ddata")
+            assert "ddata" in pmodel.dim_lengths
+
+            # Size does not include support dims, so this test must use a dist with support dims.
+            kwargs = dict(name="y", size=2, mu=at.ones((3, 4)), cov=at.eye(4))
+            if with_dims_ellipsis:
+                y = pm.MvNormal(**kwargs, dims=("dsize", ...))
+                assert pmodel.RV_dims["y"] == ("dsize", None, None)
+            else:
+                y = pm.MvNormal(**kwargs, dims=("dsize", "ddata", "dsupport"))
+                assert pmodel.RV_dims["y"] == ("dsize", "ddata", "dsupport")
+
+            assert "dsize" in pmodel.dim_lengths
+            assert y.eval().shape == (2, 3, 4)
+
     def test_define_dims_on_the_fly(self):
         with pm.Model() as pmodel:
             agedata = aesara.shared(np.array([10, 20, 30]))
@@ -312,20 +353,9 @@ class TestShapeDimsSize:
             # The change should propagate all the way through
             assert effect.eval().shape == (4,)
 
-    @pytest.mark.xfail(reason="Simultaneous use of size and dims is not implemented")
-    def test_data_defined_size_dimension_can_register_dimname(self):
-        with pm.Model() as pmodel:
-            x = pm.Data("x", [[1, 2, 3, 4]], dims=("first", "second"))
-            assert "first" in pmodel.dim_lengths
-            assert "second" in pmodel.dim_lengths
-            # two dimensions are implied; a "third" dimension is created
-            y = pm.Normal("y", mu=x, size=2, dims=("third", "first", "second"))
-            assert "third" in pmodel.dim_lengths
-            assert y.eval().shape() == (2, 1, 4)
-
     def test_can_resize_data_defined_size(self):
         with pm.Model() as pmodel:
-            x = pm.Data("x", [[1, 2, 3, 4]], dims=("first", "second"))
+            x = pm.MutableData("x", [[1, 2, 3, 4]], dims=("first", "second"))
             y = pm.Normal("y", mu=0, dims=("first", "second"))
             z = pm.Normal("z", mu=y, observed=np.ones((1, 4)))
             assert x.eval().shape == (1, 4)
@@ -447,9 +477,3 @@ class TestShapeDimsSize:
     def test_invalid_flavors(self):
         with pytest.raises(ValueError, match="Passing both"):
             pm.Normal.dist(0, 1, shape=(3,), size=(3,))
-
-        with pm.Model():
-            with pytest.raises(ValueError, match="Passing both"):
-                pm.Normal("n", shape=(2,), dims=("town",))
-            with pytest.raises(ValueError, match="Passing both"):
-                pm.Normal("n", dims=("town",), size=(2,))

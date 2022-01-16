@@ -52,7 +52,7 @@ class MetropolisMLDA(Metropolis):
         and some extra code specific for MLDA.
         """
         model = pm.modelcontext(kwargs.get("model", None))
-        initial_values = model.initial_point
+        initial_values = model.recompute_initial_point()
 
         # flag to that variance reduction is activated - forces MetropolisMLDA
         # to store quantities of interest in a register if True
@@ -114,7 +114,7 @@ class DEMetropolisZMLDA(DEMetropolisZ):
         self.tuning_end_trigger = False
 
         model = pm.modelcontext(kwargs.get("model", None))
-        initial_values = model.initial_point
+        initial_values = model.recompute_initial_point()
 
         # flag to that variance reduction is activated - forces DEMetropolisZMLDA
         # to store quantities of interest in a register if True
@@ -381,7 +381,7 @@ class MLDA(ArrayStepShared):
 
         # assign internal state
         model = pm.modelcontext(model)
-        initial_values = model.initial_point
+        initial_values = model.recompute_initial_point()
         self.model = model
         self.coarse_models = coarse_models
         self.model_below = self.coarse_models[-1]
@@ -538,7 +538,7 @@ class MLDA(ArrayStepShared):
         # Construct Aesara function for current-level model likelihood
         # (for use in acceptance)
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
 
         # Construct Aesara function for below-level model likelihood
         # (for use in acceptance)
@@ -547,7 +547,7 @@ class MLDA(ArrayStepShared):
         vars_below = pm.inputvars(vars_below)
         shared_below = pm.make_shared_replacements(initial_values, vars_below, model_below)
         self.delta_logp_below = delta_logp(
-            initial_values, model_below.logpt, vars_below, shared_below
+            initial_values, model_below.logpt(), vars_below, shared_below
         )
 
         super().__init__(vars, shared)

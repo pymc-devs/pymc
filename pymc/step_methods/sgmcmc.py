@@ -45,7 +45,7 @@ def _check_minibatches(minibatch_tensors, minibatches):
 
 def prior_dlogp(vars, model, flat_view):
     """Returns the gradient of the prior on the parameters as a vector of size D x 1"""
-    terms = at.concatenate([aesara.grad(var.logpt, var).flatten() for var in vars], axis=0)
+    terms = at.concatenate([aesara.grad(var.logpt(), var).flatten() for var in vars], axis=0)
     dlogp = aesara.clone_replace(terms, flat_view.replacements, strict=False)
 
     return dlogp

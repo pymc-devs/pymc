@@ -17,18 +17,20 @@ import io
 import os
 import pkgutil
 import urllib.request
+import warnings
 
 from copy import copy
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import aesara
 import aesara.tensor as at
 import numpy as np
 import pandas as pd
 
+from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Apply
 from aesara.tensor.type import TensorType
-from aesara.tensor.var import TensorVariable
+from aesara.tensor.var import TensorConstant, TensorVariable
 
 import pymc as pm
 
@@ -40,6 +42,8 @@ __all__ = [
     "Minibatch",
     "align_minibatches",
     "Data",
+    "ConstantData",
+    "MutableData",
 ]
 BASE_URL = "https://raw.githubusercontent.com/pymc-devs/pymc-examples/main/examples/data/{filename}"
 
@@ -463,9 +467,103 @@ def align_minibatches(batches=None):
                 rng.seed()
 
 
-class Data:
-    """Data container class that wraps :func:`aesara.shared` and lets
-    the model be aware of its inputs and outputs.
+def determine_coords(model, value, dims: Optional[Sequence[str]] = None) -> Dict[str, Sequence]:
+    """Determines coordinate values from data or the model (via ``dims``)."""
+    coords = {}
+
+    # If value is a df or a series, we interpret the index as coords:
+    if isinstance(value, (pd.Series, pd.DataFrame)):
+        dim_name = None
+        if dims is not None:
+            dim_name = dims[0]
+        if dim_name is None and value.index.name is not None:
+            dim_name = value.index.name
+        if dim_name is not None:
+            coords[dim_name] = value.index
+
+    # If value is a df, we also interpret the columns as coords:
+    if isinstance(value, pd.DataFrame):
+        dim_name = None
+        if dims is not None:
+            dim_name = dims[1]
+        if dim_name is None and value.columns.name is not None:
+            dim_name = value.columns.name
+        if dim_name is not None:
+            coords[dim_name] = value.columns
+
+    if isinstance(value, np.ndarray) and dims is not None:
+        if len(dims) != value.ndim:
+            raise pm.exceptions.ShapeError(
+                "Invalid data shape. The rank of the dataset must match the " "length of `dims`.",
+                actual=value.shape,
+                expected=value.ndim,
+            )
+        for size, dim in zip(value.shape, dims):
+            coord = model.coords.get(dim, None)
+            if coord is None:
+                coords[dim] = pd.RangeIndex(size, name=dim)
+
+    return coords
+
+
+def ConstantData(
+    name: str,
+    value,
+    *,
+    dims: Optional[Sequence[str]] = None,
+    export_index_as_coords=False,
+    **kwargs,
+) -> TensorConstant:
+    """Alias for ``pm.Data(..., mutable=False)``.
+
+    Registers the ``value`` as a ``TensorConstant`` with the model.
+    """
+    return Data(
+        name,
+        value,
+        dims=dims,
+        export_index_as_coords=export_index_as_coords,
+        mutable=False,
+        **kwargs,
+    )
+
+
+def MutableData(
+    name: str,
+    value,
+    *,
+    dims: Optional[Sequence[str]] = None,
+    export_index_as_coords=False,
+    **kwargs,
+) -> SharedVariable:
+    """Alias for ``pm.Data(..., mutable=True)``.
+
+    Registers the ``value`` as a ``SharedVariable`` with the model.
+    """
+    return Data(
+        name,
+        value,
+        dims=dims,
+        export_index_as_coords=export_index_as_coords,
+        mutable=True,
+        **kwargs,
+    )
+
+
+def Data(
+    name: str,
+    value,
+    *,
+    dims: Optional[Sequence[str]] = None,
+    export_index_as_coords=False,
+    mutable: Optional[bool] = None,
+    **kwargs,
+) -> Union[SharedVariable, TensorConstant]:
+    """Data container that registers a data variable with the model.
+
+    Depending on the ``mutable`` setting (default: True), the variable
+    is registered as a ``SharedVariable``, enabling it to be altered
+    in value and shape, but NOT in dimensionality using ``pm.set_data()``.
 
     Parameters
     ----------
@@ -473,6 +571,11 @@ class Data:
         The name for this variable
     value: {List, np.ndarray, pd.Series, pd.Dataframe}
         A value to associate with this variable
+    mutable : bool, optional
+        Switches between creating a ``SharedVariable`` (``mutable=True``, default)
+        vs. creating a ``TensorConstant`` (``mutable=False``).
+        Consider using ``pm.ConstantData`` or ``pm.MutableData`` as less verbose
+        alternatives to ``pm.Data(..., mutable=...)``.
     dims: {str, tuple of str}, optional, default=None
         Dimension names of the random variables (as opposed to the shapes of these
         random variables). Use this when `value` is a pandas Series or DataFrame. The
@@ -495,7 +598,7 @@ class Data:
     >>> observed_data = [mu + np.random.randn(20) for mu in true_mu]
 
     >>> with pm.Model() as model:
-    ...     data = pm.Data('data', observed_data[0])
+    ...     data = pm.MutableData('data', observed_data[0])
     ...     mu = pm.Normal('mu', 0, 10)
     ...     pm.Normal('y', mu=mu, sigma=1, observed=data)
 
@@ -513,104 +616,58 @@ class Data:
     For more information, take a look at this example notebook
     https://docs.pymc.io/notebooks/data_container.html
     """
+    if isinstance(value, list):
+        value = np.array(value)
 
-    def __new__(
-        self,
-        name,
-        value,
-        *,
-        dims=None,
-        export_index_as_coords=False,
-        **kwargs,
-    ):
-        if isinstance(value, list):
-            value = np.array(value)
+    # Add data container to the named variables of the model.
+    try:
+        model = pm.Model.get_context()
+    except TypeError:
+        raise TypeError(
+            "No model on context stack, which is needed to instantiate a data container. "
+            "Add variable inside a 'with model:' block."
+        )
+    name = model.name_for(name)
 
-        # Add data container to the named variables of the model.
-        try:
-            model = pm.Model.get_context()
-        except TypeError:
-            raise TypeError(
-                "No model on context stack, which is needed to instantiate a data container. "
-                "Add variable inside a 'with model:' block."
+    # `pandas_to_array` takes care of parameter `value` and
+    # transforms it to something digestible for Aesara.
+    arr = pandas_to_array(value)
+
+    if mutable is None:
+        major, minor = (int(v) for v in pm.__version__.split(".")[:2])
+        mutable = major == 4 and minor < 1
+        if mutable:
+            warnings.warn(
+                "The `mutable` kwarg was not specified. Currently it defaults to `pm.Data(mutable=True)`,"
+                " which is equivalent to using `pm.MutableData()`."
+                " In v4.1.0 the default will change to `pm.Data(mutable=False)`, equivalent to `pm.ConstantData`."
+                " Set `pm.Data(..., mutable=False/True)`, or use `pm.ConstantData`/`pm.MutableData`.",
+                FutureWarning,
             )
-        name = model.name_for(name)
+    if mutable:
+        x = aesara.shared(arr, name, **kwargs)
+    else:
+        x = at.as_tensor_variable(arr, name, **kwargs)
 
-        # `pandas_to_array` takes care of parameter `value` and
-        # transforms it to something digestible for pymc
-        shared_object = aesara.shared(pandas_to_array(value), name, **kwargs)
+    if isinstance(dims, str):
+        dims = (dims,)
+    if not (dims is None or len(dims) == x.ndim):
+        raise pm.exceptions.ShapeError(
+            "Length of `dims` must match the dimensions of the dataset.",
+            actual=len(dims),
+            expected=x.ndim,
+        )
 
-        if isinstance(dims, str):
-            dims = (dims,)
-        if not (dims is None or len(dims) == shared_object.ndim):
-            raise pm.exceptions.ShapeError(
-                "Length of `dims` must match the dimensions of the dataset.",
-                actual=len(dims),
-                expected=shared_object.ndim,
-            )
+    coords = determine_coords(model, value, dims)
 
-        coords = self.set_coords(model, value, dims)
+    if export_index_as_coords:
+        model.add_coords(coords)
+    elif dims:
+        # Register new dimension lengths
+        for d, dname in enumerate(dims):
+            if not dname in model.dim_lengths:
+                model.add_coord(dname, values=None, length=x.shape[d])
 
-        if export_index_as_coords:
-            model.add_coords(coords)
-        elif dims:
-            # Register new dimension lengths
-            for d, dname in enumerate(dims):
-                if not dname in model.dim_lengths:
-                    model.add_coord(dname, values=None, length=shared_object.shape[d])
+    model.add_random_variable(x, dims=dims)
 
-        # To draw the node for this variable in the graphviz Digraph we need
-        # its shape.
-        # XXX: This needs to be refactored
-        # shared_object.dshape = tuple(shared_object.shape.eval())
-        # if dims is not None:
-        #     shape_dims = model.shape_from_dims(dims)
-        #     if shared_object.dshape != shape_dims:
-        #         raise pm.exceptions.ShapeError(
-        #             "Data shape does not match with specified `dims`.",
-        #             actual=shared_object.dshape,
-        #             expected=shape_dims,
-        #         )
-
-        model.add_random_variable(shared_object, dims=dims)
-
-        return shared_object
-
-    @staticmethod
-    def set_coords(model, value, dims=None) -> Dict[str, Sequence]:
-        coords = {}
-
-        # If value is a df or a series, we interpret the index as coords:
-        if isinstance(value, (pd.Series, pd.DataFrame)):
-            dim_name = None
-            if dims is not None:
-                dim_name = dims[0]
-            if dim_name is None and value.index.name is not None:
-                dim_name = value.index.name
-            if dim_name is not None:
-                coords[dim_name] = value.index
-
-        # If value is a df, we also interpret the columns as coords:
-        if isinstance(value, pd.DataFrame):
-            dim_name = None
-            if dims is not None:
-                dim_name = dims[1]
-            if dim_name is None and value.columns.name is not None:
-                dim_name = value.columns.name
-            if dim_name is not None:
-                coords[dim_name] = value.columns
-
-        if isinstance(value, np.ndarray) and dims is not None:
-            if len(dims) != value.ndim:
-                raise pm.exceptions.ShapeError(
-                    "Invalid data shape. The rank of the dataset must match the "
-                    "length of `dims`.",
-                    actual=value.shape,
-                    expected=value.ndim,
-                )
-            for size, dim in zip(value.shape, dims):
-                coord = model.coords.get(dim, None)
-                if coord is None:
-                    coords[dim] = pd.RangeIndex(size, name=dim)
-
-        return coords
+    return x

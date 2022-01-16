@@ -7,7 +7,7 @@ Instead update the vNext section until 4.0.0 is out.
 ⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠
 -->
 
-## PyMC vNext (4.0.0b1 → 4.0.0b2 → 4.0.0)
+## PyMC vNext (4.0.0b1 → 4.0.0b2 → 4.0.0b3 → 4.0.0)
 ⚠ The changes below are the delta between the upcoming releases `v3.11.5` →...→ `v4.0.0`.
 
 ### No-yet working features
@@ -31,17 +31,21 @@ All of the above apply to:
 
 - ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
-- `pm.Distribution(...).logp(x)` is now `pm.logp(pm.Distribution(...), x)`
-- `pm.Distribution(...).logcdf(x)` is now `pm.logcdf(pm.Distribution(...), x)`
-- `pm.Distribution(...).random()` is now `pm.Distribution(...).eval()`
-- `pm.draw_values(...)` and `pm.generate_samples(...)` were removed. The tensors can now be evaluated with `.eval()`.
+- `pm.Distribution(...).logp(x)` is now `pm.logp(pm.Distribution(...), x)`.
+- `pm.Distribution(...).logcdf(x)` is now `pm.logcdf(pm.Distribution(...), x)`.
+- `pm.Distribution(...).random(size=x)` is now `pm.draw(pm.Distribution(...), draws=x)`.
+- `pm.draw_values(...)` and `pm.generate_samples(...)` were removed.
 - `pm.fast_sample_posterior_predictive` was removed.
 - `pm.sample_prior_predictive`, `pm.sample_posterior_predictive` and `pm.sample_posterior_predictive_w` now return an `InferenceData` object by default, instead of a dictionary (see [#5073](https://github.com/pymc-devs/pymc/pull/5073)).
 - `pm.sample_prior_predictive` no longer returns transformed variable values by default. Pass them by name in `var_names` if you want to obtain these draws (see [4769](https://github.com/pymc-devs/pymc/pull/4769)).
 - `pm.sample(trace=...)` no longer accepts `MultiTrace` or `len(.) > 0` traces ([see 5019#](https://github.com/pymc-devs/pymc/pull/5019)).
+- `logpt`, `logpt_sum`, `logp_elemwiset` and `nojac` variations were removed. Use `Model.logpt(jacobian=True/False, sum=True/False)` instead.
+- `dlogp_nojact` and `d2logp_nojact` were removed. Use `Model.dlogpt` and `d2logpt` with `jacobian=False` instead.
+- `logp`, `dlogp`, and `d2logp` and `nojac` variations were removed. Use `Model.compile_logp`, `compile_dlgop` and `compile_d2logp` with `jacobian` keyword instead.
+- `model.makefn` is now called `Model.compile_fn`, and `model.fn` was removed.
+- Methods starting with `fast_*`, such as `Model.fast_logp`, were removed. Same applies to `PointFunc` classes
 - The GLM submodule was removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
 - `pm.Bound` interface no longer accepts a callable class as argument, instead it requires an instantiated distribution (created via the `.dist()` API) to be passed as an argument. In addition, Bound no longer returns a class instance but works as a normal PyMC distribution. Finally, it is no longer possible to do predictive random sampling from Bounded variables. Please, consult the new documentation for details on how to use Bounded variables (see [4815](https://github.com/pymc-devs/pymc/pull/4815)).
-- `pm.logpt(transformed=...)` kwarg was removed (816b5f).
 - `Model(model=...)` kwarg was removed
 - `Model(theano_config=...)` kwarg was removed
 - `Model.size` property was removed (use `Model.ndim` instead).
@@ -113,7 +117,14 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
   - Added partial dependence plots and individual conditional expectation plots [5091](https://github.com/pymc-devs/pymc3/pull/5091).
   - Modify how particle weights are computed. This improves accuracy of the modeled function (see [5177](https://github.com/pymc-devs/pymc3/pull/5177)).
   - Improve sampling, increase default number of particles [5229](https://github.com/pymc-devs/pymc3/pull/5229).
-- `pm.Data` now passes additional kwargs to `aesara.shared`. [#5098](https://github.com/pymc-devs/pymc/pull/5098)
+- The new `pm.find_constrained_prior` function can be used to find optimized prior parameters of a distribution under some
+  constraints (e.g lower and upper bound). See [#5231](https://github.com/pymc-devs/pymc/pull/5231).
+- New features for `pm.Data` containers:
+  - With `pm.Data(..., mutable=True/False)`, or by using `pm.MutableData` vs. `pm.ConstantData` one can now create `TensorConstant` data variables. They can be more performant and compatible in situations where a variable doesn't need to be changed via `pm.set_data()`. See [#5295](https://github.com/pymc-devs/pymc/pull/5295).
+  - New named dimensions can be introduced to the model via `pm.Data(..., dims=...)`. For mutable data variables (see above) the lengths of these dimensions are symbolic, so they can be re-sized via `pm.set_data()`.
+  - `pm.Data` now passes additional kwargs to `aesara.shared`/`at.as_tensor`. [#5098](https://github.com/pymc-devs/pymc/pull/5098).
+- Univariate censored distributions are now available via `pm.Censored`. [#5169](https://github.com/pymc-devs/pymc/pull/5169)
+- Nested models now inherit the parent model's coordinates. [#5344](https://github.com/pymc-devs/pymc/pull/5344)
 - ...
 
 

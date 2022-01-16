@@ -56,8 +56,6 @@ traceplot = alias_deprecation(az.plot_trace, alias="traceplot")
 compareplot = alias_deprecation(az.plot_compare, alias="compareplot")
 
 
-from pymc.plots.posteriorplot import plot_posterior_predictive_glm
-
 __all__ = tuple(az.plots.__all__) + (
     "autocorrplot",
     "compareplot",
@@ -67,5 +65,4 @@ __all__ = tuple(az.plots.__all__) + (
     "energyplot",
     "densityplot",
     "pairplot",
-    "plot_posterior_predictive_glm",
 )

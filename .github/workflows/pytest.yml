@@ -46,11 +46,9 @@ jobs:
             --ignore=pymc/tests/test_dist_math.py
             --ignore=pymc/tests/test_minibatches.py
             --ignore=pymc/tests/test_pickling.py
-            --ignore=pymc/tests/test_plots.py
             --ignore=pymc/tests/test_updates.py
             --ignore=pymc/tests/test_gp.py
             --ignore=pymc/tests/test_model.py
-            --ignore=pymc/tests/test_model_func.py
             --ignore=pymc/tests/test_ode.py
             --ignore=pymc/tests/test_posdef_sym.py
             --ignore=pymc/tests/test_quadpotential.py
@@ -69,7 +67,6 @@ jobs:
             pymc/tests/test_dist_math.py
             pymc/tests/test_minibatches.py
             pymc/tests/test_pickling.py
-            pymc/tests/test_plots.py
             pymc/tests/test_updates.py
             pymc/tests/test_transforms.py
 
@@ -85,7 +82,6 @@ jobs:
             pymc/tests/test_distributions_timeseries.py
             pymc/tests/test_gp.py
             pymc/tests/test_model.py
-            pymc/tests/test_model_func.py
             pymc/tests/test_model_graph.py
             pymc/tests/test_ode.py
             pymc/tests/test_posdef_sym.py
@@ -142,10 +138,10 @@ jobs:
           conda activate pymc-test-py37
           python -m pytest -vv --cov=pymc --cov-append --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v2
         with:
-          env_vars: OS,PYTHON
-          name: codecov-umbrella
+          env_vars: TEST_SUBSET
+          name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
   windows:
     strategy:
@@ -170,7 +166,6 @@ jobs:
             pymc/tests/test_ode.py
           - |
             pymc/tests/test_model.py
-            pymc/tests/test_model_func.py
             pymc/tests/test_modelcontext.py
             pymc/tests/test_model_graph.py
             pymc/tests/test_pickling.py
@@ -225,3 +220,9 @@ jobs:
         run: >-
           conda activate pymc-test-py38 &&
           python -m pytest -vv --cov=pymc --cov-append --cov-report=xml --cov-report term --durations=50 %TEST_SUBSET%
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          env_vars: TEST_SUBSET
+          name: ${{ matrix.os }} ${{ matrix.floatx }}
+          fail_ci_if_error: false

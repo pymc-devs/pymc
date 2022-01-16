@@ -16,11 +16,11 @@ from pymc.distributions.logprob import (  # isort:skip
     logcdf,
     logp,
     logp_transform,
-    logpt,
-    logpt_sum,
+    joint_logpt,
 )
 
 from pymc.distributions.bound import Bound
+from pymc.distributions.censored import Censored
 from pymc.distributions.continuous import (
     AsymmetricLaplace,
     Beta,
@@ -187,11 +187,11 @@ __all__ = [
     "Rice",
     "Moyal",
     "Simulator",
+    "Censored",
     "CAR",
     "PolyaGamma",
-    "logpt",
+    "joint_logpt",
     "logp",
     "logp_transform",
     "logcdf",
-    "logpt_sum",
 ]

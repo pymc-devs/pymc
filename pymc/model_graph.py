@@ -20,7 +20,7 @@ from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import walk
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.var import TensorVariable
+from aesara.tensor.var import TensorConstant, TensorVariable
 
 import pymc as pm
 
@@ -91,6 +91,7 @@ class ModelGraph:
 
     def get_parents(self, var: TensorVariable) -> Set[VarName]:
         """Get the named nodes that are direct inputs to the var"""
+        # TODO: Update these lines, variables no longer have a `logpt` attribute
         if hasattr(var, "transformed"):
             func = var.transformed.logpt
         elif hasattr(var, "logpt"):
@@ -133,10 +134,14 @@ class ModelGraph:
             shape = "octagon"
             style = "filled"
             label = f"{var_name}\n~\nPotential"
+        elif isinstance(v, TensorConstant):
+            shape = "box"
+            style = "rounded, filled"
+            label = f"{var_name}\n~\nConstantData"
         elif isinstance(v, SharedVariable):
             shape = "box"
             style = "rounded, filled"
-            label = f"{var_name}\n~\nData"
+            label = f"{var_name}\n~\nMutableData"
         elif v.owner and isinstance(v.owner.op, RandomVariable):
             shape = "ellipse"
             if hasattr(v.tag, "observations"):

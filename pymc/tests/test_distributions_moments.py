@@ -34,6 +34,7 @@ from pymc.distributions import (
     HyperGeometric,
     Interpolated,
     InverseGamma,
+    KroneckerNormal,
     Kumaraswamy,
     Laplace,
     Logistic,
@@ -63,7 +64,7 @@ from pymc.distributions import (
     ZeroInflatedPoisson,
 )
 from pymc.distributions.distribution import _get_moment, get_moment
-from pymc.distributions.logprob import logpt
+from pymc.distributions.logprob import joint_logpt
 from pymc.distributions.multivariate import MvNormal
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.initial_point import make_initial_point_fn
@@ -110,7 +111,6 @@ def test_all_distributions_have_moments():
         dist_module.discrete.DiscreteWeibull,
         dist_module.multivariate.CAR,
         dist_module.multivariate.DirichletMultinomial,
-        dist_module.multivariate.KroneckerNormal,
         dist_module.multivariate.Wishart,
     }
 
@@ -163,7 +163,7 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
     assert np.allclose(moment, expected)
 
     if check_finite_logp:
-        logp_moment = logpt(model["x"], at.constant(moment), transformed=False).eval()
+        logp_moment = joint_logpt(model["x"], at.constant(moment), transformed=False).eval()
         assert np.isfinite(logp_moment)
 
 
@@ -1316,3 +1316,32 @@ def test_simulator_moment(mu, sigma, size):
     cutoff = st.norm().ppf(1 - (alpha / 2))
 
     assert np.all(np.abs((result - expected_sample_mean) / expected_sample_mean_std) < cutoff)
+
+
+@pytest.mark.parametrize(
+    "mu, covs, size, expected",
+    [
+        (np.ones(1), [np.identity(1), np.identity(1)], None, np.ones(1)),
+        (np.ones(6), [np.identity(2), np.identity(3)], 5, np.ones((5, 6))),
+        (np.zeros(6), [np.identity(2), np.identity(3)], 6, np.zeros((6, 6))),
+        (np.zeros(3), [np.identity(3), np.identity(1)], 6, np.zeros((6, 3))),
+        (
+            np.array([1, 2, 3, 4]),
+            [
+                np.array([[1.0, 0.5], [0.5, 2]]),
+                np.array([[1.0, 0.4], [0.4, 2]]),
+            ],
+            2,
+            np.array(
+                [
+                    [1, 2, 3, 4],
+                    [1, 2, 3, 4],
+                ]
+            ),
+        ),
+    ],
+)
+def test_kronecker_normal_moments(mu, covs, size, expected):
+    with Model() as model:
+        KroneckerNormal("x", mu=mu, covs=covs, size=size)
+    assert_moment_is_expected(model, expected)

@@ -1810,7 +1810,7 @@ def test_mixture_random_shape():
     assert rand3.shape == (100, 20)
 
     with m:
-        ppc = pm.sample_posterior_predictive([m.initial_point], samples=200)
+        ppc = pm.sample_posterior_predictive([m.recompute_initial_point()], samples=200)
     assert ppc["like0"].shape == (200, 20)
     assert ppc["like1"].shape == (200, 20)
     assert ppc["like2"].shape == (200, 20)
@@ -1875,9 +1875,8 @@ class TestDensityDist:
             )
             idata = pm.sample(tune=50, draws=100, cores=1, step=pm.Metropolis())
 
-        samples = 500
         with pytest.raises(NotImplementedError):
-            pm.sample_posterior_predictive(idata, samples=samples, model=model, size=100)
+            pm.sample_posterior_predictive(idata, model=model)
 
     @pytest.mark.parametrize("size", [(), (3,), (3, 2)], ids=str)
     def test_density_dist_with_random_multivariate(self, size):

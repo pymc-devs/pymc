@@ -906,8 +906,8 @@ class WaldRV(RandomVariable):
     _print_name = ("Wald", "\\operatorname{Wald}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, lam, alpha, size):
-        return rng.wald(mu, lam, size=size) + alpha
+    def rng_fn(cls, rng, mu, lam, alpha, size) -> np.ndarray:
+        return np.asarray(rng.wald(mu, lam, size=size) + alpha)
 
 
 wald = WaldRV()
@@ -1137,8 +1137,8 @@ class Wald(PositiveContinuous):
 
 class BetaClippedRV(BetaRV):
     @classmethod
-    def rng_fn(cls, rng, alpha, beta, size):
-        return clipped_beta_rvs(alpha, beta, size=size, random_state=rng)
+    def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
+        return np.asarray(clipped_beta_rvs(alpha, beta, size=size, random_state=rng))
 
 
 beta = BetaClippedRV()
@@ -1288,9 +1288,9 @@ class KumaraswamyRV(RandomVariable):
     _print_name = ("Kumaraswamy", "\\operatorname{Kumaraswamy}")
 
     @classmethod
-    def rng_fn(cls, rng, a, b, size):
+    def rng_fn(cls, rng, a, b, size) -> np.ndarray:
         u = rng.uniform(size=size)
-        return (1 - (1 - u) ** (1 / b)) ** (1 / a)
+        return np.asarray((1 - (1 - u) ** (1 / b)) ** (1 / a))
 
 
 kumaraswamy = KumaraswamyRV()
@@ -1449,6 +1449,11 @@ class Exponential(PositiveContinuous):
     Variance  :math:`\dfrac{1}{\lambda^2}`
     ========  ============================
 
+    Notes
+    -----
+    Logp calculation is defined in aeppl.logprob
+    https://github.com/aesara-devs/aeppl/blob/main/aeppl/logprob.py
+
     Parameters
     ----------
     lam: float
@@ -1596,13 +1601,13 @@ class AsymmetricLaplaceRV(RandomVariable):
     _print_name = ("AsymmetricLaplace", "\\operatorname{AsymmetricLaplace}")
 
     @classmethod
-    def rng_fn(cls, rng, b, kappa, mu, size=None):
+    def rng_fn(cls, rng, b, kappa, mu, size=None) -> np.ndarray:
         u = rng.uniform(size=size)
         switch = kappa ** 2 / (1 + kappa ** 2)
         non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
         positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
         draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
-        return draws
+        return np.asarray(draws)
 
 
 asymmetriclaplace = AsymmetricLaplaceRV()
@@ -1811,8 +1816,8 @@ class StudentTRV(RandomVariable):
     _print_name = ("StudentT", "\\operatorname{StudentT}")
 
     @classmethod
-    def rng_fn(cls, rng, nu, mu, sigma, size=None):
-        return stats.t.rvs(nu, mu, sigma, size=size, random_state=rng)
+    def rng_fn(cls, rng, nu, mu, sigma, size=None) -> np.ndarray:
+        return np.asarray(stats.t.rvs(nu, mu, sigma, size=size, random_state=rng))
 
 
 studentt = StudentTRV()
@@ -2538,8 +2543,8 @@ class WeibullBetaRV(WeibullRV):
     ndims_params = [0, 0]
 
     @classmethod
-    def rng_fn(cls, rng, alpha, beta, size):
-        return beta * rng.weibull(alpha, size=size)
+    def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
+        return np.asarray(beta * rng.weibull(alpha, size=size))
 
 
 weibull_beta = WeibullBetaRV()
@@ -2642,8 +2647,8 @@ class HalfStudentTRV(RandomVariable):
     _print_name = ("HalfStudentT", "\\operatorname{HalfStudentT}")
 
     @classmethod
-    def rng_fn(cls, rng, nu, sigma, size=None):
-        return np.abs(stats.t.rvs(nu, sigma, size=size, random_state=rng))
+    def rng_fn(cls, rng, nu, sigma, size=None) -> np.ndarray:
+        return np.asarray(np.abs(stats.t.rvs(nu, sigma, size=size, random_state=rng)))
 
 
 halfstudentt = HalfStudentTRV()
@@ -2770,8 +2775,8 @@ class ExGaussianRV(RandomVariable):
     _print_name = ("ExGaussian", "\\operatorname{ExGaussian}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, sigma, nu, size=None):
-        return rng.normal(mu, sigma, size=size) + rng.exponential(scale=nu, size=size)
+    def rng_fn(cls, rng, mu, sigma, nu, size=None) -> np.ndarray:
+        return np.asarray(rng.normal(mu, sigma, size=size) + rng.exponential(scale=nu, size=size))
 
 
 exgaussian = ExGaussianRV()
@@ -3007,8 +3012,10 @@ class SkewNormalRV(RandomVariable):
     _print_name = ("SkewNormal", "\\operatorname{SkewNormal}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, sigma, alpha, size=None):
-        return stats.skewnorm.rvs(a=alpha, loc=mu, scale=sigma, size=size, random_state=rng)
+    def rng_fn(cls, rng, mu, sigma, alpha, size=None) -> np.ndarray:
+        return np.asarray(
+            stats.skewnorm.rvs(a=alpha, loc=mu, scale=sigma, size=size, random_state=rng)
+        )
 
 
 skewnormal = SkewNormalRV()
@@ -3333,8 +3340,8 @@ class RiceRV(RandomVariable):
     _print_name = ("Rice", "\\operatorname{Rice}")
 
     @classmethod
-    def rng_fn(cls, rng, b, sigma, size=None):
-        return stats.rice.rvs(b=b, scale=sigma, size=size, random_state=rng)
+    def rng_fn(cls, rng, b, sigma, size=None) -> np.ndarray:
+        return np.asarray(stats.rice.rvs(b=b, scale=sigma, size=size, random_state=rng))
 
 
 rice = RiceRV()
@@ -3560,8 +3567,8 @@ class LogitNormalRV(RandomVariable):
     _print_name = ("logitNormal", "\\operatorname{logitNormal}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, sigma, size=None):
-        return expit(stats.norm.rvs(loc=mu, scale=sigma, size=size, random_state=rng))
+    def rng_fn(cls, rng, mu, sigma, size=None) -> np.ndarray:
+        return np.asarray(expit(stats.norm.rvs(loc=mu, scale=sigma, size=size, random_state=rng)))
 
 
 logit_normal = LogitNormalRV()
@@ -3684,9 +3691,9 @@ class InterpolatedRV(RandomVariable):
     _print_name = ("Interpolated", "\\operatorname{Interpolated}")
 
     @classmethod
-    def rng_fn(cls, rng, x, pdf, cdf, size=None):
+    def rng_fn(cls, rng, x, pdf, cdf, size=None) -> np.ndarray:
         p = rng.uniform(size=size)
-        return _interpolated_argcdf(p, pdf, cdf, x)
+        return np.asarray(_interpolated_argcdf(p, pdf, cdf, x))
 
 
 interpolated = InterpolatedRV()
@@ -3821,8 +3828,8 @@ class MoyalRV(RandomVariable):
     _print_name = ("Moyal", "\\operatorname{Moyal}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, sigma, size=None):
-        return stats.moyal.rvs(mu, sigma, size=size, random_state=rng)
+    def rng_fn(cls, rng, mu, sigma, size=None) -> np.ndarray:
+        return np.asarray(stats.moyal.rvs(mu, sigma, size=size, random_state=rng))
 
 
 moyal = MoyalRV()
@@ -3948,7 +3955,7 @@ class PolyaGammaRV(RandomVariable):
         return super().__call__(h, z, size=size, **kwargs)
 
     @classmethod
-    def rng_fn(cls, rng, h, z, size=None):
+    def rng_fn(cls, rng, h, z, size=None) -> np.ndarray:
         """
         Generate a random sample from the distribution with the given parameters
 
@@ -3976,7 +3983,9 @@ class PolyaGammaRV(RandomVariable):
         """
         # handle the kind of rng passed to the sampler
         bg = rng._bit_generator if isinstance(rng, np.random.RandomState) else rng
-        return random_polyagamma(h, z, size=size, random_state=bg).astype(aesara.config.floatX)
+        return np.asarray(
+            random_polyagamma(h, z, size=size, random_state=bg).astype(aesara.config.floatX)
+        )
 
 
 polyagamma = PolyaGammaRV()
