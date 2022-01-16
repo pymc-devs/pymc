@@ -947,6 +947,7 @@ def test_replacements(binomial_model_inference):
     assert not any(
         isinstance(n.owner.op, aesara.tensor.random.basic.BetaRV)
         for n in aesara.graph.ancestors([p_s])
+        if n.owner
     ), "p should be replaced"
     if aesara.config.compute_test_value != "off":
         assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
