@@ -289,6 +289,8 @@ class GaussianRandomWalk(distribution.Continuous):
         """
         Calculate log-probability of Gaussian Random Walk distribution at specified value.
 
+
+
         Parameters
         ----------
         x : numeric
@@ -307,17 +309,15 @@ class GaussianRandomWalk(distribution.Continuous):
             )
             return logp
 
-        # Create logp calculation graph the inital time point
-        init_logp = normal_logp(value[0] - init, mu, sigma)
+        # Calculate initialization logp
+        init_logp = normal_logp(at.expand_dims(value[0], 0), init, sigma)
 
-        # Create logp calculation graph for innovations
-        stationary_vals = at.diff(value)
-        innov_logp = normal_logp(stationary_vals, mu, sigma)
-
-        # Return both calculation logps in a vector
-        total_logp = at.concatenate([init_logp, innov_logp])
-
+        # Make time series stationary around the mean value
+        stationary_series = at.diff(value)
+        series_logp = normal_logp(stationary_series, mu, sigma)
+        total_logp = at.concatenate([init_logp, series_logp])
         total_logp = check_parameters(total_logp, sigma > 0, msg="sigma > 0")
+
         return total_logp
 
 

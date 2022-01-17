@@ -44,8 +44,8 @@ def test_grw_rv_op():
 
 
 def test_grw_log():
-    vals = [1, 2]
-    mu = 0
+    vals = [0, 1, 2]
+    mu = 1
     sd = 1
     init = 0
 
@@ -58,7 +58,21 @@ def test_grw_log():
 
     logp = pm.logp(grw, vals)
 
-    assert logp
+    logp_vals = logp.eval()
+
+    # Calculate logp from scipy
+    from scipy import stats
+
+    # Calculate logp in explicit loop for testing obviousness
+    init_val = vals[0]
+    init_logp = stats.norm(0, 1).logpdf(init_val)
+
+    logp_reference = [init_logp]
+    for x_minus_one_val, x_val in zip(vals, vals[1:]):
+        logp_point = stats.norm(x_minus_one_val + mu, sd).logpdf(x_val)
+        logp_reference.append(logp_point)
+
+    np.testing.assert_almost_equal(logp_vals, logp_reference)
 
 
 @pytest.mark.xfail(reason="Timeseries not refactored")
