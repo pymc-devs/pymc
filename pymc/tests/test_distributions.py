@@ -2138,7 +2138,7 @@ class TestMatchesScipy:
             StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
         pt = {"sbw": value}
         assert_almost_equal(
-            model.fastlogp(pt),
+            model.compile_logp()(pt),
             logp,
             decimal=select_by_precision(float64=6, float32=2),
             err_msg=str(pt),
