@@ -293,9 +293,9 @@ class GaussianRandomWalk(distribution.Continuous):
 
         # Make time series stationary around the mean value
         stationary_series = at.diff(value)
-        series_logp = pm.logp(stationary_series, mu, sigma)
+        series_logp = pm.logp(Normal.dist(mu, sigma), stationary_series)
 
-        total_logp = at.concatenate([init_logp, series_logp])
+        total_logp = at.concatenate([at.expand_dims(init_logp, 0), series_logp])
         total_logp = check_parameters(total_logp, sigma > 0, msg="sigma > 0")
 
         return total_logp
