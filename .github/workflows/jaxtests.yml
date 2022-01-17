@@ -4,6 +4,14 @@ on:
   pull_request:
   push:
     branches: [main]
+    paths:
+      - ".github/workflows/*"
+      - "pymc/**"
+      - "setup.py"
+      - "pyproject.toml"
+      - "buildosx"
+      - "conda-envs/**"
+      - "codecov.yml"
 
 jobs:
   pytest:
