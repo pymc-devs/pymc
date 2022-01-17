@@ -20,6 +20,8 @@ import numpy as np
 from aesara import scan
 from aesara.tensor.random.basic import RandomVariable
 
+import pymc as pm
+
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
@@ -286,21 +288,13 @@ class GaussianRandomWalk(distribution.Continuous):
         TensorVariable
         """
 
-        # TODO: Remove this and use pm.Normal.logp
-        def normal_logp(value, mu, sigma):
-            logp = (
-                -0.5 * at.pow((value - mu) / sigma, 2)
-                - at.log(at.sqrt(2.0 * np.pi))
-                - at.log(sigma)
-            )
-            return logp
-
         # Calculate initialization logp
-        init_logp = normal_logp(at.expand_dims(value[0], 0), init, sigma)
+        init_logp = pm.logp(Normal.dist(init, sigma), 0)
 
         # Make time series stationary around the mean value
         stationary_series = at.diff(value)
-        series_logp = normal_logp(stationary_series, mu, sigma)
+        series_logp = pm.logp(stationary_series, mu, sigma)
+
         total_logp = at.concatenate([init_logp, series_logp])
         total_logp = check_parameters(total_logp, sigma > 0, msg="sigma > 0")
 
