@@ -9,8 +9,9 @@ python:
      path: .
 
 conda:
-  environment: conda-envs/environment-dev-py38.yml
+  environment: "conda-envs/environment-dev-py38.yml"
 
 build:
+  os: "ubuntu-20.04"
   tools:
-    python: mambaforge-4.10
+    python: "mambaforge-4.10"
