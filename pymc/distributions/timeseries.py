@@ -56,7 +56,10 @@ class GaussianRandomWalkRV(RandomVariable):
         init: float,
         size: int,
     ) -> np.ndarray:
-        """Gaussian Random Walk randon function
+        """Gaussian Random Walk generator.
+
+        The init value is drawn from the Normal distribution with the same sigma as the
+        innovations.
 
         Parameters
         ----------
@@ -79,7 +82,7 @@ class GaussianRandomWalkRV(RandomVariable):
         -------
         np.ndarray
         """
-        return init + np.cumsum(rng.normal(loc=mu, scale=sigma, size=size))
+        return np.cumsum([rng.normal(init, sigma), rng.normal(loc=mu, scale=sigma, size=size)])
 
 
 gaussianrandomwalk = GaussianRandomWalkRV()
@@ -231,26 +234,17 @@ class AR(distribution.Continuous):
 class GaussianRandomWalk(distribution.Continuous):
     r"""Random Walk with Normal innovations
 
-    Note that this is mainly a user-friendly wrapper to enable an easier specification
-    of GRW. You are not restricted to use only Normal innovations but can use any
-    distribution: just use `aesara.tensor.cumsum()` to create the random walk behavior.
+
+    Note init is currently drawn from a normal distribution with the same sigma as the innovations
 
     Parameters
     ----------
     mu : tensor_like of float, default 0
         innovation drift, defaults to 0.0
-        For vector valued `mu`, first dimension must match shape of the random walk, and
-        the first element will be discarded (since there is no innovation in the first timestep)
-    sigma : tensor_like of float, optional
-        `sigma` > 0, innovation standard deviation (only required if `tau` is not specified)
-        For vector valued `sigma`, first dimension must match shape of the random walk, and
-        the first element will be discarded (since there is no innovation in the first timestep)
-    tau : tensor_like of float, optional
-        `tau` > 0, innovation precision (only required if `sigma` is not specified)
-        For vector valued `tau`, first dimension must match shape of the random walk, and
-        the first element will be discarded (since there is no innovation in the first timestep)
-    init : pymc.Distribution, optional
-        distribution for initial value (Defaults to Flat())
+    sigma: tensor
+        sigma > 0, innovation standard deviation, defaults to 0.0
+    init: float
+        Mean value of initialization, defaults to 0.0
     """
 
     rv_op = gaussianrandomwalk
@@ -258,27 +252,15 @@ class GaussianRandomWalk(distribution.Continuous):
     @classmethod
     def dist(
         cls,
-        mu: Optional[Union[np.ndarray, float]] = None,
-        sigma: Optional[Union[np.ndarray, float]] = None,
-        init: float = None,
+        mu: Optional[Union[np.ndarray, float]] = 0.0,
+        sigma: Optional[Union[np.ndarray, float]] = 1.0,
+        init: float = 0.0,
         size: int = None,
         *args,
         **kwargs
     ) -> RandomVariable:
 
-        # Still working on this. The RV op is my current blocker
         return super().dist([mu, sigma, init], **kwargs)
-
-    # TODO: Add typehints
-    # def get_moment(
-    #     self,
-    #     size: Optional[Union[np.ndarray, float]],
-    #     mu: Optional[Union[np.ndarray, float]],
-    #     sigma: Optional[Union[np.ndarray, float]],
-    #     init: Optional[Union[np.ndarray, float]],
-    # ):
-    #     moment = mu * size + init
-    #     return moment
 
     def logp(
         value: at.Variable,
@@ -289,18 +271,19 @@ class GaussianRandomWalk(distribution.Continuous):
         """
         Calculate log-probability of Gaussian Random Walk distribution at specified value.
 
-
-
         Parameters
         ----------
-        x : numeric
-            Value for which log-probability is calculated.
+        value: at.Variable,
+        mu: at.Variable,
+        sigma: at.Variable,
+        init: at.Variable,
 
         Returns
         -------
         TensorVariable
         """
 
+        # TODO: Remove this and use pm.Normal.logp
         def normal_logp(value, mu, sigma):
             logp = (
                 -0.5 * at.pow((value - mu) / sigma, 2)
