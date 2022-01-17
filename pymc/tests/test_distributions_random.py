@@ -1810,7 +1810,7 @@ def test_mixture_random_shape():
     assert rand3.shape == (100, 20)
 
     with m:
-        ppc = pm.sample_posterior_predictive([m.recompute_initial_point()], samples=200)
+        ppc = pm.sample_posterior_predictive([m.compute_initial_point()], samples=200)
     assert ppc["like0"].shape == (200, 20)
     assert ppc["like1"].shape == (200, 20)
     assert ppc["like2"].shape == (200, 20)

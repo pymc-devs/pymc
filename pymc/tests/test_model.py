@@ -287,7 +287,7 @@ class TestValueGradFunction(unittest.TestCase):
             step = pm.NUTS()
 
         func = step._logp_dlogp_func
-        initial_point = m.recompute_initial_point()
+        initial_point = m.compute_initial_point()
         func.set_extra_values(initial_point)
         q = func.dict_to_array(initial_point)
         logp, dlogp = func(q)
@@ -517,7 +517,7 @@ def test_initial_point():
     assert a in model.initial_values
     assert x in model.initial_values
     assert model.initial_values[b] == b_initval
-    assert model.recompute_initial_point(0)["b_interval__"] == b_initval_trans
+    assert model.compute_initial_point(0)["b_interval__"] == b_initval_trans
     assert model.initial_values[y] == y_initval
 
 

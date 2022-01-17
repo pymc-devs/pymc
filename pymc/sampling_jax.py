@@ -170,7 +170,7 @@ def sample_numpyro_nuts(
     print("Compiling...", file=sys.stdout)
 
     rv_names = [rv.name for rv in model.value_vars]
-    initial_point = model.recompute_initial_point()
+    initial_point = model.compute_initial_point()
     init_state = [initial_point[rv_name] for rv_name in rv_names]
     init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
 
