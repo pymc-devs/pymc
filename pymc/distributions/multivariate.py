@@ -2237,6 +2237,36 @@ stickbreakingweights = StickBreakingWeightsRV()
 
 
 class StickBreakingWeights(Continuous):
+    r"""
+    Likelihood of truncated stick-breaking weights. The weights are generated
+
+    .. math:
+
+
+        f(\mathbf{x}|\alpha, K) = 
+
+    ========  ===============================================
+    Support   :math:`x_i \in (0, 1)` for :math:`i \in \{1, \ldots, K+1\}`
+              such that :math:`\sum x_i = 1`
+    Mean      :math:`\dfrac{a_i}{\sum a_i}`
+    Variance  :math:`\dfrac{a_i - \sum a_0}{a_0^2 (a_0 + 1)}`
+              where :math:`a_0 = \sum a_i`
+    ========  ===============================================
+
+    Parameters
+    ----------
+    alpha: float
+        Concentration parameters (alpha > 0).
+    K: int
+        The number of "sticks" to break off from an initial one-unit stick. The length
+        of categories is K + 1, where the last weight is one minus the sum of all the first sticks.
+
+    References
+    ----------
+    .. [1] Ishwaran James
+
+    .. [2] Peter Mueller
+    """
     rv_op = stickbreakingweights
 
     def __new__(cls, name, *args, **kwargs):
@@ -2277,6 +2307,19 @@ class StickBreakingWeights(Continuous):
         return moment
 
     def logp(value, alpha, K):
+        """
+        Calculate log-probability of the distribution induced from the stick-breaking process
+        at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         logp = -at.sum(
             at.log(
                 at.cumsum(
