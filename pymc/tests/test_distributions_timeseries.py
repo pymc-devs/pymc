@@ -41,6 +41,7 @@ def test_grw_rv_op():
     size = 4
 
     grw = gaussianrandomwalk(mu, sd, init, size=size).eval()
+
     np.testing.assert_almost_equal(grw[-1], 13, decimal=4)
     assert grw.shape[0] == size
 

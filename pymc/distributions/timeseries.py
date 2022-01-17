@@ -61,6 +61,10 @@ class GaussianRandomWalkRV(RandomVariable):
         The init value is drawn from the Normal distribution with the same sigma as the
         innovations.
 
+        Notes
+        -----
+        Currently does not support custom init distribution
+
         Parameters
         ----------
         rng: np.random.RandomState
@@ -72,17 +76,14 @@ class GaussianRandomWalkRV(RandomVariable):
         init: float
             Initialization value for GaussianRandomWalk
         size: int
-            Length of random walk
-
-        Notes
-        -----
-        Currently does not support init distribution
+            Length of random walk, must be greater than 1. Returned array will be of size+1 to
+            account as first value is initial value
 
         Returns
         -------
         np.ndarray
         """
-        return np.cumsum([rng.normal(init, sigma), rng.normal(loc=mu, scale=sigma, size=size)])
+        return rng.normal(init, sigma) + np.cumsum(rng.normal(loc=mu, scale=sigma, size=size))
 
 
 gaussianrandomwalk = GaussianRandomWalkRV()
@@ -235,7 +236,9 @@ class GaussianRandomWalk(distribution.Continuous):
     r"""Random Walk with Normal innovations
 
 
-    Note init is currently drawn from a normal distribution with the same sigma as the innovations
+    Notes
+    -----
+    init is currently drawn from a Normal distribution with the same sigma as the innovations
 
     Parameters
     ----------
