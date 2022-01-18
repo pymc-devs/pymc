@@ -2188,9 +2188,6 @@ class StickBreakingWeightsRV(RandomVariable):
         alpha = at.as_tensor_variable(alpha)
         K = at.as_tensor_variable(intX(K))
 
-        if K.eval() < 0:
-            raise ValueError("K needs to be positive.")
-
         if alpha.ndim > 0:
             raise ValueError("The concentration parameter needs to be a scalar.")
 
@@ -2205,6 +2202,9 @@ class StickBreakingWeightsRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, alpha, K, size):
+        if K < 0:
+            raise ValueError("K needs to be positive.")
+
         if size is None:
             size = (K,)
         elif isinstance(size, int):
@@ -2352,5 +2352,5 @@ class StickBreakingWeights(Continuous):
             logp,
             alpha > 0,
             K > 0,
-            msg="alpha > 0, K > 0, 0 <= value <= 1, sum(value) == 1",
+            msg="alpha > 0, K > 0",
         )

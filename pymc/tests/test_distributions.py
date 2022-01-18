@@ -2127,18 +2127,24 @@ class TestMatchesScipy:
     @pytest.mark.parametrize(
         "value,alpha,K,logp",
         [
-            (np.array([5, 4, 3, 2, 1]) / 15, 0.5, 4, 2.2057773112876893),
-            (np.tile(1, 13) / 13, 2, 12, 13.286898065112881),
-            (np.array([0.001] * 10 + [0.99]), 0.1, 10, -20.66907735582068),
-            (np.append(0.5 ** np.arange(1, 20), 0.5 ** 20), 5, 19, 92.59518981534681),
+            (np.array([5, 4, 3, 2, 1]) / 15, 0.5, 4, 1.5126301307277439),
+            (np.tile(1, 13) / 13, 2, 12, 13.980045245672827),
+            (np.array([0.001] * 10 + [0.99]), 0.1, 10, -22.971662448814723),
+            (np.append(0.5 ** np.arange(1, 20), 0.5 ** 20), 5, 19, 94.20462772778092),
+            (
+                (np.array([[7, 5, 3, 2], [19, 17, 13, 11]]) / np.array([[17], [60]])),
+                2.5,
+                3,
+                np.array([1.29317672, 1.50126157]),
+            ),
         ],
     )
-    def test_stickbreakingweights(self, value, alpha, K, logp):
+    def test_stickbreakingweights_logp(self, value, alpha, K, logp):
         with Model() as model:
-            StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
+            sbw = StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
         pt = {"sbw": value}
         assert_almost_equal(
-            model.compile_logp()(pt),
+            pm.logp(sbw, value).eval(),
             logp,
             decimal=select_by_precision(float64=6, float32=2),
             err_msg=str(pt),
