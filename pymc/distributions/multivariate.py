@@ -2241,7 +2241,8 @@ class StickBreakingWeights(Continuous):
     r"""
     Likelihood of truncated stick-breaking weights. The weights are generated from a
     stick-breaking proceduce where :math:`x_k = v_k \prod_{\ell < k} (1 - v_\ell)` for
-    :math:`k \in \{1, \ldots, K\}` and :math
+    :math:`k \in \{1, \ldots, K\}` and :math:`x_K = \prod_{\ell = 1}^{K} (1 - v_\ell) = 1 - \sum_{\ell=1}^K x_\ell`
+    with `v_k \stackrel{\text{i.i.d.}}{\sim} \text{Beta}(1, \alpha)`.
 
     .. math:
 
@@ -2252,7 +2253,7 @@ class StickBreakingWeights(Continuous):
     Support   :math:`x_k \in (0, 1)` for :math:`k \in \{1, \ldots, K+1\}`
               such that :math:`\sum x_k = 1`
     Mean      :math:`\mathbb{E}[x_k] = \dfrac{1}{1 + \alpha}\left(\dfrac{\alpha}{1 + \alpha}\right)^{k - 1}`
-              for :math:`k \in \{1, \ldots, K\}` and `\mathbb{E}[x_{K+1}] = \left(\dfrac{\alpha}{1 + \alpha}\right)^{K}`
+              for :math:`k \in \{1, \ldots, K\}` and :math:`\mathbb{E}[x_{K+1}] = \left(\dfrac{\alpha}{1 + \alpha}\right)^{K}`
     ========  ===============================================
 
     Parameters
@@ -2260,8 +2261,8 @@ class StickBreakingWeights(Continuous):
     alpha: float
         Concentration parameter (alpha > 0).
     K: int
-        The number of "sticks" to break off from an initial one-unit stick. The length
-        of categories is K + 1, where the last weight is one minus the sum of all the first sticks.
+        The number of "sticks" to break off from an initial one-unit stick. The length of the weight 
+        vector is K + 1, where the last weight is one minus the sum of all the first sticks.
 
     References
     ----------
