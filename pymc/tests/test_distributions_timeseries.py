@@ -17,6 +17,8 @@ import pytest
 
 from scipy import stats
 
+import pymc as pm
+
 from pymc.aesaraf import floatX
 from pymc.distributions.continuous import Flat, Normal
 from pymc.distributions.timeseries import (
@@ -24,13 +26,12 @@ from pymc.distributions.timeseries import (
     AR1,
     GARCH11,
     EulerMaruyama,
+    GaussianRandomWalk,
     gaussianrandomwalk,
 )
 from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
-
-# pytestmark = pytest.mark.usefixtures("seeded_test")
 
 
 def test_grw_rv_op():
@@ -46,15 +47,11 @@ def test_grw_rv_op():
     assert grw.shape[0] == size
 
 
-def test_grw_log():
+def test_grw_logp():
     vals = [0, 1, 2]
     mu = 1
     sigma = 1
     init = 0
-
-    import pymc as pm
-
-    from pymc.distributions.timeseries import GaussianRandomWalk
 
     with pm.Model():
         grw = GaussianRandomWalk("grw", mu, sigma, init, size=2)
