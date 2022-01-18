@@ -2242,7 +2242,7 @@ class StickBreakingWeights(Continuous):
     Likelihood of truncated stick-breaking weights. The weights are generated from a
     stick-breaking proceduce where :math:`x_k = v_k \prod_{\ell < k} (1 - v_\ell)` for
     :math:`k \in \{1, \ldots, K\}` and :math:`x_K = \prod_{\ell = 1}^{K} (1 - v_\ell) = 1 - \sum_{\ell=1}^K x_\ell`
-    with `v_k \stackrel{\text{i.i.d.}}{\sim} \text{Beta}(1, \alpha)`.
+    with :math:`v_k \stackrel{\text{i.i.d.}}{\sim} \text{Beta}(1, \alpha)`.
 
     .. math:
 
