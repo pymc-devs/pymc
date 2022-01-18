@@ -24,7 +24,6 @@ import pymc as pm
 
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
-from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.shape_utils import to_tuple
 
 __all__ = [
@@ -273,8 +272,7 @@ class GaussianRandomWalk(distribution.Continuous):
         sigma: at.Variable,
         init: at.Variable,
     ) -> at.TensorVariable:
-        """
-        Calculate log-probability of Gaussian Random Walk distribution at specified value.
+        """Calculate log-probability of Gaussian Random Walk distribution at specified value.
 
         Parameters
         ----------
@@ -296,7 +294,6 @@ class GaussianRandomWalk(distribution.Continuous):
         series_logp = pm.logp(Normal.dist(mu, sigma), stationary_series)
 
         total_logp = at.concatenate([at.expand_dims(init_logp, 0), series_logp])
-        total_logp = check_parameters(total_logp, sigma > 0, msg="sigma > 0")
 
         return total_logp
 
