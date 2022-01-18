@@ -1749,7 +1749,7 @@ class MatrixNormal(Continuous):
         dist_shape = (rowchol_cov.shape[0], colchol_cov.shape[0])
 
         # Broadcasting mu
-        mu = at.extra_ops.broadcast_to(a=mu, shape=dist_shape)
+        mu = at.extra_ops.broadcast_to(mu, shape=dist_shape)
 
         mu = at.as_tensor_variable(floatX(mu))
         # mean = median = mode = mu
