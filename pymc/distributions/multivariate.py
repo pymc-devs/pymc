@@ -2191,6 +2191,9 @@ class StickBreakingWeightsRV(RandomVariable):
         if alpha.ndim > 0:
             raise ValueError("The concentration parameter needs to be a scalar.")
 
+        if K.ndim > 0:
+            raise ValueError("K must be a scalar.")
+
         return super().make_node(rng, size, dtype, alpha, K)
 
     def _infer_shape(self, size, dist_params, param_shapes=None):
@@ -2278,12 +2281,6 @@ class StickBreakingWeights(Continuous):
     def dist(cls, alpha, K, *args, **kwargs):
         alpha = at.as_tensor_variable(floatX(alpha))
         K = at.as_tensor_variable(intX(K))
-
-        if alpha.ndim > 0:
-            raise ValueError("alpha must be a scalar.")
-
-        if K.ndim > 0:
-            raise ValueError("K must be a scalar.")
 
         assert_negative_support(alpha, "alpha", "StickBreakingWeights")
         assert_negative_support(K, "K", "StickBreakingWeights")
