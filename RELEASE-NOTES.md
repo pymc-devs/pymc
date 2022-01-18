@@ -127,6 +127,13 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - Nested models now inherit the parent model's coordinates. [#5344](https://github.com/pymc-devs/pymc/pull/5344)
 - ...
 
+## Documentation
+- Switched to the [pydata-sphinx-theme](https://pydata-sphinx-theme.readthedocs.io/en/latest/)
+- Updated our documentation tooling to use [MyST](), [MyST-NB](), sphinx-design, notfound.extension,
+  sphinx-copybutton and sphinx-remove-toctrees.
+- Separated the builds of the example notebooks and of the versioned docs.
+- Restructured the documentation to facilitate learning paths
+- Updated API docs to document objects at the path users should use to import them
 
 ### Internal changes
 - ⚠ PyMC now requires Scipy version `>= 1.4.1` (see [4857](https://github.com/pymc-devs/pymc/pull/4857)).
