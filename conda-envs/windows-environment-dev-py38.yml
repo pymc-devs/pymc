@@ -33,3 +33,4 @@ dependencies:
 - watermark
 - pip:
   - sphinx-design
+  - sphinx-remove-toctrees

@@ -29,3 +29,4 @@ dependencies:
 - typing-extensions
 - pip:
   - sphinx-design
+  - sphinx-remove-toctrees

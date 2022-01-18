@@ -2,12 +2,10 @@
 Mean Functions
 **************
 
-.. currentmodule:: pymc.gp.mean
+.. automodule:: pymc.gp.mean
 .. autosummary::
+   :toctree: generated
 
    Zero
    Constant
    Linear
-
-.. automodule:: pymc.gp.mean
-   :members:
