@@ -1205,10 +1205,11 @@ class TestStickBreakingWeights(BaseTestDistribution):
             size=(2, 3, 5),
             rng=default_rng,
         )
+        draws = draws.eval()
 
-        assert np.allclose(draws.sum(-1).eval(), 1)
-        assert np.all(draws.eval() >= 0)
-        assert np.all(draws.eval() <= 1)
+        assert np.allclose(draws.sum(-1), 1)
+        assert np.all(draws >= 0)
+        assert np.all(draws <= 1)
 
 
 class TestMultinomial(BaseTestDistribution):
