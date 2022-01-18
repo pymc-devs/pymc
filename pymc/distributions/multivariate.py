@@ -2261,7 +2261,7 @@ class StickBreakingWeights(Continuous):
     alpha: float
         Concentration parameter (alpha > 0).
     K: int
-        The number of "sticks" to break off from an initial one-unit stick. The length of the weight 
+        The number of "sticks" to break off from an initial one-unit stick. The length of the weight
         vector is K + 1, where the last weight is one minus the sum of all the first sticks.
 
     References
