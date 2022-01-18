@@ -1204,8 +1204,7 @@ class TestStickBreakingWeights(BaseTestDistribution):
             K=19,
             size=(2, 3, 5),
             rng=default_rng,
-        )
-        draws = draws.eval()
+        ).eval()
 
         assert np.allclose(draws.sum(-1), 1)
         assert np.all(draws >= 0)

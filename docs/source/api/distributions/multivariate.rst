@@ -19,3 +19,4 @@ Multivariate
    MatrixNormal
    KroneckerNormal
    CAR
+   StickBreakingWeights
