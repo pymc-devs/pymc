@@ -212,7 +212,7 @@ html_theme_options = {
         },
     ],
     "show_prev_next": False,
-    "navbar_align": "content",
+    "navbar_align": "left",
     "navbar_start": ["navbar-logo", "navbar-version"],
     "navbar_end": ["search-field.html", "navbar-icon-links.html"],
     "search_bar_text": "Search...",
