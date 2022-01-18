@@ -44,7 +44,13 @@ import pymc as pm
 from pymc.aesaraf import floatX, intX
 from pymc.distributions import transforms
 from pymc.distributions.continuous import ChiSquared, Normal, assert_negative_support
-from pymc.distributions.dist_math import check_parameters, factln, logpow, multigammaln
+from pymc.distributions.dist_math import (
+    betaln,
+    check_parameters,
+    factln,
+    logpow,
+    multigammaln,
+)
 from pymc.distributions.distribution import Continuous, Discrete
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
@@ -67,6 +73,7 @@ __all__ = [
     "MatrixNormal",
     "KroneckerNormal",
     "CAR",
+    "StickBreakingWeights",
 ]
 
 # Step methods and advi do not catch LinAlgErrors at the
@@ -2166,4 +2173,182 @@ class CAR(Continuous):
             alpha >= -1,
             tau > 0,
             msg="-1 <= alpha <= 1, tau > 0",
+        )
+
+
+class StickBreakingWeightsRV(RandomVariable):
+    name = "stick_breaking_weights"
+    ndim_supp = 1
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
+
+    def make_node(self, rng, size, dtype, alpha, K):
+
+        alpha = at.as_tensor_variable(alpha)
+        K = at.as_tensor_variable(intX(K))
+
+        if alpha.ndim > 0:
+            raise ValueError("The concentration parameter needs to be a scalar.")
+
+        if K.ndim > 0:
+            raise ValueError("K must be a scalar.")
+
+        return super().make_node(rng, size, dtype, alpha, K)
+
+    def _infer_shape(self, size, dist_params, param_shapes=None):
+        alpha, K = dist_params
+
+        size = tuple(size)
+
+        return size + (K + 1,)
+
+    @classmethod
+    def rng_fn(cls, rng, alpha, K, size):
+        if K < 0:
+            raise ValueError("K needs to be positive.")
+
+        if size is None:
+            size = (K,)
+        elif isinstance(size, int):
+            size = (size,) + (K,)
+        else:
+            size = tuple(size) + (K,)
+
+        betas = rng.beta(1, alpha, size=size)
+
+        sticks = np.concatenate(
+            (
+                np.ones(shape=(size[:-1] + (1,))),
+                np.cumprod(1 - betas[..., :-1], axis=-1),
+            ),
+            axis=-1,
+        )
+
+        weights = sticks * betas
+        weights = np.concatenate(
+            (weights, 1 - weights.sum(axis=-1)[..., np.newaxis]),
+            axis=-1,
+        )
+
+        return weights
+
+
+stickbreakingweights = StickBreakingWeightsRV()
+
+
+class StickBreakingWeights(Continuous):
+    r"""
+    Likelihood of truncated stick-breaking weights. The weights are generated from a
+    stick-breaking proceduce where :math:`x_k = v_k \prod_{\ell < k} (1 - v_\ell)` for
+    :math:`k \in \{1, \ldots, K\}` and :math:`x_K = \prod_{\ell = 1}^{K} (1 - v_\ell) = 1 - \sum_{\ell=1}^K x_\ell`
+    with :math:`v_k \stackrel{\text{i.i.d.}}{\sim} \text{Beta}(1, \alpha)`.
+
+    .. math:
+
+        f(\mathbf{x}|\alpha, K) =
+            B(1, \alpha)^{-K}x_{K+1}^\alpha \prod_{k=1}^{K+1}\left\{\sum_{j=k}^{K+1} x_j\right\}^{-1}
+
+    ========  ===============================================
+    Support   :math:`x_k \in (0, 1)` for :math:`k \in \{1, \ldots, K+1\}`
+              such that :math:`\sum x_k = 1`
+    Mean      :math:`\mathbb{E}[x_k] = \dfrac{1}{1 + \alpha}\left(\dfrac{\alpha}{1 + \alpha}\right)^{k - 1}`
+              for :math:`k \in \{1, \ldots, K\}` and :math:`\mathbb{E}[x_{K+1}] = \left(\dfrac{\alpha}{1 + \alpha}\right)^{K}`
+    ========  ===============================================
+
+    Parameters
+    ----------
+    alpha: float
+        Concentration parameter (alpha > 0).
+    K: int
+        The number of "sticks" to break off from an initial one-unit stick. The length of the weight
+        vector is K + 1, where the last weight is one minus the sum of all the first sticks.
+
+    References
+    ----------
+    .. [1] Ishwaran, H., & James, L. F. (2001). Gibbs sampling methods for stick-breaking priors.
+           Journal of the American Statistical Association, 96(453), 161-173.
+
+    .. [2] Müller, P., Quintana, F. A., Jara, A., & Hanson, T. (2015). Bayesian nonparametric data
+           analysis. New York: Springer.
+    """
+    rv_op = stickbreakingweights
+
+    def __new__(cls, name, *args, **kwargs):
+        kwargs.setdefault("transform", transforms.simplex)
+        return super().__new__(cls, name, *args, **kwargs)
+
+    @classmethod
+    def dist(cls, alpha, K, *args, **kwargs):
+        alpha = at.as_tensor_variable(floatX(alpha))
+        K = at.as_tensor_variable(intX(K))
+
+        assert_negative_support(alpha, "alpha", "StickBreakingWeights")
+        assert_negative_support(K, "K", "StickBreakingWeights")
+
+        return super().dist([alpha, K], **kwargs)
+
+    def get_moment(rv, size, alpha, K):
+        moment = (alpha / (1 + alpha)) ** at.arange(K)
+        moment *= 1 / (1 + alpha)
+        moment = at.concatenate([moment, [(alpha / (1 + alpha)) ** K]], axis=-1)
+        if not rv_size_is_none(size):
+            moment_size = at.concatenate(
+                [
+                    size,
+                    [
+                        K + 1,
+                    ],
+                ]
+            )
+            moment = at.full(moment_size, moment)
+
+        return moment
+
+    def logp(value, alpha, K):
+        """
+        Calculate log-probability of the distribution induced from the stick-breaking process
+        at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        logp = -at.sum(
+            at.log(
+                at.cumsum(
+                    value[..., ::-1],
+                    axis=-1,
+                )
+            ),
+            axis=-1,
+        )
+        logp += -K * betaln(1, alpha)
+        logp += alpha * at.log(value[..., -1])
+
+        logp = at.switch(
+            at.or_(
+                at.any(
+                    at.and_(at.le(value, 0), at.ge(value, 1)),
+                    axis=-1,
+                ),
+                at.or_(
+                    at.bitwise_not(at.allclose(value.sum(-1), 1)),
+                    at.neq(value.shape[-1], K + 1),
+                ),
+            ),
+            -np.inf,
+            logp,
+        )
+
+        return check_parameters(
+            logp,
+            alpha > 0,
+            K > 0,
+            msg="alpha > 0, K > 0",
         )

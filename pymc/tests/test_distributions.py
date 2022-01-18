@@ -109,6 +109,7 @@ from pymc.distributions import (
     Poisson,
     Rice,
     SkewNormal,
+    StickBreakingWeights,
     StudentT,
     Triangular,
     TruncatedNormal,
@@ -2122,6 +2123,40 @@ class TestMatchesScipy:
         value[1] -= 1
         valid_dist = Dirichlet.dist(a=[1, 1, 1])
         assert np.all(np.isfinite(pm.logp(valid_dist, value).eval()) == np.array([True, False]))
+
+    @pytest.mark.parametrize(
+        "value,alpha,K,logp",
+        [
+            (np.array([5, 4, 3, 2, 1]) / 15, 0.5, 4, 1.5126301307277439),
+            (np.tile(1, 13) / 13, 2, 12, 13.980045245672827),
+            (np.array([0.001] * 10 + [0.99]), 0.1, 10, -22.971662448814723),
+            (np.append(0.5 ** np.arange(1, 20), 0.5 ** 20), 5, 19, 94.20462772778092),
+            (
+                (np.array([[7, 5, 3, 2], [19, 17, 13, 11]]) / np.array([[17], [60]])),
+                2.5,
+                3,
+                np.array([1.29317672, 1.50126157]),
+            ),
+        ],
+    )
+    def test_stickbreakingweights_logp(self, value, alpha, K, logp):
+        with Model() as model:
+            sbw = StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
+        pt = {"sbw": value}
+        assert_almost_equal(
+            pm.logp(sbw, value).eval(),
+            logp,
+            decimal=select_by_precision(float64=6, float32=2),
+            err_msg=str(pt),
+        )
+
+    def test_stickbreakingweights_invalid(self):
+        sbw = pm.StickBreakingWeights.dist(3.0, 3)
+        sbw_wrong_K = pm.StickBreakingWeights.dist(3.0, 7)
+        assert pm.logp(sbw, np.array([0.4, 0.3, 0.2, 0.15])).eval() == -np.inf
+        assert pm.logp(sbw, np.array([1.1, 0.3, 0.2, 0.1])).eval() == -np.inf
+        assert pm.logp(sbw, np.array([0.4, 0.3, 0.2, -0.1])).eval() == -np.inf
+        assert pm.logp(sbw_wrong_K, np.array([0.4, 0.3, 0.2, 0.1])).eval() == -np.inf
 
     @pytest.mark.parametrize(
         "a",
