@@ -59,7 +59,7 @@ def test_missing_data():
         mu = pm.BART("mu", X, Y, m=10)
         sigma = pm.HalfNormal("sigma", 1)
         y = pm.Normal("y", mu, sigma, observed=Y)
-        idata = pm.sample(random_seed=3415)
+        idata = pm.sample(tune=10, draws=10, chains=1, random_seed=3415)
 
 
 class TestUtils:
