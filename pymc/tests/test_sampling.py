@@ -63,11 +63,12 @@ class TestSample(SeededTest):
         self.model, self.start, self.step, _ = simple_init()
 
     def test_sample_does_not_set_seed(self):
+        # This tests that when random_seed is None, the global seed is not affected
         random_numbers = []
         for _ in range(2):
             np.random.seed(1)
             with self.model:
-                pm.sample(1, tune=0, chains=1)
+                pm.sample(1, tune=0, chains=1, random_seed=None)
                 random_numbers.append(np.random.random())
         assert random_numbers[0] == random_numbers[1]
 
