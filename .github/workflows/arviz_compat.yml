@@ -21,8 +21,10 @@ jobs:
         floatx: [float64]
         test-subset:
           - pymc/tests/test_distributions.py
-          - pymc/tests/test_distributions_random.py
-          - pymc/tests/test_sampling.py
+
+          - |
+            pymc/tests/test_distributions_random.py
+            pymc/tests/test_sampling.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
