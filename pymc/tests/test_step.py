@@ -221,6 +221,16 @@ class TestCompoundStep:
                     assert not isinstance(sampler_instance, CompoundStep)
                     assert isinstance(sampler_instance, sampler)
 
+    def test_name(self):
+        with Model() as m:
+            c1 = HalfNormal("c1")
+            c2 = HalfNormal("c2")
+
+            step1 = NUTS([c1])
+            step2 = Slice([c2])
+            step = CompoundStep([step1, step2])
+        assert step.name == "Compound[nuts, slice]"
+
 
 class TestAssignStepMethods:
     def test_bernoulli(self):
