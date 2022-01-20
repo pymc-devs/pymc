@@ -78,46 +78,58 @@ class TestStepMethods:
         shutil.rmtree(self.temp_dir)
 
     def check_stat(self, check, idata, name):
-        if hasattr(idata, "warmup_posterior"):
-            group = idata.warmup_posterior
-        else:
-            group = idata.posterior
+        group = idata.posterior
         for (var, stat, value, bound) in check:
-            s = stat(group[var].sel(chain=0, draw=slice(2000, None)), axis=0)
-            close_to(s, value, bound)
+            s = stat(group[var].sel(chain=0), axis=0)
+            close_to(s, value, bound, name)
 
-    def test_step_continuous(self):
-        start, model, (mu, C) = mv_simple()
-        unc = np.diag(C) ** 0.5
-        check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, unc, unc / 10.0))
-        _, model_coarse, _ = mv_simple_coarse()
-        with model:
-            steps = (
-                Slice(),
-                HamiltonianMC(scaling=C, is_cov=True, blocked=False),
-                NUTS(scaling=C, is_cov=True, blocked=False),
-                Metropolis(S=C, proposal_dist=MultivariateNormalProposal, blocked=True),
-                Slice(blocked=True),
-                HamiltonianMC(scaling=C, is_cov=True),
-                NUTS(scaling=C, is_cov=True),
-                CompoundStep(
+    @pytest.mark.parametrize(
+        "step_fn, draws",
+        [
+            (lambda C, _: HamiltonianMC(scaling=C, is_cov=True, blocked=False), 1000),
+            (lambda C, _: HamiltonianMC(scaling=C, is_cov=True), 1000),
+            (lambda C, _: NUTS(scaling=C, is_cov=True, blocked=False), 1000),
+            (lambda C, _: NUTS(scaling=C, is_cov=True), 1000),
+            (
+                lambda C, _: CompoundStep(
                     [
                         HamiltonianMC(scaling=C, is_cov=True),
                         HamiltonianMC(scaling=C, is_cov=True, blocked=False),
                     ]
                 ),
-                MLDA(
+                1000,
+            ),
+            # MLDA takes 1/2 of the total test time!
+            (
+                lambda C, model_coarse: MLDA(
                     coarse_models=[model_coarse],
                     base_S=C,
                     base_proposal_dist=MultivariateNormalProposal,
                 ),
-            )
-        for step in steps:
+                1000,
+            ),
+            (lambda *_: Slice(), 2000),
+            (lambda *_: Slice(blocked=True), 2000),
+            (
+                lambda C, _: Metropolis(
+                    S=C, proposal_dist=MultivariateNormalProposal, blocked=True
+                ),
+                4000,
+            ),
+        ],
+        ids=str,
+    )
+    def test_step_continuous(self, step_fn, draws):
+        start, model, (mu, C) = mv_simple()
+        unc = np.diag(C) ** 0.5
+        check = (("x", np.mean, mu, unc / 10), ("x", np.std, unc, unc / 10))
+        _, model_coarse, _ = mv_simple_coarse()
+        with model:
+            step = step_fn(C, model_coarse)
             idata = sample(
-                0,
-                tune=8000,
+                tune=1000,
+                draws=draws,
                 chains=1,
-                discard_tuned_samples=False,
                 step=step,
                 start=start,
                 model=model,
@@ -126,30 +138,38 @@ class TestStepMethods:
             self.check_stat(check, idata, step.__class__.__name__)
 
     def test_step_discrete(self):
-        if aesara.config.floatX == "float32":
-            return  # Cannot use @skip because it only skips one iteration of the yield
         start, model, (mu, C) = mv_simple_discrete()
         unc = np.diag(C) ** 0.5
         check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, unc, unc / 10.0))
         with model:
-            steps = (Metropolis(S=C, proposal_dist=MultivariateNormalProposal),)
-        for step in steps:
+            step = Metropolis(S=C, proposal_dist=MultivariateNormalProposal)
             idata = sample(
-                20000, tune=0, step=step, start=start, model=model, random_seed=1, chains=1
+                tune=1000,
+                draws=2000,
+                chains=1,
+                step=step,
+                start=start,
+                model=model,
+                random_seed=1,
             )
             self.check_stat(check, idata, step.__class__.__name__)
 
-    def test_step_categorical(self):
+    @pytest.mark.parametrize("proposal", ["uniform", "proportional"])
+    def test_step_categorical(self, proposal):
         start, model, (mu, C) = simple_categorical()
         unc = C**0.5
         check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, unc, unc / 10.0))
         with model:
-            steps = (
-                CategoricalGibbsMetropolis([model.x], proposal="uniform"),
-                CategoricalGibbsMetropolis([model.x], proposal="proportional"),
+            step = CategoricalGibbsMetropolis([model.x], proposal=proposal)
+            idata = sample(
+                tune=1000,
+                draws=2000,
+                chains=1,
+                step=step,
+                start=start,
+                model=model,
+                random_seed=1,
             )
-        for step in steps:
-            idata = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, idata, step.__class__.__name__)
 
 
