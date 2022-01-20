@@ -21,9 +21,10 @@ import numpy as np
 import numpy.random as nr
 
 from aesara.gradient import verify_grad as at_verify_grad
+from aesara.graph.opt import in2out
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 
-from pymc.aesaraf import at_rng, set_at_rng
+from pymc.aesaraf import at_rng, local_check_parameter_to_ninf_switch, set_at_rng
 
 
 class SeededTest:
@@ -132,3 +133,18 @@ def assert_random_state_equal(state1, state2):
             np.testing.assert_array_equal(field1, field2)
         else:
             assert field1 == field2
+
+
+# This mode can be used for tests where model compilations takes the bulk of the runtime
+# AND where we don't care about posterior numerical or sampling stability (e.g., when
+# all that matters are the shape of the draws or deterministic values of observed data).
+# DO NOT USE UNLESS YOU HAVE A GOOD REASON TO!
+fast_unstable_sampling_mode = (
+    aesara.compile.mode.FAST_COMPILE
+    # Remove slow rewrite phases
+    .excluding("canonicalize", "specialize")
+    # Include necessary rewrites for proper logp handling
+    .including("remove_TransformedVariables").register(
+        (in2out(local_check_parameter_to_ninf_switch), -1)
+    )
+)

@@ -25,6 +25,7 @@ import pymc as pm
 
 from pymc.ode import DifferentialEquation
 from pymc.ode.utils import augment_system
+from pymc.tests.helpers import fast_unstable_sampling_mode
 
 IS_FLOAT32 = aesara.config.floatX == "float32"
 IS_WINDOWS = sys.platform == "win32"
@@ -291,11 +292,13 @@ class TestDiffEqModel:
             sigma = pm.HalfCauchy("sigma", 1)
             forward = ode_model(theta=[alpha], y0=[y0])
             y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
-            idata = pm.sample(100, tune=0, chains=1)
 
-        assert idata.posterior["alpha"].shape == (1, 100)
-        assert idata.posterior["y0"].shape == (1, 100)
-        assert idata.posterior["sigma"].shape == (1, 100)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                idata = pm.sample(50, tune=0, chains=1)
+
+        assert idata.posterior["alpha"].shape == (1, 50)
+        assert idata.posterior["y0"].shape == (1, 50)
+        assert idata.posterior["sigma"].shape == (1, 50)
 
     def test_scalar_ode_2_param(self):
         """Test running model for a scalar ODE with 2 parameters"""
@@ -321,12 +324,13 @@ class TestDiffEqModel:
             forward = ode_model(theta=[alpha, beta], y0=[y0])
             y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-            idata = pm.sample(100, tune=0, chains=1)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                idata = pm.sample(50, tune=0, chains=1)
 
-        assert idata.posterior["alpha"].shape == (1, 100)
-        assert idata.posterior["beta"].shape == (1, 100)
-        assert idata.posterior["y0"].shape == (1, 100)
-        assert idata.posterior["sigma"].shape == (1, 100)
+        assert idata.posterior["alpha"].shape == (1, 50)
+        assert idata.posterior["beta"].shape == (1, 50)
+        assert idata.posterior["y0"].shape == (1, 50)
+        assert idata.posterior["sigma"].shape == (1, 50)
 
     def test_vector_ode_1_param(self):
         """Test running model for a vector ODE with 1 parameter"""
@@ -362,10 +366,11 @@ class TestDiffEqModel:
             forward = ode_model(theta=[R], y0=[0.99, 0.01])
             y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-            idata = pm.sample(100, tune=0, chains=1)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                idata = pm.sample(50, tune=0, chains=1)
 
-        assert idata.posterior["R"].shape == (1, 100)
-        assert idata.posterior["sigma"].shape == (1, 100, 2)
+        assert idata.posterior["R"].shape == (1, 50)
+        assert idata.posterior["sigma"].shape == (1, 50, 2)
 
     def test_vector_ode_2_param(self):
         """Test running model for a vector ODE with 2 parameters"""
@@ -402,8 +407,9 @@ class TestDiffEqModel:
             forward = ode_model(theta=[beta, gamma], y0=[0.99, 0.01])
             y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-            idata = pm.sample(100, tune=0, chains=1)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                idata = pm.sample(50, tune=0, chains=1)
 
-        assert idata.posterior["beta"].shape == (1, 100)
-        assert idata.posterior["gamma"].shape == (1, 100)
-        assert idata.posterior["sigma"].shape == (1, 100, 2)
+        assert idata.posterior["beta"].shape == (1, 50)
+        assert idata.posterior["gamma"].shape == (1, 50)
+        assert idata.posterior["sigma"].shape == (1, 50, 2)
