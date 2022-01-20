@@ -969,6 +969,9 @@ def _iter_sample(
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
+    if random_seed is not None:
+        np.random.seed(random_seed)
+
     try:
         step = CompoundStep(step)
     except TypeError:
@@ -1228,6 +1231,9 @@ def _prepare_iter_population(
 
     if draws < 1:
         raise ValueError("Argument `draws` should be above 0.")
+
+    if random_seed is not None:
+        np.random.seed(random_seed)
 
     # The initialization of traces, samplers and points must happen in the right order:
     # 1. population of points is created
@@ -2511,7 +2517,7 @@ def init_nuts(
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "advi_map":
-        start = pm.find_MAP(include_transformed=True)
+        start = pm.find_MAP(include_transformed=True, seed=seeds[0])
         approx = pm.MeanField(model=model, start=start)
         pm.fit(
             random_seed=seeds[0],
@@ -2526,7 +2532,7 @@ def init_nuts(
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "map":
-        start = pm.find_MAP(include_transformed=True)
+        start = pm.find_MAP(include_transformed=True, seed=seeds[0])
         cov = pm.find_hessian(point=start)
         initial_points = [start] * chains
         potential = quadpotential.QuadPotentialFull(cov)

@@ -62,6 +62,54 @@ class TestSample(SeededTest):
         super().setup_method()
         self.model, self.start, self.step, _ = simple_init()
 
+    @pytest.mark.parametrize("init", ("jitter+adapt_diag", "advi", "map"))
+    @pytest.mark.parametrize("cores", (1, 2))
+    @pytest.mark.parametrize(
+        "chains, seeds",
+        [
+            (1, None),
+            (1, 1),
+            (1, [1]),
+            (2, None),
+            (2, 1),
+            (2, [1, 2]),
+        ],
+    )
+    def test_random_seed(self, chains, seeds, cores, init):
+        with pm.Model(rng_seeder=3):
+            x = pm.Normal("x", 0, 10, initval="prior")
+            tr1 = pm.sample(
+                chains=chains,
+                random_seed=seeds,
+                cores=cores,
+                init=init,
+                tune=0,
+                draws=10,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
+            tr2 = pm.sample(
+                chains=chains,
+                random_seed=seeds,
+                cores=cores,
+                init=init,
+                tune=0,
+                draws=10,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
+
+        allequal = np.all(tr1["x"] == tr2["x"])
+        if seeds is None:
+            assert not allequal
+        # TODO: ADVI init methods are not correctly seeded, as they rely on the state of
+        #  the model RandomState/Generators which is updated in place when the function
+        #  is compiled and evaluated. This elif branch must be removed once this is fixed
+        elif init == "advi":
+            assert not allequal
+        else:
+            assert allequal
+
     def test_sample_does_not_set_seed(self):
         # This tests that when random_seed is None, the global seed is not affected
         random_numbers = []
