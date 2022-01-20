@@ -38,7 +38,6 @@ jobs:
         # → pytest will run only these files
           - |
             --ignore=pymc/tests/test_distributions_timeseries.py
-            --ignore=pymc/tests/test_initial_point.py
             --ignore=pymc/tests/test_mixture.py
             --ignore=pymc/tests/test_model_graph.py
             --ignore=pymc/tests/test_modelcontext.py
@@ -64,9 +63,11 @@ jobs:
             --ignore=pymc/tests/test_distributions.py
             --ignore=pymc/tests/test_distributions_random.py
             --ignore=pymc/tests/test_idata_conversion.py
+            --ignore=pymc/tests/test_smc.py
+            --ignore=pymc/tests/test_bart.py
+            --ignore=pymc/tests/test_missing.py
 
           - |
-            pymc/tests/test_initial_point.py
             pymc/tests/test_distributions.py
 
           - |
@@ -76,12 +77,15 @@ jobs:
             pymc/tests/test_pickling.py
             pymc/tests/test_updates.py
             pymc/tests/test_transforms.py
+            pymc/tests/test_smc.py
+            pymc/tests/test_bart.py
 
           - |
             pymc/tests/test_parallel_sampling.py
             pymc/tests/test_sampling.py
             pymc/tests/test_tuning.py
             pymc/tests/test_posteriors.py
+            pymc/tests/test_step.py
 
           - |
             pymc/tests/test_idata_conversion.py
@@ -95,7 +99,7 @@ jobs:
             pymc/tests/test_profile.py
             pymc/tests/test_quadpotential.py
             pymc/tests/test_shape_handling.py
-            pymc/tests/test_step.py
+            pymc/tests/test_missing.py
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
