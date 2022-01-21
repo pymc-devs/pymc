@@ -118,7 +118,7 @@ exclude_patterns = [
 ]
 
 # myst and panels config
-jupyter_execute_notebooks = "off"
+jupyter_execute_notebooks = "auto"
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "substitution"]
 myst_substitutions = {
     "version_slug": rtd_version,
