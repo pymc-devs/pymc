@@ -22,5 +22,6 @@ scipy>1.4.1
 sphinx-copybutton
 sphinx-design
 sphinx-notfound-page
+sphinx-remove-toctrees
 sphinx>=1.5
 typing-extensions>=3.7.4

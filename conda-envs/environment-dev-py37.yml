@@ -31,3 +31,4 @@ dependencies:
 - pip:
   - polyagamma
   - sphinx-design
+  - sphinx-remove-toctrees

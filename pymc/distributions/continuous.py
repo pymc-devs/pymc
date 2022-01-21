@@ -263,6 +263,7 @@ class Uniform(BoundedContinuous):
        f(x \mid lower, upper) = \frac{1}{upper-lower}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -289,10 +290,10 @@ class Uniform(BoundedContinuous):
 
     Parameters
     ----------
-    lower: float
-        Lower limit.
-    upper: float
-        Upper limit.
+    lower : float, optional
+        Lower limit. Defaults to 0.
+    upper : float, optional
+        Upper limit. Defaults to 1.
     """
     rv_op = uniform
     bound_args_indices = (3, 4)  # Lower, Upper
@@ -317,9 +318,13 @@ class Uniform(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or `TensorVariable`
+        value : numeric or ndarray or TensorVariable
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or `TensorVariable`.
+        lower : float, optional
+            Lower limit. Defaults to 0.
+        upper : float, optional
+            Upper limit. Defaults to 1.
 
         Returns
         -------

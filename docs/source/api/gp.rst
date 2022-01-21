@@ -1,7 +1,7 @@
-Gaussian Processes API
-----------------------
+Gaussian Processes
+------------------
 
-.. currentmodule:: pymc.gp.gp
+.. automodule:: pymc.gp
 
 .. toctree::
 
