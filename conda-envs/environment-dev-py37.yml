@@ -29,4 +29,5 @@ dependencies:
 - sphinx>=1.5
 - typing-extensions
 - pip:
+  - polyagamma
   - sphinx-design

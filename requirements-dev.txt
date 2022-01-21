@@ -13,6 +13,7 @@ myst-nb
 numpy>=1.15.0
 numpydoc>=0.9
 pandas
+polyagamma
 pre-commit>=2.8.0
 pydata-sphinx-theme
 pytest-cov>=2.5
