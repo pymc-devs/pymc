@@ -81,14 +81,13 @@ class GaussianRandomWalkRV(RandomVariable):
             Length of random walk, must be greater than 1. Returned array will be of size+1 to
             account as first value is initial value
         size: int
-            Length of random walk, must be greater than 1. Returned array will be of size+1 to
-            account as first value is initial value
+            The number of Random Walk time series generated
 
         Returns
         -------
         np.ndarray
         """
-        return rng.normal(init, sigma) + np.cumsum(
+        return rng.normal(init, sigma, size=size) + np.cumsum(
             rng.normal(loc=mu, scale=sigma, size=(length, size))
         )
 
