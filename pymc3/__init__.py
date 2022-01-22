@@ -81,7 +81,12 @@ def _check_backend_version():
 def __set_compiler_flags():
     # Workarounds for Theano compiler problems on various platforms
     current = theano.config.gcc__cxxflags
-    theano.config.gcc__cxxflags = f"{current} -Wno-c++11-narrowing"
+    augmented = f"{current} -Wno-c++11-narrowing"
+    # Work around compiler bug in GCC < 8.4 related to structured exception
+    # handling registers on Windows.
+    # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65782 for details.
+    augmented = f"{augmented} -fno-asynchronous-unwind-tables"
+    theano.config.gcc__cxxflags = augmented
 
 
 def _hotfix_theano_printing():
