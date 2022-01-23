@@ -650,7 +650,7 @@ class NegativeBinomial(Discrete):
 
     The negative binomial distribution describes a Poisson random variable
     whose rate parameter is gamma distributed.
-    The pmf of this distribution is
+    Its pmf, parametrized by the parameters alpha and mu of the gamma distribution, is
 
     .. math::
 
@@ -692,15 +692,24 @@ class NegativeBinomial(Discrete):
 
     .. math::
 
-        \mu &= \frac{n(1-p)}{p} \\
-        \alpha &= n
+        p &= \frac{\alpha}{\mu + \alpha} \\
+        n &= \alpha
+
+    If it is parametrized in terms of n and p, the negative binomial describes the probability to have x failures
+    before the n-th success, given the probability p of success in each trial. Its pmf is
+
+    .. math::
+
+        f(x \mid n, p) =
+           \binom{x + n - 1}{x}
+           (p)^n (1 - p)^x
 
     Parameters
     ----------
-    mu: float
-        Poission distribution parameter (mu > 0).
     alpha: float
-        Gamma distribution parameter (alpha > 0).
+        Gamma distribution shape parameter (alpha > 0).
+    mu: float
+        Gamma distribution mean (mu > 0).
     p: float
         Alternative probability of success in each trial (0 < p < 1).
     n: float
