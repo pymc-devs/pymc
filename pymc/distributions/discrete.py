@@ -695,21 +695,21 @@ class NegativeBinomial(Discrete):
         p &= \frac{\alpha}{\mu + \alpha} \\
         n &= \alpha
 
-    If it is parametrized in terms of n and p, the negative binomial  describes the probability to have x failures 
-    before the n-th success, given the probability p of success in each trial. and its pmf is
- 
+    If it is parametrized in terms of n and p, the negative binomial describes the probability to have x failures
+    before the n-th success, given the probability p of success in each trial. Its pmf is
+
     .. math::
- 
+
         f(x \mid n, p) =
            \binom{x + n - 1}{x}
            (p)^n (1 - p)^x
-           
+
     Parameters
     ----------
     alpha: float
         Gamma distribution shape parameter (alpha > 0).
     mu: float
-        Gamma distribution mean (mu > 0).         
+        Gamma distribution mean (mu > 0).
     p: float
         Alternative probability of success in each trial (0 < p < 1).
     n: float
