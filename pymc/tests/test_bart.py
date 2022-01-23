@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from numpy.random import RandomState
+from numpy.testing import assert_almost_equal
 
 import pymc as pm
 
@@ -46,7 +47,7 @@ def test_bart_vi():
         )
         var_imp /= var_imp.sum()
         assert var_imp[0] > var_imp[1:].sum()
-        np.testing.assert_almost_equal(var_imp.sum(), 1)
+        assert_almost_equal(var_imp.sum(), 1)
 
 
 def test_missing_data():
@@ -58,24 +59,7 @@ def test_missing_data():
         mu = pm.BART("mu", X, Y, m=10)
         sigma = pm.HalfNormal("sigma", 1)
         y = pm.Normal("y", mu, sigma, observed=Y)
-        idata = pm.sample(random_seed=3415, chains=1)
-
-
-@pytest.mark.xfail(reason="random fn is not yet implemented")
-def test_random_fn():
-    X = np.random.normal(0, 1, size=(2, 50)).T
-    Y = np.random.normal(0, 1, size=50)
-
-    with pm.Model() as model:
-        mu = pm.BART("mu", X, Y, m=10)
-    rng = RandomState(12345)
-    pred_all = mu.owner.op.rng_fn(rng, size=2)
-    rng = RandomState(12345)
-    pred_first = mu.owner.op.rng_fn(rng, X_new=X[:10])
-
-    assert pred_all.shape == (2, 50)
-    assert pred_first.shape == (10,)
-    np.testing.assert_almost_equal(pred_first, pred_all[0, :10], decimal=4)
+        idata = pm.sample(random_seed=3415)
 
 
 class TestUtils:
@@ -96,7 +80,7 @@ class TestUtils:
         rng = RandomState(12345)
         pred_first = pm.bart.utils.predict(self.idata, rng, X_new=self.X[:10])
 
-        np.testing.assert_almost_equal(pred_first, pred_all[0, :10], decimal=4)
+        assert_almost_equal(pred_first, pred_all[0, :10], decimal=4)
         assert pred_all.shape == (2, 50)
         assert pred_first.shape == (10,)
 
