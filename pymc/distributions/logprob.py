@@ -16,6 +16,7 @@ from collections.abc import Mapping
 from functools import singledispatch
 from typing import Dict, List, Optional, Union
 
+import aesara
 import aesara.tensor as at
 import numpy as np
 
@@ -45,13 +46,15 @@ def logp_transform(op: Op):
 
 def _get_scaling(total_size, shape, ndim):
     """
-    Gets scaling constant for logp
+    Gets scaling constant for logp.
 
     Parameters
     ----------
-    total_size: int or list[int]
+    total_size: Optional[int|List[int]]
+        size of a fully observed data without minibatching,
+        `None` means data is fully observed
     shape: shape
-        shape to scale
+        shape of an observed data
     ndim: int
         ndim hint
 
@@ -60,7 +63,7 @@ def _get_scaling(total_size, shape, ndim):
     scalar
     """
     if total_size is None:
-        coef = floatX(1)
+        coef = 1.0
     elif isinstance(total_size, int):
         if ndim >= 1:
             denom = shape[0]
@@ -90,21 +93,23 @@ def _get_scaling(total_size, shape, ndim):
                 "number of scalings is bigger that ndim, got %r" % total_size
             )
         elif (len(begin) + len(end)) == 0:
-            return floatX(1)
+            coef = 1.0
         if len(end) > 0:
             shp_end = shape[-len(end) :]
         else:
             shp_end = np.asarray([])
         shp_begin = shape[: len(begin)]
-        begin_coef = [floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
-        end_coef = [floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
+        begin_coef = [
+            floatX(t) / floatX(shp_begin[i]) for i, t in enumerate(begin) if t is not None
+        ]
+        end_coef = [floatX(t) / floatX(shp_end[i]) for i, t in enumerate(end) if t is not None]
         coefs = begin_coef + end_coef
         coef = at.prod(coefs)
     else:
         raise TypeError(
             "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
         )
-    return at.as_tensor(floatX(coef))
+    return at.as_tensor(coef, dtype=aesara.config.floatX)
 
 
 subtensor_types = (
