@@ -222,7 +222,7 @@ def parametric_grouped_approxes(request):
 @pytest.fixture
 @ignore_not_implemented_inference
 def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
-    one_initial_value = three_var_model.recompute_initial_point()[
+    one_initial_value = three_var_model.recompute_initial_point(0)[
         three_var_model.one.tag.value_var.name
     ]
     dsize = np.prod(one_initial_value.shape[1:])
@@ -853,7 +853,7 @@ def aevb_model():
         pm.Normal("y", size=(2,))
     x = model.x
     y = model.y
-    xr = model.recompute_initial_point()[model.rvs_to_values[x].name]
+    xr = model.recompute_initial_point(0)[model.rvs_to_values[x].name]
     mu = aesara.shared(xr)
     rho = aesara.shared(np.zeros_like(xr))
     return {"model": model, "y": y, "x": x, "replace": dict(mu=mu, rho=rho)}
