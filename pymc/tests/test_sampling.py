@@ -35,7 +35,7 @@ from pymc.aesaraf import compile_pymc
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
-from pymc.tests.helpers import SeededTest
+from pymc.tests.helpers import SeededTest, fast_unstable_sampling_mode
 from pymc.tests.models import simple_init
 
 
@@ -490,7 +490,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.recompute_initial_point()], samples=10, return_inferencedata=False
+                [model.compute_initial_point()], samples=10, return_inferencedata=False
             )
             # # deprecated argument is not introduced to fast version [2019/08/20:rpg]
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"], return_inferencedata=False)
@@ -549,7 +549,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.recompute_initial_point()], return_inferencedata=False, samples=10
+                [model.compute_initial_point()], return_inferencedata=False, samples=10
             )
             ppc = pm.sample_posterior_predictive(
                 trace, return_inferencedata=False, samples=12, var_names=[]
@@ -647,7 +647,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.recompute_initial_point()], return_inferencedata=False, samples=10
+                [model.compute_initial_point()], return_inferencedata=False, samples=10
             )
             assert ppc0 == {}
             ppc = pm.sample_posterior_predictive(
@@ -665,7 +665,8 @@ class TestSamplePPC(SeededTest):
         with model:
             mu = pm.HalfFlat("sigma")
             pm.Poisson("foo", mu=mu, observed=data)
-            idata = pm.sample(tune=1000)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                idata = pm.sample(tune=10, draws=40, chains=1)
 
         with model:
             with pytest.raises(NotImplementedError) as excinfo:
@@ -718,12 +719,15 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            trace = pm.sample(
-                100,
-                chains=nchains,
-                return_inferencedata=False,
-                compute_convergence_checks=False,
-            )
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                trace = pm.sample(
+                    tune=100,
+                    draws=100,
+                    chains=nchains,
+                    step=pm.Metropolis(),
+                    return_inferencedata=False,
+                    compute_convergence_checks=False,
+                )
 
             rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-4
 
@@ -754,11 +758,14 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            trace = pm.sample(
-                100,
-                return_inferencedata=False,
-                compute_convergence_checks=False,
-            )
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                trace = pm.sample(
+                    tune=100,
+                    draws=100,
+                    step=pm.Metropolis(),
+                    return_inferencedata=False,
+                    compute_convergence_checks=False,
+                )
             varnames = [v for v in trace.varnames if v != "out"]
             ppc_trace = [
                 dict(zip(varnames, row)) for row in zip(*(trace.get_values(v) for v in varnames))
@@ -779,7 +786,10 @@ class TestSamplePPC(SeededTest):
             mu = pm.HalfNormal("mu", 1)
             a = pm.Normal("a", mu=mu, sigma=2, observed=np.array([1, 2]))
             b = pm.Poisson("b", mu, observed=np.array([1, 2]))
-            trace = pm.sample(compute_convergence_checks=False, return_inferencedata=False)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                trace = pm.sample(
+                    tune=10, draws=10, compute_convergence_checks=False, return_inferencedata=False
+                )
 
         with model:
             ppc = pm.sample_posterior_predictive(trace, return_inferencedata=False, samples=1)
@@ -998,9 +1008,14 @@ class TestSamplePriorPredictive(SeededTest):
         with pm.Model() as dm_model:
             probs = pm.Dirichlet("probs", a=np.ones(6))
             obs = pm.Multinomial("obs", n=100, p=probs, observed=mn_data)
-            burned_trace = pm.sample(
-                20, tune=10, cores=1, return_inferencedata=False, compute_convergence_checks=False
-            )
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                burned_trace = pm.sample(
+                    tune=10,
+                    draws=20,
+                    chains=1,
+                    return_inferencedata=False,
+                    compute_convergence_checks=False,
+                )
         sim_priors = pm.sample_prior_predictive(
             return_inferencedata=False, samples=20, model=dm_model
         )

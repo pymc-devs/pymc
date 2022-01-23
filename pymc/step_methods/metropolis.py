@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 import numpy.random as nr
 import scipy.linalg
+import scipy.special
 
 from aesara.graph.fg import MissingInputError
 from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
@@ -161,7 +162,7 @@ class Metropolis(ArrayStepShared):
         """
 
         model = pm.modelcontext(model)
-        initial_values = model.recompute_initial_point()
+        initial_values = model.compute_initial_point()
 
         if vars is None:
             vars = model.value_vars
@@ -425,7 +426,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         # transition probabilities
         self.transit_p = transit_p
 
-        initial_point = model.recompute_initial_point()
+        initial_point = model.compute_initial_point()
         vars = [model.rvs_to_values.get(var, var) for var in vars]
         self.dim = sum(initial_point[v.name].size for v in vars)
 
@@ -510,7 +511,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         vars = [model.rvs_to_values.get(var, var) for var in vars]
         vars = pm.inputvars(vars)
 
-        initial_point = model.recompute_initial_point()
+        initial_point = model.compute_initial_point()
 
         dimcats = []
         # The above variable is a list of pairs (aggregate dimension, number
@@ -608,7 +609,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if candidate_cat != given_cat:
                 q.data[dim] = candidate_cat
                 log_probs[candidate_cat] = logp(q)
-        probs = softmax(log_probs)
+        probs = scipy.special.softmax(log_probs, axis=0)
         prob_curr, probs[given_cat] = probs[given_cat], 0.0
         probs /= 1.0 - prob_curr
         proposed_cat = nr.choice(candidates, p=probs)
@@ -712,7 +713,7 @@ class DEMetropolis(PopulationArrayStepShared):
     ):
 
         model = pm.modelcontext(model)
-        initial_values = model.recompute_initial_point()
+        initial_values = model.compute_initial_point()
         initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
@@ -863,7 +864,7 @@ class DEMetropolisZ(ArrayStepShared):
         **kwargs
     ):
         model = pm.modelcontext(model)
-        initial_values = model.recompute_initial_point()
+        initial_values = model.compute_initial_point()
         initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
@@ -993,11 +994,6 @@ def sample_except(limit, excluded):
     if candidate >= excluded:
         candidate += 1
     return candidate
-
-
-def softmax(x):
-    e_x = np.exp(x - np.max(x))
-    return e_x / np.sum(e_x, axis=0)
 
 
 def delta_logp(point, logp, vars, shared):

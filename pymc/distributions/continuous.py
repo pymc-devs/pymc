@@ -85,7 +85,7 @@ from pymc.distributions.dist_math import (
     normal_lcdf,
     zvalue,
 )
-from pymc.distributions.distribution import Continuous
+from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.math import invlogit, logdiffexp, logit
 from pymc.util import UNSET
@@ -263,6 +263,7 @@ class Uniform(BoundedContinuous):
        f(x \mid lower, upper) = \frac{1}{upper-lower}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -289,10 +290,10 @@ class Uniform(BoundedContinuous):
 
     Parameters
     ----------
-    lower: float
-        Lower limit.
-    upper: float
-        Upper limit.
+    lower : float, optional
+        Lower limit. Defaults to 0.
+    upper : float, optional
+        Upper limit. Defaults to 1.
     """
     rv_op = uniform
     bound_args_indices = (3, 4)  # Lower, Upper
@@ -317,9 +318,13 @@ class Uniform(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or `TensorVariable`
+        value : numeric or ndarray or TensorVariable
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or `TensorVariable`.
+        lower : float, optional
+            Lower limit. Defaults to 0.
+        upper : float, optional
+            Upper limit. Defaults to 1.
 
         Returns
         -------
@@ -692,12 +697,12 @@ class TruncatedNormal(BoundedContinuous):
     @classmethod
     def dist(
         cls,
-        mu: Optional[Union[float, np.ndarray]] = None,
-        sigma: Optional[Union[float, np.ndarray]] = None,
-        tau: Optional[Union[float, np.ndarray]] = None,
-        sd: Optional[Union[float, np.ndarray]] = None,
-        lower: Optional[Union[float, np.ndarray]] = None,
-        upper: Optional[Union[float, np.ndarray]] = None,
+        mu: Optional[DIST_PARAMETER_TYPES] = None,
+        sigma: Optional[DIST_PARAMETER_TYPES] = None,
+        tau: Optional[DIST_PARAMETER_TYPES] = None,
+        sd: Optional[DIST_PARAMETER_TYPES] = None,
+        lower: Optional[DIST_PARAMETER_TYPES] = None,
+        upper: Optional[DIST_PARAMETER_TYPES] = None,
         transform: str = "auto",
         *args,
         **kwargs,

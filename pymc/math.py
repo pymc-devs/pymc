@@ -155,9 +155,9 @@ def kron_matrix_op(krons, m, op):
         m = m[:, None]  # Treat 1D array as Nx1 matrix
     if m.ndim != 2:  # Has not been tested otherwise
         raise ValueError(f"m must have ndim <= 2, not {m.ndim}")
-    res = kron_vector_op(m)
-    res_shape = res.shape
-    return at.reshape(res, (res_shape[1], res_shape[0])).T
+    result = kron_vector_op(m)
+    result_shape = result.shape
+    return at.reshape(result, (result_shape[1], result_shape[0])).T
 
 
 # Define kronecker functions that work on 1D and 2D arrays
@@ -209,6 +209,22 @@ def invlogit(x, eps=None):
             stacklevel=2,
         )
     return at.sigmoid(x)
+
+
+def softmax(x, axis=None):
+    # Ignore vector case UserWarning issued by Aesara. This can be removed once Aesara
+    # drops that warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        return at.nnet.softmax(x, axis=axis)
+
+
+def log_softmax(x, axis=None):
+    # Ignore vector case UserWarning issued by Aesara. This can be removed once Aesara
+    # drops that warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        return at.nnet.logsoftmax(x, axis=axis)
 
 
 def logbern(log_p):

@@ -5,7 +5,7 @@ channels:
 - defaults
 dependencies:
 - aeppl=0.0.18
-- aesara=2.3.2
+- aesara=2.3.6
 - arviz>=0.11.4
 - cachetools>=4.2.1
 - cloudpickle
@@ -13,9 +13,10 @@ dependencies:
 - h5py>=2.7
 - ipython
 - myst-nb
-- numpy>=1.15.0,<1.22.0
+- numpy>=1.15.0
 - numpydoc>=0.9
 - pandas>=0.24.0
+- pip
 - pre-commit>=2.8.0
 - pydata-sphinx-theme
 - pytest-cov>=2.5
@@ -28,4 +29,6 @@ dependencies:
 - sphinx>=1.5
 - typing-extensions>=3.7.4
 - pip:
+  - polyagamma
   - sphinx-design
+  - sphinx-remove-toctrees

@@ -140,20 +140,13 @@ class TestSMC(SeededTest):
             with pm.Model() as model:
                 a = pm.Beta("a", alpha, beta)
                 y = pm.Bernoulli("y", a, observed=data)
-                trace = pm.sample_smc(2000, return_inferencedata=False)
-                marginals.append(trace.report.log_marginal_likelihood)
+                trace = pm.sample_smc(2000, chains=2, return_inferencedata=False)
+            # log_marignal_likelihood is found in the last value of each chain
+            lml = np.mean([chain[-1] for chain in trace.report.log_marginal_likelihood])
+            marginals.append(lml)
 
         # compare to the analytical result
-        assert (
-            np.abs(
-                np.exp(
-                    np.nanmean(np.array(marginals[1], dtype=float))
-                    - np.nanmean(np.array(marginals[0], dtype=float))
-                    - 4.0
-                )
-            )
-            <= 1
-        )
+        assert abs(np.exp(marginals[1] - marginals[0]) - 4.0) <= 1
 
     def test_start(self):
         with pm.Model() as model:

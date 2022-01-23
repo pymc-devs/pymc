@@ -155,6 +155,7 @@ See [Google Scholar](https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&
 
 installation
 learning
+Examples <https://docs.pymc.io/projects/examples/en/latest/>
 api
 community
 contributing/index

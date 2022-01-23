@@ -58,7 +58,7 @@ class PGBART(ArrayStepShared):
     def __init__(self, vars=None, num_particles=40, max_stages=100, batch="auto", model=None):
         _log.warning("BART is experimental. Use with caution.")
         model = modelcontext(model)
-        initial_values = model.recompute_initial_point()
+        initial_values = model.compute_initial_point()
         value_bart = inputvars(vars)[0]
         self.bart = model.values_to_rvs[value_bart].owner.op
 

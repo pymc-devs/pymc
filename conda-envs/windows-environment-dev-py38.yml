@@ -5,13 +5,13 @@ channels:
 dependencies:
  # base dependencies (see install guide for Windows)
 - aeppl=0.0.18
-- aesara=2.3.2
+- aesara=2.3.6
 - arviz>=0.11.4
 - cachetools>=4.2.1
 - cloudpickle
 - fastprogress>=0.2.0
 - h5py
-- numpy>=1.15.0,<1.22.0
+- numpy>=1.15.0
 - pandas
 - pip
 - python=3.8
@@ -33,3 +33,4 @@ dependencies:
 - watermark
 - pip:
   - sphinx-design
+  - sphinx-remove-toctrees

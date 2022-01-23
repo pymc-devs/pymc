@@ -61,6 +61,8 @@ __all__ = [
     "NoDistribution",
 ]
 
+DIST_PARAMETER_TYPES = Union[np.ndarray, int, float, TensorVariable]
+
 vectorized_ppc = contextvars.ContextVar(
     "vectorized_ppc", default=None
 )  # type: contextvars.ContextVar[Optional[Callable]]
@@ -73,6 +75,17 @@ class _Unpickling:
 
 
 class DistributionMeta(ABCMeta):
+    """
+    DistributionMeta class
+
+
+    Notes
+    -----
+    DistributionMeta currently performs many functions, and will likely be refactored soon.
+    See issue below for more details
+    https://github.com/pymc-devs/pymc/issues/5308
+    """
+
     def __new__(cls, name, bases, clsdict):
 
         # Forcefully deprecate old v3 `Distribution`s

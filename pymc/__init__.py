@@ -33,7 +33,12 @@ def __set_compiler_flags():
     import aesara
 
     current = aesara.config.gcc__cxxflags
-    aesara.config.gcc__cxxflags = f"{current} -Wno-c++11-narrowing"
+    augmented = f"{current} -Wno-c++11-narrowing"
+    # Work around compiler bug in GCC < 8.4 related to structured exception
+    # handling registers on Windows.
+    # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65782 for details.
+    augmented = f"{augmented} -fno-asynchronous-unwind-tables"
+    aesara.config.gcc__cxxflags = augmented
 
 
 __set_compiler_flags()
