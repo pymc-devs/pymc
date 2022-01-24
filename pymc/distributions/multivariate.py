@@ -891,9 +891,13 @@ class WishartRV(RandomVariable):
         return dist_params[1].shape
 
     @classmethod
-    def rng_fn(cls, rng, nu, V, size=None):
-        size = size if size else 1  # Default size for Scipy's wishart.rvs is 1
-        return stats.wishart.rvs(np.int(nu), V, size=size, random_state=rng)
+    def rng_fn(cls, rng, nu, V, size):
+        scipy_size = size if size else 1  # Default size for Scipy's wishart.rvs is 1
+        result = stats.wishart.rvs(np.int(nu), V, size=scipy_size, random_state=rng)
+        if size == (1,):
+            return result[np.newaxis, ...]
+        else:
+            return result
 
 
 wishart = WishartRV()
