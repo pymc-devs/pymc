@@ -39,12 +39,14 @@ from pymc.distributions import (
     KroneckerNormal,
     Kumaraswamy,
     Laplace,
+    LKJCorr,
     Logistic,
     LogitNormal,
     LogNormal,
     MatrixNormal,
     Moyal,
     Multinomial,
+    MvNormal,
     MvStudentT,
     NegativeBinomial,
     Normal,
@@ -68,7 +70,6 @@ from pymc.distributions import (
 )
 from pymc.distributions.distribution import _get_moment, get_moment
 from pymc.distributions.logprob import joint_logpt
-from pymc.distributions.multivariate import MvNormal
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
@@ -97,7 +98,6 @@ def test_all_distributions_have_moments():
 
     # Distributions that have not been refactored for V4 yet
     not_implemented = {
-        dist_module.multivariate.LKJCorr,
         dist_module.mixture.Mixture,
         dist_module.mixture.MixtureSameFamily,
         dist_module.mixture.NormalMixture,
@@ -1423,4 +1423,19 @@ def test_simulator_moment(mu, sigma, size):
 def test_kronecker_normal_moments(mu, covs, size, expected):
     with Model() as model:
         KroneckerNormal("x", mu=mu, covs=covs, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "n, eta, size, expected",
+    [
+        (3, 1, None, np.zeros(3)),
+        (5, 1, None, np.zeros(10)),
+        (3, 1, 1, np.zeros((1, 3))),
+        (5, 1, (2, 3), np.zeros((2, 3, 10))),
+    ],
+)
+def test_lkjcorr_moment(n, eta, size, expected):
+    with Model() as model:
+        LKJCorr("x", n=n, eta=eta, size=size)
     assert_moment_is_expected(model, expected)
