@@ -1828,29 +1828,46 @@ class TestKroneckerNormal(BaseTestDistributionRandom):
     ]
 
 
+class TestLKJCorr(BaseTestDistributionRandom):
+    pymc_dist = pm.LKJCorr
+    pymc_dist_params = {"n": 3, "eta": 1.0}
+    expected_rv_op_params = {"n": 3, "eta": 1.0}
+
+    sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+    sizes_expected = [
+        (3,),
+        (3,),
+        (1, 3),
+        (1, 3),
+        (5, 3),
+        (4, 5, 3),
+        (2, 4, 2, 3),
+    ]
+
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_draws_match_expected",
+    ]
+
+    def check_draws_match_expected(self):
+        def ref_rand(size, n, eta):
+            shape = int(n * (n - 1) // 2)
+            beta = eta - 1 + n / 2
+            return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
+
+        pymc_random(
+            pm.LKJCorr,
+            {
+                "n": Domain([2, 10, 50], edges=(None, None)),
+                "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
+            },
+            ref_rand=ref_rand,
+            size=1000,
+        )
+
+
 class TestScalarParameterSamples(SeededTest):
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_lkj(self):
-        for n in [2, 10, 50]:
-            # pylint: disable=cell-var-from-loop
-            shape = n * (n - 1) // 2
-
-            def ref_rand(size, eta):
-                beta = eta - 1 + n / 2
-                return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
-
-            class TestedLKJCorr(pm.LKJCorr):
-                def __init__(self, **kwargs):
-                    kwargs.pop("shape", None)
-                    super().__init__(n=n, **kwargs)
-
-            pymc_random(
-                TestedLKJCorr,
-                {"eta": Domain([1.0, 10.0, 100.0])},
-                size=10000 // n,
-                ref_rand=ref_rand,
-            )
-
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_normalmixture(self):
         def ref_rand(size, w, mu, sigma):
