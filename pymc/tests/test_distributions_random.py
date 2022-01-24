@@ -369,8 +369,9 @@ class BaseTestDistributionRandom(SeededTest):
         sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
         for size, expected in zip(sizes_to_check, sizes_expected):
             pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
-            actual = tuple(pymc_rv.shape.eval())
-            assert actual == expected, f"size={size}, expected={expected}, actual={actual}"
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            actual = pymc_rv.eval().shape
+            assert actual == expected_symbolic == expected
 
         # test multi-parameters sampling for univariate distributions (with univariate inputs)
         if (
@@ -390,8 +391,9 @@ class BaseTestDistributionRandom(SeededTest):
             ]
             for size, expected in zip(sizes_to_check, sizes_expected):
                 pymc_rv = self.pymc_dist.dist(**params, size=size)
-                actual = tuple(pymc_rv.shape.eval())
-                assert actual == expected
+                expected_symbolic = tuple(pymc_rv.shape.eval())
+                actual = pymc_rv.eval().shape
+                assert actual == expected_symbolic == expected
 
     def validate_tests_list(self):
         assert len(self.checks_to_run) == len(
@@ -417,9 +419,17 @@ class TestFlat(BaseTestDistributionRandom):
     expected_rv_op_params = {}
     checks_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_rv_size",
+        "check_rv_inferred_size",
         "check_not_implemented",
     ]
+
+    def check_rv_inferred_size(self):
+        sizes_to_check = self.sizes_to_check or [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+        sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
+        for size, expected in zip(sizes_to_check, sizes_expected):
+            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            assert expected_symbolic == expected
 
     def check_not_implemented(self):
         with pytest.raises(NotImplementedError):
@@ -432,9 +442,17 @@ class TestHalfFlat(BaseTestDistributionRandom):
     expected_rv_op_params = {}
     checks_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_rv_size",
+        "check_rv_inferred_size",
         "check_not_implemented",
     ]
+
+    def check_rv_inferred_size(self):
+        sizes_to_check = self.sizes_to_check or [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+        sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
+        for size, expected in zip(sizes_to_check, sizes_expected):
+            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            assert expected_symbolic == expected
 
     def check_not_implemented(self):
         with pytest.raises(NotImplementedError):
