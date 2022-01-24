@@ -134,6 +134,8 @@ jobs:
             hashFiles('requirements.txt') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          mamba-version: "*"
+          use-mamba: true
           activate-environment: pymc-test-py37
           channel-priority: strict
           environment-file: conda-envs/environment-test-py37.yml
