@@ -253,7 +253,6 @@ class BaseTestCases:
             ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
     distribution = pm.GaussianRandomWalk
     params = {"mu": 1.0, "sigma": 1.0}
