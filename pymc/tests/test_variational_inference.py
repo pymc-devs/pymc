@@ -936,8 +936,7 @@ def binomial_model_inference(binomial_model, inference_spec):
         return inference_spec()
 
 
-# @pytest.mark.xfail("aesara.config.warn_float64 == 'raise'", reason="too strict float32")
-@pytest.mark.xfail(reason="waits for aesara release")
+@pytest.mark.xfail("aesara.config.warn_float64 == 'raise'", reason="too strict float32")
 def test_replacements(binomial_model_inference):
     d = at.bscalar()
     d.tag.test_value = 1
