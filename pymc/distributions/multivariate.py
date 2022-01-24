@@ -1566,6 +1566,9 @@ class LKJCorr(BoundedContinuous):
         eta = at.as_tensor_variable(floatX(eta))
         return super().dist([n, eta], **kwargs)
 
+    def get_moment(rv, *args):
+        return at.zeros_like(rv)
+
     def logp(value, n, eta):
         """
         Calculate log-probability of LKJ distribution at specified
