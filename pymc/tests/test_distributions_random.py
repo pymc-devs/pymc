@@ -256,7 +256,7 @@ class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
     default_shape = (1,)
 
 
-class BaseTestDistribution(SeededTest):
+class BaseTestDistributionRandom(SeededTest):
     """
     This class provides a base for tests that new RandomVariables are correctly
     implemented, and that the mapping of parameters between the PyMC
@@ -411,7 +411,7 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
     )
 
 
-class TestFlat(BaseTestDistribution):
+class TestFlat(BaseTestDistributionRandom):
     pymc_dist = pm.Flat
     pymc_dist_params = {}
     expected_rv_op_params = {}
@@ -426,7 +426,7 @@ class TestFlat(BaseTestDistribution):
             self.pymc_rv.eval()
 
 
-class TestHalfFlat(BaseTestDistribution):
+class TestHalfFlat(BaseTestDistributionRandom):
     pymc_dist = pm.HalfFlat
     pymc_dist_params = {}
     expected_rv_op_params = {}
@@ -441,7 +441,7 @@ class TestHalfFlat(BaseTestDistribution):
             self.pymc_rv.eval()
 
 
-class TestDiscreteWeibull(BaseTestDistribution):
+class TestDiscreteWeibull(BaseTestDistributionRandom):
     def discrete_weibul_rng_fn(self, size, q, beta, uniform_rng_fct):
         return np.ceil(np.power(np.log(1 - uniform_rng_fct(size=size)) / np.log(q), 1.0 / beta)) - 1
 
@@ -463,7 +463,7 @@ class TestDiscreteWeibull(BaseTestDistribution):
     ]
 
 
-class TestPareto(BaseTestDistribution):
+class TestPareto(BaseTestDistributionRandom):
     pymc_dist = pm.Pareto
     pymc_dist_params = {"alpha": 3.0, "m": 2.0}
     expected_rv_op_params = {"alpha": 3.0, "m": 2.0}
@@ -476,7 +476,7 @@ class TestPareto(BaseTestDistribution):
     ]
 
 
-class TestLaplace(BaseTestDistribution):
+class TestLaplace(BaseTestDistributionRandom):
     pymc_dist = pm.Laplace
     pymc_dist_params = {"mu": 0.0, "b": 1.0}
     expected_rv_op_params = {"mu": 0.0, "b": 1.0}
@@ -489,7 +489,7 @@ class TestLaplace(BaseTestDistribution):
     ]
 
 
-class TestAsymmetricLaplace(BaseTestDistribution):
+class TestAsymmetricLaplace(BaseTestDistributionRandom):
     def asymmetriclaplace_rng_fn(self, b, kappa, mu, size, uniform_rng_fct):
         u = uniform_rng_fct(size=size)
         switch = kappa ** 2 / (1 + kappa ** 2)
@@ -517,7 +517,7 @@ class TestAsymmetricLaplace(BaseTestDistribution):
     ]
 
 
-class TestExGaussian(BaseTestDistribution):
+class TestExGaussian(BaseTestDistributionRandom):
     def exgaussian_rng_fn(self, mu, sigma, nu, size, normal_rng_fct, exponential_rng_fct):
         return normal_rng_fct(mu, sigma, size=size) + exponential_rng_fct(scale=nu, size=size)
 
@@ -547,7 +547,7 @@ class TestExGaussian(BaseTestDistribution):
     ]
 
 
-class TestGumbel(BaseTestDistribution):
+class TestGumbel(BaseTestDistributionRandom):
     pymc_dist = pm.Gumbel
     pymc_dist_params = {"mu": 1.5, "beta": 3.0}
     expected_rv_op_params = {"mu": 1.5, "beta": 3.0}
@@ -559,7 +559,7 @@ class TestGumbel(BaseTestDistribution):
     ]
 
 
-class TestStudentT(BaseTestDistribution):
+class TestStudentT(BaseTestDistributionRandom):
     pymc_dist = pm.StudentT
     pymc_dist_params = {"nu": 5.0, "mu": -1.0, "sigma": 2.0}
     expected_rv_op_params = {"nu": 5.0, "mu": -1.0, "sigma": 2.0}
@@ -572,7 +572,7 @@ class TestStudentT(BaseTestDistribution):
     ]
 
 
-class TestMoyal(BaseTestDistribution):
+class TestMoyal(BaseTestDistributionRandom):
     pymc_dist = pm.Moyal
     pymc_dist_params = {"mu": 0.0, "sigma": 1.0}
     expected_rv_op_params = {"mu": 0.0, "sigma": 1.0}
@@ -585,7 +585,7 @@ class TestMoyal(BaseTestDistribution):
     ]
 
 
-class TestKumaraswamy(BaseTestDistribution):
+class TestKumaraswamy(BaseTestDistributionRandom):
     def kumaraswamy_rng_fn(self, a, b, size, uniform_rng_fct):
         return (1 - (1 - uniform_rng_fct(size=size)) ** (1 / b)) ** (1 / a)
 
@@ -607,7 +607,7 @@ class TestKumaraswamy(BaseTestDistribution):
     ]
 
 
-class TestTruncatedNormal(BaseTestDistribution):
+class TestTruncatedNormal(BaseTestDistributionRandom):
     pymc_dist = pm.TruncatedNormal
     lower, upper, mu, sigma = -2.0, 2.0, 0, 1.0
     pymc_dist_params = {"mu": mu, "sigma": sigma, "lower": lower, "upper": upper}
@@ -626,7 +626,7 @@ class TestTruncatedNormal(BaseTestDistribution):
     ]
 
 
-class TestTruncatedNormalTau(BaseTestDistribution):
+class TestTruncatedNormalTau(BaseTestDistributionRandom):
     pymc_dist = pm.TruncatedNormal
     lower, upper, mu, tau = -2.0, 2.0, 0, 1.0
     tau, sigma = get_tau_sigma(tau=tau, sigma=None)
@@ -637,7 +637,7 @@ class TestTruncatedNormalTau(BaseTestDistribution):
     ]
 
 
-class TestTruncatedNormalLowerTau(BaseTestDistribution):
+class TestTruncatedNormalLowerTau(BaseTestDistributionRandom):
     pymc_dist = pm.TruncatedNormal
     lower, upper, mu, tau = -2.0, np.inf, 0, 1.0
     tau, sigma = get_tau_sigma(tau=tau, sigma=None)
@@ -648,7 +648,7 @@ class TestTruncatedNormalLowerTau(BaseTestDistribution):
     ]
 
 
-class TestTruncatedNormalUpperTau(BaseTestDistribution):
+class TestTruncatedNormalUpperTau(BaseTestDistributionRandom):
     pymc_dist = pm.TruncatedNormal
     lower, upper, mu, tau = -np.inf, 2.0, 0, 1.0
     tau, sigma = get_tau_sigma(tau=tau, sigma=None)
@@ -659,7 +659,7 @@ class TestTruncatedNormalUpperTau(BaseTestDistribution):
     ]
 
 
-class TestTruncatedNormalUpperArray(BaseTestDistribution):
+class TestTruncatedNormalUpperArray(BaseTestDistributionRandom):
     pymc_dist = pm.TruncatedNormal
     lower, upper, mu, tau = (
         np.array([-np.inf, -np.inf]),
@@ -681,7 +681,7 @@ class TestTruncatedNormalUpperArray(BaseTestDistribution):
     ]
 
 
-class TestWald(BaseTestDistribution):
+class TestWald(BaseTestDistributionRandom):
     pymc_dist = pm.Wald
     mu, lam, alpha = 1.0, 1.0, 0.0
     mu_rv, lam_rv, phi_rv = pm.Wald.get_mu_lam_phi(mu=mu, lam=lam, phi=None)
@@ -701,7 +701,7 @@ class TestWald(BaseTestDistribution):
         )
 
 
-class TestWaldMuPhi(BaseTestDistribution):
+class TestWaldMuPhi(BaseTestDistributionRandom):
     pymc_dist = pm.Wald
     mu, phi, alpha = 1.0, 3.0, 0.0
     mu_rv, lam_rv, phi_rv = pm.Wald.get_mu_lam_phi(mu=mu, lam=None, phi=phi)
@@ -712,7 +712,7 @@ class TestWaldMuPhi(BaseTestDistribution):
     ]
 
 
-class TestSkewNormal(BaseTestDistribution):
+class TestSkewNormal(BaseTestDistributionRandom):
     pymc_dist = pm.SkewNormal
     pymc_dist_params = {"mu": 0.0, "sigma": 1.0, "alpha": 5.0}
     expected_rv_op_params = {"mu": 0.0, "sigma": 1.0, "alpha": 5.0}
@@ -725,7 +725,7 @@ class TestSkewNormal(BaseTestDistribution):
     ]
 
 
-class TestSkewNormalTau(BaseTestDistribution):
+class TestSkewNormalTau(BaseTestDistributionRandom):
     pymc_dist = pm.SkewNormal
     tau, sigma = get_tau_sigma(tau=2.0)
     pymc_dist_params = {"mu": 0.0, "tau": tau, "alpha": 5.0}
@@ -733,7 +733,7 @@ class TestSkewNormalTau(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestRice(BaseTestDistribution):
+class TestRice(BaseTestDistributionRandom):
     pymc_dist = pm.Rice
     b, sigma = 1, 2
     pymc_dist_params = {"b": b, "sigma": sigma}
@@ -747,7 +747,7 @@ class TestRice(BaseTestDistribution):
     ]
 
 
-class TestRiceNu(BaseTestDistribution):
+class TestRiceNu(BaseTestDistributionRandom):
     pymc_dist = pm.Rice
     nu = sigma = 2
     pymc_dist_params = {"nu": nu, "sigma": sigma}
@@ -755,7 +755,7 @@ class TestRiceNu(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestStudentTLam(BaseTestDistribution):
+class TestStudentTLam(BaseTestDistributionRandom):
     pymc_dist = pm.StudentT
     lam, sigma = get_tau_sigma(tau=2.0)
     pymc_dist_params = {"nu": 5.0, "mu": -1.0, "lam": lam}
@@ -765,7 +765,7 @@ class TestStudentTLam(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestNormal(BaseTestDistribution):
+class TestNormal(BaseTestDistributionRandom):
     pymc_dist = pm.Normal
     pymc_dist_params = {"mu": 5.0, "sigma": 10.0}
     expected_rv_op_params = {"mu": 5.0, "sigma": 10.0}
@@ -779,7 +779,7 @@ class TestNormal(BaseTestDistribution):
     ]
 
 
-class TestLogitNormal(BaseTestDistribution):
+class TestLogitNormal(BaseTestDistributionRandom):
     def logit_normal_rng_fn(self, rng, size, loc, scale):
         return expit(st.norm.rvs(loc=loc, scale=scale, size=size, random_state=rng))
 
@@ -797,7 +797,7 @@ class TestLogitNormal(BaseTestDistribution):
     ]
 
 
-class TestLogitNormalTau(BaseTestDistribution):
+class TestLogitNormalTau(BaseTestDistributionRandom):
     pymc_dist = pm.LogitNormal
     tau, sigma = get_tau_sigma(tau=25.0)
     pymc_dist_params = {"mu": 1.0, "tau": tau}
@@ -805,7 +805,7 @@ class TestLogitNormalTau(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestNormalTau(BaseTestDistribution):
+class TestNormalTau(BaseTestDistributionRandom):
     pymc_dist = pm.Normal
     tau, sigma = get_tau_sigma(tau=25.0)
     pymc_dist_params = {"mu": 1.0, "tau": tau}
@@ -813,21 +813,21 @@ class TestNormalTau(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestNormalSd(BaseTestDistribution):
+class TestNormalSd(BaseTestDistributionRandom):
     pymc_dist = pm.Normal
     pymc_dist_params = {"mu": 1.0, "sd": 5.0}
     expected_rv_op_params = {"mu": 1.0, "sigma": 5.0}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestUniform(BaseTestDistribution):
+class TestUniform(BaseTestDistributionRandom):
     pymc_dist = pm.Uniform
     pymc_dist_params = {"lower": 0.5, "upper": 1.5}
     expected_rv_op_params = {"lower": 0.5, "upper": 1.5}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestHalfNormal(BaseTestDistribution):
+class TestHalfNormal(BaseTestDistributionRandom):
     pymc_dist = pm.HalfNormal
     pymc_dist_params = {"sigma": 10.0}
     expected_rv_op_params = {"mean": 0, "sigma": 10.0}
@@ -839,7 +839,7 @@ class TestHalfNormal(BaseTestDistribution):
     ]
 
 
-class TestHalfNormalTau(BaseTestDistribution):
+class TestHalfNormalTau(BaseTestDistributionRandom):
     pymc_dist = pm.Normal
     tau, sigma = get_tau_sigma(tau=25.0)
     pymc_dist_params = {"tau": tau}
@@ -847,14 +847,14 @@ class TestHalfNormalTau(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestHalfNormalSd(BaseTestDistribution):
+class TestHalfNormalSd(BaseTestDistributionRandom):
     pymc_dist = pm.Normal
     pymc_dist_params = {"sd": 5.0}
     expected_rv_op_params = {"mu": 0.0, "sigma": 5.0}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestBeta(BaseTestDistribution):
+class TestBeta(BaseTestDistributionRandom):
     pymc_dist = pm.Beta
     pymc_dist_params = {"alpha": 2.0, "beta": 5.0}
     expected_rv_op_params = {"alpha": 2.0, "beta": 5.0}
@@ -870,7 +870,7 @@ class TestBeta(BaseTestDistribution):
     ]
 
 
-class TestBetaMuSigma(BaseTestDistribution):
+class TestBetaMuSigma(BaseTestDistributionRandom):
     pymc_dist = pm.Beta
     pymc_dist_params = {"mu": 0.5, "sigma": 0.25}
     expected_alpha, expected_beta = pm.Beta.get_alpha_beta(
@@ -880,7 +880,7 @@ class TestBetaMuSigma(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestExponential(BaseTestDistribution):
+class TestExponential(BaseTestDistributionRandom):
     pymc_dist = pm.Exponential
     pymc_dist_params = {"lam": 10.0}
     expected_rv_op_params = {"mu": 1.0 / pymc_dist_params["lam"]}
@@ -892,7 +892,7 @@ class TestExponential(BaseTestDistribution):
     ]
 
 
-class TestCauchy(BaseTestDistribution):
+class TestCauchy(BaseTestDistributionRandom):
     pymc_dist = pm.Cauchy
     pymc_dist_params = {"alpha": 2.0, "beta": 5.0}
     expected_rv_op_params = {"alpha": 2.0, "beta": 5.0}
@@ -904,7 +904,7 @@ class TestCauchy(BaseTestDistribution):
     ]
 
 
-class TestHalfCauchy(BaseTestDistribution):
+class TestHalfCauchy(BaseTestDistributionRandom):
     pymc_dist = pm.HalfCauchy
     pymc_dist_params = {"beta": 5.0}
     expected_rv_op_params = {"alpha": 0.0, "beta": 5.0}
@@ -916,7 +916,7 @@ class TestHalfCauchy(BaseTestDistribution):
     ]
 
 
-class TestGamma(BaseTestDistribution):
+class TestGamma(BaseTestDistributionRandom):
     pymc_dist = pm.Gamma
     pymc_dist_params = {"alpha": 2.0, "beta": 5.0}
     expected_rv_op_params = {"alpha": 2.0, "beta": 1 / 5.0}
@@ -928,7 +928,7 @@ class TestGamma(BaseTestDistribution):
     ]
 
 
-class TestGammaMuSigma(BaseTestDistribution):
+class TestGammaMuSigma(BaseTestDistributionRandom):
     pymc_dist = pm.Gamma
     pymc_dist_params = {"mu": 0.5, "sigma": 0.25}
     expected_alpha, expected_beta = pm.Gamma.get_alpha_beta(
@@ -938,7 +938,7 @@ class TestGammaMuSigma(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestInverseGamma(BaseTestDistribution):
+class TestInverseGamma(BaseTestDistributionRandom):
     pymc_dist = pm.InverseGamma
     pymc_dist_params = {"alpha": 2.0, "beta": 5.0}
     expected_rv_op_params = {"alpha": 2.0, "beta": 5.0}
@@ -950,7 +950,7 @@ class TestInverseGamma(BaseTestDistribution):
     ]
 
 
-class TestInverseGammaMuSigma(BaseTestDistribution):
+class TestInverseGammaMuSigma(BaseTestDistributionRandom):
     pymc_dist = pm.InverseGamma
     pymc_dist_params = {"mu": 0.5, "sigma": 0.25}
     expected_alpha, expected_beta = pm.InverseGamma._get_alpha_beta(
@@ -963,7 +963,7 @@ class TestInverseGammaMuSigma(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestChiSquared(BaseTestDistribution):
+class TestChiSquared(BaseTestDistributionRandom):
     pymc_dist = pm.ChiSquared
     pymc_dist_params = {"nu": 2.0}
     expected_rv_op_params = {"nu": 2.0}
@@ -976,21 +976,21 @@ class TestChiSquared(BaseTestDistribution):
     ]
 
 
-class TestBinomial(BaseTestDistribution):
+class TestBinomial(BaseTestDistributionRandom):
     pymc_dist = pm.Binomial
     pymc_dist_params = {"n": 100, "p": 0.33}
     expected_rv_op_params = {"n": 100, "p": 0.33}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestNegativeBinomial(BaseTestDistribution):
+class TestNegativeBinomial(BaseTestDistributionRandom):
     pymc_dist = pm.NegativeBinomial
     pymc_dist_params = {"n": 100, "p": 0.33}
     expected_rv_op_params = {"n": 100, "p": 0.33}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestNegativeBinomialMuSigma(BaseTestDistribution):
+class TestNegativeBinomialMuSigma(BaseTestDistributionRandom):
     pymc_dist = pm.NegativeBinomial
     pymc_dist_params = {"mu": 5.0, "alpha": 8.0}
     expected_n, expected_p = pm.NegativeBinomial.get_n_p(
@@ -1003,7 +1003,7 @@ class TestNegativeBinomialMuSigma(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestBernoulli(BaseTestDistribution):
+class TestBernoulli(BaseTestDistributionRandom):
     pymc_dist = pm.Bernoulli
     pymc_dist_params = {"p": 0.33}
     expected_rv_op_params = {"p": 0.33}
@@ -1015,21 +1015,21 @@ class TestBernoulli(BaseTestDistribution):
     ]
 
 
-class TestBernoulliLogitP(BaseTestDistribution):
+class TestBernoulliLogitP(BaseTestDistributionRandom):
     pymc_dist = pm.Bernoulli
     pymc_dist_params = {"logit_p": 1.0}
     expected_rv_op_params = {"p": expit(1.0)}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestPoisson(BaseTestDistribution):
+class TestPoisson(BaseTestDistributionRandom):
     pymc_dist = pm.Poisson
     pymc_dist_params = {"mu": 4.0}
     expected_rv_op_params = {"mu": 4.0}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestMvNormalCov(BaseTestDistribution):
+class TestMvNormalCov(BaseTestDistributionRandom):
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -1077,7 +1077,7 @@ class TestMvNormalCov(BaseTestDistribution):
         # assert mu.eval().shape == (10, 2, 3)
 
 
-class TestMvNormalChol(BaseTestDistribution):
+class TestMvNormalChol(BaseTestDistributionRandom):
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -1090,7 +1090,7 @@ class TestMvNormalChol(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestMvNormalTau(BaseTestDistribution):
+class TestMvNormalTau(BaseTestDistributionRandom):
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -1103,7 +1103,7 @@ class TestMvNormalTau(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestMvStudentTCov(BaseTestDistribution):
+class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, cov, rng):
         chi2_samples = rng.chisquare(nu, size=size)
         mv_samples = rng.multivariate_normal(np.zeros_like(mu), cov, size=size)
@@ -1173,7 +1173,7 @@ class TestMvStudentTCov(BaseTestDistribution):
         # assert mu.eval().shape == (10, 2, 3)
 
 
-class TestMvStudentTChol(BaseTestDistribution):
+class TestMvStudentTChol(BaseTestDistributionRandom):
     pymc_dist = pm.MvStudentT
     pymc_dist_params = {
         "nu": 5,
@@ -1188,7 +1188,7 @@ class TestMvStudentTChol(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestMvStudentTTau(BaseTestDistribution):
+class TestMvStudentTTau(BaseTestDistributionRandom):
     pymc_dist = pm.MvStudentT
     pymc_dist_params = {
         "nu": 5,
@@ -1203,7 +1203,7 @@ class TestMvStudentTTau(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestDirichlet(BaseTestDistribution):
+class TestDirichlet(BaseTestDistributionRandom):
     pymc_dist = pm.Dirichlet
     pymc_dist_params = {"a": np.array([1.0, 2.0])}
     expected_rv_op_params = {"a": np.array([1.0, 2.0])}
@@ -1218,7 +1218,7 @@ class TestDirichlet(BaseTestDistribution):
     ]
 
 
-class TestStickBreakingWeights(BaseTestDistribution):
+class TestStickBreakingWeights(BaseTestDistributionRandom):
     pymc_dist = pm.StickBreakingWeights
     pymc_dist_params = {"alpha": 2.0, "K": 19}
     expected_rv_op_params = {"alpha": 2.0, "K": 19}
@@ -1253,7 +1253,7 @@ class TestStickBreakingWeights(BaseTestDistribution):
         assert np.all(draws <= 1)
 
 
-class TestMultinomial(BaseTestDistribution):
+class TestMultinomial(BaseTestDistributionRandom):
     pymc_dist = pm.Multinomial
     pymc_dist_params = {"n": 85, "p": np.array([0.28, 0.62, 0.10])}
     expected_rv_op_params = {"n": 85, "p": np.array([0.28, 0.62, 0.10])}
@@ -1268,7 +1268,7 @@ class TestMultinomial(BaseTestDistribution):
     ]
 
 
-class TestDirichletMultinomial(BaseTestDistribution):
+class TestDirichletMultinomial(BaseTestDistributionRandom):
     pymc_dist = pm.DirichletMultinomial
 
     pymc_dist_params = {"n": 85, "a": np.array([1.0, 2.0, 1.5, 1.5])}
@@ -1298,7 +1298,7 @@ class TestDirichletMultinomial(BaseTestDistribution):
         assert np.all((draws.sum(-2)[:, :, 3] > 3) & (draws.sum(-2)[:, :, 3] <= 5))
 
 
-class TestDirichletMultinomial_1d_n_2d_a(BaseTestDistribution):
+class TestDirichletMultinomial_1D_n_2D_a(BaseTestDistributionRandom):
     pymc_dist = pm.DirichletMultinomial
     pymc_dist_params = {
         "n": np.array([23, 29]),
@@ -1309,7 +1309,7 @@ class TestDirichletMultinomial_1d_n_2d_a(BaseTestDistribution):
     checks_to_run = ["check_rv_size"]
 
 
-class TestCategorical(BaseTestDistribution):
+class TestCategorical(BaseTestDistributionRandom):
     pymc_dist = pm.Categorical
     pymc_dist_params = {"p": np.array([0.28, 0.62, 0.10])}
     expected_rv_op_params = {"p": np.array([0.28, 0.62, 0.10])}
@@ -1319,14 +1319,14 @@ class TestCategorical(BaseTestDistribution):
     ]
 
 
-class TestGeometric(BaseTestDistribution):
+class TestGeometric(BaseTestDistributionRandom):
     pymc_dist = pm.Geometric
     pymc_dist_params = {"p": 0.9}
     expected_rv_op_params = {"p": 0.9}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestHyperGeometric(BaseTestDistribution):
+class TestHyperGeometric(BaseTestDistributionRandom):
     pymc_dist = pm.HyperGeometric
     pymc_dist_params = {"N": 20, "k": 12, "n": 5}
     expected_rv_op_params = {
@@ -1342,21 +1342,21 @@ class TestHyperGeometric(BaseTestDistribution):
     ]
 
 
-class TestLogistic(BaseTestDistribution):
+class TestLogistic(BaseTestDistributionRandom):
     pymc_dist = pm.Logistic
     pymc_dist_params = {"mu": 1.0, "s": 2.0}
     expected_rv_op_params = {"mu": 1.0, "s": 2.0}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestLogNormal(BaseTestDistribution):
+class TestLogNormal(BaseTestDistributionRandom):
     pymc_dist = pm.LogNormal
     pymc_dist_params = {"mu": 1.0, "sigma": 5.0}
     expected_rv_op_params = {"mu": 1.0, "sigma": 5.0}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestLognormalTau(BaseTestDistribution):
+class TestLognormalTau(BaseTestDistributionRandom):
     pymc_dist = pm.Lognormal
     tau, sigma = get_tau_sigma(tau=25.0)
     pymc_dist_params = {"mu": 1.0, "tau": 25.0}
@@ -1364,14 +1364,14 @@ class TestLognormalTau(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestLognormalSd(BaseTestDistribution):
+class TestLognormalSd(BaseTestDistributionRandom):
     pymc_dist = pm.Lognormal
     pymc_dist_params = {"mu": 1.0, "sd": 5.0}
     expected_rv_op_params = {"mu": 1.0, "sigma": 5.0}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestTriangular(BaseTestDistribution):
+class TestTriangular(BaseTestDistributionRandom):
     pymc_dist = pm.Triangular
     pymc_dist_params = {"lower": 0, "upper": 1, "c": 0.5}
     expected_rv_op_params = {"lower": 0, "c": 0.5, "upper": 1}
@@ -1383,14 +1383,14 @@ class TestTriangular(BaseTestDistribution):
     ]
 
 
-class TestVonMises(BaseTestDistribution):
+class TestVonMises(BaseTestDistributionRandom):
     pymc_dist = pm.VonMises
     pymc_dist_params = {"mu": -2.1, "kappa": 5}
     expected_rv_op_params = {"mu": -2.1, "kappa": 5}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestWeibull(BaseTestDistribution):
+class TestWeibull(BaseTestDistributionRandom):
     def weibull_rng_fn(self, size, alpha, beta, std_weibull_rng_fct):
         return beta * std_weibull_rng_fct(alpha, size=size)
 
@@ -1412,7 +1412,7 @@ class TestWeibull(BaseTestDistribution):
     ]
 
 
-class TestBetaBinomial(BaseTestDistribution):
+class TestBetaBinomial(BaseTestDistributionRandom):
     pymc_dist = pm.BetaBinomial
     pymc_dist_params = {"alpha": 2.0, "beta": 1.0, "n": 5}
     expected_rv_op_params = {"n": 5, "alpha": 2.0, "beta": 1.0}
@@ -1429,7 +1429,7 @@ class TestBetaBinomial(BaseTestDistribution):
     condition=_polyagamma_not_installed,
     reason="`polyagamma package is not available/installed.",
 )
-class TestPolyaGamma(BaseTestDistribution):
+class TestPolyaGamma(BaseTestDistributionRandom):
     def polyagamma_rng_fn(self, size, h, z, rng):
         return random_polyagamma(h, z, size=size, random_state=rng._bit_generator)
 
@@ -1447,7 +1447,7 @@ class TestPolyaGamma(BaseTestDistribution):
     ]
 
 
-class TestDiscreteUniform(BaseTestDistribution):
+class TestDiscreteUniform(BaseTestDistributionRandom):
     def discrete_uniform_rng_fn(self, size, lower, upper, rng):
         return st.randint.rvs(lower, upper + 1, size=size, random_state=rng)
 
@@ -1465,7 +1465,7 @@ class TestDiscreteUniform(BaseTestDistribution):
     ]
 
 
-class TestConstant(BaseTestDistribution):
+class TestConstant(BaseTestDistributionRandom):
     def constant_rng_fn(self, size, c):
         if size is None:
             return c
@@ -1483,7 +1483,7 @@ class TestConstant(BaseTestDistribution):
     ]
 
 
-class TestZeroInflatedPoisson(BaseTestDistribution):
+class TestZeroInflatedPoisson(BaseTestDistributionRandom):
     def zero_inflated_poisson_rng_fn(self, size, psi, theta, poisson_rng_fct, random_rng_fct):
         return poisson_rng_fct(theta, size=size) * (random_rng_fct(size=size) < psi)
 
@@ -1514,7 +1514,7 @@ class TestZeroInflatedPoisson(BaseTestDistribution):
     ]
 
 
-class TestZeroInflatedBinomial(BaseTestDistribution):
+class TestZeroInflatedBinomial(BaseTestDistributionRandom):
     def zero_inflated_binomial_rng_fn(self, size, psi, n, p, binomial_rng_fct, random_rng_fct):
         return binomial_rng_fct(n, p, size=size) * (random_rng_fct(size=size) < psi)
 
@@ -1545,7 +1545,7 @@ class TestZeroInflatedBinomial(BaseTestDistribution):
     ]
 
 
-class TestZeroInflatedNegativeBinomialMuSigma(BaseTestDistribution):
+class TestZeroInflatedNegativeBinomialMuSigma(BaseTestDistributionRandom):
     def zero_inflated_negbinomial_rng_fn(
         self, size, psi, n, p, negbinomial_rng_fct, random_rng_fct
     ):
@@ -1580,7 +1580,7 @@ class TestZeroInflatedNegativeBinomialMuSigma(BaseTestDistribution):
     ]
 
 
-class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
+class TestZeroInflatedNegativeBinomial(BaseTestDistributionRandom):
     pymc_dist = pm.ZeroInflatedNegativeBinomial
     pymc_dist_params = {"psi": 0.9, "n": 12, "p": 0.7}
     expected_rv_op_params = {"psi": 0.9, "n": 12, "p": 0.7}
@@ -1588,7 +1588,7 @@ class TestZeroInflatedNegativeBinomial(BaseTestDistribution):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestOrderedLogistic(BaseTestDistribution):
+class TestOrderedLogistic(BaseTestDistributionRandom):
     pymc_dist = _OrderedLogistic
     pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2])}
     expected_rv_op_params = {"p": np.array([0.11920292, 0.38079708, 0.38079708, 0.11920292])}
@@ -1598,7 +1598,7 @@ class TestOrderedLogistic(BaseTestDistribution):
     ]
 
 
-class TestOrderedProbit(BaseTestDistribution):
+class TestOrderedProbit(BaseTestDistributionRandom):
     pymc_dist = _OrderedProbit
     pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2])}
     expected_rv_op_params = {"p": np.array([0.02275013, 0.47724987, 0.47724987, 0.02275013])}
@@ -1608,7 +1608,7 @@ class TestOrderedProbit(BaseTestDistribution):
     ]
 
 
-class TestOrderedMultinomial(BaseTestDistribution):
+class TestOrderedMultinomial(BaseTestDistributionRandom):
     pymc_dist = _OrderedMultinomial
     pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2]), "n": 1000}
     sizes_to_check = [None, (1), (4,), (3, 2)]
@@ -1623,7 +1623,7 @@ class TestOrderedMultinomial(BaseTestDistribution):
     ]
 
 
-class TestWishart(BaseTestDistribution):
+class TestWishart(BaseTestDistributionRandom):
     def wishart_rng_fn(self, size, nu, V, rng):
         return st.wishart.rvs(np.int(nu), V, size=size, random_state=rng)
 
@@ -1649,7 +1649,7 @@ class TestWishart(BaseTestDistribution):
     ]
 
 
-class TestMatrixNormal(BaseTestDistribution):
+class TestMatrixNormal(BaseTestDistributionRandom):
 
     pymc_dist = pm.MatrixNormal
 
@@ -1734,7 +1734,7 @@ class TestMatrixNormal(BaseTestDistribution):
                 )
 
 
-class TestInterpolated(BaseTestDistribution):
+class TestInterpolated(BaseTestDistributionRandom):
     def interpolated_rng_fn(self, size, mu, sigma, rng):
         return st.norm.rvs(loc=mu, scale=sigma, size=size)
 
@@ -1781,7 +1781,7 @@ class TestInterpolated(BaseTestDistribution):
                 )
 
 
-class TestKroneckerNormal(BaseTestDistribution):
+class TestKroneckerNormal(BaseTestDistributionRandom):
     def kronecker_rng_fn(self, size, mu, covs=None, sigma=None, rng=None):
         cov = pm.math.kronecker(covs[0], covs[1]).eval()
         cov += sigma ** 2 * np.identity(cov.shape[0])
