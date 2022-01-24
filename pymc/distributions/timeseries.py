@@ -43,7 +43,7 @@ class GaussianRandomWalkRV(RandomVariable):
     """
 
     name = "GaussianRandomWalk"
-    ndim_supp = 1
+    ndim_supp = 0
     ndims_params = [0, 0, 0]
     dtype = "floatX"
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
@@ -88,7 +88,7 @@ class GaussianRandomWalkRV(RandomVariable):
         np.ndarray
         """
         return rng.normal(init, sigma, size=size) + np.cumsum(
-            rng.normal(loc=mu, scale=sigma, size=(steps, size))
+            rng.normal(loc=mu, scale=sigma, size=(size, steps)), axis=-1
         )
 
 
