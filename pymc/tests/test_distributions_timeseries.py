@@ -34,7 +34,7 @@ from pymc.sampling import sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
 
 
-def test_grw_rv_op():
+def test_grw_rv_op_scalar_size():
     """Basic test for GRW RV op"""
     init = 1
     mu = 3
@@ -45,6 +45,22 @@ def test_grw_rv_op():
 
     np.testing.assert_almost_equal(grw[-1], 13, decimal=4)
     assert grw.shape[0] == size
+
+
+def test_grw_rv_op_vector_steps():
+    """Basic test for GRW RV op
+
+    TODO: Will parametrize before merging PR, just splitting for convenience in development
+    """
+    init = 1
+    mu = 3
+    sd = 0.0000001
+    steps = 4
+
+    grw = gaussianrandomwalk(mu, sd, init, steps, size=1).eval()
+
+    np.testing.assert_almost_equal(grw[-1], 13, decimal=4)
+    assert grw.shape[0] == steps
 
 
 def test_grw_logp():
