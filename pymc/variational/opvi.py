@@ -1200,7 +1200,6 @@ class Group(WithMemoization):
         """
         node = self.to_flat_input(node)
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
-        random = at.patternbroadcast(random, self.symbolic_initial.broadcastable)
         return aesara.clone_replace(node, {self.input: random[0]})
 
     def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
