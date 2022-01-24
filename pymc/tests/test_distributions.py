@@ -2094,8 +2094,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_lkj(self, x, eta, n, lp):
+    def test_lkjcorr(self, x, eta, n, lp):
         with Model() as model:
             LKJCorr("lkj", eta=eta, n=n, transform=None)
 
