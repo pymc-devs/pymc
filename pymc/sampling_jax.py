@@ -74,7 +74,7 @@ def get_jaxified_logp(model: Model) -> Callable:
 
     logpt = replace_shared_variables([model.logpt()])[0]
 
-    logpt_fgraph = FunctionGraph(outputs=[logpt], clone=False)
+    logpt_fgraph = FunctionGraph(outputs=[logpt], clone=True)
     optimize_graph(logpt_fgraph, include=["fast_run"], exclude=["cxx_only", "BlasOpt"])
 
     # We now jaxify the optimized fgraph
@@ -123,7 +123,7 @@ def _get_log_likelihood(model, samples):
     data = {}
     for v in model.observed_RVs:
         logp_v = replace_shared_variables([model.logpt(v, sum=False)[0]])
-        fgraph = FunctionGraph(model.value_vars, logp_v, clone=False)
+        fgraph = FunctionGraph(model.value_vars, logp_v, clone=True)
         optimize_graph(fgraph, include=["fast_run"], exclude=["cxx_only", "BlasOpt"])
         jax_fn = jax_funcify(fgraph)
         result = jax.jit(jax.vmap(jax.vmap(jax_fn)))(*samples)[0]
@@ -229,7 +229,7 @@ def sample_numpyro_nuts(
     print("Transforming variables...", file=sys.stdout)
     mcmc_samples = {}
     for v in vars_to_sample:
-        fgraph = FunctionGraph(model.value_vars, [v], clone=False)
+        fgraph = FunctionGraph(model.value_vars, [v], clone=True)
         optimize_graph(fgraph, include=["fast_run"], exclude=["cxx_only", "BlasOpt"])
         jax_fn = jax_funcify(fgraph)
         result = jax.vmap(jax.vmap(jax_fn))(*raw_mcmc_samples)[0]
