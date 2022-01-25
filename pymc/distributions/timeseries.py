@@ -22,6 +22,8 @@ from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.shape_utils import to_tuple
 
+from aesara.tensor.random.op import RandomVariable
+
 __all__ = [
     "AR1",
     "AR",
@@ -32,49 +34,39 @@ __all__ = [
     "MvStudentTRandomWalk",
 ]
 
+class ARRV(RandomVariable):
+    name = "AR"
+    ndim_supp = 0
+    ndims_params = [1, 0, 0]
+    dtype = "floatX"
+    _print_name = ("AR", "\\operatorname{AR}")
+    
+    #set default values for parameters
+    def __call__(self, phi, mu=0.0, sigma=1.0, init=None **kwargs) -> TensorVariable:
+        return super().__call__(phi, mu, sigma,init **kwargs)
 
-class AR1(distribution.Continuous):
-    """
-    Autoregressive process with 1 lag.
+    @classmethod
+    def rng_fn(
+            cls,
+            rng: np.random.default_rng(),
+            phi: np.ndarray,
+            mu: np.ndarray,
+            sigma: np.ndarray,
+            size: Tuple[int, ...],
+            init: float) -> np.ndarray:
+            
+        # size parameter *should* be necessary for time series generation
+        if size is None:
+            raise ValueError('Specify size')
+                
+        # sign conventions used in signal.lfilter (or signal processing)
+        phi = np.r_[1, -phi] # add zero-lag and negate
+            
+        #ifilter convolutes x with the coefficient theta to create a linear recurrence relation and generate the AR process
+        if init is None:
+            init = rng.normal(loc=mu, scale=sigma,size=size)
+        return signal.lfilter(phi, init, axis=-1)
 
-    Parameters
-    ----------
-    k: tensor
-       effect of lagged value on current value
-    tau_e: tensor
-       precision for innovations
-    """
-
-    def __init__(self, k, tau_e, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.k = k = at.as_tensor_variable(k)
-        self.tau_e = tau_e = at.as_tensor_variable(tau_e)
-        self.tau = tau_e * (1 - k ** 2)
-        self.mode = at.as_tensor_variable(0.0)
-
-    def logp(self, x):
-        """
-        Calculate log-probability of AR1 distribution at specified value.
-
-        Parameters
-        ----------
-        x: numeric
-            Value for which log-probability is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        k = self.k
-        tau_e = self.tau_e  # innovation precision
-        tau = tau_e * (1 - k ** 2)  # ar1 precision
-
-        x_im1 = x[:-1]
-        x_i = x[1:]
-        boundary = Normal.dist(0.0, tau=tau).logp
-
-        innov_like = Normal.dist(k * x_im1, tau=tau_e).logp(x_i)
-        return boundary(x[0]) + at.sum(innov_like)
 
 
 class AR(distribution.Continuous):
