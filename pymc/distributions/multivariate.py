@@ -233,6 +233,8 @@ class MvNormal(Continuous):
     def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
         mu = at.as_tensor_variable(mu)
         cov = quaddist_matrix(cov, chol, tau, lower)
+        # Aesara is stricter about the shape of mu, than PyMC used to be
+        mu = at.broadcast_arrays(mu, cov[..., -1])[0]
         return super().dist([mu, cov], **kwargs)
 
     def get_moment(rv, size, mu, cov):
@@ -362,6 +364,8 @@ class MvStudentT(Continuous):
         nu = at.as_tensor_variable(floatX(nu))
         mu = at.as_tensor_variable(floatX(mu))
         cov = quaddist_matrix(cov, chol, tau, lower)
+        # Aesara is stricter about the shape of mu, than PyMC used to be
+        mu = at.broadcast_arrays(mu, cov[..., -1])[0]
         assert_negative_support(nu, "nu", "MvStudentT")
         return super().dist([nu, mu, cov], **kwargs)
 

@@ -950,7 +950,7 @@ def test_mv_normal_moment(mu, cov, size, expected):
     with Model() as model:
         x = MvNormal("x", mu=mu, cov=cov, size=size)
 
-    # MvNormal logp is only impemented for up to 2D variables
+    # MvNormal logp is only implemented for up to 2D variables
     assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
 
 
