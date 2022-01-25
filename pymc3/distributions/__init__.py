@@ -35,6 +35,7 @@ from pymc3.distributions.continuous import (
     Laplace,
     Logistic,
     LogitNormal,
+    Lognormal,
     LogNormal,
     Moyal,
     Normal,
