@@ -1125,6 +1125,75 @@ class TestMvNormalTau(BaseTestDistributionRandom):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
+class TestMvNormalMisc:
+    def test_with_chol_rv(self):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, size=3)
+            sd_dist = pm.Exponential.dist(1.0, size=3)
+            # pylint: disable=unpacking-non-sequence
+            chol, _, _ = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            # pylint: enable=unpacking-non-sequence
+            mv = pm.MvNormal("mv", mu, chol=chol, size=4)
+            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+
+        assert prior["mv"].shape == (10, 4, 3)
+
+    def test_with_cov_rv(
+        self,
+    ):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, shape=3)
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            # pylint: disable=unpacking-non-sequence
+            chol, corr, stds = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            # pylint: enable=unpacking-non-sequence
+            mv = pm.MvNormal("mv", mu, cov=pm.math.dot(chol, chol.T), size=4)
+            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+
+        assert prior["mv"].shape == (10, 4, 3)
+
+    def test_issue_3758(self):
+        np.random.seed(42)
+        ndim = 50
+        with pm.Model() as model:
+            a = pm.Normal("a", sigma=100, shape=ndim)
+            b = pm.Normal("b", mu=a, sigma=1, shape=ndim)
+            c = pm.MvNormal("c", mu=a, chol=np.linalg.cholesky(np.eye(ndim)), shape=ndim)
+            d = pm.MvNormal("d", mu=a, cov=np.eye(ndim), shape=ndim)
+            samples = pm.sample_prior_predictive(1000, return_inferencedata=False)
+
+        for var in "abcd":
+            assert not np.isnan(np.std(samples[var]))
+
+        for var in "bcd":
+            std = np.std(samples[var] - samples["a"])
+            npt.assert_allclose(std, 1, rtol=1e-2)
+
+    def test_issue_3829(self):
+        with pm.Model() as model:
+            x = pm.MvNormal("x", mu=np.zeros(5), cov=np.eye(5), shape=(2, 5))
+            trace_pp = pm.sample_prior_predictive(50, return_inferencedata=False)
+
+        assert np.shape(trace_pp["x"][0]) == (2, 5)
+
+    def test_issue_3706(self):
+        N = 10
+        Sigma = np.eye(2)
+
+        with pm.Model() as model:
+            X = pm.MvNormal("X", mu=np.zeros(2), cov=Sigma, shape=(N, 2))
+            betas = pm.Normal("betas", 0, 1, shape=2)
+            y = pm.Deterministic("y", pm.math.dot(X, betas))
+
+            prior_pred = pm.sample_prior_predictive(1, return_inferencedata=False)
+
+        assert prior_pred["X"].shape == (1, N, 2)
+
+
 class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, cov, rng):
         chi2_samples = rng.chisquare(nu, size=size)
@@ -2366,94 +2435,6 @@ def generate_shapes(include_params=False):
     return data
 
 
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestMvNormal(SeededTest):
-    @pytest.mark.parametrize(
-        ["sample_shape", "dist_shape", "mu_shape", "param"],
-        generate_shapes(include_params=True),
-        ids=str,
-    )
-    def test_with_np_arrays(self, sample_shape, dist_shape, mu_shape, param):
-        dist = pm.MvNormal.dist(mu=np.ones(mu_shape), **{param: np.eye(3)}, shape=dist_shape)
-        output_shape = to_tuple(sample_shape) + dist_shape
-        assert dist.random(size=sample_shape).shape == output_shape
-
-    @pytest.mark.parametrize(
-        ["sample_shape", "dist_shape", "mu_shape"],
-        generate_shapes(include_params=False),
-        ids=str,
-    )
-    def test_with_chol_rv(self, sample_shape, dist_shape, mu_shape):
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
-            sd_dist = pm.Exponential.dist(1.0, shape=3)
-            # pylint: disable=unpacking-non-sequence
-            chol, corr, stds = pm.LKJCholeskyCov(
-                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
-            )
-            # pylint: enable=unpacking-non-sequence
-            mv = pm.MvNormal("mv", mu, chol=chol, shape=dist_shape)
-            prior = pm.sample_prior_predictive(samples=sample_shape)
-
-        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
-
-    @pytest.mark.parametrize(
-        ["sample_shape", "dist_shape", "mu_shape"],
-        generate_shapes(include_params=False),
-        ids=str,
-    )
-    def test_with_cov_rv(self, sample_shape, dist_shape, mu_shape):
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
-            sd_dist = pm.Exponential.dist(1.0, shape=3)
-            # pylint: disable=unpacking-non-sequence
-            chol, corr, stds = pm.LKJCholeskyCov(
-                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
-            )
-            # pylint: enable=unpacking-non-sequence
-            mv = pm.MvNormal("mv", mu, cov=pm.math.dot(chol, chol.T), shape=dist_shape)
-            prior = pm.sample_prior_predictive(samples=sample_shape)
-
-        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
-
-    def test_issue_3758(self):
-        np.random.seed(42)
-        ndim = 50
-        with pm.Model() as model:
-            a = pm.Normal("a", sigma=100, shape=ndim)
-            b = pm.Normal("b", mu=a, sigma=1, shape=ndim)
-            c = pm.MvNormal("c", mu=a, chol=np.linalg.cholesky(np.eye(ndim)), shape=ndim)
-            d = pm.MvNormal("d", mu=a, cov=np.eye(ndim), shape=ndim)
-            samples = pm.sample_prior_predictive(1000)
-
-        for var in "abcd":
-            assert not np.isnan(np.std(samples[var]))
-
-        for var in "bcd":
-            std = np.std(samples[var] - samples["a"])
-            npt.assert_allclose(std, 1, rtol=1e-2)
-
-    def test_issue_3829(self):
-        with pm.Model() as model:
-            x = pm.MvNormal("x", mu=np.zeros(5), cov=np.eye(5), shape=(2, 5))
-            trace_pp = pm.sample_prior_predictive(50)
-
-        assert np.shape(trace_pp["x"][0]) == (2, 5)
-
-    def test_issue_3706(self):
-        N = 10
-        Sigma = np.eye(2)
-
-        with pm.Model() as model:
-            X = pm.MvNormal("X", mu=np.zeros(2), cov=Sigma, shape=(N, 2))
-            betas = pm.Normal("betas", 0, 1, shape=2)
-            y = pm.Deterministic("y", pm.math.dot(X, betas))
-
-            prior_pred = pm.sample_prior_predictive(1)
-
-        assert prior_pred["X"].shape == (1, N, 2)
-
-
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 def test_matrix_normal_random_with_random_variables():
     """
@@ -2492,7 +2473,6 @@ class TestMvGaussianRandomWalk(SeededTest):
         output_shape = to_tuple(sample_shape) + dist_shape
         assert dist.random(size=sample_shape).shape == output_shape
 
-    @pytest.mark.xfail
     @pytest.mark.parametrize(
         ["sample_shape", "dist_shape", "mu_shape"],
         generate_shapes(include_params=False),
