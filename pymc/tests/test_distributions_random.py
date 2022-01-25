@@ -1756,6 +1756,7 @@ class TestMatrixNormal(BaseTestDistributionRandom):
         "check_pymc_params_match_rv_op",
         "check_draws",
         "check_errors",
+        "check_random_variable_prior",
     ]
 
     def check_draws(self):
@@ -1823,6 +1824,28 @@ class TestMatrixNormal(BaseTestDistributionRandom):
                     colcov=np.eye(3),
                     shape=15,
                 )
+
+    def check_random_variable_prior(self):
+        """
+        This test checks for shape correctness when using MatrixNormal distribution
+        with parameters as random variables.
+        Originally reported - https://github.com/pymc-devs/pymc/issues/3585
+        """
+        K = 3
+        D = 15
+        mu_0 = np.zeros((D, K))
+        lambd = 1.0
+        with pm.Model() as model:
+            sd_dist = pm.HalfCauchy.dist(beta=2.5, size=D)
+            packedL = pm.LKJCholeskyCov("packedL", eta=2, n=D, sd_dist=sd_dist, compute_corr=False)
+            L = pm.expand_packed_triangular(D, packedL, lower=True)
+            Sigma = pm.Deterministic("Sigma", L.dot(L.T))  # D x D covariance
+            mu = pm.MatrixNormal(
+                "mu", mu=mu_0, rowcov=(1 / lambd) * Sigma, colcov=np.eye(K), shape=(D, K)
+            )
+            prior = pm.sample_prior_predictive(2, return_inferencedata=False)
+
+        assert prior["mu"].shape == (2, D, K)
 
 
 class TestInterpolated(BaseTestDistributionRandom):
@@ -2433,30 +2456,6 @@ def generate_shapes(include_params=False):
         del mudim_as_dist[-1]
     data = itertools.chain(itertools.product(*mudim_as_event), itertools.product(*mudim_as_dist))
     return data
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-def test_matrix_normal_random_with_random_variables():
-    """
-    This test checks for shape correctness when using MatrixNormal distribution
-    with parameters as random variables.
-    Originally reported - https://github.com/pymc-devs/pymc/issues/3585
-    """
-    K = 3
-    D = 15
-    mu_0 = np.zeros((D, K))
-    lambd = 1.0
-    with pm.Model() as model:
-        sd_dist = pm.HalfCauchy.dist(beta=2.5)
-        packedL = pm.LKJCholeskyCov("packedL", eta=2, n=D, sd_dist=sd_dist)
-        L = pm.expand_packed_triangular(D, packedL, lower=True)
-        Sigma = pm.Deterministic("Sigma", L.dot(L.T))  # D x D covariance
-        mu = pm.MatrixNormal(
-            "mu", mu=mu_0, rowcov=(1 / lambd) * Sigma, colcov=np.eye(K), shape=(D, K)
-        )
-        prior = pm.sample_prior_predictive(2)
-
-    assert prior["mu"].shape == (2, D, K)
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
