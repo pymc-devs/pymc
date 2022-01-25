@@ -120,6 +120,7 @@ __all__ = [
     "Gamma",
     "Weibull",
     "Bound",
+    "Lognormal",
     "LogNormal",
     "HalfStudentT",
     "ChiSquared",
