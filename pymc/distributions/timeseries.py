@@ -22,6 +22,11 @@ from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.shape_utils import to_tuple
 
+from aesara.tensor.random.op import RandomVariable
+from pymc.aesaraf import floatX, intX
+from aesara.tensor.var import TensorVariable
+from typing import Tuple
+
 __all__ = [
     "AR1",
     "AR",
@@ -33,49 +38,39 @@ __all__ = [
 ]
 
 
-class AR1(distribution.Continuous):
-    """
-    Autoregressive process with 1 lag.
+class ARrv(RandomVariable):
+    name = "AR"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("AR", "\\operatorname{AR}")
+    
+    
+    def __call__(self, phi, init=0.0, mu=0.0, sigma=1.0, **kwargs) -> TensorVariable:
+        return super().__call__(phi, init, mu, sigma, **kwargs)
 
-    Parameters
-    ----------
-    k: tensor
-       effect of lagged value on current value
-    tau_e: tensor
-       precision for innovations
-    """
+    
+    @classmethod
+    def rng_fn(
+            cls,
+            rng: np.random.default_rng(),
+            phi: float,
+            init: float,
+            mu: np.ndarray,
+            sigma: np.ndarray,
+            size: Tuple[int, ...],
+    ) -> np.ndarray:
 
-    def __init__(self, k, tau_e, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.k = k = at.as_tensor_variable(k)
-        self.tau_e = tau_e = at.as_tensor_variable(tau_e)
-        self.tau = tau_e * (1 - k ** 2)
-        self.mode = at.as_tensor_variable(0.0)
+        phi = np.asarray(phi)
+        if init!=0.0:
+            y = np.asarray([init])
+        else:
+            y = rng.normal(0.0, 1.0,size=1)
 
-    def logp(self, x):
-        """
-        Calculate log-probability of AR1 distribution at specified value.
-
-        Parameters
-        ----------
-        x: numeric
-            Value for which log-probability is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        k = self.k
-        tau_e = self.tau_e  # innovation precision
-        tau = tau_e * (1 - k ** 2)  # ar1 precision
-
-        x_im1 = x[:-1]
-        x_i = x[1:]
-        boundary = Normal.dist(0.0, tau=tau).logp
-
-        innov_like = Normal.dist(k * x_im1, tau=tau_e).logp(x_i)
-        return boundary(x[0]) + at.sum(innov_like)
-
+        for i in range(1, size[0]):
+            y = np.append(y, mu + phi*y[-1] + rng.normal(0.0, sigma))
+            
+        return y
 
 class AR(distribution.Continuous):
     r"""
