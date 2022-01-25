@@ -1050,7 +1050,31 @@ class TestMvNormalCov(BaseTestDistribution):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
         "check_rv_size",
+        "check_mu_broadcast_helper",
     ]
+
+    def check_mu_broadcast_helper(self):
+        """Test that mu is broadcasted to the shape of cov"""
+        x = pm.MvNormal.dist(mu=1, cov=np.eye(3))
+        mu = x.owner.inputs[3]
+        assert mu.eval().shape == (3,)
+
+        x = pm.MvNormal.dist(mu=np.ones(1), cov=np.eye(3))
+        mu = x.owner.inputs[3]
+        assert mu.eval().shape == (3,)
+
+        x = pm.MvNormal.dist(mu=np.ones((1, 1)), cov=np.eye(3))
+        mu = x.owner.inputs[3]
+        assert mu.eval().shape == (1, 3)
+
+        x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.eye(3))
+        mu = x.owner.inputs[3]
+        assert mu.eval().shape == (10, 3)
+
+        # Cov is artificually limited to being 2D
+        # x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.full((2, 3, 3), np.eye(3)))
+        # mu = x.owner.inputs[3]
+        # assert mu.eval().shape == (10, 2, 3)
 
 
 class TestMvNormalChol(BaseTestDistribution):
@@ -1111,6 +1135,7 @@ class TestMvStudentTCov(BaseTestDistribution):
         "check_pymc_draws_match_reference",
         "check_rv_size",
         "check_errors",
+        "check_mu_broadcast_helper",
     ]
 
     def check_errors(self):
@@ -1123,6 +1148,29 @@ class TestMvStudentTCov(BaseTestDistribution):
                     mu=np.ones(2),
                     cov=np.full((2, 2), np.ones(2)),
                 )
+
+    def check_mu_broadcast_helper(self):
+        """Test that mu is broadcasted to the shape of cov"""
+        x = pm.MvStudentT.dist(nu=4, mu=1, cov=np.eye(3))
+        mu = x.owner.inputs[4]
+        assert mu.eval().shape == (3,)
+
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones(1), cov=np.eye(3))
+        mu = x.owner.inputs[4]
+        assert mu.eval().shape == (3,)
+
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones((1, 1)), cov=np.eye(3))
+        mu = x.owner.inputs[4]
+        assert mu.eval().shape == (1, 3)
+
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), cov=np.eye(3))
+        mu = x.owner.inputs[4]
+        assert mu.eval().shape == (10, 3)
+
+        # Cov is artificually limited to being 2D
+        # x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), cov=np.full((2, 3, 3), np.eye(3)))
+        # mu = x.owner.inputs[4]
+        # assert mu.eval().shape == (10, 2, 3)
 
 
 class TestMvStudentTChol(BaseTestDistribution):
