@@ -37,17 +37,16 @@ __all__ = [
     "MvStudentTRandomWalk",
 ]
 
-
-class ARrv(RandomVariable):
-    name = "AR"
+class AR1rv(RandomVariable):
+    name = "AR1"
     ndim_supp = 0
     ndims_params = [0, 0, 0, 0, 0]
     dtype = "floatX"
-    _print_name = ("AR", "\\operatorname{AR}")
+    _print_name = ("AR1", "\\operatorname{AR1}")
     
     
-    def __call__(self, phi, init=0.0, mu=0.0, sigma=1.0, **kwargs) -> TensorVariable:
-        return super().__call__(phi, init, mu, sigma, **kwargs)
+    def __call__(self, phi, init=0.0, mu=0.0, sigma=1.0,*args,**kwargs) -> TensorVariable:
+        return super().__call__(phi, init, mu, sigma,*args, **kwargs)
 
     
     @classmethod
@@ -62,15 +61,71 @@ class ARrv(RandomVariable):
     ) -> np.ndarray:
 
         phi = np.asarray(phi)
+        
         if init!=0.0:
             y = np.asarray([init])
         else:
             y = rng.normal(0.0, 1.0,size=1)
-
+        
+        y[-1]
         for i in range(1, size[0]):
             y = np.append(y, mu + phi*y[-1] + rng.normal(0.0, sigma))
             
         return y
+
+class AR1(distribution.Continuous):
+    rv_op = AR1rv()
+    r"""
+    Autoregressive with order 1.
+
+    Parameters
+    ----------
+    phi: tensor
+        Autoregressive coefficient.
+    sigma: float
+        Standard deviation of noise (sigma > 0, default: 1.0).
+    mu: float
+        Mean or constant (default: 0.0)
+    size: int
+        Number of observations in time series.
+        
+    Examples
+    --------
+    
+    .. code-block:: python
+    
+        #Generate an AR1 process
+        Y = AR1.dist(phi=.50, size=500)
+        
+        #Estimate AR1 parameter
+        with pm.Model() as ar1:
+        
+            #priors
+            phi = Uniform("phi",-0.99,0.99,shape=1)
+            
+            #sampling and results
+            ar1 = AR1("AR1", phi=phi, observed = Y)
+            trace = pm.sample(1000, tune=500, target_accept=0.99,return_inferencedata=True)
+            az.summary(trace)
+            
+    """
+    @classmethod
+    def dist(cls, phi,*args,**kwargs):
+        return super().dist([phi],*args,**kwargs)
+
+    def logp(obs, phi, mu=0.0, sigma=1.0, *args,**kwargs):
+        
+        n = obs.shape[0]
+        epsilon = at.ivector()
+        
+        for i in range(1, n):
+            epsilon = at.sub(Y, mu + phi*obs[-1])
+        
+        logp = at.sum(pm.logp(Normal.dist(mu=nu, sigma=sigma,size=n), epsilon))
+
+        return logp
+
+
 
 class AR(distribution.Continuous):
     r"""
