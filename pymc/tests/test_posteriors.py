@@ -95,7 +95,6 @@ class TestNUTSNormalLong(sf.NutsFixture, sf.NormalFixture):
     atol = 0.001
 
 
-@pytest.mark.xfail(reason="LKJCholeskyCov not refactored for v4")
 class TestNUTSLKJCholeskyCov(sf.NutsFixture, sf.LKJCholeskyCovFixture):
     n_samples = 2000
     tune = 1000

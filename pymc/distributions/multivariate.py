@@ -24,9 +24,9 @@ import aesara.tensor as at
 import numpy as np
 import scipy
 
-from aesara.assert_op import Assert
-from aesara.graph.basic import Apply, Constant
+from aesara.graph.basic import Apply, Constant, Variable
 from aesara.graph.op import Op
+from aesara.raise_op import Assert
 from aesara.sparse.basic import sp_sum
 from aesara.tensor import gammaln, sigmoid
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
@@ -64,7 +64,7 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.distributions.transforms import interval
 from pymc.math import kron_diag, kron_dot
-from pymc.util import UNSET
+from pymc.util import UNSET, check_dist_not_registered
 
 __all__ = [
     "MvNormal",
@@ -1113,67 +1113,122 @@ def _lkj_normalizing_constant(eta, n):
     return result
 
 
+class _LKJCholeskyCovRV(RandomVariable):
+    name = "_lkjcholeskycov"
+    ndim_supp = 1
+    ndims_params = [0, 0, 1]
+    dtype = "floatX"
+    _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
+
+    def make_node(self, rng, size, dtype, n, eta, D):
+        n = at.as_tensor_variable(n)
+        if not n.ndim == 0:
+            raise ValueError("n must be a scalar (ndim=0).")
+
+        eta = at.as_tensor_variable(eta)
+        if not eta.ndim == 0:
+            raise ValueError("eta must be a scalar (ndim=0).")
+
+        D = at.as_tensor_variable(D)
+
+        return super().make_node(rng, size, dtype, n, eta, D)
+
+    def _infer_shape(self, size, dist_params, param_shapes=None):
+        n = dist_params[0]
+        dist_shape = tuple(size) + ((n * (n + 1)) // 2,)
+        return dist_shape
+
+    def rng_fn(self, rng, n, eta, D, size):
+        # We flatten the size to make operations easier, and then rebuild it
+        if size is None:
+            flat_size = 1
+        else:
+            flat_size = np.prod(size)
+
+        C = LKJCorrRV._random_corr_matrix(rng, n, eta, flat_size)
+
+        D = D.reshape(flat_size, n)
+        C *= D[..., :, np.newaxis] * D[..., np.newaxis, :]
+
+        tril_idx = np.tril_indices(n, k=0)
+        samples = np.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
+
+        if size is None:
+            samples = samples[0]
+        else:
+            dist_shape = (n * (n + 1)) // 2
+            samples = np.reshape(samples, (*size, dist_shape))
+
+        return samples
+
+
+_ljk_cholesky_cov = _LKJCholeskyCovRV()
+
+
 class _LKJCholeskyCov(Continuous):
     r"""Underlying class for covariance matrix with LKJ distributed correlations.
     See docs for LKJCholeskyCov function for more details on how to use it in models.
     """
+    rv_op = _ljk_cholesky_cov
 
-    def __init__(self, eta, n, sd_dist, *args, **kwargs):
-        self.n = at.as_tensor_variable(n)
-        self.eta = at.as_tensor_variable(eta)
+    def __new__(cls, name, eta, n, sd_dist, **kwargs):
+        transform = kwargs.get("transform", UNSET)
+        if transform is UNSET:
+            kwargs["transform"] = transforms.CholeskyCovPacked(n)
 
-        if "transform" in kwargs and kwargs["transform"] is not None:
-            raise ValueError("Invalid parameter: transform.")
-        if "shape" in kwargs:
-            raise ValueError("Invalid parameter: shape.")
+        check_dist_not_registered(sd_dist)
 
-        shape = n * (n + 1) // 2
+        return super().__new__(cls, name, eta, n, sd_dist, **kwargs)
 
-        if sd_dist.shape.ndim not in [0, 1]:
-            raise ValueError("Invalid shape for sd_dist.")
+    @classmethod
+    def dist(cls, eta, n, sd_dist, size=None, **kwargs):
+        eta = at.as_tensor_variable(floatX(eta))
+        n = at.as_tensor_variable(intX(n))
 
-        def transform_params(rv_var):
-            _, _, _, n, eta = rv_var.owner.inputs
-            return np.arange(1, n + 1).cumsum() - 1
+        if not (
+            isinstance(sd_dist, Variable)
+            and sd_dist.owner is not None
+            and isinstance(sd_dist.owner.op, RandomVariable)
+        ):
+            raise TypeError("sd_dist must be a Distribution variable")
 
-        transform = transforms.CholeskyCovPacked(transform_params)
+        # sd_dist is part of the generative graph, but should be completely ignored
+        # by the logp graph, since the LKJ logp explicitly includes these terms.
+        # Setting sd_dist.tag.ignore_logprob to True, will prevent Aeppl warning about
+        # an unnacounted RandomVariable in the graph
+        # TODO: Things could be simplified a bit if we managed to extract the
+        #  sd_dist prior components from the logp expression.
+        sd_dist.tag.ignore_logprob = True
 
-        kwargs["shape"] = shape
-        kwargs["transform"] = transform
-        super().__init__(*args, **kwargs)
+        return super().dist([n, eta, sd_dist], size=size, **kwargs)
 
-        self.sd_dist = sd_dist
-        self.diag_idxs = transform.diag_idxs
-
-        self.mode = floatX(np.zeros(shape))
-        self.mode[self.diag_idxs] = 1
-
-    def logp(self, x):
+    def logp(value, n, eta, sd_dist):
         """
         Calculate log-probability of Covariance matrix with LKJ
         distributed correlations at specified value.
 
         Parameters
         ----------
-        x: numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
         -------
         TensorVariable
         """
-        n = self.n
-        eta = self.eta
 
-        diag_idxs = self.diag_idxs
-        cumsum = at.cumsum(x ** 2)
-        variance = at.zeros(n)
-        variance = at.inc_subtensor(variance[0], x[0] ** 2)
+        if value.ndim > 1:
+            raise ValueError("LKJCholeskyCov logp is only implemented for vector values (ndim=1)")
+
+        diag_idxs = at.cumsum(at.arange(1, n + 1)) - 1
+        cumsum = at.cumsum(value ** 2)
+        variance = at.zeros(at.atleast_1d(n))
+        variance = at.inc_subtensor(variance[0], value[0] ** 2)
         variance = at.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
         sd_vals = at.sqrt(variance)
 
-        logp_sd = self.sd_dist.logp(sd_vals).sum()
-        corr_diag = x[diag_idxs] / sd_vals
+        logp_sd = pm.logp(sd_dist, sd_vals).sum()
+        corr_diag = value[diag_idxs] / sd_vals
 
         logp_lkj = (2 * eta - 3 + n - at.arange(n)) * at.log(corr_diag)
         logp_lkj = at.sum(logp_lkj)
@@ -1184,114 +1239,22 @@ class _LKJCholeskyCov(Continuous):
         det_invjac = at.log(corr_diag) - idx * at.log(sd_vals)
         det_invjac = det_invjac.sum()
 
+        # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
+        if not isinstance(n, Constant):
+            raise NotImplementedError("logp only implemented for constant `n`")
+        n = int(n.data)
+
+        if not isinstance(eta, Constant):
+            raise NotImplementedError("logp only implemented for constant `eta`")
+        eta = float(eta.data)
+
         norm = _lkj_normalizing_constant(eta, n)
 
         return norm + logp_lkj + logp_sd + det_invjac
 
-    def _random(self, n, eta, size=1):
-        eta_sample_shape = (size,) + eta.shape
-        P = np.eye(n) * np.ones(eta_sample_shape + (n, n))
-        # original implementation in R see:
-        # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
-        beta = eta - 1.0 + n / 2.0
-        r12 = 2.0 * stats.beta.rvs(a=beta, b=beta, size=eta_sample_shape) - 1.0
-        P[..., 0, 1] = r12
-        P[..., 1, 1] = np.sqrt(1.0 - r12 ** 2)
-        for mp1 in range(2, n):
-            beta -= 0.5
-            y = stats.beta.rvs(a=mp1 / 2.0, b=beta, size=eta_sample_shape)
-            z = stats.norm.rvs(loc=0, scale=1, size=eta_sample_shape + (mp1,))
-            z = z / np.sqrt(np.einsum("ij,ij->j", z, z))
-            P[..., 0:mp1, mp1] = np.sqrt(y[..., np.newaxis]) * z
-            P[..., mp1, mp1] = np.sqrt(1.0 - y)
-        C = np.einsum("...ji,...jk->...ik", P, P)
-        D = np.atleast_1d(self.sd_dist.random(size=P.shape[:-2]))
-        if D.shape in [tuple(), (1,)]:
-            D = self.sd_dist.random(size=P.shape[:-1])
-        elif D.ndim < C.ndim - 1:
-            D = [D] + [self.sd_dist.random(size=P.shape[:-2]) for _ in range(n - 1)]
-            D = np.moveaxis(np.array(D), 0, C.ndim - 2)
-        elif D.ndim == C.ndim - 1:
-            if D.shape[-1] == 1:
-                D = [D] + [self.sd_dist.random(size=P.shape[:-2]) for _ in range(n - 1)]
-                D = np.concatenate(D, axis=-1)
-            elif D.shape[-1] != n:
-                raise ValueError(
-                    "The size of the samples drawn from the "
-                    "supplied sd_dist.random have the wrong "
-                    "size. Expected {} but got {} instead.".format(n, D.shape[-1])
-                )
-        else:
-            raise ValueError(
-                "Supplied sd_dist.random generates samples with "
-                "too many dimensions. It must yield samples "
-                "with 0 or 1 dimensions. Got {} instead".format(D.ndim - C.ndim - 2)
-            )
-        C *= D[..., :, np.newaxis] * D[..., np.newaxis, :]
-        tril_idx = np.tril_indices(n, k=0)
-        return np.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Covariance matrix with LKJ
-        distributed correlations.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # # Get parameters and broadcast them
-        # n, eta = draw_values([self.n, self.eta], point=point, size=size)
-        # broadcast_shape = np.broadcast(n, eta).shape
-        # # We can only handle cov matrices with a constant n per random call
-        # n = np.unique(n)
-        # if len(n) > 1:
-        #     raise RuntimeError("Varying n is not supported for LKJCholeskyCov")
-        # n = int(n[0])
-        # dist_shape = ((n * (n + 1)) // 2,)
-        # # We make sure that eta and the drawn n get their shapes broadcasted
-        # eta = np.broadcast_to(eta, broadcast_shape)
-        # # We change the size of the draw depending on the broadcast shape
-        # sample_shape = broadcast_shape + dist_shape
-        # if size is not None:
-        #     if not isinstance(size, tuple):
-        #         try:
-        #             size = tuple(size)
-        #         except TypeError:
-        #             size = (size,)
-        #     if size == sample_shape:
-        #         size = None
-        #     elif size == broadcast_shape:
-        #         size = None
-        #     elif size[-len(sample_shape) :] == sample_shape:
-        #         size = size[: len(size) - len(sample_shape)]
-        #     elif size[-len(broadcast_shape) :] == broadcast_shape:
-        #         size = size[: len(size) - len(broadcast_shape)]
-        # # We will always provide _random with an integer size and then reshape
-        # # the output to get the correct size
-        # if size is not None:
-        #     _size = np.prod(size)
-        # else:
-        #     _size = 1
-        # samples = self._random(n, eta, size=_size)
-        # if size is None:
-        #     samples = samples[0]
-        # else:
-        #     samples = np.reshape(samples, size + sample_shape)
-        # return samples
-
-
-def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=True, *args, **kwargs):
-    r"""Wrapper function for covariance matrix with LKJ distributed correlations.
+class LKJCholeskyCov:
+    r"""Wrapper class for covariance matrix with LKJ distributed correlations.
 
     This defines a distribution over Cholesky decomposed covariance
     matrices, such that the underlying correlation matrices follow an
@@ -1309,11 +1272,11 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
     n: int
         Dimension of the covariance matrix (n > 1).
     sd_dist: pm.Distribution
-        A distribution for the standard deviations.
-    compute_corr: bool, default=False
+        A distribution for the standard deviations, should have `size=n`.
+    compute_corr: bool, default=True
         If `True`, returns three values: the Cholesky decomposition, the correlations
         and the standard deviations of the covariance matrix. Otherwise, only returns
-        the packed Cholesky decomposition. Defaults to `False` to ensure backwards
+        the packed Cholesky decomposition. Defaults to `True`.
         compatibility.
     store_in_trace: bool, default=True
         Whether to store the correlations and standard deviations of the covariance
@@ -1323,14 +1286,14 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
 
     Returns
     -------
-    packed_chol: TensorVariable
-        If `compute_corr=False` (default). The packed Cholesky covariance decomposition.
     chol:  TensorVariable
         If `compute_corr=True`. The unpacked Cholesky covariance decomposition.
     corr: TensorVariable
         If `compute_corr=True`. The correlations of the covariance matrix.
     stds: TensorVariable
         If `compute_corr=True`. The standard deviations of the covariance matrix.
+    packed_chol: TensorVariable
+        If `compute_corr=False` The packed Cholesky covariance decomposition.
 
     Notes
     -----
@@ -1355,12 +1318,15 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
         with pm.Model() as model:
             # Note that we access the distribution for the standard
             # deviations, and do not create a new random variable.
-            sd_dist = pm.Exponential.dist(1.0)
-            chol, corr, sigmas = pm.LKJCholeskyCov('chol_cov', eta=4, n=10,
-            sd_dist=sd_dist, compute_corr=True)
+            sd_dist = pm.Exponential.dist(1.0, size=10)
+            chol, corr, sigmas = pm.LKJCholeskyCov(
+                'chol_cov', eta=4, n=10, sd_dist=sd_dist
+            )
 
-            # if you only want the packed Cholesky (default behavior):
-            # packed_chol = pm.LKJCholeskyCov('chol_cov', eta=4, n=10, sd_dist=sd_dist)
+            # if you only want the packed Cholesky:
+            # packed_chol = pm.LKJCholeskyCov(
+                'chol_cov', eta=4, n=10, sd_dist=sd_dist, compute_corr=False
+            )
             # chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
 
             # Define a new MvNormal with the given covariance
@@ -1423,12 +1389,29 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
        determinant, URL (version: 2012-04-14):
        http://math.stackexchange.com/q/130026
     """
-    # compute Cholesky decomposition
-    packed_chol = _LKJCholeskyCov(name, eta=eta, n=n, sd_dist=sd_dist)
-    if not compute_corr:
-        return packed_chol
 
-    else:
+    def __new__(cls, name, eta, n, sd_dist, *, compute_corr=True, store_in_trace=True, **kwargs):
+        packed_chol = _LKJCholeskyCov(name, eta=eta, n=n, sd_dist=sd_dist, **kwargs)
+        if not compute_corr:
+            return packed_chol
+        else:
+            chol, corr, stds = cls.helper_deterministics(n, packed_chol)
+            if store_in_trace:
+                corr = pm.Deterministic(f"{name}_corr", corr)
+                stds = pm.Deterministic(f"{name}_stds", stds)
+            return chol, corr, stds
+
+    @classmethod
+    def dist(cls, eta, n, sd_dist, *, compute_corr=True, **kwargs):
+        # compute Cholesky decomposition
+        packed_chol = _LKJCholeskyCov.dist(eta=eta, n=n, sd_dist=sd_dist, **kwargs)
+        if not compute_corr:
+            return packed_chol
+        else:
+            return cls.helper_deterministics(n, packed_chol)
+
+    @classmethod
+    def helper_deterministics(cls, n, packed_chol):
         chol = pm.expand_packed_triangular(n, packed_chol, lower=True)
         # compute covariance matrix
         cov = at.dot(chol, chol.T)
@@ -1436,10 +1419,6 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
         stds = at.sqrt(at.diag(cov))
         inv_stds = 1 / stds
         corr = inv_stds[None, :] * cov * inv_stds[:, None]
-        if store_in_trace:
-            stds = pm.Deterministic(f"{name}_stds", stds)
-            corr = pm.Deterministic(f"{name}_corr", corr)
-
         return chol, corr, stds
 
 
