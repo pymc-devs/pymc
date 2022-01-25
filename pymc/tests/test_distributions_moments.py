@@ -39,6 +39,7 @@ from pymc.distributions import (
     KroneckerNormal,
     Kumaraswamy,
     Laplace,
+    LKJCholeskyCov,
     LKJCorr,
     Logistic,
     LogitNormal,
@@ -1439,3 +1440,24 @@ def test_lkjcorr_moment(n, eta, size, expected):
     with Model() as model:
         LKJCorr("x", n=n, eta=eta, size=size)
     assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "n, eta, size, expected",
+    [
+        (3, 1, None, np.array([1, 0, 1, 0, 0, 1])),
+        (4, 1, None, np.array([1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])),
+        (3, 1, 1, np.array([[1, 0, 1, 0, 0, 1]])),
+        (
+            4,
+            1,
+            (2, 3),
+            np.full((2, 3, 10), np.array([1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])),
+        ),
+    ],
+)
+def test_lkjcholeskycov_moment(n, eta, size, expected):
+    with Model() as model:
+        sd_dist = pm.Exponential.dist(1, size=(*to_tuple(size), n))
+        LKJCholeskyCov("x", n=n, eta=eta, sd_dist=sd_dist, size=size, compute_corr=False)
+    assert_moment_is_expected(model, expected, check_finite_logp=size is None)

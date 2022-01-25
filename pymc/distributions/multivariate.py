@@ -1202,6 +1202,12 @@ class _LKJCholeskyCov(Continuous):
 
         return super().dist([n, eta, sd_dist], size=size, **kwargs)
 
+    def get_moment(rv, size, n, eta, sd_dists):
+        diag_idxs = (at.cumsum(at.arange(1, n + 1)) - 1).astype("int32")
+        moment = at.zeros_like(rv)
+        moment = at.set_subtensor(moment[..., diag_idxs], 1)
+        return moment
+
     def logp(value, n, eta, sd_dist):
         """
         Calculate log-probability of Covariance matrix with LKJ
