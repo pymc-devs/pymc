@@ -3352,3 +3352,40 @@ class TestCensored:
                 match="The dist dist was already registered in the current model",
             ):
                 x = pm.Censored("x", registered_dist, lower=None, upper=None)
+
+
+class TestLKJCholeskCov:
+    def test_dist(self):
+        sd_dist = pm.Exponential.dist(1, size=(10, 3))
+        x = pm.LKJCholeskyCov.dist(n=3, eta=1, sd_dist=sd_dist, size=10, compute_corr=False)
+        assert x.eval().shape == (10, 6)
+
+        sd_dist = pm.Exponential.dist(1, size=3)
+        chol, corr, stds = pm.LKJCholeskyCov.dist(n=3, eta=1, sd_dist=sd_dist)
+        assert chol.eval().shape == (3, 3)
+        assert corr.eval().shape == (3, 3)
+        assert stds.eval().shape == (3,)
+
+    def test_sd_dist_distribution(self):
+        with pm.Model() as m:
+            sd_dist = at.constant([1, 2, 3])
+            with pytest.raises(TypeError, match="sd_dist must be a Distribution variable"):
+                x = pm.LKJCholeskyCov("x", n=3, eta=1, sd_dist=sd_dist)
+
+    def test_sd_dist_registered(self):
+        with pm.Model() as m:
+            sd_dist = pm.Exponential("sd_dist", 1, size=3)
+            with pytest.raises(
+                ValueError, match="The dist sd_dist was already registered in the current model"
+            ):
+                x = pm.LKJCholeskyCov("x", n=3, eta=1, sd_dist=sd_dist)
+
+    def test_no_warning_logp(self):
+        # Check that calling logp of a model with LKJCholeskyCov does not issue any warnings
+        # due to the RandomVariable in the graph
+        with pm.Model() as m:
+            sd_dist = pm.Exponential.dist(1, size=3)
+            x = pm.LKJCholeskyCov("x", n=3, eta=1, sd_dist=sd_dist)
+        with pytest.warns(None) as record:
+            m.logpt()
+        assert not record

@@ -47,7 +47,11 @@ from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc.distributions.dist_math import clipped_beta_rvs
 from pymc.distributions.logprob import logp
-from pymc.distributions.multivariate import _OrderedMultinomial, quaddist_matrix
+from pymc.distributions.multivariate import (
+    _LKJCholeskyCov,
+    _OrderedMultinomial,
+    quaddist_matrix,
+)
 from pymc.distributions.shape_utils import to_tuple
 from pymc.tests.helpers import SeededTest, select_by_precision
 from pymc.tests.test_distributions import (
@@ -1867,6 +1871,43 @@ class TestLKJCorr(BaseTestDistributionRandom):
         )
 
 
+class TestLKJCholeskyCov(BaseTestDistributionRandom):
+    pymc_dist = _LKJCholeskyCov
+    pymc_dist_params = {"eta": 1.0, "n": 3, "sd_dist": pm.Constant.dist([0.5, 1.0, 2.0])}
+    expected_rv_op_params = {"n": 3, "eta": 1.0, "sd_dist": pm.Constant.dist([0.5, 1.0, 2.0])}
+    size = None
+
+    sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+    sizes_expected = [
+        (6,),
+        (6,),
+        (1, 6),
+        (1, 6),
+        (5, 6),
+        (4, 5, 6),
+        (2, 4, 2, 6),
+    ]
+
+    tests_to_run = [
+        "check_rv_size",
+        "check_draws_match_expected",
+    ]
+
+    def check_rv_size(self):
+        for size, expected in zip(self.sizes_to_check, self.sizes_expected):
+            sd_dist = pm.Exponential.dist(1, size=(*to_tuple(size), 3))
+            pymc_rv = self.pymc_dist.dist(n=3, eta=1, sd_dist=sd_dist, size=size)
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            actual = pymc_rv.eval().shape
+            assert actual == expected_symbolic == expected
+
+    def check_draws_match_expected(self):
+        # TODO: Find better comparison:
+        rng = aesara.shared(self.get_random_state(reset=True))
+        x = _LKJCholeskyCov.dist(n=2, eta=10_000, sd_dist=pm.Constant.dist([0.5, 2.0]), rng=rng)
+        assert np.all(np.abs(x.eval() - np.array([0.5, 0, 2.0])) < 0.01)
+
+
 class TestScalarParameterSamples(SeededTest):
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_normalmixture(self):
@@ -2346,9 +2387,11 @@ class TestMvNormal(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
             sd_dist = pm.Exponential.dist(1.0, shape=3)
+            # pylint: disable=unpacking-non-sequence
             chol, corr, stds = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
+            # pylint: enable=unpacking-non-sequence
             mv = pm.MvNormal("mv", mu, chol=chol, shape=dist_shape)
             prior = pm.sample_prior_predictive(samples=sample_shape)
 
@@ -2363,9 +2406,11 @@ class TestMvNormal(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
             sd_dist = pm.Exponential.dist(1.0, shape=3)
+            # pylint: disable=unpacking-non-sequence
             chol, corr, stds = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
+            # pylint: enable=unpacking-non-sequence
             mv = pm.MvNormal("mv", mu, cov=pm.math.dot(chol, chol.T), shape=dist_shape)
             prior = pm.sample_prior_predictive(samples=sample_shape)
 
@@ -2457,9 +2502,11 @@ class TestMvGaussianRandomWalk(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
             sd_dist = pm.Exponential.dist(1.0, shape=3)
+            # pylint: disable=unpacking-non-sequence
             chol, corr, stds = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
+            # pylint: enable=unpacking-non-sequence
             mv = pm.MvGaussianRandomWalk("mv", mu, chol=chol, shape=dist_shape)
             prior = pm.sample_prior_predictive(samples=sample_shape)
 
@@ -2475,9 +2522,11 @@ class TestMvGaussianRandomWalk(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
             sd_dist = pm.Exponential.dist(1.0, shape=3)
+            # pylint: disable=unpacking-non-sequence
             chol, corr, stds = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
+            # pylint: enable=unpacking-non-sequence
             mv = pm.MvGaussianRandomWalk("mv", mu, cov=pm.math.dot(chol, chol.T), shape=dist_shape)
             prior = pm.sample_prior_predictive(samples=sample_shape)
 
