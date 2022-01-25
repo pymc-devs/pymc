@@ -5,6 +5,7 @@
 + The `pm.logp(rv, x)` syntax is now available and recommended to make your model code `v4`-ready. Note that this backport is just an alias and much less capable than what's available with `pymc >=4` (see [#5083](https://github.com/pymc-devs/pymc/pulls/5083)).
 + The `pm.Distribution(testval=...)` kwarg was deprecated and will be replaced by `pm.Distribution(initval=...)`in `pymc >=4` (see [#5226](https://github.com/pymc-devs/pymc/pulls/5226)).
 + The `pm.sample(start=...)` kwarg was deprecated and will be replaced by `pm.sample(initvals=...)`in `pymc >=4` (see [#5226](https://github.com/pymc-devs/pymc/pulls/5226)).
++ `pm.Lognormal` is now available as an alias for `pm.Lognormal` (see [#5389](https://github.com/pymc-devs/pymc/pull/5389)).
 
 ### Bugfixes
 + A hotfix is applied on import to remain compatible with NumPy 1.22 (see [#5316](https://github.com/pymc-devs/pymc/pull/5316)).
