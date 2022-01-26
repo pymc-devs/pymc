@@ -21,7 +21,7 @@ dependencies:
 # Extra stuff for dev, testing and docs build
 - ipython
 - myst-nb
-- numpydoc>=0.9
+- numpydoc<1.2
 - pre-commit>=2.8.0
 - pydata-sphinx-theme
 - pytest-cov>=2.5
