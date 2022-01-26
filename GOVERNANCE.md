@@ -139,6 +139,7 @@ Contributors don't need to be part of any dedicated team.
 * Olga Khan (docs)
 * Peadar Coyle
 * Raul Maldonado (docs)
+* Martin Ingram (community)
 
 ## Core Contributors
 Core Contributors are those individuals entrusted with the development and
