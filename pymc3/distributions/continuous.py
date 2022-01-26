@@ -318,7 +318,7 @@ class Flat(Continuous):
         size: int, optional
 
         Raises
-        -------
+        ------
         ValueError
         """
         raise ValueError("Cannot sample from Flat distribution")
@@ -375,7 +375,7 @@ class HalfFlat(PositiveContinuous):
         size: int, optional
 
         Raises
-        -------
+        ------
         ValueError
         """
         raise ValueError("Cannot sample from HalfFlat distribution")
@@ -1710,7 +1710,7 @@ class AsymmetricLaplace(Continuous):
         Location parameter
 
     See Also:
-    --------
+    ---------
     `Reference <https://en.wikipedia.org/wiki/Asymmetric_Laplace_distribution>`_
     """
 
