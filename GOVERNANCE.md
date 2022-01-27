@@ -136,10 +136,10 @@ Contributors don't need to be part of any dedicated team.
 * Kaustubh Chaudhari (dev)
 * Larry Dong (dev)
 * Lorenzo Toniazzi (docs)
+* Martin Ingram (community)
 * Olga Khan (docs)
 * Peadar Coyle
 * Raul Maldonado (docs)
-* Martin Ingram (community)
 
 ## Core Contributors
 Core Contributors are those individuals entrusted with the development and
