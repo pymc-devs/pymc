@@ -22,6 +22,7 @@ from pymc.distributions import (
     DensityDist,
     Dirichlet,
     DiscreteUniform,
+    DiscreteWeibull,
     ExGaussian,
     Exponential,
     Flat,
@@ -110,7 +111,6 @@ def test_all_distributions_have_moments():
 
     # Distributions that have been refactored but don't yet have moments
     not_implemented |= {
-        dist_module.discrete.DiscreteWeibull,
         dist_module.multivariate.DirichletMultinomial,
         dist_module.multivariate.Wishart,
     }
@@ -750,6 +750,26 @@ def test_discrete_uniform_moment(lower, upper, size, expected):
     with Model() as model:
         DiscreteUniform("x", lower=lower, upper=upper, size=size)
         assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "q, beta, size, expected",
+    [
+        (0.5, 0.5, None, 0),
+        (0.6, 0.1, 5, (20,) * 5),
+        (np.linspace(0.25, 0.99, 4), 0.42, None, [0, 0, 6, 23862]),
+        (
+            np.linspace(0.5, 0.99, 3),
+            [[1, 1.25, 1.75], [1.25, 0.75, 0.5]],
+            None,
+            [[0, 0, 10], [0, 2, 4755]],
+        ),
+    ],
+)
+def test_discrete_weibull_moment(q, beta, size, expected):
+    with Model() as model:
+        DiscreteWeibull("x", q=q, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
 
 
 @pytest.mark.parametrize(

@@ -490,6 +490,12 @@ class DiscreteWeibull(Discrete):
         beta = at.as_tensor_variable(floatX(beta))
         return super().dist([q, beta], **kwargs)
 
+    def get_moment(rv, size, q, beta):
+        median = at.power(at.log(0.5) / at.log(q), 1 / beta) - 1
+        if not rv_size_is_none(size):
+            median = at.full(size, median)
+        return median
+
     def logp(value, q, beta):
         r"""
         Calculate log-probability of DiscreteWeibull distribution at specified value.
