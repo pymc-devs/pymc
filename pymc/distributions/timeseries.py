@@ -18,7 +18,8 @@ import aesara.tensor as at
 import numpy as np
 
 from aesara import scan
-from aesara.tensor.random.basic import RandomVariable
+from aesara.tensor.random.op import RandomVariable, default_shape_from_params
+
 
 import pymc as pm
 
@@ -258,6 +259,26 @@ class GaussianRandomWalk(distribution.Continuous):
 
     rv_op = gaussianrandomwalk
 
+    def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
+        raise Exception("Ravin's shape exception")
+        # if self.ndim_supp <= 0:
+        #     raise ValueError("ndim_supp must be greater than 0")
+        # if param_shapes is not None:
+        #     ref_param = param_shapes[rep_param_idx]
+        #     return (ref_param[-self.ndim_supp],)
+        # else:
+        #     ref_param = dist_params[rep_param_idx]
+        #     if ref_param.ndim < self.ndim_supp:
+        #         raise ValueError(
+        #             (
+        #                 "Reference parameter does not match the "
+        #                 f"expected dimensions; {ref_param} has less than {self.ndim_supp} dim(s)."
+        #             )
+        #         )
+        #     return ref_param.shape[-self.ndim_supp:]
+
+
+
     @classmethod
     def dist(
         cls,
@@ -265,11 +286,12 @@ class GaussianRandomWalk(distribution.Continuous):
         sigma: Optional[Union[np.ndarray, float]] = 1.0,
         init: float = 0.0,
         size: int = None,
+        steps: int = 0,
         *args,
         **kwargs
     ) -> RandomVariable:
 
-        return super().dist([mu, sigma, init], **kwargs)
+        return super().dist([mu, sigma, init, steps], **kwargs)
 
     def logp(
         value: at.Variable,
