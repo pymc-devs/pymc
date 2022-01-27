@@ -49,6 +49,27 @@ class GaussianRandomWalkRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
 
+    def _shape_from_params(self, dist_params, reop_param_idx=1, param_shapes=None):
+        # (size which is number of time series, steps)
+        return (dist_params[-2], dist_params[-1])
+        raise Exception("Ravin's shape exception")
+
+        # if self.ndim_supp <= 0:
+        #     raise ValueError("ndim_supp must be greater than 0")
+        # if param_shapes is not None:
+        #     ref_param = param_shapes[rep_param_idx]
+        #     return (ref_param[-self.ndim_supp],)
+        # else:
+        #     ref_param = dist_params[rep_param_idx]
+        #     if ref_param.ndim < self.ndim_supp:
+        #         raise ValueError(
+        #             (
+        #                 "Reference parameter does not match the "
+        #                 f"expected dimensions; {ref_param} has less than {self.ndim_supp} dim(s)."
+        #             )
+        #         )
+        #     return ref_param.shape[-self.ndim_supp:]
+
     @classmethod
     def rng_fn(
         cls,
@@ -259,23 +280,7 @@ class GaussianRandomWalk(distribution.Continuous):
 
     rv_op = gaussianrandomwalk
 
-    def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        raise Exception("Ravin's shape exception")
-        # if self.ndim_supp <= 0:
-        #     raise ValueError("ndim_supp must be greater than 0")
-        # if param_shapes is not None:
-        #     ref_param = param_shapes[rep_param_idx]
-        #     return (ref_param[-self.ndim_supp],)
-        # else:
-        #     ref_param = dist_params[rep_param_idx]
-        #     if ref_param.ndim < self.ndim_supp:
-        #         raise ValueError(
-        #             (
-        #                 "Reference parameter does not match the "
-        #                 f"expected dimensions; {ref_param} has less than {self.ndim_supp} dim(s)."
-        #             )
-        #         )
-        #     return ref_param.shape[-self.ndim_supp:]
+
 
 
 
