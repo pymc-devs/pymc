@@ -136,6 +136,7 @@ Contributors don't need to be part of any dedicated team.
 * Kaustubh Chaudhari (dev)
 * Larry Dong (dev)
 * Lorenzo Toniazzi (docs)
+* Martin Ingram (community)
 * Olga Khan (docs)
 * Peadar Coyle
 * Raul Maldonado (docs)
