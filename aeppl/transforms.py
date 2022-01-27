@@ -87,7 +87,7 @@ class RVTransform(abc.ABC):
         # )
         # return at.log(at.abs_(jac))
         phi_inv = self.backward(value, *inputs)
-        return at.log(at.nlinalg.det(at.atleast_2d(jacobian(phi_inv, [value]))))
+        return at.log(at.abs(at.nlinalg.det(at.atleast_2d(jacobian(phi_inv, [value])))))
 
 
 class DefaultTransformSentinel:
