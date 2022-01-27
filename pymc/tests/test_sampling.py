@@ -508,7 +508,7 @@ class TestSamplePPC(SeededTest):
             assert ppc["a"].shape == (nchains * ndraws,)
             # mu's standard deviation may have changed thanks to a's observed
             _, pval = stats.kstest(ppc["a"] - trace["mu"], stats.norm(loc=0, scale=1).cdf)
-            assert pval > 0.01
+            assert pval > 0.001
 
         # size argument not introduced to fast version [2019/08/20:rpg]
         with model:
