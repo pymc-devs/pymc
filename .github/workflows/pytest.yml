@@ -134,9 +134,13 @@ jobs:
             hashFiles('requirements.txt') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          mamba-version: "*"
           activate-environment: pymc-test-py37
           channel-priority: strict
           environment-file: conda-envs/environment-test-py37.yml
+          use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install-pymc
         run: |
@@ -214,9 +218,13 @@ jobs:
             hashFiles('requirements.txt') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          mamba-version: "*"
           activate-environment: pymc-test-py38
           channel-priority: strict
           environment-file: conda-envs/windows-environment-test-py38.yml
+          use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install-pymc
         run: |
