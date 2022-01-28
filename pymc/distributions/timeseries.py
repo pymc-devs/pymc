@@ -20,7 +20,6 @@ import numpy as np
 from aesara import scan
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
 
-
 import pymc as pm
 
 from pymc.distributions import distribution, multivariate
@@ -109,9 +108,17 @@ class GaussianRandomWalkRV(RandomVariable):
         -------
         np.ndarray
         """
-        return rng.normal(init, sigma, size=size) + np.cumsum(
-            rng.normal(loc=mu, scale=sigma, size=(size, steps)), axis=-1
-        )
+
+        if steps is None or steps == 0:
+            raise ValueError("Steps must be greater than 0 or not None")
+        if size is None:
+            size = 1
+
+        init_val = rng.normal(init, sigma, size=(size, 1))
+        steps = rng.normal(loc=mu, scale=sigma, size=(size, steps))
+        grw = np.concatenate([init_val, steps], axis=-1)
+
+        return np.cumsum(grw, axis=-1).squeeze()
 
 
 gaussianrandomwalk = GaussianRandomWalkRV()
@@ -279,10 +286,6 @@ class GaussianRandomWalk(distribution.Continuous):
     """
 
     rv_op = gaussianrandomwalk
-
-
-
-
 
     @classmethod
     def dist(
