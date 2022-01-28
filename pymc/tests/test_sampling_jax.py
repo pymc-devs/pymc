@@ -10,9 +10,9 @@ import pymc as pm
 
 from pymc.sampling_jax import (
     _get_log_likelihood,
+    _replace_shared_variables,
     get_jaxified_graph,
     get_jaxified_logp,
-    replace_shared_variables,
     sample_numpyro_nuts,
 )
 
@@ -95,13 +95,13 @@ def test_get_log_likelihood():
 def test_replace_shared_variables():
     x = aesara.shared(5, name="shared_x")
 
-    new_x = replace_shared_variables([x])
+    new_x = _replace_shared_variables([x])
     shared_variables = [var for var in graph_inputs(new_x) if isinstance(var, SharedVariable)]
     assert not shared_variables
 
     x.default_update = x + 1
     with pytest.raises(ValueError, match="shared variables with default_update"):
-        replace_shared_variables([x])
+        _replace_shared_variables([x])
 
 
 def test_get_jaxified_logp():
