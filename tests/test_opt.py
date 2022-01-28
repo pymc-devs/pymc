@@ -13,7 +13,7 @@ from aeppl.opt import local_lift_DiracDelta, naive_bcast_rv_lift
 def test_naive_bcast_rv_lift():
     r"""Make sure `test_naive_bcast_rv_lift` can handle useless scalar `BroadcastTo`\s."""
     X_rv = at.random.normal()
-    Z_at = at.broadcast_to(X_rv, ())
+    Z_at = BroadcastTo()(X_rv, ())
 
     # Make sure we're testing what we intend to test
     assert isinstance(Z_at.owner.op, BroadcastTo)
