@@ -45,7 +45,7 @@ def jax_funcify_Assert(op, **kwargs):
     return assert_fn
 
 
-def replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariable]:
+def _replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariable]:
     """Replace shared variables in graph by their constant values
 
     Raises
@@ -74,7 +74,7 @@ def get_jaxified_graph(
 ) -> List[TensorVariable]:
     """Compile an Aesara graph into an optimized JAX function"""
 
-    graph = replace_shared_variables(outputs)
+    graph = _replace_shared_variables(outputs)
 
     fgraph = FunctionGraph(inputs=inputs, outputs=graph, clone=True)
     # We need to add a Supervisor to the fgraph to be able to run the
