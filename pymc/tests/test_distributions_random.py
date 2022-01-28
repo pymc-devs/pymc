@@ -1171,7 +1171,7 @@ class TestMvNormalMisc:
 
         for var in "bcd":
             std = np.std(samples[var] - samples["a"])
-            npt.assert_allclose(std, 1, rtol=1e-2)
+            npt.assert_allclose(std, 1, rtol=2e-2)
 
     def test_issue_3829(self):
         with pm.Model() as model:
