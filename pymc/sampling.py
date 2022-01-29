@@ -769,7 +769,7 @@ def _sample_population(
     start: Sequence[PointType],
     random_seed,
     step,
-    tune,
+    tune: int,
     model,
     progressbar: bool = True,
     parallelize=False,
@@ -791,8 +791,8 @@ def _sample_population(
         A list is accepted if more if ``cores`` is greater than one.
     step : function
         Step function (should be or contain a population step method)
-    tune : int, optional
-        Number of iterations to tune, if applicable (defaults to None)
+    tune : int
+        Number of iterations to tune.
     model : Model (optional if in ``with`` context)
     progressbar : bool
         Show progress bars? (defaults to True)
@@ -826,6 +826,7 @@ def _sample_population(
 
 
 def _sample(
+    *,
     chain: int,
     progressbar: bool,
     random_seed,
@@ -833,7 +834,7 @@ def _sample(
     draws: int,
     step=None,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
-    tune=None,
+    tune: int,
     model: Optional[Model] = None,
     callback=None,
     **kwargs,
@@ -861,8 +862,8 @@ def _sample(
     trace : backend or list
         This should be a backend instance, or a list of variables to track.
         If None or a list of variables, the NDArray backend is used.
-    tune : int, optional
-        Number of iterations to tune, if applicable (defaults to None)
+    tune : int
+        Number of iterations to tune.
     model : Model (optional if in ``with`` context)
 
     Returns
@@ -898,7 +899,7 @@ def iter_sample(
     start: PointType,
     trace=None,
     chain=0,
-    tune: Optional[int] = None,
+    tune: int = 0,
     model: Optional[Model] = None,
     random_seed: Optional[Union[int, List[int]]] = None,
     callback=None,
@@ -923,7 +924,7 @@ def iter_sample(
         Chain number used to store sample in backend. If ``cores`` is greater than one, chain numbers
         will start here.
     tune : int, optional
-        Number of iterations to tune, if applicable (defaults to None)
+        Number of iterations to tune (defaults to 0).
     model : Model (optional if in ``with`` context)
     random_seed : int or list of ints, optional
         A list is accepted if more if ``cores`` is greater than one.
@@ -957,7 +958,7 @@ def _iter_sample(
     start: PointType,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
     chain=0,
-    tune=None,
+    tune: int = 0,
     model=None,
     random_seed=None,
     callback=None,
@@ -980,7 +981,7 @@ def _iter_sample(
         Chain number used to store sample in backend. If ``cores`` is greater than one, chain numbers
         will start here.
     tune : int, optional
-        Number of iterations to tune, if applicable (defaults to None)
+        Number of iterations to tune (defaults to 0).
     model : Model (optional if in ``with`` context)
     random_seed : int or list of ints, optional
         A list is accepted if more if ``cores`` is greater than one.
@@ -1217,7 +1218,7 @@ def _prepare_iter_population(
     step,
     start: Sequence[PointType],
     parallelize: bool,
-    tune=None,
+    tune: int,
     model=None,
     random_seed=None,
     progressbar=True,
@@ -1236,8 +1237,8 @@ def _prepare_iter_population(
         Start points for each chain
     parallelize : bool
         Setting for multiprocess parallelization
-    tune : int, optional
-        Number of iterations to tune, if applicable (defaults to None)
+    tune : int
+        Number of iterations to tune.
     model : Model (optional if in ``with`` context)
     random_seed : int or list of ints, optional
         A list is accepted if more if ``cores`` is greater than one.
@@ -1417,7 +1418,7 @@ def _mp_sample(
     draws : int
         The number of samples to draw
     tune : int
-        Number of iterations to tune, if applicable (defaults to None)
+        Number of iterations to tune.
     step : function
         Step function
     chains : int
@@ -1517,7 +1518,7 @@ def _mp_sample(
             strace.close()
 
 
-def _choose_chains(traces: Sequence[BaseTrace], tune: Optional[int]) -> Tuple[List[BaseTrace], int]:
+def _choose_chains(traces: Sequence[BaseTrace], tune: int) -> Tuple[List[BaseTrace], int]:
     """
     Filter and slice traces such that (n_traces * len(shortest_trace)) is maximized.
 
@@ -1526,9 +1527,6 @@ def _choose_chains(traces: Sequence[BaseTrace], tune: Optional[int]) -> Tuple[Li
     traces such that (number of traces) * (length of shortest trace)
     is maximised.
     """
-    if tune is None:
-        tune = 0
-
     if not traces:
         raise ValueError("No traces to slice.")
 
