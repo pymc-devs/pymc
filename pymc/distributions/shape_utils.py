@@ -472,7 +472,7 @@ def convert_size(size: Size) -> Optional[StrongSize]:
     if size is None:
         return None
 
-    if isinstance(size, int) or (isinstance(size, TensorVariable) and size.ndim >= 1):
+    if isinstance(size, int) or (isinstance(size, TensorVariable) and size.ndim==1 or size.ndim==0):
         size = tuple(size,)
     elif isinstance(size, (list, tuple)):
         size = tuple(size)
