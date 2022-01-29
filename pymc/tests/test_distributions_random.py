@@ -21,7 +21,6 @@ import aesara
 import numpy as np
 import numpy.random as nr
 import numpy.testing as npt
-import pandas as pd
 import pytest
 import scipy.stats as st
 
@@ -369,7 +368,7 @@ class BaseTestDistributionRandom(SeededTest):
             assert_almost_equal(expected_value, actual_variable.eval(), decimal=self.decimal)
 
     def check_rv_size(self):
-        # test sizes    
+        # test sizes
         sizes_to_check = self.sizes_to_check or [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
         sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
         for size, expected in zip(sizes_to_check, sizes_expected):
@@ -1700,33 +1699,32 @@ class TestOrderedProbit(BaseTestDistributionRandom):
     ]
 
     def test_vector_inputs(self):
-        """ 
+        """
         This test checks when providing vector inputs for `eta` and `sigma` parameters using advanced indexing.
         """
-        df = pd.DataFrame({    
-            'X' : ['A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'B', 'B', 'B'],
-            'Y' : [1, 1, 1, 2, 2, 3, 4, 5, 1, 1, 1, 1, 2, 2, 3, 3]
-        })
-        
-        df.Y = df.Y.astype(int)
-        grp_idx = pd.Categorical(df.X).codes
-        K = df.Y.nunique()
+        categorical = pm.OrderedProbit.dist(
+            eta=0,
+            cutpoints=np.array([-2.0, 0, 2.0]),
+            sigma=1.0,
+        )
+        p = categorical.owner.inputs[3].eval()
+        assert p.shape == (4,)
 
-        with pm.Model() as opb:    
-            cutpoints = pm.Normal("cutpoints", 0.0, 1.5, shape=K-1,
-                        transform=pm.distributions.transforms.ordered,
-                        initval=np.arange(K-1))
+        categorical = pm.OrderedProbit.dist(
+            eta=np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
+            cutpoints=np.array([-2.0, 0, 2.0]),
+            sigma=1,
+        )
+        p = categorical.owner.inputs[3].eval()
+        assert p.shape == (5, 4)
 
-            mu = pm.Normal("mu", mu=K/2, sd=K, shape=2)
-            sigma = pm.HalfNormal("sigma", 1, shape=2)    
-
-            y_obs = pm.OrderedProbit("y_obs", 
-                            cutpoints=cutpoints, 
-                            eta=mu[grp_idx], 
-                            sigma=sigma[grp_idx],                      
-                            observed=df.Y-1)
-
-        assert df.Y.shape == y_obs.eval().shape
+        categorical = pm.OrderedProbit.dist(
+            eta=np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
+            cutpoints=np.array([-2.0, 0, 2.0]),
+            sigma=np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
+        )
+        p = categorical.owner.inputs[3].eval()
+        assert p.shape == (5, 4)
 
 
 class TestOrderedMultinomial(BaseTestDistributionRandom):
@@ -1854,7 +1852,6 @@ class TestMatrixNormal(BaseTestDistributionRandom):
                     colcov=np.eye(3),
                     shape=15,
                 )
-
 
     def check_random_variable_prior(self):
         """
