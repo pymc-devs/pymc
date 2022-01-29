@@ -565,7 +565,7 @@ def sample(
         _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
         _print_step_hierarchy(step)
         try:
-            trace = _mp_sample(**sample_args, **parallel_args)
+            mtrace = _mp_sample(**sample_args, **parallel_args)
         except pickle.PickleError:
             _log.warning("Could not pickle model, sampling singlethreaded.")
             _log.debug("Pickling error:", exec_info=True)
@@ -603,17 +603,17 @@ def sample(
                     stacklevel=2,
                 )
             _print_step_hierarchy(step)
-            trace = _sample_population(parallelize=cores > 1, **sample_args)
+            mtrace = _sample_population(parallelize=cores > 1, **sample_args)
         else:
             _log.info(f"Sequential sampling ({chains} chains in 1 job)")
             _print_step_hierarchy(step)
-            trace = _sample_many(**sample_args)
+            mtrace = _sample_many(**sample_args)
 
     t_sampling = time.time() - t_start
     # count the number of tune/draw iterations that happened
     # ideally via the "tune" statistic, but not all samplers record it!
-    if "tune" in trace.stat_names:
-        stat = trace.get_sampler_stats("tune", chains=chain_idx)
+    if "tune" in mtrace.stat_names:
+        stat = mtrace.get_sampler_stats("tune", chains=chain_idx)
         # when CompoundStep is used, the stat is 2 dimensional!
         if len(stat.shape) == 2:
             stat = stat[:, 0]
@@ -622,40 +622,40 @@ def sample(
         n_draws = stat.count(False)
     else:
         # these may be wrong when KeyboardInterrupt happened, but they're better than nothing
-        n_tune = min(tune, len(trace))
-        n_draws = max(0, len(trace) - n_tune)
+        n_tune = min(tune, len(mtrace))
+        n_draws = max(0, len(mtrace) - n_tune)
 
     if discard_tuned_samples:
-        trace = trace[n_tune:]
+        mtrace = mtrace[n_tune:]
 
     # save metadata in SamplerReport
-    trace.report._n_tune = n_tune
-    trace.report._n_draws = n_draws
-    trace.report._t_sampling = t_sampling
+    mtrace.report._n_tune = n_tune
+    mtrace.report._n_draws = n_draws
+    mtrace.report._t_sampling = t_sampling
 
-    if "variable_inclusion" in trace.stat_names:
-        for strace in trace._straces.values():
+    if "variable_inclusion" in mtrace.stat_names:
+        for strace in mtrace._straces.values():
             for stat in strace._stats:
                 if "variable_inclusion" in stat:
-                    if trace.nchains > 1:
+                    if mtrace.nchains > 1:
                         stat["variable_inclusion"] = np.vstack(stat["variable_inclusion"])
                     else:
                         stat["variable_inclusion"] = [np.vstack(stat["variable_inclusion"])]
 
-    if "bart_trees" in trace.stat_names:
-        for strace in trace._straces.values():
+    if "bart_trees" in mtrace.stat_names:
+        for strace in mtrace._straces.values():
             for stat in strace._stats:
                 if "bart_trees" in stat:
-                    if trace.nchains > 1:
+                    if mtrace.nchains > 1:
                         stat["bart_trees"] = np.vstack(stat["bart_trees"])
                     else:
                         stat["bart_trees"] = [np.vstack(stat["bart_trees"])]
 
-    n_chains = len(trace.chains)
+    n_chains = len(mtrace.chains)
     _log.info(
         f'Sampling {n_chains} chain{"s" if n_chains > 1 else ""} for {n_tune:_d} tune and {n_draws:_d} draw iterations '
         f"({n_tune*n_chains:_d} + {n_draws*n_chains:_d} draws total) "
-        f"took {trace.report.t_sampling:.0f} seconds."
+        f"took {mtrace.report.t_sampling:.0f} seconds."
     )
 
     idata = None
@@ -663,7 +663,7 @@ def sample(
         ikwargs = dict(model=model, save_warmup=not discard_tuned_samples)
         if idata_kwargs:
             ikwargs.update(idata_kwargs)
-        idata = pm.to_inference_data(trace, **ikwargs)
+        idata = pm.to_inference_data(mtrace, **ikwargs)
 
     if compute_convergence_checks:
         if draws - tune < 100:
@@ -671,13 +671,13 @@ def sample(
                 "The number of samples is too small to check convergence reliably.", stacklevel=2
             )
         else:
-            trace.report._run_convergence_checks(idata, model)
-    trace.report._log_summary()
+            mtrace.report._run_convergence_checks(idata, model)
+    mtrace.report._log_summary()
 
     if return_inferencedata:
         return idata
     else:
-        return trace
+        return mtrace
 
 
 def _check_start_shape(model, start: PointType):
@@ -1446,7 +1446,7 @@ def _mp_sample(
 
     Returns
     -------
-    trace : pymc.backends.base.MultiTrace
+    mtrace : pymc.backends.base.MultiTrace
         A ``MultiTrace`` object that contains the samples for all chains.
     """
     import pymc.parallel_sampling as ps
@@ -1483,24 +1483,24 @@ def _mp_sample(
         try:
             with sampler:
                 for draw in sampler:
-                    trace = traces[draw.chain - chain]
-                    if trace.supports_sampler_stats and draw.stats is not None:
-                        trace.record(draw.point, draw.stats)
+                    strace = traces[draw.chain - chain]
+                    if strace.supports_sampler_stats and draw.stats is not None:
+                        strace.record(draw.point, draw.stats)
                     else:
-                        trace.record(draw.point)
+                        strace.record(draw.point)
                     if draw.is_last:
-                        trace.close()
+                        strace.close()
                         if draw.warnings is not None:
-                            trace._add_warnings(draw.warnings)
+                            strace._add_warnings(draw.warnings)
 
                     if callback is not None:
                         callback(trace=trace, draw=draw)
 
         except ps.ParallelSamplingError as error:
-            trace = traces[error._chain - chain]
-            trace._add_warnings(error._warnings)
-            for trace in traces:
-                trace.close()
+            strace = traces[error._chain - chain]
+            strace._add_warnings(error._warnings)
+            for strace in traces:
+                strace.close()
 
             multitrace = MultiTrace(traces)
             multitrace._report._log_summary()
@@ -1513,8 +1513,8 @@ def _mp_sample(
             traces, length = _choose_chains(traces, 0)
         return MultiTrace(traces)[:length]
     finally:
-        for trace in traces:
-            trace.close()
+        for strace in traces:
+            strace.close()
 
 
 def _choose_chains(traces: Sequence[BaseTrace], tune: Optional[int]) -> Tuple[List[BaseTrace], int]:
