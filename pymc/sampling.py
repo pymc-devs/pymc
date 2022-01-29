@@ -999,8 +999,6 @@ def _iter_sample(
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
-    strace: BaseTrace = _choose_backend(trace, model=model)
-
     try:
         step = CompoundStep(step)
     except TypeError:
@@ -1008,10 +1006,13 @@ def _iter_sample(
 
     point = start
 
-    if step.generates_stats and strace.supports_sampler_stats:
-        strace.setup(draws, chain, step.stats_dtypes)
-    else:
-        strace.setup(draws, chain)
+    strace: BaseTrace = _init_trace(
+        expected_length=draws + int(tune or 0),
+        step=step,
+        chain_number=chain,
+        trace=trace,
+        model=model,
+    )
 
     try:
         step.tune = bool(tune)
@@ -1259,20 +1260,16 @@ def _prepare_iter_population(
         raise ValueError("Argument `draws` should be above 0.")
 
     # The initialization of traces, samplers and points must happen in the right order:
-    # 1. traces are initialized
-    # 2. population of points is created
-    # 3. steppers are initialized and linked to the points object
-    # 4. traces are configured to track the sampler stats
-    # 5. a PopulationStepper is configured for parallelized stepping
+    # 1. population of points is created
+    # 2. steppers are initialized and linked to the points object
+    # 3. traces are initialized
+    # 4. a PopulationStepper is configured for parallelized stepping
 
-    # 1. prepare a BaseTrace for each chain
-    traces: List[BaseTrace] = [_choose_backend(None, model=model) for chain in chains]
-
-    # 2. create a population (points) that tracks each chain
+    # 1. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
     population = [start[c] for c in range(nchains)]
 
-    # 3. Set up the steppers
+    # 2. Set up the steppers
     steppers: List[Step] = []
     for c in range(nchains):
         # need indepenent samplers for each chain
@@ -1287,14 +1284,19 @@ def _prepare_iter_population(
                 sm.link_population(population, c)
         steppers.append(chainstep)
 
-    # 4. configure tracking of sampler stats
-    for c in range(nchains):
-        if steppers[c].generates_stats and traces[c].supports_sampler_stats:
-            traces[c].setup(draws, c, steppers[c].stats_dtypes)
-        else:
-            traces[c].setup(draws, c)
+    # 3. Initialize a BaseTrace for each chain
+    traces: List[BaseTrace] = [
+        _init_trace(
+            expected_length=draws + tune,
+            step=steppers[c],
+            chain_number=c,
+            trace=None,
+            model=model,
+        )
+        for c in chains
+    ]
 
-    # 5. configure the PopulationStepper (expensive call)
+    # 4. configure the PopulationStepper (expensive call)
     popstep = PopulationStepper(steppers, parallelize, progressbar=progressbar)
 
     # Because the preparations above are expensive, the actual iterator is
@@ -1394,6 +1396,27 @@ def _choose_backend(trace: Optional[Union[BaseTrace, List[str]]], **kwds) -> Bas
     return NDArray(vars=trace, **kwds)
 
 
+def _init_trace(
+    *,
+    expected_length: int,
+    step: Step,
+    chain_number: int,
+    trace: Optional[Union[BaseTrace, List[str]]],
+    model,
+) -> BaseTrace:
+    """Extracted helper function to create trace backends for each chain."""
+    if trace is not None:
+        strace = _choose_backend(copy(trace), model=model)
+    else:
+        strace = _choose_backend(None, model=model)
+
+    if step.generates_stats and strace.supports_sampler_stats:
+        strace.setup(expected_length, chain_number, step.stats_dtypes)
+    else:
+        strace.setup(expected_length, chain_number)
+    return strace
+
+
 def _mp_sample(
     draws: int,
     tune: int,
@@ -1455,18 +1478,16 @@ def _mp_sample(
     # We did draws += tune in pm.sample
     draws -= tune
 
-    traces: List[BaseTrace] = []
-    for idx in range(chain, chain + chains):
-        if trace is not None:
-            strace = _choose_backend(copy(trace), model=model)
-        else:
-            strace = _choose_backend(None, model=model)
-
-        if step.generates_stats and strace.supports_sampler_stats:
-            strace.setup(draws + tune, idx, step.stats_dtypes)
-        else:
-            strace.setup(draws + tune, idx)
-        traces.append(strace)
+    traces = [
+        _init_trace(
+            expected_length=draws + tune,
+            step=step,
+            chain_number=chain_number,
+            trace=trace,
+            model=model,
+        )
+        for chain_number in range(chain, chain + chains)
+    ]
 
     sampler = ps.ParallelSampler(
         draws,
