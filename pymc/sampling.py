@@ -734,10 +734,10 @@ def _sample_many(
 
     Returns
     -------
-    trace: MultiTrace
+    mtrace: MultiTrace
         Contains samples of all chains
     """
-    traces: List[Backend] = []
+    traces: List[BaseTrace] = []
     for i in range(chains):
         trace = _sample(
             draws=draws,
@@ -837,7 +837,7 @@ def _sample(
     model: Optional[Model] = None,
     callback=None,
     **kwargs,
-) -> MultiTrace:
+) -> BaseTrace:
     """Main iteration for singleprocess sampling.
 
     Multiple step methods are supported via compound step methods.
@@ -867,8 +867,8 @@ def _sample(
 
     Returns
     -------
-    strace : MultiTrace
-        A ``MultiTrace`` object that contains the samples for this chain.
+    strace : BaseTrace
+        A ``BaseTrace`` object that contains the samples for this chain.
     """
     skip_first = kwargs.get("skip_first", 0)
 
@@ -961,7 +961,7 @@ def _iter_sample(
     model=None,
     random_seed=None,
     callback=None,
-) -> Iterator[Tuple[Backend, bool]]:
+) -> Iterator[Tuple[BaseTrace, bool]]:
     """Generator for sampling one chain. (Used in singleprocess sampling.)
 
     Parameters
@@ -998,7 +998,7 @@ def _iter_sample(
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
-    strace = _choose_backend(trace, model=model)
+    strace: BaseTrace = _choose_backend(trace, model=model)
 
     try:
         step = CompoundStep(step)
@@ -1265,7 +1265,7 @@ def _prepare_iter_population(
     # 5. a PopulationStepper is configured for parallelized stepping
 
     # 1. prepare a BaseTrace for each chain
-    traces = [_choose_backend(None, model=model) for chain in chains]
+    traces: List[BaseTrace] = [_choose_backend(None, model=model) for chain in chains]
 
     # 2. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
@@ -1364,7 +1364,7 @@ def _iter_population(
                 steppers[c].report._finalize(strace)
 
 
-def _choose_backend(trace: Optional[Union[BaseTrace, List[str]]], **kwds) -> Backend:
+def _choose_backend(trace: Optional[Union[BaseTrace, List[str]]], **kwds) -> BaseTrace:
     """Selects or creates a NDArray trace backend for a particular chain.
 
     Parameters
@@ -1454,7 +1454,7 @@ def _mp_sample(
     # We did draws += tune in pm.sample
     draws -= tune
 
-    traces = []
+    traces: List[BaseTrace] = []
     for idx in range(chain, chain + chains):
         if trace is not None:
             strace = _choose_backend(copy(trace), model=model)
