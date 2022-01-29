@@ -1964,7 +1964,9 @@ class _OrderedProbit(Categorical):
         _log_p = at.concatenate(
             [
                 at.shape_padright(normal_lccdf(0, sigma, probits[..., 0])),
-                log_diff_normal_cdf(0, sigma, probits[..., :-1], probits[..., 1:]),
+                log_diff_normal_cdf(
+                    0, at.shape_padright(sigma), probits[..., :-1], probits[..., 1:]
+                ),
                 at.shape_padright(normal_lcdf(0, sigma, probits[..., -1])),
             ],
             axis=-1,
