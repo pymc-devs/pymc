@@ -46,6 +46,7 @@ from aesara.graph.basic import Constant, Variable
 from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
+from typing_extensions import TypeAlias
 
 import pymc as pm
 
@@ -109,11 +110,11 @@ STEP_METHODS = (
     CategoricalGibbsMetropolis,
     PGBART,
 )
-Step = Union[BlockedStep, CompoundStep]
+Step: TypeAlias = Union[BlockedStep, CompoundStep]
 
-ArrayLike = Union[np.ndarray, List[float]]
-PointList = List[PointType]
-Backend = Union[BaseTrace, MultiTrace, NDArray]
+ArrayLike: TypeAlias = Union[np.ndarray, List[float]]
+PointList: TypeAlias = List[PointType]
+Backend: TypeAlias = Union[BaseTrace, MultiTrace, NDArray]
 
 _log = logging.getLogger("pymc")
 
@@ -233,7 +234,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
     return instantiate_steppers(model, steps, selected_steps, step_kwargs)
 
 
-def _print_step_hierarchy(s: Step, level=0) -> None:
+def _print_step_hierarchy(s: Step, level: int = 0) -> None:
     if isinstance(s, CompoundStep):
         _log.info(">" * level + "CompoundStep")
         for i in s.methods:
@@ -268,25 +269,25 @@ def all_continuous(vars, model):
 
 
 def sample(
-    draws=1000,
+    draws: int = 1000,
     step=None,
-    init="auto",
-    n_init=200_000,
+    init: str = "auto",
+    n_init: int = 200_000,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
-    chain_idx=0,
-    chains=None,
-    cores=None,
-    tune=1000,
-    progressbar=True,
+    chain_idx: int = 0,
+    chains: Optional[int] = None,
+    cores: Optional[int] = None,
+    tune: int = 1000,
+    progressbar: bool = True,
     model=None,
     random_seed=None,
-    discard_tuned_samples=True,
-    compute_convergence_checks=True,
+    discard_tuned_samples: bool = True,
+    compute_convergence_checks: bool = True,
     callback=None,
-    jitter_max_retries=10,
+    jitter_max_retries: int = 10,
     *,
-    return_inferencedata=True,
+    return_inferencedata: bool = True,
     idata_kwargs: dict = None,
     mp_ctx=None,
     **kwargs,
@@ -508,7 +509,7 @@ def sample(
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
             # gradient computation failed
             _log.info("Initializing NUTS failed. Falling back to elementwise auto-assignment.")
-            _log.debug("Exception in init nuts", exec_info=True)
+            _log.debug("Exception in init nuts", exc_info=True)
             step = assign_step_methods(model, step, step_kwargs=kwargs)
     else:
         step = assign_step_methods(model, step, step_kwargs=kwargs)
@@ -568,13 +569,13 @@ def sample(
             mtrace = _mp_sample(**sample_args, **parallel_args)
         except pickle.PickleError:
             _log.warning("Could not pickle model, sampling singlethreaded.")
-            _log.debug("Pickling error:", exec_info=True)
+            _log.debug("Pickling error:", exc_info=True)
             parallel = False
         except AttributeError as e:
             if not str(e).startswith("AttributeError: Can't pickle"):
                 raise
             _log.warning("Could not pickle model, sampling singlethreaded.")
-            _log.debug("Pickling error:", exec_info=True)
+            _log.debug("Pickling error:", exc_info=True)
             parallel = False
     if not parallel:
         if has_population_samplers:
@@ -706,7 +707,7 @@ def _check_start_shape(model, start: PointType):
 
 
 def _sample_many(
-    draws,
+    draws: int,
     chain: int,
     chains: int,
     start: Sequence[PointType],
@@ -772,7 +773,7 @@ def _sample_population(
     tune: int,
     model,
     progressbar: bool = True,
-    parallelize=False,
+    parallelize: bool = False,
     **kwargs,
 ) -> MultiTrace:
     """Performs sampling of a population of chains using the ``PopulationStepper``.
@@ -898,7 +899,7 @@ def iter_sample(
     step,
     start: PointType,
     trace=None,
-    chain=0,
+    chain: int = 0,
     tune: int = 0,
     model: Optional[Model] = None,
     random_seed: Optional[Union[int, List[int]]] = None,
@@ -953,11 +954,11 @@ def iter_sample(
 
 
 def _iter_sample(
-    draws,
+    draws: int,
     step,
     start: PointType,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
-    chain=0,
+    chain: int = 0,
     tune: int = 0,
     model=None,
     random_seed=None,
@@ -1007,7 +1008,7 @@ def _iter_sample(
     point = start
 
     strace: BaseTrace = _init_trace(
-        expected_length=draws + int(tune or 0),
+        expected_length=draws + tune,
         step=step,
         chain_number=chain,
         trace=trace,
@@ -1063,7 +1064,7 @@ def _iter_sample(
 class PopulationStepper:
     """Wraps population of step methods to step them in parallel with single or multiprocessing."""
 
-    def __init__(self, steppers, parallelize, progressbar=True):
+    def __init__(self, steppers, parallelize: bool, progressbar: bool = True):
         """Use multiprocessing to parallelize chains.
 
         Falls back to sequential evaluation if multiprocessing fails.
@@ -1117,7 +1118,7 @@ class PopulationStepper:
                     "Population parallelization failed. "
                     "Falling back to sequential stepping of chains."
                 )
-                _log.debug("Error was: ", exec_info=True)
+                _log.debug("Error was: ", exc_info=True)
         else:
             _log.info(
                 "Chains are not parallelized. You can enable this by passing "
@@ -1183,7 +1184,7 @@ class PopulationStepper:
             _log.exception(f"ChainWalker{c}")
         return
 
-    def step(self, tune_stop, population):
+    def step(self, tune_stop: bool, population):
         """Step the entire population of chains.
 
         Parameters
@@ -1426,11 +1427,11 @@ def _mp_sample(
     chain: int,
     random_seed: list,
     start: Sequence[PointType],
-    progressbar=True,
+    progressbar: bool = True,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
     model=None,
     callback=None,
-    discard_tuned_samples=True,
+    discard_tuned_samples: bool = True,
     mp_ctx=None,
     **kwargs,
 ) -> MultiTrace:
@@ -1580,9 +1581,9 @@ def sample_posterior_predictive(
     random_seed=None,
     progressbar: bool = True,
     mode: Optional[Union[str, Mode]] = None,
-    return_inferencedata=True,
-    extend_inferencedata=False,
-    predictions=False,
+    return_inferencedata: bool = True,
+    extend_inferencedata: bool = False,
+    predictions: bool = False,
     idata_kwargs: dict = None,
 ) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate posterior predictive samples from a model given a trace.
@@ -1838,7 +1839,7 @@ def sample_posterior_predictive_w(
     weights: Optional[ArrayLike] = None,
     random_seed: Optional[int] = None,
     progressbar: bool = True,
-    return_inferencedata=True,
+    return_inferencedata: bool = True,
     idata_kwargs: dict = None,
 ):
     """Generate weighted posterior predictive samples from a list of models and
@@ -2006,12 +2007,12 @@ def sample_posterior_predictive_w(
 
 
 def sample_prior_predictive(
-    samples=500,
+    samples: int = 500,
     model: Optional[Model] = None,
     var_names: Optional[Iterable[str]] = None,
     random_seed=None,
     mode: Optional[Union[str, Mode]] = None,
-    return_inferencedata=True,
+    return_inferencedata: bool = True,
     idata_kwargs: dict = None,
 ) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate samples from the prior predictive distribution.
@@ -2234,14 +2235,14 @@ def _init_jitter(
 
 def init_nuts(
     *,
-    init="auto",
-    chains=1,
-    n_init=500_000,
+    init: str = "auto",
+    chains: int = 1,
+    n_init: int = 500_000,
     model=None,
     seeds: Sequence[int] = None,
     progressbar=True,
-    jitter_max_retries=10,
-    tune=None,
+    jitter_max_retries: int = 10,
+    tune: Optional[int] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     **kwargs,
 ) -> Tuple[Sequence[PointType], NUTS]:

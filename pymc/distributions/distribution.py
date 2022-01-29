@@ -32,6 +32,7 @@ from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.var import TensorVariable
+from typing_extensions import TypeAlias
 
 from pymc.aesaraf import change_rv_size
 from pymc.distributions.shape_utils import (
@@ -61,7 +62,7 @@ __all__ = [
     "NoDistribution",
 ]
 
-DIST_PARAMETER_TYPES = Union[np.ndarray, int, float, TensorVariable]
+DIST_PARAMETER_TYPES: TypeAlias = Union[np.ndarray, int, float, TensorVariable]
 
 vectorized_ppc = contextvars.ContextVar(
     "vectorized_ppc", default=None
