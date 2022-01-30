@@ -23,8 +23,15 @@ API Reference
    api/shape_utils
    api/misc
 
+------------------
+shapes, size, dims
+------------------
+some placeholder text
+The {ref}`GLM_linear` notebook provides is
+The {ref}`shapes` notebook provides is
+
 --------------
-API extensions
+api extensions
 --------------
 
 Plots, stats and diagnostics
