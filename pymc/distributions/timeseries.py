@@ -111,14 +111,23 @@ class GaussianRandomWalkRV(RandomVariable):
 
         if steps is None or steps == 0:
             raise ValueError("Steps must be greater than 0 or not None")
-        if size is None:
-            size = 1
 
-        init_val = rng.normal(init, sigma, size=(size, 1))
-        steps = rng.normal(loc=mu, scale=sigma, size=(size, steps))
+        # If size is None then the returned series should be (1+steps,)
+        if size is None:
+            init_size = 1
+            steps_size = steps
+
+        # If size is None then the returned series should be (size, 1+steps)
+        else:
+            init_size = (size, 1)
+            steps_size = (size, steps)
+
+        init_val = rng.normal(init, sigma, size=init_size)
+        steps = rng.normal(loc=mu, scale=sigma, size=steps_size)
+
         grw = np.concatenate([init_val, steps], axis=-1)
 
-        return np.cumsum(grw, axis=-1).squeeze()
+        return np.cumsum(grw, axis=-1)
 
 
 gaussianrandomwalk = GaussianRandomWalkRV()
