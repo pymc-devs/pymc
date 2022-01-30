@@ -1094,9 +1094,9 @@ class TestMvNormalCov(BaseTestDistributionRandom):
         assert mu.eval().shape == (10, 3)
 
         # Cov is artificually limited to being 2D
-        # x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.full((2, 3, 3), np.eye(3)))
-        # mu = x.owner.inputs[3]
-        # assert mu.eval().shape == (10, 2, 3)
+        x = pm.MvNormal.dist(mu=np.ones((10, 1, 1)), cov=np.full((2, 3, 3), np.eye(3)))
+        mu = x.owner.inputs[3]
+        assert mu.eval().shape == (10, 2, 3)
 
 
 class TestMvNormalChol(BaseTestDistributionRandom):

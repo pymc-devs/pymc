@@ -237,11 +237,11 @@ class MvNormal(Continuous):
         mu = at.as_tensor_variable(mu)
         cov = quaddist_matrix(cov, chol, tau, lower)
 
-        distribution_shape = at.broadcast_shape(mu.shape, cov.shape[:-1], arrays_are_shapes=True)
+        distribution_shape = at.stack(at.broadcast_shape(mu, cov[..., -1]))
         mu = at.broadcast_to(mu, distribution_shape)
 
-        event_shape = distribution_shape[-1]
-        cov_shape = at.broadcast_shape(mu[..., None].shape, event_shape, arrays_are_shapes=True)
+        event_shape = [distribution_shape[-1]]
+        cov_shape = at.concatenate((distribution_shape, event_shape))
 
         cov = at.broadcast_to(cov, cov_shape)
         return super().dist([mu, cov], **kwargs)
