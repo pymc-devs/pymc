@@ -368,7 +368,7 @@ class TestMixture(SeededTest):
                 mu.append(pm.Normal("mu%i" % i, 0, 10, shape=D))
                 packed_chol.append(
                     pm.LKJCholeskyCov(
-                        "chol_cov_%i" % i, eta=2, n=D, sd_dist=pm.HalfNormal.dist(2.5)
+                        "chol_cov_%i" % i, eta=2, n=D, sd_dist=pm.HalfNormal.dist(2.5, size=D)
                     )
                 )
                 chol.append(pm.expand_packed_triangular(D, packed_chol[i], lower=True))

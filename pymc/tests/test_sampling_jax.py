@@ -10,8 +10,9 @@ import pymc as pm
 
 from pymc.sampling_jax import (
     _get_log_likelihood,
+    _replace_shared_variables,
+    get_jaxified_graph,
     get_jaxified_logp,
-    replace_shared_variables,
     sample_numpyro_nuts,
 )
 
@@ -62,6 +63,17 @@ def test_deterministic_samples():
     assert np.allclose(trace.posterior["b"].values, trace.posterior["a"].values / 2)
 
 
+def test_get_jaxified_graph():
+    # Check that jaxifying a graph does not emmit the Supervisor Warning. This test can
+    # be removed once https://github.com/aesara-devs/aesara/issues/637 is sorted.
+    x = at.scalar("x")
+    y = at.exp(x)
+    with pytest.warns(None) as record:
+        fn = get_jaxified_graph(inputs=[x], outputs=[y])
+    assert not record
+    assert np.isclose(fn(0), 1)
+
+
 def test_get_log_likelihood():
     obs = np.random.normal(10, 2, size=100)
     obs_at = aesara.shared(obs, borrow=True, name="obs")
@@ -83,13 +95,13 @@ def test_get_log_likelihood():
 def test_replace_shared_variables():
     x = aesara.shared(5, name="shared_x")
 
-    new_x = replace_shared_variables([x])
+    new_x = _replace_shared_variables([x])
     shared_variables = [var for var in graph_inputs(new_x) if isinstance(var, SharedVariable)]
     assert not shared_variables
 
     x.default_update = x + 1
     with pytest.raises(ValueError, match="shared variables with default_update"):
-        replace_shared_variables([x])
+        _replace_shared_variables([x])
 
 
 def test_get_jaxified_logp():

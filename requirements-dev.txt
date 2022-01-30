@@ -2,7 +2,7 @@
 # See that file for comments about the need/usage of each dependency.
 
 aeppl==0.0.18
-aesara==2.3.6
+aesara==2.3.8
 arviz>=0.11.4
 cachetools>=4.2.1
 cloudpickle
@@ -11,7 +11,7 @@ h5py>=2.7
 ipython
 myst-nb
 numpy>=1.15.0
-numpydoc>=0.9
+numpydoc<1.2
 pandas
 polyagamma
 pre-commit>=2.8.0

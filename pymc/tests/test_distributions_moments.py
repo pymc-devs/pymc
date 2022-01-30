@@ -9,6 +9,7 @@ from scipy import special
 import pymc as pm
 
 from pymc.distributions import (
+    CAR,
     AsymmetricLaplace,
     Bernoulli,
     Beta,
@@ -21,6 +22,7 @@ from pymc.distributions import (
     DensityDist,
     Dirichlet,
     DiscreteUniform,
+    DiscreteWeibull,
     ExGaussian,
     Exponential,
     Flat,
@@ -37,12 +39,15 @@ from pymc.distributions import (
     KroneckerNormal,
     Kumaraswamy,
     Laplace,
+    LKJCholeskyCov,
+    LKJCorr,
     Logistic,
     LogitNormal,
     LogNormal,
     MatrixNormal,
     Moyal,
     Multinomial,
+    MvNormal,
     MvStudentT,
     NegativeBinomial,
     Normal,
@@ -66,7 +71,6 @@ from pymc.distributions import (
 )
 from pymc.distributions.distribution import _get_moment, get_moment
 from pymc.distributions.logprob import joint_logpt
-from pymc.distributions.multivariate import MvNormal
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
@@ -95,7 +99,6 @@ def test_all_distributions_have_moments():
 
     # Distributions that have not been refactored for V4 yet
     not_implemented = {
-        dist_module.multivariate.LKJCorr,
         dist_module.mixture.Mixture,
         dist_module.mixture.MixtureSameFamily,
         dist_module.mixture.NormalMixture,
@@ -109,8 +112,6 @@ def test_all_distributions_have_moments():
 
     # Distributions that have been refactored but don't yet have moments
     not_implemented |= {
-        dist_module.discrete.DiscreteWeibull,
-        dist_module.multivariate.CAR,
         dist_module.multivariate.DirichletMultinomial,
         dist_module.multivariate.Wishart,
     }
@@ -749,6 +750,27 @@ def test_hyper_geometric_moment(N, k, n, size, expected):
 def test_discrete_uniform_moment(lower, upper, size, expected):
     with Model() as model:
         DiscreteUniform("x", lower=lower, upper=upper, size=size)
+        assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "q, beta, size, expected",
+    [
+        (0.5, 0.5, None, 0),
+        (0.6, 0.1, 5, (20,) * 5),
+        (np.linspace(0.25, 0.99, 4), 0.42, None, [0, 0, 6, 23862]),
+        (
+            np.linspace(0.5, 0.99, 3),
+            [[1, 1.25, 1.75], [1.25, 0.75, 0.5]],
+            None,
+            [[0, 0, 10], [0, 2, 4755]],
+        ),
+    ],
+)
+def test_discrete_weibull_moment(q, beta, size, expected):
+    with Model() as model:
+        DiscreteWeibull("x", q=q, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
 
 
 @pytest.mark.parametrize(
@@ -929,8 +951,36 @@ def test_mv_normal_moment(mu, cov, size, expected):
     with Model() as model:
         x = MvNormal("x", mu=mu, cov=cov, size=size)
 
-    # MvNormal logp is only impemented for up to 2D variables
+    # MvNormal logp is only implemented for up to 2D variables
     assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
+
+
+@pytest.mark.parametrize(
+    "mu, size, expected",
+    [
+        (
+            np.array([1, 0, 3.0, 4]),
+            None,
+            np.array([1, 0, 3.0, 4]),
+        ),
+        (np.array([1, 0, 3.0, 4]), 6, np.full((6, 4), [1, 0, 3.0, 4])),
+        (np.array([1, 0, 3.0, 4]), (5, 3), np.full((5, 3, 4), [1, 0, 3.0, 4])),
+        (
+            np.array([[3.0, 5, 2, 1], [1, 4, 0.5, 9]]),
+            (4, 5),
+            np.full((4, 5, 2, 4), [[3.0, 5, 2, 1], [1, 4, 0.5, 9]]),
+        ),
+    ],
+)
+def test_car_moment(mu, size, expected):
+    W = np.array(
+        [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
+    )
+    tau = 2
+    alpha = 0.5
+    with Model() as model:
+        CAR("x", mu=mu, W=W, alpha=alpha, tau=tau, size=size)
+    assert_moment_is_expected(model, expected)
 
 
 @pytest.mark.parametrize(
@@ -1375,3 +1425,39 @@ def test_kronecker_normal_moments(mu, covs, size, expected):
     with Model() as model:
         KroneckerNormal("x", mu=mu, covs=covs, size=size)
     assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "n, eta, size, expected",
+    [
+        (3, 1, None, np.zeros(3)),
+        (5, 1, None, np.zeros(10)),
+        (3, 1, 1, np.zeros((1, 3))),
+        (5, 1, (2, 3), np.zeros((2, 3, 10))),
+    ],
+)
+def test_lkjcorr_moment(n, eta, size, expected):
+    with Model() as model:
+        LKJCorr("x", n=n, eta=eta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "n, eta, size, expected",
+    [
+        (3, 1, None, np.array([1, 0, 1, 0, 0, 1])),
+        (4, 1, None, np.array([1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])),
+        (3, 1, 1, np.array([[1, 0, 1, 0, 0, 1]])),
+        (
+            4,
+            1,
+            (2, 3),
+            np.full((2, 3, 10), np.array([1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])),
+        ),
+    ],
+)
+def test_lkjcholeskycov_moment(n, eta, size, expected):
+    with Model() as model:
+        sd_dist = pm.Exponential.dist(1, size=(*to_tuple(size), n))
+        LKJCholeskyCov("x", n=n, eta=eta, sd_dist=sd_dist, size=size, compute_corr=False)
+    assert_moment_is_expected(model, expected, check_finite_logp=size is None)

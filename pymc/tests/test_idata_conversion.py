@@ -331,16 +331,17 @@ class TestDataPyMC:
         # See https://github.com/pymc-devs/pymc/issues/5255
         assert inference_data.log_likelihood["y_observed"].shape == (2, 100, 3)
 
-    @pytest.mark.xfal(reason="Multivariate partial observed RVs not implemented for V4")
-    @pytest.mark.xfail(reason="LKJCholeskyCov not refactored for v4")
+    @pytest.mark.xfail(reason="Multivariate partial observed RVs not implemented for V4")
     def test_mv_missing_data_model(self):
         data = ma.masked_values([[1, 2], [2, 2], [-1, 4], [2, -1], [-1, -1]], value=-1)
 
         model = pm.Model()
         with model:
             mu = pm.Normal("mu", 0, 1, size=2)
-            sd_dist = pm.HalfNormal.dist(1.0)
+            sd_dist = pm.HalfNormal.dist(1.0, size=2)
+            # pylint: disable=unpacking-non-sequence
             chol, *_ = pm.LKJCholeskyCov("chol_cov", n=2, eta=1, sd_dist=sd_dist, compute_corr=True)
+            # pylint: enable=unpacking-non-sequence
             y = pm.MvNormal("y", mu=mu, chol=chol, observed=data)
             inference_data = pm.sample(100, chains=2, return_inferencedata=True)
 
@@ -531,6 +532,7 @@ class TestDataPyMC:
         data = np.random.multinomial(20, [0.2, 0.3, 0.5], size=20)
         with pm.Model(coords=coords):
             p = pm.Beta("p", 1, 1, size=(3,))
+            p = p / p.sum()
             pm.Multinomial("y", 20, p, dims=("experiment", "direction"), observed=data)
             idata = pm.sample(draws=50, chains=2, tune=100, return_inferencedata=True)
         test_dict = {

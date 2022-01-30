@@ -87,6 +87,7 @@ All of the above apply to:
 - ArviZ `plots` and `stats` *wrappers* were removed. The functions are now just available by their original names (see [#4549](https://github.com/pymc-devs/pymc/pull/4471) and `3.11.2` release notes).
 - `pm.sample_posterior_predictive(vars=...)` kwarg was removed in favor of `var_names` (see [#4343](https://github.com/pymc-devs/pymc/pull/4343)).
 - `ElemwiseCategorical` step method was removed (see [#4701](https://github.com/pymc-devs/pymc/pull/4701))
+- `LKJCholeskyCov` `compute_corr` keyword argument is now set to `True` by default (see[#5382](https://github.com/pymc-devs/pymc/pull/5382))
 
 ### Ongoing deprecations
 - Old API still works in `v4` and has a deprecation warning.
@@ -145,6 +146,7 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - `math.log1mexp` and `math.log1mexp_numpy` will expect negative inputs in the future. A `FutureWarning` is now raised unless `negative_input=True` is set (see [#4860](https://github.com/pymc-devs/pymc/pull/4860)).
 - Changed name of `Lognormal` distribution to `LogNormal` to harmonize CamelCase usage for distribution names.
 - Attempt to iterate over MultiTrace will raise NotImplementedError.
+- Removed silent normalisation of `p` parameters in Categorical and Multinomial distributions (see [#5370](https://github.com/pymc-devs/pymc/pull/5370)).
 - ...
 
 

@@ -2094,8 +2094,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_lkj(self, x, eta, n, lp):
+    def test_lkjcorr(self, x, eta, n, lp):
         with Model() as model:
             LKJCorr("lkj", eta=eta, n=n, transform=None)
 
@@ -2189,19 +2188,43 @@ class TestMatchesScipy:
             lambda value, n, p: scipy.stats.multinomial.logpmf(value, n, p),
         )
 
-    def test_multinomial_invalid(self):
-        # Test non-scalar invalid parameters/values
-        value = np.array([[1, 2, 2], [4, 0, 1]])
-
-        invalid_dist = Multinomial.dist(n=5, p=[-1, 1, 1], size=2)
-        # TODO: Multinomial normalizes p, so it is impossible to trigger p checks
-        # with pytest.raises(ParameterValueError):
-        with does_not_raise():
-            pm.logp(invalid_dist, value).eval()
-
-        value[1] -= 1
+    def test_multinomial_invalid_value(self):
+        # Test passing non-scalar invalid parameters/values to an otherwise valid Multinomial,
+        # evaluates to -inf
+        value = np.array([[1, 2, 2], [3, -1, 0]])
         valid_dist = Multinomial.dist(n=5, p=np.ones(3) / 3)
         assert np.all(np.isfinite(pm.logp(valid_dist, value).eval()) == np.array([True, False]))
+
+    def test_multinomial_negative_p(self):
+        # test passing a list/numpy with negative p raises an immediate error
+        with pytest.raises(ValueError, match="[-1, 1, 1]"):
+            with Model() as model:
+                x = Multinomial("x", n=5, p=[-1, 1, 1])
+
+    def test_multinomial_p_not_normalized(self):
+        # test UserWarning is raised for p vals that sum to more than 1
+        # and normaliation is triggered
+        with pytest.warns(UserWarning, match="[5]"):
+            with pm.Model() as m:
+                x = pm.Multinomial("x", n=5, p=[1, 1, 1, 1, 1])
+        # test stored p-vals have been normalised
+        assert np.isclose(m.x.owner.inputs[4].sum().eval(), 1.0)
+
+    def test_multinomial_negative_p_symbolic(self):
+        # Passing symbolic negative p does not raise an immediate error, but evaluating
+        # logp raises a ParameterValueError
+        with pytest.raises(ParameterValueError):
+            value = np.array([[1, 1, 1]])
+            invalid_dist = pm.Multinomial.dist(n=1, p=at.as_tensor_variable([-1, 0.5, 0.5]))
+            pm.logp(invalid_dist, value).eval()
+
+    def test_multinomial_p_not_normalized_symbolic(self):
+        # Passing symbolic p that do not add up to on does not raise any warning, but evaluating
+        # logp raises a ParameterValueError
+        with pytest.raises(ParameterValueError):
+            value = np.array([[1, 1, 1]])
+            invalid_dist = pm.Multinomial.dist(n=1, p=at.as_tensor_variable([1, 0.5, 0.5]))
+            pm.logp(invalid_dist, value).eval()
 
     @pytest.mark.parametrize("n", [(10), ([10, 11]), ([[5, 6], [10, 11]])])
     @pytest.mark.parametrize(
@@ -2317,12 +2340,22 @@ class TestMatchesScipy:
             np.array([-1, -1, 0, 0]),
         ],
     )
-    def test_categorical_valid_p(self, p):
-        with Model():
-            x = Categorical("x", p=p)
+    def test_categorical_negative_p(self, p):
+        with pytest.raises(ValueError, match=f"{p}"):
+            with Model():
+                x = Categorical("x", p=p)
 
-            with pytest.raises(ParameterValueError):
-                logp(x, 2).eval()
+    def test_categorical_negative_p_symbolic(self):
+        with pytest.raises(ParameterValueError):
+            value = np.array([[1, 1, 1]])
+            invalid_dist = pm.Categorical.dist(p=at.as_tensor_variable([-1, 0.5, 0.5]))
+            pm.logp(invalid_dist, value).eval()
+
+    def test_categorical_p_not_normalized_symbolic(self):
+        with pytest.raises(ParameterValueError):
+            value = np.array([[1, 1, 1]])
+            invalid_dist = pm.Categorical.dist(p=at.as_tensor_variable([2, 2, 2]))
+            pm.logp(invalid_dist, value).eval()
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_categorical(self, n):
@@ -2332,6 +2365,14 @@ class TestMatchesScipy:
             {"p": Simplex(n)},
             lambda value, p: categorical_logpdf(value, p),
         )
+
+    def test_categorical_p_not_normalized(self):
+        # test UserWarning is raised for p vals that sum to more than 1
+        # and normaliation is triggered
+        with pytest.warns(UserWarning, match="[5]"):
+            with pm.Model() as m:
+                x = pm.Categorical("x", p=[1, 1, 1, 1, 1])
+        assert np.isclose(m.x.owner.inputs[3].sum().eval(), 1.0)
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedlogistic(self, n):
@@ -2903,7 +2944,7 @@ class TestStrAndLatexRepr:
                 r"sigma ~ N**+(0, 1)",
                 r"mu ~ Deterministic(f(beta, alpha))",
                 r"beta ~ N(0, 10)",
-                r"Z ~ N(<constant>, f())",
+                r"Z ~ N(f(), f())",
                 r"nb_with_p_n ~ NB(10, nbp)",
                 r"Y_obs ~ N(mu, sigma)",
                 r"pot ~ Potential(f(beta, alpha))",
@@ -2923,7 +2964,7 @@ class TestStrAndLatexRepr:
                 r"$\text{sigma} \sim \operatorname{N^{+}}(0,~1)$",
                 r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{beta},~\text{alpha}))$",
                 r"$\text{beta} \sim \operatorname{N}(0,~10)$",
-                r"$\text{Z} \sim \operatorname{N}(\text{<constant>},~f())$",
+                r"$\text{Z} \sim \operatorname{N}(f(),~f())$",
                 r"$\text{nb_with_p_n} \sim \operatorname{NB}(10,~\text{nbp})$",
                 r"$\text{Y_obs} \sim \operatorname{N}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
@@ -3311,3 +3352,40 @@ class TestCensored:
                 match="The dist dist was already registered in the current model",
             ):
                 x = pm.Censored("x", registered_dist, lower=None, upper=None)
+
+
+class TestLKJCholeskCov:
+    def test_dist(self):
+        sd_dist = pm.Exponential.dist(1, size=(10, 3))
+        x = pm.LKJCholeskyCov.dist(n=3, eta=1, sd_dist=sd_dist, size=10, compute_corr=False)
+        assert x.eval().shape == (10, 6)
+
+        sd_dist = pm.Exponential.dist(1, size=3)
+        chol, corr, stds = pm.LKJCholeskyCov.dist(n=3, eta=1, sd_dist=sd_dist)
+        assert chol.eval().shape == (3, 3)
+        assert corr.eval().shape == (3, 3)
+        assert stds.eval().shape == (3,)
+
+    def test_sd_dist_distribution(self):
+        with pm.Model() as m:
+            sd_dist = at.constant([1, 2, 3])
+            with pytest.raises(TypeError, match="sd_dist must be a Distribution variable"):
+                x = pm.LKJCholeskyCov("x", n=3, eta=1, sd_dist=sd_dist)
+
+    def test_sd_dist_registered(self):
+        with pm.Model() as m:
+            sd_dist = pm.Exponential("sd_dist", 1, size=3)
+            with pytest.raises(
+                ValueError, match="The dist sd_dist was already registered in the current model"
+            ):
+                x = pm.LKJCholeskyCov("x", n=3, eta=1, sd_dist=sd_dist)
+
+    def test_no_warning_logp(self):
+        # Check that calling logp of a model with LKJCholeskyCov does not issue any warnings
+        # due to the RandomVariable in the graph
+        with pm.Model() as m:
+            sd_dist = pm.Exponential.dist(1, size=3)
+            x = pm.LKJCholeskyCov("x", n=3, eta=1, sd_dist=sd_dist)
+        with pytest.warns(None) as record:
+            m.logpt()
+        assert not record
