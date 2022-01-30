@@ -28,7 +28,7 @@ from aesara.graph.basic import Apply, Constant, Variable
 from aesara.graph.op import Op
 from aesara.raise_op import Assert
 from aesara.sparse.basic import sp_sum
-from aesara.tensor import gammaln, sigmoid
+from aesara.tensor import gammaln, sigmoid, swapaxes
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
 from aesara.tensor.random.op import RandomVariable, default_shape_from_params
@@ -57,6 +57,7 @@ from pymc.distributions.dist_math import (
     multigammaln,
 )
 from pymc.distributions.distribution import Continuous, Discrete
+from pymc.distributions.multivariate_utils import batched_matrix_inverse
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
     rv_size_is_none,
@@ -92,28 +93,23 @@ cholesky = Cholesky(lower=True, on_error="nan")
 
 def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
     if chol is not None and not lower:
-        chol = chol.T
+        chol = swapaxes(chol, -1, -2)
 
     if len([i for i in [tau, cov, chol] if i is not None]) != 1:
         raise ValueError("Incompatible parameterization. Specify exactly one of tau, cov, or chol.")
 
     if cov is not None:
         cov = at.as_tensor_variable(cov)
-        if cov.ndim != 2:
-            raise ValueError("cov must be two dimensional.")
     elif tau is not None:
         tau = at.as_tensor_variable(tau)
-        if tau.ndim != 2:
-            raise ValueError("tau must be two dimensional.")
         # TODO: What's the correct order/approach (in the non-square case)?
         # `aesara.tensor.nlinalg.tensorinv`?
-        cov = matrix_inverse(tau)
+        cov = batched_matrix_inverse(tau)
     else:
         # TODO: What's the correct order/approach (in the non-square case)?
         chol = at.as_tensor_variable(chol)
-        if chol.ndim != 2:
-            raise ValueError("chol must be two dimensional.")
-        cov = chol.dot(chol.T)
+        chol_transpose = swapaxes(chol, -1, -2)
+        cov = chol * chol_transpose
 
     return cov
 
@@ -240,8 +236,14 @@ class MvNormal(Continuous):
     def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
         mu = at.as_tensor_variable(mu)
         cov = quaddist_matrix(cov, chol, tau, lower)
-        # Aesara is stricter about the shape of mu, than PyMC used to be
-        mu = at.broadcast_arrays(mu, cov[..., -1])[0]
+
+        distribution_shape = at.broadcast_shape(mu.shape, cov.shape[:-1], arrays_are_shapes=True)
+        mu = at.broadcast_to(mu, distribution_shape)
+
+        event_shape = distribution_shape[-1]
+        cov_shape = at.broadcast_shape(mu[..., None].shape, event_shape, arrays_are_shapes=True)
+
+        cov = at.broadcast_to(cov, cov_shape)
         return super().dist([mu, cov], **kwargs)
 
     def get_moment(rv, size, mu, cov):
