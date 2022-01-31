@@ -107,11 +107,15 @@ def augment_system(ode_func, n_states, n_theta):
         if yhat.ndim == 0:
             # Convert yhat from scalar to array
             t_yhat = at.stack((yhat,), axis=0)
-        else:
+        elif yhat.ndim == 1:
             t_yhat = yhat
+        else:
+            raise ValueError(
+                f"The odefunc returned a {yhat.ndim}-dimensional tensor, but 0 or 1 dimensions were expected."
+            )
     elif isinstance(yhat, np.ndarray):
-        msg = f'Invalid Output type for odefunc: {type(yhat)}.\n'
-        msg += 'Valid output types are list, tuple, or at.TensorVariable.'
+        msg = f"Invalid Output type for odefunc: {type(yhat)}.\n"
+        msg += "Valid output types are list, tuple, or at.TensorVariable."
         raise TypeError(msg)
     else:
         # Stack the results of the ode_func into a single tensor variable

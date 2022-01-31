@@ -165,7 +165,9 @@ class TestSensitivityInitialCondition:
             return at.concatenate([ds, di], axis=0)
 
         # Instantiate ODE model
-        model4_t = DifferentialEquation(func=ode_func_4_t, t0=0, times=self.t, n_states=2, n_theta=2)
+        model4_t = DifferentialEquation(
+            func=ode_func_4_t, t0=0, times=self.t, n_states=2, n_theta=2
+        )
 
         model4_sens_ic_t = np.array([1, 0, 0, 0, 0, 1, 0, 0])
 
