@@ -104,7 +104,11 @@ def augment_system(ode_func, n_states, n_theta):
     # Get symbolic representation of the ODEs by passing tensors for y, t and theta
     yhat = ode_func(t_y, t_t, t_p[n_states:])
     if isinstance(yhat, at.TensorVariable):
-        t_yhat = yhat
+        if yhat.ndim == 0:
+            # Convert yhat from scalar to array
+            t_yhat = at.stack((yhat,), axis=0)
+        else:
+            t_yhat = yhat
     elif isinstance(yhat, np.ndarray):
         t_yhat = at.shared(yhat)
     else:
