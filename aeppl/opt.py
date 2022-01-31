@@ -219,6 +219,13 @@ def naive_bcast_rv_lift(fgraph, node):
     if hasattr(fgraph, "dont_touch_vars") and rv_var in fgraph.dont_touch_vars:
         return None  # pragma: no cover
 
+    # Do not replace RV if it is associated with a value variable
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(
+        fgraph, "preserve_rv_mappings", None
+    )
+    if rv_map_feature is not None and rv_var in rv_map_feature.rv_values:
+        return None
+
     if not bcast_shape:
         # The `BroadcastTo` is broadcasting a scalar to a scalar (i.e. doing nothing)
         assert rv_var.ndim == 0
