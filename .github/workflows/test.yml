@@ -66,7 +66,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.6", "3.7"]
+        python-version: ["3.7", "3.10"]
         fast-compile: [0]
         float32: [0]
         part:
