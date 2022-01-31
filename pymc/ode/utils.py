@@ -110,7 +110,9 @@ def augment_system(ode_func, n_states, n_theta):
         else:
             t_yhat = yhat
     elif isinstance(yhat, np.ndarray):
-        t_yhat = at.shared(yhat)
+        msg = f'Invalid Output type for odefunc: {type(yhat)}.\n'
+        msg += 'Valid output types are list, tuple, or at.TensorVariable.'
+        raise TypeError(msg)
     else:
         # Stack the results of the ode_func into a single tensor variable
         if not isinstance(yhat, (list, tuple)):
