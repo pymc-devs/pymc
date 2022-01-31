@@ -113,3 +113,27 @@ def test_get_jaxified_logp():
     jax_fn = get_jaxified_logp(m)
     # This would underflow if not optimized
     assert not np.isinf(jax_fn((np.array(5000.0), np.array(5000.0))))
+
+
+@pytest.mark.parametrize(
+    "idata_kwargs",
+    [
+        dict(),
+        dict(log_likelihood=False),
+    ],
+)
+def test_idata_kwargs(idata_kwargs):
+    with pm.Model() as m:
+        x = pm.Normal("x")
+        y = pm.Normal("y", x, observed=0)
+        idata = sample_numpyro_nuts(
+            tune=50,
+            draws=50,
+            chains=1,
+            idata_kwargs=idata_kwargs,
+        )
+
+    if idata_kwargs.get("log_likelihood", True):
+        assert "log_likelihood" in idata
+    else:
+        assert "log_likelihood" not in idata
