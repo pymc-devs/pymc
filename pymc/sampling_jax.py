@@ -6,8 +6,6 @@ import warnings
 
 from typing import Callable, List, Optional
 
-from aesara.tensor import TensorVariable
-
 xla_flags = os.getenv("XLA_FLAGS", "")
 xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
 os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
@@ -24,6 +22,7 @@ from aesara.graph.basic import clone_replace, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
 from aesara.raise_op import Assert
+from aesara.tensor import TensorVariable
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_observations
@@ -150,6 +149,7 @@ def sample_numpyro_nuts(
     progress_bar=True,
     keep_untransformed=False,
     chain_method="parallel",
+    idata_kwargs=None,
 ):
     from numpyro.infer import MCMC, NUTS
 
@@ -244,14 +244,25 @@ def sample_numpyro_nuts(
     tic4 = pd.Timestamp.now()
     print("Transformation time = ", tic4 - tic3, file=sys.stdout)
 
+    if idata_kwargs is None:
+        idata_kwargs = {}
+    else:
+        idata_kwargs = idata_kwargs.copy()
+
+    if idata_kwargs.pop("log_likelihood", True):
+        log_likelihood = _get_log_likelihood(model, raw_mcmc_samples)
+    else:
+        log_likelihood = None
+
     posterior = mcmc_samples
     az_trace = az.from_dict(
         posterior=posterior,
-        log_likelihood=_get_log_likelihood(model, raw_mcmc_samples),
+        log_likelihood=log_likelihood,
         observed_data=find_observations(model),
         sample_stats=_sample_stats_to_xarray(pmap_numpyro),
         coords=coords,
         dims=dims,
+        **idata_kwargs,
     )
 
     return az_trace
