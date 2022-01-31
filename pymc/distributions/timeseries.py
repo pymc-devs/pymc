@@ -331,7 +331,7 @@ class GaussianRandomWalk(distribution.Continuous):
         """
 
         # Calculate initialization logp
-        init_logp = pm.logp(Normal.dist(init, sigma), 0)
+        init_logp = pm.logp(Normal.dist(init, sigma), value[0])
 
         # Make time series stationary around the mean value
         stationary_series = at.diff(value)
