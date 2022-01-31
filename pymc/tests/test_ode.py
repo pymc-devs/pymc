@@ -15,6 +15,7 @@
 import sys
 
 import aesara
+import aesara.tensor as at
 import numpy as np
 import pytest
 
@@ -153,6 +154,22 @@ class TestSensitivityInitialCondition:
         model4_sens_ic = np.array([1, 0, 0, 0, 0, 1, 0, 0])
 
         np.testing.assert_array_equal(model4_sens_ic, model4._sens_ic)
+
+    def test_sens_ic_vector_2_param_tensor(self):
+        # Vector ODE 2 Param with return type at.TensorVariable
+        def ode_func_4_t(y, t, p):
+            # Make sure that ds and di are vectors by slicing
+            ds = -p[0:1] * y[0:1] * y[1:]
+            di = p[0:1] * y[0:1] * y[1:] - p[1:] * y[1:]
+
+            return at.concatenate([ds, di], axis=0)
+
+        # Instantiate ODE model
+        model4_t = DifferentialEquation(func=ode_func_4_t, t0=0, times=self.t, n_states=2, n_theta=2)
+
+        model4_sens_ic_t = np.array([1, 0, 0, 0, 0, 1, 0, 0])
+
+        np.testing.assert_array_equal(model4_sens_ic_t, model4_t._sens_ic)
 
     def test_sens_ic_vector_3_params(self):
         # Big System with Many Parameters
