@@ -51,7 +51,7 @@ __set_compiler_flags()
 
 from pymc import gp, ode, sampling
 from pymc.aesaraf import *
-from pymc.backends import predictions_to_inference_data, to_inference_data
+from pymc.backends import *
 from pymc.backends.tracetab import *
 from pymc.bart import *
 from pymc.blocking import *

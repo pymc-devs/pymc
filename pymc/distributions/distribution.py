@@ -57,6 +57,7 @@ __all__ = [
     "DensityDistRV",
     "DensityDist",
     "Distribution",
+    "SymbolicDistribution",
     "Continuous",
     "Discrete",
     "NoDistribution",

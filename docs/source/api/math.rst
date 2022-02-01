@@ -7,9 +7,27 @@ from aesara.tensor (see there for more details). Doing any kind of math with PyM
 variables, or defining custom likelihoods or priors requires you to use these Aesara
 expressions rather than NumPy or Python code.
 
-.. currentmodule:: pymc.math
+.. currentmodule:: pymc
 
+Functions exposed in pymc namespace
+-----------------------------------
 .. autosummary::
+   :toctree: generated/
+
+   expand_packed_triangular
+   logit
+   invlogit
+   probit
+   invprobit
+   logsumexp
+
+Functions exposed in pymc.math
+------------------------------
+
+.. automodule:: pymc.math
+.. autosummary::
+   :toctree: generated/
+
    dot
    constant
    flatten
@@ -58,6 +76,3 @@ expressions rather than NumPy or Python code.
    logsumexp
    invlogit
    logit
-
-.. automodule:: pymc.math
-   :members:

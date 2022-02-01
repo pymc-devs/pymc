@@ -10,11 +10,18 @@ API Reference
    api/distributions
    api/gp
    api/model
-   api/ode
    api/samplers
+   api/vi
    api/smc
-   api/step_methods
-   api/inference
+   api/backends
+   api/data
+   api/bart
+   api/ode
+   api/tuning
+   api/math
+   api/aesaraf
+   api/shape_utils
+   api/misc
 
 --------------
 API extensions
