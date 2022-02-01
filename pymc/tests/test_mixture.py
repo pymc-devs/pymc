@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from contextlib import ExitStack as does_not_raise
+
 import aesara
 import numpy as np
 import pytest
@@ -25,6 +27,7 @@ from pymc.aesaraf import floatX
 from pymc.distributions import (
     Categorical,
     Dirichlet,
+    DirichletMultinomial,
     Exponential,
     Gamma,
     HalfNormal,
@@ -38,18 +41,22 @@ from pymc.distributions import (
     NormalMixture,
     Poisson,
 )
+from pymc.distributions.logprob import logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.math import expand_packed_triangular
 from pymc.model import Model
-from pymc.sampling import sample, sample_posterior_predictive, sample_prior_predictive
+from pymc.sampling import (
+    draw,
+    sample,
+    sample_posterior_predictive,
+    sample_prior_predictive,
+)
 from pymc.step_methods import Metropolis
 from pymc.tests.helpers import SeededTest
 from pymc.tests.test_distributions import Domain, Simplex
 from pymc.tests.test_distributions_random import pymc_random
 
-pytestmark = pytest.mark.xfail(reason="Mixture not refactored.")
 
-# Generate data
 def generate_normal_mixture_data(w, mu, sd, size=1000):
     component = np.random.choice(w.size, size=size, p=w)
     mu, sd = np.broadcast_arrays(mu, sd)
@@ -75,76 +82,318 @@ def generate_poisson_mixture_data(w, mu, size=1000):
 
 
 class TestMixture(SeededTest):
-    @classmethod
-    def setup_class(cls):
-        super().setup_class()
-
-        cls.norm_w = np.array([0.75, 0.25])
-        cls.norm_mu = np.array([0.0, 5.0])
-        cls.norm_sd = np.ones_like(cls.norm_mu)
-        cls.norm_x = generate_normal_mixture_data(cls.norm_w, cls.norm_mu, cls.norm_sd, size=1000)
-
-        cls.pois_w = np.array([0.4, 0.6])
-        cls.pois_mu = np.array([5.0, 20.0])
-        cls.pois_x = generate_poisson_mixture_data(cls.pois_w, cls.pois_mu, size=1000)
-
-    def test_dimensions(self):
-        a1 = Normal.dist(mu=0, sigma=1)
-        a2 = Normal.dist(mu=10, sigma=1)
-        mix = Mixture.dist(w=np.r_[0.5, 0.5], comp_dists=[a1, a2])
-
-        assert mix.mode.ndim == 0
-        assert mix.logp(0.0).ndim == 0
-
-        value = np.r_[0.0, 1.0, 2.0]
-        assert mix.logp(value).ndim == 1
-
-    def test_mixture_list_of_normals(self):
-        with Model() as model:
-            w = Dirichlet("w", floatX(np.ones_like(self.norm_w)), shape=self.norm_w.size)
-            mu = Normal("mu", 0.0, 10.0, shape=self.norm_w.size)
-            tau = Gamma("tau", 1.0, 1.0, shape=self.norm_w.size)
-            Mixture(
-                "x_obs",
-                w,
-                [Normal.dist(mu[0], tau=tau[0]), Normal.dist(mu[1], tau=tau[1])],
-                observed=self.norm_x,
+    def get_inital_point(self, model):
+        """Get initial point with untransformed variables for posterior predictive sampling"""
+        return {
+            var.name: initial_point
+            for var, initial_point in zip(
+                model.unobserved_value_vars,
+                model.compile_fn(model.unobserved_value_vars)(model.compute_initial_point()),
             )
-            step = Metropolis()
-            trace = sample(5000, step, random_seed=self.random_seed, progressbar=False, chains=1)
+        }
 
-        assert_allclose(np.sort(trace["w"].mean(axis=0)), np.sort(self.norm_w), rtol=0.1, atol=0.1)
-        assert_allclose(
-            np.sort(trace["mu"].mean(axis=0)), np.sort(self.norm_mu), rtol=0.1, atol=0.1
+    @pytest.mark.parametrize(
+        "weights",
+        [
+            np.array([1, 0]),
+            np.array([[1, 0], [0, 1], [1, 0]]),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "component",
+        [
+            Normal.dist([-10, 10]),
+            Normal.dist([-10, 10], size=(3, 2)),
+            Normal.dist([[-15, 15], [-10, 10], [-5, 5]], 1e-3),
+            Normal.dist([-10, 10], size=(4, 3, 2)),
+        ],
+    )
+    @pytest.mark.parametrize("size", [None, (3,), (4, 3)])
+    def test_single_univariate_component_deterministic_weights(self, weights, component, size):
+        # Size can't be smaller than what is implied by replication dimensions
+        if size is not None and len(size) < max(component.ndim - 1, weights.ndim - 1):
+            return
+
+        mix = Mixture.dist(weights, component, size=size)
+        mix_eval = mix.eval()
+
+        # Test shape
+        # component shape is either (4, 3, 2), (3, 2) or (2,)
+        # weights shape is either (3, 2) or (2,)
+        if size is not None:
+            expected_shape = size
+        elif component.ndim == 3:
+            expected_shape = (4, 3)
+        elif component.ndim == 2 or weights.ndim == 2:
+            expected_shape = (3,)
+        else:
+            expected_shape = ()
+        assert mix_eval.shape == expected_shape
+
+        # Test draws
+        expected_positive = np.zeros_like(mix_eval)
+        if expected_positive.ndim > 0:
+            expected_positive[..., :] = (weights == 1)[..., 1]
+        assert np.all((mix_eval > 0) == expected_positive)
+        repetitions = np.unique(mix_eval).size < mix_eval.size
+        assert not repetitions
+
+        # Test logp
+        mix_logp_eval = logp(mix, mix_eval).eval()
+        assert mix_logp_eval.shape == expected_shape
+        bcast_weights = np.broadcast_to(weights, (*expected_shape, 2))
+        expected_logp = logp(component, mix_eval[..., None]).eval()[bcast_weights == 1]
+        expected_logp = expected_logp.reshape(expected_shape)
+        assert np.allclose(mix_logp_eval, expected_logp)
+
+    @pytest.mark.parametrize(
+        "weights",
+        [
+            np.array([1, 0]),
+            np.array([[1, 0], [0, 1], [1, 0]]),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "components",
+        [
+            (Normal.dist(-10, 1e-3), Normal.dist(10, 1e-3)),
+            (Normal.dist(-10, 1e-3, size=(3,)), Normal.dist(10, 1e-3, size=(3,))),
+            (Normal.dist([-15, -10, -5], 1e-3), Normal.dist([15, 10, 5], 1e-3)),
+            (Normal.dist(-10, 1e-3, size=(4, 3)), Normal.dist(10, 1e-3, size=(4, 3))),
+        ],
+    )
+    @pytest.mark.parametrize("size", [None, (3,), (4, 3)])
+    def test_list_univariate_components_deterministic_weights(self, weights, components, size):
+        # Size can't be smaller than what is implied by replication dimensions
+        if size is not None and len(size) < max(components[0].ndim, weights.ndim - 1):
+            return
+
+        mix = Mixture.dist(weights, components, size=size)
+        mix_eval = mix.eval()
+
+        # Test shape
+        # components[0] shape is either (4, 3), (3,) or ()
+        # weights shape is either (3, 2) or (2,)
+        if size is not None:
+            expected_shape = size
+        elif components[0].ndim == 2:
+            expected_shape = (4, 3)
+        elif components[0].ndim == 1 or weights.ndim == 2:
+            expected_shape = (3,)
+        else:
+            expected_shape = ()
+        assert mix_eval.shape == expected_shape
+
+        # Test draws
+        expected_positive = np.zeros_like(mix_eval)
+        if expected_positive.ndim > 0:
+            expected_positive[..., :] = (weights == 1)[..., 1]
+        assert np.all((mix_eval > 0) == expected_positive)
+        repetitions = np.unique(mix_eval).size < mix_eval.size
+        assert not repetitions
+
+        # Test logp
+        mix_logp_eval = logp(mix, mix_eval).eval()
+        assert mix_logp_eval.shape == expected_shape
+        bcast_weights = np.broadcast_to(weights, (*expected_shape, 2))
+        expected_logp = np.stack(
+            (
+                logp(components[0], mix_eval).eval(),
+                logp(components[1], mix_eval).eval(),
+            ),
+            axis=-1,
+        )[bcast_weights == 1]
+        expected_logp = expected_logp.reshape(expected_shape)
+        assert np.allclose(mix_logp_eval, expected_logp)
+
+    @pytest.mark.parametrize(
+        "weights",
+        [
+            np.array([1, 0]),
+            np.array([[1, 0], [0, 1], [1, 0], [0, 1]]),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "component",
+        [
+            DirichletMultinomial.dist(n=[5_000, 10_000], a=np.ones((3,))),
+            DirichletMultinomial.dist(n=[5_000, 10_000], a=np.ones((3,)), size=(4, 2)),
+        ],
+    )
+    @pytest.mark.parametrize("size", [None, (4,), (5, 4)])
+    def test_single_multivariate_component_deterministic_weights(self, weights, component, size):
+        # This test needs seeding to avoid repetitions
+        rngs = [
+            aesara.shared(np.random.default_rng(seed))
+            for seed in self.get_random_state().randint(2**30, size=2)
+        ]
+        mix = Mixture.dist(weights, component, size=size, rngs=rngs)
+        mix_eval = mix.eval()
+
+        # Test shape
+        # component shape is either (4, 2, 3), (2, 3)
+        # weights shape is either (4, 2) or (2,)
+        if size is not None:
+            expected_shape = size + (3,)
+        elif component.ndim == 3 or weights.ndim == 2:
+            expected_shape = (4, 3)
+        else:
+            expected_shape = (3,)
+        assert mix_eval.shape == expected_shape
+
+        # Test draws
+        totals = mix_eval.sum(-1)
+        expected_large_count = (weights == 1)[..., 1]
+        assert np.all((totals == 10_000) == expected_large_count)
+        repetitions = np.unique(mix_eval[..., 0]).size < totals.size
+        assert not repetitions
+
+        # Test logp
+        mix_logp_eval = logp(mix, mix_eval).eval()
+        expected_logp_shape = expected_shape[:-1]
+        assert mix_logp_eval.shape == expected_logp_shape
+        bcast_weights = np.broadcast_to(weights, (*expected_logp_shape, 2))
+        expected_logp = logp(component, mix_eval[..., None, :]).eval()[bcast_weights == 1]
+        expected_logp = expected_logp.reshape(expected_logp_shape)
+        assert np.allclose(mix_logp_eval, expected_logp)
+
+    @pytest.mark.parametrize(
+        "weights",
+        [
+            np.array([1, 0]),
+            np.array([[1, 0], [0, 1], [1, 0], [0, 1]]),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "components",
+        [
+            (
+                MvNormal.dist([-15, -10, -5], np.eye(3) * 1e-3),
+                MvNormal.dist([15, 10, 5], np.eye(3) * 1e-3),
+            ),
+            (
+                MvNormal.dist([-15, -10, -5], np.eye(3) * 1e-3, size=(4,)),
+                MvNormal.dist([15, 10, 5], np.eye(3) * 1e-3, size=(4,)),
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("size", [None, (4,), (5, 4)])
+    def test_list_multivariate_components_deterministic_weights(self, weights, components, size):
+        mix = Mixture.dist(weights, components, size=size)
+        mix_eval = mix.eval()
+
+        # Test shape
+        # components[0] shape is either (4, 3) or (3,)
+        # weights shape is either (4, 2) or (2,)
+        if size is not None:
+            expected_shape = size + (3,)
+        elif components[0].ndim == 2 or weights.ndim == 2:
+            expected_shape = (4, 3)
+        else:
+            expected_shape = (3,)
+        assert mix_eval.shape == expected_shape
+
+        # Test draws
+        expected_positive = np.zeros_like(mix_eval)
+        expected_positive[..., :] = (weights == 1)[..., 1, None]
+        assert np.all((mix_eval > 0) == expected_positive)
+        repetitions = np.unique(mix_eval).size < mix_eval.size
+        assert not repetitions
+
+        # Test logp
+        # MvNormal logp is currently limited to 2d values
+        expectation = pytest.raises(ValueError) if mix_eval.ndim > 2 else does_not_raise()
+        with expectation:
+            mix_logp_eval = logp(mix, mix_eval).eval()
+            assert mix_logp_eval.shape == expected_shape[:-1]
+            bcast_weights = np.broadcast_to(weights, (*expected_shape[:-1], 2))
+            expected_logp = np.stack(
+                (
+                    logp(components[0], mix_eval).eval(),
+                    logp(components[1], mix_eval).eval(),
+                ),
+                axis=-1,
+            )[bcast_weights == 1]
+            expected_logp = expected_logp.reshape(expected_shape[:-1])
+            assert np.allclose(mix_logp_eval, expected_logp)
+
+    def test_component_choice_random(self):
+        """Test that mixture choices change over evaluations"""
+        with Model() as m:
+            weights = [0.5, 0.5]
+            components = [Normal.dist(-10, 0.01), Normal.dist(10, 0.01)]
+            mix = Mixture.dist(weights, components)
+        draws = draw(mix, draws=10)
+        # Probability of coming from same component 10 times is 0.5**10
+        assert np.unique(draws > 0).size == 2
+
+    @pytest.mark.parametrize(
+        "comp_dists",
+        (
+            [Normal.dist(size=(2,))],
+            [Normal.dist(), Normal.dist()],
+            [MvNormal.dist(np.ones(3), np.eye(3), size=(2,))],
+            [
+                MvNormal.dist(np.ones(3), np.eye(3)),
+                MvNormal.dist(np.ones(3), np.eye(3)),
+            ],
+        ),
+    )
+    def test_components_expanded_by_weights(self, comp_dists):
+        """Test that components are expanded when size or weights are larger than components"""
+        univariate = comp_dists[0].owner.op.ndim_supp == 0
+
+        mix = Mixture.dist(
+            w=Dirichlet.dist([1, 1], shape=(3, 2)),
+            comp_dists=comp_dists,
+            size=(3,),
         )
+        draws = mix.eval()
+        assert draws.shape == (3,) if univariate else (3, 3)
+        assert np.unique(draws).size == draws.size
 
-    def test_poisson_mixture(self):
-        with Model() as model:
-            w = Dirichlet("w", floatX(np.ones_like(self.pois_w)), shape=self.pois_w.shape)
-            mu = Gamma("mu", 1.0, 1.0, shape=self.pois_w.size)
-            Mixture("x_obs", w, Poisson.dist(mu), observed=self.pois_x)
-            step = Metropolis()
-            trace = sample(5000, step, random_seed=self.random_seed, progressbar=False, chains=1)
-
-        assert_allclose(np.sort(trace["w"].mean(axis=0)), np.sort(self.pois_w), rtol=0.1, atol=0.1)
-        assert_allclose(
-            np.sort(trace["mu"].mean(axis=0)), np.sort(self.pois_mu), rtol=0.1, atol=0.1
+        mix = Mixture.dist(
+            w=Dirichlet.dist([1, 1], shape=(4, 3, 2)),
+            comp_dists=comp_dists,
+            size=(3,),
         )
+        draws = mix.eval()
+        assert draws.shape == (4, 3) if univariate else (4, 3, 3)
+        assert np.unique(draws).size == draws.size
 
-    def test_mixture_list_of_poissons(self):
-        with Model() as model:
-            w = Dirichlet("w", floatX(np.ones_like(self.pois_w)), shape=self.pois_w.shape)
-            mu = Gamma("mu", 1.0, 1.0, shape=self.pois_w.size)
-            Mixture("x_obs", w, [Poisson.dist(mu[0]), Poisson.dist(mu[1])], observed=self.pois_x)
-            step = Metropolis()
-            trace = sample(5000, step, random_seed=self.random_seed, progressbar=False, chains=1)
+    @pytest.mark.parametrize(
+        "comp_dists",
+        (
+            [Normal.dist(size=(2,))],
+            [Normal.dist(), Normal.dist()],
+            [MvNormal.dist(np.ones(3), np.eye(3), size=(2,))],
+            [
+                MvNormal.dist(np.ones(3), np.eye(3)),
+                MvNormal.dist(np.ones(3), np.eye(3)),
+            ],
+        ),
+    )
+    @pytest.mark.parametrize("expand", (False, True))
+    def test_change_size(self, comp_dists, expand):
+        univariate = comp_dists[0].owner.op.ndim_supp == 0
 
-        assert_allclose(np.sort(trace["w"].mean(axis=0)), np.sort(self.pois_w), rtol=0.1, atol=0.1)
-        assert_allclose(
-            np.sort(trace["mu"].mean(axis=0)), np.sort(self.pois_mu), rtol=0.1, atol=0.1
-        )
+        mix = Mixture.dist(w=Dirichlet.dist([1, 1]), comp_dists=comp_dists)
+        mix = Mixture.change_size(mix, new_size=(4,), expand=expand)
+        draws = mix.eval()
+        expected_shape = (4,) if univariate else (4, 3)
+        assert draws.shape == expected_shape
+        assert np.unique(draws).size == draws.size
 
-    def test_mixture_of_mvn(self):
+        mix = Mixture.dist(w=Dirichlet.dist([1, 1]), comp_dists=comp_dists, size=(3,))
+        mix = Mixture.change_size(mix, new_size=(5, 4), expand=expand)
+        draws = mix.eval()
+        expected_shape = (5, 4) if univariate else (5, 4, 3)
+        if expand:
+            expected_shape = expected_shape + (3,)
+        assert draws.shape == expected_shape
+        assert np.unique(draws).size == draws.size
+
+    def test_list_mvnormals_logp(self):
         mu1 = np.asarray([0.0, 1.0])
         cov1 = np.diag([1.5, 2.5])
         mu2 = np.asarray([1.0, 0.0])
@@ -163,22 +412,170 @@ class TestMixture(SeededTest):
                 st.multivariate_normal.logpdf(obs, mu2, cov2),
             )
         ).T
-        complogp = y.distribution._comp_logp(aesara.shared(obs)).eval()
-        assert_allclose(complogp, complogp_st)
 
         # check logp of mixture
         testpoint = model.compute_initial_point()
         mixlogp_st = logsumexp(np.log(testpoint["w"]) + complogp_st, axis=-1, keepdims=False)
-        assert_allclose(y.logp_elemwise(testpoint), mixlogp_st)
+        assert_allclose(model.compile_logp(y, sum=False)(testpoint)[0], mixlogp_st)
 
         # check logp of model
         priorlogp = st.dirichlet.logpdf(
             x=testpoint["w"],
             alpha=np.ones(2),
         )
-        assert_allclose(model.logp(testpoint), mixlogp_st.sum() + priorlogp)
+        assert_allclose(model.compile_logp()(testpoint), mixlogp_st.sum() + priorlogp)
 
-    def test_mixture_of_mixture(self):
+    def test_single_poisson_sampling(self):
+        pois_w = np.array([0.4, 0.6])
+        pois_mu = np.array([5.0, 20.0])
+        pois_x = generate_poisson_mixture_data(pois_w, pois_mu, size=1000)
+
+        with Model() as model:
+            w = Dirichlet("w", floatX(np.ones_like(pois_w)), shape=pois_w.shape)
+            mu = Gamma("mu", 1.0, 1.0, shape=pois_w.size)
+            Mixture("x_obs", w, Poisson.dist(mu), observed=pois_x)
+            step = Metropolis()
+            trace = sample(
+                5000,
+                step,
+                random_seed=self.random_seed,
+                progressbar=False,
+                chains=1,
+                return_inferencedata=False,
+            )
+
+        assert_allclose(np.sort(trace["w"].mean(axis=0)), np.sort(pois_w), rtol=0.1, atol=0.1)
+        assert_allclose(np.sort(trace["mu"].mean(axis=0)), np.sort(pois_mu), rtol=0.1, atol=0.1)
+
+    def test_list_poissons_sampling(self):
+        pois_w = np.array([0.4, 0.6])
+        pois_mu = np.array([5.0, 20.0])
+        pois_x = generate_poisson_mixture_data(pois_w, pois_mu, size=1000)
+
+        with Model() as model:
+            w = Dirichlet("w", floatX(np.ones_like(pois_w)), shape=pois_w.shape)
+            mu = Gamma("mu", 1.0, 1.0, shape=pois_w.size)
+            Mixture("x_obs", w, [Poisson.dist(mu[0]), Poisson.dist(mu[1])], observed=pois_x)
+            trace = sample(
+                5000,
+                chains=1,
+                step=Metropolis(),
+                random_seed=self.random_seed,
+                progressbar=False,
+                return_inferencedata=False,
+            )
+
+        assert_allclose(np.sort(trace["w"].mean(axis=0)), np.sort(pois_w), rtol=0.1, atol=0.1)
+        assert_allclose(np.sort(trace["mu"].mean(axis=0)), np.sort(pois_mu), rtol=0.1, atol=0.1)
+
+    def test_list_normals_sampling(self):
+        norm_w = np.array([0.75, 0.25])
+        norm_mu = np.array([0.0, 5.0])
+        norm_sd = np.ones_like(norm_mu)
+        norm_x = generate_normal_mixture_data(norm_w, norm_mu, norm_sd, size=1000)
+
+        with Model() as model:
+            w = Dirichlet("w", floatX(np.ones_like(norm_w)), shape=norm_w.size)
+            mu = Normal("mu", 0.0, 10.0, shape=norm_w.size)
+            tau = Gamma("tau", 1.0, 1.0, shape=norm_w.size)
+            Mixture(
+                "x_obs",
+                w,
+                [Normal.dist(mu[0], tau=tau[0]), Normal.dist(mu[1], tau=tau[1])],
+                observed=norm_x,
+            )
+            trace = sample(
+                5000,
+                chains=1,
+                step=Metropolis(),
+                random_seed=self.random_seed,
+                progressbar=False,
+                return_inferencedata=False,
+            )
+
+        assert_allclose(np.sort(trace["w"].mean(axis=0)), np.sort(norm_w), rtol=0.1, atol=0.1)
+        assert_allclose(np.sort(trace["mu"].mean(axis=0)), np.sort(norm_mu), rtol=0.1, atol=0.1)
+
+    def test_single_poisson_predictive_sampling_shape(self):
+        # test the shape broadcasting in mixture random
+        rng = self.get_random_state()
+        y = np.concatenate([rng.poisson(5, size=10), rng.poisson(9, size=10)])
+        with Model() as model:
+            comp0 = Poisson.dist(mu=np.ones(2))
+            w0 = Dirichlet("w0", a=np.ones(2), shape=(2,))
+            like0 = Mixture("like0", w=w0, comp_dists=comp0, observed=y)
+
+            comp1 = Poisson.dist(mu=np.ones((20, 2)), shape=(20, 2))
+            w1 = Dirichlet("w1", a=np.ones(2), shape=(2,))
+            like1 = Mixture("like1", w=w1, comp_dists=comp1, observed=y)
+
+            comp2 = Poisson.dist(mu=np.ones(2))
+            w2 = Dirichlet("w2", a=np.ones(2), shape=(20, 2))
+            like2 = Mixture("like2", w=w2, comp_dists=comp2, observed=y)
+
+            comp3 = Poisson.dist(mu=np.ones(2), shape=(20, 2))
+            w3 = Dirichlet("w3", a=np.ones(2), shape=(20, 2))
+            like3 = Mixture("like3", w=w3, comp_dists=comp3, observed=y)
+
+        n_samples = 30
+        with model:
+            prior = sample_prior_predictive(samples=n_samples, return_inferencedata=False)
+            ppc = sample_posterior_predictive(
+                [self.get_inital_point(model)], samples=n_samples, return_inferencedata=False
+            )
+
+        assert prior["like0"].shape == (n_samples, 20)
+        assert prior["like1"].shape == (n_samples, 20)
+        assert prior["like2"].shape == (n_samples, 20)
+        assert prior["like3"].shape == (n_samples, 20)
+
+        assert ppc["like0"].shape == (n_samples, 20)
+        assert ppc["like1"].shape == (n_samples, 20)
+        assert ppc["like2"].shape == (n_samples, 20)
+        assert ppc["like3"].shape == (n_samples, 20)
+
+    def test_list_mvnormals_predictive_sampling_shape(self):
+        N = 100  # number of data points
+        K = 3  # number of mixture components
+        D = 3  # dimensionality of the data
+        X = MvNormal.dist(np.zeros(D), np.eye(D), size=N).eval()
+
+        with Model() as model:
+            pi = Dirichlet("pi", np.ones(K), shape=(K,))
+
+            comp_dist = []
+            mu = []
+            packed_chol = []
+            chol = []
+            for i in range(K):
+                mu.append(Normal(f"mu{i}", 0, 10, shape=D))
+                packed_chol.append(
+                    LKJCholeskyCov(
+                        f"chol_cov_{i}",
+                        eta=2,
+                        n=D,
+                        sd_dist=HalfNormal.dist(2.5, size=D),
+                        compute_corr=False,
+                    )
+                )
+                chol.append(expand_packed_triangular(D, packed_chol[i], lower=True))
+                comp_dist.append(MvNormal.dist(mu=mu[i], chol=chol[i], shape=D))
+
+            Mixture("x_obs", pi, comp_dist, observed=X)
+
+        n_samples = 20
+        with model:
+            prior = sample_prior_predictive(samples=n_samples, return_inferencedata=False)
+            ppc = sample_posterior_predictive(
+                [self.get_inital_point(model)], samples=n_samples, return_inferencedata=False
+            )
+        assert ppc["x_obs"].shape == (n_samples,) + X.shape
+        assert prior["x_obs"].shape == (n_samples,) + X.shape
+        assert prior["mu0"].shape == (n_samples, D)
+        assert prior["chol_cov_0"].shape == (n_samples, D * (D + 1) // 2)
+
+    @pytest.mark.xfail(reason="Mixture from single component not refactored yet")
+    def test_nested_mixture(self):
         if aesara.config.floatX == "float32":
             rtol = 1e-4
         else:
@@ -251,92 +648,6 @@ class TestMixture(SeededTest):
         priorlogp, mixmixlogpg = mixmixlogp(value, test_point)
         assert_allclose(mixmixlogpg, mix.logp_elemwise(test_point), rtol=rtol)
         assert_allclose(priorlogp + mixmixlogpg.sum(), model.logp(test_point), rtol=rtol)
-
-    def test_sample_prior_and_posterior(self):
-        def build_toy_dataset(N, K):
-            pi = np.array([0.2, 0.5, 0.3])
-            mus = [[1, 1, 1], [-1, -1, -1], [2, -2, 0]]
-            stds = [[0.1, 0.1, 0.1], [0.1, 0.2, 0.2], [0.2, 0.3, 0.3]]
-            x = np.zeros((N, 3), dtype=np.float32)
-            y = np.zeros((N,), dtype=np.int)
-            for n in range(N):
-                k = np.argmax(np.random.multinomial(1, pi))
-                x[n, :] = np.random.multivariate_normal(mus[k], np.diag(stds[k]))
-                y[n] = k
-            return x, y
-
-        N = 100  # number of data points
-        K = 3  # number of mixture components
-        D = 3  # dimensionality of the data
-
-        X, y = build_toy_dataset(N, K)
-
-        with Model() as model:
-            pi = Dirichlet("pi", np.ones(K), shape=(K,))
-
-            comp_dist = []
-            mu = []
-            packed_chol = []
-            chol = []
-            for i in range(K):
-                mu.append(Normal("mu%i" % i, 0, 10, shape=D))
-                packed_chol.append(
-                    LKJCholeskyCov(
-                        "chol_cov_%i" % i, eta=2, n=D, sd_dist=HalfNormal.dist(2.5, size=D)
-                    )
-                )
-                chol.append(expand_packed_triangular(D, packed_chol[i], lower=True))
-                comp_dist.append(MvNormal.dist(mu=mu[i], chol=chol[i], shape=D))
-
-            Mixture("x_obs", pi, comp_dist, observed=X)
-        with model:
-            idata = sample(30, tune=10, chains=1)
-
-        n_samples = 20
-        with model:
-            ppc = sample_posterior_predictive(idata, n_samples)
-            prior = sample_prior_predictive(samples=n_samples)
-        assert ppc["x_obs"].shape == (n_samples,) + X.shape
-        assert prior["x_obs"].shape == (n_samples,) + X.shape
-        assert prior["mu0"].shape == (n_samples, D)
-        assert prior["chol_cov_0"].shape == (n_samples, D * (D + 1) // 2)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_mixture_random_shape(self):
-        # test the shape broadcasting in mixture random
-        y = np.concatenate([np.random.poisson(5, size=10), np.random.poisson(9, size=10)])
-        with pm.Model() as m:
-            comp0 = pm.Poisson.dist(mu=np.ones(2))
-            w0 = pm.Dirichlet("w0", a=np.ones(2), shape=(2,))
-            like0 = pm.Mixture("like0", w=w0, comp_dists=comp0, observed=y)
-
-            comp1 = pm.Poisson.dist(mu=np.ones((20, 2)), shape=(20, 2))
-            w1 = pm.Dirichlet("w1", a=np.ones(2), shape=(2,))
-            like1 = pm.Mixture("like1", w=w1, comp_dists=comp1, observed=y)
-
-            comp2 = pm.Poisson.dist(mu=np.ones(2))
-            w2 = pm.Dirichlet("w2", a=np.ones(2), shape=(20, 2))
-            like2 = pm.Mixture("like2", w=w2, comp_dists=comp2, observed=y)
-
-            comp3 = pm.Poisson.dist(mu=np.ones(2), shape=(20, 2))
-            w3 = pm.Dirichlet("w3", a=np.ones(2), shape=(20, 2))
-            like3 = pm.Mixture("like3", w=w3, comp_dists=comp3, observed=y)
-
-        # XXX: This needs to be refactored
-        rand0, rand1, rand2, rand3 = [None] * 4  # draw_values(
-        #     [like0, like1, like2, like3], point=m.initial_point, size=100
-        # )
-        assert rand0.shape == (100, 20)
-        assert rand1.shape == (100, 20)
-        assert rand2.shape == (100, 20)
-        assert rand3.shape == (100, 20)
-
-        with m:
-            ppc = pm.sample_posterior_predictive([m.compute_initial_point()], samples=200)
-        assert ppc["like0"].shape == (200, 20)
-        assert ppc["like1"].shape == (200, 20)
-        assert ppc["like2"].shape == (200, 20)
-        assert ppc["like3"].shape == (200, 20)
 
 
 class TestNormalMixture(SeededTest):
@@ -465,6 +776,7 @@ class TestNormalMixture(SeededTest):
         )
 
 
+@pytest.mark.xfail(reason="NormalMixture not refactored yet")
 class TestMixtureVsLatent(SeededTest):
     def setup_method(self, *args, **kwargs):
         super().setup_method(*args, **kwargs)
@@ -573,6 +885,7 @@ class TestMixtureVsLatent(SeededTest):
         assert_allclose(mix_logp, latent_mix_logp, rtol=rtol)
 
 
+@pytest.mark.xfail(reason="MixtureSameFamily not refactored yet")
 class TestMixtureSameFamily(SeededTest):
     @classmethod
     def setup_class(cls):
