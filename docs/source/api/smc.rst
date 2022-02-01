@@ -1,8 +1,21 @@
-*************
 Sequential Monte Carlo
-*************
+**********************
 
-.. toctree::
+.. automodule:: pymc.smc
 
-   smc/sample_smc
-   smc/smc
+.. autosummary::
+   :toctree: generated/
+
+    sample_smc
+
+(smc_kernels)=
+SMC kernels
+-----------
+
+.. currentmodule:: pymc.smc.smc
+.. autosummary::
+   :toctree: generated/
+
+    SMC_KERNEL
+    IMH
+    MH

@@ -70,6 +70,11 @@ numpydoc_xref_aliases = {
     "ndarray": ":class:`~numpy.ndarray`",
     "Covariance": ":mod:`Covariance <pymc.gp.cov>`",
     "Mean": ":mod:`Mean <pymc.gp.mean>`",
+    "InferenceData": ":class:`arviz.InferenceData`",
+    "MultiTrace": ":class:`~pymc.backends.base.MultiTrace`",
+    "BaseTrace": ":class:`~pymc.backends.base.BaseTrace`",
+    "Point": ":class:`~pymc.Point`",
+    "SMC_kernel": ":ref:`SMC Kernel <smc_kernels>`",
 }
 
 # Show the documentation of __init__ and the class docstring
@@ -179,6 +184,7 @@ intersphinx_mapping = {
     "myst": ("https://myst-parser.readthedocs.io/en/latest", None),
     "myst-nb": ("https://myst-nb.readthedocs.io/en/latest/", None),
     "python": ("https://docs.python.org/3/", None),
+    "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
 
 

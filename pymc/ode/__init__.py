@@ -1,3 +1,4 @@
+"""This submodule contains tools used to perform inference on ordinary differential equations."""
 #   Copyright 2020 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
