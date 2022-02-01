@@ -26,7 +26,13 @@ from aesara.tensor.random.op import RandomVariable
 from pymc.aesaraf import change_rv_size
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.distribution import Discrete, Distribution, SymbolicDistribution
+from pymc.distributions.distribution import (
+    Discrete,
+    Distribution,
+    SymbolicDistribution,
+    _get_moment,
+    get_moment,
+)
 from pymc.distributions.logprob import logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.util import check_dist_not_registered
@@ -396,6 +402,24 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
     )
 
     return mix_logp
+
+
+@_get_moment.register(MarginalMixtureRV)
+def get_moment_marginal_mixture(op, rv, rng, weights, *components):
+    ndim_supp = components[0].owner.op.ndim_supp
+    weights = at.shape_padright(weights, ndim_supp)
+    mix_axis = -ndim_supp - 1
+
+    if len(components) == 1:
+        moment_components = get_moment(components[0])
+
+    else:
+        moment_components = at.stack(
+            [get_moment(component) for component in components],
+            axis=mix_axis,
+        )
+
+    return at.sum(weights * moment_components, axis=mix_axis)
 
 
 class NormalMixture:
