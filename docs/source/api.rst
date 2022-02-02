@@ -24,14 +24,14 @@ API Reference
    api/misc
 
 ------------------
-shapes, size, dims
+Dimensionality
 ------------------
-some placeholder text
-The {ref}`GLM_linear` notebook provides is
-The {ref}`shapes` notebook provides is
+PyMC provides numerous methods, and syntatic sugar, to easily specify the dimensionality of
+Random Variables in modeling. Refer to {ref}`dimensionality` notebook to see examples
+demonstrating the functionality.
 
 --------------
-api extensions
+API extensions
 --------------
 
 Plots, stats and diagnostics
