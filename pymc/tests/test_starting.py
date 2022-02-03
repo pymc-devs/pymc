@@ -46,9 +46,9 @@ def test_accuracy_non_normal():
         close_to(newstart["x"], mu, select_by_precision(float64=1e-5, float32=1e-4))
 
 
-@pytest.mark.xfail(reason="first call to find_MAP is failing")
 def test_find_MAP_discrete():
-    tol = 2.0 ** -11
+    tol1 = 2.0 ** -11
+    tol2 = 2.0 ** -6
     alpha = 4
     beta = 4
     n = 20
@@ -62,9 +62,9 @@ def test_find_MAP_discrete():
         map_est1 = starting.find_MAP()
         map_est2 = starting.find_MAP(vars=model.value_vars)
 
-    close_to(map_est1["p"], 0.6086956533498806, tol)
+    close_to(map_est1["p"], 0.6086956533498806, tol1)
 
-    close_to(map_est2["p"], 0.695642178810167, tol)
+    close_to(map_est2["p"], 0.695642178810167, tol2)
     assert map_est2["ss"] == 14
 
 

@@ -112,18 +112,23 @@ def find_MAP(
     start = ipfn(seed)
     model.check_start_vals(start)
 
-    x0 = DictToArrayBijection.map(start)
+    var_names = {var.name for var in vars}
+    x0 = DictToArrayBijection.map(
+        {var_name: value for var_name, value in start.items() if var_name in var_names}
+    )
 
     # TODO: If the mapping is fixed, we can simply create graphs for the
     # mapping and avoid all this bijection overhead
-    compiled_logp_func = DictToArrayBijection.mapf(model.compile_logp(jacobian=False))
+    compiled_logp_func = DictToArrayBijection.mapf(model.compile_logp(jacobian=False), start)
     logp_func = lambda x: compiled_logp_func(RaveledVars(x, x0.point_map_info))
 
     rvs = [model.values_to_rvs[value] for value in vars]
     try:
         # This might be needed for calls to `dlogp_func`
         # start_map_info = tuple((v.name, v.shape, v.dtype) for v in vars)
-        compiled_dlogp_func = DictToArrayBijection.mapf(model.compile_dlogp(rvs, jacobian=False))
+        compiled_dlogp_func = DictToArrayBijection.mapf(
+            model.compile_dlogp(rvs, jacobian=False), start
+        )
         dlogp_func = lambda x: compiled_dlogp_func(RaveledVars(x, x0.point_map_info))
         compute_gradient = True
     except (AttributeError, NotImplementedError, tg.NullTypeGradError):
@@ -162,12 +167,11 @@ def find_MAP(
             print(file=sys.stdout)
 
     mx0 = RaveledVars(mx0, x0.point_map_info)
-
-    vars = get_default_varnames(model.unobserved_value_vars, include_transformed)
-    mx = {
-        var.name: value
-        for var, value in zip(vars, model.compile_fn(vars)(DictToArrayBijection.rmap(mx0)))
-    }
+    unobserved_vars = get_default_varnames(model.unobserved_value_vars, include_transformed)
+    unobserved_vars_values = model.compile_fn(unobserved_vars)(
+        DictToArrayBijection.rmap(mx0, start)
+    )
+    mx = {var.name: value for var, value in zip(unobserved_vars, unobserved_vars_values)}
 
     if return_raw:
         return mx, opt_result
