@@ -313,6 +313,19 @@ class TestSample(SeededTest):
             with pytest.raises(NotImplementedError):
                 xvars = [t["mu"] for t in trace]
 
+    def test_deterministic_of_unobserved(self):
+        with pm.Model() as model:
+            x = pm.HalfNormal("x", 1)
+            y = pm.Deterministic("y", x + 100)
+            idata = pm.sample(
+                chains=1,
+                tune=10,
+                draws=50,
+                compute_convergence_checks=False,
+            )
+
+        np.testing.assert_allclose(idata.posterior["y"], idata.posterior["x"] + 100)
+
 
 def test_sample_find_MAP_does_not_modify_start():
     # see https://github.com/pymc-devs/pymc/pull/4458
@@ -1218,15 +1231,6 @@ class TestSamplePosteriorPredictive:
         with pmodel:
             idat = pm.to_inference_data(trace)
             pp = pm.sample_posterior_predictive(idat.posterior, var_names=["d"])
-
-
-def test_sample_deterministic():
-    with pm.Model() as model:
-        x = pm.HalfNormal("x", 1)
-        y = pm.Deterministic("y", x + 100)
-        idata = pm.sample(chains=1, draws=50, compute_convergence_checks=False)
-
-    np.testing.assert_allclose(idata.posterior["y"], idata.posterior["x"] + 100)
 
 
 class TestDraw(SeededTest):
