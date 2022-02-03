@@ -900,10 +900,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
     @property
     def unobserved_value_vars(self):
         """List of all random variables (including untransformed projections),
-        as well as deterministics used as inputs and outputs of the the model's
+        as well as deterministics used as inputs and outputs of the model's
         log-likelihood graph
         """
         vars = []
+        untransformed_vars = []
         for rv in self.free_RVs:
             value_var = self.rvs_to_values[rv]
             transform = getattr(value_var.tag, "transform", None)
@@ -912,13 +913,16 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 # each transformed variable
                 untrans_value_var = transform.backward(value_var, *rv.owner.inputs)
                 untrans_value_var.name = rv.name
-                vars.append(untrans_value_var)
+                untransformed_vars.append(untrans_value_var)
             vars.append(value_var)
+
+        # Remove rvs from untransformed values graph
+        untransformed_vars, _ = rvs_to_value_vars(untransformed_vars, apply_transforms=True)
 
         # Remove rvs from deterministics graph
         deterministics, _ = rvs_to_value_vars(self.deterministics, apply_transforms=True)
 
-        return vars + deterministics
+        return vars + untransformed_vars + deterministics
 
     @property
     def basic_RVs(self):

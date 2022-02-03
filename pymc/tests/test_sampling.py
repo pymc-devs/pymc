@@ -23,6 +23,7 @@ import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
+import scipy.special
 
 from aesara import shared
 from arviz import InferenceData
@@ -325,6 +326,16 @@ class TestSample(SeededTest):
             )
 
         np.testing.assert_allclose(idata.posterior["y"], idata.posterior["x"] + 100)
+
+    def test_transform_with_rv_depenency(self):
+        # Test that untransformed variables that depend on upstream variables are properly handled
+        with pm.Model() as m:
+            x = pm.HalfNormal("x", observed=1)
+            transform = pm.transforms.IntervalTransform(lambda *inputs: (inputs[-2], inputs[-1]))
+            y = pm.Uniform("y", lower=0, upper=x, transform=transform)
+            trace = pm.sample(tune=10, draws=50, return_inferencedata=False, random_seed=336)
+
+        assert np.allclose(scipy.special.expit(trace["y_interval__"]), trace["y"])
 
 
 def test_sample_find_MAP_does_not_modify_start():
