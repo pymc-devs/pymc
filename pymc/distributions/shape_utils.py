@@ -21,12 +21,13 @@ samples from probability distributions for stochastic nodes in PyMC.
 import warnings
 
 from functools import partial
-from typing import Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from aesara.graph.basic import Constant, Variable
 from aesara.tensor.var import TensorVariable
+from typing_extensions import TypeAlias
 
 from pymc.aesaraf import change_rv_size, pandas_to_array
 from pymc.exceptions import ShapeError, ShapeWarning
@@ -412,19 +413,31 @@ def broadcast_dist_samples_to(to_shape, samples, size=None):
     return [np.broadcast_to(o, to_shape) for o in samples]
 
 
+# Workaround to annotate the Ellipsis type, posted by the BDFL himself.
+# See https://github.com/python/typing/issues/684#issuecomment-548203158
+if TYPE_CHECKING:
+    from enum import Enum
+
+    class ellipsis(Enum):
+        Ellipsis = "..."
+
+    Ellipsis = ellipsis.Ellipsis
+else:
+    ellipsis = type(Ellipsis)
+
 # User-provided can be lazily specified as scalars
-Shape = Union[int, TensorVariable, Sequence[Union[int, TensorVariable, type(Ellipsis)]]]
-Dims = Union[str, Sequence[Union[str, None, type(Ellipsis)]]]
-Size = Union[int, TensorVariable, Sequence[Union[int, TensorVariable]]]
+Shape: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, TensorVariable, ellipsis]]]
+Dims: TypeAlias = Union[str, Sequence[Optional[Union[str, ellipsis]]]]
+Size: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, TensorVariable]]]
 
 # After conversion to vectors
-WeakShape = Union[TensorVariable, Tuple[Union[int, TensorVariable, type(Ellipsis)], ...]]
-WeakDims = Tuple[Union[str, None, type(Ellipsis)], ...]
+WeakShape: TypeAlias = Union[TensorVariable, Tuple[Union[int, TensorVariable, ellipsis], ...]]
+WeakDims: TypeAlias = Tuple[Optional[Union[str, ellipsis]], ...]
 
 # After Ellipsis were substituted
-StrongShape = Union[TensorVariable, Tuple[Union[int, TensorVariable], ...]]
-StrongDims = Sequence[Union[str, None]]
-StrongSize = Union[TensorVariable, Tuple[Union[int, TensorVariable], ...]]
+StrongShape: TypeAlias = Union[TensorVariable, Tuple[Union[int, TensorVariable], ...]]
+StrongDims: TypeAlias = Sequence[Optional[str]]
+StrongSize: TypeAlias = Union[TensorVariable, Tuple[Union[int, TensorVariable], ...]]
 
 
 def convert_dims(dims: Optional[Dims]) -> Optional[WeakDims]:
