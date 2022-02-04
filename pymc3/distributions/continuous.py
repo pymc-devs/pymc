@@ -62,7 +62,7 @@ __all__ = [
     "Gamma",
     "Weibull",
     "HalfStudentT",
-    "Lognormal",
+    "LogNormal",
     "ChiSquared",
     "HalfNormal",
     "Wald",
@@ -318,7 +318,7 @@ class Flat(Continuous):
         size: int, optional
 
         Raises
-        -------
+        ------
         ValueError
         """
         raise ValueError("Cannot sample from Flat distribution")
@@ -375,7 +375,7 @@ class HalfFlat(PositiveContinuous):
         size: int, optional
 
         Raises
-        -------
+        ------
         ValueError
         """
         raise ValueError("Cannot sample from HalfFlat distribution")
@@ -1710,7 +1710,7 @@ class AsymmetricLaplace(Continuous):
         Location parameter
 
     See Also:
-    --------
+    ---------
     `Reference <https://en.wikipedia.org/wiki/Asymmetric_Laplace_distribution>`_
     """
 
@@ -1778,7 +1778,7 @@ class AsymmetricLaplace(Continuous):
         )
 
 
-class Lognormal(PositiveContinuous):
+class LogNormal(PositiveContinuous):
     r"""
     Log-normal log-likelihood.
 
@@ -1834,10 +1834,10 @@ class Lognormal(PositiveContinuous):
 
         # Example to show that we pass in only ``sigma`` or ``tau`` but not both.
         with pm.Model():
-            x = pm.Lognormal('x', mu=2, sigma=30)
+            x = pm.LogNormal('x', mu=2, sigma=30)
 
         with pm.Model():
-            x = pm.Lognormal('x', mu=2, tau=1/100)
+            x = pm.LogNormal('x', mu=2, tau=1/100)
     """
 
     def __init__(self, mu=0, sigma=None, tau=None, sd=None, *args, **kwargs):
@@ -1856,8 +1856,8 @@ class Lognormal(PositiveContinuous):
         self.mode = tt.exp(self.mu - 1.0 / self.tau)
         self.variance = (tt.exp(1.0 / self.tau) - 1) * tt.exp(2 * self.mu + 1.0 / self.tau)
 
-        assert_negative_support(tau, "tau", "Lognormal")
-        assert_negative_support(sigma, "sigma", "Lognormal")
+        assert_negative_support(tau, "tau", "LogNormal")
+        assert_negative_support(sigma, "sigma", "LogNormal")
 
     def _random(self, mu, tau, size=None):
         samples = np.random.normal(size=size)
@@ -1865,7 +1865,7 @@ class Lognormal(PositiveContinuous):
 
     def random(self, point=None, size=None):
         """
-        Draw random values from Lognormal distribution.
+        Draw random values from LogNormal distribution.
 
         Parameters
         ----------
@@ -1885,7 +1885,7 @@ class Lognormal(PositiveContinuous):
 
     def logp(self, value):
         """
-        Calculate log-probability of Lognormal distribution at specified value.
+        Calculate log-probability of LogNormal distribution at specified value.
 
         Parameters
         ----------
@@ -1911,7 +1911,7 @@ class Lognormal(PositiveContinuous):
 
     def logcdf(self, value):
         """
-        Compute the log of the cumulative distribution function for Lognormal distribution
+        Compute the log of the cumulative distribution function for LogNormal distribution
         at the specified value.
 
         Parameters
@@ -1933,6 +1933,9 @@ class Lognormal(PositiveContinuous):
             0 < value,
             0 < tau,
         )
+
+
+Lognormal = LogNormal
 
 
 class StudentT(Continuous):

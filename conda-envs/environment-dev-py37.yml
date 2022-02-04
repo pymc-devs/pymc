@@ -9,7 +9,7 @@ dependencies:
 - mkl-service
 - nbsphinx>=0.4
 - numpy=1.15
-- numpydoc>=0.9
+- numpydoc<1.2
 - pandas=0.24
 - pip
 - pre-commit>=2.8.0

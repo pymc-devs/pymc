@@ -1388,8 +1388,11 @@ def _choose_backend(trace, chain, **kwds) -> Backend:
         A trace object for the selected chain
     """
     if isinstance(trace, BaseTrace):
+        if len(trace) > 0:
+            warnings.warn("Trace-continuation is not supported in v4.", FutureWarning)
         return trace
     if isinstance(trace, MultiTrace):
+        warnings.warn("Starting from MultiTrace objects is not supported in v4.", FutureWarning)
         return trace._straces[chain]
     if trace is None:
         return NDArray(**kwds)

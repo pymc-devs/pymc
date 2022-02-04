@@ -484,7 +484,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
 
         Examples
-        -------
+        --------
         .. code-block:: python
 
             with pm.Model():
