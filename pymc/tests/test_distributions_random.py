@@ -19,7 +19,6 @@ from typing import Callable, List, Optional
 
 import aesara
 import numpy as np
-import numpy.random as nr
 import numpy.testing as npt
 import pytest
 import scipy.stats as st
@@ -59,7 +58,6 @@ from pymc.tests.test_distributions import (
     R,
     RandomPdMatrix,
     Rplus,
-    Simplex,
     build_model,
     product,
 )
@@ -2043,106 +2041,6 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
         rng = aesara.shared(self.get_random_state(reset=True))
         x = _LKJCholeskyCov.dist(n=2, eta=10_000, sd_dist=pm.Constant.dist([0.5, 2.0]), rng=rng)
         assert np.all(np.abs(x.eval() - np.array([0.5, 0, 2.0])) < 0.01)
-
-
-class TestScalarParameterSamples(SeededTest):
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_normalmixture(self):
-        def ref_rand(size, w, mu, sigma):
-            component = np.random.choice(w.size, size=size, p=w)
-            return np.random.normal(mu[component], sigma[component], size=size)
-
-        pymc_random(
-            pm.NormalMixture,
-            {
-                "w": Simplex(2),
-                "mu": Domain([[0.05, 2.5], [-5.0, 1.0]], edges=(None, None)),
-                "sigma": Domain([[1, 1], [1.5, 2.0]], edges=(None, None)),
-            },
-            extra_args={"comp_shape": 2},
-            size=1000,
-            ref_rand=ref_rand,
-        )
-        pymc_random(
-            pm.NormalMixture,
-            {
-                "w": Simplex(3),
-                "mu": Domain([[-5.0, 1.0, 2.5]], edges=(None, None)),
-                "sigma": Domain([[1.5, 2.0, 3.0]], edges=(None, None)),
-            },
-            extra_args={"comp_shape": 3},
-            size=1000,
-            ref_rand=ref_rand,
-        )
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-def test_mixture_random_shape():
-    # test the shape broadcasting in mixture random
-    y = np.concatenate([nr.poisson(5, size=10), nr.poisson(9, size=10)])
-    with pm.Model() as m:
-        comp0 = pm.Poisson.dist(mu=np.ones(2))
-        w0 = pm.Dirichlet("w0", a=np.ones(2), shape=(2,))
-        like0 = pm.Mixture("like0", w=w0, comp_dists=comp0, observed=y)
-
-        comp1 = pm.Poisson.dist(mu=np.ones((20, 2)), shape=(20, 2))
-        w1 = pm.Dirichlet("w1", a=np.ones(2), shape=(2,))
-        like1 = pm.Mixture("like1", w=w1, comp_dists=comp1, observed=y)
-
-        comp2 = pm.Poisson.dist(mu=np.ones(2))
-        w2 = pm.Dirichlet("w2", a=np.ones(2), shape=(20, 2))
-        like2 = pm.Mixture("like2", w=w2, comp_dists=comp2, observed=y)
-
-        comp3 = pm.Poisson.dist(mu=np.ones(2), shape=(20, 2))
-        w3 = pm.Dirichlet("w3", a=np.ones(2), shape=(20, 2))
-        like3 = pm.Mixture("like3", w=w3, comp_dists=comp3, observed=y)
-
-    # XXX: This needs to be refactored
-    rand0, rand1, rand2, rand3 = [None] * 4  # draw_values(
-    #     [like0, like1, like2, like3], point=m.initial_point, size=100
-    # )
-    assert rand0.shape == (100, 20)
-    assert rand1.shape == (100, 20)
-    assert rand2.shape == (100, 20)
-    assert rand3.shape == (100, 20)
-
-    with m:
-        ppc = pm.sample_posterior_predictive([m.compute_initial_point()], samples=200)
-    assert ppc["like0"].shape == (200, 20)
-    assert ppc["like1"].shape == (200, 20)
-    assert ppc["like2"].shape == (200, 20)
-    assert ppc["like3"].shape == (200, 20)
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-def test_mixture_random_shape_fast():
-    # test the shape broadcasting in mixture random
-    y = np.concatenate([nr.poisson(5, size=10), nr.poisson(9, size=10)])
-    with pm.Model() as m:
-        comp0 = pm.Poisson.dist(mu=np.ones(2))
-        w0 = pm.Dirichlet("w0", a=np.ones(2), shape=(2,))
-        like0 = pm.Mixture("like0", w=w0, comp_dists=comp0, observed=y)
-
-        comp1 = pm.Poisson.dist(mu=np.ones((20, 2)), shape=(20, 2))
-        w1 = pm.Dirichlet("w1", a=np.ones(2), shape=(2,))
-        like1 = pm.Mixture("like1", w=w1, comp_dists=comp1, observed=y)
-
-        comp2 = pm.Poisson.dist(mu=np.ones(2))
-        w2 = pm.Dirichlet("w2", a=np.ones(2), shape=(20, 2))
-        like2 = pm.Mixture("like2", w=w2, comp_dists=comp2, observed=y)
-
-        comp3 = pm.Poisson.dist(mu=np.ones(2), shape=(20, 2))
-        w3 = pm.Dirichlet("w3", a=np.ones(2), shape=(20, 2))
-        like3 = pm.Mixture("like3", w=w3, comp_dists=comp3, observed=y)
-
-    # XXX: This needs to be refactored
-    rand0, rand1, rand2, rand3 = [None] * 4  # draw_values(
-    #     [like0, like1, like2, like3], point=m.initial_point, size=100
-    # )
-    assert rand0.shape == (100, 20)
-    assert rand1.shape == (100, 20)
-    assert rand2.shape == (100, 20)
-    assert rand3.shape == (100, 20)
 
 
 class TestDensityDist:

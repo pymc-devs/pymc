@@ -40,6 +40,8 @@ from pymc import (
 from pymc.aesaraf import floatX
 from pymc.distributions.shape_utils import to_tuple
 from pymc.tests.helpers import SeededTest
+from pymc.tests.test_distributions import Domain, Simplex
+from pymc.tests.test_distributions_random import pymc_random
 
 pytestmark = pytest.mark.xfail(reason="Mixture not refactored.")
 
@@ -295,6 +297,43 @@ class TestMixture(SeededTest):
         assert prior["mu0"].shape == (n_samples, D)
         assert prior["chol_cov_0"].shape == (n_samples, D * (D + 1) // 2)
 
+    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
+    def test_mixture_random_shape(self):
+        # test the shape broadcasting in mixture random
+        y = np.concatenate([np.random.poisson(5, size=10), np.random.poisson(9, size=10)])
+        with pm.Model() as m:
+            comp0 = pm.Poisson.dist(mu=np.ones(2))
+            w0 = pm.Dirichlet("w0", a=np.ones(2), shape=(2,))
+            like0 = pm.Mixture("like0", w=w0, comp_dists=comp0, observed=y)
+
+            comp1 = pm.Poisson.dist(mu=np.ones((20, 2)), shape=(20, 2))
+            w1 = pm.Dirichlet("w1", a=np.ones(2), shape=(2,))
+            like1 = pm.Mixture("like1", w=w1, comp_dists=comp1, observed=y)
+
+            comp2 = pm.Poisson.dist(mu=np.ones(2))
+            w2 = pm.Dirichlet("w2", a=np.ones(2), shape=(20, 2))
+            like2 = pm.Mixture("like2", w=w2, comp_dists=comp2, observed=y)
+
+            comp3 = pm.Poisson.dist(mu=np.ones(2), shape=(20, 2))
+            w3 = pm.Dirichlet("w3", a=np.ones(2), shape=(20, 2))
+            like3 = pm.Mixture("like3", w=w3, comp_dists=comp3, observed=y)
+
+        # XXX: This needs to be refactored
+        rand0, rand1, rand2, rand3 = [None] * 4  # draw_values(
+        #     [like0, like1, like2, like3], point=m.initial_point, size=100
+        # )
+        assert rand0.shape == (100, 20)
+        assert rand1.shape == (100, 20)
+        assert rand2.shape == (100, 20)
+        assert rand3.shape == (100, 20)
+
+        with m:
+            ppc = pm.sample_posterior_predictive([m.compute_initial_point()], samples=200)
+        assert ppc["like0"].shape == (200, 20)
+        assert ppc["like1"].shape == (200, 20)
+        assert ppc["like2"].shape == (200, 20)
+        assert ppc["like3"].shape == (200, 20)
+
 
 class TestNormalMixture(SeededTest):
     @classmethod
@@ -392,6 +431,34 @@ class TestNormalMixture(SeededTest):
             assert_allclose(mixture0.logp(testpoint), mixture2.logp(testpoint))
         if obs2 is not None:
             assert_allclose(obs0.logp(testpoint), obs2.logp(testpoint))
+
+    def test_random(self):
+        def ref_rand(size, w, mu, sigma):
+            component = np.random.choice(w.size, size=size, p=w)
+            return np.random.normal(mu[component], sigma[component], size=size)
+
+        pymc_random(
+            pm.NormalMixture,
+            {
+                "w": Simplex(2),
+                "mu": Domain([[0.05, 2.5], [-5.0, 1.0]], edges=(None, None)),
+                "sigma": Domain([[1, 1], [1.5, 2.0]], edges=(None, None)),
+            },
+            extra_args={"comp_shape": 2},
+            size=1000,
+            ref_rand=ref_rand,
+        )
+        pymc_random(
+            pm.NormalMixture,
+            {
+                "w": Simplex(3),
+                "mu": Domain([[-5.0, 1.0, 2.5]], edges=(None, None)),
+                "sigma": Domain([[1.5, 2.0, 3.0]], edges=(None, None)),
+            },
+            extra_args={"comp_shape": 3},
+            size=1000,
+            ref_rand=ref_rand,
+        )
 
 
 class TestMixtureVsLatent(SeededTest):
