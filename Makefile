@@ -3,6 +3,8 @@
 
 PROJECT_NAME = aeppl
 PROJECT_DIR = aeppl
+SPHINXSOURCEDIR = docs/source
+SPHINXBUILDDIR = docs/build
 PYTHON = python
 PIP = pip
 CONDA = conda
@@ -74,3 +76,9 @@ pypi:
 lint: docstyle format style  # Lint code using pydocstyle, black and pylint.
 
 check: lint test coverage  # Both lint and test code. Runs `make lint` followed by `make test`.
+
+html:
+	sphinx-build "$(SPHINXSOURCEDIR)" "$(SPHINXBUILDDIR)" -b html
+
+cleandocs:
+	rm -r "$(SPHINXBUILDDIR)" "$(SPHINXSOURCEDIR)/api/generated"

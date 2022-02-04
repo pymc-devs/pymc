@@ -47,3 +47,6 @@ core
 aesara-venv/
 /notebooks/Sandbox*
 .vscode/
+docs/source/api/generated
+docs/build
+docs/jupyter_execute
