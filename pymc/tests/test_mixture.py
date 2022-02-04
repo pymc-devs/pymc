@@ -21,24 +21,28 @@ from aesara import tensor as at
 from numpy.testing import assert_allclose
 from scipy.special import logsumexp
 
-import pymc as pm
-
-from pymc import (
+from pymc.aesaraf import floatX
+from pymc.distributions import (
+    Categorical,
     Dirichlet,
     Exponential,
     Gamma,
+    HalfNormal,
+    LKJCholeskyCov,
     LogNormal,
-    Metropolis,
     Mixture,
-    Model,
+    MixtureSameFamily,
+    Multinomial,
     MvNormal,
     Normal,
     NormalMixture,
     Poisson,
-    sample,
 )
-from pymc.aesaraf import floatX
 from pymc.distributions.shape_utils import to_tuple
+from pymc.math import expand_packed_triangular
+from pymc.model import Model
+from pymc.sampling import sample, sample_posterior_predictive, sample_prior_predictive
+from pymc.step_methods import Metropolis
 from pymc.tests.helpers import SeededTest
 from pymc.tests.test_distributions import Domain, Simplex
 from pymc.tests.test_distributions_random import pymc_random
@@ -267,31 +271,31 @@ class TestMixture(SeededTest):
 
         X, y = build_toy_dataset(N, K)
 
-        with pm.Model() as model:
-            pi = pm.Dirichlet("pi", np.ones(K), shape=(K,))
+        with Model() as model:
+            pi = Dirichlet("pi", np.ones(K), shape=(K,))
 
             comp_dist = []
             mu = []
             packed_chol = []
             chol = []
             for i in range(K):
-                mu.append(pm.Normal("mu%i" % i, 0, 10, shape=D))
+                mu.append(Normal("mu%i" % i, 0, 10, shape=D))
                 packed_chol.append(
-                    pm.LKJCholeskyCov(
-                        "chol_cov_%i" % i, eta=2, n=D, sd_dist=pm.HalfNormal.dist(2.5, size=D)
+                    LKJCholeskyCov(
+                        "chol_cov_%i" % i, eta=2, n=D, sd_dist=HalfNormal.dist(2.5, size=D)
                     )
                 )
-                chol.append(pm.expand_packed_triangular(D, packed_chol[i], lower=True))
-                comp_dist.append(pm.MvNormal.dist(mu=mu[i], chol=chol[i], shape=D))
+                chol.append(expand_packed_triangular(D, packed_chol[i], lower=True))
+                comp_dist.append(MvNormal.dist(mu=mu[i], chol=chol[i], shape=D))
 
-            pm.Mixture("x_obs", pi, comp_dist, observed=X)
+            Mixture("x_obs", pi, comp_dist, observed=X)
         with model:
-            idata = pm.sample(30, tune=10, chains=1)
+            idata = sample(30, tune=10, chains=1)
 
         n_samples = 20
         with model:
-            ppc = pm.sample_posterior_predictive(idata, n_samples)
-            prior = pm.sample_prior_predictive(samples=n_samples)
+            ppc = sample_posterior_predictive(idata, n_samples)
+            prior = sample_prior_predictive(samples=n_samples)
         assert ppc["x_obs"].shape == (n_samples,) + X.shape
         assert prior["x_obs"].shape == (n_samples,) + X.shape
         assert prior["mu0"].shape == (n_samples, D)
@@ -438,7 +442,7 @@ class TestNormalMixture(SeededTest):
             return np.random.normal(mu[component], sigma[component], size=size)
 
         pymc_random(
-            pm.NormalMixture,
+            NormalMixture,
             {
                 "w": Simplex(2),
                 "mu": Domain([[0.05, 2.5], [-5.0, 1.0]], edges=(None, None)),
@@ -449,7 +453,7 @@ class TestNormalMixture(SeededTest):
             ref_rand=ref_rand,
         )
         pymc_random(
-            pm.NormalMixture,
+            NormalMixture,
             {
                 "w": Simplex(3),
                 "mu": Domain([[-5.0, 1.0, 2.5]], edges=(None, None)),
@@ -487,12 +491,12 @@ class TestMixtureVsLatent(SeededTest):
         npop = self.npop
         mus = self.mus
         size = 100
-        with pm.Model() as model:
-            m = pm.NormalMixture(
+        with Model() as model:
+            m = NormalMixture(
                 "m", w=np.ones(npop) / npop, mu=mus, sigma=1e-5, comp_shape=(nd, npop), shape=nd
             )
-            z = pm.Categorical("z", p=np.ones(npop) / npop)
-            latent_m = pm.Normal("latent_m", mu=mus[..., z], sigma=1e-5, shape=nd)
+            z = Categorical("z", p=np.ones(npop) / npop)
+            latent_m = Normal("latent_m", mu=mus[..., z], sigma=1e-5, shape=nd)
 
         m_val = m.random(size=size)
         latent_m_val = latent_m.random(size=size)
@@ -510,8 +514,8 @@ class TestMixtureVsLatent(SeededTest):
         npop = self.npop
         mus = self.mus
         size = 100
-        with pm.Model() as model:
-            m = pm.NormalMixture(
+        with Model() as model:
+            m = NormalMixture(
                 "m",
                 w=np.ones((nd, npop)) / npop,
                 mu=mus,
@@ -519,9 +523,9 @@ class TestMixtureVsLatent(SeededTest):
                 comp_shape=(nd, npop),
                 shape=nd,
             )
-            z = pm.Categorical("z", p=np.ones(npop) / npop, shape=nd)
+            z = Categorical("z", p=np.ones(npop) / npop, shape=nd)
             mu = at.as_tensor_variable([mus[i, z[i]] for i in range(nd)])
-            latent_m = pm.Normal("latent_m", mu=mu, sigma=1e-5, shape=nd)
+            latent_m = Normal("latent_m", mu=mu, sigma=1e-5, shape=nd)
 
         m_val = m.random(size=size)
         latent_m_val = latent_m.random(size=size)
@@ -583,16 +587,16 @@ class TestMixtureSameFamily(SeededTest):
         n = 100 * np.ones((*batch_shape, 1))
         w = np.ones(self.mixture_comps) / self.mixture_comps
         mixture_axis = len(batch_shape)
-        with pm.Model() as model:
-            comp_dists = pm.Multinomial.dist(p=p, n=n, shape=(*batch_shape, self.mixture_comps, 3))
-            mixture = pm.MixtureSameFamily(
+        with Model() as model:
+            comp_dists = Multinomial.dist(p=p, n=n, shape=(*batch_shape, self.mixture_comps, 3))
+            mixture = MixtureSameFamily(
                 "mixture",
                 w=w,
                 comp_dists=comp_dists,
                 mixture_axis=mixture_axis,
                 shape=(*batch_shape, 3),
             )
-            prior = pm.sample_prior_predictive(samples=self.n_samples)
+            prior = sample_prior_predictive(samples=self.n_samples)
 
         assert prior["mixture"].shape == (self.n_samples, *batch_shape, 3)
         assert mixture.random(size=self.size).shape == (self.size, *batch_shape, 3)
@@ -623,12 +627,12 @@ class TestMixtureSameFamily(SeededTest):
         chol = np.linalg.cholesky(cov)
         w = np.ones(self.mixture_comps) / self.mixture_comps
 
-        with pm.Model() as model:
-            comp_dists = pm.MvNormal.dist(mu=mu, chol=chol, shape=(self.mixture_comps, 3))
-            mixture = pm.MixtureSameFamily(
+        with Model() as model:
+            comp_dists = MvNormal.dist(mu=mu, chol=chol, shape=(self.mixture_comps, 3))
+            mixture = MixtureSameFamily(
                 "mixture", w=w, comp_dists=comp_dists, mixture_axis=0, shape=(3,)
             )
-            prior = pm.sample_prior_predictive(samples=self.n_samples)
+            prior = sample_prior_predictive(samples=self.n_samples)
 
         assert prior["mixture"].shape == (self.n_samples, 3)
         assert mixture.random(size=self.size).shape == (self.size, 3)
@@ -650,12 +654,10 @@ class TestMixtureSameFamily(SeededTest):
         )
 
     def test_broadcasting_in_shape(self):
-        with pm.Model() as model:
-            mu = pm.Gamma("mu", 1.0, 1.0, shape=2)
-            comp_dists = pm.Poisson.dist(mu, shape=2)
-            mix = pm.MixtureSameFamily(
-                "mix", w=np.ones(2) / 2, comp_dists=comp_dists, shape=(1000,)
-            )
-            prior = pm.sample_prior_predictive(samples=self.n_samples)
+        with Model() as model:
+            mu = Gamma("mu", 1.0, 1.0, shape=2)
+            comp_dists = Poisson.dist(mu, shape=2)
+            mix = MixtureSameFamily("mix", w=np.ones(2) / 2, comp_dists=comp_dists, shape=(1000,))
+            prior = sample_prior_predictive(samples=self.n_samples)
 
         assert prior["mix"].shape == (self.n_samples, 1000)
