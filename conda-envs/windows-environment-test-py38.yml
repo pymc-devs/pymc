@@ -20,7 +20,7 @@ dependencies:
 - pip
 - python=3.8
 - python-graphviz
-- scipy>=1.4.1
+- scipy>=1.4.1,<1.8.0
 - typing-extensions>=3.7.4
 # Extra stuff for testing
 - ipython>=7.16

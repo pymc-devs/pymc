@@ -23,7 +23,7 @@ dependencies:
 - pytest>=3.0
 - python-graphviz
 - python=3.7
-- scipy>=1.4.1
+- scipy>=1.4.1,<1.8.0
 - sphinx-copybutton
 - sphinx-notfound-page
 - sphinx>=1.5
