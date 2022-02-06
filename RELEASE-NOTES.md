@@ -8,6 +8,7 @@
 + `pm.Lognormal` is now available as an alias for `pm.Lognormal` (see [#5389](https://github.com/pymc-devs/pymc/pull/5389)).
 
 ### Bugfixes
++ The upper limit for the SciPy version is `<1.8.0` and will most probably remain for all future `3.x.x` releases. For compatibility with newer SciPy versions please update to `pymc>=4.0.0`. Also see [#5448](https://github.com/pymc-devs/pymc/pull/5448).
 + A hotfix is applied on import to remain compatible with NumPy 1.22 (see [#5316](https://github.com/pymc-devs/pymc/pull/5316)).
 
 ## PyMC3 3.11.4 (20 August 2021)

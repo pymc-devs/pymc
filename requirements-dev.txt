@@ -5,6 +5,7 @@ deprecat
 h5py>=2.7
 ipython>=7.16
 nbsphinx>=0.4
+numpy>=1.15,<1.22.2
 numpydoc<1.2
 pre-commit>=2.8.0
 pytest-cov>=2.5
