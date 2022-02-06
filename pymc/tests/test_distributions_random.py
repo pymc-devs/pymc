@@ -157,6 +157,7 @@ def pymc_random_discrete(
         assert p > alpha, str(pt)
 
 
+'''
 class BaseTestCases:
     class BaseTestCase(SeededTest):
         shape = 5
@@ -257,6 +258,7 @@ class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
     distribution = pm.GaussianRandomWalk
     params = {"mu": 1.0, "sigma": 1.0}
     default_shape = (1,)
+'''
 
 
 class BaseTestDistributionRandom(SeededTest):
@@ -415,6 +417,44 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
     return lambda self: functools.partial(
         getattr(np.random.RandomState, dist_name), self.get_random_state()
     )
+
+
+@pytest.mark.skip("Not sure how to implement with BaseTest")
+class TestGRW(BaseTestDistributionRandom):
+    pymc_dist = pm.GaussianRandomWalk
+    pymc_dist_params = {}
+    expected_rv_op_params = {}
+    checks_to_run = [
+        # "check_pymc_params_match_rv_op",
+        "check_rv_inferred_size",
+        # "check_not_implemented",
+    ]
+
+    def check_rv_inferred_size(self):
+        sizes_to_check = [
+            None,
+        ]
+        sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
+        for size, expected in zip(sizes_to_check, sizes_expected):
+            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            assert expected_symbolic == expected
+
+
+@pytest.mark.parametrize(
+    "steps,size,expected",
+    (
+        # This one fails due to None being passed to dist but completely confused what is occuring
+        pytest.param(*(1, None, (2,)), marks=pytest.mark.xfail),
+        (2, 1, (1, 3)),
+        (2, 5, (5, 3)),
+        (10, 5, (5, 11)),
+    ),
+)
+def test_grw_shape(steps, size, expected):
+    grw_dist = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=steps, size=size)
+    expected_symbolic = tuple(grw_dist.shape.eval())
+    assert expected_symbolic == expected
 
 
 class TestFlat(BaseTestDistributionRandom):

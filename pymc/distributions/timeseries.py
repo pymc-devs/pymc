@@ -18,7 +18,7 @@ import aesara.tensor as at
 import numpy as np
 
 from aesara import scan
-from aesara.tensor.random.op import RandomVariable, default_shape_from_params
+from aesara.tensor.random.op import RandomVariable
 
 import pymc as pm
 
@@ -48,10 +48,12 @@ class GaussianRandomWalkRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
 
-    def _shape_from_params(self, dist_params, reop_param_idx=1, param_shapes=None):
-        # (size which is number of time series, steps)
-        return (dist_params[-2], dist_params[-1])
-        raise Exception("Ravin's shape exception")
+    def _shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
+        mu, sigma, init, steps, size = dist_params
+        if size is None:
+            return (steps + 1,)
+        else:
+            return (size, steps + 1)
 
         # if self.ndim_supp <= 0:
         #     raise ValueError("ndim_supp must be greater than 0")
@@ -109,8 +111,8 @@ class GaussianRandomWalkRV(RandomVariable):
         np.ndarray
         """
 
-        if steps is None or steps == 0:
-            raise ValueError("Steps must be greater than 0 or not None")
+        if steps is None or steps < 1:
+            raise ValueError("Steps must be None or greater than 0")
 
         # If size is None then the returned series should be (1+steps,)
         if size is None:
@@ -292,6 +294,10 @@ class GaussianRandomWalk(distribution.Continuous):
         sigma > 0, innovation standard deviation, defaults to 0.0
     init: float
         Mean value of initialization, defaults to 0.0
+    steps: int
+        Number of steps in Gaussian Random Walks
+    size: int
+        Number of independent Gaussian Random Walks
     """
 
     rv_op = gaussianrandomwalk
@@ -302,13 +308,13 @@ class GaussianRandomWalk(distribution.Continuous):
         mu: Optional[Union[np.ndarray, float]] = 0.0,
         sigma: Optional[Union[np.ndarray, float]] = 1.0,
         init: float = 0.0,
-        size: int = None,
         steps: int = 0,
+        size: int = None,
         *args,
         **kwargs
     ) -> RandomVariable:
 
-        return super().dist([mu, sigma, init, steps], **kwargs)
+        return super().dist([mu, sigma, init, steps, size], **kwargs)
 
     def logp(
         value: at.Variable,
