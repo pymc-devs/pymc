@@ -1016,7 +1016,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Maps names of transformed variables to numeric initial values in the transformed space.
         """
         if seed is None:
-            seed = self.rng_seeder.randint(2 ** 30, dtype=np.int64)
+            seed = self.rng_seeder.randint(2**30, dtype=np.int64)
         fn = make_initial_point_fn(model=self, return_transformed=True)
         return Point(fn(seed), model=self)
 
@@ -1043,7 +1043,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         The new ``RandomStateSharedVariable`` is also added to
         ``Model.rng_seq``.
         """
-        new_seed = self.rng_seeder.randint(2 ** 30, dtype=np.int64)
+        new_seed = self.rng_seeder.randint(2**30, dtype=np.int64)
         next_rng = aesara.shared(np.random.RandomState(new_seed), borrow=True)
         next_rng.tag.is_rng = True
 

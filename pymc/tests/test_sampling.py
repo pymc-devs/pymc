@@ -679,7 +679,7 @@ class TestSamplePPC(SeededTest):
             )
             assert len(ppc) == 1
             assert ppc["b"].shape == (1000,)
-            scale = np.sqrt(1 + 0.2 ** 2)
+            scale = np.sqrt(1 + 0.2**2)
             _, pval = stats.kstest(ppc["b"], stats.norm(scale=scale).cdf)
             assert pval > 0.001
 

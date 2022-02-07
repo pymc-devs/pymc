@@ -52,7 +52,7 @@ class DualAverageAdaptation:
         self._hbar = (1 - w) * self._hbar + w * (self._target - accept_stat)
 
         self._log_step = self._mu - self._hbar * np.sqrt(count) / self._gamma
-        mk = count ** -k
+        mk = count**-k
         self._log_bar = mk * self._log_step + (1 - mk) * self._log_bar
         self._count += 1
 

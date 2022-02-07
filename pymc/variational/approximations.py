@@ -76,7 +76,7 @@ class MeanFieldGroup(Group):
             jitter_rvs={},
             return_transformed=True,
         )
-        start = ipfn(self.model.rng_seeder.randint(2 ** 30, dtype=np.int64))
+        start = ipfn(self.model.rng_seeder.randint(2**30, dtype=np.int64))
         if self.batched:
             start = start[self.group[0].name][0]
         else:
@@ -132,7 +132,7 @@ class FullRankGroup(Group):
             jitter_rvs={},
             return_transformed=True,
         )
-        start = ipfn(self.model.rng_seeder.randint(2 ** 30, dtype=np.int64))
+        start = ipfn(self.model.rng_seeder.randint(2**30, dtype=np.int64))
         if self.batched:
             start = start[self.group[0].name][0]
         else:
@@ -247,7 +247,7 @@ class EmpiricalGroup(Group):
                     jitter_rvs={},
                     return_transformed=True,
                 )
-                start = ipfn(self.model.rng_seeder.randint(2 ** 30, dtype=np.int64))
+                start = ipfn(self.model.rng_seeder.randint(2**30, dtype=np.int64))
                 start = pm.floatX(DictToArrayBijection.map(start))
                 # Initialize particles
                 histogram = np.tile(start, (size, 1))

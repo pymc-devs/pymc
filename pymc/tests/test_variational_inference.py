@@ -521,11 +521,11 @@ def test_elbo():
     # Exact value
     elbo_true = -0.5 * (
         3
-        + 3 * post_mu ** 2
+        + 3 * post_mu**2
         - 2 * (y_obs[0] + y_obs[1] + mu0) * post_mu
         + y_obs[0] ** 2
         + y_obs[1] ** 2
-        + mu0 ** 2
+        + mu0**2
         + 3 * np.log(2 * np.pi)
     ) + 0.5 * (np.log(2 * np.pi) + 1)
     np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
@@ -638,8 +638,8 @@ def simple_model_data(use_minibatch):
     mu = -5.0
 
     data = sigma * np.random.randn(n) + mu
-    d = n / sigma ** 2 + 1 / sigma0 ** 2
-    mu_post = (n * np.mean(data) / sigma ** 2 + mu0 / sigma0 ** 2) / d
+    d = n / sigma**2 + 1 / sigma0**2
+    mu_post = (n * np.mean(data) / sigma**2 + mu0 / sigma0**2) / d
     if use_minibatch:
         data = pm.Minibatch(data)
     return dict(
@@ -917,7 +917,7 @@ def test_replacements(binomial_model_inference):
     d.tag.test_value = 1
     approx = binomial_model_inference.approx
     p = approx.model.p
-    p_t = p ** 3
+    p_t = p**3
     p_s = approx.sample_node(p_t)
     if aesara.config.compute_test_value != "off":
         assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
@@ -940,7 +940,7 @@ def test_sample_replacements(binomial_model_inference):
     i.tag.test_value = 1
     approx = binomial_model_inference.approx
     p = approx.model.p
-    p_t = p ** 3
+    p_t = p**3
     p_s = approx.sample_node(p_t, size=100)
     if aesara.config.compute_test_value != "off":
         assert p_s.tag.test_value.shape == (100,) + p_t.tag.test_value.shape

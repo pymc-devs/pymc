@@ -47,8 +47,8 @@ def test_accuracy_non_normal():
 
 
 def test_find_MAP_discrete():
-    tol1 = 2.0 ** -11
-    tol2 = 2.0 ** -6
+    tol1 = 2.0**-11
+    tol2 = 2.0**-6
     alpha = 4
     beta = 4
     n = 20
@@ -75,7 +75,7 @@ def test_find_MAP_no_gradient():
 
 
 def test_find_MAP():
-    tol = 2.0 ** -11  # 16 bit machine epsilon, a low bar
+    tol = 2.0**-11  # 16 bit machine epsilon, a low bar
     data = np.random.randn(100)
     # data should be roughly mean 0, std 1, but let's
     # normalize anyway to get it really close
@@ -84,7 +84,7 @@ def test_find_MAP():
     with Model():
         mu = Uniform("mu", -1, 1)
         sigma = Uniform("sigma", 0.5, 1.5)
-        Normal("y", mu=mu, tau=sigma ** -2, observed=data)
+        Normal("y", mu=mu, tau=sigma**-2, observed=data)
 
         # Test gradient minimization
         map_est1 = starting.find_MAP(progressbar=False)

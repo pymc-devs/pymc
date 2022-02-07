@@ -49,7 +49,7 @@ class AR1(distribution.Continuous):
         super().__init__(*args, **kwargs)
         self.k = k = at.as_tensor_variable(k)
         self.tau_e = tau_e = at.as_tensor_variable(tau_e)
-        self.tau = tau_e * (1 - k ** 2)
+        self.tau = tau_e * (1 - k**2)
         self.mode = at.as_tensor_variable(0.0)
 
     def logp(self, x):
@@ -67,7 +67,7 @@ class AR1(distribution.Continuous):
         """
         k = self.k
         tau_e = self.tau_e  # innovation precision
-        tau = tau_e * (1 - k ** 2)  # ar1 precision
+        tau = tau_e * (1 - k**2)  # ar1 precision
 
         x_im1 = x[:-1]
         x_i = x[1:]

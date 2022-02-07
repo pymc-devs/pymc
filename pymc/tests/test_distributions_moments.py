@@ -1387,7 +1387,7 @@ def test_simulator_moment(mu, sigma, size):
 
     n = 10  # samples
     expected_sample_mean = mu
-    expected_sample_mean_std = np.sqrt(sigma ** 2 / n)
+    expected_sample_mean_std = np.sqrt(sigma**2 / n)
 
     # Multiple test adjustment for z-test to maintain alpha=0.01
     alpha = 0.01

@@ -107,7 +107,7 @@ class BaseHMC(GradientSharedStep):
         nuts_vars = [test_point[v.name] for v in vars]
         size = sum(v.size for v in nuts_vars)
 
-        self.step_size = step_scale / (size ** 0.25)
+        self.step_size = step_scale / (size**0.25)
         self.step_adapt = step_sizes.DualAverageAdaptation(
             self.step_size, target_accept, gamma, k, t0
         )

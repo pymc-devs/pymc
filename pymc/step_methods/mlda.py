@@ -991,7 +991,7 @@ def subsample(
 
     model = pm.modelcontext(model)
     chain = 0
-    random_seed = np.random.randint(2 ** 30)
+    random_seed = np.random.randint(2**30)
     callback = None
 
     draws += tune

@@ -284,7 +284,7 @@ class TestTakeAlongAxis:
         # Setup the aesara function
         t_arr, t_indices = self.get_input_tensors(shape)
         t_out2 = aesara.grad(
-            at.sum(self._output_tensor(t_arr ** 2, t_indices, axis)),
+            at.sum(self._output_tensor(t_arr**2, t_indices, axis)),
             t_arr,
         )
         func = aesara.function([t_arr, t_indices], [t_out2])
@@ -392,7 +392,7 @@ def test_pandas_to_array(input_dtype):
 
     # Create a generator object. Apparently the generator object needs to
     # yield numpy arrays.
-    square_generator = (np.array([i ** 2], dtype=int) for i in range(100))
+    square_generator = (np.array([i**2], dtype=int) for i in range(100))
 
     # Alias the function to be tested
     func = pandas_to_array
