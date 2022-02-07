@@ -96,7 +96,7 @@ class TestGenerator:
 
     def test_cloning_available(self):
         gop = generator(integers())
-        res = gop ** 2
+        res = gop**2
         shared = aesara.shared(floatX(10))
         res1 = aesara.clone_replace(res, {gop: shared})
         f = aesara.function([], res1)
@@ -144,7 +144,7 @@ class TestGenerator:
         res, _ = aesara.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
         assert res.eval().shape == (50,)
         shared = aesara.shared(datagen.data.astype(gen.dtype))
-        res2 = aesara.clone_replace(res, {gen: shared ** 2})
+        res2 = aesara.clone_replace(res, {gen: shared**2})
         assert res2.eval().shape == (1000,)
 
 
@@ -335,7 +335,7 @@ class TestMinibatch:
 
     def test_cloning_available(self):
         gop = pm.Minibatch(np.arange(100), 1)
-        res = gop ** 2
+        res = gop**2
         shared = aesara.shared(np.array([10]))
         res1 = aesara.clone_replace(res, {gop: shared})
         f = aesara.function([], res1)

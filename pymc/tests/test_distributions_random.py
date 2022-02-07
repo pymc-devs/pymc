@@ -514,9 +514,9 @@ class TestLaplace(BaseTestDistributionRandom):
 class TestAsymmetricLaplace(BaseTestDistributionRandom):
     def asymmetriclaplace_rng_fn(self, b, kappa, mu, size, uniform_rng_fct):
         u = uniform_rng_fct(size=size)
-        switch = kappa ** 2 / (1 + kappa ** 2)
+        switch = kappa**2 / (1 + kappa**2)
         non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
-        positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+        positive_x = mu - np.log((1 - u) * (1 + kappa**2)) / (kappa * b)
         draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
         return draws
 
@@ -1944,13 +1944,13 @@ class TestInterpolated(BaseTestDistributionRandom):
 class TestKroneckerNormal(BaseTestDistributionRandom):
     def kronecker_rng_fn(self, size, mu, covs=None, sigma=None, rng=None):
         cov = pm.math.kronecker(covs[0], covs[1]).eval()
-        cov += sigma ** 2 * np.identity(cov.shape[0])
+        cov += sigma**2 * np.identity(cov.shape[0])
         return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
 
     pymc_dist = pm.KroneckerNormal
 
     n = 3
-    N = n ** 2
+    N = n**2
     covs = [RandomPdMatrix(n), RandomPdMatrix(n)]
     mu = np.random.random(N) * 0.1
     sigma = 1

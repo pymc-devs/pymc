@@ -348,7 +348,7 @@ dirichlet_multinomial_logpmf = np.vectorize(
 
 
 def beta_mu_sigma(value, mu, sigma):
-    kappa = mu * (1 - mu) / sigma ** 2 - 1
+    kappa = mu * (1 - mu) / sigma**2 - 1
     if kappa > 0:
         return sp.beta.logpdf(value, mu * kappa, (1 - mu) * kappa)
     else:
@@ -430,7 +430,7 @@ def matrix_normal_logpdf_chol(value, mu, rowchol, colchol):
 def kron_normal_logpdf_cov(value, mu, covs, sigma, size=None):
     cov = kronecker(*covs).eval()
     if sigma is not None:
-        cov += sigma ** 2 * np.eye(*cov.shape)
+        cov += sigma**2 * np.eye(*cov.shape)
     return scipy.stats.multivariate_normal.logpdf(value, mu, cov).sum()
 
 
@@ -497,7 +497,7 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
 
 
 def AR1_logpdf(value, k, tau_e):
-    tau = tau_e * (1 - k ** 2)
+    tau = tau_e * (1 - k**2)
     return (
         sp.norm(loc=0, scale=1 / np.sqrt(tau)).logpdf(value[0])
         + sp.norm(loc=k * value[:-1], scale=1 / np.sqrt(tau_e)).logpdf(value[1:]).sum()
@@ -1244,11 +1244,11 @@ class TestMatchesScipy:
         # Scipy does not have a built-in Kumaraswamy
         def scipy_log_pdf(value, a, b):
             return (
-                np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value ** a)
+                np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value**a)
             )
 
         def scipy_log_cdf(value, a, b):
-            return pm.math.log1mexp_numpy(b * np.log1p(-(value ** a)), negative_input=True)
+            return pm.math.log1mexp_numpy(b * np.log1p(-(value**a)), negative_input=True)
 
         self.check_logp(
             Kumaraswamy,
@@ -1422,7 +1422,7 @@ class TestMatchesScipy:
             LogNormal,
             Rplus,
             {"mu": R, "tau": Rplusbig},
-            lambda value, mu, tau: floatX(sp.lognorm.logpdf(value, tau ** -0.5, 0, np.exp(mu))),
+            lambda value, mu, tau: floatX(sp.lognorm.logpdf(value, tau**-0.5, 0, np.exp(mu))),
         )
         self.check_logp(
             LogNormal,
@@ -1434,7 +1434,7 @@ class TestMatchesScipy:
             LogNormal,
             Rplus,
             {"mu": R, "tau": Rplusbig},
-            lambda value, mu, tau: sp.lognorm.logcdf(value, tau ** -0.5, 0, np.exp(mu)),
+            lambda value, mu, tau: sp.lognorm.logcdf(value, tau**-0.5, 0, np.exp(mu)),
         )
         self.check_logcdf(
             LogNormal,
@@ -1448,7 +1448,7 @@ class TestMatchesScipy:
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "lam": Rplus},
-            lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam ** -0.5),
+            lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-0.5),
         )
         self.check_logp(
             StudentT,
@@ -1466,7 +1466,7 @@ class TestMatchesScipy:
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "lam": Rplus},
-            lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam ** -0.5),
+            lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam**-0.5),
         )
         self.check_logcdf(
             StudentT,
@@ -1512,7 +1512,7 @@ class TestMatchesScipy:
         )
 
         def test_fun(value, mu, sigma):
-            return sp.gamma.logpdf(value, mu ** 2 / sigma ** 2, scale=1.0 / (mu / sigma ** 2))
+            return sp.gamma.logpdf(value, mu**2 / sigma**2, scale=1.0 / (mu / sigma**2))
 
         self.check_logp(
             Gamma,
@@ -2129,7 +2129,7 @@ class TestMatchesScipy:
             (np.array([5, 4, 3, 2, 1]) / 15, 0.5, 4, 1.5126301307277439),
             (np.tile(1, 13) / 13, 2, 12, 13.980045245672827),
             (np.array([0.001] * 10 + [0.99]), 0.1, 10, -22.971662448814723),
-            (np.append(0.5 ** np.arange(1, 20), 0.5 ** 20), 5, 19, 94.20462772778092),
+            (np.append(0.5 ** np.arange(1, 20), 0.5**20), 5, 19, 94.20462772778092),
             (
                 (np.array([[7, 5, 3, 2], [19, 17, 13, 11]]) / np.array([[17], [60]])),
                 2.5,
@@ -2394,10 +2394,10 @@ class TestMatchesScipy:
 
     def test_get_tau_sigma(self):
         sigma = np.array(2)
-        assert_almost_equal(get_tau_sigma(sigma=sigma), [1.0 / sigma ** 2, sigma])
+        assert_almost_equal(get_tau_sigma(sigma=sigma), [1.0 / sigma**2, sigma])
 
         tau = np.array(2)
-        assert_almost_equal(get_tau_sigma(tau=tau), [tau, tau ** -0.5])
+        assert_almost_equal(get_tau_sigma(tau=tau), [tau, tau**-0.5])
 
         tau, _ = get_tau_sigma(sigma=at.constant(-2))
         with pytest.raises(ParameterValueError):
@@ -2932,7 +2932,7 @@ class TestStrAndLatexRepr:
             Y_obs = Normal("Y_obs", mu=mu, sigma=sigma, observed=Y)
 
             # add a potential as well
-            pot = Potential("pot", mu ** 2)
+            pot = Potential("pot", mu**2)
 
         self.distributions = [alpha, sigma, mu, b, Z, nb2, Y_obs, pot]
         self.deterministics_or_potentials = [mu, pot]
@@ -3191,7 +3191,7 @@ class TestBugfixes:
 
 def test_serialize_density_dist():
     def func(x):
-        return -2 * (x ** 2).sum()
+        return -2 * (x**2).sum()
 
     def random(rng, size):
         return rng.uniform(-2, 2, size=size)
@@ -3276,12 +3276,9 @@ def test_density_dist_multivariate_logp(size):
         aesara.config.floatX
     )
     log_densityt = joint_logpt(a, a.tag.value_var, sum=False)
-    assert (
-        log_densityt.eval(
-            {a.tag.value_var: a_val, mu.tag.value_var: mu_val},
-        ).shape
-        == to_tuple(size)
-    )
+    assert log_densityt.eval(
+        {a.tag.value_var: a_val, mu.tag.value_var: mu_val},
+    ).shape == to_tuple(size)
 
 
 class TestCensored:

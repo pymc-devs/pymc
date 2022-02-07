@@ -465,7 +465,7 @@ def sample(
     if random_seed is None or isinstance(random_seed, int):
         if random_seed is not None:
             np.random.seed(random_seed)
-        random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
+        random_seed = [np.random.randint(2**30) for _ in range(chains)]
 
     if not isinstance(random_seed, abc.Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
@@ -2226,7 +2226,7 @@ def _init_jitter(
                     model.check_start_vals(point)
                 except SamplingError:
                     # Retry with a new seed
-                    seed = rng.randint(2 ** 30, dtype=np.int64)
+                    seed = rng.randint(2**30, dtype=np.int64)
                 else:
                     break
         initial_points.append(point)
@@ -2322,7 +2322,7 @@ def init_nuts(
         init = "jitter+adapt_diag"
 
     if seeds is None:
-        seeds = model.rng_seeder.randint(2 ** 30, dtype=np.int64, size=chains)
+        seeds = model.rng_seeder.randint(2**30, dtype=np.int64, size=chains)
     if not isinstance(seeds, (list, tuple, np.ndarray)):
         raise ValueError(f"The `seeds` must be array-like. Got {type(seeds)} instead.")
     if len(seeds) != chains:
@@ -2387,7 +2387,7 @@ def init_nuts(
         )
         initial_points = list(approx.sample(draws=chains))
         std_apoint = approx.std.eval()
-        cov = std_apoint ** 2
+        cov = std_apoint**2
         mean = approx.mean.get_value()
         weight = 50
         n = len(cov)

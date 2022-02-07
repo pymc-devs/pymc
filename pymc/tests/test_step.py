@@ -612,7 +612,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
 
     def test_step_categorical(self):
         start, model, (mu, C) = simple_categorical()
-        unc = C ** 0.5
+        unc = C**0.5
         check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, unc, unc / 10.0))
         with model:
             steps = (
@@ -626,7 +626,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
     @pytest.mark.xfail(reason="EllipticalSlice not refactored for v4")
     def test_step_elliptical_slice(self):
         start, model, (K, L, mu, std, noise) = mv_prior_simple()
-        unc = noise ** 0.5
+        unc = noise**0.5
         check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, std, unc / 10.0))
         with model:
             steps = (EllipticalSlice(prior_cov=K), EllipticalSlice(prior_chol=L))
@@ -1467,9 +1467,9 @@ class TestMLDA:
         # y = a + b*x
         true_regression_line = true_intercept + true_slope * x
         # add noise
-        y = true_regression_line + np.random.normal(0, sigma ** 2, size)
+        y = true_regression_line + np.random.normal(0, sigma**2, size)
         s = np.identity(y.shape[0], dtype=p)
-        np.fill_diagonal(s, sigma ** 2)
+        np.fill_diagonal(s, sigma**2)
 
         # forward model Op - here, just the regression equation
         class ForwardModel(Op):
@@ -1600,7 +1600,7 @@ class TestMLDA:
         # y = a + b*x
         true_regression_line = true_intercept + true_slope * x
         # add noise
-        y = true_regression_line + np.random.normal(0, sigma ** 2, size)
+        y = true_regression_line + np.random.normal(0, sigma**2, size)
         s = sigma
 
         x_coarse_0 = x[::3]
@@ -1636,7 +1636,7 @@ class TestMLDA:
                 with self.pymc_model:
                     set_data({"Q": np.array(x_coeff, dtype=p)})
                 outputs[0][0] = np.array(
-                    -(0.5 / s ** 2) * np.sum((temp - self.y) ** 2, dtype=p), dtype=p
+                    -(0.5 / s**2) * np.sum((temp - self.y) ** 2, dtype=p), dtype=p
                 )
 
         # run four MLDA steppers for all combinations of
