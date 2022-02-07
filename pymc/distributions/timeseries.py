@@ -49,27 +49,19 @@ class GaussianRandomWalkRV(RandomVariable):
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
 
     def _shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
-        mu, sigma, init, steps, size = dist_params
+        mu, sigma, init, steps = dist_params[:4]
+
+        # TODO: Figure out why parameter defaulting doesn't work
+        # test_distributions_timeseries.py::test_grw_rv_op_scalar_size fails without this
+        try:
+            size = dist_params[4]
+        except IndexError:
+            size = None
+
         if size is None:
             return (steps + 1,)
         else:
             return (size, steps + 1)
-
-        # if self.ndim_supp <= 0:
-        #     raise ValueError("ndim_supp must be greater than 0")
-        # if param_shapes is not None:
-        #     ref_param = param_shapes[rep_param_idx]
-        #     return (ref_param[-self.ndim_supp],)
-        # else:
-        #     ref_param = dist_params[rep_param_idx]
-        #     if ref_param.ndim < self.ndim_supp:
-        #         raise ValueError(
-        #             (
-        #                 "Reference parameter does not match the "
-        #                 f"expected dimensions; {ref_param} has less than {self.ndim_supp} dim(s)."
-        #             )
-        #         )
-        #     return ref_param.shape[-self.ndim_supp:]
 
     @classmethod
     def rng_fn(
@@ -133,6 +125,76 @@ class GaussianRandomWalkRV(RandomVariable):
 
 
 gaussianrandomwalk = GaussianRandomWalkRV()
+
+
+class GaussianRandomWalk(distribution.Continuous):
+    r"""Random Walk with Normal innovations
+
+
+    Notes
+    -----
+    init is currently drawn from a Normal distribution with the same sigma as the innovations
+
+    Parameters
+    ----------
+    mu: tensor
+        innovation drift, defaults to 0.0
+    sigma: tensor
+        sigma > 0, innovation standard deviation, defaults to 0.0
+    init: float
+        Mean value of initialization, defaults to 0.0
+    steps: int
+        Number of steps in Gaussian Random Walks
+    size: int
+        Number of independent Gaussian Random Walks
+    """
+
+    rv_op = gaussianrandomwalk
+
+    @classmethod
+    def dist(
+        cls,
+        mu: Optional[Union[np.ndarray, float]] = 0.0,
+        sigma: Optional[Union[np.ndarray, float]] = 1.0,
+        init: float = 0.0,
+        steps: int = 0,
+        size: int = None,
+        *args,
+        **kwargs
+    ) -> RandomVariable:
+
+        return super().dist([mu, sigma, init, steps, size], **kwargs)
+
+    def logp(
+        value: at.Variable,
+        mu: at.Variable,
+        sigma: at.Variable,
+        init: at.Variable,
+    ) -> at.TensorVariable:
+        """Calculate log-probability of Gaussian Random Walk distribution at specified value.
+
+        Parameters
+        ----------
+        value: at.Variable,
+        mu: at.Variable,
+        sigma: at.Variable,
+        init: at.Variable,
+
+        Returns
+        -------
+        TensorVariable
+        """
+
+        # Calculate initialization logp
+        init_logp = pm.logp(Normal.dist(init, sigma), value[0])
+
+        # Make time series stationary around the mean value
+        stationary_series = at.diff(value)
+        series_logp = pm.logp(Normal.dist(mu, sigma), stationary_series)
+
+        total_logp = at.concatenate([at.expand_dims(init_logp, 0), series_logp])
+
+        return total_logp
 
 
 class AR1(distribution.Continuous):

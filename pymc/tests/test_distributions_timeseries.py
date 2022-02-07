@@ -39,12 +39,12 @@ def test_grw_rv_op_scalar_size():
     init = 1
     mu = 3
     sd = 0.0000001
-    size = 4
+    steps = 4
 
-    grw = gaussianrandomwalk(mu, sd, init, size=size).eval()
+    grw = gaussianrandomwalk(mu, sd, init, steps).eval()
 
     np.testing.assert_almost_equal(grw[-1], 13, decimal=4)
-    assert grw.shape[0] == size
+    assert grw.shape[0] == steps + 1
 
 
 def test_grw_rv_op_vector_steps():
@@ -58,9 +58,9 @@ def test_grw_rv_op_vector_steps():
     steps = 4
 
     grw = gaussianrandomwalk(mu, sd, init, steps, size=1).eval()
-
     np.testing.assert_almost_equal(grw[-1], 13, decimal=4)
-    assert grw.shape[0] == steps
+
+    assert grw.shape[0] == steps + 1
 
 
 def test_grw_logp():
@@ -70,7 +70,7 @@ def test_grw_logp():
     init = 0
 
     with pm.Model():
-        grw = GaussianRandomWalk("grw", mu, sigma, init, size=2)
+        grw = GaussianRandomWalk("grw", mu, sigma, init, steps=2)
 
     logp = pm.logp(grw, vals)
 
