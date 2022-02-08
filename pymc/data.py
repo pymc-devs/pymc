@@ -321,7 +321,7 @@ class Minibatch(TensorVariable):
         else:
             data = np.asarray(data, dtype)
         in_memory_slc = self.make_static_slices(in_memory_size)
-        self.shared = aesara.shared(data[in_memory_slc])
+        self.shared = aesara.shared(data[tuple(in_memory_slc)])
         self.update_shared_f = update_shared_f
         self.random_slc = self.make_random_slices(self.shared.shape, batch_size, random_seed)
         minibatch = self.shared[self.random_slc]
