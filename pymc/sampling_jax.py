@@ -262,7 +262,7 @@ def sample_numpyro_nuts(
         sample_stats=_sample_stats_to_xarray(pmap_numpyro),
         coords=coords,
         dims=dims,
-        attrs={"sampling_time": (tic3 - tic2).total_seconds()},
+        sample_stats_attrs={"sampling_time": (tic3 - tic2).total_seconds()},
         **idata_kwargs,
     )
 
