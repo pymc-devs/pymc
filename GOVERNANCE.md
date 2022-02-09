@@ -664,7 +664,7 @@ Team:
 * Documentation team members are given permissions to [pymc-examples](https://github.com/pymc-devs/pymc-examples)
   and [resources](https://github.com/pymc-devs/resources) repositories.
 
-In addition, Council members are given admin rights to all repositories within
+In addition, Council members are given administrative rights to all repositories within
 the [pymc-devs](https://github.com/pymc-devs) organization.
 
 #### Discourse
@@ -709,7 +709,7 @@ provide examples on how to assign permissions:
   * Added to all private communication channels
   * Write permissions on pymc-examples and resources repositories, triage permissions
     to pymc and pymc-experimental repositories
-  * Admin access to ReadTheDocs accounts
+  * Administrative access to ReadTheDocs accounts
 
 - Dolors, core contributor, dev and community teams
   * Added to the Community PyMC_team and given "leader" trust level,
