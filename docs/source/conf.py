@@ -1,10 +1,5 @@
-import sys
 import os
-import pathlib
 
-
-# import local version of library instead of installed one
-sys.path.insert(0, str(pathlib.Path(__file__).parent.resolve().parent.parent / "src"))
 import aeppl
 
 # -- Project information
