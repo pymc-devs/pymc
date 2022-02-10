@@ -631,7 +631,7 @@ For current members of the documentation team, refer to the recurrent and
 core contributor membership sections.
 
 ### Community team
-The focus of the Community team is activities intended to nuture, energize, and grow the community of PyMC users and contributors.
+The focus of the Community team is activities intended to nurture, energize, and grow the community of PyMC users and contributors.  These activities include moderation of and participation in the discussions on the PyMC Discourse, planning and organization of events such as PyMCon and sprints, and coordination of presence on various social networks.  These activites are not intended to be the sole responsibility of the Community team.  Instead, the Community team provides leadership in these efforts, but recruits other contributors and community members as needed, thus encourging participation and fostering a healthy, self-sustaining community.
 
 For current members of the community team, refer to the recurrent and
 core contributor membership sections.
@@ -640,8 +640,7 @@ core contributor membership sections.
 All tasks related to the project that are not specifically listed in the
 description of a dedicated team are the responsibility of the PyMC team
 as a whole. At the time of writing, this includes but is not limited to:
-fundraising, issue triaging, running PyMC related events like PyMCon or
-sprints, outreach, or presence on social networks.
+enforcing this governance  and the [PyMC code of conduct](https://github.com/pymc-devs/pymc/blob/main/CODE_OF_CONDUCT.md), developing project-related grants, soliciting of project sponsorships, decisions regarding the allocation of project-related funds, planning of the project roadmap, and triaging of GitHub issues.
 
 ### Team structure in practice
 This section describes how members of the PyMC team are given
@@ -663,12 +662,13 @@ Team:
   and [pymc-experimental](https://github.com/pymc-devs/pymc-experimental) repository.
 * Documentation team members are given permissions to [pymc-examples](https://github.com/pymc-devs/pymc-examples)
   and [resources](https://github.com/pymc-devs/resources) repositories.
+* Community team members are given permissions to [PyMCon](https://github.com/pymc-devs/pymcon), [PyMC Data Umbrella](https://github.com/pymc-devs/pymc-data-umbrella), and other event- and community-related repositories.
 
 In addition, Council members are given administrative rights to all repositories within
 the [pymc-devs](https://github.com/pymc-devs) organization.
 
 #### Discourse
-Similarly to the above section, Discourse permissions are also mapped to the community team
+Similar to the above section, Discourse permissions are also mapped to the community team
 and the two contributor roles.
 
 Role:
@@ -696,7 +696,7 @@ provide examples on how to assign permissions:
 - Arnau, recurrent contributor, community team
   * Added to the Community PyMC_team and given "leader" trust level
   * Added to all private communication channels
-  * No permissions on any GitHub
+  * Triage permissions on the pymcon, pymc-data-umbrella, and other "event" repositories
 
 - Berta, recurrent contributor, dev and doc teams
   * No permissions on Discourse
@@ -713,10 +713,10 @@ provide examples on how to assign permissions:
 
 - Dolors, core contributor, dev and community teams
   * Added to the Community PyMC_team and given "leader" trust level,
-    given moderator permissions on Discourse (that might be rotating and not always active)
+    given moderator permissions on Discourse (such permissions may rotate and not always be active)
   * Added to all private communication channels
-  * Write permissions on pymc and pymc-experimental repositories, triage permissions
-    to pymc-examples and resources repositories
+  * Write permissions on pymc, pymc-experimental, pymcon, pymc-data-umbrella, and other "event" repositories, triage permissions
+    on pymc-examples and resources repositories
 
 - Eudald, core contributor, no dedicated team membership
   * Added to the Community PyMC_team and given "leader" trust level
