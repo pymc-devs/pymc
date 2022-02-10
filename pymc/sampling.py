@@ -403,7 +403,7 @@ def sample(
 
         ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
         ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
-        ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
+        ``DEMetropolis``, ``DEMetropolisZ``, ``slice``, ``pgbart``
 
     B. If you manually declare the ``step_method``\ s, within the ``step``
        kwarg, then you can address the ``step_method`` kwargs directly.
