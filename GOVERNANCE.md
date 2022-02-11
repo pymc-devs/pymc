@@ -722,7 +722,7 @@ provide examples on how to assign permissions:
   * Added to the Community PyMC_team and given "leader" trust level
   * Added to all private communication channels
   * Triage permissions on all repositories
-  * Access to pymc_devs twitter account as they are the main manager
+  * Access to pymc gmail, drive and grant application platforms (i.e. CZI slack) as they are the main grant writing coordinator
 
 </details>
 
