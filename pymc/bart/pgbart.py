@@ -205,7 +205,7 @@ class PGBART(ArrayStepShared):
                 for index in new_particle.used_variates:
                     variable_inclusion[index] += 1
 
-        stats = {"variable_inclusion": variable_inclusion, "bart_trees": self.all_trees}
+        stats = {"variable_inclusion": variable_inclusion, "bart_trees": copy(self.all_trees)}
         return self.sum_trees, [stats]
 
     def normalize(self, particles):
