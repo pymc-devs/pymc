@@ -145,12 +145,12 @@ class Bound:
 
     Parameters
     ----------
-    dist: PyMC unnamed distribution
+    dist : PyMC unnamed distribution
         Distribution to be transformed into a bounded distribution created via the
         `.dist()` API.
-    lower: float or array like, optional
+    lower : float or array like, optional
         Lower bound of the distribution.
-    upper: float or array like, optional
+    upper : float or array like, optional
         Upper bound of the distribution.
 
     Examples
