@@ -138,7 +138,7 @@ def test_init_groups(three_var_model, raises, grouping):
             else:
                 assert {pm.util.get_transformed(z) for z in g} == set(ig.group)
         else:
-            model_dim = sum(v.size for v in three_var_model.initial_point.values())
+            model_dim = sum(v.size for v in three_var_model.compute_initial_point(0).values())
             assert approx.ndim == model_dim
         trace = approx.sample(100)
 
