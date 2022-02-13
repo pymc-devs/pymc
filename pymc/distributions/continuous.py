@@ -2594,9 +2594,9 @@ class Weibull(PositiveContinuous):
 
     Parameters
     ----------
-    alpha: float
+    alpha : float
         Shape parameter (alpha > 0).
-    beta: float
+    beta : float
         Scale parameter (beta > 0).
     """
 
