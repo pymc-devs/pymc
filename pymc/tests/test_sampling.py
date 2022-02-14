@@ -23,6 +23,7 @@ import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
+import scipy.special
 
 from aesara import shared
 from arviz import InferenceData
@@ -312,6 +313,29 @@ class TestSample(SeededTest):
             trace = pm.sample(tune=0, draws=10, chains=2, return_inferencedata=False)
             with pytest.raises(NotImplementedError):
                 xvars = [t["mu"] for t in trace]
+
+    def test_deterministic_of_unobserved(self):
+        with pm.Model() as model:
+            x = pm.HalfNormal("x", 1)
+            y = pm.Deterministic("y", x + 100)
+            idata = pm.sample(
+                chains=1,
+                tune=10,
+                draws=50,
+                compute_convergence_checks=False,
+            )
+
+        np.testing.assert_allclose(idata.posterior["y"], idata.posterior["x"] + 100)
+
+    def test_transform_with_rv_depenency(self):
+        # Test that untransformed variables that depend on upstream variables are properly handled
+        with pm.Model() as m:
+            x = pm.HalfNormal("x", observed=1)
+            transform = pm.transforms.IntervalTransform(lambda *inputs: (inputs[-2], inputs[-1]))
+            y = pm.Uniform("y", lower=0, upper=x, transform=transform)
+            trace = pm.sample(tune=10, draws=50, return_inferencedata=False, random_seed=336)
+
+        assert np.allclose(scipy.special.expit(trace["y_interval__"]), trace["y"])
 
 
 def test_sample_find_MAP_does_not_modify_start():
@@ -1218,15 +1242,6 @@ class TestSamplePosteriorPredictive:
         with pmodel:
             idat = pm.to_inference_data(trace)
             pp = pm.sample_posterior_predictive(idat.posterior, var_names=["d"])
-
-
-def test_sample_deterministic():
-    with pm.Model() as model:
-        x = pm.HalfNormal("x", 1)
-        y = pm.Deterministic("y", x + 100)
-        idata = pm.sample(chains=1, draws=50, compute_convergence_checks=False)
-
-    np.testing.assert_allclose(idata.posterior["y"], idata.posterior["x"] + 100)
 
 
 class TestDraw(SeededTest):

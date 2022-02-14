@@ -16,3 +16,9 @@ exclude_lines = [
 isort = 1
 black = 1
 pyupgrade = 1
+
+[tool.mypy]
+exclude = [
+  "^pymc/tests",
+]
+ignore_missing_imports = true

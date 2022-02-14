@@ -1688,6 +1688,28 @@ class TestOrderedLogistic(BaseTestDistributionRandom):
         "check_rv_size",
     ]
 
+    @pytest.mark.parametrize(
+        "eta, cutpoints, expected",
+        [
+            (0, [-2.0, 0, 2.0], (4,)),
+            ([-1], [-2.0, 0, 2.0], (1, 4)),
+            ([1.0, -2.0], [-1.0, 0, 1.0], (2, 4)),
+            (np.zeros((3, 2)), [-2.0, 0, 1.0], (3, 2, 4)),
+            (np.ones((5, 2)), [[-2.0, 0, 1.0], [-1.0, 0, 1.0]], (5, 2, 4)),
+            (np.ones((3, 5, 2)), [[-2.0, 0, 1.0], [-1.0, 0, 1.0]], (3, 5, 2, 4)),
+        ],
+    )
+    def test_shape_inputs(self, eta, cutpoints, expected):
+        """
+        This test checks when providing different shapes for `eta` parameters.
+        """
+        categorical = _OrderedLogistic.dist(
+            eta=eta,
+            cutpoints=cutpoints,
+        )
+        p = categorical.owner.inputs[3].eval()
+        assert p.shape == expected
+
 
 class TestOrderedProbit(BaseTestDistributionRandom):
     pymc_dist = _OrderedProbit
@@ -1697,6 +1719,30 @@ class TestOrderedProbit(BaseTestDistributionRandom):
         "check_pymc_params_match_rv_op",
         "check_rv_size",
     ]
+
+    @pytest.mark.parametrize(
+        "eta, cutpoints, sigma, expected",
+        [
+            (0, [-2.0, 0, 2.0], 1.0, (4,)),
+            ([-1], [-1.0, 0, 2.0], [2.0], (1, 4)),
+            ([1.0, -2.0], [-1.0, 0, 1.0], 1.0, (2, 4)),
+            ([1.0, -2.0, 3.0], [-1.0, 0, 2.0], np.ones((1, 3)), (1, 3, 4)),
+            (np.zeros((2, 3)), [-2.0, 0, 1.0], [1.0, 2.0, 5.0], (2, 3, 4)),
+            (np.ones((2, 3)), [-1.0, 0, 1.0], np.ones((2, 3)), (2, 3, 4)),
+            (np.zeros((5, 2)), [[-2, 0, 1], [-1, 0, 1]], np.ones((2, 5, 2)), (2, 5, 2, 4)),
+        ],
+    )
+    def test_shape_inputs(self, eta, cutpoints, sigma, expected):
+        """
+        This test checks when providing different shapes for `eta` and `sigma` parameters.
+        """
+        categorical = _OrderedProbit.dist(
+            eta=eta,
+            cutpoints=cutpoints,
+            sigma=sigma,
+        )
+        p = categorical.owner.inputs[3].eval()
+        assert p.shape == expected
 
 
 class TestOrderedMultinomial(BaseTestDistributionRandom):

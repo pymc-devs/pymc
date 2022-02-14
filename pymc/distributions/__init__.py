@@ -81,6 +81,7 @@ from pymc.distributions.distribution import (
     Discrete,
     Distribution,
     NoDistribution,
+    SymbolicDistribution,
 )
 from pymc.distributions.mixture import Mixture, MixtureSameFamily, NormalMixture
 from pymc.distributions.multivariate import (
@@ -152,6 +153,7 @@ __all__ = [
     "OrderedProbit",
     "DensityDist",
     "Distribution",
+    "SymbolicDistribution",
     "Continuous",
     "Discrete",
     "NoDistribution",

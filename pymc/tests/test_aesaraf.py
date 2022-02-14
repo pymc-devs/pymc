@@ -574,3 +574,11 @@ def test_check_bounds_flag():
     m.check_bounds = True
     with m:
         assert np.all(compile_pymc([], bound)() == -np.inf)
+
+
+def test_compile_pymc_sets_default_updates():
+    rng = aesara.shared(np.random.default_rng(0))
+    x = pm.Normal.dist(rng=rng)
+    assert x.owner.inputs[0] is rng
+    f = compile_pymc([], x)
+    assert not np.isclose(f(), f())

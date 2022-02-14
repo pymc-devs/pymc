@@ -961,17 +961,14 @@ def compile_pymc(inputs, outputs, mode=None, **kwargs):
         this function is called within a model context and the model `check_bounds` flag
         is set to False.
     """
-
-    # Avoid circular dependency
-    from pymc.distributions import NoDistribution
-
-    # Set the default update of a NoDistribution RNG so that it is automatically
+    # Set the default update of RandomVariable's RNG so that it is automatically
     # updated after every function call
+    # TODO: This won't work for variables with InnerGraphs (Scan and OpFromGraph)
     output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
     for rv in (
         node
         for node in walk_model(output_to_list, walk_past_rvs=True)
-        if node.owner and isinstance(node.owner.op, NoDistribution)
+        if node.owner and isinstance(node.owner.op, RandomVariable)
     ):
         rng = rv.owner.inputs[0]
         if not hasattr(rng, "default_update"):
