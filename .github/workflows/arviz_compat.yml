@@ -20,11 +20,18 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         floatx: [float64]
         test-subset:
-          - pymc/tests/test_distributions.py
+          - |
+            pymc/tests/test_parallel_sampling.py
+            pymc/tests/test_posteriors.py
+            pymc/tests/test_sampling.py
 
           - |
-            pymc/tests/test_distributions_random.py
-            pymc/tests/test_sampling.py
+            pymc/tests/test_data_container.py
+            pymc/tests/test_idata_conversion.py
+            pymc/tests/test_missing.py
+            pymc/tests/test_model.py
+            pymc/tests/test_shape_handling.py
+            pymc/tests/test_shared.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
