@@ -198,7 +198,7 @@ Each notebook should have a one or two categories indicating:
   - `beginner` (standing crow icon)
   - `intermediate` (flying dove icon)
   - `advanced` (dragon icon)
-* the [diataxis](https://diataxis.fr/) type (optional):
+* the [diataxis](https://diataxis.fr/) type (optional for old notebooks):
   - tutorial
   - how to guide
   - explanation
