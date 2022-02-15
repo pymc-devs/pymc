@@ -38,12 +38,12 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v1
         env:
-          # Increase this value to reset cache if environment-dev-py39.yml has not changed
+          # Increase this value to reset cache if environment-test-py39.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-dev-py39.yml') }}
+            hashFiles('conda-envs/environment-test-py39.yml') }}
       - name: Cache multiple paths
         uses: actions/cache@v2
         env:
@@ -61,19 +61,19 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           mamba-version: "*"
-          activate-environment: pymc-dev-py39
+          activate-environment: pymc-test-py39
           channel-priority: strict
-          environment-file: conda-envs/environment-dev-py39.yml
+          environment-file: conda-envs/environment-test-py39.yml
           use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install pymc
         run: |
-          conda activate pymc-dev-py39
+          conda activate pymc-test-py39
           pip install -e .
           python --version
       - name: Install latest arviz
         run: |
-          conda activate pymc-dev-py39
+          conda activate pymc-test-py39
           pip uninstall arviz -y
           pip install git+git://github.com/arviz-devs/arviz.git
       - name: Run tests
