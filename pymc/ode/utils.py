@@ -104,12 +104,8 @@ def augment_system(ode_func, n_states, n_theta):
     # Get symbolic representation of the ODEs by passing tensors for y, t and theta
     yhat = ode_func(t_y, t_t, t_p[n_states:])
     if isinstance(yhat, at.TensorVariable):
-        if yhat.ndim == 0:
-            # Convert yhat from scalar to array
-            t_yhat = at.stack((yhat,), axis=0)
-        elif yhat.ndim == 1:
-            t_yhat = yhat
-        else:
+        t_yhat = at.atleast_1d(yhat)
+        if t_yhat.ndim > 1:
             raise ValueError(
                 f"The odefunc returned a {yhat.ndim}-dimensional tensor, but 0 or 1 dimensions were expected."
             )
