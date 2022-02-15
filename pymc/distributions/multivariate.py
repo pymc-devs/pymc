@@ -56,7 +56,7 @@ from pymc.distributions.dist_math import (
     logpow,
     multigammaln,
 )
-from pymc.distributions.distribution import Continuous, Discrete
+from pymc.distributions.distribution import Continuous, Discrete, get_moment
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
     rv_size_is_none,
@@ -558,11 +558,7 @@ class Multinomial(Discrete):
         return super().dist([n, p], *args, **kwargs)
 
     def get_moment(rv, size, n, p):
-        if p.ndim > 1:
-            n = at.shape_padright(n)
-        if (p.ndim == 1) & (n.ndim > 0):
-            n = at.shape_padright(n)
-            p = at.shape_padleft(p)
+        n = at.shape_padright(n)
         mode = at.round(n * p)
         diff = n - at.sum(mode, axis=-1, keepdims=True)
         inc_bool_arr = at.abs_(diff) > 0
@@ -682,21 +678,8 @@ class DirichletMultinomial(Discrete):
         return super().dist([n, a], **kwargs)
 
     def get_moment(rv, size, n, a):
-        p = a / at.sum(a, axis=-1)
-        mode = at.round(n * p)
-        diff = n - at.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = at.abs_(diff) > 0
-        mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
-
-        # Reshape mode according to dimensions implied by the parameters
-        # This can include axes of length 1
-        _, p_bcast = broadcast_params([n, p], ndims_params=[0, 1])
-        mode = at.reshape(mode, p_bcast.shape)
-
-        if not rv_size_is_none(size):
-            output_size = at.concatenate([size, [p.shape[-1]]])
-            mode = at.full(output_size, mode)
-        return mode
+        p = a / at.sum(a, axis=-1, keepdims=True)
+        return get_moment(Multinomial.dist(n=n, p=p, size=size))
 
     def logp(value, n, a):
         """
