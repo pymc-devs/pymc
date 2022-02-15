@@ -2,7 +2,7 @@
 # See that file for comments about the need/usage of each dependency.
 
 aeppl==0.0.26
-aesara==2.3.8
+aesara==2.4.0
 arviz>=0.11.4
 cachetools>=4.2.1
 cloudpickle
@@ -18,7 +18,7 @@ pre-commit>=2.8.0
 pydata-sphinx-theme
 pytest-cov>=2.5
 pytest>=3.0
-scipy>=1.4.1,<1.8.0
+scipy>=1.4.1
 sphinx-copybutton
 sphinx-design
 sphinx-notfound-page
