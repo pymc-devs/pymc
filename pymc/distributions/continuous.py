@@ -2568,6 +2568,7 @@ class Weibull(PositiveContinuous):
            \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
