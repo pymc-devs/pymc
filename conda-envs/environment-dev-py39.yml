@@ -11,11 +11,11 @@ dependencies:
 - cloudpickle
 - fastprogress>=0.2.0
 - h5py>=2.7
-- ipython
+- ipython>=7.16
 - myst-nb
 - numpy>=1.15.0
 - numpydoc<1.2
-- pandas
+- pandas>=0.24.0
 - pip
 - pre-commit>=2.8.0
 - pydata-sphinx-theme
@@ -23,7 +23,7 @@ dependencies:
 - pytest>=3.0
 - python-graphviz
 - python=3.9
-- scipy>1.4.1
+- scipy>=1.4.1
 - sphinx-copybutton
 - sphinx-notfound-page
 - sphinx>=1.5
