@@ -6,8 +6,8 @@ dependencies:
  # base dependencies (see install guide for Windows)
 - aeppl=0.0.18
 - aesara=2.3.8
-- arviz>=0.11.2
-- cachetools
+- arviz>=0.11.4
+- cachetools>=4.2.1
 - cloudpickle
 - fastprogress>=0.2.0
 - h5py>=2.7
@@ -16,11 +16,11 @@ dependencies:
 - mkl-service==2.3.0
 - m2w64-toolchain
 - numpy>=1.15.0
-- pandas
+- pandas>=0.24.0
 - pip
 - python=3.8
 - python-graphviz
-- scipy>1.4.1
+- scipy>=1.4.1
 - typing-extensions>=3.7.4
 # Extra stuff for testing
 - ipython>=7.16
