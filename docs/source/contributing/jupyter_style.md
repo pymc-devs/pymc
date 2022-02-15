@@ -47,13 +47,13 @@ This guide does not teach nor cover MyST extensively, only gives some opinionate
 ### Variable names
 
 * Above all, stay consistent with variable names within the notebook. Notebooks using multiple names for the same variable will not be merged.
-
 * Use meaningful variable names wherever possible. Our users come from different backgrounds and not everyone is familiar with the same naming conventions.
-
+  - Annotate dimensions too. Notebooks are published to be read, so even if the shape is derived
+    from the inputs or you don't like to use named dims and don't use them in your presonal
+    code, notebooks must use dims, even if annotating and not setting the shape.
+    It makes the code easier to follow, especially for newcomers.
 * Sometimes it makes sense to use Greek letters to refer to variables, for example when writing equations, as this makes them easier to read. In that case, use LaTeX to insert the Greek letter like this `$\theta$` instead of using Unicode like `θ`.
-
 * If you need to use Greek letter variable names inside the code, please spell them out instead of using unicode. For example, `theta`, not `θ`.
-
 * When using non meaningful names such as single letters, add bullet points with a 1-2 sentence description of each variable below the equation where they are first introduced.
 
 Choosing variable names can sometimes be difficult, tedious or annoying.
@@ -174,7 +174,7 @@ The first cell of all example notebooks should have a MyST target, a level 1 mar
 The syntax is as follows:
 
 ```markdown
-(notebook_id)=
+(notebook_name)=
 # Notebook Title
 
 :::{post} Aug 31, 2021
@@ -186,14 +186,23 @@ The syntax is as follows:
 
 The date should correspond to the latest update/execution date, at least roughly (it's not a problem if the date is a few days off due to the review process before merging the PR). This will allow users to see which notebooks have been updated lately and will help the PyMC team make sure no notebook is left outdated for too long.
 
-The {ref}`MyST target <myst:syntax/targets>`
+The {ref}`MyST target <myst:syntax/targets>` (the `(notebook_name)=` bit)
 is important to ease referencing and linking notebooks between each other.
+It must be notebook specific, for example its file name.
 
 Tags can be anything, but we ask you to try to use [existing tags](https://github.com/pymc-devs/pymc/wiki/Categories-and-Tags-for-PyMC-Examples)
 to avoid the tag list from getting too long.
 
-Each notebook should have a single category indicating the level of the notebook.
-Choose a category from [existing categories](https://github.com/pymc-devs/pymc/wiki/Categories-and-Tags-for-PyMC-Examples#categories).
+Each notebook should have a one or two categories indicating:
+* the level of the notebook (required):
+  - `beginner` (standing crow icon)
+  - `intermediate` (flying dove icon)
+  - `advanced` (dragon icon)
+* the [diataxis](https://diataxis.fr/) type (optional for old notebooks):
+  - tutorial
+  - how to guide
+  - explanation
+  - reference
 
 Authors should list people who authored, adapted or updated the notebook. See {ref}`jupyter_authors`
 for more details.
