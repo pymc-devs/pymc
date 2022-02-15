@@ -267,15 +267,6 @@ class TestErrors:
         with pytest.raises(ValueError):
             DifferentialEquation(func=self.system, t0=0, times=self.times, n_states=1, n_theta=0)
 
-    def system_2(y, t, p):
-        return np.array(np.exp(-t) - p[0] * y[0])
-
-    ode_model_2 = DifferentialEquation(func=system, t0=0, times=times, n_states=1, n_theta=1)
-
-    def test_output_numpy(self):
-        with pytest.raises(TypeError):
-            DifferentialEquation(func=self.system_2, t0=0, times=self.times, n_states=1, n_theta=1)
-
 
 class TestDiffEqModel:
     def test_op_equality(self):
