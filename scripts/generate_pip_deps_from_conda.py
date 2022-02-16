@@ -52,6 +52,7 @@ EXCLUDE = {
     "numba",
     "python-graphviz",
     "blas",
+    "jax",
 }
 RENAME = {}
 
