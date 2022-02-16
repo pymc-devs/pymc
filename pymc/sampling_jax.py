@@ -102,9 +102,7 @@ def get_jaxified_logp(model: Model, negative_logp=True) -> Callable:
     logp_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[model_logpt])
 
     def logp_fn_wrap(x):
-        # NumPyro expects a scalar potential with the opposite sign of model.logpt
-        res = logp_fn(*x)[0]
-        return res
+        return logp_fn(*x)[0]
 
     return logp_fn_wrap
 
