@@ -4,6 +4,7 @@ import re
 import sys
 import warnings
 
+from functools import partial
 from typing import Callable, List, Optional
 
 xla_flags = os.getenv("XLA_FLAGS", "")
@@ -94,14 +95,17 @@ def get_jaxified_graph(
     return jax_funcify(fgraph)
 
 
-def get_jaxified_logp(model: Model) -> Callable:
+def get_jaxified_logp(model: Model, sampler=None) -> Callable:
 
     logp_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[model.logpt()])
 
     def logp_fn_wrap(x):
         # NumPyro expects a scalar potential with the opposite sign of model.logpt
         res = logp_fn(*x)[0]
-        return -res
+        if sampler == "numpyro":
+            return -res
+        else:
+            return res
 
     return logp_fn_wrap
 
@@ -136,6 +140,151 @@ def _get_log_likelihood(model, samples):
         result = jax.jit(jax.vmap(jax.vmap(jax_fn)))(*samples)[0]
         data[v.name] = result
     return data
+
+
+@partial(jax.jit, static_argnums=(2,3,4,5,6))
+def _blackjax_inference_loop(
+        seed,
+        init_position,
+        logprob_fn,
+        draws,
+        tune,
+        target_accept,
+        algorithm=None,
+):
+    import blackjax
+
+    if algorithm is None:
+        algorithm = blackjax.nuts
+
+    adapt = blackjax.window_adaptation(
+        algorithm=algorithm,
+        logprob_fn=logprob_fn,
+        num_steps=tune,
+        target_acceptance_rate=target_accept,
+    )
+    last_state, kernel, _ = adapt.run(seed, init_position)
+
+    def inference_loop(rng_key, initial_state):
+        def one_step(state, rng_key):
+            state, info = kernel(rng_key, state)
+            return state, (state, info)
+
+        keys = jax.random.split(rng_key, draws)
+        _, (states, infos) = jax.lax.scan(one_step, initial_state, keys)
+
+        return states, infos
+
+    return inference_loop(seed, last_state)
+
+
+def sample_blackjax_nuts(
+    draws=1000,
+    tune=1000,
+    chains=4,
+    target_accept=0.8,
+    random_seed=10,
+    model=None,
+    var_names=None,
+    progress_bar=True, # FIXME: Unused for now
+    keep_untransformed=False,
+    chain_method="parallel",
+    idata_kwargs=None,
+):
+    model = modelcontext(model)
+
+    if var_names is None:
+        var_names = model.unobserved_value_vars
+
+    vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
+
+    coords = {
+        cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
+        for cname, cvals in model.coords.items()
+        if cvals is not None
+    }
+
+    if hasattr(model, "RV_dims"):
+        dims = {
+            var_name: [dim for dim in dims if dim is not None]
+            for var_name, dims in model.RV_dims.items()
+        }
+    else:
+        dims = {}
+
+    tic1 = pd.Timestamp.now()
+    print("Compiling...", file=sys.stdout)
+
+    rv_names = [rv.name for rv in model.value_vars]
+    initial_point = model.compute_initial_point()
+    init_state = [initial_point[rv_name] for rv_name in rv_names]
+    init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
+
+    logprob_fn = get_jaxified_logp(model, sampler="blackjax")
+
+    seed = jax.random.PRNGKey(random_seed)
+    keys = jax.random.split(seed, chains)
+
+    get_posterior_samples = partial(
+        _blackjax_inference_loop,
+        logprob_fn=logprob_fn,
+        tune=tune,
+        draws=draws,
+        target_accept=target_accept,
+    )
+
+    tic2 = pd.Timestamp.now()
+    print("Compilation time = ", tic2 - tic1, file=sys.stdout)
+
+    print("Sampling...", file=sys.stdout)
+
+    # Adapted from numpyro
+    if chain_method == 'parallel':
+        map_fn = jax.pmap
+    elif chain_method == 'vectorized':
+        map_fn = jax.vmap
+    else:
+        raise ValueError('Only supporting the following methods to draw chains:'
+                         ' "parallel" or "vectorized"')
+
+    states, _ = map_fn(get_posterior_samples)(keys, init_state_batched)
+    raw_mcmc_samples = states.position
+
+    tic3 = pd.Timestamp.now()
+    print("Sampling time = ", tic3 - tic2, file=sys.stdout)
+
+    print("Transforming variables...", file=sys.stdout)
+    mcmc_samples = {}
+    for v in vars_to_sample:
+        jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
+        result = jax.vmap(jax.vmap(jax_fn))(*raw_mcmc_samples)[0]
+        mcmc_samples[v.name] = result
+
+    tic4 = pd.Timestamp.now()
+    print("Transformation time = ", tic4 - tic3, file=sys.stdout)
+
+    if idata_kwargs is None:
+        idata_kwargs = {}
+    else:
+        idata_kwargs = idata_kwargs.copy()
+
+    if idata_kwargs.pop("log_likelihood", True):
+        log_likelihood = _get_log_likelihood(model, raw_mcmc_samples)
+    else:
+        log_likelihood = None
+
+    posterior = mcmc_samples
+    az_trace = az.from_dict(
+        posterior=posterior,
+        log_likelihood=log_likelihood,
+        observed_data=find_observations(model),
+        coords=coords,
+        dims=dims,
+        attrs={"sampling_time": (tic3 - tic2).total_seconds()},
+        **idata_kwargs,
+    )
+
+    return az_trace
 
 
 def sample_numpyro_nuts(
@@ -182,7 +331,7 @@ def sample_numpyro_nuts(
     init_state = [initial_point[rv_name] for rv_name in rv_names]
     init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
 
-    logp_fn = get_jaxified_logp(model)
+    logp_fn = get_jaxified_logp(model, sampler="numpyro")
 
     nuts_kernel = NUTS(
         potential_fn=logp_fn,
