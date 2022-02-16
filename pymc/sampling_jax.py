@@ -95,17 +95,16 @@ def get_jaxified_graph(
     return jax_funcify(fgraph)
 
 
-def get_jaxified_logp(model: Model, sampler=None) -> Callable:
-
-    logp_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[model.logpt()])
+def get_jaxified_logp(model: Model, negative_logp=True) -> Callable:
+    model_logpt = model.logpt()
+    if not negative_logp:
+        model_logpt = -model_logpt
+    logp_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[model_logpt])
 
     def logp_fn_wrap(x):
         # NumPyro expects a scalar potential with the opposite sign of model.logpt
         res = logp_fn(*x)[0]
-        if sampler == "numpyro":
-            return -res
-        else:
-            return res
+        return res
 
     return logp_fn_wrap
 
@@ -220,7 +219,7 @@ def sample_blackjax_nuts(
     init_state = [initial_point[rv_name] for rv_name in rv_names]
     init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
 
-    logprob_fn = get_jaxified_logp(model, sampler="blackjax")
+    logprob_fn = get_jaxified_logp(model)
 
     seed = jax.random.PRNGKey(random_seed)
     keys = jax.random.split(seed, chains)
@@ -332,7 +331,7 @@ def sample_numpyro_nuts(
     init_state = [initial_point[rv_name] for rv_name in rv_names]
     init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
 
-    logp_fn = get_jaxified_logp(model, sampler="numpyro")
+    logp_fn = get_jaxified_logp(model, negative_logp=False)
 
     nuts_kernel = NUTS(
         potential_fn=logp_fn,
