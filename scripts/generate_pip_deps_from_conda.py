@@ -51,6 +51,7 @@ EXCLUDE = {
     "mkl-service",
     "numba",
     "python-graphviz",
+    "blas",
 }
 RENAME = {}
 
