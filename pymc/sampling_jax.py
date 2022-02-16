@@ -24,6 +24,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
 from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
+from arviz.data.base import make_attrs
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_observations
@@ -188,7 +189,8 @@ def sample_blackjax_nuts(
     chain_method="parallel",
     idata_kwargs=None,
 ):
-    """Draw samples from the posterior using the NUTS method from the blackjax library.
+    """
+    Draw samples from the posterior using the NUTS method from the blackjax library.
 
     Parameters
     ----------
@@ -226,6 +228,7 @@ def sample_blackjax_nuts(
     trace : arviz.InferenceData
         ArviZ ``InferenceData`` object that contains the samples.
     """
+    import blackjax
 
     model = modelcontext(model)
 
@@ -310,6 +313,10 @@ def sample_blackjax_nuts(
     else:
         log_likelihood = None
 
+    attrs = {
+        "sampling_time": (tic3 - tic2).total_seconds(),
+    }
+
     posterior = mcmc_samples
     az_trace = az.from_dict(
         posterior=posterior,
@@ -317,7 +324,7 @@ def sample_blackjax_nuts(
         observed_data=find_observations(model),
         coords=coords,
         dims=dims,
-        attrs={"sampling_time": (tic3 - tic2).total_seconds()},
+        attrs=make_attrs(attrs, library=blackjax),
         **idata_kwargs,
     )
 
@@ -337,7 +344,8 @@ def sample_numpyro_nuts(
     chain_method="parallel",
     idata_kwargs=None,
 ):
-    """Draw samples from the posterior using the NUTS method from the numpyro library.
+    """
+    Draw samples from the posterior using the NUTS method from the numpyro library.
 
     Parameters
     ----------
@@ -375,6 +383,8 @@ def sample_numpyro_nuts(
     trace : arviz.InferenceData
         ArviZ ``InferenceData`` object that contains the samples.
     """
+
+    import numpyro
 
     from numpyro.infer import MCMC, NUTS
 
@@ -479,6 +489,10 @@ def sample_numpyro_nuts(
     else:
         log_likelihood = None
 
+    attrs = {
+        "sampling_time": (tic3 - tic2).total_seconds(),
+    }
+
     posterior = mcmc_samples
     az_trace = az.from_dict(
         posterior=posterior,
@@ -487,7 +501,7 @@ def sample_numpyro_nuts(
         sample_stats=_sample_stats_to_xarray(pmap_numpyro),
         coords=coords,
         dims=dims,
-        attrs={"sampling_time": (tic3 - tic2).total_seconds()},
+        attrs=make_attrs(attrs, library=numpyro),
         **idata_kwargs,
     )
 
