@@ -190,43 +190,46 @@ def sample_blackjax_nuts(
     idata_kwargs=None,
 ):
     """
-    Draw samples from the posterior using the NUTS method from the blackjax library.
+    Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
 
     Parameters
     ----------
-    draws : int
-        The number of samples to draw. Defaults to 1000. The number of tuned samples are discarded
-        by default.
-    tune : int
-        Number of iterations to tune, defaults to 1000. Samplers adjust the step sizes, scalings or
+    draws : int, default 1000
+        The number of samples to draw. The number of tuned samples are discarded by default.
+    tune : int, default 1000
+        Number of iterations to tune. Samplers adjust the step sizes, scalings or
         similar during tuning. Tuning samples will be drawn in addition to the number specified in
         the ``draws`` argument.
-    chains : int
-        The number of chains to sample. Defaults to 4.
+    chains : int, default 4
+        The number of chains to sample.
     target_accept : float in [0, 1].
         The step size is tuned such that we approximate this acceptance rate. Higher values like
         0.9 or 0.95 often work better for problematic posteriors.
-    random_seed : int
+    random_seed : int, default 10
         Random seed used by the sampling steps.
-    model : Model (optional if in ``with`` context)
-        Model to sample from. The model needs to have free random variables.
-    var_names : Iterable[str]
-        Names of variables for which to compute the posterior samples.
-    progress_bar : bool, optional default=True
+    model : Model, optional
+        Model to sample from. The model needs to have free random variables. When inside a ``with`` model
+        context, it defaults to that model, otherwise the model must be passed explicitly.
+    var_names : iterable of str, optional
+        Names of variables for which to compute the posterior samples. Defaults to all variables in the posterior
+    progress_bar : bool, default True
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
-    keep_untransformed : bool, optional default=False
+    keep_untransformed : bool, default False
         Include untransformed variables in the posterior samples. Defaults to False.
-    chain_method : str
-        Specify how samples should be drawn. The choices include "parallel", and
-        "vectorized". Defaults to "parallel".
+    chain_method : str, default "parallel"
+        Specify how samples should be drawn. The choices include "parallel", and "vectorized".
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data`
+        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
+        for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
+        not be included in the returned object.
+
     Returns
     -------
-    trace : arviz.InferenceData
-        ArviZ ``InferenceData`` object that contains the samples.
+    InferenceData
+        ArviZ ``InferenceData`` object that contains the posterior samples, together with their respective sample stats and
+        pointwise log likeihood values (unless skipped with ``idata_kwargs``).
     """
     import blackjax
 
@@ -345,43 +348,46 @@ def sample_numpyro_nuts(
     idata_kwargs=None,
 ):
     """
-    Draw samples from the posterior using the NUTS method from the numpyro library.
+    Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
 
     Parameters
     ----------
-    draws : int
-        The number of samples to draw. Defaults to 1000. The number of tuned samples are discarded
-        by default.
-    tune : int
-        Number of iterations to tune, defaults to 1000. Samplers adjust the step sizes, scalings or
+    draws : int, default 1000
+        The number of samples to draw. The number of tuned samples are discarded by default.
+    tune : int, default 1000
+        Number of iterations to tune. Samplers adjust the step sizes, scalings or
         similar during tuning. Tuning samples will be drawn in addition to the number specified in
         the ``draws`` argument.
-    chains : int
-        The number of chains to sample. Defaults to 4.
+    chains : int, default 4
+        The number of chains to sample.
     target_accept : float in [0, 1].
         The step size is tuned such that we approximate this acceptance rate. Higher values like
         0.9 or 0.95 often work better for problematic posteriors.
-    random_seed : int
+    random_seed : int, default 10
         Random seed used by the sampling steps.
-    model : Model (optional if in ``with`` context)
-        Model to sample from. The model needs to have free random variables.
-    var_names : Iterable[str]
-        Names of variables for which to compute the posterior samples.
-    progress_bar : bool, optional default=True
+    model : Model, optional
+        Model to sample from. The model needs to have free random variables. When inside a ``with`` model
+        context, it defaults to that model, otherwise the model must be passed explicitly.
+    var_names : iterable of str, optional
+        Names of variables for which to compute the posterior samples. Defaults to all variables in the posterior
+    progress_bar : bool, default True
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
-    keep_untransformed : bool, optional default=False
+    keep_untransformed : bool, default False
         Include untransformed variables in the posterior samples. Defaults to False.
-    chain_method : str
-        Specify how samples should be drawn. The choices include "sequential", "parallel", and
-        "vectorized". Defaults to "parallel".
+    chain_method : str, default "parallel"
+        Specify how samples should be drawn. The choices include "sequential", "parallel", and "vectorized".
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data`
+        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
+        for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
+        not be included in the returned object.
+
     Returns
     -------
-    trace : arviz.InferenceData
-        ArviZ ``InferenceData`` object that contains the samples.
+    InferenceData
+        ArviZ ``InferenceData`` object that contains the posterior samples, together with their respective sample stats and
+        pointwise log likeihood values (unless skipped with ``idata_kwargs``).
     """
 
     import numpyro
