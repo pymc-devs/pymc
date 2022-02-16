@@ -142,15 +142,15 @@ def _get_log_likelihood(model, samples):
     return data
 
 
-@partial(jax.jit, static_argnums=(2,3,4,5,6))
+@partial(jax.jit, static_argnums=(2, 3, 4, 5, 6))
 def _blackjax_inference_loop(
-        seed,
-        init_position,
-        logprob_fn,
-        draws,
-        tune,
-        target_accept,
-        algorithm=None,
+    seed,
+    init_position,
+    logprob_fn,
+    draws,
+    tune,
+    target_accept,
+    algorithm=None,
 ):
     import blackjax
 
@@ -186,7 +186,7 @@ def sample_blackjax_nuts(
     random_seed=10,
     model=None,
     var_names=None,
-    progress_bar=True, # FIXME: Unused for now
+    progress_bar=True,  # FIXME: Unused for now
     keep_untransformed=False,
     chain_method="parallel",
     idata_kwargs=None,
@@ -239,13 +239,14 @@ def sample_blackjax_nuts(
     print("Sampling...", file=sys.stdout)
 
     # Adapted from numpyro
-    if chain_method == 'parallel':
+    if chain_method == "parallel":
         map_fn = jax.pmap
-    elif chain_method == 'vectorized':
+    elif chain_method == "vectorized":
         map_fn = jax.vmap
     else:
-        raise ValueError('Only supporting the following methods to draw chains:'
-                         ' "parallel" or "vectorized"')
+        raise ValueError(
+            "Only supporting the following methods to draw chains:" ' "parallel" or "vectorized"'
+        )
 
     states, _ = map_fn(get_posterior_samples)(keys, init_state_batched)
     raw_mcmc_samples = states.position

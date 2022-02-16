@@ -13,8 +13,8 @@ from pymc.sampling_jax import (
     _replace_shared_variables,
     get_jaxified_graph,
     get_jaxified_logp,
-    sample_numpyro_nuts,
     sample_blackjax_nuts,
+    sample_numpyro_nuts,
 )
 
 
@@ -23,7 +23,8 @@ from pymc.sampling_jax import (
     [
         sample_blackjax_nuts,
         sample_numpyro_nuts,
-    ])
+    ],
+)
 def test_transform_samples(sampler):
     aesara.config.on_opt_error = "raise"
     np.random.seed(13244)
@@ -58,7 +59,8 @@ def test_transform_samples(sampler):
     [
         sample_blackjax_nuts,
         sample_numpyro_nuts,
-    ])
+    ],
+)
 def test_deterministic_samples(sampler):
     aesara.config.on_opt_error = "raise"
     np.random.seed(13244)
@@ -133,7 +135,8 @@ def test_get_jaxified_logp():
     [
         sample_blackjax_nuts,
         sample_numpyro_nuts,
-    ])
+    ],
+)
 @pytest.mark.parametrize(
     "idata_kwargs",
     [
