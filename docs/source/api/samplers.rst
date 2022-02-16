@@ -30,6 +30,8 @@ HMC family
 
    NUTS
    HamiltonianMC
+   sampling_jax.sample_blackjax_nuts
+   sampling_jax.sample_numpyro_nuts
 
 Metropolis family
 -----------------

@@ -188,6 +188,45 @@ def sample_blackjax_nuts(
     chain_method="parallel",
     idata_kwargs=None,
 ):
+    """Draw samples from the posterior using the NUTS method from the blackjax library.
+
+    Parameters
+    ----------
+    draws : int
+        The number of samples to draw. Defaults to 1000. The number of tuned samples are discarded
+        by default.
+    tune : int
+        Number of iterations to tune, defaults to 1000. Samplers adjust the step sizes, scalings or
+        similar during tuning. Tuning samples will be drawn in addition to the number specified in
+        the ``draws`` argument.
+    chains : int
+        The number of chains to sample. Defaults to 4.
+    target_accept : float in [0, 1].
+        The step size is tuned such that we approximate this acceptance rate. Higher values like
+        0.9 or 0.95 often work better for problematic posteriors.
+    random_seed : int
+        Random seed used by the sampling steps.
+    model : Model (optional if in ``with`` context)
+        Model to sample from. The model needs to have free random variables.
+    var_names : Iterable[str]
+        Names of variables for which to compute the posterior samples.
+    progress_bar : bool, optional default=True
+        Whether or not to display a progress bar in the command line. The bar shows the percentage
+        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
+        time until completion ("expected time of arrival"; ETA).
+    keep_untransformed : bool, optional default=False
+        Include untransformed variables in the posterior samples. Defaults to False.
+    chain_method : str
+        Specify how samples should be drawn. The choices include "parallel", and
+        "vectorized". Defaults to "parallel".
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
+    Returns
+    -------
+    trace : arviz.InferenceData
+        ArviZ ``InferenceData`` object that contains the samples.
+    """
+
     model = modelcontext(model)
 
     if var_names is None:
@@ -298,6 +337,45 @@ def sample_numpyro_nuts(
     chain_method="parallel",
     idata_kwargs=None,
 ):
+    """Draw samples from the posterior using the NUTS method from the numpyro library.
+
+    Parameters
+    ----------
+    draws : int
+        The number of samples to draw. Defaults to 1000. The number of tuned samples are discarded
+        by default.
+    tune : int
+        Number of iterations to tune, defaults to 1000. Samplers adjust the step sizes, scalings or
+        similar during tuning. Tuning samples will be drawn in addition to the number specified in
+        the ``draws`` argument.
+    chains : int
+        The number of chains to sample. Defaults to 4.
+    target_accept : float in [0, 1].
+        The step size is tuned such that we approximate this acceptance rate. Higher values like
+        0.9 or 0.95 often work better for problematic posteriors.
+    random_seed : int
+        Random seed used by the sampling steps.
+    model : Model (optional if in ``with`` context)
+        Model to sample from. The model needs to have free random variables.
+    var_names : Iterable[str]
+        Names of variables for which to compute the posterior samples.
+    progress_bar : bool, optional default=True
+        Whether or not to display a progress bar in the command line. The bar shows the percentage
+        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
+        time until completion ("expected time of arrival"; ETA).
+    keep_untransformed : bool, optional default=False
+        Include untransformed variables in the posterior samples. Defaults to False.
+    chain_method : str
+        Specify how samples should be drawn. The choices include "sequential", "parallel", and
+        "vectorized". Defaults to "parallel".
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
+    Returns
+    -------
+    trace : arviz.InferenceData
+        ArviZ ``InferenceData`` object that contains the samples.
+    """
+
     from numpyro.infer import MCMC, NUTS
 
     model = modelcontext(model)
