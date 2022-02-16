@@ -29,6 +29,7 @@ dependencies:
 - sphinx-notfound-page
 - sphinx>=1.5
 - typing-extensions>=3.7.4
+- watermark
 - pip:
   - polyagamma
   - sphinx-design

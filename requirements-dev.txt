@@ -25,3 +25,4 @@ sphinx-notfound-page
 sphinx-remove-toctrees
 sphinx>=1.5
 typing-extensions>=3.7.4
+watermark
