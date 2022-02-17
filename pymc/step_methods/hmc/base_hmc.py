@@ -157,8 +157,9 @@ class BaseHMC(GradientSharedStep):
 
         if not np.isfinite(start.energy):
             model = self._model
-            check_test_point = model.point_logps()
-            error_logp = check_test_point.loc[
+            check_test_point_dict = model.point_logps()
+            check_test_point = np.asarray(list(check_test_point_dict.values()))
+            error_logp = check_test_point[
                 (np.abs(check_test_point) >= 1e20) | np.isnan(check_test_point)
             ]
             self.potential.raise_ok(q0.point_map_info)
