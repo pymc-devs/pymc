@@ -37,4 +37,5 @@ examples/pymc_overview
 examples/GLM_linear
 examples/model_comparison
 examples/posterior_predictive
+examples/dimensionality
 :::
