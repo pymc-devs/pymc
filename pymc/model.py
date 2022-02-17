@@ -46,7 +46,6 @@ from aesara.tensor.random.opt import local_subtensor_rv_lift
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorVariable
-from pandas import Series
 
 from pymc.aesaraf import (
     compile_pymc,
@@ -1673,7 +1672,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             initial_eval = self.point_logps(point=elem)
 
-            if not np.all(np.isfinite(initial_eval)):
+            if not all(np.isfinite(v) for v in initial_eval.values()):
                 raise SamplingError(
                     "Initial evaluation of model at starting point failed!\n"
                     f"Starting values:\n{elem}\n\n"
@@ -1700,24 +1699,21 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Returns
         -------
-        Pandas Series
+        log_probability_of_point : dict
+            Log probability of `point`.
         """
         if point is None:
             point = self.compute_initial_point()
 
         factors = self.basic_RVs + self.potentials
-        return Series(
-            {
-                factor.name: np.round(np.asarray(factor_logp), round_vals)
-                for factor, factor_logp in zip(
-                    factors,
-                    self.compile_fn([at.sum(factor) for factor in self.logpt(factors, sum=False)])(
-                        point
-                    ),
-                )
-            },
-            name="Point log-probability",
-        )
+        factor_logps_fn = [at.sum(factor) for factor in self.logpt(factors, sum=False)]
+        return {
+            factor.name: np.round(np.asarray(factor_logp), round_vals)
+            for factor, factor_logp in zip(
+                factors,
+                self.compile_fn(factor_logps_fn)(point),
+            )
+        }
 
 
 # this is really disgusting, but it breaks a self-loop: I can't pass Model
