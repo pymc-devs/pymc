@@ -66,4 +66,4 @@ repos:
       files: ^docs/source/
       entry: 'docs.pymc.io'
       language: pygrep
-      types_or: [markdown, rst]
+      types_or: [markdown, rst, jupyter]
