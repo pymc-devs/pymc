@@ -614,7 +614,7 @@ def Data(
     :func:`pymc.Model.set_data`.
 
     For more information, take a look at this example notebook
-    https://docs.pymc.io/notebooks/data_container.html
+    https://docs.pymc.io/projects/examples/en/latest/pymc3_howto/data_container.html
     """
     if isinstance(value, list):
         value = np.array(value)
