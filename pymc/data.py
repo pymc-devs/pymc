@@ -578,20 +578,26 @@ def Data(
         The name for this variable.
     value : list or ndarray or pd.Series, pd.Dataframe
         A value to associate with this variable.
-    dims : str or tuple of str, optional, default=None
+    dims : str or tuple of str, optional
         Dimension names of the random variables (as opposed to the shapes of these
         random variables). Use this when ``value`` is a pandas Series or DataFrame. The
         ``dims`` will then be the name of the Series / DataFrame's columns. See ArviZ
         documentation for more information about dimensions and coordinates:
         :ref:`arviz:quickstart`.
+        If this parameter is not specified, the random variables will not have dimension
+        names.
     export_index_as_coords : bool, default=False
         If True, the ``Data`` container will try to infer what the coordinates should be
         if there is an index in ``value``.
     mutable : bool, optional
-        Switches between creating a ``SharedVariable`` (``mutable=True``, default)
-        vs. creating a ``TensorConstant`` (``mutable=False``).
-        Consider using ``pm.ConstantData`` or ``pm.MutableData`` as less verbose
-        alternatives to ``pm.Data(..., mutable=...)``.
+        Switches between creating a :class:`~aesara.compile.sharedvalue.SharedVariable`
+        (``mutable=True``) vs. creating a :class:`~aesara.tensor.TensorConstant`
+        (``mutable=False``).
+        Consider using :class:`pymc.ConstantData` or :class:`pymc.MutableData` as less
+        verbose alternatives to ``pm.Data(..., mutable=...)``.
+        If this parameter is not specified, the value it takes will depend on the
+        version of the package. Since ``v4.1.0`` the default value is
+        ``mutable=False``, with previous versions having ``mutable=True``.
     **kwargs : dict, optional
         Extra arguments passed to :func:`aesara.shared`.
 
