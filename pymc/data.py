@@ -571,7 +571,7 @@ def Data(
     To set the value of the data container variable, check out
     :func:`pymc.Model.set_data`.
 
-    For more information, read the notebook :ref:`nb:data_container`
+    For more information, read the notebook :ref:`nb:data_container`.
 
     Parameters
     ----------
