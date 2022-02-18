@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import os
 import re
 
 from codecs import open
@@ -65,10 +66,26 @@ def get_version():
     raise RuntimeError(f"Unable to find version in {VERSIONFILE}.")
 
 
+VERSION = get_version()
+
+if "BUILD_PYMC_NIGHTLY" in os.environ:
+    nightly = True
+    DISTNAME += "-nightly"
+
+    def get_versions():
+        from datetime import datetime, timezone
+
+        suffix = datetime.now(timezone.utc).strftime(r".dev%Y%m%d")
+        versions = get_version()
+        versions += suffix
+        return versions
+
+    VERSION = get_versions()
+
 if __name__ == "__main__":
     setup(
         name=DISTNAME,
-        version=get_version(),
+        version=VERSION,
         maintainer=AUTHOR,
         maintainer_email=AUTHOR_EMAIL,
         description=DESCRIPTION,
