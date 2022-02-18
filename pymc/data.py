@@ -565,6 +565,12 @@ def Data(
     is registered as a ``SharedVariable``, enabling it to be altered
     in value and shape, but NOT in dimensionality using ``pm.set_data()``.
 
+    To set the value of the data container variable, check out
+    :func:`pymc.Model.set_data`.
+
+    For more information, take a look at this example notebook
+    https://docs.pymc.io/projects/examples/en/latest/pymc3_howto/data_container.html
+
     Parameters
     ----------
     name : str
@@ -590,7 +596,6 @@ def Data(
 
     Examples
     --------
-
     >>> import pymc as pm
     >>> import numpy as np
     >>> # We generate 10 datasets
@@ -609,12 +614,6 @@ def Data(
     ...         # Switch out the observed dataset
     ...         model.set_data('data', data_vals)
     ...         idatas.append(pm.sample())
-
-    To set the value of the data container variable, check out
-    :func:`pymc.Model.set_data`.
-
-    For more information, take a look at this example notebook
-    https://docs.pymc.io/projects/examples/en/latest/pymc3_howto/data_container.html
     """
     if isinstance(value, list):
         value = np.array(value)
