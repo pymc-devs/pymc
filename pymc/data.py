@@ -516,7 +516,8 @@ def ConstantData(
 ) -> TensorConstant:
     """Alias for ``pm.Data(..., mutable=False)``.
 
-    Registers the ``value`` as a ``TensorConstant`` with the model.
+    Registers the ``value`` as a :class:`~aesara.tensor.TensorConstant` with the model.
+    For more information, please reference :class:`pymc.Data`.
     """
     return Data(
         name,
@@ -538,7 +539,8 @@ def MutableData(
 ) -> SharedVariable:
     """Alias for ``pm.Data(..., mutable=True)``.
 
-    Registers the ``value`` as a ``SharedVariable`` with the model.
+    Registers the ``value`` as a :class:`~aesara.compile.sharedvalue.SharedVariable`
+    with the model. For more information, please reference :class:`pymc.Data`.
     """
     return Data(
         name,
