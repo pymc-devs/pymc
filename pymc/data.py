@@ -579,13 +579,13 @@ def Data(
         A value to associate with this variable.
     dims : str or tuple of str, optional, default=None
         Dimension names of the random variables (as opposed to the shapes of these
-        random variables). Use this when `value` is a pandas Series or DataFrame. The
-        `dims` will then be the name of the Series / DataFrame's columns. See ArviZ
+        random variables). Use this when ``value`` is a pandas Series or DataFrame. The
+        ``dims`` will then be the name of the Series / DataFrame's columns. See ArviZ
         documentation for more information about dimensions and coordinates:
         :ref:`arviz:quickstart`.
     export_index_as_coords : bool, default=False
-        If True, the `Data` container will try to infer what the coordinates should be
-        if there is an index in `value`.
+        If True, the ``Data`` container will try to infer what the coordinates should be
+        if there is an index in ``value``.
     mutable : bool, optional
         Switches between creating a ``SharedVariable`` (``mutable=True``, default)
         vs. creating a ``TensorConstant`` (``mutable=False``).
