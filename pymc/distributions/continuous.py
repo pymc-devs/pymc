@@ -499,6 +499,7 @@ class Normal(Continuous):
        \tau = \dfrac{1}{\sigma^2}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -524,11 +525,11 @@ class Normal(Continuous):
 
     Parameters
     ----------
-    mu: float
-        Mean.
-    sigma: float
+    mu : float
+        Mean. Defaults to 0.
+    sigma : float
         Standard deviation (sigma > 0) (only required if tau is not specified).
-    tau: float
+    tau : float
         Precision (tau > 0) (only required if sigma is not specified).
 
     Examples
@@ -573,9 +574,13 @@ class Normal(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or `TensorVariable`
+        value : numeric or ndarray or TensorVariable
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or `TensorVariable`.
+        mu : float
+            Mean. Defaults to 0.
+        sigma : float
+            Standard deviation (sigma > 0).
 
         Returns
         -------
