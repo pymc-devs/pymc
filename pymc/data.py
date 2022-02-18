@@ -562,8 +562,9 @@ def Data(
     """Data container that registers a data variable with the model.
 
     Depending on the ``mutable`` setting (default: True), the variable
-    is registered as a ``SharedVariable``, enabling it to be altered
-    in value and shape, but NOT in dimensionality using ``pm.set_data()``.
+    is registered as a :class:`~aesara.compile.sharedvalue.SharedVariable`,
+    enabling it to be altered in value and shape, but NOT in dimensionality using
+    :func:`pymc.set_data`.
 
     To set the value of the data container variable, check out
     :func:`pymc.Model.set_data`.
