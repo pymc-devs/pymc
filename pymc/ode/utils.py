@@ -105,15 +105,15 @@ def augment_system(ode_func, n_states, n_theta):
     yhat = ode_func(t_y, t_t, t_p[n_states:])
     if isinstance(yhat, at.TensorVariable):
         t_yhat = at.atleast_1d(yhat)
-        if t_yhat.ndim > 1:
-            raise ValueError(
-                f"The odefunc returned a {yhat.ndim}-dimensional tensor, but 0 or 1 dimensions were expected."
-            )
     else:
         # Stack the results of the ode_func into a single tensor variable
         if not isinstance(yhat, (list, tuple)):
             yhat = (yhat,)
         t_yhat = at.stack(yhat, axis=0)
+    if t_yhat.ndim > 1:
+        raise ValueError(
+            f"The odefunc returned a {yhat.ndim}-dimensional tensor, but 0 or 1 dimensions were expected."
+        )
 
     # Now compute gradients
     J = at.jacobian(t_yhat, t_y)
