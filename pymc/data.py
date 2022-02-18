@@ -568,9 +568,9 @@ def Data(
     Parameters
     ----------
     name : str
-        The name for this variable
+        The name for this variable.
     value : list or ndarray or pd.Series, pd.Dataframe
-        A value to associate with this variable
+        A value to associate with this variable.
     mutable : bool, optional
         Switches between creating a ``SharedVariable`` (``mutable=True``, default)
         vs. creating a ``TensorConstant`` (``mutable=False``).
