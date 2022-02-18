@@ -60,3 +60,10 @@ repos:
       entry: from \.[\.\w]* import
       types: [python]
       language: pygrep
+    - id: no-internal-links
+      name: Check no internal links are in the docs
+      description: 'A quick check for the `docs.pymc.io` inside `docs/source/`'
+      files: ^docs/source/
+      entry: 'docs.pymc.io'
+      language: pygrep
+      types_or: [markdown, rst]
