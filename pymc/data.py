@@ -611,7 +611,7 @@ def Data(
     ...         idatas.append(pm.sample())
 
     To set the value of the data container variable, check out
-    :func:`pymc.model.set_data()`.
+    :func:`pymc.Model.set_data`.
 
     For more information, take a look at this example notebook
     https://docs.pymc.io/notebooks/data_container.html
