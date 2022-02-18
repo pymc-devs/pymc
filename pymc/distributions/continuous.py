@@ -1433,6 +1433,7 @@ class Exponential(PositiveContinuous):
        f(x \mid \lambda) = \lambda \exp\left\{ -\lambda x \right\}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1456,12 +1457,11 @@ class Exponential(PositiveContinuous):
 
     Notes
     -----
-    Logp calculation is defined in aeppl.logprob
-    https://github.com/aesara-devs/aeppl/blob/main/aeppl/logprob.py
+    Logp calculation is defined in `aeppl.logprob <https://github.com/aesara-devs/aeppl/blob/main/aeppl/logprob.py/>`_.
 
     Parameters
     ----------
-    lam: float
+    lam : float
         Rate or inverse scale (lam > 0)
     """
     rv_op = exponential
@@ -1487,7 +1487,7 @@ class Exponential(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : numeric or ndarray or TensorVariable
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
             array or Aesara tensor.
