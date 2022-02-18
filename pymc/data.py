@@ -577,7 +577,7 @@ def Data(
     ----------
     name : str
         The name for this variable.
-    value : array_like or pd.Series, pd.Dataframe
+    value : array_like or pandas.Series, pandas.Dataframe
         A value to associate with this variable.
     dims : str or tuple of str, optional
         Dimension names of the random variables (as opposed to the shapes of these
