@@ -972,11 +972,11 @@ class HyperGeometric(Discrete):
     Parameters
     ----------
     N : integer
-        Total size of the population
+        Total size of the population (N > 0)
     k : integer
-        Number of successful individuals in the population
+        Number of successful individuals in the population (0 <= k <= N)
     n : integer
-        Number of samples drawn from the population
+        Number of samples drawn from the population (0 <= n <= N)
     """
 
     rv_op = hypergeometric
