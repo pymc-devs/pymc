@@ -382,7 +382,7 @@ class Flat(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor
 
@@ -399,7 +399,7 @@ class Flat(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
