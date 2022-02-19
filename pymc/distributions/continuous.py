@@ -1439,6 +1439,7 @@ class Exponential(PositiveContinuous):
        f(x \mid \lambda) = \lambda \exp\left\{ -\lambda x \right\}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1467,8 +1468,8 @@ class Exponential(PositiveContinuous):
 
     Parameters
     ----------
-    lam: float
-        Rate or inverse scale (lam > 0)
+    lam : tensor_like of float
+        Rate or inverse scale (``lam`` > 0)
     """
     rv_op = exponential
 
