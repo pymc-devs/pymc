@@ -2279,13 +2279,13 @@ class Gamma(PositiveContinuous):
 
     Parameters
     ----------
-    alpha : tensor_like or float, optional
+    alpha : tensor_like of float, optional
         Shape parameter (alpha > 0).
-    beta : tensor_like or float, optional
+    beta : tensor_like of float, optional
         Rate parameter (beta > 0).
-    mu : tensor_like or float, optional
+    mu : tensor_like of float, optional
         Alternative shape parameter (mu > 0).
-    sigma : tensor_like or float, optional
+    sigma : tensor_like of float, optional
         Alternative scale parameter (sigma > 0).
     """
     rv_op = gamma
