@@ -532,7 +532,6 @@ class Normal(Continuous):
         Defaults to 1 if neither sigma nor tau is specified.
     tau : tensor_like of float, optional
         Precision (tau > 0) (only required if sigma is not specified).
-        Defaults to 1 if neither sigma nor tau is specified.
 
     Examples
     --------
