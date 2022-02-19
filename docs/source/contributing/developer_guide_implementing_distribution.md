@@ -23,7 +23,7 @@ This guide does not attempt to explain the rationale behind the `Distributions` 
 {class}`~aesara.tensor.random.op.RandomVariable` are responsible for implementing the random sampling methods, which in version 3 of PyMC used to be one of the standard `Distribution` methods, alongside `logp` and `logcdf`.
 The `RandomVariable` is also responsible for parameter broadcasting and shape inference.
 
-Before creating a new `RandomVariable` make sure that it is not offered in the [Numpy library](https://numpy.org/doc/stable/reference/random/generator.html#distributions).
+Before creating a new `RandomVariable` make sure that it is not offered in the {mod}`Numpy library <numpy.random>`.
 If it is, it should be added to the {doc}`Aesara library <aesara>` first and then imported into the PyMC library.
 
 In addition, it might not always be necessary to implement a new `RandomVariable`.
