@@ -500,7 +500,7 @@ def determine_coords(model, value, dims: Optional[Sequence[str]] = None) -> Dict
         for size, dim in zip(value.shape, dims):
             coord = model.coords.get(dim, None)
             if coord is None:
-                coords[dim] = list(range(size))
+                coords[dim] = range(size)
 
     return coords
 
