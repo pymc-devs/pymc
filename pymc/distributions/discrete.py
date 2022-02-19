@@ -971,11 +971,11 @@ class HyperGeometric(Discrete):
 
     Parameters
     ----------
-    N : integer
+    N : integer, array_like or TensorVariable
         Total size of the population (N > 0)
-    k : integer
+    k : integer, array_like or TensorVariable
         Number of successful individuals in the population (0 <= k <= N)
-    n : integer
+    n : integer, array_like or TensorVariable
         Number of samples drawn from the population (0 <= n <= N)
     """
 
