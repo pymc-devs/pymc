@@ -25,7 +25,6 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 import aesara
 import aesara.tensor as at
 import numpy as np
-import pandas as pd
 
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Apply
@@ -472,7 +471,7 @@ def determine_coords(model, value, dims: Optional[Sequence[str]] = None) -> Dict
     coords = {}
 
     # If value is a df or a series, we interpret the index as coords:
-    if isinstance(value, (pd.Series, pd.DataFrame)):
+    if hasattr(value, "index"):
         dim_name = None
         if dims is not None:
             dim_name = dims[0]
@@ -482,7 +481,7 @@ def determine_coords(model, value, dims: Optional[Sequence[str]] = None) -> Dict
             coords[dim_name] = value.index
 
     # If value is a df, we also interpret the columns as coords:
-    if isinstance(value, pd.DataFrame):
+    if hasattr(value, "columns"):
         dim_name = None
         if dims is not None:
             dim_name = dims[1]
@@ -501,7 +500,7 @@ def determine_coords(model, value, dims: Optional[Sequence[str]] = None) -> Dict
         for size, dim in zip(value.shape, dims):
             coord = model.coords.get(dim, None)
             if coord is None:
-                coords[dim] = pd.RangeIndex(size, name=dim)
+                coords[dim] = range(size)
 
     return coords
 
