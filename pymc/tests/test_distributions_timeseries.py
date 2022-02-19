@@ -58,9 +58,9 @@ def test_grw_rv_op_vector_steps():
     steps = 4
 
     grw = gaussianrandomwalk(mu, sd, init, steps, size=1).eval()
-    np.testing.assert_almost_equal(grw[-1], 13, decimal=4)
+    np.testing.assert_almost_equal(grw[:, -1], 13, decimal=4)
 
-    assert grw.shape[0] == steps + 1
+    assert grw.shape[-1] == steps + 1
 
 
 def test_grw_logp():

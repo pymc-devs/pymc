@@ -44,24 +44,16 @@ class GaussianRandomWalkRV(RandomVariable):
 
     name = "GaussianRandomWalk"
     ndim_supp = 1
-    ndims_params = [0, 0, 0]
+    ndims_params = [0, 0, 0, 0]
     dtype = "floatX"
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
 
     def _shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
+        # This function is breaking everything
         mu, sigma, init, steps = dist_params[:4]
 
-        # TODO: Figure out why parameter defaulting doesn't work
-        # test_distributions_timeseries.py::test_grw_rv_op_scalar_size fails without this
-        try:
-            size = dist_params[4]
-        except IndexError:
-            size = None
-
-        if size is None:
-            return (steps + 1,)
-        else:
-            return (size, steps + 1)
+        # TODO: Ask ricardo why this is correct. Isn't shape different if size is passed?
+        return (steps + 1,)
 
     @classmethod
     def rng_fn(
@@ -112,9 +104,11 @@ class GaussianRandomWalkRV(RandomVariable):
             steps_size = steps
 
         # If size is None then the returned series should be (size, 1+steps)
+
+        # TODO: Ask Ricardo how size is known to be a tuple? Its int above
         else:
-            init_size = (size, 1)
-            steps_size = (size, steps)
+            init_size = (*size, 1)
+            steps_size = (*size, steps)
 
         init_val = rng.normal(init, sigma, size=init_size)
         steps = rng.normal(loc=mu, scale=sigma, size=steps_size)
