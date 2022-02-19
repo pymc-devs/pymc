@@ -289,7 +289,7 @@ class Distribution(metaclass=DistributionMeta):
             functools.partial(str_for_dist, formatting="latex"), rv_out
         )
 
-        rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
+        rv_out.logp = _make_nice_attr_error("pm.logp(rv,x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
         rv_out.random = _make_nice_attr_error("rv.random()", "rv.eval()")
         return rv_out
@@ -382,7 +382,7 @@ class Distribution(metaclass=DistributionMeta):
             rv_out.update = (rng, new_rng)
             rng.default_update = new_rng
 
-        rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
+        rv_out.logp = _make_nice_attr_error("pm.logp(rv,x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
         rv_out.random = _make_nice_attr_error("rv.random()", "rv.eval()")
         return rv_out
