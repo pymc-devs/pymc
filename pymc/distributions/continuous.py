@@ -525,12 +525,12 @@ class Normal(Continuous):
 
     Parameters
     ----------
-    mu : float or array_like or TensorVariable, default 0
+    mu : tensor_like of float, default 0
         Mean.
-    sigma : float or array_like or TensorVariable, optional
+    sigma : tensor_like of float, optional
         Standard deviation (sigma > 0) (only required if tau is not specified).
         Defaults to 1 if neither sigma nor tau is specified.
-    tau : float or array_like or TensorVariable, optional
+    tau : tensor_like of float, optional
         Precision (tau > 0) (only required if sigma is not specified).
         Defaults to 1 if neither sigma nor tau is specified.
 
@@ -576,12 +576,12 @@ class Normal(Continuous):
 
         Parameters
         ----------
-        value : float or ndarray or TensorVariable
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or `TensorVariable`.
-        mu : float or array_like or TensorVariable
-            Mean. Defaults to 0.
-        sigma : float or array_like or TensorVariable
+        mu : tensor_like of float
+            Mean.
+        sigma : tensor_like of float
             Standard deviation (sigma > 0).
 
         Returns
