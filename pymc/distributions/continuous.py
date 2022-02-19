@@ -2271,13 +2271,13 @@ class Gamma(PositiveContinuous):
 
     Parameters
     ----------
-    alpha: float
+    alpha : float, optional
         Shape parameter (alpha > 0).
-    beta: float
+    beta : float, optional
         Rate parameter (beta > 0).
-    mu: float
+    mu : float, optional
         Alternative shape parameter (mu > 0).
-    sigma: float
+    sigma : float, optional
         Alternative scale parameter (sigma > 0).
     """
     rv_op = gamma
@@ -2332,10 +2332,13 @@ class Gamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or `TensorVariable`
+        value : numeric or ndarray or TensorVariable
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
             array or `TensorVariable`.
+        alpha : float
+            Shape parameter (alpha > 0).
+        inv_beta:
 
         Returns
         -------
