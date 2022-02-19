@@ -2237,6 +2237,7 @@ class Gamma(PositiveContinuous):
            \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2271,13 +2272,13 @@ class Gamma(PositiveContinuous):
 
     Parameters
     ----------
-    alpha : float, optional
+    alpha : tensor_like or float, optional
         Shape parameter (alpha > 0).
-    beta : float, optional
+    beta : tensor_like or float, optional
         Rate parameter (beta > 0).
-    mu : float, optional
+    mu : tensor_like or float, optional
         Alternative shape parameter (mu > 0).
-    sigma : float, optional
+    sigma : tensor_like or float, optional
         Alternative scale parameter (sigma > 0).
     """
     rv_op = gamma
@@ -2332,13 +2333,10 @@ class Gamma(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric or ndarray or TensorVariable
+        value : tensor_like
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
             array or `TensorVariable`.
-        alpha : float
-            Shape parameter (alpha > 0).
-        inv_beta:
 
         Returns
         -------
