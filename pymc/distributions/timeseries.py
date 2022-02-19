@@ -185,19 +185,19 @@ class GaussianRandomWalk(distribution.Continuous):
 
     Parameters
     ----------
-    mu : TensorVariable, optional
+    mu : tensor_like of float, default 0
         innovation drift, defaults to 0.0
         For vector valued `mu`, first dimension must match shape of the random walk, and
         the first element will be discarded (since there is no innovation in the first timestep)
-    sigma : TensorVariable, optional
+    sigma : tensor_like of float, optional
         `sigma` > 0, innovation standard deviation (only required if `tau` is not specified)
         For vector valued `sigma`, first dimension must match shape of the random walk, and
         the first element will be discarded (since there is no innovation in the first timestep)
-    tau : TensorVariable, optional
+    tau : tensor_like of float, optional
         `tau` > 0, innovation precision (only required if `sigma` is not specified)
         For vector valued `tau`, first dimension must match shape of the random walk, and
         the first element will be discarded (since there is no innovation in the first timestep)
-    init : distribution, optional
+    init : pymc.Distribution, optional
         distribution for initial value (Defaults to Flat())
     """
 
@@ -250,7 +250,7 @@ class GaussianRandomWalk(distribution.Continuous):
 
         Parameters
         ----------
-        Point : dict, optional
+        point : dict or Point, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
         size : int, optional
