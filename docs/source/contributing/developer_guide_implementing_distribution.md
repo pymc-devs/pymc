@@ -24,7 +24,7 @@ This guide does not attempt to explain the rationale behind the `Distributions` 
 The `RandomVariable` is also responsible for parameter broadcasting and shape inference.
 
 Before creating a new `RandomVariable` make sure that it is not offered in the [Numpy library](https://numpy.org/doc/stable/reference/random/generator.html#distributions).
-If it is, it should be added to the [Aesara library](https://github.com/aesara-devs/aesara) first and then imported into the PyMC library.
+If it is, it should be added to the {doc}`Aesara library <aesara>` first and then imported into the PyMC library.
 
 In addition, it might not always be necessary to implement a new `RandomVariable`.
 For example if the new `Distribution` is just a special parametrization of an existing `Distribution`.
