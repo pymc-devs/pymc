@@ -1004,9 +1004,9 @@ class HyperGeometric(Discrete):
         value : numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor
-        good : integer
+        good : integer, array_like or TensorVariable
             Number of successful individuals in the population. Alias for parameter :math:`k`.
-        bad : integer
+        bad : integer, array_like or TensorVariable
             Number of unsuccessful individuals in the population. Alias for :math:`N-k`.
 
         Returns
