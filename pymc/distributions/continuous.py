@@ -2340,7 +2340,7 @@ class Gamma(PositiveContinuous):
 
         Parameters
         ----------
-        value : tensor_like
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
             array or `TensorVariable`.
@@ -2372,6 +2372,7 @@ class InverseGamma(PositiveContinuous):
            \exp\left(\frac{-\beta}{x}\right)
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2398,13 +2399,13 @@ class InverseGamma(PositiveContinuous):
 
     Parameters
     ----------
-    alpha: float
+    alpha : tensor_like of float, optional
         Shape parameter (alpha > 0).
-    beta: float
+    beta : tensor_like of float, optional
         Scale parameter (beta > 0).
-    mu: float
+    mu : tensor_like of float, optional
         Alternative shape parameter (mu > 0).
-    sigma: float
+    sigma : tensor_like of float, optional
         Alternative scale parameter (sigma > 0).
     """
     rv_op = invgamma
@@ -2460,14 +2461,19 @@ class InverseGamma(PositiveContinuous):
 
     def logcdf(value, alpha, beta):
         """
-        Compute the log of the cumulative distribution function for Inverse Gamma distribution
-        at the specified value.
+        Compute the log of the cumulative distribution function for Inverse Gamma
+        distribution at the specified value.
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara
+            tensor.
+        alpha : tensor_like of float
+            Shape parameter (alpha > 0).
+        beta : tensor_like of float
+            Scale parameter (beta > 0).
 
         Returns
         -------
