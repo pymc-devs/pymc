@@ -1,10 +1,11 @@
-name: Nightly
+name: nightly
+
 on:
   schedule:
     - cron: "0 0 * * *"
 
 jobs:
-  build_and_publish:
+  build-and-publish-nightly:
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
@@ -28,7 +29,7 @@ jobs:
           user: __token__
           password: ${{ secrets.nightly_pypi_secret }}
   test-install-job:
-    needs: release-job
+    needs: build-and-publish-nightly
     runs-on: ubuntu-latest
     steps:
     - name: Set up Python
