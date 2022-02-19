@@ -1461,8 +1461,8 @@ class Exponential(PositiveContinuous):
 
     Parameters
     ----------
-    lam: float
-        Rate or inverse scale (lam > 0)
+    lam : float
+        Rate or inverse scale (`lam` > 0)
     """
     rv_op = exponential
 
