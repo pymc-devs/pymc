@@ -75,6 +75,7 @@ numpydoc_xref_aliases = {
     "MultiTrace": ":class:`~pymc.backends.base.MultiTrace`",
     "BaseTrace": ":class:`~pymc.backends.base.BaseTrace`",
     "Point": ":class:`~pymc.Point`",
+    "Model": ":class:`~pymc.Model`",
     "SMC_kernel": ":ref:`SMC Kernel <smc_kernels>`",
     "Aesara_Op": ":class:`Aesara Op <aesara.graph.op.Op>`",
     "tensor_like": ":term:`tensor_like`",
