@@ -34,7 +34,7 @@ class Kernel(TestFunction):
 class RBF(Kernel):
     def __call__(self, X):
         XY = X.dot(X.T)
-        x2 = at.sum(X ** 2, axis=1).dimshuffle(0, "x")
+        x2 = at.sum(X**2, axis=1).dimshuffle(0, "x")
         X2e = at.repeat(x2, X.shape[0], axis=1)
         H = X2e + X2e.T - 2.0 * XY
 

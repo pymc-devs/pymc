@@ -314,7 +314,7 @@ class TestSimulator(SeededTest):
         assert abs(self.data.std() - trace["b"].mean()) < 0.05
 
         assert pr_p["s"].shape == (1000, 1000)
-        assert abs(0 - pr_p["s"].mean()) < 0.10
+        assert abs(0 - pr_p["s"].mean()) < 0.15
         assert abs(1.4 - pr_p["s"].std()) < 0.10
 
         assert po_p["s"].shape == (1000, 1000)

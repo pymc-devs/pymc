@@ -32,7 +32,7 @@ def simple_model():
     with Model() as model:
         Normal("x", mu, tau=tau, size=2, initval=floatX_array([0.1, 0.1]))
 
-    return model.compute_initial_point(), model, (mu, tau ** -0.5)
+    return model.compute_initial_point(), model, (mu, tau**-0.5)
 
 
 def simple_categorical():
@@ -52,7 +52,7 @@ def multidimensional_model():
     with Model() as model:
         Normal("x", mu, tau=tau, size=(3, 2), initval=0.1 * np.ones((3, 2)))
 
-    return model.compute_initial_point(), model, (mu, tau ** -0.5)
+    return model.compute_initial_point(), model, (mu, tau**-0.5)
 
 
 def simple_arbitrary_det():

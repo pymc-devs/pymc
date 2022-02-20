@@ -235,7 +235,7 @@ def get_tau_sigma(tau=None, sigma=None):
             else:
                 assert np.all(np.asarray(sigma) > 0)
                 sigma_ = sigma
-            tau = sigma_ ** -2.0
+            tau = sigma_**-2.0
 
     else:
         if sigma is not None:
@@ -247,7 +247,7 @@ def get_tau_sigma(tau=None, sigma=None):
                 assert np.all(np.asarray(tau) > 0)
                 tau_ = tau
 
-            sigma = tau_ ** -0.5
+            sigma = tau_**-0.5
 
     return floatX(tau), floatX(sigma)
 
@@ -382,7 +382,7 @@ class Flat(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor
 
@@ -399,7 +399,7 @@ class Flat(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -450,7 +450,7 @@ class HalfFlat(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor
 
@@ -467,7 +467,7 @@ class HalfFlat(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -499,6 +499,7 @@ class Normal(Continuous):
        \tau = \dfrac{1}{\sigma^2}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -524,11 +525,12 @@ class Normal(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Mean.
-    sigma: float
+    sigma : tensor_like of float, optional
         Standard deviation (sigma > 0) (only required if tau is not specified).
-    tau: float
+        Defaults to 1 if neither sigma nor tau is specified.
+    tau : tensor_like of float, optional
         Precision (tau > 0) (only required if sigma is not specified).
 
     Examples
@@ -573,9 +575,13 @@ class Normal(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or `TensorVariable`
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or `TensorVariable`.
+        mu : tensor_like of float
+            Mean.
+        sigma : tensor_like of float
+            Standard deviation (sigma > 0).
 
         Returns
         -------
@@ -1240,7 +1246,7 @@ class Beta(UnitContinuous):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
-            kappa = mu * (1 - mu) / sigma ** 2 - 1
+            kappa = mu * (1 - mu) / sigma**2 - 1
             alpha = mu * kappa
             beta = (1 - mu) * kappa
         else:
@@ -1375,7 +1381,7 @@ class Kumaraswamy(UnitContinuous):
         -------
         TensorVariable
         """
-        res = at.log(a) + at.log(b) + (a - 1) * at.log(value) + (b - 1) * at.log(1 - value ** a)
+        res = at.log(a) + at.log(b) + (a - 1) * at.log(value) + (b - 1) * at.log(1 - value**a)
         res = at.switch(
             at.or_(at.lt(value, 0), at.gt(value, 1)),
             -np.inf,
@@ -1409,7 +1415,7 @@ class Kumaraswamy(UnitContinuous):
             -np.inf,
             at.switch(
                 at.lt(value, 1),
-                at.log1mexp(b * at.log1p(-(value ** a))),
+                at.log1mexp(b * at.log1p(-(value**a))),
                 0,
             ),
         )
@@ -1433,6 +1439,7 @@ class Exponential(PositiveContinuous):
        f(x \mid \lambda) = \lambda \exp\left\{ -\lambda x \right\}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1461,8 +1468,8 @@ class Exponential(PositiveContinuous):
 
     Parameters
     ----------
-    lam: float
-        Rate or inverse scale (lam > 0)
+    lam : tensor_like of float
+        Rate or inverse scale (``lam`` > 0)
     """
     rv_op = exponential
 
@@ -1608,9 +1615,9 @@ class AsymmetricLaplaceRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, b, kappa, mu, size=None) -> np.ndarray:
         u = rng.uniform(size=size)
-        switch = kappa ** 2 / (1 + kappa ** 2)
+        switch = kappa**2 / (1 + kappa**2)
         non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
-        positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+        positive_x = mu - np.log((1 - u) * (1 + kappa**2)) / (kappa * b)
         draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
         return np.asarray(draws)
 
@@ -1691,7 +1698,7 @@ class AsymmetricLaplace(Continuous):
         TensorVariable
         """
         value = value - mu
-        res = at.log(b / (kappa + (kappa ** -1))) + (
+        res = at.log(b / (kappa + (kappa**-1))) + (
             -value * b * at.sgn(value) * (kappa ** at.sgn(value))
         )
 
@@ -1781,7 +1788,7 @@ class LogNormal(PositiveContinuous):
         return super().dist([mu, sigma], *args, **kwargs)
 
     def get_moment(rv, size, mu, sigma):
-        mean = at.exp(mu + 0.5 * sigma ** 2)
+        mean = at.exp(mu + 0.5 * sigma**2)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
         return mean
@@ -1955,7 +1962,7 @@ class StudentT(Continuous):
         _, sigma = get_tau_sigma(sigma=sigma)
 
         t = (value - mu) / sigma
-        sqrt_t2_nu = at.sqrt(t ** 2 + nu)
+        sqrt_t2_nu = at.sqrt(t**2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
 
         res = at.log(at.betainc(nu / 2.0, nu / 2.0, x))
@@ -2237,6 +2244,7 @@ class Gamma(PositiveContinuous):
            \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2271,13 +2279,13 @@ class Gamma(PositiveContinuous):
 
     Parameters
     ----------
-    alpha: float
+    alpha : tensor_like of float, optional
         Shape parameter (alpha > 0).
-    beta: float
+    beta : tensor_like of float, optional
         Rate parameter (beta > 0).
-    mu: float
+    mu : tensor_like of float, optional
         Alternative shape parameter (mu > 0).
-    sigma: float
+    sigma : tensor_like of float, optional
         Alternative scale parameter (sigma > 0).
     """
     rv_op = gamma
@@ -2307,8 +2315,8 @@ class Gamma(PositiveContinuous):
                 sigma = check_parameters(sigma, sigma > 0, msg="sigma > 0")
             else:
                 assert np.all(np.asarray(sigma) > 0)
-            alpha = mu ** 2 / sigma ** 2
-            beta = mu / sigma ** 2
+            alpha = mu**2 / sigma**2
+            beta = mu / sigma**2
         else:
             raise ValueError(
                 "Incompatible parameterization. Either use "
@@ -2332,7 +2340,7 @@ class Gamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or `TensorVariable`
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
             array or `TensorVariable`.
@@ -2364,6 +2372,7 @@ class InverseGamma(PositiveContinuous):
            \exp\left(\frac{-\beta}{x}\right)
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2390,13 +2399,13 @@ class InverseGamma(PositiveContinuous):
 
     Parameters
     ----------
-    alpha: float
+    alpha : tensor_like of float, optional
         Shape parameter (alpha > 0).
-    beta: float
+    beta : tensor_like of float, optional
         Scale parameter (beta > 0).
-    mu: float
+    mu : tensor_like of float, optional
         Alternative shape parameter (mu > 0).
-    sigma: float
+    sigma : tensor_like of float, optional
         Alternative scale parameter (sigma > 0).
     """
     rv_op = invgamma
@@ -2435,8 +2444,8 @@ class InverseGamma(PositiveContinuous):
                 sigma = check_parameters(sigma, sigma > 0, msg="sigma > 0")
             else:
                 assert np.all(np.asarray(sigma) > 0)
-            alpha = (2 * sigma ** 2 + mu ** 2) / sigma ** 2
-            beta = mu * (mu ** 2 + sigma ** 2) / sigma ** 2
+            alpha = (2 * sigma**2 + mu**2) / sigma**2
+            beta = mu * (mu**2 + sigma**2) / sigma**2
         else:
             raise ValueError(
                 "Incompatible parameterization. Either use "
@@ -2452,14 +2461,19 @@ class InverseGamma(PositiveContinuous):
 
     def logcdf(value, alpha, beta):
         """
-        Compute the log of the cumulative distribution function for Inverse Gamma distribution
-        at the specified value.
+        Compute the log of the cumulative distribution function for Inverse Gamma
+        distribution at the specified value.
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara
+            tensor.
+        alpha : tensor_like of float
+            Shape parameter (alpha > 0).
+        beta : tensor_like of float
+            Scale parameter (beta > 0).
 
         Returns
         -------
@@ -2568,6 +2582,7 @@ class Weibull(PositiveContinuous):
            \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2594,9 +2609,9 @@ class Weibull(PositiveContinuous):
 
     Parameters
     ----------
-    alpha: float
+    alpha : float
         Shape parameter (alpha > 0).
-    beta: float
+    beta : float
         Scale parameter (beta > 0).
     """
 
@@ -2759,8 +2774,8 @@ class HalfStudentT(PositiveContinuous):
             at.log(2)
             + gammaln((nu + 1.0) / 2.0)
             - gammaln(nu / 2.0)
-            - 0.5 * at.log(nu * np.pi * sigma ** 2)
-            - (nu + 1.0) / 2.0 * at.log1p(value ** 2 / (nu * sigma ** 2))
+            - 0.5 * at.log(nu * np.pi * sigma**2)
+            - (nu + 1.0) / 2.0 * at.log1p(value**2 / (nu * sigma**2))
         )
 
         res = at.switch(
@@ -2898,7 +2913,7 @@ class ExGaussian(Continuous):
                 -at.log(nu)
                 + (mu - value) / nu
                 + 0.5 * (sigma / nu) ** 2
-                + normal_lcdf(mu + (sigma ** 2) / nu, sigma, value)
+                + normal_lcdf(mu + (sigma**2) / nu, sigma, value)
             ),
             log_normal(value, mean=mu, sigma=sigma),
         )
@@ -2939,7 +2954,7 @@ class ExGaussian(Continuous):
                 (
                     (mu - value) / nu
                     + 0.5 * (sigma / nu) ** 2
-                    + normal_lcdf(mu + (sigma ** 2) / nu, sigma, value)
+                    + normal_lcdf(mu + (sigma**2) / nu, sigma, value)
                 ),
             ),
             normal_lcdf(mu, sigma, value),
@@ -3103,7 +3118,7 @@ class SkewNormal(Continuous):
         return super().dist([mu, sigma, alpha], *args, **kwargs)
 
     def get_moment(rv, size, mu, sigma, alpha):
-        mean = mu + sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha ** 2) ** 0.5
+        mean = mu + sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha**2) ** 0.5
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
         return mean
@@ -3437,7 +3452,7 @@ class Rice(PositiveContinuous):
         raise ValueError("Rice distribution must specify either nu" " or b.")
 
     def get_moment(rv, size, nu, sigma):
-        nu_sigma_ratio = -(nu ** 2) / (2 * sigma ** 2)
+        nu_sigma_ratio = -(nu**2) / (2 * sigma**2)
         mean = (
             sigma
             * np.sqrt(np.pi / 2)
@@ -3939,7 +3954,7 @@ class Moyal(Continuous):
         TensorVariable
         """
         scaled = (value - mu) / sigma
-        res = at.log(at.erfc(at.exp(-scaled / 2) * (2 ** -0.5)))
+        res = at.log(at.erfc(at.exp(-scaled / 2) * (2**-0.5)))
         return check_parameters(
             res,
             0 < sigma,

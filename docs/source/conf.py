@@ -49,6 +49,7 @@ extensions = [
     "notfound.extension",
     "sphinx_copybutton",
     "sphinx_remove_toctrees",
+    "jupyter_sphinx",
 ]
 
 # Don't auto-generate summary for class members.
@@ -70,11 +71,14 @@ numpydoc_xref_aliases = {
     "ndarray": ":class:`~numpy.ndarray`",
     "Covariance": ":mod:`Covariance <pymc.gp.cov>`",
     "Mean": ":mod:`Mean <pymc.gp.mean>`",
-    "InferenceData": ":class:`arviz.InferenceData`",
+    "InferenceData": ":class:`~arviz.InferenceData`",
     "MultiTrace": ":class:`~pymc.backends.base.MultiTrace`",
     "BaseTrace": ":class:`~pymc.backends.base.BaseTrace`",
     "Point": ":class:`~pymc.Point`",
+    "Model": ":class:`~pymc.Model`",
     "SMC_kernel": ":ref:`SMC Kernel <smc_kernels>`",
+    "Aesara_Op": ":class:`Aesara Op <aesara.graph.op.Op>`",
+    "tensor_like": ":term:`tensor_like`",
 }
 
 # Show the documentation of __init__ and the class docstring
@@ -178,7 +182,7 @@ todo_include_todos = False
 intersphinx_mapping = {
     "arviz": ("https://arviz-devs.github.io/arviz/", None),
     "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
-    "aeppl": ("https://aesara-devs.github.io/aeppl/", None),
+    "aeppl": ("https://aeppl.readthedocs.io/en/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "nb": ("https://pymc-examples.readthedocs.io/en/latest/", None),
     "myst": ("https://myst-parser.readthedocs.io/en/latest", None),

@@ -264,9 +264,9 @@ class TestCovExponentiation:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov1 = pm.gp.cov.ExpQuad(1, 0.1)
-            cov = cov1 ** 2
+            cov = cov1**2
         K = cov(X).eval()
-        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        npt.assert_allclose(K[0, 1], 0.53940**2, atol=1e-3)
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
@@ -277,7 +277,7 @@ class TestCovExponentiation:
             a = np.array([[2]])
             cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
         K = cov(X).eval()
-        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        npt.assert_allclose(K[0, 1], 0.53940**2, atol=1e-3)
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
@@ -288,7 +288,7 @@ class TestCovExponentiation:
             a = at.alloc(2.0, 1, 1)
             cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
         K = cov(X).eval()
-        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        npt.assert_allclose(K[0, 1], 0.53940**2, atol=1e-3)
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
@@ -299,7 +299,7 @@ class TestCovExponentiation:
             a = aesara.shared(2.0)
             cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
         K = cov(X).eval()
-        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        npt.assert_allclose(K[0, 1], 0.53940**2, atol=1e-3)
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
@@ -459,7 +459,7 @@ class TestWhiteNoise:
             cov = pm.gp.cov.WhiteNoise(sigma=0.5)
         K = cov(X).eval()
         npt.assert_allclose(K[0, 1], 0.0, atol=1e-3)
-        npt.assert_allclose(K[0, 0], 0.5 ** 2, atol=1e-3)
+        npt.assert_allclose(K[0, 0], 0.5**2, atol=1e-3)
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)

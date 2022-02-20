@@ -96,7 +96,7 @@ class MeanFieldGroup(Group):
         z0 = self.symbolic_initial
         std = rho2sigma(self.rho)
         logdet = at.log(std)
-        quaddist = -0.5 * z0 ** 2 - at.log((2 * np.pi) ** 0.5)
+        quaddist = -0.5 * z0**2 - at.log((2 * np.pi) ** 0.5)
         logq = quaddist - logdet
         return logq.sum(range(1, logq.ndim))
 
@@ -175,7 +175,7 @@ class FullRankGroup(Group):
         z0 = self.symbolic_initial
         diag = at.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1)
         logdet = at.log(diag)
-        quaddist = -0.5 * z0 ** 2 - at.log((2 * np.pi) ** 0.5)
+        quaddist = -0.5 * z0**2 - at.log((2 * np.pi) ** 0.5)
         logq = quaddist - logdet
         return logq.sum(range(1, logq.ndim))
 

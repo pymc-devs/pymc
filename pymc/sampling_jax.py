@@ -10,11 +10,12 @@ xla_flags = os.getenv("XLA_FLAGS", "")
 xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
 os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
 
+from datetime import datetime
+
 import aesara.tensor as at
 import arviz as az
 import jax
 import numpy as np
-import pandas as pd
 
 from aeppl.logprob import CheckParameterValue
 from aesara.compile import SharedVariable, Supervisor, mode
@@ -174,7 +175,7 @@ def sample_numpyro_nuts(
     else:
         dims = {}
 
-    tic1 = pd.Timestamp.now()
+    tic1 = datetime.now()
     print("Compiling...", file=sys.stdout)
 
     rv_names = [rv.name for rv in model.value_vars]
@@ -202,7 +203,7 @@ def sample_numpyro_nuts(
         progress_bar=progress_bar,
     )
 
-    tic2 = pd.Timestamp.now()
+    tic2 = datetime.now()
     print("Compilation time = ", tic2 - tic1, file=sys.stdout)
 
     print("Sampling...", file=sys.stdout)
@@ -231,7 +232,7 @@ def sample_numpyro_nuts(
 
     raw_mcmc_samples = pmap_numpyro.get_samples(group_by_chain=True)
 
-    tic3 = pd.Timestamp.now()
+    tic3 = datetime.now()
     print("Sampling time = ", tic3 - tic2, file=sys.stdout)
 
     print("Transforming variables...", file=sys.stdout)
@@ -241,7 +242,7 @@ def sample_numpyro_nuts(
         result = jax.vmap(jax.vmap(jax_fn))(*raw_mcmc_samples)[0]
         mcmc_samples[v.name] = result
 
-    tic4 = pd.Timestamp.now()
+    tic4 = datetime.now()
     print("Transformation time = ", tic4 - tic3, file=sys.stdout)
 
     if idata_kwargs is None:

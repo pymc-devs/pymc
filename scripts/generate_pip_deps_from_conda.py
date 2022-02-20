@@ -50,8 +50,8 @@ EXCLUDE = {
     "m2w64-toolchain",
     "mkl-service",
     "numba",
-    "scipy",
     "python-graphviz",
+    "blas",
 }
 RENAME = {}
 

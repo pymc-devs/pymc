@@ -23,6 +23,13 @@ API Reference
    api/shape_utils
    api/misc
 
+------------------
+Dimensionality
+------------------
+PyMC provides numerous methods, and syntatic sugar, to easily specify the dimensionality of
+Random Variables in modeling. Refer to {ref}`dimensionality` notebook to see examples
+demonstrating the functionality.
+
 --------------
 API extensions
 --------------

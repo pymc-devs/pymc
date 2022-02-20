@@ -350,7 +350,7 @@ class BinaryMetropolis(ArrayStep):
         q0 = q0.data
 
         # Convert adaptive_scale_factor to a jump probability
-        p_jump = 1.0 - 0.5 ** self.scaling
+        p_jump = 1.0 - 0.5**self.scaling
 
         rand_array = nr.random(q0.shape)
         q = np.copy(q0)

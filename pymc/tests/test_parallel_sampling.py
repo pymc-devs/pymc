@@ -191,7 +191,7 @@ def test_spawn_densitydist_function():
         mu = pm.Normal("mu", 0, 1)
 
         def func(x):
-            return -2 * (x ** 2).sum()
+            return -2 * (x**2).sum()
 
         obs = pm.DensityDist("density_dist", logp=func, observed=np.random.randn(100))
         pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
