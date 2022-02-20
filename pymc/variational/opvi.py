@@ -957,7 +957,7 @@ class Group(WithMemoization):
         if not group:
             raise GroupError("Got empty group")
         if self.local:
-            raise NotImplementedInference("Local inferene aka AEVB is not fully supported in v4")
+            raise NotImplementedInference("Local inferene aka AEVB is not supported in v4")
         if self.batched:
             raise NotImplementedInference("Batched inferene is not supported in v4")
         if self.group is None:
