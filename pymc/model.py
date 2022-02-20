@@ -1691,11 +1691,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        point: Point
+        point: Point, default 'None'
             Point to be evaluated.  If ``None``, then ``model.initial_point``
             is used.
-        round_vals: int
-            Number of decimals to round log-probabilities
+        round_vals: int, default '2'
+            Number of decimals to round log-probabilities.
 
         Returns
         -------
