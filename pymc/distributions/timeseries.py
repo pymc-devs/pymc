@@ -144,11 +144,11 @@ class GaussianRandomWalk(distribution.Continuous):
     @classmethod
     def dist(
         cls,
-        mu: Optional[Union[np.ndarray, float]] = 0.0,
-        sigma: Optional[Union[np.ndarray, float]] = 1.0,
-        init: float = 0.0,
-        steps: int = 0,
-        *args,
+        mu = 0.0,
+        sigma = 1.0,
+        *,
+        steps: int,
+        init = 0.0,
         **kwargs
     ) -> RandomVariable:
 
