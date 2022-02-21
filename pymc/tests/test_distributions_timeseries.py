@@ -34,68 +34,81 @@ from pymc.sampling import sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
 
 
-@pytest.mark.parametrize(
-    "kwargs,expected",
-    [
-        ({"steps": 5}, (6,)),
-        ({"size": 1}, (5,)),
-        ({"size": 2}, (5,)),
-        # implied dims are not working
-        pytest.param({"mu": [0, 0]}, (2, 5), marks=pytest.mark.xfail),
-    ],
-)
-def test_grw_rv_op_shape(kwargs, expected):
-    """Basic test for GRW RV op"""
-    default_kwargs = dict(init=1, mu=3, sd=0.0000001, steps=4, size=None)
+class TestGaussianRandomWalk:
+    @pytest.mark.parametrize(
+        "kwargs,expected",
+        [
+            ({"steps": 5}, (6,)),
+            ({"size": 1}, (5,)),
+            ({"size": 2}, (5,)),
+            # implied dims are not working
+            pytest.param({"mu": [0, 0]}, (2, 5), marks=pytest.mark.xfail),
+        ],
+    )
+    def test_grw_rv_op_shape(self, kwargs, expected):
+        """Basic test for GRW RV op"""
+        default_kwargs = dict(init=1, mu=3, sd=0.0000001, steps=4, size=None)
 
-    combined_kwargs = {**default_kwargs, **kwargs}
-    grw = gaussianrandomwalk(
-        combined_kwargs["mu"],
-        combined_kwargs["sd"],
-        combined_kwargs["init"],
-        combined_kwargs["steps"],
-    ).eval()
+        combined_kwargs = {**default_kwargs, **kwargs}
+        grw = gaussianrandomwalk(
+            combined_kwargs["mu"],
+            combined_kwargs["sd"],
+            combined_kwargs["init"],
+            combined_kwargs["steps"],
+        ).eval()
 
-    assert grw.shape == expected
+        assert grw.shape == expected
 
+    def test_grw_logp(self):
+        vals = [0, 1, 2]
+        mu = 1
+        sigma = 1
+        init = 0
 
-def test_grw_logp():
-    vals = [0, 1, 2]
-    mu = 1
-    sigma = 1
-    init = 0
+        with pm.Model():
+            grw = GaussianRandomWalk("grw", mu, sigma, init, steps=2)
 
-    with pm.Model():
-        grw = GaussianRandomWalk("grw", mu, sigma, init, steps=2)
+        logp = pm.logp(grw, vals)
+        logp_vals = logp.eval()
 
-    logp = pm.logp(grw, vals)
-    logp_vals = logp.eval()
+        # Calculate logp in explicit loop to make testing sequence obvious
+        init_val = vals[0]
+        init_logp = stats.norm(init, sigma).logpdf(init_val)
+        logp_reference = [init_logp]
 
-    # Calculate logp in explicit loop to make testing sequence obvious
-    init_val = vals[0]
-    init_logp = stats.norm(init, sigma).logpdf(init_val)
-    logp_reference = [init_logp]
+        for x_minus_one_val, x_val in zip(vals, vals[1:]):
+            logp_point = stats.norm(x_minus_one_val + mu + init, sigma).logpdf(x_val)
+            logp_reference.append(logp_point)
 
-    for x_minus_one_val, x_val in zip(vals, vals[1:]):
-        logp_point = stats.norm(x_minus_one_val + mu + init, sigma).logpdf(x_val)
-        logp_reference.append(logp_point)
+        np.testing.assert_almost_equal(logp_vals, logp_reference)
 
-    np.testing.assert_almost_equal(logp_vals, logp_reference)
+    def test_grw_inference(self):
+        mu, sigma, steps = 2, 1, 10000
+        obs = np.concatenate([[0], np.random.normal(mu, sigma, size=steps)]).cumsum()
 
+        with pm.Model():
+            _mu = pm.Uniform("mu", -10, 10)
+            _sigma = pm.Uniform("sigma", 0, 10)
+            grw = GaussianRandomWalk("grw", _mu, _sigma, init=0, steps=steps, observed=obs)
+            trace = pm.sample()
 
-def test_grw_inference():
-    mu, sigma, steps = 2, 1, 10000
-    obs = np.concatenate([[0], np.random.normal(mu, sigma, size=steps)]).cumsum()
+        recovered_mu = trace.posterior["mu"].mean()
+        recovered_sigma = trace.posterior["sigma"].mean()
+        np.testing.assert_allclose([mu, sigma], [recovered_mu, recovered_sigma], atol=0.2)
 
-    with pm.Model():
-        _mu = pm.Uniform("mu", -10, 10)
-        _sigma = pm.Uniform("sigma", 0, 10)
-        grw = GaussianRandomWalk("grw", _mu, _sigma, init=0, steps=steps, observed=obs)
-        trace = pm.sample()
-
-    recovered_mu = trace.posterior["mu"].mean()
-    recovered_sigma = trace.posterior["sigma"].mean()
-    np.testing.assert_allclose([mu, sigma], [recovered_mu, recovered_sigma], atol=0.2)
+    @pytest.mark.parametrize(
+        "steps,size,expected",
+        (
+            (1, None, (2,)),
+            (2, 1, (1, 3)),
+            (2, 5, (5, 3)),
+            (10, 5, (5, 11)),
+        ),
+    )
+    def test_grw_shape(self, steps, size, expected):
+        grw_dist = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=steps, size=size)
+        expected_symbolic = tuple(grw_dist.shape.eval())
+        assert expected_symbolic == expected
 
 
 @pytest.mark.xfail(reason="Timeseries not refactored")

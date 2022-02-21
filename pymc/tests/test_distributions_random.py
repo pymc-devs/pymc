@@ -441,20 +441,7 @@ class TestGRW(BaseTestDistributionRandom):
             assert expected_symbolic == expected
 
 
-@pytest.mark.parametrize(
-    "steps,size,expected",
-    (
-        # This one fails due to None being passed to dist but completely confused what is occuring
-        pytest.param(*(1, None, (2,)), marks=pytest.mark.xfail),
-        (2, 1, (1, 3)),
-        (2, 5, (5, 3)),
-        (10, 5, (5, 11)),
-    ),
-)
-def test_grw_shape(steps, size, expected):
-    grw_dist = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=steps, size=size)
-    expected_symbolic = tuple(grw_dist.shape.eval())
-    assert expected_symbolic == expected
+d
 
 
 class TestFlat(BaseTestDistributionRandom):
