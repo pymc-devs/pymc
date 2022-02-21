@@ -152,7 +152,7 @@ class GaussianRandomWalk(distribution.Continuous):
         **kwargs
     ) -> RandomVariable:
 
-        params = [at.as_tensor_variable(param) for param in (mu, sigma, init, steps)]
+        params = [at.as_tensor_variable(floatX(param)) for param in (mu, sigma, init)] + [at.as_tensor_variable(intX(steps))]
 
         return super().dist(params, **kwargs)
 
