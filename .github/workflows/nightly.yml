@@ -40,4 +40,4 @@ jobs:
       run: sleep 240
     - name: Install from PyPI
       run: |
-        pip install pymc-nightly==${GITHUB_REF:11}
+        pip install pymc-nightly==${GITHUB_REF:11}.dev$(date +"%Y%m%d")
