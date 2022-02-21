@@ -58,7 +58,7 @@ test_reqs = ["pytest", "pytest-cov"]
 def get_distname(nightly_build=False):
     distname = "pymc"
     if nightly_build:
-        distname = "{}{}".format(distname, "-nightly")
+        distname = f"{distname}-nightly"
 
     return distname
 
