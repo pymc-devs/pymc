@@ -49,7 +49,6 @@ class GaussianRandomWalkRV(RandomVariable):
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
 
     def _shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
-        # This function is breaking everything
         steps = dist_params[3]
 
         # TODO: Ask ricardo why this is correct. Isn't shape different if size is passed?
@@ -103,9 +102,8 @@ class GaussianRandomWalkRV(RandomVariable):
             init_size = 1
             steps_size = steps
 
-        # If size is None then the returned series should be (size, 1+steps)
-
         # TODO: Ask Ricardo how size is known to be a tuple? Its int above
+        # If size is None then the returned series should be (size, 1+steps)
         else:
             init_size = (*size, 1)
             steps_size = (*size, steps)
@@ -157,7 +155,6 @@ class GaussianRandomWalk(distribution.Continuous):
     ) -> RandomVariable:
 
         params = [at.as_tensor_variable(param) for param in (mu, sigma, init, steps)]
-        # params = [mu, sigma, steps, size]
 
         return super().dist(params, **kwargs)
 
