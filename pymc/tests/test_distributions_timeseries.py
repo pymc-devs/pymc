@@ -83,6 +83,21 @@ def test_grw_logp():
     np.testing.assert_almost_equal(logp_vals, logp_reference)
 
 
+def test_grw_inference():
+    mu, sigma, steps = 2, 1, 10000
+    obs = np.concatenate([[0], np.random.normal(mu, sigma, size=steps)]).cumsum()
+
+    with pm.Model():
+        _mu = pm.Uniform("mu", -10, 10)
+        _sigma = pm.Uniform("sigma", 0, 10)
+        grw = GaussianRandomWalk("grw", _mu, _sigma, init=0, steps=steps, observed=obs)
+        trace = pm.sample()
+
+    recovered_mu = trace.posterior["mu"].mean()
+    recovered_sigma = trace.posterior["sigma"].mean()
+    np.testing.assert_allclose([mu, sigma], [recovered_mu, recovered_sigma], atol=0.2)
+
+
 @pytest.mark.xfail(reason="Timeseries not refactored")
 def test_AR():
     # AR1
