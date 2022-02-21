@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 import aesara.tensor as at
 import numpy as np
@@ -63,7 +63,7 @@ class GaussianRandomWalkRV(RandomVariable):
         sigma: Union[np.ndarray, float],
         init: float,
         steps: int,
-        size: int,
+        size: Tuple[int],
     ) -> np.ndarray:
         """Gaussian Random Walk generator.
 
@@ -332,76 +332,6 @@ class AR(distribution.Continuous):
         init_like = self.init.logp(value[: self.p])
 
         return at.sum(innov_like) + at.sum(init_like)
-
-
-class GaussianRandomWalk(distribution.Continuous):
-    r"""Random Walk with Normal innovations
-
-
-    Notes
-    -----
-    init is currently drawn from a Normal distribution with the same sigma as the innovations
-
-    Parameters
-    ----------
-    mu : tensor_like of float, default 0
-        innovation drift, defaults to 0.0
-    sigma: tensor
-        sigma > 0, innovation standard deviation, defaults to 0.0
-    init: float
-        Mean value of initialization, defaults to 0.0
-    steps: int
-        Number of steps in Gaussian Random Walks
-    size: int
-        Number of independent Gaussian Random Walks
-    """
-
-    rv_op = gaussianrandomwalk
-
-    @classmethod
-    def dist(
-        cls,
-        mu: Optional[Union[np.ndarray, float]] = 0.0,
-        sigma: Optional[Union[np.ndarray, float]] = 1.0,
-        init: float = 0.0,
-        steps: int = 0,
-        size: int = None,
-        *args,
-        **kwargs
-    ) -> RandomVariable:
-
-        return super().dist([mu, sigma, init, steps, size], **kwargs)
-
-    def logp(
-        value: at.Variable,
-        mu: at.Variable,
-        sigma: at.Variable,
-        init: at.Variable,
-    ) -> at.TensorVariable:
-        """Calculate log-probability of Gaussian Random Walk distribution at specified value.
-
-        Parameters
-        ----------
-        value: at.Variable,
-        mu: at.Variable,
-        sigma: at.Variable,
-        init: at.Variable,
-
-        Returns
-        -------
-        TensorVariable
-        """
-
-        # Calculate initialization logp
-        init_logp = pm.logp(Normal.dist(init, sigma), value[0])
-
-        # Make time series stationary around the mean value
-        stationary_series = at.diff(value)
-        series_logp = pm.logp(Normal.dist(mu, sigma), stationary_series)
-
-        total_logp = at.concatenate([at.expand_dims(init_logp, 0), series_logp])
-
-        return total_logp
 
 
 class GARCH11(distribution.Continuous):
