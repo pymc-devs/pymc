@@ -360,10 +360,10 @@ class BaseTestDistributionRandom(SeededTest):
         )
 
     def check_pymc_params_match_rv_op(self):
-        aesera_dist_inputs = self.pymc_rv.get_parents()[0].inputs[3:]
-        assert len(self.expected_rv_op_params) == len(aesera_dist_inputs)
+        aesara_dist_inputs = self.pymc_rv.get_parents()[0].inputs[3:]
+        assert len(self.expected_rv_op_params) == len(aesara_dist_inputs)
         for (expected_name, expected_value), actual_variable in zip(
-            self.expected_rv_op_params.items(), aesera_dist_inputs
+            self.expected_rv_op_params.items(), aesara_dist_inputs
         ):
             assert_almost_equal(expected_value, actual_variable.eval(), decimal=self.decimal)
 
