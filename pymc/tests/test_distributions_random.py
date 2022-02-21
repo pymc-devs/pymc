@@ -315,19 +315,22 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
     )
 
 
-class TestFlat(BaseTestDistributionRandom):
-    pymc_dist = pm.Flat
-    pymc_dist_params = {}
-    expected_rv_op_params = {}
+class TestGaussianRandomWalk(BaseTestDistributionRandom):
+    pymc_dist = pm.GaussianRandomWalk
+    pymc_dist_params = {"mu": 1.0, "steps": 2, "sigma": 3, "init": 1}
+    expected_rv_op_params = {"mu": 1.0, "sigma": 3, "init": 1, "steps": 2}
+    # pymc_dist_params = {"mu": 1.0, "steps": 2, "sigma": 3, "init":1}
+    # reference_dist_params = {"b": 1.0, "kappa": 1.0, "mu": 0.0}
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_inferred_size",
-        "check_not_implemented",
+        # "check_not_implemented",
     ]
 
     def check_rv_inferred_size(self):
         sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
         sizes_expected = [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
+
         for size, expected in zip(sizes_to_check, sizes_expected):
             pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
             expected_symbolic = tuple(pymc_rv.shape.eval())
