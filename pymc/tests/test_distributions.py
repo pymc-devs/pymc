@@ -2093,7 +2093,6 @@ class TestMatchesScipy:
             lambda value, nu, V: scipy.stats.wishart.logpdf(value, np.int(nu), V),
         )
 
-    @pytest.mark.skip("This test started failing for some reason and I have no idea why")
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
     def test_lkjcorr(self, x, eta, n, lp):
         with Model() as model:
