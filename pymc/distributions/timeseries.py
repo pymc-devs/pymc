@@ -50,7 +50,7 @@ class GaussianRandomWalkRV(RandomVariable):
 
     def _shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
         # This function is breaking everything
-        mu, sigma, init, steps = dist_params[:4]
+        steps = dist_params[3]
 
         # TODO: Ask ricardo why this is correct. Isn't shape different if size is passed?
         return (steps + 1,)
@@ -152,18 +152,21 @@ class GaussianRandomWalk(distribution.Continuous):
         sigma: Optional[Union[np.ndarray, float]] = 1.0,
         init: float = 0.0,
         steps: int = 0,
-        size: int = None,
         *args,
         **kwargs
     ) -> RandomVariable:
 
-        return super().dist([mu, sigma, init, steps, size], **kwargs)
+        params = [at.as_tensor_variable(param) for param in (mu, sigma, init, steps)]
+        # params = [mu, sigma, steps, size]
+
+        return super().dist(params, **kwargs)
 
     def logp(
         value: at.Variable,
         mu: at.Variable,
         sigma: at.Variable,
         init: at.Variable,
+        steps: at.Variable,
     ) -> at.TensorVariable:
         """Calculate log-probability of Gaussian Random Walk distribution at specified value.
 

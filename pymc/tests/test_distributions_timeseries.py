@@ -34,33 +34,29 @@ from pymc.sampling import sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
 
 
-def test_grw_rv_op_scalar_size():
+@pytest.mark.parametrize(
+    "kwargs,expected",
+    [
+        ({"steps": 5}, (6,)),
+        ({"size": 1}, (5,)),
+        ({"size": 2}, (5,)),
+        # implied dims are not working
+        pytest.param({"mu": [0, 0]}, (2, 5), marks=pytest.mark.xfail),
+    ],
+)
+def test_grw_rv_op_shape(kwargs, expected):
     """Basic test for GRW RV op"""
-    init = 1
-    mu = 3
-    sd = 0.0000001
-    steps = 4
+    default_kwargs = dict(init=1, mu=3, sd=0.0000001, steps=4, size=None)
 
-    grw = gaussianrandomwalk(mu, sd, init, steps).eval()
+    combined_kwargs = {**default_kwargs, **kwargs}
+    grw = gaussianrandomwalk(
+        combined_kwargs["mu"],
+        combined_kwargs["sd"],
+        combined_kwargs["init"],
+        combined_kwargs["steps"],
+    ).eval()
 
-    np.testing.assert_almost_equal(grw[-1], 13, decimal=4)
-    assert grw.shape[0] == steps + 1
-
-
-def test_grw_rv_op_vector_steps():
-    """Basic test for GRW RV op
-
-    TODO: Will parametrize before merging PR, just splitting for convenience in development
-    """
-    init = 1
-    mu = 3
-    sd = 0.0000001
-    steps = 4
-
-    grw = gaussianrandomwalk(mu, sd, init, steps, size=1).eval()
-    np.testing.assert_almost_equal(grw[:, -1], 13, decimal=4)
-
-    assert grw.shape[-1] == steps + 1
+    assert grw.shape == expected
 
 
 def test_grw_logp():
@@ -73,16 +69,15 @@ def test_grw_logp():
         grw = GaussianRandomWalk("grw", mu, sigma, init, steps=2)
 
     logp = pm.logp(grw, vals)
-
     logp_vals = logp.eval()
 
-    # Calculate logp in explicit loop for testing obviousness
+    # Calculate logp in explicit loop to make testing sequence obvious
     init_val = vals[0]
-    init_logp = stats.norm(0, sigma).logpdf(init_val)
-
+    init_logp = stats.norm(init, sigma).logpdf(init_val)
     logp_reference = [init_logp]
+
     for x_minus_one_val, x_val in zip(vals, vals[1:]):
-        logp_point = stats.norm(x_minus_one_val + mu, sigma).logpdf(x_val)
+        logp_point = stats.norm(x_minus_one_val + mu + init, sigma).logpdf(x_val)
         logp_reference.append(logp_point)
 
     np.testing.assert_almost_equal(logp_vals, logp_reference)
