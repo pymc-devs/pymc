@@ -419,31 +419,6 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
     )
 
 
-@pytest.mark.skip("Not sure how to implement with BaseTest")
-class TestGRW(BaseTestDistributionRandom):
-    pymc_dist = pm.GaussianRandomWalk
-    pymc_dist_params = {}
-    expected_rv_op_params = {}
-    checks_to_run = [
-        # "check_pymc_params_match_rv_op",
-        "check_rv_inferred_size",
-        # "check_not_implemented",
-    ]
-
-    def check_rv_inferred_size(self):
-        sizes_to_check = [
-            None,
-        ]
-        sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
-        for size, expected in zip(sizes_to_check, sizes_expected):
-            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
-            expected_symbolic = tuple(pymc_rv.shape.eval())
-            assert expected_symbolic == expected
-
-
-d
-
-
 class TestFlat(BaseTestDistributionRandom):
     pymc_dist = pm.Flat
     pymc_dist_params = {}
