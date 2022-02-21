@@ -26,6 +26,7 @@ AUTHOR = "PyMC Developers"
 AUTHOR_EMAIL = "pymc.devs@gmail.com"
 URL = "http://github.com/pymc-devs/pymc"
 LICENSE = "Apache License, Version 2.0"
+NIGHLTY = "BUILD_PYMC_NIGHTLY" in os.environ
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -81,12 +82,10 @@ def get_version(nightly_build=False):
     raise RuntimeError(f"Unable to find version in {version_file}.")
 
 
-nightly = "BUILD_PYMC_NIGHTLY" in os.environ
-
 if __name__ == "__main__":
     setup(
-        name=get_distname(nightly),
-        version=get_version(nightly),
+        name=get_distname(NIGHLTY),
+        version=get_version(NIGHLTY),
         maintainer=AUTHOR,
         maintainer_email=AUTHOR_EMAIL,
         description=DESCRIPTION,
