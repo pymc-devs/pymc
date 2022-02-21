@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import Optional, Tuple, Union
+from typing import Tuple, Union
 
 import aesara.tensor as at
 import numpy as np
@@ -20,6 +20,7 @@ import numpy as np
 from aesara import scan
 from aesara.tensor.random.op import RandomVariable
 
+from pymc.aesaraf import floatX, intX
 from pymc.distributions import distribution, logprob, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.shape_utils import to_tuple
@@ -142,17 +143,11 @@ class GaussianRandomWalk(distribution.Continuous):
     rv_op = gaussianrandomwalk
 
     @classmethod
-    def dist(
-        cls,
-        mu = 0.0,
-        sigma = 1.0,
-        *,
-        steps: int,
-        init = 0.0,
-        **kwargs
-    ) -> RandomVariable:
+    def dist(cls, mu=0.0, sigma=1.0, *, steps: int, init=0.0, **kwargs) -> RandomVariable:
 
-        params = [at.as_tensor_variable(floatX(param)) for param in (mu, sigma, init)] + [at.as_tensor_variable(intX(steps))]
+        params = [at.as_tensor_variable(floatX(param)) for param in (mu, sigma, init)] + [
+            at.as_tensor_variable(intX(steps))
+        ]
 
         return super().dist(params, **kwargs)
 

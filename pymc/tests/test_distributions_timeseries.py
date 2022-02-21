@@ -66,7 +66,7 @@ class TestGaussianRandomWalk:
         init = 0
 
         with pm.Model():
-            grw = GaussianRandomWalk("grw", mu, sigma, init, steps=2)
+            grw = GaussianRandomWalk("grw", mu, sigma, init=init, steps=2)
 
         logp = pm.logp(grw, vals)
         logp_vals = logp.eval()
