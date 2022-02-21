@@ -428,9 +428,9 @@ class TestFlat(BaseTestDistributionRandom):
     ]
 
     def check_rv_inferred_size(self):
-        sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
-        sizes_expected = [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
-        for size, expected in zip(sizes_to_check, sizes_expected):
+        self.sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+        self.sizes_expected = [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
+        for size, expected in zip(self.sizes_to_check, self.sizes_expected):
             pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
             expected_symbolic = tuple(pymc_rv.shape.eval())
             assert expected_symbolic == expected
