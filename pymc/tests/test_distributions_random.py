@@ -328,8 +328,16 @@ class TestGaussianRandomWalk(BaseTestDistributionRandom):
     ]
 
     def check_rv_inferred_size(self):
-        sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
-        sizes_expected = [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
+        steps = self.pymc_dist_params["steps"]
+        sizes_to_check = [
+            None,
+            (),
+            1,
+            (1,),
+        ]
+        # sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+        sizes_expected = [(steps + 1,), (steps + 1,), (1, steps + 1), (1, steps + 1)]
+        # sizes_expected = [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
 
         for size, expected in zip(sizes_to_check, sizes_expected):
             pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
@@ -339,6 +347,12 @@ class TestGaussianRandomWalk(BaseTestDistributionRandom):
     def check_not_implemented(self):
         with pytest.raises(NotImplementedError):
             self.pymc_rv.eval()
+=======
+    #
+    # def check_not_implemented(self):
+    #     with pytest.raises(NotImplementedError):
+    #         self.pymc_rv.eval()
+>>>>>>> Add initial shape checks
 
 
 class TestHalfFlat(BaseTestDistributionRandom):
