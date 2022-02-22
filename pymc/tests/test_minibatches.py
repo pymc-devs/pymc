@@ -317,21 +317,18 @@ class TestMinibatch:
         mb = pm.Minibatch(self.data, [(10, 42), (4, 42)])
         assert mb.eval().shape == (10, 4, 40, 10, 50)
 
-    def test_special1(self):
-        mb = pm.Minibatch(self.data, [(10, 42), None, (4, 42)])
-        assert mb.eval().shape == (10, 10, 4, 10, 50)
-
-    def test_special2(self):
-        mb = pm.Minibatch(self.data, [(10, 42), Ellipsis, (4, 42)])
-        assert mb.eval().shape == (10, 10, 40, 10, 4)
-
-    def test_special3(self):
-        mb = pm.Minibatch(self.data, [(10, 42), None, Ellipsis, (4, 42)])
-        assert mb.eval().shape == (10, 10, 40, 10, 4)
-
-    def test_special4(self):
-        mb = pm.Minibatch(self.data, [10, None, Ellipsis, (4, 42)])
-        assert mb.eval().shape == (10, 10, 40, 10, 4)
+    @pytest.mark.parametrize(
+        "batch_size, expected",
+        [
+            ([(10, 42), None, (4, 42)], (10, 10, 4, 10, 50)),
+            ([(10, 42), Ellipsis, (4, 42)], (10, 10, 40, 10, 4)),
+            ([(10, 42), None, Ellipsis, (4, 42)], (10, 10, 40, 10, 4)),
+            ([10, None, Ellipsis, (4, 42)], (10, 10, 40, 10, 4)),
+        ],
+    )
+    def test_special_batch_size(self, batch_size, expected):
+        mb = pm.Minibatch(self.data, batch_size)
+        assert mb.eval().shape == expected
 
     def test_cloning_available(self):
         gop = pm.Minibatch(np.arange(100), 1)
