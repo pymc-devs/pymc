@@ -1415,7 +1415,7 @@ def test_simulator_moment(mu, sigma, size):
         ),
     ],
 )
-def test_kronecker_normal_moments(mu, covs, size, expected):
+def test_kronecker_normal_moment(mu, covs, size, expected):
     with Model() as model:
         KroneckerNormal("x", mu=mu, covs=covs, size=size)
     assert_moment_is_expected(model, expected)

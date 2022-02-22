@@ -1829,13 +1829,10 @@ class MatrixNormal(Continuous):
 
 class KroneckerNormalRV(RandomVariable):
     name = "kroneckernormal"
-    ndim_supp = 2
+    ndim_supp = 1
     ndims_params = [1, 0, 2]
     dtype = "floatX"
     _print_name = ("KroneckerNormal", "\\operatorname{KroneckerNormal}")
-
-    def _shape_from_params(self, dist_params, rep_param_idx=0, param_shapes=None):
-        return default_shape_from_params(1, dist_params, rep_param_idx, param_shapes)
 
     def rng_fn(self, rng, mu, sigma, *covs, size=None):
         size = size if size else covs[-1]
@@ -1965,7 +1962,6 @@ class KroneckerNormal(Continuous):
 
         mu = at.as_tensor_variable(mu)
 
-        # mean = median = mode = mu
         return super().dist([mu, sigma, *covs], **kwargs)
 
     def get_moment(rv, size, mu, covs, chols, evds):
