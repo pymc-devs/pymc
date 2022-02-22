@@ -18,20 +18,15 @@ A collection of common shape operations needed for broadcasting
 samples from probability distributions for stochastic nodes in PyMC.
 """
 
-import warnings
-
-from functools import partial
-from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 
 from aesara.graph.basic import Constant, Variable
-from aesara.graph.op import Op
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
-from pymc.aesaraf import change_rv_size, pandas_to_array
-from pymc.exceptions import ShapeError, ShapeWarning
+from pymc.aesaraf import pandas_to_array
 
 __all__ = [
     "to_tuple",
@@ -525,19 +520,22 @@ def resize_from_dims(dims: WeakDims, ndim_implied: int, model) -> Tuple[StrongSi
         # We don't have a way to know the names of implied
         # dimensions, so they will be `None`.
         dims = (*dims[:-1], *[None] * ndim_implied)
+    sdims = cast(StrongDims, dims)
 
-    ndim_resize = len(dims) - ndim_implied
+    ndim_resize = len(sdims) - ndim_implied
 
     # All resize dims must be known already (numerically or symbolically).
-    unknowndim_resize_dims = set(dims[:ndim_resize]) - set(model.dim_lengths)
+    unknowndim_resize_dims = set(sdims[:ndim_resize]) - set(model.dim_lengths)
     if unknowndim_resize_dims:
         raise KeyError(
             f"Dimensions {unknowndim_resize_dims} are unknown to the model and cannot be used to specify a `size`."
         )
 
     # The numeric/symbolic resize tuple can be created using model.RV_dim_lengths
-    resize_shape = tuple(model.dim_lengths[dname] for dname in dims[:ndim_resize])
-    return resize_shape, dims
+    resize_shape: Tuple[Variable, ...] = tuple(
+        model.dim_lengths[dname] for dname in sdims[:ndim_resize]
+    )
+    return resize_shape, sdims
 
 
 def resize_from_observed(
@@ -566,26 +564,30 @@ def resize_from_observed(
     return resize_shape, observed
 
 
-def find_size(shape=None, size=None, ndim_supp=None):
+def find_size(
+    shape: Optional[WeakShape],
+    size: Optional[StrongSize],
+    ndim_supp: int,
+) -> Tuple[Optional[StrongSize], Optional[int], Optional[int], int]:
     """Determines the size keyword argument for creating a Distribution.
 
     Parameters
     ----------
-    shape : tuple
+    shape
         A tuple specifying the final shape of a distribution
-    size : tuple
+    size
         A tuple specifying the size of a distribution
     ndim_supp : int
         The support dimension of the distribution.
-        0 if a univariate distribution, 1 if a multivariate distribution.
+        0 if a univariate distribution, 1 or higher for multivariate distributions.
 
     Returns
     -------
-    create_size : int
+    create_size : int, optional
         The size argument to be passed to the distribution
-    ndim_expected : int
+    ndim_expected : int, optional
         Number of dimensions expected after distribution was created
-    ndim_batch : int
+    ndim_batch : int, optional
         Number of batch dimensions
     ndim_supp : int
         Number of support dimensions
@@ -612,84 +614,6 @@ def find_size(shape=None, size=None, ndim_supp=None):
         create_size = size
 
     return create_size, ndim_expected, ndim_batch, ndim_supp
-
-
-def maybe_resize(
-    rv_out: TensorVariable,
-    rv_op: Op,
-    dist_params,
-    ndim_expected: int,
-    ndim_batch,
-    ndim_supp,
-    shape,
-    size,
-    *,
-    change_rv_size_fn=partial(change_rv_size, expand=True),
-    **kwargs,
-):
-    """Resize a distribution if necessary.
-
-    Parameters
-    ----------
-    rv_out : RandomVariable
-        The RandomVariable to be resized if necessary
-    rv_op : RandomVariable.__class__
-        The RandomVariable class to recreate it
-    dist_params : dict
-        Input parameters to recreate the RandomVariable
-    ndim_expected : int
-        Number of dimensions expected after distribution was created
-    ndim_batch : int
-        Number of batch dimensions
-    ndim_supp : int
-        The support dimension of the distribution.
-        0 if a univariate distribution, 1 if a multivariate distribution.
-    shape : tuple
-        A tuple specifying the final shape of a distribution
-    size : tuple
-        A tuple specifying the size of a distribution
-    change_rv_size_fn: callable
-        A function that returns an equivalent RV with a different size
-
-    Returns
-    -------
-    rv_out : int
-        The size argument to be passed to the distribution
-    """
-    ndim_actual = rv_out.ndim
-    ndims_unexpected = ndim_actual != ndim_expected
-
-    if shape is not None and ndims_unexpected:
-        if Ellipsis in shape:
-            # Resize and we're done!
-            rv_out = change_rv_size_fn(rv_var=rv_out, new_size=shape[:-1])
-        else:
-            # This is rare, but happens, for example, with MvNormal(np.ones((2, 3)), np.eye(3), shape=(2, 3)).
-            # Recreate the RV without passing `size` to created it with just the implied dimensions.
-            rv_out = rv_op(*dist_params, size=None, **kwargs)
-
-            # Now resize by any remaining "extra" dimensions that were not implied from support and parameters
-            if rv_out.ndim < ndim_expected:
-                expand_shape = shape[: ndim_expected - rv_out.ndim]
-                rv_out = change_rv_size_fn(rv_var=rv_out, new_size=expand_shape)
-            if not rv_out.ndim == ndim_expected:
-                raise ShapeError(
-                    f"Failed to create the RV with the expected dimensionality. "
-                    f"This indicates a severe problem. Please open an issue.",
-                    actual=ndim_actual,
-                    expected=ndim_batch + ndim_supp,
-                )
-
-    # Warn about the edge cases where the RV Op creates more dimensions than
-    # it should based on `size` and `RVOp.ndim_supp`.
-    if size is not None and ndims_unexpected:
-        warnings.warn(
-            f"You may have expected a ({len(tuple(size))}+{ndim_supp})-dimensional RV, but the resulting RV will be {ndim_actual}-dimensional."
-            ' To silence this warning use `warnings.simplefilter("ignore", pm.ShapeWarning)`.',
-            ShapeWarning,
-        )
-
-    return rv_out
 
 
 def rv_size_is_none(size: Variable) -> bool:
