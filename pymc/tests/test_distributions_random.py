@@ -1309,41 +1309,6 @@ class TestDirichlet(BaseTestDistributionRandom):
     ]
 
 
-class TestStickBreakingWeights(BaseTestDistributionRandom):
-    pymc_dist = pm.StickBreakingWeights
-    pymc_dist_params = {"alpha": 2.0, "K": 19}
-    expected_rv_op_params = {"alpha": 2.0, "K": 19}
-    sizes_to_check = [None, 17, (5,), (11, 5), (3, 13, 5)]
-    sizes_expected = [
-        (20,),
-        (17, 20),
-        (
-            5,
-            20,
-        ),
-        (11, 5, 20),
-        (3, 13, 5, 20),
-    ]
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_rv_size",
-        "check_basic_properties",
-    ]
-
-    def check_basic_properties(self):
-        default_rng = aesara.shared(np.random.default_rng(1234))
-        draws = pm.StickBreakingWeights.dist(
-            alpha=3.5,
-            K=19,
-            size=(2, 3, 5),
-            rng=default_rng,
-        ).eval()
-
-        assert np.allclose(draws.sum(-1), 1)
-        assert np.all(draws >= 0)
-        assert np.all(draws <= 1)
-
-
 class TestMultinomial(BaseTestDistributionRandom):
     pymc_dist = pm.Multinomial
     pymc_dist_params = {"n": 85, "p": np.array([0.28, 0.62, 0.10])}
@@ -1398,6 +1363,41 @@ class TestDirichletMultinomial_1D_n_2D_a(BaseTestDistributionRandom):
     sizes_to_check = [None, 1, (4,), (3, 4)]
     sizes_expected = [(2, 4), (1, 2, 4), (4, 2, 4), (3, 4, 2, 4)]
     checks_to_run = ["check_rv_size"]
+
+
+class TestStickBreakingWeights(BaseTestDistributionRandom):
+    pymc_dist = pm.StickBreakingWeights
+    pymc_dist_params = {"alpha": 2.0, "K": 19}
+    expected_rv_op_params = {"alpha": 2.0, "K": 19}
+    sizes_to_check = [None, 17, (5,), (11, 5), (3, 13, 5)]
+    sizes_expected = [
+        (20,),
+        (17, 20),
+        (
+            5,
+            20,
+        ),
+        (11, 5, 20),
+        (3, 13, 5, 20),
+    ]
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_basic_properties",
+    ]
+
+    def check_basic_properties(self):
+        default_rng = aesara.shared(np.random.default_rng(1234))
+        draws = pm.StickBreakingWeights.dist(
+            alpha=3.5,
+            K=19,
+            size=(2, 3, 5),
+            rng=default_rng,
+        ).eval()
+
+        assert np.allclose(draws.sum(-1), 1)
+        assert np.all(draws >= 0)
+        assert np.all(draws <= 1)
 
 
 class TestCategorical(BaseTestDistributionRandom):
