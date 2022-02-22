@@ -247,7 +247,7 @@ class MvNormal(Continuous):
     def get_moment(rv, size, mu, cov):
         moment = mu
         if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, mu.shape])
+            moment_size = at.concatenate([size, [mu.shape[-1]]])
             moment = at.full(moment_size, mu)
         return moment
 
@@ -301,18 +301,13 @@ class MvStudentTRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, nu, mu, cov, size):
 
-        # Don't reassign broadcasted cov, since MvNormal expects two dimensional cov only.
-        mu, _ = broadcast_params([mu, cov], cls.ndims_params[1:])
-
-        chi2_samples = np.sqrt(rng.chisquare(nu, size=size) / nu)
-        # Add distribution shape to chi2 samples
-        chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(mu.shape))
-
         mv_samples = multivariate_normal.rng_fn(rng=rng, mean=np.zeros_like(mu), cov=cov, size=size)
 
-        size = tuple(size or ())
+        # Take chi2 draws and add an axis of length 1 to the right for correct broadcasting below
+        chi2_samples = np.sqrt(rng.chisquare(nu, size=size) / nu)[..., None]
+
         if size:
-            mu = np.broadcast_to(mu, size + mu.shape)
+            mu = np.broadcast_to(mu, size + (mu.shape[-1],))
 
         return (mv_samples / chi2_samples) + mu
 
@@ -379,7 +374,7 @@ class MvStudentT(Continuous):
     def get_moment(rv, size, nu, mu, cov):
         moment = mu
         if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, moment.shape])
+            moment_size = at.concatenate([size, [mu.shape[-1]]])
             moment = at.full(moment_size, moment)
         return moment
 
@@ -453,7 +448,7 @@ class Dirichlet(Continuous):
         norm_constant = at.sum(a, axis=-1)[..., None]
         moment = a / norm_constant
         if not rv_size_is_none(size):
-            moment = at.full(at.concatenate([size, a.shape]), moment)
+            moment = at.full(at.concatenate([size, [a.shape[-1]]]), moment)
         return moment
 
     def logp(value, a):
@@ -497,8 +492,8 @@ class MultinomialRV(MultinomialRV):
             size = tuple(size or ())
 
             if size:
-                n = np.broadcast_to(n, size + n.shape)
-                p = np.broadcast_to(p, size + p.shape)
+                n = np.broadcast_to(n, size)
+                p = np.broadcast_to(p, size + (p.shape[-1],))
 
             res = np.empty(p.shape)
             for idx in np.ndindex(p.shape[:-1]):
@@ -571,7 +566,7 @@ class Multinomial(Discrete):
         inc_bool_arr = at.abs_(diff) > 0
         mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         if not rv_size_is_none(size):
-            output_size = at.concatenate([size, p.shape])
+            output_size = at.concatenate([size, [p.shape[-1]]])
             mode = at.full(output_size, mode)
         return mode
 
@@ -623,8 +618,8 @@ class DirichletMultinomialRV(RandomVariable):
             size = tuple(size or ())
 
             if size:
-                n = np.broadcast_to(n, size + n.shape)
-                a = np.broadcast_to(a, size + a.shape)
+                n = np.broadcast_to(n, size)
+                a = np.broadcast_to(a, size + (a.shape[-1],))
 
             res = np.empty(a.shape)
             for idx in np.ndindex(a.shape[:-1]):
@@ -688,10 +683,14 @@ class DirichletMultinomial(Discrete):
         diff = n - at.sum(mode, axis=-1, keepdims=True)
         inc_bool_arr = at.abs_(diff) > 0
         mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
-        # Reshape mode according to base shape (ignoring size)
-        mode = at.reshape(mode, rv.shape[size.size :])
+
+        # Reshape mode according to dimensions implied by the parameters
+        # This can include axes of length 1
+        _, p_bcast = broadcast_params([n, p], ndims_params=[0, 1])
+        mode = at.reshape(mode, p_bcast.shape)
+
         if not rv_size_is_none(size):
-            output_size = at.concatenate([size, mode.shape])
+            output_size = at.concatenate([size, [p.shape[-1]]])
             mode = at.full(output_size, mode)
         return mode
 
@@ -2070,7 +2069,7 @@ class CARRV(RandomVariable):
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
     def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + tuple(dist_params[0].shape)
+        shape = tuple(size) + (dist_params[0].shape[-1],)
         return shape
 
     @classmethod
@@ -2105,7 +2104,7 @@ class CARRV(RandomVariable):
 
         size = tuple(size or ())
         if size:
-            mu = np.broadcast_to(mu, size + mu.shape)
+            mu = np.broadcast_to(mu, size + (mu.shape[-1],))
         z = rng.normal(size=mu.shape)
         samples = np.empty(z.shape)
         for idx in np.ndindex(mu.shape[:-1]):
@@ -2165,11 +2164,7 @@ class CAR(Continuous):
         return super().dist([mu, W, alpha, tau], **kwargs)
 
     def get_moment(rv, size, mu, W, alpha, tau):
-        moment = mu
-        if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, moment.shape])
-            moment = at.full(moment_size, mu)
-        return moment
+        return at.full_like(rv, mu)
 
     def logp(value, mu, W, alpha, tau):
         """

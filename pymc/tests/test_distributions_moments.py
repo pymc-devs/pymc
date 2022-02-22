@@ -789,7 +789,7 @@ def test_discrete_weibull_moment(q, beta, size, expected):
         ),
         (
             np.array([[1, 2, 3], [5, 6, 7]]),
-            7,
+            (7, 2),
             np.apply_along_axis(
                 lambda x: np.divide(x, np.array([6, 18])),
                 1,
@@ -798,7 +798,7 @@ def test_discrete_weibull_moment(q, beta, size, expected):
         ),
         (
             np.full(shape=np.array([7, 3]), fill_value=np.array([13, 17, 19])),
-            (11, 5),
+            (11, 5, 7),
             np.broadcast_to([13, 17, 19], shape=[11, 5, 7, 3]) / 49,
         ),
     ],
@@ -940,7 +940,7 @@ def test_interpolated_moment(x_points, pdf_points, size, expected):
         (
             np.array([[3.0, 5], [1, 4]]),
             np.identity(2),
-            (4, 5),
+            (4, 5, 2),
             np.full((4, 5, 2, 2), [[3.0, 5], [1, 4]]),
         ),
     ],
@@ -965,7 +965,7 @@ def test_mv_normal_moment(mu, cov, size, expected):
         (np.array([1, 0, 3.0, 4]), (5, 3), np.full((5, 3, 4), [1, 0, 3.0, 4])),
         (
             np.array([[3.0, 5, 2, 1], [1, 4, 0.5, 9]]),
-            (4, 5),
+            (4, 5, 2),
             np.full((4, 5, 2, 4), [[3.0, 5, 2, 1], [1, 4, 0.5, 9]]),
         ),
     ],
@@ -1008,8 +1008,8 @@ rand2d = np.random.rand(2, 3)
         (2, rand1d, np.eye(2), 2, np.full((2, 2), rand1d)),
         (2, rand1d, np.eye(2), (2, 5), np.full((2, 5, 2), rand1d)),
         (2, rand2d, np.eye(3), None, rand2d),
-        (2, rand2d, np.eye(3), 2, np.full((2, 2, 3), rand2d)),
-        (2, rand2d, np.eye(3), (2, 5), np.full((2, 5, 2, 3), rand2d)),
+        (2, rand2d, np.eye(3), (2, 2), np.full((2, 2, 3), rand2d)),
+        (2, rand2d, np.eye(3), (2, 5, 2), np.full((2, 5, 2, 3), rand2d)),
     ],
 )
 def test_mvstudentt_moment(nu, mu, cov, size, expected):
@@ -1326,7 +1326,7 @@ def test_polyagamma_moment(h, z, size, expected):
         (
             np.array([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]]),
             np.array([1, 10]),
-            2,
+            (2, 2),
             np.full((2, 2, 4), [[1, 0, 0, 0], [2, 3, 3, 2]]),
         ),
     ],
@@ -1476,7 +1476,7 @@ def test_lkjcholeskycov_moment(n, eta, size, expected):
         (
             np.array([[26, 26, 26, 22]]),  # Dim: 1 x 4
             np.array([[1], [10]]),  # Dim: 2 x 1
-            (2, 1),
+            (2, 1, 2, 1),
             np.full(
                 (2, 1, 2, 1, 4),
                 np.array([[[1, 0, 0, 0]], [[2, 3, 3, 2]]]),  # Dim: 2 x 1 x 4

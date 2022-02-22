@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union
 import numpy as np
 
 from aesara.graph.basic import Constant, Variable
+from aesara.graph.op import Op
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
@@ -614,10 +615,10 @@ def find_size(shape=None, size=None, ndim_supp=None):
 
 
 def maybe_resize(
-    rv_out,
-    rv_op,
+    rv_out: TensorVariable,
+    rv_op: Op,
     dist_params,
-    ndim_expected,
+    ndim_expected: int,
     ndim_batch,
     ndim_supp,
     shape,

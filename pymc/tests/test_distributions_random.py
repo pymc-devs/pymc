@@ -1197,8 +1197,8 @@ class TestMvNormalMisc:
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, cov, rng):
-        chi2_samples = rng.chisquare(nu, size=size)
         mv_samples = rng.multivariate_normal(np.zeros_like(mu), cov, size=size)
+        chi2_samples = rng.chisquare(nu, size=size)
         return (mv_samples / np.sqrt(chi2_samples[:, None] / nu)) + mu
 
     pymc_dist = pm.MvStudentT
@@ -1345,7 +1345,7 @@ class TestDirichletMultinomial(BaseTestDistributionRandom):
         draws = pm.DirichletMultinomial.dist(
             n=np.array([5, 100]),
             a=np.array([[0.001, 0.001, 0.001, 1000], [1000, 1000, 0.001, 0.001]]),
-            size=(2, 3),
+            size=(2, 3, 2),
             rng=default_rng,
         ).eval()
         assert np.all(draws.sum(-1) == np.array([5, 100]))
@@ -1361,7 +1361,7 @@ class TestDirichletMultinomial_1D_n_2D_a(BaseTestDistributionRandom):
         "n": np.array([23, 29]),
         "a": np.array([[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]]),
     }
-    sizes_to_check = [None, 1, (4,), (3, 4)]
+    sizes_to_check = [None, (1, 2), (4, 2), (3, 4, 2)]
     sizes_expected = [(2, 4), (1, 2, 4), (4, 2, 4), (3, 4, 2, 4)]
     checks_to_run = ["check_rv_size"]
 
