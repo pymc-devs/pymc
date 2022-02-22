@@ -70,6 +70,7 @@ repos:
       # Files that should be ignored:
       # - 404.md
       # - contributing_release_checklist.md
+      # - contributing_release_checklist.md
       # The other files are under development and should be
       # removed from the list once they are revised.
       exclude: >
