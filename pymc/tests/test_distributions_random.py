@@ -1784,7 +1784,24 @@ class TestWishart(BaseTestDistributionRandom):
         "check_rv_size",
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
+        "check_rv_size_batched_params",
     ]
+
+    def check_rv_size_batched_params(self):
+        for size in (None, (2,), (1, 2), (4, 3, 2)):
+            x = pm.Wishart.dist(nu=4, V=np.stack([np.eye(3), np.eye(3)]), size=size)
+
+            if size is None:
+                expected_shape = (2, 3, 3)
+            else:
+                expected_shape = size + (3, 3)
+
+            assert tuple(x.shape.eval()) == expected_shape
+
+            # RNG does not currently support batched parameters, whet it does this test
+            # should be updated to check that draws also have the expected shape
+            with pytest.raises(ValueError):
+                x.eval()
 
 
 class TestMatrixNormal(BaseTestDistributionRandom):

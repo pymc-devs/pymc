@@ -905,7 +905,7 @@ class WishartRV(RandomVariable):
 
     def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
         # The shape of second parameter `V` defines the shape of the output.
-        return dist_params[1].shape
+        return dist_params[1].shape[-2:]
 
     @classmethod
     def rng_fn(cls, rng, nu, V, size):
