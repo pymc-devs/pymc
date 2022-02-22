@@ -3,7 +3,7 @@
 
 TODO add "core" notebooks:
 
-- {ref}`nb:GLM-linear`
+- {ref}`GLM-linear`
 
 - {ref}`nb:multilevel_modeling`
 
