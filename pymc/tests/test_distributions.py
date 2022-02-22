@@ -21,6 +21,7 @@ import numpy as np
 import numpy.random as nr
 
 from aeppl.logprob import ParameterValueError
+from aesara.tensor.random.utils import broadcast_params
 
 from pymc.distributions.continuous import get_tau_sigma
 from pymc.util import UNSET
@@ -2130,9 +2131,10 @@ class TestMatchesScipy:
             (np.abs(np.random.randn(2, 2, 4)) + 1),
         ],
     )
-    @pytest.mark.parametrize("size", [2, (1, 2), (2, 4, 3)])
-    def test_dirichlet_vectorized(self, a, size):
+    @pytest.mark.parametrize("extra_size", [(2,), (1, 2), (2, 4, 3)])
+    def test_dirichlet_vectorized(self, a, extra_size):
         a = floatX(np.array(a))
+        size = extra_size + a.shape[:-1]
 
         dir = pm.Dirichlet.dist(a=a, size=size)
         vals = dir.eval()
@@ -2200,11 +2202,14 @@ class TestMatchesScipy:
             (np.abs(np.random.randn(2, 2, 4))),
         ],
     )
-    @pytest.mark.parametrize("size", [1, 2, (2, 3)])
-    def test_multinomial_vectorized(self, n, p, size):
+    @pytest.mark.parametrize("extra_size", [(1,), (2,), (2, 3)])
+    def test_multinomial_vectorized(self, n, p, extra_size):
         n = intX(np.array(n))
         p = floatX(np.array(p))
         p /= p.sum(axis=-1, keepdims=True)
+
+        _, bcast_p = broadcast_params([n, p], ndims_params=[0, 1])
+        size = extra_size + bcast_p.shape[:-1]
 
         mn = pm.Multinomial.dist(n=n, p=p, size=size)
         vals = mn.eval()
@@ -2269,10 +2274,13 @@ class TestMatchesScipy:
             (np.abs(np.random.randn(2, 2, 4))),
         ],
     )
-    @pytest.mark.parametrize("size", [1, 2, (2, 3)])
-    def test_dirichlet_multinomial_vectorized(self, n, a, size):
+    @pytest.mark.parametrize("extra_size", [(1,), (2,), (2, 3)])
+    def test_dirichlet_multinomial_vectorized(self, n, a, extra_size):
         n = intX(np.array(n))
         a = floatX(np.array(a))
+
+        _, bcast_a = broadcast_params([n, a], ndims_params=[0, 1])
+        size = extra_size + bcast_a.shape[:-1]
 
         dm = pm.DirichletMultinomial.dist(n=n, a=a, size=size)
         vals = dm.eval()

@@ -173,9 +173,9 @@ def change_rv_size(
     tag = rv_var.tag
 
     if expand:
-        if rv_node.op.ndim_supp == 0 and at.get_vector_length(size) == 0:
-            size = rv_node.op._infer_shape(size, dist_params)
-        new_size = tuple(new_size) + tuple(size)
+        old_shape = tuple(rv_node.op._infer_shape(size, dist_params))
+        old_size = old_shape[: len(old_shape) - rv_node.op.ndim_supp]
+        new_size = tuple(new_size) + tuple(old_size)
 
     # Make sure the new size is a tensor. This dtype-aware conversion helps
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
