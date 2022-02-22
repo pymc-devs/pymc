@@ -375,7 +375,8 @@ class BaseTestDistributionRandom(SeededTest):
             pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
             expected_symbolic = tuple(pymc_rv.shape.eval())
             actual = pymc_rv.eval().shape
-            assert actual == expected_symbolic == expected
+            assert actual == expected_symbolic
+            assert expected_symbolic == expected
 
         # test multi-parameters sampling for univariate distributions (with univariate inputs)
         if (
