@@ -161,7 +161,8 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
     except NotImplementedError:
         random_draw = moment
 
-    assert moment.shape == expected.shape == random_draw.shape
+    assert moment.shape == expected.shape
+    assert expected.shape == random_draw.shape
     assert np.allclose(moment, expected)
 
     if check_finite_logp:
