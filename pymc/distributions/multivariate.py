@@ -1616,7 +1616,7 @@ class MatrixNormalRV(RandomVariable):
     _print_name = ("MatrixNormal", "\\operatorname{MatrixNormal}")
 
     def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + tuple(dist_params[0].shape)
+        shape = tuple(size) + tuple(dist_params[0].shape[-2:])
         return shape
 
     @classmethod
@@ -1746,18 +1746,6 @@ class MatrixNormal(Continuous):
 
         cholesky = Cholesky(lower=True, on_error="raise")
 
-        if kwargs.get("size", None) is not None:
-            raise NotImplementedError("MatrixNormal doesn't support size argument")
-
-        if "shape" in kwargs:
-            kwargs.pop("shape")
-            warnings.warn(
-                "The shape argument in MatrixNormal is deprecated and will be ignored."
-                "MatrixNormal automatically derives the shape"
-                "from row and column matrix dimensions.",
-                FutureWarning,
-            )
-
         # Among-row matrices
         if len([i for i in [rowcov, rowchol] if i is not None]) != 1:
             raise ValueError(
@@ -1787,22 +1775,16 @@ class MatrixNormal(Continuous):
                 raise ValueError("colchol must be two dimensional.")
             colchol_cov = at.as_tensor_variable(colchol)
 
-        dist_shape = (rowchol_cov.shape[0], colchol_cov.shape[0])
+        dist_shape = (rowchol_cov.shape[-1], colchol_cov.shape[-1])
 
         # Broadcasting mu
         mu = at.extra_ops.broadcast_to(mu, shape=dist_shape)
-
         mu = at.as_tensor_variable(floatX(mu))
-        # mean = median = mode = mu
 
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
 
     def get_moment(rv, size, mu, rowchol, colchol):
-        output_shape = (rowchol.shape[0], colchol.shape[0])
-        if not rv_size_is_none(size):
-            output_shape = at.concatenate([size, output_shape])
-        moment = at.full(output_shape, mu)
-        return moment
+        return at.full_like(rv, mu)
 
     def logp(value, mu, rowchol, colchol):
         """

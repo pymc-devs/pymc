@@ -1020,11 +1020,6 @@ def test_mvstudentt_moment(nu, mu, cov, size, expected):
     assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
 
 
-def check_matrixnormal_moment(mu, rowchol, colchol, size, expected):
-    with Model() as model:
-        MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
-
-
 @pytest.mark.parametrize(
     "alpha, mu, sigma, size, expected",
     [
@@ -1092,11 +1087,12 @@ def test_asymmetriclaplace_moment(b, kappa, mu, size, expected):
     ],
 )
 def test_matrixnormal_moment(mu, rowchol, colchol, size, expected):
-    if size is None:
-        check_matrixnormal_moment(mu, rowchol, colchol, size, expected)
-    else:
-        with pytest.raises(NotImplementedError):
-            check_matrixnormal_moment(mu, rowchol, colchol, size, expected)
+    with Model() as model:
+        x = MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
+
+    # MatrixNormal logp is only implemented for 2d values
+    check_logp = x.ndim == 2
+    assert_moment_is_expected(model, expected, check_finite_logp=check_logp)
 
 
 @pytest.mark.parametrize(
