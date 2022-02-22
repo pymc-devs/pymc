@@ -17,7 +17,7 @@ TODO add "core" notebooks:
   update needed: from "pymc and theano" to "pymc and aesara" tutorial (not just auto-renaming from theano to aesara but showing correct use). Very related to migration guide as well, though the migration guide already covers it.
   - https://github.com/pymc-devs/pymc/blob/37ba9a3e3a19b738f48cb30007f4d70c33bdd0f6/docs/source/PyMC_and_Aesara.rst
 
-- {ref}`nb:posterior_predictive`
+- {ref}`posterior_predictive`
 
 - {mod}`pymc.gp`
 
