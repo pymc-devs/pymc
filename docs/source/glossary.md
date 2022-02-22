@@ -11,7 +11,7 @@ Functional Programming
   This contrasts with functions or methods that depend on variables that are not explicitly passed as an input (such as accessing `self.variable` inside a method) or that alter the inputs or other state variables in-place, instead of returning new distinct variables as outputs.
 
 Dispatching
-  Choosing which function or method implementation to use based on the type of the input variables (usually just the first variable). For some examples, see Python's documentation for the [singledispatch](https://docs.python.org/3/library/functools.html#functools.singledispatch) decorator.
+  Choosing which function or method implementation to use based on the type of the input variables (usually just the first variable). For some examples, see Python's documentation for the {func}`singledispatch <~functools.singledispatch>` decorator.
 
 [Dispersion](https://en.wikipedia.org/wiki/Statistical_dispersion)
   In statistics, dispersion (also called variability, scatter, or spread) is the extent to which a distribution is stretched or squeezed
