@@ -7,7 +7,7 @@ TODO add "core" notebooks:
 
 - {ref}`nb:multilevel_modeling`
 
-- {ref}`nb:model_comparison`
+- {ref}`model_comparison`
   TODO: Add reference to ArviZ docs since it was taken from there
 
 - https://docs.pymc.io/en/stable/Probability_Distributions.html
