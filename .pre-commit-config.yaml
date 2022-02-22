@@ -68,12 +68,14 @@ repos:
         'See docs/source/conf.py for more information.'
       files: ^docs/source/
       # Files that should be ignored:
+      # - index.md
       # - 404.md
       # - contributing/release_checklist.md
       # The other files are under development and should be
       # removed from the list once they are revised.
       exclude: >
-          (?x)(404.md|
+          (?x)(index.md|
+               404.md|
                contributing/release_checklist.md|
                contributing/developer_guide.rst|
                learn/examples.md)
