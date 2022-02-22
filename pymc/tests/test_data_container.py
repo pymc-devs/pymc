@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import io
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -403,3 +405,8 @@ def test_data_naming():
         y = pm.Normal("y")
     assert y.name == "named_model_y"
     assert x.name == "named_model_x"
+
+
+def test_get_data():
+    data = pm.get_data("radon.csv")
+    assert type(data) == io.BytesIO
