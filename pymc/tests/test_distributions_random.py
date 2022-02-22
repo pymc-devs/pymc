@@ -1811,13 +1811,15 @@ class TestMatrixNormal(BaseTestDistributionRandom):
     mu = np.random.random((3, 3))
     row_cov = np.eye(3)
     col_cov = np.eye(3)
-    shape = None
-    size = None
     pymc_dist_params = {"mu": mu, "rowcov": row_cov, "colcov": col_cov}
     expected_rv_op_params = {"mu": mu, "rowcov": row_cov, "colcov": col_cov}
 
+    sizes_to_check = (None, (1,), (2, 4))
+    sizes_expected = [(3, 3), (1, 3, 3), (2, 4, 3, 3)]
+
     checks_to_run = [
         "check_pymc_params_match_rv_op",
+        "check_rv_size",
         "check_draws",
         "check_errors",
         "check_random_variable_prior",
@@ -1858,17 +1860,6 @@ class TestMatrixNormal(BaseTestDistributionRandom):
         assert p > delta
 
     def check_errors(self):
-        msg = "MatrixNormal doesn't support size argument"
-        with pm.Model():
-            with pytest.raises(NotImplementedError, match=msg):
-                matrixnormal = pm.MatrixNormal(
-                    "matnormal",
-                    mu=np.random.random((3, 3)),
-                    rowcov=np.eye(3),
-                    colcov=np.eye(3),
-                    size=15,
-                )
-
         with pm.Model():
             matrixnormal = pm.MatrixNormal(
                 "matnormal",
@@ -1878,16 +1869,6 @@ class TestMatrixNormal(BaseTestDistributionRandom):
             )
             with pytest.raises(ValueError):
                 logp(matrixnormal, aesara.tensor.ones((3, 3, 3)))
-
-        with pm.Model():
-            with pytest.warns(FutureWarning):
-                matrixnormal = pm.MatrixNormal(
-                    "matnormal",
-                    mu=np.random.random((3, 3)),
-                    rowcov=np.eye(3),
-                    colcov=np.eye(3),
-                    shape=15,
-                )
 
     def check_random_variable_prior(self):
         """
