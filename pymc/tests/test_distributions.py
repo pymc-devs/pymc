@@ -2616,6 +2616,16 @@ class TestMatchesScipy:
             assert not np.isfinite(m.compile_logp()({"x": -1.0}))
             assert not np.isfinite(m.compile_logp()({"x": 11.0}))
 
+    @pytest.mark.skip("Need to remove init")
+    def test_grw(self):
+        self.check_logp(
+            pm.GaussianRandomWalk,
+            R,
+            {"mu": R, "sigma": Rplus, "steps": Nat, "init": R},
+            lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma).cumsum(),
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+
 
 class TestBound:
     """Tests for pm.Bound distribution"""
