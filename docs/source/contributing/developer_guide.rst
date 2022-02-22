@@ -23,8 +23,7 @@ A high-level introduction of ``Distribution`` in PyMC can be found in
 the :ref:`documentation <api_distributions>`. The source
 code of the probability distributions is nested under
 :ref:`pymc/distributions <api_distributions>`,
-with the ``Distribution`` class defined in :class:`distribution.py
-pymc.Distribution`.
+with the :class:`~pymc.Distribution` class defined in ``distribution.py``.
 A few important points to highlight in the Distribution Class:
 
 .. code:: python
