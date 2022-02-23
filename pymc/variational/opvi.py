@@ -365,7 +365,7 @@ class ObjectiveFunction:
         if score:
             step_fn = compile_pymc([], updates.loss, updates=updates, **fn_kwargs)
         else:
-            step_fn = compile_pymc([], None, updates=updates, **fn_kwargs)
+            step_fn = compile_pymc([], [], updates=updates, **fn_kwargs)
         return step_fn
 
     @aesara.config.change_flags(compute_test_value="off")
