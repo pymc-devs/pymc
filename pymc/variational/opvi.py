@@ -1003,7 +1003,6 @@ class Group(WithMemoization):
             else:
                 shape = test_var.shape
                 size = test_var.size
-            # TODO: There was self.ordering used in other util funcitons
             dtype = test_var.dtype
             vr = self.input[..., start_idx : start_idx + size].reshape(shape).astype(dtype)
             vr.name = value_var.name + "_vi_replacement"
