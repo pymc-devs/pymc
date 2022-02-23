@@ -1661,7 +1661,7 @@ class Approximation(WithMemoization):
         trace: :class:`pymc.backends.base.MultiTrace`
             Samples drawn from variational posterior.
         """
-        # TODO: check for include_transformed case
+        # TODO: add tests for include_transformed case
         kwargs["log_likelihood"] = False
 
         samples = self.sample_dict_fn(draws)  # type: dict
