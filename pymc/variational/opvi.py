@@ -57,7 +57,7 @@ from aesara.graph.basic import Variable
 
 import pymc as pm
 
-from pymc.aesaraf import at_rng, identity, rvs_to_value_vars
+from pymc.aesaraf import at_rng, compile_pymc, identity, rvs_to_value_vars
 from pymc.backends import NDArray
 from pymc.blocking import DictToArrayBijection
 from pymc.initial_point import make_initial_point_fn
@@ -363,9 +363,9 @@ class ObjectiveFunction:
             total_grad_norm_constraint=total_grad_norm_constraint,
         )
         if score:
-            step_fn = aesara.function([], updates.loss, updates=updates, **fn_kwargs)
+            step_fn = compile_pymc([], updates.loss, updates=updates, **fn_kwargs)
         else:
-            step_fn = aesara.function([], None, updates=updates, **fn_kwargs)
+            step_fn = compile_pymc([], None, updates=updates, **fn_kwargs)
         return step_fn
 
     @aesara.config.change_flags(compute_test_value="off")
@@ -394,7 +394,7 @@ class ObjectiveFunction:
         if more_replacements is None:
             more_replacements = {}
         loss = self(sc_n_mc, more_replacements=more_replacements)
-        return aesara.function([], loss, **fn_kwargs)
+        return compile_pymc([], loss, **fn_kwargs)
 
     @aesara.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
@@ -1637,7 +1637,7 @@ class Approximation(WithMemoization):
         names = [self.model.rvs_to_values[v].name for v in self.model.free_RVs]
         sampled = [self.rslice(name) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
-        sample_fn = aesara.function([s], sampled)
+        sample_fn = compile_pymc([s], sampled)
 
         def inner(draws=100):
             _samples = sample_fn(draws)
