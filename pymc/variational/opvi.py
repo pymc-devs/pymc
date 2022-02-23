@@ -1633,7 +1633,6 @@ class Approximation(WithMemoization):
 
     @node_property
     def sample_dict_fn(self):
-        # TODO: this breaks
         s = at.iscalar()
         names = [self.model.rvs_to_values[v].name for v in self.model.free_RVs]
         sampled = [self.rslice(name) for name in names]
