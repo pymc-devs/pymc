@@ -68,6 +68,7 @@ jobs:
 
           - |
             pymc/tests/test_distributions.py
+
           - |
             pymc/tests/test_modelcontext.py
             pymc/tests/test_dist_math.py
