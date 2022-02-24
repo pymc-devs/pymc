@@ -14,7 +14,7 @@
 
 from collections.abc import Mapping
 from functools import singledispatch
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 import aesara
 import aesara.tensor as at
@@ -44,7 +44,7 @@ def logp_transform(op: Op):
     return None
 
 
-def _get_scaling(total_size, shape, ndim):
+def _get_scaling(total_size: Optional[Union[int, Sequence[int]]], shape, ndim: int):
     """
     Gets scaling constant for logp.
 
