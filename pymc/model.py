@@ -631,9 +631,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     raise ValueError(f"Can only compute the gradient of continuous types: {var}")
 
         if tempered:
-            # TODO: Should this differ from self.datalogpt,
-            #  where the potential terms are added to the observations?
-            costs = [self.varlogpt + self.potentiallogpt, self.observedlogpt]
+            costs = [self.varlogpt, self.datalogpt]
         else:
             costs = [self.logpt()]
 
