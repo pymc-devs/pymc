@@ -151,6 +151,7 @@ def sample_numpyro_nuts(
     keep_untransformed=False,
     chain_method="parallel",
     idata_kwargs=None,
+    nuts_kwargs=None,
 ):
     from numpyro.infer import MCMC, NUTS
 
@@ -185,12 +186,15 @@ def sample_numpyro_nuts(
 
     logp_fn = get_jaxified_logp(model)
 
+    if nuts_kwargs is None:
+        nuts_kwargs = {}
     nuts_kernel = NUTS(
         potential_fn=logp_fn,
         target_accept_prob=target_accept,
         adapt_step_size=True,
         adapt_mass_matrix=True,
         dense_mass=False,
+        **nuts_kwargs,
     )
 
     pmap_numpyro = MCMC(
