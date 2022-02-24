@@ -2023,7 +2023,7 @@ def sample_prior_predictive(
         Number of samples from the prior predictive to generate. Defaults to 500.
     model : Model (optional if in ``with`` context)
     var_names : Iterable[str]
-        A list of names of variables for which to compute the posterior predictive
+        A list of names of variables for which to compute the prior predictive
         samples. Defaults to both observed and unobserved RVs. Transformed values
         are not included unless explicitly defined in var_names.
     random_seed : int
