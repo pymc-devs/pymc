@@ -126,7 +126,7 @@ class SamplerReport:
 
         elif idata.posterior.sizes["chain"] < 4:
             msg = (
-                "We recommend running at least 4 chains for proper computation of "
+                "We recommend running at least 4 chains for robust computation of "
                 "convergence diagnostics"
             )
             warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info")
@@ -151,7 +151,8 @@ class SamplerReport:
         if rhat_max > 1.01:
             msg = (
                 "The rhat statistic is larger than 1.01 for some "
-                "parameters. This might indicate problems during sampling."
+                "parameters. This indicates problems during sampling. "
+                "See https://arxiv.org/abs/1903.08008 for details"
             )
             warn = SamplerWarning(WarningType.CONVERGENCE, msg, "info", extra=rhat)
             warnings.append(warn)
@@ -161,7 +162,8 @@ class SamplerReport:
         if eff_per_chain < 100:
             msg = (
                 "The effective sample size per chain is smaller than 100 for some parameters. "
-                " A higher number is needed for reliable rhat and ess computation"
+                " A higher number is needed for reliable rhat and ess computation. "
+                "See https://arxiv.org/abs/1903.08008 for details"
             )
             warn = SamplerWarning(WarningType.CONVERGENCE, msg, "error", extra=ess)
             warnings.append(warn)
