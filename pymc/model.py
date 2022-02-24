@@ -1441,6 +1441,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             if isinstance(dims, str):
                 dims = (dims,)
             assert all(dim in self.coords or dim is None for dim in dims)
+            assert all(
+                var.name != dim for dim in dims
+            ), f"Variable `{var.name}` has the same name as its dimension label."
             self._RV_dims[var.name] = dims
 
         self.named_vars[var.name] = var
