@@ -25,7 +25,7 @@ The preferred workflow for contributing to PyMC is to fork the [GitHub repositor
    :::
 
 4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``. The easiest (and recommended) way to set up a development environment is via [miniconda](https://docs.conda.io/en/latest/miniconda.html):
-   
+
    If using Windows:
 
    ```bash
@@ -35,7 +35,7 @@ The preferred workflow for contributing to PyMC is to fork the [GitHub repositor
    ```
 
    For other platforms:
-   
+
    ```bash
    $ conda env create -f conda-envs/environment-dev-py37.yml  # or py38 or py39
    $ conda activate pymc-dev-py37
