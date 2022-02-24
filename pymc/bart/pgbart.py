@@ -50,7 +50,7 @@ class PGBART(ArrayStepShared):
         Optional model for sampling step. Defaults to None (taken from context).
     """
 
-    name = "bartsampler"
+    name = "pgbart"
     default_blocked = False
     generates_stats = True
     stats_dtypes = [{"variable_inclusion": np.ndarray, "bart_trees": np.ndarray}]
@@ -59,7 +59,12 @@ class PGBART(ArrayStepShared):
         _log.warning("BART is experimental. Use with caution.")
         model = modelcontext(model)
         initial_values = model.compute_initial_point()
-        value_bart = inputvars(vars)[0]
+        if vars is None:
+            vars = model.value_vars
+        else:
+            vars = [model.rvs_to_values.get(var, var) for var in vars]
+            vars = inputvars(vars)
+        value_bart = vars[0]
         self.bart = model.values_to_rvs[value_bart].owner.op
 
         self.X = self.bart.X
@@ -200,7 +205,7 @@ class PGBART(ArrayStepShared):
                 for index in new_particle.used_variates:
                     variable_inclusion[index] += 1
 
-        stats = {"variable_inclusion": variable_inclusion, "bart_trees": self.all_trees}
+        stats = {"variable_inclusion": variable_inclusion, "bart_trees": copy(self.all_trees)}
         return self.sum_trees, [stats]
 
     def normalize(self, particles):
