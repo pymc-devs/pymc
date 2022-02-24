@@ -1205,10 +1205,10 @@ class Beta(UnitContinuous):
 
     Parameters
     ----------
-    alpha : tensor_like of float
-        ``alpha`` > 0.
-    beta : tensor_like of float
-        ``beta`` > 0.
+    alpha : tensor_like of float, optional
+        ``alpha`` > 0. If not specified, then calculated using ``mu`` and ``sigma``.
+    beta : tensor_like of float, optional
+        ``beta`` > 0. If not specified, then calculated using ``mu`` and ``sigma``.
     mu : tensor_like of float, optional
         Alternative mean (0 < ``mu`` < 1).
     sigma : tensor_like of float, optional
