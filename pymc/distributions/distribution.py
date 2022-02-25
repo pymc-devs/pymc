@@ -803,8 +803,8 @@ class DensityDist(NoDistribution):
                         observed=np.random.randn(100, 3),
                         size=(100, 3),
                     )
-                    prior = pm.sample_prior_predictive(10)['density_dist']
-                assert prior.shape == (10, 100, 3)
+                    prior = pm.sample_prior_predictive(10).prior_predictive['density_dist']
+                assert prior.shape == (1, 10, 100, 3)
 
         """
 
