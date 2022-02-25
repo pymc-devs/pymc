@@ -58,6 +58,7 @@ from pymc.aesaraf import (
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
 from pymc.distributions import joint_logpt, logp_transform
+from pymc.distributions.logprob import _get_scaling
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
 from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
@@ -1238,6 +1239,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         name = self.name_for(name)
         rv_var.name = name
         rv_var.tag.total_size = total_size
+        rv_var.tag.scaling = _get_scaling(total_size, shape=rv_var.shape, ndim=rv_var.ndim)
 
         # Associate previously unknown dimension names with
         # the length of the corresponding RV dimension.
@@ -1870,7 +1872,7 @@ def Potential(name, var, model=None):
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
-    var.tag.scaling = None
+    var.tag.scaling = 1.0
     model.potentials.append(var)
     model.add_random_variable(var)
 
