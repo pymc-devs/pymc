@@ -1167,6 +1167,7 @@ class Beta(UnitContinuous):
            \frac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1204,14 +1205,14 @@ class Beta(UnitContinuous):
 
     Parameters
     ----------
-    alpha: float
-        alpha > 0.
-    beta: float
-        beta > 0.
-    mu: float
-        Alternative mean (0 < mu < 1).
-    sigma: float
-        Alternative standard deviation (0 < sigma < sqrt(mu * (1 - mu))).
+    alpha : tensor_like of float, optional
+        ``alpha`` > 0. If not specified, then calculated using ``mu`` and ``sigma``.
+    beta : tensor_like of float, optional
+        ``beta`` > 0. If not specified, then calculated using ``mu`` and ``sigma``.
+    mu : tensor_like of float, optional
+        Alternative mean (0 < ``mu`` < 1).
+    sigma : tensor_like of float, optional
+        Alternative standard deviation (1 < ``sigma`` < sqrt(``mu`` * (1 - ``mu``))).
 
     Notes
     -----
@@ -1264,9 +1265,13 @@ class Beta(UnitContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
+        alpha : tensor_like of float
+            ``alpha`` > 0.
+        beta : tensor_like of float
+            ``beta`` > 0.
 
         Returns
         -------
