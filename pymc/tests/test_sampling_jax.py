@@ -9,6 +9,7 @@ from aesara.graph import graph_inputs
 import pymc as pm
 
 from pymc.sampling_jax import (
+    _get_batched_jittered_initial_points,
     _get_log_likelihood,
     _replace_shared_variables,
     get_jaxified_graph,
@@ -137,3 +138,26 @@ def test_idata_kwargs(idata_kwargs):
         assert "log_likelihood" in idata
     else:
         assert "log_likelihood" not in idata
+
+
+def test_get_batched_jittered_initial_points():
+    with pm.Model() as model:
+        x = pm.MvNormal("x", mu=np.zeros(3), cov=np.eye(3), shape=(2, 3), initval=np.zeros((2, 3)))
+
+    # No jitter
+    ips = _get_batched_jittered_initial_points(
+        model=model, chains=1, random_seed=1, initvals=None, jitter=False
+    )
+    assert np.all(ips[0] == 0)
+
+    # Single chain
+    ips = _get_batched_jittered_initial_points(model=model, chains=1, random_seed=1, initvals=None)
+
+    assert ips[0].shape == (2, 3)
+    assert np.all(ips[0] != 0)
+
+    # Multiple chains
+    ips = _get_batched_jittered_initial_points(model=model, chains=2, random_seed=1, initvals=None)
+
+    assert ips[0].shape == (2, 2, 3)
+    assert np.all(ips[0][0] != ips[0][1])

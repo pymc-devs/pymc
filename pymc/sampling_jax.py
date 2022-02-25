@@ -6,6 +6,8 @@ import warnings
 
 from typing import Callable, List, Optional
 
+from pymc.sampling import _init_jitter
+
 xla_flags = os.getenv("XLA_FLAGS", "")
 xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
 os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
@@ -139,12 +141,46 @@ def _get_log_likelihood(model, samples):
     return data
 
 
+def _get_batched_jittered_initial_points(
+    model, chains, initvals, random_seed, jitter=True, jitter_max_retries=10
+):
+    """Get jittered initial point in format expected by NumPyro MCMC kernel
+
+    Returns
+    -------
+    out: list of ndarrays
+        list with one item per variable and number of chains as batch dimension.
+        Each item has shape `(chains, *var.shape)`
+    """
+    if isinstance(random_seed, (int, np.integer)):
+        random_seed = np.random.default_rng(random_seed).integers(2**30, size=chains)
+    elif not isinstance(random_seed, (list, tuple, np.ndarray)):
+        raise ValueError(f"The `seeds` must be int or array-like. Got {type(random_seed)} instead.")
+
+    assert len(random_seed) == chains
+
+    initial_points = _init_jitter(
+        model,
+        initvals,
+        seeds=random_seed,
+        jitter=jitter,
+        jitter_max_retries=jitter_max_retries,
+    )
+    initial_points = [list(initial_point.values()) for initial_point in initial_points]
+    if chains == 1:
+        initial_points = initial_points[0]
+    else:
+        initial_points = [np.stack(init_state) for init_state in zip(*initial_points)]
+    return initial_points
+
+
 def sample_numpyro_nuts(
     draws=1000,
     tune=1000,
     chains=4,
     target_accept=0.8,
-    random_seed=10,
+    random_seed=None,
+    initvals=None,
     model=None,
     var_names=None,
     progress_bar=True,
@@ -176,13 +212,20 @@ def sample_numpyro_nuts(
     else:
         dims = {}
 
+    if random_seed is None:
+        random_seed = model.rng_seeder.randint(
+            2**30, dtype=np.int64, size=chains if chains > 1 else None
+        )
+
     tic1 = datetime.now()
     print("Compiling...", file=sys.stdout)
 
-    rv_names = [rv.name for rv in model.value_vars]
-    initial_point = model.compute_initial_point()
-    init_state = [initial_point[rv_name] for rv_name in rv_names]
-    init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
+    init_params = _get_batched_jittered_initial_points(
+        model=model,
+        chains=chains,
+        initvals=initvals,
+        random_seed=random_seed,
+    )
 
     logp_fn = get_jaxified_logp(model)
 
@@ -212,14 +255,9 @@ def sample_numpyro_nuts(
 
     print("Sampling...", file=sys.stdout)
 
-    seed = jax.random.PRNGKey(random_seed)
-    map_seed = jax.random.split(seed, chains)
-
-    if chains == 1:
-        init_params = init_state
-        map_seed = seed
-    else:
-        init_params = init_state_batched
+    map_seed = jax.random.PRNGKey(random_seed)
+    if chains > 1:
+        map_seed = jax.random.split(map_seed, chains)
 
     pmap_numpyro.run(
         map_seed,
