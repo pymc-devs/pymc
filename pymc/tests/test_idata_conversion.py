@@ -602,14 +602,12 @@ class TestDataPyMC:
             )
             assert isinstance(converter.coords["city"], pd.MultiIndex)
 
-    @pytest.mark.xfail(
-        reason="Xarray doesn't support labeling dimensions with the same name as the variable"
-    )
     def test_variable_dimension_name_collision(self):
-        with pm.Model() as pmodel:
-            pm.ConstantData("time", np.ones(9), dims="time")
-            pm.Normal("a")
-            idata = pm.sample(chains=1)
+        with pytest.raises(ValueError):
+            with pm.Model() as pmodel:
+                pm.ConstantData("time", np.ones(9), dims="time")
+                pm.Normal("a")
+                idata = pm.sample(chains=1)
 
 
 class TestPyMCWarmupHandling:
