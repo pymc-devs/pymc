@@ -272,7 +272,7 @@ class TestErrors:
         return at.stack((s, s, s, s)).reshape((2,2))
 
     def test_tensor_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="returned a 2-dimensional tensor"):
             DifferentialEquation(func=self.system_2d_tensor, t0=0, times=self.times, n_states=1, n_theta=0)
 
     def system_2d_list(y, t, p):
