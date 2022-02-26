@@ -280,7 +280,7 @@ class TestErrors:
         return [[s,s], [s,s]]
 
     def test_list_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="returned a 2-dimensional tensor"):
             DifferentialEquation(func=self.system_2d_list, t0=0, times=self.times, n_states=1, n_theta=0)
 
 
