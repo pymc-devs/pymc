@@ -1440,10 +1440,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if dims is not None:
             if isinstance(dims, str):
                 dims = (dims,)
-            assert all(dim in self.coords or dim is None for dim in dims)
-            assert all(
-                var.name != dim for dim in dims
-            ), f"Variable `{var.name}` has the same name as its dimension label."
+
+            for dim in dims:
+                if dim in self.coords:
+                    raise ValueError(f"Dimension {dim} is already specified in `coords`.")
+                if dim is None:
+                    raise ValueError("Empty dimension name.")
+                if var.name != dim:
+                    raise ValueError(
+                        f"Variable `{var.name}` has the same name as its dimension label."
+                    )
+
             self._RV_dims[var.name] = dims
 
         self.named_vars[var.name] = var
