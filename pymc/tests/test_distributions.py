@@ -3357,6 +3357,15 @@ class TestCensored:
             ):
                 x = pm.Censored("x", registered_dist, lower=None, upper=None)
 
+    def test_change_size(self):
+        base_dist = pm.Censored.dist(pm.Normal.dist(), -1, 1, size=(3, 2))
+
+        new_dist = pm.Censored.change_size(base_dist, (4,))
+        assert new_dist.eval().shape == (4,)
+
+        new_dist = pm.Censored.change_size(base_dist, (4,), expand=True)
+        assert new_dist.eval().shape == (4, 3, 2)
+
 
 class TestLKJCholeskCov:
     def test_dist(self):

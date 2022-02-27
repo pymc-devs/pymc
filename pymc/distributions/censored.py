@@ -100,11 +100,12 @@ class Censored(SymbolicDistribution):
         return 0
 
     @classmethod
-    def change_size(cls, rv, new_size):
+    def change_size(cls, rv, new_size, expand=False):
         dist_node = rv.tag.dist.owner
         lower = rv.tag.lower
         upper = rv.tag.upper
         rng, old_size, dtype, *dist_params = dist_node.inputs
+        new_size = new_size if not expand else tuple(new_size) + tuple(old_size)
         new_dist = dist_node.op.make_node(rng, new_size, dtype, *dist_params).default_output()
         return cls.rv_op(new_dist, lower, upper)
 
