@@ -1444,7 +1444,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 raise ValueError(f"Dimension {dim} is not specified in `coords`.")
             if any(var.name == dim for dim in dims):
                 raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
-
             self._RV_dims[var.name] = dims
 
         self.named_vars[var.name] = var
