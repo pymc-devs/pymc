@@ -378,14 +378,14 @@ class IMH(SMC_KERNEL):
             proposal = floatX(self.proposal_dist.rvs(size=self.draws, random_state=self.rng))
             proposal = proposal.reshape(len(proposal), -1)
             # To do that we compute the logp of moving to a new point
-            forward = self.proposal_dist.logpdf(proposal)
+            forward_logp = self.proposal_dist.logpdf(proposal)
             # And to going back from that new point
-            backward = self.proposal_dist.logpdf(self.tempered_posterior)
+            backward_logp = self.proposal_dist.logpdf(self.tempered_posterior)
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])
             proposal_logp = pl + ll * self.beta
             accepted = log_R < (
-                (proposal_logp + backward) - (self.tempered_posterior_logp + forward)
+                (proposal_logp + backward_logp) - (self.tempered_posterior_logp + forward_logp)
             )
 
             tmp = np.copy(self.tempered_posterior)
