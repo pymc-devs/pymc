@@ -8,7 +8,7 @@ from scipy.interpolate import griddata
 from scipy.signal import savgol_filter
 
 
-def predict(idata, rng, X_new=None, size=None):
+def predict(idata, rng, X_new=None, size=None, excluded=None):
     """
     Generate samples from the BART-posterior
 
@@ -21,6 +21,8 @@ def predict(idata, rng, X_new=None, size=None):
         A new covariate matrix. Use it to obtain out-of-sample predictions
     size: int or tuple
         Number of samples.
+    excluded: list
+        id of the variables to exclude when computing predictions
     """
     bart_trees = idata.sample_stats.bart_trees
     stacked_trees = bart_trees.stack(trees=["chain", "draw"])
@@ -39,12 +41,12 @@ def predict(idata, rng, X_new=None, size=None):
         pred = np.zeros((flatten_size, stacked_trees[0, 0].item().num_observations))
         for ind, p in enumerate(pred):
             for tree in stacked_trees.isel(trees=idx[ind]).values:
-                p += tree.predict_output()
+                p += tree.predict_output(excluded=excluded)
     else:
         pred = np.zeros((flatten_size, X_new.shape[0]))
         for ind, p in enumerate(pred):
             for tree in stacked_trees.isel(trees=idx[ind]).values:
-                p += np.array([tree.predict_out_of_sample(x) for x in X_new])
+                p += np.array([tree.predict_out_of_sample(x, excluded) for x in X_new])
     return pred.reshape((*size, -1))
 
 

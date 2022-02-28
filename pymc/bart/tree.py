@@ -74,15 +74,20 @@ class Tree:
             self.idx_leaf_nodes.remove(index)
         del self.tree_structure[index]
 
-    def predict_output(self):
+    def predict_output(self, excluded=None):
         output = np.zeros(self.num_observations)
         for node_index in self.idx_leaf_nodes:
-            current_node = self.get_node(node_index)
-            output[current_node.idx_data_points] = current_node.value
+            leaf_node = self.get_node(node_index)
+            if excluded is None:
+                output[leaf_node.idx_data_points] = leaf_node.value
+            else:
+                parent_node = leaf_node.get_idx_parent_node()
+                if self.get_node(parent_node).idx_split_variable not in excluded:
+                    output[leaf_node.idx_data_points] = leaf_node.value
 
         return output.astype(aesara.config.floatX)
 
-    def predict_out_of_sample(self, X):
+    def predict_out_of_sample(self, X, excluded=None):
         """
         Predict output of tree for an unobserved point x.
 
@@ -97,7 +102,12 @@ class Tree:
             Value of the leaf value where the unobserved point lies.
         """
         leaf_node = self._traverse_tree(X, node_index=0)
-        return leaf_node.value
+        leaf_value = leaf_node.value
+        if excluded is not None:
+            parent_node = leaf_node.get_idx_parent_node()
+            if self.get_node(parent_node).idx_split_variable in excluded:
+                leaf_value = 0.0
+        return leaf_value
 
     def _traverse_tree(self, x, node_index=0):
         """
