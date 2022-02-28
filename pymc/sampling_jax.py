@@ -155,7 +155,7 @@ def _get_batched_jittered_initial_points(
         Each item has shape `(chains, *var.shape)`
     """
     if isinstance(random_seed, (int, np.integer)):
-        random_seed = np.random.default_rng(random_seed).integers(2**30, size=chains)
+        random_seed = np.random.default_rng(random_seed).integers(2 ** 30, size=chains)
     elif not isinstance(random_seed, (list, tuple, np.ndarray)):
         raise ValueError(f"The `seeds` must be int or array-like. Got {type(random_seed)} instead.")
 
@@ -218,6 +218,7 @@ def sample_blackjax_nuts(
     chains=4,
     target_accept=0.8,
     random_seed=10,
+    initvals=None,
     model=None,
     var_names=None,
     progress_bar=True,  # FIXME: Unused for now
@@ -290,13 +291,19 @@ def sample_blackjax_nuts(
     else:
         dims = {}
 
-    tic1 = pd.Timestamp.now()
+    tic1 = datetime.now()
     print("Compiling...", file=sys.stdout)
 
-    rv_names = [rv.name for rv in model.value_vars]
-    initial_point = model.compute_initial_point()
-    init_state = [initial_point[rv_name] for rv_name in rv_names]
-    init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
+    init_params = _get_batched_jittered_initial_points(
+        model=model,
+        chains=chains,
+        initvals=initvals,
+        random_seed=random_seed,
+    )
+
+    if chains == 1:
+        init_params = [np.stack(init_params)]
+        init_params = [np.stack(init_state) for init_state in zip(*init_params)]
 
     logprob_fn = get_jaxified_logp(model)
 
@@ -311,7 +318,7 @@ def sample_blackjax_nuts(
         target_accept=target_accept,
     )
 
-    tic2 = pd.Timestamp.now()
+    tic2 = datetime.now()
     print("Compilation time = ", tic2 - tic1, file=sys.stdout)
 
     print("Sampling...", file=sys.stdout)
@@ -326,10 +333,10 @@ def sample_blackjax_nuts(
             "Only supporting the following methods to draw chains:" ' "parallel" or "vectorized"'
         )
 
-    states, _ = map_fn(get_posterior_samples)(keys, init_state_batched)
+    states, _ = map_fn(get_posterior_samples)(keys, init_params)
     raw_mcmc_samples = states.position
 
-    tic3 = pd.Timestamp.now()
+    tic3 = datetime.now()
     print("Sampling time = ", tic3 - tic2, file=sys.stdout)
 
     print("Transforming variables...", file=sys.stdout)
@@ -339,7 +346,7 @@ def sample_blackjax_nuts(
         result = jax.vmap(jax.vmap(jax_fn))(*raw_mcmc_samples)[0]
         mcmc_samples[v.name] = result
 
-    tic4 = pd.Timestamp.now()
+    tic4 = datetime.now()
     print("Transformation time = ", tic4 - tic3, file=sys.stdout)
 
     if idata_kwargs is None:
@@ -368,8 +375,6 @@ def sample_blackjax_nuts(
     )
 
     return az_trace
-=======
->>>>>>> main
 
 
 def sample_numpyro_nuts(
@@ -457,7 +462,7 @@ def sample_numpyro_nuts(
 
     if random_seed is None:
         random_seed = model.rng_seeder.randint(
-            2**30, dtype=np.int64, size=chains if chains > 1 else None
+            2 ** 30, dtype=np.int64, size=chains if chains > 1 else None
         )
 
     tic1 = datetime.now()
