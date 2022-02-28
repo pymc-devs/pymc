@@ -1,5 +1,5 @@
 from aesara.graph.basic import walk
-from aesara.scan.op import Scan
+from aesara.graph.op import HasInnerGraph
 
 from aeppl.abstract import MeasurableVariable
 
@@ -12,10 +12,8 @@ def assert_no_rvs(var):
         if owner:
             inputs = list(reversed(owner.inputs))
 
-            # TODO: We need a better--potentially type-based--means of
-            # determining whether or not an inner-graph is present
-            if isinstance(owner.op, Scan):
-                inputs += owner.op.outputs
+            if isinstance(owner.op, HasInnerGraph):
+                inputs += owner.op.inner_outputs
 
             return inputs
 

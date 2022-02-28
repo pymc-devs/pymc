@@ -461,8 +461,8 @@ def add_opts_to_inner_graphs(fgraph, node):
         return None
 
     inner_fgraph = FunctionGraph(
-        node.op.inputs,
-        node.op.outputs,
+        node.op.inner_inputs,
+        node.op.inner_outputs,
         clone=True,
         copy_inputs=False,
         copy_orphans=False,
@@ -474,7 +474,7 @@ def add_opts_to_inner_graphs(fgraph, node):
 
     new_outputs = list(inner_fgraph.outputs)
 
-    op = Scan(node.op.inputs, new_outputs, node.op.info)
+    op = Scan(node.op.inner_inputs, new_outputs, node.op.info)
     new_node = op.make_node(*node.inputs)
 
     return dict(zip(node.outputs, new_node.outputs))
