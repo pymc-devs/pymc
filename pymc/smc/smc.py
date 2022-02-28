@@ -369,7 +369,7 @@ class IMH(SMC_KERNEL):
         corr = Pearson(self.tempered_posterior)
         ac_ = []
         while True:
-            log_R = np.log(np.random.rand(self.draws))
+            log_R = np.log(self.rng.random(self.draws))
             # The proposal is independent from the current point.
             # We have to take that into account to compute the Metropolis-Hastings acceptance
             # We first compute the logp of proposing a transition to the current points.
