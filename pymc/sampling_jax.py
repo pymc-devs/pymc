@@ -221,7 +221,6 @@ def sample_blackjax_nuts(
     initvals=None,
     model=None,
     var_names=None,
-    progress_bar=True,  # FIXME: Unused for now
     keep_untransformed=False,
     chain_method="parallel",
     idata_kwargs=None,
@@ -249,10 +248,6 @@ def sample_blackjax_nuts(
         context, it defaults to that model, otherwise the model must be passed explicitly.
     var_names : iterable of str, optional
         Names of variables for which to compute the posterior samples. Defaults to all variables in the posterior
-    progress_bar : bool, default True
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
     keep_untransformed : bool, default False
         Include untransformed variables in the posterior samples. Defaults to False.
     chain_method : str, default "parallel"
