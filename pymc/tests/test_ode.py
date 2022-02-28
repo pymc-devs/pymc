@@ -268,20 +268,26 @@ class TestErrors:
             DifferentialEquation(func=self.system, t0=0, times=self.times, n_states=1, n_theta=0)
 
     def system_2d_tensor(y, t, p):
-        s = np.exp(-t) - p[0] * y[0]
-        return at.stack((s, s, s, s)).reshape((2,2))
+        s0 = np.exp(-t) - p[0] * y[0]
+        s1 = np.exp(-t) - p[0] * y[1]
+        s2 = np.exp(-t) - p[0] * y[2]
+        s3 = np.exp(-t) - p[0] * y[3]
+        return at.stack((s0, s1, s2, s3)).reshape((2,2))
 
     def test_tensor_shape(self):
         with pytest.raises(ValueError, match="returned a 2-dimensional tensor"):
-            DifferentialEquation(func=self.system_2d_tensor, t0=0, times=self.times, n_states=1, n_theta=0)
+            DifferentialEquation(func=TestErrors.system_2d_tensor, t0=0, times=self.times, n_states=4, n_theta=1)
 
     def system_2d_list(y, t, p):
-        s = np.exp(-t) - p[0] * y[0]
-        return [[s,s], [s,s]]
+        s0 = np.exp(-t) - p[0] * y[0]
+        s1 = np.exp(-t) - p[0] * y[1]
+        s2 = np.exp(-t) - p[0] * y[2]
+        s3 = np.exp(-t) - p[0] * y[3]
+        return [[s0,s1], [s2,s3]]
 
     def test_list_shape(self):
         with pytest.raises(ValueError, match="returned a 2-dimensional tensor"):
-            DifferentialEquation(func=self.system_2d_list, t0=0, times=self.times, n_states=1, n_theta=0)
+            DifferentialEquation(func=TestErrors.system_2d_list, t0=0, times=self.times, n_states=4, n_theta=1)
 
 
 class TestDiffEqModel:

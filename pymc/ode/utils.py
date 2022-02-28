@@ -112,7 +112,7 @@ def augment_system(ode_func, n_states, n_theta):
         t_yhat = at.stack(yhat, axis=0)
     if t_yhat.ndim > 1:
         raise ValueError(
-            f"The odefunc returned a {yhat.ndim}-dimensional tensor, but 0 or 1 dimensions were expected."
+            f"The odefunc returned a {t_yhat.ndim}-dimensional tensor, but 0 or 1 dimensions were expected."
         )
 
     # Now compute gradients
