@@ -767,60 +767,19 @@ class TestNormalMixture(SeededTest):
         )
 
 
-@pytest.mark.xfail(reason="NormalMixture not refactored yet")
 class TestMixtureVsLatent(SeededTest):
-    def setup_method(self, *args, **kwargs):
-        super().setup_method(*args, **kwargs)
-        self.nd = 3
-        self.npop = 3
-        self.mus = at.as_tensor_variable(
-            np.tile(
-                np.reshape(
-                    np.arange(self.npop),
-                    (
-                        1,
-                        -1,
-                    ),
-                ),
-                (
-                    self.nd,
-                    1,
-                ),
-            )
-        )
+    """This class contains tests that compare a marginal Mixture with a latent indexed Mixture"""
 
-    def test_1d_w(self):
-        nd = self.nd
-        npop = self.npop
-        mus = self.mus
-        size = 100
-        with Model() as model:
-            m = NormalMixture(
-                "m", w=np.ones(npop) / npop, mu=mus, sigma=1e-5, comp_shape=(nd, npop), shape=nd
-            )
-            z = Categorical("z", p=np.ones(npop) / npop)
-            latent_m = Normal("latent_m", mu=mus[..., z], sigma=1e-5, shape=nd)
+    def test_scalar_components(self):
+        nd = 3
+        npop = 4
+        # [[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]]
+        mus = at.constant(np.full((nd, npop), np.arange(npop)))
 
-        m_val = m.random(size=size)
-        latent_m_val = latent_m.random(size=size)
-        assert m_val.shape == latent_m_val.shape
-        # Test that each element in axis = -1 comes from the same mixture
-        # component
-        assert all(np.all(np.diff(m_val) < 1e-3, axis=-1))
-        assert all(np.all(np.diff(latent_m_val) < 1e-3, axis=-1))
-
-        self.samples_from_same_distribution(m_val, latent_m_val)
-        self.logp_matches(m, latent_m, z, npop, model=model)
-
-    def test_2d_w(self):
-        nd = self.nd
-        npop = self.npop
-        mus = self.mus
-        size = 100
-        with Model() as model:
+        with Model(rng_seeder=self.get_random_state()) as model:
             m = NormalMixture(
                 "m",
-                w=np.ones((nd, npop)) / npop,
+                w=np.ones(npop) / npop,
                 mu=mus,
                 sigma=1e-5,
                 comp_shape=(nd, npop),
@@ -830,15 +789,55 @@ class TestMixtureVsLatent(SeededTest):
             mu = at.as_tensor_variable([mus[i, z[i]] for i in range(nd)])
             latent_m = Normal("latent_m", mu=mu, sigma=1e-5, shape=nd)
 
-        m_val = m.random(size=size)
-        latent_m_val = latent_m.random(size=size)
+        size = 100
+        m_val = draw(m, draws=size)
+        latent_m_val = draw(latent_m, draws=size)
+
         assert m_val.shape == latent_m_val.shape
         # Test that each element in axis = -1 can come from independent
         # components
         assert not all(np.all(np.diff(m_val) < 1e-3, axis=-1))
         assert not all(np.all(np.diff(latent_m_val) < 1e-3, axis=-1))
-
         self.samples_from_same_distribution(m_val, latent_m_val)
+
+        # Check that logp is the same whether elements of the last axis are mixed or not
+        logp_fn = model.compile_logp(vars=[m])
+        assert np.isclose(logp_fn({"m": [0, 0, 0]}), logp_fn({"m": [0, 1, 2]}))
+        self.logp_matches(m, latent_m, z, npop, model=model)
+
+    def test_vector_components(self):
+        nd = 3
+        npop = 4
+        # [[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]]
+        mus = at.constant(np.full((nd, npop), np.arange(npop)))
+
+        with Model(rng_seeder=self.get_random_state()) as model:
+            m = Mixture(
+                "m",
+                w=np.ones(npop) / npop,
+                # MvNormal distribution with squared sigma diagonal covariance should
+                # be equal to vector of Normals from latent_m
+                comp_dists=[MvNormal.dist(mus[:, i], np.eye(nd) * 1e-5**2) for i in range(npop)],
+            )
+            z = Categorical("z", p=np.ones(npop) / npop)
+            latent_m = Normal("latent_m", mu=mus[..., z], sigma=1e-5, shape=nd)
+
+        size = 100
+        m_val = draw(m, draws=size)
+        latent_m_val = draw(latent_m, draws=size)
+        assert m_val.shape == latent_m_val.shape
+        # Test that each element in axis = -1 comes from the same mixture
+        # component
+        assert np.all(np.diff(m_val) < 1e-3)
+        assert np.all(np.diff(latent_m_val) < 1e-3)
+        # TODO: The following statistical test appears to be more flaky than expected
+        #  even though the  distributions should be the same. Seeding should make it
+        #  stable but might be worth investigating further
+        self.samples_from_same_distribution(m_val, latent_m_val)
+
+        # Check that mixing of values in the last axis leads to smaller logp
+        logp_fn = model.compile_logp(vars=[m])
+        assert logp_fn({"m": [0, 0, 0]}) > logp_fn({"m": [0, 1, 0]}) > logp_fn({"m": [0, 1, 2]})
         self.logp_matches(m, latent_m, z, npop, model=model)
 
     def samples_from_same_distribution(self, *args):
@@ -848,31 +847,42 @@ class TestMixtureVsLatent(SeededTest):
         _, p_correlation = st.ks_2samp(
             *(np.array([np.corrcoef(ss) for ss in s]).flatten() for s in args)
         )
+        # This has a success rate of 10% (0.95**2), even if the distributions are the same
         assert p_marginal >= 0.05 and p_correlation >= 0.05
 
     def logp_matches(self, mixture, latent_mix, z, npop, model):
+        def loose_logp(model, vars):
+            """Return logp function that accepts dictionary with unused variables as input"""
+            return model.compile_fn(
+                model.logpt(vars=vars, sum=False),
+                inputs=model.value_vars,
+                on_unused_input="ignore",
+            )
+
         if aesara.config.floatX == "float32":
             rtol = 1e-4
         else:
             rtol = 1e-7
         test_point = model.compute_initial_point()
-        test_point["latent_m"] = test_point["m"]
-        mix_logp = mixture.logp(test_point)
-        logps = []
+        test_point["m"] = test_point["latent_m"]
+
+        mix_logp = loose_logp(model, mixture)(test_point)[0]
+
+        z_shape = z.shape.eval()
+        latent_mix_components_logps = []
         for component in range(npop):
-            test_point["z"] = component * np.ones(z.distribution.shape)
-            # Count the number of axes that should be broadcasted from z to
-            # modify the logp
-            sh1 = test_point["z"].shape
-            sh2 = test_point["latent_m"].shape
-            if len(sh1) > len(sh2):
-                sh2 = (1,) * (len(sh1) - len(sh2)) + sh2
-            elif len(sh2) > len(sh1):
-                sh1 = (1,) * (len(sh2) - len(sh1)) + sh1
-            reps = np.prod([s2 if s1 != s2 else 1 for s1, s2 in zip(sh1, sh2)])
-            z_logp = z.logp(test_point) * reps
-            logps.append(z_logp + latent_mix.logp(test_point))
-        latent_mix_logp = logsumexp(np.array(logps), axis=0)
+            test_point["z"] = np.full(z_shape, component)
+            z_logp = loose_logp(model, z)(test_point)[0]
+            latent_mix_component_logp = loose_logp(model, latent_mix)(test_point)[0]
+            # If the mixture ndim_supp is a vector, the logp should be summed within
+            # components, as its items are not independent
+            if mix_logp.ndim == 0:
+                latent_mix_component_logp = latent_mix_component_logp.sum()
+            latent_mix_components_logps.append(z_logp + latent_mix_component_logp)
+        latent_mix_logp = logsumexp(np.array(latent_mix_components_logps), axis=0)
+        if mix_logp.ndim == 0:
+            latent_mix_logp = latent_mix_logp.sum()
+
         assert_allclose(mix_logp, latent_mix_logp, rtol=rtol)
 
 
