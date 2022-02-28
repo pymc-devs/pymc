@@ -166,12 +166,10 @@ class Inference:
                 if np.isnan(current_param).any():
                     name_slc = []
                     tmp_hold = list(range(current_param.size))
-                    # XXX: This needs to be refactored
-                    vmap = None  # self.approx.groups[0].bij.ordering.vmap
-                    for vmap_ in vmap:
-                        slclen = len(tmp_hold[vmap_.slc])
+                    for varname, slice_info in self.approx.groups[0].ordering.items():
+                        slclen = len(tmp_hold[slice_info[1]])
                         for j in range(slclen):
-                            name_slc.append((vmap_.var, j))
+                            name_slc.append((varname, j))
                     index = np.where(np.isnan(current_param))[0]
                     errmsg = ["NaN occurred in optimization. "]
                     suggest_solution = (
@@ -210,18 +208,16 @@ class Inference:
         try:
             for i in progress:
                 e = step_func()
-                if np.isnan(e):  # pragma: no cover
+                if np.isnan(e):
                     scores = scores[:i]
                     self.hist = np.concatenate([self.hist, scores])
                     current_param = self.approx.params[0].get_value()
                     name_slc = []
                     tmp_hold = list(range(current_param.size))
-                    # XXX: This needs to be refactored
-                    vmap = None  # self.approx.groups[0].bij.ordering.vmap
-                    for vmap_ in vmap:
-                        slclen = len(tmp_hold[vmap_.slc])
+                    for varname, slice_info in self.approx.groups[0].ordering.items():
+                        slclen = len(tmp_hold[slice_info[1]])
                         for j in range(slclen):
-                            name_slc.append((vmap_.var, j))
+                            name_slc.append((varname, j))
                     index = np.where(np.isnan(current_param))[0]
                     errmsg = ["NaN occurred in optimization. "]
                     suggest_solution = (

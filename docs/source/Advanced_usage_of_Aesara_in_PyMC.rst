@@ -102,7 +102,7 @@ Good reasons for defining a custom `Op` might be the following:
   and sufficiently parallelizable to make the cost worth it.
   We would definitely like to hear about any such examples.
 
-Aesara has extensive `documentation, <https://aesara.readthedocs.io/en/latest/extending/index.html>`_
+Aesara has extensive :doc:`documentation <aesara:index>`
 about how to write new Ops.
 
 

@@ -360,10 +360,10 @@ class BaseTestDistributionRandom(SeededTest):
         )
 
     def check_pymc_params_match_rv_op(self):
-        aesera_dist_inputs = self.pymc_rv.get_parents()[0].inputs[3:]
-        assert len(self.expected_rv_op_params) == len(aesera_dist_inputs)
+        aesara_dist_inputs = self.pymc_rv.get_parents()[0].inputs[3:]
+        assert len(self.expected_rv_op_params) == len(aesara_dist_inputs)
         for (expected_name, expected_value), actual_variable in zip(
-            self.expected_rv_op_params.items(), aesera_dist_inputs
+            self.expected_rv_op_params.items(), aesara_dist_inputs
         ):
             assert_almost_equal(expected_value, actual_variable.eval(), decimal=self.decimal)
 
@@ -375,7 +375,8 @@ class BaseTestDistributionRandom(SeededTest):
             pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
             expected_symbolic = tuple(pymc_rv.shape.eval())
             actual = pymc_rv.eval().shape
-            assert actual == expected_symbolic == expected
+            assert actual == expected_symbolic
+            assert expected_symbolic == expected
 
         # test multi-parameters sampling for univariate distributions (with univariate inputs)
         if (
@@ -1196,8 +1197,8 @@ class TestMvNormalMisc:
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, cov, rng):
-        chi2_samples = rng.chisquare(nu, size=size)
         mv_samples = rng.multivariate_normal(np.zeros_like(mu), cov, size=size)
+        chi2_samples = rng.chisquare(nu, size=size)
         return (mv_samples / np.sqrt(chi2_samples[:, None] / nu)) + mu
 
     pymc_dist = pm.MvStudentT
@@ -1309,41 +1310,6 @@ class TestDirichlet(BaseTestDistributionRandom):
     ]
 
 
-class TestStickBreakingWeights(BaseTestDistributionRandom):
-    pymc_dist = pm.StickBreakingWeights
-    pymc_dist_params = {"alpha": 2.0, "K": 19}
-    expected_rv_op_params = {"alpha": 2.0, "K": 19}
-    sizes_to_check = [None, 17, (5,), (11, 5), (3, 13, 5)]
-    sizes_expected = [
-        (20,),
-        (17, 20),
-        (
-            5,
-            20,
-        ),
-        (11, 5, 20),
-        (3, 13, 5, 20),
-    ]
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_rv_size",
-        "check_basic_properties",
-    ]
-
-    def check_basic_properties(self):
-        default_rng = aesara.shared(np.random.default_rng(1234))
-        draws = pm.StickBreakingWeights.dist(
-            alpha=3.5,
-            K=19,
-            size=(2, 3, 5),
-            rng=default_rng,
-        ).eval()
-
-        assert np.allclose(draws.sum(-1), 1)
-        assert np.all(draws >= 0)
-        assert np.all(draws <= 1)
-
-
 class TestMultinomial(BaseTestDistributionRandom):
     pymc_dist = pm.Multinomial
     pymc_dist_params = {"n": 85, "p": np.array([0.28, 0.62, 0.10])}
@@ -1379,7 +1345,7 @@ class TestDirichletMultinomial(BaseTestDistributionRandom):
         draws = pm.DirichletMultinomial.dist(
             n=np.array([5, 100]),
             a=np.array([[0.001, 0.001, 0.001, 1000], [1000, 1000, 0.001, 0.001]]),
-            size=(2, 3),
+            size=(2, 3, 2),
             rng=default_rng,
         ).eval()
         assert np.all(draws.sum(-1) == np.array([5, 100]))
@@ -1395,9 +1361,44 @@ class TestDirichletMultinomial_1D_n_2D_a(BaseTestDistributionRandom):
         "n": np.array([23, 29]),
         "a": np.array([[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]]),
     }
-    sizes_to_check = [None, 1, (4,), (3, 4)]
+    sizes_to_check = [None, (1, 2), (4, 2), (3, 4, 2)]
     sizes_expected = [(2, 4), (1, 2, 4), (4, 2, 4), (3, 4, 2, 4)]
     checks_to_run = ["check_rv_size"]
+
+
+class TestStickBreakingWeights(BaseTestDistributionRandom):
+    pymc_dist = pm.StickBreakingWeights
+    pymc_dist_params = {"alpha": 2.0, "K": 19}
+    expected_rv_op_params = {"alpha": 2.0, "K": 19}
+    sizes_to_check = [None, 17, (5,), (11, 5), (3, 13, 5)]
+    sizes_expected = [
+        (20,),
+        (17, 20),
+        (
+            5,
+            20,
+        ),
+        (11, 5, 20),
+        (3, 13, 5, 20),
+    ]
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_basic_properties",
+    ]
+
+    def check_basic_properties(self):
+        default_rng = aesara.shared(np.random.default_rng(1234))
+        draws = pm.StickBreakingWeights.dist(
+            alpha=3.5,
+            K=19,
+            size=(2, 3, 5),
+            rng=default_rng,
+        ).eval()
+
+        assert np.allclose(draws.sum(-1), 1)
+        assert np.all(draws >= 0)
+        assert np.all(draws <= 1)
 
 
 class TestCategorical(BaseTestDistributionRandom):
@@ -1783,7 +1784,24 @@ class TestWishart(BaseTestDistributionRandom):
         "check_rv_size",
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
+        "check_rv_size_batched_params",
     ]
+
+    def check_rv_size_batched_params(self):
+        for size in (None, (2,), (1, 2), (4, 3, 2)):
+            x = pm.Wishart.dist(nu=4, V=np.stack([np.eye(3), np.eye(3)]), size=size)
+
+            if size is None:
+                expected_shape = (2, 3, 3)
+            else:
+                expected_shape = size + (3, 3)
+
+            assert tuple(x.shape.eval()) == expected_shape
+
+            # RNG does not currently support batched parameters, whet it does this test
+            # should be updated to check that draws also have the expected shape
+            with pytest.raises(ValueError):
+                x.eval()
 
 
 class TestMatrixNormal(BaseTestDistributionRandom):
@@ -1793,13 +1811,15 @@ class TestMatrixNormal(BaseTestDistributionRandom):
     mu = np.random.random((3, 3))
     row_cov = np.eye(3)
     col_cov = np.eye(3)
-    shape = None
-    size = None
     pymc_dist_params = {"mu": mu, "rowcov": row_cov, "colcov": col_cov}
     expected_rv_op_params = {"mu": mu, "rowcov": row_cov, "colcov": col_cov}
 
+    sizes_to_check = (None, (1,), (2, 4))
+    sizes_expected = [(3, 3), (1, 3, 3), (2, 4, 3, 3)]
+
     checks_to_run = [
         "check_pymc_params_match_rv_op",
+        "check_rv_size",
         "check_draws",
         "check_errors",
         "check_random_variable_prior",
@@ -1840,17 +1860,6 @@ class TestMatrixNormal(BaseTestDistributionRandom):
         assert p > delta
 
     def check_errors(self):
-        msg = "MatrixNormal doesn't support size argument"
-        with pm.Model():
-            with pytest.raises(NotImplementedError, match=msg):
-                matrixnormal = pm.MatrixNormal(
-                    "matnormal",
-                    mu=np.random.random((3, 3)),
-                    rowcov=np.eye(3),
-                    colcov=np.eye(3),
-                    size=15,
-                )
-
         with pm.Model():
             matrixnormal = pm.MatrixNormal(
                 "matnormal",
@@ -1860,16 +1869,6 @@ class TestMatrixNormal(BaseTestDistributionRandom):
             )
             with pytest.raises(ValueError):
                 logp(matrixnormal, aesara.tensor.ones((3, 3, 3)))
-
-        with pm.Model():
-            with pytest.warns(FutureWarning):
-                matrixnormal = pm.MatrixNormal(
-                    "matnormal",
-                    mu=np.random.random((3, 3)),
-                    rowcov=np.eye(3),
-                    colcov=np.eye(3),
-                    shape=15,
-                )
 
     def check_random_variable_prior(self):
         """

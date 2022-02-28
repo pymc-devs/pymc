@@ -233,7 +233,7 @@ def test_interval_near_boundary():
         pm.Uniform("x", initval=x0, lower=lb, upper=ub)
 
     log_prob = model.point_logps()
-    np.testing.assert_allclose(log_prob, np.array([-52.68]))
+    np.testing.assert_allclose(list(log_prob.values()), np.array([-52.68]))
 
 
 def test_circular():

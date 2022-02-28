@@ -2,6 +2,7 @@
 
 from typing import Dict, Tuple
 
+import aesara.tensor as at
 import numpy as np
 import pandas as pd
 import pytest
@@ -601,6 +602,12 @@ class TestDataPyMC:
                 },
             )
             assert isinstance(converter.coords["city"], pd.MultiIndex)
+
+    def test_variable_dimension_name_collision(self):
+        with pytest.raises(ValueError, match="same name as its dimension"):
+            with pm.Model() as pmodel:
+                var = at.as_tensor([1, 2, 3])
+                pmodel.register_rv(var, name="time", dims=("time",))
 
 
 class TestPyMCWarmupHandling:

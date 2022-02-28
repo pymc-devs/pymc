@@ -185,19 +185,19 @@ class GaussianRandomWalk(distribution.Continuous):
 
     Parameters
     ----------
-    mu: tensor
+    mu : tensor_like of float, default 0
         innovation drift, defaults to 0.0
-        For vector valued mu, first dimension must match shape of the random walk, and
+        For vector valued `mu`, first dimension must match shape of the random walk, and
         the first element will be discarded (since there is no innovation in the first timestep)
-    sigma: tensor
-        sigma > 0, innovation standard deviation (only required if tau is not specified)
-        For vector valued sigma, first dimension must match shape of the random walk, and
+    sigma : tensor_like of float, optional
+        `sigma` > 0, innovation standard deviation (only required if `tau` is not specified)
+        For vector valued `sigma`, first dimension must match shape of the random walk, and
         the first element will be discarded (since there is no innovation in the first timestep)
-    tau: tensor
-        tau > 0, innovation precision (only required if sigma is not specified)
-        For vector valued tau, first dimension must match shape of the random walk, and
+    tau : tensor_like of float, optional
+        `tau` > 0, innovation precision (only required if `sigma` is not specified)
+        For vector valued `tau`, first dimension must match shape of the random walk, and
         the first element will be discarded (since there is no innovation in the first timestep)
-    init: distribution
+    init : pymc.Distribution, optional
         distribution for initial value (Defaults to Flat())
     """
 
@@ -230,7 +230,7 @@ class GaussianRandomWalk(distribution.Continuous):
 
         Parameters
         ----------
-        x: numeric
+        x : numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -250,10 +250,10 @@ class GaussianRandomWalk(distribution.Continuous):
 
         Parameters
         ----------
-        point: dict, optional
+        point : dict or Point, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size: int, optional
+        size : int, optional
             Desired size of random sample (returns one sample if not
             specified).
 

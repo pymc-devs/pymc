@@ -403,7 +403,7 @@ def sample(
 
         ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
         ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
-        ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
+        ``DEMetropolis``, ``DEMetropolisZ``, ``slice``, ``pgbart``
 
     B. If you manually declare the ``step_method``\ s, within the ``step``
        kwarg, then you can address the ``step_method`` kwargs directly.
@@ -2023,7 +2023,7 @@ def sample_prior_predictive(
         Number of samples from the prior predictive to generate. Defaults to 500.
     model : Model (optional if in ``with`` context)
     var_names : Iterable[str]
-        A list of names of variables for which to compute the posterior predictive
+        A list of names of variables for which to compute the prior predictive
         samples. Defaults to both observed and unobserved RVs. Transformed values
         are not included unless explicitly defined in var_names.
     random_seed : int
@@ -2385,7 +2385,7 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains))
+        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
         std_apoint = approx.std.eval()
         cov = std_apoint**2
         mean = approx.mean.get_value()
@@ -2402,7 +2402,7 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains))
+        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "advi_map":
@@ -2416,7 +2416,7 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains))
+        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "map":

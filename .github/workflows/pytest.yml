@@ -48,7 +48,6 @@ jobs:
             --ignore=pymc/tests/test_step.py
             --ignore=pymc/tests/test_tuning.py
             --ignore=pymc/tests/test_transforms.py
-            --ignore=pymc/tests/test_variational_inference.py
             --ignore=pymc/tests/test_sampling_jax.py
             --ignore=pymc/tests/test_dist_math.py
             --ignore=pymc/tests/test_minibatches.py
@@ -169,6 +168,7 @@ jobs:
             pymc/tests/test_distributions_random.py
             pymc/tests/test_distributions_moments.py
             pymc/tests/test_distributions_timeseries.py
+            pymc/tests/test_variational_inference.py
           - |
             pymc/tests/test_parallel_sampling.py
             pymc/tests/test_sampling.py

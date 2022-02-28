@@ -3,14 +3,11 @@
 
 TODO add "core" notebooks:
 
-- https://docs.pymc.io/en/stable/pymc-examples/examples/generalized_linear_models/GLM-linear.html
-  - https://github.com/pymc-devs/pymc-examples/blob/main/examples/generalized_linear_models/GLM-linear.ipynb
+- {ref}`GLM-linear`
 
-- https://docs.pymc.io/en/stable/pymc-examples/examples/case_studies/multilevel_modeling.html
-  - https://github.com/pymc-devs/pymc-examples/blob/main/examples/case_studies/multilevel_modeling.ipynb
+- {ref}`nb:multilevel_modeling`
 
-- https://docs.pymc.io/en/stable/pymc-examples/examples/diagnostics_and_criticism/model_comparison.html
-  - https://github.com/pymc-devs/pymc-examples/blob/main/examples/diagnostics_and_criticism/model_comparison.ipynb
+- {ref}`model_comparison`
   TODO: Add reference to ArviZ docs since it was taken from there
 
 - https://docs.pymc.io/en/stable/Probability_Distributions.html
@@ -20,11 +17,9 @@ TODO add "core" notebooks:
   update needed: from "pymc and theano" to "pymc and aesara" tutorial (not just auto-renaming from theano to aesara but showing correct use). Very related to migration guide as well, though the migration guide already covers it.
   - https://github.com/pymc-devs/pymc/blob/37ba9a3e3a19b738f48cb30007f4d70c33bdd0f6/docs/source/PyMC_and_Aesara.rst
 
-- https://docs.pymc.io/en/stable/pymc-examples/examples/diagnostics_and_criticism/posterior_predictive.html
-  - https://github.com/pymc-devs/pymc-examples/blob/2002ebd815a199be89b011039906b197bca42361/examples/diagnostics_and_criticism/posterior_predictive.ipynb
+- {ref}`posterior_predictive`
 
-- https://docs.pymc.io/en/stable/Gaussian_Processes.html
-  - https://github.com/pymc-devs/pymc/blob/37ba9a3e3a19b738f48cb30007f4d70c33bdd0f6/docs/source/Gaussian_Processes.rst
+- {mod}`pymc.gp`
 
 TODO link to the pymc-examples
 TODO add categories to all notebooks
@@ -37,4 +32,5 @@ examples/pymc_overview
 examples/GLM_linear
 examples/model_comparison
 examples/posterior_predictive
+examples/dimensionality
 :::
