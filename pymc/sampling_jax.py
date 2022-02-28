@@ -155,7 +155,7 @@ def _get_batched_jittered_initial_points(
         Each item has shape `(chains, *var.shape)`
     """
     if isinstance(random_seed, (int, np.integer)):
-        random_seed = np.random.default_rng(random_seed).integers(2 ** 30, size=chains)
+        random_seed = np.random.default_rng(random_seed).integers(2**30, size=chains)
     elif not isinstance(random_seed, (list, tuple, np.ndarray)):
         raise ValueError(f"The `seeds` must be int or array-like. Got {type(random_seed)} instead.")
 
@@ -457,7 +457,7 @@ def sample_numpyro_nuts(
 
     if random_seed is None:
         random_seed = model.rng_seeder.randint(
-            2 ** 30, dtype=np.int64, size=chains if chains > 1 else None
+            2**30, dtype=np.int64, size=chains if chains > 1 else None
         )
 
     tic1 = datetime.now()
