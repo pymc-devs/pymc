@@ -388,17 +388,16 @@ class IMH(SMC_KERNEL):
                 (proposal_logp + backward_logp) - (self.tempered_posterior_logp + forward_logp)
             )
 
-            tmp = np.copy(self.tempered_posterior)
-            tmp[accepted] = proposal[accepted]
-            pearson_r = corr.get(tmp)
+            self.tempered_posterior[accepted] = proposal[accepted]
+            self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
+            self.prior_logp[accepted] = pl[accepted]
+            self.likelihood_logp[accepted] = ll[accepted]
+            ac_.append(accepted)
+            self.n_steps += 1
+
+            pearson_r = corr.get(self.tempered_posterior)
             if np.mean((old_corr - pearson_r) > self.correlation_threshold) > 0.9:
-                self.tempered_posterior = tmp
-                self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
-                self.prior_logp[accepted] = pl[accepted]
-                self.likelihood_logp[accepted] = ll[accepted]
                 old_corr = pearson_r
-                ac_.append(accepted)
-                self.n_steps += 1
             else:
                 break
 
@@ -503,17 +502,16 @@ class MH(SMC_KERNEL):
             proposal_logp = pl + ll * self.beta
             accepted = log_R < (proposal_logp - self.tempered_posterior_logp)
 
-            tmp = np.copy(self.tempered_posterior)
-            tmp[accepted] = proposal[accepted]
-            pearson_r = corr.get(tmp)
+            self.tempered_posterior[accepted] = proposal[accepted]
+            self.prior_logp[accepted] = pl[accepted]
+            self.likelihood_logp[accepted] = ll[accepted]
+            self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
+            ac_.append(accepted)
+            self.n_steps += 1
+
+            pearson_r = corr.get(self.tempered_posterior)
             if np.mean((old_corr - pearson_r) > self.correlation_threshold) > 0.9:
-                self.tempered_posterior[accepted] = proposal[accepted]
-                self.prior_logp[accepted] = pl[accepted]
-                self.likelihood_logp[accepted] = ll[accepted]
-                self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
                 old_corr = pearson_r
-                ac_.append(accepted)
-                self.n_steps += 1
             else:
                 break
 
