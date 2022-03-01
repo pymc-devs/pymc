@@ -165,7 +165,8 @@ class GaussianRandomWalk(distribution.Continuous):
         value: at.Variable,
         mu: at.Variable,
         sigma: at.Variable,
-        init: at.Variable,
+        init: at.Variable, Not used
+        steps: at.Variable, Not used
 
         Returns
         -------
@@ -173,14 +174,11 @@ class GaussianRandomWalk(distribution.Continuous):
         """
 
         # Calculate initialization logp
-        init_logp = logprob.logp(Normal.dist(init, sigma), value[0])
         # Make time series stationary around the mean value
         stationary_series = at.diff(value)
         series_logp = logprob.logp(Normal.dist(mu, sigma), stationary_series)
 
-        total_logp = at.concatenate([at.expand_dims(init_logp, 0), series_logp])
-
-        return total_logp
+        return series_logp
 
 
 class AR1(distribution.Continuous):

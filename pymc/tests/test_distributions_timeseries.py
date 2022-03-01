@@ -71,10 +71,7 @@ class TestGaussianRandomWalk:
         logp = pm.logp(grw, vals)
         logp_vals = logp.eval()
 
-        # Calculate logp in explicit loop to make testing sequence obvious
-        init_val = vals[0]
-        init_logp = stats.norm(init, sigma).logpdf(init_val)
-        logp_reference = [init_logp]
+        logp_reference = []
 
         for x_minus_one_val, x_val in zip(vals, vals[1:]):
             logp_point = stats.norm(x_minus_one_val + mu + init, sigma).logpdf(x_val)
