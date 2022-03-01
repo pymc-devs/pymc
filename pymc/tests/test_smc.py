@@ -165,36 +165,29 @@ class TestSMC(SeededTest):
                 draws=10,
                 chains=1,
                 threshold=0.7,
-                n_steps=15,
-                tune_steps=False,
-                p_acc_rate=0.5,
+                correlation_threshold=0.02,
                 return_inferencedata=False,
                 kernel=pm.smc.IMH,
             )
 
             assert trace.report.threshold == 0.7
             assert trace.report.n_draws == 10
-            assert trace.report.n_tune == 15
-            assert trace.report.tune_steps is False
-            assert trace.report.p_acc_rate == 0.5
+
+            assert trace.report.correlation_threshold == 0.02
 
         with self.fast_model:
             trace = pm.sample_smc(
                 draws=10,
                 chains=1,
                 threshold=0.95,
-                n_steps=15,
-                tune_steps=False,
-                p_acc_rate=0.5,
+                correlation_threshold=0.02,
                 return_inferencedata=False,
                 kernel=pm.smc.MH,
             )
 
             assert trace.report.threshold == 0.95
             assert trace.report.n_draws == 10
-            assert trace.report.n_tune == 15
-            assert trace.report.tune_steps is False
-            assert trace.report.p_acc_rate == 0.5
+            assert trace.report.correlation_threshold == 0.02
 
     @pytest.mark.parametrize("chains", (1, 2))
     def test_return_datatype(self, chains):
