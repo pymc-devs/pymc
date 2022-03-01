@@ -320,10 +320,10 @@ class BaseTestDistributionRandom(SeededTest):
     """
 
     pymc_dist: Optional[Callable] = None
-    pymc_dist_params = dict()
+    pymc_dist_params: Optional[dict] = None
     reference_dist: Optional[Callable] = None
-    reference_dist_params = dict()
-    expected_rv_op_params = dict()
+    reference_dist_params: Optional[dict] = None
+    expected_rv_op_params: Optional[dict] = None
     checks_to_run = []
     size = 15
     decimal = select_by_precision(float64=6, float32=3)
