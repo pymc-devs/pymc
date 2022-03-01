@@ -234,7 +234,6 @@ class TestErrors:
 
     times = np.arange(0, 9)
 
-    print(type(system))
     ode_model = DifferentialEquation(func=system.__func__, t0=0, times=times, n_states=1, n_theta=1)
 
     @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
