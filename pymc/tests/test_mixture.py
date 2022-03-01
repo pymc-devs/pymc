@@ -34,7 +34,6 @@ from pymc.distributions import (
     LKJCholeskyCov,
     LogNormal,
     Mixture,
-    MixtureSameFamily,
     Multinomial,
     MvNormal,
     Normal,
@@ -886,8 +885,12 @@ class TestMixtureVsLatent(SeededTest):
         assert_allclose(mix_logp, latent_mix_logp, rtol=rtol)
 
 
-@pytest.mark.xfail(reason="MixtureSameFamily not refactored yet")
 class TestMixtureSameFamily(SeededTest):
+    """Tests that used to belong to deprecated `TestMixtureSameFamily`.
+
+    The functionality is now expected to be provided by `Mixture`
+    """
+
     @classmethod
     def setup_class(cls):
         super().setup_class()
@@ -903,17 +906,16 @@ class TestMixtureSameFamily(SeededTest):
         mixture_axis = len(batch_shape)
         with Model() as model:
             comp_dists = Multinomial.dist(p=p, n=n, shape=(*batch_shape, self.mixture_comps, 3))
-            mixture = MixtureSameFamily(
+            mixture = Mixture(
                 "mixture",
                 w=w,
                 comp_dists=comp_dists,
-                mixture_axis=mixture_axis,
                 shape=(*batch_shape, 3),
             )
-            prior = sample_prior_predictive(samples=self.n_samples)
+            prior = sample_prior_predictive(samples=self.n_samples, return_inferencedata=False)
 
         assert prior["mixture"].shape == (self.n_samples, *batch_shape, 3)
-        assert mixture.random(size=self.size).shape == (self.size, *batch_shape, 3)
+        assert draw(mixture, draws=self.size).shape == (self.size, *batch_shape, 3)
 
         if aesara.config.floatX == "float32":
             rtol = 1e-4
@@ -921,18 +923,16 @@ class TestMixtureSameFamily(SeededTest):
             rtol = 1e-7
 
         initial_point = model.compute_initial_point()
-        comp_logp = comp_dists.logp(initial_point["mixture"].reshape(*batch_shape, 1, 3))
+        comp_logp = logp(comp_dists, initial_point["mixture"].reshape(*batch_shape, 1, 3))
         log_sum_exp = logsumexp(
-            comp_logp.eval() + np.log(w)[..., None], axis=mixture_axis, keepdims=True
+            comp_logp.eval() + np.log(w), axis=mixture_axis, keepdims=True
         ).sum()
         assert_allclose(
-            model.logp(initial_point),
+            model.compile_logp()(initial_point),
             log_sum_exp,
             rtol,
         )
 
-    # TODO: Handle case when `batch_shape` == `sample_shape`.
-    # See https://github.com/pymc-devs/pymc/issues/4185 for details.
     def test_with_mvnormal(self):
         # 10 batch, 3-variate Gaussian
         mu = np.random.randn(self.mixture_comps, 3)
@@ -943,13 +943,11 @@ class TestMixtureSameFamily(SeededTest):
 
         with Model() as model:
             comp_dists = MvNormal.dist(mu=mu, chol=chol, shape=(self.mixture_comps, 3))
-            mixture = MixtureSameFamily(
-                "mixture", w=w, comp_dists=comp_dists, mixture_axis=0, shape=(3,)
-            )
-            prior = sample_prior_predictive(samples=self.n_samples)
+            mixture = Mixture("mixture", w=w, comp_dists=comp_dists, shape=(3,))
+            prior = sample_prior_predictive(samples=self.n_samples, return_inferencedata=False)
 
         assert prior["mixture"].shape == (self.n_samples, 3)
-        assert mixture.random(size=self.size).shape == (self.size, 3)
+        assert draw(mixture, draws=self.size).shape == (self.size, 3)
 
         if aesara.config.floatX == "float32":
             rtol = 1e-4
@@ -957,12 +955,10 @@ class TestMixtureSameFamily(SeededTest):
             rtol = 1e-7
 
         initial_point = model.compute_initial_point()
-        comp_logp = comp_dists.logp(initial_point["mixture"].reshape(1, 3))
-        log_sum_exp = logsumexp(
-            comp_logp.eval() + np.log(w)[..., None], axis=0, keepdims=True
-        ).sum()
+        comp_logp = logp(comp_dists, initial_point["mixture"].reshape(1, 3))
+        log_sum_exp = logsumexp(comp_logp.eval() + np.log(w), axis=0, keepdims=True).sum()
         assert_allclose(
-            model.logp(initial_point),
+            model.compile_logp()(initial_point),
             log_sum_exp,
             rtol,
         )
@@ -971,7 +967,7 @@ class TestMixtureSameFamily(SeededTest):
         with Model() as model:
             mu = Gamma("mu", 1.0, 1.0, shape=2)
             comp_dists = Poisson.dist(mu, shape=2)
-            mix = MixtureSameFamily("mix", w=np.ones(2) / 2, comp_dists=comp_dists, shape=(1000,))
-            prior = sample_prior_predictive(samples=self.n_samples)
+            mix = Mixture("mix", w=np.ones(2) / 2, comp_dists=comp_dists, shape=(1000,))
+            prior = sample_prior_predictive(samples=self.n_samples, return_inferencedata=False)
 
         assert prior["mix"].shape == (self.n_samples, 1000)

@@ -100,7 +100,6 @@ def test_all_distributions_have_moments():
 
     # Distributions that have not been refactored for V4 yet
     not_implemented = {
-        dist_module.mixture.MixtureSameFamily,
         dist_module.timeseries.AR,
         dist_module.timeseries.AR1,
         dist_module.timeseries.GARCH11,
