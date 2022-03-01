@@ -103,6 +103,16 @@ class TestUtils:
     def test_pdp(self, kwargs):
         pm.bart.utils.plot_dependence(self.idata, X=self.X, Y=self.Y, **kwargs)
 
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {},
+            {"labels": ["A", "B", "C"], "samples": 2, "figsize": (6, 6)},
+        ],
+    )
+    def test_vi(self, kwargs):
+        pm.bart.utils.variable_importance(self.idata, **kwargs)
+
 
 @pytest.mark.parametrize(
     "size, expected",

@@ -6,6 +6,7 @@ import pandas as pd
 from numpy.random import RandomState
 from scipy.interpolate import griddata
 from scipy.signal import savgol_filter
+from scipy.stats import pearsonr
 
 
 def predict(idata, rng, X_new=None, size=None, excluded=None):
@@ -300,7 +301,7 @@ def plot_dependence(
     return axes
 
 
-def variable_importance(idata, labels=None, figsize=None, samples=100):
+def variable_importance(idata, labels=None, figsize=None, samples=100, random_seed=None):
     """
     Estimates variable importance from the BART-posterior
 
@@ -314,12 +315,14 @@ def variable_importance(idata, labels=None, figsize=None, samples=100):
         Figure size. If None it will be defined automatically.
     samples : int
         Number of predictions used to compute correlation for subsets of variables. Defaults to 100
-
+    random_seed : int
+        random_seed used to sample from the posterior. Defaults to None.
     Returns
     -------
     idxs: indexes of the covariates from higher to lower relative importance
     axes: matplotlib axes
     """
+    rng = RandomState(seed=random_seed)
     _, axes = plt.subplots(2, 1, figsize=figsize)
 
     VI = (
@@ -342,15 +345,15 @@ def variable_importance(idata, labels=None, figsize=None, samples=100):
     axes[0].set_xlabel("variable index")
     axes[0].set_ylabel("relative importance")
 
-    predicted_all = pm.bart.predict(idata, rng, size=samples, excluded=None)
+    predicted_all = predict(idata, rng, size=samples, excluded=None)
 
     EV_mean = np.zeros(len(VI))
     EV_hdi = np.zeros((len(VI), 2))
     for idx, subset in enumerate(subsets):
-        predicted_subset = pm.bart.predict(idata, rng, size=samples, excluded=subset)
+        predicted_subset = predict(idata, rng, size=samples, excluded=subset)
         pearson = np.zeros(samples)
         for j in range(samples):
-            pearson[j] = stats.pearsonr(predicted_all[j], predicted_subset[j])[0]
+            pearson[j] = pearsonr(predicted_all[j], predicted_subset[j])[0]
         EV_mean[idx] = np.mean(pearson)
         EV_hdi[idx] = az.hdi(pearson)
 
