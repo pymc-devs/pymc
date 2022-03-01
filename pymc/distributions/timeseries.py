@@ -76,7 +76,7 @@ class GaussianRandomWalkRV(RandomVariable):
         ----------
         rng: np.random.RandomState
            Numpy random number generator
-        mu: np.ndarray
+        mu: array_like
            Random walk mean
         sigma: np.ndarray
             Standard deviation of innovation (sigma > 0)
@@ -90,7 +90,7 @@ class GaussianRandomWalkRV(RandomVariable):
 
         Returns
         -------
-        np.ndarray
+        ndarray
         """
 
         if steps is None or steps < 1:
@@ -128,11 +128,11 @@ class GaussianRandomWalk(distribution.Continuous):
 
     Parameters
     ----------
-    mu: tensor
+    mu: tensor_like of float
         innovation drift, defaults to 0.0
-    sigma: tensor
+    sigma: tensor_like of float, optional
         sigma > 0, innovation standard deviation, defaults to 0.0
-    init: float
+    init: tensor_like of float, optional
         Mean value of initialization, defaults to 0.0
     steps: int
         Number of steps in Gaussian Random Walks
