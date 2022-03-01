@@ -298,3 +298,71 @@ def plot_dependence(
 
     fig.text(-0.05, 0.5, Y_label, va="center", rotation="vertical", fontsize=15)
     return axes
+
+
+def variable_importance(idata, labels=None, figsize=None, samples=100):
+    """
+    Estimates variable importance from the BART-posterior
+
+    Parameters
+    ----------
+    idata: InferenceData
+        InferenceData containing a collection of BART_trees in sample_stats group
+    labels: list
+        List of the names of the covariates.
+    figsize : tuple
+        Figure size. If None it will be defined automatically.
+    samples : int
+        Number of predictions used to compute correlation for subsets of variables. Defaults to 100
+
+    Returns
+    -------
+    idxs: indexes of the covariates from higher to lower relative importance
+    axes: matplotlib axes
+    """
+    _, axes = plt.subplots(2, 1, figsize=figsize)
+
+    VI = (
+        idata.sample_stats["variable_inclusion"]
+        .stack(samples=("chain", "draw"))
+        .mean("samples")
+        .values
+    )
+    if labels is None:
+        labels = range(len(VI))
+
+    ticks = np.arange(len(VI), dtype=int)
+    idxs = np.argsort(VI)
+    subsets = [idxs[:-i] for i in range(1, len(idxs))]
+    subsets.append(None)
+
+    axes[0].plot(VI / VI.sum(), "o-")
+    axes[0].set_xticks(ticks)
+    axes[0].set_xticklabels(labels)
+    axes[0].set_xlabel("variable index")
+    axes[0].set_ylabel("relative importance")
+
+    predicted_all = pm.bart.predict(idata, rng, size=samples, excluded=None)
+
+    EV_mean = np.zeros(len(VI))
+    EV_hdi = np.zeros((len(VI), 2))
+    for idx, subset in enumerate(subsets):
+        predicted_subset = pm.bart.predict(idata, rng, size=samples, excluded=subset)
+        pearson = np.zeros(samples)
+        for j in range(samples):
+            pearson[j] = stats.pearsonr(predicted_all[j], predicted_subset[j])[0]
+        EV_mean[idx] = np.mean(pearson)
+        EV_hdi[idx] = az.hdi(pearson)
+
+    axes[1].errorbar(ticks, EV_mean, np.array((EV_mean - EV_hdi[:, 0], EV_hdi[:, 1] - EV_mean)))
+
+    axes[1].set_xticks(ticks)
+    axes[1].set_xticklabels(ticks + 1)
+    axes[1].set_xlabel("number of components")
+    axes[1].set_ylabel("correlation")
+    axes[1].set_ylim(0, 1)
+
+    axes[0].set_xlim(-0.5, len(VI) - 0.5)
+    axes[1].set_xlim(-0.5, len(VI) - 0.5)
+
+    return idxs[::-1], axes
