@@ -93,7 +93,7 @@ class TestGaussianRandomWalk:
             with pytest.raises(TypeError) as err:
                 trace = pm.sample()
 
-            assert "cannot convert type tensortype(float32".lower() in str(err).lower()
+            assert "cannot convert type tensortype(float".lower() in str(err).lower()
 
         # recovered_mu = trace.posterior["mu"].mean()
         # recovered_sigma = trace.posterior["sigma"].mean()
