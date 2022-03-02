@@ -649,6 +649,15 @@ class TestMixture(SeededTest):
         assert_allclose(mixmixlogpg, mix.logp_elemwise(test_point), rtol=rtol)
         assert_allclose(priorlogp + mixmixlogpg.sum(), model.logp(test_point), rtol=rtol)
 
+    def test_iterable_single_component_warning(self):
+        with pytest.warns(None) as record:
+            Mixture.dist(w=[0.5, 0.5], comp_dists=Normal.dist(size=2))
+            Mixture.dist(w=[0.5, 0.5], comp_dists=[Normal.dist(size=2), Normal.dist(size=2)])
+        assert not record
+
+        with pytest.warns(UserWarning, match="Single component will be treated as a mixture"):
+            Mixture.dist(w=[0.5, 0.5], comp_dists=[Normal.dist(size=2)])
+
 
 class TestNormalMixture(SeededTest):
     @classmethod

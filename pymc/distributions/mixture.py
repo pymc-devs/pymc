@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 import aesara
 import aesara.tensor as at
 import numpy as np
@@ -129,6 +131,12 @@ class Mixture(SymbolicDistribution):
         if not isinstance(comp_dists, (tuple, list)):
             # comp_dists is a single component
             comp_dists = [comp_dists]
+        elif len(comp_dists) == 1:
+            warnings.warn(
+                "Single component will be treated as a mixture across the last size dimension.\n"
+                "To disable this warning do not wrap the single component inside a list or tuple",
+                UserWarning,
+            )
 
         # Check that components are not associated with a registered variable in the model
         components_ndim = set()
