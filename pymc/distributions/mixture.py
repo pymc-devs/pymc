@@ -67,63 +67,95 @@ class Mixture(SymbolicDistribution):
 
     Parameters
     ----------
-    w: array of floats
+    w : tensor_like of float
         w >= 0 and w <= 1
         the mixture weights
-    comp_dists: multidimensional PyMC distribution (e.g. `pm.Poisson.dist(...)`)
-        or iterable of PyMC distributions the component distributions
+    comp_dists : iterable of PyMC distributions or single batched distribution
+        Distributions should be created via the `.dist()` API. If single distribution is
+        passed, the last size dimension (not shape) determines the number of mixture
+        components (e.g. `pm.Poisson.dist(..., size=components)`)
         :math:`f_1, \ldots, f_n`
 
     Examples
     --------
     .. code-block:: python
 
-        # 2-Mixture Poisson distribution
+        # Mixture of 2 Poisson variables
         with pm.Model() as model:
-            lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixture components.
+            w = pm.Dirichlet('w', a=np.array([1, 1]))  # 2 mixture weights
 
-            # As we just need the logp, rather than add a RV to the model, we need to call .dist()
-            components = pm.Poisson.dist(mu=lam, shape=(2,))
-
-            w = pm.Dirichlet('w', a=np.array([1, 1]))  # two mixture component weights.
-
-            like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
-
-        # 2-Mixture Poisson using iterable of distributions.
-        with pm.Model() as model:
             lam1 = pm.Exponential('lam1', lam=1)
             lam2 = pm.Exponential('lam2', lam=1)
 
-            pois1 = pm.Poisson.dist(mu=lam1)
-            pois2 = pm.Poisson.dist(mu=lam2)
+            # As we just need the logp, rather than add a RV to the model, we need to call `.dist()`
+            # These two forms are equivalent, but the second benefits from vectorization
+            components = [
+                pm.Poisson.dist(mu=lam1),
+                pm.Poisson.dist(mu=lam2),
+            ]
+            # `shape=(2,)` indicates 2 mixture components
+            components = pm.Poisson.dist(mu=pm.math.stack([lam1, lam2]), shape=(2,))
 
-            w = pm.Dirichlet('w', a=np.array([1, 1]))
+            like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
 
-            like = pm.Mixture('like', w=w, comp_dists = [pois1, pois2], observed=data)
 
-        # npop-Mixture of multidimensional Gaussian
-        npop = 5
-        nd = (3, 4)
+    .. code-block:: python
+
+        # Mixture of Normal and StudentT variables
         with pm.Model() as model:
-            mu = pm.Normal('mu', mu=np.arange(npop), sigma=1, shape=npop) # Each component has an independent mean
+            w = pm.Dirichlet('w', a=np.array([1, 1]))  # 2 mixture weights
 
-            w = pm.Dirichlet('w', a=np.ones(npop))
+            mu = pm.Normal("mu", 0, 1)
 
-            components = pm.Normal.dist(mu=mu, sigma=1, shape=nd + (npop,))  # nd + (npop,) shaped multinomial
+            components = [
+                pm.Normal.dist(mu=mu, sigma=1),
+                pm.StudentT.dist(nu=4, mu=mu, sigma=1),
+            ]
 
-            like = pm.Mixture('like', w=w, comp_dists = components, observed=data, shape=nd)  # The resulting mixture is nd-shaped
+            like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
 
-        # Multidimensional Mixture as stacked independent mixtures
+
+    .. code-block:: python
+
+        # Mixture of (5 x 3) Normal variables
         with pm.Model() as model:
-            mu = pm.Normal('mu', mu=np.arange(5), sigma=1, shape=5) # Each component has an independent mean
+            # w is a stack of 5 independent size 3 weight vectors
+            # If shape was `(3,)`, the weights would be shared across the 5 replication dimensions
+            w = pm.Dirichlet('w', a=np.ones(3), shape=(5, 3))
 
-            w = pm.Dirichlet('w', a=np.ones(3, 5))  # w is a stack of 3 independent 5 component weight arrays
+            # Each of the 3 mixture components has an independent mean
+            mu = pm.Normal('mu', mu=np.arange(3), sigma=1, shape=3)
 
-            components = pm.Normal.dist(mu=mu, sigma=1, shape=(3, 5))
+            # These two forms are equivalent, but the second benefits from vectorization
+            components = [
+                pm.Normal.dist(mu=mu[0], sigma=1, shape=(5,)),
+                pm.Normal.dist(mu=mu[1], sigma=1, shape=(5,)),
+                pm.Normal.dist(mu=mu[2], sigma=1, shape=(5,)),
+            ]
+            components = pm.Normal.dist(mu=mu, sigma=1, shape=(5, 3))
 
-            # The mixture is an array of 3 elements.
-            # Each can be thought of as an independent scalar mixture of 5 components
-            like = pm.Mixture('like', w=w, comp_dists = components, observed=data, shape=3)
+            # The mixture is an array of 5 elements
+            # Each element can be thought of as an independent scalar mixture of 3
+            # components with different means
+            like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
+
+
+    .. code-block:: python
+
+        # Mixture of 2 Dirichlet variables
+        with pm.Model() as model:
+            w = pm.Dirichlet('w', a=np.ones(2))  # 2 mixture weights
+
+            # These two forms are equivalent, but the second benefits from vectorization
+            components = [
+                pm.Dirichlet.dist(a=[1, 10, 100], shape=(3,)),
+                pm.Dirichlet.dist(a=[100, 10, 1], shape=(3,)),
+            ]
+            components = pm.Dirichlet.dist(a=[[1, 10, 100], [100, 10, 1]], shape=(2, 3))
+
+            # The mixture is an array of 3 elements
+            # Each element comes from only one of the two core Dirichlet components
+            like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
     """
 
     @classmethod
