@@ -325,12 +325,7 @@ def variable_importance(idata, labels=None, figsize=None, samples=100, random_se
     rng = RandomState(seed=random_seed)
     _, axes = plt.subplots(2, 1, figsize=figsize)
 
-    VI = (
-        idata.sample_stats["variable_inclusion"]
-        .stack(samples=("chain", "draw"))
-        .mean("samples")
-        .values
-    )
+    VI = idata.sample_stats["variable_inclusion"].mean(("chain", "draw")).values
     if labels is None:
         labels = range(len(VI))
 
