@@ -49,7 +49,9 @@ class GaussianRandomWalkRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
 
-    def _shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
+    # TODO: Assert steps is a scalar!
+
+    def _shape_from_params(self, dist_params, **kwargs):
         steps = dist_params[3]
 
         # TODO: Ask ricardo why this is correct. Isn't shape different if size is passed?
@@ -95,6 +97,7 @@ class GaussianRandomWalkRV(RandomVariable):
         ndarray
         """
 
+        # TODO: Maybe we can remove this contraint?
         if steps is None or steps < 1:
             raise ValueError("Steps must be None or greater than 0")
 
@@ -145,17 +148,26 @@ class GaussianRandomWalk(distribution.Continuous):
 
     rv_op = gaussianrandomwalk
 
-    def __new__(cls, name, mu=0.0, sigma=1.0, init=None, steps: int = 1, **kwargs):
+    def __new__(cls, name, mu=0.0, sigma=1.0, init=None, steps=None, **kwargs):
         check_dist_not_registered(init)
         return super().__new__(cls, name, mu, sigma, init, steps, **kwargs)
 
     @classmethod
     def dist(
-        cls, mu=0.0, sigma=1.0, init=None, steps: int = 1, size=None, **kwargs
+        cls, mu=0.0, sigma=1.0, init=None, steps=None, size=None, shape=None, **kwargs
     ) -> RandomVariable:
 
         mu = at.as_tensor_variable(floatX(mu))
         sigma = at.as_tensor_variable(floatX(sigma))
+
+        if steps is None:
+            # We can infer steps from the shape, if it was given
+            if shape is not None:
+                steps = to_tuple(shape)[-1] - 1
+            else:
+                # TODO: Raise ValueError?
+                steps = 1
+
         steps = at.as_tensor_variable(intX(steps))
 
         if init is None:
@@ -175,7 +187,7 @@ class GaussianRandomWalk(distribution.Continuous):
                 mu_ = at.broadcast_arrays(mu, sigma)[0]
                 init = change_rv_size(init, mu_.shape)
 
-        return super().dist([mu, sigma, init, steps], size=size, **kwargs)
+        return super().dist([mu, sigma, init, steps], size=size, shape=shape, **kwargs)
 
     def logp(
         value: at.Variable,

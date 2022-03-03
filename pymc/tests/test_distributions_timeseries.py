@@ -122,6 +122,13 @@ class TestGaussianRandomWalk:
         init = x.owner.inputs[-2]
         assert init.eval().shape == size if size is not None else (2,)
 
+    @pytest.mark.parametrize("shape", (None, (6,), (3, 6)))
+    def test_inferred_steps_from_shape(self, shape):
+        with pm.Model() as m:
+            x = GaussianRandomWalk("x", shape=shape)
+        steps = x.owner.inputs[-1]
+        assert steps.eval() == 5 if shape is not None else 1
+
 
 @pytest.mark.xfail(reason="Timeseries not refactored")
 def test_AR():
