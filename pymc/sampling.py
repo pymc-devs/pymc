@@ -181,14 +181,14 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
     Parameters
     ----------
     model : Model object
-        A fully-specified model object
-    step : step function or vector of step functions
+        A fully-specified model object.
+    step : step function or iterable of step functions, optional
         One or more step functions that have been assigned to some subset of
         the model's parameters. Defaults to ``None`` (no assigned variables).
-    methods : vector of step method classes
+    methods : iterable of step method classes, optional
         The set of step methods from which the function may choose. Defaults
         to the main step methods provided by PyMC.
-    step_kwargs : dict
+    step_kwargs : dict, optional
         Parameters for the samplers. Keys are the lower case names of
         the step method, values a dict of arguments.
 

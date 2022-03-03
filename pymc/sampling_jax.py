@@ -1,12 +1,12 @@
-# pylint: skip-file
 import os
 import re
 import sys
 import warnings
 
 from functools import partial
-from typing import Callable, List, Optional
+from typing import Callable, Dict, List, Optional, Sequence, Union
 
+from pymc.initial_point import StartDict
 from pymc.sampling import _init_jitter
 
 xla_flags = os.getenv("XLA_FLAGS", "")
@@ -132,7 +132,7 @@ def _sample_stats_to_xarray(posterior):
     return data
 
 
-def _get_log_likelihood(model, samples):
+def _get_log_likelihood(model: Model, samples) -> Dict:
     """Compute log-likelihood for all observations"""
     data = {}
     for v in model.observed_RVs:
@@ -144,8 +144,13 @@ def _get_log_likelihood(model, samples):
 
 
 def _get_batched_jittered_initial_points(
-    model, chains, initvals, random_seed, jitter=True, jitter_max_retries=10
-):
+    model: Model,
+    chains: int,
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
+    random_seed: int,
+    jitter: bool = True,
+    jitter_max_retries: int = 10,
+) -> Union[np.ndarray, List[np.ndarray]]:
     """Get jittered initial point in format expected by NumPyro MCMC kernel
 
     Returns
@@ -154,10 +159,8 @@ def _get_batched_jittered_initial_points(
         list with one item per variable and number of chains as batch dimension.
         Each item has shape `(chains, *var.shape)`
     """
-    if isinstance(random_seed, (int, np.integer)):
-        random_seed = np.random.default_rng(random_seed).integers(2**30, size=chains)
-    elif not isinstance(random_seed, (list, tuple, np.ndarray)):
-        raise ValueError(f"The `seeds` must be int or array-like. Got {type(random_seed)} instead.")
+
+    random_seed = np.random.default_rng(random_seed).integers(2**30, size=chains)
 
     assert len(random_seed) == chains
 
@@ -373,19 +376,19 @@ def sample_blackjax_nuts(
 
 
 def sample_numpyro_nuts(
-    draws=1000,
-    tune=1000,
-    chains=4,
-    target_accept=0.8,
-    random_seed=None,
-    initvals=None,
-    model=None,
+    draws: int = 1000,
+    tune: int = 1000,
+    chains: int = 4,
+    target_accept: float = 0.8,
+    random_seed: int = None,
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    model: Optional[Model] = None,
     var_names=None,
-    progress_bar=True,
-    keep_untransformed=False,
-    chain_method="parallel",
-    idata_kwargs=None,
-    nuts_kwargs=None,
+    progress_bar: bool = True,
+    keep_untransformed: bool = False,
+    chain_method: str = "parallel",
+    idata_kwargs: Optional[Dict] = None,
+    nuts_kwargs: Optional[Dict] = None,
 ):
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
@@ -456,9 +459,7 @@ def sample_numpyro_nuts(
         dims = {}
 
     if random_seed is None:
-        random_seed = model.rng_seeder.randint(
-            2**30, dtype=np.int64, size=chains if chains > 1 else None
-        )
+        random_seed = model.rng_seeder.randint(2**30, dtype=np.int64)
 
     tic1 = datetime.now()
     print("Compiling...", file=sys.stdout)

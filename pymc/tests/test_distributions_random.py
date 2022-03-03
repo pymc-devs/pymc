@@ -320,10 +320,10 @@ class BaseTestDistributionRandom(SeededTest):
     """
 
     pymc_dist: Optional[Callable] = None
-    pymc_dist_params = dict()
+    pymc_dist_params: Optional[dict] = None
     reference_dist: Optional[Callable] = None
-    reference_dist_params = dict()
-    expected_rv_op_params = dict()
+    reference_dist_params: Optional[dict] = None
+    expected_rv_op_params: Optional[dict] = None
     checks_to_run = []
     size = 15
     decimal = select_by_precision(float64=6, float32=3)
@@ -429,8 +429,8 @@ class TestFlat(BaseTestDistributionRandom):
     ]
 
     def check_rv_inferred_size(self):
-        sizes_to_check = self.sizes_to_check or [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
-        sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
+        sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+        sizes_expected = [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
         for size, expected in zip(sizes_to_check, sizes_expected):
             pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
             expected_symbolic = tuple(pymc_rv.shape.eval())
@@ -452,8 +452,8 @@ class TestHalfFlat(BaseTestDistributionRandom):
     ]
 
     def check_rv_inferred_size(self):
-        sizes_to_check = self.sizes_to_check or [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
-        sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
+        sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+        sizes_expected = [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
         for size, expected in zip(sizes_to_check, sizes_expected):
             pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
             expected_symbolic = tuple(pymc_rv.shape.eval())
