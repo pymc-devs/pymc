@@ -1,4 +1,3 @@
-# pylint: skip-file
 import os
 import re
 import sys
