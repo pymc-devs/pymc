@@ -238,22 +238,32 @@ class TestErrors:
 
     @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_many_params(self):
-        with pytest.raises(pm.ShapeError, match="Length of theta is wrong. \\(actual \\(2,\\) != expected \\(1,\\)\\)"):
+        with pytest.raises(
+            pm.ShapeError,
+            match="Length of theta is wrong. \\(actual \\(2,\\) != expected \\(1,\\)\\)",
+        ):
             self.ode_model(theta=[1, 1], y0=[0])
 
     @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_many_y0(self):
-        with pytest.raises(pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(2,\\) != expected \\(1,\\)\\)"):
+        with pytest.raises(
+            pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(2,\\) != expected \\(1,\\)\\)"
+        ):
             self.ode_model(theta=[1], y0=[0, 0])
 
     @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_few_params(self):
-        with pytest.raises(pm.ShapeError, match="Length of theta is wrong. \\(actual \\(0,\\) != expected \\(1,\\)\\)"):
+        with pytest.raises(
+            pm.ShapeError,
+            match="Length of theta is wrong. \\(actual \\(0,\\) != expected \\(1,\\)\\)",
+        ):
             self.ode_model(theta=[], y0=[1])
 
     @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_few_y0(self):
-        with pytest.raises(pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(0,\\) != expected \\(1,\\)\\)"):
+        with pytest.raises(
+            pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(0,\\) != expected \\(1,\\)\\)"
+        ):
             self.ode_model(theta=[1], y0=[])
 
     def test_func_callable(self):
@@ -262,31 +272,39 @@ class TestErrors:
 
     def test_number_of_states(self):
         with pytest.raises(ValueError, match="Argument n_states must be at least 1."):
-            DifferentialEquation(func=TestErrors.system, t0=0, times=self.times, n_states=0, n_theta=1)
+            DifferentialEquation(
+                func=TestErrors.system, t0=0, times=self.times, n_states=0, n_theta=1
+            )
 
     def test_number_of_params(self):
         with pytest.raises(ValueError, match="Argument n_theta must be positive"):
-            DifferentialEquation(func=TestErrors.system, t0=0, times=self.times, n_states=1, n_theta=0)
+            DifferentialEquation(
+                func=TestErrors.system, t0=0, times=self.times, n_states=1, n_theta=0
+            )
 
     def test_tensor_shape(self):
         with pytest.raises(ValueError, match="returned a 2-dimensional tensor"):
+
             def system_2d_tensor(y, t, p):
                 s0 = np.exp(-t) - p[0] * y[0]
                 s1 = np.exp(-t) - p[0] * y[1]
                 s2 = np.exp(-t) - p[0] * y[2]
                 s3 = np.exp(-t) - p[0] * y[3]
-                return at.stack((s0, s1, s2, s3)).reshape((2,2))
+                return at.stack((s0, s1, s2, s3)).reshape((2, 2))
 
-            DifferentialEquation(func=system_2d_tensor, t0=0, times=self.times, n_states=4, n_theta=1)
+            DifferentialEquation(
+                func=system_2d_tensor, t0=0, times=self.times, n_states=4, n_theta=1
+            )
 
     def test_list_shape(self):
         with pytest.raises(ValueError, match="returned a 2-dimensional tensor"):
+
             def system_2d_list(y, t, p):
                 s0 = np.exp(-t) - p[0] * y[0]
                 s1 = np.exp(-t) - p[0] * y[1]
                 s2 = np.exp(-t) - p[0] * y[2]
                 s3 = np.exp(-t) - p[0] * y[3]
-                return [[s0,s1], [s2,s3]]
+                return [[s0, s1], [s2, s3]]
 
             DifferentialEquation(func=system_2d_list, t0=0, times=self.times, n_states=4, n_theta=1)
 
