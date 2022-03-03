@@ -2622,7 +2622,7 @@ class TestMatchesScipy:
             pm.GaussianRandomWalk,
             R,
             {"mu": R, "sigma": Rplus, "steps": Nat},
-            lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma).cumsum(),
+            lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma).cumsum().sum(),
             decimal=select_by_precision(float64=6, float32=1),
         )
 

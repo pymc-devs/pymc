@@ -61,7 +61,7 @@ class TestGaussianRandomWalk:
         vals = [0, 1, 2]
         mu = 1
         sigma = 1
-        init = 0
+        init = pm.Normal.dist(mu, sigma)
 
         with pm.Model():
             grw = GaussianRandomWalk("grw", mu, sigma, init=init, steps=2)
@@ -88,7 +88,7 @@ class TestGaussianRandomWalk:
         with pm.Model():
             _mu = pm.Uniform("mu", -10, 10)
             _sigma = pm.Uniform("sigma", 0, 10)
-            grw = GaussianRandomWalk("grw", _mu, _sigma, init=0, steps=steps, observed=obs)
+            grw = GaussianRandomWalk("grw", _mu, _sigma, steps=steps, observed=obs)
 
             with pytest.raises(TypeError) as err:
                 trace = pm.sample()
@@ -112,6 +112,16 @@ class TestGaussianRandomWalk:
         grw_dist = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=steps, size=size)
         expected_symbolic = tuple(grw_dist.shape.eval())
         assert expected_symbolic == expected
+
+    @pytest.mark.parametrize("size", (None, (1, 2), (10, 2), (3, 100, 2)))
+    def test_init_automatically_resized(self, size):
+        x = GaussianRandomWalk.dist(mu=[0, 1], init=pm.Normal.dist(), size=size)
+        init = x.owner.inputs[-2]
+        assert init.eval().shape == size if size is not None else (2,)
+
+        x = GaussianRandomWalk.dist(mu=[0, 1], init=pm.Normal.dist(size=5), shape=size)
+        init = x.owner.inputs[-2]
+        assert init.eval().shape == size if size is not None else (2,)
 
 
 @pytest.mark.xfail(reason="Timeseries not refactored")

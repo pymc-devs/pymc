@@ -20,7 +20,7 @@ import numpy as np
 from aesara import scan
 from aesara.tensor.random.op import RandomVariable
 
-from pymc.aesaraf import floatX, intX
+from pymc.aesaraf import change_rv_size, floatX, intX
 from pymc.distributions import distribution, logprob, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.shape_utils import to_tuple
@@ -34,6 +34,8 @@ __all__ = [
     "MvGaussianRandomWalk",
     "MvStudentTRandomWalk",
 ]
+
+from pymc.util import check_dist_not_registered
 
 
 class GaussianRandomWalkRV(RandomVariable):
@@ -107,10 +109,10 @@ class GaussianRandomWalkRV(RandomVariable):
             init_size = (*size, 1)
             steps_size = (*size, steps)
 
-        init_val = rng.normal(init, sigma, size=init_size)
+        init = np.reshape(init, init_size)
         steps = rng.normal(loc=mu, scale=sigma, size=steps_size)
 
-        grw = np.concatenate([init_val, steps], axis=-1)
+        grw = np.concatenate([init, steps], axis=-1)
 
         return np.cumsum(grw, axis=-1)
 
@@ -132,8 +134,9 @@ class GaussianRandomWalk(distribution.Continuous):
         innovation drift, defaults to 0.0
     sigma: tensor_like of float, optional
         sigma > 0, innovation standard deviation, defaults to 0.0
-    init: tensor_like of float, optional
-        Mean value of initialization, defaults to 0.0
+    init: Scalar PyMC distribution
+        Scalar distribution of the initial value, created with the `.dist()` API. Defaults to
+        Normal with same `mu` and `sigma` as the GaussianRandomWalk
     steps: int
         Number of steps in Gaussian Random Walks
     size: int
@@ -142,14 +145,37 @@ class GaussianRandomWalk(distribution.Continuous):
 
     rv_op = gaussianrandomwalk
 
+    def __new__(cls, name, mu=0.0, sigma=1.0, init=None, steps: int = 1, **kwargs):
+        check_dist_not_registered(init)
+        return super().__new__(cls, name, mu, sigma, init, steps, **kwargs)
+
     @classmethod
-    def dist(cls, mu=0.0, sigma=1.0, *, steps: int, init=0.0, **kwargs) -> RandomVariable:
+    def dist(
+        cls, mu=0.0, sigma=1.0, init=None, steps: int = 1, size=None, **kwargs
+    ) -> RandomVariable:
 
-        params = [at.as_tensor_variable(floatX(param)) for param in (mu, sigma, init)] + [
-            at.as_tensor_variable(intX(steps))
-        ]
+        mu = at.as_tensor_variable(floatX(mu))
+        sigma = at.as_tensor_variable(floatX(sigma))
+        steps = at.as_tensor_variable(intX(steps))
 
-        return super().dist(params, **kwargs)
+        if init is None:
+            init = Normal.dist(mu, sigma, size=size)
+        else:
+            if not (
+                isinstance(init, at.TensorVariable)
+                and init.owner is not None
+                and isinstance(init.owner.op, RandomVariable)
+                and init.owner.op.ndim_supp == 0
+            ):
+                raise TypeError("init must be a scalar distribution variable")
+            if size is not None or shape is not None:
+                init = change_rv_size(init, to_tuple(size or shape))
+            else:
+                # If not explicit, size is determined by the shape of mu and sigma
+                mu_ = at.broadcast_arrays(mu, sigma)[0]
+                init = change_rv_size(init, mu_.shape)
+
+        return super().dist([mu, sigma, init, steps], size=size, **kwargs)
 
     def logp(
         value: at.Variable,
@@ -174,11 +200,13 @@ class GaussianRandomWalk(distribution.Continuous):
         """
 
         # Calculate initialization logp
+        init_logp = logprob.logp(init, value[..., 0])
+
         # Make time series stationary around the mean value
-        stationary_series = at.diff(value)
+        stationary_series = at.diff(value, axis=-1)
         series_logp = logprob.logp(Normal.dist(mu, sigma), stationary_series)
 
-        return series_logp
+        return init_logp + series_logp.sum(axis=-1)
 
 
 class AR1(distribution.Continuous):
