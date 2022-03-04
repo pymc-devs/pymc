@@ -673,14 +673,14 @@ class TruncatedNormal(BoundedContinuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, optional
         Mean.
-    sigma: float
+    sigma : tensor_like of float, optional
         Standard deviation (sigma > 0).
-    lower: float (optional)
-        Left bound.
-    upper: float (optional)
-        Right bound.
+    lower : tensor_like of float, optional
+        Left bound. Defaults to 0.
+    upper : tensor_like of float, optional
+        Right bound. Defaults to 1.
 
     Examples
     --------
@@ -762,9 +762,9 @@ class TruncatedNormal(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
