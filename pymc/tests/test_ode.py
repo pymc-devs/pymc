@@ -228,13 +228,12 @@ def test_logp_scalar_ode():
 class TestErrors:
     """Test running model for a scalar ODE with 1 parameter"""
 
-    @staticmethod
-    def system(y, t, p):
-        return np.exp(-t) - p[0] * y[0]
-
-    times = np.arange(0, 9)
-
-    ode_model = DifferentialEquation(func=system.__func__, t0=0, times=times, n_states=1, n_theta=1)
+    def setup_method(self, method):
+        def system(y, t, p):
+            return np.exp(-t) - p[0] * y[0]
+        self.system = system
+        self.times = np.arange(0, 9)
+        self.ode_model = DifferentialEquation(func=system, t0=0, times=self.times, n_states=1, n_theta=1)
 
     @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_many_params(self):
@@ -273,13 +272,13 @@ class TestErrors:
     def test_number_of_states(self):
         with pytest.raises(ValueError, match="Argument n_states must be at least 1."):
             DifferentialEquation(
-                func=TestErrors.system, t0=0, times=self.times, n_states=0, n_theta=1
+                func=self.system, t0=0, times=self.times, n_states=0, n_theta=1
             )
 
     def test_number_of_params(self):
         with pytest.raises(ValueError, match="Argument n_theta must be positive"):
             DifferentialEquation(
-                func=TestErrors.system, t0=0, times=self.times, n_states=1, n_theta=0
+                func=self.system, t0=0, times=self.times, n_states=1, n_theta=0
             )
 
     def test_tensor_shape(self):
