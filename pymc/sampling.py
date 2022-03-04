@@ -2128,7 +2128,7 @@ def draw(
     vars
         A variable or a list of variables for which to draw samples.
     draws : int
-        Number of samples needed to draw. Detaults to 500.
+        Number of samples needed to draw. Detaults to 1.
     mode
         The mode used by ``aesara.function`` to compile the graph.
     **kwargs
