@@ -2125,18 +2125,18 @@ def draw(
 
     Parameters
     ----------
-    vars
+    vars : tensor_like or iterable of tensor_like
         A variable or a list of variables for which to draw samples.
-    draws : int
-        Number of samples needed to draw. Detaults to 1.
-    mode
-        The mode used by ``aesara.function`` to compile the graph.
-    **kwargs
+    draws : int, default 1
+        Number of samples needed to draw.
+    mode : str or `Mode` instance, optional
+        The mode used by :func:``aesara.function`` to compile the graph.
+    **kwargs : dict, optional
         Keyword arguments for :func:`pymc.aesara.compile_pymc`
 
     Returns
     -------
-    List[np.ndarray]
+    out : list of ndarrays
         A list of numpy arrays.
 
     Examples
