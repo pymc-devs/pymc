@@ -20,7 +20,7 @@ import urllib.request
 import warnings
 
 from copy import copy
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
 import aesara
 import aesara.tensor as at
@@ -518,7 +518,7 @@ def ConstantData(
     Registers the ``value`` as a :class:`~aesara.tensor.TensorConstant` with the model.
     For more information, please reference :class:`pymc.Data`.
     """
-    return Data(
+    var = Data(
         name,
         value,
         dims=dims,
@@ -526,6 +526,7 @@ def ConstantData(
         mutable=False,
         **kwargs,
     )
+    return cast(TensorConstant, var)
 
 
 def MutableData(
@@ -541,7 +542,7 @@ def MutableData(
     Registers the ``value`` as a :class:`~aesara.compile.sharedvalue.SharedVariable`
     with the model. For more information, please reference :class:`pymc.Data`.
     """
-    return Data(
+    var = Data(
         name,
         value,
         dims=dims,
@@ -549,6 +550,7 @@ def MutableData(
         mutable=True,
         **kwargs,
     )
+    return cast(SharedVariable, var)
 
 
 def Data(
@@ -626,9 +628,8 @@ def Data(
         value = np.array(value)
 
     # Add data container to the named variables of the model.
-    try:
-        model = pm.Model.get_context()
-    except TypeError:
+    model = pm.Model.get_context(error_if_none=False)
+    if model is None:
         raise TypeError(
             "No model on context stack, which is needed to instantiate a data container. "
             "Add variable inside a 'with model:' block."
