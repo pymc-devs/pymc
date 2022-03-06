@@ -1755,12 +1755,14 @@ class LogNormal(PositiveContinuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Location parameter.
-    sigma: float
+    sigma : tensor_like of float, optional
         Standard deviation. (sigma > 0). (only required if tau is not specified).
-    tau: float
+        Defaults to 1.
+    tau : tensor_like of float, optional
         Scale parameter (tau > 0). (only required if sigma is not specified).
+        Defaults to 1.
 
     Examples
     --------
@@ -1805,7 +1807,7 @@ class LogNormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
