@@ -2194,7 +2194,7 @@ class HalfCauchy(PositiveContinuous):
 
     Parameters
     ----------
-    beta: float
+    beta : tensor_like of float
         Scale parameter (beta > 0).
     """
     rv_op = halfcauchy
@@ -2217,7 +2217,7 @@ class HalfCauchy(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
