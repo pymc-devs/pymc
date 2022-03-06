@@ -2125,18 +2125,18 @@ def draw(
 
     Parameters
     ----------
-    vars
+    vars : Variable or iterable of Variable
         A variable or a list of variables for which to draw samples.
-    draws : int
-        Number of samples needed to draw. Detaults to 500.
-    mode
-        The mode used by ``aesara.function`` to compile the graph.
-    **kwargs
-        Keyword arguments for :func:`pymc.aesara.compile_pymc`
+    draws : int, default 1
+        Number of samples needed to draw.
+    mode : str or aesara.compile.mode.Mode, optional
+        The mode used by :func:`aesara.function` to compile the graph.
+    **kwargs : dict, optional
+        Keyword arguments for :func:`pymc.aesara.compile_pymc`.
 
     Returns
     -------
-    List[np.ndarray]
+    list of ndarray
         A list of numpy arrays.
 
     Examples
