@@ -1555,9 +1555,9 @@ class Laplace(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float
         Location parameter.
-    b: float
+    b : tensor_like of float
         Scale parameter (b > 0).
     """
     rv_op = laplace
@@ -1583,7 +1583,7 @@ class Laplace(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
