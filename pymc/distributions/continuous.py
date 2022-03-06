@@ -673,14 +673,17 @@ class TruncatedNormal(BoundedContinuous):
 
     Parameters
     ----------
-    mu : tensor_like of float, optional
+    mu : tensor_like of float, default 0
         Mean.
     sigma : tensor_like of float, optional
-        Standard deviation (sigma > 0).
-    lower : tensor_like of float, optional
-        Left bound. Defaults to 0.
-    upper : tensor_like of float, optional
-        Right bound. Defaults to 1.
+        Standard deviation (sigma > 0) (only required if tau is not specified).
+        Defaults to 1 if neither sigma nor tau is specified.
+    tau : tensor_like of float, optional
+        Precision (tau > 0) (only required if sigma is not specified).
+    lower : tensor_like of float, default -numpy.inf
+        Left bound.
+    upper : tensor_like of float, default numpy.inf
+        Right bound.
 
     Examples
     --------
@@ -709,7 +712,6 @@ class TruncatedNormal(BoundedContinuous):
         sd: Optional[DIST_PARAMETER_TYPES] = None,
         lower: Optional[DIST_PARAMETER_TYPES] = None,
         upper: Optional[DIST_PARAMETER_TYPES] = None,
-        transform: str = "auto",
         *args,
         **kwargs,
     ) -> RandomVariable:
