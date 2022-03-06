@@ -2681,7 +2681,7 @@ halfstudentt = HalfStudentTRV()
 
 class HalfStudentT(PositiveContinuous):
     r"""
-    Half Student's T log-likelihood
+    Half Student's T log-likelihood.
 
     The pdf of this distribution is
 
@@ -2716,14 +2716,14 @@ class HalfStudentT(PositiveContinuous):
 
     Parameters
     ----------
-    nu: float
+    nu : tensor_like of float, default 1
         Degrees of freedom, also known as normality parameter (nu > 0).
-    sigma: float
+    sigma : tensor_like of float, optional
         Scale parameter (sigma > 0). Converges to the standard deviation as nu
-        increases. (only required if lam is not specified)
-    lam: float
+        increases (only required if lam is not specified). Defaults to 1.
+    lam : tensor_like of float, optional
         Scale parameter (lam > 0). Converges to the precision as nu
-        increases. (only required if sigma is not specified)
+        increases (only required if sigma is not specified). Defaults to 1.
 
     Examples
     --------
@@ -2766,9 +2766,9 @@ class HalfStudentT(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
