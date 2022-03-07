@@ -17,7 +17,7 @@ from aesara.graph.basic import Constant, Variable, clone_get_equiv, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import compute_test_value
 from aesara.graph.opt_utils import optimize_graph
-from aesara.graph.type import CType
+from aesara.link.c.type import CType
 from aesara.tensor.basic_opt import ShapeFeature, topo_constant_folding
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
