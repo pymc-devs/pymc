@@ -660,26 +660,32 @@ class TestMixture(SeededTest):
 
 
 class TestNormalMixture(SeededTest):
-    @classmethod
-    def setup_class(cls):
-        TestMixture.setup_class()
+    def test_normal_mixture_sampling(self):
+        norm_w = np.array([0.75, 0.25])
+        norm_mu = np.array([0.0, 5.0])
+        norm_sd = np.ones_like(norm_mu)
+        norm_x = generate_normal_mixture_data(norm_w, norm_mu, norm_sd, size=1000)
 
-    def test_normal_mixture(self):
         with Model() as model:
-            w = Dirichlet("w", floatX(np.ones_like(self.norm_w)), shape=self.norm_w.size)
-            mu = Normal("mu", 0.0, 10.0, shape=self.norm_w.size)
-            tau = Gamma("tau", 1.0, 1.0, shape=self.norm_w.size)
-            NormalMixture("x_obs", w, mu, tau=tau, observed=self.norm_x)
+            w = Dirichlet("w", floatX(np.ones_like(norm_w)), shape=norm_w.size)
+            mu = Normal("mu", 0.0, 10.0, shape=norm_w.size)
+            tau = Gamma("tau", 1.0, 1.0, shape=norm_w.size)
+            NormalMixture("x_obs", w, mu, tau=tau, observed=norm_x)
             step = Metropolis()
-            trace = sample(5000, step, random_seed=self.random_seed, progressbar=False, chains=1)
+            trace = sample(
+                5000,
+                step,
+                random_seed=self.random_seed,
+                progressbar=False,
+                chains=1,
+                return_inferencedata=False,
+            )
 
-        assert_allclose(np.sort(trace["w"].mean(axis=0)), np.sort(self.norm_w), rtol=0.1, atol=0.1)
-        assert_allclose(
-            np.sort(trace["mu"].mean(axis=0)), np.sort(self.norm_mu), rtol=0.1, atol=0.1
-        )
+        assert_allclose(np.sort(trace["w"].mean(axis=0)), np.sort(norm_w), rtol=0.1, atol=0.1)
+        assert_allclose(np.sort(trace["mu"].mean(axis=0)), np.sort(norm_mu), rtol=0.1, atol=0.1)
 
     @pytest.mark.parametrize(
-        "nd,ncomp", [(tuple(), 5), (1, 5), (3, 5), ((3, 3), 5), (3, 3), ((3, 3), 3)], ids=str
+        "nd, ncomp", [(tuple(), 5), (1, 5), (3, 5), ((3, 3), 5), (3, 3), ((3, 3), 3)], ids=str
     )
     def test_normal_mixture_nd(self, nd, ncomp):
         nd = to_tuple(nd)
@@ -697,7 +703,7 @@ class TestNormalMixture(SeededTest):
             ws = Dirichlet("ws", np.ones(ncomp), shape=(ncomp,))
             mixture0 = NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd, comp_shape=comp_shape)
             obs0 = NormalMixture(
-                "obs", w=ws, mu=mus, tau=taus, shape=nd, comp_shape=comp_shape, observed=observed
+                "obs", w=ws, mu=mus, tau=taus, comp_shape=comp_shape, observed=observed
             )
 
         with Model() as model1:
@@ -708,53 +714,27 @@ class TestNormalMixture(SeededTest):
                 Normal.dist(mu=mus[..., i], tau=taus[..., i], shape=nd) for i in range(ncomp)
             ]
             mixture1 = Mixture("m", w=ws, comp_dists=comp_dist, shape=nd)
-            obs1 = Mixture("obs", w=ws, comp_dists=comp_dist, shape=nd, observed=observed)
+            obs1 = Mixture("obs", w=ws, comp_dists=comp_dist, observed=observed)
 
         with Model() as model2:
-            # Expected to fail if comp_shape is not provided,
-            # nd is multidim and it does not broadcast with ncomp. If by chance
-            # it does broadcast, an error is raised if the mixture is given
-            # observed data.
-            # Furthermore, the Mixture will also raise errors when the observed
-            # data is multidimensional but it does not broadcast well with
-            # comp_dists.
+            # Test that results are correct without comp_shape being passed to the Mixture.
+            # This used to fail in V3
             mus = Normal("mus", shape=comp_shape)
             taus = Gamma("taus", alpha=1, beta=1, shape=comp_shape)
             ws = Dirichlet("ws", np.ones(ncomp), shape=(ncomp,))
-            if len(nd) > 1:
-                if nd[-1] != ncomp:
-                    with pytest.raises(ValueError):
-                        NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd)
-                    mixture2 = None
-                else:
-                    mixture2 = NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd)
-            else:
-                mixture2 = NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd)
-            observed_fails = False
-            if len(nd) >= 1 and nd != (1,):
-                try:
-                    np.broadcast(np.empty(comp_shape), observed)
-                except Exception:
-                    observed_fails = True
-            if observed_fails:
-                with pytest.raises(ValueError):
-                    NormalMixture("obs", w=ws, mu=mus, tau=taus, shape=nd, observed=observed)
-                obs2 = None
-            else:
-                obs2 = NormalMixture("obs", w=ws, mu=mus, tau=taus, shape=nd, observed=observed)
+            mixture2 = NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd)
+            obs2 = NormalMixture("obs", w=ws, mu=mus, tau=taus, observed=observed)
 
         testpoint = model0.compute_initial_point()
         testpoint["mus"] = test_mus
-        testpoint["taus"] = test_taus
-        assert_allclose(model0.logp(testpoint), model1.logp(testpoint))
-        assert_allclose(mixture0.logp(testpoint), mixture1.logp(testpoint))
-        assert_allclose(obs0.logp(testpoint), obs1.logp(testpoint))
-        if mixture2 is not None and obs2 is not None:
-            assert_allclose(model0.logp(testpoint), model2.logp(testpoint))
-        if mixture2 is not None:
-            assert_allclose(mixture0.logp(testpoint), mixture2.logp(testpoint))
-        if obs2 is not None:
-            assert_allclose(obs0.logp(testpoint), obs2.logp(testpoint))
+        testpoint["taus_log__"] = np.log(test_taus)
+        for logp0, logp1, logp2 in zip(
+            model0.compile_logp(vars=[mixture0, obs0], sum=False)(testpoint),
+            model1.compile_logp(vars=[mixture1, obs1], sum=False)(testpoint),
+            model2.compile_logp(vars=[mixture2, obs2], sum=False)(testpoint),
+        ):
+            assert_allclose(logp0, logp1)
+            assert_allclose(logp0, logp2)
 
     def test_random(self):
         def ref_rand(size, w, mu, sigma):
@@ -771,6 +751,7 @@ class TestNormalMixture(SeededTest):
             extra_args={"comp_shape": 2},
             size=1000,
             ref_rand=ref_rand,
+            change_rv_size_fn=Mixture.change_size,
         )
         pymc_random(
             NormalMixture,
@@ -782,6 +763,7 @@ class TestNormalMixture(SeededTest):
             extra_args={"comp_shape": 3},
             size=1000,
             ref_rand=ref_rand,
+            change_rv_size_fn=Mixture.change_size,
         )
 
 

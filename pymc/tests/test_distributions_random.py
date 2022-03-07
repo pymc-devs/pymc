@@ -73,6 +73,7 @@ def pymc_random(
     fails=10,
     extra_args=None,
     model_args=None,
+    change_rv_size_fn=change_rv_size,
 ):
     if valuedomain is None:
         valuedomain = Domain([0], edges=(None, None))
@@ -81,7 +82,7 @@ def pymc_random(
         model_args = {}
 
     model, param_vars = build_model(dist, valuedomain, paramdomains, extra_args)
-    model_dist = change_rv_size(model.named_vars["value"], size, expand=True)
+    model_dist = change_rv_size_fn(model.named_vars["value"], size, expand=True)
     pymc_rand = aesara.function([], model_dist)
 
     domains = paramdomains.copy()

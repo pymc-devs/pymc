@@ -24,7 +24,7 @@ from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
 from pymc.aesaraf import change_rv_size, take_along_axis
-from pymc.distributions.continuous import Normal
+from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import Discrete, Distribution, SymbolicDistribution
 from pymc.distributions.logprob import logp
@@ -399,7 +399,7 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
     return mix_logp
 
 
-class NormalMixture(Mixture):
+class NormalMixture:
     R"""
     Normal mixture log-likelihood
 
@@ -415,18 +415,18 @@ class NormalMixture(Mixture):
 
     Parameters
     ----------
-    w: array of floats
+    w : tensor_like of float
         w >= 0 and w <= 1
         the mixture weights
-    mu: array of floats
+    mu : tensor_like of float
         the component means
-    sigma: array of floats
+    sigma : tensor_like of float
         the component standard deviations
-    tau: array of floats
+    tau : tensor_like of float
         the component precisions
-    comp_shape: shape of the Normal component
+    comp_shape : shape of the Normal component
         notice that it should be different than the shape
-        of the mixture distribution, with one axis being
+        of the mixture distribution, with the last axis representing
         the number of components.
 
     Notes
@@ -442,30 +442,32 @@ class NormalMixture(Mixture):
         with pm.Model() as gauss_mix:
             μ = pm.Normal(
                 "μ",
-                data.mean(),
-                10,
+                mu=data.mean(),
+                sigma=10,
                 shape=n_components,
                 transform=pm.transforms.ordered,
                 initval=[1, 2, 3],
             )
-            σ = pm.HalfNormal("σ", 10, shape=n_components)
+            σ = pm.HalfNormal("σ", sigma=10, shape=n_components)
             weights = pm.Dirichlet("w", np.ones(n_components))
 
-            pm.NormalMixture("y", w=weights, mu=μ, sigma=σ, observed=data)
+            y = pm.NormalMixture("y", w=weights, mu=μ, sigma=σ, observed=data)
     """
 
-    def __init__(self, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):
+    def __new__(cls, name, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), **kwargs):
         if sd is not None:
             sigma = sd
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        self.mu = mu = at.as_tensor_variable(mu)
-        self.sigma = self.sd = sigma = at.as_tensor_variable(sigma)
+        return Mixture(name, w, Normal.dist(mu, sigma=sigma, size=comp_shape), **kwargs)
 
-        super().__init__(w, Normal.dist(mu, sigma=sigma, shape=comp_shape), *args, **kwargs)
+    @classmethod
+    def dist(cls, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), **kwargs):
+        if sd is not None:
+            sigma = sd
+        _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-    def _distr_parameters_for_repr(self):
-        return ["w", "mu", "sigma"]
+        return Mixture.dist(w, Normal.dist(mu, sigma=sigma, size=comp_shape), **kwargs)
 
 
 class MixtureSameFamily(Distribution):
