@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from numpy.random import RandomState
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_array_equal
 
 import pymc as pm
 
@@ -102,6 +102,18 @@ class TestUtils:
     )
     def test_pdp(self, kwargs):
         pm.bart.utils.plot_dependence(self.idata, X=self.X, Y=self.Y, **kwargs)
+
+    def test_pdp_pandas_labels(self):
+        pd = pytest.importorskip("pandas")
+
+        X_names = ["norm1", "norm2", "binom"]
+        X_pd = pd.DataFrame(self.X, columns=X_names)
+        Y_pd = pd.Series(self.Y, name="response")
+        axes = pm.bart.utils.plot_dependence(self.idata, X=X_pd, Y=Y_pd)
+
+        figure = axes[0].figure
+        assert figure.texts[0].get_text() == "Predicted response"
+        assert_array_equal([ax.get_xlabel() for ax in axes], X_names)
 
 
 @pytest.mark.parametrize(

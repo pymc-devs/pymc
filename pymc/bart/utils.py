@@ -1,7 +1,6 @@
 import arviz as az
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 
 from numpy.random import RandomState
 from scipy.interpolate import griddata
@@ -147,13 +146,13 @@ def plot_dependence(
 
     rng = RandomState(seed=random_seed)
 
-    if isinstance(X, pd.DataFrame):
+    if hasattr(X, "columns") and hasattr(X, "values"):
         X_names = list(X.columns)
         X = X.values
     else:
         X_names = []
 
-    if isinstance(Y, pd.DataFrame):
+    if hasattr(Y, "name"):
         Y_label = f"Predicted {Y.name}"
     else:
         Y_label = "Predicted Y"
