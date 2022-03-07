@@ -9,6 +9,7 @@ from aesara.graph import graph_inputs
 import pymc as pm
 
 from pymc.sampling_jax import (
+    _get_batched_jittered_initial_points,
     _get_log_likelihood,
     _replace_shared_variables,
     get_jaxified_graph,
@@ -137,3 +138,55 @@ def test_idata_kwargs(idata_kwargs):
         assert "log_likelihood" in idata
     else:
         assert "log_likelihood" not in idata
+
+
+def test_get_batched_jittered_initial_points():
+    with pm.Model() as model:
+        x = pm.MvNormal("x", mu=np.zeros(3), cov=np.eye(3), shape=(2, 3), initval=np.zeros((2, 3)))
+
+    # No jitter
+    ips = _get_batched_jittered_initial_points(
+        model=model, chains=1, random_seed=1, initvals=None, jitter=False
+    )
+    assert np.all(ips[0] == 0)
+
+    # Single chain
+    ips = _get_batched_jittered_initial_points(model=model, chains=1, random_seed=1, initvals=None)
+
+    assert ips[0].shape == (2, 3)
+    assert np.all(ips[0] != 0)
+
+    # Multiple chains
+    ips = _get_batched_jittered_initial_points(model=model, chains=2, random_seed=1, initvals=None)
+
+    assert ips[0].shape == (2, 2, 3)
+    assert np.all(ips[0][0] != ips[0][1])
+
+
+@pytest.mark.parametrize("random_seed", (None, 123))
+@pytest.mark.parametrize("chains", (1, 2))
+def test_seeding(chains, random_seed):
+    sample_kwargs = dict(
+        tune=100,
+        draws=5,
+        chains=chains,
+        random_seed=random_seed,
+    )
+
+    with pm.Model(rng_seeder=456) as m:
+        pm.Normal("x", mu=0, sigma=1)
+        result1 = sample_numpyro_nuts(**sample_kwargs)
+
+    with pm.Model(rng_seeder=456) as m:
+        pm.Normal("x", mu=0, sigma=1)
+        result2 = sample_numpyro_nuts(**sample_kwargs)
+        result3 = sample_numpyro_nuts(**sample_kwargs)
+
+    assert np.all(result1.posterior["x"] == result2.posterior["x"])
+    expected_equal_result3 = random_seed is not None
+    assert np.all(result2.posterior["x"] == result3.posterior["x"]) == expected_equal_result3
+
+    if chains > 1:
+        assert np.all(result1.posterior["x"].sel(chain=0) != result1.posterior["x"].sel(chain=1))
+        assert np.all(result2.posterior["x"].sel(chain=0) != result2.posterior["x"].sel(chain=1))
+        assert np.all(result3.posterior["x"].sel(chain=0) != result3.posterior["x"].sel(chain=1))

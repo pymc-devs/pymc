@@ -104,7 +104,7 @@ def model_with_dims():
 
         population = pm.HalfNormal("population", sd=5, dims=("city"))
 
-        time = pm.ConstantData("year", [2014, 2015, 2016], dims="year")
+        time = pm.ConstantData("time", [2014, 2015, 2016], dims="year")
 
         n = pm.Deterministic(
             "tax revenue", economics * population[None, :] * time[:, None], dims=("year", "city")
@@ -116,15 +116,15 @@ def model_with_dims():
     compute_graph = {
         "economics": set(),
         "population": set(),
-        "year": set(),
-        "tax revenue": {"economics", "population", "year"},
+        "time": set(),
+        "tax revenue": {"economics", "population", "time"},
         "L": {"tax revenue"},
         "observed": {"L"},
     }
     plates = {
         "1": {"economics"},
         "city (4)": {"population"},
-        "year (3)": {"year"},
+        "year (3)": {"time"},
         "year (3) x city (4)": {"tax revenue"},
         "3 x 4": {"L", "observed"},
     }

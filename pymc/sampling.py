@@ -181,14 +181,14 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
     Parameters
     ----------
     model : Model object
-        A fully-specified model object
-    step : step function or vector of step functions
+        A fully-specified model object.
+    step : step function or iterable of step functions, optional
         One or more step functions that have been assigned to some subset of
         the model's parameters. Defaults to ``None`` (no assigned variables).
-    methods : vector of step method classes
+    methods : iterable of step method classes, optional
         The set of step methods from which the function may choose. Defaults
         to the main step methods provided by PyMC.
-    step_kwargs : dict
+    step_kwargs : dict, optional
         Parameters for the samplers. Keys are the lower case names of
         the step method, values a dict of arguments.
 
@@ -2125,18 +2125,18 @@ def draw(
 
     Parameters
     ----------
-    vars
+    vars : Variable or iterable of Variable
         A variable or a list of variables for which to draw samples.
-    draws : int
-        Number of samples needed to draw. Detaults to 500.
-    mode
-        The mode used by ``aesara.function`` to compile the graph.
-    **kwargs
-        Keyword arguments for :func:`pymc.aesara.compile_pymc`
+    draws : int, default 1
+        Number of samples needed to draw.
+    mode : str or aesara.compile.mode.Mode, optional
+        The mode used by :func:`aesara.function` to compile the graph.
+    **kwargs : dict, optional
+        Keyword arguments for :func:`pymc.aesara.compile_pymc`.
 
     Returns
     -------
-    List[np.ndarray]
+    list of ndarray
         A list of numpy arrays.
 
     Examples
@@ -2385,7 +2385,7 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains))
+        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
         std_apoint = approx.std.eval()
         cov = std_apoint**2
         mean = approx.mean.get_value()
@@ -2402,7 +2402,7 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains))
+        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "advi_map":
@@ -2416,7 +2416,7 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains))
+        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "map":

@@ -25,9 +25,9 @@ import aesara.tensor as at
 import numpy as np
 
 from aeppl.logprob import _logprob, logcdf
-from aesara.assert_op import Assert
 from aesara.graph.basic import Apply, Variable
 from aesara.graph.op import Op
+from aesara.raise_op import Assert
 from aesara.tensor import gammaln
 from aesara.tensor.extra_ops import broadcast_shape
 from aesara.tensor.math import tanh

@@ -124,6 +124,15 @@ class SamplerReport:
             self._add_warnings([warn])
             return
 
+        elif idata.posterior.sizes["chain"] < 4:
+            msg = (
+                "We recommend running at least 4 chains for robust computation of "
+                "convergence diagnostics"
+            )
+            warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info")
+            self._add_warnings([warn])
+            return
+
         valid_name = [rv.name for rv in model.free_RVs + model.deterministics]
         varnames = []
         for rv in model.free_RVs:
@@ -139,43 +148,24 @@ class SamplerReport:
 
         warnings = []
         rhat_max = max(val.max() for val in rhat.values())
-        if rhat_max > 1.4:
+        if rhat_max > 1.01:
             msg = (
-                "The rhat statistic is larger than 1.4 for some "
-                "parameters. The sampler did not converge."
-            )
-            warn = SamplerWarning(WarningType.CONVERGENCE, msg, "error", extra=rhat)
-            warnings.append(warn)
-        elif rhat_max > 1.2:
-            msg = "The rhat statistic is larger than 1.2 for some " "parameters."
-            warn = SamplerWarning(WarningType.CONVERGENCE, msg, "warn", extra=rhat)
-            warnings.append(warn)
-        elif rhat_max > 1.05:
-            msg = (
-                "The rhat statistic is larger than 1.05 for some "
-                "parameters. This indicates slight problems during "
-                "sampling."
+                "The rhat statistic is larger than 1.01 for some "
+                "parameters. This indicates problems during sampling. "
+                "See https://arxiv.org/abs/1903.08008 for details"
             )
             warn = SamplerWarning(WarningType.CONVERGENCE, msg, "info", extra=rhat)
             warnings.append(warn)
 
         eff_min = min(val.min() for val in ess.values())
-        sizes = idata.posterior.sizes
-        n_samples = sizes["chain"] * sizes["draw"]
-        if eff_min < 200 and n_samples >= 500:
+        eff_per_chain = eff_min / idata.posterior.sizes["chain"]
+        if eff_per_chain < 100:
             msg = (
-                "The estimated number of effective samples is smaller than "
-                "200 for some parameters."
+                "The effective sample size per chain is smaller than 100 for some parameters. "
+                " A higher number is needed for reliable rhat and ess computation. "
+                "See https://arxiv.org/abs/1903.08008 for details"
             )
             warn = SamplerWarning(WarningType.CONVERGENCE, msg, "error", extra=ess)
-            warnings.append(warn)
-        elif eff_min / n_samples < 0.1:
-            msg = "The number of effective samples is smaller than " "10% for some parameters."
-            warn = SamplerWarning(WarningType.CONVERGENCE, msg, "warn", extra=ess)
-            warnings.append(warn)
-        elif eff_min / n_samples < 0.25:
-            msg = "The number of effective samples is smaller than " "25% for some parameters."
-            warn = SamplerWarning(WarningType.CONVERGENCE, msg, "info", extra=ess)
             warnings.append(warn)
 
         self._add_warnings(warnings)

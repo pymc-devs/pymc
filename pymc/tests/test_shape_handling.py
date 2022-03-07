@@ -31,7 +31,6 @@ from pymc.distributions.shape_utils import (
     shapes_broadcasting,
     to_tuple,
 )
-from pymc.exceptions import ShapeWarning
 
 test_shapes = [
     (tuple(), (1,), (4,), (5, 4)),
@@ -323,7 +322,7 @@ class TestShapeDimsSize:
             assert "ddata" in pmodel.dim_lengths
 
             # Size does not include support dims, so this test must use a dist with support dims.
-            kwargs = dict(name="y", size=2, mu=at.ones((3, 4)), cov=at.eye(4))
+            kwargs = dict(name="y", size=(2, 3), mu=at.ones((3, 4)), cov=at.eye(4))
             if with_dims_ellipsis:
                 y = pm.MvNormal(**kwargs, dims=("dsize", ...))
                 assert pmodel.RV_dims["y"] == ("dsize", None, None)
@@ -434,17 +433,11 @@ class TestShapeDimsSize:
         assert rv.ndim == 5
         assert tuple(rv.shape.eval()) == (6, 5, 4, 3, 2)
 
-        with pytest.warns(None):
-            rv = pm.MvNormal.dist(mu=[1, 2, 3], cov=np.eye(3), size=(5, 4))
-            assert tuple(rv.shape.eval()) == (5, 4, 3)
+        rv = pm.MvNormal.dist(mu=[1, 2, 3], cov=np.eye(3), size=(5, 4))
+        assert tuple(rv.shape.eval()) == (5, 4, 3)
 
-        # When using `size` the API behaves like Aesara/NumPy
-        with pytest.warns(
-            ShapeWarning,
-            match=r"You may have expected a \(2\+1\)-dimensional RV, but the resulting RV will be 5-dimensional",
-        ):
-            rv = pm.MvNormal.dist(mu=np.ones((5, 4, 3)), cov=np.eye(3), size=(5, 4))
-            assert tuple(rv.shape.eval()) == (5, 4, 5, 4, 3)
+        rv = pm.MvNormal.dist(mu=np.ones((5, 4, 3)), cov=np.eye(3), size=(5, 4))
+        assert tuple(rv.shape.eval()) == (5, 4, 3)
 
     def test_convert_dims(self):
         assert convert_dims(dims="town") == ("town",)
