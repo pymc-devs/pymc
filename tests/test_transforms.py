@@ -281,7 +281,8 @@ def test_simple_transformed_logprob_nojac(use_jacobian):
     )
 
 
-def test_fallback_log_jac_det():
+@pytest.mark.parametrize("ndim", (0, 1))
+def test_fallback_log_jac_det(ndim):
     """
     Test fallback log_jac_det in RVTransform produces correct the graph for a
     simple transformation: x**2 -> -log(2*x)
@@ -298,11 +299,13 @@ def test_fallback_log_jac_det():
 
     square_tr = SquareTransform()
 
-    value = at.scalar("value")
+    value = at.TensorType("float64", (None,) * ndim)("value")
     value_tr = square_tr.forward(value)
     log_jac_det = square_tr.log_jac_det(value_tr)
 
-    assert np.isclose(log_jac_det.eval({value: 3}), -np.log(6))
+    test_value = np.full((2,) * ndim, 3)
+    expected_log_jac_det = -np.log(6) * test_value.size
+    assert np.isclose(log_jac_det.eval({value: test_value}), expected_log_jac_det)
 
 
 def test_hierarchical_uniform_transform():
