@@ -15,6 +15,6 @@
 
 from pymc.bart.bart import BART
 from pymc.bart.pgbart import PGBART
-from pymc.bart.utils import plot_dependence, predict, variable_importance
+from pymc.bart.utils import plot_dependence, plot_variable_importance, predict
 
 __all__ = ["BART", "PGBART"]

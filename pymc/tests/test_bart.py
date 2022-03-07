@@ -111,7 +111,7 @@ class TestUtils:
         ],
     )
     def test_vi(self, kwargs):
-        pm.bart.utils.variable_importance(self.idata, **kwargs)
+        pm.bart.utils.plot_variable_importance(self.idata, **kwargs)
 
 
 @pytest.mark.parametrize(
