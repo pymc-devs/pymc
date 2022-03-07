@@ -7,15 +7,13 @@ Instead update the vNext section until 4.0.0 is out.
 ⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠
 -->
 
-## PyMC vNext (4.0.0b1 → 4.0.0b2 → 4.0.0b3 → 4.0.0)
+## PyMC vNext (4.0.0b1 → 4.0.0b2 → 4.0.0b3 → 4.0.0b4 → 4.0.0)
 ⚠ The changes below are the delta between the upcoming releases `v3.11.5` →...→ `v4.0.0`.
 
-### No-yet working features
+### Not-yet working features
 We plan to get these working again, but at this point their inner workings have not been refactored.
 - Timeseries distributions (see [#4642](https://github.com/pymc-devs/pymc/issues/4642))
 - Mixture distributions (see [#4781](https://github.com/pymc-devs/pymc/issues/4781))
-- Cholesky distributions (see WIP PR [#4784](https://github.com/pymc-devs/pymc/pull/4784))
-- Variational inference submodule (see WIP PR [#4582](https://github.com/pymc-devs/pymc/pull/4582))
 - Elliptical slice sampling (see [#5137](https://github.com/pymc-devs/pymc/issues/5137))
 - `BaseStochasticGradient` (see [#5138](https://github.com/pymc-devs/pymc/issues/5138))
 - `pm.sample_posterior_predictive_w` (see [#4807](https://github.com/pymc-devs/pymc/issues/4807))
@@ -128,6 +126,7 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - Nested models now inherit the parent model's coordinates. [#5344](https://github.com/pymc-devs/pymc/pull/5344)
 - `softmax` and `log_softmax` functions added to `math` module (see [#5279](https://github.com/pymc-devs/pymc/pull/5279)).
 - ...
+
 
 ## Documentation
 - Switched to the [pydata-sphinx-theme](https://pydata-sphinx-theme.readthedocs.io/en/latest/)
