@@ -129,6 +129,9 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - `softmax` and `log_softmax` functions added to `math` module (see [#5279](https://github.com/pymc-devs/pymc/pull/5279)).
 - ...
 
+### Maintenance
+- Variational inference has been ported to v4.
+
 ## Documentation
 - Switched to the [pydata-sphinx-theme](https://pydata-sphinx-theme.readthedocs.io/en/latest/)
 - Updated our documentation tooling to use [MyST](https://myst-parser.readthedocs.io/en/latest/), [MyST-NB](https://myst-nb.readthedocs.io/en/latest/), sphinx-design, notfound.extension,
