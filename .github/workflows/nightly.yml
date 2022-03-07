@@ -27,7 +27,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@v1.5.0
         with:
           user: __token__
-          password: ${{ secrets.nightly_pypi_secret }}
+          password: ${{ secrets.PYPI_TOKEN_PYMC_NIGHTLY }}
   test-install-job:
     needs: build-and-publish-nightly
     runs-on: ubuntu-latest
