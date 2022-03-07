@@ -23,7 +23,7 @@ def predict(idata, rng, X_new=None, size=None, excluded=None):
     size: int or tuple
         Number of samples.
     excluded: list
-        id of the variables to exclude when computing predictions
+        indexes of the variables to exclude when computing predictions
     """
     bart_trees = idata.sample_stats.bart_trees
     stacked_trees = bart_trees.stack(trees=["chain", "draw"])
@@ -301,7 +301,7 @@ def plot_dependence(
     return axes
 
 
-def variable_importance(idata, labels=None, figsize=None, samples=100, random_seed=None):
+def plot_variable_importance(idata, labels=None, figsize=None, samples=100, random_seed=None):
     """
     Estimates variable importance from the BART-posterior
 
