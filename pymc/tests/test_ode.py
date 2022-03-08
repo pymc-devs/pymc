@@ -306,6 +306,26 @@ class TestErrors:
 
             DifferentialEquation(func=system_2d_list, t0=0, times=self.times, n_states=4, n_theta=1)
 
+    def test_unexpected_return_type_set(self):
+        with pytest.raises(
+            TypeError, match="Unexpected type, <class 'set'>, returned by ode_func."
+        ):
+
+            def system_set(y, t, p):
+                return {np.exp(-t) - p[0] * y[0]}
+
+            DifferentialEquation(func=system_set, t0=0, times=self.times, n_states=4, n_theta=1)
+
+    def test_unexpected_return_type_dict(self):
+        with pytest.raises(
+            TypeError, match="Unexpected type, <class 'dict'>, returned by ode_func."
+        ):
+
+            def system_dict(y, t, p):
+                return {"rhs": np.exp(-t) - p[0] * y[0]}
+
+            DifferentialEquation(func=system_dict, t0=0, times=self.times, n_states=4, n_theta=1)
+
 
 class TestDiffEqModel:
     def test_op_equality(self):
