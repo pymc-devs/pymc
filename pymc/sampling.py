@@ -64,17 +64,7 @@ from pymc.initial_point import (
 )
 from pymc.model import Model, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
-from pymc.step_methods import (
-    NUTS,
-    BinaryGibbsMetropolis,
-    BinaryMetropolis,
-    CategoricalGibbsMetropolis,
-    CompoundStep,
-    DEMetropolis,
-    HamiltonianMC,
-    Metropolis,
-    Slice,
-)
+from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
@@ -98,15 +88,6 @@ __all__ = [
     "draw",
 ]
 
-STEP_METHODS = (
-    NUTS,
-    HamiltonianMC,
-    Metropolis,
-    BinaryMetropolis,
-    BinaryGibbsMetropolis,
-    Slice,
-    CategoricalGibbsMetropolis,
-)
 Step: TypeAlias = Union[BlockedStep, CompoundStep]
 
 ArrayLike: TypeAlias = Union[np.ndarray, List[float]]
@@ -164,7 +145,7 @@ def instantiate_steppers(
     return steps
 
 
-def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None):
+def assign_step_methods(model, step=None, methods=None, step_kwargs=None):
     """Assign model variables to appropriate step methods.
 
     Passing a specified model will auto-assign its constituent stochastic
@@ -196,6 +177,9 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
     """
     steps = []
     assigned_vars = set()
+
+    if methods is None:
+        methods = pm.STEP_METHODS
 
     if step is not None:
         try:
@@ -481,29 +465,7 @@ def sample(
     draws += tune
 
     initial_points = None
-    if step is None and init is not None and all_continuous(model.value_vars):
-        try:
-            # By default, try to use NUTS
-            _log.info("Auto-assigning NUTS sampler...")
-            initial_points, step = init_nuts(
-                init=init,
-                chains=chains,
-                n_init=n_init,
-                model=model,
-                seeds=random_seed,
-                progressbar=progressbar,
-                jitter_max_retries=jitter_max_retries,
-                tune=tune,
-                initvals=initvals,
-                **kwargs,
-            )
-        except (AttributeError, NotImplementedError, tg.NullTypeGradError):
-            # gradient computation failed
-            _log.info("Initializing NUTS failed. Falling back to elementwise auto-assignment.")
-            _log.debug("Exception in init nuts", exc_info=True)
-            step = assign_step_methods(model, step, step_kwargs=kwargs)
-    else:
-        step = assign_step_methods(model, step, step_kwargs=kwargs)
+    step = assign_step_methods(model, step, methods=pm.STEP_METHODS, step_kwargs=kwargs)
 
     if isinstance(step, list):
         step = CompoundStep(step)
