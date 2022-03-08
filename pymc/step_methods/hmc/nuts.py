@@ -18,7 +18,6 @@ import numpy as np
 
 from pymc.aesaraf import floatX
 from pymc.backends.report import SamplerWarning, WarningType
-from pymc.bart.bart import BARTRV
 from pymc.math import logbern, logdiffexp_numpy
 from pymc.step_methods.arraystep import Competence
 from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
@@ -200,7 +199,7 @@ class NUTS(BaseHMC):
         """Check how appropriate this class is for sampling a random variable."""
 
         dist = getattr(var.owner, "op", None)
-        if var.dtype in continuous_types and has_grad and not isinstance(dist, BARTRV):
+        if var.dtype in continuous_types and has_grad:
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
 

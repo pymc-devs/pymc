@@ -54,9 +54,7 @@ from pymc.aesaraf import change_rv_size, compile_pymc, inputvars, walk_model
 from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray
-from pymc.bart.pgbart import PGBART
 from pymc.blocking import DictToArrayBijection
-from pymc.distributions import NoDistribution
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
 from pymc.initial_point import (
     PointType,
@@ -108,7 +106,6 @@ STEP_METHODS = (
     BinaryGibbsMetropolis,
     Slice,
     CategoricalGibbsMetropolis,
-    PGBART,
 )
 Step: TypeAlias = Union[BlockedStep, CompoundStep]
 
@@ -212,6 +209,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
     # variables
     selected_steps = defaultdict(list)
     model_logpt = model.logpt()
+
     for var in model.value_vars:
         if var not in assigned_vars:
             # determine if a gradient can be computed
@@ -221,6 +219,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
                     tg.grad(model_logpt, var)
                 except (NotImplementedError, tg.NullTypeGradError):
                     has_gradient = False
+
             # select the best method
             rv_var = model.values_to_rvs[var]
             selected = max(
@@ -249,20 +248,12 @@ def _print_step_hierarchy(s: Step, level: int = 0) -> None:
         _log.info(">" * level + f"{s.__class__.__name__}: [{varnames}]")
 
 
-def all_continuous(vars, model):
-    """Check that vars not include discrete variables or BART variables, excepting observed RVs."""
+def all_continuous(vars):
+    """Check that vars not include discrete variables, excepting observed RVs."""
 
-    vars_ = [var for var in vars if not (var.owner and hasattr(var.tag, "observations"))]
+    vars_ = [var for var in vars if not hasattr(var.tag, "observations")]
 
-    if any(
-        [
-            (
-                var.dtype in discrete_types
-                or isinstance(model.values_to_rvs[var].owner.op, NoDistribution)
-            )
-            for var in vars_
-        ]
-    ):
+    if any([(var.dtype in discrete_types) for var in vars_]):
         return False
     else:
         return True
@@ -403,7 +394,7 @@ def sample(
 
         ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
         ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
-        ``DEMetropolis``, ``DEMetropolisZ``, ``slice``, ``pgbart``
+        ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
 
     B. If you manually declare the ``step_method``\ s, within the ``step``
        kwarg, then you can address the ``step_method`` kwargs directly.
@@ -490,7 +481,7 @@ def sample(
     draws += tune
 
     initial_points = None
-    if step is None and init is not None and all_continuous(model.value_vars, model):
+    if step is None and init is not None and all_continuous(model.value_vars):
         try:
             # By default, try to use NUTS
             _log.info("Auto-assigning NUTS sampler...")
@@ -633,24 +624,6 @@ def sample(
     mtrace.report._n_tune = n_tune
     mtrace.report._n_draws = n_draws
     mtrace.report._t_sampling = t_sampling
-
-    if "variable_inclusion" in mtrace.stat_names:
-        for strace in mtrace._straces.values():
-            for stat in strace._stats:
-                if "variable_inclusion" in stat:
-                    if mtrace.nchains > 1:
-                        stat["variable_inclusion"] = np.vstack(stat["variable_inclusion"])
-                    else:
-                        stat["variable_inclusion"] = [np.vstack(stat["variable_inclusion"])]
-
-    if "bart_trees" in mtrace.stat_names:
-        for strace in mtrace._straces.values():
-            for stat in strace._stats:
-                if "bart_trees" in stat:
-                    if mtrace.nchains > 1:
-                        stat["bart_trees"] = np.vstack(stat["bart_trees"])
-                    else:
-                        stat["bart_trees"] = [np.vstack(stat["bart_trees"])]
 
     n_chains = len(mtrace.chains)
     _log.info(
@@ -2309,8 +2282,8 @@ def init_nuts(
     vars = kwargs.get("vars", model.value_vars)
     if set(vars) != set(model.value_vars):
         raise ValueError("Must use init_nuts on all variables of a model.")
-    if not all_continuous(vars, model):
-        raise ValueError("init_nuts can only be used for models with only " "continuous variables.")
+    if not all_continuous(vars):
+        raise ValueError("init_nuts can only be used for models with continuous variables.")
 
     if not isinstance(init, str):
         raise TypeError("init must be a string.")
