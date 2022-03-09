@@ -74,6 +74,7 @@ pr_tutorial
 developer_guide_implementing_distribution
 build_docs
 running_the_test_suite
+review_pr_pymc_examples
 :::
 
 :::{toctree}
