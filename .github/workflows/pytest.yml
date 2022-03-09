@@ -78,6 +78,7 @@ jobs:
             pymc/tests/test_transforms.py
             pymc/tests/test_smc.py
             pymc/tests/test_bart.py
+            pymc/tests/test_mixture.py
 
           - |
             pymc/tests/test_parallel_sampling.py
