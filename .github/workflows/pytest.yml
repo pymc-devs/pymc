@@ -63,7 +63,6 @@ jobs:
             --ignore=pymc/tests/test_distributions_random.py
             --ignore=pymc/tests/test_idata_conversion.py
             --ignore=pymc/tests/test_smc.py
-            --ignore=pymc/tests/test_bart.py
             --ignore=pymc/tests/test_missing.py
 
           - |
@@ -77,7 +76,7 @@ jobs:
             pymc/tests/test_updates.py
             pymc/tests/test_transforms.py
             pymc/tests/test_smc.py
-            pymc/tests/test_bart.py
+            pymc/tests/test_mixture.py
 
           - |
             pymc/tests/test_parallel_sampling.py
