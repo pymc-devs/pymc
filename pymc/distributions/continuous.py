@@ -1712,14 +1712,14 @@ class AsymmetricLaplace(Continuous):
 
 class LogNormal(PositiveContinuous):
     r"""
-    Note: Class name Lognormal is deprecated, use LogNormal now!
-
     Log-normal log-likelihood.
 
     Distribution of any random variable whose logarithm is normally
     distributed. A variable might be modeled as log-normal if it can
     be thought of as the multiplicative product of many small
     independent factors.
+
+    Note: Class name Lognormal is deprecated, use LogNormal now!
 
     The pdf of this distribution is
 
@@ -1730,6 +1730,7 @@ class LogNormal(PositiveContinuous):
            \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
