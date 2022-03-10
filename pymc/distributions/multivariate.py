@@ -41,7 +41,7 @@ from scipy import linalg, stats
 
 import pymc as pm
 
-from pymc.aesaraf import floatX, intX
+from pymc.aesaraf import change_rv_size, floatX, intX
 from pymc.distributions import transforms
 from pymc.distributions.continuous import (
     BoundedContinuous,
@@ -247,7 +247,7 @@ class MvNormal(Continuous):
     def get_moment(rv, size, mu, cov):
         moment = mu
         if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, mu.shape])
+            moment_size = at.concatenate([size, [mu.shape[-1]]])
             moment = at.full(moment_size, mu)
         return moment
 
@@ -301,18 +301,13 @@ class MvStudentTRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, nu, mu, cov, size):
 
-        # Don't reassign broadcasted cov, since MvNormal expects two dimensional cov only.
-        mu, _ = broadcast_params([mu, cov], cls.ndims_params[1:])
-
-        chi2_samples = np.sqrt(rng.chisquare(nu, size=size) / nu)
-        # Add distribution shape to chi2 samples
-        chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(mu.shape))
-
         mv_samples = multivariate_normal.rng_fn(rng=rng, mean=np.zeros_like(mu), cov=cov, size=size)
 
-        size = tuple(size or ())
+        # Take chi2 draws and add an axis of length 1 to the right for correct broadcasting below
+        chi2_samples = np.sqrt(rng.chisquare(nu, size=size) / nu)[..., None]
+
         if size:
-            mu = np.broadcast_to(mu, size + mu.shape)
+            mu = np.broadcast_to(mu, size + (mu.shape[-1],))
 
         return (mv_samples / chi2_samples) + mu
 
@@ -379,7 +374,7 @@ class MvStudentT(Continuous):
     def get_moment(rv, size, nu, mu, cov):
         moment = mu
         if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, moment.shape])
+            moment_size = at.concatenate([size, [mu.shape[-1]]])
             moment = at.full(moment_size, moment)
         return moment
 
@@ -453,9 +448,7 @@ class Dirichlet(Continuous):
         norm_constant = at.sum(a, axis=-1)[..., None]
         moment = a / norm_constant
         if not rv_size_is_none(size):
-            if isinstance(size, int):
-                size = (size,)
-            moment = at.full((*size, *a.shape), moment)
+            moment = at.full(at.concatenate([size, [a.shape[-1]]]), moment)
         return moment
 
     def logp(value, a):
@@ -499,8 +492,8 @@ class MultinomialRV(MultinomialRV):
             size = tuple(size or ())
 
             if size:
-                n = np.broadcast_to(n, size + n.shape)
-                p = np.broadcast_to(p, size + p.shape)
+                n = np.broadcast_to(n, size)
+                p = np.broadcast_to(p, size + (p.shape[-1],))
 
             res = np.empty(p.shape)
             for idx in np.ndindex(p.shape[:-1]):
@@ -573,7 +566,7 @@ class Multinomial(Discrete):
         inc_bool_arr = at.abs_(diff) > 0
         mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         if not rv_size_is_none(size):
-            output_size = at.concatenate([size, p.shape])
+            output_size = at.concatenate([size, [p.shape[-1]]])
             mode = at.full(output_size, mode)
         return mode
 
@@ -625,8 +618,8 @@ class DirichletMultinomialRV(RandomVariable):
             size = tuple(size or ())
 
             if size:
-                n = np.broadcast_to(n, size + n.shape)
-                a = np.broadcast_to(a, size + a.shape)
+                n = np.broadcast_to(n, size)
+                a = np.broadcast_to(a, size + (a.shape[-1],))
 
             res = np.empty(a.shape)
             for idx in np.ndindex(a.shape[:-1]):
@@ -683,6 +676,23 @@ class DirichletMultinomial(Discrete):
         a = floatX(a)
 
         return super().dist([n, a], **kwargs)
+
+    def get_moment(rv, size, n, a):
+        p = a / at.sum(a, axis=-1)
+        mode = at.round(n * p)
+        diff = n - at.sum(mode, axis=-1, keepdims=True)
+        inc_bool_arr = at.abs_(diff) > 0
+        mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+
+        # Reshape mode according to dimensions implied by the parameters
+        # This can include axes of length 1
+        _, p_bcast = broadcast_params([n, p], ndims_params=[0, 1])
+        mode = at.reshape(mode, p_bcast.shape)
+
+        if not rv_size_is_none(size):
+            output_size = at.concatenate([size, [p.shape[-1]]])
+            mode = at.full(output_size, mode)
+        return mode
 
     def logp(value, n, a):
         """
@@ -895,7 +905,7 @@ class WishartRV(RandomVariable):
 
     def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
         # The shape of second parameter `V` defines the shape of the output.
-        return dist_params[1].shape
+        return dist_params[1].shape[-2:]
 
     @classmethod
     def rng_fn(cls, rng, nu, V, size):
@@ -1189,8 +1199,21 @@ class _LKJCholeskyCov(Continuous):
             isinstance(sd_dist, Variable)
             and sd_dist.owner is not None
             and isinstance(sd_dist.owner.op, RandomVariable)
+            and sd_dist.owner.op.ndim_supp < 2
         ):
-            raise TypeError("sd_dist must be a Distribution variable")
+            raise TypeError("sd_dist must be a scalar or vector distribution variable")
+
+        # We resize the sd_dist automatically so that it has (size x n) independent draws
+        # which is what the `_LKJCholeskyCovRV.rng_fn` expects. This makes the random
+        # and logp methods equivalent, as the latter also assumes a unique value for each
+        # diagonal element.
+        # Since `eta` and `n` are forced to be scalars we don't need to worry about
+        # implied batched dimensions for the time being.
+        if sd_dist.owner.op.ndim_supp == 0:
+            sd_dist = change_rv_size(sd_dist, to_tuple(size) + (n,))
+        else:
+            # The support shape must be `n` but we have no way of controlling it
+            sd_dist = change_rv_size(sd_dist, to_tuple(size))
 
         # sd_dist is part of the generative graph, but should be completely ignored
         # by the logp graph, since the LKJ logp explicitly includes these terms.
@@ -1278,7 +1301,9 @@ class LKJCholeskyCov:
     n: int
         Dimension of the covariance matrix (n > 1).
     sd_dist: pm.Distribution
-        A distribution for the standard deviations, should have `size=n`.
+        A positive scalar or vector distribution for the standard deviations, created
+        with the `.dist()` API. Should have `shape[-1]=n`. Scalar distributions will be
+        automatically resized to ensure this.
     compute_corr: bool, default=True
         If `True`, returns three values: the Cholesky decomposition, the correlations
         and the standard deviations of the covariance matrix. Otherwise, only returns
@@ -1606,7 +1631,7 @@ class MatrixNormalRV(RandomVariable):
     _print_name = ("MatrixNormal", "\\operatorname{MatrixNormal}")
 
     def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + tuple(dist_params[0].shape)
+        shape = tuple(size) + tuple(dist_params[0].shape[-2:])
         return shape
 
     @classmethod
@@ -1736,18 +1761,6 @@ class MatrixNormal(Continuous):
 
         cholesky = Cholesky(lower=True, on_error="raise")
 
-        if kwargs.get("size", None) is not None:
-            raise NotImplementedError("MatrixNormal doesn't support size argument")
-
-        if "shape" in kwargs:
-            kwargs.pop("shape")
-            warnings.warn(
-                "The shape argument in MatrixNormal is deprecated and will be ignored."
-                "MatrixNormal automatically derives the shape"
-                "from row and column matrix dimensions.",
-                FutureWarning,
-            )
-
         # Among-row matrices
         if len([i for i in [rowcov, rowchol] if i is not None]) != 1:
             raise ValueError(
@@ -1777,22 +1790,16 @@ class MatrixNormal(Continuous):
                 raise ValueError("colchol must be two dimensional.")
             colchol_cov = at.as_tensor_variable(colchol)
 
-        dist_shape = (rowchol_cov.shape[0], colchol_cov.shape[0])
+        dist_shape = (rowchol_cov.shape[-1], colchol_cov.shape[-1])
 
         # Broadcasting mu
         mu = at.extra_ops.broadcast_to(mu, shape=dist_shape)
-
         mu = at.as_tensor_variable(floatX(mu))
-        # mean = median = mode = mu
 
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
 
     def get_moment(rv, size, mu, rowchol, colchol):
-        output_shape = (rowchol.shape[0], colchol.shape[0])
-        if not rv_size_is_none(size):
-            output_shape = at.concatenate([size, output_shape])
-        moment = at.full(output_shape, mu)
-        return moment
+        return at.full_like(rv, mu)
 
     def logp(value, mu, rowchol, colchol):
         """
@@ -1837,13 +1844,10 @@ class MatrixNormal(Continuous):
 
 class KroneckerNormalRV(RandomVariable):
     name = "kroneckernormal"
-    ndim_supp = 2
+    ndim_supp = 1
     ndims_params = [1, 0, 2]
     dtype = "floatX"
     _print_name = ("KroneckerNormal", "\\operatorname{KroneckerNormal}")
-
-    def _shape_from_params(self, dist_params, rep_param_idx=0, param_shapes=None):
-        return default_shape_from_params(1, dist_params, rep_param_idx, param_shapes)
 
     def rng_fn(self, rng, mu, sigma, *covs, size=None):
         size = size if size else covs[-1]
@@ -1973,7 +1977,6 @@ class KroneckerNormal(Continuous):
 
         mu = at.as_tensor_variable(mu)
 
-        # mean = median = mode = mu
         return super().dist([mu, sigma, *covs], **kwargs)
 
     def get_moment(rv, size, mu, covs, chols, evds):
@@ -2059,7 +2062,7 @@ class CARRV(RandomVariable):
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
     def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + tuple(dist_params[0].shape)
+        shape = tuple(size) + (dist_params[0].shape[-1],)
         return shape
 
     @classmethod
@@ -2094,7 +2097,7 @@ class CARRV(RandomVariable):
 
         size = tuple(size or ())
         if size:
-            mu = np.broadcast_to(mu, size + mu.shape)
+            mu = np.broadcast_to(mu, size + (mu.shape[-1],))
         z = rng.normal(size=mu.shape)
         samples = np.empty(z.shape)
         for idx in np.ndindex(mu.shape[:-1]):
@@ -2154,11 +2157,7 @@ class CAR(Continuous):
         return super().dist([mu, W, alpha, tau], **kwargs)
 
     def get_moment(rv, size, mu, W, alpha, tau):
-        moment = mu
-        if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, moment.shape])
-            moment = at.full(moment_size, mu)
-        return moment
+        return at.full_like(rv, mu)
 
     def logp(value, mu, W, alpha, tau):
         """

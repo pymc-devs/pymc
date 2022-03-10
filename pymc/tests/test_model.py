@@ -366,6 +366,7 @@ def test_tempered_logp_dlogp():
     with pm.Model() as model:
         pm.Normal("x")
         pm.Normal("y", observed=1)
+        pm.Potential("z", at.constant(-1.0, dtype=aesara.config.floatX))
 
     func = model.logp_dlogp_function()
     func.set_extra_values({})
@@ -380,13 +381,15 @@ def test_tempered_logp_dlogp():
     func_temp_nograd.set_extra_values({})
 
     x = np.ones(1, dtype=func.dtype)
-    assert func(x) == func_temp(x)
-    assert func_nograd(x) == func(x)[0]
-    assert func_temp_nograd(x) == func(x)[0]
+    npt.assert_allclose(func(x)[0], func_temp(x)[0])
+    npt.assert_allclose(func(x)[1], func_temp(x)[1])
+
+    npt.assert_allclose(func_nograd(x), func(x)[0])
+    npt.assert_allclose(func_temp_nograd(x), func(x)[0])
 
     func_temp.set_weights(np.array([0.0], dtype=func.dtype))
     func_temp_nograd.set_weights(np.array([0.0], dtype=func.dtype))
-    npt.assert_allclose(func(x)[0], 2 * func_temp(x)[0])
+    npt.assert_allclose(func(x)[0], 2 * func_temp(x)[0] - 1)
     npt.assert_allclose(func(x)[1], func_temp(x)[1])
 
     npt.assert_allclose(func_nograd(x), func(x)[0])
@@ -394,7 +397,7 @@ def test_tempered_logp_dlogp():
 
     func_temp.set_weights(np.array([0.5], dtype=func.dtype))
     func_temp_nograd.set_weights(np.array([0.5], dtype=func.dtype))
-    npt.assert_allclose(func(x)[0], 4 / 3 * func_temp(x)[0])
+    npt.assert_allclose(func(x)[0], 4 / 3 * (func_temp(x)[0] - 1 / 4))
     npt.assert_allclose(func(x)[1], func_temp(x)[1])
 
     npt.assert_allclose(func_nograd(x), func(x)[0])

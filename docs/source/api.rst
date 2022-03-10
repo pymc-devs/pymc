@@ -15,7 +15,6 @@ API Reference
    api/smc
    api/backends
    api/data
-   api/bart
    api/ode
    api/tuning
    api/math

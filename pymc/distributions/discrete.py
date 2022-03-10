@@ -971,12 +971,12 @@ class HyperGeometric(Discrete):
 
     Parameters
     ----------
-    N : integer
-        Total size of the population
-    k : integer
-        Number of successful individuals in the population
-    n : integer
-        Number of samples drawn from the population
+    N : tensor_like of integer
+        Total size of the population (N > 0)
+    k : tensor_like of integer
+        Number of successful individuals in the population (0 <= k <= N)
+    n : tensor_like of integer
+        Number of samples drawn from the population (0 <= n <= N)
     """
 
     rv_op = hypergeometric
@@ -1004,6 +1004,10 @@ class HyperGeometric(Discrete):
         value : numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor
+        good : integer, array_like or TensorVariable
+            Number of successful individuals in the population. Alias for parameter :math:`k`.
+        bad : integer, array_like or TensorVariable
+            Number of unsuccessful individuals in the population. Alias for :math:`N-k`.
 
         Returns
         -------
@@ -1042,8 +1046,14 @@ class HyperGeometric(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value : numeric
             Value for which log CDF is calculated.
+        good : integer
+            Number of successful individuals in the population. Alias for parameter :math:`k`.
+        bad : integer
+            Number of unsuccessful individuals in the population. Alias for :math:`N-k`.
+        n : integer
+            Number of samples drawn from the population (0 <= n <= N)
 
         Returns
         -------

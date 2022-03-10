@@ -5,7 +5,7 @@ channels:
 - defaults
 dependencies:
 - aeppl=0.0.26
-- aesara=2.3.8
+- aesara=2.4.0
 - arviz>=0.11.4
 - blas
 - cachetools>=4.2.1
@@ -24,7 +24,7 @@ dependencies:
 - pytest>=3.0
 - python-graphviz
 - python=3.9
-- scipy>=1.4.1,<1.8.0
+- scipy>=1.4.1
 - sphinx-copybutton
 - sphinx-notfound-page
 - sphinx>=1.5

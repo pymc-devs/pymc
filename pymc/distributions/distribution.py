@@ -19,7 +19,7 @@ import warnings
 
 from abc import ABCMeta
 from functools import singledispatch
-from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
+from typing import Callable, Iterable, Optional, Sequence, Tuple, Union, cast
 
 import aesara
 import numpy as np
@@ -45,7 +45,6 @@ from pymc.distributions.shape_utils import (
     convert_shape,
     convert_size,
     find_size,
-    maybe_resize,
     resize_from_dims,
     resize_from_observed,
 )
@@ -353,17 +352,11 @@ class Distribution(metaclass=DistributionMeta):
         # Create the RV with a `size` right away.
         # This is not necessarily the final result.
         rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
-        rv_out = maybe_resize(
-            rv_out,
-            cls.rv_op,
-            dist_params,
-            ndim_expected,
-            ndim_batch,
-            ndim_supp,
-            shape,
-            size,
-            **kwargs,
-        )
+
+        # Replicate dimensions may be prepended via a shape with Ellipsis as the last element:
+        if shape is not None and Ellipsis in shape:
+            replicate_shape = cast(StrongShape, shape[:-1])
+            rv_out = change_rv_size(rv_var=rv_out, new_size=replicate_shape, expand=True)
 
         rng = kwargs.pop("rng", None)
         if (
@@ -507,6 +500,7 @@ class SymbolicDistribution:
             rv_out = cls.change_size(
                 rv=rv_out,
                 new_size=resize_shape,
+                expand=True,
             )
 
         rv_out = model.register_rv(
@@ -589,18 +583,11 @@ class SymbolicDistribution:
         # Create the RV with a `size` right away.
         # This is not necessarily the final result.
         graph = cls.rv_op(*dist_params, size=create_size, **kwargs)
-        graph = maybe_resize(
-            graph,
-            cls.rv_op,
-            dist_params,
-            ndim_expected,
-            ndim_batch,
-            ndim_supp,
-            shape,
-            size,
-            change_rv_size_fn=cls.change_size,
-            **kwargs,
-        )
+
+        # Replicate dimensions may be prepended via a shape with Ellipsis as the last element:
+        if shape is not None and Ellipsis in shape:
+            replicate_shape = cast(StrongShape, shape[:-1])
+            graph = cls.change_size(rv=graph, new_size=replicate_shape, expand=True)
 
         rngs = kwargs.pop("rngs", None)
         if rngs is not None:
@@ -803,8 +790,8 @@ class DensityDist(NoDistribution):
                         observed=np.random.randn(100, 3),
                         size=(100, 3),
                     )
-                    prior = pm.sample_prior_predictive(10)['density_dist']
-                assert prior.shape == (10, 100, 3)
+                    prior = pm.sample_prior_predictive(10).prior_predictive['density_dist']
+                assert prior.shape == (1, 10, 100, 3)
 
         """
 

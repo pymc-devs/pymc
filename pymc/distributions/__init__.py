@@ -83,7 +83,7 @@ from pymc.distributions.distribution import (
     NoDistribution,
     SymbolicDistribution,
 )
-from pymc.distributions.mixture import Mixture, MixtureSameFamily, NormalMixture
+from pymc.distributions.mixture import Mixture, NormalMixture
 from pymc.distributions.multivariate import (
     CAR,
     Dirichlet,
@@ -180,7 +180,6 @@ __all__ = [
     "SkewNormal",
     "Mixture",
     "NormalMixture",
-    "MixtureSameFamily",
     "Triangular",
     "DiscreteWeibull",
     "Gumbel",

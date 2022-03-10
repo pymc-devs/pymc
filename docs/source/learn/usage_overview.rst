@@ -6,7 +6,7 @@ Usage Overview
 
 For a detailed overview of building models in PyMC, please read the appropriate sections in the rest of the documentation. For a flavor of what PyMC models look like, here is a quick example.
 
-First, let's import PyMC and `ArviZ <https://arviz-devs.github.io/arviz/>`__ (which handles plotting and diagnostics):
+First, let's import PyMC and :doc:`ArviZ <arviz:index>` (which handles plotting and diagnostics):
 
 ::
 

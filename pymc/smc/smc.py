@@ -337,41 +337,21 @@ class SMC_KERNEL(ABC):
 class IMH(SMC_KERNEL):
     """Independent Metropolis-Hastings SMC kernel"""
 
-    def __init__(self, *args, n_steps=25, tune_steps=True, p_acc_rate=0.85, **kwargs):
+    def __init__(self, *args, correlation_threshold=0.01, **kwargs):
         """
         Parameters
         ----------
-        n_steps: int
-            The number of steps of each Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
-            for the first stage and for the others it will be determined automatically based on the
-            acceptance rate and `p_acc_rate`, the max number of steps is ``n_steps``.
-        tune_steps: bool
-            Whether to compute the number of steps automatically or not. Defaults to True
-        p_acc_rate: float
-            Used to compute ``n_steps`` when ``tune_steps == True``. The higher the value of
-            ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.85.
-            It should be between 0 and 1.
+        correlation_threshold: float
+            The lower the value the higher the number of IMH steps computed automatically.
+            Defaults to 0.01. It should be between 0 and 1.
         """
         super().__init__(*args, **kwargs)
-        self.n_steps = n_steps
-        self.tune_steps = tune_steps
-        self.p_acc_rate = p_acc_rate
+        self.correlation_threshold = correlation_threshold
 
-        self.max_steps = n_steps
-        self.proposed = self.draws * self.n_steps
         self.proposal_dist = None
         self.acc_rate = None
 
     def tune(self):
-        # Tune n_steps based on the acceptance rate (skip in first iteration)
-        if self.tune_steps and self.iteration > 1:
-            acc_rate = max(1.0 / self.proposed, self.acc_rate)
-            self.n_steps = min(
-                self.max_steps,
-                max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate))),
-            )
-            self.proposed = self.draws * self.n_steps
-
         # Update MVNormal proposal based on the mean and covariance of the
         # tempered posterior.
         cov = np.cov(self.tempered_posterior, ddof=0, rowvar=0)
@@ -384,34 +364,42 @@ class IMH(SMC_KERNEL):
 
     def mutate(self):
         """Independent Metropolis-Hastings perturbation."""
-        ac_ = np.empty((self.n_steps, self.draws))
-        log_R = np.log(self.rng.random((self.n_steps, self.draws)))
-
-        # The proposal is independent from the current point.
-        # We have to take that into account to compute the Metropolis-Hastings acceptance
-        # We first compute the logp of proposing a transition to the current points.
-        # This variable is updated at the end of the loop with the entries from the accepted
-        # transitions, which is equivalent to recomputing it in every iteration of the loop.
-        backward_logp = self.proposal_dist.logpdf(self.tempered_posterior)
-        for n_step in range(self.n_steps):
+        self.n_steps = 1
+        old_corr = 2
+        corr = Pearson(self.tempered_posterior)
+        ac_ = []
+        while True:
+            log_R = np.log(self.rng.random(self.draws))
+            # The proposal is independent from the current point.
+            # We have to take that into account to compute the Metropolis-Hastings acceptance
+            # We first compute the logp of proposing a transition to the current points.
+            # This variable is updated at the end of the loop with the entries from the accepted
+            # transitions, which is equivalent to recomputing it in every iteration of the loop.
             proposal = floatX(self.proposal_dist.rvs(size=self.draws, random_state=self.rng))
             proposal = proposal.reshape(len(proposal), -1)
-            # We then compute the logp of proposing a transition to the new points
+            # To do that we compute the logp of moving to a new point
             forward_logp = self.proposal_dist.logpdf(proposal)
-
+            # And to going back from that new point
+            backward_logp = self.proposal_dist.logpdf(self.tempered_posterior)
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])
             proposal_logp = pl + ll * self.beta
-            accepted = log_R[n_step] < (
+            accepted = log_R < (
                 (proposal_logp + backward_logp) - (self.tempered_posterior_logp + forward_logp)
             )
 
-            ac_[n_step] = accepted
             self.tempered_posterior[accepted] = proposal[accepted]
             self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
-            backward_logp[accepted] = forward_logp[accepted]
+            ac_.append(accepted)
+            self.n_steps += 1
+
+            pearson_r = corr.get(self.tempered_posterior)
+            if np.mean((old_corr - pearson_r) > self.correlation_threshold) > 0.9:
+                old_corr = pearson_r
+            else:
+                break
 
         self.acc_rate = np.mean(ac_)
 
@@ -429,36 +417,39 @@ class IMH(SMC_KERNEL):
         stats.update(
             {
                 "_n_tune": self.n_steps,  # Default property name used in `SamplerReport`
-                "tune_steps": self.tune_steps,
-                "p_acc_rate": self.p_acc_rate,
+                "correlation_threshold": self.correlation_threshold,
             }
         )
         return stats
 
 
+class Pearson:
+    def __init__(self, a):
+        self.l = a.shape[0]
+        self.am = a - np.sum(a, axis=0) / self.l
+        self.aa = np.sum(self.am**2, axis=0) ** 0.5
+
+    def get(self, b):
+        bm = b - np.sum(b, axis=0) / self.l
+        bb = np.sum(bm**2, axis=0) ** 0.5
+        ab = np.sum(self.am * bm, axis=0)
+        return np.abs(ab / (self.aa * bb))
+
+
 class MH(SMC_KERNEL):
     """Metropolis-Hastings SMC kernel"""
 
-    def __init__(self, *args, n_steps=25, tune_steps=True, p_acc_rate=0.85, **kwargs):
+    def __init__(self, *args, correlation_threshold=0.01, **kwargs):
         """
         Parameters
         ----------
-        n_steps: int
-            The number of steps of each Markov Chain.
-        tune_steps: bool
-            Whether to compute the number of steps automatically or not. Defaults to True
-        p_acc_rate: float
-            Used to compute ``n_steps`` when ``tune_steps == True``. The higher the value of
-            ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.85.
-            It should be between 0 and 1.
+        correlation_threshold: float
+            The lower the value the higher the number of MH steps computed automatically.
+            Defaults to 0.01. It should be between 0 and 1.
         """
         super().__init__(*args, **kwargs)
-        self.n_steps = n_steps
-        self.tune_steps = tune_steps
-        self.p_acc_rate = p_acc_rate
+        self.correlation_threshold = correlation_threshold
 
-        self.max_steps = n_steps
-        self.proposed = self.draws * self.n_steps
         self.proposal_dist = None
         self.proposal_scales = None
         self.chain_acc_rate = None
@@ -484,14 +475,6 @@ class MH(SMC_KERNEL):
             # Interpolate between individual and population scales
             self.proposal_scales = 0.5 * (chain_scales + chain_scales.mean())
 
-            if self.tune_steps:
-                acc_rate = max(1.0 / self.proposed, self.chain_acc_rate.mean())
-                self.n_steps = min(
-                    self.max_steps,
-                    max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate))),
-                )
-            self.proposed = self.draws * self.n_steps
-
         # Update MVNormal proposal based on the covariance of the tempered posterior.
         cov = np.cov(self.tempered_posterior, ddof=0, rowvar=0)
         cov = np.atleast_2d(cov)
@@ -502,9 +485,12 @@ class MH(SMC_KERNEL):
 
     def mutate(self):
         """Metropolis-Hastings perturbation."""
-        ac_ = np.empty((self.n_steps, self.draws))
-        log_R = np.log(self.rng.random((self.n_steps, self.draws)))
-        for n_step in range(self.n_steps):
+        self.n_steps = 1
+        old_corr = 2
+        corr = Pearson(self.tempered_posterior)
+        ac_ = []
+        while True:
+            log_R = np.log(self.rng.random(self.draws))
             proposal = floatX(
                 self.tempered_posterior
                 + self.proposal_dist(num_draws=self.draws, rng=self.rng)
@@ -514,13 +500,20 @@ class MH(SMC_KERNEL):
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])
 
             proposal_logp = pl + ll * self.beta
-            accepted = log_R[n_step] < (proposal_logp - self.tempered_posterior_logp)
+            accepted = log_R < (proposal_logp - self.tempered_posterior_logp)
 
-            ac_[n_step] = accepted
             self.tempered_posterior[accepted] = proposal[accepted]
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
             self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
+            ac_.append(accepted)
+            self.n_steps += 1
+
+            pearson_r = corr.get(self.tempered_posterior)
+            if np.mean((old_corr - pearson_r) > self.correlation_threshold) > 0.9:
+                old_corr = pearson_r
+            else:
+                break
 
         self.chain_acc_rate = np.mean(ac_, axis=0)
 
@@ -539,8 +532,7 @@ class MH(SMC_KERNEL):
         stats.update(
             {
                 "_n_tune": self.n_steps,  # Default property name used in `SamplerReport`
-                "tune_steps": self.tune_steps,
-                "p_acc_rate": self.p_acc_rate,
+                "correlation_threshold": self.correlation_threshold,
             }
         )
         return stats

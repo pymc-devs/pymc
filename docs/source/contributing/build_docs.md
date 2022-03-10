@@ -6,7 +6,7 @@ To build the docs, run these commands at pymc repository root:
 $ pip install -r requirements-dev.txt  # Make sure the dev requirements are installed
 $ make clean  # clean built docs from previous runs and intermediate outputs
 $ make html   # Build docs
-$ python -m http.server --directory ../_build/  # Render docs
+$ python -m http.server --directory docs/_build/  # Render docs
 ```
 
 Check the printed url where docs are being served and open it.

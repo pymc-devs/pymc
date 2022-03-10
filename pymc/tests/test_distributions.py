@@ -21,6 +21,7 @@ import numpy as np
 import numpy.random as nr
 
 from aeppl.logprob import ParameterValueError
+from aesara.tensor.random.utils import broadcast_params
 
 from pymc.distributions.continuous import get_tau_sigma
 from pymc.util import UNSET
@@ -2123,40 +2124,6 @@ class TestMatchesScipy:
         assert np.all(np.isfinite(pm.logp(valid_dist, value).eval()) == np.array([True, False]))
 
     @pytest.mark.parametrize(
-        "value,alpha,K,logp",
-        [
-            (np.array([5, 4, 3, 2, 1]) / 15, 0.5, 4, 1.5126301307277439),
-            (np.tile(1, 13) / 13, 2, 12, 13.980045245672827),
-            (np.array([0.001] * 10 + [0.99]), 0.1, 10, -22.971662448814723),
-            (np.append(0.5 ** np.arange(1, 20), 0.5**20), 5, 19, 94.20462772778092),
-            (
-                (np.array([[7, 5, 3, 2], [19, 17, 13, 11]]) / np.array([[17], [60]])),
-                2.5,
-                3,
-                np.array([1.29317672, 1.50126157]),
-            ),
-        ],
-    )
-    def test_stickbreakingweights_logp(self, value, alpha, K, logp):
-        with Model() as model:
-            sbw = StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
-        pt = {"sbw": value}
-        assert_almost_equal(
-            pm.logp(sbw, value).eval(),
-            logp,
-            decimal=select_by_precision(float64=6, float32=2),
-            err_msg=str(pt),
-        )
-
-    def test_stickbreakingweights_invalid(self):
-        sbw = pm.StickBreakingWeights.dist(3.0, 3)
-        sbw_wrong_K = pm.StickBreakingWeights.dist(3.0, 7)
-        assert pm.logp(sbw, np.array([0.4, 0.3, 0.2, 0.15])).eval() == -np.inf
-        assert pm.logp(sbw, np.array([1.1, 0.3, 0.2, 0.1])).eval() == -np.inf
-        assert pm.logp(sbw, np.array([0.4, 0.3, 0.2, -0.1])).eval() == -np.inf
-        assert pm.logp(sbw_wrong_K, np.array([0.4, 0.3, 0.2, 0.1])).eval() == -np.inf
-
-    @pytest.mark.parametrize(
         "a",
         [
             ([2, 3, 5]),
@@ -2164,9 +2131,10 @@ class TestMatchesScipy:
             (np.abs(np.random.randn(2, 2, 4)) + 1),
         ],
     )
-    @pytest.mark.parametrize("size", [2, (1, 2), (2, 4, 3)])
-    def test_dirichlet_vectorized(self, a, size):
+    @pytest.mark.parametrize("extra_size", [(2,), (1, 2), (2, 4, 3)])
+    def test_dirichlet_vectorized(self, a, extra_size):
         a = floatX(np.array(a))
+        size = extra_size + a.shape[:-1]
 
         dir = pm.Dirichlet.dist(a=a, size=size)
         vals = dir.eval()
@@ -2234,11 +2202,14 @@ class TestMatchesScipy:
             (np.abs(np.random.randn(2, 2, 4))),
         ],
     )
-    @pytest.mark.parametrize("size", [1, 2, (2, 3)])
-    def test_multinomial_vectorized(self, n, p, size):
+    @pytest.mark.parametrize("extra_size", [(1,), (2,), (2, 3)])
+    def test_multinomial_vectorized(self, n, p, extra_size):
         n = intX(np.array(n))
         p = floatX(np.array(p))
         p /= p.sum(axis=-1, keepdims=True)
+
+        _, bcast_p = broadcast_params([n, p], ndims_params=[0, 1])
+        size = extra_size + bcast_p.shape[:-1]
 
         mn = pm.Multinomial.dist(n=n, p=p, size=size)
         vals = mn.eval()
@@ -2303,10 +2274,13 @@ class TestMatchesScipy:
             (np.abs(np.random.randn(2, 2, 4))),
         ],
     )
-    @pytest.mark.parametrize("size", [1, 2, (2, 3)])
-    def test_dirichlet_multinomial_vectorized(self, n, a, size):
+    @pytest.mark.parametrize("extra_size", [(1,), (2,), (2, 3)])
+    def test_dirichlet_multinomial_vectorized(self, n, a, extra_size):
         n = intX(np.array(n))
         a = floatX(np.array(a))
+
+        _, bcast_a = broadcast_params([n, a], ndims_params=[0, 1])
+        size = extra_size + bcast_a.shape[:-1]
 
         dm = pm.DirichletMultinomial.dist(n=n, a=a, size=size)
         vals = dm.eval()
@@ -2317,6 +2291,40 @@ class TestMatchesScipy:
             decimal=4,
             err_msg=f"vals={vals}",
         )
+
+    @pytest.mark.parametrize(
+        "value,alpha,K,logp",
+        [
+            (np.array([5, 4, 3, 2, 1]) / 15, 0.5, 4, 1.5126301307277439),
+            (np.tile(1, 13) / 13, 2, 12, 13.980045245672827),
+            (np.array([0.001] * 10 + [0.99]), 0.1, 10, -22.971662448814723),
+            (np.append(0.5 ** np.arange(1, 20), 0.5**20), 5, 19, 94.20462772778092),
+            (
+                (np.array([[7, 5, 3, 2], [19, 17, 13, 11]]) / np.array([[17], [60]])),
+                2.5,
+                3,
+                np.array([1.29317672, 1.50126157]),
+            ),
+        ],
+    )
+    def test_stickbreakingweights_logp(self, value, alpha, K, logp):
+        with Model() as model:
+            sbw = StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
+        pt = {"sbw": value}
+        assert_almost_equal(
+            pm.logp(sbw, value).eval(),
+            logp,
+            decimal=select_by_precision(float64=6, float32=2),
+            err_msg=str(pt),
+        )
+
+    def test_stickbreakingweights_invalid(self):
+        sbw = pm.StickBreakingWeights.dist(3.0, 3)
+        sbw_wrong_K = pm.StickBreakingWeights.dist(3.0, 7)
+        assert pm.logp(sbw, np.array([0.4, 0.3, 0.2, 0.15])).eval() == -np.inf
+        assert pm.logp(sbw, np.array([1.1, 0.3, 0.2, 0.1])).eval() == -np.inf
+        assert pm.logp(sbw, np.array([0.4, 0.3, 0.2, -0.1])).eval() == -np.inf
+        assert pm.logp(sbw_wrong_K, np.array([0.4, 0.3, 0.2, 0.1])).eval() == -np.inf
 
     @aesara.config.change_flags(compute_test_value="raise")
     def test_categorical_bounds(self):
@@ -3349,6 +3357,15 @@ class TestCensored:
             ):
                 x = pm.Censored("x", registered_dist, lower=None, upper=None)
 
+    def test_change_size(self):
+        base_dist = pm.Censored.dist(pm.Normal.dist(), -1, 1, size=(3, 2))
+
+        new_dist = pm.Censored.change_size(base_dist, (4,))
+        assert new_dist.eval().shape == (4,)
+
+        new_dist = pm.Censored.change_size(base_dist, (4,), expand=True)
+        assert new_dist.eval().shape == (4, 3, 2)
+
 
 class TestLKJCholeskCov:
     def test_dist(self):
@@ -3365,7 +3382,7 @@ class TestLKJCholeskCov:
     def test_sd_dist_distribution(self):
         with pm.Model() as m:
             sd_dist = at.constant([1, 2, 3])
-            with pytest.raises(TypeError, match="sd_dist must be a Distribution variable"):
+            with pytest.raises(TypeError, match="^sd_dist must be a scalar or vector distribution"):
                 x = pm.LKJCholeskyCov("x", n=3, eta=1, sd_dist=sd_dist)
 
     def test_sd_dist_registered(self):
@@ -3385,3 +3402,17 @@ class TestLKJCholeskCov:
         with pytest.warns(None) as record:
             m.logpt()
         assert not record
+
+    @pytest.mark.parametrize(
+        "sd_dist",
+        [
+            pm.Exponential.dist(1),
+            pm.MvNormal.dist(np.ones(3), np.eye(3)),
+        ],
+    )
+    def test_sd_dist_automatically_resized(self, sd_dist):
+        x = pm.LKJCholeskyCov.dist(n=3, eta=1, sd_dist=sd_dist, size=10, compute_corr=False)
+        resized_sd_dist = x.owner.inputs[-1]
+        assert resized_sd_dist.eval().shape == (10, 3)
+        # LKJCov has support shape `(n * (n+1)) // 2`
+        assert x.eval().shape == (10, 6)

@@ -7,25 +7,23 @@
 PyMC Developer Guide
 ====================
 
-`PyMC <https://docs.pymc.io/>`__ is a Python package for Bayesian
+:doc:`PyMC <index>` is a Python package for Bayesian
 statistical modeling built on top of
-`Aesara <https://aesara.readthedocs.io/en/latest/index.html>`__. This
+:doc:`Aesara <aesara:index>`. This
 document aims to explain the design and implementation of probabilistic
 programming in PyMC, with comparisons to other PPL like TensorFlow Probability (TFP)
 and Pyro in mind. A user-facing API
-introduction can be found in the `API
-quickstart <https://docs.pymc.io/notebooks/api_quickstart.html>`__. A more accessible, user facing deep introduction can be found in
+introduction can be found in the :ref:`API quickstart <pymc_overview>`. A more accessible, user facing deep introduction can be found in
 `Peadar Coyle's probabilistic programming primer <https://github.com/springcoil/probabilisticprogrammingprimer>`__
 
 Distribution
 ------------
 
 A high-level introduction of ``Distribution`` in PyMC can be found in
-the `documentation <https://docs.pymc.io/Probability_Distributions.html>`__. The source
+the :ref:`documentation <api_distributions>`. The source
 code of the probability distributions is nested under
-`pymc/distributions <https://github.com/pymc-devs/pymc/blob/main/pymc/distributions/>`__,
-with the ``Distribution`` class defined in `distribution.py
-<https://github.com/pymc-devs/pymc/blob/main/pymc/distributions/distribution.py#L23-L44>`__.
+:ref:`pymc/distributions <api_distributions>`,
+with the :class:`~pymc.Distribution` class defined in ``distribution.py``.
 A few important points to highlight in the Distribution Class:
 
 .. code:: python
@@ -66,8 +64,7 @@ functions. Instead, to access a stateless distribution, you need to call
 https://docs.pymc.io/Probability\_Distributions.html#using-pymc-distributions-without-a-model).
 
 With this distinction in mind, we can take a closer look at the
-stateless distribution part of pymc (see distribution api in `doc
-<https://docs.pymc.io/api/distributions.html>`__), which divided into:
+stateless distribution part of pymc (see distribution api in :ref:`doc <api_distributions>`), which divided into:
 
 - Continuous
 
@@ -319,14 +316,13 @@ cannot be transformed.
    correction for inverse mapping). The use cases we considered are limited
    to the set of distributions that are bounded, and the transformation
    maps the bounded set to the real line - see
-   `doc
-   <https://docs.pymc.io/notebooks/api_quickstart.html#Automatic-transforms-of-bounded-RVs>`__.
+   :ref:`API quickstart <pymc_overview#Automatic-transforms-of-bounded-RVs>`.
    However, other transformations are possible.
    In general, PyMC does not provide explicit functionality to transform
    one distribution to another. Instead, a dedicated distribution is
    usually created in order to optimise performance. But getting a
    ``TransformedDistribution`` is also possible (see also in
-   `doc <https://docs.pymc.io/notebooks/api_quickstart.html#Transformed-distributions-and-changes-of-variables>`__):
+   :ref:`doc <pymc_overview##Transformed-distributions-and-changes-of-variables>`):
 
    .. code:: python
 

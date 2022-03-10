@@ -1,20 +1,23 @@
-# pylint: skip-file
 import os
 import re
 import sys
 import warnings
 
-from typing import Callable, List, Optional
+from typing import Callable, Dict, List, Optional, Sequence, Union
+
+from pymc.initial_point import StartDict
+from pymc.sampling import _init_jitter
 
 xla_flags = os.getenv("XLA_FLAGS", "")
 xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
 os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
 
+from datetime import datetime
+
 import aesara.tensor as at
 import arviz as az
 import jax
 import numpy as np
-import pandas as pd
 
 from aeppl.logprob import CheckParameterValue
 from aesara.compile import SharedVariable, Supervisor, mode
@@ -127,7 +130,7 @@ def _sample_stats_to_xarray(posterior):
     return data
 
 
-def _get_log_likelihood(model, samples):
+def _get_log_likelihood(model: Model, samples) -> Dict:
     """Compute log-likelihood for all observations"""
     data = {}
     for v in model.observed_RVs:
@@ -138,18 +141,56 @@ def _get_log_likelihood(model, samples):
     return data
 
 
+def _get_batched_jittered_initial_points(
+    model: Model,
+    chains: int,
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
+    random_seed: int,
+    jitter: bool = True,
+    jitter_max_retries: int = 10,
+) -> Union[np.ndarray, List[np.ndarray]]:
+    """Get jittered initial point in format expected by NumPyro MCMC kernel
+
+    Returns
+    -------
+    out: list of ndarrays
+        list with one item per variable and number of chains as batch dimension.
+        Each item has shape `(chains, *var.shape)`
+    """
+
+    random_seed = np.random.default_rng(random_seed).integers(2**30, size=chains)
+
+    assert len(random_seed) == chains
+
+    initial_points = _init_jitter(
+        model,
+        initvals,
+        seeds=random_seed,
+        jitter=jitter,
+        jitter_max_retries=jitter_max_retries,
+    )
+    initial_points = [list(initial_point.values()) for initial_point in initial_points]
+    if chains == 1:
+        initial_points = initial_points[0]
+    else:
+        initial_points = [np.stack(init_state) for init_state in zip(*initial_points)]
+    return initial_points
+
+
 def sample_numpyro_nuts(
-    draws=1000,
-    tune=1000,
-    chains=4,
-    target_accept=0.8,
-    random_seed=10,
-    model=None,
+    draws: int = 1000,
+    tune: int = 1000,
+    chains: int = 4,
+    target_accept: float = 0.8,
+    random_seed: int = None,
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    model: Optional[Model] = None,
     var_names=None,
-    progress_bar=True,
-    keep_untransformed=False,
-    chain_method="parallel",
-    idata_kwargs=None,
+    progress_bar: bool = True,
+    keep_untransformed: bool = False,
+    chain_method: str = "parallel",
+    idata_kwargs: Optional[Dict] = None,
+    nuts_kwargs: Optional[Dict] = None,
 ):
     from numpyro.infer import MCMC, NUTS
 
@@ -174,22 +215,30 @@ def sample_numpyro_nuts(
     else:
         dims = {}
 
-    tic1 = pd.Timestamp.now()
+    if random_seed is None:
+        random_seed = model.rng_seeder.randint(2**30, dtype=np.int64)
+
+    tic1 = datetime.now()
     print("Compiling...", file=sys.stdout)
 
-    rv_names = [rv.name for rv in model.value_vars]
-    initial_point = model.compute_initial_point()
-    init_state = [initial_point[rv_name] for rv_name in rv_names]
-    init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
+    init_params = _get_batched_jittered_initial_points(
+        model=model,
+        chains=chains,
+        initvals=initvals,
+        random_seed=random_seed,
+    )
 
     logp_fn = get_jaxified_logp(model)
 
+    if nuts_kwargs is None:
+        nuts_kwargs = {}
     nuts_kernel = NUTS(
         potential_fn=logp_fn,
         target_accept_prob=target_accept,
         adapt_step_size=True,
         adapt_mass_matrix=True,
         dense_mass=False,
+        **nuts_kwargs,
     )
 
     pmap_numpyro = MCMC(
@@ -202,19 +251,14 @@ def sample_numpyro_nuts(
         progress_bar=progress_bar,
     )
 
-    tic2 = pd.Timestamp.now()
+    tic2 = datetime.now()
     print("Compilation time = ", tic2 - tic1, file=sys.stdout)
 
     print("Sampling...", file=sys.stdout)
 
-    seed = jax.random.PRNGKey(random_seed)
-    map_seed = jax.random.split(seed, chains)
-
-    if chains == 1:
-        init_params = init_state
-        map_seed = seed
-    else:
-        init_params = init_state_batched
+    map_seed = jax.random.PRNGKey(random_seed)
+    if chains > 1:
+        map_seed = jax.random.split(map_seed, chains)
 
     pmap_numpyro.run(
         map_seed,
@@ -231,7 +275,7 @@ def sample_numpyro_nuts(
 
     raw_mcmc_samples = pmap_numpyro.get_samples(group_by_chain=True)
 
-    tic3 = pd.Timestamp.now()
+    tic3 = datetime.now()
     print("Sampling time = ", tic3 - tic2, file=sys.stdout)
 
     print("Transforming variables...", file=sys.stdout)
@@ -241,7 +285,7 @@ def sample_numpyro_nuts(
         result = jax.vmap(jax.vmap(jax_fn))(*raw_mcmc_samples)[0]
         mcmc_samples[v.name] = result
 
-    tic4 = pd.Timestamp.now()
+    tic4 = datetime.now()
     print("Transformation time = ", tic4 - tic3, file=sys.stdout)
 
     if idata_kwargs is None:

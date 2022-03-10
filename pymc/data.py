@@ -25,7 +25,6 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 import aesara
 import aesara.tensor as at
 import numpy as np
-import pandas as pd
 
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Apply
@@ -321,7 +320,7 @@ class Minibatch(TensorVariable):
         else:
             data = np.asarray(data, dtype)
         in_memory_slc = self.make_static_slices(in_memory_size)
-        self.shared = aesara.shared(data[in_memory_slc])
+        self.shared = aesara.shared(data[tuple(in_memory_slc)])
         self.update_shared_f = update_shared_f
         self.random_slc = self.make_random_slices(self.shared.shape, batch_size, random_seed)
         minibatch = self.shared[self.random_slc]
@@ -472,7 +471,7 @@ def determine_coords(model, value, dims: Optional[Sequence[str]] = None) -> Dict
     coords = {}
 
     # If value is a df or a series, we interpret the index as coords:
-    if isinstance(value, (pd.Series, pd.DataFrame)):
+    if hasattr(value, "index"):
         dim_name = None
         if dims is not None:
             dim_name = dims[0]
@@ -482,7 +481,7 @@ def determine_coords(model, value, dims: Optional[Sequence[str]] = None) -> Dict
             coords[dim_name] = value.index
 
     # If value is a df, we also interpret the columns as coords:
-    if isinstance(value, pd.DataFrame):
+    if hasattr(value, "columns"):
         dim_name = None
         if dims is not None:
             dim_name = dims[1]
@@ -501,7 +500,7 @@ def determine_coords(model, value, dims: Optional[Sequence[str]] = None) -> Dict
         for size, dim in zip(value.shape, dims):
             coord = model.coords.get(dim, None)
             if coord is None:
-                coords[dim] = pd.RangeIndex(size, name=dim)
+                coords[dim] = range(size)
 
     return coords
 
@@ -516,7 +515,8 @@ def ConstantData(
 ) -> TensorConstant:
     """Alias for ``pm.Data(..., mutable=False)``.
 
-    Registers the ``value`` as a ``TensorConstant`` with the model.
+    Registers the ``value`` as a :class:`~aesara.tensor.TensorConstant` with the model.
+    For more information, please reference :class:`pymc.Data`.
     """
     return Data(
         name,
@@ -538,7 +538,8 @@ def MutableData(
 ) -> SharedVariable:
     """Alias for ``pm.Data(..., mutable=True)``.
 
-    Registers the ``value`` as a ``SharedVariable`` with the model.
+    Registers the ``value`` as a :class:`~aesara.compile.sharedvalue.SharedVariable`
+    with the model. For more information, please reference :class:`pymc.Data`.
     """
     return Data(
         name,
@@ -562,35 +563,46 @@ def Data(
     """Data container that registers a data variable with the model.
 
     Depending on the ``mutable`` setting (default: True), the variable
-    is registered as a ``SharedVariable``, enabling it to be altered
-    in value and shape, but NOT in dimensionality using ``pm.set_data()``.
+    is registered as a :class:`~aesara.compile.sharedvalue.SharedVariable`,
+    enabling it to be altered in value and shape, but NOT in dimensionality using
+    :func:`pymc.set_data`.
+
+    To set the value of the data container variable, check out
+    :func:`pymc.Model.set_data`.
+
+    For more information, read the notebook :ref:`nb:data_container`.
 
     Parameters
     ----------
-    name: str
-        The name for this variable
-    value: {List, np.ndarray, pd.Series, pd.Dataframe}
-        A value to associate with this variable
-    mutable : bool, optional
-        Switches between creating a ``SharedVariable`` (``mutable=True``, default)
-        vs. creating a ``TensorConstant`` (``mutable=False``).
-        Consider using ``pm.ConstantData`` or ``pm.MutableData`` as less verbose
-        alternatives to ``pm.Data(..., mutable=...)``.
-    dims: {str, tuple of str}, optional, default=None
+    name : str
+        The name for this variable.
+    value : array_like or pandas.Series, pandas.Dataframe
+        A value to associate with this variable.
+    dims : str or tuple of str, optional
         Dimension names of the random variables (as opposed to the shapes of these
-        random variables). Use this when `value` is a pandas Series or DataFrame. The
-        `dims` will then be the name of the Series / DataFrame's columns. See ArviZ
+        random variables). Use this when ``value`` is a pandas Series or DataFrame. The
+        ``dims`` will then be the name of the Series / DataFrame's columns. See ArviZ
         documentation for more information about dimensions and coordinates:
         :ref:`arviz:quickstart`.
-    export_index_as_coords: bool, optional, default=False
-        If True, the `Data` container will try to infer what the coordinates should be
-        if there is an index in `value`.
-    **kwargs: dict, optional
+        If this parameter is not specified, the random variables will not have dimension
+        names.
+    export_index_as_coords : bool, default=False
+        If True, the ``Data`` container will try to infer what the coordinates should be
+        if there is an index in ``value``.
+    mutable : bool, optional
+        Switches between creating a :class:`~aesara.compile.sharedvalue.SharedVariable`
+        (``mutable=True``) vs. creating a :class:`~aesara.tensor.TensorConstant`
+        (``mutable=False``).
+        Consider using :class:`pymc.ConstantData` or :class:`pymc.MutableData` as less
+        verbose alternatives to ``pm.Data(..., mutable=...)``.
+        If this parameter is not specified, the value it takes will depend on the
+        version of the package. Since ``v4.1.0`` the default value is
+        ``mutable=False``, with previous versions having ``mutable=True``.
+    **kwargs : dict, optional
         Extra arguments passed to :func:`aesara.shared`.
 
     Examples
     --------
-
     >>> import pymc as pm
     >>> import numpy as np
     >>> # We generate 10 datasets
@@ -609,12 +621,6 @@ def Data(
     ...         # Switch out the observed dataset
     ...         model.set_data('data', data_vals)
     ...         idatas.append(pm.sample())
-
-    To set the value of the data container variable, check out
-    :func:`pymc.model.set_data()`.
-
-    For more information, take a look at this example notebook
-    https://docs.pymc.io/notebooks/data_container.html
     """
     if isinstance(value, list):
         value = np.array(value)
