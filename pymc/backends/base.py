@@ -204,10 +204,18 @@ class BaseTrace(ABC):
         vals = np.stack(
             [self._get_sampler_stats(stat_name, i, burn, thin) for i in sampler_idxs], axis=-1
         )
+
         if vals.shape[-1] == 1:
-            return vals[..., 0]
-        else:
-            return vals
+            vals = vals[..., 0]
+
+        if vals.dtype == np.dtype(object):
+            try:
+                vals = np.vstack(vals)
+            except ValueError:
+                # Most likely due to non-identical shapes. Just stick with the object-array.
+                pass
+
+        return vals
 
     def _get_sampler_stats(self, stat_name, sampler_idx, burn, thin):
         """Get sampler statistics."""
