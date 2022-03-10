@@ -36,3 +36,13 @@ from pymc.step_methods.mlda import (
     RecursiveDAProposal,
 )
 from pymc.step_methods.slicer import Slice
+
+STEP_METHODS = (
+    NUTS,
+    HamiltonianMC,
+    Metropolis,
+    BinaryMetropolis,
+    BinaryGibbsMetropolis,
+    Slice,
+    CategoricalGibbsMetropolis,
+)

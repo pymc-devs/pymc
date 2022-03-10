@@ -27,7 +27,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@v1.5.0
         with:
           user: __token__
-          password: ${{ secrets.nightly_pypi_secret }}
+          password: ${{ secrets.PYPI_TOKEN_PYMC_NIGHTLY }}
   test-install-job:
     needs: build-and-publish-nightly
     runs-on: ubuntu-latest
@@ -40,4 +40,4 @@ jobs:
       run: sleep 240
     - name: Install from PyPI
       run: |
-        pip install pymc-nightly==${GITHUB_REF:11}.dev$(date +"%Y%m%d")
+        pip install pymc-nightly==$(grep 'version' pymc/__init__.py | awk '{print $3}' | tr -d '"').dev$(date +"%Y%m%d")

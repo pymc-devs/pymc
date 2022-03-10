@@ -103,10 +103,19 @@ def augment_system(ode_func, n_states, n_theta):
 
     # Get symbolic representation of the ODEs by passing tensors for y, t and theta
     yhat = ode_func(t_y, t_t, t_p[n_states:])
-    # Stack the results of the ode_func into a single tensor variable
-    if not isinstance(yhat, (list, tuple)):
-        yhat = (yhat,)
-    t_yhat = at.stack(yhat, axis=0)
+    if isinstance(yhat, at.TensorVariable):
+        t_yhat = at.atleast_1d(yhat)
+    else:
+        # Stack the results of the ode_func into a single tensor variable
+        if not isinstance(yhat, (list, tuple)):
+            raise TypeError(
+                f"Unexpected type, {type(yhat)}, returned by ode_func. TensorVariable, list or tuple is expected."
+            )
+        t_yhat = at.stack(yhat, axis=0)
+    if t_yhat.ndim > 1:
+        raise ValueError(
+            f"The odefunc returned a {t_yhat.ndim}-dimensional tensor, but 0 or 1 dimensions were expected."
+        )
 
     # Now compute gradients
     J = at.jacobian(t_yhat, t_y)

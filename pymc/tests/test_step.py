@@ -27,6 +27,8 @@ from aesara.compile.ops import as_op
 from aesara.graph.op import Op
 from numpy.testing import assert_array_almost_equal
 
+import pymc as pm
+
 from pymc.aesaraf import floatX
 from pymc.data import Data
 from pymc.distributions import (
@@ -740,6 +742,26 @@ class TestAssignStepMethods:
 
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Slice)
+
+    def test_modify_step_methods(self):
+        """Test step methods can be changed"""
+        # remove nuts from step_methods
+        step_methods = list(pm.STEP_METHODS)
+        step_methods.remove(NUTS)
+        pm.STEP_METHODS = step_methods
+
+        with Model() as model:
+            Normal("x", 0, 1)
+            steps = assign_step_methods(model, [])
+        assert not isinstance(steps, NUTS)
+
+        # add back nuts
+        pm.STEP_METHODS = step_methods + [NUTS]
+
+        with Model() as model:
+            Normal("x", 0, 1)
+            steps = assign_step_methods(model, [])
+        assert isinstance(steps, NUTS)
 
 
 class TestPopulationSamplers:
