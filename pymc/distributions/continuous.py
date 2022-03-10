@@ -1712,14 +1712,14 @@ class AsymmetricLaplace(Continuous):
 
 class LogNormal(PositiveContinuous):
     r"""
-    Note: Class name Lognormal is deprecated, use LogNormal now!
-
     Log-normal log-likelihood.
 
     Distribution of any random variable whose logarithm is normally
     distributed. A variable might be modeled as log-normal if it can
     be thought of as the multiplicative product of many small
     independent factors.
+
+    Note: Class name Lognormal is deprecated, use LogNormal now!
 
     The pdf of this distribution is
 
@@ -1730,6 +1730,7 @@ class LogNormal(PositiveContinuous):
            \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1755,12 +1756,14 @@ class LogNormal(PositiveContinuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Location parameter.
-    sigma: float
+    sigma : tensor_like of float, optional
         Standard deviation. (sigma > 0). (only required if tau is not specified).
-    tau: float
+        Defaults to 1.
+    tau : tensor_like of float, optional
         Scale parameter (tau > 0). (only required if sigma is not specified).
+        Defaults to 1.
 
     Examples
     --------
@@ -1805,7 +1808,7 @@ class LogNormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
