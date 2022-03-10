@@ -500,6 +500,7 @@ class SymbolicDistribution:
             rv_out = cls.change_size(
                 rv=rv_out,
                 new_size=resize_shape,
+                expand=True,
             )
 
         rv_out = model.register_rv(

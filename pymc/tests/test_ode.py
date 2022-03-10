@@ -15,6 +15,7 @@
 import sys
 
 import aesara
+import aesara.tensor as at
 import numpy as np
 import pytest
 
@@ -154,6 +155,24 @@ class TestSensitivityInitialCondition:
 
         np.testing.assert_array_equal(model4_sens_ic, model4._sens_ic)
 
+    def test_sens_ic_vector_2_param_tensor(self):
+        # Vector ODE 2 Param with return type at.TensorVariable
+        def ode_func_4_t(y, t, p):
+            # Make sure that ds and di are vectors by slicing
+            ds = -p[0:1] * y[0:1] * y[1:]
+            di = p[0:1] * y[0:1] * y[1:] - p[1:] * y[1:]
+
+            return at.concatenate([ds, di], axis=0)
+
+        # Instantiate ODE model
+        model4_t = DifferentialEquation(
+            func=ode_func_4_t, t0=0, times=self.t, n_states=2, n_theta=2
+        )
+
+        model4_sens_ic_t = np.array([1, 0, 0, 0, 0, 1, 0, 0])
+
+        np.testing.assert_array_equal(model4_sens_ic_t, model4_t._sens_ic)
+
     def test_sens_ic_vector_3_params(self):
         # Big System with Many Parameters
         def ode_func_5(y, t, p):
@@ -209,44 +228,103 @@ def test_logp_scalar_ode():
 class TestErrors:
     """Test running model for a scalar ODE with 1 parameter"""
 
-    def system(y, t, p):
-        return np.exp(-t) - p[0] * y[0]
+    def setup_method(self, method):
+        def system(y, t, p):
+            return np.exp(-t) - p[0] * y[0]
 
-    times = np.arange(0, 9)
-
-    ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=1, n_theta=1)
+        self.system = system
+        self.times = np.arange(0, 9)
+        self.ode_model = DifferentialEquation(
+            func=system, t0=0, times=self.times, n_states=1, n_theta=1
+        )
 
     @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_many_params(self):
-        with pytest.raises(pm.ShapeError):
+        with pytest.raises(
+            pm.ShapeError,
+            match="Length of theta is wrong. \\(actual \\(2,\\) != expected \\(1,\\)\\)",
+        ):
             self.ode_model(theta=[1, 1], y0=[0])
 
     @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_many_y0(self):
-        with pytest.raises(pm.ShapeError):
+        with pytest.raises(
+            pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(2,\\) != expected \\(1,\\)\\)"
+        ):
             self.ode_model(theta=[1], y0=[0, 0])
 
     @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_few_params(self):
-        with pytest.raises(pm.ShapeError):
+        with pytest.raises(
+            pm.ShapeError,
+            match="Length of theta is wrong. \\(actual \\(0,\\) != expected \\(1,\\)\\)",
+        ):
             self.ode_model(theta=[], y0=[1])
 
     @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_few_y0(self):
-        with pytest.raises(pm.ShapeError):
+        with pytest.raises(
+            pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(0,\\) != expected \\(1,\\)\\)"
+        ):
             self.ode_model(theta=[1], y0=[])
 
     def test_func_callable(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Argument func must be callable."):
             DifferentialEquation(func=1, t0=0, times=self.times, n_states=1, n_theta=1)
 
     def test_number_of_states(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Argument n_states must be at least 1."):
             DifferentialEquation(func=self.system, t0=0, times=self.times, n_states=0, n_theta=1)
 
     def test_number_of_params(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Argument n_theta must be positive"):
             DifferentialEquation(func=self.system, t0=0, times=self.times, n_states=1, n_theta=0)
+
+    def test_tensor_shape(self):
+        with pytest.raises(ValueError, match="returned a 2-dimensional tensor"):
+
+            def system_2d_tensor(y, t, p):
+                s0 = np.exp(-t) - p[0] * y[0]
+                s1 = np.exp(-t) - p[0] * y[1]
+                s2 = np.exp(-t) - p[0] * y[2]
+                s3 = np.exp(-t) - p[0] * y[3]
+                return at.stack((s0, s1, s2, s3)).reshape((2, 2))
+
+            DifferentialEquation(
+                func=system_2d_tensor, t0=0, times=self.times, n_states=4, n_theta=1
+            )
+
+    def test_list_shape(self):
+        with pytest.raises(ValueError, match="returned a 2-dimensional tensor"):
+
+            def system_2d_list(y, t, p):
+                s0 = np.exp(-t) - p[0] * y[0]
+                s1 = np.exp(-t) - p[0] * y[1]
+                s2 = np.exp(-t) - p[0] * y[2]
+                s3 = np.exp(-t) - p[0] * y[3]
+                return [[s0, s1], [s2, s3]]
+
+            DifferentialEquation(func=system_2d_list, t0=0, times=self.times, n_states=4, n_theta=1)
+
+    def test_unexpected_return_type_set(self):
+        with pytest.raises(
+            TypeError, match="Unexpected type, <class 'set'>, returned by ode_func."
+        ):
+
+            def system_set(y, t, p):
+                return {np.exp(-t) - p[0] * y[0]}
+
+            DifferentialEquation(func=system_set, t0=0, times=self.times, n_states=4, n_theta=1)
+
+    def test_unexpected_return_type_dict(self):
+        with pytest.raises(
+            TypeError, match="Unexpected type, <class 'dict'>, returned by ode_func."
+        ):
+
+            def system_dict(y, t, p):
+                return {"rhs": np.exp(-t) - p[0] * y[0]}
+
+            DifferentialEquation(func=system_dict, t0=0, times=self.times, n_states=4, n_theta=1)
 
 
 class TestDiffEqModel:

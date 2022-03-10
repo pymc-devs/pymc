@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 # pylint: disable=wildcard-import
-__version__ = "4.0.0b2"
+__version__ = "4.0.0b3"
 
 import logging
 import multiprocessing as mp
@@ -52,7 +52,6 @@ __set_compiler_flags()
 from pymc import gp, ode, sampling
 from pymc.aesaraf import *
 from pymc.backends import *
-from pymc.bart import *
 from pymc.blocking import *
 from pymc.data import *
 from pymc.distributions import *
