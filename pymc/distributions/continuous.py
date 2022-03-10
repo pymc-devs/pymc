@@ -1324,6 +1324,7 @@ class Kumaraswamy(UnitContinuous):
            abx^{a-1}(1-x^a)^{b-1}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1858,6 +1859,7 @@ class StudentT(Continuous):
            \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1906,9 +1908,7 @@ class StudentT(Continuous):
     rv_op = studentt
 
     @classmethod
-    def dist(cls, nu, mu=0, lam=None, sigma=None, sd=None, *args, **kwargs):
-        if sd is not None:
-            sigma = sd
+    def dist(cls, nu, mu=0, lam=None, sigma=None, *args, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
