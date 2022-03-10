@@ -2089,6 +2089,7 @@ class Cauchy(Continuous):
            \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
