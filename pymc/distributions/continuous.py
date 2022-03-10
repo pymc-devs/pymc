@@ -1530,6 +1530,7 @@ class Laplace(Continuous):
            \frac{1}{2b} \exp \left\{ - \frac{|x - \mu|}{b} \right\}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
