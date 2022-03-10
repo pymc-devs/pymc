@@ -645,6 +645,7 @@ class TruncatedNormal(BoundedContinuous):
 
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -680,7 +681,7 @@ class TruncatedNormal(BoundedContinuous):
         Defaults to 1 if neither sigma nor tau is specified.
     tau : tensor_like of float, optional
         Precision (tau > 0) (only required if sigma is not specified).
-    lower : tensor_like of float, default -numpy.inf
+    lower : tensor_like of float, default - numpy.inf
         Left bound.
     upper : tensor_like of float, default numpy.inf
         Right bound.
@@ -709,13 +710,11 @@ class TruncatedNormal(BoundedContinuous):
         mu: Optional[DIST_PARAMETER_TYPES] = None,
         sigma: Optional[DIST_PARAMETER_TYPES] = None,
         tau: Optional[DIST_PARAMETER_TYPES] = None,
-        sd: Optional[DIST_PARAMETER_TYPES] = None,
         lower: Optional[DIST_PARAMETER_TYPES] = None,
         upper: Optional[DIST_PARAMETER_TYPES] = None,
         *args,
         **kwargs,
     ) -> RandomVariable:
-        sigma = sd if sd is not None else sigma
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
         tau = at.as_tensor_variable(tau)
