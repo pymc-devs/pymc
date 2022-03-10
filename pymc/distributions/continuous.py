@@ -1349,9 +1349,9 @@ class Kumaraswamy(UnitContinuous):
 
     Parameters
     ----------
-    a: float
+    a : tensor_like of float
         a > 0.
-    b: float
+    b : tensor_like of float
         b > 0.
     """
     rv_op = kumaraswamy
@@ -1378,9 +1378,9 @@ class Kumaraswamy(UnitContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1406,7 +1406,7 @@ class Kumaraswamy(UnitContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
             array or Aesara tensor.

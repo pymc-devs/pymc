@@ -3382,7 +3382,7 @@ class TestLKJCholeskCov:
     def test_sd_dist_distribution(self):
         with pm.Model() as m:
             sd_dist = at.constant([1, 2, 3])
-            with pytest.raises(TypeError, match="sd_dist must be a Distribution variable"):
+            with pytest.raises(TypeError, match="^sd_dist must be a scalar or vector distribution"):
                 x = pm.LKJCholeskyCov("x", n=3, eta=1, sd_dist=sd_dist)
 
     def test_sd_dist_registered(self):
@@ -3402,3 +3402,17 @@ class TestLKJCholeskCov:
         with pytest.warns(None) as record:
             m.logpt()
         assert not record
+
+    @pytest.mark.parametrize(
+        "sd_dist",
+        [
+            pm.Exponential.dist(1),
+            pm.MvNormal.dist(np.ones(3), np.eye(3)),
+        ],
+    )
+    def test_sd_dist_automatically_resized(self, sd_dist):
+        x = pm.LKJCholeskyCov.dist(n=3, eta=1, sd_dist=sd_dist, size=10, compute_corr=False)
+        resized_sd_dist = x.owner.inputs[-1]
+        assert resized_sd_dist.eval().shape == (10, 3)
+        # LKJCov has support shape `(n * (n+1)) // 2`
+        assert x.eval().shape == (10, 6)
