@@ -41,7 +41,7 @@ from scipy import linalg, stats
 
 import pymc as pm
 
-from pymc.aesaraf import floatX, intX
+from pymc.aesaraf import change_rv_size, floatX, intX
 from pymc.distributions import transforms
 from pymc.distributions.continuous import (
     BoundedContinuous,
@@ -1199,8 +1199,21 @@ class _LKJCholeskyCov(Continuous):
             isinstance(sd_dist, Variable)
             and sd_dist.owner is not None
             and isinstance(sd_dist.owner.op, RandomVariable)
+            and sd_dist.owner.op.ndim_supp < 2
         ):
-            raise TypeError("sd_dist must be a Distribution variable")
+            raise TypeError("sd_dist must be a scalar or vector distribution variable")
+
+        # We resize the sd_dist automatically so that it has (size x n) independent draws
+        # which is what the `_LKJCholeskyCovRV.rng_fn` expects. This makes the random
+        # and logp methods equivalent, as the latter also assumes a unique value for each
+        # diagonal element.
+        # Since `eta` and `n` are forced to be scalars we don't need to worry about
+        # implied batched dimensions for the time being.
+        if sd_dist.owner.op.ndim_supp == 0:
+            sd_dist = change_rv_size(sd_dist, to_tuple(size) + (n,))
+        else:
+            # The support shape must be `n` but we have no way of controlling it
+            sd_dist = change_rv_size(sd_dist, to_tuple(size))
 
         # sd_dist is part of the generative graph, but should be completely ignored
         # by the logp graph, since the LKJ logp explicitly includes these terms.
@@ -1288,7 +1301,9 @@ class LKJCholeskyCov:
     n: int
         Dimension of the covariance matrix (n > 1).
     sd_dist: pm.Distribution
-        A distribution for the standard deviations, should have `size=n`.
+        A positive scalar or vector distribution for the standard deviations, created
+        with the `.dist()` API. Should have `shape[-1]=n`. Scalar distributions will be
+        automatically resized to ensure this.
     compute_corr: bool, default=True
         If `True`, returns three values: the Cholesky decomposition, the correlations
         and the standard deviations of the covariance matrix. Otherwise, only returns

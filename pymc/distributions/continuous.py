@@ -25,9 +25,9 @@ import aesara.tensor as at
 import numpy as np
 
 from aeppl.logprob import _logprob, logcdf
-from aesara.assert_op import Assert
 from aesara.graph.basic import Apply, Variable
 from aesara.graph.op import Op
+from aesara.raise_op import Assert
 from aesara.tensor import gammaln
 from aesara.tensor.extra_ops import broadcast_shape
 from aesara.tensor.math import tanh
@@ -1349,9 +1349,9 @@ class Kumaraswamy(UnitContinuous):
 
     Parameters
     ----------
-    a: float
+    a : tensor_like of float
         a > 0.
-    b: float
+    b : tensor_like of float
         b > 0.
     """
     rv_op = kumaraswamy
@@ -1378,9 +1378,9 @@ class Kumaraswamy(UnitContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1406,7 +1406,7 @@ class Kumaraswamy(UnitContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
             array or Aesara tensor.

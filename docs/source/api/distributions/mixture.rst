@@ -8,4 +8,3 @@ Mixture
 
    Mixture
    NormalMixture
-   MixtureSameFamily
