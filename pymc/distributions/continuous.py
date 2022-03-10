@@ -2693,6 +2693,7 @@ class HalfStudentT(PositiveContinuous):
             \left(1+\frac{1}{\nu}\frac{x^2}{\sigma^2}\right)^{-\frac{\nu+1}{2}}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2739,11 +2740,7 @@ class HalfStudentT(PositiveContinuous):
     rv_op = halfstudentt
 
     @classmethod
-    def dist(cls, nu=1, sigma=None, lam=None, sd=None, *args, **kwargs):
-
-        if sd is not None:
-            sigma = sd
-
+    def dist(cls, nu=1, sigma=None, lam=None, *args, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(lam, sigma)
         sigma = at.as_tensor_variable(sigma)
