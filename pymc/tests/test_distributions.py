@@ -1744,6 +1744,7 @@ class TestMatchesScipy:
 
     def test_constantdist(self):
         self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
+        self.check_logcdf(Constant, I, {"c": I}, lambda value, c: np.log(value >= c))
 
     def test_zeroinflatedpoisson(self):
         def logp_fn(value, psi, theta):

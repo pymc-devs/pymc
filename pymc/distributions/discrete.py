@@ -1378,6 +1378,13 @@ class Constant(Discrete):
             -np.inf,
         )
 
+    def logcdf(value, c):
+        return at.switch(
+            at.lt(value, c),
+            -np.inf,
+            0,
+        )
+
 
 class ZeroInflatedPoissonRV(RandomVariable):
     name = "zero_inflated_poisson"
