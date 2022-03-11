@@ -58,13 +58,13 @@ def str_for_dist(rv: TensorVariable, formatting: str = "plain", include_params: 
 def str_for_model(model: Model, formatting: str = "plain", include_params: bool = True) -> str:
     """Make a human-readable string representation of Model, listing all random variables
     and their distributions, optionally including parameter values."""
-    if len(model.unobserved_RVs) + len(model.observed_RVs) + len(model.potentials) == 0:
-        return ""
-
     all_rv = itertools.chain(model.unobserved_RVs, model.observed_RVs, model.potentials)
 
     rv_reprs = [rv.str_repr(formatting=formatting, include_params=include_params) for rv in all_rv]
     rv_reprs = [rv_repr for rv_repr in rv_reprs if "TransformedDistribution()" not in rv_repr]
+
+    if not rv_reprs:
+        return ""
     if "latex" in formatting:
         rv_reprs = [
             rv_repr.replace(r"\sim", r"&\sim &").strip("$")
