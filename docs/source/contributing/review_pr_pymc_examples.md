@@ -1,4 +1,4 @@
-(reveiw_pr_pymc_examples)=
+(review_pr_pymc_examples)=
 # Review a PR on pymc-examples
 
 The target audience for this page are reviewers of PRs in pymc-examples
@@ -11,7 +11,7 @@ reviewer tasks and responsibilities.
 
 :::{important}
 The most important guideline is the following: **When you aren't _completely_
-sure about something say so, ask around and (re)read the documentation**.
+sure about something communicate it, ask around and (re)read the documentation**.
 :::
 
 pymc-examples is a huge collection of notebooks, covering many fields
@@ -24,10 +24,11 @@ You can still review, either focus on your expertise or take some
 time going through all the available resources to learn about the parts
 you are not sure about.
 
-(reveiw_pr/scope)=
+(review_pr/scope)=
 ## 1. Define the scope
 Before starting you need to make sure you understand the scope of the PR and
 to set the scope of your own review.
+If the scope isn't clear from the PR description, ask the author to update it!
 
 There are many valid contributions that can be done to the notebooks in pymc-examples.
 They can be focused on code, styling, wording...
@@ -42,12 +43,7 @@ working and coherent notebooks. If the code is updated to use `Potential` instea
 of `DensityDist` and the explanation mentions `DensityDist`, that specific sentence
 needs to be updated too.
 
-If you are not sure about the scope of the PR or think that what the PR is aiming for
-won't leave a coherent notebook, ask the PR author to make sure you are on the same
-page before reviewing.
-
-Once you are clear on the scope of the PR, define which subset of that (if any)
-will your review cover. A PR that aims to update everything about a notebook
+A PR that aims to update everything about a notebook
 could easily have 3 or more reviewers, each covering different aspects of the
 example like Aesara usage, writing and explanation of the concepts used,
 ArviZ usage, styling with MyST+Sphinx, or structuring and scope of the notebook.
@@ -60,6 +56,7 @@ Part of that is also making sure that the PR description links to the relevant i
 (review_pr/initial_pass)=
 ## 2. Try to be concise and clear
 Try to be concise and to the point with your reviews.
+**Make sure to leave actionable responses.**
 You'll need less time to review and the PR author will need less time to go over the review.
 Here are some examples about what this does:
 
