@@ -658,6 +658,25 @@ class TestMixture(SeededTest):
         with pytest.warns(UserWarning, match="Single component will be treated as a mixture"):
             Mixture.dist(w=[0.5, 0.5], comp_dists=[Normal.dist(size=2)])
 
+    def test_mixture_dtype(self):
+        mix_dtype = Mixture.dist(
+            w=[0.5, 0.5],
+            comp_dists=[
+                Multinomial.dist(n=5, p=[0.5, 0.5]),
+                Multinomial.dist(n=5, p=[0.5, 0.5]),
+            ],
+        ).dtype
+        assert mix_dtype == "int64"
+
+        mix_dtype = Mixture.dist(
+            w=[0.5, 0.5],
+            comp_dists=[
+                Dirichlet.dist(a=[0.5, 0.5]),
+                Dirichlet.dist(a=[0.5, 0.5]),
+            ],
+        ).dtype
+        assert mix_dtype == aesara.config.floatX
+
 
 class TestNormalMixture(SeededTest):
     def test_normal_mixture_sampling(self):
