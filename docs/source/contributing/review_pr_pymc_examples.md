@@ -75,15 +75,17 @@ and doesn't mean:
 * Avoiding mentioning good things from the PR or not thanking the PR author.
 * Being cryptic or writing badly
 
-## 3. Review the content and code
-* Check the intended level of the notebook.
-  beginner notebooks should sacrifice performance for the sake of clarity without even needing
+## 3. Review the code and supporting text
+* Check the intended level of the notebook, both when it comes to code and to text.
+  i.e. beginner notebooks should sacrifice performance for the sake of clarity without even needing
   an explanation, intermediate and advanced ones should not.
 * In all cases, however, remember that this code is written to be read!
   There is little to gain from obscure one-liners and much to lose, even in
   intermediate or advanced notebooks. If some code is necessary but not
   very relevant and you think takes up too much space, hide that cell/input/output
   under a toggle button.
+* Make sure that the text is relevant, it explains the code blocks when needed and
+  is up to date with the code.
 * Check diffs and output on ReviewNB
 
 ## 4. Review the styling and formatting
@@ -95,16 +97,31 @@ and doesn't mean:
 
 For the time being (while we rerun and update the docs to new formatting) you should
 not accept any of the following without a very good reason.
-They are very specific and you should be part of the PR scope even if the PR author
-didn't intend to originally. Think of this a CI breaking.
+They are very specific and should be part of the PR scope even if the PR author
+didn't intend to originally. Think of this as CI breaking.
 
 * URLs pointing to PyMC/ArviZ/Aesara docs
 * No post directive or no MyST target at the top of the notebook.
 * No watermark (this is already CI breaking but is still included here for full context)
 
-In general check that the style described in {ref}`jupyter_style` is followed.
+* In general check that the style described in {ref}`jupyter_style` is followed.
 
 ## 5. Check CI
 * CI in pymc-examples is very specific and has never had a false failure yet.
 * What it does however is skipping some files from given checks! Make sure to check the
   file is not excluded from CI when reviewing.
+  
+## Checklist
+This might be moved to a comment added by a bot to every new PR, see [pymc-examples#288](https://github.com/pymc-devs/pymc-examples/issues/288)
+
+* Check PR description for clarity and links to relevant issues
+* Define scope of review
+* Leave actionable comments with rationale
+* Check code, outputs and supporting text in ReviewNB
+* Check styling and rendering in readthedocs preview and MyST notebook representation
+* Check there are:
+  - **No** URLs pointing to PyMC/Aesara/ArviZ docs
+  - A post directive with tags and categories and MyST target at the top of the notebook
+  - A watermark with all relevant libraries for reproducibility at the bottom of the notebook
+* Check CI is passing
+* Proofread changes (once no significant rewriting is needed)
