@@ -46,6 +46,7 @@ from pymc.distributions.distribution import Discrete
 from pymc.distributions.logprob import logcdf, logp
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.math import sigmoid
+from pymc.vartypes import continuous_types
 
 __all__ = [
     "Binomial",
@@ -1315,8 +1316,11 @@ class ConstantRV(RandomVariable):
     name = "constant"
     ndim_supp = 0
     ndims_params = [0]
-    dtype = "floatX"  # Should be treated as a discrete variable!
     _print_name = ("Constant", "\\operatorname{Constant}")
+
+    def make_node(self, rng, size, dtype, c):
+        c = at.as_tensor_variable(c)
+        return super().make_node(rng, size, c.dtype, c)
 
     @classmethod
     def rng_fn(cls, rng, c, size=None):
@@ -1334,15 +1338,19 @@ class Constant(Discrete):
 
     Parameters
     ----------
-    value: float or int
-        Constant parameter.
+    c: float or int
+        Constant parameter. The dtype of `c` determines the dtype of the distribution.
+        This can affect which sampler is assigned to Constant variables, or variables
+        that use Constant, such as Mixtures.
     """
 
     rv_op = constant
 
     @classmethod
     def dist(cls, c, *args, **kwargs):
-        c = at.as_tensor_variable(floatX(c))
+        c = at.as_tensor_variable(c)
+        if c.dtype in continuous_types:
+            c = floatX(c)
         return super().dist([c], **kwargs)
 
     def get_moment(rv, size, c):
