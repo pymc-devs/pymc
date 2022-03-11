@@ -31,7 +31,7 @@ from aesara.sparse.basic import sp_sum
 from aesara.tensor import gammaln, sigmoid
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
-from aesara.tensor.random.op import RandomVariable, default_shape_from_params
+from aesara.tensor.random.op import RandomVariable, default_supp_shape_from_params
 from aesara.tensor.random.utils import broadcast_params
 from aesara.tensor.slinalg import Cholesky
 from aesara.tensor.slinalg import solve_lower_triangular as solve_lower
@@ -295,8 +295,10 @@ class MvStudentTRV(RandomVariable):
             cov = np.array([[1.0]], dtype=dtype)
         return super().__call__(nu, mu, cov, size=size, **kwargs)
 
-    def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return default_shape_from_params(self.ndim_supp, dist_params, rep_param_idx, param_shapes)
+    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
+        return default_supp_shape_from_params(
+            self.ndim_supp, dist_params, rep_param_idx, param_shapes
+        )
 
     @classmethod
     def rng_fn(cls, rng, nu, mu, cov, size):
@@ -607,8 +609,10 @@ class DirichletMultinomialRV(RandomVariable):
     dtype = "int64"
     _print_name = ("DirichletMN", "\\operatorname{DirichletMN}")
 
-    def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return default_shape_from_params(self.ndim_supp, dist_params, rep_param_idx, param_shapes)
+    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
+        return default_supp_shape_from_params(
+            self.ndim_supp, dist_params, rep_param_idx, param_shapes
+        )
 
     @classmethod
     def rng_fn(cls, rng, n, a, size):
@@ -903,7 +907,7 @@ class WishartRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("Wishart", "\\operatorname{Wishart}")
 
-    def _shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
+    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
         # The shape of second parameter `V` defines the shape of the output.
         return dist_params[1].shape[-2:]
 
@@ -1471,7 +1475,7 @@ class LKJCorrRV(RandomVariable):
 
         return super().make_node(rng, size, dtype, n, eta)
 
-    def _shape_from_params(self, dist_params, **kwargs):
+    def _supp_shape_from_params(self, dist_params, **kwargs):
         n = dist_params[0]
         dist_shape = ((n * (n - 1)) // 2,)
         return dist_shape
