@@ -20,6 +20,7 @@ import pytest
 import scipy.stats as st
 
 from aesara import tensor as at
+from aesara.tensor.random.op import RandomVariable
 from numpy.testing import assert_allclose
 from scipy.special import logsumexp
 
@@ -676,6 +677,38 @@ class TestMixture(SeededTest):
             ],
         ).dtype
         assert mix_dtype == aesara.config.floatX
+
+    @pytest.mark.parametrize(
+        "comp_dists, expected_shape",
+        [
+            (
+                [
+                    Normal.dist([[0, 0, 0], [0, 0, 0]]),
+                    Normal.dist([0, 0, 0]),
+                    Normal.dist([0]),
+                ],
+                (2, 3),
+            ),
+            (
+                [
+                    Dirichlet.dist([[1, 1, 1], [1, 1, 1]]),
+                    Dirichlet.dist([1, 1, 1]),
+                ],
+                (2, 3),
+            ),
+        ],
+    )
+    def test_broadcast_components(self, comp_dists, expected_shape):
+        n_dists = len(comp_dists)
+        mix = Mixture.dist(w=np.ones(n_dists) / n_dists, comp_dists=comp_dists)
+        mix_eval = mix.eval()
+        assert tuple(mix_eval.shape) == expected_shape
+        assert np.unique(mix_eval).size == mix.eval().size
+        for comp_dist in mix.owner.inputs[2:]:
+            # We check that the input is a "pure" RandomVariable and not a broadcast
+            # operation. This confirms that all draws will be unique
+            assert isinstance(comp_dist.owner.op, RandomVariable)
+            assert tuple(comp_dist.shape.eval()) == expected_shape
 
 
 class TestNormalMixture(SeededTest):
