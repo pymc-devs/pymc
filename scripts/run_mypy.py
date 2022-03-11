@@ -74,6 +74,8 @@ pymc/variational/stein.py
 pymc/variational/test_functions.py
 pymc/variational/updates.py
 pymc/vartypes.py
+pymc/sampling_jax.py
+pymc/step_methods/sgmcmc.py
 """
 
 
