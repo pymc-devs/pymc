@@ -176,7 +176,6 @@ class Mixture(SymbolicDistribution):
             )
 
         # Check that components are not associated with a registered variable in the model
-        components_ndim = set()
         components_ndim_supp = set()
         for dist in comp_dists:
             # TODO: Allow these to not be a RandomVariable as long as we can call `ndim_supp` on them
@@ -188,13 +187,7 @@ class Mixture(SymbolicDistribution):
                     f"Component dist must be a distribution created via the `.dist()` API, got {type(dist)}"
                 )
             check_dist_not_registered(dist)
-            components_ndim.add(dist.ndim)
             components_ndim_supp.add(dist.owner.op.ndim_supp)
-
-        if len(components_ndim) > 1:
-            raise ValueError(
-                f"Mixture components must all have the same dimensionality, got {components_ndim}"
-            )
 
         if len(components_ndim_supp) > 1:
             raise ValueError(
@@ -214,13 +207,18 @@ class Mixture(SymbolicDistribution):
             # Create new rng for the mix_indexes internal RV
             mix_indexes_rng = aesara.shared(np.random.default_rng())
 
+        single_component = len(components) == 1
+        ndim_supp = components[0].owner.op.ndim_supp
+
         if size is not None:
             components = cls._resize_components(size, *components)
+        elif not single_component:
+            # We might need to broadcast components when size is not specified
+            shape = tuple(at.broadcast_shape(*components))
+            size = shape[: len(shape) - ndim_supp]
+            components = cls._resize_components(size, *components)
 
-        single_component = len(components) == 1
-
-        # Extract support and replication ndims from components and weights
-        ndim_supp = components[0].owner.op.ndim_supp
+        # Extract replication ndims from components and weights
         ndim_batch = components[0].ndim - ndim_supp
         if single_component:
             # One dimension is taken by the mixture axis in the single component case
