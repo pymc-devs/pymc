@@ -749,11 +749,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         f"Requested variable {var} not found among the model variables"
                     )
 
-        rv_logps = []
+        rv_logps: List[TensorVariable] = []
         if rv_values:
             rv_logps = joint_logpt(list(rv_values.keys()), rv_values, sum=False, jacobian=jacobian)
-            if not isinstance(rv_logps, list):
-                rv_logps = [rv_logps]
+            assert isinstance(rv_logps, list)
 
         # Replace random variables by their value variables in potential terms
         potential_logps = []

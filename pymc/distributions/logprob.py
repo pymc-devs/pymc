@@ -246,12 +246,6 @@ def joint_logpt(
         logp_var = at.sum([at.sum(factor) for factor in logp_var_dict.values()])
     else:
         logp_var = list(logp_var_dict.values())
-        # TODO: deprecate special behavior when only one variable is requested and
-        #  always return a list. This is here for backwards compatibility as logpt
-        #  started as a replacement to factor.logpt, but it should now be considered an
-        #  internal function reached only via model.logp* methods.
-        if len(logp_var) == 1:
-            logp_var = logp_var[0]
 
     return logp_var
 
