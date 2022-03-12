@@ -82,12 +82,9 @@ class _DefaultTrace:
         `insert()` method
     """
 
-    trace_dict: Dict[str, np.ndarray] = {}
-    _len: Optional[int] = None
-
     def __init__(self, samples: int):
-        self._len = samples
-        self.trace_dict = {}
+        self._len: int = samples
+        self.trace_dict: Dict[str, np.ndarray] = {}
 
     def insert(self, k: str, v, idx: int):
         """
@@ -180,10 +177,10 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 " one of trace, prior, posterior_predictive or predictions."
             )
 
-        self.coords = {**self.model.coords, **(coords or {})}
+        untyped_coords = {**self.model.coords, **(coords or {})}
         self.coords = {
             cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
-            for cname, cvals in self.coords.items()
+            for cname, cvals in untyped_coords.items()
             if cvals is not None
         }
 
@@ -639,7 +636,7 @@ def predictions_to_inference_data(
     """
     if inplace and not idata_orig:
         raise ValueError(
-            "Do not pass True for inplace unless passing" "an existing InferenceData as idata_orig"
+            "Do not pass True for inplace unless passing an existing InferenceData as idata_orig"
         )
     converter = InferenceDataConverter(
         trace=posterior_trace,
@@ -650,6 +647,7 @@ def predictions_to_inference_data(
         log_likelihood=False,
     )
     if hasattr(idata_orig, "posterior"):
+        assert idata_orig is not None
         converter.nchains = idata_orig.posterior.dims["chain"]
         converter.ndraws = idata_orig.posterior.dims["draw"]
     else:

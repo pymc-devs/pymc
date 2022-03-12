@@ -3,6 +3,7 @@ import re
 import sys
 import warnings
 
+from functools import partial
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
 from pymc.initial_point import StartDict
@@ -26,6 +27,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
 from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
+from arviz.data.base import make_attrs
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_observations
@@ -97,14 +99,14 @@ def get_jaxified_graph(
     return jax_funcify(fgraph)
 
 
-def get_jaxified_logp(model: Model) -> Callable:
-
-    logp_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[model.logpt()])
+def get_jaxified_logp(model: Model, negative_logp=True) -> Callable:
+    model_logpt = model.logpt()
+    if not negative_logp:
+        model_logpt = -model_logpt
+    logp_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[model_logpt])
 
     def logp_fn_wrap(x):
-        # NumPyro expects a scalar potential with the opposite sign of model.logpt
-        res = logp_fn(*x)[0]
-        return -res
+        return logp_fn(*x)[0]
 
     return logp_fn_wrap
 
@@ -177,6 +179,202 @@ def _get_batched_jittered_initial_points(
     return initial_points
 
 
+@partial(jax.jit, static_argnums=(2, 3, 4, 5, 6))
+def _blackjax_inference_loop(
+    seed,
+    init_position,
+    logprob_fn,
+    draws,
+    tune,
+    target_accept,
+    algorithm=None,
+):
+    import blackjax
+
+    if algorithm is None:
+        algorithm = blackjax.nuts
+
+    adapt = blackjax.window_adaptation(
+        algorithm=algorithm,
+        logprob_fn=logprob_fn,
+        num_steps=tune,
+        target_acceptance_rate=target_accept,
+    )
+    last_state, kernel, _ = adapt.run(seed, init_position)
+
+    def inference_loop(rng_key, initial_state):
+        def one_step(state, rng_key):
+            state, info = kernel(rng_key, state)
+            return state, (state, info)
+
+        keys = jax.random.split(rng_key, draws)
+        _, (states, infos) = jax.lax.scan(one_step, initial_state, keys)
+
+        return states, infos
+
+    return inference_loop(seed, last_state)
+
+
+def sample_blackjax_nuts(
+    draws=1000,
+    tune=1000,
+    chains=4,
+    target_accept=0.8,
+    random_seed=10,
+    initvals=None,
+    model=None,
+    var_names=None,
+    keep_untransformed=False,
+    chain_method="parallel",
+    idata_kwargs=None,
+):
+    """
+    Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
+
+    Parameters
+    ----------
+    draws : int, default 1000
+        The number of samples to draw. The number of tuned samples are discarded by default.
+    tune : int, default 1000
+        Number of iterations to tune. Samplers adjust the step sizes, scalings or
+        similar during tuning. Tuning samples will be drawn in addition to the number specified in
+        the ``draws`` argument.
+    chains : int, default 4
+        The number of chains to sample.
+    target_accept : float in [0, 1].
+        The step size is tuned such that we approximate this acceptance rate. Higher values like
+        0.9 or 0.95 often work better for problematic posteriors.
+    random_seed : int, default 10
+        Random seed used by the sampling steps.
+    model : Model, optional
+        Model to sample from. The model needs to have free random variables. When inside a ``with`` model
+        context, it defaults to that model, otherwise the model must be passed explicitly.
+    var_names : iterable of str, optional
+        Names of variables for which to compute the posterior samples. Defaults to all variables in the posterior
+    keep_untransformed : bool, default False
+        Include untransformed variables in the posterior samples. Defaults to False.
+    chain_method : str, default "parallel"
+        Specify how samples should be drawn. The choices include "parallel", and "vectorized".
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
+        for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
+        not be included in the returned object.
+
+    Returns
+    -------
+    InferenceData
+        ArviZ ``InferenceData`` object that contains the posterior samples, together with their respective sample stats and
+        pointwise log likeihood values (unless skipped with ``idata_kwargs``).
+    """
+    import blackjax
+
+    model = modelcontext(model)
+
+    if var_names is None:
+        var_names = model.unobserved_value_vars
+
+    vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
+
+    coords = {
+        cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
+        for cname, cvals in model.coords.items()
+        if cvals is not None
+    }
+
+    if hasattr(model, "RV_dims"):
+        dims = {
+            var_name: [dim for dim in dims if dim is not None]
+            for var_name, dims in model.RV_dims.items()
+        }
+    else:
+        dims = {}
+
+    tic1 = datetime.now()
+    print("Compiling...", file=sys.stdout)
+
+    init_params = _get_batched_jittered_initial_points(
+        model=model,
+        chains=chains,
+        initvals=initvals,
+        random_seed=random_seed,
+    )
+
+    if chains == 1:
+        init_params = [np.stack(init_params)]
+        init_params = [np.stack(init_state) for init_state in zip(*init_params)]
+
+    logprob_fn = get_jaxified_logp(model)
+
+    seed = jax.random.PRNGKey(random_seed)
+    keys = jax.random.split(seed, chains)
+
+    get_posterior_samples = partial(
+        _blackjax_inference_loop,
+        logprob_fn=logprob_fn,
+        tune=tune,
+        draws=draws,
+        target_accept=target_accept,
+    )
+
+    tic2 = datetime.now()
+    print("Compilation time = ", tic2 - tic1, file=sys.stdout)
+
+    print("Sampling...", file=sys.stdout)
+
+    # Adapted from numpyro
+    if chain_method == "parallel":
+        map_fn = jax.pmap
+    elif chain_method == "vectorized":
+        map_fn = jax.vmap
+    else:
+        raise ValueError(
+            "Only supporting the following methods to draw chains:" ' "parallel" or "vectorized"'
+        )
+
+    states, _ = map_fn(get_posterior_samples)(keys, init_params)
+    raw_mcmc_samples = states.position
+
+    tic3 = datetime.now()
+    print("Sampling time = ", tic3 - tic2, file=sys.stdout)
+
+    print("Transforming variables...", file=sys.stdout)
+    mcmc_samples = {}
+    for v in vars_to_sample:
+        jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
+        result = jax.vmap(jax.vmap(jax_fn))(*raw_mcmc_samples)[0]
+        mcmc_samples[v.name] = result
+
+    tic4 = datetime.now()
+    print("Transformation time = ", tic4 - tic3, file=sys.stdout)
+
+    if idata_kwargs is None:
+        idata_kwargs = {}
+    else:
+        idata_kwargs = idata_kwargs.copy()
+
+    if idata_kwargs.pop("log_likelihood", True):
+        log_likelihood = _get_log_likelihood(model, raw_mcmc_samples)
+    else:
+        log_likelihood = None
+
+    attrs = {
+        "sampling_time": (tic3 - tic2).total_seconds(),
+    }
+
+    posterior = mcmc_samples
+    az_trace = az.from_dict(
+        posterior=posterior,
+        log_likelihood=log_likelihood,
+        observed_data=find_observations(model),
+        coords=coords,
+        dims=dims,
+        attrs=make_attrs(attrs, library=blackjax),
+        **idata_kwargs,
+    )
+
+    return az_trace
+
+
 def sample_numpyro_nuts(
     draws: int = 1000,
     tune: int = 1000,
@@ -192,6 +390,51 @@ def sample_numpyro_nuts(
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
 ):
+    """
+    Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
+
+    Parameters
+    ----------
+    draws : int, default 1000
+        The number of samples to draw. The number of tuned samples are discarded by default.
+    tune : int, default 1000
+        Number of iterations to tune. Samplers adjust the step sizes, scalings or
+        similar during tuning. Tuning samples will be drawn in addition to the number specified in
+        the ``draws`` argument.
+    chains : int, default 4
+        The number of chains to sample.
+    target_accept : float in [0, 1].
+        The step size is tuned such that we approximate this acceptance rate. Higher values like
+        0.9 or 0.95 often work better for problematic posteriors.
+    random_seed : int, default 10
+        Random seed used by the sampling steps.
+    model : Model, optional
+        Model to sample from. The model needs to have free random variables. When inside a ``with`` model
+        context, it defaults to that model, otherwise the model must be passed explicitly.
+    var_names : iterable of str, optional
+        Names of variables for which to compute the posterior samples. Defaults to all variables in the posterior
+    progress_bar : bool, default True
+        Whether or not to display a progress bar in the command line. The bar shows the percentage
+        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
+        time until completion ("expected time of arrival"; ETA).
+    keep_untransformed : bool, default False
+        Include untransformed variables in the posterior samples. Defaults to False.
+    chain_method : str, default "parallel"
+        Specify how samples should be drawn. The choices include "sequential", "parallel", and "vectorized".
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
+        for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
+        not be included in the returned object.
+
+    Returns
+    -------
+    InferenceData
+        ArviZ ``InferenceData`` object that contains the posterior samples, together with their respective sample stats and
+        pointwise log likeihood values (unless skipped with ``idata_kwargs``).
+    """
+
+    import numpyro
+
     from numpyro.infer import MCMC, NUTS
 
     model = modelcontext(model)
@@ -228,7 +471,7 @@ def sample_numpyro_nuts(
         random_seed=random_seed,
     )
 
-    logp_fn = get_jaxified_logp(model)
+    logp_fn = get_jaxified_logp(model, negative_logp=False)
 
     if nuts_kwargs is None:
         nuts_kwargs = {}
@@ -298,6 +541,10 @@ def sample_numpyro_nuts(
     else:
         log_likelihood = None
 
+    attrs = {
+        "sampling_time": (tic3 - tic2).total_seconds(),
+    }
+
     posterior = mcmc_samples
     az_trace = az.from_dict(
         posterior=posterior,
@@ -306,7 +553,7 @@ def sample_numpyro_nuts(
         sample_stats=_sample_stats_to_xarray(pmap_numpyro),
         coords=coords,
         dims=dims,
-        attrs={"sampling_time": (tic3 - tic2).total_seconds()},
+        attrs=make_attrs(attrs, library=numpyro),
         **idata_kwargs,
     )
 

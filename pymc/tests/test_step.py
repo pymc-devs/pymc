@@ -1750,13 +1750,13 @@ class TestMLDA:
                 Q_mean_vr, Q_se_vr = extract_Q_estimate(trace, 3)
 
                 # check that returned values are floats and finite.
-                assert isinstance(Q_mean_standard, float)
+                assert isinstance(Q_mean_standard, np.floating)
                 assert np.isfinite(Q_mean_standard)
-                assert isinstance(Q_mean_vr, float)
+                assert isinstance(Q_mean_vr, np.floating)
                 assert np.isfinite(Q_mean_vr)
-                assert isinstance(Q_se_standard, float)
+                assert isinstance(Q_se_standard, np.floating)
                 assert np.isfinite(Q_se_standard)
-                assert isinstance(Q_se_vr, float)
+                assert isinstance(Q_se_vr, np.floating)
                 assert np.isfinite(Q_se_vr)
 
                 # check consistency of QoI across levels.

@@ -753,3 +753,7 @@ def test_deterministic():
 
     assert model.y == y
     assert model["y"] == y
+
+
+def test_empty_model_representation():
+    assert pm.Model().str_repr() == ""

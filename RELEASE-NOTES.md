@@ -27,6 +27,7 @@ Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) fo
 
 All of the above apply to:
 
+- BART was removed [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental)
 - ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
 - `pm.Distribution(...).logp(x)` is now `pm.logp(pm.Distribution(...), x)`.

@@ -103,7 +103,7 @@ def find_MAP(
     allinmodel(vars, model)
     ipfn = make_initial_point_fn(
         model=model,
-        jitter_rvs={},
+        jitter_rvs=set(),
         return_transformed=True,
         overrides=start,
     )
