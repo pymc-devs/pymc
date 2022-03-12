@@ -635,7 +635,7 @@ class TestSamplePPC(SeededTest):
 
             # test wrong type argument
             bad_trace = {"mu": stats.norm.rvs(size=1000)}
-            with pytest.raises(TypeError):
+            with pytest.raises(TypeError, match="type for `trace`"):
                 ppc = pm.sample_posterior_predictive(bad_trace)
 
     def test_vector_observed(self):
