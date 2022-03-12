@@ -450,8 +450,10 @@ def convert_shape(shape: Shape) -> Optional[WeakShape]:
     if shape is None:
         return None
 
-    if isinstance(shape, int) or (isinstance(shape, TensorVariable) and shape.ndim == 0):
-        shape = (shape,)
+    if isinstance(shape, int):
+        shape = shape
+    if isinstance(shape, TensorVariable) and shape.ndim <= 0:
+        shape = tuple(shape)
     elif isinstance(shape, (list, tuple)):
         shape = tuple(shape)
     else:
@@ -473,7 +475,7 @@ def convert_size(size: Size) -> Optional[StrongSize]:
         return None
     if isinstance(size, int):
         size = size
-    elif isinstance(size,TensorVariable):
+    elif isinstance(size, TensorVariable) and size.ndim <= 1:
         size = tuple(size)
     elif isinstance(size, (list, tuple)):
         size = tuple(size)

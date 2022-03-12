@@ -467,9 +467,9 @@ class TestShapeDimsSize:
         with pytest.raises(ValueError, match="cannot contain"):
             convert_size(size=(3, ...))
         x = at.constant(5)
-        assert convert_size(x) ==(5,)
+        assert convert_size(x) == (5,)
         x = at.constant([5, 5])
-        assert convert_size(x) ==([5,5],)
+        assert convert_size(x) == ([5, 5],)
 
     def test_lazy_flavors(self):
         assert pm.Uniform.dist(2, [4, 5], size=[3, 2]).eval().shape == (3, 2)
