@@ -31,6 +31,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
 )
 
 import aesara
@@ -552,8 +553,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.rng_seeder = rng_seeder
 
         # The sequence of model-generated RNGs
-        self.rng_seq = []
-        self._initial_values = {}
+        self.rng_seq: List[SharedVariable] = []
+        self._initial_values: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]] = {}
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -721,17 +722,20 @@ class Model(WithMemoization, metaclass=ContextMeta):
         -------
         Logp graph(s)
         """
+        varlist: List[TensorVariable]
         if vars is None:
-            vars = self.free_RVs + self.observed_RVs + self.potentials
+            varlist = self.free_RVs + self.observed_RVs + self.potentials
         elif not isinstance(vars, (list, tuple)):
-            vars = [vars]
+            varlist = [vars]
+        else:
+            varlist = cast(List[TensorVariable], vars)
 
         # We need to separate random variables from potential terms, and remember their
         # original order so that we can merge them together in the same order at the end
         rv_values = {}
         potentials = []
         rv_order, potential_order = [], []
-        for i, var in enumerate(vars):
+        for i, var in enumerate(varlist):
             value_var = self.rvs_to_values.get(var)
             if value_var is not None:
                 rv_values[var] = value_var
@@ -756,7 +760,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if potentials:
             potential_logps, _ = rvs_to_value_vars(potentials, apply_transforms=True)
 
-        logp_factors = [None] * len(vars)
+        logp_factors = [None] * len(varlist)
         for logp_order, logp in zip((rv_order + potential_order), (rv_logps + potential_logps)):
             logp_factors[logp_order] = logp
 
@@ -948,7 +952,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self._coords
 
     @property
-    def dim_lengths(self) -> Dict[str, Tuple[Variable, ...]]:
+    def dim_lengths(self) -> Dict[str, Variable]:
         """The symbolic lengths of dimensions in the model.
 
         The values are typically instances of ``TensorVariable`` or ``ScalarSharedVariable``.

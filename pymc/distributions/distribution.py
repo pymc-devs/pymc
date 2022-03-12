@@ -186,7 +186,7 @@ class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
     rv_class = None
-    rv_op = None
+    rv_op: RandomVariable = None
 
     def __new__(
         cls,

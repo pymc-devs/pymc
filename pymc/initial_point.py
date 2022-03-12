@@ -68,7 +68,7 @@ def filter_rvs_to_jitter(step) -> Set[TensorVariable]:
         The random variables for which jitter should be added.
     """
     # TODO: implement this
-    return {}
+    return set()
 
 
 def make_initial_point_fns_per_chain(
@@ -163,12 +163,16 @@ def make_initial_point_fn(
             )
         ]
 
-    overrides = convert_str_to_rv_dict(model, overrides or {})
+    sdict_overrides = convert_str_to_rv_dict(model, overrides or {})
+    initval_strats = {
+        **model.initial_values,
+        **sdict_overrides,
+    }
 
     initial_values = make_initial_point_expression(
         free_rvs=model.free_RVs,
         rvs_to_values=model.rvs_to_values,
-        initval_strategies={**model.initial_values, **(overrides or {})},
+        initval_strategies=initval_strats,
         jitter_rvs=jitter_rvs,
         default_strategy=default_strategy,
         return_transformed=return_transformed,
@@ -178,13 +182,14 @@ def make_initial_point_fn(
     # when calling the final seeded function
     graph = FunctionGraph(outputs=initial_values, clone=False)
     rng_nodes = find_rng_nodes(graph.outputs)
-    new_rng_nodes = []
+    new_rng_nodes: List[Union[np.random.RandomState, np.random.Generator]] = []
     for rng_node in rng_nodes:
+        rng_cls: type
         if isinstance(rng_node, at.random.var.RandomStateSharedVariable):
-            new_rng = np.random.RandomState(np.random.PCG64())
+            rng_cls = np.random.RandomState
         else:
-            new_rng = np.random.Generator(np.random.PCG64())
-        new_rng_nodes.append(aesara.shared(new_rng))
+            rng_cls = np.random.Generator
+        new_rng_nodes.append(aesara.shared(rng_cls(np.random.PCG64())))
     graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
     func = compile_pymc(inputs=[], outputs=graph.outputs, mode=aesara.compile.mode.FAST_COMPILE)
 
@@ -310,7 +315,7 @@ def make_initial_point_expression(
 
         initial_values.append(value)
 
-    all_outputs = []
+    all_outputs: List[TensorVariable] = []
     all_outputs.extend(free_rvs)
     all_outputs.extend(initial_values)
     all_outputs.extend(initial_values_transformed)
