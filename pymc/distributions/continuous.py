@@ -2743,7 +2743,11 @@ class HalfStudentT(PositiveContinuous):
     rv_op = halfstudentt
 
     @classmethod
-    def dist(cls, nu=1, sigma=None, lam=None, *args, **kwargs):
+    def dist(cls, nu=1, sigma=None, lam=None, sd=None, *args, **kwargs):
+
+        if sd is not None:
+            sigma = sd
+
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(lam, sigma)
         sigma = at.as_tensor_variable(sigma)
