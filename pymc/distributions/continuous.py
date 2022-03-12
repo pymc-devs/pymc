@@ -1468,8 +1468,7 @@ class Exponential(PositiveContinuous):
 
     Notes
     -----
-    Logp calculation is defined in aeppl.logprob
-    https://github.com/aesara-devs/aeppl/blob/main/aeppl/logprob.py
+    Logp calculation is defined in `aeppl.logprob <https://github.com/aesara-devs/aeppl/blob/main/aeppl/logprob.py/>`_.
 
     Parameters
     ----------
@@ -1499,7 +1498,7 @@ class Exponential(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
             array or Aesara tensor.
