@@ -2783,19 +2783,19 @@ class TestBound:
             UpperPoisson = Bound("upper", dist, upper=[np.inf, 10], transform=None)
             BoundedPoisson = Bound("bounded", dist, lower=[1, 2], upper=[9, 10], transform=None)
 
-        first, second = joint_logpt(LowerPoisson, [0, 0], sum=False).eval()
+        first, second = joint_logpt(LowerPoisson, [0, 0], sum=False)[0].eval()
         assert first == -np.inf
         assert second != -np.inf
 
-        first, second = joint_logpt(UpperPoisson, [11, 11], sum=False).eval()
+        first, second = joint_logpt(UpperPoisson, [11, 11], sum=False)[0].eval()
         assert first != -np.inf
         assert second == -np.inf
 
-        first, second = joint_logpt(BoundedPoisson, [1, 1], sum=False).eval()
+        first, second = joint_logpt(BoundedPoisson, [1, 1], sum=False)[0].eval()
         assert first != -np.inf
         assert second == -np.inf
 
-        first, second = joint_logpt(BoundedPoisson, [10, 10], sum=False).eval()
+        first, second = joint_logpt(BoundedPoisson, [10, 10], sum=False)[0].eval()
         assert first == -np.inf
         assert second != -np.inf
 
@@ -3285,7 +3285,7 @@ def test_density_dist_multivariate_logp(size):
     a_val = np.random.normal(loc=mu_val, scale=1, size=to_tuple(size) + (supp_shape,)).astype(
         aesara.config.floatX
     )
-    log_densityt = joint_logpt(a, a.tag.value_var, sum=False)
+    log_densityt = joint_logpt(a, a.tag.value_var, sum=False)[0]
     assert log_densityt.eval(
         {a.tag.value_var: a_val, mu.tag.value_var: mu_val},
     ).shape == to_tuple(size)

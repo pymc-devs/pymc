@@ -296,7 +296,7 @@ class TestElementWiseLogp(SeededTest):
         x_val_untransf = at.constant(test_array_untransf).type()
 
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
-        assert joint_logpt(x, sum=False).ndim == x.ndim == jacob_det.ndim
+        assert joint_logpt(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
 
         v1 = joint_logpt(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
         v2 = joint_logpt(x, x_val_untransf, transformed=False).eval(
@@ -319,10 +319,10 @@ class TestElementWiseLogp(SeededTest):
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
         # Original distribution is univariate
         if x.owner.op.ndim_supp == 0:
-            assert joint_logpt(x, sum=False).ndim == x.ndim == (jacob_det.ndim + 1)
+            assert joint_logpt(x, sum=False)[0].ndim == x.ndim == (jacob_det.ndim + 1)
         # Original distribution is multivariate
         else:
-            assert joint_logpt(x, sum=False).ndim == (x.ndim - 1) == jacob_det.ndim
+            assert joint_logpt(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
 
         a = joint_logpt(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
         b = joint_logpt(x, x_val_untransf, transformed=False).eval(
