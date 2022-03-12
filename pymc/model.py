@@ -1734,7 +1734,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 Model._context_class = Model
 
 
-def set_data(new_data, coords,model=None):
+def set_data(new_data, model=None, *, coords=None):
     """Sets the value of one or more data container variables.
 
     Parameters
@@ -1771,8 +1771,8 @@ def set_data(new_data, coords,model=None):
     model = modelcontext(model)
 
     for variable_name, new_value in new_data.items():
-        model.set_data(variable_name, new_value)
-    return model.set_data(new_data, coords)
+        model.set_data(variable_name, new_value,coords)
+    """return model.set_data(new_data, coords)"""
 
 def compile_fn(outs, mode=None, point_fn=True, model=None, **kwargs):
     """Compiles an Aesara function which returns ``outs`` and takes values of model
