@@ -1911,7 +1911,9 @@ class StudentT(Continuous):
     rv_op = studentt
 
     @classmethod
-    def dist(cls, nu, mu=0, lam=None, sigma=None, *args, **kwargs):
+    def dist(cls, nu, mu=0, lam=None, sigma=None, sd=None, *args, **kwargs):
+        if sd is not None:
+            sigma = sd
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
