@@ -13,7 +13,7 @@
 #   limitations under the License.
 import warnings
 
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional, Union
 
 import aesara.tensor as aet
 import numpy as np
@@ -129,6 +129,7 @@ def find_constrained_prior(
     cdf_error = (pm.math.exp(logcdf_upper) - pm.math.exp(logcdf_lower)) - mass
     cdf_error_fn = pm.aesaraf.compile_pymc([dist_params], cdf_error, allow_input_downcast=True)
 
+    jac: Union[str, Callable]
     try:
         aesara_jac = pm.gradient(cdf_error, [dist_params])
         jac = pm.aesaraf.compile_pymc([dist_params], aesara_jac, allow_input_downcast=True)
