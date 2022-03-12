@@ -710,11 +710,13 @@ class TruncatedNormal(BoundedContinuous):
         mu: Optional[DIST_PARAMETER_TYPES] = None,
         sigma: Optional[DIST_PARAMETER_TYPES] = None,
         tau: Optional[DIST_PARAMETER_TYPES] = None,
+        sd: Optional[DIST_PARAMETER_TYPES] = None,
         lower: Optional[DIST_PARAMETER_TYPES] = None,
         upper: Optional[DIST_PARAMETER_TYPES] = None,
         *args,
         **kwargs,
     ) -> RandomVariable:
+        sigma = sd if sd is not None else sigma
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
         tau = at.as_tensor_variable(tau)
