@@ -471,19 +471,18 @@ def convert_size(size: Size) -> Optional[StrongSize]:
     """Process a user-provided size variable into None or a valid size object."""
     if size is None:
         return None
-
-    if isinstance(size, int) or (isinstance(size, TensorVariable) and size.ndim==1 or size.ndim==0):
-        size = tuple(size,)
+    if isinstance(size, int):
+        size = size
+    elif isinstance(size,TensorVariable):
+        size = tuple(size)
     elif isinstance(size, (list, tuple)):
         size = tuple(size)
     else:
         raise ValueError(
             f"The `size` parameter must be a tuple, TensorVariable, int or list. Actual: {type(size)}"
         )
-
     if isinstance(size, tuple) and Ellipsis in size:
         raise ValueError(f"The `size` parameter cannot contain an Ellipsis. Actual: {size}")
-
     return size
 
 
