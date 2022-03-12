@@ -2097,6 +2097,7 @@ class Cauchy(Continuous):
            \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2123,10 +2124,10 @@ class Cauchy(Continuous):
 
     Parameters
     ----------
-    alpha: float
-        Location parameter
-    beta: float
-        Scale parameter > 0
+    alpha : tensor_like of float
+        Location parameter.
+    beta : tensor_like of float
+        Scale parameter > 0.
     """
     rv_op = cauchy
 
@@ -2151,7 +2152,7 @@ class Cauchy(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
