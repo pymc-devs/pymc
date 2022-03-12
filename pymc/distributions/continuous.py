@@ -645,6 +645,7 @@ class TruncatedNormal(BoundedContinuous):
 
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -673,13 +674,16 @@ class TruncatedNormal(BoundedContinuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Mean.
-    sigma: float
-        Standard deviation (sigma > 0).
-    lower: float (optional)
+    sigma : tensor_like of float, optional
+        Standard deviation (sigma > 0) (only required if tau is not specified).
+        Defaults to 1 if neither sigma nor tau is specified.
+    tau : tensor_like of float, optional
+        Precision (tau > 0) (only required if sigma is not specified).
+    lower : tensor_like of float, default - numpy.inf
         Left bound.
-    upper: float (optional)
+    upper : tensor_like of float, default numpy.inf
         Right bound.
 
     Examples
@@ -709,7 +713,6 @@ class TruncatedNormal(BoundedContinuous):
         sd: Optional[DIST_PARAMETER_TYPES] = None,
         lower: Optional[DIST_PARAMETER_TYPES] = None,
         upper: Optional[DIST_PARAMETER_TYPES] = None,
-        transform: str = "auto",
         *args,
         **kwargs,
     ) -> RandomVariable:
@@ -762,9 +765,9 @@ class TruncatedNormal(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
