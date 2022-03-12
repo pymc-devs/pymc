@@ -449,10 +449,9 @@ def convert_shape(shape: Shape) -> Optional[WeakShape]:
     """Process a user-provided shape variable into None or a valid shape object."""
     if shape is None:
         return None
-
-    if isinstance(shape, int):
-        shape = shape
-    if isinstance(shape, TensorVariable) and shape.ndim <= 0:
+    if isinstance(shape, int) or (isinstance(size, TensorVariable) and shape.ndim == 0):
+        shape = (shape,)
+    if isinstance(shape, TensorVariable) and shape.ndim == 1:
         shape = tuple(shape)
     elif isinstance(shape, (list, tuple)):
         shape = tuple(shape)
@@ -473,9 +472,9 @@ def convert_size(size: Size) -> Optional[StrongSize]:
     """Process a user-provided size variable into None or a valid size object."""
     if size is None:
         return None
-    if isinstance(size, int):
-        size = size
-    elif isinstance(size, TensorVariable) and size.ndim <= 1:
+    if isinstance(size, int) or (isinstance(size, TensorVariable) and size.ndim == 0):
+        size = (size,)
+    elif isinstance(size, TensorVariable) and size.ndim == 1:
         size = tuple(size)
     elif isinstance(size, (list, tuple)):
         size = tuple(size)
