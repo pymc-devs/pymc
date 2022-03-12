@@ -75,7 +75,6 @@ from pymc.sampling import *
 from pymc.smc import *
 from pymc.stats import *
 from pymc.step_methods import *
-from pymc.tests import test
 from pymc.tuning import *
 from pymc.variational import *
 from pymc.vartypes import *

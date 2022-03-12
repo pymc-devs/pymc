@@ -14,11 +14,19 @@ from pymc.sampling_jax import (
     _replace_shared_variables,
     get_jaxified_graph,
     get_jaxified_logp,
+    sample_blackjax_nuts,
     sample_numpyro_nuts,
 )
 
 
-def test_transform_samples():
+@pytest.mark.parametrize(
+    "sampler",
+    [
+        sample_blackjax_nuts,
+        sample_numpyro_nuts,
+    ],
+)
+def test_transform_samples(sampler):
     aesara.config.on_opt_error = "raise"
     np.random.seed(13244)
 
@@ -29,7 +37,7 @@ def test_transform_samples():
         sigma = pm.HalfNormal("sigma")
         b = pm.Normal("b", a, sigma=sigma, observed=obs_at)
 
-        trace = sample_numpyro_nuts(chains=1, random_seed=1322, keep_untransformed=True)
+        trace = sampler(chains=1, random_seed=1322, keep_untransformed=True)
 
     log_vals = trace.posterior["sigma_log__"].values
 
@@ -41,13 +49,20 @@ def test_transform_samples():
 
     obs_at.set_value(-obs)
     with model:
-        trace = sample_numpyro_nuts(chains=2, random_seed=1322, keep_untransformed=False)
+        trace = sampler(chains=2, random_seed=1322, keep_untransformed=False)
 
     assert -11 < trace.posterior["a"].mean() < -8
     assert 1.5 < trace.posterior["sigma"].mean() < 2.5
 
 
-def test_deterministic_samples():
+@pytest.mark.parametrize(
+    "sampler",
+    [
+        sample_blackjax_nuts,
+        sample_numpyro_nuts,
+    ],
+)
+def test_deterministic_samples(sampler):
     aesara.config.on_opt_error = "raise"
     np.random.seed(13244)
 
@@ -58,7 +73,7 @@ def test_deterministic_samples():
         b = pm.Deterministic("b", a / 2.0)
         c = pm.Normal("c", a, sigma=1.0, observed=obs_at)
 
-        trace = sample_numpyro_nuts(chains=2, random_seed=1322, keep_untransformed=True)
+        trace = sampler(chains=2, random_seed=1322, keep_untransformed=True)
 
     assert 8 < trace.posterior["a"].mean() < 11
     assert np.allclose(trace.posterior["b"].values, trace.posterior["a"].values / 2)
@@ -117,17 +132,24 @@ def test_get_jaxified_logp():
 
 
 @pytest.mark.parametrize(
+    "sampler",
+    [
+        sample_blackjax_nuts,
+        sample_numpyro_nuts,
+    ],
+)
+@pytest.mark.parametrize(
     "idata_kwargs",
     [
         dict(),
         dict(log_likelihood=False),
     ],
 )
-def test_idata_kwargs(idata_kwargs):
+def test_idata_kwargs(sampler, idata_kwargs):
     with pm.Model() as m:
         x = pm.Normal("x")
         y = pm.Normal("y", x, observed=0)
-        idata = sample_numpyro_nuts(
+        idata = sampler(
             tune=50,
             draws=50,
             chains=1,

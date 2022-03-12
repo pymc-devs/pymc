@@ -422,18 +422,18 @@ else:
     ellipsis = type(Ellipsis)
 
 # User-provided can be lazily specified as scalars
-Shape: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, TensorVariable, ellipsis]]]
+Shape: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, Variable, ellipsis]]]
 Dims: TypeAlias = Union[str, Sequence[Optional[Union[str, ellipsis]]]]
-Size: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, TensorVariable]]]
+Size: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, Variable]]]
 
 # After conversion to vectors
-WeakShape: TypeAlias = Union[TensorVariable, Tuple[Union[int, TensorVariable, ellipsis], ...]]
+WeakShape: TypeAlias = Union[TensorVariable, Tuple[Union[int, Variable, ellipsis], ...]]
 WeakDims: TypeAlias = Tuple[Optional[Union[str, ellipsis]], ...]
 
 # After Ellipsis were substituted
-StrongShape: TypeAlias = Union[TensorVariable, Tuple[Union[int, TensorVariable], ...]]
+StrongShape: TypeAlias = Union[TensorVariable, Tuple[Union[int, Variable], ...]]
 StrongDims: TypeAlias = Sequence[Optional[str]]
-StrongSize: TypeAlias = Union[TensorVariable, Tuple[Union[int, TensorVariable], ...]]
+StrongSize: TypeAlias = Union[TensorVariable, Tuple[Union[int, Variable], ...]]
 
 
 def convert_dims(dims: Optional[Dims]) -> Optional[WeakDims]:
@@ -593,9 +593,9 @@ def find_size(
         Number of support dimensions
     """
 
-    ndim_expected = None
-    ndim_batch = None
-    create_size = None
+    ndim_expected: Optional[int] = None
+    ndim_batch: Optional[int] = None
+    create_size: Optional[StrongSize] = None
 
     if shape is not None:
         if Ellipsis in shape:

@@ -62,6 +62,9 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
 
     rv_reprs = [rv.str_repr(formatting=formatting, include_params=include_params) for rv in all_rv]
     rv_reprs = [rv_repr for rv_repr in rv_reprs if "TransformedDistribution()" not in rv_repr]
+
+    if not rv_reprs:
+        return ""
     if "latex" in formatting:
         rv_reprs = [
             rv_repr.replace(r"\sim", r"&\sim &").strip("$")
