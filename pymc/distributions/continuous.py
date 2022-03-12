@@ -2179,6 +2179,7 @@ class HalfCauchy(PositiveContinuous):
        f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2203,7 +2204,7 @@ class HalfCauchy(PositiveContinuous):
 
     Parameters
     ----------
-    beta: float
+    beta : tensor_like of float
         Scale parameter (beta > 0).
     """
     rv_op = halfcauchy
@@ -2226,7 +2227,7 @@ class HalfCauchy(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
