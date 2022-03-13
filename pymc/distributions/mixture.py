@@ -36,6 +36,7 @@ from pymc.distributions.distribution import (
 from pymc.distributions.logprob import logcdf, logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.util import check_dist_not_registered
+from pymc.vartypes import discrete_types
 
 __all__ = ["Mixture", "NormalMixture"]
 
@@ -452,7 +453,10 @@ def get_moment_marginal_mixture(op, rv, rng, weights, *components):
             axis=mix_axis,
         )
 
-    return at.sum(weights * moment_components, axis=mix_axis)
+    moment = at.sum(weights * moment_components, axis=mix_axis)
+    if components[0].dtype in discrete_types:
+        moment = at.round(moment)
+    return moment
 
 
 class NormalMixture:
