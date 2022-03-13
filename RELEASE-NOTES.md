@@ -127,6 +127,9 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - Univariate censored distributions are now available via `pm.Censored`. [#5169](https://github.com/pymc-devs/pymc/pull/5169)
 - Nested models now inherit the parent model's coordinates. [#5344](https://github.com/pymc-devs/pymc/pull/5344)
 - `softmax` and `log_softmax` functions added to `math` module (see [#5279](https://github.com/pymc-devs/pymc/pull/5279)).
+- Adding support for blackjax's NUTS sampler `pymc.sampling_jax` (see [#5477](ihttps://github.com/pymc-devs/pymc/pull/5477))
+- `pymc.sampling_jax` samplers support `log_likelihood`, `observed_data`, and `sample_stats` in returned InferenceData object (see [#5189](https://github.com/pymc-devs/pymc/pull/5189))
+- Adding support for `pm.Deterministic` in `pymc.sampling_jax` (see [#5182](https://github.com/pymc-devs/pymc/pull/5182))
 - ...
 
 
