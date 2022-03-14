@@ -3069,6 +3069,7 @@ class SkewNormal(Continuous):
        2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3099,13 +3100,15 @@ class SkewNormal(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Location parameter.
-    sigma: float
+    sigma : tensor_like of float, optional
         Scale parameter (sigma > 0).
-    tau: float
+        Defaults to 1.
+    tau : tensor_like of float, optional
         Alternative scale parameter (tau > 0).
-    alpha: float
+        Defaults to 1.
+    alpha : tensor_like of float, default 1
         Skewness parameter.
 
     Notes
@@ -3145,9 +3148,9 @@ class SkewNormal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
