@@ -3278,7 +3278,7 @@ class Triangular(BoundedContinuous):
 
 class Gumbel(Continuous):
     r"""
-        Univariate Gumbel log-likelihood
+    Univariate Gumbel log-likelihood.
 
     The pdf of this distribution is
 
@@ -3293,6 +3293,7 @@ class Gumbel(Continuous):
         z = \frac{x - \mu}{\beta}.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3319,9 +3320,9 @@ class Gumbel(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, optional
         Location parameter.
-    beta: float
+    beta : tensor_like of float, optional
         Scale parameter (beta > 0).
     """
     rv_op = gumbel
@@ -3359,7 +3360,7 @@ class Gumbel(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
