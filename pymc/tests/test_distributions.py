@@ -1747,33 +1747,33 @@ class TestMatchesScipy:
         self.check_logcdf(Constant, I, {"c": I}, lambda value, c: np.log(value >= c))
 
     def test_zeroinflatedpoisson(self):
-        def logp_fn(value, psi, theta):
+        def logp_fn(value, psi, mu):
             if value == 0:
-                return np.log((1 - psi) * sp.poisson.pmf(0, theta))
+                return np.log((1 - psi) * sp.poisson.pmf(0, mu))
             else:
-                return np.log(psi * sp.poisson.pmf(value, theta))
+                return np.log(psi * sp.poisson.pmf(value, mu))
 
-        def logcdf_fn(value, psi, theta):
-            return np.log((1 - psi) + psi * sp.poisson.cdf(value, theta))
+        def logcdf_fn(value, psi, mu):
+            return np.log((1 - psi) + psi * sp.poisson.cdf(value, mu))
 
         self.check_logp(
             ZeroInflatedPoisson,
             Nat,
-            {"psi": Unit, "theta": Rplus},
+            {"psi": Unit, "mu": Rplus},
             logp_fn,
         )
 
         self.check_logcdf(
             ZeroInflatedPoisson,
             Nat,
-            {"psi": Unit, "theta": Rplus},
+            {"psi": Unit, "mu": Rplus},
             logcdf_fn,
         )
 
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedPoisson,
             Nat,
-            {"theta": Rplus, "psi": Unit},
+            {"mu": Rplus, "psi": Unit},
         )
 
     def test_zeroinflatednegativebinomial(self):
