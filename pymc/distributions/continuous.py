@@ -3168,7 +3168,7 @@ class SkewNormal(Continuous):
 
 class Triangular(BoundedContinuous):
     r"""
-    Continuous Triangular log-likelihood
+    Continuous Triangular log-likelihood.
 
     The pdf of this distribution is
 
@@ -3183,6 +3183,7 @@ class Triangular(BoundedContinuous):
         \end{cases}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3213,11 +3214,11 @@ class Triangular(BoundedContinuous):
 
     Parameters
     ----------
-    lower: float
+    lower : tensor_like of float, default 0
         Lower limit.
-    c: float
-        mode
-    upper: float
+    c : tensor_like of float, default 0.5
+        Mode.
+    upper : tensor_like of float, default 1
         Upper limit.
     """
 
@@ -3245,7 +3246,7 @@ class Triangular(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
