@@ -1414,8 +1414,8 @@ class ZeroInflatedPoisson:
 
     .. math::
 
-        f(x \mid \psi, \theta) = \left\{ \begin{array}{l}
-            (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
+        f(x \mid \psi, \mu) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi e^{-\mu}, \text{if } x = 0 \\
             \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
             \end{array} \right.
 
@@ -1428,13 +1428,13 @@ class ZeroInflatedPoisson:
         plt.style.use('arviz-darkgrid')
         x = np.arange(0, 22)
         psis = [0.7, 0.4]
-        thetas = [8, 4]
-        for psi, theta in zip(psis, thetas):
-            pmf = st.poisson.pmf(x, theta)
+        mus = [8, 4]
+        for psi, mu in zip(psis, mus):
+            pmf = st.poisson.pmf(x, mu)
             pmf[0] = (1 - psi) + pmf[0]
             pmf[1:] =  psi * pmf[1:]
             pmf /= pmf.sum()
-            plt.plot(x, pmf, '-o', label='$\\psi$ = {}, $\\theta$ = {}'.format(psi, theta))
+            plt.plot(x, pmf, '-o', label='$\\psi$ = {}, $\\mu$ = {}'.format(psi, mu))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -1442,28 +1442,28 @@ class ZeroInflatedPoisson:
 
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
-    Mean      :math:`\psi\theta`
-    Variance  :math:`\theta + \frac{1-\psi}{\psi}\theta^2`
+    Mean      :math:`\psi\mu`
+    Variance  :math:`\mu + \frac{1-\psi}{\psi}\mu^2`
     ========  ==========================
 
     Parameters
     ----------
     psi: float
         Expected proportion of Poisson variates (0 < psi < 1)
-    theta: float
+    mu: float
         Expected number of occurrences during the given interval
-        (theta >= 0).
+        (mu >= 0).
     """
 
-    def __new__(cls, name, psi, theta, **kwargs):
+    def __new__(cls, name, psi, mu, **kwargs):
         return _zero_inflated_mixture(
-            name=name, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=theta), **kwargs
+            name=name, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=mu), **kwargs
         )
 
     @classmethod
-    def dist(cls, psi, theta, **kwargs):
+    def dist(cls, psi, mu, **kwargs):
         return _zero_inflated_mixture(
-            name=None, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=theta), **kwargs
+            name=None, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=mu), **kwargs
         )
 
 
