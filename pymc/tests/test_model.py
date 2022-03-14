@@ -58,7 +58,7 @@ class DocstringModel(pm.Model):
         super().__init__(name, model)
         self.register_rv(Normal.dist(mu=mean, sigma=sigma), "v1")
         Normal("v2", mu=mean, sigma=sigma)
-        Normal("v3", mu=mean, sigma=Normal("sd", mu=10, sigma=1, initval=1.0))
+        Normal("v3", mu=mean, sigma=Normal("sigma", mu=10, sigma=1, initval=1.0))
         Deterministic("v3_sq", self.v3**2)
         Potential("p1", at.constant(1))
 
@@ -626,7 +626,7 @@ def test_set_initval():
 
     with pm.Model(rng_seeder=rng) as model:
         eta = pm.Uniform("eta", 1.0, 2.0, size=(1, 1))
-        mu = pm.Normal("mu", sd=eta, initval=[[100]])
+        mu = pm.Normal("mu", sigma=eta, initval=[[100]])
         alpha = pm.HalfNormal("alpha", initval=100)
         value = pm.NegativeBinomial("value", mu=mu, alpha=alpha)
 

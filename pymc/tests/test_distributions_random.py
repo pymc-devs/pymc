@@ -837,7 +837,7 @@ class TestNormalTau(BaseTestDistributionRandom):
 
 class TestNormalSd(BaseTestDistributionRandom):
     pymc_dist = pm.Normal
-    pymc_dist_params = {"mu": 1.0, "sd": 5.0}
+    pymc_dist_params = {"mu": 1.0, "sigma": 5.0}
     expected_rv_op_params = {"mu": 1.0, "sigma": 5.0}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
@@ -871,7 +871,7 @@ class TestHalfNormalTau(BaseTestDistributionRandom):
 
 class TestHalfNormalSd(BaseTestDistributionRandom):
     pymc_dist = pm.Normal
-    pymc_dist_params = {"sd": 5.0}
+    pymc_dist_params = {"sigma": 5.0}
     expected_rv_op_params = {"mu": 0.0, "sigma": 5.0}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
@@ -1457,7 +1457,7 @@ class TestLognormalTau(BaseTestDistributionRandom):
 
 class TestLognormalSd(BaseTestDistributionRandom):
     pymc_dist = pm.Lognormal
-    pymc_dist_params = {"mu": 1.0, "sd": 5.0}
+    pymc_dist_params = {"mu": 1.0, "sigma": 5.0}
     expected_rv_op_params = {"mu": 1.0, "sigma": 5.0}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
