@@ -3530,6 +3530,7 @@ class Logistic(Continuous):
            \frac{\exp\left(-\frac{x - \mu}{s}\right)}{s \left(1 + \exp\left(-\frac{x - \mu}{s}\right)\right)^2}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3556,9 +3557,9 @@ class Logistic(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Mean.
-    s: float
+    s : tensor_like of float, default 1
         Scale (s > 0).
     """
 
@@ -3583,7 +3584,7 @@ class Logistic(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
