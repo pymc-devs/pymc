@@ -3061,7 +3061,7 @@ class SkewNormal(Continuous):
     r"""
     Univariate skew-normal log-likelihood.
 
-     The pdf of this distribution is
+    The pdf of this distribution is
 
     .. math::
 
@@ -3320,9 +3320,9 @@ class Gumbel(Continuous):
 
     Parameters
     ----------
-    mu : tensor_like of float, optional
+    mu : tensor_like of float
         Location parameter.
-    beta : tensor_like of float, optional
+    beta : tensor_like of float
         Scale parameter (beta > 0).
     """
     rv_op = gumbel
