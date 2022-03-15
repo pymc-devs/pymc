@@ -9,7 +9,7 @@ jobs:
   release-job:
     runs-on: ubuntu-latest
     env:
-      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN_PYMC3 }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python
