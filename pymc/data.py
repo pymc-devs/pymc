@@ -205,8 +205,8 @@ class Minibatch(TensorVariable):
 
     >>> with pm.Model() as model:
     ...     mu = pm.Flat('mu')
-    ...     sd = pm.HalfNormal('sd')
-    ...     lik = pm.Normal('lik', mu, sd, observed=x, total_size=(100, 100))
+    ...     sigma = pm.HalfNormal('sigma')
+    ...     lik = pm.Normal('lik', mu, sigma, observed=x, total_size=(100, 100))
 
 
     Then you can perform regular Variational Inference out of the box
