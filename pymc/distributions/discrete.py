@@ -146,7 +146,7 @@ class Binomial(Discrete):
             binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
         )
 
-        return check_parameters(res, 0 < n, 0 <= p, p <= 1, msg="n > 0, 0 <= p <= 1")
+        return check_parameters(res, 0 <= n, 0 <= p, p <= 1, msg="n >= 0, 0 <= p <= 1")
 
     def logcdf(value, n, p):
         """
@@ -177,10 +177,10 @@ class Binomial(Discrete):
 
         return check_parameters(
             res,
-            0 < n,
+            0 <= n,
             0 <= p,
             p <= 1,
-            msg="n > 0, 0 <= p <= 1",
+            msg="n >= 0, 0 <= p <= 1",
         )
 
 
