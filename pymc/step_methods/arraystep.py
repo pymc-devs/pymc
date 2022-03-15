@@ -50,7 +50,7 @@ class Competence(IntEnum):
 class BlockedStep(ABC):
 
     generates_stats = False
-    stats_dtypes: List[Dict[str, np.dtype]] = []
+    stats_dtypes: List[Dict[str, type]] = []
     vars: List[Variable] = []
 
     def __new__(cls, *args, **kwargs):

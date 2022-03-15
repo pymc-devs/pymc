@@ -130,7 +130,7 @@ from pymc.distributions.shape_utils import to_tuple
 from pymc.math import kronecker
 from pymc.model import Deterministic, Model, Point, Potential
 from pymc.tests.helpers import select_by_precision
-from pymc.vartypes import continuous_types
+from pymc.vartypes import continuous_types, discrete_types
 
 
 def get_lkj_cases():
@@ -934,7 +934,9 @@ class TestMatchesScipy:
         Check that logcdf of discrete distributions matches sum of logps up to value
         """
         # This test only works for scalar random variables
-        assert distribution.rv_op.ndim_supp == 0
+        rv_op = getattr(distribution, "rv_op", None)
+        if rv_op:
+            assert rv_op.ndim_supp == 0
 
         domains = paramdomains.copy()
         domains["value"] = domain
@@ -1742,35 +1744,36 @@ class TestMatchesScipy:
 
     def test_constantdist(self):
         self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
+        self.check_logcdf(Constant, I, {"c": I}, lambda value, c: np.log(value >= c))
 
     def test_zeroinflatedpoisson(self):
-        def logp_fn(value, psi, theta):
+        def logp_fn(value, psi, mu):
             if value == 0:
-                return np.log((1 - psi) * sp.poisson.pmf(0, theta))
+                return np.log((1 - psi) * sp.poisson.pmf(0, mu))
             else:
-                return np.log(psi * sp.poisson.pmf(value, theta))
+                return np.log(psi * sp.poisson.pmf(value, mu))
 
-        def logcdf_fn(value, psi, theta):
-            return np.log((1 - psi) + psi * sp.poisson.cdf(value, theta))
+        def logcdf_fn(value, psi, mu):
+            return np.log((1 - psi) + psi * sp.poisson.cdf(value, mu))
 
         self.check_logp(
             ZeroInflatedPoisson,
             Nat,
-            {"psi": Unit, "theta": Rplus},
+            {"psi": Unit, "mu": Rplus},
             logp_fn,
         )
 
         self.check_logcdf(
             ZeroInflatedPoisson,
             Nat,
-            {"psi": Unit, "theta": Rplus},
+            {"psi": Unit, "mu": Rplus},
             logcdf_fn,
         )
 
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedPoisson,
             Nat,
-            {"theta": Rplus, "psi": Unit},
+            {"mu": Rplus, "psi": Unit},
         )
 
     def test_zeroinflatednegativebinomial(self):
@@ -2780,19 +2783,19 @@ class TestBound:
             UpperPoisson = Bound("upper", dist, upper=[np.inf, 10], transform=None)
             BoundedPoisson = Bound("bounded", dist, lower=[1, 2], upper=[9, 10], transform=None)
 
-        first, second = joint_logpt(LowerPoisson, [0, 0], sum=False).eval()
+        first, second = joint_logpt(LowerPoisson, [0, 0], sum=False)[0].eval()
         assert first == -np.inf
         assert second != -np.inf
 
-        first, second = joint_logpt(UpperPoisson, [11, 11], sum=False).eval()
+        first, second = joint_logpt(UpperPoisson, [11, 11], sum=False)[0].eval()
         assert first != -np.inf
         assert second == -np.inf
 
-        first, second = joint_logpt(BoundedPoisson, [1, 1], sum=False).eval()
+        first, second = joint_logpt(BoundedPoisson, [1, 1], sum=False)[0].eval()
         assert first != -np.inf
         assert second == -np.inf
 
-        first, second = joint_logpt(BoundedPoisson, [10, 10], sum=False).eval()
+        first, second = joint_logpt(BoundedPoisson, [10, 10], sum=False)[0].eval()
         assert first == -np.inf
         assert second != -np.inf
 
@@ -3282,7 +3285,7 @@ def test_density_dist_multivariate_logp(size):
     a_val = np.random.normal(loc=mu_val, scale=1, size=to_tuple(size) + (supp_shape,)).astype(
         aesara.config.floatX
     )
-    log_densityt = joint_logpt(a, a.tag.value_var, sum=False)
+    log_densityt = joint_logpt(a, a.tag.value_var, sum=False)[0]
     assert log_densityt.eval(
         {a.tag.value_var: a_val, mu.tag.value_var: mu_val},
     ).shape == to_tuple(size)
@@ -3416,3 +3419,17 @@ class TestLKJCholeskCov:
         assert resized_sd_dist.eval().shape == (10, 3)
         # LKJCov has support shape `(n * (n+1)) // 2`
         assert x.eval().shape == (10, 6)
+
+
+@pytest.mark.parametrize(
+    "dist, non_psi_args",
+    [
+        (pm.ZeroInflatedPoisson.dist, (2,)),
+        (pm.ZeroInflatedBinomial.dist, (2, 0.5)),
+        (pm.ZeroInflatedNegativeBinomial.dist, (2, 2)),
+    ],
+)
+def test_zero_inflated_dists_dtype_and_broadcast(dist, non_psi_args):
+    x = dist([0.5, 0.5, 0.5], *non_psi_args)
+    assert x.dtype in discrete_types
+    assert x.eval().shape == (3,)

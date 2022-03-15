@@ -14,7 +14,7 @@
 import abc
 
 from abc import ABC
-from typing import Dict
+from typing import Dict, cast
 
 import aesara.tensor as at
 import numpy as np
@@ -173,15 +173,15 @@ class SMC_KERNEL(ABC):
         self.resampling_indexes = None
         self.weights = np.ones(self.draws) / self.draws
 
-    def initialize_population(self) -> Dict[str, NDArray]:
+    def initialize_population(self) -> Dict[str, np.ndarray]:
         """Create an initial population from the prior distribution"""
-
-        return sample_prior_predictive(
+        result = sample_prior_predictive(
             self.draws,
             var_names=[v.name for v in self.model.unobserved_value_vars],
             model=self.model,
             return_inferencedata=False,
         )
+        return cast(Dict[str, np.ndarray], result)
 
     def _initialize_kernel(self):
         """Create variables and logp function necessary to run kernel

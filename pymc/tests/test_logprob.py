@@ -60,7 +60,7 @@ def test_joint_logpt_basic():
 
     b_logp = joint_logpt(b, b_value_var, sum=False)
 
-    res_ancestors = list(walk_model((b_logp,), walk_past_rvs=True))
+    res_ancestors = list(walk_model(b_logp, walk_past_rvs=True))
     res_rv_ancestors = [
         v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
     ]
@@ -104,7 +104,7 @@ def test_joint_logpt_incsubtensor(indices, size):
 
     a_idx_logp = joint_logpt(a_idx, {a_idx: a_value_var}, sum=False)
 
-    logp_vals = a_idx_logp.eval({a_value_var: a_val})
+    logp_vals = a_idx_logp[0].eval({a_value_var: a_val})
 
     # The indices that were set should all have the same log-likelihood values,
     # because the values they were set to correspond to the unique means along

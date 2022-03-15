@@ -43,9 +43,11 @@ from pymc.distributions.dist_math import (
     normal_lcdf,
 )
 from pymc.distributions.distribution import Discrete
-from pymc.distributions.logprob import logcdf, logp
+from pymc.distributions.logprob import logp
+from pymc.distributions.mixture import Mixture
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.math import sigmoid
+from pymc.vartypes import continuous_types
 
 __all__ = [
     "Binomial",
@@ -144,7 +146,7 @@ class Binomial(Discrete):
             binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
         )
 
-        return check_parameters(res, 0 < n, 0 <= p, p <= 1, msg="n > 0, 0 <= p <= 1")
+        return check_parameters(res, 0 <= n, 0 <= p, p <= 1, msg="n >= 0, 0 <= p <= 1")
 
     def logcdf(value, n, p):
         """
@@ -175,10 +177,10 @@ class Binomial(Discrete):
 
         return check_parameters(
             res,
-            0 < n,
+            0 <= n,
             0 <= p,
             p <= 1,
-            msg="n > 0, 0 <= p <= 1",
+            msg="n >= 0, 0 <= p <= 1",
         )
 
 
@@ -1315,8 +1317,11 @@ class ConstantRV(RandomVariable):
     name = "constant"
     ndim_supp = 0
     ndims_params = [0]
-    dtype = "floatX"  # Should be treated as a discrete variable!
     _print_name = ("Constant", "\\operatorname{Constant}")
+
+    def make_node(self, rng, size, dtype, c):
+        c = at.as_tensor_variable(c)
+        return super().make_node(rng, size, c.dtype, c)
 
     @classmethod
     def rng_fn(cls, rng, c, size=None):
@@ -1334,15 +1339,19 @@ class Constant(Discrete):
 
     Parameters
     ----------
-    value: float or int
-        Constant parameter.
+    c: float or int
+        Constant parameter. The dtype of `c` determines the dtype of the distribution.
+        This can affect which sampler is assigned to Constant variables, or variables
+        that use Constant, such as Mixtures.
     """
 
     rv_op = constant
 
     @classmethod
     def dist(cls, c, *args, **kwargs):
-        c = at.as_tensor_variable(floatX(c))
+        c = at.as_tensor_variable(c)
+        if c.dtype in continuous_types:
+            c = floatX(c)
         return super().dist([c], **kwargs)
 
     def get_moment(rv, size, c):
@@ -1370,23 +1379,32 @@ class Constant(Discrete):
             -np.inf,
         )
 
-
-class ZeroInflatedPoissonRV(RandomVariable):
-    name = "zero_inflated_poisson"
-    ndim_supp = 0
-    ndims_params = [0, 0]
-    dtype = "int64"
-    _print_name = ("ZeroInflatedPois", "\\operatorname{ZeroInflatedPois}")
-
-    @classmethod
-    def rng_fn(cls, rng, psi, lam, size):
-        return rng.poisson(lam, size=size) * (rng.random(size=size) < psi)
+    def logcdf(value, c):
+        return at.switch(
+            at.lt(value, c),
+            -np.inf,
+            0,
+        )
 
 
-zero_inflated_poisson = ZeroInflatedPoissonRV()
+def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
+    """Helper function to create a zero-inflated mixture
+
+    If name is `None`, this function returns an unregistered variable
+    """
+    nonzero_p = at.as_tensor_variable(floatX(nonzero_p))
+    weights = at.stack([1 - nonzero_p, nonzero_p], axis=-1)
+    comp_dists = [
+        Constant.dist(0),
+        nonzero_dist,
+    ]
+    if name is not None:
+        return Mixture(name, weights, comp_dists, **kwargs)
+    else:
+        return Mixture.dist(weights, comp_dists, **kwargs)
 
 
-class ZeroInflatedPoisson(Discrete):
+class ZeroInflatedPoisson:
     R"""
     Zero-inflated Poisson log-likelihood.
 
@@ -1396,8 +1414,8 @@ class ZeroInflatedPoisson(Discrete):
 
     .. math::
 
-        f(x \mid \psi, \theta) = \left\{ \begin{array}{l}
-            (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
+        f(x \mid \psi, \mu) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi e^{-\mu}, \text{if } x = 0 \\
             \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
             \end{array} \right.
 
@@ -1410,13 +1428,13 @@ class ZeroInflatedPoisson(Discrete):
         plt.style.use('arviz-darkgrid')
         x = np.arange(0, 22)
         psis = [0.7, 0.4]
-        thetas = [8, 4]
-        for psi, theta in zip(psis, thetas):
-            pmf = st.poisson.pmf(x, theta)
+        mus = [8, 4]
+        for psi, mu in zip(psis, mus):
+            pmf = st.poisson.pmf(x, mu)
             pmf[0] = (1 - psi) + pmf[0]
             pmf[1:] =  psi * pmf[1:]
             pmf /= pmf.sum()
-            plt.plot(x, pmf, '-o', label='$\\psi$ = {}, $\\theta$ = {}'.format(psi, theta))
+            plt.plot(x, pmf, '-o', label='$\\psi$ = {}, $\\mu$ = {}'.format(psi, mu))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -1424,110 +1442,32 @@ class ZeroInflatedPoisson(Discrete):
 
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
-    Mean      :math:`\psi\theta`
-    Variance  :math:`\theta + \frac{1-\psi}{\psi}\theta^2`
+    Mean      :math:`\psi\mu`
+    Variance  :math:`\mu + \frac{1-\psi}{\psi}\mu^2`
     ========  ==========================
 
     Parameters
     ----------
     psi: float
         Expected proportion of Poisson variates (0 < psi < 1)
-    theta: float
+    mu: float
         Expected number of occurrences during the given interval
-        (theta >= 0).
+        (mu >= 0).
     """
 
-    rv_op = zero_inflated_poisson
+    def __new__(cls, name, psi, mu, **kwargs):
+        return _zero_inflated_mixture(
+            name=name, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=mu), **kwargs
+        )
 
     @classmethod
-    def dist(cls, psi, theta, *args, **kwargs):
-        psi = at.as_tensor_variable(floatX(psi))
-        theta = at.as_tensor_variable(floatX(theta))
-        return super().dist([psi, theta], *args, **kwargs)
-
-    def get_moment(rv, size, psi, theta):
-        mean = at.floor(psi * theta)
-        if not rv_size_is_none(size):
-            mean = at.full(size, mean)
-        return mean
-
-    def logp(value, psi, theta):
-        r"""
-        Calculate log-probability of ZeroInflatedPoisson distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-
-        res = at.switch(
-            at.gt(value, 0),
-            at.log(psi) + logp(Poisson.dist(mu=theta), value),
-            at.logaddexp(at.log1p(-psi), at.log(psi) - theta),
-        )
-
-        res = at.switch(at.lt(value, 0), -np.inf, res)
-
-        return check_parameters(
-            res,
-            0 <= psi,
-            psi <= 1,
-            0 <= theta,
-            msg="0 <= psi <= 1, theta >= 0",
-        )
-
-    def logcdf(value, psi, theta):
-        """
-        Compute the log of the cumulative distribution function for ZeroInflatedPoisson distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
-        res = at.switch(
-            at.lt(value, 0),
-            -np.inf,
-            at.logaddexp(
-                at.log1p(-psi),
-                at.log(psi) + logcdf(Poisson.dist(mu=theta), value),
-            ),
-        )
-
-        return check_parameters(
-            res, 0 <= psi, psi <= 1, 0 <= theta, msg="0 <= psi <= 1, theta >= 0"
+    def dist(cls, psi, mu, **kwargs):
+        return _zero_inflated_mixture(
+            name=None, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=mu), **kwargs
         )
 
 
-class ZeroInflatedBinomialRV(RandomVariable):
-    name = "zero_inflated_binomial"
-    ndim_supp = 0
-    ndims_params = [0, 0, 0]
-    dtype = "int64"
-    _print_name = ("ZeroInflatedBinom", "\\operatorname{ZeroInflatedBinom}")
-
-    @classmethod
-    def rng_fn(cls, rng, psi, n, p, size):
-        return rng.binomial(n=n, p=p, size=size) * (rng.random(size=size) < psi)
-
-
-zero_inflated_binomial = ZeroInflatedBinomialRV()
-
-
-class ZeroInflatedBinomial(Discrete):
+class ZeroInflatedBinomial:
     R"""
     Zero-inflated Binomial log-likelihood.
 
@@ -1579,110 +1519,19 @@ class ZeroInflatedBinomial(Discrete):
 
     """
 
-    rv_op = zero_inflated_binomial
+    def __new__(cls, name, psi, n, p, **kwargs):
+        return _zero_inflated_mixture(
+            name=name, nonzero_p=psi, nonzero_dist=Binomial.dist(n=n, p=p), **kwargs
+        )
 
     @classmethod
-    def dist(cls, psi, n, p, *args, **kwargs):
-        psi = at.as_tensor_variable(floatX(psi))
-        n = at.as_tensor_variable(intX(n))
-        p = at.as_tensor_variable(floatX(p))
-        return super().dist([psi, n, p], *args, **kwargs)
-
-    def get_moment(rv, size, psi, n, p):
-        mean = at.round(psi * n * p)
-        if not rv_size_is_none(size):
-            mean = at.full(size, mean)
-        return mean
-
-    def logp(value, psi, n, p):
-        r"""
-        Calculate log-probability of ZeroInflatedBinomial distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-
-        res = at.switch(
-            at.gt(value, 0),
-            at.log(psi) + logp(Binomial.dist(n=n, p=p), value),
-            at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
-        )
-
-        res = at.switch(
-            at.lt(value, 0),
-            -np.inf,
-            res,
-        )
-
-        return check_parameters(
-            res,
-            0 <= psi,
-            psi <= 1,
-            0 <= p,
-            p <= 1,
-            msg="0 <= psi <= 1, 0 <= p <= 1",
-        )
-
-    def logcdf(value, psi, n, p):
-        """
-        Compute the log of the cumulative distribution function for ZeroInflatedBinomial distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        res = at.switch(
-            at.or_(at.lt(value, 0), at.gt(value, n)),
-            -np.inf,
-            at.logaddexp(
-                at.log1p(-psi),
-                at.log(psi) + logcdf(Binomial.dist(n=n, p=p), value),
-            ),
-        )
-
-        return check_parameters(
-            res,
-            0 <= psi,
-            psi <= 1,
-            0 <= p,
-            p <= 1,
-            msg="0 <= psi <= 1, 0 <= p <= 1",
+    def dist(cls, psi, n, p, **kwargs):
+        return _zero_inflated_mixture(
+            name=None, nonzero_p=psi, nonzero_dist=Binomial.dist(n=n, p=p), **kwargs
         )
 
 
-class ZeroInflatedNegBinomialRV(RandomVariable):
-    name = "zero_inflated_neg_binomial"
-    ndim_supp = 0
-    ndims_params = [0, 0, 0]
-    dtype = "int64"
-    _print_name = (
-        "ZeroInflatedNegBinom",
-        "\\operatorname{ZeroInflatedNegBinom}",
-    )
-
-    @classmethod
-    def rng_fn(cls, rng, psi, n, p, size):
-        return rng.negative_binomial(n=n, p=p, size=size) * (rng.random(size=size) < psi)
-
-
-zero_inflated_neg_binomial = ZeroInflatedNegBinomialRV()
-
-
-class ZeroInflatedNegativeBinomial(Discrete):
+class ZeroInflatedNegativeBinomial:
     R"""
     Zero-Inflated Negative binomial log-likelihood.
 
@@ -1763,91 +1612,21 @@ class ZeroInflatedNegativeBinomial(Discrete):
         Alternative number of target success trials (n > 0)
     """
 
-    rv_op = zero_inflated_neg_binomial
+    def __new__(cls, name, psi, mu=None, alpha=None, p=None, n=None, **kwargs):
+        return _zero_inflated_mixture(
+            name=name,
+            nonzero_p=psi,
+            nonzero_dist=NegativeBinomial.dist(mu=mu, alpha=alpha, p=p, n=n),
+            **kwargs,
+        )
 
     @classmethod
-    def dist(cls, psi, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
-        psi = at.as_tensor_variable(floatX(psi))
-        n, p = NegativeBinomial.get_n_p(mu=mu, alpha=alpha, p=p, n=n)
-        n = at.as_tensor_variable(floatX(n))
-        p = at.as_tensor_variable(floatX(p))
-        return super().dist([psi, n, p], *args, **kwargs)
-
-    def get_moment(rv, size, psi, n, p):
-        mean = at.floor(psi * n * (1 - p) / p)
-        if not rv_size_is_none(size):
-            mean = at.full(size, mean)
-        return mean
-
-    def logp(value, psi, n, p):
-        r"""
-        Calculate log-probability of ZeroInflatedNegativeBinomial distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-
-        res = at.switch(
-            at.gt(value, 0),
-            at.log(psi) + logp(NegativeBinomial.dist(n=n, p=p), value),
-            at.logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
-        )
-
-        res = at.switch(
-            at.lt(value, 0),
-            -np.inf,
-            res,
-        )
-
-        return check_parameters(
-            res,
-            0 <= psi,
-            psi <= 1,
-            0 < n,
-            0 <= p,
-            p <= 1,
-            msg="0 <= psi <= 1, n > 0, 0 <= p <= 1",
-        )
-
-    def logcdf(value, psi, n, p):
-        """
-        Compute the log of the cumulative distribution function for ZeroInflatedNegativeBinomial distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        res = at.switch(
-            at.lt(value, 0),
-            -np.inf,
-            at.logaddexp(
-                at.log1p(-psi),
-                at.log(psi) + logcdf(NegativeBinomial.dist(n=n, p=p), value),
-            ),
-        )
-
-        return check_parameters(
-            res,
-            0 <= psi,
-            psi <= 1,
-            0 < n,
-            0 < p,
-            p <= 1,
-            msg="0 <= psi <= 1, n > 0, 0 < p <= 1",
+    def dist(cls, psi, mu=None, alpha=None, p=None, n=None, **kwargs):
+        return _zero_inflated_mixture(
+            name=None,
+            nonzero_p=psi,
+            nonzero_dist=NegativeBinomial.dist(mu=mu, alpha=alpha, p=p, n=n),
+            **kwargs,
         )
 
 
