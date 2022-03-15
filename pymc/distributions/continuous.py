@@ -850,10 +850,10 @@ class HalfNormal(PositiveContinuous):
     Parameters
     ----------
     sigma : tensor_like of float, optional
-        Scale parameter :math:`sigma` (``sigma`` > 0) (only required if ``tau`` is not specified).
+        Scale parameter :math:`\sigma` (``sigma`` > 0) (only required if ``tau`` is not specified).
         Defaults to 1.
     tau : tensor_like of float, optional
-        Precision :math:`tau` (tau > 0) (only required if sigma is not specified).
+        Precision :math:`\tau` (tau > 0) (only required if sigma is not specified).
         Defaults to 1.
 
     Examples
@@ -2028,7 +2028,7 @@ class Pareto(BoundedContinuous):
 
     Parameters
     ----------
-    alpha : tensor_like of float, optional
+    alpha : tensor_like of float
         Shape parameter (alpha > 0).
     m : tensor_like of float, optional
         Scale parameter (m > 0).
@@ -2874,9 +2874,9 @@ class ExGaussian(Continuous):
     ----------
     mu : tensor_like of float, default 0
         Mean of the normal distribution.
-    sigma : tensor_like of float, optional
+    sigma : tensor_like of float
         Standard deviation of the normal distribution (sigma > 0).
-    nu : tensor_like of float, optional
+    nu : tensor_like of float
         Mean of the exponential distribution (nu > 0).
 
     References
@@ -3029,7 +3029,7 @@ class VonMises(CircularContinuous):
     ----------
     mu : tensor_like of float, default 0
         Mean.
-    kappa : tensor_like of float, optional
+    kappa : tensor_like of float
         Concentration (\frac{1}{kappa} is analogous to \sigma^2).
     """
 
