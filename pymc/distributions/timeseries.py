@@ -393,8 +393,8 @@ class EulerMaruyama(distribution.Continuous):
         xt = x[:-1]
         f, g = self.sde_fn(x[:-1], *self.sde_pars)
         mu = xt + self.dt * f
-        sd = at.sqrt(self.dt) * g
-        return at.sum(Normal.dist(mu=mu, sigma=sd).logp(x[1:]))
+        sigma = at.sqrt(self.dt) * g
+        return at.sum(Normal.dist(mu=mu, sigma=sigma).logp(x[1:]))
 
     def _distr_parameters_for_repr(self):
         return ["dt"]
