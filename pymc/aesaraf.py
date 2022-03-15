@@ -941,7 +941,9 @@ aesara.compile.optdb["canonicalize"].register(
 )
 
 
-def compile_pymc(inputs, outputs, mode=None, **kwargs):
+def compile_pymc(
+    inputs, outputs, mode=None, **kwargs
+) -> Callable[..., Union[np.ndarray, List[np.ndarray]]]:
     """Use ``aesara.function`` with specialized pymc rewrites always enabled.
 
     Included rewrites

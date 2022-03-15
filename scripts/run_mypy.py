@@ -50,15 +50,19 @@ pymc/ode/ode.py
 pymc/ode/utils.py
 pymc/parallel_sampling.py
 pymc/plots/__init__.py
+pymc/sampling.py
 pymc/smc/__init__.py
 pymc/smc/sample_smc.py
+pymc/smc/smc.py
 pymc/stats/__init__.py
 pymc/step_methods/__init__.py
 pymc/step_methods/compound.py
 pymc/step_methods/elliptical_slice.py
 pymc/step_methods/hmc/__init__.py
 pymc/step_methods/hmc/base_hmc.py
+pymc/step_methods/hmc/hmc.py
 pymc/step_methods/hmc/integration.py
+pymc/step_methods/hmc/nuts.py
 pymc/step_methods/hmc/quadpotential.py
 pymc/step_methods/slicer.py
 pymc/step_methods/step_sizes.py
@@ -159,6 +163,9 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
         print(f"{len(unexpected_passing)} files unexpectedly passed the type checks:")
         print("\n".join(sorted(map(str, unexpected_passing))))
         print("This is good news! Go to scripts/run-mypy.py and add them to the list.")
+        if all_files.issubset(passing):
+            print("WOW! All files are passing the mypy type checks!")
+            print("scripts\\run_mypy.py may no longer be needed.")
         sys.exit(1)
     return
 
