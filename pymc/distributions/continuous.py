@@ -2030,7 +2030,7 @@ class Pareto(BoundedContinuous):
     ----------
     alpha : tensor_like of float
         Shape parameter (alpha > 0).
-    m : tensor_like of float, optional
+    m : tensor_like of float
         Scale parameter (m > 0).
     """
     rv_op = pareto
@@ -2570,7 +2570,7 @@ class ChiSquared(PositiveContinuous):
         value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
-            array or `TensorVariable`.
+            array or Aesara tensor.
 
         Returns
         -------
