@@ -458,16 +458,16 @@ def convert_shape(shape: Shape) -> Optional[WeakShape]:
     """Process a user-provided shape variable into None or a valid shape object."""
     if shape is None:
         return None
-
-    if isinstance(shape, int) or (isinstance(shape, TensorVariable) and shape.ndim == 0):
+    elif isinstance(shape, int) or (isinstance(shape, TensorVariable) and shape.ndim == 0):
         shape = (shape,)
+    elif isinstance(shape, TensorVariable) and shape.ndim == 1:
+        shape = tuple(shape)
     elif isinstance(shape, (list, tuple)):
         shape = tuple(shape)
     else:
         raise ValueError(
             f"The `shape` parameter must be a tuple, TensorVariable, int or list. Actual: {type(shape)}"
         )
-
     if isinstance(shape, tuple) and any(s == Ellipsis for s in shape[:-1]):
         raise ValueError(
             f"Ellipsis in `shape` may only appear in the last position. Actual: {shape}"
@@ -480,16 +480,16 @@ def convert_size(size: Size) -> Optional[StrongSize]:
     """Process a user-provided size variable into None or a valid size object."""
     if size is None:
         return None
-
-    if isinstance(size, int) or (isinstance(size, TensorVariable) and size.ndim == 0):
+    elif isinstance(size, int) or (isinstance(size, TensorVariable) and size.ndim == 0):
         size = (size,)
+    elif isinstance(size, TensorVariable) and size.ndim == 1:
+        size = tuple(size)
     elif isinstance(size, (list, tuple)):
         size = tuple(size)
     else:
         raise ValueError(
             f"The `size` parameter must be a tuple, TensorVariable, int or list. Actual: {type(size)}"
         )
-
     if isinstance(size, tuple) and Ellipsis in size:
         raise ValueError(f"The `size` parameter cannot contain an Ellipsis. Actual: {size}")
 
