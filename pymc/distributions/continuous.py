@@ -573,11 +573,7 @@ class Normal(Continuous):
         ----------
         value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or `TensorVariable`.
-        mu : tensor_like of float
-            Mean.
-        sigma : tensor_like of float
-            Standard deviation (sigma > 0).
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -2354,7 +2350,7 @@ class Gamma(PositiveContinuous):
         value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
-            array or `TensorVariable`.
+            array or Aesara tensor.
 
         Returns
         -------
@@ -3417,12 +3413,12 @@ class Rice(PositiveContinuous):
 
     Parameters
     ----------
-    nu : tensor_like of float
-        noncentrality parameter.
+    nu : tensor_like of float, optional
+        Noncentrality parameter (only required if b is not specified).
     sigma : tensor_like of float, default 1
         scale parameter.
-    b : tensor_like of float
-        shape parameter (alternative to nu).
+    b : tensor_like of float, optional
+        Shape parameter (alternative to nu, only required if nu is not specified).
 
     Notes
     -----
