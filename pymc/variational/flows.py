@@ -225,12 +225,6 @@ class AbstractFlow(WithMemoization):
     @aesara.config.change_flags(compute_test_value="off")
     def forward_pass(self, z0):
         ret = aesara.clone_replace(self.forward, {self.root.z0: z0})
-        try:
-            ret.tag.test_value = np.random.normal(size=z0.tag.test_value.shape).astype(
-                self.z0.dtype
-            )
-        except AttributeError:
-            ret.tag.test_value = self.root.z0.tag.test_value
         return ret
 
     __call__ = forward_pass
@@ -392,7 +386,7 @@ class PlanarFlow(LinearFlow):
             wu = u.dot(w)  # .
             mwu = -1.0 + at.softplus(wu)  # .
             # d + (. - .) * d / .
-            u_h = u + (mwu - wu) * w / ((w ** 2).sum() + 1e-10)
+            u_h = u + (mwu - wu) * w / ((w**2).sum() + 1e-10)
             return u_h, w
         else:
             # u_: bxd
@@ -400,7 +394,7 @@ class PlanarFlow(LinearFlow):
             wu = (u * w).sum(-1, keepdims=True)  # bx-
             mwu = -1.0 + at.softplus(wu)  # bx-
             # bxd + (bx- - bx-) * bxd / bx- = bxd
-            u_h = u + (mwu - wu) * w / ((w ** 2).sum(-1, keepdims=True) + 1e-10)
+            u_h = u + (mwu - wu) * w / ((w**2).sum(-1, keepdims=True) + 1e-10)
             return u_h, w
 
 
@@ -572,11 +566,11 @@ class HouseholderFlow(AbstractFlow):
         if self.batched:
             vv = v.dimshuffle(0, 1, "x") * v.dimshuffle(0, "x", 1)
             I = at.eye(self.dim).dimshuffle("x", 0, 1)
-            vvn = (1e-10 + (v ** 2).sum(-1)).dimshuffle(0, "x", "x")
+            vvn = (1e-10 + (v**2).sum(-1)).dimshuffle(0, "x", "x")
         else:
             vv = at.outer(v, v)
             I = at.eye(self.dim)
-            vvn = (v ** 2).sum(-1) + 1e-10
+            vvn = (v**2).sum(-1) + 1e-10
         self.H = I - 2.0 * vv / vvn
 
     @node_property

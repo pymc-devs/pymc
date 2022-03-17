@@ -537,7 +537,7 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
         accu = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
-        accu_new = accu + grad ** 2
+        accu_new = accu + grad**2
         updates[accu] = accu_new
         updates[param] = param - (learning_rate * grad / at.sqrt(accu_new + epsilon))
 
@@ -579,7 +579,7 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
         accu = aesara.shared(np.zeros(value.shape + (n_win,), dtype=value.dtype))
 
         # Append squared gradient vector to accu_new
-        accu_new = at.set_subtensor(accu[..., i_int], grad ** 2)
+        accu_new = at.set_subtensor(accu[..., i_int], grad**2)
         i_new = at.switch((i + 1) < n_win, i + 1, 0)
         updates[accu] = accu_new
         updates[i] = i_new
@@ -665,7 +665,7 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
         accu = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
-        accu_new = rho * accu + (one - rho) * grad ** 2
+        accu_new = rho * accu + (one - rho) * grad**2
         updates[accu] = accu_new
         updates[param] = param - (learning_rate * grad / at.sqrt(accu_new + epsilon))
 
@@ -764,7 +764,7 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
         )
 
         # update accu (as in rmsprop)
-        accu_new = rho * accu + (one - rho) * grad ** 2
+        accu_new = rho * accu + (one - rho) * grad**2
         updates[accu] = accu_new
 
         # compute parameter update, using the 'old' delta_accu
@@ -772,7 +772,7 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
         updates[param] = param - learning_rate * update
 
         # update delta_accu (as accu, but accumulating updates)
-        delta_accu_new = rho * delta_accu + (one - rho) * update ** 2
+        delta_accu_new = rho * delta_accu + (one - rho) * update**2
         updates[delta_accu] = delta_accu_new
 
     return updates
@@ -846,7 +846,7 @@ def adam(
     one = at.constant(1)
 
     t = t_prev + 1
-    a_t = learning_rate * at.sqrt(one - beta2 ** t) / (one - beta1 ** t)
+    a_t = learning_rate * at.sqrt(one - beta2**t) / (one - beta1**t)
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
@@ -858,7 +858,7 @@ def adam(
         )
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
-        v_t = beta2 * v_prev + (one - beta2) * g_t ** 2
+        v_t = beta2 * v_prev + (one - beta2) * g_t**2
         step = a_t * m_t / (at.sqrt(v_t) + epsilon)
 
         updates[m_prev] = m_t
@@ -934,7 +934,7 @@ def adamax(
     one = at.constant(1)
 
     t = t_prev + 1
-    a_t = learning_rate / (one - beta1 ** t)
+    a_t = learning_rate / (one - beta1**t)
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
@@ -1090,7 +1090,7 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False
        learning with neural networks. In Advances in Neural Information
        Processing Systems (pp. 3104-3112).
     """
-    norm = at.sqrt(sum(at.sum(tensor ** 2) for tensor in tensor_vars))
+    norm = at.sqrt(sum(at.sum(tensor**2) for tensor in tensor_vars))
     dtype = np.dtype(aesara.config.floatX).type
     target_norm = at.clip(norm, 0, dtype(max_norm))
     multiplier = target_norm / (dtype(epsilon) + norm)

@@ -65,14 +65,14 @@ class BaseTrace(ABC):
 
         self.vars = vars
         self.varnames = [var.name for var in vars]
-        self.fn = model.fastfn(vars)
+        self.fn = model.compile_fn(vars, inputs=model.value_vars, on_unused_input="ignore")
 
         # Get variable shapes. Most backends will need this
         # information.
         if test_point is None:
-            test_point = model.recompute_initial_point()
+            test_point = model.compute_initial_point()
         else:
-            test_point_ = model.recompute_initial_point().copy()
+            test_point_ = model.compute_initial_point().copy()
             test_point_.update(test_point)
             test_point = test_point_
         var_values = list(zip(self.varnames, self.fn(test_point)))
@@ -204,10 +204,18 @@ class BaseTrace(ABC):
         vals = np.stack(
             [self._get_sampler_stats(stat_name, i, burn, thin) for i in sampler_idxs], axis=-1
         )
+
         if vals.shape[-1] == 1:
-            return vals[..., 0]
-        else:
-            return vals
+            vals = vals[..., 0]
+
+        if vals.dtype == np.dtype(object):
+            try:
+                vals = np.vstack(vals)
+            except ValueError:
+                # Most likely due to non-identical shapes. Just stick with the object-array.
+                pass
+
+        return vals
 
     def _get_sampler_stats(self, stat_name, sampler_idx, burn, thin):
         """Get sampler statistics."""

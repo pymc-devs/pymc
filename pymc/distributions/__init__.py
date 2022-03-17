@@ -16,11 +16,11 @@ from pymc.distributions.logprob import (  # isort:skip
     logcdf,
     logp,
     logp_transform,
-    logpt,
-    logpt_sum,
+    joint_logpt,
 )
 
 from pymc.distributions.bound import Bound
+from pymc.distributions.censored import Censored
 from pymc.distributions.continuous import (
     AsymmetricLaplace,
     Beta,
@@ -81,8 +81,9 @@ from pymc.distributions.distribution import (
     Discrete,
     Distribution,
     NoDistribution,
+    SymbolicDistribution,
 )
-from pymc.distributions.mixture import Mixture, MixtureSameFamily, NormalMixture
+from pymc.distributions.mixture import Mixture, NormalMixture
 from pymc.distributions.multivariate import (
     CAR,
     Dirichlet,
@@ -95,6 +96,7 @@ from pymc.distributions.multivariate import (
     MvNormal,
     MvStudentT,
     OrderedMultinomial,
+    StickBreakingWeights,
     Wishart,
     WishartBartlett,
 )
@@ -151,6 +153,7 @@ __all__ = [
     "OrderedProbit",
     "DensityDist",
     "Distribution",
+    "SymbolicDistribution",
     "Continuous",
     "Discrete",
     "NoDistribution",
@@ -159,6 +162,7 @@ __all__ = [
     "KroneckerNormal",
     "MvStudentT",
     "Dirichlet",
+    "StickBreakingWeights",
     "Multinomial",
     "DirichletMultinomial",
     "OrderedMultinomial",
@@ -176,7 +180,6 @@ __all__ = [
     "SkewNormal",
     "Mixture",
     "NormalMixture",
-    "MixtureSameFamily",
     "Triangular",
     "DiscreteWeibull",
     "Gumbel",
@@ -187,11 +190,11 @@ __all__ = [
     "Rice",
     "Moyal",
     "Simulator",
+    "Censored",
     "CAR",
     "PolyaGamma",
-    "logpt",
+    "joint_logpt",
     "logp",
     "logp_transform",
     "logcdf",
-    "logpt_sum",
 ]

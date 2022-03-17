@@ -102,12 +102,12 @@ class BaseHMC(GradientSharedStep):
         # size.
         # XXX: If the dimensions of these terms change, the step size
         # dimension-scaling should change as well, no?
-        test_point = self._model.recompute_initial_point()
+        test_point = self._model.compute_initial_point()
 
         nuts_vars = [test_point[v.name] for v in vars]
         size = sum(v.size for v in nuts_vars)
 
-        self.step_size = step_scale / (size ** 0.25)
+        self.step_size = step_scale / (size**0.25)
         self.step_adapt = step_sizes.DualAverageAdaptation(
             self.step_size, target_accept, gamma, k, t0
         )
@@ -157,8 +157,9 @@ class BaseHMC(GradientSharedStep):
 
         if not np.isfinite(start.energy):
             model = self._model
-            check_test_point = model.point_logps()
-            error_logp = check_test_point.loc[
+            check_test_point_dict = model.point_logps()
+            check_test_point = np.asarray(list(check_test_point_dict.values()))
+            error_logp = check_test_point[
                 (np.abs(check_test_point) >= 1e20) | np.isnan(check_test_point)
             ]
             self.potential.raise_ok(q0.point_map_info)

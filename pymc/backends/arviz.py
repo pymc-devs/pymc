@@ -7,6 +7,7 @@ from typing import (  # pylint: disable=unused-import
     Any,
     Dict,
     Iterable,
+    Mapping,
     Optional,
     Tuple,
     Union,
@@ -82,12 +83,9 @@ class _DefaultTrace:
         `insert()` method
     """
 
-    trace_dict: Dict[str, np.ndarray] = {}
-    _len: Optional[int] = None
-
     def __init__(self, samples: int):
-        self._len = samples
-        self.trace_dict = {}
+        self._len: int = samples
+        self.trace_dict: Dict[str, np.ndarray] = {}
 
     def insert(self, k: str, v, idx: int):
         """
@@ -180,10 +178,10 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 " one of trace, prior, posterior_predictive or predictions."
             )
 
-        self.coords = {**self.model.coords, **(coords or {})}
+        untyped_coords = {**self.model.coords, **(coords or {})}
         self.coords = {
             cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
-            for cname, cvals in self.coords.items()
+            for cname, cvals in untyped_coords.items()
             if cvals is not None
         }
 
@@ -246,12 +244,26 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         # TODO: We no longer need one function per observed variable
         if self.log_likelihood is True:
             cached = [
-                (var, self.model.fn(self.model.logp_elemwiset(var)[0]))
+                (
+                    var,
+                    self.model.compile_fn(
+                        self.model.logpt(var, sum=False)[0],
+                        inputs=self.model.value_vars,
+                        on_unused_input="ignore",
+                    ),
+                )
                 for var in self.model.observed_RVs
             ]
         else:
             cached = [
-                (var, self.model.fn(self.model.logp_elemwiset(var)[0]))
+                (
+                    var,
+                    self.model.compile_fn(
+                        self.model.logpt(var, sum=False)[0],
+                        inputs=self.model.value_vars,
+                        on_unused_input="ignore",
+                    ),
+                )
                 for var in self.model.observed_RVs
                 if var.name in self.log_likelihood
             ]
@@ -412,7 +424,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         if self.prior is None:
             return {"prior": None, "prior_predictive": None}
         if self.observations is not None:
-            prior_predictive_vars = list(self.observations.keys())
+            prior_predictive_vars = list(set(self.observations).intersection(self.prior))
             prior_vars = [key for key in self.prior.keys() if key not in prior_predictive_vars]
         else:
             prior_vars = list(self.prior.keys())
@@ -464,6 +476,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 and var not in self.model.observed_RVs
                 and var not in self.model.free_RVs
                 and var not in self.model.potentials
+                and var not in self.model.value_vars
                 and (self.observations is None or name not in self.observations)
                 and isinstance(var, (Constant, SharedVariable))
             )
@@ -520,8 +533,8 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
 def to_inference_data(
     trace: Optional["MultiTrace"] = None,
     *,
-    prior: Optional[Dict[str, Any]] = None,
-    posterior_predictive: Optional[Dict[str, Any]] = None,
+    prior: Optional[Mapping[str, Any]] = None,
+    posterior_predictive: Optional[Mapping[str, Any]] = None,
     log_likelihood: Union[bool, Iterable[str]] = True,
     coords: Optional[CoordSpec] = None,
     dims: Optional[DimSpec] = None,
@@ -624,7 +637,7 @@ def predictions_to_inference_data(
     """
     if inplace and not idata_orig:
         raise ValueError(
-            "Do not pass True for inplace unless passing" "an existing InferenceData as idata_orig"
+            "Do not pass True for inplace unless passing an existing InferenceData as idata_orig"
         )
     converter = InferenceDataConverter(
         trace=posterior_trace,
@@ -635,6 +648,7 @@ def predictions_to_inference_data(
         log_likelihood=False,
     )
     if hasattr(idata_orig, "posterior"):
+        assert idata_orig is not None
         converter.nchains = idata_orig.posterior.dims["chain"]
         converter.ndraws = idata_orig.posterior.dims["draw"]
     else:

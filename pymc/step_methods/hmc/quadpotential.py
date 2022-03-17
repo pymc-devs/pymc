@@ -373,7 +373,7 @@ class _ExpWeightedVariance:
         alpha = self._alpha
         delta = value - self._mean
         self._mean[...] += alpha * delta
-        self._variance[...] = (1 - alpha) * (self._variance + alpha * delta ** 2)
+        self._variance[...] = (1 - alpha) * (self._variance + alpha * delta**2)
 
     def current_variance(self, out=None):
         if out is None:
@@ -484,7 +484,7 @@ class QuadPotentialDiag(QuadPotential):
             dtype = aesara.config.floatX
         self.dtype = dtype
         v = v.astype(self.dtype)
-        s = v ** 0.5
+        s = v**0.5
 
         self.s = s
         self.inv_s = 1.0 / s

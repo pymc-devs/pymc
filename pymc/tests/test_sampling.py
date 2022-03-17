@@ -23,6 +23,7 @@ import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
+import scipy.special
 
 from aesara import shared
 from arviz import InferenceData
@@ -35,7 +36,7 @@ from pymc.aesaraf import compile_pymc
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
-from pymc.tests.helpers import SeededTest
+from pymc.tests.helpers import SeededTest, fast_unstable_sampling_mode
 from pymc.tests.models import simple_init
 
 
@@ -313,6 +314,29 @@ class TestSample(SeededTest):
             with pytest.raises(NotImplementedError):
                 xvars = [t["mu"] for t in trace]
 
+    def test_deterministic_of_unobserved(self):
+        with pm.Model() as model:
+            x = pm.HalfNormal("x", 1)
+            y = pm.Deterministic("y", x + 100)
+            idata = pm.sample(
+                chains=1,
+                tune=10,
+                draws=50,
+                compute_convergence_checks=False,
+            )
+
+        np.testing.assert_allclose(idata.posterior["y"], idata.posterior["x"] + 100)
+
+    def test_transform_with_rv_depenency(self):
+        # Test that untransformed variables that depend on upstream variables are properly handled
+        with pm.Model() as m:
+            x = pm.HalfNormal("x", observed=1)
+            transform = pm.transforms.IntervalTransform(lambda *inputs: (inputs[-2], inputs[-1]))
+            y = pm.Uniform("y", lower=0, upper=x, transform=transform)
+            trace = pm.sample(tune=10, draws=50, return_inferencedata=False, random_seed=336)
+
+        assert np.allclose(scipy.special.expit(trace["y_interval__"]), trace["y"])
+
 
 def test_sample_find_MAP_does_not_modify_start():
     # see https://github.com/pymc-devs/pymc/pull/4458
@@ -490,7 +514,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.recompute_initial_point()], samples=10, return_inferencedata=False
+                [model.compute_initial_point()], samples=10, return_inferencedata=False
             )
             # # deprecated argument is not introduced to fast version [2019/08/20:rpg]
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"], return_inferencedata=False)
@@ -549,7 +573,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.recompute_initial_point()], return_inferencedata=False, samples=10
+                [model.compute_initial_point()], return_inferencedata=False, samples=10
             )
             ppc = pm.sample_posterior_predictive(
                 trace, return_inferencedata=False, samples=12, var_names=[]
@@ -611,7 +635,7 @@ class TestSamplePPC(SeededTest):
 
             # test wrong type argument
             bad_trace = {"mu": stats.norm.rvs(size=1000)}
-            with pytest.raises(TypeError):
+            with pytest.raises(TypeError, match="type for `trace`"):
                 ppc = pm.sample_posterior_predictive(bad_trace)
 
     def test_vector_observed(self):
@@ -647,7 +671,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.recompute_initial_point()], return_inferencedata=False, samples=10
+                [model.compute_initial_point()], return_inferencedata=False, samples=10
             )
             assert ppc0 == {}
             ppc = pm.sample_posterior_predictive(
@@ -655,7 +679,7 @@ class TestSamplePPC(SeededTest):
             )
             assert len(ppc) == 1
             assert ppc["b"].shape == (1000,)
-            scale = np.sqrt(1 + 0.2 ** 2)
+            scale = np.sqrt(1 + 0.2**2)
             _, pval = stats.kstest(ppc["b"], stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
@@ -665,7 +689,8 @@ class TestSamplePPC(SeededTest):
         with model:
             mu = pm.HalfFlat("sigma")
             pm.Poisson("foo", mu=mu, observed=data)
-            idata = pm.sample(tune=1000)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                idata = pm.sample(tune=10, draws=40, chains=1)
 
         with model:
             with pytest.raises(NotImplementedError) as excinfo:
@@ -718,12 +743,15 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            trace = pm.sample(
-                100,
-                chains=nchains,
-                return_inferencedata=False,
-                compute_convergence_checks=False,
-            )
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                trace = pm.sample(
+                    tune=100,
+                    draws=100,
+                    chains=nchains,
+                    step=pm.Metropolis(),
+                    return_inferencedata=False,
+                    compute_convergence_checks=False,
+                )
 
             rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-4
 
@@ -754,11 +782,14 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            trace = pm.sample(
-                100,
-                return_inferencedata=False,
-                compute_convergence_checks=False,
-            )
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                trace = pm.sample(
+                    tune=100,
+                    draws=100,
+                    step=pm.Metropolis(),
+                    return_inferencedata=False,
+                    compute_convergence_checks=False,
+                )
             varnames = [v for v in trace.varnames if v != "out"]
             ppc_trace = [
                 dict(zip(varnames, row)) for row in zip(*(trace.get_values(v) for v in varnames))
@@ -779,7 +810,10 @@ class TestSamplePPC(SeededTest):
             mu = pm.HalfNormal("mu", 1)
             a = pm.Normal("a", mu=mu, sigma=2, observed=np.array([1, 2]))
             b = pm.Poisson("b", mu, observed=np.array([1, 2]))
-            trace = pm.sample(compute_convergence_checks=False, return_inferencedata=False)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                trace = pm.sample(
+                    tune=10, draws=10, compute_convergence_checks=False, return_inferencedata=False
+                )
 
         with model:
             ppc = pm.sample_posterior_predictive(trace, return_inferencedata=False, samples=1)
@@ -998,9 +1032,14 @@ class TestSamplePriorPredictive(SeededTest):
         with pm.Model() as dm_model:
             probs = pm.Dirichlet("probs", a=np.ones(6))
             obs = pm.Multinomial("obs", n=100, p=probs, observed=mn_data)
-            burned_trace = pm.sample(
-                20, tune=10, cores=1, return_inferencedata=False, compute_convergence_checks=False
-            )
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                burned_trace = pm.sample(
+                    tune=10,
+                    draws=20,
+                    chains=1,
+                    return_inferencedata=False,
+                    compute_convergence_checks=False,
+                )
         sim_priors = pm.sample_prior_predictive(
             return_inferencedata=False, samples=20, model=dm_model
         )
@@ -1089,11 +1128,11 @@ class TestSamplePriorPredictive(SeededTest):
 
     def test_zeroinflatedpoisson(self):
         with pm.Model():
-            theta = pm.Beta("theta", alpha=1, beta=1)
+            mu = pm.Beta("mu", alpha=1, beta=1)
             psi = pm.HalfNormal("psi", sd=1)
-            pm.ZeroInflatedPoisson("suppliers", psi=psi, theta=theta, size=20)
+            pm.ZeroInflatedPoisson("suppliers", psi=psi, mu=mu, size=20)
             gen_data = pm.sample_prior_predictive(samples=5000)
-            assert gen_data.prior["theta"].shape == (1, 5000)
+            assert gen_data.prior["mu"].shape == (1, 5000)
             assert gen_data.prior["psi"].shape == (1, 5000)
             assert gen_data.prior["suppliers"].shape == (1, 5000, 20)
 
@@ -1205,10 +1244,57 @@ class TestSamplePosteriorPredictive:
             pp = pm.sample_posterior_predictive(idat.posterior, var_names=["d"])
 
 
-def test_sample_deterministic():
-    with pm.Model() as model:
-        x = pm.HalfNormal("x", 1)
-        y = pm.Deterministic("y", x + 100)
-        idata = pm.sample(chains=1, draws=50, compute_convergence_checks=False)
+class TestDraw(SeededTest):
+    def test_univariate(self):
+        with pm.Model():
+            x = pm.Normal("x")
 
-    np.testing.assert_allclose(idata.posterior["y"], idata.posterior["x"] + 100)
+        x_draws = pm.draw(x)
+        assert x_draws.shape == ()
+
+        (x_draws,) = pm.draw([x])
+        assert x_draws.shape == ()
+
+        x_draws = pm.draw(x, draws=10)
+        assert x_draws.shape == (10,)
+
+        (x_draws,) = pm.draw([x], draws=10)
+        assert x_draws.shape == (10,)
+
+    def test_multivariate(self):
+        with pm.Model():
+            mln = pm.Multinomial("mln", n=5, p=np.array([0.25, 0.25, 0.25, 0.25]))
+
+        mln_draws = pm.draw(mln, draws=1)
+        assert mln_draws.shape == (4,)
+
+        (mln_draws,) = pm.draw([mln], draws=1)
+        assert mln_draws.shape == (4,)
+
+        mln_draws = pm.draw(mln, draws=10)
+        assert mln_draws.shape == (10, 4)
+
+        (mln_draws,) = pm.draw([mln], draws=10)
+        assert mln_draws.shape == (10, 4)
+
+    def test_multiple_variables(self):
+        with pm.Model():
+            x = pm.Normal("x")
+            y = pm.Normal("y", shape=10)
+            z = pm.Uniform("z", shape=5)
+            w = pm.Dirichlet("w", a=[1, 1, 1])
+
+        num_draws = 100
+        draws = pm.draw((x, y, z, w), draws=num_draws)
+        assert draws[0].shape == (num_draws,)
+        assert draws[1].shape == (num_draws, 10)
+        assert draws[2].shape == (num_draws, 5)
+        assert draws[3].shape == (num_draws, 3)
+
+    def test_draw_different_samples(self):
+        with pm.Model():
+            x = pm.Normal("x")
+
+        x_draws_1 = pm.draw(x, 100)
+        x_draws_2 = pm.draw(x, 100)
+        assert not np.all(np.isclose(x_draws_1, x_draws_2))

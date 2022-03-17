@@ -42,7 +42,7 @@ def test_AR():
         rho = Normal("rho", 0.0, 1.0)
         y1 = AR1("y1", rho, 1.0, observed=data)
         y2 = AR("y2", rho, 1.0, init=Normal.dist(0, 1), observed=data)
-    initial_point = t.recompute_initial_point()
+    initial_point = t.compute_initial_point()
     np.testing.assert_allclose(y1.logp(initial_point), y2.logp(initial_point))
 
     # AR1 + constant
@@ -78,7 +78,7 @@ def test_AR_nd():
             AR("y_%d" % i, beta[:, i], sigma=1.0, shape=T, initval=y_tp[:, i])
 
     np.testing.assert_allclose(
-        t0.logp(t0.recompute_initial_point()), t1.logp(t1.recompute_initial_point())
+        t0.logp(t0.compute_initial_point()), t1.logp(t1.compute_initial_point())
     )
 
 

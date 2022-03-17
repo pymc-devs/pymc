@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 # pylint: disable=wildcard-import
-__version__ = "4.0.0b1"
+__version__ = "4.0.0b4"
 
 import logging
 import multiprocessing as mp
@@ -28,54 +28,30 @@ if not logging.root.handlers:
         _log.addHandler(handler)
 
 
-def _check_install_compatibilitites():
-    try:
-        import theano
-
-        _log.warning(
-            "!" * 60
-            + f"\nYour Python environment has Theano(-PyMC) {theano.__version__} installed, "
-            + f"but you are importing PyMC {__version__} which uses Aesara as its backend."
-            + f"\nFor PyMC {__version__} to work as expected you should uninstall Theano(-PyMC)."
-            + "\nSee https://github.com/pymc-devs/pymc/wiki for update instructions.\n"
-            + "!" * 60
-        )
-    except ImportError:
-        pass
-
-    try:
-        import pymc3
-
-        _log.warning(
-            "!" * 60
-            + f"\nYou are importing PyMC {__version__}, but your environment also has"
-            + f" the legacy version PyMC3 {pymc3.__version__} installed."
-            + f"\nFor PyMC {__version__} to work as expected you should uninstall PyMC3."
-            + "\nSee https://github.com/pymc-devs/pymc/wiki for update instructions.\n"
-            + "!" * 60
-        )
-    except ImportError:
-        pass
-
-
-_check_install_compatibilitites()
-
-
 def __set_compiler_flags():
     # Workarounds for Aesara compiler problems on various platforms
     import aesara
 
     current = aesara.config.gcc__cxxflags
-    aesara.config.gcc__cxxflags = f"{current} -Wno-c++11-narrowing"
+    augmented = f"{current} -Wno-c++11-narrowing"
+
+    # Work around compiler bug in GCC < 8.4 related to structured exception
+    # handling registers on Windows.
+    # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65782 for details.
+    # First disable C++ exception handling altogether since it's not needed
+    # for the C extensions that we generate.
+    augmented = f"{augmented} -fno-exceptions"
+    # Now disable the generation of stack unwinding tables.
+    augmented = f"{augmented} -fno-unwind-tables -fno-asynchronous-unwind-tables"
+
+    aesara.config.gcc__cxxflags = augmented
 
 
 __set_compiler_flags()
 
 from pymc import gp, ode, sampling
 from pymc.aesaraf import *
-from pymc.backends import predictions_to_inference_data, to_inference_data
-from pymc.backends.tracetab import *
-from pymc.bart import *
+from pymc.backends import *
 from pymc.blocking import *
 from pymc.data import *
 from pymc.distributions import *
@@ -99,7 +75,6 @@ from pymc.sampling import *
 from pymc.smc import *
 from pymc.stats import *
 from pymc.step_methods import *
-from pymc.tests import test
 from pymc.tuning import *
 from pymc.variational import *
 from pymc.vartypes import *

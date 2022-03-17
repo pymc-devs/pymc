@@ -95,36 +95,41 @@ def find_MAP(
         vars = model.cont_vars
         if not vars:
             raise ValueError("Model has no unobserved continuous variables.")
+    else:
+        vars = [model.rvs_to_values.get(var, var) for var in vars]
+
     vars = inputvars(vars)
     disc_vars = list(typefilter(vars, discrete_types))
     allinmodel(vars, model)
     ipfn = make_initial_point_fn(
         model=model,
-        jitter_rvs={},
+        jitter_rvs=set(),
         return_transformed=True,
         overrides=start,
     )
     if seed is None:
-        seed = model.rng_seeder.randint(2 ** 30, dtype=np.int64)
+        seed = model.rng_seeder.randint(2**30, dtype=np.int64)
     start = ipfn(seed)
     model.check_start_vals(start)
 
-    x0 = DictToArrayBijection.map(start)
+    var_names = {var.name for var in vars}
+    x0 = DictToArrayBijection.map(
+        {var_name: value for var_name, value in start.items() if var_name in var_names}
+    )
 
     # TODO: If the mapping is fixed, we can simply create graphs for the
     # mapping and avoid all this bijection overhead
-    def logp_func(x):
-        return DictToArrayBijection.mapf(model.fastlogp_nojac)(RaveledVars(x, x0.point_map_info))
+    compiled_logp_func = DictToArrayBijection.mapf(model.compile_logp(jacobian=False), start)
+    logp_func = lambda x: compiled_logp_func(RaveledVars(x, x0.point_map_info))
 
+    rvs = [model.values_to_rvs[value] for value in vars]
     try:
         # This might be needed for calls to `dlogp_func`
         # start_map_info = tuple((v.name, v.shape, v.dtype) for v in vars)
-
-        def dlogp_func(x):
-            return DictToArrayBijection.mapf(model.fastdlogp_nojac(vars))(
-                RaveledVars(x, x0.point_map_info)
-            )
-
+        compiled_dlogp_func = DictToArrayBijection.mapf(
+            model.compile_dlogp(rvs, jacobian=False), start
+        )
+        dlogp_func = lambda x: compiled_dlogp_func(RaveledVars(x, x0.point_map_info))
         compute_gradient = True
     except (AttributeError, NotImplementedError, tg.NullTypeGradError):
         compute_gradient = False
@@ -162,12 +167,11 @@ def find_MAP(
             print(file=sys.stdout)
 
     mx0 = RaveledVars(mx0, x0.point_map_info)
-
-    vars = get_default_varnames(model.unobserved_value_vars, include_transformed)
-    mx = {
-        var.name: value
-        for var, value in zip(vars, model.fastfn(vars)(DictToArrayBijection.rmap(mx0)))
-    }
+    unobserved_vars = get_default_varnames(model.unobserved_value_vars, include_transformed)
+    unobserved_vars_values = model.compile_fn(unobserved_vars)(
+        DictToArrayBijection.rmap(mx0, start)
+    )
+    mx = {var.name: value for var, value in zip(unobserved_vars, unobserved_vars_values)}
 
     if return_raw:
         return mx, opt_result

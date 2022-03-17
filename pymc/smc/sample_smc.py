@@ -198,7 +198,7 @@ def sample_smc(
         random_seed = None
     if isinstance(random_seed, int) or random_seed is None:
         rng = np.random.default_rng(seed=random_seed)
-        random_seed = list(rng.integers(2 ** 30, size=chains))
+        random_seed = list(rng.integers(2**30, size=chains))
     elif isinstance(random_seed, Iterable):
         if len(random_seed) != chains:
             raise ValueError(f"Length of seeds ({len(seeds)}) must match number of chains {chains}")

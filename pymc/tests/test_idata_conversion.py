@@ -2,6 +2,7 @@
 
 from typing import Dict, Tuple
 
+import aesara.tensor as at
 import numpy as np
 import pandas as pd
 import pytest
@@ -331,16 +332,17 @@ class TestDataPyMC:
         # See https://github.com/pymc-devs/pymc/issues/5255
         assert inference_data.log_likelihood["y_observed"].shape == (2, 100, 3)
 
-    @pytest.mark.xfal(reason="Multivariate partial observed RVs not implemented for V4")
-    @pytest.mark.xfail(reason="LKJCholeskyCov not refactored for v4")
+    @pytest.mark.xfail(reason="Multivariate partial observed RVs not implemented for V4")
     def test_mv_missing_data_model(self):
         data = ma.masked_values([[1, 2], [2, 2], [-1, 4], [2, -1], [-1, -1]], value=-1)
 
         model = pm.Model()
         with model:
             mu = pm.Normal("mu", 0, 1, size=2)
-            sd_dist = pm.HalfNormal.dist(1.0)
+            sd_dist = pm.HalfNormal.dist(1.0, size=2)
+            # pylint: disable=unpacking-non-sequence
             chol, *_ = pm.LKJCholeskyCov("chol_cov", n=2, eta=1, sd_dist=sd_dist, compute_corr=True)
+            # pylint: enable=unpacking-non-sequence
             y = pm.MvNormal("y", mu=mu, chol=chol, observed=data)
             inference_data = pm.sample(100, chains=2, return_inferencedata=True)
 
@@ -387,63 +389,6 @@ class TestDataPyMC:
 
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
-
-    @pytest.mark.xfail(reason="MultiObservedRV is no longer used in v4")
-    def test_multiple_observed_rv_without_observations(self):
-        with pm.Model():
-            mu = pm.Normal("mu")
-            x = pm.DensityDist(  # pylint: disable=unused-variable
-                "x", mu, logp=lambda value, mu: pm.Normal.logp(value, mu, 1), observed=0.1
-            )
-            inference_data = pm.sample(100, chains=2, return_inferencedata=True)
-        test_dict = {
-            "posterior": ["mu"],
-            "sample_stats": ["lp"],
-            "log_likelihood": ["x"],
-            "observed_data": ["value", "~x"],
-        }
-        fails = check_multiple_attrs(test_dict, inference_data)
-        assert not fails
-        assert inference_data.observed_data.value.dtype.kind == "f"
-
-    @pytest.mark.xfail(reason="MultiObservedRV is no longer used in v4")
-    @pytest.mark.parametrize("multiobs", (True, False))
-    def test_multiobservedrv_to_observed_data(self, multiobs):
-        # fake regression data, with weights (W)
-        np.random.seed(2019)
-        N = 100
-        X = np.random.uniform(size=N)
-        W = 1 + np.random.poisson(size=N)
-        a, b = 5, 17
-        Y = a + np.random.normal(b * X)
-
-        with pm.Model():
-            a = pm.Normal("a", 0, 10)
-            b = pm.Normal("b", 0, 10)
-            mu = a + b * X
-            sigma = pm.HalfNormal("sigma", 1)
-            w = W
-
-            def weighted_normal(value, mu, sigma, w):
-                return w * pm.Normal.logp(value, mu, sigma)
-
-            y_logp = pm.DensityDist(  # pylint: disable=unused-variable
-                "y_logp", mu, sigma, w, logp=weighted_normal, observed=Y, size=N
-            )
-            idata = pm.sample(
-                20, tune=20, return_inferencedata=True, idata_kwargs={"density_dist_obs": multiobs}
-            )
-        multiobs_str = "" if multiobs else "~"
-        test_dict = {
-            "posterior": ["a", "b", "sigma"],
-            "sample_stats": ["lp"],
-            "log_likelihood": ["y_logp"],
-            f"{multiobs_str}observed_data": ["y", "w"],
-        }
-        fails = check_multiple_attrs(test_dict, idata)
-        assert not fails
-        if multiobs:
-            assert idata.observed_data.y.dtype.kind == "f"
 
     def test_single_observation(self):
         with pm.Model():
@@ -572,11 +517,23 @@ class TestDataPyMC:
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
 
+    def test_conversion_from_variables_subset(self):
+        """This is a regression test for issue #5337."""
+        with pm.Model() as model:
+            x = pm.Normal("x")
+            pm.Normal("y", x, observed=5)
+            idata = pm.sample(
+                tune=10, draws=20, chains=1, step=pm.Metropolis(), compute_convergence_checks=False
+            )
+            pm.sample_posterior_predictive(idata, var_names=["x"])
+            pm.sample_prior_predictive(var_names=["x"])
+
     def test_multivariate_observations(self):
         coords = {"direction": ["x", "y", "z"], "experiment": np.arange(20)}
         data = np.random.multinomial(20, [0.2, 0.3, 0.5], size=20)
         with pm.Model(coords=coords):
             p = pm.Beta("p", 1, 1, size=(3,))
+            p = p / p.sum()
             pm.Multinomial("y", 20, p, dims=("experiment", "direction"), observed=data)
             idata = pm.sample(draws=50, chains=2, tune=100, return_inferencedata=True)
         test_dict = {
@@ -645,6 +602,12 @@ class TestDataPyMC:
                 },
             )
             assert isinstance(converter.coords["city"], pd.MultiIndex)
+
+    def test_variable_dimension_name_collision(self):
+        with pytest.raises(ValueError, match="same name as its dimension"):
+            with pm.Model() as pmodel:
+                var = at.as_tensor([1, 2, 3])
+                pmodel.register_rv(var, name="time", dims=("time",))
 
 
 class TestPyMCWarmupHandling:

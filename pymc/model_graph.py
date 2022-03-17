@@ -91,6 +91,7 @@ class ModelGraph:
 
     def get_parents(self, var: TensorVariable) -> Set[VarName]:
         """Get the named nodes that are direct inputs to the var"""
+        # TODO: Update these lines, variables no longer have a `logpt` attribute
         if hasattr(var, "transformed"):
             func = var.transformed.logpt
         elif hasattr(var, "logpt"):

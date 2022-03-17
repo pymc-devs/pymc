@@ -10,11 +10,24 @@ API Reference
    api/distributions
    api/gp
    api/model
-   api/ode
    api/samplers
+   api/vi
    api/smc
-   api/step_methods
-   api/inference
+   api/backends
+   api/data
+   api/ode
+   api/tuning
+   api/math
+   api/aesaraf
+   api/shape_utils
+   api/misc
+
+------------------
+Dimensionality
+------------------
+PyMC provides numerous methods, and syntatic sugar, to easily specify the dimensionality of
+Random Variables in modeling. Refer to {ref}`dimensionality` notebook to see examples
+demonstrating the functionality.
 
 --------------
 API extensions

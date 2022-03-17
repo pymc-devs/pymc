@@ -21,6 +21,9 @@ coverage:
         threshold: 1%
         base: auto
 
+ignore:
+  - "pymc/tests/*"
+
 comment:
   layout: "reach, diff, flags, files"
   behavior: default

@@ -11,6 +11,7 @@ This module introduces functions that are made aware of the requested `size_tupl
 .. currentmodule:: pymc.distributions.shape_utils
 
 .. autosummary::
+   :toctree: generated/
 
    to_tuple
    shapes_broadcasting
@@ -18,6 +19,4 @@ This module introduces functions that are made aware of the requested `size_tupl
    get_broadcastable_dist_samples
    broadcast_distribution_samples
    broadcast_dist_samples_to
-
-.. automodule:: pymc.distributions.shape_utils
-   :members:
+   rv_size_is_none

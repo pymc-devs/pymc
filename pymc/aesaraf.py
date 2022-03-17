@@ -173,9 +173,9 @@ def change_rv_size(
     tag = rv_var.tag
 
     if expand:
-        if rv_node.op.ndim_supp == 0 and at.get_vector_length(size) == 0:
-            size = rv_node.op._infer_shape(size, dist_params)
-        new_size = tuple(new_size) + tuple(size)
+        old_shape = tuple(rv_node.op._infer_shape(size, dist_params))
+        old_size = old_shape[: len(old_shape) - rv_node.op.ndim_supp]
+        new_size = tuple(new_size) + tuple(old_size)
 
     # Make sure the new size is a tensor. This dtype-aware conversion helps
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
@@ -941,7 +941,9 @@ aesara.compile.optdb["canonicalize"].register(
 )
 
 
-def compile_pymc(inputs, outputs, mode=None, **kwargs):
+def compile_pymc(
+    inputs, outputs, mode=None, **kwargs
+) -> Callable[..., Union[np.ndarray, List[np.ndarray]]]:
     """Use ``aesara.function`` with specialized pymc rewrites always enabled.
 
     Included rewrites
@@ -961,17 +963,14 @@ def compile_pymc(inputs, outputs, mode=None, **kwargs):
         this function is called within a model context and the model `check_bounds` flag
         is set to False.
     """
-
-    # Avoid circular dependency
-    from pymc.distributions import NoDistribution
-
-    # Set the default update of a NoDistribution RNG so that it is automatically
+    # Set the default update of RandomVariable's RNG so that it is automatically
     # updated after every function call
-    output_to_list = outputs if isinstance(outputs, list) else [outputs]
+    # TODO: This won't work for variables with InnerGraphs (Scan and OpFromGraph)
+    output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
     for rv in (
         node
         for node in walk_model(output_to_list, walk_past_rvs=True)
-        if node.owner and isinstance(node.owner.op, NoDistribution)
+        if node.owner and isinstance(node.owner.op, RandomVariable)
     ):
         rng = rv.owner.inputs[0]
         if not hasattr(rng, "default_update"):

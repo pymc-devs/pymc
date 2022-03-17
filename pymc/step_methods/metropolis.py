@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 import numpy.random as nr
 import scipy.linalg
+import scipy.special
 
 from aesara.graph.fg import MissingInputError
 from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
@@ -161,7 +162,7 @@ class Metropolis(ArrayStepShared):
         """
 
         model = pm.modelcontext(model)
-        initial_values = model.recompute_initial_point()
+        initial_values = model.compute_initial_point()
 
         if vars is None:
             vars = model.value_vars
@@ -202,7 +203,7 @@ class Metropolis(ArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
         super().__init__(vars, shared)
 
     def reset_tuning(self):
@@ -340,7 +341,7 @@ class BinaryMetropolis(ArrayStep):
         if not all([v.dtype in pm.discrete_types for v in vars]):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
 
-        super().__init__(vars, [model.fastlogp])
+        super().__init__(vars, [model.compile_logp()])
 
     def astep(self, q0: RaveledVars, logp) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
 
@@ -349,7 +350,7 @@ class BinaryMetropolis(ArrayStep):
         q0 = q0.data
 
         # Convert adaptive_scale_factor to a jump probability
-        p_jump = 1.0 - 0.5 ** self.scaling
+        p_jump = 1.0 - 0.5**self.scaling
 
         rand_array = nr.random(q0.shape)
         q = np.copy(q0)
@@ -425,7 +426,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         # transition probabilities
         self.transit_p = transit_p
 
-        initial_point = model.recompute_initial_point()
+        initial_point = model.compute_initial_point()
         vars = [model.rvs_to_values.get(var, var) for var in vars]
         self.dim = sum(initial_point[v.name].size for v in vars)
 
@@ -441,7 +442,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         if not all([v.dtype in pm.discrete_types for v in vars]):
             raise ValueError("All variables must be binary for BinaryGibbsMetropolis")
 
-        super().__init__(vars, [model.fastlogp])
+        super().__init__(vars, [model.compile_logp()])
 
     def astep(self, q0: RaveledVars, logp: Callable[[RaveledVars], np.ndarray]) -> RaveledVars:
 
@@ -510,7 +511,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         vars = [model.rvs_to_values.get(var, var) for var in vars]
         vars = pm.inputvars(vars)
 
-        initial_point = model.recompute_initial_point()
+        initial_point = model.compute_initial_point()
 
         dimcats = []
         # The above variable is a list of pairs (aggregate dimension, number
@@ -527,7 +528,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if isinstance(distr, CategoricalRV):
                 k_graph = rv_var.owner.inputs[3].shape[-1]
                 (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
-                k = model.fn(k_graph)(initial_point)
+                k = model.compile_fn(k_graph, inputs=model.value_vars, on_unused_input="ignore")(
+                    initial_point
+                )
             elif isinstance(distr, BernoulliRV):
                 k = 2
             else:
@@ -554,7 +557,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         else:
             raise ValueError("Argument 'proposal' should either be 'uniform' or 'proportional'")
 
-        super().__init__(vars, [model.fastlogp])
+        super().__init__(vars, [model.compile_logp()])
 
     def astep_unif(self, q0: RaveledVars, logp) -> RaveledVars:
 
@@ -606,7 +609,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if candidate_cat != given_cat:
                 q.data[dim] = candidate_cat
                 log_probs[candidate_cat] = logp(q)
-        probs = softmax(log_probs)
+        probs = scipy.special.softmax(log_probs, axis=0)
         prob_curr, probs[given_cat] = probs[given_cat], 0.0
         probs /= 1.0 - prob_curr
         proposed_cat = nr.choice(candidates, p=probs)
@@ -710,7 +713,7 @@ class DEMetropolis(PopulationArrayStepShared):
     ):
 
         model = pm.modelcontext(model)
-        initial_values = model.recompute_initial_point()
+        initial_values = model.compute_initial_point()
         initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
@@ -742,7 +745,7 @@ class DEMetropolis(PopulationArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
         super().__init__(vars, shared)
 
     def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
@@ -861,7 +864,7 @@ class DEMetropolisZ(ArrayStepShared):
         **kwargs
     ):
         model = pm.modelcontext(model)
-        initial_values = model.recompute_initial_point()
+        initial_values = model.compute_initial_point()
         initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
@@ -905,7 +908,7 @@ class DEMetropolisZ(ArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
         super().__init__(vars, shared)
 
     def reset_tuning(self):
@@ -991,11 +994,6 @@ def sample_except(limit, excluded):
     if candidate >= excluded:
         candidate += 1
     return candidate
-
-
-def softmax(x):
-    e_x = np.exp(x - np.max(x))
-    return e_x / np.sum(e_x, axis=0)
 
 
 def delta_logp(point, logp, vars, shared):

@@ -11,12 +11,12 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import warnings
 
 from collections.abc import Mapping
 from functools import singledispatch
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Sequence, Union
 
+import aesara
 import aesara.tensor as at
 import numpy as np
 
@@ -44,15 +44,17 @@ def logp_transform(op: Op):
     return None
 
 
-def _get_scaling(total_size, shape, ndim):
+def _get_scaling(total_size: Optional[Union[int, Sequence[int]]], shape, ndim: int):
     """
-    Gets scaling constant for logp
+    Gets scaling constant for logp.
 
     Parameters
     ----------
-    total_size: int or list[int]
+    total_size: Optional[int|List[int]]
+        size of a fully observed data without minibatching,
+        `None` means data is fully observed
     shape: shape
-        shape to scale
+        shape of an observed data
     ndim: int
         ndim hint
 
@@ -61,7 +63,7 @@ def _get_scaling(total_size, shape, ndim):
     scalar
     """
     if total_size is None:
-        coef = floatX(1)
+        coef = 1.0
     elif isinstance(total_size, int):
         if ndim >= 1:
             denom = shape[0]
@@ -91,21 +93,23 @@ def _get_scaling(total_size, shape, ndim):
                 "number of scalings is bigger that ndim, got %r" % total_size
             )
         elif (len(begin) + len(end)) == 0:
-            return floatX(1)
+            coef = 1.0
         if len(end) > 0:
             shp_end = shape[-len(end) :]
         else:
             shp_end = np.asarray([])
         shp_begin = shape[: len(begin)]
-        begin_coef = [floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
-        end_coef = [floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
+        begin_coef = [
+            floatX(t) / floatX(shp_begin[i]) for i, t in enumerate(begin) if t is not None
+        ]
+        end_coef = [floatX(t) / floatX(shp_end[i]) for i, t in enumerate(end) if t is not None]
         coefs = begin_coef + end_coef
         coef = at.prod(coefs)
     else:
         raise TypeError(
             "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
         )
-    return at.as_tensor(floatX(coef))
+    return at.as_tensor(coef, dtype=aesara.config.floatX)
 
 
 subtensor_types = (
@@ -118,7 +122,7 @@ subtensor_types = (
 )
 
 
-def logpt(
+def joint_logpt(
     var: Union[TensorVariable, List[TensorVariable]],
     rv_values: Optional[Union[TensorVariable, Dict[TensorVariable, TensorVariable]]] = None,
     *,
@@ -242,12 +246,6 @@ def logpt(
         logp_var = at.sum([at.sum(factor) for factor in logp_var_dict.values()])
     else:
         logp_var = list(logp_var_dict.values())
-        # TODO: deprecate special behavior when only one variable is requested and
-        #  always return a list. This is here for backwards compatibility as logpt
-        #  started as a replacement to factor.logpt, but it should now be considered an
-        #  internal function reached only via model.logp* methods.
-        if len(logp_var) == 1:
-            logp_var = logp_var[0]
 
     return logp_var
 
@@ -264,17 +262,3 @@ def logcdf(rv, value):
 
     value = at.as_tensor_variable(value, dtype=rv.dtype)
     return logcdf_aeppl(rv, value)
-
-
-def logpt_sum(*args, **kwargs):
-    """Return the sum of the logp values for the given observations.
-
-    Subclasses can use this to improve the speed of logp evaluations
-    if only the sum of the logp values is needed.
-    """
-    warnings.warn(
-        "logpt_sum has been deprecated, you can use logpt instead, which now defaults"
-        "to the same behavior of logpt_sum",
-        DeprecationWarning,
-    )
-    return logpt(*args, sum=True, **kwargs)
