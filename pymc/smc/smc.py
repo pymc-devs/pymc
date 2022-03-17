@@ -53,7 +53,7 @@ class SMC_KERNEL(ABC):
 
         _initialize_kernel: default
             Creates initial population of particles in the variable
-            `self.tempered_posterior` and populates the `self.var_info` dictionary
+            self.particles and populates the `self.var_info` dictionary
             with information about model variables shape and size as
             {var.name : (var.shape, var.size)
 
@@ -154,14 +154,11 @@ class SMC_KERNEL(ABC):
         if threshold < 0 or threshold > 1:
             raise ValueError(f"Threshold value {threshold} must be between 0 and 1")
         self.threshold = threshold
-        self.model = model
         self.rng = np.random.default_rng(seed=random_seed)
 
         self.model = modelcontext(model)
         self.variables = inputvars(self.model.value_vars)
-
-        self.var_info = {}
-        self.tempered_posterior = None
+        self.particles = None
         self.prior_logp = None
         self.likelihood_logp = None
         self.tempered_posterior_logp = None
@@ -192,21 +189,14 @@ class SMC_KERNEL(ABC):
         """
         # Create dictionary that stores original variables shape and size
         initial_point = self.model.recompute_initial_point(seed=self.rng.integers(2 ** 30))
-        for v in self.variables:
-            self.var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
+
         # Create particles bijection map
         if self.start:
             init_rnd = self.start
         else:
             init_rnd = self.initialize_population()
 
-        population = []
-        for i in range(self.draws):
-            point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
-            population.append(DictToArrayBijection.map(point).data)
-
-        self.tempered_posterior = np.array(floatX(population))
-
+        self.particles = Particles.build(self.draws, init_rnd, self.model, self.rng)
         # Initialize prior and likelihood log probabilities
         shared = make_shared_replacements(initial_point, self.variables, self.model)
 
@@ -217,8 +207,8 @@ class SMC_KERNEL(ABC):
             initial_point, [self.model.datalogpt], self.variables, shared
         )
 
-        priors = [self.prior_logp_func(sample) for sample in self.tempered_posterior]
-        likelihoods = [self.likelihood_logp_func(sample) for sample in self.tempered_posterior]
+        priors = [self.prior_logp_func(sample) for sample in self.particles.as_array]
+        likelihoods = [self.likelihood_logp_func(sample) for sample in self.particles.as_array]
 
         self.prior_logp = np.array(priors).squeeze()
         self.likelihood_logp = np.array(likelihoods).squeeze()
@@ -270,7 +260,7 @@ class SMC_KERNEL(ABC):
             np.arange(self.draws), size=self.draws, p=self.weights
         )
 
-        self.tempered_posterior = self.tempered_posterior[self.resampling_indexes]
+        self.particles.resample(self.resampling_indexes)
         self.prior_logp = self.prior_logp[self.resampling_indexes]
         self.likelihood_logp = self.likelihood_logp[self.resampling_indexes]
 
@@ -311,27 +301,16 @@ class SMC_KERNEL(ABC):
 
         This method should not be overwritten.
         """
-        lenght_pos = len(self.tempered_posterior)
-        varnames = [v.name for v in self.variables]
+        return self.particles.to_trace(chain)
 
-        with self.model:
-            strace = NDArray(name=self.model.name)
-            strace.setup(lenght_pos, chain)
-        for i in range(lenght_pos):
-            value = []
-            size = 0
-            for varname in varnames:
-                shape, new_size = self.var_info[varname]
-                var_samples = self.tempered_posterior[i][size : size + new_size]
-                # Round discrete variable samples. The rounded values were the ones
-                # actually used in the logp evaluations (see logp_forw)
-                var = self.model[varname]
-                if var.dtype in discrete_types:
-                    var_samples = np.round(var_samples).astype(var.dtype)
-                value.append(var_samples.reshape(shape))
-                size += new_size
-            strace.record(point={k: v for k, v in zip(varnames, value)})
-        return strace
+    def _tempered_posterior_p(self, samples):
+        """
+        Evaluates tempered posterior over samples, in log scale.
+        """
+        ll = np.array([self.likelihood_logp_func(prop) for prop in samples])
+        pl = np.array([self.prior_logp_func(prop) for prop in samples])
+        sample_logp = pl + ll * self.beta
+        return sample_logp, pl, ll
 
 
 class IMH(SMC_KERNEL):
@@ -374,12 +353,13 @@ class IMH(SMC_KERNEL):
 
         # Update MVNormal proposal based on the mean and covariance of the
         # tempered posterior.
-        cov = np.cov(self.tempered_posterior, ddof=0, rowvar=0)
+        tempered_posterior = self.particles.as_array
+        cov = np.cov(tempered_posterior, ddof=0, rowvar=0)
         cov = np.atleast_2d(cov)
         cov += 1e-6 * np.eye(cov.shape[0])
         if np.isnan(cov).any() or np.isinf(cov).any():
             raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
-        mean = np.average(self.tempered_posterior, axis=0)
+        mean = np.average(tempered_posterior, axis=0)
         self.proposal_dist = multivariate_normal(mean, cov)
 
     def mutate(self):
@@ -392,22 +372,20 @@ class IMH(SMC_KERNEL):
         # We first compute the logp of proposing a transition to the current points.
         # This variable is updated at the end of the loop with the entries from the accepted
         # transitions, which is equivalent to recomputing it in every iteration of the loop.
-        backward_logp = self.proposal_dist.logpdf(self.tempered_posterior)
+        backward_logp = self.proposal_dist.logpdf(self.particles.as_array)
         for n_step in range(self.n_steps):
             proposal = floatX(self.proposal_dist.rvs(size=self.draws, random_state=self.rng))
             proposal = proposal.reshape(len(proposal), -1)
             # We then compute the logp of proposing a transition to the new points
             forward_logp = self.proposal_dist.logpdf(proposal)
 
-            ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
-            pl = np.array([self.prior_logp_func(prop) for prop in proposal])
-            proposal_logp = pl + ll * self.beta
+            proposal_logp, pl, ll = self._tempered_posterior_p(proposal)
             accepted = log_R[n_step] < (
                 (proposal_logp + backward_logp) - (self.tempered_posterior_logp + forward_logp)
             )
 
             ac_[n_step] = accepted
-            self.tempered_posterior[accepted] = proposal[accepted]
+            self.particles.set(accepted, proposal[accepted])
             self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
@@ -467,7 +445,7 @@ class MH(SMC_KERNEL):
         """Proposal dist is just a Multivariate Normal with unit identity covariance.
         Dimension specific scaling is provided by self.proposal_scales and set in self.tune()
         """
-        ndim = self.tempered_posterior.shape[1]
+        ndim = self.particles.as_array.shape[1]
         self.proposal_scales = np.full(self.draws, min(1, 2.38 ** 2 / ndim))
 
     def resample(self):
@@ -493,7 +471,7 @@ class MH(SMC_KERNEL):
             self.proposed = self.draws * self.n_steps
 
         # Update MVNormal proposal based on the covariance of the tempered posterior.
-        cov = np.cov(self.tempered_posterior, ddof=0, rowvar=0)
+        cov = np.cov(self.particles.as_array, ddof=0, rowvar=0)
         cov = np.atleast_2d(cov)
         cov += 1e-6 * np.eye(cov.shape[0])
         if np.isnan(cov).any() or np.isinf(cov).any():
@@ -506,18 +484,16 @@ class MH(SMC_KERNEL):
         log_R = np.log(self.rng.random((self.n_steps, self.draws)))
         for n_step in range(self.n_steps):
             proposal = floatX(
-                self.tempered_posterior
+                self.particles.as_array
                 + self.proposal_dist(num_draws=self.draws, rng=self.rng)
                 * self.proposal_scales[:, None]
             )
-            ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
-            pl = np.array([self.prior_logp_func(prop) for prop in proposal])
 
-            proposal_logp = pl + ll * self.beta
+            proposal_logp, pl, ll = self._tempered_posterior_p(proposal)
             accepted = log_R[n_step] < (proposal_logp - self.tempered_posterior_logp)
 
             ac_[n_step] = accepted
-            self.tempered_posterior[accepted] = proposal[accepted]
+            self.particles.set(accepted, proposal[accepted])
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
             self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
@@ -578,3 +554,90 @@ def _logp_forw(point, out_vars, in_vars, shared):
     f = compile_pymc([inarray0], out_list[0])
     f.trust_input = True
     return f
+
+
+class Particles:
+    """
+    List of draws from variables (particles)
+    belonging to a model that can be modified
+    in place as if they were an array.
+    """
+
+    @classmethod
+    def build(cls, draws: int, init_rnd, model, random_seed, dual_representation=False):
+        rng = np.random.default_rng(seed=random_seed)
+        initial_point = model.recompute_initial_point(seed=rng.integers(2 ** 30))
+        var_info = {}
+        variables = inputvars(model.value_vars)
+        for v in variables:
+            var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
+        points = [
+            Point({v.name: init_rnd[v.name][i] for v in variables}, model=model)
+            for i in range(draws)
+        ]
+        draws = draws
+        if dual_representation:
+            return DualParticles(points, draws, var_info, variables, model)
+        else:
+            return Particles(points, draws, var_info, variables, model)
+
+    def __init__(self, points, draws, var_info, variables, model):
+        self.as_array = np.array(floatX([DictToArrayBijection.map(point).data for point in points]))
+        self.variables = variables
+        self._draws = draws
+        self._var_info = var_info
+        self._model = model
+
+    def resample(self, resampling_indexes):
+        self.as_array = self.as_array[resampling_indexes]
+
+    def __len__(self):
+        return self._draws
+
+    def __getitem__(self, item):
+        return self.as_array[item]
+
+    def set(self, indexes, values):
+        """
+        Consistently updates array and points
+        representations. If no index is selected, modify all
+        """
+        if indexes is None:
+            if not len(values) == len(self):
+                raise ValueError(
+                    "If values size doesn't match particle size, then indexes need to be specified"
+                )
+            indexes = [True] * len(self)
+
+        elif not len(indexes) == len(self):
+            raise ValueError(
+                f"Indexes length {len(indexes)} does not match particles size {len(self)}"
+            )
+
+        self.as_array[indexes] = values
+
+    def to_trace(self, chain):
+        """
+        Builds a trace object out self,
+        rounding discrete variable samples.
+        """
+        varnames = [v.name for v in self.variables]
+
+        with self._model:
+            strace = NDArray(name=self._model.name)
+            strace.setup(len(self), chain)
+        for i in range(len(self)):
+            value = []
+            size = 0
+            for varname in varnames:
+                shape, new_size = self._var_info[varname]
+                var_samples = self.as_array[i][size : size + new_size]
+                # Round discrete variable samples. The rounded values were the ones
+                # actually used in the logp evaluations (see logp_forw)
+                var = self._model[varname]
+                if var.dtype in discrete_types:
+                    var_samples = np.round(var_samples).astype(var.dtype)
+                value.append(var_samples.reshape(shape))
+                size += new_size
+            strace.record(point={k: v for k, v in zip(varnames, value)})
+        return strace

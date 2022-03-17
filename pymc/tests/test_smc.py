@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import copy
 
 import aesara
 import aesara.tensor as at
@@ -31,7 +32,7 @@ import pymc as pm
 
 from pymc.aesaraf import floatX
 from pymc.backends.base import MultiTrace
-from pymc.smc.smc import IMH
+from pymc.smc.smc import IMH, Particles
 from pymc.tests.helpers import SeededTest, assert_random_state_equal
 
 
@@ -566,3 +567,60 @@ class TestMHKernel(SeededTest):
                 kernel=pm.smc.MH,
                 return_inferencedata=False,
             )
+
+
+class TestParticles(SeededTest):
+    def setup_class(self):
+        super().setup_class()
+        with pm.Model() as self.model:
+            a = pm.Poisson("a", 5)
+            b = pm.HalfNormal("b", 10)
+            y = pm.Normal("y", a, b, observed=[1, 2, 3, 4])
+
+        self.particles = Particles.build(
+            10,
+            {
+                "a": np.random.poisson(5, size=500),
+                "b_log__": np.abs(np.random.normal(0, 10, size=500)),
+            },
+            self.model,
+            1243,
+        )
+
+    def test_build(self):
+        assert [v.name for v in self.particles.variables] == ["b_log__", "a"]
+        assert self.particles.as_array.shape == (10, 2)
+
+    def test_to_trace(self):
+        samples = self.particles.to_trace(0).samples
+        assert set(samples.keys()) == {"a", "b", "b_log__"}
+        assert samples["a"].dtype == "int64"
+
+    def test_resample(self):
+        initial = copy.copy(self.particles)
+        self.particles.resample([9, 1, 2, 3, 4, 5, 6, 7, 8, 0])
+        for i in range(1, 9):
+            assert np.allclose(initial.as_array[i], self.particles.as_array[i])
+        assert np.allclose(initial.as_array[9], self.particles.as_array[0])
+
+    def test_set(self):
+        expected_particle_value = np.array([[12, 2]])
+        self.particles.set([True] + [False] * 9, expected_particle_value)
+        assert np.allclose(self.particles.as_array[0], np.array([12, 2]))
+
+    def test_set_no_indexes_few_values(self):
+        with pytest.raises(
+            ValueError,
+        ):
+            self.particles.set(None, np.array([[12, 2]]))
+
+    def test_set_no_indexes(self):
+        self.particles.set(None, np.tile(np.array([12, 2]), (10, 1)))
+        for i in range(0, 10):
+            assert np.allclose(self.particles[i], np.array([12, 2]))
+
+    def test_set_few_indexes(self):
+        with pytest.raises(
+            ValueError,
+        ):
+            self.particles.set([True, False], np.array([[12, 2]]))
