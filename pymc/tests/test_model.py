@@ -95,20 +95,20 @@ class TestBaseModel:
                 usermodel2.register_rv(pm.Normal.dist(), "v3")
                 pm.Normal("v4")
                 # this variable is created in parent model too
-        assert "another_v2" in model.named_vars
-        assert "another_v3" in model.named_vars
-        assert "another_v3" in usermodel2.named_vars
-        assert "another_v4" in model.named_vars
-        assert "another_v4" in usermodel2.named_vars
+        assert "another/v2" in model.named_vars
+        assert "another/v3" in model.named_vars
+        assert "another/v3" in usermodel2.named_vars
+        assert "another/v4" in model.named_vars
+        assert "another/v4" in usermodel2.named_vars
         assert hasattr(usermodel2, "v3")
         assert hasattr(usermodel2, "v2")
         assert hasattr(usermodel2, "v4")
         # When you create a class based model you should follow some rules
         with model:
             m = NewModel("one_more")
-        assert m.d is model["one_more_d"]
-        assert m["d"] is model["one_more_d"]
-        assert m["one_more_d"] is model["one_more_d"]
+        assert m.d is model["one_more/d"]
+        assert m["d"] is model["one_more/d"]
+        assert m["one_more/d"] is model["one_more/d"]
 
 
 class TestNested:
@@ -124,8 +124,8 @@ class TestNested:
     def test_named_context(self):
         with pm.Model() as m:
             NewModel(name="new")
-        assert "new_v1" in m.named_vars
-        assert "new_v2" in m.named_vars
+        assert "new/v1" in m.named_vars
+        assert "new/v2" in m.named_vars
 
     def test_docstring_example1(self):
         usage1 = DocstringModel()
@@ -138,10 +138,10 @@ class TestNested:
     def test_docstring_example2(self):
         with pm.Model() as model:
             DocstringModel(name="prefix")
-        assert "prefix_v1" in model.named_vars
-        assert "prefix_v2" in model.named_vars
-        assert "prefix_v3" in model.named_vars
-        assert "prefix_v3_sq" in model.named_vars
+        assert "prefix/v1" in model.named_vars
+        assert "prefix/v2" in model.named_vars
+        assert "prefix/v3" in model.named_vars
+        assert "prefix/v3_sq" in model.named_vars
         assert len(model.potentials), 1
 
     def test_duplicates_detection(self):
