@@ -196,7 +196,7 @@ class SMC_KERNEL(ABC):
         else:
             init_rnd = self.initialize_population()
 
-        self.particles = Particles.build(self.draws, initial_point, init_rnd, self.model, self.rng)
+        self.particles = Particles.build(self.draws, initial_point, init_rnd, self.model)
         # Initialize prior and likelihood log probabilities
         shared = make_shared_replacements(initial_point, self.variables, self.model)
 
@@ -557,7 +557,7 @@ class Particles:
     """
 
     @classmethod
-    def build(cls, draws: int, initial_point, init_rnd, model, dual_representation=False):
+    def build(cls, draws: int, initial_point, init_rnd, model):
         var_info = {}
         variables = inputvars(model.value_vars)
         for v in variables:
