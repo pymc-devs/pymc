@@ -1457,8 +1457,20 @@ class Model(WithMemoization, metaclass=ContextMeta):
             setattr(self, self.name_of(var.name), var)
 
     @property
-    def prefix(self):
-        return f"{self.name}/" if self.name else ""
+    def prefix(self) -> str:
+        parts = []
+        model = self
+        while True:
+            if model.name:
+                parts.append(model.name)
+            if model.isroot:
+                break
+            else:
+                model = model.parent
+        name = "/".join(reversed(parts))
+        if name:
+            name += "/"
+        return name
 
     def name_for(self, name):
         """Checks if name has prefix and adds if needed"""

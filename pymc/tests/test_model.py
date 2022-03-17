@@ -156,6 +156,31 @@ class TestNested:
             with pm.Model() as sub:
                 assert model is sub.root
 
+    def test_multi_scoping(self):
+        with pm.Model("sub") as model:
+            b = pm.Normal("var")
+            with pm.Model("sub"):
+                b = pm.Normal("var")
+        assert {"sub/var", "sub/sub/var"} == set(model.named_vars.keys())
+
+    def test_multi_scoping1(self):
+        with pm.Model("sub1") as model:
+            b = pm.Normal("var")
+            with pm.Model("sub2"):
+                b = pm.Normal("var")
+        assert {"sub1/var", "sub1/sub2/var"} == set(model.named_vars.keys())
+
+    def test_multi_scoping_coords(self):
+        with pm.Model("sub", coords=dict(c1=[1, 2, 3])) as m1:
+            a = pm.Normal("a", dims="c1")
+            with pm.Model("sub", coords=dict(c3=[6, 7, 2])) as m2:
+                a = pm.Normal("a", dims="c1")
+                e = pm.Normal("e", dims="c3")
+                m2.add_coord("c2", [3, 4, 5])
+                assert m1.coords is m2.coords
+            b = pm.Normal("b", dims="c2")
+            e = pm.Normal("e", dims="c3")
+
 
 class TestObserved:
     def test_observed_rv_fail(self):
