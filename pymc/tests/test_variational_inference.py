@@ -38,12 +38,20 @@ from pymc.variational.approximations import (
     NormalizingFlowGroup,
 )
 from pymc.variational.inference import ADVI, ASVGD, NFVI, SVGD, FullRankADVI, fit
-from pymc.variational.opvi import Approximation, Group
+from pymc.variational.opvi import Approximation, Group, NotImplementedInference
 
-# pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
-pytestmark = pytest.mark.xfail(
-    reason="These tests rely on Group, which hasn't been refactored for v4"
-)
+pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
+
+
+def ignore_not_implemented_inference(func):
+    @functools.wraps(func)
+    def new_test(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except NotImplementedInference:
+            pytest.xfail("NotImplementedInference")
+
+    return new_test
 
 
 @pytest.mark.parametrize("diff", ["relative", "absolute"])
@@ -114,6 +122,7 @@ def three_var_model():
         (not_raises(), {MeanFieldGroup: ["one"], FullRankGroup: ["two", "three"]}),
     ],
 )
+@ignore_not_implemented_inference
 def test_init_groups(three_var_model, raises, grouping):
     with raises, three_var_model:
         approxes, groups = zip(*grouping.items())
@@ -129,7 +138,9 @@ def test_init_groups(three_var_model, raises, grouping):
             else:
                 assert {pm.util.get_transformed(z) for z in g} == set(ig.group)
         else:
-            assert approx.ndim == three_var_model.ndim
+            model_dim = sum(v.size for v in three_var_model.compute_initial_point(0).values())
+            assert approx.ndim == model_dim
+        trace = approx.sample(100)
 
 
 @pytest.fixture(
@@ -149,6 +160,7 @@ def test_init_groups(three_var_model, raises, grouping):
     ],
     ids=lambda t: ", ".join(f"{k.__name__}: {v[0]}" for k, v in t[1].items()),
 )
+@ignore_not_implemented_inference
 def three_var_groups(request, three_var_model):
     kw, grouping = request.param
     approxes, groups = zip(*grouping.items())
@@ -208,8 +220,9 @@ def parametric_grouped_approxes(request):
 
 
 @pytest.fixture
+@ignore_not_implemented_inference
 def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
-    one_initial_value = three_var_model.recompute_initial_point()[
+    one_initial_value = three_var_model.compute_initial_point(0)[
         three_var_model.one.tag.value_var.name
     ]
     dsize = np.prod(one_initial_value.shape[1:])
@@ -234,9 +247,8 @@ def three_var_aevb_approx(three_var_model, three_var_aevb_groups):
 
 
 def test_sample_aevb(three_var_aevb_approx, aevb_initial):
-    pm.KLqp(three_var_aevb_approx).fit(
-        1, more_replacements={aevb_initial: np.zeros_like(aevb_initial.get_value())[:1]}
-    )
+    inf = pm.KLqp(three_var_aevb_approx)
+    inf.fit(1, more_replacements={aevb_initial: np.zeros_like(aevb_initial.get_value())[:1]})
     aevb_initial.set_value(np.random.rand(7, 7).astype("float32"))
     trace = three_var_aevb_approx.sample(500, return_inferencedata=False)
     assert set(trace.varnames) == {"one", "one_log__", "two", "three"}
@@ -265,6 +277,7 @@ def test_replacements_in_sample_node_aevb(three_var_aevb_approx, aevb_initial):
     ).eval({inp: np.random.rand(7, 7).astype("float32")})
 
 
+@ignore_not_implemented_inference
 def test_vae():
     minibatch_size = 10
     data = pm.floatX(np.random.rand(100))
@@ -296,6 +309,7 @@ def test_vae():
         )
 
 
+@ignore_not_implemented_inference
 def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
     approx = cls([three_var_model.one], model=three_var_model, **kw)
@@ -304,6 +318,7 @@ def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     logq.eval()
 
 
+@ignore_not_implemented_inference
 def test_logq_mini_2_sample_2_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
     approx = cls([three_var_model.one, three_var_model.two], model=three_var_model, **kw)
@@ -386,6 +401,7 @@ def test_logq_globals(three_var_approx):
         (not_raises(), "empirical", EmpiricalGroup, {"size": 100}),
     ],
 )
+@ignore_not_implemented_inference
 def test_group_api_vfam(three_var_model, raises, vfam, type_, kw):
     with three_var_model, raises:
         g = Group([three_var_model.one], vfam, **kw)
@@ -461,6 +477,7 @@ def test_group_api_vfam(three_var_model, raises, vfam, type_, kw):
         (not_raises(), dict(histogram=np.ones((20, 10, 2), "float32")), EmpiricalGroup, {}, None),
     ],
 )
+@ignore_not_implemented_inference
 def test_group_api_params(three_var_model, raises, params, type_, kw, formula):
     with three_var_model, raises:
         g = Group([three_var_model.one], params=params, **kw)
@@ -485,6 +502,7 @@ def test_group_api_params(three_var_model, raises, params, type_, kw, formula):
         (NormalizingFlowGroup, NormalizingFlow, {}),
     ],
 )
+@ignore_not_implemented_inference
 def test_single_group_shortcuts(three_var_model, approx, kw, gcls):
     with three_var_model:
         a = approx(**kw)
@@ -521,11 +539,11 @@ def test_elbo():
     # Exact value
     elbo_true = -0.5 * (
         3
-        + 3 * post_mu ** 2
+        + 3 * post_mu**2
         - 2 * (y_obs[0] + y_obs[1] + mu0) * post_mu
         + y_obs[0] ** 2
         + y_obs[1] ** 2
-        + mu0 ** 2
+        + mu0**2
         + 3 * np.log(2 * np.pi)
     ) + 0.5 * (np.log(2 * np.pi) + 1)
     np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
@@ -638,8 +656,8 @@ def simple_model_data(use_minibatch):
     mu = -5.0
 
     data = sigma * np.random.randn(n) + mu
-    d = n / sigma ** 2 + 1 / sigma0 ** 2
-    mu_post = (n * np.mean(data) / sigma ** 2 + mu0 / sigma0 ** 2) / d
+    d = n / sigma**2 + 1 / sigma0**2
+    mu_post = (n * np.mean(data) / sigma**2 + mu0 / sigma0**2) / d
     if use_minibatch:
         data = pm.Minibatch(data)
     return dict(
@@ -694,6 +712,7 @@ def inference_spec(request):
 
 
 @pytest.fixture(scope="function")
+@ignore_not_implemented_inference
 def inference(inference_spec, simple_model):
     with simple_model:
         return inference_spec()
@@ -713,7 +732,7 @@ def fit_kwargs(inference, use_minibatch):
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=12000
         ),
         (FullRankADVI, "full"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50), n=6000
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=6000
         ),
         (FullRankADVI, "mini"): dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50), n=12000
@@ -740,8 +759,8 @@ def test_fit_oo(inference, fit_kwargs, simple_model_data):
     trace = inference.fit(**fit_kwargs).sample(10000)
     mu_post = simple_model_data["mu_post"]
     d = simple_model_data["d"]
-    np.testing.assert_allclose(np.mean(trace["mu"]), mu_post, rtol=0.05)
-    np.testing.assert_allclose(np.std(trace["mu"]), np.sqrt(1.0 / d), rtol=0.2)
+    np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
+    np.testing.assert_allclose(np.std(trace.posterior["mu"]), np.sqrt(1.0 / d), rtol=0.2)
 
 
 def test_profile(inference):
@@ -817,6 +836,7 @@ def fit_method_with_object(request, another_simple_model):
         ("nfvi=bad-formula", dict(start={}), KeyError),
     ],
 )
+@ignore_not_implemented_inference
 def test_fit_fn_text(method, kwargs, error, another_simple_model):
     with another_simple_model:
         if error is not None:
@@ -833,11 +853,13 @@ def aevb_model():
         pm.Normal("y", size=(2,))
     x = model.x
     y = model.y
-    mu = aesara.shared(x.init_value)
-    rho = aesara.shared(np.zeros_like(x.init_value))
+    xr = model.compute_initial_point(0)[model.rvs_to_values[x].name]
+    mu = aesara.shared(xr)
+    rho = aesara.shared(np.zeros_like(xr))
     return {"model": model, "y": y, "x": x, "replace": dict(mu=mu, rho=rho)}
 
 
+@ignore_not_implemented_inference
 def test_aevb(inference_spec, aevb_model):
     # add to inference that supports aevb
     x = aevb_model["x"]
@@ -856,6 +878,7 @@ def test_aevb(inference_spec, aevb_model):
             pytest.skip("Does not support AEVB")
 
 
+@ignore_not_implemented_inference
 def test_rowwise_approx(three_var_model, parametric_grouped_approxes):
     # add to inference that supports aevb
     cls, kw = parametric_grouped_approxes
@@ -907,26 +930,43 @@ def binomial_model():
 
 
 @pytest.fixture(scope="module")
+@ignore_not_implemented_inference
 def binomial_model_inference(binomial_model, inference_spec):
     with binomial_model:
         return inference_spec()
 
 
+@pytest.mark.xfail("aesara.config.warn_float64 == 'raise'", reason="too strict float32")
 def test_replacements(binomial_model_inference):
     d = at.bscalar()
     d.tag.test_value = 1
     approx = binomial_model_inference.approx
     p = approx.model.p
-    p_t = p ** 3
+    p_t = p**3
     p_s = approx.sample_node(p_t)
+    assert not any(
+        isinstance(n.owner.op, aesara.tensor.random.basic.BetaRV)
+        for n in aesara.graph.ancestors([p_s])
+        if n.owner
+    ), "p should be replaced"
     if aesara.config.compute_test_value != "off":
         assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
     sampled = [p_s.eval() for _ in range(100)]
     assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
+    p_z = approx.sample_node(p_t, deterministic=False, size=10)
+    assert p_z.shape.eval() == (10,)
+    try:
+        p_z = approx.sample_node(p_t, deterministic=True, size=10)
+        assert p_z.shape.eval() == (10,)
+    except NotImplementedInference:
+        pass
 
-    p_d = approx.sample_node(p_t, deterministic=True)
-    sampled = [p_d.eval() for _ in range(100)]
-    assert all(map(operator.eq, sampled[1:], sampled[:-1]))  # deterministic
+    try:
+        p_d = approx.sample_node(p_t, deterministic=True)
+        sampled = [p_d.eval() for _ in range(100)]
+        assert all(map(operator.eq, sampled[1:], sampled[:-1]))  # deterministic
+    except NotImplementedInference:
+        pass
 
     p_r = approx.sample_node(p_t, deterministic=d)
     sampled = [p_r.eval({d: 1}) for _ in range(100)]
@@ -940,7 +980,7 @@ def test_sample_replacements(binomial_model_inference):
     i.tag.test_value = 1
     approx = binomial_model_inference.approx
     p = approx.model.p
-    p_t = p ** 3
+    p_t = p**3
     p_s = approx.sample_node(p_t, size=100)
     if aesara.config.compute_test_value != "off":
         assert p_s.tag.test_value.shape == (100,) + p_t.tag.test_value.shape
@@ -1028,6 +1068,7 @@ def test_flow_det(flow_spec):
     np.testing.assert_allclose(logJdet.eval(), det.eval(), atol=0.0001)
 
 
+@pytest.mark.skip("normalizing flows are not fully supported")
 def test_flow_det_local(flow_spec):
     z0 = at.arange(0, 12).astype("float32")
     spec = flow_spec.cls.get_param_spec_for(d=12)
@@ -1070,3 +1111,16 @@ def test_flow_formula(formula, length, order):
     if order is not None:
         assert flows_list == order
     spec(dim=2, jitter=1)(at.ones((3, 2))).eval()  # should work
+
+
+@pytest.mark.parametrize("score", [True, False])
+def test_fit_with_nans(score):
+    X_mean = pm.floatX(np.linspace(0, 10, 10))
+    y = pm.floatX(np.random.normal(X_mean * 4, 0.05))
+    with pm.Model():
+        inp = pm.Normal("X", X_mean, size=X_mean.shape)
+        coef = pm.Normal("b", 4.0)
+        mean = inp * coef
+        pm.Normal("y", mean, 0.1, observed=y)
+        with pytest.raises(FloatingPointError) as e:
+            advi = pm.fit(100, score=score, obj_optimizer=pm.adam(learning_rate=float("nan")))

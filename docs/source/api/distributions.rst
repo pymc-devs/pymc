@@ -1,3 +1,4 @@
+.. _api_distributions:
 *************
 Distributions
 *************
@@ -6,10 +7,11 @@ Distributions
 
    distributions/continuous
    distributions/discrete
-   distributions/logprob
    distributions/multivariate
    distributions/mixture
-   distributions/simulator
    distributions/timeseries
+   distributions/censored
+   distributions/simulator
    distributions/transforms
+   distributions/logprob
    distributions/utilities

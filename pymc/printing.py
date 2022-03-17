@@ -46,13 +46,13 @@ def str_for_dist(rv: TensorVariable, formatting: str = "plain", include_params: 
         if include_params:
             return r"${} \sim {}({})$".format(print_name, dist_name, ",~".join(dist_args))
         else:
-            return fr"${print_name} \sim {dist_name}$"
+            return rf"${print_name} \sim {dist_name}$"
     else:  # plain
         dist_name = rv.owner.op._print_name[0]
         if include_params:
             return r"{} ~ {}({})".format(print_name, dist_name, ", ".join(dist_args))
         else:
-            return fr"{print_name} ~ {dist_name}"
+            return rf"{print_name} ~ {dist_name}"
 
 
 def str_for_model(model: Model, formatting: str = "plain", include_params: bool = True) -> str:
@@ -62,6 +62,9 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
 
     rv_reprs = [rv.str_repr(formatting=formatting, include_params=include_params) for rv in all_rv]
     rv_reprs = [rv_repr for rv_repr in rv_reprs if "TransformedDistribution()" not in rv_repr]
+
+    if not rv_reprs:
+        return ""
     if "latex" in formatting:
         rv_reprs = [
             rv_repr.replace(r"\sim", r"&\sim &").strip("$")
@@ -99,14 +102,14 @@ def str_for_potential_or_deterministic(
     if "latex" in formatting:
         print_name = r"\text{" + _latex_escape(print_name) + "}"
         if include_params:
-            return fr"${print_name} \sim \operatorname{{{dist_name}}}({_str_for_expression(var, formatting=formatting)})$"
+            return rf"${print_name} \sim \operatorname{{{dist_name}}}({_str_for_expression(var, formatting=formatting)})$"
         else:
-            return fr"${print_name} \sim \operatorname{{{dist_name}}}$"
+            return rf"${print_name} \sim \operatorname{{{dist_name}}}$"
     else:  # plain
         if include_params:
-            return fr"{print_name} ~ {dist_name}({_str_for_expression(var, formatting=formatting)})"
+            return rf"{print_name} ~ {dist_name}({_str_for_expression(var, formatting=formatting)})"
         else:
-            return fr"{print_name} ~ {dist_name}"
+            return rf"{print_name} ~ {dist_name}"
 
 
 def _str_for_input_var(var: Variable, formatting: str) -> str:

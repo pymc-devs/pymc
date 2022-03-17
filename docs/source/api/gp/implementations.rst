@@ -2,14 +2,13 @@
 Implementations
 ***************
 
-.. currentmodule:: pymc.gp.gp
+.. currentmodule:: pymc.gp
 .. autosummary::
-   Latent
-   Marginal
-   LatentKron
-   MarginalKron
-   MarginalSparse
-   TP
+   :toctree: generated
 
-.. automodule:: pymc.gp.gp
-   :members:
+   Latent
+   LatentKron
+   Marginal
+   MarginalKron
+   MarginalApprox
+   TP

@@ -22,7 +22,6 @@ from aeppl.transforms import (
     RVTransform,
     Simplex,
 )
-from aesara.tensor.subtensor import advanced_set_subtensor1
 
 __all__ = [
     "RVTransform",
@@ -97,22 +96,31 @@ class SumTo1(RVTransform):
 
 
 class CholeskyCovPacked(RVTransform):
+    """
+    Transforms the diagonal elements of the LKJCholeskyCov distribution to be on the
+    log scale
+    """
+
     name = "cholesky-cov-packed"
 
-    def __init__(self, param_extract_fn):
-        self.param_extract_fn = param_extract_fn
+    def __init__(self, n):
+        """
+
+        Parameters
+        ----------
+        n: int
+            Number of diagonal entries in the LKJCholeskyCov distribution
+        """
+        self.diag_idxs = at.arange(1, n + 1).cumsum() - 1
 
     def backward(self, value, *inputs):
-        diag_idxs = self.param_extract_fn(inputs)
-        return advanced_set_subtensor1(value, at.exp(value[diag_idxs]), diag_idxs)
+        return at.set_subtensor(value[..., self.diag_idxs], at.exp(value[..., self.diag_idxs]))
 
     def forward(self, value, *inputs):
-        diag_idxs = self.param_extract_fn(inputs)
-        return advanced_set_subtensor1(value, at.log(value[diag_idxs]), diag_idxs)
+        return at.set_subtensor(value[..., self.diag_idxs], at.log(value[..., self.diag_idxs]))
 
     def log_jac_det(self, value, *inputs):
-        diag_idxs = self.param_extract_fn(inputs)
-        return at.sum(value[diag_idxs])
+        return at.sum(value[..., self.diag_idxs], axis=-1)
 
 
 class Chain(RVTransform):

@@ -57,15 +57,12 @@ from aesara.graph.basic import Variable
 
 import pymc as pm
 
-from pymc.aesaraf import at_rng, identity
+from pymc.aesaraf import at_rng, compile_pymc, identity, rvs_to_value_vars
 from pymc.backends import NDArray
+from pymc.blocking import DictToArrayBijection
+from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
-from pymc.util import (
-    WithMemoization,
-    get_default_varnames,
-    get_transformed,
-    locally_cachedmethod,
-)
+from pymc.util import WithMemoization, locally_cachedmethod
 from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
 
@@ -74,6 +71,10 @@ __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximat
 
 class VariationalInferenceError(Exception):
     """Exception for VI specific cases"""
+
+
+class NotImplementedInference(VariationalInferenceError, NotImplementedError):
+    """Marking non functional parts of code"""
 
 
 class ExplicitInferenceError(VariationalInferenceError, TypeError):
@@ -362,9 +363,9 @@ class ObjectiveFunction:
             total_grad_norm_constraint=total_grad_norm_constraint,
         )
         if score:
-            step_fn = aesara.function([], updates.loss, updates=updates, **fn_kwargs)
+            step_fn = compile_pymc([], updates.loss, updates=updates, **fn_kwargs)
         else:
-            step_fn = aesara.function([], None, updates=updates, **fn_kwargs)
+            step_fn = compile_pymc([], [], updates=updates, **fn_kwargs)
         return step_fn
 
     @aesara.config.change_flags(compute_test_value="off")
@@ -393,7 +394,7 @@ class ObjectiveFunction:
         if more_replacements is None:
             more_replacements = {}
         loss = self(sc_n_mc, more_replacements=more_replacements)
-        return aesara.function([], loss, **fn_kwargs)
+        return compile_pymc([], loss, **fn_kwargs)
 
     @aesara.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
@@ -833,9 +834,6 @@ class Group(WithMemoization):
         options=None,
         **kwargs,
     ):
-        # XXX: Needs to be refactored for v4
-        raise NotImplementedError("This class needs to be refactored for v4")
-
         if local and not self.supports_batched:
             raise LocalGroupError("%s does not support local groups" % self.__class__)
         if local and rowwise:
@@ -854,11 +852,29 @@ class Group(WithMemoization):
         self.group = group
         self.user_params = params
         self._user_params = None
+        self.replacements = collections.OrderedDict()
+        self.ordering = collections.OrderedDict()
         # save this stuff to use in __init_group__ later
         self._kwargs = kwargs
         if self.group is not None:
             # init can be delayed
             self.__init_group__(self.group)
+
+    def _prepare_start(self, start=None):
+        ipfn = make_initial_point_fn(
+            model=self.model,
+            overrides=start,
+            jitter_rvs={},
+            return_transformed=True,
+        )
+        start = ipfn(self.model.rng_seeder.randint(2**30, dtype=np.int64))
+        group_vars = {self.model.rvs_to_values[v].name for v in self.group}
+        start = {k: v for k, v in start.items() if k in group_vars}
+        if self.batched:
+            start = start[self.group[0].name][0]
+        else:
+            start = DictToArrayBijection.map(start).data
+        return start
 
     @classmethod
     def get_param_spec_for(cls, **kwargs):
@@ -940,6 +956,10 @@ class Group(WithMemoization):
     def __init_group__(self, group):
         if not group:
             raise GroupError("Got empty group")
+        if self.local:
+            raise NotImplementedInference("Local inferene aka AEVB is not supported in v4")
+        if self.batched:
+            raise NotImplementedInference("Batched inferene is not supported in v4")
         if self.group is None:
             # delayed init
             self.group = group
@@ -956,42 +976,44 @@ class Group(WithMemoization):
         self.input = self._input_type(self.__class__.__name__ + "_symbolic_input")
         # I do some staff that is not supported by standard __init__
         # so I have to to it by myself
-        self.group = [get_transformed(var) for var in self.group]
 
-        # XXX: This needs to be refactored
-        # self.ordering = ArrayOrdering([])
-        self.replacements = dict()
+        # 1) we need initial point (transformed space)
+        model_initial_point = self.model.compute_initial_point(0)
+        # 2) we'll work with a single group, a subset of the model
+        # here we need to create a mapping to replace value_vars with slices from the approximation
+        start_idx = 0
         for var in self.group:
             if var.type.numpy_dtype.name in discrete_types:
                 raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
-            begin = self.ddim
+            # 3) This is the way to infer shape and dtype of the variable
+            value_var = self.model.rvs_to_values[var]
+            test_var = model_initial_point[value_var.name]
             if self.batched:
+                # Leave a more complicated case for future work
                 if var.ndim < 1:
                     if self.local:
                         raise LocalGroupError("Local variable should not be scalar")
                     else:
                         raise BatchedGroupError("Batched variable should not be scalar")
-                # XXX: This needs to be refactored
-                # self.ordering.size += None  # (np.prod(var.dshape[1:])).astype(int)
+                size = test_var[0].size
                 if self.local:
-                    # XXX: This needs to be refactored
-                    shape = None  # (-1,) + var.dshape[1:]
+                    shape = (-1,) + test_var.shape[1:]
                 else:
-                    # XXX: This needs to be refactored
-                    shape = None  # var.dshape
+                    shape = test_var.shape
             else:
-                # XXX: This needs to be refactored
-                # self.ordering.size += None  # var.dsize
-                # XXX: This needs to be refactored
-                shape = None  # var.dshape
-            # end = self.ordering.size
-            # XXX: This needs to be refactored
-            vmap = None  # VarMap(var.name, slice(begin, end), shape, var.dtype)
-            # self.ordering.vmap.append(vmap)
-            # self.ordering.by_name[vmap.var] = vmap
-            vr = self.input[..., vmap.slc].reshape(shape).astype(vmap.dtyp)
-            vr.name = vmap.var + "_vi_replacement"
-            self.replacements[var] = vr
+                shape = test_var.shape
+                size = test_var.size
+            dtype = test_var.dtype
+            vr = self.input[..., start_idx : start_idx + size].reshape(shape).astype(dtype)
+            vr.name = value_var.name + "_vi_replacement"
+            self.replacements[value_var] = vr
+            self.ordering[value_var.name] = (
+                value_var.name,
+                slice(start_idx, start_idx + size),
+                shape,
+                dtype,
+            )
+            start_idx += size
 
     def _finalize_init(self):
         """*Dev* - clean up after init"""
@@ -1043,8 +1065,7 @@ class Group(WithMemoization):
     def bdim(self):
         if not self.local:
             if self.batched:
-                # XXX: This needs to be refactored
-                return None  # self.ordering.vmap[0].shp[0]
+                return next(iter(self.ordering.values()))[2][0]
             else:
                 return 1
         else:
@@ -1052,13 +1073,14 @@ class Group(WithMemoization):
 
     @node_property
     def ndim(self):
-        # XXX: This needs to be refactored
-        return None  # self.ordering.size * self.bdim
+        if self.batched:
+            return self.ordering.size * self.bdim
+        else:
+            return self.ddim
 
     @property
     def ddim(self):
-        # XXX: This needs to be refactored
-        return None  # self.ordering.size
+        return sum(s.stop - s.start for _, s, _, _ in self.ordering.values())
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         """*Dev* - allocates new initial random generator
@@ -1177,7 +1199,6 @@ class Group(WithMemoization):
         """
         node = self.to_flat_input(node)
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
-        random = at.patternbroadcast(random, self.symbolic_initial.broadcastable)
         return aesara.clone_replace(node, {self.input: random[0]})
 
     def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
@@ -1206,7 +1227,7 @@ class Group(WithMemoization):
     @node_property
     def symbolic_normalizing_constant(self):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`"""
-        t = self.to_flat_input(at.max([v.scaling for v in self.group]))
+        t = self.to_flat_input(at.max([v.tag.scaling for v in self.group]))
         t = self.symbolic_single_sample(t)
         return pm.floatX(t)
 
@@ -1222,7 +1243,7 @@ class Group(WithMemoization):
     def symbolic_logq(self):
         """*Dev* - correctly scaled `self.symbolic_logq_not_scaled`"""
         if self.local:
-            s = self.group[0].scaling
+            s = self.group[0].tag.scaling
             s = self.to_flat_input(s)
             s = self.symbolic_single_sample(s)
             return self.symbolic_logq_not_scaled * s
@@ -1359,7 +1380,7 @@ class Approximation(WithMemoization):
         """
         t = at.max(
             self.collect("symbolic_normalizing_constant")
-            + [var.scaling for var in self.model.observed_RVs]
+            + [var.tag.scaling for var in self.model.observed_RVs]
         )
         t = at.switch(self._scale_cost_to_minibatch, t, at.constant(1, dtype=t.dtype))
         return pm.floatX(t)
@@ -1516,29 +1537,30 @@ class Approximation(WithMemoization):
         try_to_set_test_value(_node, node, s)
         return node
 
-    def to_flat_input(self, node):
+    def to_flat_input(self, node, more_replacements=None):
         """*Dev* - replace vars with flattened view stored in `self.inputs`"""
+        more_replacements = more_replacements or {}
+        node = aesara.clone_replace(node, more_replacements)
         return aesara.clone_replace(node, self.replacements)
 
-    def symbolic_sample_over_posterior(self, node):
+    def symbolic_sample_over_posterior(self, node, more_replacements=None):
         """*Dev* - performs sampling of node applying independent samples from posterior each time.
         Note that it is done symbolically and this node needs :func:`set_size_and_deterministic` call
         """
-        node = self.to_flat_input(node)
+        node = self.to_flat_input(node, more_replacements=more_replacements)
 
-        def sample(*post, node, inputs):
-            node, inputs = post[-2:]
-            return aesara.clone_replace(node, dict(zip(inputs, post)))
+        def sample(*post):
+            return aesara.clone_replace(node, dict(zip(self.inputs, post)))
 
-        nodes, _ = aesara.scan(sample, self.symbolic_randoms, non_sequences=[node, inputs])
+        nodes, _ = aesara.scan(sample, self.symbolic_randoms)
         return nodes
 
-    def symbolic_single_sample(self, node):
+    def symbolic_single_sample(self, node, more_replacements=None):
         """*Dev* - performs sampling of node applying single sample from posterior.
         Note that it is done symbolically and this node needs
         :func:`set_size_and_deterministic` call with `size=1`
         """
-        node = self.to_flat_input(node)
+        node = self.to_flat_input(node, more_replacements=more_replacements)
         post = [v[0] for v in self.symbolic_randoms]
         inp = self.inputs
         return aesara.clone_replace(node, dict(zip(inp, post)))
@@ -1574,12 +1596,18 @@ class Approximation(WithMemoization):
         sampled node(s) with replacements
         """
         node_in = node
-        node = aesara.clone_replace(node, more_replacements)
+        if more_replacements:
+            node = aesara.clone_replace(node, more_replacements)
+        if not isinstance(node, (list, tuple)):
+            node = [node]
+        node, _ = rvs_to_value_vars(node, apply_transforms=True)
+        if not isinstance(node_in, (list, tuple)):
+            node = node[0]
         if size is None:
             node_out = self.symbolic_single_sample(node)
         else:
             node_out = self.symbolic_sample_over_posterior(node)
-        node_out = self.set_size_and_deterministic(node_out, size, deterministic, more_replacements)
+        node_out = self.set_size_and_deterministic(node_out, size, deterministic)
         try_to_set_test_value(node_in, node_out, size)
         return node_out
 
@@ -1589,7 +1617,7 @@ class Approximation(WithMemoization):
         """
 
         def vars_names(vs):
-            return {v.name for v in vs}
+            return {self.model.rvs_to_values[v].name for v in vs}
 
         for vars_, random, ordering in zip(
             self.collect("group"), self.symbolic_randoms, self.collect("ordering")
@@ -1606,42 +1634,40 @@ class Approximation(WithMemoization):
     @node_property
     def sample_dict_fn(self):
         s = at.iscalar()
-        names = [v.name for v in self.model.free_RVs]
+        names = [self.model.rvs_to_values[v].name for v in self.model.free_RVs]
         sampled = [self.rslice(name) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
-        sample_fn = aesara.function([s], sampled)
+        sample_fn = compile_pymc([s], sampled)
 
         def inner(draws=100):
             _samples = sample_fn(draws)
-            return {v_.name: s_ for v_, s_ in zip(self.model.free_RVs, _samples)}
+            return {v_: s_ for v_, s_ in zip(names, _samples)}
 
         return inner
 
-    def sample(self, draws=500, include_transformed=True):
+    def sample(self, draws=500, return_inferencedata=True, **kwargs):
         """Draw samples from variational posterior.
 
         Parameters
         ----------
         draws: `int`
             Number of random samples.
-        include_transformed: `bool`
-            If True, transformed variables are also sampled. Default is False.
+        return_inferencedata: `bool`
+            Return trace in Arviz format
 
         Returns
         -------
         trace: :class:`pymc.backends.base.MultiTrace`
             Samples drawn from variational posterior.
         """
-        vars_sampled = get_default_varnames(
-            [v.tag.value_var for v in self.model.unobserved_RVs],
-            include_transformed=include_transformed,
-        )
+        # TODO: add tests for include_transformed case
+        kwargs["log_likelihood"] = False
+
         samples = self.sample_dict_fn(draws)  # type: dict
         points = ({name: records[i] for name, records in samples.items()} for i in range(draws))
 
         trace = NDArray(
             model=self.model,
-            vars=vars_sampled,
             test_point={name: records[0] for name, records in samples.items()},
         )
         try:
@@ -1650,7 +1676,12 @@ class Approximation(WithMemoization):
                 trace.record(point)
         finally:
             trace.close()
-        return pm.sampling.MultiTrace([trace])
+
+        trace = pm.sampling.MultiTrace([trace])
+        if not return_inferencedata:
+            return trace
+        else:
+            return pm.to_inference_data(trace, model=self.model, **kwargs)
 
     @property
     def ndim(self):

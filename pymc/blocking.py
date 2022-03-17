@@ -35,6 +35,19 @@ PointType = Dict[str, np.ndarray]
 RaveledVars = collections.namedtuple("RaveledVars", "data, point_map_info")
 
 
+class Compose:
+    """
+    Compose two functions in a pickleable way
+    """
+
+    def __init__(self, fa: Callable[[PointType], T], fb: Callable[[RaveledVars], PointType]):
+        self.fa = fa
+        self.fb = fb
+
+    def __call__(self, x: RaveledVars) -> T:
+        return self.fa(self.fb(x))
+
+
 class DictToArrayBijection:
     """Map between a `dict`s of variables to an array space.
 
@@ -48,10 +61,10 @@ class DictToArrayBijection:
         vars_info = tuple((v, k, v.shape, v.dtype) for k, v in var_dict.items())
         raveled_vars = [v[0].ravel() for v in vars_info]
         if raveled_vars:
-            res = np.concatenate(raveled_vars)
+            result = np.concatenate(raveled_vars)
         else:
-            res = np.array([])
-        return RaveledVars(res, tuple(v[1:] for v in vars_info))
+            result = np.array([])
+        return RaveledVars(result, tuple(v[1:] for v in vars_info))
 
     @staticmethod
     def rmap(
@@ -69,9 +82,9 @@ class DictToArrayBijection:
 
         """
         if start_point:
-            res = dict(start_point)
+            result = dict(start_point)
         else:
-            res = {}
+            result = {}
 
         if not isinstance(array, RaveledVars):
             raise TypeError("`array` must be a `RaveledVars` type")
@@ -80,13 +93,15 @@ class DictToArrayBijection:
         for name, shape, dtype in array.point_map_info:
             arr_len = np.prod(shape, dtype=int)
             var = array.data[last_idx : last_idx + arr_len].reshape(shape).astype(dtype)
-            res[name] = var
+            result[name] = var
             last_idx += arr_len
 
-        return res
+        return result
 
     @classmethod
-    def mapf(cls, f: Callable[[PointType], T], start_point: Optional[PointType] = None) -> T:
+    def mapf(
+        cls, f: Callable[[PointType], T], start_point: Optional[PointType] = None
+    ) -> Callable[[RaveledVars], T]:
         """Create a callable that first maps back to ``dict`` inputs and then applies a function.
 
         function f: DictSpace -> T to ArraySpace -> T
@@ -100,16 +115,3 @@ class DictToArrayBijection:
         f: array -> T
         """
         return Compose(f, partial(cls.rmap, start_point=start_point))
-
-
-class Compose:
-    """
-    Compose two functions in a pickleable way
-    """
-
-    def __init__(self, fa, fb):
-        self.fa = fa
-        self.fb = fb
-
-    def __call__(self, x):
-        return self.fa(self.fb(x))

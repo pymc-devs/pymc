@@ -21,7 +21,7 @@ import time
 import traceback
 
 from collections import namedtuple
-from typing import Dict, Sequence
+from typing import Dict, List, Sequence
 
 import cloudpickle
 import numpy as np
@@ -425,8 +425,8 @@ class ParallelSampler:
         ]
 
         self._inactive = self._samplers.copy()
-        self._finished = []
-        self._active = []
+        self._finished: List[ProcessAdapter] = []
+        self._active: List[ProcessAdapter] = []
         self._max_active = cores
 
         self._in_context = False

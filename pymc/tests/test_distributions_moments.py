@@ -9,6 +9,7 @@ from scipy import special
 import pymc as pm
 
 from pymc.distributions import (
+    CAR,
     AsymmetricLaplace,
     Bernoulli,
     Beta,
@@ -20,7 +21,9 @@ from pymc.distributions import (
     Constant,
     DensityDist,
     Dirichlet,
+    DirichletMultinomial,
     DiscreteUniform,
+    DiscreteWeibull,
     ExGaussian,
     Exponential,
     Flat,
@@ -37,12 +40,15 @@ from pymc.distributions import (
     KroneckerNormal,
     Kumaraswamy,
     Laplace,
+    LKJCholeskyCov,
+    LKJCorr,
     Logistic,
     LogitNormal,
     LogNormal,
     MatrixNormal,
     Moyal,
     Multinomial,
+    MvNormal,
     MvStudentT,
     NegativeBinomial,
     Normal,
@@ -52,6 +58,7 @@ from pymc.distributions import (
     Rice,
     Simulator,
     SkewNormal,
+    StickBreakingWeights,
     StudentT,
     Triangular,
     TruncatedNormal,
@@ -64,8 +71,7 @@ from pymc.distributions import (
     ZeroInflatedPoisson,
 )
 from pymc.distributions.distribution import _get_moment, get_moment
-from pymc.distributions.logprob import logpt
-from pymc.distributions.multivariate import MvNormal
+from pymc.distributions.logprob import joint_logpt
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
@@ -94,10 +100,6 @@ def test_all_distributions_have_moments():
 
     # Distributions that have not been refactored for V4 yet
     not_implemented = {
-        dist_module.multivariate.LKJCorr,
-        dist_module.mixture.Mixture,
-        dist_module.mixture.MixtureSameFamily,
-        dist_module.mixture.NormalMixture,
         dist_module.timeseries.AR,
         dist_module.timeseries.AR1,
         dist_module.timeseries.GARCH11,
@@ -108,9 +110,6 @@ def test_all_distributions_have_moments():
 
     # Distributions that have been refactored but don't yet have moments
     not_implemented |= {
-        dist_module.discrete.DiscreteWeibull,
-        dist_module.multivariate.CAR,
-        dist_module.multivariate.DirichletMultinomial,
         dist_module.multivariate.Wishart,
     }
 
@@ -159,11 +158,12 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
     except NotImplementedError:
         random_draw = moment
 
-    assert moment.shape == expected.shape == random_draw.shape
+    assert moment.shape == expected.shape
+    assert expected.shape == random_draw.shape
     assert np.allclose(moment, expected)
 
     if check_finite_logp:
-        logp_moment = logpt(model["x"], at.constant(moment), transformed=False).eval()
+        logp_moment = joint_logpt(model["x"], at.constant(moment), transformed=False).eval()
         assert np.isfinite(logp_moment)
 
 
@@ -624,17 +624,17 @@ def test_constant_moment(c, size, expected):
 
 
 @pytest.mark.parametrize(
-    "psi, theta, size, expected",
+    "psi, mu, size, expected",
     [
-        (0.9, 3.0, None, 2),
+        (0.9, 3.0, None, 3),
         (0.8, 2.9, 5, np.full(5, 2)),
         (0.2, np.arange(1, 5) * 5, None, np.arange(1, 5)),
         (0.2, np.arange(1, 5) * 5, (2, 4), np.full((2, 4), np.arange(1, 5))),
     ],
 )
-def test_zero_inflated_poisson_moment(psi, theta, size, expected):
+def test_zero_inflated_poisson_moment(psi, mu, size, expected):
     with Model() as model:
-        ZeroInflatedPoisson("x", psi=psi, theta=theta, size=size)
+        ZeroInflatedPoisson("x", psi=psi, mu=mu, size=size)
     assert_moment_is_expected(model, expected)
 
 
@@ -748,6 +748,27 @@ def test_hyper_geometric_moment(N, k, n, size, expected):
 def test_discrete_uniform_moment(lower, upper, size, expected):
     with Model() as model:
         DiscreteUniform("x", lower=lower, upper=upper, size=size)
+        assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "q, beta, size, expected",
+    [
+        (0.5, 0.5, None, 0),
+        (0.6, 0.1, 5, (20,) * 5),
+        (np.linspace(0.25, 0.99, 4), 0.42, None, [0, 0, 6, 23862]),
+        (
+            np.linspace(0.5, 0.99, 3),
+            [[1, 1.25, 1.75], [1.25, 0.75, 0.5]],
+            None,
+            [[0, 0, 10], [0, 2, 4755]],
+        ),
+    ],
+)
+def test_discrete_weibull_moment(q, beta, size, expected):
+    with Model() as model:
+        DiscreteWeibull("x", q=q, beta=beta, size=size)
+    assert_moment_is_expected(model, expected)
 
 
 @pytest.mark.parametrize(
@@ -765,7 +786,7 @@ def test_discrete_uniform_moment(lower, upper, size, expected):
         ),
         (
             np.array([[1, 2, 3], [5, 6, 7]]),
-            7,
+            (7, 2),
             np.apply_along_axis(
                 lambda x: np.divide(x, np.array([6, 18])),
                 1,
@@ -774,10 +795,7 @@ def test_discrete_uniform_moment(lower, upper, size, expected):
         ),
         (
             np.full(shape=np.array([7, 3]), fill_value=np.array([13, 17, 19])),
-            (
-                11,
-                5,
-            ),
+            (11, 5, 7),
             np.broadcast_to([13, 17, 19], shape=[11, 5, 7, 3]) / 49,
         ),
     ],
@@ -919,7 +937,7 @@ def test_interpolated_moment(x_points, pdf_points, size, expected):
         (
             np.array([[3.0, 5], [1, 4]]),
             np.identity(2),
-            (4, 5),
+            (4, 5, 2),
             np.full((4, 5, 2, 2), [[3.0, 5], [1, 4]]),
         ),
     ],
@@ -928,8 +946,36 @@ def test_mv_normal_moment(mu, cov, size, expected):
     with Model() as model:
         x = MvNormal("x", mu=mu, cov=cov, size=size)
 
-    # MvNormal logp is only impemented for up to 2D variables
+    # MvNormal logp is only implemented for up to 2D variables
     assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
+
+
+@pytest.mark.parametrize(
+    "mu, size, expected",
+    [
+        (
+            np.array([1, 0, 3.0, 4]),
+            None,
+            np.array([1, 0, 3.0, 4]),
+        ),
+        (np.array([1, 0, 3.0, 4]), 6, np.full((6, 4), [1, 0, 3.0, 4])),
+        (np.array([1, 0, 3.0, 4]), (5, 3), np.full((5, 3, 4), [1, 0, 3.0, 4])),
+        (
+            np.array([[3.0, 5, 2, 1], [1, 4, 0.5, 9]]),
+            (4, 5, 2),
+            np.full((4, 5, 2, 4), [[3.0, 5, 2, 1], [1, 4, 0.5, 9]]),
+        ),
+    ],
+)
+def test_car_moment(mu, size, expected):
+    W = np.array(
+        [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
+    )
+    tau = 2
+    alpha = 0.5
+    with Model() as model:
+        CAR("x", mu=mu, W=W, alpha=alpha, tau=tau, size=size)
+    assert_moment_is_expected(model, expected)
 
 
 @pytest.mark.parametrize(
@@ -959,8 +1005,8 @@ rand2d = np.random.rand(2, 3)
         (2, rand1d, np.eye(2), 2, np.full((2, 2), rand1d)),
         (2, rand1d, np.eye(2), (2, 5), np.full((2, 5, 2), rand1d)),
         (2, rand2d, np.eye(3), None, rand2d),
-        (2, rand2d, np.eye(3), 2, np.full((2, 2, 3), rand2d)),
-        (2, rand2d, np.eye(3), (2, 5), np.full((2, 5, 2, 3), rand2d)),
+        (2, rand2d, np.eye(3), (2, 2), np.full((2, 2, 3), rand2d)),
+        (2, rand2d, np.eye(3), (2, 5, 2), np.full((2, 5, 2, 3), rand2d)),
     ],
 )
 def test_mvstudentt_moment(nu, mu, cov, size, expected):
@@ -969,11 +1015,6 @@ def test_mvstudentt_moment(nu, mu, cov, size, expected):
 
     # MvStudentT logp is only impemented for up to 2D variables
     assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
-
-
-def check_matrixnormal_moment(mu, rowchol, colchol, size, expected):
-    with Model() as model:
-        MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
 
 
 @pytest.mark.parametrize(
@@ -1043,11 +1084,12 @@ def test_asymmetriclaplace_moment(b, kappa, mu, size, expected):
     ],
 )
 def test_matrixnormal_moment(mu, rowchol, colchol, size, expected):
-    if size is None:
-        check_matrixnormal_moment(mu, rowchol, colchol, size, expected)
-    else:
-        with pytest.raises(NotImplementedError):
-            check_matrixnormal_moment(mu, rowchol, colchol, size, expected)
+    with Model() as model:
+        x = MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
+
+    # MatrixNormal logp is only implemented for 2d values
+    check_logp = x.ndim == 2
+    assert_moment_is_expected(model, expected, check_finite_logp=check_logp)
 
 
 @pytest.mark.parametrize(
@@ -1087,6 +1129,35 @@ def test_matrixnormal_moment(mu, rowchol, colchol, size, expected):
 def test_rice_moment(nu, sigma, size, expected):
     with Model() as model:
         Rice("x", nu=nu, sigma=sigma, size=size)
+
+
+@pytest.mark.parametrize(
+    "alpha, K, size, expected",
+    [
+        (3, 11, None, np.append((3 / 4) ** np.arange(11) * 1 / 4, (3 / 4) ** 11)),
+        (5, 19, None, np.append((5 / 6) ** np.arange(19) * 1 / 6, (5 / 6) ** 19)),
+        (
+            1,
+            7,
+            (13,),
+            np.full(
+                shape=(13, 8), fill_value=np.append((1 / 2) ** np.arange(7) * 1 / 2, (1 / 2) ** 7)
+            ),
+        ),
+        (
+            0.5,
+            5,
+            (3, 5, 7),
+            np.full(
+                shape=(3, 5, 7, 6),
+                fill_value=np.append((1 / 3) ** np.arange(5) * 2 / 3, (1 / 3) ** 5),
+            ),
+        ),
+    ],
+)
+def test_stickbreakingweights_moment(alpha, K, size, expected):
+    with Model() as model:
+        StickBreakingWeights("x", alpha=alpha, K=K, size=size)
     assert_moment_is_expected(model, expected)
 
 
@@ -1248,7 +1319,7 @@ def test_polyagamma_moment(h, z, size, expected):
         (
             np.array([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]]),
             np.array([1, 10]),
-            2,
+            (2, 2),
             np.full((2, 2, 4), [[1, 0, 0, 0], [2, 3, 3, 2]]),
         ),
     ],
@@ -1264,7 +1335,13 @@ def test_multinomial_moment(p, n, size, expected):
     [
         (0.2, 10, 3, None, 2),
         (0.2, 10, 4, 5, np.full(5, 2)),
-        (0.4, np.arange(1, 5), np.arange(2, 6), None, np.array([0, 0, 1, 1])),
+        (
+            0.4,
+            np.arange(1, 5),
+            np.arange(2, 6),
+            None,
+            np.array([0, 1, 1, 2] if aesara.config.floatX == "float64" else [0, 0, 1, 1]),
+        ),
         (
             np.linspace(0.2, 0.6, 3),
             np.arange(1, 10, 4),
@@ -1307,7 +1384,7 @@ def test_simulator_moment(mu, sigma, size):
 
     n = 10  # samples
     expected_sample_mean = mu
-    expected_sample_mean_std = np.sqrt(sigma ** 2 / n)
+    expected_sample_mean_std = np.sqrt(sigma**2 / n)
 
     # Multiple test adjustment for z-test to maintain alpha=0.01
     alpha = 0.01
@@ -1341,7 +1418,72 @@ def test_simulator_moment(mu, sigma, size):
         ),
     ],
 )
-def test_kronecker_normal_moments(mu, covs, size, expected):
+def test_kronecker_normal_moment(mu, covs, size, expected):
     with Model() as model:
         KroneckerNormal("x", mu=mu, covs=covs, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "n, eta, size, expected",
+    [
+        (3, 1, None, np.zeros(3)),
+        (5, 1, None, np.zeros(10)),
+        (3, 1, 1, np.zeros((1, 3))),
+        (5, 1, (2, 3), np.zeros((2, 3, 10))),
+    ],
+)
+def test_lkjcorr_moment(n, eta, size, expected):
+    with Model() as model:
+        LKJCorr("x", n=n, eta=eta, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+@pytest.mark.parametrize(
+    "n, eta, size, expected",
+    [
+        (3, 1, None, np.array([1, 0, 1, 0, 0, 1])),
+        (4, 1, None, np.array([1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])),
+        (3, 1, 1, np.array([[1, 0, 1, 0, 0, 1]])),
+        (
+            4,
+            1,
+            (2, 3),
+            np.full((2, 3, 10), np.array([1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])),
+        ),
+    ],
+)
+def test_lkjcholeskycov_moment(n, eta, size, expected):
+    with Model() as model:
+        sd_dist = pm.Exponential.dist(1, size=(*to_tuple(size), n))
+        LKJCholeskyCov("x", n=n, eta=eta, sd_dist=sd_dist, size=size, compute_corr=False)
+    assert_moment_is_expected(model, expected, check_finite_logp=size is None)
+
+
+@pytest.mark.parametrize(
+    "a, n, size, expected",
+    [
+        (np.array([2, 2, 2, 2]), 1, None, np.array([1, 0, 0, 0])),
+        (np.array([3, 6, 0.5, 0.5]), 2, None, np.array([1, 1, 0, 0])),
+        (np.array([30, 60, 5, 5]), 10, None, np.array([4, 6, 0, 0])),
+        (
+            np.array([[26, 26, 26, 22]]),  # Dim: 1 x 4
+            np.array([[1], [10]]),  # Dim: 2 x 1
+            None,
+            np.array([[[1, 0, 0, 0]], [[2, 3, 3, 2]]]),  # Dim: 2 x 1 x 4
+        ),
+        (
+            np.array([[26, 26, 26, 22]]),  # Dim: 1 x 4
+            np.array([[1], [10]]),  # Dim: 2 x 1
+            (2, 1, 2, 1),
+            np.full(
+                (2, 1, 2, 1, 4),
+                np.array([[[1, 0, 0, 0]], [[2, 3, 3, 2]]]),  # Dim: 2 x 1 x 4
+            ),
+        ),
+    ],
+)
+def test_dirichlet_multinomial_moment(a, n, size, expected):
+    with Model() as model:
+        DirichletMultinomial("x", n=n, a=a, size=size)
     assert_moment_is_expected(model, expected)

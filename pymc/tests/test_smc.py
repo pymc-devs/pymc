@@ -141,11 +141,13 @@ class TestSMC(SeededTest):
             with pm.Model() as model:
                 a = pm.Beta("a", alpha, beta)
                 y = pm.Bernoulli("y", a, observed=data)
-                trace = pm.sample_smc(2000, return_inferencedata=False)
-                marginals.append(trace.report.log_marginal_likelihood)
+                trace = pm.sample_smc(2000, chains=2, return_inferencedata=False)
+            # log_marignal_likelihood is found in the last value of each chain
+            lml = np.mean([chain[-1] for chain in trace.report.log_marginal_likelihood])
+            marginals.append(lml)
 
         # compare to the analytical result
-        assert abs(np.exp(np.nanmean(marginals[1]) - np.nanmean(marginals[0])) - 4.0) <= 1
+        assert abs(np.exp(marginals[1] - marginals[0]) - 4.0) <= 1
 
     def test_start(self):
         with pm.Model() as model:
@@ -164,36 +166,29 @@ class TestSMC(SeededTest):
                 draws=10,
                 chains=1,
                 threshold=0.7,
-                n_steps=15,
-                tune_steps=False,
-                p_acc_rate=0.5,
+                correlation_threshold=0.02,
                 return_inferencedata=False,
                 kernel=pm.smc.IMH,
             )
 
             assert trace.report.threshold == 0.7
             assert trace.report.n_draws == 10
-            assert trace.report.n_tune == 15
-            assert trace.report.tune_steps is False
-            assert trace.report.p_acc_rate == 0.5
+
+            assert trace.report.correlation_threshold == 0.02
 
         with self.fast_model:
             trace = pm.sample_smc(
                 draws=10,
                 chains=1,
                 threshold=0.95,
-                n_steps=15,
-                tune_steps=False,
-                p_acc_rate=0.5,
+                correlation_threshold=0.02,
                 return_inferencedata=False,
                 kernel=pm.smc.MH,
             )
 
             assert trace.report.threshold == 0.95
             assert trace.report.n_draws == 10
-            assert trace.report.n_tune == 15
-            assert trace.report.tune_steps is False
-            assert trace.report.p_acc_rate == 0.5
+            assert trace.report.correlation_threshold == 0.02
 
     @pytest.mark.parametrize("chains", (1, 2))
     def test_return_datatype(self, chains):
@@ -300,7 +295,7 @@ class TestSimulator(SeededTest):
             s = pm.Simulator("s", self.normal_sim, a, b, observed=self.data)
 
     def test_one_gaussian(self):
-        assert self.count_rvs(self.SMABC_test.logpt) == 1
+        assert self.count_rvs(self.SMABC_test.logpt()) == 1
 
         with self.SMABC_test:
             trace = pm.sample_smc(draws=1000, chains=1, return_inferencedata=False)
@@ -313,7 +308,7 @@ class TestSimulator(SeededTest):
         assert abs(self.data.std() - trace["b"].mean()) < 0.05
 
         assert pr_p["s"].shape == (1000, 1000)
-        assert abs(0 - pr_p["s"].mean()) < 0.10
+        assert abs(0 - pr_p["s"].mean()) < 0.15
         assert abs(1.4 - pr_p["s"].std()) < 0.10
 
         assert po_p["s"].shape == (1000, 1000)
@@ -334,7 +329,7 @@ class TestSimulator(SeededTest):
                 observed=self.data,
             )
 
-        assert self.count_rvs(m.logpt) == 1
+        assert self.count_rvs(m.logpt()) == 1
 
         with m:
             pm.sample_smc(draws=100)
@@ -355,7 +350,7 @@ class TestSimulator(SeededTest):
                 sum_stat=self.quantiles,
                 observed=scalar_data,
             )
-        assert self.count_rvs(m.logpt) == 1
+        assert self.count_rvs(m.logpt()) == 1
 
         with pm.Model() as m:
             s = pm.Simulator(
@@ -367,10 +362,10 @@ class TestSimulator(SeededTest):
                 sum_stat="mean",
                 observed=scalar_data,
             )
-        assert self.count_rvs(m.logpt) == 1
+        assert self.count_rvs(m.logpt()) == 1
 
     def test_model_with_potential(self):
-        assert self.count_rvs(self.SMABC_potential.logpt) == 1
+        assert self.count_rvs(self.SMABC_potential.logpt()) == 1
 
         with self.SMABC_potential:
             trace = pm.sample_smc(draws=100, chains=1, return_inferencedata=False)
@@ -414,17 +409,17 @@ class TestSimulator(SeededTest):
                 observed=data2,
             )
 
-        assert self.count_rvs(m.logpt) == 2
+        assert self.count_rvs(m.logpt()) == 2
 
         # Check that the logps use the correct methods
         a_val = m.rvs_to_values[a]
         sim1_val = m.rvs_to_values[sim1]
-        logp_sim1 = pm.logpt(sim1, sim1_val)
+        logp_sim1 = pm.joint_logpt(sim1, sim1_val)
         logp_sim1_fn = aesara.function([a_val], logp_sim1)
 
         b_val = m.rvs_to_values[b]
         sim2_val = m.rvs_to_values[sim2]
-        logp_sim2 = pm.logpt(sim2, sim2_val)
+        logp_sim2 = pm.joint_logpt(sim2, sim2_val)
         logp_sim2_fn = aesara.function([b_val], logp_sim2)
 
         assert any(
@@ -464,7 +459,7 @@ class TestSimulator(SeededTest):
                 observed=data,
             )
 
-        assert self.count_rvs(m.logpt) == 2
+        assert self.count_rvs(m.logpt()) == 2
 
         with m:
             trace = pm.sample_smc(return_inferencedata=False)
@@ -576,15 +571,14 @@ class TestParticles(SeededTest):
             a = pm.Poisson("a", 5)
             b = pm.HalfNormal("b", 10)
             y = pm.Normal("y", a, b, observed=[1, 2, 3, 4])
-
         self.particles = Particles.build(
             10,
+            {"a": np.array(5), "b_log__": np.array(2.30258509)},
             {
                 "a": np.random.poisson(5, size=500),
                 "b_log__": np.abs(np.random.normal(0, 10, size=500)),
             },
             self.model,
-            1243,
         )
 
     def test_build(self):

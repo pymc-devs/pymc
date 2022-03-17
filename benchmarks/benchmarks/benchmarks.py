@@ -32,9 +32,9 @@ def glm_hierarchical_model(random_seed=123):
 
     n_counties = len(data.county.unique())
     with pm.Model() as model:
-        mu_a = pm.Normal("mu_a", mu=0.0, sd=100 ** 2)
+        mu_a = pm.Normal("mu_a", mu=0.0, sd=100**2)
         sigma_a = pm.HalfCauchy("sigma_a", 5)
-        mu_b = pm.Normal("mu_b", mu=0.0, sd=100 ** 2)
+        mu_b = pm.Normal("mu_b", mu=0.0, sd=100**2)
         sigma_b = pm.HalfCauchy("sigma_b", 5)
         a = pm.Normal("a", mu=0, sd=1, shape=n_counties)
         b = pm.Normal("b", mu=0, sd=1, shape=n_counties)
@@ -70,7 +70,7 @@ def mixture_model(random_seed=1234):
     # Initialization can be poorly specified, this is a hack to make it work
     start = {
         "mu": mu_true.copy(),
-        "tau_log__": np.log(1.0 / sigma ** 2),
+        "tau_log__": np.log(1.0 / sigma**2),
         "w_stickbreaking__": np.array([-0.03, 0.44]),
     }
     return model, start
@@ -137,8 +137,8 @@ class ExampleSuite:
             group2_mean = pm.Normal("group2_mean", y_mean, sd=y_std)
             group1_std = pm.Uniform("group1_std", lower=sigma_low, upper=sigma_high)
             group2_std = pm.Uniform("group2_std", lower=sigma_low, upper=sigma_high)
-            lambda_1 = group1_std ** -2
-            lambda_2 = group2_std ** -2
+            lambda_1 = group1_std**-2
+            lambda_2 = group2_std**-2
 
             nu = pm.Exponential("ν_minus_one", 1 / 29.0) + 1
 
@@ -147,7 +147,7 @@ class ExampleSuite:
             diff_of_means = pm.Deterministic("difference of means", group1_mean - group2_mean)
             pm.Deterministic("difference of stds", group1_std - group2_std)
             pm.Deterministic(
-                "effect size", diff_of_means / np.sqrt((group1_std ** 2 + group2_std ** 2) / 2)
+                "effect size", diff_of_means / np.sqrt((group1_std**2 + group2_std**2) / 2)
             )
             pm.sample(
                 draws=20000, cores=4, chains=4, progressbar=False, compute_convergence_checks=False

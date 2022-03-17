@@ -158,7 +158,7 @@ class DifferentialEquation(Op):
         theta = at.cast(at.unbroadcast(at.as_tensor_variable(theta), 0), floatX)
         inputs = [y0, theta]
         for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
-            if not input_val.type == itype:
+            if not input_val.type.in_same_class(itype):
                 raise ValueError(
                     f"Input {i} of type {input_val.type} does not have the expected type of {itype}"
                 )

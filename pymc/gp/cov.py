@@ -526,7 +526,7 @@ class Exponential(Stationary):
 
     .. math::
 
-       k(x, x') = \mathrm{exp}\left[ -\frac{||x - x'||}{2\ell^2} \right]
+       k(x, x') = \mathrm{exp}\left[ -\frac{||x - x'||}{2\ell} \right]
     """
 
     def full(self, X, Xs=None):

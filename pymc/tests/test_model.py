@@ -25,6 +25,7 @@ import numpy.testing as npt
 import pandas as pd
 import pytest
 import scipy.sparse as sps
+import scipy.stats as st
 
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorConstant
@@ -33,7 +34,7 @@ import pymc as pm
 
 from pymc import Deterministic, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.distributions import Normal, logpt_sum, transforms
+from pymc.distributions import Normal, transforms
 from pymc.exceptions import ShapeError
 from pymc.model import Point, ValueGradFunction
 from pymc.tests.helpers import SeededTest
@@ -58,7 +59,7 @@ class DocstringModel(pm.Model):
         self.register_rv(Normal.dist(mu=mean, sigma=sigma), "v1")
         Normal("v2", mu=mean, sigma=sigma)
         Normal("v3", mu=mean, sigma=Normal("sd", mu=10, sigma=1, initval=1.0))
-        Deterministic("v3_sq", self.v3 ** 2)
+        Deterministic("v3_sq", self.v3**2)
         Potential("p1", at.constant(1))
 
 
@@ -190,7 +191,7 @@ def test_duplicate_vars():
     with pytest.raises(ValueError) as err:
         with pm.Model():
             a = pm.Normal("a")
-            pm.Potential("a", a ** 2)
+            pm.Potential("a", a**2)
     err.match("already exists")
 
     with pytest.raises(ValueError) as err:
@@ -286,7 +287,7 @@ class TestValueGradFunction(unittest.TestCase):
             step = pm.NUTS()
 
         func = step._logp_dlogp_func
-        initial_point = m.recompute_initial_point()
+        initial_point = m.compute_initial_point()
         func.set_extra_values(initial_point)
         q = func.dict_to_array(initial_point)
         logp, dlogp = func(q)
@@ -327,7 +328,7 @@ class TestValueGradFunction(unittest.TestCase):
             obs = pm.Bernoulli("obs", p=p, observed=data)
 
         npt.assert_allclose(
-            logpt_sum(obs).eval({p.tag.value_var: pm.floatX(np.array(0.0))}),
+            m.compile_logp(obs)({"p_logodds__": pm.floatX(np.array(0.0))}),
             np.log(0.5) * 10,
         )
 
@@ -343,7 +344,7 @@ class TestValueGradFunction(unittest.TestCase):
             mu = pm.Normal("mu", 0, 5)
             obs = pm.TruncatedNormal("obs", mu=mu, sigma=1, lower=-1, upper=2, observed=data)
 
-        npt.assert_allclose(m.dlogp([m.rvs_to_values[mu]])({"mu": 0}), 2.499424682024436, rtol=1e-5)
+        npt.assert_allclose(m.compile_dlogp(mu)({"mu": 0}), 2.499424682024436, rtol=1e-5)
 
 
 def test_multiple_observed_rv():
@@ -365,6 +366,7 @@ def test_tempered_logp_dlogp():
     with pm.Model() as model:
         pm.Normal("x")
         pm.Normal("y", observed=1)
+        pm.Potential("z", at.constant(-1.0, dtype=aesara.config.floatX))
 
     func = model.logp_dlogp_function()
     func.set_extra_values({})
@@ -379,13 +381,15 @@ def test_tempered_logp_dlogp():
     func_temp_nograd.set_extra_values({})
 
     x = np.ones(1, dtype=func.dtype)
-    assert func(x) == func_temp(x)
-    assert func_nograd(x) == func(x)[0]
-    assert func_temp_nograd(x) == func(x)[0]
+    npt.assert_allclose(func(x)[0], func_temp(x)[0])
+    npt.assert_allclose(func(x)[1], func_temp(x)[1])
+
+    npt.assert_allclose(func_nograd(x), func(x)[0])
+    npt.assert_allclose(func_temp_nograd(x), func(x)[0])
 
     func_temp.set_weights(np.array([0.0], dtype=func.dtype))
     func_temp_nograd.set_weights(np.array([0.0], dtype=func.dtype))
-    npt.assert_allclose(func(x)[0], 2 * func_temp(x)[0])
+    npt.assert_allclose(func(x)[0], 2 * func_temp(x)[0] - 1)
     npt.assert_allclose(func(x)[1], func_temp(x)[1])
 
     npt.assert_allclose(func_nograd(x), func(x)[0])
@@ -393,7 +397,7 @@ def test_tempered_logp_dlogp():
 
     func_temp.set_weights(np.array([0.5], dtype=func.dtype))
     func_temp_nograd.set_weights(np.array([0.5], dtype=func.dtype))
-    npt.assert_allclose(func(x)[0], 4 / 3 * func_temp(x)[0])
+    npt.assert_allclose(func(x)[0], 4 / 3 * (func_temp(x)[0] - 1 / 4))
     npt.assert_allclose(func(x)[1], func_temp(x)[1])
 
     npt.assert_allclose(func_nograd(x), func(x)[0])
@@ -516,7 +520,7 @@ def test_initial_point():
     assert a in model.initial_values
     assert x in model.initial_values
     assert model.initial_values[b] == b_initval
-    assert model.recompute_initial_point(0)["b_interval__"] == b_initval_trans
+    assert model.compute_initial_point(0)["b_interval__"] == b_initval_trans
     assert model.initial_values[y] == y_initval
 
 
@@ -651,3 +655,105 @@ def test_datalogpt_multiple_shapes():
     # This would raise a TypeError, see #4803 and #4804
     x_val = m.rvs_to_values[x]
     m.datalogpt.eval({x_val: 0})
+
+
+def test_nested_model_coords():
+    COORDS = {"dim": range(10)}
+    with pm.Model(name="m1", coords=COORDS) as m1:
+        a = pm.Normal("a")
+        with pm.Model(name="m2") as m2:
+            b = pm.Normal("b")
+            c = pm.HalfNormal("c")
+            d = pm.Normal("d", b, c, dims="dim")
+        e = pm.Normal("e", a + d, dims="dim")
+    assert m1.coords is m2.coords
+    assert m1.dim_lengths is m2.dim_lengths
+    assert set(m2.RV_dims) < set(m1.RV_dims)
+
+
+@pytest.mark.parametrize("jacobian", [True, False])
+def test_model_logp(jacobian):
+    with pm.Model() as m:
+        x = pm.Normal("x", 0, 1, size=2)
+        y = pm.LogNormal("y", 0, 1, size=2)
+
+    test_vals = np.array([0.0, 1.0])
+
+    expected_x_logp = st.norm().logpdf(test_vals)
+    expected_y_logp = expected_x_logp.copy()
+    if not jacobian:
+        expected_y_logp -= np.array([0.0, 1.0])
+
+    x_logp, y_logp = m.compile_logp(sum=False, jacobian=jacobian)(
+        {"x": test_vals, "y_log__": test_vals}
+    )
+    assert np.all(np.isclose(x_logp, expected_x_logp))
+    assert np.all(np.isclose(y_logp, expected_y_logp))
+
+    x_logp2 = m.compile_logp(vars=[x], sum=False, jacobian=jacobian)({"x": test_vals})
+    assert np.all(np.isclose(x_logp2, expected_x_logp))
+
+    y_logp2 = m.compile_logp(vars=[y], sum=False, jacobian=jacobian)({"y_log__": test_vals})
+    assert np.all(np.isclose(y_logp2, expected_y_logp))
+
+    logp_sum = m.compile_logp(sum=True, jacobian=jacobian)({"x": test_vals, "y_log__": test_vals})
+    assert np.isclose(logp_sum, expected_x_logp.sum() + expected_y_logp.sum())
+
+
+@pytest.mark.parametrize("jacobian", [True, False])
+def test_model_dlogp(jacobian):
+    with pm.Model() as m:
+        x = pm.Normal("x", 0, 1, size=2)
+        y = pm.LogNormal("y", 0, 1, size=2)
+
+    test_vals = np.array([0.0, -1.0])
+    state = {"x": test_vals, "y_log__": test_vals}
+
+    expected_x_dlogp = expected_y_dlogp = np.array([0.0, 1.0])
+    if not jacobian:
+        expected_y_dlogp = np.array([-1.0, 0.0])
+
+    dlogps = m.compile_dlogp(jacobian=jacobian)(state)
+    assert np.all(np.isclose(dlogps[:2], expected_x_dlogp))
+    assert np.all(np.isclose(dlogps[2:], expected_y_dlogp))
+
+    x_dlogp2 = m.compile_dlogp(vars=[x], jacobian=jacobian)(state)
+    assert np.all(np.isclose(x_dlogp2, expected_x_dlogp))
+
+    y_dlogp2 = m.compile_dlogp(vars=[y], jacobian=jacobian)(state)
+    assert np.all(np.isclose(y_dlogp2, expected_y_dlogp))
+
+
+@pytest.mark.parametrize("jacobian", [True, False])
+def test_model_d2logp(jacobian):
+    with pm.Model() as m:
+        x = pm.Normal("x", 0, 1, size=2)
+        y = pm.LogNormal("y", 0, 1, size=2)
+
+    test_vals = np.array([0.0, -1.0])
+    state = {"x": test_vals, "y_log__": test_vals}
+
+    expected_x_d2logp = expected_y_d2logp = np.eye(2)
+
+    dlogps = m.compile_d2logp(jacobian=jacobian)(state)
+    assert np.all(np.isclose(dlogps[:2, :2], expected_x_d2logp))
+    assert np.all(np.isclose(dlogps[2:, 2:], expected_y_d2logp))
+
+    x_dlogp2 = m.compile_d2logp(vars=[x], jacobian=jacobian)(state)
+    assert np.all(np.isclose(x_dlogp2, expected_x_d2logp))
+
+    y_dlogp2 = m.compile_d2logp(vars=[y], jacobian=jacobian)(state)
+    assert np.all(np.isclose(y_dlogp2, expected_y_d2logp))
+
+
+def test_deterministic():
+    with pm.Model() as model:
+        x = pm.Normal("x", 0, 1)
+        y = pm.Deterministic("y", x**2)
+
+    assert model.y == y
+    assert model["y"] == y
+
+
+def test_empty_model_representation():
+    assert pm.Model().str_repr() == ""

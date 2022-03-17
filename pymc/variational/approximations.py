@@ -23,10 +23,14 @@ import pymc as pm
 
 from pymc.blocking import DictToArrayBijection
 from pymc.distributions.dist_math import rho2sigma
-from pymc.initial_point import make_initial_point_fn
 from pymc.math import batched_diag
 from pymc.variational import flows, opvi
-from pymc.variational.opvi import Approximation, Group, node_property
+from pymc.variational.opvi import (
+    Approximation,
+    Group,
+    NotImplementedInference,
+    node_property,
+)
 
 __all__ = ["MeanField", "FullRank", "Empirical", "NormalizingFlow", "sample_approx"]
 
@@ -70,17 +74,7 @@ class MeanFieldGroup(Group):
         self._finalize_init()
 
     def create_shared_params(self, start=None):
-        ipfn = make_initial_point_fn(
-            model=self.model,
-            overrides=start,
-            jitter_rvs={},
-            return_transformed=True,
-        )
-        start = ipfn(self.model.rng_seeder.randint(2 ** 30, dtype=np.int64))
-        if self.batched:
-            start = start[self.group[0].name][0]
-        else:
-            start = DictToArrayBijection.map(start)
+        start = self._prepare_start(start)
         rho = np.zeros((self.ddim,))
         if self.batched:
             start = np.tile(start, (self.bdim, 1))
@@ -102,7 +96,8 @@ class MeanFieldGroup(Group):
         z0 = self.symbolic_initial
         std = rho2sigma(self.rho)
         logdet = at.log(std)
-        logq = pm.Normal.dist().logp(z0) - logdet
+        quaddist = -0.5 * z0**2 - at.log((2 * np.pi) ** 0.5)
+        logq = quaddist - logdet
         return logq.sum(range(1, logq.ndim))
 
 
@@ -126,17 +121,7 @@ class FullRankGroup(Group):
         self._finalize_init()
 
     def create_shared_params(self, start=None):
-        ipfn = make_initial_point_fn(
-            model=self.model,
-            overrides=start,
-            jitter_rvs={},
-            return_transformed=True,
-        )
-        start = ipfn(self.model.rng_seeder.randint(2 ** 30, dtype=np.int64))
-        if self.batched:
-            start = start[self.group[0].name][0]
-        else:
-            start = DictToArrayBijection.map(start)
+        start = self._prepare_start(start)
         n = self.ddim
         L_tril = np.eye(n)[np.tril_indices(n)].astype(aesara.config.floatX)
         if self.batched:
@@ -153,6 +138,8 @@ class FullRankGroup(Group):
         else:
             L = at.zeros((self.ddim, self.ddim))
             L = at.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"])
+        Ld = L[..., np.arange(self.ddim), np.arange(self.ddim)]
+        L = at.set_subtensor(Ld, rho2sigma(Ld))
         return L
 
     @node_property
@@ -185,18 +172,12 @@ class FullRankGroup(Group):
 
     @node_property
     def symbolic_logq_not_scaled(self):
-        z = self.symbolic_random
-        if self.batched:
-
-            def logq(z_b, mu_b, L_b):
-                return pm.MvNormal.dist(mu=mu_b, chol=L_b).logp(z_b)
-
-            # it's gonna be so slow
-            # scan is computed over batch and then summed up
-            # output shape is (batch, samples)
-            return aesara.scan(logq, [z.swapaxes(0, 1), self.mean, self.L])[0].sum(0)
-        else:
-            return pm.MvNormal.dist(mu=self.mean, chol=self.L).logp(z)
+        z0 = self.symbolic_initial
+        diag = at.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1)
+        logdet = at.log(diag)
+        quaddist = -0.5 * z0**2 - at.log((2 * np.pi) ** 0.5)
+        logq = quaddist - logdet
+        return logq.sum(range(1, logq.ndim))
 
     @node_property
     def symbolic_random(self):
@@ -241,14 +222,7 @@ class EmpiricalGroup(Group):
             if size is None:
                 raise opvi.ParametrizationError("Need `trace` or `size` to initialize")
             else:
-                ipfn = make_initial_point_fn(
-                    model=self.model,
-                    overrides=start,
-                    jitter_rvs={},
-                    return_transformed=True,
-                )
-                start = ipfn(self.model.rng_seeder.randint(2 ** 30, dtype=np.int64))
-                start = pm.floatX(DictToArrayBijection.map(start))
+                start = self._prepare_start(start)
                 # Initialize particles
                 histogram = np.tile(start, (size, 1))
                 histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
@@ -258,13 +232,15 @@ class EmpiricalGroup(Group):
             i = 0
             for t in trace.chains:
                 for j in range(len(trace)):
-                    histogram[i] = DictToArrayBijection.map(trace.point(j, t))
+                    histogram[i] = DictToArrayBijection.map(trace.point(j, t)).data
                     i += 1
         return dict(histogram=aesara.shared(pm.floatX(histogram), "histogram"))
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
-        if trace is not None and not all([var.name in trace.varnames for var in self.group]):
+        if trace is not None and not all(
+            [self.model.rvs_to_values[var].name in trace.varnames for var in self.group]
+        ):
             raise ValueError("trace has not all free RVs in the group")
 
     def randidx(self, size=None):
@@ -285,15 +261,21 @@ class EmpiricalGroup(Group):
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         aesara_condition_is_here = isinstance(deterministic, Variable)
+        if size is None:
+            size = 1
+        size = at.as_tensor(size)
         if aesara_condition_is_here:
             return at.switch(
                 deterministic,
-                at.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1),
+                at.repeat(self.mean.reshape((1, -1)), size, -1),
                 self.histogram[self.randidx(size)],
             )
         else:
             if deterministic:
-                return at.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1)
+                raise NotImplementedInference(
+                    "Deterministic sampling from a Histogram is broken in v4"
+                )
+                return at.repeat(self.mean.reshape((1, -1)), size, -1)
             else:
                 return self.histogram[self.randidx(size)]
 
@@ -378,6 +360,7 @@ class NormalizingFlowGroup(Group):
 
     @aesara.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
+        raise NotImplementedInference("Normalizing flows are not yet ported to v4")
         super().__init_group__(group)
         # objects to be resolved
         # 1. string formula
@@ -487,7 +470,7 @@ class NormalizingFlowGroup(Group):
     @node_property
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
-        q0 = pm.Normal.dist().logp(z0).sum(range(1, z0.ndim))
+        q0 = pm.Normal.logp(z0, 0, 1).sum(range(1, z0.ndim))
         return q0 - self.flow.sum_logdets
 
     @property

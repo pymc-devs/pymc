@@ -89,6 +89,76 @@ from pymc.aesaraf import floatX, ix_, largest_common_dtype
 
 # pylint: enable=unused-import
 
+__all__ = [
+    "abs_",
+    "and_",
+    "ceil",
+    "clip",
+    "concatenate",
+    "constant",
+    "cos",
+    "cosh",
+    "dot",
+    "eq",
+    "erf",
+    "erfc",
+    "erfcinv",
+    "erfinv",
+    "exp",
+    "flatten",
+    "floor",
+    "ge",
+    "gt",
+    "le",
+    "log",
+    "log1pexp",
+    "logaddexp",
+    "logsumexp",
+    "lt",
+    "maximum",
+    "minimum",
+    "neq",
+    "ones_like",
+    "or_",
+    "prod",
+    "sgn",
+    "sigmoid",
+    "sin",
+    "sinh",
+    "sqr",
+    "sqrt",
+    "stack",
+    "sum",
+    "switch",
+    "tan",
+    "tanh",
+    "where",
+    "zeros_like",
+    "kronecker",
+    "cartesian",
+    "kron_dot",
+    "kron_solve_lower",
+    "kron_solve_upper",
+    "kron_diag",
+    "flat_outer",
+    "logdiffexp",
+    "logdiffexp_numpy",
+    "invlogit",
+    "softmax",
+    "log_softmax",
+    "logbern",
+    "logit",
+    "log1mexp",
+    "log1mexp_numpy",
+    "flatten_list",
+    "logdet",
+    "probit",
+    "invprobit",
+    "expand_packed_triangular",
+    "batched_diag",
+    "block_diagonal",
+]
+
 
 def kronecker(*Ks):
     r"""Return the Kronecker product of arguments:
@@ -155,9 +225,9 @@ def kron_matrix_op(krons, m, op):
         m = m[:, None]  # Treat 1D array as Nx1 matrix
     if m.ndim != 2:  # Has not been tested otherwise
         raise ValueError(f"m must have ndim <= 2, not {m.ndim}")
-    res = kron_vector_op(m)
-    res_shape = res.shape
-    return at.reshape(res, (res_shape[1], res_shape[0])).T
+    result = kron_vector_op(m)
+    result_shape = result.shape
+    return at.reshape(result, (result_shape[1], result_shape[0])).T
 
 
 # Define kronecker functions that work on 1D and 2D arrays
@@ -209,6 +279,22 @@ def invlogit(x, eps=None):
             stacklevel=2,
         )
     return at.sigmoid(x)
+
+
+def softmax(x, axis=None):
+    # Ignore vector case UserWarning issued by Aesara. This can be removed once Aesara
+    # drops that warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        return at.nnet.softmax(x, axis=axis)
+
+
+def log_softmax(x, axis=None):
+    # Ignore vector case UserWarning issued by Aesara. This can be removed once Aesara
+    # drops that warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        return at.nnet.logsoftmax(x, axis=axis)
 
 
 def logbern(log_p):

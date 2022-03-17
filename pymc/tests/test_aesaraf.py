@@ -108,7 +108,7 @@ class TestBroadcasting:
 
         # Replace test1 with a shared variable, keep test 2 the same
         replacement = pm.make_shared_replacements(
-            test_model.recompute_initial_point(), [test_model.test2], test_model
+            test_model.compute_initial_point(), [test_model.test2], test_model
         )
         assert (
             test_model.test1.broadcastable
@@ -284,7 +284,7 @@ class TestTakeAlongAxis:
         # Setup the aesara function
         t_arr, t_indices = self.get_input_tensors(shape)
         t_out2 = aesara.grad(
-            at.sum(self._output_tensor(t_arr ** 2, t_indices, axis)),
+            at.sum(self._output_tensor(t_arr**2, t_indices, axis)),
             t_arr,
         )
         func = aesara.function([t_arr, t_indices], [t_out2])
@@ -392,7 +392,7 @@ def test_pandas_to_array(input_dtype):
 
     # Create a generator object. Apparently the generator object needs to
     # yield numpy arrays.
-    square_generator = (np.array([i ** 2], dtype=int) for i in range(100))
+    square_generator = (np.array([i**2], dtype=int) for i in range(100))
 
     # Alias the function to be tested
     func = pandas_to_array
@@ -574,3 +574,11 @@ def test_check_bounds_flag():
     m.check_bounds = True
     with m:
         assert np.all(compile_pymc([], bound)() == -np.inf)
+
+
+def test_compile_pymc_sets_default_updates():
+    rng = aesara.shared(np.random.default_rng(0))
+    x = pm.Normal.dist(rng=rng)
+    assert x.owner.inputs[0] is rng
+    f = compile_pymc([], x)
+    assert not np.isclose(f(), f())

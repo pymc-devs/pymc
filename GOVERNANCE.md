@@ -136,6 +136,7 @@ Contributors don't need to be part of any dedicated team.
 * Kaustubh Chaudhari (dev)
 * Larry Dong (dev)
 * Lorenzo Toniazzi (docs)
+* Martin Ingram (community)
 * Olga Khan (docs)
 * Peadar Coyle
 * Raul Maldonado (docs)
@@ -197,7 +198,6 @@ Contributors don't need to be part of any dedicated team.
 * George Ho (dev)
 * Junpeng Lao (dev, discourse)
 * Luciano Paz (dev - PyMC Labs)
-* Marco E. Gorelli (dev, docs)
 * Martina Cantaro (docs)
 * Maxim Kochurov (dev - PyMC Labs)
 * Meenal Jhajharia (docs)

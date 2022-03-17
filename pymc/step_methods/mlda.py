@@ -52,7 +52,7 @@ class MetropolisMLDA(Metropolis):
         and some extra code specific for MLDA.
         """
         model = pm.modelcontext(kwargs.get("model", None))
-        initial_values = model.recompute_initial_point()
+        initial_values = model.compute_initial_point()
 
         # flag to that variance reduction is activated - forces MetropolisMLDA
         # to store quantities of interest in a register if True
@@ -114,7 +114,7 @@ class DEMetropolisZMLDA(DEMetropolisZ):
         self.tuning_end_trigger = False
 
         model = pm.modelcontext(kwargs.get("model", None))
-        initial_values = model.recompute_initial_point()
+        initial_values = model.compute_initial_point()
 
         # flag to that variance reduction is activated - forces DEMetropolisZMLDA
         # to store quantities of interest in a register if True
@@ -381,7 +381,7 @@ class MLDA(ArrayStepShared):
 
         # assign internal state
         model = pm.modelcontext(model)
-        initial_values = model.recompute_initial_point()
+        initial_values = model.compute_initial_point()
         self.model = model
         self.coarse_models = coarse_models
         self.model_below = self.coarse_models[-1]
@@ -538,7 +538,7 @@ class MLDA(ArrayStepShared):
         # Construct Aesara function for current-level model likelihood
         # (for use in acceptance)
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
 
         # Construct Aesara function for below-level model likelihood
         # (for use in acceptance)
@@ -547,7 +547,7 @@ class MLDA(ArrayStepShared):
         vars_below = pm.inputvars(vars_below)
         shared_below = pm.make_shared_replacements(initial_values, vars_below, model_below)
         self.delta_logp_below = delta_logp(
-            initial_values, model_below.logpt, vars_below, shared_below
+            initial_values, model_below.logpt(), vars_below, shared_below
         )
 
         super().__init__(vars, shared)
@@ -946,28 +946,22 @@ def extract_Q_estimate(trace, levels):
     MLDA with variance reduction has been used for sampling.
     """
 
-    Q_0_raw = trace.get_sampler_stats("Q_0")
-    # total number of base level samples from all iterations
-    total_base_level_samples = sum(it.shape[0] for it in Q_0_raw)
-    Q_0 = np.concatenate(Q_0_raw).reshape((1, total_base_level_samples))
+    Q_0_raw = trace.get_sampler_stats("Q_0").squeeze()
+    Q_0 = np.concatenate(Q_0_raw)[None, ::]
     ess_Q_0 = az.ess(np.array(Q_0, np.float64))
     Q_0_var = Q_0.var() / ess_Q_0
 
     Q_diff_means = []
     Q_diff_vars = []
     for l in range(1, levels):
-        Q_diff_raw = trace.get_sampler_stats(f"Q_{l}_{l-1}")
-        # total number of samples from all iterations
-        total_level_samples = sum(it.shape[0] for it in Q_diff_raw)
-        Q_diff = np.concatenate(Q_diff_raw).reshape((1, total_level_samples))
+        Q_diff_raw = trace.get_sampler_stats(f"Q_{l}_{l-1}").squeeze()
+        Q_diff = np.hstack(Q_diff_raw)[None, ::]
         ess_diff = az.ess(np.array(Q_diff, np.float64))
-
         Q_diff_means.append(Q_diff.mean())
         Q_diff_vars.append(Q_diff.var() / ess_diff)
 
     Q_mean = Q_0.mean() + sum(Q_diff_means)
     Q_se = np.sqrt(Q_0_var + sum(Q_diff_vars))
-
     return Q_mean, Q_se
 
 
@@ -991,7 +985,7 @@ def subsample(
 
     model = pm.modelcontext(model)
     chain = 0
-    random_seed = np.random.randint(2 ** 30)
+    random_seed = np.random.randint(2**30)
     callback = None
 
     draws += tune
