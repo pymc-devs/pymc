@@ -14,6 +14,7 @@
 
 import collections
 import functools
+import os.path
 import threading
 import types
 import warnings
@@ -1458,25 +1459,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     @property
     def prefix(self) -> str:
-        parts = []
-        model = self
-        while True:
-            if model.name:
-                parts.append(model.name)
-            if model.isroot:
-                break
-            else:
-                model = model.parent
-        name = "/".join(reversed(parts))
-        if name:
-            name += "/"
-        return name
+        if self.isroot:
+            name = self.name
+        else:
+            name = os.path.join(self.parent.prefix, self.name)
+        return name.strip("/")
 
     def name_for(self, name):
         """Checks if name has prefix and adds if needed"""
         if self.prefix:
             if not name.startswith(self.prefix):
-                return f"{self.prefix}{name}"
+                return os.path.join(self.prefix, name)
             else:
                 return name
         else:
@@ -1486,8 +1479,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Checks if name has prefix and deletes if needed"""
         if not self.prefix or not name:
             return name
-        elif name.startswith(self.prefix):
-            return name[len(self.prefix) :]
+        elif name.startswith(self.prefix + "/"):
+            return name[len(self.prefix) + 1 :]
         else:
             return name
 
