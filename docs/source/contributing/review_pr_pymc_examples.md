@@ -110,7 +110,7 @@ didn't intend to originally. Think of this as CI breaking.
 * CI in pymc-examples is very specific and has never had a false failure yet.
 * What it does however is skipping some files from given checks! Make sure to check the
   file is not excluded from CI when reviewing.
-  
+
 ## Checklist
 This might be moved to a comment added by a bot to every new PR, see [pymc-examples#288](https://github.com/pymc-devs/pymc-examples/issues/288)
 
