@@ -39,6 +39,7 @@ from aesara.graph.basic import (
     Apply,
     Constant,
     Variable,
+    ancestors,
     clone_get_equiv,
     graph_inputs,
     walk,
@@ -963,18 +964,19 @@ def compile_pymc(
         this function is called within a model context and the model `check_bounds` flag
         is set to False.
     """
-    # Set the default update of RandomVariable's RNG so that it is automatically
+    # Create an update mapping of RandomVariable's RNG so that it is automatically
     # updated after every function call
     # TODO: This won't work for variables with InnerGraphs (Scan and OpFromGraph)
+    rng_updates = {}
     output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
     for rv in (
         node
-        for node in walk_model(output_to_list, walk_past_rvs=True)
+        for node in ancestors(output_to_list)
         if node.owner and isinstance(node.owner.op, RandomVariable)
     ):
         rng = rv.owner.inputs[0]
         if not hasattr(rng, "default_update"):
-            rng.default_update = rv.owner.outputs[0]
+            rng_updates[rng] = rv.owner.outputs[0]
 
     # If called inside a model context, see if check_bounds flag is set to False
     try:
@@ -991,5 +993,11 @@ def compile_pymc(
     mode = get_mode(mode)
     opt_qry = mode.provided_optimizer.including("random_make_inplace", check_parameter_opt)
     mode = Mode(linker=mode.linker, optimizer=opt_qry)
-    aesara_function = aesara.function(inputs, outputs, mode=mode, **kwargs)
+    aesara_function = aesara.function(
+        inputs,
+        outputs,
+        updates={**rng_updates, **kwargs.pop("updates", {})},
+        mode=mode,
+        **kwargs,
+    )
     return aesara_function
