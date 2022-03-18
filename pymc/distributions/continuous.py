@@ -73,7 +73,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
 
 from pymc.aesaraf import floatX
-from pymc.distributions import logp_transform, transforms
+from pymc.distributions import transforms
 from pymc.distributions.dist_math import (
     SplineWrapper,
     check_parameters,
@@ -87,6 +87,7 @@ from pymc.distributions.dist_math import (
 )
 from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous
 from pymc.distributions.shape_utils import rv_size_is_none
+from pymc.distributions.transforms import _get_default_transform
 from pymc.math import invlogit, logdiffexp, logit
 from pymc.util import UNSET
 
@@ -139,17 +140,17 @@ class CircularContinuous(Continuous):
     """Base class for circular continuous distributions"""
 
 
-@logp_transform.register(PositiveContinuous)
+@_get_default_transform.register(PositiveContinuous)
 def pos_cont_transform(op):
     return transforms.log
 
 
-@logp_transform.register(UnitContinuous)
+@_get_default_transform.register(UnitContinuous)
 def unit_cont_transform(op):
     return transforms.logodds
 
 
-@logp_transform.register(CircularContinuous)
+@_get_default_transform.register(CircularContinuous)
 def circ_cont_transform(op):
     return transforms.circular
 

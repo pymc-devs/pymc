@@ -15,7 +15,6 @@
 from pymc.distributions.logprob import (  # isort:skip
     logcdf,
     logp,
-    logp_transform,
     joint_logpt,
 )
 
@@ -195,6 +194,5 @@ __all__ = [
     "PolyaGamma",
     "joint_logpt",
     "logp",
-    "logp_transform",
     "logcdf",
 ]

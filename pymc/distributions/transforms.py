@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from functools import singledispatch
 
 import aesara.tensor as at
 
@@ -22,6 +23,7 @@ from aeppl.transforms import (
     RVTransform,
     Simplex,
 )
+from aesara.graph import Op
 
 __all__ = [
     "RVTransform",
@@ -36,6 +38,12 @@ __all__ = [
     "CholeskyCovPacked",
     "Chain",
 ]
+
+
+@singledispatch
+def _get_default_transform(op: Op):
+    """Return default transform for a given Distribution `Op`"""
+    return None
 
 
 class LogExpM1(RVTransform):
