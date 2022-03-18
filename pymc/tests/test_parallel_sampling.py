@@ -201,11 +201,11 @@ def test_spawn_densitydist_bound_method():
     N = 100
     with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
-        normal_dist = pm.Normal.dist(mu, 1, size=N)
 
-        def logp(x):
+        def logp(x, mu):
+            normal_dist = pm.Normal.dist(mu, 1, size=N)
             out = pm.logp(normal_dist, x)
             return out
 
-        obs = pm.DensityDist("density_dist", logp=logp, observed=np.random.randn(N), size=N)
+        obs = pm.DensityDist("density_dist", mu, logp=logp, observed=np.random.randn(N), size=N)
         pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
