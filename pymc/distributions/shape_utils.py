@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 
-from aesara.graph.basic import Constant, Variable
+from aesara.graph.basic import Variable
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
@@ -618,4 +618,4 @@ def find_size(
 
 def rv_size_is_none(size: Variable) -> bool:
     """Check wether an rv size is None (ie., at.Constant([]))"""
-    return isinstance(size, Constant) and size.data.size == 0
+    return size.type.shape == (0,)

@@ -133,6 +133,9 @@ def test_rv_size_is_none():
     rv = Normal.dist(0, 1, size=None)
     assert rv_size_is_none(rv.owner.inputs[1])
 
+    rv = Normal.dist(0, 1, size=())
+    assert rv_size_is_none(rv.owner.inputs[1])
+
     rv = Normal.dist(0, 1, size=1)
     assert not rv_size_is_none(rv.owner.inputs[1])
 
