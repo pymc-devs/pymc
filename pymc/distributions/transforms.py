@@ -259,12 +259,12 @@ class Interval(IntervalTransform):
 
 log_exp_m1 = LogExpM1()
 log_exp_m1.__doc__ = """
-Instantiation of :class:`pymc.transforms.LogExpM1`
+Instantiation of :class:`pymc.distributions.transforms.LogExpM1`
 for use in the ``transform`` argument of a random variable."""
 
 ordered = Ordered()
 ordered.__doc__ = """
-Instantiation of :class:`pymc.transforms.Ordered`
+Instantiation of :class:`pymc.distributions.transforms.Ordered`
 for use in the ``transform`` argument of a random variable."""
 
 log = LogTransform()
@@ -274,7 +274,7 @@ for use in the ``transform`` argument of a random variable."""
 
 sum_to_1 = SumTo1()
 sum_to_1.__doc__ = """
-Instantiation of :class:`pymc.transforms.SumTo1`
+Instantiation of :class:`pymc.distributions.transforms.SumTo1`
 for use in the ``transform`` argument of a random variable."""
 
 circular = CircularTransform()
