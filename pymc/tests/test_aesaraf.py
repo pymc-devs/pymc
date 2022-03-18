@@ -576,9 +576,21 @@ def test_check_bounds_flag():
         assert np.all(compile_pymc([], bound)() == -np.inf)
 
 
-def test_compile_pymc_sets_default_updates():
+def test_compile_pymc_sets_rng_updates():
     rng = aesara.shared(np.random.default_rng(0))
     x = pm.Normal.dist(rng=rng)
     assert x.owner.inputs[0] is rng
     f = compile_pymc([], x)
     assert not np.isclose(f(), f())
+
+    # Check that update was not done inplace
+    assert not hasattr(rng, "default_update")
+    f = aesara.function([], x)
+    assert f() == f()
+
+
+def test_compile_pymc_with_updates():
+    x = aesara.shared(0)
+    f = compile_pymc([], x, updates={x: x + 1})
+    assert f() == 0
+    assert f() == 1
