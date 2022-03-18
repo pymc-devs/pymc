@@ -1,15 +1,14 @@
 name: arviz-compatibility
 
-on:
-  push:
-    paths:
-      - ".github/workflows/**"
-      - "pymc/**"
-      - "setup.py"
-      - "pyproject.toml"
-      - "buildosx"
-      - "conda-envs/**"
-      - "codecov.yml"
+on: [push, pull_request]
+  paths:
+    - ".github/workflows/**"
+    - "pymc/**"
+    - "setup.py"
+    - "pyproject.toml"
+    - "buildosx"
+    - "conda-envs/**"
+    - "codecov.yml"
 
 jobs:
   pytest:
