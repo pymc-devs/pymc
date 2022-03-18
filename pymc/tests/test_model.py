@@ -170,17 +170,6 @@ class TestNested:
                 b = pm.Normal("var")
         assert {"sub1/var", "sub1/sub2/var"} == set(model.named_vars.keys())
 
-    def test_multi_scoping_coords(self):
-        with pm.Model("sub", coords=dict(c1=[1, 2, 3])) as m1:
-            a = pm.Normal("a", dims="c1")
-            with pm.Model("sub", coords=dict(c3=[6, 7, 2])) as m2:
-                a = pm.Normal("a", dims="c1")
-                e = pm.Normal("e", dims="c3")
-                m2.add_coord("c2", [3, 4, 5])
-                assert m1.coords is m2.coords
-            b = pm.Normal("b", dims="c2")
-            e = pm.Normal("e", dims="c3")
-
 
 class TestObserved:
     def test_observed_rv_fail(self):
@@ -683,14 +672,14 @@ def test_datalogpt_multiple_shapes():
 
 
 def test_nested_model_coords():
-    COORDS = {"dim": range(10)}
-    with pm.Model(name="m1", coords=COORDS) as m1:
-        a = pm.Normal("a")
-        with pm.Model(name="m2") as m2:
-            b = pm.Normal("b")
-            c = pm.HalfNormal("c")
-            d = pm.Normal("d", b, c, dims="dim")
-        e = pm.Normal("e", a + d, dims="dim")
+    with pm.Model(name="m1", coords=dict(dim1=range(2))) as m1:
+        a = pm.Normal("a", dims="dim1")
+        with pm.Model(name="m2", coords=dict(dim2=range(4))) as m2:
+            b = pm.Normal("b", dims="dim1")
+            m1.add_coord("dim3", range(4))
+            c = pm.HalfNormal("c", dims="dim3")
+            d = pm.Normal("d", b, c, dims="dim2")
+        e = pm.Normal("e", a[None] + d[:, None], dims=("dim2", "dim1"))
     assert m1.coords is m2.coords
     assert m1.dim_lengths is m2.dim_lengths
     assert set(m2.RV_dims) < set(m1.RV_dims)
