@@ -473,7 +473,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
                 # 3) you can create variables with Var method
                 self.Var('v1', Normal.dist(mu=mean, sigma=sd))
-                # this will create variable named like '{prefix_}v1'
+                # this will create variable named like '{prefix/}v1'
                 # and assign attribute 'v1' to instance created
                 # variable can be accessed with self.v1 or self['v1']
 
@@ -514,6 +514,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         with Model() as model:
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
+
+        # variables inside both scopes will be named like `first/*`, `second/*`
 
     """
 
@@ -1455,14 +1457,18 @@ class Model(WithMemoization, metaclass=ContextMeta):
             setattr(self, self.name_of(var.name), var)
 
     @property
-    def prefix(self):
-        return f"{self.name}_" if self.name else ""
+    def prefix(self) -> str:
+        if self.isroot or not self.parent.prefix:
+            name = self.name
+        else:
+            name = f"{self.parent.prefix}/{self.name}"
+        return name.strip("/")
 
     def name_for(self, name):
         """Checks if name has prefix and adds if needed"""
         if self.prefix:
             if not name.startswith(self.prefix):
-                return f"{self.prefix}{name}"
+                return f"{self.prefix}/{name}"
             else:
                 return name
         else:
@@ -1472,8 +1478,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Checks if name has prefix and deletes if needed"""
         if not self.prefix or not name:
             return name
-        elif name.startswith(self.prefix):
-            return name[len(self.prefix) :]
+        elif name.startswith(self.prefix + "/"):
+            return name[len(self.prefix) + 1 :]
         else:
             return name
 

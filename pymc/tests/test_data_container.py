@@ -403,8 +403,8 @@ def test_data_naming():
     with pm.Model("named_model") as model:
         x = pm.ConstantData("x", [1.0, 2.0, 3.0])
         y = pm.Normal("y")
-    assert y.name == "named_model_y"
-    assert x.name == "named_model_x"
+    assert y.name == "named_model/y"
+    assert x.name == "named_model/x"
 
 
 def test_get_data():
