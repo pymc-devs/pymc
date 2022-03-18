@@ -55,7 +55,6 @@ from pymc.backends import *
 from pymc.blocking import *
 from pymc.data import *
 from pymc.distributions import *
-from pymc.distributions import transforms
 from pymc.exceptions import *
 from pymc.func_utils import find_constrained_prior
 from pymc.math import (

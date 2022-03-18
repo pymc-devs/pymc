@@ -2,7 +2,7 @@
 Transformations
 ***************
 
-.. currentmodule:: pymc.transforms
+.. currentmodule:: pymc.distributions.transforms
 
 Transform Instances
 ~~~~~~~~~~~~~~~~~~~
