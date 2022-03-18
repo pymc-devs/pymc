@@ -163,7 +163,7 @@ class TestNested:
                 b = pm.Normal("var")
         assert {"sub/var", "sub/sub/var"} == set(model.named_vars.keys())
 
-    def test_multi_scoping1(self):
+    def test_nested_named_model(self):
         with pm.Model("sub1") as model:
             b = pm.Normal("var")
             with pm.Model("sub2"):
