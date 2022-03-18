@@ -1571,112 +1571,14 @@ class TestConstant(BaseTestDistributionRandom):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
         "check_rv_size",
+        "check_dtype",
     ]
 
-
-class TestZeroInflatedPoisson(BaseTestDistributionRandom):
-    def zero_inflated_poisson_rng_fn(self, size, psi, theta, poisson_rng_fct, random_rng_fct):
-        return poisson_rng_fct(theta, size=size) * (random_rng_fct(size=size) < psi)
-
-    def seeded_zero_inflated_poisson_rng_fn(self):
-        poisson_rng_fct = functools.partial(
-            getattr(np.random.RandomState, "poisson"), self.get_random_state()
-        )
-
-        random_rng_fct = functools.partial(
-            getattr(np.random.RandomState, "random"), self.get_random_state()
-        )
-
-        return functools.partial(
-            self.zero_inflated_poisson_rng_fn,
-            poisson_rng_fct=poisson_rng_fct,
-            random_rng_fct=random_rng_fct,
-        )
-
-    pymc_dist = pm.ZeroInflatedPoisson
-    pymc_dist_params = {"psi": 0.9, "theta": 4.0}
-    expected_rv_op_params = {"psi": 0.9, "theta": 4.0}
-    reference_dist_params = {"psi": 0.9, "theta": 4.0}
-    reference_dist = seeded_zero_inflated_poisson_rng_fn
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
-    ]
-
-
-class TestZeroInflatedBinomial(BaseTestDistributionRandom):
-    def zero_inflated_binomial_rng_fn(self, size, psi, n, p, binomial_rng_fct, random_rng_fct):
-        return binomial_rng_fct(n, p, size=size) * (random_rng_fct(size=size) < psi)
-
-    def seeded_zero_inflated_binomial_rng_fn(self):
-        binomial_rng_fct = functools.partial(
-            getattr(np.random.RandomState, "binomial"), self.get_random_state()
-        )
-
-        random_rng_fct = functools.partial(
-            getattr(np.random.RandomState, "random"), self.get_random_state()
-        )
-
-        return functools.partial(
-            self.zero_inflated_binomial_rng_fn,
-            binomial_rng_fct=binomial_rng_fct,
-            random_rng_fct=random_rng_fct,
-        )
-
-    pymc_dist = pm.ZeroInflatedBinomial
-    pymc_dist_params = {"psi": 0.9, "n": 12, "p": 0.7}
-    expected_rv_op_params = {"psi": 0.9, "n": 12, "p": 0.7}
-    reference_dist_params = {"psi": 0.9, "n": 12, "p": 0.7}
-    reference_dist = seeded_zero_inflated_binomial_rng_fn
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
-    ]
-
-
-class TestZeroInflatedNegativeBinomialMuSigma(BaseTestDistributionRandom):
-    def zero_inflated_negbinomial_rng_fn(
-        self, size, psi, n, p, negbinomial_rng_fct, random_rng_fct
-    ):
-        return negbinomial_rng_fct(n, p, size=size) * (random_rng_fct(size=size) < psi)
-
-    def seeded_zero_inflated_negbinomial_rng_fn(self):
-        negbinomial_rng_fct = functools.partial(
-            getattr(np.random.RandomState, "negative_binomial"), self.get_random_state()
-        )
-
-        random_rng_fct = functools.partial(
-            getattr(np.random.RandomState, "random"), self.get_random_state()
-        )
-
-        return functools.partial(
-            self.zero_inflated_negbinomial_rng_fn,
-            negbinomial_rng_fct=negbinomial_rng_fct,
-            random_rng_fct=random_rng_fct,
-        )
-
-    n, p = pm.NegativeBinomial.get_n_p(mu=3, alpha=5)
-
-    pymc_dist = pm.ZeroInflatedNegativeBinomial
-    pymc_dist_params = {"psi": 0.9, "mu": 3, "alpha": 5}
-    expected_rv_op_params = {"psi": 0.9, "n": n, "p": p}
-    reference_dist_params = {"psi": 0.9, "n": n, "p": p}
-    reference_dist = seeded_zero_inflated_negbinomial_rng_fn
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
-    ]
-
-
-class TestZeroInflatedNegativeBinomial(BaseTestDistributionRandom):
-    pymc_dist = pm.ZeroInflatedNegativeBinomial
-    pymc_dist_params = {"psi": 0.9, "n": 12, "p": 0.7}
-    expected_rv_op_params = {"psi": 0.9, "n": 12, "p": 0.7}
-    reference_dist_params = {"psi": 0.9, "n": 12, "p": 0.7}
-    checks_to_run = ["check_pymc_params_match_rv_op"]
+    def check_dtype(self):
+        assert pm.Constant.dist(2**4).dtype == "int8"
+        assert pm.Constant.dist(2**16).dtype == "int32"
+        assert pm.Constant.dist(2**32).dtype == "int64"
+        assert pm.Constant.dist(2.0).dtype == aesara.config.floatX
 
 
 class TestOrderedLogistic(BaseTestDistributionRandom):

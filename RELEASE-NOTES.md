@@ -7,8 +7,8 @@ Instead update the vNext section until 4.0.0 is out.
 ⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠
 -->
 
-## PyMC vNext (4.0.0b1 → 4.0.0b2 → 4.0.0b3 → 4.0.0b4 → 4.0.0)
-⚠ The changes below are the delta between the upcoming releases `v3.11.5` →...→ `v4.0.0`.
+## PyMC vNext (4.0.0b1 → ... → 4.0.0b4 → 4.0.0)
+⚠ The changes below are the delta between the releases `v3.11.5` →...→ `v4.0.0`.
 
 ### Not-yet working features
 We plan to get these working again, but at this point their inner workings have not been refactored.
@@ -74,6 +74,7 @@ All of the above apply to:
   - The function `replace_with_values` function has been added to `gp.utils`.
   - `MarginalSparse` has been renamed `MarginalApprox`.
   - Removed `MixtureSameFamily`. `Mixture` is now capable of handling batched multivariate components (see [#5438](https://github.com/pymc-devs/pymc/pull/5438)).
+  - `ZeroInflatedPoisson` `theta` parameter was renamed to `mu` (see [#5584](https://github.com/pymc-devs/pymc/pull/5584)).
 - ...
 
 ### Expected breaks
@@ -128,6 +129,9 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - Univariate censored distributions are now available via `pm.Censored`. [#5169](https://github.com/pymc-devs/pymc/pull/5169)
 - Nested models now inherit the parent model's coordinates. [#5344](https://github.com/pymc-devs/pymc/pull/5344)
 - `softmax` and `log_softmax` functions added to `math` module (see [#5279](https://github.com/pymc-devs/pymc/pull/5279)).
+- Adding support for blackjax's NUTS sampler `pymc.sampling_jax` (see [#5477](ihttps://github.com/pymc-devs/pymc/pull/5477))
+- `pymc.sampling_jax` samplers support `log_likelihood`, `observed_data`, and `sample_stats` in returned InferenceData object (see [#5189](https://github.com/pymc-devs/pymc/pull/5189))
+- Adding support for `pm.Deterministic` in `pymc.sampling_jax` (see [#5182](https://github.com/pymc-devs/pymc/pull/5182))
 - ...
 
 

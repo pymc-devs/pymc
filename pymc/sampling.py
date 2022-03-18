@@ -24,6 +24,8 @@ import warnings
 from collections import defaultdict
 from copy import copy
 from typing import (
+    Any,
+    Callable,
     Dict,
     Iterable,
     Iterator,
@@ -811,12 +813,16 @@ def _sample(
 
     trace = copy(trace)
 
-    sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
+    sampling_gen = _iter_sample(
+        draws, step, start, trace, chain, tune, model, random_seed, callback
+    )
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
     if progressbar:
-        sampling = progress_bar(sampling, total=draws, display=progressbar)
+        sampling = progress_bar(sampling_gen, total=draws, display=progressbar)
         sampling.comment = _desc.format(**_pbar_data)
+    else:
+        sampling = sampling_gen
     try:
         strace = None
         for it, (strace, diverging) in enumerate(sampling):
@@ -826,6 +832,8 @@ def _sample(
                     sampling.comment = _desc.format(**_pbar_data)
     except KeyboardInterrupt:
         pass
+    if strace is None:
+        raise Exception("KeyboardInterrupt happened before the base trace was created.")
     return strace
 
 
@@ -1494,10 +1502,12 @@ def _choose_chains(traces: Sequence[BaseTrace], tune: int) -> Tuple[List[BaseTra
     idxs = np.argsort(lengths)
     l_sort = np.array(lengths)[idxs]
 
-    use_until = np.argmax(l_sort * np.arange(1, l_sort.shape[0] + 1)[::-1])
+    use_until = cast(int, np.argmax(l_sort * np.arange(1, l_sort.shape[0] + 1)[::-1]))
     final_length = l_sort[use_until]
 
-    return [traces[idx] for idx in idxs[use_until:]], final_length + tune
+    take_idx = cast(Sequence[int], idxs[use_until:])
+    sliced_traces = [traces[idx] for idx in take_idx]
+    return sliced_traces, final_length + tune
 
 
 def stop_tuning(step):
@@ -1590,29 +1600,29 @@ def sample_posterior_predictive(
     """
 
     _trace: Union[MultiTrace, PointList]
+    nchain: int
     if isinstance(trace, InferenceData):
         _trace = dataset_to_point_list(trace.posterior)
+        nchain, len_trace = chains_and_samples(trace)
     elif isinstance(trace, xarray.Dataset):
         _trace = dataset_to_point_list(trace)
-    else:
+        nchain, len_trace = chains_and_samples(trace)
+    elif isinstance(trace, MultiTrace):
         _trace = trace
+        nchain = _trace.nchains
+        len_trace = len(_trace)
+    elif isinstance(trace, list) and all(isinstance(x, dict) for x in trace):
+        _trace = trace
+        nchain = 1
+        len_trace = len(_trace)
+    else:
+        raise TypeError(f"Unsupported type for `trace` argument: {type(trace)}.")
 
     if keep_size is None:
         # This will allow users to set return_inferencedata=False and
         # automatically get the old behaviour instead of needing to
         # set both return_inferencedata and keep_size to False
         keep_size = return_inferencedata
-
-    nchain: int
-    len_trace: int
-    if isinstance(trace, (InferenceData, xarray.Dataset)):
-        nchain, len_trace = chains_and_samples(trace)
-    else:
-        len_trace = len(_trace)
-        try:
-            nchain = _trace.nchains
-        except AttributeError:
-            nchain = 1
 
     if keep_size and samples is not None:
         raise IncorrectArgumentsError(
@@ -1625,7 +1635,7 @@ def sample_posterior_predictive(
     if samples is None:
         if isinstance(_trace, MultiTrace):
             samples = sum(len(v) for v in _trace._straces.values())
-        elif isinstance(_trace, list) and all(isinstance(x, dict) for x in _trace):
+        elif isinstance(_trace, list):
             # this is a list of points
             samples = len(_trace)
         else:
@@ -1693,6 +1703,7 @@ def sample_posterior_predictive(
         else:
             inputs, input_names = [], []
     else:
+        assert isinstance(_trace, MultiTrace)
         output_names = [v.name for v in vars_to_sample if v.name is not None]
         input_names = [
             n
@@ -1715,7 +1726,7 @@ def sample_posterior_predictive(
 
     ppc_trace_t = _DefaultTrace(samples)
     try:
-        if hasattr(_trace, "_straces"):
+        if isinstance(_trace, MultiTrace):
             # trace dict is unordered, but we want to return ppc samples in
             # a predictable ordering, so sort the chain indices
             chain_idx_mapping = sorted(_trace._straces.keys())
@@ -1750,7 +1761,7 @@ def sample_posterior_predictive(
 
     if not return_inferencedata:
         return ppc_trace
-    ikwargs = dict(model=model)
+    ikwargs: Dict[str, Any] = dict(model=model)
     if idata_kwargs:
         ikwargs.update(idata_kwargs)
     if predictions:
@@ -1881,8 +1892,8 @@ def sample_posterior_predictive_w(
         indices = np.random.randint(0, nchain * len_trace, j)
         if nchain > 1:
             chain_idx, point_idx = np.divmod(indices, len_trace)
-            for idx in zip(chain_idx, point_idx):
-                trace.append(tr._straces[idx[0]].point(idx[1]))
+            for cidx, pidx in zip(chain_idx, point_idx):
+                trace.append(tr._straces[cidx].point(pidx))
         else:
             for idx in indices:
                 trace.append(tr[idx])
@@ -1892,12 +1903,12 @@ def sample_posterior_predictive_w(
 
     lengths = list({np.atleast_1d(observed).shape for observed in obs})
 
+    size: List[Optional[Tuple[int, ...]]] = []
     if len(lengths) == 1:
-        size = [None for i in variables]
+        size = [None] * len(variables)
     elif len(lengths) > 2:
         raise ValueError("Observed variables could not be broadcast together")
     else:
-        size = []
         x = np.zeros(shape=lengths[0])
         y = np.zeros(shape=lengths[1])
         b = np.broadcast(x, y)
@@ -1919,7 +1930,7 @@ def sample_posterior_predictive_w(
         indices = progress_bar(indices, total=samples, display=progressbar)
 
     try:
-        ppc = defaultdict(list)
+        ppcl: Dict[str, list] = defaultdict(list)
         for idx in indices:
             param = trace[idx]
             var = variables[idx]
@@ -1932,13 +1943,13 @@ def sample_posterior_predictive_w(
     except KeyboardInterrupt:
         pass
     else:
-        ppc = {k: np.asarray(v) for k, v in ppc.items()}
+        ppcd = {k: np.asarray(v) for k, v in ppcl.items()}
         if not return_inferencedata:
-            return ppc
-        ikwargs = dict(model=models)
+            return ppcd
+        ikwargs: Dict[str, Any] = dict(model=models)
         if idata_kwargs:
             ikwargs.update(idata_kwargs)
-        return pm.to_inference_data(posterior_predictive=ppc, **ikwargs)
+        return pm.to_inference_data(posterior_predictive=ppcd, **ikwargs)
 
 
 def sample_prior_predictive(
@@ -2044,7 +2055,7 @@ def sample_prior_predictive(
 
     if not return_inferencedata:
         return prior
-    ikwargs = dict(model=model)
+    ikwargs: Dict[str, Any] = dict(model=model)
     if idata_kwargs:
         ikwargs.update(idata_kwargs)
     return pm.to_inference_data(prior=prior, **ikwargs)
@@ -2106,10 +2117,11 @@ def draw(
 
     # Single variable output
     if not isinstance(vars, (list, tuple)):
-        drawn_values = (draw_fn() for _ in range(draws))
-        return np.stack(drawn_values)
+        cast(Callable[[], np.ndarray], draw_fn)
+        return np.stack([draw_fn() for _ in range(draws)])
 
     # Multiple variable output
+    cast(Callable[[], List[np.ndarray]], draw_fn)
     drawn_values = zip(*(draw_fn() for _ in range(draws)))
     return [np.stack(v) for v in drawn_values]
 
@@ -2120,7 +2132,7 @@ def _init_jitter(
     seeds: Sequence[int],
     jitter: bool,
     jitter_max_retries: int,
-) -> PointType:
+) -> List[PointType]:
     """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
 
     ``model.check_start_vals`` is used to test whether the jittered starting
@@ -2144,7 +2156,7 @@ def _init_jitter(
     ipfns = make_initial_point_fns_per_chain(
         model=model,
         overrides=initvals,
-        jitter_rvs=set(model.free_RVs) if jitter else {},
+        jitter_rvs=set(model.free_RVs) if jitter else set(),
         chains=len(seeds),
     )
 
@@ -2282,6 +2294,7 @@ def init_nuts(
 
     apoints = [DictToArrayBijection.map(point) for point in initial_points]
     apoints_data = [apoint.data for apoint in apoints]
+    potential: quadpotential.QuadPotential
 
     if init == "adapt_diag":
         mean = np.mean(apoints_data, axis=0)

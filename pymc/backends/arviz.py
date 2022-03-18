@@ -7,6 +7,7 @@ from typing import (  # pylint: disable=unused-import
     Any,
     Dict,
     Iterable,
+    Mapping,
     Optional,
     Tuple,
     Union,
@@ -532,8 +533,8 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
 def to_inference_data(
     trace: Optional["MultiTrace"] = None,
     *,
-    prior: Optional[Dict[str, Any]] = None,
-    posterior_predictive: Optional[Dict[str, Any]] = None,
+    prior: Optional[Mapping[str, Any]] = None,
+    posterior_predictive: Optional[Mapping[str, Any]] = None,
     log_likelihood: Union[bool, Iterable[str]] = True,
     coords: Optional[CoordSpec] = None,
     dims: Optional[DimSpec] = None,

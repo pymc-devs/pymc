@@ -749,11 +749,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         f"Requested variable {var} not found among the model variables"
                     )
 
-        rv_logps = []
+        rv_logps: List[TensorVariable] = []
         if rv_values:
             rv_logps = joint_logpt(list(rv_values.keys()), rv_values, sum=False, jacobian=jacobian)
-            if not isinstance(rv_logps, list):
-                rv_logps = [rv_logps]
+            assert isinstance(rv_logps, list)
 
         # Replace random variables by their value variables in potential terms
         potential_logps = []
@@ -1444,8 +1443,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if dims is not None:
             if isinstance(dims, str):
                 dims = (dims,)
-            if any(dim not in self.coords and dim is not None for dim in dims):
-                raise ValueError(f"Dimension {dim} is not specified in `coords`.")
+            for dim in dims:
+                if dim not in self.coords and dim is not None:
+                    raise ValueError(f"Dimension {dim} is not specified in `coords`.")
             if any(var.name == dim for dim in dims):
                 raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
             self._RV_dims[var.name] = dims

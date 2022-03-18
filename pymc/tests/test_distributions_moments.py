@@ -624,17 +624,17 @@ def test_constant_moment(c, size, expected):
 
 
 @pytest.mark.parametrize(
-    "psi, theta, size, expected",
+    "psi, mu, size, expected",
     [
-        (0.9, 3.0, None, 2),
+        (0.9, 3.0, None, 3),
         (0.8, 2.9, 5, np.full(5, 2)),
         (0.2, np.arange(1, 5) * 5, None, np.arange(1, 5)),
         (0.2, np.arange(1, 5) * 5, (2, 4), np.full((2, 4), np.arange(1, 5))),
     ],
 )
-def test_zero_inflated_poisson_moment(psi, theta, size, expected):
+def test_zero_inflated_poisson_moment(psi, mu, size, expected):
     with Model() as model:
-        ZeroInflatedPoisson("x", psi=psi, theta=theta, size=size)
+        ZeroInflatedPoisson("x", psi=psi, mu=mu, size=size)
     assert_moment_is_expected(model, expected)
 
 
@@ -1335,7 +1335,13 @@ def test_multinomial_moment(p, n, size, expected):
     [
         (0.2, 10, 3, None, 2),
         (0.2, 10, 4, 5, np.full(5, 2)),
-        (0.4, np.arange(1, 5), np.arange(2, 6), None, np.array([0, 0, 1, 1])),
+        (
+            0.4,
+            np.arange(1, 5),
+            np.arange(2, 6),
+            None,
+            np.array([0, 1, 1, 2] if aesara.config.floatX == "float64" else [0, 0, 1, 1]),
+        ),
         (
             np.linspace(0.2, 0.6, 3),
             np.arange(1, 10, 4),

@@ -18,7 +18,7 @@ import aesara.tensor as at
 import numpy as np
 
 from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
-from aeppl.logprob import _logprob
+from aeppl.logprob import _logcdf, _logprob
 from aesara.compile.builders import OpFromGraph
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
@@ -33,9 +33,10 @@ from pymc.distributions.distribution import (
     _get_moment,
     get_moment,
 )
-from pymc.distributions.logprob import logp
+from pymc.distributions.logprob import logcdf, logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.util import check_dist_not_registered
+from pymc.vartypes import discrete_types
 
 __all__ = ["Mixture", "NormalMixture"]
 
@@ -176,7 +177,6 @@ class Mixture(SymbolicDistribution):
             )
 
         # Check that components are not associated with a registered variable in the model
-        components_ndim = set()
         components_ndim_supp = set()
         for dist in comp_dists:
             # TODO: Allow these to not be a RandomVariable as long as we can call `ndim_supp` on them
@@ -188,13 +188,7 @@ class Mixture(SymbolicDistribution):
                     f"Component dist must be a distribution created via the `.dist()` API, got {type(dist)}"
                 )
             check_dist_not_registered(dist)
-            components_ndim.add(dist.ndim)
             components_ndim_supp.add(dist.owner.op.ndim_supp)
-
-        if len(components_ndim) > 1:
-            raise ValueError(
-                f"Mixture components must all have the same dimensionality, got {components_ndim}"
-            )
 
         if len(components_ndim_supp) > 1:
             raise ValueError(
@@ -214,13 +208,18 @@ class Mixture(SymbolicDistribution):
             # Create new rng for the mix_indexes internal RV
             mix_indexes_rng = aesara.shared(np.random.default_rng())
 
+        single_component = len(components) == 1
+        ndim_supp = components[0].owner.op.ndim_supp
+
         if size is not None:
             components = cls._resize_components(size, *components)
+        elif not single_component:
+            # We might need to broadcast components when size is not specified
+            shape = tuple(at.broadcast_shape(*components))
+            size = shape[: len(shape) - ndim_supp]
+            components = cls._resize_components(size, *components)
 
-        single_component = len(components) == 1
-
-        # Extract support and replication ndims from components and weights
-        ndim_supp = components[0].owner.op.ndim_supp
+        # Extract replication ndims from components and weights
         ndim_batch = components[0].ndim - ndim_supp
         if single_component:
             # One dimension is taken by the mixture axis in the single component case
@@ -275,7 +274,8 @@ class Mixture(SymbolicDistribution):
 
         # Index components and squeeze mixture dimension
         mix_out_ = at.take_along_axis(stacked_components_, mix_indexes_padded_, axis=mix_axis)
-        # There is a Aeasara bug in squeeze with negative axis
+        # There is a Aesara bug in squeeze with negative axis
+        # https://github.com/aesara-devs/aesara/issues/830
         # this is equivalent to np.squeeze(mix_out_, axis=mix_axis)
         mix_out_ = at.squeeze(mix_out_, axis=mix_out_.ndim + mix_axis)
 
@@ -389,7 +389,8 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
     mix_logp = at.logsumexp(at.log(weights) + components_logp, axis=-1)
 
     # Squeeze stack dimension
-    # There is a Aeasara bug in squeeze with negative axis
+    # There is a Aesara bug in squeeze with negative axis
+    # https://github.com/aesara-devs/aesara/issues/830
     # mix_logp = at.squeeze(mix_logp, axis=-1)
     mix_logp = at.squeeze(mix_logp, axis=mix_logp.ndim - 1)
 
@@ -402,6 +403,39 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
     )
 
     return mix_logp
+
+
+@_logcdf.register(MarginalMixtureRV)
+def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
+
+    # single component
+    if len(components) == 1:
+        # Need to broadcast value across mixture axis
+        mix_axis = -components[0].owner.op.ndim_supp - 1
+        components_logcdf = logcdf(components[0], at.expand_dims(value, mix_axis))
+    else:
+        components_logcdf = at.stack(
+            [logcdf(component, value) for component in components],
+            axis=-1,
+        )
+
+    mix_logcdf = at.logsumexp(at.log(weights) + components_logcdf, axis=-1)
+
+    # Squeeze stack dimension
+    # There is a Aesara bug in squeeze with negative axis
+    # https://github.com/aesara-devs/aesara/issues/830
+    # mix_logp = at.squeeze(mix_logp, axis=-1)
+    mix_logcdf = at.squeeze(mix_logcdf, axis=mix_logcdf.ndim - 1)
+
+    mix_logcdf = check_parameters(
+        mix_logcdf,
+        0 <= weights,
+        weights <= 1,
+        at.isclose(at.sum(weights, axis=-1), 1),
+        msg="0 <= weights <= 1, sum(weights) == 1",
+    )
+
+    return mix_logcdf
 
 
 @_get_moment.register(MarginalMixtureRV)
@@ -419,7 +453,10 @@ def get_moment_marginal_mixture(op, rv, rng, weights, *components):
             axis=mix_axis,
         )
 
-    return at.sum(weights * moment_components, axis=mix_axis)
+    moment = at.sum(weights * moment_components, axis=mix_axis)
+    if components[0].dtype in discrete_types:
+        moment = at.round(moment)
+    return moment
 
 
 class NormalMixture:
