@@ -17,7 +17,18 @@ Please verify that your issue is not being currently addressed by other issues o
 
 Filter on the ["beginner friendly"](https://github.com/pymc-devs/pymc/issues?q=is%3Aopen+is%3Aissue+label%3A%22beginner+friendly%22) label for issues which are good for new contributors.
 
-# Contributing code via pull requests
+## Etiquiette for code contributions
+When you start working working on an issue, open a `Draft` pull request as soon as you're doing the first steps.
+Before opening a PR with a new feature, please first open an Issue or Discussion to propose it and discuss the new feature with the maintainers.
+Make sure to mention the issue number in the PR description or commit message.
+This will automatically add a link to the PR in the issue ticket as well.
+By doing this way others can see that the issue is being worked on and has a pull request.
+
+Comments like "I want to work on this issue" will be ignored.
+This is because we value getting things done over pledges and found that waiting weeks for follow-ups to such pledges slows down the progress.
+Similarly, we may decide to close or take over pull requests where the author is not responsive.
+
+## Contributing code via pull requests
 
 While issue reporting is valuable, we strongly encourage users who are inclined to do so to submit patches for new or existing issues via pull requests. This is particularly the case for simple fixes, such as typos or tweaks to documentation, which do not require a heavy investment of time and attention.
 
@@ -26,6 +37,8 @@ Contributors are also encouraged to contribute new code to enhance PyMC's functi
 The preferred workflow for contributing to PyMC is to fork the [GitHub repository](https://github.com/pymc-devs/pymc/), clone it to your local machine, and develop on a feature branch.
 
 ### Steps
+
+1. Read the [Contributing etiquette section](#etiquiette-for-code-contributions).
 
 1. Fork the [project repository](https://github.com/pymc-devs/pymc/) by clicking on the 'Fork' button near the top right of the main repository page. This creates a copy of the code under your GitHub user account.
 
