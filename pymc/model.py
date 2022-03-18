@@ -58,8 +58,9 @@ from pymc.aesaraf import (
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
-from pymc.distributions import joint_logpt, logp_transform
+from pymc.distributions import joint_logpt
 from pymc.distributions.logprob import _get_scaling
+from pymc.distributions.transforms import _get_default_transform
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
 from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
@@ -1421,7 +1422,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
         if transform is UNSET and rv_var.owner:
-            transform = logp_transform(rv_var.owner.op)
+            transform = _get_default_transform(rv_var.owner.op)
 
         if transform is not None and transform is not UNSET:
             value_var.tag.transform = transform

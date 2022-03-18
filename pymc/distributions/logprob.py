@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 from collections.abc import Mapping
-from functools import singledispatch
 from typing import Dict, List, Optional, Sequence, Union
 
 import aesara
@@ -25,7 +24,6 @@ from aeppl.logprob import logcdf as logcdf_aeppl
 from aeppl.logprob import logprob as logp_aeppl
 from aeppl.transforms import TransformValuesOpt
 from aesara.graph.basic import graph_inputs, io_toposort
-from aesara.graph.op import Op
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -37,11 +35,6 @@ from aesara.tensor.subtensor import (
 from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import floatX
-
-
-@singledispatch
-def logp_transform(op: Op):
-    return None
 
 
 def _get_scaling(total_size: Optional[Union[int, Sequence[int]]], shape, ndim: int):
