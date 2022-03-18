@@ -156,7 +156,7 @@ class TestNested:
             with pm.Model() as sub:
                 assert model is sub.root
 
-    def test_multi_scoping(self):
+    def test_nested_named_model_repeated(self):
         with pm.Model("sub") as model:
             b = pm.Normal("var")
             with pm.Model("sub"):
