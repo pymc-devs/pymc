@@ -58,15 +58,15 @@ from pymc.tests.test_distributions_moments import assert_moment_is_expected
 from pymc.tests.test_distributions_random import pymc_random
 
 
-def generate_normal_mixture_data(w, mu, sd, size=1000):
+def generate_normal_mixture_data(w, mu, sigma, size=1000):
     component = np.random.choice(w.size, size=size, p=w)
-    mu, sd = np.broadcast_arrays(mu, sd)
+    mu, sigma = np.broadcast_arrays(mu, sigma)
     out_size = to_tuple(size) + mu.shape[:-1]
     mu_ = np.array([mu[..., comp] for comp in component.ravel()])
-    sd_ = np.array([sd[..., comp] for comp in component.ravel()])
+    sigma_ = np.array([sigma[..., comp] for comp in component.ravel()])
     mu_ = np.reshape(mu_, out_size)
-    sd_ = np.reshape(sd_, out_size)
-    x = np.random.normal(mu_, sd_, size=out_size)
+    sigma_ = np.reshape(sigma_, out_size)
+    x = np.random.normal(mu_, sigma_, size=out_size)
 
     return x
 
@@ -472,8 +472,8 @@ class TestMixture(SeededTest):
     def test_list_normals_sampling(self):
         norm_w = np.array([0.75, 0.25])
         norm_mu = np.array([0.0, 5.0])
-        norm_sd = np.ones_like(norm_mu)
-        norm_x = generate_normal_mixture_data(norm_w, norm_mu, norm_sd, size=1000)
+        norm_sigma = np.ones_like(norm_mu)
+        norm_x = generate_normal_mixture_data(norm_w, norm_mu, norm_sigma, size=1000)
 
         with Model() as model:
             w = Dirichlet("w", floatX(np.ones_like(norm_w)), shape=norm_w.size)
@@ -715,8 +715,8 @@ class TestNormalMixture(SeededTest):
     def test_normal_mixture_sampling(self):
         norm_w = np.array([0.75, 0.25])
         norm_mu = np.array([0.0, 5.0])
-        norm_sd = np.ones_like(norm_mu)
-        norm_x = generate_normal_mixture_data(norm_w, norm_mu, norm_sd, size=1000)
+        norm_sigma = np.ones_like(norm_mu)
+        norm_x = generate_normal_mixture_data(norm_w, norm_mu, norm_sigma, size=1000)
 
         with Model() as model:
             w = Dirichlet("w", floatX(np.ones_like(norm_w)), shape=norm_w.size)
@@ -746,7 +746,7 @@ class TestNormalMixture(SeededTest):
         test_mus = np.random.randn(*comp_shape)
         test_taus = np.random.gamma(1, 1, size=comp_shape)
         observed = generate_normal_mixture_data(
-            w=np.ones(ncomp) / ncomp, mu=test_mus, sd=1 / np.sqrt(test_taus), size=10
+            w=np.ones(ncomp) / ncomp, mu=test_mus, sigma=1 / np.sqrt(test_taus), size=10
         )
 
         with Model() as model0:

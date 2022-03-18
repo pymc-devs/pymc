@@ -95,12 +95,12 @@ class TestInitvalEvaluation:
     def test_nested_initvals(self):
         # See issue #5168
         with pm.Model() as pmodel:
-            one = pm.LogNormal("one", mu=np.log(1), sd=1e-5, initval="prior")
-            two = pm.Lognormal("two", mu=np.log(one * 2), sd=1e-5, initval="prior")
-            three = pm.LogNormal("three", mu=np.log(two * 2), sd=1e-5, initval="prior")
-            four = pm.LogNormal("four", mu=np.log(three * 2), sd=1e-5, initval="prior")
-            five = pm.LogNormal("five", mu=np.log(four * 2), sd=1e-5, initval="prior")
-            six = pm.LogNormal("six", mu=np.log(five * 2), sd=1e-5, initval="prior")
+            one = pm.LogNormal("one", mu=np.log(1), sigma=1e-5, initval="prior")
+            two = pm.Lognormal("two", mu=np.log(one * 2), sigma=1e-5, initval="prior")
+            three = pm.LogNormal("three", mu=np.log(two * 2), sigma=1e-5, initval="prior")
+            four = pm.LogNormal("four", mu=np.log(three * 2), sigma=1e-5, initval="prior")
+            five = pm.LogNormal("five", mu=np.log(four * 2), sigma=1e-5, initval="prior")
+            six = pm.LogNormal("six", mu=np.log(five * 2), sigma=1e-5, initval="prior")
 
         ip_vals = list(make_initial_point_fn(model=pmodel, return_transformed=True)(0).values())
         assert np.allclose(np.exp(ip_vals), [1, 2, 4, 8, 16, 32], rtol=1e-3)

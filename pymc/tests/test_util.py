@@ -94,9 +94,9 @@ def test_hashing_of_rv_tuples():
     obs = np.random.normal(-1, 0.1, size=10)
     with pm.Model() as pmodel:
         mu = pm.Normal("mu", 0, 1)
-        sd = pm.Gamma("sd", 1, 2)
+        sigma = pm.Gamma("sigma", 1, 2)
         dd = pm.Normal("dd", observed=obs)
-        for freerv in [mu, sd, dd] + pmodel.free_RVs:
+        for freerv in [mu, sigma, dd] + pmodel.free_RVs:
             for structure in [
                 freerv,
                 {"alpha": freerv, "omega": None},

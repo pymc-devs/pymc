@@ -188,8 +188,8 @@ example::
 
     with pm.Model() as model:
         mu = pm.Normal('mu', 0, 1)
-        sd = pm.HalfNormal('sd', 1)
-        y = pm.Normal('y', mu=mu, sigma=sd, observed=data)
+        sigma = pm.HalfNormal('sigma', 1)
+        y = pm.Normal('y', mu=mu, sigma=sigma, observed=data)
 
 is roughly equivalent to this::
 
@@ -203,10 +203,10 @@ is roughly equivalent to this::
     model.add_free_variable(sd_log__)
     model.add_logp_term(corrected_logp_half_normal(sd_log__))
 
-    sd = at.exp(sd_log__)
-    model.add_deterministic_variable(sd)
+    sigma = at.exp(sd_log__)
+    model.add_deterministic_variable(sigma)
 
-    model.add_logp_term(pm.Normal.dist(mu, sd).logp(data))
+    model.add_logp_term(pm.Normal.dist(mu, sigma).logp(data))
 
 The return values of the variable constructors are subclasses
 of Aesara variables, so when we define a variable we can use any
@@ -217,5 +217,5 @@ Aesara operation on them::
         # beta is a at.dvector
         beta = pm.Normal('beta', 0, 1, shape=len(design_matrix))
         predict = at.dot(design_matrix, beta)
-        sd = pm.HalfCauchy('sd', beta=2.5)
-        pm.Normal('y', mu=predict, sigma=sd, observed=data)
+        sigma = pm.HalfCauchy('sigma', beta=2.5)
+        pm.Normal('y', mu=predict, sigma=sigma, observed=data)

@@ -212,7 +212,7 @@ def beta_bernoulli(n=2):
 def simple_normal(bounded_prior=False):
     """Simple normal for testing MLE / MAP; probes issue #2482."""
     x0 = 10.0
-    sd = 1.0
+    sigma = 1.0
     a, b = (9, 12)  # bounds for uniform RV, need non-symmetric to reproduce issue
 
     with pm.Model(rng_seeder=2482) as model:
@@ -220,6 +220,6 @@ def simple_normal(bounded_prior=False):
             mu_i = pm.Uniform("mu_i", a, b)
         else:
             mu_i = pm.Flat("mu_i")
-        pm.Normal("X_obs", mu=mu_i, sigma=sd, observed=x0)
+        pm.Normal("X_obs", mu=mu_i, sigma=sigma, observed=x0)
 
     return model.compute_initial_point(), model, None

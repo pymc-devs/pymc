@@ -97,6 +97,7 @@ All of the above apply to:
 This includes API changes we did not warn about since at least `3.11.0` (2021-01).
 
 - Setting initial values through `pm.Distribution(testval=...)` is now `pm.Distribution(initval=...)`.
+- Alternative `sd` keyword argument has been removed from all distributions. `sigma` should be used instead (see [#5583](https://github.com/pymc-devs/pymc/pull/5583)).
 
 
 ### New features
