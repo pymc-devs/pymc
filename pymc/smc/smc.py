@@ -14,7 +14,7 @@
 import abc
 
 from abc import ABC
-from typing import Dict, cast
+from typing import Dict, Tuple, cast
 
 import aesara.tensor as at
 import numpy as np
@@ -303,14 +303,14 @@ class SMC_KERNEL(ABC):
         """
         return self.particles.to_trace(chain)
 
-    def _tempered_posterior_p(self, samples):
+    def _tempered_logps(self, samples) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Evaluates tempered posterior over samples, in log scale.
         """
-        ll = np.array([self.likelihood_logp_func(prop) for prop in samples])
-        pl = np.array([self.prior_logp_func(prop) for prop in samples])
-        sample_logp = pl + ll * self.beta
-        return sample_logp, pl, ll
+        likelihood_logp = np.array([self.likelihood_logp_func(sample) for sample in samples])
+        prior_logp = np.array([self.prior_logp_func(sample) for sample in samples])
+        sample_logp = prior_logp + likelihood_logp * self.beta
+        return sample_logp, prior_logp, likelihood_logp
 
 
 class IMH(SMC_KERNEL):
@@ -360,14 +360,13 @@ class IMH(SMC_KERNEL):
             forward_logp = self.proposal_dist.logpdf(proposal)
             # And to going back from that new point
             backward_logp = self.proposal_dist.logpdf(self.particles.as_array)
-            proposal_logp, pl, ll = self._tempered_posterior_p(proposal)
+            proposal_logp, pl, ll = self._tempered_logps(proposal)
 
             accepted = log_R < (
                 (proposal_logp + backward_logp) - (self.tempered_posterior_logp + forward_logp)
             )
 
-            self.particles.set(accepted, proposal[accepted])
-
+            self.particles[accepted] = proposal[accepted]
             self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
@@ -476,10 +475,10 @@ class MH(SMC_KERNEL):
                 * self.proposal_scales[:, None]
             )
 
-            proposal_logp, pl, ll = self._tempered_posterior_p(proposal)
+            proposal_logp, pl, ll = self._tempered_logps(proposal)
             accepted = log_R < (proposal_logp - self.tempered_posterior_logp)
 
-            self.particles.set(accepted, proposal[accepted])
+            self.particles[accepted] = proposal[accepted]
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
             self.tempered_posterior_logp[accepted] = proposal_logp[accepted]
@@ -551,9 +550,7 @@ def _logp_forw(point, out_vars, in_vars, shared):
 
 class Particles:
     """
-    List of draws from variables (particles)
-    belonging to a model that can be modified
-    in place as if they were an array.
+    List of draws from variables (particles) belonging to a model that can be modified in place as if it were an array.
     """
 
     @classmethod
@@ -566,8 +563,6 @@ class Particles:
             Point({v.name: init_rnd[v.name][i] for v in variables}, model=model)
             for i in range(draws)
         ]
-        draws = draws
-
         return Particles(points, draws, var_info, variables, model)
 
     def __init__(self, points, draws, var_info, variables, model):
@@ -586,28 +581,15 @@ class Particles:
     def __getitem__(self, item):
         return self.as_array[item]
 
-    def set(self, indexes, values):
+    def __setitem__(self, key, value):
         """
-        Consistently updates array and points
-        representations. If no index is selected, modify all
+        Consistently updates array and points representations.
         """
-        if indexes is None:
-            if not len(values) == len(self):
-                raise ValueError(
-                    "If values size doesn't match particle size, then indexes need to be specified"
-                )
-            indexes = [True] * len(self)
-
-        elif not len(indexes) == len(self):
-            raise ValueError(
-                f"Indexes length {len(indexes)} does not match particles size {len(self)}"
-            )
-
-        self.as_array[indexes] = values
+        self.as_array[key] = value
 
     def to_trace(self, chain):
         """
-        Builds a trace object out self,
+        Builds a trace object from self,
         rounding discrete variable samples.
         """
         varnames = [v.name for v in self.variables]

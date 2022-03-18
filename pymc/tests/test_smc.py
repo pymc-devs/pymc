@@ -599,22 +599,5 @@ class TestParticles(SeededTest):
 
     def test_set(self):
         expected_particle_value = np.array([[12, 2]])
-        self.particles.set([True] + [False] * 9, expected_particle_value)
+        self.particles[[True] + [False] * 9] = [expected_particle_value]
         assert np.allclose(self.particles.as_array[0], np.array([12, 2]))
-
-    def test_set_no_indexes_few_values(self):
-        with pytest.raises(
-            ValueError,
-        ):
-            self.particles.set(None, np.array([[12, 2]]))
-
-    def test_set_no_indexes(self):
-        self.particles.set(None, np.tile(np.array([12, 2]), (10, 1)))
-        for i in range(0, 10):
-            assert np.allclose(self.particles[i], np.array([12, 2]))
-
-    def test_set_few_indexes(self):
-        with pytest.raises(
-            ValueError,
-        ):
-            self.particles.set([True, False], np.array([[12, 2]]))
