@@ -530,9 +530,9 @@ class TestSimulator(SeededTest):
             s = pm.Simulator("s", self.normal_sim, a, b, observed=self.data)
 
             trace = pm.sample_smc(draws=10, chains=2, return_inferencedata=False)
-            assert f"{name}_a" in trace.varnames
-            assert f"{name}_b" in trace.varnames
-            assert f"{name}_b_log__" in trace.varnames
+            assert f"{name}/a" in trace.varnames
+            assert f"{name}/b" in trace.varnames
+            assert f"{name}/b_log__" in trace.varnames
 
 
 class TestMHKernel(SeededTest):
