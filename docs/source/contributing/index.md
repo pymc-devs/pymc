@@ -81,6 +81,7 @@ running_the_test_suite
 :maxdepth: 1
 :caption: Reference content
 
+private_api/index
 python_style
 jupyter_style
 pr_checklist
