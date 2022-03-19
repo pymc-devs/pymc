@@ -1,6 +1,0 @@
-#!/bin/sh
-export CFLAGS="-arch x86_64"
-export FFLAGS="-static -ff2c -arch x86_64"
-export LDFLAGS="-Wall -undefined dynamic_lookup -bundle -arch x86_64"
-rm -rf build
-python setupegg.py bdist_egg
