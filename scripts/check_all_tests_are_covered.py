@@ -36,7 +36,7 @@ def from_yaml():
     """
     # First collect the matrix definitions from testing workflows
     matrices = {}
-    for wf in ["pytest.yml", "arviz_compat.yml", "jaxtests.yml"]:
+    for wf in ["tests.yml"]:
         wfname = wf.strip(".yml")
         wfdef = yaml.safe_load(open(Path(".github", "workflows", wf)))
         for jobname, jobdef in wfdef["jobs"].items():
