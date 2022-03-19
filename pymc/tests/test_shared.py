@@ -44,7 +44,7 @@ class TestShared(SeededTest):
             pm.Normal("obs", b * x_shared, np.sqrt(1e-2), observed=y)
             prior_trace0 = pm.sample_prior_predictive(1000)
 
-            idata = pm.sample(1000, init=None, tune=1000, chains=1)
+            idata = pm.sample(1000, tune=1000, chains=1)
             pp_trace0 = pm.sample_posterior_predictive(idata)
 
             x_shared.set_value(x_pred)

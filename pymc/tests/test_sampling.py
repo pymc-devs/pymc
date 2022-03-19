@@ -123,16 +123,12 @@ class TestSample(SeededTest):
     def test_sample_args(self):
         with self.model:
             with pytest.raises(ValueError) as excinfo:
-                pm.sample(50, tune=0, init=None, foo=1)
+                pm.sample(50, tune=0, foo=1)
             assert "'foo'" in str(excinfo.value)
 
             with pytest.raises(ValueError) as excinfo:
-                pm.sample(50, tune=0, init=None, foo={})
+                pm.sample(50, tune=0, foo={})
             assert "foo" in str(excinfo.value)
-
-            with pytest.raises(ValueError) as excinfo:
-                pm.sample(10, tune=0, init=None, target_accept=0.9)
-            assert "target_accept" in str(excinfo.value)
 
     def test_iter_sample(self):
         with self.model:
@@ -918,23 +914,12 @@ def check_exec_nuts_init(method):
         assert model.b.tag.value_var.name in start[0]
 
 
-@pytest.mark.xfail(reason="ADVI not refactored for v4")
 @pytest.mark.parametrize(
     "method",
     [
         "advi",
         "ADVI+adapt_diag",
-        "advi+adapt_diag_grad",
         "advi_map",
-    ],
-)
-def test_exec_nuts_advi_init(method):
-    check_exec_nuts_init(method)
-
-
-@pytest.mark.parametrize(
-    "method",
-    [
         "jitter+adapt_diag",
         "adapt_diag",
         "map",
@@ -1302,3 +1287,45 @@ class TestDraw(SeededTest):
         x_draws_1 = pm.draw(x, 100)
         x_draws_2 = pm.draw(x, 100)
         assert not np.all(np.isclose(x_draws_1, x_draws_2))
+
+
+class test_step_args(SeededTest):
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        idata0 = pm.sample(target_accept=0.5)
+        idata1 = pm.sample(nuts={"target_accept": 0.5})
+
+    npt.assert_almost_equal(idata0.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
+    npt.assert_almost_equal(idata1.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
+
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Poisson("b", 1)
+        idata0 = pm.sample(target_accept=0.5)
+        idata1 = pm.sample(nuts={"target_accept": 0.5}, metropolis={"scaling": 0})
+
+    npt.assert_almost_equal(idata0.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
+    npt.assert_almost_equal(idata1.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
+    npt.assert_allclose(idata1.sample_stats.scaling, 0)
+
+
+def test_init_nuts(caplog):
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        pm.sample(10, tune=10)
+        assert "Initializing NUTS" in caplog.text
+
+
+def test_no_init_nuts_step(caplog):
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        pm.sample(10, tune=10, step=pm.NUTS([a]))
+        assert "Initializing NUTS" not in caplog.text
+
+
+def test_no_init_nuts_compound(caplog):
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Poisson("b", 1)
+        pm.sample(10, tune=10)
+        assert "Initializing NUTS" not in caplog.text
