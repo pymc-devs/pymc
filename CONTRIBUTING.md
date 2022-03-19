@@ -17,15 +17,15 @@ Please verify that your issue is not being currently addressed by other issues o
 
 Filter on the ["beginner friendly"](https://github.com/pymc-devs/pymc/issues?q=is%3Aopen+is%3Aissue+label%3A%22beginner+friendly%22) label for issues which are good for new contributors.
 
-## Etiquiette for code contributions
-* When you start working working on an issue, open a `Draft` pull request as soon as you're doing the first steps (see steps below).
-* Before opening a PR with a new feature, please propose it in an [Issue](https://github.com/pymc-devs/pymc/issues) or [Discussion](https://github.com/pymc-devs/pymc/discussions) with the maintainers. Depending on the proposal we might direct you to other places such as [`pymc-experimental`](https://github.com/pymc-devs/pymc-experimental) or [`pymc-examples`](https://github.com/pymc-devs/pymc-examples).
+## Etiquette for code contributions
+* When you start working working on an issue, open a `Draft` pull request as soon as you make your first commit (see steps below).
+* Before opening a PR with a new feature, please make a proposal by opening an [issue](https://github.com/pymc-devs/pymc/issues) or [Discussion](https://github.com/pymc-devs/pymc/discussions) with the maintainers. Depending on the proposal we might direct you to other places such as [`pymc-experimental`](https://github.com/pymc-devs/pymc-experimental) or [`pymc-examples`](https://github.com/pymc-devs/pymc-examples).
 * Any issue without an open pull request is available for work.
    * If a pull request has no recent activity it may be closed, or taken over by someone else.
    * The specific timeframe for "recent" is hard to define as it depends on the contributor the specific code change, and other contextual factors. As a rule of thumb in a normal pull request with no other blockers there is typically activity every couple of days.
-   * The core devs will make their best judgement when opting to close PRs.
-* In accordance with the previous point, please don't make unrealistic "_I want to work on this issue_" pledges.
-* It's okay if priorities change, but please communicate if you can't get a PR to the finish line, or that you're taking a break. Depending on the change (urgent bugfix vs. new feature) others might want to take over to get the work done.
+   * The core devs will make their best judgement when opting to close PRs or reassign them to others.
+* If unsure if an issue ticket is available feel free to ask in the issue ticket. Note however, that per the previous point an open pull request is way to claim an issue ticket. Please do not make unrealistic pledges in the issue tickets.
+* It's okay if you are delayed or need to take a break, but please leave a comment in the pull request if you cannot get it to a state where it can be merged. Depending on the change (urgent bugfix vs. new feature) the core devs can determine if the PR needs to be reassigned to get the work done.
 
 ## Contributing code via pull requests
 
@@ -37,7 +37,7 @@ The preferred workflow for contributing to PyMC is to fork the [GitHub repositor
 
 ### Steps
 
-1. Read the [Contributing etiquette section](#etiquiette-for-code-contributions).
+1. Read the [Etiquette for code contributions](#etiquette-for-code-contributions).
 
 1. Fork the [project repository](https://github.com/pymc-devs/pymc/) by clicking on the 'Fork' button near the top right of the main repository page. This creates a copy of the code under your GitHub user account.
 
