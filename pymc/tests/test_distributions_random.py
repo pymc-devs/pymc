@@ -14,6 +14,7 @@
 import functools
 import itertools
 import re
+import sys
 
 from typing import Callable, List, Optional
 
@@ -1571,14 +1572,18 @@ class TestConstant(BaseTestDistributionRandom):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
         "check_rv_size",
-        "check_dtype",
     ]
 
-    def check_dtype(self):
-        assert pm.Constant.dist(2**4).dtype == "int8"
-        assert pm.Constant.dist(2**16).dtype == "int32"
-        assert pm.Constant.dist(2**32).dtype == "int64"
-        assert pm.Constant.dist(2.0).dtype == aesara.config.floatX
+    @pytest.mark.parametrize("floatX", ["float32", "float64"])
+    @pytest.mark.xfail(
+        sys.platform == "win32", reason="https://github.com/aesara-devs/aesara/issues/871"
+    )
+    def test_dtype(self, floatX):
+        with aesara.config.change_flags(floatX=floatX):
+            assert pm.Constant.dist(2**4).dtype == "int8"
+            assert pm.Constant.dist(2**16).dtype == "int32"
+            assert pm.Constant.dist(2**32).dtype == "int64"
+            assert pm.Constant.dist(2.0).dtype == floatX
 
 
 class TestOrderedLogistic(BaseTestDistributionRandom):
