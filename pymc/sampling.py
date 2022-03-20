@@ -45,6 +45,7 @@ import xarray
 
 from aesara.compile.mode import Mode
 from aesara.graph.basic import Constant, Variable
+from aesara.tensor import TensorVariable
 from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
@@ -1708,6 +1709,8 @@ def sample_posterior_predictive(
             return trace
         return {}
 
+    inputs: Sequence[TensorVariable]
+    input_names: Sequence[str]
     if not hasattr(_trace, "varnames"):
         inputs_and_names = [
             (rv, rv.name)

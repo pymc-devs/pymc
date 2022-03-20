@@ -26,8 +26,8 @@ repos:
       - types-filelock
       - types-setuptools
       - arviz
-      - aesara==2.4.0
-      - aeppl==0.0.26
+      - aesara==2.5.1
+      - aeppl==0.0.27
       always_run: true
       require_serial: true
       pass_filenames: false
