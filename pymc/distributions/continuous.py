@@ -1658,7 +1658,7 @@ class AsymmetricLaplace(Continuous):
     rv_op = asymmetriclaplace
 
     @classmethod
-    def dist(cls, b, kappa, mu=0, *args, **kwargs):
+    def dist(cls, kappa, mu, b, *args, **kwargs):
         b = at.as_tensor_variable(floatX(b))
         kappa = at.as_tensor_variable(floatX(kappa))
         mu = mu = at.as_tensor_variable(floatX(mu))
@@ -1897,7 +1897,7 @@ class StudentT(Continuous):
     rv_op = studentt
 
     @classmethod
-    def dist(cls, nu, mu=0, lam=None, sigma=None, *args, **kwargs):
+    def dist(cls, nu=1, mu=0, sigma=None, lam=None, *args, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
