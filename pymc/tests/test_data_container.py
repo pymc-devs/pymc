@@ -342,6 +342,7 @@ class TestData(SeededTest):
                 pmodel.set_data("inhabitants", [1, 2, 3, 4])
 
     def test_implicit_coords_series(self):
+        pd = pytest.importorskip("pandas")
         ser_sales = pd.Series(
             data=np.random.randint(low=0, high=30, size=22),
             index=pd.date_range(start="2020-05-01", periods=22, freq="24H", name="date"),
@@ -355,6 +356,7 @@ class TestData(SeededTest):
         assert pmodel.RV_dims == {"sales": ("date",)}
 
     def test_implicit_coords_dataframe(self):
+        pd = pytest.importorskip("pandas")
         N_rows = 5
         N_cols = 7
         df_data = pd.DataFrame()
