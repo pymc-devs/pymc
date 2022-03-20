@@ -35,74 +35,45 @@ jobs:
         os: [ubuntu-20.04]
         floatx: [float32, float64]
         test-subset:
-        # How this works:
-        # 1st block: Only passes --ignore parameters to pytest.
-        # → pytest will run all test_*.py files that are NOT ignored.
-        #
-        # Subsequent blocks: Only pass paths to test files.
-        # → pytest will run only these files
           - |
-            --ignore=pymc/tests/test_distributions_timeseries.py
-            --ignore=pymc/tests/test_mixture.py
-            --ignore=pymc/tests/test_model_graph.py
-            --ignore=pymc/tests/test_modelcontext.py
-            --ignore=pymc/tests/test_parallel_sampling.py
-            --ignore=pymc/tests/test_posteriors.py
-            --ignore=pymc/tests/test_sampling.py
-            --ignore=pymc/tests/test_profile.py
-            --ignore=pymc/tests/test_step.py
-            --ignore=pymc/tests/test_tuning.py
-            --ignore=pymc/tests/test_transforms.py
-            --ignore=pymc/tests/test_sampling_jax.py
-            --ignore=pymc/tests/test_dist_math.py
-            --ignore=pymc/tests/test_minibatches.py
-            --ignore=pymc/tests/test_pickling.py
-            --ignore=pymc/tests/test_updates.py
-            --ignore=pymc/tests/test_gp.py
-            --ignore=pymc/tests/test_model.py
-            --ignore=pymc/tests/test_ode.py
-            --ignore=pymc/tests/test_posdef_sym.py
-            --ignore=pymc/tests/test_quadpotential.py
-            --ignore=pymc/tests/test_shape_handling.py
-            --ignore=pymc/tests/test_distributions.py
-            --ignore=pymc/tests/test_distributions_random.py
-            --ignore=pymc/tests/test_idata_conversion.py
-            --ignore=pymc/tests/test_smc.py
-            --ignore=pymc/tests/test_missing.py
+            pymc/tests/test_util.py
+            pymc/tests/test_logprob.py
+            pymc/tests/test_aesaraf.py
+            pymc/tests/test_math.py
+            pymc/tests/test_posdef_sym.py
+            pymc/tests/test_ndarray_backend.py
+            pymc/tests/test_hmc.py
+            pymc/tests/test_func_utils.py
+            pymc/tests/test_shape_handling.py
+            pymc/tests/test_starting.py
+            pymc/tests/test_mixture.py
 
           - |
             pymc/tests/test_distributions.py
+
+          - |
+            pymc/tests/test_tuning.py
+            pymc/tests/test_shared.py
+            pymc/tests/test_types.py
+            pymc/tests/test_distributions_moments.py
 
           - |
             pymc/tests/test_modelcontext.py
             pymc/tests/test_dist_math.py
             pymc/tests/test_minibatches.py
             pymc/tests/test_pickling.py
-            pymc/tests/test_updates.py
             pymc/tests/test_transforms.py
-            pymc/tests/test_smc.py
-            pymc/tests/test_mixture.py
-
-          - |
             pymc/tests/test_parallel_sampling.py
-            pymc/tests/test_sampling.py
-            pymc/tests/test_tuning.py
-            pymc/tests/test_posteriors.py
-            pymc/tests/test_step.py
 
           - |
-            pymc/tests/test_idata_conversion.py
             pymc/tests/test_distributions_random.py
             pymc/tests/test_distributions_timeseries.py
             pymc/tests/test_gp.py
             pymc/tests/test_model.py
             pymc/tests/test_model_graph.py
             pymc/tests/test_ode.py
-            pymc/tests/test_posdef_sym.py
             pymc/tests/test_profile.py
             pymc/tests/test_quadpotential.py
-            pymc/tests/test_shape_handling.py
-            pymc/tests/test_missing.py
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -167,27 +138,10 @@ jobs:
         os: [windows-latest]
         floatx: [float32, float64]
         test-subset:
-          - |
-            pymc/tests/test_initial_point.py
-            pymc/tests/test_distributions_random.py
-            pymc/tests/test_distributions_moments.py
-            pymc/tests/test_distributions_timeseries.py
-            pymc/tests/test_variational_inference.py
-          - |
-            pymc/tests/test_parallel_sampling.py
-            pymc/tests/test_sampling.py
-            pymc/tests/test_tuning.py
-            pymc/tests/test_shared.py
-            pymc/tests/test_types.py
-          - |
-            pymc/tests/test_gp.py
-            pymc/tests/test_ode.py
-          - |
-            pymc/tests/test_model.py
-            pymc/tests/test_modelcontext.py
-            pymc/tests/test_model_graph.py
-            pymc/tests/test_pickling.py
-            pymc/tests/test_profile.py
+          - pymc/tests/test_variational_inference.py pymc/tests/test_initial_point.py
+          - pymc/tests/test_pickling.py pymc/tests/test_profile.py pymc/tests/test_step.py
+          - pymc/tests/test_gp.py pymc/tests/test_ode.py pymc/tests/test_smc.py pymc/tests/test_parallel_sampling.py
+          - pymc/tests/test_sampling.py pymc/tests/test_posteriors.py
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -256,16 +210,15 @@ jobs:
         test-subset:
           - |
             pymc/tests/test_parallel_sampling.py
-            pymc/tests/test_posteriors.py
+            pymc/tests/test_data_container.py
+            pymc/tests/test_missing.py
+
+          - |
             pymc/tests/test_sampling.py
 
           - |
-            pymc/tests/test_data_container.py
             pymc/tests/test_idata_conversion.py
-            pymc/tests/test_missing.py
-            pymc/tests/test_model.py
-            pymc/tests/test_shape_handling.py
-            pymc/tests/test_shared.py
+            pymc/tests/test_updates.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
