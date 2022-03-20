@@ -618,4 +618,4 @@ def find_size(
 
 def rv_size_is_none(size: Variable) -> bool:
     """Check wether an rv size is None (ie., at.Constant([]))"""
-    return size.type.shape == (0,)
+    return size.type.shape == (0,)  # type: ignore [attr-defined]
