@@ -33,7 +33,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
-        floatx: [float32, float64]
+        floatx: [float64]
         test-subset:
           - |
             pymc/tests/test_util.py
@@ -125,7 +125,7 @@ jobs:
       - name: Run tests
         run: |
           conda activate pymc-test-py37
-          python -m pytest -vv --cov=pymc --cov-append --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
@@ -136,7 +136,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest]
-        floatx: [float32, float64]
+        floatx: [float64]
         test-subset:
           - pymc/tests/test_variational_inference.py pymc/tests/test_initial_point.py
           - pymc/tests/test_pickling.py pymc/tests/test_profile.py pymc/tests/test_step.py
@@ -195,7 +195,7 @@ jobs:
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
           conda activate pymc-test-py38 &&
-          python -m pytest -vv --cov=pymc --cov-append --cov-report=xml --cov-report term --durations=50 %TEST_SUBSET%
+          python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
@@ -340,4 +340,70 @@ jobs:
         with:
           env_vars: TEST_SUBSET
           name: JAX tests - ${{ matrix.os }} ${{ matrix.floatx }}
+          fail_ci_if_error: false
+  float32:
+    strategy:
+      matrix:
+        os: [windows-latest]
+        floatx: [float32]
+        test-subset:
+        - pymc/tests/test_sampling.py pymc/tests/test_ode.py
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      AESARA_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache conda
+        uses: actions/cache@v1
+        env:
+          # Increase this value to reset cache if conda-envs/environment-test-py38.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/windows-environment-test-py38.yml') }}
+      - name: Cache multiple paths
+        uses: actions/cache@v2
+        env:
+          # Increase this value to reset cache if requirements.txt has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: |
+            ~/.cache/pip
+            $RUNNER_TOOL_CACHE/Python/*
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{
+            hashFiles('requirements.txt') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          mamba-version: "*"
+          activate-environment: pymc-test-py38
+          channel-priority: strict
+          environment-file: conda-envs/windows-environment-test-py38.yml
+          use-mamba: true
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Install-pymc
+        run: |
+          conda activate pymc-test-py38
+          pip install -e .
+          pip install --pre -U polyagamma
+          python --version
+      - name: Run tests
+        # This job uses a cmd shell, therefore the environment variable syntax is different!
+        # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
+        run: >-
+          conda activate pymc-test-py38 &&
+          python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 %TEST_SUBSET%
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          env_vars: TEST_SUBSET
+          name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
