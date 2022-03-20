@@ -159,7 +159,11 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
         print("\n".join(sorted(map(str, unexpected_failing))))
         sys.exit(1)
 
-    if unexpected_passing:
+    if unexpected_passing == {"pymc/sampling_jax.py"}:
+        print("Letting you know that 'pymc/sampling_jax.py' unexpectedly passed.")
+        print("But this file is known to sometimes pass and sometimes not.")
+        print("Unless tried to resolve problems in sampling_jax.py just ignore this message.")
+    elif unexpected_passing:
         print(f"{len(unexpected_passing)} files unexpectedly passed the type checks:")
         print("\n".join(sorted(map(str, unexpected_passing))))
         print("This is good news! Go to scripts/run-mypy.py and add them to the list.")
