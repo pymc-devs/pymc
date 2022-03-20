@@ -43,21 +43,6 @@ from pymc.vartypes import continuous_types, discrete_types
 __all__ = ["Mixture", "NormalMixture"]
 
 
-def all_same_type(comp_dists):
-    """
-    Determine if the distributions in comp_dists are all discrete or continuous
-    """
-
-    if len(comp_dists) == 1:
-        # should return True for either check_discrete=True or False
-        return comp_dists[0] in continuous_types | discrete_types
-    else:
-        all_continuous = all([comp_dist in continuous_types for comp_dist in comp_dists])
-        all_discrete = all([comp_dist in discrete_types for comp_dist in comp_dists])
-
-        return all_continuous or all_discrete
-
-
 class MarginalMixtureRV(OpFromGraph):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
@@ -192,11 +177,16 @@ class Mixture(SymbolicDistribution):
                 UserWarning,
             )
 
-        if not all_same_type(comp_dists):
-            raise ValueError(
-                "All distributions in comp_dists must be either discrete or continuous.\n"
-                "See the following issue for more information: https://github.com/pymc-devs/pymc/issues/4511."
-            )
+        if len(comp_dists) > 1:
+            all_continuous = all([comp_dist.dtype in continuous_types for comp_dist in comp_dists])
+            all_discrete = all([comp_dist.dtype in discrete_types for comp_dist in comp_dists])
+
+            if not (all_continuous or all_discrete):
+                # Determine if the distributions in comp_dists are all discrete or continuous
+                raise ValueError(
+                    "All distributions in comp_dists must be either discrete or continuous.\n"
+                    "See the following issue for more information: https://github.com/pymc-devs/pymc/issues/4511."
+                )
 
         # Check that components are not associated with a registered variable in the model
         components_ndim_supp = set()
