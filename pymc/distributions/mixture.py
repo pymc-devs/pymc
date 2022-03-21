@@ -54,6 +54,8 @@ def all_discrete(comp_dists):
 class MarginalMixtureRV(OpFromGraph):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
+    default_output = 1
+
 
 MeasurableVariable.register(MarginalMixtureRV)
 
@@ -288,11 +290,11 @@ class Mixture(SymbolicDistribution):
         )
 
         # Create the actual MarginalMixture variable
-        mix_indexes_rng_next, mix_out = mix_op(mix_indexes_rng, weights, *components)
+        mix_out = mix_op(mix_indexes_rng, weights, *components)
 
         # We need to set_default_updates ourselves, because the choices RV is hidden
         # inside OpFromGraph and PyMC will never find it otherwise
-        mix_indexes_rng.default_update = mix_indexes_rng_next
+        mix_indexes_rng.default_update = mix_out.owner.outputs[0]
 
         # Reference nodes to facilitate identification in other classmethods
         mix_out.tag.weights = weights
