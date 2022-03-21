@@ -1648,12 +1648,12 @@ class AsymmetricLaplace(Continuous):
 
     Parameters
     ----------
-    b: float
-        Scale parameter (b > 0)
     kappa: float
         Symmetry parameter (kappa > 0)
     mu: float
         Location parameter
+    b: float
+        Scale parameter (b > 0)
 
     See Also:
     --------
