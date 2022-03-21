@@ -56,7 +56,7 @@ from pymc.distributions.dist_math import (
     logpow,
     multigammaln,
 )
-from pymc.distributions.distribution import Continuous, Discrete, get_moment
+from pymc.distributions.distribution import Continuous, Discrete, moment
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
     rv_size_is_none,
@@ -244,7 +244,7 @@ class MvNormal(Continuous):
         mu = at.broadcast_arrays(mu, cov[..., -1])[0]
         return super().dist([mu, cov], **kwargs)
 
-    def get_moment(rv, size, mu, cov):
+    def moment(rv, size, mu, cov):
         moment = mu
         if not rv_size_is_none(size):
             moment_size = at.concatenate([size, [mu.shape[-1]]])
@@ -373,7 +373,7 @@ class MvStudentT(Continuous):
         assert_negative_support(nu, "nu", "MvStudentT")
         return super().dist([nu, mu, cov], **kwargs)
 
-    def get_moment(rv, size, nu, mu, cov):
+    def moment(rv, size, nu, mu, cov):
         moment = mu
         if not rv_size_is_none(size):
             moment_size = at.concatenate([size, [mu.shape[-1]]])
@@ -446,7 +446,7 @@ class Dirichlet(Continuous):
 
         return super().dist([a], **kwargs)
 
-    def get_moment(rv, size, a):
+    def moment(rv, size, a):
         norm_constant = at.sum(a, axis=-1)[..., None]
         moment = a / norm_constant
         if not rv_size_is_none(size):
@@ -557,7 +557,7 @@ class Multinomial(Discrete):
         p = at.as_tensor_variable(p)
         return super().dist([n, p], *args, **kwargs)
 
-    def get_moment(rv, size, n, p):
+    def moment(rv, size, n, p):
         n = at.shape_padright(n)
         mode = at.round(n * p)
         diff = n - at.sum(mode, axis=-1, keepdims=True)
@@ -677,9 +677,9 @@ class DirichletMultinomial(Discrete):
 
         return super().dist([n, a], **kwargs)
 
-    def get_moment(rv, size, n, a):
+    def moment(rv, size, n, a):
         p = a / at.sum(a, axis=-1, keepdims=True)
-        return get_moment(Multinomial.dist(n=n, p=p, size=size))
+        return moment(Multinomial.dist(n=n, p=p, size=size))
 
     def logp(value, n, a):
         """
@@ -1212,7 +1212,7 @@ class _LKJCholeskyCov(Continuous):
 
         return super().dist([n, eta, sd_dist], size=size, **kwargs)
 
-    def get_moment(rv, size, n, eta, sd_dists):
+    def moment(rv, size, n, eta, sd_dists):
         diag_idxs = (at.cumsum(at.arange(1, n + 1)) - 1).astype("int32")
         moment = at.zeros_like(rv)
         moment = at.set_subtensor(moment[..., diag_idxs], 1)
@@ -1563,7 +1563,7 @@ class LKJCorr(BoundedContinuous):
         eta = at.as_tensor_variable(floatX(eta))
         return super().dist([n, eta], **kwargs)
 
-    def get_moment(rv, *args):
+    def moment(rv, *args):
         return at.zeros_like(rv)
 
     def logp(value, n, eta):
@@ -1785,7 +1785,7 @@ class MatrixNormal(Continuous):
 
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
 
-    def get_moment(rv, size, mu, rowchol, colchol):
+    def moment(rv, size, mu, rowchol, colchol):
         return at.full_like(rv, mu)
 
     def logp(value, mu, rowchol, colchol):
@@ -1966,7 +1966,7 @@ class KroneckerNormal(Continuous):
 
         return super().dist([mu, sigma, *covs], **kwargs)
 
-    def get_moment(rv, size, mu, covs, chols, evds):
+    def moment(rv, size, mu, covs, chols, evds):
         mean = mu
         if not rv_size_is_none(size):
             moment_size = at.concatenate([size, mu.shape])
@@ -2143,7 +2143,7 @@ class CAR(Continuous):
     def dist(cls, mu, W, alpha, tau, *args, **kwargs):
         return super().dist([mu, W, alpha, tau], **kwargs)
 
-    def get_moment(rv, size, mu, W, alpha, tau):
+    def moment(rv, size, mu, W, alpha, tau):
         return at.full_like(rv, mu)
 
     def logp(value, mu, W, alpha, tau):
@@ -2312,7 +2312,7 @@ class StickBreakingWeights(Continuous):
 
         return super().dist([alpha, K], **kwargs)
 
-    def get_moment(rv, size, alpha, K):
+    def moment(rv, size, alpha, K):
         moment = (alpha / (1 + alpha)) ** at.arange(K)
         moment *= 1 / (1 + alpha)
         moment = at.concatenate([moment, [(alpha / (1 + alpha)) ** K]], axis=-1)

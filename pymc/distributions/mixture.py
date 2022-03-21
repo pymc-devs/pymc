@@ -30,8 +30,8 @@ from pymc.distributions.distribution import (
     Discrete,
     Distribution,
     SymbolicDistribution,
-    _get_moment,
-    get_moment,
+    _moment,
+    moment,
 )
 from pymc.distributions.logprob import logcdf, logp
 from pymc.distributions.shape_utils import to_tuple
@@ -438,25 +438,25 @@ def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
     return mix_logcdf
 
 
-@_get_moment.register(MarginalMixtureRV)
-def get_moment_marginal_mixture(op, rv, rng, weights, *components):
+@_moment.register(MarginalMixtureRV)
+def moment_marginal_mixture(op, rv, rng, weights, *components):
     ndim_supp = components[0].owner.op.ndim_supp
     weights = at.shape_padright(weights, ndim_supp)
     mix_axis = -ndim_supp - 1
 
     if len(components) == 1:
-        moment_components = get_moment(components[0])
+        moment_components = moment(components[0])
 
     else:
         moment_components = at.stack(
-            [get_moment(component) for component in components],
+            [moment(component) for component in components],
             axis=mix_axis,
         )
 
-    moment = at.sum(weights * moment_components, axis=mix_axis)
+    mix_moment = at.sum(weights * moment_components, axis=mix_axis)
     if components[0].dtype in discrete_types:
-        moment = at.round(moment)
-    return moment
+        mix_moment = at.round(mix_moment)
+    return mix_moment
 
 
 class NormalMixture:

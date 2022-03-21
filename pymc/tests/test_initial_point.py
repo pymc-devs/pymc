@@ -21,7 +21,7 @@ from aesara.tensor.random.op import RandomVariable
 
 import pymc as pm
 
-from pymc.distributions.distribution import get_moment
+from pymc.distributions.distribution import moment
 from pymc.initial_point import make_initial_point_fn, make_initial_point_fns_per_chain
 
 
@@ -218,30 +218,30 @@ class TestMoment:
     def test_basic(self):
         # Standard distributions
         rv = pm.Normal.dist(mu=2.3)
-        np.testing.assert_allclose(get_moment(rv).eval(), 2.3)
+        np.testing.assert_allclose(moment(rv).eval(), 2.3)
 
         # Special distributions
         rv = pm.Flat.dist()
-        assert get_moment(rv).eval() == np.zeros(())
+        assert moment(rv).eval() == np.zeros(())
         rv = pm.HalfFlat.dist()
-        assert get_moment(rv).eval() == np.ones(())
+        assert moment(rv).eval() == np.ones(())
         rv = pm.Flat.dist(size=(2, 4))
-        assert np.all(get_moment(rv).eval() == np.zeros((2, 4)))
+        assert np.all(moment(rv).eval() == np.zeros((2, 4)))
         rv = pm.HalfFlat.dist(size=(2, 4))
-        assert np.all(get_moment(rv).eval() == np.ones((2, 4)))
+        assert np.all(moment(rv).eval() == np.ones((2, 4)))
 
     @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
     def test_numeric_moment_shape(self, rv_cls):
         rv = rv_cls.dist(shape=(2,))
         assert not hasattr(rv.tag, "test_value")
-        assert tuple(get_moment(rv).shape.eval()) == (2,)
+        assert tuple(moment(rv).shape.eval()) == (2,)
 
     @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
     def test_symbolic_moment_shape(self, rv_cls):
         s = at.scalar()
         rv = rv_cls.dist(shape=(s,))
         assert not hasattr(rv.tag, "test_value")
-        assert tuple(get_moment(rv).shape.eval({s: 4})) == (4,)
+        assert tuple(moment(rv).shape.eval({s: 4})) == (4,)
         pass
 
     @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
@@ -254,7 +254,7 @@ class TestMoment:
         ):
             rv = rv_cls("rv", dims=("year", "city"))
             assert not hasattr(rv.tag, "test_value")
-            assert tuple(get_moment(rv).shape.eval()) == (4, 3)
+            assert tuple(moment(rv).shape.eval()) == (4, 3)
         pass
 
     def test_moment_not_implemented_fallback(self):

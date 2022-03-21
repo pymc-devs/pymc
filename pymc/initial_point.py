@@ -259,7 +259,7 @@ def make_initial_point_expression(
     initial_points : list of TensorVariable
         Aesara expressions for initial values of the free random variables.
     """
-    from pymc.distributions.distribution import get_moment
+    from pymc.distributions.distribution import moment
 
     if jitter_rvs is None:
         jitter_rvs = set()
@@ -276,14 +276,14 @@ def make_initial_point_expression(
         if isinstance(strategy, str):
             if strategy == "moment":
                 try:
-                    value = get_moment(variable)
+                    value = moment(variable)
                 except NotImplementedError:
                     warnings.warn(
                         f"Moment not defined for variable {variable} of type "
                         f"{variable.owner.op.__class__.__name__}, defaulting to "
                         f"a draw from the prior. This can lead to difficulties "
                         f"during tuning. You can manually define an initval or "
-                        f"implement a get_moment dispatched function for this "
+                        f"implement a moment dispatched function for this "
                         f"distribution.",
                         UserWarning,
                     )

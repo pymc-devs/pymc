@@ -129,7 +129,7 @@ class Binomial(Discrete):
         p = at.as_tensor_variable(floatX(p))
         return super().dist([n, p], **kwargs)
 
-    def get_moment(rv, size, n, p):
+    def moment(rv, size, n, p):
         mean = at.round(n * p)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -259,7 +259,7 @@ class BetaBinomial(Discrete):
         n = at.as_tensor_variable(intX(n))
         return super().dist([n, alpha, beta], **kwargs)
 
-    def get_moment(rv, size, n, alpha, beta):
+    def moment(rv, size, n, alpha, beta):
         mean = at.round((n * alpha) / (alpha + beta))
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -384,7 +384,7 @@ class Bernoulli(Discrete):
         p = at.as_tensor_variable(floatX(p))
         return super().dist([p], **kwargs)
 
-    def get_moment(rv, size, p):
+    def moment(rv, size, p):
         if not rv_size_is_none(size):
             p = at.full(size, p)
         return at.switch(p < 0.5, 0, 1)
@@ -502,7 +502,7 @@ class DiscreteWeibull(Discrete):
         beta = at.as_tensor_variable(floatX(beta))
         return super().dist([q, beta], **kwargs)
 
-    def get_moment(rv, size, q, beta):
+    def moment(rv, size, q, beta):
         median = at.power(at.log(0.5) / at.log(q), 1 / beta) - 1
         if not rv_size_is_none(size):
             median = at.full(size, median)
@@ -606,7 +606,7 @@ class Poisson(Discrete):
         mu = at.as_tensor_variable(floatX(mu))
         return super().dist([mu], *args, **kwargs)
 
-    def get_moment(rv, size, mu):
+    def moment(rv, size, mu):
         mu = at.floor(mu)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -764,7 +764,7 @@ class NegativeBinomial(Discrete):
 
         return n, p
 
-    def get_moment(rv, size, n, p):
+    def moment(rv, size, n, p):
         mu = at.floor(n * (1 - p) / p)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -881,7 +881,7 @@ class Geometric(Discrete):
         p = at.as_tensor_variable(floatX(p))
         return super().dist([p], *args, **kwargs)
 
-    def get_moment(rv, size, p):
+    def moment(rv, size, p):
         mean = at.round(1.0 / p)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -1000,7 +1000,7 @@ class HyperGeometric(Discrete):
         n = at.as_tensor_variable(intX(n))
         return super().dist([good, bad, n], *args, **kwargs)
 
-    def get_moment(rv, size, good, bad, n):
+    def moment(rv, size, good, bad, n):
         N, k = good + bad, good
         mode = at.floor((n + 1) * (k + 1) / (N + 2))
         if not rv_size_is_none(size):
@@ -1168,7 +1168,7 @@ class DiscreteUniform(Discrete):
         upper = intX(at.floor(upper))
         return super().dist([lower, upper], **kwargs)
 
-    def get_moment(rv, size, lower, upper):
+    def moment(rv, size, lower, upper):
         mode = at.maximum(at.floor((upper + lower) / 2.0), lower)
         if not rv_size_is_none(size):
             mode = at.full(size, mode)
@@ -1286,7 +1286,7 @@ class Categorical(Discrete):
         p = at.as_tensor_variable(floatX(p))
         return super().dist([p], **kwargs)
 
-    def get_moment(rv, size, p):
+    def moment(rv, size, p):
         mode = at.argmax(p, axis=-1)
         if not rv_size_is_none(size):
             mode = at.full(size, mode)
@@ -1374,7 +1374,7 @@ class Constant(Discrete):
             c = floatX(c)
         return super().dist([c], **kwargs)
 
-    def get_moment(rv, size, c):
+    def moment(rv, size, c):
         if not rv_size_is_none(size):
             c = at.full(size, c)
         return c
