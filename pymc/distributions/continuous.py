@@ -1901,7 +1901,7 @@ class StudentT(Continuous):
     rv_op = studentt
 
     @classmethod
-    def dist(cls, nu=1, mu=0, sigma=None, lam=None, *args, **kwargs):
+    def dist(cls, nu, mu=0, *, sigma=None, lam=None, *args, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
@@ -2706,7 +2706,7 @@ class HalfStudentT(PositiveContinuous):
 
     Parameters
     ----------
-    nu : tensor_like of float, default 1
+    nu : tensor_like of float
         Degrees of freedom, also known as normality parameter (nu > 0).
     sigma : tensor_like of float, optional
         Scale parameter (sigma > 0). Converges to the standard deviation as nu
@@ -2729,7 +2729,7 @@ class HalfStudentT(PositiveContinuous):
     rv_op = halfstudentt
 
     @classmethod
-    def dist(cls, nu=1, sigma=None, lam=None, *args, **kwargs):
+    def dist(cls, nu, sigma=None, lam=None, *args, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(lam, sigma)
         sigma = at.as_tensor_variable(sigma)
