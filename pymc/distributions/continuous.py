@@ -305,7 +305,7 @@ class Uniform(BoundedContinuous):
         upper = at.as_tensor_variable(floatX(upper))
         return super().dist([lower, upper], **kwargs)
 
-    def get_moment(rv, size, lower, upper):
+    def moment(rv, size, lower, upper):
         lower, upper = at.broadcast_arrays(lower, upper)
         moment = (lower + upper) / 2
         if not rv_size_is_none(size):
@@ -370,7 +370,7 @@ class Flat(Continuous):
         res = super().dist([], size=size, **kwargs)
         return res
 
-    def get_moment(rv, size):
+    def moment(rv, size):
         return at.zeros(size)
 
     def logp(value):
@@ -438,7 +438,7 @@ class HalfFlat(PositiveContinuous):
         res = super().dist([], size=size, **kwargs)
         return res
 
-    def get_moment(rv, size):
+    def moment(rv, size):
         return at.ones(size)
 
     def logp(value):
@@ -556,7 +556,7 @@ class Normal(Continuous):
 
         return super().dist([mu, sigma], **kwargs)
 
-    def get_moment(rv, size, mu, sigma):
+    def moment(rv, size, mu, sigma):
         mu, _ = at.broadcast_arrays(mu, sigma)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -716,7 +716,7 @@ class TruncatedNormal(BoundedContinuous):
         upper = at.as_tensor_variable(floatX(upper)) if upper is not None else at.constant(np.inf)
         return super().dist([mu, sigma, lower, upper], **kwargs)
 
-    def get_moment(rv, size, mu, sigma, lower, upper):
+    def moment(rv, size, mu, sigma, lower, upper):
         mu, _, lower, upper = at.broadcast_arrays(mu, sigma, lower, upper)
         moment = at.switch(
             at.eq(lower, -np.inf),
@@ -865,7 +865,7 @@ class HalfNormal(PositiveContinuous):
 
         return super().dist([0.0, sigma], **kwargs)
 
-    def get_moment(rv, size, loc, sigma):
+    def moment(rv, size, loc, sigma):
         moment = loc + sigma
         if not rv_size_is_none(size):
             moment = at.full(size, moment)
@@ -1017,7 +1017,7 @@ class Wald(PositiveContinuous):
 
         return super().dist([mu, lam, alpha], **kwargs)
 
-    def get_moment(rv, size, mu, lam, alpha):
+    def moment(rv, size, mu, lam, alpha):
         mu, _, _ = at.broadcast_arrays(mu, lam, alpha)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -1225,7 +1225,7 @@ class Beta(UnitContinuous):
 
         return super().dist([alpha, beta], **kwargs)
 
-    def get_moment(rv, size, alpha, beta):
+    def moment(rv, size, alpha, beta):
         mean = alpha / (alpha + beta)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -1356,7 +1356,7 @@ class Kumaraswamy(UnitContinuous):
 
         return super().dist([a, b], *args, **kwargs)
 
-    def get_moment(rv, size, a, b):
+    def moment(rv, size, a, b):
         mean = at.exp(at.log(b) + at.gammaln(1 + 1 / a) + at.gammaln(b) - at.gammaln(1 + 1 / a + b))
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -1476,7 +1476,7 @@ class Exponential(PositiveContinuous):
         # Aesara exponential op is parametrized in terms of mu (1/lam)
         return super().dist([at.inv(lam)], **kwargs)
 
-    def get_moment(rv, size, mu):
+    def moment(rv, size, mu):
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
         return mu
@@ -1560,7 +1560,7 @@ class Laplace(Continuous):
         assert_negative_support(b, "b", "Laplace")
         return super().dist([mu, b], *args, **kwargs)
 
-    def get_moment(rv, size, mu, b):
+    def moment(rv, size, mu, b):
         mu, _ = at.broadcast_arrays(mu, b)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -1671,7 +1671,7 @@ class AsymmetricLaplace(Continuous):
 
         return super().dist([b, kappa, mu], *args, **kwargs)
 
-    def get_moment(rv, size, b, kappa, mu):
+    def moment(rv, size, b, kappa, mu):
         mean = mu - (kappa - 1 / kappa) / b
 
         if not rv_size_is_none(size):
@@ -1782,7 +1782,7 @@ class LogNormal(PositiveContinuous):
 
         return super().dist([mu, sigma], *args, **kwargs)
 
-    def get_moment(rv, size, mu, sigma):
+    def moment(rv, size, mu, sigma):
         mean = at.exp(mu + 0.5 * sigma**2)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -1907,7 +1907,7 @@ class StudentT(Continuous):
 
         return super().dist([nu, mu, sigma], **kwargs)
 
-    def get_moment(rv, size, nu, mu, sigma):
+    def moment(rv, size, nu, mu, sigma):
         mu, _, _ = at.broadcast_arrays(mu, nu, sigma)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -2025,7 +2025,7 @@ class Pareto(BoundedContinuous):
 
         return super().dist([alpha, m], **kwargs)
 
-    def get_moment(rv, size, alpha, m):
+    def moment(rv, size, alpha, m):
         median = m * 2 ** (1 / alpha)
         if not rv_size_is_none(size):
             median = at.full(size, median)
@@ -2121,7 +2121,7 @@ class Cauchy(Continuous):
         assert_negative_support(beta, "beta", "Cauchy")
         return super().dist([alpha, beta], **kwargs)
 
-    def get_moment(rv, size, alpha, beta):
+    def moment(rv, size, alpha, beta):
         alpha, _ = at.broadcast_arrays(alpha, beta)
         if not rv_size_is_none(size):
             alpha = at.full(size, alpha)
@@ -2197,7 +2197,7 @@ class HalfCauchy(PositiveContinuous):
         assert_negative_support(beta, "beta", "HalfCauchy")
         return super().dist([0.0, beta], **kwargs)
 
-    def get_moment(rv, size, loc, beta):
+    def moment(rv, size, loc, beta):
         if not rv_size_is_none(size):
             beta = at.full(size, beta)
         return beta
@@ -2320,7 +2320,7 @@ class Gamma(PositiveContinuous):
 
         return alpha, beta
 
-    def get_moment(rv, size, alpha, inv_beta):
+    def moment(rv, size, alpha, inv_beta):
         # The Aesara `GammaRV` `Op` inverts the `beta` parameter itself
         mean = alpha * inv_beta
         if not rv_size_is_none(size):
@@ -2415,7 +2415,7 @@ class InverseGamma(PositiveContinuous):
 
         return super().dist([alpha, beta], **kwargs)
 
-    def get_moment(rv, size, alpha, beta):
+    def moment(rv, size, alpha, beta):
         mean = beta / (alpha - 1.0)
         mode = beta / (alpha + 1.0)
         moment = at.switch(alpha > 1, mean, mode)
@@ -2525,7 +2525,7 @@ class ChiSquared(PositiveContinuous):
         nu = at.as_tensor_variable(floatX(nu))
         return super().dist([nu], *args, **kwargs)
 
-    def get_moment(rv, size, nu):
+    def moment(rv, size, nu):
         moment = nu
         if not rv_size_is_none(size):
             moment = at.full(size, moment)
@@ -2620,7 +2620,7 @@ class Weibull(PositiveContinuous):
 
         return super().dist([alpha, beta], *args, **kwargs)
 
-    def get_moment(rv, size, alpha, beta):
+    def moment(rv, size, alpha, beta):
         mean = beta * at.gamma(1 + 1 / alpha)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -2739,7 +2739,7 @@ class HalfStudentT(PositiveContinuous):
 
         return super().dist([nu, sigma], *args, **kwargs)
 
-    def get_moment(rv, size, nu, sigma):
+    def moment(rv, size, nu, sigma):
         sigma, _ = at.broadcast_arrays(sigma, nu)
         if not rv_size_is_none(size):
             sigma = at.full(size, sigma)
@@ -2871,7 +2871,7 @@ class ExGaussian(Continuous):
 
         return super().dist([mu, sigma, nu], *args, **kwargs)
 
-    def get_moment(rv, size, mu, sigma, nu):
+    def moment(rv, size, mu, sigma, nu):
         mu, nu, _ = at.broadcast_arrays(mu, nu, sigma)
         moment = mu + nu
         if not rv_size_is_none(size):
@@ -3005,7 +3005,7 @@ class VonMises(CircularContinuous):
         assert_negative_support(kappa, "kappa", "VonMises")
         return super().dist([mu, kappa], *args, **kwargs)
 
-    def get_moment(rv, size, mu, kappa):
+    def moment(rv, size, mu, kappa):
         mu, _ = at.broadcast_arrays(mu, kappa)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -3105,7 +3105,7 @@ class SkewNormal(Continuous):
 
         return super().dist([mu, sigma, alpha], *args, **kwargs)
 
-    def get_moment(rv, size, mu, sigma, alpha):
+    def moment(rv, size, mu, sigma, alpha):
         mean = mu + sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha**2) ** 0.5
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -3202,7 +3202,7 @@ class Triangular(BoundedContinuous):
 
         return super().dist([lower, c, upper], *args, **kwargs)
 
-    def get_moment(rv, size, lower, c, upper):
+    def moment(rv, size, lower, c, upper):
         mean = (lower + upper + c) / 3
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -3309,7 +3309,7 @@ class Gumbel(Continuous):
 
         return super().dist([mu, beta], **kwargs)
 
-    def get_moment(rv, size, mu, beta):
+    def moment(rv, size, mu, beta):
         mean = mu + beta * np.euler_gamma
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -3439,7 +3439,7 @@ class Rice(PositiveContinuous):
             return nu, b, sigma
         raise ValueError("Rice distribution must specify either nu" " or b.")
 
-    def get_moment(rv, size, nu, sigma):
+    def moment(rv, size, nu, sigma):
         nu_sigma_ratio = -(nu**2) / (2 * sigma**2)
         mean = (
             sigma
@@ -3538,7 +3538,7 @@ class Logistic(Continuous):
         s = at.as_tensor_variable(floatX(s))
         return super().dist([mu, s], *args, **kwargs)
 
-    def get_moment(rv, size, mu, s):
+    def moment(rv, size, mu, s):
         mu, _ = at.broadcast_arrays(mu, s)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -3643,7 +3643,7 @@ class LogitNormal(UnitContinuous):
 
         return super().dist([mu, sigma], **kwargs)
 
-    def get_moment(rv, size, mu, sigma):
+    def moment(rv, size, mu, sigma):
         median, _ = at.broadcast_arrays(invlogit(mu), sigma)
         if not rv_size_is_none(size):
             median = at.full(size, median)
@@ -3793,7 +3793,7 @@ class Interpolated(BoundedContinuous):
 
         return super().dist([x_points, pdf_points, cdf_points], **kwargs)
 
-    def get_moment(rv, size, x_points, pdf_points, cdf_points):
+    def moment(rv, size, x_points, pdf_points, cdf_points):
         # cdf_points argument is unused
         moment = at.sum(at.mul(x_points, pdf_points))
 
@@ -3905,7 +3905,7 @@ class Moyal(Continuous):
 
         return super().dist([mu, sigma], *args, **kwargs)
 
-    def get_moment(rv, size, mu, sigma):
+    def moment(rv, size, mu, sigma):
         mean = mu + sigma * (np.euler_gamma + at.log(2))
 
         if not rv_size_is_none(size):
@@ -4119,7 +4119,7 @@ class PolyaGamma(PositiveContinuous):
 
         return super().dist([h, z], **kwargs)
 
-    def get_moment(rv, size, h, z):
+    def moment(rv, size, h, z):
         mean = at.switch(at.eq(z, 0), h / 4, tanh(z / 2) * (h / (2 * z)))
         if not rv_size_is_none(size):
             mean = at.full(size, mean)

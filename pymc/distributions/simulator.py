@@ -25,7 +25,7 @@ from aesara.tensor.var import TensorVariable
 from scipy.spatial import cKDTree
 
 from pymc.aesaraf import floatX
-from pymc.distributions.distribution import NoDistribution, _get_moment
+from pymc.distributions.distribution import NoDistribution, _moment
 
 __all__ = ["Simulator"]
 
@@ -223,9 +223,9 @@ class Simulator(NoDistribution):
             value_var = value_var_list[0]
             return cls.logp(value_var, op, dist_params)
 
-        @_get_moment.register(SimulatorRV)
-        def get_moment(op, rv, rng, size, dtype, *rv_inputs):
-            return cls.get_moment(rv, *rv_inputs)
+        @_moment.register(SimulatorRV)
+        def moment(op, rv, rng, size, dtype, *rv_inputs):
+            return cls.moment(rv, *rv_inputs)
 
         cls.rv_op = sim_op
         return super().__new__(cls, name, *params, **kwargs)
@@ -235,7 +235,7 @@ class Simulator(NoDistribution):
         return super().dist(params, **kwargs)
 
     @classmethod
-    def get_moment(cls, rv, *sim_inputs):
+    def moment(cls, rv, *sim_inputs):
         # Take the mean of 10 draws
         multiple_sim = rv.owner.op(*sim_inputs, size=at.concatenate([[10], rv.shape]))
         return at.mean(multiple_sim, axis=0)

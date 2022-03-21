@@ -70,7 +70,7 @@ from pymc.distributions import (
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
 )
-from pymc.distributions.distribution import _get_moment, get_moment
+from pymc.distributions.distribution import _moment, moment
 from pymc.distributions.logprob import joint_logpt
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.initial_point import make_initial_point_fn
@@ -85,7 +85,7 @@ def test_all_distributions_have_moments():
     dists = (getattr(dist_module, dist) for dist in dist_module.__all__)
     dists = (dist for dist in dists if isinstance(dist, DistributionMeta))
     missing_moments = {
-        dist for dist in dists if type(getattr(dist, "rv_op", None)) not in _get_moment.registry
+        dist for dist in dists if type(getattr(dist, "rv_op", None)) not in _moment.registry
     }
 
     # Ignore super classes
@@ -116,7 +116,7 @@ def test_all_distributions_have_moments():
     unexpected_implemented = not_implemented - missing_moments
     if unexpected_implemented:
         raise Exception(
-            f"Distributions {unexpected_implemented} have a `get_moment` implemented. "
+            f"Distributions {unexpected_implemented} have a `moment` implemented. "
             "This test must be updated to expect this."
         )
 
@@ -124,7 +124,7 @@ def test_all_distributions_have_moments():
     if unexpected_not_implemented:
         raise NotImplementedError(
             f"Unexpected by this test, distributions {unexpected_not_implemented} do "
-            "not have a `get_moment` implementation. Either add a moment or filter "
+            "not have a `moment` implementation. Either add a moment or filter "
             "these distributions in this test."
         )
 
@@ -1165,7 +1165,7 @@ def test_stickbreakingweights_moment(alpha, K, size, expected):
 
 
 @pytest.mark.parametrize(
-    "get_moment, size, expected",
+    "moment, size, expected",
     [
         (None, None, 0.0),
         (None, 5, np.zeros(5)),
@@ -1173,38 +1173,38 @@ def test_stickbreakingweights_moment(alpha, K, size, expected):
         ("custom_moment", (2, 5), np.full((2, 5), 5)),
     ],
 )
-def test_density_dist_default_moment_univariate(get_moment, size, expected):
-    if get_moment == "custom_moment":
-        get_moment = lambda rv, size, *rv_inputs: 5 * at.ones(size, dtype=rv.dtype)
+def test_density_dist_default_moment_univariate(moment, size, expected):
+    if moment == "custom_moment":
+        moment = lambda rv, size, *rv_inputs: 5 * at.ones(size, dtype=rv.dtype)
     with Model() as model:
-        DensityDist("x", get_moment=get_moment, size=size)
+        DensityDist("x", moment=moment, size=size)
     assert_moment_is_expected(model, expected, check_finite_logp=False)
 
 
 @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
 def test_density_dist_custom_moment_univariate(size):
-    def moment(rv, size, mu):
+    def density_moment(rv, size, mu):
         return (at.ones(size) * mu).astype(rv.dtype)
 
     mu_val = np.array(np.random.normal(loc=2, scale=1)).astype(aesara.config.floatX)
     with pm.Model():
         mu = pm.Normal("mu")
-        a = pm.DensityDist("a", mu, get_moment=moment, size=size)
-    evaled_moment = get_moment(a).eval({mu: mu_val})
+        a = pm.DensityDist("a", mu, moment=density_moment, size=size)
+    evaled_moment = moment(a).eval({mu: mu_val})
     assert evaled_moment.shape == to_tuple(size)
     assert np.all(evaled_moment == mu_val)
 
 
 @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
 def test_density_dist_custom_moment_multivariate(size):
-    def moment(rv, size, mu):
+    def density_moment(rv, size, mu):
         return (at.ones(size)[..., None] * mu).astype(rv.dtype)
 
     mu_val = np.random.normal(loc=2, scale=1, size=5).astype(aesara.config.floatX)
     with pm.Model():
         mu = pm.Normal("mu", size=5)
-        a = pm.DensityDist("a", mu, get_moment=moment, ndims_params=[1], ndim_supp=1, size=size)
-    evaled_moment = get_moment(a).eval({mu: mu_val})
+        a = pm.DensityDist("a", mu, moment=density_moment, ndims_params=[1], ndim_supp=1, size=size)
+    evaled_moment = moment(a).eval({mu: mu_val})
     assert evaled_moment.shape == to_tuple(size) + (5,)
     assert np.all(evaled_moment == mu_val)
 
@@ -1233,7 +1233,7 @@ def test_density_dist_default_moment_multivariate(with_random, size):
         mu = pm.Normal("mu", size=5)
         a = pm.DensityDist("a", mu, random=random, ndims_params=[1], ndim_supp=1, size=size)
     if with_random:
-        evaled_moment = get_moment(a).eval({mu: mu_val})
+        evaled_moment = moment(a).eval({mu: mu_val})
         assert evaled_moment.shape == to_tuple(size) + (5,)
         assert np.all(evaled_moment == 0)
     else:
@@ -1241,7 +1241,7 @@ def test_density_dist_default_moment_multivariate(with_random, size):
             TypeError,
             match="Cannot safely infer the size of a multivariate random variable's moment.",
         ):
-            evaled_moment = get_moment(a).eval({mu: mu_val})
+            evaled_moment = moment(a).eval({mu: mu_val})
 
 
 @pytest.mark.parametrize(
@@ -1381,7 +1381,7 @@ def test_simulator_moment(mu, sigma, size):
     assert result.shape == random_draw.shape
 
     # We perform a z-test between the moment and expected mean from a sample of 10 draws
-    # This test fails if the number of samples averaged in get_moment(Simulator)
+    # This test fails if the number of samples averaged in moment(Simulator)
     # is much smaller than 10, but would not catch the case where the number of samples
     # is higher than the expected 10
 
