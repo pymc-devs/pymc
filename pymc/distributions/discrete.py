@@ -106,15 +106,25 @@ class Binomial(Discrete):
 
     Parameters
     ----------
-    n: int
+    n : int
         Number of Bernoulli trials (n >= 0).
-    p: float
+    p : float
         Probability of success in each trial (0 < p < 1).
+    logit_p : float
+        Alternative log odds for the probability of success.
     """
     rv_op = binomial
 
     @classmethod
-    def dist(cls, n, p, *args, **kwargs):
+    def dist(cls, n, p=None, logit_p=None, *args, **kwargs):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        elif p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+
+        if logit_p is not None:
+            p = at.sigmoid(logit_p)
+
         n = at.as_tensor_variable(intX(n))
         p = at.as_tensor_variable(floatX(p))
         return super().dist([n, p], **kwargs)
@@ -1245,14 +1255,24 @@ class Categorical(Discrete):
 
     Parameters
     ----------
-    p: array of floats
+    p : array of floats
         p > 0 and the elements of p must sum to 1. They will be automatically
         rescaled otherwise.
+    logit_p : float
+        Alternative log odds for the probability of success.
     """
     rv_op = categorical
 
     @classmethod
-    def dist(cls, p, **kwargs):
+    def dist(cls, p=None, logit_p=None, **kwargs):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        elif p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+
+        if logit_p is not None:
+            p = pm.math.softmax(logit_p, axis=-1)
+
         if isinstance(p, np.ndarray) or isinstance(p, list):
             if (np.asarray(p) < 0).any():
                 raise ValueError(f"Negative `p` parameters are not valid, got: {p}")
