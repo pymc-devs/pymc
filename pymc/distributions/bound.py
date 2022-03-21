@@ -20,11 +20,12 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import floatX, intX
-from pymc.distributions.continuous import BoundedContinuous
+from pymc.distributions.continuous import BoundedContinuous, bounded_cont_transform
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import Continuous, Discrete
 from pymc.distributions.logprob import logp
 from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.transforms import _default_transform
 from pymc.model import modelcontext
 from pymc.util import check_dist_not_registered
 
@@ -82,6 +83,11 @@ class _ContinuousBounded(BoundedContinuous):
         )
 
 
+@_default_transform.register(BoundRV)
+def bound_default_transform(op, rv):
+    return bounded_cont_transform(op, rv, _ContinuousBounded.bound_args_indices)
+
+
 class DiscreteBoundRV(BoundRV):
     name = "discrete_bound"
     dtype = "int64"
@@ -94,8 +100,8 @@ class _DiscreteBounded(Discrete):
     rv_op = discrete_boundrv
 
     def __new__(cls, *args, **kwargs):
-        transform = kwargs.get("transform", None)
-        if transform is not None:
+        kwargs.setdefault("transform", None)
+        if kwargs.get("transform") is not None:
             raise ValueError("Cannot transform discrete variable.")
         return super().__new__(cls, *args, **kwargs)
 

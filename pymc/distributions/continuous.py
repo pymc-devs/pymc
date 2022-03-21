@@ -89,7 +89,6 @@ from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.distributions.transforms import _default_transform
 from pymc.math import invlogit, logdiffexp, logit
-from pymc.util import UNSET
 
 __all__ = [
     "Uniform",
@@ -140,6 +139,13 @@ class CircularContinuous(Continuous):
     """Base class for circular continuous distributions"""
 
 
+class BoundedContinuous(Continuous):
+    """Base class for bounded continuous distributions"""
+
+    # Indices of the arguments that define the lower and upper bounds of the distribution
+    bound_args_indices: Optional[List[int]] = None
+
+
 @_default_transform.register(PositiveContinuous)
 def pos_cont_transform(op, rv):
     return transforms.log
@@ -155,48 +161,34 @@ def circ_cont_transform(op, rv):
     return transforms.circular
 
 
-class BoundedContinuous(Continuous):
-    """Base class for bounded continuous distributions"""
+@_default_transform.register(BoundedContinuous)
+def bounded_cont_transform(op, rv, bound_args_indices=None):
+    if bound_args_indices is None:
+        raise ValueError(f"Must specify bound_args_indices for {op} bounded distribution")
 
-    # Indices of the arguments that define the lower and upper bounds of the distribution
-    bound_args_indices: Optional[List[int]] = None
+    def transform_params(*args):
 
-    def __new__(cls, *args, **kwargs):
-        transform = kwargs.get("transform", UNSET)
-        if transform is UNSET:
-            kwargs["transform"] = cls.default_transform()
-        return super().__new__(cls, *args, **kwargs)
+        lower, upper = None, None
+        if bound_args_indices[0] is not None:
+            lower = args[bound_args_indices[0]]
+        if bound_args_indices[1] is not None:
+            upper = args[bound_args_indices[1]]
 
-    @classmethod
-    def default_transform(cls):
-        if cls.bound_args_indices is None:
-            raise ValueError(
-                f"Must specify bound_args_indices for {cls.__name__} bounded distribution"
-            )
+        if lower is not None:
+            if isinstance(lower, TensorConstant) and np.all(lower.value == -np.inf):
+                lower = None
+            else:
+                lower = at.as_tensor_variable(lower)
 
-        def transform_params(*args):
+        if upper is not None:
+            if isinstance(upper, TensorConstant) and np.all(upper.value == np.inf):
+                upper = None
+            else:
+                upper = at.as_tensor_variable(upper)
 
-            lower, upper = None, None
-            if cls.bound_args_indices[0] is not None:
-                lower = args[cls.bound_args_indices[0]]
-            if cls.bound_args_indices[1] is not None:
-                upper = args[cls.bound_args_indices[1]]
+        return lower, upper
 
-            if lower is not None:
-                if isinstance(lower, TensorConstant) and np.all(lower.value == -np.inf):
-                    lower = None
-                else:
-                    lower = at.as_tensor_variable(lower)
-
-            if upper is not None:
-                if isinstance(upper, TensorConstant) and np.all(upper.value == np.inf):
-                    upper = None
-                else:
-                    upper = at.as_tensor_variable(upper)
-
-            return lower, upper
-
-        return transforms.Interval(bounds_fn=transform_params)
+    return transforms.Interval(bounds_fn=transform_params)
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):
@@ -336,6 +328,11 @@ class Uniform(BoundedContinuous):
                 0,
             ),
         )
+
+
+@_default_transform.register(Uniform)
+def uniform_default_transform(op, rv):
+    return bounded_cont_transform(op, rv, Uniform.bound_args_indices)
 
 
 class FlatRV(RandomVariable):
@@ -786,6 +783,11 @@ class TruncatedNormal(BoundedContinuous):
         if not unbounded_lower and not unbounded_upper:
             bounds.append(lower <= upper)
         return check_parameters(logp, *bounds)
+
+
+@_default_transform.register(TruncatedNormal)
+def truncated_normal_default_transform(op, rv):
+    return bounded_cont_transform(op, rv, TruncatedNormal.bound_args_indices)
 
 
 class HalfNormal(PositiveContinuous):
@@ -2065,6 +2067,11 @@ class Pareto(BoundedContinuous):
         return check_parameters(res, 0 < alpha, 0 < m, msg="alpha > 0, m > 0")
 
 
+@_default_transform.register(Pareto)
+def pareto_default_transform(op, rv):
+    return bounded_cont_transform(op, rv, Pareto.bound_args_indices)
+
+
 class Cauchy(Continuous):
     r"""
     Cauchy log-likelihood.
@@ -3245,6 +3252,11 @@ class Triangular(BoundedContinuous):
         )
 
 
+@_default_transform.register(Triangular)
+def triangular_default_transform(op, rv):
+    return bounded_cont_transform(op, rv, Triangular.bound_args_indices)
+
+
 class Gumbel(Continuous):
     r"""
     Univariate Gumbel log-likelihood.
@@ -3763,17 +3775,6 @@ class Interpolated(BoundedContinuous):
 
     rv_op = interpolated
 
-    def __new__(cls, *args, **kwargs):
-        transform = kwargs.get("transform", UNSET)
-        if transform is UNSET:
-
-            def transform_params(*params):
-                _, _, _, x_points, _, _ = params
-                return floatX(x_points[0]), floatX(x_points[-1])
-
-            kwargs["transform"] = transforms.Interval(bounds_fn=transform_params)
-        return super().__new__(cls, *args, **kwargs)
-
     @classmethod
     def dist(cls, x_points, pdf_points, *args, **kwargs):
 
@@ -3827,8 +3828,14 @@ class Interpolated(BoundedContinuous):
 
         return at.log(interp_op(value) / Z)
 
-    def _distr_parameters_for_repr(self):
-        return []
+
+@_default_transform.register(Interpolated)
+def interpolated_default_transform(op, rv):
+    def transform_params(*params):
+        _, _, _, x_points, _, _ = params
+        return floatX(x_points[0]), floatX(x_points[-1])
+
+    return transforms.Interval(bounds_fn=transform_params)
 
 
 class MoyalRV(RandomVariable):
