@@ -62,9 +62,9 @@ from pymc.distributions.shape_utils import (
     rv_size_is_none,
     to_tuple,
 )
-from pymc.distributions.transforms import Interval
+from pymc.distributions.transforms import Interval, _default_transform
 from pymc.math import kron_diag, kron_dot
-from pymc.util import UNSET, check_dist_not_registered
+from pymc.util import check_dist_not_registered
 
 __all__ = [
     "MvNormal",
@@ -82,6 +82,16 @@ __all__ = [
     "CAR",
     "StickBreakingWeights",
 ]
+
+
+class SimplexContinuous(Continuous):
+    """Base class for simplex continuous distributions"""
+
+
+@_default_transform.register(SimplexContinuous)
+def simplex_cont_transform(op, rv):
+    return transforms.simplex
+
 
 # Step methods and advi do not catch LinAlgErrors at the
 # moment. We work around that by using a cholesky op
@@ -408,7 +418,7 @@ class MvStudentT(Continuous):
         )
 
 
-class Dirichlet(Continuous):
+class Dirichlet(SimplexContinuous):
     r"""
     Dirichlet log-likelihood.
 
@@ -433,10 +443,6 @@ class Dirichlet(Continuous):
         length of the last axis.
     """
     rv_op = dirichlet
-
-    def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("transform", transforms.simplex)
-        return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
     def dist(cls, a, **kwargs):
@@ -1169,12 +1175,7 @@ class _LKJCholeskyCov(Continuous):
     rv_op = _ljk_cholesky_cov
 
     def __new__(cls, name, eta, n, sd_dist, **kwargs):
-        transform = kwargs.get("transform", UNSET)
-        if transform is UNSET:
-            kwargs["transform"] = transforms.CholeskyCovPacked(n)
-
         check_dist_not_registered(sd_dist)
-
         return super().__new__(cls, name, eta, n, sd_dist, **kwargs)
 
     @classmethod
@@ -1267,6 +1268,12 @@ class _LKJCholeskyCov(Continuous):
         norm = _lkj_normalizing_constant(eta, n)
 
         return norm + logp_lkj + logp_sd + det_invjac
+
+
+@_default_transform.register(_LKJCholeskyCov)
+def lkjcholeskycov_default_transform(op, rv):
+    _, _, _, n, _, _ = rv.owner.inputs
+    return transforms.CholeskyCovPacked(n)
 
 
 class LKJCholeskyCov:
@@ -1551,12 +1558,6 @@ class LKJCorr(BoundedContinuous):
 
     rv_op = lkjcorr
 
-    def __new__(cls, *args, **kwargs):
-        transform = kwargs.get("transform", UNSET)
-        if transform is UNSET:
-            kwargs["transform"] = Interval(floatX(-1.0), floatX(1.0))
-        return super().__new__(cls, *args, **kwargs)
-
     @classmethod
     def dist(cls, n, eta, **kwargs):
         n = at.as_tensor_variable(intX(n))
@@ -1608,6 +1609,11 @@ class LKJCorr(BoundedContinuous):
             matrix_pos_def(value),
             eta > 0,
         )
+
+
+@_default_transform.register(LKJCorr)
+def lkjcorr_default_transform(op, rv):
+    return Interval(floatX(-1.0), floatX(1.0))
 
 
 class MatrixNormalRV(RandomVariable):
@@ -2261,7 +2267,7 @@ class StickBreakingWeightsRV(RandomVariable):
 stickbreakingweights = StickBreakingWeightsRV()
 
 
-class StickBreakingWeights(Continuous):
+class StickBreakingWeights(SimplexContinuous):
     r"""
     Likelihood of truncated stick-breaking weights. The weights are generated from a
     stick-breaking proceduce where :math:`x_k = v_k \prod_{\ell < k} (1 - v_\ell)` for
@@ -2297,10 +2303,6 @@ class StickBreakingWeights(Continuous):
            analysis. New York: Springer.
     """
     rv_op = stickbreakingweights
-
-    def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("transform", transforms.simplex)
-        return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
     def dist(cls, alpha, K, *args, **kwargs):
