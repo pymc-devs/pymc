@@ -241,10 +241,7 @@ class ModelGraph:
         for child, parents in self.make_compute_graph(selected_vars=selected_vars).items():
             # parents is a set of rv names that preceed child rv nodes
             for parent in parents:
-                try:
-                    graph.edge(parent.replace(":", "&"), child.replace(":", "&"))
-                except AttributeError:
-                    print(child, parent)
+                graph.edge(parent.replace(":", "&"), child.replace(":", "&"))
 
         return graph
 
