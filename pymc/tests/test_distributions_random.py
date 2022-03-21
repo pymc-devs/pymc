@@ -37,7 +37,7 @@ except ImportError:  # pragma: no cover
         raise RuntimeError("polyagamma package is not installed!")
 
 
-from scipy.special import expit
+from scipy.special import expit, softmax
 
 import pymc as pm
 
@@ -1007,8 +1007,8 @@ class TestBinomial(BaseTestDistributionRandom):
 
 class TestLogitBinomial(BaseTestDistributionRandom):
     pymc_dist = pm.Binomial
-    pymc_dist_params = {"n": 100, "logit_p": 2.197224577}
-    expected_rv_op_params = {"n": 100, "p": 0.9}
+    pymc_dist_params = {"n": 100, "logit_p": 0.5}
+    expected_rv_op_params = {"n": 100, "p": expit(0.5)}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
     @pytest.mark.parametrize(
@@ -1431,8 +1431,8 @@ class TestCategorical(BaseTestDistributionRandom):
 
 class TestLogitCategorical(BaseTestDistributionRandom):
     pymc_dist = pm.Categorical
-    pymc_dist_params = {"logit_p": np.array([-0.944461608841, 0.489548225319, -2.197224577336])}
-    expected_rv_op_params = {"p": np.array([0.28, 0.62, 0.10])}
+    pymc_dist_params = {"logit_p": np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]])}
+    expected_rv_op_params = {"p": softmax(np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]]), axis=-1)}
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",
