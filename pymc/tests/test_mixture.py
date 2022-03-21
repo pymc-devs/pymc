@@ -19,7 +19,10 @@ import numpy as np
 import pytest
 import scipy.stats as st
 
+from aeppl.transforms import IntervalTransform, LogTransform
+from aeppl.transforms import Simplex as SimplexTransform
 from aesara import tensor as at
+from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 from numpy.testing import assert_allclose
 from scipy.special import logsumexp
@@ -32,6 +35,7 @@ from pymc.distributions import (
     Exponential,
     Gamma,
     HalfNormal,
+    HalfStudentT,
     LKJCholeskyCov,
     LogNormal,
     Mixture,
@@ -40,9 +44,14 @@ from pymc.distributions import (
     Normal,
     NormalMixture,
     Poisson,
+    StickBreakingWeights,
+    Triangular,
+    Uniform,
 )
 from pymc.distributions.logprob import logp
+from pymc.distributions.mixture import MixtureTransformWarning
 from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.transforms import _default_transform
 from pymc.math import expand_packed_triangular
 from pymc.model import Model
 from pymc.sampling import (
@@ -1216,3 +1225,90 @@ class TestMixtureMoments:
         with Model() as model:
             Mixture("x", weights, comp_dists, size=size)
         assert_moment_is_expected(model, expected, check_finite_logp=False)
+
+
+class TestMixtureDefaultTransforms:
+    @pytest.mark.parametrize(
+        "comp_dists, expected_transform_type",
+        [
+            (Poisson.dist(1, size=2), type(None)),
+            (Normal.dist(size=2), type(None)),
+            (Uniform.dist(size=2), IntervalTransform),
+            (HalfNormal.dist(size=2), LogTransform),
+            ([HalfNormal.dist(), Normal.dist()], type(None)),
+            ([HalfNormal.dist(1), Exponential.dist(1), HalfStudentT.dist(4, 1)], LogTransform),
+            ([Dirichlet.dist([1, 2, 3, 4]), StickBreakingWeights.dist(1, K=3)], SimplexTransform),
+            ([Uniform.dist(0, 1), Uniform.dist(0, 1), Triangular.dist(0, 1)], IntervalTransform),
+            ([Uniform.dist(0, 1), Uniform.dist(0, 2)], type(None)),
+        ],
+    )
+    def test_expected(self, comp_dists, expected_transform_type):
+        if isinstance(comp_dists, TensorVariable):
+            weights = np.ones(2) / 2
+        else:
+            weights = np.ones(len(comp_dists)) / len(comp_dists)
+        mix = Mixture.dist(weights, comp_dists)
+        assert isinstance(_default_transform(mix.owner.op, mix), expected_transform_type)
+
+    def test_hierarchical_interval_transform(self):
+        with Model() as model:
+            lower = Normal("lower", 0.5)
+            upper = Uniform("upper", 0, 1)
+            uniform = Uniform("uniform", -at.abs(lower), at.abs(upper), transform=None)
+            triangular = Triangular(
+                "triangular", -at.abs(lower), at.abs(upper), c=0.25, transform=None
+            )
+            comp_dists = [
+                Uniform.dist(-at.abs(lower), at.abs(upper)),
+                Triangular.dist(-at.abs(lower), at.abs(upper), c=0.25),
+            ]
+            mix1 = Mixture("mix1", [0.3, 0.7], comp_dists)
+            mix2 = Mixture("mix2", [0.3, 0.7][::-1], comp_dists[::-1])
+
+        ip = model.compute_initial_point()
+        # We want an informative moment, other than zero
+        assert ip["mix1_interval__"] != 0
+
+        expected_mix_ip = (
+            IntervalTransform(args_fn=lambda *args: (-0.5, 0.5))
+            .forward(0.3 * ip["uniform"] + 0.7 * ip["triangular"])
+            .eval()
+        )
+        assert np.isclose(ip["mix1_interval__"], ip["mix2_interval__"])
+        assert np.isclose(ip["mix1_interval__"], expected_mix_ip)
+
+    def test_logp(self):
+        with Model() as m:
+            halfnorm = HalfNormal("halfnorm")
+            comp_dists = [HalfNormal.dist(), HalfNormal.dist()]
+            mix_transf = Mixture("mix_transf", w=[0.5, 0.5], comp_dists=comp_dists)
+            mix = Mixture("mix", w=[0.5, 0.5], comp_dists=comp_dists, transform=None)
+
+        logp_fn = m.compile_logp(vars=[halfnorm, mix_transf, mix], sum=False)
+        test_point = {"halfnorm_log__": 1, "mix_transf_log__": 1, "mix": np.exp(1)}
+        logp_halfnorm, logp_mix_transf, logp_mix = logp_fn(test_point)
+        assert np.isclose(logp_halfnorm, logp_mix_transf)
+        assert np.isclose(logp_halfnorm, logp_mix + 1)
+
+    def test_warning(self):
+        with Model() as m:
+            comp_dists = [HalfNormal.dist(), Exponential.dist(1)]
+            with pytest.warns(None) as rec:
+                Mixture("mix1", w=[0.5, 0.5], comp_dists=comp_dists)
+            assert not rec
+
+            comp_dists = [Uniform.dist(0, 1), Uniform.dist(0, 2)]
+            with pytest.warns(MixtureTransformWarning):
+                Mixture("mix2", w=[0.5, 0.5], comp_dists=comp_dists)
+
+            comp_dists = [Normal.dist(), HalfNormal.dist()]
+            with pytest.warns(MixtureTransformWarning):
+                Mixture("mix3", w=[0.5, 0.5], comp_dists=comp_dists)
+
+            with pytest.warns(None) as rec:
+                Mixture("mix4", w=[0.5, 0.5], comp_dists=comp_dists, transform=None)
+            assert not rec
+
+            with pytest.warns(None) as rec:
+                Mixture("mix5", w=[0.5, 0.5], comp_dists=comp_dists, observed=1)
+            assert not rec
