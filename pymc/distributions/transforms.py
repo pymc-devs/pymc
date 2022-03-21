@@ -42,7 +42,7 @@ __all__ = [
 
 
 @singledispatch
-def _get_default_transform(op: Op):
+def _default_transform(op: Op):
     """Return default transform for a given Distribution `Op`"""
     return None
 
