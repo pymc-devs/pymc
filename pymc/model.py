@@ -1422,7 +1422,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
         if transform is UNSET and rv_var.owner:
-            transform = _default_transform(rv_var.owner.op)
+            transform = _default_transform(rv_var.owner.op, rv_var)
 
         if transform is not None and transform is not UNSET:
             value_var.tag.transform = transform
