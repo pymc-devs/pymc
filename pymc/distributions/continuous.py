@@ -141,17 +141,17 @@ class CircularContinuous(Continuous):
 
 
 @_default_transform.register(PositiveContinuous)
-def pos_cont_transform(op):
+def pos_cont_transform(op, rv):
     return transforms.log
 
 
 @_default_transform.register(UnitContinuous)
-def unit_cont_transform(op):
+def unit_cont_transform(op, rv):
     return transforms.logodds
 
 
 @_default_transform.register(CircularContinuous)
-def circ_cont_transform(op):
+def circ_cont_transform(op, rv):
     return transforms.circular
 
 
