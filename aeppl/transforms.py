@@ -286,7 +286,7 @@ class LogOddsTransform(RVTransform):
         return at.log(sigmoid_value) + at.log1p(-sigmoid_value)
 
 
-class Simplex(RVTransform):
+class SimplexTransform(RVTransform):
     name = "simplex"
 
     def forward(self, value, *inputs):
@@ -467,5 +467,5 @@ TransformedVonMisesRV = create_default_transformed_rv_op(
 )
 TransformedDirichletRV = create_default_transformed_rv_op(
     at.random.dirichlet,
-    Simplex(),
+    SimplexTransform(),
 )
