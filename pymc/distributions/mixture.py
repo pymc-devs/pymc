@@ -171,10 +171,13 @@ class Mixture(SymbolicDistribution):
             )
 
         if len(comp_dists) > 1:
-            all_continuous = all([comp_dist.dtype in continuous_types for comp_dist in comp_dists])
-            all_discrete = all([comp_dist.dtype in discrete_types for comp_dist in comp_dists])
+            all_continuous = all(comp_dist.dtype in continuous_types for comp_dist in comp_dists)
+            all_discrete = all(comp_dist.dtype in discrete_types for comp_dist in comp_dists)
 
-            if not (all_continuous or all_discrete):
+            if not (
+                all(comp_dist.dtype in continuous_types for comp_dist in comp_dists)
+                or all(comp_dist.dtype in discrete_types for comp_dist in comp_dists)
+                ):
                 # Determine if the distributions in comp_dists are all discrete or continuous
                 raise ValueError(
                     "All distributions in comp_dists must be either discrete or continuous.\n"
