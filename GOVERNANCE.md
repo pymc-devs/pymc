@@ -833,4 +833,3 @@ extra benefits but those will be related to the conference, not the Project.
 * Sharan Yalburgi (GSoC 2018)
 * Taku Yoshioka
 * Tirth Patel (GSoC 2020)
-
