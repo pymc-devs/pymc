@@ -27,6 +27,10 @@ Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) fo
 
 All of the above apply to:
 
+- `pm.StudentT` now now requires either `sigma` or `lam` as kwarg
+- `pm.StudentT` now requires `nu` to be specified (no longer defaults to 1.0)
+- `pm.AsymmetricLaplace` positional arguments re-ordered
+- `pm.AsymmetricLaplace` now requires `mu` to be specified (no longer defaults to 1.0)
 - BART was removed [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental)
 - ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
