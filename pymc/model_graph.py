@@ -102,11 +102,27 @@ class ModelGraph:
         parents = self._get_ancestors(var, func)
         return self._filter_parents(var, parents)
 
-    def make_compute_graph(self) -> Dict[str, Set[VarName]]:
+    def vars_to_plot(self, selected_vars=None):
+        if selected_vars is None:
+            return self.var_names
+        else:
+            all_selected_ancestors = set()
+
+            for selected_var_name in selected_vars:
+                var_ancestors = self._get_ancestors(self.model[selected_var_name], self.model[selected_var_name])
+                all_selected_ancestors = all_selected_ancestors.union(var_ancestors)
+
+            vars_on_graph = all_selected_ancestors.union(set(self.model[selected_var_name] for selected_var_name in selected_vars))
+            vars_on_graph = {var.name for var in vars_on_graph}
+
+            # ordering of self.var_names is important
+            return [var_name for var_name in self.var_names if var_name in vars_on_graph]
+
+    def make_compute_graph(self, selected_vars=None) -> Dict[str, Set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
         input_map = defaultdict(set)  # type: Dict[str, Set[VarName]]
 
-        for var_name in self.var_names:
+        for var_name in self.vars_to_plot(selected_vars):
             var = self.model[var_name]
             key = var_name
             val = self.get_parents(var)
@@ -120,6 +136,7 @@ class ModelGraph:
                         input_map[obs_name] = input_map[obs_name].union({var_name})
                 except AttributeError:
                     pass
+
         return input_map
 
     def _make_node(self, var_name, graph, *, formatting: str = "plain"):
@@ -168,7 +185,7 @@ class ModelGraph:
     def _eval(self, var):
         return function([], var, mode="FAST_COMPILE")()
 
-    def get_plates(self):
+    def get_plates(self, selected_vars=None):
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
@@ -179,7 +196,8 @@ class ModelGraph:
         dict: str -> set[str]
         """
         plates = defaultdict(set)
-        for var_name in self.var_names:
+
+        for var_name in self.vars_to_plot(selected_vars):
             v = self.model[var_name]
             if var_name in self.model.RV_dims:
                 plate_label = " x ".join(
@@ -189,9 +207,10 @@ class ModelGraph:
             else:
                 plate_label = " x ".join(map(str, self._eval(v.shape)))
             plates[plate_label].add(var_name)
+
         return plates
 
-    def make_graph(self, formatting: str = "plain"):
+    def make_graph(self, selected_vars=None, formatting: str = "plain"):
         """Make graphviz Digraph of PyMC model
 
         Returns
@@ -207,7 +226,7 @@ class ModelGraph:
                 "\tconda install -c conda-forge python-graphviz"
             )
         graph = graphviz.Digraph(self.model.name)
-        for plate_label, var_names in self.get_plates().items():
+        for plate_label, var_names in self.get_plates(selected_vars).items():
             if plate_label:
                 # must be preceded by 'cluster' to get a box around it
                 with graph.subgraph(name="cluster" + plate_label) as sub:
@@ -219,13 +238,18 @@ class ModelGraph:
                 for var_name in var_names:
                     self._make_node(var_name, graph, formatting=formatting)
 
-        for key, values in self.make_compute_graph().items():
-            for value in values:
-                graph.edge(value.replace(":", "&"), key.replace(":", "&"))
+        for child, parents in self.make_compute_graph(selected_vars=selected_vars).items():
+            # parents is a set of rv names that preceed child rv nodes
+            for parent in parents:
+                try:
+                    graph.edge(parent.replace(":", "&"), child.replace(":", "&"))
+                except AttributeError:
+                    print(child, parent)
+
         return graph
 
 
-def model_to_graphviz(model=None, *, formatting: str = "plain"):
+def model_to_graphviz(model=None, *, selected_vars=None, formatting: str = "plain"):
     """Produce a graphviz Digraph from a PyMC model.
 
     Requires graphviz, which may be installed most easily with
@@ -275,4 +299,4 @@ def model_to_graphviz(model=None, *, formatting: str = "plain"):
             "Formattings other than 'plain' are currently not supported.", UserWarning, stacklevel=2
         )
     model = pm.modelcontext(model)
-    return ModelGraph(model).make_graph(formatting=formatting)
+    return ModelGraph(model).make_graph(selected_vars=selected_vars, formatting=formatting)
