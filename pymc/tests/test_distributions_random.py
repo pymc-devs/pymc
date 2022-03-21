@@ -1432,7 +1432,9 @@ class TestCategorical(BaseTestDistributionRandom):
 class TestLogitCategorical(BaseTestDistributionRandom):
     pymc_dist = pm.Categorical
     pymc_dist_params = {"logit_p": np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]])}
-    expected_rv_op_params = {"p": softmax(np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]]), axis=-1)}
+    expected_rv_op_params = {
+        "p": softmax(np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]]), axis=-1)
+    }
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",
