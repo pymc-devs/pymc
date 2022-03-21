@@ -50,7 +50,7 @@ class TestData(SeededTest):
             pm.Normal("obs", b * x_shared, np.sqrt(1e-2), observed=y)
 
             prior_trace0 = pm.sample_prior_predictive(1000)
-            idata = pm.sample(1000, init=None, tune=1000, chains=1)
+            idata = pm.sample(1000, tune=1000, chains=1)
             pp_trace0 = pm.sample_posterior_predictive(idata)
 
             x_shared.set_value(x_pred)
@@ -103,7 +103,6 @@ class TestData(SeededTest):
             pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y)
             pm.sample(
                 1000,
-                init=None,
                 tune=1000,
                 chains=1,
                 compute_convergence_checks=False,
@@ -115,7 +114,6 @@ class TestData(SeededTest):
             pm.set_data(new_data={"x": new_x, "y": new_y})
             new_idata = pm.sample(
                 1000,
-                init=None,
                 tune=1000,
                 chains=1,
                 compute_convergence_checks=False,
@@ -141,7 +139,6 @@ class TestData(SeededTest):
             prior_trace = pm.sample_prior_predictive(1000)
             idata = pm.sample(
                 1000,
-                init=None,
                 tune=1000,
                 chains=1,
                 compute_convergence_checks=False,
@@ -236,7 +233,6 @@ class TestData(SeededTest):
             pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y)
             pm.sample(
                 1000,
-                init=None,
                 tune=1000,
                 chains=1,
                 compute_convergence_checks=False,
@@ -255,7 +251,6 @@ class TestData(SeededTest):
             pm.Normal("obs", beta * x, obs_sigma, observed=y)
             pm.sample(
                 1000,
-                init=None,
                 tune=1000,
                 chains=1,
                 compute_convergence_checks=False,

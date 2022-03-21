@@ -520,7 +520,7 @@ class TestNutsCheckTrace:
         with Model():
             HalfNormal("a", sigma=1, initval=-1, transform=None)
             with pytest.raises(SamplingError) as error:
-                sample(init=None, chains=1, random_seed=1)
+                sample(chains=1, random_seed=1)
             error.match("Initial evaluation")
 
     @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
@@ -528,7 +528,7 @@ class TestNutsCheckTrace:
         with Model():
             HalfNormal("a", sigma=1, initval=-1, transform=None)
             with pytest.raises(SamplingError) as error:
-                sample(init=None, cores=2, random_seed=1)
+                sample(cores=2, random_seed=1)
             error.match("Initial evaluation")
 
     def test_linalg(self, caplog):
@@ -538,7 +538,7 @@ class TestNutsCheckTrace:
             b = at.slinalg.solve(floatX(np.eye(2)), a, check_finite=False)
             Normal("c", mu=b, size=2, initval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
-            trace = sample(20, init=None, tune=5, chains=2, return_inferencedata=False)
+            trace = sample(20, tune=5, chains=2, return_inferencedata=False)
             warns = [msg.msg for msg in caplog.records]
             assert np.any(trace["diverging"])
             assert (
