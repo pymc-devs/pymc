@@ -106,10 +106,12 @@ class Binomial(Discrete):
 
     Parameters
     ----------
-    n: int
+    n : int
         Number of Bernoulli trials (n >= 0).
-    p: float
+    p : float
         Probability of success in each trial (0 < p < 1).
+    logit_p : float
+        Alternative log odds for the probability of success.
     """
     rv_op = binomial
 
@@ -1253,9 +1255,11 @@ class Categorical(Discrete):
 
     Parameters
     ----------
-    p: array of floats
+    p : array of floats
         p > 0 and the elements of p must sum to 1. They will be automatically
         rescaled otherwise.
+    logit_p : float
+        Alternative log odds for the probability of success.
     """
     rv_op = categorical
 
