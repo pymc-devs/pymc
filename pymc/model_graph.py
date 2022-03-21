@@ -109,10 +109,14 @@ class ModelGraph:
             all_selected_ancestors = set()
 
             for selected_var_name in selected_vars:
-                var_ancestors = self._get_ancestors(self.model[selected_var_name], self.model[selected_var_name])
+                var_ancestors = self._get_ancestors(
+                    self.model[selected_var_name], self.model[selected_var_name]
+                )
                 all_selected_ancestors = all_selected_ancestors.union(var_ancestors)
 
-            vars_on_graph = all_selected_ancestors.union(set(self.model[selected_var_name] for selected_var_name in selected_vars))
+            vars_on_graph = all_selected_ancestors.union(
+                {self.model[selected_var_name] for selected_var_name in selected_vars}
+            )
             vars_on_graph = {var.name for var in vars_on_graph}
 
             # ordering of self.var_names is important
