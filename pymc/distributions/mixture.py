@@ -177,7 +177,7 @@ class Mixture(SymbolicDistribution):
             if not (
                 all(comp_dist.dtype in continuous_types for comp_dist in comp_dists)
                 or all(comp_dist.dtype in discrete_types for comp_dist in comp_dists)
-                ):
+            ):
                 # Determine if the distributions in comp_dists are all discrete or continuous
                 raise ValueError(
                     "All distributions in comp_dists must be either discrete or continuous.\n"
