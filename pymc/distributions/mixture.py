@@ -439,7 +439,7 @@ def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
 
 
 @_moment.register(MarginalMixtureRV)
-def moment_marginal_mixture(op, rv, rng, weights, *components):
+def marginal_mixture_moment(op, rv, rng, weights, *components):
     ndim_supp = components[0].owner.op.ndim_supp
     weights = at.shape_padright(weights, ndim_supp)
     mix_axis = -ndim_supp - 1
