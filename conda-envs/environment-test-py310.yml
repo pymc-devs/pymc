@@ -1,5 +1,5 @@
 # "dev" conda envs are to be used by devs in setting their local environments
-name: pymc-dev-py37
+name: pymc-dev-py310
 channels:
 - conda-forge
 - defaults
@@ -24,7 +24,7 @@ dependencies:
 - pytest-cov>=2.5
 - pytest>=3.0
 - python-graphviz
-- python=3.7
+- python=3.10
 - scipy>=1.4.1
 - sphinx-copybutton
 - sphinx-notfound-page
