@@ -291,10 +291,10 @@ class Uniform(BoundedContinuous):
 
     Parameters
     ----------
-    lower : float, optional
-        Lower limit. Defaults to 0.
-    upper : float, optional
-        Upper limit. Defaults to 1.
+    lower : tensor_like of float, default 0
+        Lower limit.
+    upper : tensor_like of float, default 1
+        Upper limit.
     """
     rv_op = uniform
     bound_args_indices = (3, 4)  # Lower, Upper
@@ -319,13 +319,9 @@ class Uniform(BoundedContinuous):
 
         Parameters
         ----------
-        value : numeric or ndarray or TensorVariable
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or `TensorVariable`.
-        lower : float, optional
-            Lower limit. Defaults to 0.
-        upper : float, optional
-            Upper limit. Defaults to 1.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -385,7 +381,7 @@ class Flat(Continuous):
         ----------
         value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -453,7 +449,7 @@ class HalfFlat(PositiveContinuous):
         ----------
         value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -575,11 +571,7 @@ class Normal(Continuous):
         ----------
         value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or `TensorVariable`.
-        mu : tensor_like of float
-            Mean.
-        sigma : tensor_like of float
-            Standard deviation (sigma > 0).
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1471,7 +1463,7 @@ class Exponential(PositiveContinuous):
     Parameters
     ----------
     lam : tensor_like of float
-        Rate or inverse scale (``lam`` > 0)
+        Rate or inverse scale (``lam`` > 0).
     """
     rv_op = exponential
 
@@ -1652,12 +1644,12 @@ class AsymmetricLaplace(Continuous):
 
     Parameters
     ----------
-    b: float
-        Scale parameter (b > 0)
-    kappa: float
-        Symmetry parameter (kappa > 0)
-    mu: float
-        Location parameter
+    b : tensor_like of float
+        Scale parameter (b > 0).
+    kappa : tensor_like of float
+        Symmetry parameter (kappa > 0).
+    mu : tensor_like of float, default 0
+        Location parameter.
 
     See Also:
     --------
@@ -1692,9 +1684,9 @@ class AsymmetricLaplace(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -2345,7 +2337,7 @@ class Gamma(PositiveContinuous):
         value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
-            array or `TensorVariable`.
+            array or Aesara tensor.
 
         Returns
         -------
@@ -2641,7 +2633,7 @@ class Weibull(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -3371,6 +3363,7 @@ class Rice(PositiveContinuous):
        \left({\frac  {-(x^{2}+\nu ^{2})}{2\sigma ^{2}}}\right)I_{0}\left({\frac  {x\nu }{\sigma ^{2}}}\right),
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3397,12 +3390,12 @@ class Rice(PositiveContinuous):
 
     Parameters
     ----------
-    nu: float
-        noncentrality parameter.
-    sigma: float
+    nu : tensor_like of float, optional
+        Noncentrality parameter (only required if b is not specified).
+    sigma : tensor_like of float, default 1
         scale parameter.
-    b: float
-        shape parameter (alternative to nu).
+    b : tensor_like of float, optional
+        Shape parameter (alternative to nu, only required if nu is not specified).
 
     Notes
     -----
@@ -3463,9 +3456,9 @@ class Rice(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3724,6 +3717,7 @@ class Interpolated(BoundedContinuous):
     plain array-like objects, so they are constant and cannot be sampled.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3751,11 +3745,11 @@ class Interpolated(BoundedContinuous):
 
     Parameters
     ----------
-    x_points: array-like
-        A monotonically growing list of values. Must be non-symbolic
-    pdf_points: array-like
+    x_points : array_like
+        A monotonically growing list of values. Must be non-symbolic.
+    pdf_points : array_like
         Probability density function evaluated on lattice ``x_points``. Must
-        be non-symbolic
+        be non-symbolic.
     """
 
     rv_op = interpolated
@@ -3805,9 +3799,9 @@ class Interpolated(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3860,6 +3854,7 @@ class Moyal(Continuous):
        z = \frac{x-\mu}{\sigma}.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3885,9 +3880,9 @@ class Moyal(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Location parameter.
-    sigma: float
+    sigma : tensor_like of float, default 1
         Scale parameter (sigma > 0).
     """
     rv_op = moyal
@@ -3914,9 +3909,9 @@ class Moyal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3933,7 +3928,7 @@ class Moyal(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -4044,6 +4039,7 @@ class PolyaGamma(PositiveContinuous):
     random variable with shape  parameter ``h`` and scale parameter ``1``.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -4068,9 +4064,9 @@ class PolyaGamma(PositiveContinuous):
 
     Parameters
     ----------
-    h: float, optional
+    h : tensor_like of float, default 1
         The shape parameter of the distribution (h > 0).
-    z: float, optional
+    z : tensor_like of float, default 0
         The exponential tilting parameter of the distribution.
 
     Examples
@@ -4091,7 +4087,7 @@ class PolyaGamma(PositiveContinuous):
            108.504 (2013): 1339-1349.
     .. [2] Windle, Jesse, Nicholas G. Polson, and James G. Scott.
            "Sampling Polya-Gamma random variates: alternate and approximate
-           techniques." arXiv preprint arXiv:1405.0506 (2014)
+           techniques." arXiv preprint arXiv:1405.0506 (2014).
     .. [3] Luc Devroye. "On exact simulation algorithms for some distributions
            related to Jacobi theta functions." Statistics & Probability Letters,
            Volume 79, Issue 21, (2009): 2251-2259.
@@ -4126,7 +4122,7 @@ class PolyaGamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log
             probabilities for multiple values are desired the values must be
             provided in a numpy array.
@@ -4154,7 +4150,7 @@ class PolyaGamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or `TensorVariable`
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array.
 
