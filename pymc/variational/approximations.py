@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 import aesara
 import numpy as np
 
@@ -270,14 +272,14 @@ class EmpiricalGroup(Group):
                 at.repeat(self.mean.reshape((1, -1)), size, -1),
                 self.histogram[self.randidx(size)],
             )
+        elif deterministic:
+            warnings.warn(
+                "Deterministic sampling from a Histogram is deprecated and will be removed soon.",
+                DeprecationWarning,
+            )
+            return at.repeat(self.mean.reshape((1, -1)), size, -1)
         else:
-            if deterministic:
-                raise NotImplementedInference(
-                    "Deterministic sampling from a Histogram is broken in v4"
-                )
-                return at.repeat(self.mean.reshape((1, -1)), size, -1)
-            else:
-                return self.histogram[self.randidx(size)]
+            return self.histogram[self.randidx(size)]
 
     @property
     def symbolic_random(self):

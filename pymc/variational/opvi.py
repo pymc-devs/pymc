@@ -957,9 +957,9 @@ class Group(WithMemoization):
         if not group:
             raise GroupError("Got empty group")
         if self.local:
-            raise NotImplementedInference("Local inferene aka AEVB is not supported in v4")
+            warnings.warn("Local inferene aka AEVB is deprecated.", DeprecationWarning)
         if self.batched:
-            raise NotImplementedInference("Batched inferene is not supported in v4")
+            warnings.warn("Batched inferene is deprecated.", DeprecationWarning)
         if self.group is None:
             # delayed init
             self.group = group
