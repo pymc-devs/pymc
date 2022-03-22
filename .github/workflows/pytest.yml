@@ -135,9 +135,9 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           mamba-version: "*"
-          activate-environment: pymc-test-py37
+          activate-environment: pymc-test-py38
           channel-priority: strict
-          environment-file: conda-envs/environment-test-py37.yml
+          environment-file: conda-envs/environment-test-py38.yml
           use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install-pymc
@@ -220,14 +220,14 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           mamba-version: "*"
-          activate-environment: pymc-test-py38
+          activate-environment: pymc-test-py39
           channel-priority: strict
           environment-file: conda-envs/windows-environment-test-py38.yml
           use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install-pymc
         run: |
-          conda activate pymc-test-py38
+          conda activate pymc-test-py39
           pip install -e .
           pip install --pre -U polyagamma
           python --version
@@ -235,7 +235,7 @@ jobs:
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
-          conda activate pymc-test-py38 &&
+          conda activate pymc-test-py39 &&
           python -m pytest -vv --cov=pymc --cov-append --cov-report=xml --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
