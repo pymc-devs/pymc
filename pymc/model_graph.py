@@ -18,7 +18,7 @@ from typing import Dict, Iterator, NewType, Optional, Set
 
 from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
-from aesara.graph.basic import walk
+from aesara.graph.basic import ancestors, walk
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
 
@@ -106,21 +106,32 @@ class ModelGraph:
         if selected_vars is None:
             return self.var_names
         else:
-            all_selected_ancestors = set()
+            selected_vars = set(selected_vars)
 
-            for selected_var_name in selected_vars:
-                var_ancestors = self._get_ancestors(
-                    self.model[selected_var_name], self.model[selected_var_name]
+            for var_name in selected_vars:
+                if var_name not in self.var_names:
+                    raise ValueError(f"{var_name} is not part of the defined model.")
+
+                for model_var in self.var_list:
+                    if hasattr(model_var.tag, "observations"):
+                        if model_var.tag.observations == self.model[var_name]:
+                            selected_vars = selected_vars.union({model_var.name})
+
+            selected_ancestors = set(
+                filter(
+                    lambda rv: rv.name in self.var_names,
+                    list(ancestors([self.model[var_name] for var_name in selected_vars])),
                 )
-                all_selected_ancestors = all_selected_ancestors.union(var_ancestors)
-
-            vars_on_graph = all_selected_ancestors.union(
-                {self.model[selected_var_name] for selected_var_name in selected_vars}
             )
-            vars_on_graph = {var.name for var in vars_on_graph}
+
+            for var in selected_ancestors:
+                if hasattr(var.tag, "observations"):
+                    selected_ancestors = selected_ancestors.union({var.tag.observations})
+
+            selected_ancestors = [var.name for var in selected_ancestors]
 
             # ordering of self.var_names is important
-            return [var_name for var_name in self.var_names if var_name in vars_on_graph]
+            return selected_ancestors
 
     def make_compute_graph(self, selected_vars=None) -> Dict[str, Set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
