@@ -314,54 +314,58 @@ class TestSimulator(SeededTest):
         assert abs(self.data.mean() - po_p["s"].mean()) < 0.10
         assert abs(self.data.std() - po_p["s"].std()) < 0.10
 
-    def test_custom_dist_sum_stat(self):
-        with pm.Model() as m:
-            a = pm.Normal("a", mu=0, sigma=1)
-            b = pm.HalfNormal("b", sigma=1)
-            s = pm.Simulator(
-                "s",
-                self.normal_sim,
-                a,
-                b,
-                distance=self.abs_diff,
-                sum_stat=self.quantiles,
-                observed=self.data,
-            )
+    @pytest.mark.parametrize("floatX", ["float32", "float64"])
+    def test_custom_dist_sum_stat(self, floatX):
+        with aesara.config.change_flags(floatX=floatX):
+            with pm.Model() as m:
+                a = pm.Normal("a", mu=0, sigma=1)
+                b = pm.HalfNormal("b", sigma=1)
+                s = pm.Simulator(
+                    "s",
+                    self.normal_sim,
+                    a,
+                    b,
+                    distance=self.abs_diff,
+                    sum_stat=self.quantiles,
+                    observed=self.data,
+                )
 
-        assert self.count_rvs(m.logpt()) == 1
+            assert self.count_rvs(m.logpt()) == 1
 
-        with m:
-            pm.sample_smc(draws=100)
+            with m:
+                pm.sample_smc(draws=100)
 
-    def test_custom_dist_sum_stat_scalar(self):
+    @pytest.mark.parametrize("floatX", ["float32", "float64"])
+    def test_custom_dist_sum_stat_scalar(self, floatX):
         """
         Test that automatically wrapped functions cope well with scalar inputs
         """
         scalar_data = 5
 
-        with pm.Model() as m:
-            s = pm.Simulator(
-                "s",
-                self.normal_sim,
-                0,
-                1,
-                distance=self.abs_diff,
-                sum_stat=self.quantiles,
-                observed=scalar_data,
-            )
-        assert self.count_rvs(m.logpt()) == 1
+        with aesara.config.change_flags(floatX=floatX):
+            with pm.Model() as m:
+                s = pm.Simulator(
+                    "s",
+                    self.normal_sim,
+                    0,
+                    1,
+                    distance=self.abs_diff,
+                    sum_stat=self.quantiles,
+                    observed=scalar_data,
+                )
+            assert self.count_rvs(m.logpt()) == 1
 
-        with pm.Model() as m:
-            s = pm.Simulator(
-                "s",
-                self.normal_sim,
-                0,
-                1,
-                distance=self.abs_diff,
-                sum_stat="mean",
-                observed=scalar_data,
-            )
-        assert self.count_rvs(m.logpt()) == 1
+            with pm.Model() as m:
+                s = pm.Simulator(
+                    "s",
+                    self.normal_sim,
+                    0,
+                    1,
+                    distance=self.abs_diff,
+                    sum_stat="mean",
+                    observed=scalar_data,
+                )
+            assert self.count_rvs(m.logpt()) == 1
 
     def test_model_with_potential(self):
         assert self.count_rvs(self.SMABC_potential.logpt()) == 1

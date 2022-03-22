@@ -238,7 +238,6 @@ class TestErrors:
             func=system, t0=0, times=self.times, n_states=1, n_theta=1
         )
 
-    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_many_params(self):
         with pytest.raises(
             pm.ShapeError,
@@ -246,14 +245,12 @@ class TestErrors:
         ):
             self.ode_model(theta=[1, 1], y0=[0])
 
-    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_many_y0(self):
         with pytest.raises(
             pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(2,\\) != expected \\(1,\\)\\)"
         ):
             self.ode_model(theta=[1], y0=[0, 0])
 
-    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_few_params(self):
         with pytest.raises(
             pm.ShapeError,
@@ -261,7 +258,6 @@ class TestErrors:
         ):
             self.ode_model(theta=[], y0=[1])
 
-    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_few_y0(self):
         with pytest.raises(
             pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(0,\\) != expected \\(1,\\)\\)"

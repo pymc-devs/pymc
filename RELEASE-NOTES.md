@@ -7,7 +7,7 @@ Instead update the vNext section until 4.0.0 is out.
 ⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠
 -->
 
-## PyMC vNext (4.0.0b1 → ... → 4.0.0b4 → 4.0.0)
+## PyMC vNext (4.0.0b1 → ... → 4.0.0b5 → 4.0.0)
 ⚠ The changes below are the delta between the releases `v3.11.5` →...→ `v4.0.0`.
 
 ### Not-yet working features
@@ -15,7 +15,6 @@ We plan to get these working again, but at this point their inner workings have 
 - Timeseries distributions (see [#4642](https://github.com/pymc-devs/pymc/issues/4642))
 - Nested Mixture distributions (see [#5533](https://github.com/pymc-devs/pymc/issues/5533))
 - Elliptical slice sampling (see [#5137](https://github.com/pymc-devs/pymc/issues/5137))
-- `BaseStochasticGradient` (see [#5138](https://github.com/pymc-devs/pymc/issues/5138))
 - `pm.sample_posterior_predictive_w` (see [#4807](https://github.com/pymc-devs/pymc/issues/4807))
 - Partially observed Multivariate distributions (see [#5260](https://github.com/pymc-devs/pymc/issues/5260))
 
@@ -32,6 +31,7 @@ All of the above apply to:
 - `pm.AsymmetricLaplace` positional arguments re-ordered
 - `pm.AsymmetricLaplace` now requires `mu` to be specified (no longer defaults to 0)
 - BART was removed [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental)
+- `BaseStochasticGradient` was removed (see [#5630](https://github.com/pymc-devs/pymc/pull/5630))
 - ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
 - `pm.Distribution(...).logp(x)` is now `pm.logp(pm.Distribution(...), x)`.
@@ -137,6 +137,7 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - Adding support for blackjax's NUTS sampler `pymc.sampling_jax` (see [#5477](ihttps://github.com/pymc-devs/pymc/pull/5477))
 - `pymc.sampling_jax` samplers support `log_likelihood`, `observed_data`, and `sample_stats` in returned InferenceData object (see [#5189](https://github.com/pymc-devs/pymc/pull/5189))
 - Adding support for `pm.Deterministic` in `pymc.sampling_jax` (see [#5182](https://github.com/pymc-devs/pymc/pull/5182))
+- Added an alternative parametrization, `logit_p` to `pm.Binomial` and `pm.Categorical` distributions (see [5637](https://github.com/pymc-devs/pymc/pull/5637)).
 - ...
 
 

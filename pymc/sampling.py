@@ -45,6 +45,7 @@ import xarray
 
 from aesara.compile.mode import Mode
 from aesara.graph.basic import Constant, Variable
+from aesara.tensor import TensorVariable
 from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
@@ -279,18 +280,17 @@ def sample(
         The number of samples to draw. Defaults to 1000. The number of tuned samples are discarded
         by default. See ``discard_tuned_samples``.
     init : str
-        Initialization method to use for auto-assigned NUTS samplers.
-        See `pm.init_nuts` for a list of all options.
+        Initialization method to use for auto-assigned NUTS samplers. See `pm.init_nuts` for a list
+        of all options. This argument is ignored when manually passing the NUTS step method.
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
-        step methods for those variables will be assigned automatically.  By default the NUTS step
-        method will be used, if appropriate to the model; this is a good default for beginning
-        users.
+        step methods for those variables will be assigned automatically. By default the NUTS step
+        method will be used, if appropriate to the model.
     n_init : int
         Number of iterations of initializer. Only works for 'ADVI' init methods.
     initvals : optional, dict, array of dict
-        Dict or list of dicts with initial value strategies to use instead of the defaults from `Model.initial_values`.
-        The keys should be names of transformed random variables.
+        Dict or list of dicts with initial value strategies to use instead of the defaults from
+        `Model.initial_values`. The keys should be names of transformed random variables.
         Initialization methods for NUTS (see ``init`` keyword) can overwrite the default.
     trace : backend or list
         This should be a backend instance, or a list of variables to track.
@@ -317,8 +317,8 @@ def sample(
     model : Model (optional if in ``with`` context)
         Model to sample from. The model needs to have free random variables.
     random_seed : int or list of ints
-        Random seed(s) used by the sampling steps.  A list is accepted if
-        ``cores`` is greater than one.
+        Random seed(s) used by the sampling steps. A list is accepted if ``cores`` is greater than
+        one.
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval.
     compute_convergence_checks : bool, default=True
@@ -330,17 +330,17 @@ def sample(
         is drawn from.
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
     jitter_max_retries : int
-        Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
-        that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
-        init methods.
+        Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform
+        jitter that yields a finite probability. This applies to ``jitter+adapt_diag`` and
+        ``jitter+adapt_full`` init methods.
     return_inferencedata : bool
-        Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
-        Defaults to `True`.
+        Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a
+        `MultiTrace` (False). Defaults to `True`.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
     mp_ctx : multiprocessing.context.BaseContent
-        A multiprocessing context for parallel sampling. See multiprocessing
-        documentation for details.
+        A multiprocessing context for parallel sampling.
+        See multiprocessing documentation for details.
 
     Returns
     -------
@@ -352,37 +352,28 @@ def sample(
     Optional keyword arguments can be passed to ``sample`` to be delivered to the
     ``step_method``\ s used during sampling.
 
-    If your model uses only one step method, you can address step method kwargs
-    directly. In particular, the NUTS step method has several options including:
+    For example:
+
+       1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
+       2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
+
+    Note that available step names are:
+
+    ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
+    ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
+    ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
+
+    The NUTS step method has several options including:
 
         * target_accept : float in [0, 1]. The step size is tuned such that we
           approximate this acceptance rate. Higher values like 0.9 or 0.95 often
-          work better for problematic posteriors
+          work better for problematic posteriors. This argument can be passed directly to sample.
         * max_treedepth : The maximum depth of the trajectory tree
         * step_scale : float, default 0.25
           The initial guess for the step size scaled down by :math:`1/n**(1/4)`,
           where n is the dimensionality of the parameter space
 
-    If your model uses multiple step methods, aka a Compound Step, then you have
-    two ways to address arguments to each step method:
-
-    A. If you let ``sample()`` automatically assign the ``step_method``\ s,
-       and you can correctly anticipate what they will be, then you can wrap
-       step method kwargs in a dict and pass that to sample() with a kwarg set
-       to the name of the step method.
-       e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
-       you could send:
-
-       1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
-       2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
-
-       Note that available names are:
-
-        ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
-        ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
-        ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
-
-    B. If you manually declare the ``step_method``\ s, within the ``step``
+    Alternatively, if you manually declare the ``step_method``\ s, within the ``step``
        kwarg, then you can address the ``step_method`` kwargs directly.
        e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
        you could send ::
@@ -422,6 +413,8 @@ def sample(
             stacklevel=2,
         )
         initvals = kwargs.pop("start")
+    if "target_accept" in kwargs:
+        kwargs.setdefault("nuts", {"target_accept": kwargs.pop("target_accept")})
 
     model = modelcontext(model)
     if not model.free_RVs:
@@ -466,11 +459,37 @@ def sample(
 
     draws += tune
 
+    auto_nuts_init = True
+    if step is not None:
+        if isinstance(step, CompoundStep):
+            for method in step.methods:
+                if isinstance(method, NUTS):
+                    auto_nuts_init = False
+        elif isinstance(step, NUTS):
+            auto_nuts_init = False
+
     initial_points = None
     step = assign_step_methods(model, step, methods=pm.STEP_METHODS, step_kwargs=kwargs)
 
     if isinstance(step, list):
         step = CompoundStep(step)
+    elif isinstance(step, NUTS) and auto_nuts_init:
+        if "nuts" in kwargs:
+            nuts_kwargs = kwargs.pop("nuts")
+            [kwargs.setdefault(k, v) for k, v in nuts_kwargs.items()]
+        _log.info("Auto-assigning NUTS sampler...")
+        initial_points, step = init_nuts(
+            init=init,
+            chains=chains,
+            n_init=n_init,
+            model=model,
+            seeds=random_seed,
+            progressbar=progressbar,
+            jitter_max_retries=jitter_max_retries,
+            tune=tune,
+            initvals=initvals,
+            **kwargs,
+        )
 
     if initial_points is None:
         # Time to draw/evaluate numeric start points for each chain.
@@ -1690,6 +1709,8 @@ def sample_posterior_predictive(
             return trace
         return {}
 
+    inputs: Sequence[TensorVariable]
+    input_names: Sequence[str]
     if not hasattr(_trace, "varnames"):
         inputs_and_names = [
             (rv, rv.name)
@@ -2129,7 +2150,7 @@ def draw(
 def _init_jitter(
     model: Model,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
-    seeds: Sequence[int],
+    seeds: Union[List[Any], Tuple[Any, ...], np.ndarray],
     jitter: bool,
     jitter_max_retries: int,
 ) -> List[PointType]:
@@ -2186,7 +2207,7 @@ def init_nuts(
     chains: int = 1,
     n_init: int = 500_000,
     model=None,
-    seeds: Sequence[int] = None,
+    seeds: Iterable[Any] = None,
     progressbar=True,
     jitter_max_retries: int = 10,
     tune: Optional[int] = None,
@@ -2262,8 +2283,7 @@ def init_nuts(
     if not isinstance(init, str):
         raise TypeError("init must be a string.")
 
-    if init is not None:
-        init = init.lower()
+    init = init.lower()
 
     if init == "auto":
         init = "jitter+adapt_diag"
@@ -2333,7 +2353,8 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
+        approx_sample = approx.sample(draws=chains, return_inferencedata=False)
+        initial_points = [approx_sample[i] for i in range(chains)]
         std_apoint = approx.std.eval()
         cov = std_apoint**2
         mean = approx.mean.get_value()
@@ -2350,7 +2371,8 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
+        approx_sample = approx.sample(draws=chains, return_inferencedata=False)
+        initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "advi_map":
@@ -2364,7 +2386,8 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        initial_points = list(approx.sample(draws=chains, return_inferencedata=False))
+        approx_sample = approx.sample(draws=chains, return_inferencedata=False)
+        initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "map":

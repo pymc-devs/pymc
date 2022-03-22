@@ -28,6 +28,7 @@ from aesara.tensor.subtensor import (
     Subtensor,
 )
 
+from pymc import DensityDist
 from pymc.aesaraf import floatX, walk_model
 from pymc.distributions.continuous import HalfFlat, Normal, TruncatedNormal, Uniform
 from pymc.distributions.discrete import Bernoulli
@@ -217,3 +218,12 @@ def test_model_unchanged_logprob_access():
     model.logpt()
     new_inputs = set(aesara.graph.graph_inputs([c]))
     assert original_inputs == new_inputs
+
+
+def test_unexpected_rvs():
+    with Model() as model:
+        x = Normal("x")
+        y = DensityDist("y", logp=lambda *args: x)
+
+    with pytest.raises(ValueError, match="^Random variables detected in the logp graph"):
+        model.logpt()

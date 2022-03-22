@@ -24,6 +24,7 @@ from aeppl.logprob import logcdf as logcdf_aeppl
 from aeppl.logprob import logprob as logp_aeppl
 from aeppl.transforms import TransformValuesOpt
 from aesara.graph.basic import graph_inputs, io_toposort
+from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -222,6 +223,26 @@ def joint_logpt(
     temp_logp_var_dict = factorized_joint_logprob(
         tmp_rvs_to_values, extra_rewrites=transform_opt, use_jacobian=jacobian, **kwargs
     )
+
+    # Raise if there are unexpected RandomVariables in the logp graph
+    # Only SimulatorRVs are allowed
+    from pymc.distributions.simulator import SimulatorRV
+
+    unexpected_rv_nodes = [
+        node
+        for node in aesara.graph.ancestors(list(temp_logp_var_dict.values()))
+        if (
+            node.owner
+            and isinstance(node.owner.op, RandomVariable)
+            and not isinstance(node.owner.op, SimulatorRV)
+        )
+    ]
+    if unexpected_rv_nodes:
+        raise ValueError(
+            f"Random variables detected in the logp graph: {unexpected_rv_nodes}.\n"
+            "This can happen when DensityDist logp or Interval transform functions "
+            "reference nonlocal variables."
+        )
 
     # aeppl returns the logpt for every single value term we provided to it. This includes
     # the extra values we plugged in above, so we filter those we actually wanted in the

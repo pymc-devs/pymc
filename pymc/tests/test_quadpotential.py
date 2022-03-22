@@ -150,7 +150,7 @@ def test_user_potential():
     pot = Potential(floatX([1]))
     with model:
         step = pymc.NUTS(potential=pot)
-        pymc.sample(10, init=None, step=step, chains=1)
+        pymc.sample(10, step=step, chains=1)
     assert called
 
 

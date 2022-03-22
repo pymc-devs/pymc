@@ -291,10 +291,10 @@ class Uniform(BoundedContinuous):
 
     Parameters
     ----------
-    lower : float, optional
-        Lower limit. Defaults to 0.
-    upper : float, optional
-        Upper limit. Defaults to 1.
+    lower : tensor_like of float, default 0
+        Lower limit.
+    upper : tensor_like of float, default 1
+        Upper limit.
     """
     rv_op = uniform
     bound_args_indices = (3, 4)  # Lower, Upper
@@ -319,13 +319,9 @@ class Uniform(BoundedContinuous):
 
         Parameters
         ----------
-        value : numeric or ndarray or TensorVariable
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or `TensorVariable`.
-        lower : float, optional
-            Lower limit. Defaults to 0.
-        upper : float, optional
-            Upper limit. Defaults to 1.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -385,7 +381,7 @@ class Flat(Continuous):
         ----------
         value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -453,7 +449,7 @@ class HalfFlat(PositiveContinuous):
         ----------
         value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -575,11 +571,7 @@ class Normal(Continuous):
         ----------
         value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or `TensorVariable`.
-        mu : tensor_like of float
-            Mean.
-        sigma : tensor_like of float
-            Standard deviation (sigma > 0).
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -818,9 +810,10 @@ class HalfNormal(PositiveContinuous):
        the standard deviation/precision of the unfolded normal distribution, for
        the standard deviation of the half-normal distribution, see below. For
        the half-normal, they are just two parameterisation :math:`\sigma^2
-       \equiv \frac{1}{\tau}` of a scale parameter
+       \equiv \frac{1}{\tau}` of a scale parameter.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -844,10 +837,12 @@ class HalfNormal(PositiveContinuous):
 
     Parameters
     ----------
-    sigma: float
-        Scale parameter :math:`sigma` (``sigma`` > 0) (only required if ``tau`` is not specified).
-    tau: float
-        Precision :math:`tau` (tau > 0) (only required if sigma is not specified).
+    sigma : tensor_like of float, optional
+        Scale parameter :math:`\sigma` (``sigma`` > 0) (only required if ``tau`` is not specified).
+        Defaults to 1.
+    tau : tensor_like of float, optional
+        Precision :math:`\tau` (tau > 0) (only required if sigma is not specified).
+        Defaults to 1.
 
     Examples
     --------
@@ -883,7 +878,7 @@ class HalfNormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -935,6 +930,7 @@ class Wald(PositiveContinuous):
            \right\}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -967,13 +963,13 @@ class Wald(PositiveContinuous):
 
     Parameters
     ----------
-    mu: float, optional
+    mu : tensor_like of float, optional
         Mean of the distribution (mu > 0).
-    lam: float, optional
+    lam : tensor_like of float, optional
         Relative precision (lam > 0).
-    phi: float, optional
+    phi : tensor_like of float, optional
         Alternative shape parameter (phi > 0).
-    alpha: float, optional
+    alpha : tensor_like of float, default 0
         Shift/location parameter (alpha >= 0).
 
     Notes
@@ -1060,14 +1056,14 @@ class Wald(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-        mu: float or TensorVariable
+            values are desired the values must be provided in a numpy array or Aesara tensor.
+        mu : tensor_like of float
             Mean of the distribution (mu > 0).
-        lam: float or TensorVariable
+        lam : tensor_like of float
             Relative precision (lam > 0).
-        alpha: float or TensorVariable
+        alpha : tensor_like of float
             Shift/location parameter (alpha >= 0).
 
         Returns
@@ -1105,14 +1101,14 @@ class Wald(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
-        mu: float or TensorVariable
+        mu : tensor_like of float
             Mean of the distribution (mu > 0).
-        lam: float or TensorVariable
+        lam : tensor_like of float
             Relative precision (lam > 0).
-        alpha: float or TensorVariable
+        alpha : tensor_like of float
             Shift/location parameter (alpha >= 0).
 
         Returns
@@ -1467,7 +1463,7 @@ class Exponential(PositiveContinuous):
     Parameters
     ----------
     lam : tensor_like of float
-        Rate or inverse scale (``lam`` > 0)
+        Rate or inverse scale (``lam`` > 0).
     """
     rv_op = exponential
 
@@ -1688,9 +1684,9 @@ class AsymmetricLaplace(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1982,6 +1978,7 @@ class Pareto(BoundedContinuous):
        f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2008,9 +2005,9 @@ class Pareto(BoundedContinuous):
 
     Parameters
     ----------
-    alpha: float
+    alpha : tensor_like of float
         Shape parameter (alpha > 0).
-    m: float
+    m : tensor_like of float
         Scale parameter (m > 0).
     """
     rv_op = pareto
@@ -2045,7 +2042,7 @@ class Pareto(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -2340,7 +2337,7 @@ class Gamma(PositiveContinuous):
         value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
-            array or `TensorVariable`.
+            array or Aesara tensor.
 
         Returns
         -------
@@ -2493,6 +2490,7 @@ class ChiSquared(PositiveContinuous):
        f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2517,7 +2515,7 @@ class ChiSquared(PositiveContinuous):
 
     Parameters
     ----------
-    nu: float
+    nu : tensor_like of float
         Degrees of freedom (nu > 0).
     """
     rv_op = chisquare
@@ -2540,10 +2538,11 @@ class ChiSquared(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or `TensorVariable`
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
-            array or `TensorVariable`.
+            array or Aesara tensor.
+
         Returns
         -------
         TensorVariable
@@ -2634,7 +2633,7 @@ class Weibull(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -2813,6 +2812,7 @@ class ExGaussian(Continuous):
     standard normal distribution.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2839,11 +2839,11 @@ class ExGaussian(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Mean of the normal distribution.
-    sigma: float
+    sigma : tensor_like of float
         Standard deviation of the normal distribution (sigma > 0).
-    nu: float
+    nu : tensor_like of float
         Mean of the exponential distribution (nu > 0).
 
     References
@@ -2884,9 +2884,9 @@ class ExGaussian(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -2924,7 +2924,7 @@ class ExGaussian(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -2964,6 +2964,7 @@ class VonMises(CircularContinuous):
     where :math:`I_0` is the modified Bessel function of order 0.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2989,9 +2990,9 @@ class VonMises(CircularContinuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Mean.
-    kappa: float
+    kappa : tensor_like of float
         Concentration (\frac{1}{kappa} is analogous to \sigma^2).
     """
 
@@ -3032,7 +3033,7 @@ class SkewNormal(Continuous):
     r"""
     Univariate skew-normal log-likelihood.
 
-     The pdf of this distribution is
+    The pdf of this distribution is
 
     .. math::
 
@@ -3040,6 +3041,7 @@ class SkewNormal(Continuous):
        2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3070,13 +3072,15 @@ class SkewNormal(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Location parameter.
-    sigma: float
+    sigma : tensor_like of float, optional
         Scale parameter (sigma > 0).
-    tau: float
+        Defaults to 1.
+    tau : tensor_like of float, optional
         Alternative scale parameter (tau > 0).
-    alpha: float
+        Defaults to 1.
+    alpha : tensor_like of float, default 1
         Skewness parameter.
 
     Notes
@@ -3113,9 +3117,9 @@ class SkewNormal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3133,7 +3137,7 @@ class SkewNormal(Continuous):
 
 class Triangular(BoundedContinuous):
     r"""
-    Continuous Triangular log-likelihood
+    Continuous Triangular log-likelihood.
 
     The pdf of this distribution is
 
@@ -3148,6 +3152,7 @@ class Triangular(BoundedContinuous):
         \end{cases}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3178,11 +3183,11 @@ class Triangular(BoundedContinuous):
 
     Parameters
     ----------
-    lower: float
+    lower : tensor_like of float, default 0
         Lower limit.
-    c: float
-        mode
-    upper: float
+    c : tensor_like of float, default 0.5
+        Mode.
+    upper : tensor_like of float, default 1
         Upper limit.
     """
 
@@ -3210,7 +3215,7 @@ class Triangular(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -3242,7 +3247,7 @@ class Triangular(BoundedContinuous):
 
 class Gumbel(Continuous):
     r"""
-        Univariate Gumbel log-likelihood
+    Univariate Gumbel log-likelihood.
 
     The pdf of this distribution is
 
@@ -3257,6 +3262,7 @@ class Gumbel(Continuous):
         z = \frac{x - \mu}{\beta}.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3283,9 +3289,9 @@ class Gumbel(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float
         Location parameter.
-    beta: float
+    beta : tensor_like of float
         Scale parameter (beta > 0).
     """
     rv_op = gumbel
@@ -3323,7 +3329,7 @@ class Gumbel(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -3362,6 +3368,7 @@ class Rice(PositiveContinuous):
        \left({\frac  {-(x^{2}+\nu ^{2})}{2\sigma ^{2}}}\right)I_{0}\left({\frac  {x\nu }{\sigma ^{2}}}\right),
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3388,12 +3395,12 @@ class Rice(PositiveContinuous):
 
     Parameters
     ----------
-    nu: float
-        noncentrality parameter.
-    sigma: float
+    nu : tensor_like of float, optional
+        Noncentrality parameter (only required if b is not specified).
+    sigma : tensor_like of float, default 1
         scale parameter.
-    b: float
-        shape parameter (alternative to nu).
+    b : tensor_like of float, optional
+        Shape parameter (alternative to nu, only required if nu is not specified).
 
     Notes
     -----
@@ -3454,9 +3461,9 @@ class Rice(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3490,6 +3497,7 @@ class Logistic(Continuous):
            \frac{\exp\left(-\frac{x - \mu}{s}\right)}{s \left(1 + \exp\left(-\frac{x - \mu}{s}\right)\right)^2}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3516,9 +3524,9 @@ class Logistic(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Mean.
-    s: float
+    s : tensor_like of float, default 1
         Scale (s > 0).
     """
 
@@ -3543,7 +3551,7 @@ class Logistic(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -3588,6 +3596,7 @@ class LogitNormal(UnitContinuous):
 
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3612,12 +3621,14 @@ class LogitNormal(UnitContinuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Location parameter.
-    sigma: float
+    sigma : tensor_like of float, optional
         Scale parameter (sigma > 0).
-    tau: float
+        Defaults to 1.
+    tau : tensor_like of float, optional
         Scale parameter (tau > 0).
+        Defaults to 1.
     """
     rv_op = logit_normal
 
@@ -3644,9 +3655,9 @@ class LogitNormal(UnitContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3715,6 +3726,7 @@ class Interpolated(BoundedContinuous):
     plain array-like objects, so they are constant and cannot be sampled.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3742,11 +3754,11 @@ class Interpolated(BoundedContinuous):
 
     Parameters
     ----------
-    x_points: array-like
-        A monotonically growing list of values. Must be non-symbolic
-    pdf_points: array-like
+    x_points : array_like
+        A monotonically growing list of values. Must be non-symbolic.
+    pdf_points : array_like
         Probability density function evaluated on lattice ``x_points``. Must
-        be non-symbolic
+        be non-symbolic.
     """
 
     rv_op = interpolated
@@ -3796,9 +3808,9 @@ class Interpolated(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3851,6 +3863,7 @@ class Moyal(Continuous):
        z = \frac{x-\mu}{\sigma}.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3876,9 +3889,9 @@ class Moyal(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Location parameter.
-    sigma: float
+    sigma : tensor_like of float, default 1
         Scale parameter (sigma > 0).
     """
     rv_op = moyal
@@ -3905,9 +3918,9 @@ class Moyal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3924,7 +3937,7 @@ class Moyal(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -4035,6 +4048,7 @@ class PolyaGamma(PositiveContinuous):
     random variable with shape  parameter ``h`` and scale parameter ``1``.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -4059,9 +4073,9 @@ class PolyaGamma(PositiveContinuous):
 
     Parameters
     ----------
-    h: float, optional
+    h : tensor_like of float, default 1
         The shape parameter of the distribution (h > 0).
-    z: float, optional
+    z : tensor_like of float, default 0
         The exponential tilting parameter of the distribution.
 
     Examples
@@ -4082,7 +4096,7 @@ class PolyaGamma(PositiveContinuous):
            108.504 (2013): 1339-1349.
     .. [2] Windle, Jesse, Nicholas G. Polson, and James G. Scott.
            "Sampling Polya-Gamma random variates: alternate and approximate
-           techniques." arXiv preprint arXiv:1405.0506 (2014)
+           techniques." arXiv preprint arXiv:1405.0506 (2014).
     .. [3] Luc Devroye. "On exact simulation algorithms for some distributions
            related to Jacobi theta functions." Statistics & Probability Letters,
            Volume 79, Issue 21, (2009): 2251-2259.
@@ -4117,7 +4131,7 @@ class PolyaGamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log
             probabilities for multiple values are desired the values must be
             provided in a numpy array.
@@ -4145,7 +4159,7 @@ class PolyaGamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or `TensorVariable`
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array.
 

@@ -14,6 +14,7 @@
 import functools
 import itertools
 import re
+import sys
 
 from typing import Callable, List, Optional
 
@@ -37,7 +38,7 @@ except ImportError:  # pragma: no cover
         raise RuntimeError("polyagamma package is not installed!")
 
 
-from scipy.special import expit
+from scipy.special import expit, softmax
 
 import pymc as pm
 
@@ -1005,6 +1006,25 @@ class TestBinomial(BaseTestDistributionRandom):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
+class TestLogitBinomial(BaseTestDistributionRandom):
+    pymc_dist = pm.Binomial
+    pymc_dist_params = {"n": 100, "logit_p": 0.5}
+    expected_rv_op_params = {"n": 100, "p": expit(0.5)}
+    tests_to_run = ["check_pymc_params_match_rv_op"]
+
+    @pytest.mark.parametrize(
+        "n, p, logit_p, expected",
+        [
+            (5, None, None, "Must specify either p or logit_p."),
+            (5, 0.5, 0.5, "Can't specify both p and logit_p."),
+        ],
+    )
+    def test_binomial_init_fail(self, n, p, logit_p, expected):
+        with pm.Model() as model:
+            with pytest.raises(ValueError, match=f"Incompatible parametrization. {expected}"):
+                pm.Binomial("x", n=n, p=p, logit_p=logit_p)
+
+
 class TestNegativeBinomial(BaseTestDistributionRandom):
     pymc_dist = pm.NegativeBinomial
     pymc_dist_params = {"n": 100, "p": 0.33}
@@ -1410,6 +1430,30 @@ class TestCategorical(BaseTestDistributionRandom):
     ]
 
 
+class TestLogitCategorical(BaseTestDistributionRandom):
+    pymc_dist = pm.Categorical
+    pymc_dist_params = {"logit_p": np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]])}
+    expected_rv_op_params = {
+        "p": softmax(np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]]), axis=-1)
+    }
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+    ]
+
+    @pytest.mark.parametrize(
+        "p, logit_p, expected",
+        [
+            (None, None, "Must specify either p or logit_p."),
+            (0.5, 0.5, "Can't specify both p and logit_p."),
+        ],
+    )
+    def test_categorical_init_fail(self, p, logit_p, expected):
+        with pm.Model() as model:
+            with pytest.raises(ValueError, match=f"Incompatible parametrization. {expected}"):
+                pm.Categorical("x", p=p, logit_p=logit_p)
+
+
 class TestGeometric(BaseTestDistributionRandom):
     pymc_dist = pm.Geometric
     pymc_dist_params = {"p": 0.9}
@@ -1571,14 +1615,18 @@ class TestConstant(BaseTestDistributionRandom):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
         "check_rv_size",
-        "check_dtype",
     ]
 
-    def check_dtype(self):
-        assert pm.Constant.dist(2**4).dtype == "int8"
-        assert pm.Constant.dist(2**16).dtype == "int32"
-        assert pm.Constant.dist(2**32).dtype == "int64"
-        assert pm.Constant.dist(2.0).dtype == aesara.config.floatX
+    @pytest.mark.parametrize("floatX", ["float32", "float64"])
+    @pytest.mark.xfail(
+        sys.platform == "win32", reason="https://github.com/aesara-devs/aesara/issues/871"
+    )
+    def test_dtype(self, floatX):
+        with aesara.config.change_flags(floatX=floatX):
+            assert pm.Constant.dist(2**4).dtype == "int8"
+            assert pm.Constant.dist(2**16).dtype == "int32"
+            assert pm.Constant.dist(2**32).dtype == "int64"
+            assert pm.Constant.dist(2.0).dtype == floatX
 
 
 class TestOrderedLogistic(BaseTestDistributionRandom):

@@ -36,7 +36,7 @@ def from_yaml():
     """
     # First collect the matrix definitions from testing workflows
     matrices = {}
-    for wf in ["pytest.yml", "arviz_compat.yml", "jaxtests.yml"]:
+    for wf in ["tests.yml"]:
         wfname = wf.strip(".yml")
         wfdef = yaml.safe_load(open(Path(".github", "workflows", wf)))
         for jobname, jobdef in wfdef["jobs"].items():
@@ -69,9 +69,29 @@ def from_yaml():
         for os_, floatX, subset in itertools.product(
             matrix["os"], matrix["floatx"], matrix["test-subset"]
         ):
-            testfiles = subset.split("\n")
+            lines = [l for l in subset.split("\n") if l]
+            if "windows" in os_:
+                # Windows jobs need \ in line breaks within the test-subset!
+                # The following checks that these trailing \ are present in
+                # all items except the last.
+                nlines = len(lines)
+                for l, line in enumerate(lines):
+                    if l < nlines - 1 and not line.endswith(" \\"):
+                        raise Exception(f"Missing ' \\' after '{line}' in Windows test-subset.")
+                    elif l == nlines - 1 and line.endswith(" \\"):
+                        raise Exception(
+                            f"Last entry '{line}' in Windows test subset should end WITHOUT ' \\'."
+                        )
+                    testfiles[l] = line.strip(" \\")
+
+            # Unpack lines with >1 item
+            testfiles = []
+            for line in lines:
+                testfiles += line.split(" ")
+
             ignored = {item.strip("--ignore=") for item in testfiles if item.startswith("--ignore")}
             included = {item for item in testfiles if item and not item.startswith("--ignore")}
+
             if ignored and not included:
                 # if no testfile is specified explicitly pytest runs all except the ignored ones
                 included = all_tests - ignored
