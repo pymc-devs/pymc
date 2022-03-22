@@ -190,21 +190,21 @@ class Interval(IntervalTransform):
 
     Parameters
     ----------
-    lower : int, float, or None
-        Lower bound of the interval transform. Must be a constant value. If ``None``, the
-        interval is not bounded below.
-    upper : int, float or None
-        Upper bound of the interval transfrom. Must be a finite value. If ``None``, the
-        interval is not bounded above.
-    bounds_fn : callable
+    lower : int or float, optional
+        Lower bound of the interval transform. Must be a constant finite value.
+        By default (``lower=None``), the interval is not bounded below.
+    upper : int or float, optinoal
+        Upper bound of the interval transform. Must be a constant finite value.
+        By default (``upper=None``), the interval is not bounded above.
+    bounds_fn : callable, optional
         Alternative to lower and upper. Must return a tuple of lower and upper bounds
-        as a symbolic function of the respective distribution inputs. If lower or
+        as a symbolic function of the respective distribution inputs. If one of lower or
         upper is ``None``, the interval is unbounded on that edge.
 
         .. warning:: Expressions returned by `bounds_fn` should depend only on the
-            distribution inputs or other constants. Expressions that depend on other
-            symbolic variables, including nonlocal variables defined in the model
-            context will likely break sampling.
+            distribution inputs or other constants. Expressions that depend on nonlocal
+            variables, such as other distributions defined in the model context will
+            likely break sampling.
 
 
     Examples
