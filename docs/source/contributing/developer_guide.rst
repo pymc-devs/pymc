@@ -888,8 +888,8 @@ others. The challenge and some summary of the solution could be found in Luciano
 
     with pm.Model() as m:
         mu = pm.Normal('mu', 0., 1., shape=(5, 1))
-        sd = pm.HalfNormal('sd', 5., shape=(1, 10))
-        pm.Normal('x', mu=mu, sigma=sd, observed=np.random.randn(2, 5, 10))
+        sigma = pm.HalfNormal('sigma', 5., shape=(1, 10))
+        pm.Normal('x', mu=mu, sigma=sigma, observed=np.random.randn(2, 5, 10))
         trace = pm.sample_prior_predictive(100)
 
     trace['x'].shape # ==> should be (100, 2, 5, 10)

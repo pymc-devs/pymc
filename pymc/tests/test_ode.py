@@ -219,7 +219,7 @@ def test_logp_scalar_ode():
     manual_logp = norm.logpdf(x=np.ravel(yobs), loc=np.ravel(integrated_solution), scale=1).sum()
     with pm.Model() as model_1:
         forward = ode_model(theta=[alpha], y0=[y0])
-        y = pm.Normal("y", mu=forward, sd=1, observed=yobs)
+        y = pm.Normal("y", mu=forward, sigma=1, observed=yobs)
     pymc_logp = model_1.compile_logp()({})
 
     np.testing.assert_allclose(manual_logp, pymc_logp)
@@ -238,7 +238,6 @@ class TestErrors:
             func=system, t0=0, times=self.times, n_states=1, n_theta=1
         )
 
-    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_many_params(self):
         with pytest.raises(
             pm.ShapeError,
@@ -246,14 +245,12 @@ class TestErrors:
         ):
             self.ode_model(theta=[1, 1], y0=[0])
 
-    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_many_y0(self):
         with pytest.raises(
             pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(2,\\) != expected \\(1,\\)\\)"
         ):
             self.ode_model(theta=[1], y0=[0, 0])
 
-    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_few_params(self):
         with pytest.raises(
             pm.ShapeError,
@@ -261,7 +258,6 @@ class TestErrors:
         ):
             self.ode_model(theta=[], y0=[1])
 
-    @pytest.mark.xfail(condition=(IS_FLOAT32 and IS_WINDOWS), reason="Fails on float32 on Windows")
     def test_too_few_y0(self):
         with pytest.raises(
             pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(0,\\) != expected \\(1,\\)\\)"
@@ -369,7 +365,7 @@ class TestDiffEqModel:
             y0 = pm.LogNormal("y0", 0, 1)
             sigma = pm.HalfCauchy("sigma", 1)
             forward = ode_model(theta=[alpha], y0=[y0])
-            y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
+            y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
                 idata = pm.sample(50, tune=0, chains=1)
@@ -400,7 +396,7 @@ class TestDiffEqModel:
             y0 = pm.LogNormal("y0", 0, 1)
             sigma = pm.HalfCauchy("sigma", 1)
             forward = ode_model(theta=[alpha, beta], y0=[y0])
-            y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
+            y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
                 idata = pm.sample(50, tune=0, chains=1)
@@ -442,7 +438,7 @@ class TestDiffEqModel:
             R = pm.LogNormal("R", 1, 5, initval=1)
             sigma = pm.HalfCauchy("sigma", 1, shape=2, initval=[0.5, 0.5])
             forward = ode_model(theta=[R], y0=[0.99, 0.01])
-            y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
+            y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
                 idata = pm.sample(50, tune=0, chains=1)
@@ -483,7 +479,7 @@ class TestDiffEqModel:
             gamma = pm.HalfCauchy("gamma", 1, initval=1)
             sigma = pm.HalfCauchy("sigma", 1, shape=2, initval=[1, 1])
             forward = ode_model(theta=[beta, gamma], y0=[0.99, 0.01])
-            y = pm.LogNormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
+            y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
                 idata = pm.sample(50, tune=0, chains=1)

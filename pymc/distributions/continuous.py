@@ -73,7 +73,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
 
 from pymc.aesaraf import floatX
-from pymc.distributions import logp_transform, transforms
+from pymc.distributions import transforms
 from pymc.distributions.dist_math import (
     SplineWrapper,
     check_parameters,
@@ -87,6 +87,7 @@ from pymc.distributions.dist_math import (
 )
 from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous
 from pymc.distributions.shape_utils import rv_size_is_none
+from pymc.distributions.transforms import _get_default_transform
 from pymc.math import invlogit, logdiffexp, logit
 from pymc.util import UNSET
 
@@ -139,17 +140,17 @@ class CircularContinuous(Continuous):
     """Base class for circular continuous distributions"""
 
 
-@logp_transform.register(PositiveContinuous)
+@_get_default_transform.register(PositiveContinuous)
 def pos_cont_transform(op):
     return transforms.log
 
 
-@logp_transform.register(UnitContinuous)
+@_get_default_transform.register(UnitContinuous)
 def unit_cont_transform(op):
     return transforms.logodds
 
 
-@logp_transform.register(CircularContinuous)
+@_get_default_transform.register(CircularContinuous)
 def circ_cont_transform(op):
     return transforms.circular
 
@@ -195,7 +196,7 @@ class BoundedContinuous(Continuous):
 
             return lower, upper
 
-        return transforms.interval(transform_params)
+        return transforms.Interval(bounds_fn=transform_params)
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):
@@ -546,13 +547,10 @@ class Normal(Continuous):
     rv_op = normal
 
     @classmethod
-    def dist(cls, mu=0, sigma=None, tau=None, sd=None, no_assert=False, **kwargs):
-        if sd is not None:
-            sigma = sd
+    def dist(cls, mu=0, sigma=None, tau=None, no_assert=False, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
 
-        # sd = sigma
         # tau = at.as_tensor_variable(tau)
         # mean = median = mode = mu = at.as_tensor_variable(floatX(mu))
         # variance = 1.0 / self.tau
@@ -710,13 +708,11 @@ class TruncatedNormal(BoundedContinuous):
         mu: Optional[DIST_PARAMETER_TYPES] = None,
         sigma: Optional[DIST_PARAMETER_TYPES] = None,
         tau: Optional[DIST_PARAMETER_TYPES] = None,
-        sd: Optional[DIST_PARAMETER_TYPES] = None,
         lower: Optional[DIST_PARAMETER_TYPES] = None,
         upper: Optional[DIST_PARAMETER_TYPES] = None,
         *args,
         **kwargs,
     ) -> RandomVariable:
-        sigma = sd if sd is not None else sigma
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
         tau = at.as_tensor_variable(tau)
@@ -866,10 +862,7 @@ class HalfNormal(PositiveContinuous):
     rv_op = halfnormal
 
     @classmethod
-    def dist(cls, sigma=None, tau=None, sd=None, *args, **kwargs):
-        if sd is not None:
-            sigma = sd
-
+    def dist(cls, sigma=None, tau=None, *args, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
         assert_negative_support(tau, "tau", "HalfNormal")
@@ -1226,10 +1219,7 @@ class Beta(UnitContinuous):
     rv_op = aesara.tensor.random.beta
 
     @classmethod
-    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs):
-        if sd is not None:
-            sigma = sd
-
+    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, *args, **kwargs):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
@@ -1785,10 +1775,7 @@ class LogNormal(PositiveContinuous):
     rv_op = lognormal
 
     @classmethod
-    def dist(cls, mu=0, sigma=None, tau=None, sd=None, *args, **kwargs):
-        if sd is not None:
-            sigma = sd
-
+    def dist(cls, mu=0, sigma=None, tau=None, *args, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
         mu = at.as_tensor_variable(floatX(mu))
@@ -1914,9 +1901,7 @@ class StudentT(Continuous):
     rv_op = studentt
 
     @classmethod
-    def dist(cls, nu, mu=0, lam=None, sigma=None, sd=None, *args, **kwargs):
-        if sd is not None:
-            sigma = sd
+    def dist(cls, nu, mu=0, lam=None, sigma=None, *args, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
@@ -2306,10 +2291,7 @@ class Gamma(PositiveContinuous):
     rv_op = gamma
 
     @classmethod
-    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, sd=None, no_assert=False, **kwargs):
-        if sd is not None:
-            sigma = sd
-
+    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, no_assert=False, **kwargs):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
@@ -2426,10 +2408,7 @@ class InverseGamma(PositiveContinuous):
     rv_op = invgamma
 
     @classmethod
-    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs):
-        if sd is not None:
-            sigma = sd
-
+    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, *args, **kwargs):
         alpha, beta = cls._get_alpha_beta(alpha, beta, mu, sigma)
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
@@ -2750,11 +2729,7 @@ class HalfStudentT(PositiveContinuous):
     rv_op = halfstudentt
 
     @classmethod
-    def dist(cls, nu=1, sigma=None, lam=None, sd=None, *args, **kwargs):
-
-        if sd is not None:
-            sigma = sd
-
+    def dist(cls, nu=1, sigma=None, lam=None, *args, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(lam, sigma)
         sigma = at.as_tensor_variable(sigma)
@@ -2886,11 +2861,7 @@ class ExGaussian(Continuous):
     rv_op = exgaussian
 
     @classmethod
-    def dist(cls, mu=0.0, sigma=None, nu=None, sd=None, *args, **kwargs):
-
-        if sd is not None:
-            sigma = sd
-
+    def dist(cls, mu=0.0, sigma=None, nu=None, *args, **kwargs):
         mu = at.as_tensor_variable(floatX(mu))
         sigma = at.as_tensor_variable(floatX(sigma))
         nu = at.as_tensor_variable(floatX(nu))
@@ -3118,10 +3089,7 @@ class SkewNormal(Continuous):
     rv_op = skewnormal
 
     @classmethod
-    def dist(cls, alpha=1, mu=0.0, sigma=None, tau=None, sd=None, *args, **kwargs):
-        if sd is not None:
-            sigma = sd
-
+    def dist(cls, alpha=1, mu=0.0, sigma=None, tau=None, *args, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         alpha = at.as_tensor_variable(floatX(alpha))
         mu = at.as_tensor_variable(floatX(mu))
@@ -3445,10 +3413,7 @@ class Rice(PositiveContinuous):
     rv_op = rice
 
     @classmethod
-    def dist(cls, nu=None, sigma=None, b=None, sd=None, *args, **kwargs):
-        if sd is not None:
-            sigma = sd
-
+    def dist(cls, nu=None, sigma=None, b=None, *args, **kwargs):
         nu, b, sigma = cls.get_nu_b(nu, b, sigma)
         b = at.as_tensor_variable(floatX(b))
         sigma = at.as_tensor_variable(floatX(sigma))
@@ -3657,12 +3622,10 @@ class LogitNormal(UnitContinuous):
     rv_op = logit_normal
 
     @classmethod
-    def dist(cls, mu=0, sigma=None, tau=None, sd=None, **kwargs):
-        if sd is not None:
-            sigma = sd
+    def dist(cls, mu=0, sigma=None, tau=None, **kwargs):
         mu = at.as_tensor_variable(floatX(mu))
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        sigma = sd = at.as_tensor_variable(sigma)
+        sigma = at.as_tensor_variable(sigma)
         tau = at.as_tensor_variable(tau)
         assert_negative_support(sigma, "sigma", "LogitNormal")
         assert_negative_support(tau, "tau", "LogitNormal")
@@ -3796,7 +3759,7 @@ class Interpolated(BoundedContinuous):
                 _, _, _, x_points, _, _ = params
                 return floatX(x_points[0]), floatX(x_points[-1])
 
-            kwargs["transform"] = transforms.interval(transform_params)
+            kwargs["transform"] = transforms.Interval(bounds_fn=transform_params)
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod

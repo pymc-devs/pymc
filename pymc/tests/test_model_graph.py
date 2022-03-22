@@ -102,7 +102,7 @@ def model_with_dims():
     with pm.Model(coords={"city": ["Aachen", "Maastricht", "London", "Bergheim"]}) as pmodel:
         economics = pm.Uniform("economics", lower=-1, upper=1, shape=(1,))
 
-        population = pm.HalfNormal("population", sd=5, dims=("city"))
+        population = pm.HalfNormal("population", sigma=5, dims=("city"))
 
         time = pm.ConstantData("time", [2014, 2015, 2016], dims="year")
 

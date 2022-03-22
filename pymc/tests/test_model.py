@@ -58,7 +58,7 @@ class DocstringModel(pm.Model):
         super().__init__(name, model)
         self.register_rv(Normal.dist(mu=mean, sigma=sigma), "v1")
         Normal("v2", mu=mean, sigma=sigma)
-        Normal("v3", mu=mean, sigma=Normal("sd", mu=10, sigma=1, initval=1.0))
+        Normal("v3", mu=mean, sigma=Normal("sigma", mu=10, sigma=1, initval=1.0))
         Deterministic("v3_sq", self.v3**2)
         Potential("p1", at.constant(1))
 
@@ -95,20 +95,20 @@ class TestBaseModel:
                 usermodel2.register_rv(pm.Normal.dist(), "v3")
                 pm.Normal("v4")
                 # this variable is created in parent model too
-        assert "another_v2" in model.named_vars
-        assert "another_v3" in model.named_vars
-        assert "another_v3" in usermodel2.named_vars
-        assert "another_v4" in model.named_vars
-        assert "another_v4" in usermodel2.named_vars
+        assert "another/v2" in model.named_vars
+        assert "another/v3" in model.named_vars
+        assert "another/v3" in usermodel2.named_vars
+        assert "another/v4" in model.named_vars
+        assert "another/v4" in usermodel2.named_vars
         assert hasattr(usermodel2, "v3")
         assert hasattr(usermodel2, "v2")
         assert hasattr(usermodel2, "v4")
         # When you create a class based model you should follow some rules
         with model:
             m = NewModel("one_more")
-        assert m.d is model["one_more_d"]
-        assert m["d"] is model["one_more_d"]
-        assert m["one_more_d"] is model["one_more_d"]
+        assert m.d is model["one_more/d"]
+        assert m["d"] is model["one_more/d"]
+        assert m["one_more/d"] is model["one_more/d"]
 
 
 class TestNested:
@@ -124,8 +124,8 @@ class TestNested:
     def test_named_context(self):
         with pm.Model() as m:
             NewModel(name="new")
-        assert "new_v1" in m.named_vars
-        assert "new_v2" in m.named_vars
+        assert "new/v1" in m.named_vars
+        assert "new/v2" in m.named_vars
 
     def test_docstring_example1(self):
         usage1 = DocstringModel()
@@ -138,10 +138,10 @@ class TestNested:
     def test_docstring_example2(self):
         with pm.Model() as model:
             DocstringModel(name="prefix")
-        assert "prefix_v1" in model.named_vars
-        assert "prefix_v2" in model.named_vars
-        assert "prefix_v3" in model.named_vars
-        assert "prefix_v3_sq" in model.named_vars
+        assert "prefix/v1" in model.named_vars
+        assert "prefix/v2" in model.named_vars
+        assert "prefix/v3" in model.named_vars
+        assert "prefix/v3_sq" in model.named_vars
         assert len(model.potentials), 1
 
     def test_duplicates_detection(self):
@@ -155,6 +155,20 @@ class TestNested:
             assert model is model.root
             with pm.Model() as sub:
                 assert model is sub.root
+
+    def test_nested_named_model_repeated(self):
+        with pm.Model("sub") as model:
+            b = pm.Normal("var")
+            with pm.Model("sub"):
+                b = pm.Normal("var")
+        assert {"sub/var", "sub/sub/var"} == set(model.named_vars.keys())
+
+    def test_nested_named_model(self):
+        with pm.Model("sub1") as model:
+            b = pm.Normal("var")
+            with pm.Model("sub2"):
+                b = pm.Normal("var")
+        assert {"sub1/var", "sub1/sub2/var"} == set(model.named_vars.keys())
 
 
 class TestObserved:
@@ -626,7 +640,7 @@ def test_set_initval():
 
     with pm.Model(rng_seeder=rng) as model:
         eta = pm.Uniform("eta", 1.0, 2.0, size=(1, 1))
-        mu = pm.Normal("mu", sd=eta, initval=[[100]])
+        mu = pm.Normal("mu", sigma=eta, initval=[[100]])
         alpha = pm.HalfNormal("alpha", initval=100)
         value = pm.NegativeBinomial("value", mu=mu, alpha=alpha)
 
@@ -658,14 +672,14 @@ def test_datalogpt_multiple_shapes():
 
 
 def test_nested_model_coords():
-    COORDS = {"dim": range(10)}
-    with pm.Model(name="m1", coords=COORDS) as m1:
-        a = pm.Normal("a")
-        with pm.Model(name="m2") as m2:
-            b = pm.Normal("b")
-            c = pm.HalfNormal("c")
-            d = pm.Normal("d", b, c, dims="dim")
-        e = pm.Normal("e", a + d, dims="dim")
+    with pm.Model(name="m1", coords=dict(dim1=range(2))) as m1:
+        a = pm.Normal("a", dims="dim1")
+        with pm.Model(name="m2", coords=dict(dim2=range(4))) as m2:
+            b = pm.Normal("b", dims="dim1")
+            m1.add_coord("dim3", range(4))
+            c = pm.HalfNormal("c", dims="dim3")
+            d = pm.Normal("d", b, c, dims="dim2")
+        e = pm.Normal("e", a[None] + d[:, None], dims=("dim2", "dim1"))
     assert m1.coords is m2.coords
     assert m1.dim_lengths is m2.dim_lengths
     assert set(m2.RV_dims) < set(m1.RV_dims)

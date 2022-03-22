@@ -2710,7 +2710,7 @@ class TestBound:
         with pm.Model() as m:
             x = pm.Poisson.dist(0.5)
             with pytest.raises(ValueError, match=msg):
-                pm.Bound("bound", x, transform=pm.transforms.interval)
+                pm.Bound("bound", x, transform=pm.distributions.transforms.log)
 
         msg = "Given dims do not exist in model coordinates."
         with pm.Model() as m:

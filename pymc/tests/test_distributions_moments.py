@@ -133,6 +133,9 @@ def test_rv_size_is_none():
     rv = Normal.dist(0, 1, size=None)
     assert rv_size_is_none(rv.owner.inputs[1])
 
+    rv = Normal.dist(0, 1, size=())
+    assert rv_size_is_none(rv.owner.inputs[1])
+
     rv = Normal.dist(0, 1, size=1)
     assert not rv_size_is_none(rv.owner.inputs[1])
 
@@ -1305,22 +1308,22 @@ def test_polyagamma_moment(h, z, size, expected):
             np.array([[4, 6, 0, 0], [4, 2, 2, 2]]),
         ),
         (
+            np.array([0.3, 0.6, 0.05, 0.05]),
+            np.array([2, 10]),
+            (1, 2),
+            np.array([[[1, 1, 0, 0], [4, 6, 0, 0]]]),
+        ),
+        (
             np.array([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]]),
             np.array([1, 10]),
             None,
             np.array([[1, 0, 0, 0], [2, 3, 3, 2]]),
         ),
         (
-            np.array([0.26, 0.26, 0.26, 0.22]),
-            np.array([1, 10]),
-            None,
-            np.array([[1, 0, 0, 0], [2, 3, 3, 2]]),
-        ),
-        (
             np.array([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]]),
             np.array([1, 10]),
-            (2, 2),
-            np.full((2, 2, 4), [[1, 0, 0, 0], [2, 3, 3, 2]]),
+            (3, 2),
+            np.full((3, 2, 4), [[1, 0, 0, 0], [2, 3, 3, 2]]),
         ),
     ],
 )
@@ -1467,10 +1470,16 @@ def test_lkjcholeskycov_moment(n, eta, size, expected):
         (np.array([3, 6, 0.5, 0.5]), 2, None, np.array([1, 1, 0, 0])),
         (np.array([30, 60, 5, 5]), 10, None, np.array([4, 6, 0, 0])),
         (
-            np.array([[26, 26, 26, 22]]),  # Dim: 1 x 4
-            np.array([[1], [10]]),  # Dim: 2 x 1
+            np.array([[30, 60, 5, 5], [26, 26, 26, 22]]),
+            10,
+            (1, 2),
+            np.array([[[4, 6, 0, 0], [2, 3, 3, 2]]]),
+        ),
+        (
+            np.array([26, 26, 26, 22]),
+            np.array([1, 10]),
             None,
-            np.array([[[1, 0, 0, 0]], [[2, 3, 3, 2]]]),  # Dim: 2 x 1 x 4
+            np.array([[1, 0, 0, 0], [2, 3, 3, 2]]),
         ),
         (
             np.array([[26, 26, 26, 22]]),  # Dim: 1 x 4

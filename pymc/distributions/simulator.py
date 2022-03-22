@@ -295,11 +295,9 @@ class KullbackLiebler:
         return self.d_n * np.sum(-np.log(nu_d / self.rho_d) / epsilon) + self.log_r
 
 
-scalarX = at.dscalar if aesara.config.floatX == "float64" else at.fscalar
-vectorX = at.dvector if aesara.config.floatX == "float64" else at.fvector
-
-
 def create_sum_stat_op_from_fn(fn):
+    vectorX = at.dvector if aesara.config.floatX == "float64" else at.fvector
+
     # Check if callable returns TensorVariable with dummy inputs
     try:
         res = fn(vectorX())
@@ -322,6 +320,9 @@ def create_sum_stat_op_from_fn(fn):
 
 
 def create_distance_op_from_fn(fn):
+    scalarX = at.dscalar if aesara.config.floatX == "float64" else at.fscalar
+    vectorX = at.dvector if aesara.config.floatX == "float64" else at.fvector
+
     # Check if callable returns TensorVariable with dummy inputs
     try:
         res = fn(scalarX(), vectorX(), vectorX())

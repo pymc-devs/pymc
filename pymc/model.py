@@ -58,8 +58,9 @@ from pymc.aesaraf import (
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
-from pymc.distributions import joint_logpt, logp_transform
+from pymc.distributions import joint_logpt
 from pymc.distributions.logprob import _get_scaling
+from pymc.distributions.transforms import _get_default_transform
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
 from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
@@ -473,7 +474,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
                 # 3) you can create variables with Var method
                 self.Var('v1', Normal.dist(mu=mean, sigma=sd))
-                # this will create variable named like '{prefix_}v1'
+                # this will create variable named like '{prefix/}v1'
                 # and assign attribute 'v1' to instance created
                 # variable can be accessed with self.v1 or self['v1']
 
@@ -482,7 +483,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 Normal('v2', mu=mean, sigma=sd)
 
                 # something more complex is allowed, too
-                half_cauchy = HalfCauchy('sd', beta=10, initval=1.)
+                half_cauchy = HalfCauchy('sigma', beta=10, initval=1.)
                 Normal('v3', mu=mean, sigma=half_cauchy)
 
                 # Deterministic variables can be used in usual way
@@ -514,6 +515,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         with Model() as model:
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
+
+        # variables inside both scopes will be named like `first/*`, `second/*`
 
     """
 
@@ -1419,7 +1422,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
         if transform is UNSET and rv_var.owner:
-            transform = logp_transform(rv_var.owner.op)
+            transform = _get_default_transform(rv_var.owner.op)
 
         if transform is not None and transform is not UNSET:
             value_var.tag.transform = transform
@@ -1455,14 +1458,18 @@ class Model(WithMemoization, metaclass=ContextMeta):
             setattr(self, self.name_of(var.name), var)
 
     @property
-    def prefix(self):
-        return f"{self.name}_" if self.name else ""
+    def prefix(self) -> str:
+        if self.isroot or not self.parent.prefix:
+            name = self.name
+        else:
+            name = f"{self.parent.prefix}/{self.name}"
+        return name.strip("/")
 
     def name_for(self, name):
         """Checks if name has prefix and adds if needed"""
         if self.prefix:
             if not name.startswith(self.prefix):
-                return f"{self.prefix}{name}"
+                return f"{self.prefix}/{name}"
             else:
                 return name
         else:
@@ -1472,8 +1479,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Checks if name has prefix and deletes if needed"""
         if not self.prefix or not name:
             return name
-        elif name.startswith(self.prefix):
-            return name[len(self.prefix) :]
+        elif name.startswith(self.prefix + "/"):
+            return name[len(self.prefix) + 1 :]
         else:
             return name
 

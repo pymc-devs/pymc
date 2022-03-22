@@ -52,14 +52,14 @@ class TestDataPyMC:
     @pytest.fixture(scope="class")
     def data(self, eight_schools_params, draws, chains):
         with pm.Model() as model:
-            mu = pm.Normal("mu", mu=0, sd=5)
+            mu = pm.Normal("mu", mu=0, sigma=5)
             tau = pm.HalfCauchy("tau", beta=5)
-            eta = pm.Normal("eta", mu=0, sd=1, size=eight_schools_params["J"])
+            eta = pm.Normal("eta", mu=0, sigma=1, size=eight_schools_params["J"])
             theta = pm.Deterministic("theta", mu + tau * eta)
             pm.Normal(
                 "obs",
                 mu=theta,
-                sd=eight_schools_params["sigma"],
+                sigma=eight_schools_params["sigma"],
                 observed=eight_schools_params["y"],
             )
             trace = pm.sample(draws, chains=chains, return_inferencedata=False)
@@ -249,15 +249,17 @@ class TestDataPyMC:
 
         coords = {"date": df_data.index, "city": df_data.columns}
         with pm.Model(coords=coords) as model:
-            europe_mean = pm.Normal("europe_mean_temp", mu=15.0, sd=3.0)
-            city_offset = pm.Normal("city_offset", mu=0.0, sd=3.0, dims="city")
+            europe_mean = pm.Normal("europe_mean_temp", mu=15.0, sigma=3.0)
+            city_offset = pm.Normal("city_offset", mu=0.0, sigma=3.0, dims="city")
             city_temperature = pm.Deterministic(
                 "city_temperature", europe_mean + city_offset, dims="city"
             )
 
             data_dims = ("date", "city")
             data = pm.ConstantData("data", df_data, dims=data_dims)
-            _ = pm.Normal("likelihood", mu=city_temperature, sd=0.5, observed=data, dims=data_dims)
+            _ = pm.Normal(
+                "likelihood", mu=city_temperature, sigma=0.5, observed=data, dims=data_dims
+            )
 
             trace = pm.sample(
                 return_inferencedata=False,

@@ -32,17 +32,17 @@ def glm_hierarchical_model(random_seed=123):
 
     n_counties = len(data.county.unique())
     with pm.Model() as model:
-        mu_a = pm.Normal("mu_a", mu=0.0, sd=100**2)
+        mu_a = pm.Normal("mu_a", mu=0.0, sigma=100**2)
         sigma_a = pm.HalfCauchy("sigma_a", 5)
-        mu_b = pm.Normal("mu_b", mu=0.0, sd=100**2)
+        mu_b = pm.Normal("mu_b", mu=0.0, sigma=100**2)
         sigma_b = pm.HalfCauchy("sigma_b", 5)
-        a = pm.Normal("a", mu=0, sd=1, shape=n_counties)
-        b = pm.Normal("b", mu=0, sd=1, shape=n_counties)
+        a = pm.Normal("a", mu=0, sigma=1, shape=n_counties)
+        b = pm.Normal("b", mu=0, sigma=1, shape=n_counties)
         a = mu_a + sigma_a * a
         b = mu_b + sigma_b * b
         eps = pm.HalfCauchy("eps", 5)
         radon_est = a[county_idx] + b[county_idx] * data.floor.values
-        pm.Normal("radon_like", mu=radon_est, sd=eps, observed=data.log_radon)
+        pm.Normal("radon_like", mu=radon_est, sigma=eps, observed=data.log_radon)
     return model
 
 
@@ -58,7 +58,7 @@ def mixture_model(random_seed=1234):
 
     with pm.Model() as model:
         w = pm.Dirichlet("w", a=np.ones_like(w_true))
-        mu = pm.Normal("mu", mu=0.0, sd=10.0, shape=w_true.shape)
+        mu = pm.Normal("mu", mu=0.0, sigma=10.0, shape=w_true.shape)
         enforce_order = pm.Potential(
             "enforce_order",
             at.switch(mu[0] - mu[1] <= 0, 0.0, -np.inf)
@@ -88,7 +88,7 @@ class OverheadSuite:
     def setup(self, step):
         self.n_steps = 10000
         with pm.Model() as self.model:
-            pm.Normal("x", mu=0, sd=1)
+            pm.Normal("x", mu=0, sigma=1)
 
     def time_overhead_sample(self, step):
         with self.model:
@@ -133,8 +133,8 @@ class ExampleSuite:
         sigma_low = 1
         sigma_high = 10
         with pm.Model():
-            group1_mean = pm.Normal("group1_mean", y_mean, sd=y_std)
-            group2_mean = pm.Normal("group2_mean", y_mean, sd=y_std)
+            group1_mean = pm.Normal("group1_mean", y_mean, sigma=y_std)
+            group2_mean = pm.Normal("group2_mean", y_mean, sigma=y_std)
             group1_std = pm.Uniform("group1_std", lower=sigma_low, upper=sigma_high)
             group2_std = pm.Uniform("group2_std", lower=sigma_low, upper=sigma_high)
             lambda_1 = group1_std**-2
@@ -301,7 +301,7 @@ class DifferentialEquationSuite:
             # If we know one of the parameter values, we can simply pass the value.
             ode_solution = ode_model(y0=[0], theta=[gamma, 9.8])
             # The ode_solution has a shape of (n_times, n_states)
-            Y = pm.Normal("Y", mu=ode_solution, sd=sigma, observed=y)
+            Y = pm.Normal("Y", mu=ode_solution, sigma=sigma, observed=y)
 
             t0 = time.time()
             idata = pm.sample(500, tune=1000, chains=2, cores=2, random_seed=0)

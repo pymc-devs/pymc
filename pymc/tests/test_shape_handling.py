@@ -389,12 +389,12 @@ class TestShapeDimsSize:
             # But the second shape is upcasted from an int32 vector
             cast64 = at.cast(at.constant([3, 1], dtype="int32"), dtype="int64")
 
-            pm.Normal("size64", mu=0, sd=1, size=size64, observed=obs)
-            pm.Normal("shape64", mu=0, sd=1, shape=size64, observed=obs)
+            pm.Normal("size64", mu=0, sigma=1, size=size64, observed=obs)
+            pm.Normal("shape64", mu=0, sigma=1, shape=size64, observed=obs)
             model.logp()
 
-            pm.Normal("size_cast64", mu=0, sd=1, size=cast64, observed=obs)
-            pm.Normal("shape_cast64", mu=0, sd=1, shape=cast64, observed=obs)
+            pm.Normal("size_cast64", mu=0, sigma=1, size=cast64, observed=obs)
+            pm.Normal("shape_cast64", mu=0, sigma=1, shape=cast64, observed=obs)
             model.logp()
 
     def test_dist_api_works(self):

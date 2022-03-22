@@ -7,15 +7,14 @@ Instead update the vNext section until 4.0.0 is out.
 ⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠
 -->
 
-## PyMC vNext (4.0.0b1 → 4.0.0b2 → 4.0.0b3 → 4.0.0b4 → 4.0.0)
-⚠ The changes below are the delta between the upcoming releases `v3.11.5` →...→ `v4.0.0`.
+## PyMC vNext (4.0.0b1 → ... → 4.0.0b4 → 4.0.0)
+⚠ The changes below are the delta between the releases `v3.11.5` →...→ `v4.0.0`.
 
 ### Not-yet working features
 We plan to get these working again, but at this point their inner workings have not been refactored.
 - Timeseries distributions (see [#4642](https://github.com/pymc-devs/pymc/issues/4642))
 - Nested Mixture distributions (see [#5533](https://github.com/pymc-devs/pymc/issues/5533))
 - Elliptical slice sampling (see [#5137](https://github.com/pymc-devs/pymc/issues/5137))
-- `BaseStochasticGradient` (see [#5138](https://github.com/pymc-devs/pymc/issues/5138))
 - `pm.sample_posterior_predictive_w` (see [#4807](https://github.com/pymc-devs/pymc/issues/4807))
 - Partially observed Multivariate distributions (see [#5260](https://github.com/pymc-devs/pymc/issues/5260))
 
@@ -28,6 +27,7 @@ Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) fo
 All of the above apply to:
 
 - BART was removed [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental)
+- `BaseStochasticGradient` was removed (see [#5630](https://github.com/pymc-devs/pymc/pull/5630))
 - ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
 - `pm.Distribution(...).logp(x)` is now `pm.logp(pm.Distribution(...), x)`.
@@ -38,6 +38,7 @@ All of the above apply to:
 - `pm.sample_prior_predictive`, `pm.sample_posterior_predictive` and `pm.sample_posterior_predictive_w` now return an `InferenceData` object by default, instead of a dictionary (see [#5073](https://github.com/pymc-devs/pymc/pull/5073)).
 - `pm.sample_prior_predictive` no longer returns transformed variable values by default. Pass them by name in `var_names` if you want to obtain these draws (see [4769](https://github.com/pymc-devs/pymc/pull/4769)).
 - `pm.sample(trace=...)` no longer accepts `MultiTrace` or `len(.) > 0` traces ([see 5019#](https://github.com/pymc-devs/pymc/pull/5019)).
+- `transforms` module is no longer accessible ta the root level. It is accessible at `pymc.distributions.transforms` (see[#5347](https://github.com/pymc-devs/pymc/pull/5347)).
 - `logpt`, `logpt_sum`, `logp_elemwiset` and `nojac` variations were removed. Use `Model.logpt(jacobian=True/False, sum=True/False)` instead.
 - `dlogp_nojact` and `d2logp_nojact` were removed. Use `Model.dlogpt` and `d2logpt` with `jacobian=False` instead.
 - `logp`, `dlogp`, and `d2logp` and `nojac` variations were removed. Use `Model.compile_logp`, `compile_dlgop` and `compile_d2logp` with `jacobian` keyword instead.
@@ -97,6 +98,7 @@ All of the above apply to:
 This includes API changes we did not warn about since at least `3.11.0` (2021-01).
 
 - Setting initial values through `pm.Distribution(testval=...)` is now `pm.Distribution(initval=...)`.
+- Alternative `sd` keyword argument has been removed from all distributions. `sigma` should be used instead (see [#5583](https://github.com/pymc-devs/pymc/pull/5583)).
 
 
 ### New features
@@ -131,6 +133,7 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - Adding support for blackjax's NUTS sampler `pymc.sampling_jax` (see [#5477](ihttps://github.com/pymc-devs/pymc/pull/5477))
 - `pymc.sampling_jax` samplers support `log_likelihood`, `observed_data`, and `sample_stats` in returned InferenceData object (see [#5189](https://github.com/pymc-devs/pymc/pull/5189))
 - Adding support for `pm.Deterministic` in `pymc.sampling_jax` (see [#5182](https://github.com/pymc-devs/pymc/pull/5182))
+- Added an alternative parametrization, `logit_p` to `pm.Binomial` and `pm.Categorical` distributions (see [5637](https://github.com/pymc-devs/pymc/pull/5637)).
 - ...
 
 
