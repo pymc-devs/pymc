@@ -222,7 +222,7 @@ jobs:
           mamba-version: "*"
           activate-environment: pymc-test-py39
           channel-priority: strict
-          environment-file: conda-envs/windows-environment-test-py38.yml
+          environment-file: conda-envs/windows-environment-test-py39.yml
           use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install-pymc
