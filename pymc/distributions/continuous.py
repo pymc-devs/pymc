@@ -1646,7 +1646,7 @@ class AsymmetricLaplace(Continuous):
     ----------
     kappa : tensor_like of float
         Symmetry parameter (kappa > 0).
-    mu : tensor_like of float, default 0
+    mu : tensor_like of float
         Location parameter.
     b : tensor_like of float
         Scale parameter (b > 0).
