@@ -65,6 +65,12 @@ class PreserveRVMappings(Feature):
     In addition this `Feature` provides functionality to manually update a random
     and/or value variable. A mapping from the transformed value variables to the
     the original value variables is kept in `original_values`.
+
+    Likewise, a `measurable_conversions` map is maintained, which holds
+    information about un-valued and un-measurable variables that were replaced
+    with measurable variables.  This information can be used to revert these
+    rewrites.
+
     """
 
     def __init__(self, rv_values: Dict[TensorVariable, TensorVariable]):
@@ -78,6 +84,7 @@ class PreserveRVMappings(Feature):
         """
         self.rv_values = rv_values
         self.original_values = {v: v for v in rv_values.values()}
+        self.measurable_conversions: Dict[Variable, Variable] = {}
 
     def on_attach(self, fgraph):
         if hasattr(fgraph, "preserve_rv_mappings"):
@@ -126,6 +133,14 @@ class PreserveRVMappings(Feature):
         r_value_var = self.rv_values.pop(r, None)
         if r_value_var is not None:
             self.rv_values[new_r] = r_value_var
+        elif (
+            new_r not in self.rv_values
+            and r.owner
+            and new_r.owner
+            and not isinstance(r.owner.op, MeasurableVariable)
+            and isinstance(new_r.owner.op, MeasurableVariable)
+        ):
+            self.measurable_conversions[r] = new_r
 
 
 @register_canonicalize
@@ -381,5 +396,12 @@ def construct_ir_fgraph(
     fgraph.attach_feature(rv_remapper)
 
     logprob_rewrites_db.query(OptimizationQuery(include=["basic"])).optimize(fgraph)
+
+    if rv_remapper.measurable_conversions:
+        # Undo un-valued measurable IR rewrites
+        new_to_old = tuple(
+            (v, k) for k, v in rv_remapper.measurable_conversions.items()
+        )
+        fgraph.replace_all(new_to_old)
 
     return fgraph, rv_values, memo

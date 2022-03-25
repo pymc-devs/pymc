@@ -260,12 +260,9 @@ def mixture_replace(fgraph, node):
 
     old_mixture_rv = node.default_output()
 
-    if old_mixture_rv not in rv_map_feature.rv_values:
-        return None  # pragma: no cover
-
     mixture_res, join_axis = get_stack_mixture_vars(node)
 
-    if mixture_res is None:
+    if mixture_res is None or any(rv in rv_map_feature.rv_values for rv in mixture_res):
         return None  # pragma: no cover
 
     mixing_indices = node.inputs[1:]
@@ -274,10 +271,6 @@ def mixture_replace(fgraph, node):
     # that belong to each one (by way of their indices).
     mixture_rvs = []
     for i, component_rv in enumerate(mixture_res):
-        if component_rv in rv_map_feature.rv_values:
-            raise ValueError(
-                f"A value variable was specified for a mixture component: {component_rv}"
-            )
 
         # We create custom types for the mixture components and assign them
         # null `get_measurable_outputs` dispatches so that they aren't

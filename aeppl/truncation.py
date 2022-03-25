@@ -1,4 +1,3 @@
-import warnings
 from typing import List, Optional
 
 import aesara.tensor as at
@@ -38,19 +37,13 @@ def find_censored_rvs(fgraph: FunctionGraph, node: Node) -> Optional[List[Censor
         return None
 
     clipped_var = node.outputs[0]
-    if clipped_var not in rv_map_feature.rv_values:
-        return None
-
     base_var, lower_bound, upper_bound = node.inputs
 
-    if not (base_var.owner and isinstance(base_var.owner.op, MeasurableVariable)):
-        return None
-
-    if base_var in rv_map_feature.rv_values:
-        warnings.warn(
-            f"Value variables were assigned to both the input ({base_var}) and "
-            f"output ({clipped_var}) of a censored random variable."
-        )
+    if not (
+        base_var.owner
+        and isinstance(base_var.owner.op, MeasurableVariable)
+        and base_var not in rv_map_feature.rv_values
+    ):
         return None
 
     # Replace bounds by `+-inf` if `y = clip(x, x, ?)` or `y=clip(x, ?, x)`

@@ -1,7 +1,6 @@
 import aesara
 import aesara.tensor as at
 import numpy as np
-import pytest
 import scipy as sp
 import scipy.stats as st
 
@@ -137,8 +136,7 @@ def test_fail_base_and_censored_have_values():
 
     x_vv = x_rv.clone()
     cens_x_vv = cens_x_rv.clone()
-    with pytest.warns(UserWarning):
-        logp_terms = factorized_joint_logprob({cens_x_rv: cens_x_vv, x_rv: x_vv})
+    logp_terms = factorized_joint_logprob({cens_x_rv: cens_x_vv, x_rv: x_vv})
     assert cens_x_vv not in logp_terms
 
 

@@ -57,9 +57,6 @@ def find_measurable_cumsums(fgraph, node) -> Optional[List[MeasurableCumsum]]:
 
     rv = node.outputs[0]
 
-    if rv not in rv_map_feature.rv_values:
-        return None  # pragma: no cover
-
     base_rv = node.inputs[0]
     if not (
         base_rv.owner
