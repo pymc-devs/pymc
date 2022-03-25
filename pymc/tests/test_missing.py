@@ -14,7 +14,6 @@
 
 import aesara
 import numpy as np
-import pandas as pd
 import pytest
 import scipy.stats
 
@@ -28,15 +27,22 @@ from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive, sample_prior_predictive
 
 
-@pytest.mark.parametrize(
-    "data", [ma.masked_values([1, 2, -1, 4, -1], value=-1), pd.DataFrame([1, 2, np.nan, 4, np.nan])]
-)
-def test_missing(data):
+@pytest.fixture(params=["masked", "pandas"])
+def missing_data(request):
+    if request.param == "masked":
+        return ma.masked_values([1, 2, -1, 4, -1], value=-1)
+    else:
+        # request.param == "pandas"
+        pd = pytest.importorskip("pandas")
+        return pd.DataFrame([1, 2, np.nan, 4, np.nan])
+
+
+def test_missing(missing_data):
 
     with Model() as model:
         x = Normal("x", 1, 1)
         with pytest.warns(ImputationWarning):
-            _ = Normal("y", x, 1, observed=data)
+            _ = Normal("y", x, 1, observed=missing_data)
 
     assert "y_missing" in model.named_vars
 

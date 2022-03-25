@@ -4,7 +4,6 @@ from typing import Dict, Tuple
 
 import aesara.tensor as at
 import numpy as np
-import pandas as pd
 import pytest
 
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -240,6 +239,7 @@ class TestDataPyMC:
 
     @pytest.mark.parametrize("use_context", [True, False])
     def test_autodetect_coords_from_model(self, use_context):
+        pd = pytest.importorskip("pandas")
         df_data = pd.DataFrame(columns=["date"]).set_index("date")
         dates = pd.date_range(start="2020-05-01", end="2020-05-20")
         for city, mu in {"Berlin": 15, "San Marino": 18, "Paris": 16}.items():
@@ -573,6 +573,7 @@ class TestDataPyMC:
             np.testing.assert_array_equal(ds[dname].values, cvals)
 
     def test_issue_5043_autoconvert_coord_values(self):
+        pd = pytest.importorskip("pandas")
         coords = {"city": pd.Series(["Bonn", "Berlin"])}
         with pm.Model(coords=coords) as pmodel:
             # The model tracks coord values as (immutable) tuples
