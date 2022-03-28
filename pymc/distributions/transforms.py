@@ -87,7 +87,7 @@ class Ordered(RVTransform):
         return y
 
     def log_jac_det(self, value, *inputs):
-        return at.sum(value[..., 1:], axis=-1)
+        return at.sum(value[..., 1:], axis=-1, keepdims=True)
 
 
 class SumTo1(RVTransform):
@@ -107,7 +107,7 @@ class SumTo1(RVTransform):
 
     def log_jac_det(self, value, *inputs):
         y = at.zeros(value.shape)
-        return at.sum(y, axis=-1)
+        return at.sum(y, axis=-1, keepdims=True)
 
 
 class CholeskyCovPacked(RVTransform):
