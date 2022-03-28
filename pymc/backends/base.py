@@ -70,9 +70,9 @@ class BaseTrace(ABC):
         # Get variable shapes. Most backends will need this
         # information.
         if test_point is None:
-            test_point = model.compute_initial_point()
+            test_point = model.initial_point()
         else:
-            test_point_ = model.compute_initial_point().copy()
+            test_point_ = model.initial_point().copy()
             test_point_.update(test_point)
             test_point = test_point_
         var_values = list(zip(self.varnames, self.fn(test_point)))

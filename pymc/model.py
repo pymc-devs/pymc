@@ -1565,7 +1565,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         kwargs.setdefault("on_unused_input", "ignore")
         f = self.compile_fn(outs, inputs=self.value_vars, point_fn=False, profile=profile, **kwargs)
         if point is None:
-            point = self.compute_initial_point()
+            point = self.initial_point()
 
         for _ in range(n):
             f(**point)
@@ -1725,7 +1725,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Log probability of `point`.
         """
         if point is None:
-            point = self.compute_initial_point()
+            point = self.initial_point()
 
         factors = self.basic_RVs + self.potentials
         factor_logps_fn = [at.sum(factor) for factor in self.logpt(factors, sum=False)]
