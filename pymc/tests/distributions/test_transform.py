@@ -599,16 +599,28 @@ def test_discrete_trafo():
             pm.Binomial("a", n=5, p=0.5, transform="log")
         err.match("Transformations for discrete distributions")
 def test_transforms_ordered():
-    COORDS = {"question": np.arange(10), "thresholds": np.arange(4)}
-
-    with pm.Model(coords=COORDS) as model:
-        kappa = pm.Normal(
-            "kappa",
+    with pm.Model() as model:
+        pm.Normal(
+            "x",
             mu=[-3, -1, 1, 2],
             sigma=1,
-            dims=["question", "thresholds"],
+            size=(10, 4),
             transform=pm.distributions.transforms.ordered,
         )
-
+        
     log_prob = model.point_logps()
     np.testing.assert_allclose(list(log_prob.values()), np.array([18.69]))
+
+
+def test_transforms_sumto1():
+    with pm.Model() as model:
+        pm.Normal(
+            "x",
+            mu=[-3, -1, 1, 2],
+            sigma=1,
+            size=(10, 4),
+            transform=pm.distributions.transforms.sum_to_1,
+        )
+        
+    log_prob = model.point_logps()
+    np.testing.assert_allclose(list(log_prob.values()), np.array([-56.76]))
