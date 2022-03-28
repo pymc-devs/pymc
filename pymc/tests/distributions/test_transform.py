@@ -607,7 +607,7 @@ def test_transforms_ordered():
             size=(10, 4),
             transform=pm.distributions.transforms.ordered,
         )
-        
+
     log_prob = model.point_logps()
     np.testing.assert_allclose(list(log_prob.values()), np.array([18.69]))
 
@@ -621,6 +621,6 @@ def test_transforms_sumto1():
             size=(10, 4),
             transform=pm.distributions.transforms.sum_to_1,
         )
-        
+
     log_prob = model.point_logps()
     np.testing.assert_allclose(list(log_prob.values()), np.array([-56.76]))
