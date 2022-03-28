@@ -177,9 +177,7 @@ def test_AR_nd():
         for i in range(n):
             AR("y_%d" % i, beta[:, i], sigma=1.0, shape=T, initval=y_tp[:, i])
 
-    np.testing.assert_allclose(
-        t0.logp(t0.initial_point()), t1.logp(t1.initial_point())
-    )
+    np.testing.assert_allclose(t0.logp(t0.initial_point()), t1.logp(t1.initial_point()))
 
 
 @pytest.mark.xfail(reason="Timeseries not refactored")

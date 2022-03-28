@@ -222,9 +222,7 @@ def parametric_grouped_approxes(request):
 @pytest.fixture
 @ignore_not_implemented_inference
 def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
-    one_initial_value = three_var_model.initial_point(0)[
-        three_var_model.one.tag.value_var.name
-    ]
+    one_initial_value = three_var_model.initial_point(0)[three_var_model.one.tag.value_var.name]
     dsize = np.prod(one_initial_value.shape[1:])
     cls, kw = parametric_grouped_approxes
     spec = cls.get_param_spec_for(d=dsize, **kw)
