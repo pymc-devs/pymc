@@ -148,6 +148,7 @@ def test_get_jaxified_logp():
 def test_idata_kwargs(sampler, idata_kwargs):
     with pm.Model() as m:
         x = pm.Normal("x")
+        z = pm.Normal("z")
         y = pm.Normal("y", x, observed=0)
         idata = sampler(
             tune=50,

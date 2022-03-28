@@ -72,6 +72,23 @@ def _replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariabl
     return new_graph
 
 
+def smap(fn: callable):
+    """Sequential Map
+
+    Jax equivalent of vmap using jax.lax.map
+
+    Parameters
+    ----------
+        fn : callable
+            a jax function
+
+    Notes
+    -----
+    A memory efficient, but slower than jax.vmap
+    """
+    return lambda *xs: jax.lax.map(lambda _: fn(*_), xs)
+
+
 def get_jaxified_graph(
     inputs: Optional[List[TensorVariable]] = None,
     outputs: Optional[List[TensorVariable]] = None,
@@ -138,7 +155,7 @@ def _get_log_likelihood(model: Model, samples) -> Dict:
     for v in model.observed_RVs:
         v_elemwise_logpt = model.logpt(v, sum=False)
         jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=v_elemwise_logpt)
-        result = jax.jit(jax.vmap(partial(jax.lax.map, jax_fn)))(samples)[0]
+        result = jax.jit(jax.vmap(smap(jax_fn)))(*samples)[0]
         data[v.name] = result
     return data
 
@@ -341,7 +358,7 @@ def sample_blackjax_nuts(
     mcmc_samples = {}
     for v in vars_to_sample:
         jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.jit(jax.vmap(partial(jax.lax.map, jax_fn)))(raw_mcmc_samples)[0]
+        result = jax.jit(jax.vmap(smap(jax_fn)))(*raw_mcmc_samples)[0]
         mcmc_samples[v.name] = result
 
     tic4 = datetime.now()
@@ -525,7 +542,7 @@ def sample_numpyro_nuts(
     mcmc_samples = {}
     for v in vars_to_sample:
         jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.jit(jax.vmap(partial(jax.lax.map, jax_fn)))(raw_mcmc_samples)[0]
+        result = jax.jit(jax.vmap(smap(jax_fn)))(*raw_mcmc_samples)[0]
         mcmc_samples[v.name] = result
 
     tic4 = datetime.now()
