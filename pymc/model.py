@@ -474,7 +474,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
                 # 3) you can create variables with Var method
                 self.Var('v1', Normal.dist(mu=mean, sigma=sd))
-                # this will create variable named like '{prefix/}v1'
+                # this will create variable named like '{prefix|}v1'
                 # and assign attribute 'v1' to instance created
                 # variable can be accessed with self.v1 or self['v1']
 
@@ -516,7 +516,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
 
-        # variables inside both scopes will be named like `first/*`, `second/*`
+        # variables inside both scopes will be named like `first|*`, `second|*`
 
     """
 
