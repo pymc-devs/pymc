@@ -172,7 +172,7 @@ class TestNested:
 
     def test_nested_model_to_netcdf(self, tmp_path):
         with pm.Model("scope") as model:
-            b = pm.Normal("var::")
+            b = pm.Normal("var")
             trace = pm.sample(100, tune=0)
         az.to_netcdf(trace, tmp_path / "trace.nc")
         trace1 = az.from_netcdf(tmp_path / "trace.nc")
