@@ -11,11 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import tempfile
 import unittest
 
 from functools import reduce
-from tempfile import tempdir
 
 import aesara
 import aesara.sparse as sparse
@@ -177,6 +175,8 @@ class TestNested:
             b = pm.Normal("var")
             trace = pm.sample(100, tune=0)
         az.to_netcdf(trace, tmp_path / "trace.nc")
+        trace1 = az.from_netcdf(tmp_path / "trace.nc")
+        assert "scope|var" in trace1.posterior
 
 
 class TestObserved:
