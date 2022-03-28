@@ -1462,14 +1462,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if self.isroot or not self.parent.prefix:
             name = self.name
         else:
-            name = f"{self.parent.prefix}/{self.name}"
-        return name.strip("/")
+            name = f"{self.parent.prefix}|{self.name}"
+        return name.strip("|")
 
     def name_for(self, name):
         """Checks if name has prefix and adds if needed"""
         if self.prefix:
             if not name.startswith(self.prefix):
-                return f"{self.prefix}/{name}"
+                return f"{self.prefix}|{name}"
             else:
                 return name
         else:
@@ -1479,7 +1479,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Checks if name has prefix and deletes if needed"""
         if not self.prefix or not name:
             return name
-        elif name.startswith(self.prefix + "/"):
+        elif name.startswith(self.prefix + "|"):
             return name[len(self.prefix) + 1 :]
         else:
             return name
