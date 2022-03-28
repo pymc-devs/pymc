@@ -117,13 +117,13 @@ class Simulator(NoDistribution):
     --------
     .. code-block:: python
 
-        def my_simulator_fn(rng, loc, scale, size):
+        def simulator_fn(rng, loc, scale, size):
             return rng.normal(loc, scale, size=size)
 
         with pm.Model() as m:
             loc = pm.Normal("loc", 0, 1)
             scale = pm.HalfNormal("scale", 1)
-            simulator = pm.Simulator("sim", my_simulator, loc, scale, observed=data)
+            simulator = pm.Simulator("simulator", simulator_fn, loc, scale, observed=data)
             idata = pm.sample_smc()
 
     References
