@@ -149,13 +149,13 @@ def _sample_stats_to_xarray(posterior):
     return data
 
 
-def _get_log_likelihood(model: Model, samples) -> Dict:
+def _get_log_likelihood(model: Model, samples, map_fn=jax.vmap) -> Dict:
     """Compute log-likelihood for all observations"""
     data = {}
     for v in model.observed_RVs:
         v_elemwise_logpt = model.logpt(v, sum=False)
         jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=v_elemwise_logpt)
-        result = jax.jit(jax.vmap(smap(jax_fn)))(*samples)[0]
+        result = jax.jit(jax.vmap(map_fn(jax_fn)))(*samples)[0]
         data[v.name] = result
     return data
 
@@ -243,6 +243,7 @@ def sample_blackjax_nuts(
     var_names=None,
     keep_untransformed=False,
     chain_method="parallel",
+    postprocessing_method="vectorized",
     idata_kwargs=None,
 ):
     """
@@ -272,6 +273,8 @@ def sample_blackjax_nuts(
         Include untransformed variables in the posterior samples. Defaults to False.
     chain_method : str, default "parallel"
         Specify how samples should be drawn. The choices include "parallel", and "vectorized".
+    postprocessing_method : str, default "vectorized"
+        Specify how postprocessing should be computed. The choices include "sequential", and "vectorized".
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
         for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
@@ -347,6 +350,14 @@ def sample_blackjax_nuts(
         raise ValueError(
             "Only supporting the following methods to draw chains:" ' "parallel" or "vectorized"'
         )
+    if postprocessing_method == "vectorized":
+        post_map_fn = jax.vmap
+    elif postprocessing_method == "sequential":
+        post_map_fn = smap
+    else:
+        raise ValueError(
+            "Only supporting the following methods to draw chains:" ' "sequential" or "vectorized"'
+        )
 
     states, _ = map_fn(get_posterior_samples)(keys, init_params)
     raw_mcmc_samples = states.position
@@ -358,7 +369,7 @@ def sample_blackjax_nuts(
     mcmc_samples = {}
     for v in vars_to_sample:
         jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.jit(jax.vmap(smap(jax_fn)))(*raw_mcmc_samples)[0]
+        result = jax.jit(jax.vmap(post_map_fn(jax_fn)))(*raw_mcmc_samples)[0]
         mcmc_samples[v.name] = result
 
     tic4 = datetime.now()
@@ -370,7 +381,7 @@ def sample_blackjax_nuts(
         idata_kwargs = idata_kwargs.copy()
 
     if idata_kwargs.pop("log_likelihood", True):
-        log_likelihood = _get_log_likelihood(model, raw_mcmc_samples)
+        log_likelihood = _get_log_likelihood(model, raw_mcmc_samples, post_map_fn)
     else:
         log_likelihood = None
 
@@ -404,6 +415,7 @@ def sample_numpyro_nuts(
     progress_bar: bool = True,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
+    postprocessing_method: str = "vectorized",
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
 ):
@@ -460,7 +472,14 @@ def sample_numpyro_nuts(
         var_names = model.unobserved_value_vars
 
     vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
-
+    if postprocessing_method == "vectorized":
+        post_map_fn = jax.vmap
+    elif postprocessing_method == "sequential":
+        post_map_fn = smap
+    else:
+        raise ValueError(
+            "Only supporting the following methods to draw chains:" ' "sequential" or "vectorized"'
+        )
     coords = {
         cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
         for cname, cvals in model.coords.items()
@@ -542,7 +561,7 @@ def sample_numpyro_nuts(
     mcmc_samples = {}
     for v in vars_to_sample:
         jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.jit(jax.vmap(smap(jax_fn)))(*raw_mcmc_samples)[0]
+        result = jax.jit(jax.vmap(post_map_fn(jax_fn)))(*raw_mcmc_samples)[0]
         mcmc_samples[v.name] = result
 
     tic4 = datetime.now()
@@ -554,7 +573,7 @@ def sample_numpyro_nuts(
         idata_kwargs = idata_kwargs.copy()
 
     if idata_kwargs.pop("log_likelihood", True):
-        log_likelihood = _get_log_likelihood(model, raw_mcmc_samples)
+        log_likelihood = _get_log_likelihood(model, raw_mcmc_samples, post_map_fn)
     else:
         log_likelihood = None
 
