@@ -26,8 +26,8 @@ from pymc.sampling_jax import (
         sample_numpyro_nuts,
     ],
 )
-@pytest.mark.parametrize("postprocessing_method", ["sequential", "vectorized"])
-def test_transform_samples(sampler, postprocessing_method):
+@pytest.mark.parametrize("postprocessing_backend", [None, "cpu"])
+def test_transform_samples(sampler, postprocessing_backend):
     aesara.config.on_opt_error = "raise"
     np.random.seed(13244)
 
@@ -42,7 +42,7 @@ def test_transform_samples(sampler, postprocessing_method):
             chains=1,
             random_seed=1322,
             keep_untransformed=True,
-            postprocessing_method=postprocessing_method,
+            postprocessing_backend=postprocessing_backend,
         )
 
     log_vals = trace.posterior["sigma_log__"].values
@@ -59,7 +59,7 @@ def test_transform_samples(sampler, postprocessing_method):
             chains=2,
             random_seed=1322,
             keep_untransformed=False,
-            postprocessing_method=postprocessing_method,
+            postprocessing_backend=postprocessing_backend,
         )
 
     assert -11 < trace.posterior["a"].mean() < -8
@@ -156,8 +156,8 @@ def test_get_jaxified_logp():
         dict(log_likelihood=False),
     ],
 )
-@pytest.mark.parametrize("postprocessing_method", ["sequential", "vectorized"])
-def test_idata_kwargs(sampler, idata_kwargs, postprocessing_method):
+@pytest.mark.parametrize("postprocessing_backend", [None, "cpu"])
+def test_idata_kwargs(sampler, idata_kwargs, postprocessing_backend):
     with pm.Model() as m:
         x = pm.Normal("x")
         z = pm.Normal("z")
@@ -167,7 +167,7 @@ def test_idata_kwargs(sampler, idata_kwargs, postprocessing_method):
             draws=50,
             chains=1,
             idata_kwargs=idata_kwargs,
-            postprocessing_method=postprocessing_method,
+            postprocessing_backend=postprocessing_backend,
         )
 
     if idata_kwargs.get("log_likelihood", True):
