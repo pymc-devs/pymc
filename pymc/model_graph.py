@@ -32,7 +32,7 @@ VarName = NewType("VarName", str)
 class ModelGraph:
     def __init__(self, model):
         self.model = model
-        self.var_names = get_default_varnames(self.model.named_vars, include_transformed=False)
+        self._all_var_names = get_default_varnames(self.model.named_vars, include_transformed=False)
         self.var_list = self.model.named_vars.values()
         self.transform_map = {
             v.transformed: v.name for v in self.var_list if hasattr(v, "transformed")
@@ -80,7 +80,7 @@ class ModelGraph:
         for p in parents:
             if p == var:
                 continue
-            elif p.name in self.var_names:
+            elif p.name in self._all_var_names:
                 keep.add(p.name)
             elif p in self.transform_map:
                 if self.transform_map[p] != var.name:
@@ -102,25 +102,25 @@ class ModelGraph:
         parents = self._get_ancestors(var, func)
         return self._filter_parents(var, parents)
 
-    def vars_to_plot(self, selected_vars=None):
-        if selected_vars is None:
-            return self.var_names
+    def vars_to_plot(self, var_names=None):
+        if var_names is None:
+            return self._all_var_names
         else:
-            selected_vars = set(selected_vars)
+            var_names = set(var_names)
 
-            for var_name in selected_vars:
-                if var_name not in self.var_names:
+            for var_name in var_names:
+                if var_name not in self._all_var_names:
                     raise ValueError(f"{var_name} is not part of the defined model.")
 
                 for model_var in self.var_list:
                     if hasattr(model_var.tag, "observations"):
                         if model_var.tag.observations == self.model[var_name]:
-                            selected_vars = selected_vars.union({model_var.name})
+                            var_names = var_names.union({model_var.name})
 
             selected_ancestors = set(
                 filter(
-                    lambda rv: rv.name in self.var_names,
-                    list(ancestors([self.model[var_name] for var_name in selected_vars])),
+                    lambda rv: rv.name in self._all_var_names,
+                    list(ancestors([self.model[var_name] for var_name in var_names])),
                 )
             )
 
@@ -130,14 +130,14 @@ class ModelGraph:
 
             selected_ancestors = [var.name for var in selected_ancestors]
 
-            # ordering of self.var_names is important
+            # ordering of self._all_var_names is important
             return selected_ancestors
 
-    def make_compute_graph(self, selected_vars=None) -> Dict[str, Set[VarName]]:
+    def make_compute_graph(self, var_names=None) -> Dict[str, Set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
         input_map = defaultdict(set)  # type: Dict[str, Set[VarName]]
 
-        for var_name in self.vars_to_plot(selected_vars):
+        for var_name in self.vars_to_plot(var_names):
             var = self.model[var_name]
             key = var_name
             val = self.get_parents(var)
@@ -200,7 +200,7 @@ class ModelGraph:
     def _eval(self, var):
         return function([], var, mode="FAST_COMPILE")()
 
-    def get_plates(self, selected_vars=None):
+    def get_plates(self, var_names=None):
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
@@ -212,7 +212,7 @@ class ModelGraph:
         """
         plates = defaultdict(set)
 
-        for var_name in self.vars_to_plot(selected_vars):
+        for var_name in self.vars_to_plot(var_names):
             v = self.model[var_name]
             if var_name in self.model.RV_dims:
                 plate_label = " x ".join(
@@ -225,7 +225,7 @@ class ModelGraph:
 
         return plates
 
-    def make_graph(self, selected_vars=None, formatting: str = "plain"):
+    def make_graph(self, var_names=None, formatting: str = "plain"):
         """Make graphviz Digraph of PyMC model
 
         Returns
@@ -241,19 +241,19 @@ class ModelGraph:
                 "\tconda install -c conda-forge python-graphviz"
             )
         graph = graphviz.Digraph(self.model.name)
-        for plate_label, var_names in self.get_plates(selected_vars).items():
+        for plate_label, all_var_names in self.get_plates(var_names).items():
             if plate_label:
                 # must be preceded by 'cluster' to get a box around it
                 with graph.subgraph(name="cluster" + plate_label) as sub:
-                    for var_name in var_names:
+                    for var_name in all_var_names:
                         self._make_node(var_name, sub, formatting=formatting)
                     # plate label goes bottom right
                     sub.attr(label=plate_label, labeljust="r", labelloc="b", style="rounded")
             else:
-                for var_name in var_names:
+                for var_name in all_var_names:
                     self._make_node(var_name, graph, formatting=formatting)
 
-        for child, parents in self.make_compute_graph(selected_vars=selected_vars).items():
+        for child, parents in self.make_compute_graph(var_names=var_names).items():
             # parents is a set of rv names that preceed child rv nodes
             for parent in parents:
                 graph.edge(parent.replace(":", "&"), child.replace(":", "&"))
@@ -261,7 +261,7 @@ class ModelGraph:
         return graph
 
 
-def model_to_graphviz(model=None, *, selected_vars=None, formatting: str = "plain"):
+def model_to_graphviz(model=None, *, var_names=None, formatting: str = "plain"):
     """Produce a graphviz Digraph from a PyMC model.
 
     Requires graphviz, which may be installed most easily with
@@ -311,4 +311,4 @@ def model_to_graphviz(model=None, *, selected_vars=None, formatting: str = "plai
             "Formattings other than 'plain' are currently not supported.", UserWarning, stacklevel=2
         )
     model = pm.modelcontext(model)
-    return ModelGraph(model).make_graph(selected_vars=selected_vars, formatting=formatting)
+    return ModelGraph(model).make_graph(var_names=var_names, formatting=formatting)
