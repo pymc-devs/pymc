@@ -189,6 +189,11 @@ def change_rv_size(
     for k, v in tag.__dict__.items():
         new_rv.tag.__dict__.setdefault(k, v)
 
+    # Update "traditional" rng default_update, if that was set for old RV
+    default_update = getattr(rng, "default_update", None)
+    if default_update is not None and default_update is rv_node.outputs[0]:
+        rng.default_update = new_rv_node.outputs[0]
+
     if config.compute_test_value != "off":
         compute_test_value(new_rv_node)
 
