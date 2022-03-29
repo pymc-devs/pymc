@@ -14,7 +14,7 @@
 import warnings
 
 from collections import defaultdict, deque
-from typing import Dict, Iterator, NewType, Optional, Set
+from typing import Dict, Iterator, List, NewType, Optional, Set
 
 from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
@@ -102,38 +102,38 @@ class ModelGraph:
         parents = self._get_ancestors(var, func)
         return self._filter_parents(var, parents)
 
-    def vars_to_plot(self, var_names=None):
+    def vars_to_plot(self, var_names: Optional[Iterable[str]] = None) -> List[str]:
         if var_names is None:
             return self._all_var_names
-        else:
-            var_names = set(var_names)
 
-            for var_name in var_names:
-                if var_name not in self._all_var_names:
-                    raise ValueError(f"{var_name} is not part of the defined model.")
+        selected_names = set(var_names)
 
-                for model_var in self.var_list:
-                    if hasattr(model_var.tag, "observations"):
-                        if model_var.tag.observations == self.model[var_name]:
-                            var_names = var_names.union({model_var.name})
+        for var_name in selected_names:
+            if var_name not in self._all_var_names:
+                raise ValueError(f"{var_name} is not in this model.")
 
-            selected_ancestors = set(
-                filter(
-                    lambda rv: rv.name in self._all_var_names,
-                    list(ancestors([self.model[var_name] for var_name in var_names])),
-                )
+            for model_var in self.var_list:
+                if hasattr(model_var.tag, "observations"):
+                    if model_var.tag.observations == self.model[var_name]:
+                        selected_names.add(model_var.name)
+
+        selected_ancestors = set(
+            filter(
+                lambda rv: rv.name in self._all_var_names,
+                list(ancestors([self.model[var_name] for var_name in selected_names])),
             )
+        )
 
-            for var in selected_ancestors:
-                if hasattr(var.tag, "observations"):
-                    selected_ancestors = selected_ancestors.union({var.tag.observations})
+        for var in selected_ancestors:
+            if hasattr(var.tag, "observations"):
+                selected_ancestors.add(var.tag.observations)
 
-            selected_ancestors = [var.name for var in selected_ancestors]
+        # ordering of self._all_var_names is important
+        return [var.name for var in selected_ancestors]
 
-            # ordering of self._all_var_names is important
-            return selected_ancestors
-
-    def make_compute_graph(self, var_names=None) -> Dict[str, Set[VarName]]:
+    def make_compute_graph(
+        self, var_names: Optional[Iterable[str]] = None
+    ) -> Dict[str, Set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
         input_map = defaultdict(set)  # type: Dict[str, Set[VarName]]
 
@@ -200,7 +200,7 @@ class ModelGraph:
     def _eval(self, var):
         return function([], var, mode="FAST_COMPILE")()
 
-    def get_plates(self, var_names=None):
+    def get_plates(self, var_names: Optional[Iterable[str]] = None):
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
@@ -261,7 +261,9 @@ class ModelGraph:
         return graph
 
 
-def model_to_graphviz(model=None, *, var_names=None, formatting: str = "plain"):
+def model_to_graphviz(
+    model=None, *, var_names: Optional[Iterable[str]] = None, formatting: str = "plain"
+):
     """Produce a graphviz Digraph from a PyMC model.
 
     Requires graphviz, which may be installed most easily with

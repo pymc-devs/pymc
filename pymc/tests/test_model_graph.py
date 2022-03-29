@@ -183,6 +183,32 @@ class TestRadonModel(BaseModelGraphTest):
             model_to_graphviz(self.model, formatting="plain_with_params")
 
 
+def model_with_different_descendants():
+    """
+    Model proposed by Michael to test variable selection functionality
+    See: https://github.com/pymc-devs/pymc/pull/5634#pullrequestreview-916297509
+    """
+    with pm.Model() as pmodel2:
+        a = pm.Normal("a")
+        b = pm.Normal("b")
+        pm.Normal("c", a * b)
+        intermediate = pm.Deterministic("intermediate", a + b)
+        pred = pm.Deterministic("pred", intermediate * 3)
+
+        obs = pm.ConstantData("obs", 1.75)
+
+        L = pm.Normal("L", mu=1 + 0.5 * pred, observed=obs)
+
+    return pmodel2
+
+
+class TestVariableSelection(BaseModelGraphTest):
+    model_func = model_with_different_descendants
+
+    def check_subgraph(var_names):
+
+
+
 class TestImputationModel(BaseModelGraphTest):
     model_func = model_with_imputations
 
