@@ -636,3 +636,29 @@ def test_compile_pymc_missing_default_explicit_updates():
     # And again, it should be overridden by an explicit update
     f = compile_pymc([], x, updates={rng: x.owner.outputs[0]})
     assert f() != f()
+
+
+def test_compile_pymc_updates_inputs():
+    """Test that compile_pymc does not include rngs updates of variables that are inputs
+    or ancestors to inputs
+    """
+    x = at.random.normal()
+    y = at.random.normal(x)
+    z = at.random.normal(y)
+
+    for inputs, rvs_in_graph in (
+        ([], 3),
+        ([x], 2),
+        ([y], 1),
+        ([z], 0),
+        ([x, y], 1),
+        ([x, y, z], 0),
+    ):
+        fn = compile_pymc(inputs, z, on_unused_input="ignore")
+        fn_fgraph = fn.maker.fgraph
+        # Each RV adds a shared input for its rng
+        assert len(fn_fgraph.inputs) == len(inputs) + rvs_in_graph
+        # If the output is an input, the graph has a DeepCopyOp
+        assert len(fn_fgraph.apply_nodes) == max(rvs_in_graph, 1)
+        # Each RV adds a shared output for its rng
+        assert len(fn_fgraph.outputs) == 1 + rvs_in_graph

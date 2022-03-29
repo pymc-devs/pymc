@@ -39,9 +39,9 @@ from aesara.graph.basic import (
     Apply,
     Constant,
     Variable,
-    ancestors,
     clone_get_equiv,
     graph_inputs,
+    vars_between,
     walk,
 )
 from aesara.graph.fg import FunctionGraph
@@ -975,8 +975,8 @@ def compile_pymc(
     output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
     for rv in (
         node
-        for node in ancestors(output_to_list)
-        if node.owner and isinstance(node.owner.op, RandomVariable)
+        for node in vars_between(inputs, output_to_list)
+        if node.owner and isinstance(node.owner.op, RandomVariable) and node not in inputs
     ):
         rng = rv.owner.inputs[0]
         if not hasattr(rng, "default_update"):
