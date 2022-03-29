@@ -269,7 +269,7 @@ class Distribution(metaclass=DistributionMeta):
 
         if resize_shape:
             # A batch size was specified through `dims`, or implied by `observed`.
-            rv_out = change_rv_size(rv_var=rv_out, new_size=resize_shape, expand=True)
+            rv_out = change_rv_size(rv=rv_out, new_size=resize_shape, expand=True)
 
         rv_out = model.register_rv(
             rv_out,
@@ -355,7 +355,7 @@ class Distribution(metaclass=DistributionMeta):
         # Replicate dimensions may be prepended via a shape with Ellipsis as the last element:
         if shape is not None and Ellipsis in shape:
             replicate_shape = cast(StrongShape, shape[:-1])
-            rv_out = change_rv_size(rv_var=rv_out, new_size=replicate_shape, expand=True)
+            rv_out = change_rv_size(rv=rv_out, new_size=replicate_shape, expand=True)
 
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")

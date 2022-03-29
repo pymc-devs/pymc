@@ -143,7 +143,7 @@ def pandas_to_array(data):
 
 
 def change_rv_size(
-    rv_var: TensorVariable,
+    rv: TensorVariable,
     new_size: PotentialShapeType,
     expand: Optional[bool] = False,
 ) -> TensorVariable:
@@ -151,8 +151,8 @@ def change_rv_size(
 
     Parameters
     ==========
-    rv_var
-        The `RandomVariable` output.
+    rv
+        The old `RandomVariable` output.
     new_size
         The new size.
     expand:
@@ -167,32 +167,32 @@ def change_rv_size(
         new_size = (new_size,)
 
     # Extract the RV node that is to be resized, together with its inputs, name and tag
-    if isinstance(rv_var.owner.op, SpecifyShape):
-        rv_var = rv_var.owner.inputs[0]
-    rv_node = rv_var.owner
+    if isinstance(rv.owner.op, SpecifyShape):
+        rv = rv.owner.inputs[0]
+    rv_node = rv.owner
     rng, size, dtype, *dist_params = rv_node.inputs
-    name = rv_var.name
-    tag = rv_var.tag
+    name = rv.name
+    tag = rv.tag
 
     if expand:
-        old_shape = tuple(rv_node.op._infer_shape(size, dist_params))
-        old_size = old_shape[: len(old_shape) - rv_node.op.ndim_supp]
-        new_size = tuple(new_size) + tuple(old_size)
+        shape = tuple(rv_node.op._infer_shape(size, dist_params))
+        size = shape[: len(shape) - rv_node.op.ndim_supp]
+        new_size = tuple(new_size) + tuple(size)
 
     # Make sure the new size is a tensor. This dtype-aware conversion helps
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
     new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
 
     new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
-    rv_var = new_rv_node.outputs[-1]
-    rv_var.name = name
+    new_rv = new_rv_node.outputs[-1]
+    new_rv.name = name
     for k, v in tag.__dict__.items():
-        rv_var.tag.__dict__.setdefault(k, v)
+        new_rv.tag.__dict__.setdefault(k, v)
 
     if config.compute_test_value != "off":
         compute_test_value(new_rv_node)
 
-    return rv_var
+    return new_rv
 
 
 def extract_rv_and_value_vars(
