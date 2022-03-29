@@ -379,6 +379,14 @@ def test_extract_obs_data():
     assert isinstance(res, np.ndarray)
     assert np.ma.allequal(res, data_m)
 
+    # Cast check
+    data = np.array(5)
+    t = at.cast(at.as_tensor(5.0), np.int64)
+    res = extract_obs_data(t)
+
+    assert isinstance(res, np.ndarray)
+    assert np.array_equal(res, data)
+
 
 @pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
 def test_pandas_to_array(input_dtype):

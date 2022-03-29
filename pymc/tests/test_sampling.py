@@ -1078,7 +1078,7 @@ class TestSamplePriorPredictive(SeededTest):
             o = pm.Deterministic("o", obs)
             gen1 = pm.sample_prior_predictive(draws)
 
-        assert gen1.prior["y"].shape == (1, draws, n1)
+        assert gen1.prior_predictive["y"].shape == (1, draws, n1)
         assert gen1.prior["o"].shape == (1, draws, n1)
 
         n2 = 20
@@ -1086,7 +1086,7 @@ class TestSamplePriorPredictive(SeededTest):
         with m:
             gen2 = pm.sample_prior_predictive(draws)
 
-        assert gen2.prior["y"].shape == (1, draws, n2)
+        assert gen2.prior_predictive["y"].shape == (1, draws, n2)
         assert gen2.prior["o"].shape == (1, draws, n2)
 
     def test_density_dist(self):

@@ -47,6 +47,7 @@ from aesara.graph.basic import (
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op, compute_test_value
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
+from aesara.scalar.basic import Cast
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.shape import SpecifyShape
@@ -232,6 +233,9 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
         return x.data
     if isinstance(x, SharedVariable):
         return x.get_value()
+    if x.owner and isinstance(x.owner.op, Elemwise) and isinstance(x.owner.op.scalar_op, Cast):
+        array_data = extract_obs_data(x.owner.inputs[0])
+        return array_data.astype(x.type.dtype)
     if x.owner and isinstance(x.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1)):
         array_data = extract_obs_data(x.owner.inputs[0])
         mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
