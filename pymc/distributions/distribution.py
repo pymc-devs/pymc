@@ -30,7 +30,6 @@ from aesara.graph.basic import Variable
 from aesara.tensor.basic import as_tensor_variable
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
@@ -358,23 +357,6 @@ class Distribution(metaclass=DistributionMeta):
             replicate_shape = cast(StrongShape, shape[:-1])
             rv_out = change_rv_size(rv_var=rv_out, new_size=replicate_shape, expand=True)
 
-        rng = kwargs.pop("rng", None)
-        if (
-            rv_out.owner
-            and isinstance(rv_out.owner.op, RandomVariable)
-            and isinstance(rng, RandomStateSharedVariable)
-            and not getattr(rng, "default_update", None)
-        ):
-            # This tells `aesara.function` that the shared RNG variable
-            # is mutable, which--in turn--tells the `FunctionGraph`
-            # `Supervisor` feature to allow in-place updates on the variable.
-            # Without it, the `RandomVariable`s could not be optimized to allow
-            # in-place RNG updates, forcing all sample results from compiled
-            # functions to be the same on repeated evaluations.
-            new_rng = rv_out.owner.outputs[0]
-            rv_out.update = (rng, new_rng)
-            rng.default_update = new_rng
-
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
         rv_out.random = _make_nice_attr_error("rv.random()", "rv.eval()")
@@ -588,27 +570,6 @@ class SymbolicDistribution:
         if shape is not None and Ellipsis in shape:
             replicate_shape = cast(StrongShape, shape[:-1])
             graph = cls.change_size(rv=graph, new_size=replicate_shape, expand=True)
-
-        rngs = kwargs.pop("rngs", None)
-        if rngs is not None:
-            graph_rvs = cls.graph_rvs(graph)
-            assert len(rngs) == len(graph_rvs)
-            for rng, rv_out in zip(rngs, graph_rvs):
-                if (
-                    rv_out.owner
-                    and isinstance(rv_out.owner.op, RandomVariable)
-                    and isinstance(rng, RandomStateSharedVariable)
-                    and not getattr(rng, "default_update", None)
-                ):
-                    # This tells `aesara.function` that the shared RNG variable
-                    # is mutable, which--in turn--tells the `FunctionGraph`
-                    # `Supervisor` feature to allow in-place updates on the variable.
-                    # Without it, the `RandomVariable`s could not be optimized to allow
-                    # in-place RNG updates, forcing all sample results from compiled
-                    # functions to be the same on repeated evaluations.
-                    new_rng = rv_out.owner.outputs[0]
-                    rv_out.update = (rng, new_rng)
-                    rng.default_update = new_rng
 
         # TODO: Create new attr error stating that these are not available for DerivedDistribution
         # rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
