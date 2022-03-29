@@ -94,6 +94,28 @@ def test_change_rv_size():
     assert tuple(rv_newer.shape.eval()) == (2,)
 
 
+def test_change_rv_size_default_update():
+    rng = aesara.shared(np.random.default_rng(0))
+    x = normal(rng=rng)
+
+    # Test that "traditional" default_update is updated
+    rng.default_update = x.owner.outputs[0]
+    new_x = change_rv_size(x, new_size=(2,))
+    assert rng.default_update is not x.owner.outputs[0]
+    assert rng.default_update is new_x.owner.outputs[0]
+
+    # Test that "non-traditional" default_update is left unchanged
+    next_rng = aesara.shared(np.random.default_rng(1))
+    rng.default_update = next_rng
+    new_x = change_rv_size(x, new_size=(2,))
+    assert rng.default_update is next_rng
+
+    # Test that default_update is not set if there was none before
+    del rng.default_update
+    new_x = change_rv_size(x, new_size=(2,))
+    assert not hasattr(rng, "default_update")
+
+
 class TestBroadcasting:
     def test_make_shared_replacements(self):
         """Check if pm.make_shared_replacements preserves broadcasting."""
