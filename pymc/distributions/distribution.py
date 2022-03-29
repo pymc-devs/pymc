@@ -130,12 +130,12 @@ class DistributionMeta(ABCMeta):
                     dist_params = dist_params[3:]
                     return class_logcdf(value, *dist_params)
 
-            class_initval = clsdict.get("get_moment")
-            if class_initval:
+            class_moment = clsdict.get("moment")
+            if class_moment:
 
-                @_get_moment.register(rv_type)
-                def get_moment(op, rv, rng, size, dtype, *dist_params):
-                    return class_initval(rv, size, *dist_params)
+                @_moment.register(rv_type)
+                def moment(op, rv, rng, size, dtype, *dist_params):
+                    return class_moment(rv, size, *dist_params)
 
             # Register the Aesara `RandomVariable` type as a subclass of this
             # `Distribution` type.
@@ -618,24 +618,24 @@ class SymbolicDistribution:
 
 
 @singledispatch
-def _get_moment(op, rv, *rv_inputs) -> TensorVariable:
-    raise NotImplementedError(f"Variable {rv} of type {op} has no get_moment implementation.")
+def _moment(op, rv, *rv_inputs) -> TensorVariable:
+    raise NotImplementedError(f"Variable {rv} of type {op} has no moment implementation.")
 
 
-def get_moment(rv: TensorVariable) -> TensorVariable:
+def moment(rv: TensorVariable) -> TensorVariable:
     """Method for choosing a representative point/value
     that can be used to start optimization or MCMC sampling.
 
     The only parameter to this function is the RandomVariable
     for which the value is to be derived.
     """
-    return _get_moment(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
+    return _moment(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
 
 
-@_get_moment.register(Elemwise)
-def _get_moment_elemwise(op, rv, *dist_params):
+@_moment.register(Elemwise)
+def moment_elemwise(op, rv, *dist_params):
     """For Elemwise Ops, dispatch on respective scalar_op"""
-    return _get_moment(op.scalar_op, rv, *dist_params)
+    return _moment(op.scalar_op, rv, *dist_params)
 
 
 class Discrete(Distribution):
@@ -692,7 +692,7 @@ class DensityDist(NoDistribution):
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
         random: Optional[Callable] = None,
-        get_moment: Optional[Callable] = None,
+        moment: Optional[Callable] = None,
         ndim_supp: int = 0,
         ndims_params: Optional[Sequence[int]] = None,
         dtype: str = "floatX",
@@ -732,15 +732,15 @@ class DensityDist(NoDistribution):
             the desired size of the random draw. If ``None``, a ``NotImplemented``
             error will be raised when trying to draw random samples from the distribution's
             prior or posterior predictive.
-        get_moment : Optional[Callable]
+        moment : Optional[Callable]
             A callable that can be used to compute the moments of the distribution.
-            It must have the following signature: ``get_moment(rv, size, *rv_inputs)``.
+            It must have the following signature: ``moment(rv, size, *rv_inputs)``.
             The distribution's :class:`~aesara.tensor.random.op.RandomVariable` is passed
             as the first argument ``rv``. ``size`` is the random variable's size implied
             by the ``dims``, ``size`` and parameters supplied to the distribution. Finally,
             ``rv_inputs`` is the sequence of the distribution parameters, in the same order
             as they were supplied when the DensityDist was created. If ``None``, a default
-            ``get_moment`` function will be assigned that will always return 0, or an array
+            ``moment`` function will be assigned that will always return 0, or an array
             of zeros.
         ndim_supp : int
             The number of dimensions in the support of the distribution. Defaults to assuming
@@ -817,9 +817,9 @@ class DensityDist(NoDistribution):
         if logcdf is None:
             logcdf = default_not_implemented(name, "logcdf")
 
-        if get_moment is None:
-            get_moment = functools.partial(
-                default_get_moment,
+        if moment is None:
+            moment = functools.partial(
+                default_moment,
                 rv_name=name,
                 has_fallback=random is not None,
                 ndim_supp=ndim_supp,
@@ -856,9 +856,9 @@ class DensityDist(NoDistribution):
             value_var = rvs_to_values.get(var, var)
             return logcdf(value_var, *dist_params, **kwargs)
 
-        @_get_moment.register(rv_type)
+        @_moment.register(rv_type)
         def density_dist_get_moment(op, rv, rng, size, dtype, *dist_params):
-            return get_moment(rv, size, *dist_params)
+            return moment(rv, size, *dist_params)
 
         cls.rv_op = rv_op
         return super().__new__(cls, name, *dist_params, **kwargs)
@@ -888,7 +888,7 @@ def default_not_implemented(rv_name, method_name):
     return func
 
 
-def default_get_moment(rv, size, *rv_inputs, rv_name=None, has_fallback=False, ndim_supp=0):
+def default_moment(rv, size, *rv_inputs, rv_name=None, has_fallback=False, ndim_supp=0):
     if ndim_supp == 0:
         return at.zeros(size, dtype=rv.dtype)
     elif has_fallback:
@@ -896,6 +896,6 @@ def default_get_moment(rv, size, *rv_inputs, rv_name=None, has_fallback=False, n
     else:
         raise TypeError(
             "Cannot safely infer the size of a multivariate random variable's moment. "
-            f"Please provide a get_moment function when instantiating the {rv_name} "
+            f"Please provide a moment function when instantiating the {rv_name} "
             "random variable."
         )

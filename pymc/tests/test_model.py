@@ -22,7 +22,6 @@ import cloudpickle
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
-import pandas as pd
 import pytest
 import scipy.sparse as sps
 import scipy.stats as st
@@ -216,6 +215,7 @@ def test_duplicate_vars():
 
 
 def test_empty_observed():
+    pd = pytest.importorskip("pandas")
     data = pd.DataFrame(np.ones((2, 3)) / 3)
     data.values[:] = np.nan
     with pm.Model():
