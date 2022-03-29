@@ -86,7 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Cache conda
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if environment-test-py37.yml has not changed
           CACHE_NUMBER: 0
@@ -95,7 +95,7 @@ jobs:
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
             hashFiles('conda-envs/environment-test-py37.yml') }}
       - name: Cache multiple paths
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if requirements.txt has not changed
           CACHE_NUMBER: 0
@@ -154,7 +154,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Cache conda
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if conda-envs/environment-test-py38.yml has not changed
           CACHE_NUMBER: 0
@@ -163,7 +163,7 @@ jobs:
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
             hashFiles('conda-envs/windows-environment-test-py38.yml') }}
       - name: Cache multiple paths
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if requirements.txt has not changed
           CACHE_NUMBER: 0
@@ -230,7 +230,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Cache conda
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if environment-test-py39.yml has not changed
           CACHE_NUMBER: 0
@@ -239,7 +239,7 @@ jobs:
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
             hashFiles('conda-envs/environment-test-py39.yml') }}
       - name: Cache multiple paths
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if requirements.txt has not changed
           CACHE_NUMBER: 0
@@ -292,7 +292,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Cache conda
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if environment-test-py39.yml has not changed
           CACHE_NUMBER: 0
@@ -301,7 +301,7 @@ jobs:
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
             hashFiles('conda-envs/environment-test-py39.yml') }}
       - name: Cache multiple paths
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if requirements.txt has not changed
           CACHE_NUMBER: 0
@@ -359,7 +359,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Cache conda
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if conda-envs/environment-test-py38.yml has not changed
           CACHE_NUMBER: 0
@@ -368,7 +368,7 @@ jobs:
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
             hashFiles('conda-envs/windows-environment-test-py38.yml') }}
       - name: Cache multiple paths
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if requirements.txt has not changed
           CACHE_NUMBER: 0

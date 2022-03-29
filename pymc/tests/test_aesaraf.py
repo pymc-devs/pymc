@@ -19,7 +19,6 @@ import aesara.tensor as at
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
-import pandas as pd
 import pytest
 import scipy.sparse as sps
 
@@ -387,6 +386,7 @@ def test_pandas_to_array(input_dtype):
     Ensure that pandas_to_array returns the dense array, masked array,
     graph variable, TensorVariable, or sparse matrix as appropriate.
     """
+    pd = pytest.importorskip("pandas")
     # Create the various inputs to the function
     sparse_input = sps.csr_matrix(np.eye(3)).astype(input_dtype)
     dense_input = np.arange(9).reshape((3, 3)).astype(input_dtype)
@@ -462,6 +462,7 @@ def test_pandas_to_array(input_dtype):
 
 
 def test_pandas_to_array_pandas_index():
+    pd = pytest.importorskip("pandas")
     data = pd.Index([1, 2, 3])
     result = pandas_to_array(data)
     expected = np.array([1, 2, 3])
@@ -604,3 +605,26 @@ def test_compile_pymc_with_updates():
     f = compile_pymc([], x, updates={x: x + 1})
     assert f() == 0
     assert f() == 1
+
+
+def test_compile_pymc_missing_default_explicit_updates():
+    rng = aesara.shared(np.random.default_rng(0))
+    x = pm.Normal.dist(rng=rng)
+
+    # By default, compile_pymc should update the rng of x
+    f = compile_pymc([], x)
+    assert f() != f()
+
+    # An explicit update should override the default_update, like aesara.function does
+    # For testing purposes, we use an update that leaves the rng unchanged
+    f = compile_pymc([], x, updates={rng: rng})
+    assert f() == f()
+
+    # If we specify a custom default_update directly it should use that instead.
+    rng.default_update = rng
+    f = compile_pymc([], x)
+    assert f() == f()
+
+    # And again, it should be overridden by an explicit update
+    f = compile_pymc([], x, updates={rng: x.owner.outputs[0]})
+    assert f() != f()
