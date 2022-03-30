@@ -367,13 +367,11 @@ class TestShapeDimsSize:
             assert y.eval().shape == (3, 2)
             assert z.eval().shape == (3, 2)
 
-    @pytest.mark.xfail(reason="https://github.com/pymc-devs/aesara/issues/390")
-    def test_size32_doesnt_break_broadcasting():
+    def test_size32_doesnt_break_broadcasting(self):
         size32 = at.constant([1, 10], dtype="int32")
         rv = pm.Normal.dist(0, 1, size=size32)
         assert rv.broadcastable == (True, False)
 
-    @pytest.mark.xfail(reason="https://github.com/pymc-devs/aesara/issues/390")
     def test_observed_with_column_vector(self):
         """This test is related to https://github.com/pymc-devs/aesara/issues/390 which breaks
         broadcastability of column-vector RVs. This unexpected change in type can lead to
@@ -381,21 +379,23 @@ class TestShapeDimsSize:
         """
         with pm.Model() as model:
             # The `observed` is a broadcastable column vector
-            obs = at.as_tensor_variable(np.ones((3, 1), dtype=aesara.config.floatX))
-            assert obs.broadcastable == (False, True)
+            obs = [
+                at.as_tensor_variable(np.ones((3, 1), dtype=aesara.config.floatX)) for _ in range(4)
+            ]
+            assert all(obs_.broadcastable == (False, True) for obs_ in obs)
 
             # Both shapes describe broadcastable volumn vectors
             size64 = at.constant([3, 1], dtype="int64")
             # But the second shape is upcasted from an int32 vector
             cast64 = at.cast(at.constant([3, 1], dtype="int32"), dtype="int64")
 
-            pm.Normal("size64", mu=0, sigma=1, size=size64, observed=obs)
-            pm.Normal("shape64", mu=0, sigma=1, shape=size64, observed=obs)
-            model.logp()
+            pm.Normal("size64", mu=0, sigma=1, size=size64, observed=obs[0])
+            pm.Normal("shape64", mu=0, sigma=1, shape=size64, observed=obs[1])
+            assert model.compile_logp()({})
 
-            pm.Normal("size_cast64", mu=0, sigma=1, size=cast64, observed=obs)
-            pm.Normal("shape_cast64", mu=0, sigma=1, shape=cast64, observed=obs)
-            model.logp()
+            pm.Normal("size_cast64", mu=0, sigma=1, size=cast64, observed=obs[2])
+            pm.Normal("shape_cast64", mu=0, sigma=1, shape=cast64, observed=obs[3])
+            assert model.compile_logp()({})
 
     def test_dist_api_works(self):
         mu = aesara.shared(np.array([1, 2, 3]))
