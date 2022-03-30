@@ -19,22 +19,26 @@ import numpy as np
 
 from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 from aeppl.logprob import _logcdf, _logprob
+from aeppl.transforms import IntervalTransform
 from aesara.compile.builders import OpFromGraph
+from aesara.graph.basic import equal_computations
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
 from pymc.aesaraf import change_rv_size
+from pymc.distributions import transforms
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import (
     Discrete,
     Distribution,
     SymbolicDistribution,
-    _get_moment,
-    get_moment,
+    _moment,
+    moment,
 )
 from pymc.distributions.logprob import logcdf, logp
 from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.transforms import _default_transform
 from pymc.util import check_dist_not_registered
 from pymc.vartypes import discrete_types
 
@@ -53,6 +57,8 @@ def all_discrete(comp_dists):
 
 class MarginalMixtureRV(OpFromGraph):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
+
+    default_output = 1
 
 
 MeasurableVariable.register(MarginalMixtureRV)
@@ -288,11 +294,11 @@ class Mixture(SymbolicDistribution):
         )
 
         # Create the actual MarginalMixture variable
-        mix_indexes_rng_next, mix_out = mix_op(mix_indexes_rng, weights, *components)
+        mix_out = mix_op(mix_indexes_rng, weights, *components)
 
         # We need to set_default_updates ourselves, because the choices RV is hidden
         # inside OpFromGraph and PyMC will never find it otherwise
-        mix_indexes_rng.default_update = mix_indexes_rng_next
+        mix_indexes_rng.default_update = mix_out.owner.outputs[0]
 
         # Reference nodes to facilitate identification in other classmethods
         mix_out.tag.weights = weights
@@ -438,25 +444,102 @@ def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
     return mix_logcdf
 
 
-@_get_moment.register(MarginalMixtureRV)
-def get_moment_marginal_mixture(op, rv, rng, weights, *components):
+@_moment.register(MarginalMixtureRV)
+def marginal_mixture_moment(op, rv, rng, weights, *components):
     ndim_supp = components[0].owner.op.ndim_supp
     weights = at.shape_padright(weights, ndim_supp)
     mix_axis = -ndim_supp - 1
 
     if len(components) == 1:
-        moment_components = get_moment(components[0])
+        moment_components = moment(components[0])
 
     else:
         moment_components = at.stack(
-            [get_moment(component) for component in components],
+            [moment(component) for component in components],
             axis=mix_axis,
         )
 
-    moment = at.sum(weights * moment_components, axis=mix_axis)
+    mix_moment = at.sum(weights * moment_components, axis=mix_axis)
     if components[0].dtype in discrete_types:
-        moment = at.round(moment)
-    return moment
+        mix_moment = at.round(mix_moment)
+    return mix_moment
+
+
+# List of transforms that can be used by Mixture, either because they do not require
+# special handling or because we have custom logic to enable them. If new default
+# transforms are implemented, this list and function should be updated
+allowed_default_mixture_transforms = (
+    transforms.CholeskyCovPacked,
+    transforms.CircularTransform,
+    transforms.IntervalTransform,
+    transforms.LogTransform,
+    transforms.LogExpM1,
+    transforms.LogOddsTransform,
+    transforms.Ordered,
+    transforms.Simplex,
+    transforms.SumTo1,
+)
+
+
+class MixtureTransformWarning(UserWarning):
+    pass
+
+
+@_default_transform.register(MarginalMixtureRV)
+def marginal_mixture_default_transform(op, rv):
+    def transform_warning():
+        warnings.warn(
+            f"No safe default transform found for Mixture distribution {rv}. This can "
+            "happen when compoments have different supports or default transforms.\n"
+            "If appropriate, you can specify a custom transform for more efficient sampling.",
+            MixtureTransformWarning,
+            stacklevel=2,
+        )
+
+    rng, weights, *components = rv.owner.inputs
+
+    default_transforms = [
+        _default_transform(component.owner.op, component) for component in components
+    ]
+
+    # If there are more than one type of default transforms, we do not apply any
+    if len({type(transform) for transform in default_transforms}) != 1:
+        transform_warning()
+        return None
+
+    default_transform = default_transforms[0]
+
+    if not isinstance(default_transform, allowed_default_mixture_transforms):
+        transform_warning()
+        return None
+
+    if isinstance(default_transform, IntervalTransform):
+        # If there are more than one component, we need to check the IntervalTransform
+        # of the components are actually equivalent (e.g., we don't have an
+        # Interval(0, 1), and an Interval(0, 2)).
+        if len(default_transforms) > 1:
+            value = rv.type()
+            backward_expressions = [
+                transform.backward(value, *component.owner.inputs)
+                for transform, component in zip(default_transforms, components)
+            ]
+            for expr1, expr2 in zip(backward_expressions[:-1], backward_expressions[1:]):
+                if not equal_computations([expr1], [expr2]):
+                    transform_warning()
+                    return None
+
+        # We need to create a new IntervalTransform that expects the Mixture inputs
+        args_fn = default_transform.args_fn
+
+        def mixture_args_fn(rng, weights, *components):
+            # We checked that the interval transforms of each component are equivalent,
+            # so we can just pass the inputs of the first component
+            return args_fn(*components[0].owner.inputs)
+
+        return IntervalTransform(args_fn=mixture_args_fn)
+
+    else:
+        return default_transform
 
 
 class NormalMixture:

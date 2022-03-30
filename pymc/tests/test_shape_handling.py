@@ -101,20 +101,6 @@ def samples_to_broadcast_to(request, samples_to_broadcast):
     return to_shape, size, samples, broadcast_shape
 
 
-@pytest.fixture
-def fixture_model():
-    with pm.Model() as model:
-        n = 5
-        dim = 4
-        with pm.Model():
-            cov = pm.InverseGamma("cov", alpha=1, beta=1)
-            x = pm.Normal("x", mu=np.ones((dim,)), sigma=pm.math.sqrt(cov), shape=(n, dim))
-            eps = pm.HalfNormal("eps", np.ones((n, 1)), shape=(n, dim))
-            mu = pm.Deterministic("mu", at.sum(x + eps, axis=-1))
-            y = pm.Normal("y", mu=mu, sigma=1, shape=(n,))
-    return model, [cov, x, eps, y]
-
-
 class TestShapesBroadcasting:
     @pytest.mark.parametrize(
         "bad_input",
@@ -213,16 +199,6 @@ class TestSamplesBroadcasting:
         else:
             with pytest.raises(ValueError):
                 broadcast_dist_samples_to(to_shape, samples, size=size)
-
-
-@pytest.mark.xfail(reason="InverseGamma was not yet refactored")
-def test_sample_generate_values(fixture_model, fixture_sizes):
-    model, RVs = fixture_model
-    size = to_tuple(fixture_sizes)
-    with model:
-        prior = pm.sample_prior_predictive(samples=fixture_sizes)
-        for rv in RVs:
-            assert prior[rv.name].shape == size + tuple(rv.distribution.shape)
 
 
 class TestShapeDimsSize:
@@ -367,13 +343,11 @@ class TestShapeDimsSize:
             assert y.eval().shape == (3, 2)
             assert z.eval().shape == (3, 2)
 
-    @pytest.mark.xfail(reason="https://github.com/pymc-devs/aesara/issues/390")
-    def test_size32_doesnt_break_broadcasting():
+    def test_size32_doesnt_break_broadcasting(self):
         size32 = at.constant([1, 10], dtype="int32")
         rv = pm.Normal.dist(0, 1, size=size32)
         assert rv.broadcastable == (True, False)
 
-    @pytest.mark.xfail(reason="https://github.com/pymc-devs/aesara/issues/390")
     def test_observed_with_column_vector(self):
         """This test is related to https://github.com/pymc-devs/aesara/issues/390 which breaks
         broadcastability of column-vector RVs. This unexpected change in type can lead to
@@ -381,21 +355,23 @@ class TestShapeDimsSize:
         """
         with pm.Model() as model:
             # The `observed` is a broadcastable column vector
-            obs = at.as_tensor_variable(np.ones((3, 1), dtype=aesara.config.floatX))
-            assert obs.broadcastable == (False, True)
+            obs = [
+                at.as_tensor_variable(np.ones((3, 1), dtype=aesara.config.floatX)) for _ in range(4)
+            ]
+            assert all(obs_.broadcastable == (False, True) for obs_ in obs)
 
             # Both shapes describe broadcastable volumn vectors
             size64 = at.constant([3, 1], dtype="int64")
             # But the second shape is upcasted from an int32 vector
             cast64 = at.cast(at.constant([3, 1], dtype="int32"), dtype="int64")
 
-            pm.Normal("size64", mu=0, sigma=1, size=size64, observed=obs)
-            pm.Normal("shape64", mu=0, sigma=1, shape=size64, observed=obs)
-            model.logp()
+            pm.Normal("size64", mu=0, sigma=1, size=size64, observed=obs[0])
+            pm.Normal("shape64", mu=0, sigma=1, shape=size64, observed=obs[1])
+            assert model.compile_logp()({})
 
-            pm.Normal("size_cast64", mu=0, sigma=1, size=cast64, observed=obs)
-            pm.Normal("shape_cast64", mu=0, sigma=1, shape=cast64, observed=obs)
-            model.logp()
+            pm.Normal("size_cast64", mu=0, sigma=1, size=cast64, observed=obs[2])
+            pm.Normal("shape_cast64", mu=0, sigma=1, shape=cast64, observed=obs[3])
+            assert model.compile_logp()({})
 
     def test_dist_api_works(self):
         mu = aesara.shared(np.array([1, 2, 3]))
@@ -470,3 +446,33 @@ class TestShapeDimsSize:
     def test_invalid_flavors(self):
         with pytest.raises(ValueError, match="Passing both"):
             pm.Normal.dist(0, 1, shape=(3,), size=(3,))
+
+    def test_size_from_dims_rng_update(self):
+        """Test that when setting size from dims we update the rng properly
+        See https://github.com/pymc-devs/pymc/issues/5653
+        """
+        with pm.Model(coords=dict(x_dim=range(2))):
+            x = pm.Normal("x", dims=("x_dim",))
+
+        fn = pm.aesaraf.compile_pymc([], x)
+        # Check that both function outputs (rng and draws) come from the same Apply node
+        assert fn.maker.fgraph.outputs[0].owner is fn.maker.fgraph.outputs[1].owner
+
+        # Confirm that the rng is properly offset, otherwise the second value of the first
+        # draw, would match the first value of the second draw
+        assert fn()[1] != fn()[0]
+
+    def test_size_from_observed_rng_update(self):
+        """Test that when setting size from observed we update the rng properly
+        See https://github.com/pymc-devs/pymc/issues/5653
+        """
+        with pm.Model():
+            x = pm.Normal("x", observed=[0, 1])
+
+        fn = pm.aesaraf.compile_pymc([], x)
+        # Check that both function outputs (rng and draws) come from the same Apply node
+        assert fn.maker.fgraph.outputs[0].owner is fn.maker.fgraph.outputs[1].owner
+
+        # Confirm that the rng is properly offset, otherwise the second value of the first
+        # draw, would match the first value of the second draw
+        assert fn()[1] != fn()[0]

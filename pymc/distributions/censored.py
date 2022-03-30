@@ -18,7 +18,7 @@ from aesara.scalar import Clip
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
-from pymc.distributions.distribution import SymbolicDistribution, _get_moment
+from pymc.distributions.distribution import SymbolicDistribution, _moment
 from pymc.util import check_dist_not_registered
 
 
@@ -124,8 +124,8 @@ class Censored(SymbolicDistribution):
         return (rv.tag.dist,)
 
 
-@_get_moment.register(Clip)
-def get_moment_censored(op, rv, dist, lower, upper):
+@_moment.register(Clip)
+def moment_censored(op, rv, dist, lower, upper):
     moment = at.switch(
         at.eq(lower, -np.inf),
         at.switch(

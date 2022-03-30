@@ -18,11 +18,11 @@ from functools import reduce
 import aesara
 import aesara.sparse as sparse
 import aesara.tensor as at
+import arviz as az
 import cloudpickle
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
-import pandas as pd
 import pytest
 import scipy.sparse as sps
 import scipy.stats as st
@@ -95,20 +95,20 @@ class TestBaseModel:
                 usermodel2.register_rv(pm.Normal.dist(), "v3")
                 pm.Normal("v4")
                 # this variable is created in parent model too
-        assert "another/v2" in model.named_vars
-        assert "another/v3" in model.named_vars
-        assert "another/v3" in usermodel2.named_vars
-        assert "another/v4" in model.named_vars
-        assert "another/v4" in usermodel2.named_vars
+        assert "another::v2" in model.named_vars
+        assert "another::v3" in model.named_vars
+        assert "another::v3" in usermodel2.named_vars
+        assert "another::v4" in model.named_vars
+        assert "another::v4" in usermodel2.named_vars
         assert hasattr(usermodel2, "v3")
         assert hasattr(usermodel2, "v2")
         assert hasattr(usermodel2, "v4")
         # When you create a class based model you should follow some rules
         with model:
             m = NewModel("one_more")
-        assert m.d is model["one_more/d"]
-        assert m["d"] is model["one_more/d"]
-        assert m["one_more/d"] is model["one_more/d"]
+        assert m.d is model["one_more::d"]
+        assert m["d"] is model["one_more::d"]
+        assert m["one_more::d"] is model["one_more::d"]
 
 
 class TestNested:
@@ -124,8 +124,8 @@ class TestNested:
     def test_named_context(self):
         with pm.Model() as m:
             NewModel(name="new")
-        assert "new/v1" in m.named_vars
-        assert "new/v2" in m.named_vars
+        assert "new::v1" in m.named_vars
+        assert "new::v2" in m.named_vars
 
     def test_docstring_example1(self):
         usage1 = DocstringModel()
@@ -138,10 +138,10 @@ class TestNested:
     def test_docstring_example2(self):
         with pm.Model() as model:
             DocstringModel(name="prefix")
-        assert "prefix/v1" in model.named_vars
-        assert "prefix/v2" in model.named_vars
-        assert "prefix/v3" in model.named_vars
-        assert "prefix/v3_sq" in model.named_vars
+        assert "prefix::v1" in model.named_vars
+        assert "prefix::v2" in model.named_vars
+        assert "prefix::v3" in model.named_vars
+        assert "prefix::v3_sq" in model.named_vars
         assert len(model.potentials), 1
 
     def test_duplicates_detection(self):
@@ -161,14 +161,30 @@ class TestNested:
             b = pm.Normal("var")
             with pm.Model("sub"):
                 b = pm.Normal("var")
-        assert {"sub/var", "sub/sub/var"} == set(model.named_vars.keys())
+        assert {"sub::var", "sub::sub::var"} == set(model.named_vars.keys())
 
     def test_nested_named_model(self):
         with pm.Model("sub1") as model:
             b = pm.Normal("var")
             with pm.Model("sub2"):
                 b = pm.Normal("var")
-        assert {"sub1/var", "sub1/sub2/var"} == set(model.named_vars.keys())
+        assert {"sub1::var", "sub1::sub2::var"} == set(model.named_vars.keys())
+
+    def test_nested_model_to_netcdf(self, tmp_path):
+        with pm.Model("scope") as model:
+            b = pm.Normal("var")
+            trace = pm.sample(100, tune=0)
+        az.to_netcdf(trace, tmp_path / "trace.nc")
+        trace1 = az.from_netcdf(tmp_path / "trace.nc")
+        assert "scope::var" in trace1.posterior
+
+    def test_bad_name(self):
+        with pm.Model() as model:
+            with pytest.raises(KeyError):
+                b = pm.Normal("var::")
+        with pytest.raises(KeyError):
+            with pm.Model("scope::") as model:
+                b = pm.Normal("v")
 
 
 class TestObserved:
@@ -216,6 +232,7 @@ def test_duplicate_vars():
 
 
 def test_empty_observed():
+    pd = pytest.importorskip("pandas")
     data = pd.DataFrame(np.ones((2, 3)) / 3)
     data.values[:] = np.nan
     with pm.Model():

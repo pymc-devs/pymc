@@ -87,9 +87,8 @@ from pymc.distributions.dist_math import (
 )
 from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous
 from pymc.distributions.shape_utils import rv_size_is_none
-from pymc.distributions.transforms import _get_default_transform
+from pymc.distributions.transforms import _default_transform
 from pymc.math import invlogit, logdiffexp, logit
-from pymc.util import UNSET
 
 __all__ = [
     "Uniform",
@@ -140,63 +139,56 @@ class CircularContinuous(Continuous):
     """Base class for circular continuous distributions"""
 
 
-@_get_default_transform.register(PositiveContinuous)
-def pos_cont_transform(op):
-    return transforms.log
-
-
-@_get_default_transform.register(UnitContinuous)
-def unit_cont_transform(op):
-    return transforms.logodds
-
-
-@_get_default_transform.register(CircularContinuous)
-def circ_cont_transform(op):
-    return transforms.circular
-
-
 class BoundedContinuous(Continuous):
     """Base class for bounded continuous distributions"""
 
     # Indices of the arguments that define the lower and upper bounds of the distribution
     bound_args_indices: Optional[List[int]] = None
 
-    def __new__(cls, *args, **kwargs):
-        transform = kwargs.get("transform", UNSET)
-        if transform is UNSET:
-            kwargs["transform"] = cls.default_transform()
-        return super().__new__(cls, *args, **kwargs)
 
-    @classmethod
-    def default_transform(cls):
-        if cls.bound_args_indices is None:
-            raise ValueError(
-                f"Must specify bound_args_indices for {cls.__name__} bounded distribution"
-            )
+@_default_transform.register(PositiveContinuous)
+def pos_cont_transform(op, rv):
+    return transforms.log
 
-        def transform_params(*args):
 
-            lower, upper = None, None
-            if cls.bound_args_indices[0] is not None:
-                lower = args[cls.bound_args_indices[0]]
-            if cls.bound_args_indices[1] is not None:
-                upper = args[cls.bound_args_indices[1]]
+@_default_transform.register(UnitContinuous)
+def unit_cont_transform(op, rv):
+    return transforms.logodds
 
-            if lower is not None:
-                if isinstance(lower, TensorConstant) and np.all(lower.value == -np.inf):
-                    lower = None
-                else:
-                    lower = at.as_tensor_variable(lower)
 
-            if upper is not None:
-                if isinstance(upper, TensorConstant) and np.all(upper.value == np.inf):
-                    upper = None
-                else:
-                    upper = at.as_tensor_variable(upper)
+@_default_transform.register(CircularContinuous)
+def circ_cont_transform(op, rv):
+    return transforms.circular
 
-            return lower, upper
 
-        return transforms.Interval(bounds_fn=transform_params)
+@_default_transform.register(BoundedContinuous)
+def bounded_cont_transform(op, rv, bound_args_indices=None):
+    if bound_args_indices is None:
+        raise ValueError(f"Must specify bound_args_indices for {op} bounded distribution")
+
+    def transform_params(*args):
+
+        lower, upper = None, None
+        if bound_args_indices[0] is not None:
+            lower = args[bound_args_indices[0]]
+        if bound_args_indices[1] is not None:
+            upper = args[bound_args_indices[1]]
+
+        if lower is not None:
+            if isinstance(lower, TensorConstant) and np.all(lower.value == -np.inf):
+                lower = None
+            else:
+                lower = at.as_tensor_variable(lower)
+
+        if upper is not None:
+            if isinstance(upper, TensorConstant) and np.all(upper.value == np.inf):
+                upper = None
+            else:
+                upper = at.as_tensor_variable(upper)
+
+        return lower, upper
+
+    return transforms.Interval(bounds_fn=transform_params)
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):
@@ -291,10 +283,10 @@ class Uniform(BoundedContinuous):
 
     Parameters
     ----------
-    lower : float, optional
-        Lower limit. Defaults to 0.
-    upper : float, optional
-        Upper limit. Defaults to 1.
+    lower : tensor_like of float, default 0
+        Lower limit.
+    upper : tensor_like of float, default 1
+        Upper limit.
     """
     rv_op = uniform
     bound_args_indices = (3, 4)  # Lower, Upper
@@ -305,7 +297,7 @@ class Uniform(BoundedContinuous):
         upper = at.as_tensor_variable(floatX(upper))
         return super().dist([lower, upper], **kwargs)
 
-    def get_moment(rv, size, lower, upper):
+    def moment(rv, size, lower, upper):
         lower, upper = at.broadcast_arrays(lower, upper)
         moment = (lower + upper) / 2
         if not rv_size_is_none(size):
@@ -319,13 +311,9 @@ class Uniform(BoundedContinuous):
 
         Parameters
         ----------
-        value : numeric or ndarray or TensorVariable
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or `TensorVariable`.
-        lower : float, optional
-            Lower limit. Defaults to 0.
-        upper : float, optional
-            Upper limit. Defaults to 1.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -340,6 +328,11 @@ class Uniform(BoundedContinuous):
                 0,
             ),
         )
+
+
+@_default_transform.register(Uniform)
+def uniform_default_transform(op, rv):
+    return bounded_cont_transform(op, rv, Uniform.bound_args_indices)
 
 
 class FlatRV(RandomVariable):
@@ -374,7 +367,7 @@ class Flat(Continuous):
         res = super().dist([], size=size, **kwargs)
         return res
 
-    def get_moment(rv, size):
+    def moment(rv, size):
         return at.zeros(size)
 
     def logp(value):
@@ -385,7 +378,7 @@ class Flat(Continuous):
         ----------
         value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -442,7 +435,7 @@ class HalfFlat(PositiveContinuous):
         res = super().dist([], size=size, **kwargs)
         return res
 
-    def get_moment(rv, size):
+    def moment(rv, size):
         return at.ones(size)
 
     def logp(value):
@@ -453,7 +446,7 @@ class HalfFlat(PositiveContinuous):
         ----------
         value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -560,7 +553,7 @@ class Normal(Continuous):
 
         return super().dist([mu, sigma], **kwargs)
 
-    def get_moment(rv, size, mu, sigma):
+    def moment(rv, size, mu, sigma):
         mu, _ = at.broadcast_arrays(mu, sigma)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -575,11 +568,7 @@ class Normal(Continuous):
         ----------
         value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or `TensorVariable`.
-        mu : tensor_like of float
-            Mean.
-        sigma : tensor_like of float
-            Standard deviation (sigma > 0).
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -724,7 +713,7 @@ class TruncatedNormal(BoundedContinuous):
         upper = at.as_tensor_variable(floatX(upper)) if upper is not None else at.constant(np.inf)
         return super().dist([mu, sigma, lower, upper], **kwargs)
 
-    def get_moment(rv, size, mu, sigma, lower, upper):
+    def moment(rv, size, mu, sigma, lower, upper):
         mu, _, lower, upper = at.broadcast_arrays(mu, sigma, lower, upper)
         moment = at.switch(
             at.eq(lower, -np.inf),
@@ -796,6 +785,11 @@ class TruncatedNormal(BoundedContinuous):
         return check_parameters(logp, *bounds)
 
 
+@_default_transform.register(TruncatedNormal)
+def truncated_normal_default_transform(op, rv):
+    return bounded_cont_transform(op, rv, TruncatedNormal.bound_args_indices)
+
+
 class HalfNormal(PositiveContinuous):
     r"""
     Half-normal log-likelihood.
@@ -818,9 +812,10 @@ class HalfNormal(PositiveContinuous):
        the standard deviation/precision of the unfolded normal distribution, for
        the standard deviation of the half-normal distribution, see below. For
        the half-normal, they are just two parameterisation :math:`\sigma^2
-       \equiv \frac{1}{\tau}` of a scale parameter
+       \equiv \frac{1}{\tau}` of a scale parameter.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -844,10 +839,12 @@ class HalfNormal(PositiveContinuous):
 
     Parameters
     ----------
-    sigma: float
-        Scale parameter :math:`sigma` (``sigma`` > 0) (only required if ``tau`` is not specified).
-    tau: float
-        Precision :math:`tau` (tau > 0) (only required if sigma is not specified).
+    sigma : tensor_like of float, optional
+        Scale parameter :math:`\sigma` (``sigma`` > 0) (only required if ``tau`` is not specified).
+        Defaults to 1.
+    tau : tensor_like of float, optional
+        Precision :math:`\tau` (tau > 0) (only required if sigma is not specified).
+        Defaults to 1.
 
     Examples
     --------
@@ -870,7 +867,7 @@ class HalfNormal(PositiveContinuous):
 
         return super().dist([0.0, sigma], **kwargs)
 
-    def get_moment(rv, size, loc, sigma):
+    def moment(rv, size, loc, sigma):
         moment = loc + sigma
         if not rv_size_is_none(size):
             moment = at.full(size, moment)
@@ -883,7 +880,7 @@ class HalfNormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -935,6 +932,7 @@ class Wald(PositiveContinuous):
            \right\}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -967,13 +965,13 @@ class Wald(PositiveContinuous):
 
     Parameters
     ----------
-    mu: float, optional
+    mu : tensor_like of float, optional
         Mean of the distribution (mu > 0).
-    lam: float, optional
+    lam : tensor_like of float, optional
         Relative precision (lam > 0).
-    phi: float, optional
+    phi : tensor_like of float, optional
         Alternative shape parameter (phi > 0).
-    alpha: float, optional
+    alpha : tensor_like of float, default 0
         Shift/location parameter (alpha >= 0).
 
     Notes
@@ -1021,7 +1019,7 @@ class Wald(PositiveContinuous):
 
         return super().dist([mu, lam, alpha], **kwargs)
 
-    def get_moment(rv, size, mu, lam, alpha):
+    def moment(rv, size, mu, lam, alpha):
         mu, _, _ = at.broadcast_arrays(mu, lam, alpha)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -1060,14 +1058,14 @@ class Wald(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-        mu: float or TensorVariable
+            values are desired the values must be provided in a numpy array or Aesara tensor.
+        mu : tensor_like of float
             Mean of the distribution (mu > 0).
-        lam: float or TensorVariable
+        lam : tensor_like of float
             Relative precision (lam > 0).
-        alpha: float or TensorVariable
+        alpha : tensor_like of float
             Shift/location parameter (alpha >= 0).
 
         Returns
@@ -1105,14 +1103,14 @@ class Wald(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
-        mu: float or TensorVariable
+        mu : tensor_like of float
             Mean of the distribution (mu > 0).
-        lam: float or TensorVariable
+        lam : tensor_like of float
             Relative precision (lam > 0).
-        alpha: float or TensorVariable
+        alpha : tensor_like of float
             Shift/location parameter (alpha >= 0).
 
         Returns
@@ -1229,7 +1227,7 @@ class Beta(UnitContinuous):
 
         return super().dist([alpha, beta], **kwargs)
 
-    def get_moment(rv, size, alpha, beta):
+    def moment(rv, size, alpha, beta):
         mean = alpha / (alpha + beta)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -1360,7 +1358,7 @@ class Kumaraswamy(UnitContinuous):
 
         return super().dist([a, b], *args, **kwargs)
 
-    def get_moment(rv, size, a, b):
+    def moment(rv, size, a, b):
         mean = at.exp(at.log(b) + at.gammaln(1 + 1 / a) + at.gammaln(b) - at.gammaln(1 + 1 / a + b))
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -1467,7 +1465,7 @@ class Exponential(PositiveContinuous):
     Parameters
     ----------
     lam : tensor_like of float
-        Rate or inverse scale (``lam`` > 0)
+        Rate or inverse scale (``lam`` > 0).
     """
     rv_op = exponential
 
@@ -1480,7 +1478,7 @@ class Exponential(PositiveContinuous):
         # Aesara exponential op is parametrized in terms of mu (1/lam)
         return super().dist([at.inv(lam)], **kwargs)
 
-    def get_moment(rv, size, mu):
+    def moment(rv, size, mu):
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
         return mu
@@ -1564,7 +1562,7 @@ class Laplace(Continuous):
         assert_negative_support(b, "b", "Laplace")
         return super().dist([mu, b], *args, **kwargs)
 
-    def get_moment(rv, size, mu, b):
+    def moment(rv, size, mu, b):
         mu, _ = at.broadcast_arrays(mu, b)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -1648,12 +1646,12 @@ class AsymmetricLaplace(Continuous):
 
     Parameters
     ----------
-    b: float
-        Scale parameter (b > 0)
-    kappa: float
-        Symmetry parameter (kappa > 0)
-    mu: float
-        Location parameter
+    b : tensor_like of float
+        Scale parameter (b > 0).
+    kappa : tensor_like of float
+        Symmetry parameter (kappa > 0).
+    mu : tensor_like of float, default 0
+        Location parameter.
 
     See Also:
     --------
@@ -1675,7 +1673,7 @@ class AsymmetricLaplace(Continuous):
 
         return super().dist([b, kappa, mu], *args, **kwargs)
 
-    def get_moment(rv, size, b, kappa, mu):
+    def moment(rv, size, b, kappa, mu):
         mean = mu - (kappa - 1 / kappa) / b
 
         if not rv_size_is_none(size):
@@ -1688,9 +1686,9 @@ class AsymmetricLaplace(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1786,7 +1784,7 @@ class LogNormal(PositiveContinuous):
 
         return super().dist([mu, sigma], *args, **kwargs)
 
-    def get_moment(rv, size, mu, sigma):
+    def moment(rv, size, mu, sigma):
         mean = at.exp(mu + 0.5 * sigma**2)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -1911,7 +1909,7 @@ class StudentT(Continuous):
 
         return super().dist([nu, mu, sigma], **kwargs)
 
-    def get_moment(rv, size, nu, mu, sigma):
+    def moment(rv, size, nu, mu, sigma):
         mu, _, _ = at.broadcast_arrays(mu, nu, sigma)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -1982,6 +1980,7 @@ class Pareto(BoundedContinuous):
        f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2008,9 +2007,9 @@ class Pareto(BoundedContinuous):
 
     Parameters
     ----------
-    alpha: float
+    alpha : tensor_like of float
         Shape parameter (alpha > 0).
-    m: float
+    m : tensor_like of float
         Scale parameter (m > 0).
     """
     rv_op = pareto
@@ -2028,7 +2027,7 @@ class Pareto(BoundedContinuous):
 
         return super().dist([alpha, m], **kwargs)
 
-    def get_moment(rv, size, alpha, m):
+    def moment(rv, size, alpha, m):
         median = m * 2 ** (1 / alpha)
         if not rv_size_is_none(size):
             median = at.full(size, median)
@@ -2045,7 +2044,7 @@ class Pareto(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -2066,6 +2065,11 @@ class Pareto(BoundedContinuous):
         )
 
         return check_parameters(res, 0 < alpha, 0 < m, msg="alpha > 0, m > 0")
+
+
+@_default_transform.register(Pareto)
+def pareto_default_transform(op, rv):
+    return bounded_cont_transform(op, rv, Pareto.bound_args_indices)
 
 
 class Cauchy(Continuous):
@@ -2124,7 +2128,7 @@ class Cauchy(Continuous):
         assert_negative_support(beta, "beta", "Cauchy")
         return super().dist([alpha, beta], **kwargs)
 
-    def get_moment(rv, size, alpha, beta):
+    def moment(rv, size, alpha, beta):
         alpha, _ = at.broadcast_arrays(alpha, beta)
         if not rv_size_is_none(size):
             alpha = at.full(size, alpha)
@@ -2200,7 +2204,7 @@ class HalfCauchy(PositiveContinuous):
         assert_negative_support(beta, "beta", "HalfCauchy")
         return super().dist([0.0, beta], **kwargs)
 
-    def get_moment(rv, size, loc, beta):
+    def moment(rv, size, loc, beta):
         if not rv_size_is_none(size):
             beta = at.full(size, beta)
         return beta
@@ -2323,7 +2327,7 @@ class Gamma(PositiveContinuous):
 
         return alpha, beta
 
-    def get_moment(rv, size, alpha, inv_beta):
+    def moment(rv, size, alpha, inv_beta):
         # The Aesara `GammaRV` `Op` inverts the `beta` parameter itself
         mean = alpha * inv_beta
         if not rv_size_is_none(size):
@@ -2340,7 +2344,7 @@ class Gamma(PositiveContinuous):
         value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
-            array or `TensorVariable`.
+            array or Aesara tensor.
 
         Returns
         -------
@@ -2418,7 +2422,7 @@ class InverseGamma(PositiveContinuous):
 
         return super().dist([alpha, beta], **kwargs)
 
-    def get_moment(rv, size, alpha, beta):
+    def moment(rv, size, alpha, beta):
         mean = beta / (alpha - 1.0)
         mode = beta / (alpha + 1.0)
         moment = at.switch(alpha > 1, mean, mode)
@@ -2493,6 +2497,7 @@ class ChiSquared(PositiveContinuous):
        f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2517,7 +2522,7 @@ class ChiSquared(PositiveContinuous):
 
     Parameters
     ----------
-    nu: float
+    nu : tensor_like of float
         Degrees of freedom (nu > 0).
     """
     rv_op = chisquare
@@ -2527,7 +2532,7 @@ class ChiSquared(PositiveContinuous):
         nu = at.as_tensor_variable(floatX(nu))
         return super().dist([nu], *args, **kwargs)
 
-    def get_moment(rv, size, nu):
+    def moment(rv, size, nu):
         moment = nu
         if not rv_size_is_none(size):
             moment = at.full(size, moment)
@@ -2540,10 +2545,11 @@ class ChiSquared(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or `TensorVariable`
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
-            array or `TensorVariable`.
+            array or Aesara tensor.
+
         Returns
         -------
         TensorVariable
@@ -2621,7 +2627,7 @@ class Weibull(PositiveContinuous):
 
         return super().dist([alpha, beta], *args, **kwargs)
 
-    def get_moment(rv, size, alpha, beta):
+    def moment(rv, size, alpha, beta):
         mean = beta * at.gamma(1 + 1 / alpha)
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -2634,7 +2640,7 @@ class Weibull(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -2740,7 +2746,7 @@ class HalfStudentT(PositiveContinuous):
 
         return super().dist([nu, sigma], *args, **kwargs)
 
-    def get_moment(rv, size, nu, sigma):
+    def moment(rv, size, nu, sigma):
         sigma, _ = at.broadcast_arrays(sigma, nu)
         if not rv_size_is_none(size):
             sigma = at.full(size, sigma)
@@ -2813,6 +2819,7 @@ class ExGaussian(Continuous):
     standard normal distribution.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2839,11 +2846,11 @@ class ExGaussian(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Mean of the normal distribution.
-    sigma: float
+    sigma : tensor_like of float
         Standard deviation of the normal distribution (sigma > 0).
-    nu: float
+    nu : tensor_like of float
         Mean of the exponential distribution (nu > 0).
 
     References
@@ -2871,7 +2878,7 @@ class ExGaussian(Continuous):
 
         return super().dist([mu, sigma, nu], *args, **kwargs)
 
-    def get_moment(rv, size, mu, sigma, nu):
+    def moment(rv, size, mu, sigma, nu):
         mu, nu, _ = at.broadcast_arrays(mu, nu, sigma)
         moment = mu + nu
         if not rv_size_is_none(size):
@@ -2884,9 +2891,9 @@ class ExGaussian(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -2924,7 +2931,7 @@ class ExGaussian(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -2964,6 +2971,7 @@ class VonMises(CircularContinuous):
     where :math:`I_0` is the modified Bessel function of order 0.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -2989,9 +2997,9 @@ class VonMises(CircularContinuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Mean.
-    kappa: float
+    kappa : tensor_like of float
         Concentration (\frac{1}{kappa} is analogous to \sigma^2).
     """
 
@@ -3004,7 +3012,7 @@ class VonMises(CircularContinuous):
         assert_negative_support(kappa, "kappa", "VonMises")
         return super().dist([mu, kappa], *args, **kwargs)
 
-    def get_moment(rv, size, mu, kappa):
+    def moment(rv, size, mu, kappa):
         mu, _ = at.broadcast_arrays(mu, kappa)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -3032,7 +3040,7 @@ class SkewNormal(Continuous):
     r"""
     Univariate skew-normal log-likelihood.
 
-     The pdf of this distribution is
+    The pdf of this distribution is
 
     .. math::
 
@@ -3040,6 +3048,7 @@ class SkewNormal(Continuous):
        2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3070,13 +3079,15 @@ class SkewNormal(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Location parameter.
-    sigma: float
+    sigma : tensor_like of float, optional
         Scale parameter (sigma > 0).
-    tau: float
+        Defaults to 1.
+    tau : tensor_like of float, optional
         Alternative scale parameter (tau > 0).
-    alpha: float
+        Defaults to 1.
+    alpha : tensor_like of float, default 1
         Skewness parameter.
 
     Notes
@@ -3101,7 +3112,7 @@ class SkewNormal(Continuous):
 
         return super().dist([mu, sigma, alpha], *args, **kwargs)
 
-    def get_moment(rv, size, mu, sigma, alpha):
+    def moment(rv, size, mu, sigma, alpha):
         mean = mu + sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha**2) ** 0.5
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -3113,9 +3124,9 @@ class SkewNormal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3133,7 +3144,7 @@ class SkewNormal(Continuous):
 
 class Triangular(BoundedContinuous):
     r"""
-    Continuous Triangular log-likelihood
+    Continuous Triangular log-likelihood.
 
     The pdf of this distribution is
 
@@ -3148,6 +3159,7 @@ class Triangular(BoundedContinuous):
         \end{cases}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3178,11 +3190,11 @@ class Triangular(BoundedContinuous):
 
     Parameters
     ----------
-    lower: float
+    lower : tensor_like of float, default 0
         Lower limit.
-    c: float
-        mode
-    upper: float
+    c : tensor_like of float, default 0.5
+        Mode.
+    upper : tensor_like of float, default 1
         Upper limit.
     """
 
@@ -3197,7 +3209,7 @@ class Triangular(BoundedContinuous):
 
         return super().dist([lower, c, upper], *args, **kwargs)
 
-    def get_moment(rv, size, lower, c, upper):
+    def moment(rv, size, lower, c, upper):
         mean = (lower + upper + c) / 3
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -3210,7 +3222,7 @@ class Triangular(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -3240,9 +3252,14 @@ class Triangular(BoundedContinuous):
         )
 
 
+@_default_transform.register(Triangular)
+def triangular_default_transform(op, rv):
+    return bounded_cont_transform(op, rv, Triangular.bound_args_indices)
+
+
 class Gumbel(Continuous):
     r"""
-        Univariate Gumbel log-likelihood
+    Univariate Gumbel log-likelihood.
 
     The pdf of this distribution is
 
@@ -3257,6 +3274,7 @@ class Gumbel(Continuous):
         z = \frac{x - \mu}{\beta}.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3283,9 +3301,9 @@ class Gumbel(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float
         Location parameter.
-    beta: float
+    beta : tensor_like of float
         Scale parameter (beta > 0).
     """
     rv_op = gumbel
@@ -3303,7 +3321,7 @@ class Gumbel(Continuous):
 
         return super().dist([mu, beta], **kwargs)
 
-    def get_moment(rv, size, mu, beta):
+    def moment(rv, size, mu, beta):
         mean = mu + beta * np.euler_gamma
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -3323,7 +3341,7 @@ class Gumbel(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -3362,6 +3380,7 @@ class Rice(PositiveContinuous):
        \left({\frac  {-(x^{2}+\nu ^{2})}{2\sigma ^{2}}}\right)I_{0}\left({\frac  {x\nu }{\sigma ^{2}}}\right),
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3388,12 +3407,12 @@ class Rice(PositiveContinuous):
 
     Parameters
     ----------
-    nu: float
-        noncentrality parameter.
-    sigma: float
+    nu : tensor_like of float, optional
+        Noncentrality parameter (only required if b is not specified).
+    sigma : tensor_like of float, default 1
         scale parameter.
-    b: float
-        shape parameter (alternative to nu).
+    b : tensor_like of float, optional
+        Shape parameter (alternative to nu, only required if nu is not specified).
 
     Notes
     -----
@@ -3432,7 +3451,7 @@ class Rice(PositiveContinuous):
             return nu, b, sigma
         raise ValueError("Rice distribution must specify either nu" " or b.")
 
-    def get_moment(rv, size, nu, sigma):
+    def moment(rv, size, nu, sigma):
         nu_sigma_ratio = -(nu**2) / (2 * sigma**2)
         mean = (
             sigma
@@ -3454,9 +3473,9 @@ class Rice(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3490,6 +3509,7 @@ class Logistic(Continuous):
            \frac{\exp\left(-\frac{x - \mu}{s}\right)}{s \left(1 + \exp\left(-\frac{x - \mu}{s}\right)\right)^2}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3516,9 +3536,9 @@ class Logistic(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Mean.
-    s: float
+    s : tensor_like of float, default 1
         Scale (s > 0).
     """
 
@@ -3530,7 +3550,7 @@ class Logistic(Continuous):
         s = at.as_tensor_variable(floatX(s))
         return super().dist([mu, s], *args, **kwargs)
 
-    def get_moment(rv, size, mu, s):
+    def moment(rv, size, mu, s):
         mu, _ = at.broadcast_arrays(mu, s)
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
@@ -3543,7 +3563,7 @@ class Logistic(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -3588,6 +3608,7 @@ class LogitNormal(UnitContinuous):
 
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3612,12 +3633,14 @@ class LogitNormal(UnitContinuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Location parameter.
-    sigma: float
+    sigma : tensor_like of float, optional
         Scale parameter (sigma > 0).
-    tau: float
+        Defaults to 1.
+    tau : tensor_like of float, optional
         Scale parameter (tau > 0).
+        Defaults to 1.
     """
     rv_op = logit_normal
 
@@ -3632,7 +3655,7 @@ class LogitNormal(UnitContinuous):
 
         return super().dist([mu, sigma], **kwargs)
 
-    def get_moment(rv, size, mu, sigma):
+    def moment(rv, size, mu, sigma):
         median, _ = at.broadcast_arrays(invlogit(mu), sigma)
         if not rv_size_is_none(size):
             median = at.full(size, median)
@@ -3644,9 +3667,9 @@ class LogitNormal(UnitContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3715,6 +3738,7 @@ class Interpolated(BoundedContinuous):
     plain array-like objects, so they are constant and cannot be sampled.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3742,25 +3766,14 @@ class Interpolated(BoundedContinuous):
 
     Parameters
     ----------
-    x_points: array-like
-        A monotonically growing list of values. Must be non-symbolic
-    pdf_points: array-like
+    x_points : array_like
+        A monotonically growing list of values. Must be non-symbolic.
+    pdf_points : array_like
         Probability density function evaluated on lattice ``x_points``. Must
-        be non-symbolic
+        be non-symbolic.
     """
 
     rv_op = interpolated
-
-    def __new__(cls, *args, **kwargs):
-        transform = kwargs.get("transform", UNSET)
-        if transform is UNSET:
-
-            def transform_params(*params):
-                _, _, _, x_points, _, _ = params
-                return floatX(x_points[0]), floatX(x_points[-1])
-
-            kwargs["transform"] = transforms.Interval(bounds_fn=transform_params)
-        return super().__new__(cls, *args, **kwargs)
 
     @classmethod
     def dist(cls, x_points, pdf_points, *args, **kwargs):
@@ -3781,7 +3794,7 @@ class Interpolated(BoundedContinuous):
 
         return super().dist([x_points, pdf_points, cdf_points], **kwargs)
 
-    def get_moment(rv, size, x_points, pdf_points, cdf_points):
+    def moment(rv, size, x_points, pdf_points, cdf_points):
         # cdf_points argument is unused
         moment = at.sum(at.mul(x_points, pdf_points))
 
@@ -3796,9 +3809,9 @@ class Interpolated(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3815,8 +3828,14 @@ class Interpolated(BoundedContinuous):
 
         return at.log(interp_op(value) / Z)
 
-    def _distr_parameters_for_repr(self):
-        return []
+
+@_default_transform.register(Interpolated)
+def interpolated_default_transform(op, rv):
+    def transform_params(*params):
+        _, _, _, x_points, _, _ = params
+        return floatX(x_points[0]), floatX(x_points[-1])
+
+    return transforms.Interval(bounds_fn=transform_params)
 
 
 class MoyalRV(RandomVariable):
@@ -3851,6 +3870,7 @@ class Moyal(Continuous):
        z = \frac{x-\mu}{\sigma}.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -3876,9 +3896,9 @@ class Moyal(Continuous):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float, default 0
         Location parameter.
-    sigma: float
+    sigma : tensor_like of float, default 1
         Scale parameter (sigma > 0).
     """
     rv_op = moyal
@@ -3892,7 +3912,7 @@ class Moyal(Continuous):
 
         return super().dist([mu, sigma], *args, **kwargs)
 
-    def get_moment(rv, size, mu, sigma):
+    def moment(rv, size, mu, sigma):
         mean = mu + sigma * (np.euler_gamma + at.log(2))
 
         if not rv_size_is_none(size):
@@ -3905,9 +3925,9 @@ class Moyal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3924,7 +3944,7 @@ class Moyal(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or aesara.tensor
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or Aesara tensor.
 
@@ -4035,6 +4055,7 @@ class PolyaGamma(PositiveContinuous):
     random variable with shape  parameter ``h`` and scale parameter ``1``.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -4059,9 +4080,9 @@ class PolyaGamma(PositiveContinuous):
 
     Parameters
     ----------
-    h: float, optional
+    h : tensor_like of float, default 1
         The shape parameter of the distribution (h > 0).
-    z: float, optional
+    z : tensor_like of float, default 0
         The exponential tilting parameter of the distribution.
 
     Examples
@@ -4082,7 +4103,7 @@ class PolyaGamma(PositiveContinuous):
            108.504 (2013): 1339-1349.
     .. [2] Windle, Jesse, Nicholas G. Polson, and James G. Scott.
            "Sampling Polya-Gamma random variates: alternate and approximate
-           techniques." arXiv preprint arXiv:1405.0506 (2014)
+           techniques." arXiv preprint arXiv:1405.0506 (2014).
     .. [3] Luc Devroye. "On exact simulation algorithms for some distributions
            related to Jacobi theta functions." Statistics & Probability Letters,
            Volume 79, Issue 21, (2009): 2251-2259.
@@ -4105,7 +4126,7 @@ class PolyaGamma(PositiveContinuous):
 
         return super().dist([h, z], **kwargs)
 
-    def get_moment(rv, size, h, z):
+    def moment(rv, size, h, z):
         mean = at.switch(at.eq(z, 0), h / 4, tanh(z / 2) * (h / (2 * z)))
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -4117,7 +4138,7 @@ class PolyaGamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value : tensor_like of float
             Value(s) for which log-probability is calculated. If the log
             probabilities for multiple values are desired the values must be
             provided in a numpy array.
@@ -4145,7 +4166,7 @@ class PolyaGamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or `TensorVariable`
+        value : tensor_like of float
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array.
 

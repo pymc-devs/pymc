@@ -19,7 +19,6 @@ import aesara.tensor as at
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
-import pandas as pd
 import pytest
 import scipy.sparse as sps
 
@@ -93,6 +92,28 @@ def test_change_rv_size():
     rv_newer = change_rv_size(rv, new_size=new_size, expand=True)
     assert rv_newer.ndim == 1
     assert tuple(rv_newer.shape.eval()) == (2,)
+
+
+def test_change_rv_size_default_update():
+    rng = aesara.shared(np.random.default_rng(0))
+    x = normal(rng=rng)
+
+    # Test that "traditional" default_update is updated
+    rng.default_update = x.owner.outputs[0]
+    new_x = change_rv_size(x, new_size=(2,))
+    assert rng.default_update is not x.owner.outputs[0]
+    assert rng.default_update is new_x.owner.outputs[0]
+
+    # Test that "non-traditional" default_update is left unchanged
+    next_rng = aesara.shared(np.random.default_rng(1))
+    rng.default_update = next_rng
+    new_x = change_rv_size(x, new_size=(2,))
+    assert rng.default_update is next_rng
+
+    # Test that default_update is not set if there was none before
+    del rng.default_update
+    new_x = change_rv_size(x, new_size=(2,))
+    assert not hasattr(rng, "default_update")
 
 
 class TestBroadcasting:
@@ -380,6 +401,14 @@ def test_extract_obs_data():
     assert isinstance(res, np.ndarray)
     assert np.ma.allequal(res, data_m)
 
+    # Cast check
+    data = np.array(5)
+    t = at.cast(at.as_tensor(5.0), np.int64)
+    res = extract_obs_data(t)
+
+    assert isinstance(res, np.ndarray)
+    assert np.array_equal(res, data)
+
 
 @pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
 def test_pandas_to_array(input_dtype):
@@ -387,6 +416,7 @@ def test_pandas_to_array(input_dtype):
     Ensure that pandas_to_array returns the dense array, masked array,
     graph variable, TensorVariable, or sparse matrix as appropriate.
     """
+    pd = pytest.importorskip("pandas")
     # Create the various inputs to the function
     sparse_input = sps.csr_matrix(np.eye(3)).astype(input_dtype)
     dense_input = np.arange(9).reshape((3, 3)).astype(input_dtype)
@@ -462,6 +492,7 @@ def test_pandas_to_array(input_dtype):
 
 
 def test_pandas_to_array_pandas_index():
+    pd = pytest.importorskip("pandas")
     data = pd.Index([1, 2, 3])
     result = pandas_to_array(data)
     expected = np.array([1, 2, 3])
@@ -604,3 +635,52 @@ def test_compile_pymc_with_updates():
     f = compile_pymc([], x, updates={x: x + 1})
     assert f() == 0
     assert f() == 1
+
+
+def test_compile_pymc_missing_default_explicit_updates():
+    rng = aesara.shared(np.random.default_rng(0))
+    x = pm.Normal.dist(rng=rng)
+
+    # By default, compile_pymc should update the rng of x
+    f = compile_pymc([], x)
+    assert f() != f()
+
+    # An explicit update should override the default_update, like aesara.function does
+    # For testing purposes, we use an update that leaves the rng unchanged
+    f = compile_pymc([], x, updates={rng: rng})
+    assert f() == f()
+
+    # If we specify a custom default_update directly it should use that instead.
+    rng.default_update = rng
+    f = compile_pymc([], x)
+    assert f() == f()
+
+    # And again, it should be overridden by an explicit update
+    f = compile_pymc([], x, updates={rng: x.owner.outputs[0]})
+    assert f() != f()
+
+
+def test_compile_pymc_updates_inputs():
+    """Test that compile_pymc does not include rngs updates of variables that are inputs
+    or ancestors to inputs
+    """
+    x = at.random.normal()
+    y = at.random.normal(x)
+    z = at.random.normal(y)
+
+    for inputs, rvs_in_graph in (
+        ([], 3),
+        ([x], 2),
+        ([y], 1),
+        ([z], 0),
+        ([x, y], 1),
+        ([x, y, z], 0),
+    ):
+        fn = compile_pymc(inputs, z, on_unused_input="ignore")
+        fn_fgraph = fn.maker.fgraph
+        # Each RV adds a shared input for its rng
+        assert len(fn_fgraph.inputs) == len(inputs) + rvs_in_graph
+        # If the output is an input, the graph has a DeepCopyOp
+        assert len(fn_fgraph.apply_nodes) == max(rvs_in_graph, 1)
+        # Each RV adds a shared output for its rng
+        assert len(fn_fgraph.outputs) == 1 + rvs_in_graph

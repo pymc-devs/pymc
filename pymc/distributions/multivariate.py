@@ -56,15 +56,15 @@ from pymc.distributions.dist_math import (
     logpow,
     multigammaln,
 )
-from pymc.distributions.distribution import Continuous, Discrete, get_moment
+from pymc.distributions.distribution import Continuous, Discrete, moment
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
     rv_size_is_none,
     to_tuple,
 )
-from pymc.distributions.transforms import Interval
+from pymc.distributions.transforms import Interval, _default_transform
 from pymc.math import kron_diag, kron_dot
-from pymc.util import UNSET, check_dist_not_registered
+from pymc.util import check_dist_not_registered
 
 __all__ = [
     "MvNormal",
@@ -82,6 +82,16 @@ __all__ = [
     "CAR",
     "StickBreakingWeights",
 ]
+
+
+class SimplexContinuous(Continuous):
+    """Base class for simplex continuous distributions"""
+
+
+@_default_transform.register(SimplexContinuous)
+def simplex_cont_transform(op, rv):
+    return transforms.simplex
+
 
 # Step methods and advi do not catch LinAlgErrors at the
 # moment. We work around that by using a cholesky op
@@ -244,7 +254,7 @@ class MvNormal(Continuous):
         mu = at.broadcast_arrays(mu, cov[..., -1])[0]
         return super().dist([mu, cov], **kwargs)
 
-    def get_moment(rv, size, mu, cov):
+    def moment(rv, size, mu, cov):
         moment = mu
         if not rv_size_is_none(size):
             moment_size = at.concatenate([size, [mu.shape[-1]]])
@@ -373,7 +383,7 @@ class MvStudentT(Continuous):
         assert_negative_support(nu, "nu", "MvStudentT")
         return super().dist([nu, mu, cov], **kwargs)
 
-    def get_moment(rv, size, nu, mu, cov):
+    def moment(rv, size, nu, mu, cov):
         moment = mu
         if not rv_size_is_none(size):
             moment_size = at.concatenate([size, [mu.shape[-1]]])
@@ -408,7 +418,7 @@ class MvStudentT(Continuous):
         )
 
 
-class Dirichlet(Continuous):
+class Dirichlet(SimplexContinuous):
     r"""
     Dirichlet log-likelihood.
 
@@ -434,10 +444,6 @@ class Dirichlet(Continuous):
     """
     rv_op = dirichlet
 
-    def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("transform", transforms.simplex)
-        return super().__new__(cls, name, *args, **kwargs)
-
     @classmethod
     def dist(cls, a, **kwargs):
         a = at.as_tensor_variable(a)
@@ -446,7 +452,7 @@ class Dirichlet(Continuous):
 
         return super().dist([a], **kwargs)
 
-    def get_moment(rv, size, a):
+    def moment(rv, size, a):
         norm_constant = at.sum(a, axis=-1)[..., None]
         moment = a / norm_constant
         if not rv_size_is_none(size):
@@ -557,7 +563,7 @@ class Multinomial(Discrete):
         p = at.as_tensor_variable(p)
         return super().dist([n, p], *args, **kwargs)
 
-    def get_moment(rv, size, n, p):
+    def moment(rv, size, n, p):
         n = at.shape_padright(n)
         mode = at.round(n * p)
         diff = n - at.sum(mode, axis=-1, keepdims=True)
@@ -677,9 +683,9 @@ class DirichletMultinomial(Discrete):
 
         return super().dist([n, a], **kwargs)
 
-    def get_moment(rv, size, n, a):
+    def moment(rv, size, n, a):
         p = a / at.sum(a, axis=-1, keepdims=True)
-        return get_moment(Multinomial.dist(n=n, p=p, size=size))
+        return moment(Multinomial.dist(n=n, p=p, size=size))
 
     def logp(value, n, a):
         """
@@ -1169,12 +1175,7 @@ class _LKJCholeskyCov(Continuous):
     rv_op = _ljk_cholesky_cov
 
     def __new__(cls, name, eta, n, sd_dist, **kwargs):
-        transform = kwargs.get("transform", UNSET)
-        if transform is UNSET:
-            kwargs["transform"] = transforms.CholeskyCovPacked(n)
-
         check_dist_not_registered(sd_dist)
-
         return super().__new__(cls, name, eta, n, sd_dist, **kwargs)
 
     @classmethod
@@ -1212,7 +1213,7 @@ class _LKJCholeskyCov(Continuous):
 
         return super().dist([n, eta, sd_dist], size=size, **kwargs)
 
-    def get_moment(rv, size, n, eta, sd_dists):
+    def moment(rv, size, n, eta, sd_dists):
         diag_idxs = (at.cumsum(at.arange(1, n + 1)) - 1).astype("int32")
         moment = at.zeros_like(rv)
         moment = at.set_subtensor(moment[..., diag_idxs], 1)
@@ -1267,6 +1268,12 @@ class _LKJCholeskyCov(Continuous):
         norm = _lkj_normalizing_constant(eta, n)
 
         return norm + logp_lkj + logp_sd + det_invjac
+
+
+@_default_transform.register(_LKJCholeskyCov)
+def lkjcholeskycov_default_transform(op, rv):
+    _, _, _, n, _, _ = rv.owner.inputs
+    return transforms.CholeskyCovPacked(n)
 
 
 class LKJCholeskyCov:
@@ -1551,19 +1558,13 @@ class LKJCorr(BoundedContinuous):
 
     rv_op = lkjcorr
 
-    def __new__(cls, *args, **kwargs):
-        transform = kwargs.get("transform", UNSET)
-        if transform is UNSET:
-            kwargs["transform"] = Interval(floatX(-1.0), floatX(1.0))
-        return super().__new__(cls, *args, **kwargs)
-
     @classmethod
     def dist(cls, n, eta, **kwargs):
         n = at.as_tensor_variable(intX(n))
         eta = at.as_tensor_variable(floatX(eta))
         return super().dist([n, eta], **kwargs)
 
-    def get_moment(rv, *args):
+    def moment(rv, *args):
         return at.zeros_like(rv)
 
     def logp(value, n, eta):
@@ -1608,6 +1609,11 @@ class LKJCorr(BoundedContinuous):
             matrix_pos_def(value),
             eta > 0,
         )
+
+
+@_default_transform.register(LKJCorr)
+def lkjcorr_default_transform(op, rv):
+    return Interval(floatX(-1.0), floatX(1.0))
 
 
 class MatrixNormalRV(RandomVariable):
@@ -1785,7 +1791,7 @@ class MatrixNormal(Continuous):
 
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
 
-    def get_moment(rv, size, mu, rowchol, colchol):
+    def moment(rv, size, mu, rowchol, colchol):
         return at.full_like(rv, mu)
 
     def logp(value, mu, rowchol, colchol):
@@ -1966,7 +1972,7 @@ class KroneckerNormal(Continuous):
 
         return super().dist([mu, sigma, *covs], **kwargs)
 
-    def get_moment(rv, size, mu, covs, chols, evds):
+    def moment(rv, size, mu, covs, chols, evds):
         mean = mu
         if not rv_size_is_none(size):
             moment_size = at.concatenate([size, mu.shape])
@@ -2143,7 +2149,7 @@ class CAR(Continuous):
     def dist(cls, mu, W, alpha, tau, *args, **kwargs):
         return super().dist([mu, W, alpha, tau], **kwargs)
 
-    def get_moment(rv, size, mu, W, alpha, tau):
+    def moment(rv, size, mu, W, alpha, tau):
         return at.full_like(rv, mu)
 
     def logp(value, mu, W, alpha, tau):
@@ -2261,7 +2267,7 @@ class StickBreakingWeightsRV(RandomVariable):
 stickbreakingweights = StickBreakingWeightsRV()
 
 
-class StickBreakingWeights(Continuous):
+class StickBreakingWeights(SimplexContinuous):
     r"""
     Likelihood of truncated stick-breaking weights. The weights are generated from a
     stick-breaking proceduce where :math:`x_k = v_k \prod_{\ell < k} (1 - v_\ell)` for
@@ -2298,10 +2304,6 @@ class StickBreakingWeights(Continuous):
     """
     rv_op = stickbreakingweights
 
-    def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("transform", transforms.simplex)
-        return super().__new__(cls, name, *args, **kwargs)
-
     @classmethod
     def dist(cls, alpha, K, *args, **kwargs):
         alpha = at.as_tensor_variable(floatX(alpha))
@@ -2312,7 +2314,7 @@ class StickBreakingWeights(Continuous):
 
         return super().dist([alpha, K], **kwargs)
 
-    def get_moment(rv, size, alpha, K):
+    def moment(rv, size, alpha, K):
         moment = (alpha / (1 + alpha)) ** at.arange(K)
         moment *= 1 / (1 + alpha)
         moment = at.concatenate([moment, [(alpha / (1 + alpha)) ** K]], axis=-1)
