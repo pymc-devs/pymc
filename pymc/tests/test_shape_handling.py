@@ -101,20 +101,6 @@ def samples_to_broadcast_to(request, samples_to_broadcast):
     return to_shape, size, samples, broadcast_shape
 
 
-@pytest.fixture
-def fixture_model():
-    with pm.Model() as model:
-        n = 5
-        dim = 4
-        with pm.Model():
-            cov = pm.InverseGamma("cov", alpha=1, beta=1)
-            x = pm.Normal("x", mu=np.ones((dim,)), sigma=pm.math.sqrt(cov), shape=(n, dim))
-            eps = pm.HalfNormal("eps", np.ones((n, 1)), shape=(n, dim))
-            mu = pm.Deterministic("mu", at.sum(x + eps, axis=-1))
-            y = pm.Normal("y", mu=mu, sigma=1, shape=(n,))
-    return model, [cov, x, eps, y]
-
-
 class TestShapesBroadcasting:
     @pytest.mark.parametrize(
         "bad_input",
@@ -213,16 +199,6 @@ class TestSamplesBroadcasting:
         else:
             with pytest.raises(ValueError):
                 broadcast_dist_samples_to(to_shape, samples, size=size)
-
-
-@pytest.mark.xfail(reason="InverseGamma was not yet refactored")
-def test_sample_generate_values(fixture_model, fixture_sizes):
-    model, RVs = fixture_model
-    size = to_tuple(fixture_sizes)
-    with model:
-        prior = pm.sample_prior_predictive(samples=fixture_sizes)
-        for rv in RVs:
-            assert prior[rv.name].shape == size + tuple(rv.distribution.shape)
 
 
 class TestShapeDimsSize:
