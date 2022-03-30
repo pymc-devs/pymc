@@ -19,8 +19,7 @@ import numpy as np
 import pytest
 import scipy.stats as st
 
-from aeppl.transforms import IntervalTransform, LogTransform
-from aeppl.transforms import Simplex as SimplexTransform
+from aeppl.transforms import IntervalTransform, LogTransform, SimplexTransform
 from aesara import tensor as at
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
