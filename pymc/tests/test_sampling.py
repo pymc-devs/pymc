@@ -830,6 +830,32 @@ class TestSamplePPC(SeededTest):
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_posterior_predictive(trace)
 
+    def test_idata_extension(self):
+        """Testing if sample_posterior_predictive() extends inferenceData"""
+
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0)
+            a = pm.Normal("a", mu=mu, sigma=1, observed=[0.0, 1.0])
+            idata = pm.sample(tune=10, draws=10, compute_convergence_checks=False)
+
+        # before extension these groups are not present
+        assert not "posterior_predictive" in idata.groups()
+        assert not "predictions" in idata.groups()
+
+        # extending idata with in-sample ppc
+        with model:
+            ppc = pm.sample_posterior_predictive(idata, extend_inferencedata=True)
+        # test addition
+        assert "posterior_predictive" in idata.groups()
+        assert not "predictions" in idata.groups()
+
+        # extending idata with out-of-sample ppc
+        with model:
+            ppc = pm.sample_posterior_predictive(idata, extend_inferencedata=True, predictions=True)
+        # test addition
+        assert "posterior_predictive" in idata.groups()
+        assert "predictions" in idata.groups()
+
 
 class TestSamplePPCW(SeededTest):
     @pytest.mark.xfail(reason="sample_posterior_predictive_w not refactored for v4")
