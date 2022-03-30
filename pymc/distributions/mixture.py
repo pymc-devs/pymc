@@ -274,10 +274,7 @@ class Mixture(SymbolicDistribution):
 
         # Index components and squeeze mixture dimension
         mix_out_ = at.take_along_axis(stacked_components_, mix_indexes_padded_, axis=mix_axis)
-        # There is a Aesara bug in squeeze with negative axis
-        # https://github.com/aesara-devs/aesara/issues/830
-        # this is equivalent to np.squeeze(mix_out_, axis=mix_axis)
-        mix_out_ = at.squeeze(mix_out_, axis=mix_out_.ndim + mix_axis)
+        mix_out_ = at.squeeze(mix_out_, axis=mix_axis)
 
         # Output mix_indexes rng update so that it can be updated in place
         mix_indexes_rng_next_ = mix_indexes_.owner.outputs[0]
@@ -458,7 +455,7 @@ allowed_default_mixture_transforms = (
     transforms.LogExpM1,
     transforms.LogOddsTransform,
     transforms.Ordered,
-    transforms.Simplex,
+    transforms.SimplexTransform,
     transforms.SumTo1,
 )
 
