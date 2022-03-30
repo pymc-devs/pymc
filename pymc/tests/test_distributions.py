@@ -2619,6 +2619,22 @@ class TestMatchesScipy:
             assert not np.isfinite(m.compile_logp()({"x": -1.0}))
             assert not np.isfinite(m.compile_logp()({"x": 11.0}))
 
+    def test_gaussianrandomwalk(self):
+        def ref_logp(value, mu, sigma, steps):
+            # Relying on fact that init will be normal by default
+            return (
+                scipy.stats.norm.logpdf(value[0], mu, sigma)
+                + scipy.stats.norm.logpdf(np.diff(value), mu, sigma).sum()
+            )
+
+        self.check_logp(
+            pm.GaussianRandomWalk,
+            Vector(R, 4),
+            {"mu": R, "sigma": Rplus, "steps": Nat},
+            ref_logp,
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+
 
 class TestBound:
     """Tests for pm.Bound distribution"""

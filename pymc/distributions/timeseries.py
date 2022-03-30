@@ -12,15 +12,20 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from typing import Tuple, Union
+
 import aesara.tensor as at
 import numpy as np
 
 from aesara import scan
-from scipy import stats
+from aesara.tensor.random.op import RandomVariable
 
-from pymc.distributions import distribution, multivariate
+from pymc.aesaraf import change_rv_size, floatX, intX
+from pymc.distributions import distribution, logprob, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
+from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.shape_utils import to_tuple
+from pymc.util import check_dist_not_registered
 
 __all__ = [
     "AR1",
@@ -31,6 +36,189 @@ __all__ = [
     "MvGaussianRandomWalk",
     "MvStudentTRandomWalk",
 ]
+
+
+class GaussianRandomWalkRV(RandomVariable):
+    """
+    GaussianRandomWalk Random Variable
+    """
+
+    name = "GaussianRandomWalk"
+    ndim_supp = 1
+    ndims_params = [0, 0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
+
+    def _supp_shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
+        steps = dist_params[3]
+
+        return (steps + 1,)
+
+    @classmethod
+    def rng_fn(
+        cls,
+        rng: np.random.RandomState,
+        mu: Union[np.ndarray, float],
+        sigma: Union[np.ndarray, float],
+        init: float,
+        steps: int,
+        size: Tuple[int],
+    ) -> np.ndarray:
+        """Gaussian Random Walk generator.
+
+        The init value is drawn from the Normal distribution with the same sigma as the
+        innovations.
+
+        Notes
+        -----
+        Currently does not support custom init distribution
+
+        Parameters
+        ----------
+        rng: np.random.RandomState
+           Numpy random number generator
+        mu: array_like
+           Random walk mean
+        sigma: np.ndarray
+            Standard deviation of innovation (sigma > 0)
+        init: float
+            Initialization value for GaussianRandomWalk
+        steps: int
+            Length of random walk, must be greater than 1. Returned array will be of size+1 to
+            account as first value is initial value
+        size: int
+            The number of Random Walk time series generated
+
+        Returns
+        -------
+        ndarray
+        """
+
+        if steps is None or steps < 1:
+            raise ValueError("Steps must be None or greater than 0")
+
+        # If size is None then the returned series should be (1+steps,)
+        if size is None:
+            init_size = 1
+            steps_size = steps
+
+        # If size is None then the returned series should be (size, 1+steps)
+        else:
+            init_size = (*size, 1)
+            steps_size = (*size, steps)
+
+        init = np.reshape(init, init_size)
+        steps = rng.normal(loc=mu, scale=sigma, size=steps_size)
+
+        grw = np.concatenate([init, steps], axis=-1)
+
+        return np.cumsum(grw, axis=-1)
+
+
+gaussianrandomwalk = GaussianRandomWalkRV()
+
+
+class GaussianRandomWalk(distribution.Continuous):
+    r"""Random Walk with Normal innovations
+
+
+    Notes
+    -----
+    init is currently drawn from a Normal distribution with the same sigma as the innovations
+
+    Parameters
+    ----------
+    mu: tensor_like of float
+        innovation drift, defaults to 0.0
+    sigma: tensor_like of float, optional
+        sigma > 0, innovation standard deviation, defaults to 0.0
+    init: Scalar PyMC distribution
+        Scalar distribution of the initial value, created with the `.dist()` API. Defaults to
+        Normal with same `mu` and `sigma` as the GaussianRandomWalk
+    steps: int
+        Number of steps in Gaussian Random Walks
+    size: int
+        Number of independent Gaussian Random Walks
+    """
+
+    rv_op = gaussianrandomwalk
+
+    def __new__(cls, name, mu=0.0, sigma=1.0, init=None, steps: int = 1, **kwargs):
+        check_dist_not_registered(init)
+        return super().__new__(cls, name, mu, sigma, init, steps, **kwargs)
+
+    @classmethod
+    def dist(
+        cls, mu=0.0, sigma=1.0, init=None, steps: int = 1, size=None, **kwargs
+    ) -> at.TensorVariable:
+
+        mu = at.as_tensor_variable(floatX(mu))
+        sigma = at.as_tensor_variable(floatX(sigma))
+        steps = at.as_tensor_variable(intX(steps))
+
+        if "shape" in kwargs.keys():
+            shape = kwargs["shape"]
+        else:
+            shape = None
+
+        # If no scalar distribution is passed then initialize with a Normal of same sd and mu
+        if init is None:
+            init = Normal.dist(mu, sigma, size=size)
+        else:
+            if not (
+                isinstance(init, at.TensorVariable)
+                and init.owner is not None
+                and isinstance(init.owner.op, RandomVariable)
+                and init.owner.op.ndim_supp == 0
+            ):
+                raise TypeError("init must be a univariate distribution variable")
+
+            if size is not None or shape is not None:
+                init = change_rv_size(init, to_tuple(size or shape))
+            else:
+                # If not explicit, size is determined by the shape of mu and sigma
+                mu_ = at.broadcast_arrays(mu, sigma)[0]
+                init = change_rv_size(init, mu_.shape)
+
+        # Ignores logprob of init var because that's accounted for in the logp method
+        init.tag.ignore_logprob = True
+
+        return super().dist([mu, sigma, init, steps], size=size, **kwargs)
+
+    def logp(
+        value: at.Variable,
+        mu: at.Variable,
+        sigma: at.Variable,
+        init: at.Variable,
+        steps: at.Variable,
+    ) -> at.TensorVariable:
+        """Calculate log-probability of Gaussian Random Walk distribution at specified value.
+
+        Parameters
+        ----------
+        value: at.Variable,
+        mu: at.Variable,
+        sigma: at.Variable,
+        init: at.Variable, Not used
+        steps: at.Variable, Not used
+
+        Returns
+        -------
+        TensorVariable
+        """
+
+        # Calculate initialization logp
+        init_logp = logprob.logp(init, value[..., 0])
+
+        # Make time series stationary around the mean value
+        stationary_series = value[..., 1:] - value[..., :-1]
+        series_logp = logprob.logp(Normal.dist(mu, sigma), stationary_series)
+
+        return check_parameters(
+            init_logp + series_logp.sum(axis=-1),
+            steps > 0,
+            msg="steps > 0",
+        )
 
 
 class AR1(distribution.Continuous):
@@ -169,125 +357,6 @@ class AR(distribution.Continuous):
         init_like = self.init.logp(value[: self.p])
 
         return at.sum(innov_like) + at.sum(init_like)
-
-
-class GaussianRandomWalk(distribution.Continuous):
-    r"""Random Walk with Normal innovations
-
-    Note that this is mainly a user-friendly wrapper to enable an easier specification
-    of GRW. You are not restricted to use only Normal innovations but can use any
-    distribution: just use `aesara.tensor.cumsum()` to create the random walk behavior.
-
-    Parameters
-    ----------
-    mu : tensor_like of float, default 0
-        innovation drift, defaults to 0.0
-        For vector valued `mu`, first dimension must match shape of the random walk, and
-        the first element will be discarded (since there is no innovation in the first timestep)
-    sigma : tensor_like of float, optional
-        `sigma` > 0, innovation standard deviation (only required if `tau` is not specified)
-        For vector valued `sigma`, first dimension must match shape of the random walk, and
-        the first element will be discarded (since there is no innovation in the first timestep)
-    tau : tensor_like of float, optional
-        `tau` > 0, innovation precision (only required if `sigma` is not specified)
-        For vector valued `tau`, first dimension must match shape of the random walk, and
-        the first element will be discarded (since there is no innovation in the first timestep)
-    init : pymc.Distribution, optional
-        distribution for initial value (Defaults to Flat())
-    """
-
-    def __init__(self, tau=None, init=None, sigma=None, mu=0.0, *args, **kwargs):
-        kwargs.setdefault("shape", 1)
-        super().__init__(*args, **kwargs)
-        if sum(self.shape) == 0:
-            raise TypeError("GaussianRandomWalk must be supplied a non-zero shape argument!")
-        tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.tau = at.as_tensor_variable(tau)
-        sigma = at.as_tensor_variable(sigma)
-        self.sigma = sigma
-        self.mu = at.as_tensor_variable(mu)
-        self.init = init or Flat.dist()
-        self.mean = at.as_tensor_variable(0.0)
-
-    def _mu_and_sigma(self, mu, sigma):
-        """Helper to get mu and sigma if they are high dimensional."""
-        if sigma.ndim > 0:
-            sigma = sigma[1:]
-        if mu.ndim > 0:
-            mu = mu[1:]
-        return mu, sigma
-
-    def logp(self, x):
-        """
-        Calculate log-probability of Gaussian Random Walk distribution at specified value.
-
-        Parameters
-        ----------
-        x : numeric
-            Value for which log-probability is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        if x.ndim > 0:
-            x_im1 = x[:-1]
-            x_i = x[1:]
-            mu, sigma = self._mu_and_sigma(self.mu, self.sigma)
-            innov_like = Normal.dist(mu=x_im1 + mu, sigma=sigma).logp(x_i)
-            return self.init.logp(x[0]) + at.sum(innov_like)
-        return self.init.logp(x)
-
-    def random(self, point=None, size=None):
-        """Draw random values from GaussianRandomWalk.
-
-        Parameters
-        ----------
-        point : dict or Point, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size : int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # sigma, mu = distribution.draw_values([self.sigma, self.mu], point=point, size=size)
-        # return distribution.generate_samples(
-        #     self._random,
-        #     sigma=sigma,
-        #     mu=mu,
-        #     size=size,
-        #     dist_shape=self.shape,
-        #     not_broadcast_kwargs={"sample_shape": to_tuple(size)},
-        # )
-        pass
-
-    def _random(self, sigma, mu, size, sample_shape):
-        """Implement a Gaussian random walk as a cumulative sum of normals.
-        axis = len(size) - 1 denotes the axis along which cumulative sum would be calculated.
-        This might need to be corrected in future when issue #4010 is fixed.
-        """
-        if size[len(sample_shape)] == sample_shape:
-            axis = len(sample_shape)
-        else:
-            axis = len(size) - 1
-        rv = stats.norm(mu, sigma)
-        data = rv.rvs(size).cumsum(axis=axis)
-        data = np.array(data)
-
-        # the following lines center the random walk to start at the origin.
-        if len(data.shape) > 1:
-            for i in range(data.shape[0]):
-                data[i] = data[i] - data[i][0]
-        else:
-            data = data - data[0]
-        return data
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "sigma"]
 
 
 class GARCH11(distribution.Continuous):

@@ -11,21 +11,72 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import numpy as np
 import pytest
 
+import pymc as pm
+
 from pymc.aesaraf import floatX
 from pymc.distributions.continuous import Flat, Normal
-from pymc.distributions.timeseries import AR, AR1, GARCH11, EulerMaruyama
+from pymc.distributions.timeseries import (
+    AR,
+    AR1,
+    GARCH11,
+    EulerMaruyama,
+    GaussianRandomWalk,
+)
 from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
-
-# pytestmark = pytest.mark.usefixtures("seeded_test")
-pytestmark = pytest.mark.xfail(reason="Timeseries not refactored")
+from pymc.tests.test_distributions_random import BaseTestDistributionRandom
 
 
+class TestGaussianRandomWalk(BaseTestDistributionRandom):
+    # Override default size for test class
+    size = None
+
+    pymc_dist = pm.GaussianRandomWalk
+    pymc_dist_params = {"mu": 1.0, "sigma": 2, "init": pm.Constant.dist(0), "steps": 4}
+    expected_rv_op_params = {"mu": 1.0, "sigma": 2, "init": pm.Constant.dist(0), "steps": 4}
+
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_inferred_size",
+    ]
+
+    def check_rv_inferred_size(self):
+        steps = self.pymc_dist_params["steps"]
+        sizes_to_check = [None, (), 1, (1,)]
+        sizes_expected = [(steps + 1,), (steps + 1,), (1, steps + 1), (1, steps + 1)]
+
+        for size, expected in zip(sizes_to_check, sizes_expected):
+            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            assert expected_symbolic == expected
+
+    def check_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            self.pymc_rv.eval()
+
+    def test_grw_inference(self):
+        mu, sigma, steps = 2, 1, 10000
+        obs = np.concatenate([[0], np.random.normal(mu, sigma, size=steps)]).cumsum()
+
+        with pm.Model():
+            _mu = pm.Uniform("mu", -10, 10)
+            _sigma = pm.Uniform("sigma", 0, 10)
+
+            obs_data = pm.MutableData("obs_data", obs)
+            grw = GaussianRandomWalk("grw", _mu, _sigma, steps=steps, observed=obs_data)
+
+            trace = pm.sample(chains=1)
+
+        recovered_mu = trace.posterior["mu"].mean()
+        recovered_sigma = trace.posterior["sigma"].mean()
+        np.testing.assert_allclose([mu, sigma], [recovered_mu, recovered_sigma], atol=0.2)
+
+
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_AR():
     # AR1
     data = np.array([0.3, 1, 2, 3, 4])
@@ -63,6 +114,7 @@ def test_AR():
     np.testing.assert_allclose(ar_like, reg_like)
 
 
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_AR_nd():
     # AR2 multidimensional
     p, T, n = 3, 100, 5
@@ -82,6 +134,7 @@ def test_AR_nd():
     )
 
 
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_GARCH11():
     # test data ~ N(0, 1)
     data = np.array(
@@ -142,6 +195,7 @@ def _gen_sde_path(sde, pars, dt, n, x0):
     return np.array(xs)
 
 
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_linear():
     lam = -0.78
     sig2 = 5e-3
