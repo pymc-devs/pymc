@@ -485,3 +485,18 @@ class TestShapeDimsSize:
         # Confirm that the rng is properly offset, otherwise the second value of the first
         # draw, would match the first value of the second draw
         assert fn()[1] != fn()[0]
+
+    def test_size_from_observed_rng_update(self):
+        """Test that when setting size from observed we update the rng properly
+        See https://github.com/pymc-devs/pymc/issues/5653
+        """
+        with pm.Model():
+            x = pm.Normal("x", observed=[0, 1])
+
+        fn = pm.aesaraf.compile_pymc([], x)
+        # Check that both function outputs (rng and draws) come from the same Apply node
+        assert fn.maker.fgraph.outputs[0].owner is fn.maker.fgraph.outputs[1].owner
+
+        # Confirm that the rng is properly offset, otherwise the second value of the first
+        # draw, would match the first value of the second draw
+        assert fn()[1] != fn()[0]
