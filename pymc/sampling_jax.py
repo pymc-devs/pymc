@@ -256,7 +256,7 @@ def sample_blackjax_nuts(
         Include untransformed variables in the posterior samples. Defaults to False.
     chain_method : str, default "parallel"
         Specify how samples should be drawn. The choices include "parallel", and "vectorized".
-    postprocessing_backend : Optional[str]
+    postprocessing_backend : str, optional
         Specify how postprocessing should be computed. gpu or cpu
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
