@@ -474,7 +474,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
                 # 3) you can create variables with Var method
                 self.Var('v1', Normal.dist(mu=mean, sigma=sd))
-                # this will create variable named like '{prefix/}v1'
+                # this will create variable named like '{prefix::}v1'
                 # and assign attribute 'v1' to instance created
                 # variable can be accessed with self.v1 or self['v1']
 
@@ -516,7 +516,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
 
-        # variables inside both scopes will be named like `first/*`, `second/*`
+        # variables inside both scopes will be named like `first::*`, `second::*`
 
     """
 
@@ -538,6 +538,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         instance._aesara_config = kwargs.get("aesara_config", {})
         return instance
 
+    @staticmethod
+    def _validate_name(name):
+        if name.endswith(":"):
+            raise KeyError("name should not end with `:`")
+        return name
+
     def __init__(
         self,
         name="",
@@ -545,7 +551,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         check_bounds=True,
         rng_seeder: Optional[Union[int, np.random.RandomState]] = None,
     ):
-        self.name = name
+        self.name = self._validate_name(name)
         self.check_bounds = check_bounds
 
         if rng_seeder is None:
@@ -1462,14 +1468,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if self.isroot or not self.parent.prefix:
             name = self.name
         else:
-            name = f"{self.parent.prefix}/{self.name}"
-        return name.strip("/")
+            name = f"{self.parent.prefix}::{self.name}"
+        return name
 
     def name_for(self, name):
         """Checks if name has prefix and adds if needed"""
+        name = self._validate_name(name)
         if self.prefix:
             if not name.startswith(self.prefix):
-                return f"{self.prefix}/{name}"
+                return f"{self.prefix}::{name}"
             else:
                 return name
         else:
@@ -1477,10 +1484,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def name_of(self, name):
         """Checks if name has prefix and deletes if needed"""
+        name = self._validate_name(name)
         if not self.prefix or not name:
             return name
-        elif name.startswith(self.prefix + "/"):
-            return name[len(self.prefix) + 1 :]
+        elif name.startswith(self.prefix + "::"):
+            return name[len(self.prefix) + 2 :]
         else:
             return name
 
