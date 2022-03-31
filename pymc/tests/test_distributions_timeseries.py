@@ -31,7 +31,7 @@ from pymc.tests.helpers import select_by_precision
 from pymc.tests.test_distributions_random import BaseTestDistributionRandom
 
 
-class TestGaussianRandomWalk(BaseTestDistributionRandom):
+class TestGaussianRandomWalkRandom(BaseTestDistributionRandom):
     # Override default size for test class
     size = None
 
@@ -54,26 +54,23 @@ class TestGaussianRandomWalk(BaseTestDistributionRandom):
             expected_symbolic = tuple(pymc_rv.shape.eval())
             assert expected_symbolic == expected
 
-    def check_not_implemented(self):
-        with pytest.raises(NotImplementedError):
-            self.pymc_rv.eval()
 
-    def test_grw_inference(self):
-        mu, sigma, steps = 2, 1, 10000
-        obs = np.concatenate([[0], np.random.normal(mu, sigma, size=steps)]).cumsum()
+def test_gaussianrandomwalk_inference():
+    mu, sigma, steps = 2, 1, 1000
+    obs = np.concatenate([[0], np.random.normal(mu, sigma, size=steps)]).cumsum()
 
-        with pm.Model():
-            _mu = pm.Uniform("mu", -10, 10)
-            _sigma = pm.Uniform("sigma", 0, 10)
+    with pm.Model():
+        _mu = pm.Uniform("mu", -10, 10)
+        _sigma = pm.Uniform("sigma", 0, 10)
 
-            obs_data = pm.MutableData("obs_data", obs)
-            grw = GaussianRandomWalk("grw", _mu, _sigma, steps=steps, observed=obs_data)
+        obs_data = pm.MutableData("obs_data", obs)
+        grw = GaussianRandomWalk("grw", _mu, _sigma, steps=steps, observed=obs_data)
 
-            trace = pm.sample(chains=1)
+        trace = pm.sample(chains=1)
 
-        recovered_mu = trace.posterior["mu"].mean()
-        recovered_sigma = trace.posterior["sigma"].mean()
-        np.testing.assert_allclose([mu, sigma], [recovered_mu, recovered_sigma], atol=0.2)
+    recovered_mu = trace.posterior["mu"].mean()
+    recovered_sigma = trace.posterior["sigma"].mean()
+    np.testing.assert_allclose([mu, sigma], [recovered_mu, recovered_sigma], atol=0.2)
 
 
 @pytest.mark.xfail(reason="Timeseries not refactored")
