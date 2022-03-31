@@ -54,6 +54,10 @@ class TestGaussianRandomWalkRandom(BaseTestDistributionRandom):
             expected_symbolic = tuple(pymc_rv.shape.eval())
             assert expected_symbolic == expected
 
+    def test_steps_scalar_check(self):
+        with pytest.raises(ValueError, match="steps must be an integer scalar"):
+            self.pymc_dist.dist(steps=[1])
+
 
 def test_gaussianrandomwalk_inference():
     mu, sigma, steps = 2, 1, 1000

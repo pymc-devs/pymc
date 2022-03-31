@@ -49,6 +49,11 @@ class GaussianRandomWalkRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
 
+    def make_node(self, rng, size, dtype, mu, sigma, init, steps):
+        steps = at.as_tensor_variable(steps)
+        if not steps.ndim == 0 or not steps.dtype.startswith("float"):
+            raise ValueError("steps must be an integer scalar (ndim=0).")
+
     def _supp_shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
         steps = dist_params[3]
 
@@ -94,8 +99,8 @@ class GaussianRandomWalkRV(RandomVariable):
         ndarray
         """
 
-        if steps is None or steps < 1:
-            raise ValueError("Steps must be None or greater than 0")
+        if steps < 1:
+            raise ValueError("Steps must be greater than 0")
 
         # If size is None then the returned series should be (1+steps,)
         if size is None:
@@ -143,17 +148,19 @@ class GaussianRandomWalk(distribution.Continuous):
 
     rv_op = gaussianrandomwalk
 
-    def __new__(cls, name, mu=0.0, sigma=1.0, init=None, steps: int = 1, **kwargs):
+    def __new__(cls, name, mu=0.0, sigma=1.0, init=None, steps=None, **kwargs):
         check_dist_not_registered(init)
         return super().__new__(cls, name, mu, sigma, init, steps, **kwargs)
 
     @classmethod
     def dist(
-        cls, mu=0.0, sigma=1.0, init=None, steps: int = 1, size=None, **kwargs
+        cls, mu=0.0, sigma=1.0, init=None, steps=None, size=None, **kwargs
     ) -> at.TensorVariable:
 
         mu = at.as_tensor_variable(floatX(mu))
         sigma = at.as_tensor_variable(floatX(sigma))
+        if steps is None:
+            raise ValueError("Must specify steps parameter")
         steps = at.as_tensor_variable(intX(steps))
 
         if "shape" in kwargs.keys():
