@@ -200,7 +200,7 @@ Contributors don't need to be part of any dedicated team.
 * Luciano Paz (dev - PyMC Labs)
 * Martina Cantaro (docs)
 * Maxim Kochurov (dev - PyMC Labs)
-* Meenal Jhajharia (docs)
+* Meenal Jhajharia (docs, community)
 * Michael Osthege (dev)
 * Oriol Abril-Pla (docs, community)
 * Osvaldo Martin (dev, docs)
