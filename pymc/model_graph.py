@@ -118,7 +118,7 @@ class ModelGraph:
                     if model_var.tag.observations == self.model[var_name]:
                         selected_names.add(model_var.name)
 
-        selected_ancestors = set(
+        selected_ancestors = g(
             filter(
                 lambda rv: rv.name in self._all_var_names,
                 list(ancestors([self.model[var_name] for var_name in selected_names])),
