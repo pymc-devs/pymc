@@ -127,24 +127,17 @@ gaussianrandomwalk = GaussianRandomWalkRV()
 class GaussianRandomWalk(distribution.Continuous):
     r"""Random Walk with Normal innovations
 
-
-    Notes
-    -----
-    init is currently drawn from a Normal distribution with the same sigma as the innovations
-
     Parameters
     ----------
-    mu: tensor_like of float
+    mu : tensor_like of float
         innovation drift, defaults to 0.0
-    sigma: tensor_like of float, optional
-        sigma > 0, innovation standard deviation, defaults to 0.0
-    init: Scalar PyMC distribution
-        Scalar distribution of the initial value, created with the `.dist()` API. Defaults to
-        Normal with same `mu` and `sigma` as the GaussianRandomWalk
-    steps: int
-        Number of steps in Gaussian Random Walks
-    size: int
-        Number of independent Gaussian Random Walks
+    sigma : tensor_like of float, optional
+        sigma > 0, innovation standard deviation, defaults to 1.0
+    init : Univariate PyMC distribution
+        Univariate distribution of the initial value, created with the `.dist()` API.
+        Defaults to Normal with same `mu` and `sigma` as the GaussianRandomWalk
+    steps : int
+        Number of steps in Gaussian Random Walks (steps > 0).
     """
 
     rv_op = gaussianrandomwalk
