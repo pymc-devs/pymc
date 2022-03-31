@@ -640,7 +640,7 @@ core contributor membership sections.
 All tasks related to the project that are not specifically listed in the
 description of a dedicated team are the responsibility of the PyMC team
 as a whole. At the time of writing, this includes but is not limited to:
-enforcing this governance  and the [PyMC code of conduct](https://github.com/pymc-devs/pymc/blob/main/CODE_OF_CONDUCT.md), developing project-related grants, soliciting of project sponsorships, decisions regarding the allocation of project-related funds, planning of the project roadmap, and triaging of GitHub issues.
+enforcing this governance and the [PyMC code of conduct](https://github.com/pymc-devs/pymc/blob/main/CODE_OF_CONDUCT.md), developing project-related grants, soliciting of project sponsorships, decisions regarding the allocation of project-related funds, planning of the project roadmap, or triaging of GitHub issues.
 
 ### Team structure in practice
 This section describes how members of the PyMC team are given
@@ -672,10 +672,11 @@ Similar to the above section, Discourse permissions are also mapped to the commu
 and the two contributor roles.
 
 Role:
-- Recurring Contributors are added to the [PyMC_team](https://discourse.pymc.io/g/PyMC_devs)
-  group and are given the "leader" trust level.
-- Core Contributors are given [moderator permissions](https://discourse.pymc.io/g/moderators)
-  if possible.
+- Recurring Contributors are given no special permissions
+- Core Contributors are added to the [PyMC_core](https://discourse.pymc.io/g/PyMC_core)
+  group independently of the teams they are part of.
+  Core Contributors in the community team are also added to the
+  [Community Team](https://discourse.pymc.io/g/Community_Team) group.
 
 #### Accounts and services ownership and administration
 The PyMC Project also has accounts and hosts services on several platforms
@@ -694,7 +695,7 @@ provide examples on how to assign permissions:
 <details><summary>See permission examples</summary>
 
 - Arnau, recurrent contributor, community team
-  * Added to the Community PyMC_team and given "leader" trust level
+  * No permissions on Discourse
   * Added to all private communication channels
   * Triage permissions on the pymcon, pymc-data-umbrella, and other "event" repositories
 
@@ -705,24 +706,25 @@ provide examples on how to assign permissions:
     of the pymc-devs organization
 
 - Carme, core contributor, doc team
-  * Added to the community PyMC_team and given "leader" trust level
+  * Added to the community PyMC_core group on Discourse
   * Added to all private communication channels
   * Write permissions on pymc-examples and resources repositories, triage permissions
     to pymc and pymc-experimental repositories
   * Administrative access to ReadTheDocs accounts
 
 - Dolors, core contributor, dev and community teams
-  * Added to the Community PyMC_team and given "leader" trust level,
-    given moderator permissions on Discourse (such permissions may rotate and not always be active)
+  * Added to the Community Team and PyMC_core Discourse groups.
+    Part of the rotation of administrative permissions on Discourse
+    (Discourse allows only 3 admins on our current plan).
   * Added to all private communication channels
   * Write permissions on pymc, pymc-experimental, pymcon, pymc-data-umbrella, and other "event" repositories, triage permissions
     on pymc-examples and resources repositories
 
 - Eudald, core contributor, no dedicated team membership
-  * Added to the Community PyMC_team and given "leader" trust level
+  * Added to the PyMC_core Discourse group
   * Added to all private communication channels
   * Triage permissions on all repositories
-  * Access to pymc gmail, drive and grant application platforms (i.e. CZI slack) as they are the main grant writing coordinator
+  * Access to PyMC gmail, drive and grant application platforms (i.e. CZI slack) as they are the main grant writing coordinator
 
 </details>
 
