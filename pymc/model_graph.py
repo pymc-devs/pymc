@@ -14,7 +14,7 @@
 import warnings
 
 from collections import defaultdict, deque
-from typing import Dict, Iterator, List, NewType, Optional, Set
+from typing import Dict, Iterable, Iterator, List, NewType, Optional, Set
 
 from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
@@ -108,7 +108,8 @@ class ModelGraph:
 
         selected_names = set(var_names)
 
-        for var_name in selected_names:
+        # .copy() because sets cannot change in size during iteration
+        for var_name in selected_names.copy():
             if var_name not in self._all_var_names:
                 raise ValueError(f"{var_name} is not in this model.")
 
@@ -124,7 +125,7 @@ class ModelGraph:
             )
         )
 
-        for var in selected_ancestors:
+        for var in selected_ancestors.copy():
             if hasattr(var.tag, "observations"):
                 selected_ancestors.add(var.tag.observations)
 

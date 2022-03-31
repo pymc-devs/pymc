@@ -186,7 +186,7 @@ class TestRadonModel(BaseModelGraphTest):
 def model_with_different_descendants():
     """
     Model proposed by Michael to test variable selection functionality
-    See: https://github.com/pymc-devs/pymc/pull/5634#pullrequestreview-916297509
+    From here: https://github.com/pymc-devs/pymc/pull/5634#pullrequestreview-916297509
     """
     with pm.Model() as pmodel2:
         a = pm.Normal("a")
@@ -202,12 +202,48 @@ def model_with_different_descendants():
     return pmodel2
 
 
-class TestVariableSelection(BaseModelGraphTest):
-    model_func = model_with_different_descendants
+class TestVariableSelection:
+    mg = ModelGraph(model_with_different_descendants())
 
-    def check_subgraph(var_names):
-        # To be done sooon!
-        pass
+    @pytest.mark.parametrize(
+        "var_names, vars_to_plot, compute_graph",
+        [
+            (["c"], ["a", "b", "c"], {"c": {"a", "b"}, "a": set(), "b": set()}),
+            (
+                ["L"],
+                ["pred", "obs", "L", "intermediate", "a", "b"],
+                {
+                    "pred": {"intermediate"},
+                    "obs": {"L"},
+                    "L": {"pred"},
+                    "intermediate": {"a", "b"},
+                    "a": set(),
+                    "b": set(),
+                },
+            ),
+            (
+                ["obs"],
+                ["pred", "obs", "L", "intermediate", "a", "b"],
+                {
+                    "pred": {"intermediate"},
+                    "obs": {"L"},
+                    "L": {"pred"},
+                    "intermediate": {"a", "b"},
+                    "a": set(),
+                    "b": set(),
+                },
+            ),
+            # selecting ["c", "L"] is akin to selecting the entire graph
+            (
+                ["c", "L"],
+                mg.vars_to_plot(),
+                mg.make_compute_graph(),
+            ),
+        ],
+    )
+    def check_subgraph(self, var_names, vars_to_plot, compute_graph):
+        assert set(mg.vars_to_plot(var_names=var_names)) == set(vars_to_plot)
+        assert mg.make_compute_graph(var_names=var_names) == compute_graph
 
 
 class TestImputationModel(BaseModelGraphTest):
