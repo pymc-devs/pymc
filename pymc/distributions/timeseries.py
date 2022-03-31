@@ -104,19 +104,20 @@ class GaussianRandomWalkRV(RandomVariable):
 
         # If size is None then the returned series should be (1+steps,)
         if size is None:
-            init_size = 1
-            steps_size = steps
+            bcast_shape = np.broadcast_shapes(
+                np.asarray(mu).shape,
+                np.asarray(sigma).shape,
+                np.asarray(init).shape,
+            )
+            dist_shape = (*bcast_shape, int(steps))
 
         # If size is None then the returned series should be (size, 1+steps)
         else:
             init_size = (*size, 1)
-            steps_size = (*size, steps)
+            dist_shape = (*size, int(steps))
 
-        init = np.reshape(init, init_size)
-        steps = rng.normal(loc=mu, scale=sigma, size=steps_size)
-
-        grw = np.concatenate([init, steps], axis=-1)
-
+        innovations = rng.normal(loc=mu, scale=sigma, size=dist_shape)
+        grw = np.concatenate([init[..., None], innovations], axis=-1)
         return np.cumsum(grw, axis=-1)
 
 
@@ -149,7 +150,8 @@ class GaussianRandomWalk(distribution.Continuous):
     rv_op = gaussianrandomwalk
 
     def __new__(cls, name, mu=0.0, sigma=1.0, init=None, steps=None, **kwargs):
-        check_dist_not_registered(init)
+        if init is not None:
+            check_dist_not_registered(init)
         return super().__new__(cls, name, mu, sigma, init, steps, **kwargs)
 
     @classmethod
@@ -163,14 +165,15 @@ class GaussianRandomWalk(distribution.Continuous):
             raise ValueError("Must specify steps parameter")
         steps = at.as_tensor_variable(intX(steps))
 
-        if "shape" in kwargs.keys():
-            shape = kwargs["shape"]
+        shape = kwargs.get("shape", None)
+        if size is None and shape is None:
+            init_size = None
         else:
-            shape = None
+            init_size = to_tuple(size) if size is not None else to_tuple(shape)[:-1]
 
-        # If no scalar distribution is passed then initialize with a Normal of same sd and mu
+        # If no scalar distribution is passed then initialize with a Normal of same mu and sigma
         if init is None:
-            init = Normal.dist(mu, sigma, size=size)
+            init = Normal.dist(mu, sigma, size=init_size)
         else:
             if not (
                 isinstance(init, at.TensorVariable)
@@ -180,12 +183,12 @@ class GaussianRandomWalk(distribution.Continuous):
             ):
                 raise TypeError("init must be a univariate distribution variable")
 
-            if size is not None or shape is not None:
-                init = change_rv_size(init, to_tuple(size or shape))
+            if init_size is not None:
+                init = change_rv_size(init, init_size)
             else:
-                # If not explicit, size is determined by the shape of mu and sigma
-                mu_ = at.broadcast_arrays(mu, sigma)[0]
-                init = change_rv_size(init, mu_.shape)
+                # If not explicit, size is determined by the shapes of mu, sigma, and init
+                bcast_shape = at.broadcast_arrays(mu, sigma, init)[0].shape
+                init = change_rv_size(init, bcast_shape)
 
         # Ignores logprob of init var because that's accounted for in the logp method
         init.tag.ignore_logprob = True

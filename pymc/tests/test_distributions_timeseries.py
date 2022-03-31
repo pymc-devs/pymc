@@ -13,6 +13,7 @@
 #   limitations under the License.
 import numpy as np
 import pytest
+import scipy.stats
 
 import pymc as pm
 
@@ -75,6 +76,52 @@ def test_gaussianrandomwalk_inference():
     recovered_mu = trace.posterior["mu"].mean()
     recovered_sigma = trace.posterior["sigma"].mean()
     np.testing.assert_allclose([mu, sigma], [recovered_mu, recovered_sigma], atol=0.2)
+
+
+@pytest.mark.parametrize("init", [None, pm.Normal.dist()])
+def test_gaussian_random_walk_init_dist_shape(init):
+    """Test that init_dist is properly resized"""
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init)
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init, size=(5,))
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init, shape=1)
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init, shape=(5, 1))
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+
+    grw = pm.GaussianRandomWalk.dist(mu=[0, 0], sigma=1, steps=1, init=init)
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=[1, 1], steps=1, init=init)
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+
+    grw = pm.GaussianRandomWalk.dist(mu=np.zeros((3, 1)), sigma=[1, 1], steps=1, init=init)
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == (3, 2)
+
+
+def test_gaussianrandomwalk_broadcasted_by_init_dist():
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=4, init=pm.Normal.dist(size=(2, 3)))
+    assert tuple(grw.shape.eval()) == (2, 3, 5)
+    assert grw.eval().shape == (2, 3, 5)
+
+
+@pytest.mark.parametrize(
+    "init",
+    [
+        pm.HalfNormal.dist(sigma=2),
+        pm.StudentT.dist(nu=4, mu=1, sigma=0.5),
+    ],
+)
+def test_gaussian_random_walk_init_dist_logp(init):
+    grw = pm.GaussianRandomWalk.dist(init=init, steps=1)
+    assert np.isclose(
+        pm.logp(grw, [0, 0]).eval(),
+        pm.logp(init, 0).eval() + scipy.stats.norm.logpdf(0),
+    )
 
 
 @pytest.mark.xfail(reason="Timeseries not refactored")
