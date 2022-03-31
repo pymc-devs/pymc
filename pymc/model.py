@@ -1008,7 +1008,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         )
         return self.initial_point()
 
-    @property
     def initial_point(self, seed=None) -> Dict[str, np.ndarray]:
         """Computes the initial point of the model.
 
