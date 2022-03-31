@@ -203,8 +203,6 @@ def model_with_different_descendants():
 
 
 class TestVariableSelection:
-    mg = ModelGraph(model_with_different_descendants())
-
     @pytest.mark.parametrize(
         "var_names, vars_to_plot, compute_graph",
         [
@@ -236,12 +234,13 @@ class TestVariableSelection:
             # selecting ["c", "L"] is akin to selecting the entire graph
             (
                 ["c", "L"],
-                mg.vars_to_plot(),
-                mg.make_compute_graph(),
+                ModelGraph(model_with_different_descendants()).vars_to_plot(),
+                ModelGraph(model_with_different_descendants()).make_compute_graph(),
             ),
         ],
     )
-    def check_subgraph(self, var_names, vars_to_plot, compute_graph):
+    def test_subgraph(self, var_names, vars_to_plot, compute_graph):
+        mg = ModelGraph(model_with_different_descendants())
         assert set(mg.vars_to_plot(var_names=var_names)) == set(vars_to_plot)
         assert mg.make_compute_graph(var_names=var_names) == compute_graph
 
