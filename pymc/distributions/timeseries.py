@@ -112,7 +112,7 @@ class GaussianRandomWalkRV(RandomVariable):
             )
             dist_shape = (*bcast_shape, int(steps))
 
-        # If size is None then the returned series should be (size, 1+steps)
+        # If size is None then the returned series should be (*size, 1+steps)
         else:
             init_size = (*size, 1)
             dist_shape = (*size, int(steps))
