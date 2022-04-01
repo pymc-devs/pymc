@@ -148,7 +148,6 @@ class ModelNetwork:
             label = f"{var_name}\n~\nData"
         else:
             label = v._str_repr(formatting=formatting).replace(" ~ ", "\n~\n")
-        print(var_name)
         networkgraph.add_node(var_name.replace(":", "&"), label=label, **attrs)
 
     def get_plates(self):
@@ -212,7 +211,6 @@ class ModelNetwork:
 
         for key, values in self.make_compute_graph().items():
             for value in values:
-                print(key,value)
                 graphnetwork.add_edge(value.replace(":", "&"), key.replace(":", "&"))
         return graphnetwork
 
