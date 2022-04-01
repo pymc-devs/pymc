@@ -104,7 +104,7 @@ class GaussianRandomWalkRV(RandomVariable):
 
         # If size is None then the returned series should be (*implied_dims, 1+steps)
         if size is None:
-            # When init is larger than mu or sigma ensure the distribution has the right shape, (*init.shape, nsteps)
+            # broadcast parameters with each other to find implied dims
             bcast_shape = np.broadcast_shapes(
                 np.asarray(mu).shape,
                 np.asarray(sigma).shape,
