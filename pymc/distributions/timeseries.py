@@ -51,7 +51,7 @@ class GaussianRandomWalkRV(RandomVariable):
 
     def make_node(self, rng, size, dtype, mu, sigma, init, steps):
         steps = at.as_tensor_variable(steps)
-        if not steps.ndim == 0 or not steps.dtype.startswith("float"):
+        if not steps.ndim == 0 or not steps.dtype.startswith("int"):
             raise ValueError("steps must be an integer scalar (ndim=0).")
 
     def _supp_shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
