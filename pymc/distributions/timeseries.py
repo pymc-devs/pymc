@@ -102,7 +102,7 @@ class GaussianRandomWalkRV(RandomVariable):
         if steps < 1:
             raise ValueError("Steps must be greater than 0")
 
-        # If size is None then the returned series should be (1+steps,)
+        # If size is None then the returned series should be (*implied_dims, 1+steps)
         if size is None:
             # When init is larger than mu or sigma ensure the distribution has the right shape, (*init.shape, nsteps)
             bcast_shape = np.broadcast_shapes(
