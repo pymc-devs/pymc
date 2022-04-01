@@ -122,7 +122,7 @@ class ModelNetwork:
                     pass
         return input_map
 
-    def _make_node(self, var_name, networkgraph, *, formatting: str = "plain"):
+    def _make_node(self, var_name, networkgraph, *, cluster=False, formatting: str = "plain"):
         """Attaches the given variable to a graphviz Digraph"""
         v = self.model[var_name]
 
@@ -141,6 +141,9 @@ class ModelNetwork:
         elif isinstance(v, SharedVariable) or not hasattr(v, "distribution"):
             # shared variables and Deterministic represented by a box
             attrs["shape"] = "box"
+        
+        if cluster:
+            attrs["cluster"] = cluster
 
         if v in self.model.potentials:
             label = f"{var_name}\n~\nPotential"
@@ -180,7 +183,7 @@ class ModelNetwork:
         return plates
 
     def make_network(self, formatting: str = "plain"):
-        """Make networkx Digraph of PyMC3 model
+        """Make graphviz Digraph of PyMC3 model
         Returns
         -------
         graphviz.Digraph
@@ -189,9 +192,9 @@ class ModelNetwork:
             import networkx
         except ImportError:
             raise ImportError(
-                "This function requires the python library networkx,"
+                "This function requires the python library graphviz, along with binaries. "
                 "The easiest way to install all of this is by running\n\n"
-                "\tconda install networkx"
+                "\tconda install -c conda-forge python-graphviz"
             )
         graphnetwork = networkx.DiGraph(name=self.model.name)
         for shape, var_names in self.get_plates().items():
@@ -199,12 +202,8 @@ class ModelNetwork:
                 shape = shape.eval()
             label = " x ".join(map("{:,d}".format, shape))
             if label:
-                # must be preceded by 'cluster' to get a box around it
-                with graphnetwork.subgraph(name="cluster" + label) as sub:
-                    for var_name in var_names:
-                        self._make_node(var_name, sub, formatting=formatting)
-                    # plate label goes bottom right
-                    sub.attr(label=label, labeljust="r", labelloc="b", style="rounded")
+                for var_name in var_names:
+                    self._make_node(var_name, graphnetwork, cluster="cluster" + label, formatting=formatting)
             else:
                 for var_name in var_names:
                     self._make_node(var_name, graphnetwork, formatting=formatting)
@@ -216,11 +215,12 @@ class ModelNetwork:
 
 
 def model_to_networkx(model=None, *, formatting: str = "plain"):
-    """Produce a networkx Digraph from a PyMC3 model.
-    Requires networkx, which may be installed most easily with
-        conda install networkx
-    Alternatively, you may install via `pip install graphviz` 
-    See  https://networkx.org/documentation/stable/index.html
+    """Produce a graphviz Digraph from a PyMC3 model.
+    Requires graphviz, which may be installed most easily with
+        conda install -c conda-forge python-graphviz
+    Alternatively, you may install the `graphviz` binaries yourself,
+    and then `pip install graphviz` to get the python bindings.  See
+    http://graphviz.readthedocs.io/en/stable/manual.html
     for more information.
     Parameters
     ----------
