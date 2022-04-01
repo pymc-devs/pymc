@@ -122,7 +122,7 @@ class ModelGraph:
                     pass
         return input_map
 
-    def _make_node(self, var_name, graph, *, formatting: str = "plain"):
+    def _make_node(self, var_name, graph, *, nx=False, cluster=False, formatting: str = "plain"):
         """Attaches the given variable to a graphviz Digraph"""
         v = self.model[var_name]
 
@@ -142,6 +142,9 @@ class ModelGraph:
             # shared variables and Deterministic represented by a box
             attrs["shape"] = "box"
 
+        if cluster:
+            attrs["cluster"] = cluster
+
         if v in self.model.potentials:
             label = f"{var_name}\n~\nPotential"
         elif isinstance(v, SharedVariable):
@@ -149,14 +152,15 @@ class ModelGraph:
         else:
             label = v._str_repr(formatting=formatting).replace(" ~ ", "\n~\n")
 
-        graph.node(var_name.replace(":", "&"), label, **attrs)
+        if nx:
+            graph.add_node(var_name.replace(":", "&"), label=label, **attrs)
+        else:
+            graph.node(var_name.replace(":", "&"), label, **attrs)
 
     def get_plates(self):
         """Rough but surprisingly accurate plate detection.
-
         Just groups by the shape of the underlying distribution.  Will be wrong
         if there are two plates with the same shape.
-
         Returns
         -------
         dict: str -> set[str]
@@ -184,7 +188,6 @@ class ModelGraph:
 
     def make_graph(self, formatting: str = "plain"):
         """Make graphviz Digraph of PyMC3 model
-
         Returns
         -------
         graphviz.Digraph
@@ -218,18 +221,46 @@ class ModelGraph:
                 graph.edge(value.replace(":", "&"), key.replace(":", "&"))
         return graph
 
+    def make_networkx(self, formatting: str = "plain"):
+        """Make networkx Digraph of PyMC3 model
+        Returns
+        -------
+        graphviz.Digraph
+        """
+        try:
+            import networkx
+        except ImportError:
+            raise ImportError(
+                "This function requires the python library graphviz, along with binaries. "
+                "The easiest way to install all of this is by running\n\n"
+                "\tconda install -c conda-forge python-graphviz"
+            )
+        graphnetwork = networkx.DiGraph(name=self.model.name)
+        for shape, var_names in self.get_plates().items():
+            if isinstance(shape, SharedVariable):
+                shape = shape.eval()
+            label = " x ".join(map("{:,d}".format, shape))
+            if label:
+                for var_name in var_names:
+                    self._make_node(var_name, graphnetwork, nx=True, cluster="cluster" + label, formatting=formatting)
+            else:
+                for var_name in var_names:
+                    self._make_node(var_name, graphnetwork, nx=True, formatting=formatting)
+
+        for key, values in self.make_compute_graph().items():
+            for value in values:
+                graphnetwork.add_edge(value.replace(":", "&"), key.replace(":", "&"))
+        return graphnetwork
+
 
 def model_to_graphviz(model=None, *, formatting: str = "plain"):
     """Produce a graphviz Digraph from a PyMC3 model.
-
     Requires graphviz, which may be installed most easily with
         conda install -c conda-forge python-graphviz
-
     Alternatively, you may install the `graphviz` binaries yourself,
     and then `pip install graphviz` to get the python bindings.  See
     http://graphviz.readthedocs.io/en/stable/manual.html
     for more information.
-
     Parameters
     ----------
     model : pm.Model
@@ -241,3 +272,22 @@ def model_to_graphviz(model=None, *, formatting: str = "plain"):
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
     model = pm.modelcontext(model)
     return ModelGraph(model).make_graph(formatting=formatting)
+
+def model_to_networkx(model=None, *, formatting: str = "plain"):
+    """Produce a networkx Digraph from a PyMC3 model.
+    Requires networkx, which may be installed most easily with
+        conda install networkx
+    Alternatively, you may install via `pip install graphviz`
+    See https://networkx.org/documentation/stable/index.html
+
+    Parameters
+    ----------
+    model : pm.Model
+        The model to plot. Not required when called from inside a modelcontext.
+    formatting : str
+        one of { "plain", "plain_with_params" }
+    """
+    if not "plain" in formatting:
+        raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
+    model = pm.modelcontext(model)
+    return ModelGraph(model).make_networkx(formatting=formatting)
