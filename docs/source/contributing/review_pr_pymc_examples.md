@@ -94,17 +94,18 @@ and doesn't mean:
   want to render the notebook by itself but as a page on the example gallery.
 * Check the readthedocs preview and use the MyST notebook format to see the raw text diff
   and comment on it when it comes to formatting.
+* In general check that the style described in {ref}`jupyter_style` is followed.
 
-For the time being (while we rerun and update the docs to new formatting) you should
-not accept any of the following without a very good reason.
-They are very specific and should be part of the PR scope even if the PR author
-didn't intend to originally. Think of this as CI breaking.
+For the time being (while we rerun the notebooks with v4 and update the docs to new formatting)
+please ensure all of the following:
 
-* URLs pointing to PyMC/ArviZ/Aesara docs
-* No post directive or no MyST target at the top of the notebook.
+* There are **NO** URLs pointing to PyMC/ArviZ/Aesara docs
+* There is a post directive and MyST target at the top of the notebook.
+* The notebook is being checked by pre-commit (it should not appear in any exclude section in `.pre-commit-config.yaml`)
 * No watermark (this is already CI breaking but is still included here for full context)
 
-* In general check that the style described in {ref}`jupyter_style` is followed.
+They are very specific and should be part of the PR scope even if the PR author
+didn't intend to originally. Think of this as CI breaking.
 
 ## 5. Check CI
 * CI in pymc-examples is very specific and has never had a false failure yet.
@@ -123,5 +124,5 @@ This might be moved to a comment added by a bot to every new PR, see [pymc-examp
   - **No** URLs pointing to PyMC/Aesara/ArviZ docs
   - A post directive with tags and categories and MyST target at the top of the notebook
   - A watermark with all relevant libraries for reproducibility at the bottom of the notebook
-* Check CI is passing
+* Check CI is passing and the notebook is being checked by pre-commit
 * Proofread changes (once no significant rewriting is needed)
