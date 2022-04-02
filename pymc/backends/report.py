@@ -115,7 +115,7 @@ class SamplerReport:
             self._add_warnings([warn])
             return
 
-        if idata.posterior.sizes["chain"] == 1:
+        if idata["posterior"].sizes["chain"] == 1:
             msg = (
                 "Only one chain was sampled, this makes it impossible to "
                 "run some convergence checks"
@@ -124,7 +124,7 @@ class SamplerReport:
             self._add_warnings([warn])
             return
 
-        elif idata.posterior.sizes["chain"] < 4:
+        elif idata["posterior"].sizes["chain"] < 4:
             msg = (
                 "We recommend running at least 4 chains for robust computation of "
                 "convergence diagnostics"
@@ -140,7 +140,7 @@ class SamplerReport:
             if is_transformed_name(rv_name):
                 rv_name2 = get_untransformed_name(rv_name)
                 rv_name = rv_name2 if rv_name2 in valid_name else rv_name
-            if rv_name in idata.posterior:
+            if rv_name in idata["posterior"]:
                 varnames.append(rv_name)
 
         self._ess = ess = arviz.ess(idata, var_names=varnames)
@@ -158,7 +158,7 @@ class SamplerReport:
             warnings.append(warn)
 
         eff_min = min(val.min() for val in ess.values())
-        eff_per_chain = eff_min / idata.posterior.sizes["chain"]
+        eff_per_chain = eff_min / idata["posterior"].sizes["chain"]
         if eff_per_chain < 100:
             msg = (
                 "The effective sample size per chain is smaller than 100 for some parameters. "

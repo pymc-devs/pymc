@@ -614,6 +614,7 @@ def sample(
         f"({n_tune*n_chains:_d} + {n_draws*n_chains:_d} draws total) "
         f"took {mtrace.report.t_sampling:.0f} seconds."
     )
+    mtrace.report._log_summary()
 
     idata = None
     if compute_convergence_checks or return_inferencedata:
@@ -622,19 +623,18 @@ def sample(
             ikwargs.update(idata_kwargs)
         idata = pm.to_inference_data(mtrace, **ikwargs)
 
-    if compute_convergence_checks:
-        if draws - tune < 100:
-            warnings.warn(
-                "The number of samples is too small to check convergence reliably.", stacklevel=2
-            )
-        else:
-            mtrace.report._run_convergence_checks(idata, model)
-    mtrace.report._log_summary()
+        if compute_convergence_checks:
+            if draws - tune < 100:
+                warnings.warn(
+                    "The number of samples is too small to check convergence reliably.",
+                    stacklevel=2,
+                )
+            else:
+                mtrace.report._run_convergence_checks(idata, model)
 
-    if return_inferencedata:
-        return idata
-    else:
-        return mtrace
+        if return_inferencedata:
+            return idata
+    return mtrace
 
 
 def _check_start_shape(model, start: PointType):
@@ -1621,7 +1621,7 @@ def sample_posterior_predictive(
     _trace: Union[MultiTrace, PointList]
     nchain: int
     if isinstance(trace, InferenceData):
-        _trace = dataset_to_point_list(trace.posterior)
+        _trace = dataset_to_point_list(trace["posterior"])
         nchain, len_trace = chains_and_samples(trace)
     elif isinstance(trace, xarray.Dataset):
         _trace = dataset_to_point_list(trace)
@@ -1704,7 +1704,7 @@ def sample_posterior_predictive(
 
     if not vars_to_sample:
         if return_inferencedata and not extend_inferencedata:
-            return None
+            return InferenceData()
         elif return_inferencedata and extend_inferencedata:
             return trace
         return {}
