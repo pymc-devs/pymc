@@ -1,7 +1,7 @@
 ---
 sd_hide_title: true
 ---
-(index)=
+
 # PyMC Documentation
 
 :::{card}
@@ -153,10 +153,8 @@ See [Google Scholar](https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&
 :maxdepth: 1
 :hidden:
 
-installation
 learning
-Examples <https://docs.pymc.io/projects/examples/en/latest/>
-api
+API <api>
 community
 contributing/index
 about/index

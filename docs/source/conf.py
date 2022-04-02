@@ -143,7 +143,7 @@ exclude_patterns = [
 ]
 
 # myst and panels config
-jupyter_execute_notebooks = "auto"
+jupyter_execute_notebooks = "off"
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "substitution"]
 myst_substitutions = {
     "version_slug": rtd_version,
@@ -183,6 +183,7 @@ intersphinx_mapping = {
     "arviz": ("https://arviz-devs.github.io/arviz/", None),
     "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
     "aeppl": ("https://aeppl.readthedocs.io/en/latest/", None),
+    "pmx": ("https://pymc-experimental.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "nb": ("https://pymc-examples.readthedocs.io/en/latest/", None),
     "myst": ("https://myst-parser.readthedocs.io/en/latest", None),
@@ -216,13 +217,26 @@ html_theme_options = {
             "icon": "fab fa-twitter-square",
         },
         {
+            "name": "LinkedIn",
+            "url": "https://www.linkedin.com/company/pymc/",
+            "icon": "fab fa-linkedin",
+        },
+        {
+            "name": "YouTube",
+            "url": "https://www.youtube.com/c/PyMCDevelopers",
+            "icon": "fab fa-youtube",
+        },
+        {
             "name": "Discourse",
             "url": "https://discourse.pymc.io",
             "icon": "fab fa-discourse",
         },
     ],
+    "external_links": [
+      {"name": "Examples", "url": "https://docs.pymc.io/projects/examples/en/latest/"},
+    ],
     "show_prev_next": False,
-    "navbar_align": "left",
+    # "navbar_align": "left",
     "navbar_start": ["navbar-logo", "navbar-version"],
     "navbar_end": ["search-field.html", "navbar-icon-links.html"],
     "search_bar_text": "Search...",
@@ -265,7 +279,8 @@ html_favicon = "../logos/PyMC.ico"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["../logos"]
+html_static_path = ["../logos", "_static"]
+html_css_files = ["custom.css"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
