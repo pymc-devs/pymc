@@ -54,6 +54,8 @@ class GaussianRandomWalkRV(RandomVariable):
         if not steps.ndim == 0 or not steps.dtype.startswith("int"):
             raise ValueError("steps must be an integer scalar (ndim=0).")
 
+        return super().make_node(rng, size, dtype, mu, sigma, init, steps)
+
     def _supp_shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
         steps = dist_params[3]
 
