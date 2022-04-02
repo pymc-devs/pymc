@@ -28,6 +28,7 @@ import scipy.special
 from aesara import shared
 from arviz import InferenceData
 from arviz import from_dict as az_from_dict
+from arviz.tests.helpers import check_multiple_attrs
 from scipy import stats
 
 import pymc as pm
