@@ -838,23 +838,31 @@ class TestSamplePPC(SeededTest):
             a = pm.Normal("a", mu=mu, sigma=1, observed=[0.0, 1.0])
             idata = pm.sample(tune=10, draws=10, compute_convergence_checks=False)
 
-        # before extension these groups are not present
-        assert not "posterior_predictive" in idata.groups()
-        assert not "predictions" in idata.groups()
+        base_test_dict = {
+            "posterior": ["mu", "~a"],
+            "sample_stats": ["diverging", "lp"],
+            "log_likelihood": ["a"],
+            "observed_data": ["a"],
+        }
+        test_dict = {"~posterior_predictive": [], "~predictions": [], **base_test_dict}
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
 
         # extending idata with in-sample ppc
         with model:
-            ppc = pm.sample_posterior_predictive(idata, extend_inferencedata=True)
+            pm.sample_posterior_predictive(idata, extend_inferencedata=True)
         # test addition
-        assert "posterior_predictive" in idata.groups()
-        assert not "predictions" in idata.groups()
+        test_dict = {"posterior_predictive": ["a"], "~predictions": [], **base_test_dict}
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
 
         # extending idata with out-of-sample ppc
         with model:
-            ppc = pm.sample_posterior_predictive(idata, extend_inferencedata=True, predictions=True)
+            pm.sample_posterior_predictive(idata, extend_inferencedata=True, predictions=True)
         # test addition
-        assert "posterior_predictive" in idata.groups()
-        assert "predictions" in idata.groups()
+        test_dict = {"posterior_predictive": ["a"], "predictions": ["a"], **base_test_dict}
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
 
 
 class TestSamplePPCW(SeededTest):
