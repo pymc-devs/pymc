@@ -143,7 +143,7 @@ exclude_patterns = [
 ]
 
 # myst and panels config
-jupyter_execute_notebooks = "off"
+jupyter_execute_notebooks = "force"
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "substitution"]
 myst_substitutions = {
     "version_slug": rtd_version,
@@ -233,14 +233,15 @@ html_theme_options = {
         },
     ],
     "external_links": [
-      {"name": "Examples", "url": "https://docs.pymc.io/projects/examples/en/latest/"},
+        {"name": "Examples", "url": "https://docs.pymc.io/projects/examples/en/latest/"},
     ],
     "show_prev_next": False,
     # "navbar_align": "left",
     "navbar_start": ["navbar-logo", "navbar-version"],
     "navbar_end": ["search-field.html", "navbar-icon-links.html"],
+    "page_sidebar_items": ["page-toc", "edit-this-page", "donate"],
     "search_bar_text": "Search...",
-    "use_edit_page_button": False,  # TODO: see how to skip of fix for generated pages
+    "use_edit_page_button": True,
     "google_analytics_id": "UA-176578023-1",
 }
 html_context = {
