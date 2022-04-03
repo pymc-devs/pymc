@@ -1,9 +1,10 @@
+(pr_tutorial)=
 # Pull request step-by-step
 The preferred workflow for contributing to PyMC is to fork the [GitHub repository](https://github.com/pymc-devs/pymc/), clone it to your local machine, and develop on a feature branch.
 
 ## Steps
 
-1. Read the {ref}`pr-etiquette`.
+1. Read the {ref}`pr_etiquette`.
 
 1. Fork the [project repository](https://github.com/pymc-devs/pymc/) by clicking on the 'Fork' button near the top right of the main repository page. This creates a copy of the code under your GitHub user account.
 
@@ -55,9 +56,9 @@ The preferred workflow for contributing to PyMC is to fork the [GitHub repositor
    pip install -r requirements-dev.txt
    ```
 
-<!-- Commented out because our Docker image is outdated/broken.
-   Yet another alternative is to create a docker environment for development. See: [Developing in Docker](#Developing-in-Docker).
--->
+  <!-- Commented out because our Docker image is outdated/broken.
+    Yet another alternative is to create a docker environment for development. See: [Developing in Docker](#Developing-in-Docker).
+  -->
 
 1. Develop the feature on your feature branch.
 
@@ -94,13 +95,13 @@ The preferred workflow for contributing to PyMC is to fork the [GitHub repositor
    git push -u origin my-feature
    ```
 
-1. Go to the GitHub web page of your fork of the PyMC repo.
-   Click the 'Pull request' button to send your changes to the project's maintainers for review.
-   This will send a notification to the committers.
-
    :::{sidebar}
    If this is your first contribution, the start of some CI jobs will have to be approved by a maintainer.
    :::
+
+1. Go to the GitHub web page of your fork of the PyMC repo.
+   Click the 'Pull request' button to send your changes to the project's maintainers for review.
+   This will send a notification to the committers.
 
    :::{tip}
    Now that your PR is ready, read the {ref}`pr_checklist` to make sure it follows best practices.

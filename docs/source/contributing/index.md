@@ -36,12 +36,12 @@ If you have other ideas let us know on [Discourse](https://discourse.pymc.io/) t
 * Help with our fundraising efforts
 
 ### Contribute via Pull Requests on GitHub
-We have a {ref}`pr_tutorial` and {ref}`pr_checklist` to help in all the steps of the contributing
+We have a {ref}`pr_tutorial` and a {ref}`pr_checklist` page to help in all the steps of the contributing
 process, from before your first ever contribution to regular contributions as a core contributor.
 
 (pr_etiquette)=
 #### Etiquette for code contributions
-* When you start working working on an issue, open a `Draft` pull request as soon as you make your first commit (see steps below).
+* When you start working working on an issue, open a `Draft` pull request as soon as you make your first commit (see {ref}`pr_tutorial`).
 * Before opening a PR with a new feature, please make a proposal by opening an [issue](https://github.com/pymc-devs/pymc/issues) or [Discussion](https://github.com/pymc-devs/pymc/discussions) with the maintainers. Depending on the proposal we might direct you to other places such as [`pymc-experimental`](https://github.com/pymc-devs/pymc-experimental) or [`pymc-examples`](https://github.com/pymc-devs/pymc-examples).
 * Any issue without an open pull request is available for work.
    * If a pull request has no recent activity it may be closed, or taken over by someone else.

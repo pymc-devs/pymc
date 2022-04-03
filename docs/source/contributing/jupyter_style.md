@@ -230,8 +230,7 @@ Thus, notebooks with extra dependencies should:
     and then either the `extra_dependencies` or the `pip_dependencies` and `conda_dependencies`.
     In addition, there is also an `extra_install_notes` to include custom text inside the dropdown.
 
-    * notebook metadata can be edited from the menu bar with {menuselection}`Edit --> Edit notebook metadata`
-      in the dropdown
+    * notebook metadata can be edited from the menu with {menuselection}`Edit --> Edit notebook metadata`
 
       This will open a window with json formatted text that might look a bit like:
 
