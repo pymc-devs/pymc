@@ -2,7 +2,7 @@
 # Learning
 
 ## Installation
-Go to the {ref}`installation guide <installation>` to set up PyMC in your
+Refer to the {ref}`installation guide <installation>` to set up PyMC in your
 own environment.
 
 ## Getting started
@@ -92,7 +92,7 @@ By Osvaldo Martin, Ravin Kumar and Junpeng Lao
 `<add description here>`
 
 [Book website](https://bayesiancomputationbook.com/welcome.html)
-(the book website contains the whole book in online format)
+(the book website contains the whole book, code examples, and notebook in online format)
 
 ---
 ## Diving deeper
