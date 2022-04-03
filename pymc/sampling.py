@@ -1627,13 +1627,13 @@ def sample_posterior_predictive(
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
     if isinstance(trace, InferenceData):
-        idata_kwargs["coords"].setdefault("draw", trace.posterior.draw)
-        idata_kwargs["coords"].setdefault("chain", trace.posterior.chain)
+        idata_kwargs["coords"].setdefault("draw", trace["posterior"]["draw"])
+        idata_kwargs["coords"].setdefault("chain", trace["posterior"]["chain"])
         _trace = dataset_to_point_list(trace["posterior"])
         nchain, len_trace = chains_and_samples(trace)
     elif isinstance(trace, xarray.Dataset):
-        idata_kwargs["coords"].setdefault("draw", trace.draw)
-        idata_kwargs["coords"].setdefault("chain", trace.chain)
+        idata_kwargs["coords"].setdefault("draw", trace["draw"])
+        idata_kwargs["coords"].setdefault("chain", trace["chain"])
         _trace = dataset_to_point_list(trace)
         nchain, len_trace = chains_and_samples(trace)
     elif isinstance(trace, MultiTrace):
