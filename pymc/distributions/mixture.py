@@ -29,11 +29,7 @@ from pymc.aesaraf import change_rv_size
 from pymc.distributions import transforms
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.distribution import (
-    SymbolicDistribution,
-    _moment,
-    moment,
-)
+from pymc.distributions.distribution import SymbolicDistribution, _moment, moment
 from pymc.distributions.logprob import logcdf, logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.distributions.transforms import _default_transform

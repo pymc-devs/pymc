@@ -29,6 +29,7 @@ from scipy.special import logsumexp
 
 from pymc.aesaraf import floatX
 from pymc.distributions import (
+    Binomial,
     Categorical,
     Dirichlet,
     DirichletMultinomial,
@@ -720,6 +721,31 @@ class TestMixture(SeededTest):
             # operation. This confirms that all draws will be unique
             assert isinstance(comp_dist.owner.op, RandomVariable)
             assert tuple(comp_dist.shape.eval()) == expected_shape
+
+    @pytest.mark.parametrize(
+        "comp_dists",
+        [
+            (
+                Categorical.dist(np.tile(1 / 3, 3)),
+                Normal.dist(np.ones(3), 3),
+            ),
+            (
+                Binomial.dist(n=10, p=0.5),
+                Normal.dist(),
+            ),
+            (
+                Categorical.dist(np.broadcast_to(1 / 3, (5, 2, 3))),
+                MvNormal.dist(np.ones(3), np.eye(3), shape=(5, 2)),
+            ),
+        ],
+    )
+    def test_preventing_mixing_cont_and_discrete(self, comp_dists):
+        with pytest.raises(
+            ValueError,
+            match="All distributions in comp_dists must be either discrete or continuous.",
+        ):
+            with Model() as model:
+                mix = Mixture("x", w=[0.5, 0.3, 0.2], comp_dists=comp_dists)
 
 
 class TestNormalMixture(SeededTest):
