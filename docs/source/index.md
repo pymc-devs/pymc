@@ -157,5 +157,5 @@ learning
 API <api>
 community
 contributing/index
-about/index
+About <about/index>
 :::

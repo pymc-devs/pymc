@@ -1,5 +1,5 @@
 (index)=
-# About Us
+# About PyMC
 
 
 ## Purpose
