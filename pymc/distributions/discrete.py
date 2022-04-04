@@ -626,14 +626,18 @@ class Poisson(Discrete):
         -------
         TensorVariable
         """
-        res = at.switch(
+        logprob = at.switch(
             at.lt(value, 0),
             -np.inf,
             logpow(mu, value) - factln(value) - mu,
         )
-        log_prob = check_parameters(res, mu >= 0, msg="mu >= 0")
         # Return zero when mu and value are both zero
-        return at.switch(at.eq(mu, 0) * at.eq(value, 0), 0, log_prob)
+        logprob = at.switch(
+            at.eq(mu, 0) * at.eq(value, 0),
+            0,
+            logprob,
+        )
+        return check_parameters(logprob, mu >= 0, msg="mu >= 0")
 
     def logcdf(value, mu):
         """
