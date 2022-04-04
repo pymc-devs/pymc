@@ -25,6 +25,7 @@ from aeppl.transforms import (
     Simplex,
 )
 from aesara.graph import Op
+from aesara.tensor import TensorVariable
 
 __all__ = [
     "RVTransform",
@@ -42,7 +43,7 @@ __all__ = [
 
 
 @singledispatch
-def _get_default_transform(op: Op):
+def _default_transform(op: Op, rv: TensorVariable):
     """Return default transform for a given Distribution `Op`"""
     return None
 

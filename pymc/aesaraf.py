@@ -39,14 +39,15 @@ from aesara.graph.basic import (
     Apply,
     Constant,
     Variable,
-    ancestors,
     clone_get_equiv,
     graph_inputs,
+    vars_between,
     walk,
 )
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op, compute_test_value
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
+from aesara.scalar.basic import Cast
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.shape import SpecifyShape
@@ -142,7 +143,7 @@ def pandas_to_array(data):
 
 
 def change_rv_size(
-    rv_var: TensorVariable,
+    rv: TensorVariable,
     new_size: PotentialShapeType,
     expand: Optional[bool] = False,
 ) -> TensorVariable:
@@ -150,8 +151,8 @@ def change_rv_size(
 
     Parameters
     ==========
-    rv_var
-        The `RandomVariable` output.
+    rv
+        The old `RandomVariable` output.
     new_size
         The new size.
     expand:
@@ -166,32 +167,37 @@ def change_rv_size(
         new_size = (new_size,)
 
     # Extract the RV node that is to be resized, together with its inputs, name and tag
-    if isinstance(rv_var.owner.op, SpecifyShape):
-        rv_var = rv_var.owner.inputs[0]
-    rv_node = rv_var.owner
+    if isinstance(rv.owner.op, SpecifyShape):
+        rv = rv.owner.inputs[0]
+    rv_node = rv.owner
     rng, size, dtype, *dist_params = rv_node.inputs
-    name = rv_var.name
-    tag = rv_var.tag
+    name = rv.name
+    tag = rv.tag
 
     if expand:
-        old_shape = tuple(rv_node.op._infer_shape(size, dist_params))
-        old_size = old_shape[: len(old_shape) - rv_node.op.ndim_supp]
-        new_size = tuple(new_size) + tuple(old_size)
+        shape = tuple(rv_node.op._infer_shape(size, dist_params))
+        size = shape[: len(shape) - rv_node.op.ndim_supp]
+        new_size = tuple(new_size) + tuple(size)
 
     # Make sure the new size is a tensor. This dtype-aware conversion helps
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
     new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
 
     new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
-    rv_var = new_rv_node.outputs[-1]
-    rv_var.name = name
+    new_rv = new_rv_node.outputs[-1]
+    new_rv.name = name
     for k, v in tag.__dict__.items():
-        rv_var.tag.__dict__.setdefault(k, v)
+        new_rv.tag.__dict__.setdefault(k, v)
+
+    # Update "traditional" rng default_update, if that was set for old RV
+    default_update = getattr(rng, "default_update", None)
+    if default_update is not None and default_update is rv_node.outputs[0]:
+        rng.default_update = new_rv_node.outputs[0]
 
     if config.compute_test_value != "off":
         compute_test_value(new_rv_node)
 
-    return rv_var
+    return new_rv
 
 
 def extract_rv_and_value_vars(
@@ -232,6 +238,9 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
         return x.data
     if isinstance(x, SharedVariable):
         return x.get_value()
+    if x.owner and isinstance(x.owner.op, Elemwise) and isinstance(x.owner.op.scalar_op, Cast):
+        array_data = extract_obs_data(x.owner.inputs[0])
+        return array_data.astype(x.type.dtype)
     if x.owner and isinstance(x.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1)):
         array_data = extract_obs_data(x.owner.inputs[0])
         mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
@@ -971,8 +980,8 @@ def compile_pymc(
     output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
     for rv in (
         node
-        for node in ancestors(output_to_list)
-        if node.owner and isinstance(node.owner.op, RandomVariable)
+        for node in vars_between(inputs, output_to_list)
+        if node.owner and isinstance(node.owner.op, RandomVariable) and node not in inputs
     ):
         rng = rv.owner.inputs[0]
         if not hasattr(rng, "default_update"):

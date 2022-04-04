@@ -35,7 +35,6 @@ pymc/distributions/censored.py
 pymc/distributions/discrete.py
 pymc/distributions/shape_utils.py
 pymc/distributions/simulator.py
-pymc/distributions/timeseries.py
 pymc/distributions/transforms.py
 pymc/exceptions.py
 pymc/func_utils.py

@@ -7,7 +7,7 @@ Instead update the vNext section until 4.0.0 is out.
 ⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠
 -->
 
-## PyMC vNext (4.0.0b1 → ... → 4.0.0b5 → 4.0.0)
+## PyMC vNext (4.0.0b1 → ... → 4.0.0b6 → 4.0.0)
 ⚠ The changes below are the delta between the releases `v3.11.5` →...→ `v4.0.0`.
 
 ### Not-yet working features
