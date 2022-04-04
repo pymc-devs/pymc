@@ -89,7 +89,7 @@ For the complete list see the {ref}`books` page.
 
 By Osvaldo Martin, Ravin Kumar and Junpeng Lao
 
-`<add description here>`
+Bayesian Modeling and Computation in Python aims to help beginner Bayesian practitioners to become intermediate modelers. It uses a hands on approach with PyMC and ArviZ focusing on the practice of applied statistics with references to the underlying mathematical theory.
 
 [Book website](https://bayesiancomputationbook.com/welcome.html)
 (the book website contains the whole book, code examples, and notebook in online format)
