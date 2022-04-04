@@ -38,7 +38,6 @@ try:
     def latex_print_array(data):  # pragma: no cover
         return sympy_latex(SympyArray(data))
 
-
 except ImportError:  # pragma: no cover
 
     def latex_print_array(data):

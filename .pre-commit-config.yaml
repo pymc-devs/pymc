@@ -12,7 +12,7 @@ repos:
       - id: debug-statements
       - id: check-merge-conflict
   - repo: https://github.com/psf/black
-    rev: 20.8b1
+    rev: 22.3.0
     hooks:
       - id: black
         language_version: python3

@@ -118,7 +118,7 @@ def test_rvs_to_value_vars():
 
 
 def test_rvs_to_value_vars_intermediate_rv():
-    """Test that function replaces values above an intermediate RV. """
+    """Test that function replaces values above an intermediate RV."""
     a = at.random.uniform(0.0, 1.0)
     a.name = "a"
     a.tag.value_var = a_value_var = a.clone()

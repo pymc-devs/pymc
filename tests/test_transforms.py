@@ -40,14 +40,11 @@ class DirichletScipyDist:
         return samples
 
     def logpdf(self, value):
-        res = (
-            np.sum(
-                scipy.special.xlogy(self.alphas - 1, value)
-                - scipy.special.gammaln(self.alphas),
-                axis=-1,
-            )
-            + scipy.special.gammaln(np.sum(self.alphas, axis=-1))
-        )
+        res = np.sum(
+            scipy.special.xlogy(self.alphas - 1, value)
+            - scipy.special.gammaln(self.alphas),
+            axis=-1,
+        ) + scipy.special.gammaln(np.sum(self.alphas, axis=-1))
         return res
 
 
