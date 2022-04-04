@@ -721,7 +721,7 @@ class TestMixture(SeededTest):
             assert isinstance(comp_dist.owner.op, RandomVariable)
             assert tuple(comp_dist.shape.eval()) == expected_shape
 
-    def test_preventing_mixing_cont_and_discrete(self, comp_dists):
+    def test_preventing_mixing_cont_and_discrete(self):
         with pytest.raises(
             ValueError,
             match="All distributions in comp_dists must be either discrete or continuous.",
