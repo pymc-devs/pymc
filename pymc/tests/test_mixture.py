@@ -728,8 +728,8 @@ class TestMixture(SeededTest):
         ):
             with Model() as model:
                 mix = Mixture(
-                    "x", 
-                    w=[0.5, 0.3, 0.2], 
+                    "x",
+                    w=[0.5, 0.3, 0.2],
                     comp_dists=[
                         Categorical.dist(np.tile(1 / 3, 3)),
                         Normal.dist(np.ones(3), 3),
