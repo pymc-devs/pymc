@@ -721,22 +721,20 @@ class TestMixture(SeededTest):
             assert isinstance(comp_dist.owner.op, RandomVariable)
             assert tuple(comp_dist.shape.eval()) == expected_shape
 
-    @pytest.mark.parametrize(
-        "comp_dists",
-        [
-            (
-                Categorical.dist(np.tile(1 / 3, 3)),
-                Normal.dist(np.ones(3), 3),
-            ),
-        ],
-    )
     def test_preventing_mixing_cont_and_discrete(self, comp_dists):
         with pytest.raises(
             ValueError,
             match="All distributions in comp_dists must be either discrete or continuous.",
         ):
             with Model() as model:
-                mix = Mixture("x", w=[0.5, 0.3, 0.2], comp_dists=comp_dists)
+                mix = Mixture(
+                    "x", 
+                    w=[0.5, 0.3, 0.2], 
+                    comp_dists=[
+                        Categorical.dist(np.tile(1 / 3, 3)),
+                        Normal.dist(np.ones(3), 3),
+                    ],
+                )
 
 
 class TestNormalMixture(SeededTest):
