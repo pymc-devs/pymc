@@ -174,7 +174,6 @@ class Mixture(SymbolicDistribution):
                 all(comp_dist.dtype in continuous_types for comp_dist in comp_dists)
                 or all(comp_dist.dtype in discrete_types for comp_dist in comp_dists)
             ):
-                # Determine if the distributions in comp_dists are all discrete or continuous
                 raise ValueError(
                     "All distributions in comp_dists must be either discrete or continuous.\n"
                     "See the following issue for more information: https://github.com/pymc-devs/pymc/issues/4511."

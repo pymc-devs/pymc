@@ -729,14 +729,6 @@ class TestMixture(SeededTest):
                 Categorical.dist(np.tile(1 / 3, 3)),
                 Normal.dist(np.ones(3), 3),
             ),
-            (
-                Binomial.dist(n=10, p=0.5),
-                Normal.dist(),
-            ),
-            (
-                Categorical.dist(np.broadcast_to(1 / 3, (5, 2, 3))),
-                MvNormal.dist(np.ones(3), np.eye(3), shape=(5, 2)),
-            ),
         ],
     )
     def test_preventing_mixing_cont_and_discrete(self, comp_dists):
