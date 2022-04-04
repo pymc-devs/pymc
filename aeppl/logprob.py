@@ -9,7 +9,7 @@ from aesara.raise_op import CheckAndRaise
 from aesara.tensor.slinalg import Cholesky, solve_lower_triangular
 from aesara.tensor.var import TensorVariable
 
-from aeppl.dists import DiracDelta
+from aeppl.dists import DiracDelta, DiscreteMarkovChainFactory
 
 
 class ParameterValueError(ValueError):
@@ -606,3 +606,59 @@ def diracdelta_logprob(op, values, *inputs, **kwargs):
     return at.switch(
         at.isclose(values, const_value, rtol=op.rtol, atol=op.atol), 0.0, -np.inf
     )
+
+
+@_logprob.register(DiscreteMarkovChainFactory)
+def discrete_mc_logp(op, values, *inputs, **kwargs):
+    r"""Create a Aesara graph that computes the log-likelihood for a discrete Markov chain.
+
+    This is the log-likelihood for the joint distribution of states, :math:`S_t`, conditional
+    on state samples, :math:`s_t`, given by the following:
+
+    .. math::
+
+        \int_{S_0} P(S_1 = s_1 \mid S_0) dP(S_0) \prod^{T}_{t=2} P(S_t = s_t \mid S_{t-1} = s_{t-1})
+
+    The first term (i.e. the integral) simply computes the marginal :math:`P(S_1 = s_1)`, so
+    another way to express this result is as follows:
+
+    .. math::
+
+        P(S_1 = s_1) \prod^{T}_{t=2} P(S_t = s_t \mid S_{t-1} = s_{t-1})
+
+    XXX TODO: This does not implement complete broadcasting support!
+
+    """
+
+    (states,) = values
+    _, Gammas, gamma_0 = inputs[: len(inputs) - len(op.shared_inputs)]
+
+    if states.ndim != 1 or Gammas.ndim > 3 or gamma_0.ndim > 1:
+        raise NotImplementedError()
+
+    Gammas_at = at.broadcast_to(Gammas, (states.shape[0],) + tuple(Gammas.shape)[-2:])
+    gamma_0_at = gamma_0
+
+    Gamma_1_at = Gammas_at[0]
+    P_S_1_at = at.dot(gamma_0_at, Gamma_1_at)[states[0]]
+
+    # def S_logp_fn(S_tm1, S_t, Gamma):
+    #     return at.log(Gamma[..., S_tm1, S_t])
+    #
+    # P_S_2T_at, _ = theano.scan(
+    #     S_logp_fn,
+    #     sequences=[
+    #         {
+    #             "input": states_at,
+    #             "taps": [-1, 0],
+    #         },
+    #         Gammas_at,
+    #     ],
+    # )
+    P_S_2T_at = Gammas_at[at.arange(0, states.shape[0] - 1), states[:-1], states[1:]]
+
+    log_P_S_1T_at = at.concatenate(
+        [at.shape_padright(at.log(P_S_1_at)), at.log(P_S_2T_at)]
+    )
+
+    return log_P_S_1T_at
