@@ -29,7 +29,6 @@ from scipy.special import logsumexp
 
 from pymc.aesaraf import floatX
 from pymc.distributions import (
-    Binomial,
     Categorical,
     Dirichlet,
     DirichletMultinomial,
