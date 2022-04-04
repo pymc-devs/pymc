@@ -42,7 +42,7 @@ from scipy.special import expit, softmax
 
 import pymc as pm
 
-from pymc.aesaraf import change_rv_size, floatX, intX
+from pymc.aesaraf import change_rv_size, compile_pymc, floatX, intX
 from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc.distributions.dist_math import clipped_beta_rvs
@@ -84,7 +84,7 @@ def pymc_random(
 
     model, param_vars = build_model(dist, valuedomain, paramdomains, extra_args)
     model_dist = change_rv_size_fn(model.named_vars["value"], size, expand=True)
-    pymc_rand = aesara.function([], model_dist)
+    pymc_rand = compile_pymc([], model_dist)
 
     domains = paramdomains.copy()
     for pt in product(domains, n_samples=100):
@@ -123,7 +123,7 @@ def pymc_random_discrete(
 
     model, param_vars = build_model(dist, valuedomain, paramdomains)
     model_dist = change_rv_size(model.named_vars["value"], size, expand=True)
-    pymc_rand = aesara.function([], model_dist)
+    pymc_rand = compile_pymc([], model_dist)
 
     domains = paramdomains.copy()
     for pt in product(domains, n_samples=100):
