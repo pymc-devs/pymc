@@ -18,6 +18,7 @@ import aesara.tensor as at
 import numpy as np
 
 from aesara import scan
+from aesara.raise_op import Assert
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.utils import normalize_size_param
 
@@ -167,8 +168,26 @@ class GaussianRandomWalk(distribution.Continuous):
 
         mu = at.as_tensor_variable(floatX(mu))
         sigma = at.as_tensor_variable(floatX(sigma))
+
+        # Check if shape contains information about number of steps
+        steps_from_shape = None
+        shape = kwargs.get("shape", None)
+        if shape is not None:
+            shape = to_tuple(shape)
+            if shape[-1] is not ...:
+                steps_from_shape = shape[-1] - 1
+
         if steps is None:
-            raise ValueError("Must specify steps parameter")
+            if steps_from_shape is not None:
+                steps = steps_from_shape
+            else:
+                raise ValueError("Must specify steps or shape parameter")
+        elif steps_from_shape is not None:
+            # Assert that steps and shape are consistent
+            steps = Assert(msg="Steps do not match last shape dimension")(
+                steps, at.eq(steps, steps_from_shape)
+            )
+
         steps = at.as_tensor_variable(intX(steps))
 
         # If no scalar distribution is passed then initialize with a Normal of same mu and sigma
