@@ -935,9 +935,6 @@ class TestSamplePPC(SeededTest):
         assert np.all(np.abs(ppc.posterior_predictive.c + 4) <= 0.1)
 
 
-@pytest.mark.xfail(
-    reason="sample_posterior_predictive_w not refactored for v4", raises=NotImplementedError
-)
 class TestSamplePPCW(SeededTest):
     def test_sample_posterior_predictive_w(self):
         data0 = np.random.normal(0, 1, size=50)
