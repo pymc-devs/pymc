@@ -167,9 +167,6 @@ class Mixture(SymbolicDistribution):
             )
 
         if len(comp_dists) > 1:
-            all_continuous = all(comp_dist.dtype in continuous_types for comp_dist in comp_dists)
-            all_discrete = all(comp_dist.dtype in discrete_types for comp_dist in comp_dists)
-
             if not (
                 all(comp_dist.dtype in continuous_types for comp_dist in comp_dists)
                 or all(comp_dist.dtype in discrete_types for comp_dist in comp_dists)
