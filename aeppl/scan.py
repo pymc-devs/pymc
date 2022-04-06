@@ -506,6 +506,6 @@ logprob_rewrites_db.register(
     "scan",
 )
 
-# Add scan canonicalizations that aren't in the canonicalize DB
+# Add scan canonicalizations that aren't in the canonicalization DB
 logprob_rewrites_db.register("scan_eqopt1", scan_eqopt1, -9, "basic", "scan")
 logprob_rewrites_db.register("scan_eqopt2", scan_eqopt2, -9, "basic", "scan")

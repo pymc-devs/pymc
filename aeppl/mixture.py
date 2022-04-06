@@ -5,7 +5,7 @@ import aesara.tensor as at
 from aesara.graph.basic import Apply, Variable
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op, compute_test_value
-from aesara.graph.opt import local_optimizer, pre_greedy_local_optimizer
+from aesara.graph.opt import local_optimizer, out2in, pre_greedy_local_optimizer
 from aesara.ifelse import ifelse
 from aesara.tensor.basic import Join, MakeVector
 from aesara.tensor.random.opt import local_dimshuffle_rv_lift, local_subtensor_rv_lift
@@ -23,8 +23,8 @@ from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
 from aeppl.logprob import _logprob, logprob
 from aeppl.opt import (
     local_lift_DiracDelta,
+    logprob_rewrites_db,
     naive_bcast_rv_lift,
-    rv_sinking_db,
     subtensor_ops,
 )
 from aeppl.utils import get_constant_value
@@ -369,4 +369,10 @@ def logprob_MixtureRV(
     return logp_val
 
 
-rv_sinking_db.register("mixture_replace", mixture_replace, -5, "basic")
+logprob_rewrites_db.register(
+    "mixture_replace",
+    out2in(mixture_replace, name="mixture_replace", ignore_newtrees=True),
+    0,
+    "basic",
+    "mixture",
+)

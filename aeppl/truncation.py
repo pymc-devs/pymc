@@ -5,7 +5,7 @@ import aesara.tensor as at
 import numpy as np
 from aesara.graph.basic import Node
 from aesara.graph.fg import FunctionGraph
-from aesara.graph.opt import local_optimizer
+from aesara.graph.opt import local_optimizer, out2in
 from aesara.scalar.basic import Clip
 from aesara.scalar.basic import clip as scalar_clip
 from aesara.tensor.elemwise import Elemwise
@@ -13,7 +13,7 @@ from aesara.tensor.var import TensorConstant
 
 from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
 from aeppl.logprob import CheckParameterValue, _logcdf, _logprob
-from aeppl.opt import rv_sinking_db
+from aeppl.opt import logprob_rewrites_db
 
 
 class CensoredRV(Elemwise):
@@ -72,7 +72,13 @@ def find_censored_rvs(fgraph: FunctionGraph, node: Node) -> Optional[List[Censor
     return [censored_rv]
 
 
-rv_sinking_db.register("find_censored_rvs", find_censored_rvs, -5, "basic")
+logprob_rewrites_db.register(
+    "find_censored_rvs",
+    out2in(find_censored_rvs, name="find_censored_rvs", ignore_newtrees=True),
+    0,
+    "basic",
+    "censoring",
+)
 
 
 @_logprob.register(CensoredRV)
