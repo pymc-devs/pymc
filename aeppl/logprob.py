@@ -181,6 +181,12 @@ def normal_logcdf(op, value, *inputs, **kwargs):
     return res
 
 
+@_icdf.register(arb.NormalRV)
+def normal_icdf(op, value, *inputs, **kwargs):
+    loc, scale = inputs[3:]
+    return loc + scale * -np.sqrt(2.0) * at.erfcinv(2 * value)
+
+
 @_logprob.register(arb.HalfNormalRV)
 def halfnormal_logprob(op, values, *inputs, **kwargs):
     (value,) = values

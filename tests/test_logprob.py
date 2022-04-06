@@ -165,6 +165,24 @@ def test_normal_logcdf(dist_params, obs, size):
 @pytest.mark.parametrize(
     "dist_params, obs, size",
     [
+        ((0, 1), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), ()),
+        ((-1, 20), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), ()),
+        ((-1, 20), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), (2, 3)),
+    ],
+)
+def test_normal_icdf(dist_params, obs, size):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.normal(*dist_params_at, size=size_at)
+
+    scipy_logprob_tester(x, obs, dist_params, test_fn=stats.norm.ppf, test="icdf")
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size",
+    [
         ((0, 1), np.array([0, 0.5, 1, -1], dtype=np.float64), ()),
         ((-1, 20), np.array([0, 0.5, 1, -1], dtype=np.float64), ()),
         ((-1, 20), np.array([0, 0.5, 1, -1], dtype=np.float64), (2, 3)),
