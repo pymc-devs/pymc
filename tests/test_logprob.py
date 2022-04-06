@@ -7,7 +7,7 @@ import scipy.stats as stats
 from aesara import function
 
 from aeppl.dists import dirac_delta
-from aeppl.logprob import ParameterValueError, logcdf, logprob
+from aeppl.logprob import ParameterValueError, icdf, logcdf, logprob
 
 # @pytest.fixture(scope="module", autouse=True)
 # def set_aesara_flags():
@@ -48,7 +48,7 @@ def create_aesara_params(dist_params, obs, size):
 
 
 def scipy_logprob_tester(
-    rv_var, obs, dist_params, test_fn=None, check_broadcastable=True, test_logcdf=False
+    rv_var, obs, dist_params, test_fn=None, check_broadcastable=True, test="logprob"
 ):
     """Test for correspondence between `RandomVariable` and NumPy shape and
     broadcast dimensions.
@@ -61,10 +61,15 @@ def scipy_logprob_tester(
 
         test_fn = getattr(stats, name)
 
-    if not test_logcdf:
+    if test == "logprob":
         aesara_res = logprob(rv_var, at.as_tensor(obs))
-    else:
+    elif test == "logcdf":
         aesara_res = logcdf(rv_var, at.as_tensor(obs))
+    elif test == "icdf":
+        aesara_res = icdf(rv_var, at.as_tensor(obs))
+    else:
+        raise ValueError(f"test must be one of (logprob, logcdf, icdf), got {test}")
+
     aesara_res_val = aesara_res.eval(dist_params)
 
     numpy_res = np.asarray(test_fn(obs, *dist_params.values()))
@@ -118,7 +123,7 @@ def test_uniform_logcdf(dist_params, obs, size):
     def scipy_logcdf(obs, l, u):
         return stats.uniform.logcdf(obs, loc=l, scale=u - l)
 
-    scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logcdf, test_logcdf=True)
+    scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logcdf, test="logcdf")
 
 
 @pytest.mark.parametrize(
@@ -154,9 +159,7 @@ def test_normal_logcdf(dist_params, obs, size):
 
     x = at.random.normal(*dist_params_at, size=size_at)
 
-    scipy_logprob_tester(
-        x, obs, dist_params, test_fn=stats.norm.logcdf, test_logcdf=True
-    )
+    scipy_logprob_tester(x, obs, dist_params, test_fn=stats.norm.logcdf, test="logcdf")
 
 
 @pytest.mark.parametrize(
@@ -705,9 +708,7 @@ def test_poisson_logcdf(dist_params, obs, size, error):
         return stats.poisson.logcdf(obs, mu)
 
     with cm:
-        scipy_logprob_tester(
-            x, obs, dist_params, test_fn=scipy_logcdf, test_logcdf=True
-        )
+        scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logcdf, test="logcdf")
 
 
 @pytest.mark.parametrize(
