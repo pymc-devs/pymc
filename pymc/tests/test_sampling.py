@@ -25,7 +25,7 @@ import numpy.testing as npt
 import pytest
 import scipy.special
 
-from aesara import shared
+from aesara import Mode, shared
 from arviz import InferenceData
 from arviz import from_dict as az_from_dict
 from arviz.tests.helpers import check_multiple_attrs
@@ -1237,6 +1237,23 @@ class TestSamplePriorPredictive(SeededTest):
         assert prior1.prior["c"] == prior2.prior["c"]
         assert prior1.prior["d"] == prior2.prior["d"]
 
+    def test_aesara_function_kwargs(self):
+        sharedvar = aesara.shared(0)
+        with pm.Model() as m:
+            x = pm.Constant("x", 0)
+            y = pm.Deterministic("y", x + sharedvar)
+
+            prior = pm.sample_prior_predictive(
+                samples=5,
+                return_inferencedata=False,
+                compile_kwargs=dict(
+                    mode=Mode("py"),
+                    updates={sharedvar: sharedvar + 1},
+                ),
+            )
+
+        assert np.all(prior["y"] == np.arange(5))
+
 
 class TestSamplePosteriorPredictive:
     def test_point_list_arg_bug_spp(self, point_list_arg_bug_fixture):
@@ -1266,6 +1283,24 @@ class TestSamplePosteriorPredictive:
         with pmodel:
             idat = pm.to_inference_data(trace)
             pp = pm.sample_posterior_predictive(idat.posterior, var_names=["d"])
+
+    def test_aesara_function_kwargs(self):
+        sharedvar = aesara.shared(0)
+        with pm.Model() as m:
+            x = pm.Constant("x", 0.0)
+            y = pm.Deterministic("y", x + sharedvar)
+
+            pp = pm.sample_posterior_predictive(
+                trace=az_from_dict({"x": np.arange(5)}),
+                var_names=["y"],
+                return_inferencedata=False,
+                compile_kwargs=dict(
+                    mode=Mode("py"),
+                    updates={sharedvar: sharedvar + 1},
+                ),
+            )
+
+        assert np.all(pp["y"] == np.arange(5) * 2)
 
 
 class TestDraw(SeededTest):
@@ -1322,6 +1357,18 @@ class TestDraw(SeededTest):
         x_draws_1 = pm.draw(x, 100)
         x_draws_2 = pm.draw(x, 100)
         assert not np.all(np.isclose(x_draws_1, x_draws_2))
+
+    def test_draw_aesara_function_kwargs(self):
+        sharedvar = aesara.shared(0)
+        x = pm.Constant.dist(0.0)
+        y = x + sharedvar
+        draws = pm.draw(
+            y,
+            draws=5,
+            mode=Mode("py"),
+            updates={sharedvar: sharedvar + 1},
+        )
+        assert np.all(draws == np.arange(5))
 
 
 class test_step_args(SeededTest):
