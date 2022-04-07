@@ -43,7 +43,6 @@ import cloudpickle
 import numpy as np
 import xarray
 
-from aesara.compile.mode import Mode
 from aesara.graph.basic import Constant, Variable
 from aesara.tensor import TensorVariable
 from aesara.tensor.sharedvar import SharedVariable
@@ -1544,11 +1543,11 @@ def sample_posterior_predictive(
     keep_size: Optional[bool] = None,
     random_seed=None,
     progressbar: bool = True,
-    mode: Optional[Union[str, Mode]] = None,
     return_inferencedata: bool = True,
     extend_inferencedata: bool = False,
     predictions: bool = False,
     idata_kwargs: dict = None,
+    compile_kwargs: dict = None,
 ) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate posterior predictive samples from a model given a trace.
 
@@ -1586,8 +1585,6 @@ def sample_posterior_predictive(
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
-    mode:
-        The mode used by ``aesara.function`` to compile the graph.
     return_inferencedata : bool, default True
         Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
     extend_inferencedata : bool, default False
@@ -1599,6 +1596,8 @@ def sample_posterior_predictive(
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data` if ``predictions=False`` or to
         :func:`pymc.predictions_to_inference_data` otherwise.
+    compile_kwargs: dict, optional
+        Keyword arguments for :func:`pymc.aesaraf.compile_pymc`.
 
     Returns
     -------
@@ -1746,13 +1745,16 @@ def sample_posterior_predictive(
     if size is not None:
         vars_to_sample = [change_rv_size(v, size, expand=True) for v in vars_to_sample]
 
+    if compile_kwargs is None:
+        compile_kwargs = {}
+
     sampler_fn = compile_pymc(
         inputs,
         vars_to_sample,
         allow_input_downcast=True,
         accept_inplace=True,
         on_unused_input="ignore",
-        mode=mode,
+        **compile_kwargs,
     )
 
     ppc_trace_t = _DefaultTrace(samples)
@@ -1987,9 +1989,9 @@ def sample_prior_predictive(
     model: Optional[Model] = None,
     var_names: Optional[Iterable[str]] = None,
     random_seed=None,
-    mode: Optional[Union[str, Mode]] = None,
     return_inferencedata: bool = True,
     idata_kwargs: dict = None,
+    compile_kwargs: dict = None,
 ) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate samples from the prior predictive distribution.
 
@@ -2004,13 +2006,13 @@ def sample_prior_predictive(
         are not included unless explicitly defined in var_names.
     random_seed : int
         Seed for the random number generator.
-    mode:
-        The mode used by ``aesara.function`` to compile the graph.
     return_inferencedata : bool
         Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
         Defaults to True.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
+    compile_kwargs: dict, optional
+        Keyword arguments for :func:`pymc.aesaraf.compile_pymc`.
 
     Returns
     -------
@@ -2068,8 +2070,15 @@ def sample_prior_predictive(
 
     inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, (Constant, SharedVariable))]
 
+    if compile_kwargs is None:
+        compile_kwargs = {}
+
     sampler_fn = compile_pymc(
-        inputs, vars_to_sample, allow_input_downcast=True, accept_inplace=True, mode=mode
+        inputs,
+        vars_to_sample,
+        allow_input_downcast=True,
+        accept_inplace=True,
+        **compile_kwargs,
     )
 
     values = zip(*(sampler_fn() for i in range(samples)))
@@ -2094,7 +2103,6 @@ def sample_prior_predictive(
 def draw(
     vars: Union[Variable, Sequence[Variable]],
     draws: int = 1,
-    mode: Optional[Union[str, Mode]] = None,
     **kwargs,
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """Draw samples for one variable or a list of variables
@@ -2105,8 +2113,6 @@ def draw(
         A variable or a list of variables for which to draw samples.
     draws : int, default 1
         Number of samples needed to draw.
-    mode : str or aesara.compile.mode.Mode, optional
-        The mode used by :func:`aesara.function` to compile the graph.
     **kwargs : dict, optional
         Keyword arguments for :func:`pymc.aesara.compile_pymc`.
 
@@ -2140,7 +2146,7 @@ def draw(
             assert draws[2].shape == (num_draws, 5)
     """
 
-    draw_fn = compile_pymc(inputs=[], outputs=vars, mode=mode, **kwargs)
+    draw_fn = compile_pymc(inputs=[], outputs=vars, **kwargs)
 
     if draws == 1:
         return draw_fn()
