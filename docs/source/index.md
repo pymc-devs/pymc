@@ -146,8 +146,21 @@ Use this to cite the library:
 
 Salvatier J., Wiecki T.V., Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ Computer Science 2:e55 [DOI: 10.7717/peerj-cs.55.](https://doi.org/10.7717/peerj-cs.55)
 
-For detailed advise on citing PyMC go to {ref}`citing_pymc`.
-See [Google Scholar](https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&cites=6936955228135731011) for a continuously updated list of papers citing PyMC3.
+The BibTeX entry is:
+
+```bibtex
+@article{pymc,
+  title={Probabilistic programming in Python using PyMC3},
+  author={Salvatier, John and Wiecki, Thomas V and Fonnesbeck, Christopher},
+  journal={PeerJ Computer Science},
+  volume={2},
+  pages={e55},
+  year={2016},
+  publisher={PeerJ Inc.}
+}
+```
+
+See [Google Scholar](https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&cites=6936955228135731011) for a continuously updated list of papers citing PyMC.
 
 :::{toctree}
 :maxdepth: 1
@@ -157,5 +170,4 @@ learning
 API <api>
 community
 contributing/index
-About <about/index>
 :::

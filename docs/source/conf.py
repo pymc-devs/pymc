@@ -217,11 +217,6 @@ html_theme_options = {
             "icon": "fab fa-twitter-square",
         },
         {
-            "name": "LinkedIn",
-            "url": "https://www.linkedin.com/company/pymc/",
-            "icon": "fab fa-linkedin",
-        },
-        {
             "name": "YouTube",
             "url": "https://www.youtube.com/c/PyMCDevelopers",
             "icon": "fab fa-youtube",
@@ -233,10 +228,12 @@ html_theme_options = {
         },
     ],
     "external_links": [
+        {"name": "About", "url": "https://www.pymc.io"},
         {"name": "Examples", "url": "https://docs.pymc.io/projects/examples/en/latest/"},
+        {"name": "Blog", "url": "https://www.pymc.io/blog.html"},
     ],
     "show_prev_next": False,
-    # "navbar_align": "left",
+    "navbar_align": "left",
     "navbar_start": ["navbar-logo", "navbar-version"],
     "navbar_end": ["search-field.html", "navbar-icon-links.html"],
     "page_sidebar_items": ["page-toc", "edit-this-page", "donate"],
