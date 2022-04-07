@@ -28,6 +28,7 @@ import scipy.special
 from aesara import shared
 from arviz import InferenceData
 from arviz import from_dict as az_from_dict
+from arviz.tests.helpers import check_multiple_attrs
 from scipy import stats
 
 import pymc as pm
@@ -829,6 +830,40 @@ class TestSamplePPC(SeededTest):
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_posterior_predictive(trace)
+
+    def test_idata_extension(self):
+        """Testing if sample_posterior_predictive() extends inferenceData"""
+
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0)
+            a = pm.Normal("a", mu=mu, sigma=1, observed=[0.0, 1.0])
+            idata = pm.sample(tune=10, draws=10, compute_convergence_checks=False)
+
+        base_test_dict = {
+            "posterior": ["mu", "~a"],
+            "sample_stats": ["diverging", "lp"],
+            "log_likelihood": ["a"],
+            "observed_data": ["a"],
+        }
+        test_dict = {"~posterior_predictive": [], "~predictions": [], **base_test_dict}
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
+
+        # extending idata with in-sample ppc
+        with model:
+            pm.sample_posterior_predictive(idata, extend_inferencedata=True)
+        # test addition
+        test_dict = {"posterior_predictive": ["a"], "~predictions": [], **base_test_dict}
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
+
+        # extending idata with out-of-sample ppc
+        with model:
+            pm.sample_posterior_predictive(idata, extend_inferencedata=True, predictions=True)
+        # test addition
+        test_dict = {"posterior_predictive": ["a"], "predictions": ["a"], **base_test_dict}
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
 
 
 class TestSamplePPCW(SeededTest):

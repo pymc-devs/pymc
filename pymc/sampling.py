@@ -1796,6 +1796,7 @@ def sample_posterior_predictive(
     if predictions:
         if extend_inferencedata:
             ikwargs.setdefault("idata_orig", trace)
+            ikwargs.setdefault("inplace", True)
         return pm.predictions_to_inference_data(ppc_trace, **ikwargs)
     converter = pm.backends.arviz.InferenceDataConverter(posterior_predictive=ppc_trace, **ikwargs)
     converter.nchains = nchain
