@@ -167,7 +167,7 @@ See [Google Scholar](https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&
 :hidden:
 
 learning
-API <api>
+api
 community
 contributing/index
 :::

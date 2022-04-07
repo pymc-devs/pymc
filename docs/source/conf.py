@@ -249,8 +249,6 @@ html_context = {
 }
 # this controls which sidebar sections are available in which pages. [] removes the left sidebar
 html_sidebars = {
-    "learn": [],
-    "installation": [],
     "community": ["twitter"],
     "**": ["sidebar-nav-bs.html"],
 }

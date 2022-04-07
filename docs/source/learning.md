@@ -1,7 +1,7 @@
 (learning)=
 # Learning
 
-## Installation
+## Install PyMC
 Refer to the {ref}`installation guide <installation>` to set up PyMC in your
 own environment.
 
