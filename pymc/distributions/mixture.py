@@ -294,11 +294,6 @@ class Mixture(SymbolicDistribution):
         # inside OpFromGraph and PyMC will never find it otherwise
         mix_indexes_rng.default_update = mix_out.owner.outputs[0]
 
-        # Reference nodes to facilitate identification in other classmethods
-        mix_out.tag.weights = weights
-        mix_out.tag.components = components
-        mix_out.tag.choices_rng = mix_indexes_rng
-
         # Component RVs terms are accounted by the Mixture logprob, so they can be
         # safely ignore by Aeppl (this tag prevents UserWarning)
         for component in components:
@@ -337,15 +332,14 @@ class Mixture(SymbolicDistribution):
 
     @classmethod
     def change_size(cls, rv, new_size, expand=False):
-        weights = rv.tag.weights
-        components = rv.tag.components
-        rngs = [component.owner.inputs[0] for component in components] + [rv.tag.choices_rng]
+        mix_indexes_rng, weights, *components = rv.owner.inputs
+        rngs = [component.owner.inputs[0] for component in components] + [mix_indexes_rng]
 
         if expand:
-            component = rv.tag.components[0]
+            component = components[0]
             # Old size is equal to `shape[:-ndim_supp]`, with care needed for `ndim_supp == 0`
             size_dims = component.ndim - component.owner.op.ndim_supp
-            if len(rv.tag.components) == 1:
+            if len(components) == 1:
                 # If we have a single component, new size should ignore the mixture axis
                 # dimension, as that is not touched by `_resize_components`
                 size_dims -= 1
@@ -362,7 +356,7 @@ class Mixture(SymbolicDistribution):
         # mix_indexes_ RV in its inner graph. We want super().dist() to generate
         # (components + 1) rngs for us, and it will do so based on how many elements
         # we return here
-        return (*rv.tag.components, rv)
+        return (*rv.owner.inputs[2:], rv)
 
 
 @_get_measurable_outputs.register(MarginalMixtureRV)
