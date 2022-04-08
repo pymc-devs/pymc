@@ -24,7 +24,7 @@ from pymc.aesaraf import change_rv_size, floatX, intX
 from pymc.distributions import distribution, logprob, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.shape_utils import ndim_supp_dist, to_tuple
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -175,7 +175,7 @@ class GaussianRandomWalk(distribution.Continuous):
                 isinstance(init, at.TensorVariable)
                 and init.owner is not None
                 and isinstance(init.owner.op, RandomVariable)
-                and init.owner.op.ndim_supp == 0
+                and ndim_supp_dist(init) == 0
             ):
                 raise TypeError("init must be a univariate distribution variable")
 

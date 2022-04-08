@@ -59,6 +59,7 @@ from pymc.distributions.dist_math import (
 from pymc.distributions.distribution import Continuous, Discrete, moment
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
+    ndim_supp_dist,
     rv_size_is_none,
     to_tuple,
 )
@@ -1187,7 +1188,7 @@ class _LKJCholeskyCov(Continuous):
             isinstance(sd_dist, Variable)
             and sd_dist.owner is not None
             and isinstance(sd_dist.owner.op, RandomVariable)
-            and sd_dist.owner.op.ndim_supp < 2
+            and ndim_supp_dist(sd_dist) < 2
         ):
             raise TypeError("sd_dist must be a scalar or vector distribution variable")
 
@@ -1197,7 +1198,7 @@ class _LKJCholeskyCov(Continuous):
         # diagonal element.
         # Since `eta` and `n` are forced to be scalars we don't need to worry about
         # implied batched dimensions for the time being.
-        if sd_dist.owner.op.ndim_supp == 0:
+        if ndim_supp_dist(sd_dist) == 0:
             sd_dist = change_rv_size(sd_dist, to_tuple(size) + (n,))
         else:
             # The support shape must be `n` but we have no way of controlling it

@@ -17,12 +17,15 @@
 A collection of common shape operations needed for broadcasting
 samples from probability distributions for stochastic nodes in PyMC.
 """
-
+from functools import singledispatch
 from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 
 from aesara.graph.basic import Variable
+from aesara.graph.op import Op
+from aesara.tensor.elemwise import Elemwise
+from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
@@ -619,3 +622,23 @@ def find_size(
 def rv_size_is_none(size: Variable) -> bool:
     """Check wether an rv size is None (ie., at.Constant([]))"""
     return size.type.shape == (0,)  # type: ignore [attr-defined]
+
+
+@singledispatch
+def _ndim_supp_dist(op: Op, dist: TensorVariable) -> int:
+    raise TypeError(f"ndim_supp not known for Op {op}")
+
+
+def ndim_supp_dist(dist: TensorVariable) -> int:
+    return _ndim_supp_dist(dist.owner.op, dist)
+
+
+@_ndim_supp_dist.register(RandomVariable)
+def ndim_supp_rv(op: Op, rv: TensorVariable):
+    return op.ndim_supp
+
+
+@_ndim_supp_dist.register(Elemwise)
+def ndim_supp_elemwise(op: Op, *args, **kwargs):
+    """For Elemwise Ops, dispatch on respective scalar_op"""
+    return _ndim_supp_dist(op.scalar_op, *args, **kwargs)

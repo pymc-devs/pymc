@@ -43,6 +43,7 @@ import scipy.sparse as sps
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
+from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.opt import local_subtensor_rv_lift
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.sharedvar import ScalarSharedVariable
@@ -1329,6 +1330,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 " sampling distribution."
             )
             warnings.warn(impute_message, ImputationWarning)
+
+            # TODO: Add test for this
+            if not isinstance(rv_var.owner.op, RandomVariable):
+                raise NotImplementedError(
+                    f"Automatic inputation is only supported for RandomVariables, but {rv_var} is of type {rv_var.owner.op}"
+                )
 
             if rv_var.owner.op.ndim_supp > 0:
                 raise NotImplementedError(

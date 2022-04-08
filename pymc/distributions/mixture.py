@@ -31,7 +31,7 @@ from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicDistribution, _moment, moment
 from pymc.distributions.logprob import logcdf, logp
-from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.shape_utils import _ndim_supp_dist, ndim_supp_dist, to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.util import check_dist_not_registered
 from pymc.vartypes import continuous_types, discrete_types
@@ -188,7 +188,7 @@ class Mixture(SymbolicDistribution):
                     f"Component dist must be a distribution created via the `.dist()` API, got {type(dist)}"
                 )
             check_dist_not_registered(dist)
-            components_ndim_supp.add(dist.owner.op.ndim_supp)
+            components_ndim_supp.add(ndim_supp_dist(dist))
 
         if len(components_ndim_supp) > 1:
             raise ValueError(
@@ -209,7 +209,7 @@ class Mixture(SymbolicDistribution):
             mix_indexes_rng = aesara.shared(np.random.default_rng())
 
         single_component = len(components) == 1
-        ndim_supp = components[0].owner.op.ndim_supp
+        ndim_supp = ndim_supp_dist(components[0])
 
         if size is not None:
             components = cls._resize_components(size, *components)
@@ -319,16 +319,11 @@ class Mixture(SymbolicDistribution):
         if len(components) == 1:
             # If we have a single component, we need to keep the length of the mixture
             # axis intact, because that's what determines the number of mixture components
-            mix_axis = -components[0].owner.op.ndim_supp - 1
+            mix_axis = -ndim_supp_dist(components[0]) - 1
             mix_size = components[0].shape[mix_axis]
             size = tuple(size) + (mix_size,)
 
         return [change_rv_size(component, size) for component in components]
-
-    @classmethod
-    def ndim_supp(cls, weights, *components):
-        # We already checked that all components have the same support dimensionality
-        return components[0].owner.op.ndim_supp
 
     @classmethod
     def change_size(cls, rv, new_size, expand=False):
@@ -338,7 +333,7 @@ class Mixture(SymbolicDistribution):
         if expand:
             component = components[0]
             # Old size is equal to `shape[:-ndim_supp]`, with care needed for `ndim_supp == 0`
-            size_dims = component.ndim - component.owner.op.ndim_supp
+            size_dims = component.ndim - ndim_supp_dist(component)
             if len(components) == 1:
                 # If we have a single component, new size should ignore the mixture axis
                 # dimension, as that is not touched by `_resize_components`
@@ -359,6 +354,13 @@ class Mixture(SymbolicDistribution):
         return (*rv.owner.inputs[2:], rv)
 
 
+@_ndim_supp_dist.register(MarginalMixtureRV)
+def ndim_supp_marginal_mixture(op, rv):
+    # We already checked that all components have the same support dimensionality
+    components = rv.owner.inputs[2:]
+    return ndim_supp_dist(components[0])
+
+
 @_get_measurable_outputs.register(MarginalMixtureRV)
 def _get_measurable_outputs_MarginalMixtureRV(op, node):
     # This tells Aeppl that the second output is the measurable one
@@ -372,7 +374,7 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
     # single component
     if len(components) == 1:
         # Need to broadcast value across mixture axis
-        mix_axis = -components[0].owner.op.ndim_supp - 1
+        mix_axis = -ndim_supp_dist(components[0]) - 1
         components_logp = logp(components[0], at.expand_dims(value, mix_axis))
     else:
         components_logp = at.stack(
@@ -405,7 +407,7 @@ def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
     # single component
     if len(components) == 1:
         # Need to broadcast value across mixture axis
-        mix_axis = -components[0].owner.op.ndim_supp - 1
+        mix_axis = -ndim_supp_dist(components[0]) - 1
         components_logcdf = logcdf(components[0], at.expand_dims(value, mix_axis))
     else:
         components_logcdf = at.stack(
@@ -434,7 +436,7 @@ def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
 
 @_moment.register(MarginalMixtureRV)
 def marginal_mixture_moment(op, rv, rng, weights, *components):
-    ndim_supp = components[0].owner.op.ndim_supp
+    ndim_supp = ndim_supp_dist(components[0])
     weights = at.shape_padright(weights, ndim_supp)
     mix_axis = -ndim_supp - 1
 

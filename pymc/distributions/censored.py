@@ -19,6 +19,7 @@ from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
 from pymc.distributions.distribution import SymbolicDistribution, _moment
+from pymc.distributions.shape_utils import _ndim_supp_dist, ndim_supp_dist
 from pymc.util import check_dist_not_registered
 
 
@@ -65,7 +66,7 @@ class Censored(SymbolicDistribution):
             raise ValueError(
                 f"Censoring dist must be a distribution created via the `.dist()` API, got {type(dist)}"
             )
-        if dist.owner.op.ndim_supp > 0:
+        if ndim_supp_dist(dist) > 0:
             raise NotImplementedError(
                 "Censoring of multivariate distributions has not been implemented yet"
             )
@@ -96,10 +97,6 @@ class Censored(SymbolicDistribution):
         return rv_out
 
     @classmethod
-    def ndim_supp(cls, *dist_params):
-        return 0
-
-    @classmethod
     def change_size(cls, rv, new_size, expand=False):
         dist_node = rv.tag.dist.owner
         lower = rv.tag.lower
@@ -122,6 +119,12 @@ class Censored(SymbolicDistribution):
     @classmethod
     def graph_rvs(cls, rv):
         return (rv.tag.dist,)
+
+
+@_ndim_supp_dist.register(Clip)
+def ndim_supp_censored(op, dist):
+    # We only support Censoring of univariate distributions
+    return 0
 
 
 @_moment.register(Clip)

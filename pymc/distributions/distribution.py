@@ -44,6 +44,7 @@ from pymc.distributions.shape_utils import (
     convert_shape,
     convert_size,
     find_size,
+    ndim_supp_dist,
     resize_from_dims,
     resize_from_observed,
 )
@@ -399,15 +400,19 @@ class SymbolicDistribution:
         cls.rv_op
             Returns a TensorVariable that represents the symbolic distribution
             parametrized by a default set of parameters and a size and rngs arguments
-        cls.ndim_supp
-            Returns the support of the symbolic distribution, given the default
-            parameters. This may not always be constant, for instance if the symbolic
-            distribution can be defined based on an arbitrary base distribution.
         cls.change_size
             Returns an equivalent symbolic distribution with a different size. This is
             analogous to `pymc.aesaraf.change_rv_size` for `RandomVariable`s.
         cls.graph_rvs
             Returns base RVs in a symbolic distribution.
+
+        Furthermore, Censored distributions must have a dispatch version of the following
+        functions for correct behavior in PyMC:
+        _ndim_supp_dist
+            Returns the support of the symbolic distribution. This may not always be
+            constant, for instance if the symbolic distribution can be defined based
+            on an arbitrary base distribution. This is called by
+            `pymc.distributions.shape_utils.ndim_supp_dist`
 
         Parameters
         ----------
@@ -559,8 +564,11 @@ class SymbolicDistribution:
         shape = convert_shape(shape)
         size = convert_size(size)
 
+        # Create a temporary dist to obtain the ndim_supp
+        ndim_supp = ndim_supp_dist(cls.rv_op(*dist_params, size=size))
+
         create_size, ndim_expected, ndim_batch, ndim_supp = find_size(
-            shape=shape, size=size, ndim_supp=cls.ndim_supp(*dist_params)
+            shape=shape, size=size, ndim_supp=ndim_supp
         )
         # Create the RV with a `size` right away.
         # This is not necessarily the final result.
