@@ -42,7 +42,7 @@ from scipy.special import expit, softmax
 
 import pymc as pm
 
-from pymc.aesaraf import change_rv_size, compile_pymc, floatX, intX
+from pymc.aesaraf import compile_pymc, floatX, intX
 from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc.distributions.dist_math import clipped_beta_rvs
@@ -52,7 +52,7 @@ from pymc.distributions.multivariate import (
     _OrderedMultinomial,
     quaddist_matrix,
 )
-from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.shape_utils import resize_dist, to_tuple
 from pymc.tests.helpers import SeededTest, select_by_precision
 from pymc.tests.test_distributions import (
     Domain,
@@ -74,7 +74,6 @@ def pymc_random(
     fails=10,
     extra_args=None,
     model_args=None,
-    change_rv_size_fn=change_rv_size,
 ):
     if valuedomain is None:
         valuedomain = Domain([0], edges=(None, None))
@@ -83,7 +82,7 @@ def pymc_random(
         model_args = {}
 
     model, param_vars = build_model(dist, valuedomain, paramdomains, extra_args)
-    model_dist = change_rv_size_fn(model.named_vars["value"], size, expand=True)
+    model_dist = resize_dist(model.named_vars["value"], size, expand=True)
     pymc_rand = compile_pymc([], model_dist)
 
     domains = paramdomains.copy()
@@ -122,7 +121,7 @@ def pymc_random_discrete(
         valuedomain = Domain([0], edges=(None, None))
 
     model, param_vars = build_model(dist, valuedomain, paramdomains)
-    model_dist = change_rv_size(model.named_vars["value"], size, expand=True)
+    model_dist = resize_dist(model.named_vars["value"], size, expand=True)
     pymc_rand = compile_pymc([], model_dist)
 
     domains = paramdomains.copy()

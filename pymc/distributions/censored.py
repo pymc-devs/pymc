@@ -19,7 +19,12 @@ from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
 from pymc.distributions.distribution import SymbolicDistribution, _moment
-from pymc.distributions.shape_utils import _ndim_supp_dist, ndim_supp_dist
+from pymc.distributions.shape_utils import (
+    _ndim_supp_dist,
+    _resize_dist,
+    ndim_supp_dist,
+    resize_dist,
+)
 from pymc.util import check_dist_not_registered
 
 
@@ -90,21 +95,11 @@ class Censored(SymbolicDistribution):
         rv_out.tag.upper = upper
 
         if size is not None:
-            rv_out = cls.change_size(rv_out, size)
+            rv_out = resize_dist(rv_out, size)
         if rngs is not None:
             rv_out = cls.change_rngs(rv_out, rngs)
 
         return rv_out
-
-    @classmethod
-    def change_size(cls, rv, new_size, expand=False):
-        dist_node = rv.tag.dist.owner
-        lower = rv.tag.lower
-        upper = rv.tag.upper
-        rng, old_size, dtype, *dist_params = dist_node.inputs
-        new_size = new_size if not expand else tuple(new_size) + tuple(old_size)
-        new_dist = dist_node.op.make_node(rng, new_size, dtype, *dist_params).default_output()
-        return cls.rv_op(new_dist, lower, upper)
 
     @classmethod
     def change_rngs(cls, rv, new_rngs):
@@ -125,6 +120,15 @@ class Censored(SymbolicDistribution):
 def ndim_supp_censored(op, dist):
     # We only support Censoring of univariate distributions
     return 0
+
+
+@_resize_dist.register(Clip)
+def resize_censored(op, rv, new_size, expand=False):
+    dist = rv.tag.dist
+    lower = rv.tag.lower
+    upper = rv.tag.upper
+    new_dist = resize_dist(dist, new_size, expand=expand)
+    return Censored.rv_op(new_dist, lower, upper)
 
 
 @_moment.register(Clip)

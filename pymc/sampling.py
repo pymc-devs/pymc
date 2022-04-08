@@ -52,11 +52,12 @@ from typing_extensions import TypeAlias
 
 import pymc as pm
 
-from pymc.aesaraf import change_rv_size, compile_pymc, inputvars, walk_model
+from pymc.aesaraf import compile_pymc, inputvars, walk_model
 from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
+from pymc.distributions.shape_utils import resize_dist
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
 from pymc.initial_point import (
     PointType,
@@ -1743,7 +1744,7 @@ def sample_posterior_predictive(
         inputs = [model[n] for n in input_names]
 
     if size is not None:
-        vars_to_sample = [change_rv_size(v, size, expand=True) for v in vars_to_sample]
+        vars_to_sample = [resize_dist(v, size, expand=True) for v in vars_to_sample]
 
     if compile_kwargs is None:
         compile_kwargs = {}

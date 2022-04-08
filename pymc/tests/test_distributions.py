@@ -126,7 +126,7 @@ from pymc.distributions import (
     logcdf,
     logp,
 )
-from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.shape_utils import resize_dist, to_tuple
 from pymc.math import kronecker
 from pymc.model import Deterministic, Model, Point, Potential
 from pymc.tests.helpers import select_by_precision
@@ -3371,13 +3371,13 @@ class TestCensored:
             ):
                 x = pm.Censored("x", registered_dist, lower=None, upper=None)
 
-    def test_change_size(self):
+    def test_resize_dist(self):
         base_dist = pm.Censored.dist(pm.Normal.dist(), -1, 1, size=(3, 2))
 
-        new_dist = pm.Censored.change_size(base_dist, (4,))
+        new_dist = resize_dist(base_dist, (4,))
         assert new_dist.eval().shape == (4,)
 
-        new_dist = pm.Censored.change_size(base_dist, (4,), expand=True)
+        new_dist = resize_dist(base_dist, (4,), expand=True)
         assert new_dist.eval().shape == (4, 3, 2)
 
 

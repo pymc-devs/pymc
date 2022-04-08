@@ -20,11 +20,11 @@ import numpy as np
 from aesara import scan
 from aesara.tensor.random.op import RandomVariable
 
-from pymc.aesaraf import change_rv_size, floatX, intX
+from pymc.aesaraf import floatX, intX
 from pymc.distributions import distribution, logprob, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.shape_utils import ndim_supp_dist, to_tuple
+from pymc.distributions.shape_utils import ndim_supp_dist, resize_dist, to_tuple
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -180,11 +180,11 @@ class GaussianRandomWalk(distribution.Continuous):
                 raise TypeError("init must be a univariate distribution variable")
 
             if init_size is not None:
-                init = change_rv_size(init, init_size)
+                init = resize_dist(init, init_size)
             else:
                 # If not explicit, size is determined by the shapes of mu, sigma, and init
                 bcast_shape = at.broadcast_arrays(mu, sigma, init)[0].shape
-                init = change_rv_size(init, bcast_shape)
+                init = resize_dist(init, bcast_shape)
 
         # Ignores logprob of init var because that's accounted for in the logp method
         init.tag.ignore_logprob = True

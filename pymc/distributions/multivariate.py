@@ -41,7 +41,7 @@ from scipy import linalg, stats
 
 import pymc as pm
 
-from pymc.aesaraf import change_rv_size, floatX, intX
+from pymc.aesaraf import floatX, intX
 from pymc.distributions import transforms
 from pymc.distributions.continuous import (
     BoundedContinuous,
@@ -60,6 +60,7 @@ from pymc.distributions.distribution import Continuous, Discrete, moment
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
     ndim_supp_dist,
+    resize_dist,
     rv_size_is_none,
     to_tuple,
 )
@@ -1199,10 +1200,10 @@ class _LKJCholeskyCov(Continuous):
         # Since `eta` and `n` are forced to be scalars we don't need to worry about
         # implied batched dimensions for the time being.
         if ndim_supp_dist(sd_dist) == 0:
-            sd_dist = change_rv_size(sd_dist, to_tuple(size) + (n,))
+            sd_dist = resize_dist(sd_dist, to_tuple(size) + (n,))
         else:
             # The support shape must be `n` but we have no way of controlling it
-            sd_dist = change_rv_size(sd_dist, to_tuple(size))
+            sd_dist = resize_dist(sd_dist, to_tuple(size))
 
         # sd_dist is part of the generative graph, but should be completely ignored
         # by the logp graph, since the LKJ logp explicitly includes these terms.

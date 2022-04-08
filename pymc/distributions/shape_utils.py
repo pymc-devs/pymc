@@ -22,14 +22,18 @@ from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 
+from aesara import config
+from aesara import tensor as at
 from aesara.graph.basic import Variable
-from aesara.graph.op import Op
+from aesara.graph.op import Op, compute_test_value
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.shape import SpecifyShape
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
-from pymc.aesaraf import pandas_to_array
+from pymc.exceptions import ShapeError
+from pymc.aesaraf import PotentialShapeType, pandas_to_array
 
 __all__ = [
     "to_tuple",
@@ -642,3 +646,93 @@ def ndim_supp_rv(op: Op, rv: TensorVariable):
 def ndim_supp_elemwise(op: Op, *args, **kwargs):
     """For Elemwise Ops, dispatch on respective scalar_op"""
     return _ndim_supp_dist(op.scalar_op, *args, **kwargs)
+
+
+@singledispatch
+def _resize_dist(
+    op: Op, dist: TensorVariable, new_size: PotentialShapeType, expand: Optional[bool] = False
+) -> TensorVariable:
+    raise NotImplementedError(f"resize not implemented for Op {op}")
+
+
+def resize_dist(
+    dist: TensorVariable, new_size: PotentialShapeType, expand: Optional[bool] = False
+) -> TensorVariable:
+    """Change or expand the size of a Distribution variable.
+
+    Parameters
+    ==========
+    dist
+        The old distibution output.
+    new_size
+        The new size.
+    expand
+        Expand the existing size by `new_size`.
+    """
+    new_size_ndim = np.ndim(new_size)
+    if new_size_ndim > 1:
+        raise ShapeError("The `new_size` must be ≤1-dimensional.", actual=new_size_ndim)
+    elif new_size_ndim == 0:
+        new_size = (new_size,)
+
+    new_dist = _resize_dist(dist.owner.op, dist, new_size, expand)
+
+    new_dist.name = dist.name
+    for k, v in dist.tag.__dict__.items():
+        new_dist.tag.__dict__.setdefault(k, v)
+
+    if config.compute_test_value != "off":
+        compute_test_value(new_dist.owner)
+
+    return new_dist
+
+
+@_resize_dist.register(RandomVariable)
+def resize_rv(
+    op: Op,
+    rv: TensorVariable,
+    new_size: PotentialShapeType,
+    expand: Optional[bool] = False,
+) -> TensorVariable:
+    """Change or expand the size of a `RandomVariable`.
+
+    Parameters
+    ==========
+    rv
+        The old `RandomVariable` output.
+    new_size
+        The new size.
+    expand:
+        Expand the existing size by `new_size`.
+
+    """
+    # Extract the RV node that is to be resized, together with its inputs, name and tag
+    if isinstance(rv.owner.op, SpecifyShape):
+        rv = rv.owner.inputs[0]
+    rv_node = rv.owner
+    rng, size, dtype, *dist_params = rv_node.inputs
+
+    if expand:
+        shape = tuple(rv_node.op._infer_shape(size, dist_params))
+        size = shape[: len(shape) - rv_node.op.ndim_supp]
+        new_size = tuple(new_size) + tuple(size)
+
+    # Make sure the new size is a tensor. This dtype-aware conversion helps
+    # to not unnecessarily pick up a `Cast` in some cases (see #4652).
+    new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
+
+    new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
+    new_rv = new_rv_node.outputs[-1]
+
+    # Update "traditional" rng default_update, if that was set for old RV
+    default_update = getattr(rng, "default_update", None)
+    if default_update is not None and default_update is rv_node.outputs[0]:
+        rng.default_update = new_rv_node.outputs[0]
+
+    return new_rv
+
+
+@_resize_dist.register(Elemwise)
+def resize_elemwise(op: Op, *args, **kwargs):
+    """For Elemwise Ops, dispatch on respective scalar_op"""
+    return _resize_dist(op.scalar_op, *args, **kwargs)

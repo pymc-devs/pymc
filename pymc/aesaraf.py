@@ -31,7 +31,7 @@ import numpy as np
 import scipy.sparse as sps
 
 from aeppl.logprob import CheckParameterValue
-from aesara import config, scalar
+from aesara import scalar
 from aesara.compile.mode import Mode, get_mode
 from aesara.gradient import grad
 from aesara.graph import local_optimizer
@@ -45,17 +45,15 @@ from aesara.graph.basic import (
     walk,
 )
 from aesara.graph.fg import FunctionGraph
-from aesara.graph.op import Op, compute_test_value
+from aesara.graph.op import Op
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.scalar.basic import Cast
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.shape import SpecifyShape
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorConstant, TensorVariable
 
-from pymc.exceptions import ShapeError
 from pymc.vartypes import continuous_types, int_types, isgenerator, typefilter
 
 PotentialShapeType = Union[
@@ -140,64 +138,6 @@ def pandas_to_array(data):
     # needed for uses of this function other than with pm.Data:
     else:
         return floatX(ret)
-
-
-def change_rv_size(
-    rv: TensorVariable,
-    new_size: PotentialShapeType,
-    expand: Optional[bool] = False,
-) -> TensorVariable:
-    """Change or expand the size of a `RandomVariable`.
-
-    Parameters
-    ==========
-    rv
-        The old `RandomVariable` output.
-    new_size
-        The new size.
-    expand:
-        Expand the existing size by `new_size`.
-
-    """
-    # Check the dimensionality of the `new_size` kwarg
-    new_size_ndim = np.ndim(new_size)
-    if new_size_ndim > 1:
-        raise ShapeError("The `new_size` must be ≤1-dimensional.", actual=new_size_ndim)
-    elif new_size_ndim == 0:
-        new_size = (new_size,)
-
-    # Extract the RV node that is to be resized, together with its inputs, name and tag
-    if isinstance(rv.owner.op, SpecifyShape):
-        rv = rv.owner.inputs[0]
-    rv_node = rv.owner
-    rng, size, dtype, *dist_params = rv_node.inputs
-    name = rv.name
-    tag = rv.tag
-
-    if expand:
-        shape = tuple(rv_node.op._infer_shape(size, dist_params))
-        size = shape[: len(shape) - rv_node.op.ndim_supp]
-        new_size = tuple(new_size) + tuple(size)
-
-    # Make sure the new size is a tensor. This dtype-aware conversion helps
-    # to not unnecessarily pick up a `Cast` in some cases (see #4652).
-    new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
-
-    new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
-    new_rv = new_rv_node.outputs[-1]
-    new_rv.name = name
-    for k, v in tag.__dict__.items():
-        new_rv.tag.__dict__.setdefault(k, v)
-
-    # Update "traditional" rng default_update, if that was set for old RV
-    default_update = getattr(rng, "default_update", None)
-    if default_update is not None and default_update is rv_node.outputs[0]:
-        rng.default_update = new_rv_node.outputs[0]
-
-    if config.compute_test_value != "off":
-        compute_test_value(new_rv_node)
-
-    return new_rv
 
 
 def extract_rv_and_value_vars(

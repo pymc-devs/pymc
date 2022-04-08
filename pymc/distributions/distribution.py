@@ -33,7 +33,6 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
-from pymc.aesaraf import change_rv_size
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
@@ -45,6 +44,7 @@ from pymc.distributions.shape_utils import (
     convert_size,
     find_size,
     ndim_supp_dist,
+    resize_dist,
     resize_from_dims,
     resize_from_observed,
 )
@@ -270,7 +270,7 @@ class Distribution(metaclass=DistributionMeta):
 
         if resize_shape:
             # A batch size was specified through `dims`, or implied by `observed`.
-            rv_out = change_rv_size(rv=rv_out, new_size=resize_shape, expand=True)
+            rv_out = resize_dist(dist=rv_out, new_size=resize_shape, expand=True)
 
         rv_out = model.register_rv(
             rv_out,
@@ -356,7 +356,7 @@ class Distribution(metaclass=DistributionMeta):
         # Replicate dimensions may be prepended via a shape with Ellipsis as the last element:
         if shape is not None and Ellipsis in shape:
             replicate_shape = cast(StrongShape, shape[:-1])
-            rv_out = change_rv_size(rv=rv_out, new_size=replicate_shape, expand=True)
+            rv_out = resize_dist(dist=rv_out, new_size=replicate_shape, expand=True)
 
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
@@ -400,9 +400,6 @@ class SymbolicDistribution:
         cls.rv_op
             Returns a TensorVariable that represents the symbolic distribution
             parametrized by a default set of parameters and a size and rngs arguments
-        cls.change_size
-            Returns an equivalent symbolic distribution with a different size. This is
-            analogous to `pymc.aesaraf.change_rv_size` for `RandomVariable`s.
         cls.graph_rvs
             Returns base RVs in a symbolic distribution.
 
@@ -413,6 +410,9 @@ class SymbolicDistribution:
             constant, for instance if the symbolic distribution can be defined based
             on an arbitrary base distribution. This is called by
             `pymc.distributions.shape_utils.ndim_supp_dist`
+         _resize_dist
+            Returns an equivalent symbolic distribution with a different size. This is
+            called by `pymc.distrributions.shape_utils.resize_dist`.
 
         Parameters
         ----------
