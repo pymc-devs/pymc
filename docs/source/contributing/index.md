@@ -73,7 +73,6 @@ Institutions can contribute in the following ways:
 
 - By becoming [Institutional Partners](https://github.com/pymc-devs/pymc/blob/main/GOVERNANCE.md#institutional-partners-and-funding)
 - By becoming [Sponsors](https://github.com/pymc-devs/pymc/blob/main/GOVERNANCE.md#sponsors)
-- By subscribing to {ref}`Tidelift <pymc_for_enterprise>`
 
 Contact PyMC at pymc.devs@gmail.com for more information.
 
