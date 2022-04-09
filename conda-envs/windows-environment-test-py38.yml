@@ -16,6 +16,7 @@ dependencies:
 - mkl==2020.4
 - mkl-service==2.3.0
 - m2w64-toolchain
+- networkx
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pip

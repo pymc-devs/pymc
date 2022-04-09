@@ -15,6 +15,7 @@ dependencies:
 - ipython>=7.16
 - jax
 - myst-nb
+- networkx
 - numpy>=1.15.0
 - numpydoc<1.2
 - pandas>=0.24.0

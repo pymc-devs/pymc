@@ -122,7 +122,7 @@ class ModelGraph:
                     pass
         return input_map
 
-    def _make_node(self, var_name, graph, *, formatting: str = "plain"):
+    def _make_node(self, var_name, graph, *, cluster=False, formatting: str = "plain"):
         """Attaches the given variable to a graphviz Digraph"""
         v = self.model[var_name]
 
@@ -163,7 +163,15 @@ class ModelGraph:
             "label": label,
         }
 
-        graph.node(var_name.replace(":", "&"), **kwargs)
+        if cluster:
+            kwargs["cluster"] = cluster
+
+        if hasattr(graph, "node"):
+            graph.node(var_name.replace(":", "&"), **kwargs)
+        elif hasattr(graph, "add_node"):
+            graph.add_node(var_name.replace(":", "&"), **kwargs)
+        else:
+            raise NotImplementedError(f"Unknown type of graph: {type(graph)}.")
 
     def _eval(self, var):
         return function([], var, mode="FAST_COMPILE")()
@@ -224,6 +232,42 @@ class ModelGraph:
                 graph.edge(value.replace(":", "&"), key.replace(":", "&"))
         return graph
 
+    def make_networkx(self, formatting: str = "plain"):
+        """Make networkx Digraph of PyMC model
+
+        Returns
+        -------
+        graphviz.Digraph
+        """
+        try:
+            import networkx
+        except ImportError:
+            raise ImportError(
+                "This function requires networkx. "
+                "The easiest way to install all of this is by running\n\n"
+                "\tconda install -c conda-forge networkx"
+            )
+
+        graphnetwork = networkx.DiGraph(name=self.model.name)
+        for plate_label, var_names in self.get_plates().items():
+            if plate_label:
+                # must be preceded by 'cluster' to get a box around it
+                for var_name in var_names:
+                    self._make_node(
+                        var_name,
+                        graphnetwork,
+                        cluster="cluster" + plate_label,
+                        formatting=formatting,
+                    )
+            else:
+                for var_name in var_names:
+                    self._make_node(var_name, graphnetwork, formatting=formatting)
+
+        for key, values in self.make_compute_graph().items():
+            for value in values:
+                graphnetwork.add_edge(value.replace(":", "&"), key.replace(":", "&"))
+        return graphnetwork
+
 
 def model_to_graphviz(model=None, *, formatting: str = "plain"):
     """Produce a graphviz Digraph from a PyMC model.
@@ -276,3 +320,25 @@ def model_to_graphviz(model=None, *, formatting: str = "plain"):
         )
     model = pm.modelcontext(model)
     return ModelGraph(model).make_graph(formatting=formatting)
+
+
+def model_to_networkx(model=None, *, formatting: str = "plain"):
+    """Produce a networkx Digraph from a PyMC model.
+
+    Requires networkx, which may be installed most easily with
+        conda install networkx
+
+    Alternatively, you may install via `pip install graphviz`
+    See https://networkx.org/documentation/stable/index.html
+
+    Parameters
+    ----------
+    model : pm.Model
+        The model to plot. Not required when called from inside a modelcontext.
+    formatting : str
+        one of { "plain", "plain_with_params" }
+    """
+    if not "plain" in formatting:
+        raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
+    model = pm.modelcontext(model)
+    return ModelGraph(model).make_networkx(formatting=formatting)

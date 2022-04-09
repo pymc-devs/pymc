@@ -16,6 +16,7 @@ dependencies:
 - jax
 - libblas=*=*mkl
 - mkl-service
+- networkx
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pre-commit>=2.8.0
