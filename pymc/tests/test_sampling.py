@@ -24,6 +24,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 import scipy.special
+import xarray as xr
 
 from aesara import Mode, shared
 from arviz import InferenceData
@@ -864,6 +865,40 @@ class TestSamplePPC(SeededTest):
         test_dict = {"posterior_predictive": ["a"], "predictions": ["a"], **base_test_dict}
         fails = check_multiple_attrs(test_dict, idata)
         assert not fails
+
+    @pytest.mark.parametrize("multitrace", [False, True])
+    def test_deterministics_out_of_idata(self, multitrace):
+        draws = 10
+        chains = 2
+        coords = {"draw": range(draws), "chain": range(chains)}
+        ds = xr.Dataset(
+            {
+                "a": xr.DataArray(
+                    [[0] * draws] * chains,
+                    coords=coords,
+                    dims=["chain", "draw"],
+                )
+            },
+            coords=coords,
+        )
+        with pm.Model() as m:
+            a = pm.Normal("a")
+            if multitrace:
+                straces = []
+                for chain in ds.chain:
+                    strace = pm.backends.NDArray(model=m, vars=[a])
+                    strace.setup(len(ds.draw), int(chain))
+                    strace.values = {"a": ds.a.sel(chain=chain).data}
+                    strace.draw_idx = len(ds.draw)
+                    straces.append(strace)
+                trace = MultiTrace(straces)
+            else:
+                trace = ds
+
+            d = pm.Deterministic("d", a - 4)
+            pm.Normal("c", d, sigma=0.01)
+            ppc = pm.sample_posterior_predictive(trace, var_names="c", return_inferencedata=True)
+        assert np.all(np.abs(ppc.posterior_predictive.c + 4) <= 0.1)
 
 
 class TestSamplePPCW(SeededTest):

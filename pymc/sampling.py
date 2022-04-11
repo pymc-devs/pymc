@@ -1720,27 +1720,22 @@ def sample_posterior_predictive(
 
     inputs: Sequence[TensorVariable]
     input_names: Sequence[str]
-    if not hasattr(_trace, "varnames"):
-        inputs_and_names = [
-            (rv, rv.name)
-            for rv in walk_model(vars_to_sample, walk_past_rvs=True)
-            if rv not in vars_to_sample
-            and rv in model.named_vars.values()
-            and not isinstance(rv, (Constant, SharedVariable))
-        ]
-        if inputs_and_names:
-            inputs, input_names = zip(*inputs_and_names)
-        else:
-            inputs, input_names = [], []
+    if not isinstance(_trace, MultiTrace):
+        names_in_trace = list(_trace[0])
     else:
-        assert isinstance(_trace, MultiTrace)
-        output_names = [v.name for v in vars_to_sample if v.name is not None]
-        input_names = [
-            n
-            for n in _trace.varnames
-            if n not in output_names and not isinstance(model[n], (Constant, SharedVariable))
-        ]
-        inputs = [model[n] for n in input_names]
+        names_in_trace = _trace.varnames
+    inputs_and_names = [
+        (rv, rv.name)
+        for rv in walk_model(vars_to_sample, walk_past_rvs=True)
+        if rv not in vars_to_sample
+        and rv in model.named_vars.values()
+        and not isinstance(rv, (Constant, SharedVariable))
+        and rv.name in names_in_trace
+    ]
+    if inputs_and_names:
+        inputs, input_names = zip(*inputs_and_names)
+    else:
+        inputs, input_names = [], []
 
     if size is not None:
         vars_to_sample = [change_rv_size(v, size, expand=True) for v in vars_to_sample]
