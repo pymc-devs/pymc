@@ -13,7 +13,7 @@ developed openly and hosted in public GitHub repositories under the
 [pymc-devs GitHub organization](https://github.com/pymc-devs). Examples of
 Project Software include the PyMC library and its documentation, etc.
 The Services run by The Project consist of public websites and web-services
-that are hosted at [http://docs.pymc.io](https://docs.pymc.io)
+that are hosted at [http://www.pymc.io](https://www.pymc.io) and subdomains.
 
 The Project is developed by a team of distributed developers, called
 Contributors. Contributors are individuals who have contributed code,
@@ -21,7 +21,7 @@ documentation, designs or other work to one or more Project repositories,
 or who have done significant work to empower the Community,
 participating on [Discourse](https://discourse.pymc.io),
 organizing [PyMCon](https://pymcon.com) or helped on other platforms and events.
-Anyone can be a Contributor.
+**Anyone can be a Contributor.**
 Contributors can be affiliated with any legal entity or none.
 The foundation of Project participation is openness and transparency.
 
@@ -58,10 +58,10 @@ consensus among the Core Developers with input from the Community. The BDFL
 could, but rarely chose to, override the Core Developers and make a final
 decision on a matter.
 
-While this approach has served us well, as the Project grows and faces more
-legal and financial decisions and interacts with other institutions, we see a
+While this approach served us well, as the Project grew and faced more
+legal and financial decisions and interacted with other institutions, we saw a
 need for a more formal governance and organization model.
-We view this governance model as the formalization of what we are already doing,
+We view this governance model as the formalization of what we were already doing,
 rather than a change in direction.
 
 ## Community and Team Architecture
@@ -76,7 +76,7 @@ also members of all the groups listed above:
 * Steering Council
 * BDFL
 
-Recurring Contributors comprise what we understand as the PyMC Team.
+Core Contributors comprise what we understand as the PyMC Team.
 The Team will generally act as a single unit, except for some specific
 questions where dedicated teams will prevail.
 The PyMC project currently has Developer, Documentation and Community teams.
@@ -86,7 +86,7 @@ The diagram below should help illustrate this idea.
 <img src="docs/community_diagram.png" alt="community diagram" width="600" height="400">
 
 Anyone working with The Project has the responsibility to personally uphold
-the Code of Conduct. Recurrent Contributors have the additional responsibility
+the Code of Conduct. Core Contributors have the additional responsibility
 of _enforcing_ the Code of Conduct to maintain a safe community.
 
 ## Recurring Contributors
@@ -121,25 +121,9 @@ in more detail in a section of its own.
 
 Interns and contractors are added to the team as Recurrent Contributors.
 We consider the selection/hiring process to replace the nomination process.
-
-#### Current Recurring Contributors
-Contributors who are also part of a dedicated team or are institutional
-contributors will have so indicated after their name.
-Dedicated teams only cover a small part of the work needed to
-get the project going, tasks like fundraising, outreach and marketing,
-or organizing events for example don't (yet) have a dedicated team.
-Contributors don't need to be part of any dedicated team.
-
-* Abhipsha Das (docs)
-* Benjamin Vincent (docs - PyMC Labs)
-* Jon Sedar
-* Kaustubh Chaudhari (dev)
-* Larry Dong (dev)
-* Lorenzo Toniazzi (docs)
-* Martin Ingram (community)
-* Olga Khan (docs)
-* Peadar Coyle
-* Raul Maldonado (docs)
+This applies to Google summer of code interns or Google season of
+docs contractors, but also to interns and contractors hired by
+tier 1 Institutional Partners who work mostly on PyMC.
 
 ## Core Contributors
 Core Contributors are those individuals entrusted with the development and
@@ -181,13 +165,14 @@ Contributors who are also part of a dedicated team or are institutional
 contributors will have so indicated after their name.
 
 Dedicated teams only cover a small part of the work needed to
-get the project going, tasks like fundraising, outreach and marketing,
-or organizing events for example don't (yet) have a dedicated team.
+get the project going, tasks like fundraising, outreach or marketing
+for example don't (yet) have a dedicated team.
 Contributors don't need to be part of any dedicated team.
 
 * Adrian Seyboldt (dev - PyMC Labs)
 * Alex Andorra (dev - PyMC Labs)
 * Austin Rochford
+* Benjamin Vincent (docs - PyMC Labs)
 * Bill Engels (dev)
 * Brandon T. Willard (dev)
 * Chris Fonnesbeck (dev, docs)
@@ -205,6 +190,7 @@ Contributors don't need to be part of any dedicated team.
 * Oriol Abril-Pla (docs, community)
 * Osvaldo Martin (dev, docs)
 * Ravin Kumar (dev, community, docs)
+* Reshama Shaikh (community - PyMC Labs)
 * Ricardo Vieira (dev, community)
 * Robert P. Goldman (dev)
 * Sayam Kumar (dev, docs)
