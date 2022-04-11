@@ -304,6 +304,16 @@ class TestScaling:
         assert p4() == p5(pm.floatX([[1]]))
         assert p4() == p5(pm.floatX([[1, 1], [1, 1]]))
 
+    def test_scaling_histogram_per_observation(self):
+        with pm.Model() as model6:
+            Normal("n", observed=[1, 1, 2])
+            p6 = aesara.function([], model6.logpt())
+
+        with pm.Model() as model7:
+            n = Normal("n", observed=[1, 2], total_size=np.array([2, 1]))
+            p7 = aesara.function([], model7.logpt())
+        assert p6() == p7()
+
 
 @pytest.mark.usefixtures("strict_float32")
 class TestMinibatch:

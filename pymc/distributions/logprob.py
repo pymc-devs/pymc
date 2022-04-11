@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from collections.abc import Mapping
 from typing import Dict, List, Optional, Sequence, Union
 
@@ -99,6 +101,9 @@ def _get_scaling(total_size: Optional[Union[int, Sequence[int]]], shape, ndim: i
         end_coef = [floatX(t) / floatX(shp_end[i]) for i, t in enumerate(end) if t is not None]
         coefs = begin_coef + end_coef
         coef = at.prod(coefs)
+    elif isinstance(total_size, (np.ndarray, at.TensorVariable)):
+        coef = total_size
+        warnings.warn("Using array as scaling that is experimental", UserWarning)
     else:
         raise TypeError(
             "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
