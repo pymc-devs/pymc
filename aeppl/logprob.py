@@ -499,6 +499,22 @@ def geometric_logprob(op, values, *inputs, **kwargs):
     return res
 
 
+@_logcdf.register(arb.GeometricRV)
+def geometric_logcdf(op, value, *inputs, **kwargs):
+    (p,) = inputs[3:]
+    res = at.switch(at.le(value, 0), -np.inf, at.log1mexp(at.log1p(-p) * value))
+    res = CheckParameterValue("0 <= p <= 1")(
+        res, at.all(at.le(0.0, p)), at.all(at.ge(1.0, p))
+    )
+    return res
+
+
+@_icdf.register(arb.GeometricRV)
+def geometric_icdf(op, value, *inputs, **kwargs):
+    (p,) = inputs[3:]
+    return at.ceil(at.log1p(-value) / at.log1p(-p)).astype(op.dtype)
+
+
 @_logprob.register(arb.HyperGeometricRV)
 def hypergeometric_logprob(op, values, *inputs, **kwargs):
     (value,) = values

@@ -798,6 +798,61 @@ def test_geometric_logprob(dist_params, obs, size, error):
 @pytest.mark.parametrize(
     "dist_params, obs, size, error",
     [
+        ((-1,), np.array([0, 1, 100, 10000], dtype=np.int64), (), True),
+        ((0.1,), np.array([0, 1, 100, 10000], dtype=np.int64), (), False),
+        ((1.0,), np.array([0, 1, 100, 10000], dtype=np.int64), (3, 2), False),
+        (
+            (np.array([0.01, 0.2, 0.8]),),
+            np.array([-1, 1, 84], dtype=np.int64),
+            (),
+            False,
+        ),
+    ],
+)
+def test_geometric_logcdf(dist_params, obs, size, error):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.geometric(*dist_params_at, size=size_at)
+
+    cm = contextlib.suppress() if not error else pytest.raises(ParameterValueError)
+
+    with cm:
+        scipy_logprob_tester(
+            x, obs, dist_params, test_fn=stats.geom.logcdf, test="logcdf"
+        )
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size",
+    [
+        ((0.1,), np.array([-0.5, 0, 0.1, 0.5, 0.9, 1.0, 1.5], dtype=np.int64), ()),
+        ((0.5,), np.array([-0.5, 0, 0.1, 0.5, 0.9, 1.0, 1.5], dtype=np.int64), (3, 2)),
+        (
+            (np.array([0.0, 0.2, 0.5, 1.0]),),
+            np.array([0.7, 0.7, 0.7, 0.7], dtype=np.int64),
+            (),
+        ),
+    ],
+)
+def test_geometric_icdf(dist_params, obs, size):
+
+    dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = at.random.geometric(*dist_params_at, size=size_at)
+
+    def scipy_geom_icdf(value, p):
+        # Scipy ppf returns floats
+        return stats.geom.ppf(value, p).astype(value.dtype)
+
+    scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_geom_icdf, test="icdf")
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs, size, error",
+    [
         ((-1, 0, 1), np.array([0, 1, 100, 10000], dtype=np.int64), (), True),
         ((1, 0, 1), np.array([0, 1, 100, 10000], dtype=np.int64), (), False),
         ((10, 2, 4), np.array([0, 1, 100, 10000], dtype=np.int64), (3, 2), False),
