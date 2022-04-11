@@ -145,7 +145,7 @@ def pymc_random_discrete(
             o = np.atleast_1d(o).flatten()
             e = np.atleast_1d(e).flatten()
             bins = min(20, max(len(set(e)), len(set(o))))
-            range = (min(min(e), min(o)), max(max(e), max(o)))
+            range = (min(min(e), min(o)), max(max(e), max(o))+1)
             observed, _ = np.histogram(o, bins=bins, range=range)
             expected, _ = np.histogram(e, bins=bins, range=range)
             if np.all(observed == expected):
