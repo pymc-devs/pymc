@@ -312,7 +312,11 @@ class TestScaling:
         with pm.Model() as model7:
             n = Normal("n", observed=[1, 2], total_size=np.array([2, 1]))
             p7 = aesara.function([], model7.logpt())
-        assert p6() == p7()
+
+        with pm.Model() as model8:
+            n = Normal("n", observed=[1, 2], total_size=at.as_tensor(np.array([2, 1])))
+            p8 = aesara.function([], model7.logpt())
+        assert p6() == p7() == p8()
 
 
 @pytest.mark.usefixtures("strict_float32")
