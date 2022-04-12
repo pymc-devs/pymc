@@ -239,8 +239,12 @@ def get_random_outer_outputs(
     return rv_vars
 
 
-def construct_scan(scan_args: ScanArgs) -> Tuple[List[TensorVariable], OrderedUpdates]:
-    scan_op = Scan(scan_args.inner_inputs, scan_args.inner_outputs, scan_args.info)
+def construct_scan(
+    scan_args: ScanArgs, **kwargs
+) -> Tuple[List[TensorVariable], OrderedUpdates]:
+    scan_op = Scan(
+        scan_args.inner_inputs, scan_args.inner_outputs, scan_args.info, **kwargs
+    )
     node = scan_op.make_node(*scan_args.outer_inputs)
     updates = OrderedUpdates(zip(scan_args.outer_in_shared, scan_args.outer_out_shared))
     return node.outputs, updates
@@ -288,7 +292,7 @@ def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
     # XXX TODO: Remove this properly
     # logp_scan_args.outer_out_shared = []
 
-    logp_scan_out, updates = construct_scan(logp_scan_args)
+    logp_scan_out, updates = construct_scan(logp_scan_args, mode=op.mode)
 
     # Automatically pick up updates so that we don't have to pass them around
     for key, value in updates.items():
@@ -442,7 +446,10 @@ def find_measurable_scans(fgraph, node):
             rv_map_feature.update_rv_maps(rv_var, new_val_var, full_out)
 
     op = MeasurableScan(
-        curr_scanargs.inner_inputs, curr_scanargs.inner_outputs, curr_scanargs.info
+        curr_scanargs.inner_inputs,
+        curr_scanargs.inner_outputs,
+        curr_scanargs.info,
+        mode=node.op.mode,
     )
     new_node = op.make_node(*curr_scanargs.outer_inputs)
 
@@ -474,7 +481,7 @@ def add_opts_to_inner_graphs(fgraph, node):
 
     new_outputs = list(inner_fgraph.outputs)
 
-    op = Scan(node.op.inner_inputs, new_outputs, node.op.info)
+    op = Scan(node.op.inner_inputs, new_outputs, node.op.info, mode=node.op.mode)
     new_node = op.make_node(*node.inputs)
 
     return dict(zip(node.outputs, new_node.outputs))

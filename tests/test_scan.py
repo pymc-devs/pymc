@@ -2,6 +2,8 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 import pytest
+from aesara import Mode
+from aesara.raise_op import assert_op
 from aesara.scan.utils import ScanArgs
 
 from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
@@ -391,3 +393,24 @@ def test_initial_values():
     res = S_0T_logp_fn(s_0_val, s_1T_val, Gamma_val)
 
     assert res == pytest.approx(exp_res)
+
+
+@pytest.mark.parametrize("remove_asserts", (True, False))
+def test_mode_is_kept(remove_asserts):
+    mode = Mode().including("local_remove_all_assert") if remove_asserts else None
+    x, _ = aesara.scan(
+        fn=lambda x: at.random.normal(assert_op(x, x > 0)),
+        outputs_info=[at.ones(())],
+        n_steps=10,
+        mode=mode,
+    )
+    x.name = "x"
+    x_vv = x.clone()
+    x_logp = aesara.function([x_vv], joint_logprob({x: x_vv}))
+
+    x_test_val = np.full((10,), -1)
+    if remove_asserts:
+        assert x_logp(x=x_test_val)
+    else:
+        with pytest.raises(AssertionError):
+            x_logp(x=x_test_val)
