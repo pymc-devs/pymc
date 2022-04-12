@@ -103,7 +103,7 @@ def _get_scaling(total_size: Optional[Union[int, Sequence[int]]], shape, ndim: i
         coef = at.prod(coefs)
     elif isinstance(total_size, (np.ndarray, at.TensorVariable)):
         coef = total_size
-        warnings.warn("Using array as scaling that is experimental", UserWarning)
+        warnings.warn("Using an array for total_size is experimental.", UserWarning)
     else:
         raise TypeError(
             "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
