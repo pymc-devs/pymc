@@ -143,10 +143,10 @@ def create_discrete_mc_op(rng, size, Gammas, gamma_0):
 
     # We make shallow copies so that unwanted ancestors don't appear in the
     # graph.
-    Gammas_param = non_constant(Gammas).type()
+    Gammas_param = non_constant(Gammas).clone()
     Gammas_param.name = "Gammas_param"
 
-    gamma_0_param = non_constant(gamma_0).type()
+    gamma_0_param = non_constant(gamma_0).clone()
     gamma_0_param.name = "gamma_0_param"
 
     bcast_Gammas_param, bcast_gamma_0_param = broadcast_params(
