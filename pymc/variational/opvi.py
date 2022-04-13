@@ -1337,7 +1337,7 @@ class Approximation(WithMemoization):
                     raise GroupError("Found duplicates in groups")
                 seen.update(g.group)
                 self.groups.append(g)
-        unseen_free_RVs = [ver for var in model.free_RVs if var not in seen]
+        unseen_free_RVs = [var for var in model.free_RVs if var not in seen]
         if unseen_free_RVs:
             if rest is None:
                 raise GroupError("No approximation is specified for the rest variables")
