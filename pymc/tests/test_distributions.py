@@ -1612,6 +1612,7 @@ class TestMatchesScipy:
             Rplus,
             {"sigma": Rplus},
             lambda value, sigma: sp.halfcauchy.logpdf(value, 0, sigma),
+            extra_args={"nu": 1},
         )
 
     def test_skew_normal(self):

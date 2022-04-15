@@ -26,6 +26,11 @@ Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) fo
 
 All of the above apply to:
 
+Signature and default parameters changed for several distributions (see [#5628](https://github.com/pymc-devs/pymc/pull/5628)):
+    - `pm.StudentT` now requires either `sigma` or `lam` as kwarg
+    - `pm.StudentT` now requires `nu` to be specified (no longer defaults to 1)
+    - `pm.AsymmetricLaplace` positional arguments re-ordered
+    - `pm.AsymmetricLaplace` now requires `mu` to be specified (no longer defaults to 0)
 - BART was removed [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental)
 - `BaseStochasticGradient` was removed (see [#5630](https://github.com/pymc-devs/pymc/pull/5630))
 - ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
