@@ -52,7 +52,7 @@ class MetropolisMLDA(Metropolis):
         and some extra code specific for MLDA.
         """
         model = pm.modelcontext(kwargs.get("model", None))
-        initial_values = model.compute_initial_point()
+        initial_values = model.initial_point()
 
         # flag to that variance reduction is activated - forces MetropolisMLDA
         # to store quantities of interest in a register if True
@@ -114,7 +114,7 @@ class DEMetropolisZMLDA(DEMetropolisZ):
         self.tuning_end_trigger = False
 
         model = pm.modelcontext(kwargs.get("model", None))
-        initial_values = model.compute_initial_point()
+        initial_values = model.initial_point()
 
         # flag to that variance reduction is activated - forces DEMetropolisZMLDA
         # to store quantities of interest in a register if True
@@ -381,7 +381,7 @@ class MLDA(ArrayStepShared):
 
         # assign internal state
         model = pm.modelcontext(model)
-        initial_values = model.compute_initial_point()
+        initial_values = model.initial_point()
         self.model = model
         self.coarse_models = coarse_models
         self.model_below = self.coarse_models[-1]

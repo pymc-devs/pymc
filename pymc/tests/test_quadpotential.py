@@ -273,7 +273,7 @@ def test_full_adapt_sampling(seed=289586):
     with pymc.Model() as model:
         pymc.MvNormal("a", mu=np.zeros(len(L)), chol=L, size=len(L))
 
-        initial_point = model.compute_initial_point()
+        initial_point = model.initial_point()
         initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
 
         pot = quadpotential.QuadPotentialFullAdapt(initial_point_size, np.zeros(initial_point_size))

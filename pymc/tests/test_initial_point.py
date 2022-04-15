@@ -47,7 +47,7 @@ class TestInitvalAssignment:
         with pm.Model() as pmodel:
             with pytest.warns(FutureWarning, match="`testval` argument is deprecated"):
                 rv = pm.Uniform("u", 0, 1, testval=0.75)
-                initial_point = pmodel.compute_initial_point(seed=0)
+                initial_point = pmodel.initial_point(seed=0)
                 assert initial_point["u_interval__"] == transform_fwd(rv, 0.75)
                 assert not hasattr(rv.tag, "test_value")
         pass
@@ -56,7 +56,7 @@ class TestInitvalAssignment:
         with pm.Model() as pmodel:
             pm.Uniform("x", 0, 1, size=2, initval="unknown")
             with pytest.raises(ValueError, match="Invalid string strategy: unknown"):
-                pmodel.compute_initial_point(seed=0)
+                pmodel.initial_point(seed=0)
 
 
 class TestInitvalEvaluation:
@@ -79,7 +79,7 @@ class TestInitvalEvaluation:
             U = pm.Uniform("U", lower=9, upper=10, initval=9.5)
             B1 = pm.Uniform("B1", lower=L, upper=U, initval=5)
             B2 = pm.Uniform("B2", lower=L, upper=U, initval=(L + U) / 2)
-            ip = pmodel.compute_initial_point(seed=0)
+            ip = pmodel.initial_point(seed=0)
             assert ip["L_interval__"] == 0
             assert ip["U_interval__"] == 0
             assert ip["B1_interval__"] == 0
@@ -87,7 +87,7 @@ class TestInitvalEvaluation:
 
             # Modify initval of L and re-evaluate
             pmodel.initial_values[U] = 9.9
-            ip = pmodel.compute_initial_point(seed=0)
+            ip = pmodel.initial_point(seed=0)
             assert ip["B1_interval__"] < 0
             assert ip["B2_interval__"] == 0
         pass
@@ -121,11 +121,11 @@ class TestInitvalEvaluation:
             data = aesara.shared(np.arange(4))
             rv = pm.Uniform("u", lower=data, upper=10, initval="prior")
 
-            ip = pmodel.compute_initial_point(seed=0)
+            ip = pmodel.initial_point(seed=0)
             assert np.shape(ip["u_interval__"]) == (4,)
 
             data.set_value(np.arange(5))
-            ip = pmodel.compute_initial_point(seed=0)
+            ip = pmodel.initial_point(seed=0)
             assert np.shape(ip["u_interval__"]) == (5,)
         pass
 
@@ -134,9 +134,9 @@ class TestInitvalEvaluation:
             pm.Normal("A", initval="prior")
             pm.Uniform("B", initval="prior")
             pm.Normal("C", initval="moment")
-            ip1 = pmodel.compute_initial_point(seed=42)
-            ip2 = pmodel.compute_initial_point(seed=42)
-            ip3 = pmodel.compute_initial_point(seed=15)
+            ip1 = pmodel.initial_point(seed=42)
+            ip2 = pmodel.initial_point(seed=42)
+            ip3 = pmodel.initial_point(seed=15)
             assert ip1 == ip2
             assert ip3 != ip2
         pass
@@ -277,7 +277,7 @@ class TestMoment:
         with pytest.warns(
             UserWarning, match="Moment not defined for variable x of type MyNormalRV"
         ):
-            res = m.compute_initial_point()
+            res = m.initial_point()
 
         assert np.isclose(res["x"], np.pi)
 
@@ -285,7 +285,7 @@ class TestMoment:
 def test_pickling_issue_5090():
     with pm.Model() as model:
         pm.Normal("x", initval="prior")
-    ip_before = model.compute_initial_point(seed=5090)
+    ip_before = model.initial_point(seed=5090)
     model = cloudpickle.loads(cloudpickle.dumps(model))
-    ip_after = model.compute_initial_point(seed=5090)
+    ip_after = model.initial_point(seed=5090)
     assert ip_before["x"] == ip_after["x"]

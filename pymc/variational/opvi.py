@@ -978,7 +978,7 @@ class Group(WithMemoization):
         # so I have to to it by myself
 
         # 1) we need initial point (transformed space)
-        model_initial_point = self.model.compute_initial_point(0)
+        model_initial_point = self.model.initial_point(0)
         # 2) we'll work with a single group, a subset of the model
         # here we need to create a mapping to replace value_vars with slices from the approximation
         start_idx = 0

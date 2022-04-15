@@ -647,7 +647,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
         extra_vars = [self.rvs_to_values.get(var, var) for var in self.free_RVs]
-        ip = self.compute_initial_point(0)
+        ip = self.initial_point(0)
         extra_vars_and_values = {
             var: ip[var.name] for var in extra_vars if var in input_vars and var not in grad_vars
         }
@@ -1001,23 +1001,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     @property
     def test_point(self) -> Dict[str, np.ndarray]:
-        """Deprecated alias for `Model.compute_initial_point(seed=None)`."""
+        """Deprecated alias for `Model.initial_point(seed=None)`."""
         warnings.warn(
-            "`Model.test_point` has been deprecated. Use `Model.compute_initial_point(seed=None)`.",
+            "`Model.test_point` has been deprecated. Use `Model.initial_point(seed=None)`.",
             FutureWarning,
         )
-        return self.compute_initial_point()
+        return self.initial_point()
 
-    @property
-    def initial_point(self) -> Dict[str, np.ndarray]:
-        """Deprecated alias for `Model.compute_initial_point(seed=None)`."""
-        warnings.warn(
-            "`Model.initial_point` has been deprecated. Use `Model.compute_initial_point(seed=None)`.",
-            FutureWarning,
-        )
-        return self.compute_initial_point()
-
-    def compute_initial_point(self, seed=None) -> Dict[str, np.ndarray]:
+    def initial_point(self, seed=None) -> Dict[str, np.ndarray]:
         """Computes the initial point of the model.
 
         Returns
@@ -1565,7 +1556,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         kwargs.setdefault("on_unused_input", "ignore")
         f = self.compile_fn(outs, inputs=self.value_vars, point_fn=False, profile=profile, **kwargs)
         if point is None:
-            point = self.compute_initial_point()
+            point = self.initial_point()
 
         for _ in range(n):
             f(**point)
@@ -1725,7 +1716,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Log probability of `point`.
         """
         if point is None:
-            point = self.compute_initial_point()
+            point = self.initial_point()
 
         factors = self.basic_RVs + self.potentials
         factor_logps_fn = [at.sum(factor) for factor in self.logpt(factors, sum=False)]
