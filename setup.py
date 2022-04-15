@@ -26,7 +26,6 @@ AUTHOR = "PyMC Developers"
 AUTHOR_EMAIL = "pymc.devs@gmail.com"
 URL = "http://github.com/pymc-devs/pymc"
 LICENSE = "Apache License, Version 2.0"
-NIGHLTY = "BUILD_PYMC_NIGHTLY" in os.environ
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -56,15 +55,7 @@ with open(REQUIREMENTS_FILE) as f:
 test_reqs = ["pytest", "pytest-cov"]
 
 
-def get_distname(nightly_build=False):
-    distname = "pymc"
-    if nightly_build:
-        distname = f"{distname}-nightly"
-
-    return distname
-
-
-def get_version(nightly_build=False):
+def get_version():
     version_file = join("pymc", "__init__.py")
     lines = open(version_file).readlines()
     version_regex = r"^__version__ = ['\"]([^'\"]*)['\"]"
@@ -73,10 +64,6 @@ def get_version(nightly_build=False):
         if mo:
             version = mo.group(1)
 
-            if nightly_build:
-                suffix = datetime.now(timezone.utc).strftime(r".dev%Y%m%d")
-                version = f"{version}{suffix}"
-
             return version
 
     raise RuntimeError(f"Unable to find version in {version_file}.")
@@ -84,8 +71,8 @@ def get_version(nightly_build=False):
 
 if __name__ == "__main__":
     setup(
-        name=get_distname(NIGHLTY),
-        version=get_version(NIGHLTY),
+        name="pymc",
+        version=get_version(),
         maintainer=AUTHOR,
         maintainer_email=AUTHOR_EMAIL,
         description=DESCRIPTION,
