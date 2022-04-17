@@ -1337,6 +1337,7 @@ class Approximation(WithMemoization):
                     raise GroupError("Found duplicates in groups")
                 seen.update(g.group)
                 self.groups.append(g)
+        # List iteration to preserve order for reproducibility between runs
         unseen_free_RVs = [var for var in model.free_RVs if var not in seen]
         if unseen_free_RVs:
             if rest is None:
