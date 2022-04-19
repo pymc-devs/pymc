@@ -116,7 +116,6 @@ class GaussianRandomWalkRV(RandomVariable):
 
         # If size is None then the returned series should be (*size, 1+steps)
         else:
-            init_size = (*size, 1)
             dist_shape = (*size, int(steps))
 
         innovations = rng.normal(loc=mu, scale=sigma, size=dist_shape)
