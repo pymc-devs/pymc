@@ -1406,8 +1406,8 @@ class TestDraw(SeededTest):
         assert np.all(draws == np.arange(5))
 
 
-class test_step_args(SeededTest):
-    with pm.Model() as model:
+def test_step_args():
+    with pm.Model(rng_seeder=1410) as model:
         a = pm.Normal("a")
         idata0 = pm.sample(target_accept=0.5)
         idata1 = pm.sample(nuts={"target_accept": 0.5})
@@ -1415,7 +1415,7 @@ class test_step_args(SeededTest):
     npt.assert_almost_equal(idata0.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
     npt.assert_almost_equal(idata1.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
 
-    with pm.Model() as model:
+    with pm.Model(rng_seeder=1418) as model:
         a = pm.Normal("a")
         b = pm.Poisson("b", 1)
         idata0 = pm.sample(target_accept=0.5)
