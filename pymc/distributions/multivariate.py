@@ -32,7 +32,7 @@ from aesara.tensor import gammaln, sigmoid
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
 from aesara.tensor.random.op import RandomVariable, default_supp_shape_from_params
-from aesara.tensor.random.utils import broadcast_params
+from aesara.tensor.random.utils import broadcast_params, normalize_size_param
 from aesara.tensor.slinalg import Cholesky
 from aesara.tensor.slinalg import solve_lower_triangular as solve_lower
 from aesara.tensor.slinalg import solve_upper_triangular as solve_upper
@@ -1134,6 +1134,19 @@ class _LKJCholeskyCovRV(RandomVariable):
 
         D = at.as_tensor_variable(D)
 
+        # We resize the sd_dist `D` automatically so that it has (size x n) independent
+        # draws which is what the `_LKJCholeskyCovRV.rng_fn` expects. This makes the
+        # random and logp methods equivalent, as the latter also assumes a unique value
+        # for each diagonal element.
+        # Since `eta` and `n` are forced to be scalars we don't need to worry about
+        # implied batched dimensions for the time being.
+        size = normalize_size_param(size)
+        if D.owner.op.ndim_supp == 0:
+            D = change_rv_size(D, at.concatenate((size, (n,))))
+        else:
+            # The support shape must be `n` but we have no way of controlling it
+            D = change_rv_size(D, size)
+
         return super().make_node(rng, size, dtype, n, eta, D)
 
     def _infer_shape(self, size, dist_params, param_shapes=None):
@@ -1179,7 +1192,7 @@ class _LKJCholeskyCov(Continuous):
         return super().__new__(cls, name, eta, n, sd_dist, **kwargs)
 
     @classmethod
-    def dist(cls, eta, n, sd_dist, size=None, **kwargs):
+    def dist(cls, eta, n, sd_dist, **kwargs):
         eta = at.as_tensor_variable(floatX(eta))
         n = at.as_tensor_variable(intX(n))
 
@@ -1191,18 +1204,6 @@ class _LKJCholeskyCov(Continuous):
         ):
             raise TypeError("sd_dist must be a scalar or vector distribution variable")
 
-        # We resize the sd_dist automatically so that it has (size x n) independent draws
-        # which is what the `_LKJCholeskyCovRV.rng_fn` expects. This makes the random
-        # and logp methods equivalent, as the latter also assumes a unique value for each
-        # diagonal element.
-        # Since `eta` and `n` are forced to be scalars we don't need to worry about
-        # implied batched dimensions for the time being.
-        if sd_dist.owner.op.ndim_supp == 0:
-            sd_dist = change_rv_size(sd_dist, to_tuple(size) + (n,))
-        else:
-            # The support shape must be `n` but we have no way of controlling it
-            sd_dist = change_rv_size(sd_dist, to_tuple(size))
-
         # sd_dist is part of the generative graph, but should be completely ignored
         # by the logp graph, since the LKJ logp explicitly includes these terms.
         # Setting sd_dist.tag.ignore_logprob to True, will prevent Aeppl warning about
@@ -1211,7 +1212,7 @@ class _LKJCholeskyCov(Continuous):
         #  sd_dist prior components from the logp expression.
         sd_dist.tag.ignore_logprob = True
 
-        return super().dist([n, eta, sd_dist], size=size, **kwargs)
+        return super().dist([n, eta, sd_dist], **kwargs)
 
     def moment(rv, size, n, eta, sd_dists):
         diag_idxs = (at.cumsum(at.arange(1, n + 1)) - 1).astype("int32")

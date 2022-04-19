@@ -3437,8 +3437,18 @@ class TestLKJCholeskCov:
             pm.MvNormal.dist(np.ones(3), np.eye(3)),
         ],
     )
-    def test_sd_dist_automatically_resized(self, sd_dist):
-        x = pm.LKJCholeskyCov.dist(n=3, eta=1, sd_dist=sd_dist, size=10, compute_corr=False)
+    @pytest.mark.parametrize(
+        "size, shape",
+        [
+            ((10,), None),
+            (None, (10, 6)),
+            (None, (10, ...)),
+        ],
+    )
+    def test_sd_dist_automatically_resized(self, sd_dist, size, shape):
+        x = pm.LKJCholeskyCov.dist(
+            n=3, eta=1, sd_dist=sd_dist, size=size, shape=shape, compute_corr=False
+        )
         resized_sd_dist = x.owner.inputs[-1]
         assert resized_sd_dist.eval().shape == (10, 3)
         # LKJCov has support shape `(n * (n+1)) // 2`
