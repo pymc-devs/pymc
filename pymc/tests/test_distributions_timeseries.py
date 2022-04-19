@@ -103,6 +103,12 @@ def test_gaussian_random_walk_init_dist_shape(init):
     assert tuple(grw.owner.inputs[-2].shape.eval()) == (3, 2)
 
 
+def test_shape_ellipsis():
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=5, init=pm.Normal.dist(), shape=(3, ...))
+    assert tuple(grw.shape.eval()) == (3, 6)
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == (3,)
+
+
 def test_gaussianrandomwalk_broadcasted_by_init_dist():
     grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=4, init=pm.Normal.dist(size=(2, 3)))
     assert tuple(grw.shape.eval()) == (2, 3, 5)
