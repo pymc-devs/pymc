@@ -18,6 +18,7 @@ from aesara.scalar import Clip
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
+from pymc.aesaraf import change_rv_size
 from pymc.distributions.distribution import SymbolicDistribution, _moment
 from pymc.util import check_dist_not_registered
 
@@ -74,10 +75,13 @@ class Censored(SymbolicDistribution):
 
     @classmethod
     def rv_op(cls, dist, lower=None, upper=None, size=None, rngs=None):
-        if lower is None:
-            lower = at.constant(-np.inf)
-        if upper is None:
-            upper = at.constant(np.inf)
+
+        lower = at.constant(-np.inf) if lower is None else at.as_tensor_variable(lower)
+        upper = at.constant(np.inf) if upper is None else at.as_tensor_variable(upper)
+
+        # When size is not specified, dist may have to be broadcasted according to lower/upper
+        dist_shape = size if size is not None else at.broadcast_shape(dist, lower, upper)
+        dist = change_rv_size(dist, dist_shape)
 
         # Censoring is achieved by clipping the base distribution between lower and upper
         rv_out = at.clip(dist, lower, upper)
@@ -88,8 +92,6 @@ class Censored(SymbolicDistribution):
         rv_out.tag.lower = lower
         rv_out.tag.upper = upper
 
-        if size is not None:
-            rv_out = cls.change_size(rv_out, size)
         if rngs is not None:
             rv_out = cls.change_rngs(rv_out, rngs)
 
@@ -101,12 +103,10 @@ class Censored(SymbolicDistribution):
 
     @classmethod
     def change_size(cls, rv, new_size, expand=False):
-        dist_node = rv.tag.dist.owner
+        dist = rv.tag.dist
         lower = rv.tag.lower
         upper = rv.tag.upper
-        rng, old_size, dtype, *dist_params = dist_node.inputs
-        new_size = new_size if not expand else tuple(new_size) + tuple(old_size)
-        new_dist = dist_node.op.make_node(rng, new_size, dtype, *dist_params).default_output()
+        new_dist = change_rv_size(dist, new_size, expand=expand)
         return cls.rv_op(new_dist, lower, upper)
 
     @classmethod
