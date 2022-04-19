@@ -19,12 +19,13 @@ import numpy as np
 
 from aesara import scan
 from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.random.utils import normalize_size_param
 
 from pymc.aesaraf import change_rv_size, floatX, intX
 from pymc.distributions import distribution, logprob, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -53,6 +54,16 @@ class GaussianRandomWalkRV(RandomVariable):
         steps = at.as_tensor_variable(steps)
         if not steps.ndim == 0 or not steps.dtype.startswith("int"):
             raise ValueError("steps must be an integer scalar (ndim=0).")
+
+        mu = at.as_tensor_variable(mu)
+        sigma = at.as_tensor_variable(sigma)
+        init = at.as_tensor_variable(init)
+
+        # Resize init distribution
+        size = normalize_size_param(size)
+        # If not explicit, size is determined by the shapes of mu, sigma, and init
+        init_size = size if not rv_size_is_none(size) else at.broadcast_shape(mu, sigma, init)
+        init = change_rv_size(init, init_size)
 
         return super().make_node(rng, size, dtype, mu, sigma, init, steps)
 
@@ -160,15 +171,9 @@ class GaussianRandomWalk(distribution.Continuous):
             raise ValueError("Must specify steps parameter")
         steps = at.as_tensor_variable(intX(steps))
 
-        shape = kwargs.get("shape", None)
-        if size is None and shape is None:
-            init_size = None
-        else:
-            init_size = to_tuple(size) if size is not None else to_tuple(shape)[:-1]
-
         # If no scalar distribution is passed then initialize with a Normal of same mu and sigma
         if init is None:
-            init = Normal.dist(mu, sigma, size=init_size)
+            init = Normal.dist(mu, sigma)
         else:
             if not (
                 isinstance(init, at.TensorVariable)
@@ -177,13 +182,6 @@ class GaussianRandomWalk(distribution.Continuous):
                 and init.owner.op.ndim_supp == 0
             ):
                 raise TypeError("init must be a univariate distribution variable")
-
-            if init_size is not None:
-                init = change_rv_size(init, init_size)
-            else:
-                # If not explicit, size is determined by the shapes of mu, sigma, and init
-                bcast_shape = at.broadcast_arrays(mu, sigma, init)[0].shape
-                init = change_rv_size(init, bcast_shape)
 
         # Ignores logprob of init var because that's accounted for in the logp method
         init.tag.ignore_logprob = True
