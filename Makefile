@@ -53,6 +53,9 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 	rm -rf $(SOURCEDIR)/api/**/generated
+	rm -rf $(SOURCEDIR)/api/**/classmethods
+	rm -rf $(SOURCEDIR)/contributing/private_api/**/generated
+	rm -rf $(SOURCEDIR)/contributing/private_api/**/classmethods
 	rm -rf docs/jupyter_execute
 
 html:

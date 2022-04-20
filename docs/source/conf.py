@@ -143,7 +143,7 @@ exclude_patterns = [
 ]
 
 # myst and panels config
-jupyter_execute_notebooks = "auto"
+jupyter_execute_notebooks = "force"
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "substitution"]
 myst_substitutions = {
     "version_slug": rtd_version,
@@ -183,6 +183,7 @@ intersphinx_mapping = {
     "arviz": ("https://arviz-devs.github.io/arviz/", None),
     "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
     "aeppl": ("https://aeppl.readthedocs.io/en/latest/", None),
+    "pmx": ("https://pymc-experimental.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "nb": ("https://pymc-examples.readthedocs.io/en/latest/", None),
     "myst": ("https://myst-parser.readthedocs.io/en/latest", None),
@@ -216,17 +217,28 @@ html_theme_options = {
             "icon": "fab fa-twitter-square",
         },
         {
+            "name": "YouTube",
+            "url": "https://www.youtube.com/c/PyMCDevelopers",
+            "icon": "fab fa-youtube",
+        },
+        {
             "name": "Discourse",
             "url": "https://discourse.pymc.io",
             "icon": "fab fa-discourse",
         },
     ],
+    "external_links": [
+        {"name": "About", "url": "https://www.pymc.io"},
+        {"name": "Examples", "url": "https://docs.pymc.io/projects/examples/en/latest/"},
+        {"name": "Blog", "url": "https://www.pymc.io/blog.html"},
+    ],
     "show_prev_next": False,
     "navbar_align": "left",
     "navbar_start": ["navbar-logo", "navbar-version"],
     "navbar_end": ["search-field.html", "navbar-icon-links.html"],
+    "page_sidebar_items": ["page-toc", "edit-this-page", "donate"],
     "search_bar_text": "Search...",
-    "use_edit_page_button": False,  # TODO: see how to skip of fix for generated pages
+    "use_edit_page_button": True,
     "google_analytics_id": "UA-176578023-1",
 }
 html_context = {
@@ -237,10 +249,8 @@ html_context = {
 }
 # this controls which sidebar sections are available in which pages. [] removes the left sidebar
 html_sidebars = {
-    "learn": [],
-    "installation": [],
-    "community": ["twitter", "sidebar-nav-bs.html", "sidebar-ethical-ads.html"],
-    "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"],
+    "community": ["twitter"],
+    "**": ["sidebar-nav-bs.html"],
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -265,7 +275,8 @@ html_favicon = "../logos/PyMC.ico"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["../logos"]
+html_static_path = ["../logos", "_static"]
+html_css_files = ["custom.css"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

@@ -98,7 +98,7 @@ class TestMixture(SeededTest):
             var.name: initial_point
             for var, initial_point in zip(
                 model.unobserved_value_vars,
-                model.compile_fn(model.unobserved_value_vars)(model.compute_initial_point()),
+                model.compile_fn(model.unobserved_value_vars)(model.initial_point()),
             )
         }
 
@@ -424,7 +424,7 @@ class TestMixture(SeededTest):
         ).T
 
         # check logp of mixture
-        testpoint = model.compute_initial_point()
+        testpoint = model.initial_point()
         mixlogp_st = logsumexp(np.log(testpoint["w"]) + complogp_st, axis=-1, keepdims=False)
         assert_allclose(model.compile_logp(y, sum=False)(testpoint)[0], mixlogp_st)
 
@@ -609,7 +609,7 @@ class TestMixture(SeededTest):
             mix_w = Dirichlet("mix_w", a=floatX(np.ones(2)), transform=None, shape=(2,))
             mix = Mixture("mix", w=mix_w, comp_dists=[g_mix, l_mix], observed=np.exp(self.norm_x))
 
-        test_point = model.compute_initial_point()
+        test_point = model.initial_point()
 
         def mixmixlogp(value, point):
             floatX = aesara.config.floatX
@@ -721,6 +721,21 @@ class TestMixture(SeededTest):
             assert isinstance(comp_dist.owner.op, RandomVariable)
             assert tuple(comp_dist.shape.eval()) == expected_shape
 
+    def test_preventing_mixing_cont_and_discrete(self):
+        with pytest.raises(
+            ValueError,
+            match="All distributions in comp_dists must be either discrete or continuous.",
+        ):
+            with Model() as model:
+                mix = Mixture(
+                    "x",
+                    w=[0.5, 0.3, 0.2],
+                    comp_dists=[
+                        Categorical.dist(np.tile(1 / 3, 3)),
+                        Normal.dist(np.ones(3), 3),
+                    ],
+                )
+
 
 class TestNormalMixture(SeededTest):
     def test_normal_mixture_sampling(self):
@@ -788,7 +803,7 @@ class TestNormalMixture(SeededTest):
             mixture2 = NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd)
             obs2 = NormalMixture("obs", w=ws, mu=mus, tau=taus, observed=observed)
 
-        testpoint = model0.compute_initial_point()
+        testpoint = model0.initial_point()
         testpoint["mus"] = test_mus
         testpoint["taus_log__"] = np.log(test_taus)
         for logp0, logp1, logp2 in zip(
@@ -926,7 +941,7 @@ class TestMixtureVsLatent(SeededTest):
             rtol = 1e-4
         else:
             rtol = 1e-7
-        test_point = model.compute_initial_point()
+        test_point = model.initial_point()
         test_point["m"] = test_point["latent_m"]
 
         mix_logp = loose_logp(model, mixture)(test_point)[0]
@@ -986,7 +1001,7 @@ class TestMixtureSameFamily(SeededTest):
         else:
             rtol = 1e-7
 
-        initial_point = model.compute_initial_point()
+        initial_point = model.initial_point()
         comp_logp = logp(comp_dists, initial_point["mixture"].reshape(*batch_shape, 1, 3))
         log_sum_exp = logsumexp(
             comp_logp.eval() + np.log(w), axis=mixture_axis, keepdims=True
@@ -1018,7 +1033,7 @@ class TestMixtureSameFamily(SeededTest):
         else:
             rtol = 1e-7
 
-        initial_point = model.compute_initial_point()
+        initial_point = model.initial_point()
         comp_logp = logp(comp_dists, initial_point["mixture"].reshape(1, 3))
         log_sum_exp = logsumexp(comp_logp.eval() + np.log(w), axis=0, keepdims=True).sum()
         assert_allclose(
@@ -1265,7 +1280,7 @@ class TestMixtureDefaultTransforms:
             mix1 = Mixture("mix1", [0.3, 0.7], comp_dists)
             mix2 = Mixture("mix2", [0.3, 0.7][::-1], comp_dists[::-1])
 
-        ip = model.compute_initial_point()
+        ip = model.initial_point()
         # We want an informative moment, other than zero
         assert ip["mix1_interval__"] != 0
 

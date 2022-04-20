@@ -24,10 +24,12 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 import scipy.special
+import xarray as xr
 
-from aesara import shared
+from aesara import Mode, shared
 from arviz import InferenceData
 from arviz import from_dict as az_from_dict
+from arviz.tests.helpers import check_multiple_attrs
 from scipy import stats
 
 import pymc as pm
@@ -512,7 +514,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.compute_initial_point()], samples=10, return_inferencedata=False
+                [model.initial_point()], samples=10, return_inferencedata=False
             )
             # # deprecated argument is not introduced to fast version [2019/08/20:rpg]
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"], return_inferencedata=False)
@@ -571,7 +573,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.compute_initial_point()], return_inferencedata=False, samples=10
+                [model.initial_point()], return_inferencedata=False, samples=10
             )
             ppc = pm.sample_posterior_predictive(
                 trace, return_inferencedata=False, samples=12, var_names=[]
@@ -669,7 +671,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                [model.compute_initial_point()], return_inferencedata=False, samples=10
+                [model.initial_point()], return_inferencedata=False, samples=10
             )
             assert ppc0 == {}
             ppc = pm.sample_posterior_predictive(
@@ -829,6 +831,74 @@ class TestSamplePPC(SeededTest):
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_posterior_predictive(trace)
+
+    def test_idata_extension(self):
+        """Testing if sample_posterior_predictive() extends inferenceData"""
+
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0)
+            a = pm.Normal("a", mu=mu, sigma=1, observed=[0.0, 1.0])
+            idata = pm.sample(tune=10, draws=10, compute_convergence_checks=False)
+
+        base_test_dict = {
+            "posterior": ["mu", "~a"],
+            "sample_stats": ["diverging", "lp"],
+            "log_likelihood": ["a"],
+            "observed_data": ["a"],
+        }
+        test_dict = {"~posterior_predictive": [], "~predictions": [], **base_test_dict}
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
+
+        # extending idata with in-sample ppc
+        with model:
+            pm.sample_posterior_predictive(idata, extend_inferencedata=True)
+        # test addition
+        test_dict = {"posterior_predictive": ["a"], "~predictions": [], **base_test_dict}
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
+
+        # extending idata with out-of-sample ppc
+        with model:
+            pm.sample_posterior_predictive(idata, extend_inferencedata=True, predictions=True)
+        # test addition
+        test_dict = {"posterior_predictive": ["a"], "predictions": ["a"], **base_test_dict}
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
+
+    @pytest.mark.parametrize("multitrace", [False, True])
+    def test_deterministics_out_of_idata(self, multitrace):
+        draws = 10
+        chains = 2
+        coords = {"draw": range(draws), "chain": range(chains)}
+        ds = xr.Dataset(
+            {
+                "a": xr.DataArray(
+                    [[0] * draws] * chains,
+                    coords=coords,
+                    dims=["chain", "draw"],
+                )
+            },
+            coords=coords,
+        )
+        with pm.Model() as m:
+            a = pm.Normal("a")
+            if multitrace:
+                straces = []
+                for chain in ds.chain:
+                    strace = pm.backends.NDArray(model=m, vars=[a])
+                    strace.setup(len(ds.draw), int(chain))
+                    strace.values = {"a": ds.a.sel(chain=chain).data}
+                    strace.draw_idx = len(ds.draw)
+                    straces.append(strace)
+                trace = MultiTrace(straces)
+            else:
+                trace = ds
+
+            d = pm.Deterministic("d", a - 4)
+            pm.Normal("c", d, sigma=0.01)
+            ppc = pm.sample_posterior_predictive(trace, var_names="c", return_inferencedata=True)
+        assert np.all(np.abs(ppc.posterior_predictive.c + 4) <= 0.1)
 
 
 class TestSamplePPCW(SeededTest):
@@ -1202,6 +1272,23 @@ class TestSamplePriorPredictive(SeededTest):
         assert prior1.prior["c"] == prior2.prior["c"]
         assert prior1.prior["d"] == prior2.prior["d"]
 
+    def test_aesara_function_kwargs(self):
+        sharedvar = aesara.shared(0)
+        with pm.Model() as m:
+            x = pm.Constant("x", 0)
+            y = pm.Deterministic("y", x + sharedvar)
+
+            prior = pm.sample_prior_predictive(
+                samples=5,
+                return_inferencedata=False,
+                compile_kwargs=dict(
+                    mode=Mode("py"),
+                    updates={sharedvar: sharedvar + 1},
+                ),
+            )
+
+        assert np.all(prior["y"] == np.arange(5))
+
 
 class TestSamplePosteriorPredictive:
     def test_point_list_arg_bug_spp(self, point_list_arg_bug_fixture):
@@ -1231,6 +1318,24 @@ class TestSamplePosteriorPredictive:
         with pmodel:
             idat = pm.to_inference_data(trace)
             pp = pm.sample_posterior_predictive(idat.posterior, var_names=["d"])
+
+    def test_aesara_function_kwargs(self):
+        sharedvar = aesara.shared(0)
+        with pm.Model() as m:
+            x = pm.Constant("x", 0.0)
+            y = pm.Deterministic("y", x + sharedvar)
+
+            pp = pm.sample_posterior_predictive(
+                trace=az_from_dict({"x": np.arange(5)}),
+                var_names=["y"],
+                return_inferencedata=False,
+                compile_kwargs=dict(
+                    mode=Mode("py"),
+                    updates={sharedvar: sharedvar + 1},
+                ),
+            )
+
+        assert np.all(pp["y"] == np.arange(5) * 2)
 
 
 class TestDraw(SeededTest):
@@ -1287,6 +1392,18 @@ class TestDraw(SeededTest):
         x_draws_1 = pm.draw(x, 100)
         x_draws_2 = pm.draw(x, 100)
         assert not np.all(np.isclose(x_draws_1, x_draws_2))
+
+    def test_draw_aesara_function_kwargs(self):
+        sharedvar = aesara.shared(0)
+        x = pm.Constant.dist(0.0)
+        y = x + sharedvar
+        draws = pm.draw(
+            y,
+            draws=5,
+            mode=Mode("py"),
+            updates={sharedvar: sharedvar + 1},
+        )
+        assert np.all(draws == np.arange(5))
 
 
 class test_step_args(SeededTest):

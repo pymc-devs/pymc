@@ -220,8 +220,10 @@ class TestDataPyMC:
 
     def test_posterior_predictive_thinned(self, data):
         with data.model:
-            idata = pm.sample(tune=5, draws=20, chains=2, return_inferencedata=True)
-            thinned_idata = idata.sel(draw=slice(None, None, 4))
+            draws = 20
+            thin_by = 4
+            idata = pm.sample(tune=5, draws=draws, chains=2, return_inferencedata=True)
+            thinned_idata = idata.sel(draw=slice(None, None, thin_by))
             idata.extend(pm.sample_posterior_predictive(thinned_idata))
         test_dict = {
             "posterior": ["mu", "tau", "eta", "theta"],
@@ -233,9 +235,11 @@ class TestDataPyMC:
         fails = check_multiple_attrs(test_dict, idata)
         assert not fails
         assert idata.posterior.dims["chain"] == 2
-        assert idata.posterior.dims["draw"] == 20
+        assert idata.posterior.dims["draw"] == draws
         assert idata.posterior_predictive.dims["chain"] == 2
-        assert idata.posterior_predictive.dims["draw"] == 5
+        assert idata.posterior_predictive.dims["draw"] == draws / thin_by
+        assert np.allclose(idata.posterior["draw"], np.arange(draws))
+        assert np.allclose(idata.posterior_predictive["draw"], np.arange(draws, step=thin_by))
 
     @pytest.mark.parametrize("use_context", [True, False])
     def test_autodetect_coords_from_model(self, use_context):

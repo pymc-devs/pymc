@@ -3,7 +3,7 @@
 
 aeppl==0.0.27
 aesara==2.5.1
-arviz>=0.11.4
+arviz>=0.12.0
 cachetools>=4.2.1
 cloudpickle
 fastprogress>=0.2.0

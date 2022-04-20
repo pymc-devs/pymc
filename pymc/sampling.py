@@ -43,7 +43,6 @@ import cloudpickle
 import numpy as np
 import xarray
 
-from aesara.compile.mode import Mode
 from aesara.graph.basic import Constant, Variable
 from aesara.tensor import TensorVariable
 from aesara.tensor.sharedvar import SharedVariable
@@ -614,6 +613,7 @@ def sample(
         f"({n_tune*n_chains:_d} + {n_draws*n_chains:_d} draws total) "
         f"took {mtrace.report.t_sampling:.0f} seconds."
     )
+    mtrace.report._log_summary()
 
     idata = None
     if compute_convergence_checks or return_inferencedata:
@@ -622,19 +622,18 @@ def sample(
             ikwargs.update(idata_kwargs)
         idata = pm.to_inference_data(mtrace, **ikwargs)
 
-    if compute_convergence_checks:
-        if draws - tune < 100:
-            warnings.warn(
-                "The number of samples is too small to check convergence reliably.", stacklevel=2
-            )
-        else:
-            mtrace.report._run_convergence_checks(idata, model)
-    mtrace.report._log_summary()
+        if compute_convergence_checks:
+            if draws - tune < 100:
+                warnings.warn(
+                    "The number of samples is too small to check convergence reliably.",
+                    stacklevel=2,
+                )
+            else:
+                mtrace.report._run_convergence_checks(idata, model)
 
-    if return_inferencedata:
-        return idata
-    else:
-        return mtrace
+        if return_inferencedata:
+            return idata
+    return mtrace
 
 
 def _check_start_shape(model, start: PointType):
@@ -1544,11 +1543,11 @@ def sample_posterior_predictive(
     keep_size: Optional[bool] = None,
     random_seed=None,
     progressbar: bool = True,
-    mode: Optional[Union[str, Mode]] = None,
     return_inferencedata: bool = True,
     extend_inferencedata: bool = False,
     predictions: bool = False,
     idata_kwargs: dict = None,
+    compile_kwargs: dict = None,
 ) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate posterior predictive samples from a model given a trace.
 
@@ -1586,8 +1585,6 @@ def sample_posterior_predictive(
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
-    mode:
-        The mode used by ``aesara.function`` to compile the graph.
     return_inferencedata : bool, default True
         Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
     extend_inferencedata : bool, default False
@@ -1599,6 +1596,8 @@ def sample_posterior_predictive(
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data` if ``predictions=False`` or to
         :func:`pymc.predictions_to_inference_data` otherwise.
+    compile_kwargs: dict, optional
+        Keyword arguments for :func:`pymc.aesaraf.compile_pymc`.
 
     Returns
     -------
@@ -1620,10 +1619,20 @@ def sample_posterior_predictive(
 
     _trace: Union[MultiTrace, PointList]
     nchain: int
+    if idata_kwargs is None:
+        idata_kwargs = {}
+    else:
+        idata_kwargs = idata_kwargs.copy()
+    if "coords" not in idata_kwargs:
+        idata_kwargs["coords"] = {}
     if isinstance(trace, InferenceData):
-        _trace = dataset_to_point_list(trace.posterior)
+        idata_kwargs["coords"].setdefault("draw", trace["posterior"]["draw"])
+        idata_kwargs["coords"].setdefault("chain", trace["posterior"]["chain"])
+        _trace = dataset_to_point_list(trace["posterior"])
         nchain, len_trace = chains_and_samples(trace)
     elif isinstance(trace, xarray.Dataset):
+        idata_kwargs["coords"].setdefault("draw", trace["draw"])
+        idata_kwargs["coords"].setdefault("chain", trace["chain"])
         _trace = dataset_to_point_list(trace)
         nchain, len_trace = chains_and_samples(trace)
     elif isinstance(trace, MultiTrace):
@@ -1704,37 +1713,35 @@ def sample_posterior_predictive(
 
     if not vars_to_sample:
         if return_inferencedata and not extend_inferencedata:
-            return None
+            return InferenceData()
         elif return_inferencedata and extend_inferencedata:
             return trace
         return {}
 
     inputs: Sequence[TensorVariable]
     input_names: Sequence[str]
-    if not hasattr(_trace, "varnames"):
-        inputs_and_names = [
-            (rv, rv.name)
-            for rv in walk_model(vars_to_sample, walk_past_rvs=True)
-            if rv not in vars_to_sample
-            and rv in model.named_vars.values()
-            and not isinstance(rv, (Constant, SharedVariable))
-        ]
-        if inputs_and_names:
-            inputs, input_names = zip(*inputs_and_names)
-        else:
-            inputs, input_names = [], []
+    if not isinstance(_trace, MultiTrace):
+        names_in_trace = list(_trace[0])
     else:
-        assert isinstance(_trace, MultiTrace)
-        output_names = [v.name for v in vars_to_sample if v.name is not None]
-        input_names = [
-            n
-            for n in _trace.varnames
-            if n not in output_names and not isinstance(model[n], (Constant, SharedVariable))
-        ]
-        inputs = [model[n] for n in input_names]
+        names_in_trace = _trace.varnames
+    inputs_and_names = [
+        (rv, rv.name)
+        for rv in walk_model(vars_to_sample, walk_past_rvs=True)
+        if rv not in vars_to_sample
+        and rv in model.named_vars.values()
+        and not isinstance(rv, (Constant, SharedVariable))
+        and rv.name in names_in_trace
+    ]
+    if inputs_and_names:
+        inputs, input_names = zip(*inputs_and_names)
+    else:
+        inputs, input_names = [], []
 
     if size is not None:
         vars_to_sample = [change_rv_size(v, size, expand=True) for v in vars_to_sample]
+
+    if compile_kwargs is None:
+        compile_kwargs = {}
 
     sampler_fn = compile_pymc(
         inputs,
@@ -1742,7 +1749,7 @@ def sample_posterior_predictive(
         allow_input_downcast=True,
         accept_inplace=True,
         on_unused_input="ignore",
-        mode=mode,
+        **compile_kwargs,
     )
 
     ppc_trace_t = _DefaultTrace(samples)
@@ -1782,12 +1789,11 @@ def sample_posterior_predictive(
 
     if not return_inferencedata:
         return ppc_trace
-    ikwargs: Dict[str, Any] = dict(model=model)
-    if idata_kwargs:
-        ikwargs.update(idata_kwargs)
+    ikwargs: Dict[str, Any] = dict(model=model, **idata_kwargs)
     if predictions:
         if extend_inferencedata:
             ikwargs.setdefault("idata_orig", trace)
+            ikwargs.setdefault("inplace", True)
         return pm.predictions_to_inference_data(ppc_trace, **ikwargs)
     converter = pm.backends.arviz.InferenceDataConverter(posterior_predictive=ppc_trace, **ikwargs)
     converter.nchains = nchain
@@ -1978,9 +1984,9 @@ def sample_prior_predictive(
     model: Optional[Model] = None,
     var_names: Optional[Iterable[str]] = None,
     random_seed=None,
-    mode: Optional[Union[str, Mode]] = None,
     return_inferencedata: bool = True,
     idata_kwargs: dict = None,
+    compile_kwargs: dict = None,
 ) -> Union[InferenceData, Dict[str, np.ndarray]]:
     """Generate samples from the prior predictive distribution.
 
@@ -1995,13 +2001,13 @@ def sample_prior_predictive(
         are not included unless explicitly defined in var_names.
     random_seed : int
         Seed for the random number generator.
-    mode:
-        The mode used by ``aesara.function`` to compile the graph.
     return_inferencedata : bool
         Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
         Defaults to True.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
+    compile_kwargs: dict, optional
+        Keyword arguments for :func:`pymc.aesaraf.compile_pymc`.
 
     Returns
     -------
@@ -2059,8 +2065,15 @@ def sample_prior_predictive(
 
     inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, (Constant, SharedVariable))]
 
+    if compile_kwargs is None:
+        compile_kwargs = {}
+
     sampler_fn = compile_pymc(
-        inputs, vars_to_sample, allow_input_downcast=True, accept_inplace=True, mode=mode
+        inputs,
+        vars_to_sample,
+        allow_input_downcast=True,
+        accept_inplace=True,
+        **compile_kwargs,
     )
 
     values = zip(*(sampler_fn() for i in range(samples)))
@@ -2085,7 +2098,6 @@ def sample_prior_predictive(
 def draw(
     vars: Union[Variable, Sequence[Variable]],
     draws: int = 1,
-    mode: Optional[Union[str, Mode]] = None,
     **kwargs,
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """Draw samples for one variable or a list of variables
@@ -2096,8 +2108,6 @@ def draw(
         A variable or a list of variables for which to draw samples.
     draws : int, default 1
         Number of samples needed to draw.
-    mode : str or aesara.compile.mode.Mode, optional
-        The mode used by :func:`aesara.function` to compile the graph.
     **kwargs : dict, optional
         Keyword arguments for :func:`pymc.aesara.compile_pymc`.
 
@@ -2131,7 +2141,7 @@ def draw(
             assert draws[2].shape == (num_draws, 5)
     """
 
-    draw_fn = compile_pymc(inputs=[], outputs=vars, mode=mode, **kwargs)
+    draw_fn = compile_pymc(inputs=[], outputs=vars, **kwargs)
 
     if draws == 1:
         return draw_fn()

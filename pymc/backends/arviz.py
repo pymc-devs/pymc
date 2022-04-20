@@ -9,6 +9,7 @@ from typing import (  # pylint: disable=unused-import
     Iterable,
     Mapping,
     Optional,
+    Sequence,
     Tuple,
     Union,
 )
@@ -178,7 +179,10 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 " one of trace, prior, posterior_predictive or predictions."
             )
 
-        untyped_coords = {**self.model.coords, **(coords or {})}
+        # Make coord types more rigid
+        untyped_coords: Dict[str, Optional[Sequence[Any]]] = {**self.model.coords}
+        if coords:
+            untyped_coords.update(coords)
         self.coords = {
             cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
             for cname, cvals in untyped_coords.items()
@@ -649,8 +653,8 @@ def predictions_to_inference_data(
     )
     if hasattr(idata_orig, "posterior"):
         assert idata_orig is not None
-        converter.nchains = idata_orig.posterior.dims["chain"]
-        converter.ndraws = idata_orig.posterior.dims["draw"]
+        converter.nchains = idata_orig["posterior"].dims["chain"]
+        converter.ndraws = idata_orig["posterior"].dims["draw"]
     else:
         aelem = next(iter(predictions.values()))
         converter.nchains, converter.ndraws = aelem.shape[:2]

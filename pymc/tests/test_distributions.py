@@ -289,6 +289,343 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
     return m, param_vars
 
 
+def check_logp(
+    pymc_dist,
+    domain,
+    paramdomains,
+    scipy_logp,
+    decimal=None,
+    n_samples=100,
+    extra_args=None,
+    scipy_args=None,
+    skip_paramdomain_outside_edge_test=False,
+):
+    """
+    Generic test for PyMC logp methods
+
+    Test PyMC logp and equivalent scipy logpmf/logpdf methods give similar
+    results for valid values and parameters inside the supported edges.
+    Edges are excluded by default, but can be artificially included by
+    creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
+
+    Parameters
+    ----------
+    pymc_dist: PyMC distribution
+    domain : Domain
+        Supported domain of distribution values
+    paramdomains : Dictionary of Parameter : Domain pairs
+        Supported domains of distribution parameters
+    scipy_logp : Scipy logpmf/logpdf method
+        Scipy logp method of equivalent pymc_dist distribution
+    decimal : Int
+        Level of precision with which pymc_dist and scipy logp are compared.
+        Defaults to 6 for float64 and 3 for float32
+    n_samples : Int
+        Upper limit on the number of valid domain and value combinations that
+        are compared between pymc and scipy methods. If n_samples is below the
+        total number of combinations, a random subset is evaluated. Setting
+        n_samples = -1, will return all possible combinations. Defaults to 100
+    extra_args : Dictionary with extra arguments needed to build pymc model
+        Dictionary is passed to helper function `build_model` from which
+        the pymc distribution logp is calculated
+    scipy_args : Dictionary with extra arguments needed to call scipy logp method
+        Usually the same as extra_args
+    """
+    if decimal is None:
+        decimal = select_by_precision(float64=6, float32=3)
+
+    if extra_args is None:
+        extra_args = {}
+
+    if scipy_args is None:
+        scipy_args = {}
+
+    def logp_reference(args):
+        args.update(scipy_args)
+        return scipy_logp(**args)
+
+    def _model_input_dict(model, param_vars, pt):
+        """Create a dict with only the necessary, transformed logp inputs."""
+        pt_d = {}
+        for k, v in pt.items():
+            rv_var = model.named_vars.get(k)
+            nv = param_vars.get(k, rv_var)
+            nv = getattr(nv.tag, "value_var", nv)
+
+            transform = getattr(nv.tag, "transform", None)
+            if transform:
+                # todo: the compiled graph behind this should be cached and
+                # reused (if it isn't already).
+                v = transform.forward(rv_var, v).eval()
+
+            if nv.name in param_vars:
+                # update the shared parameter variables in `param_vars`
+                param_vars[nv.name].set_value(v)
+            else:
+                # create an argument entry for the (potentially
+                # transformed) "value" variable
+                pt_d[nv.name] = v
+
+        return pt_d
+
+    model, param_vars = build_model(pymc_dist, domain, paramdomains, extra_args)
+    logp_pymc = model.compile_logp(jacobian=False)
+
+    # Test supported value and parameters domain matches scipy
+    domains = paramdomains.copy()
+    domains["value"] = domain
+    for pt in product(domains, n_samples=n_samples):
+        pt = dict(pt)
+        pt_d = _model_input_dict(model, param_vars, pt)
+        pt_logp = Point(pt_d, model=model)
+        pt_ref = Point(pt, filter_model_vars=False, model=model)
+        assert_almost_equal(
+            logp_pymc(pt_logp),
+            logp_reference(pt_ref),
+            decimal=decimal,
+            err_msg=str(pt),
+        )
+
+    valid_value = domain.vals[0]
+    valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
+    valid_dist = pymc_dist.dist(**valid_params, **extra_args)
+
+    # Test pymc distribution raises ParameterValueError for scalar parameters outside
+    # the supported domain edges (excluding edges)
+    if not skip_paramdomain_outside_edge_test:
+        # Step1: collect potential invalid parameters
+        invalid_params = {param: [None, None] for param in paramdomains}
+        for param, paramdomain in paramdomains.items():
+            if np.ndim(paramdomain.lower) != 0:
+                continue
+            if np.isfinite(paramdomain.lower):
+                invalid_params[param][0] = paramdomain.lower - 1
+            if np.isfinite(paramdomain.upper):
+                invalid_params[param][1] = paramdomain.upper + 1
+
+        # Step2: test invalid parameters, one a time
+        for invalid_param, invalid_edges in invalid_params.items():
+            for invalid_edge in invalid_edges:
+                if invalid_edge is None:
+                    continue
+                test_params = valid_params.copy()  # Shallow copy should be okay
+                test_params[invalid_param] = at.as_tensor_variable(invalid_edge)
+                # We need to remove `Assert`s introduced by checks like
+                # `assert_negative_support` and disable test values;
+                # otherwise, we won't be able to create the `RandomVariable`
+                with aesara.config.change_flags(compute_test_value="off"):
+                    invalid_dist = pymc_dist.dist(**test_params, **extra_args)
+                with aesara.config.change_flags(mode=Mode("py")):
+                    with pytest.raises(ParameterValueError):
+                        logp(invalid_dist, valid_value).eval()
+                        pytest.fail(f"test_params={test_params}, valid_value={valid_value}")
+
+    # Test that values outside of scalar domain support evaluate to -np.inf
+    if np.ndim(domain.lower) != 0:
+        return
+    invalid_values = [None, None]
+    if np.isfinite(domain.lower):
+        invalid_values[0] = domain.lower - 1
+    if np.isfinite(domain.upper):
+        invalid_values[1] = domain.upper + 1
+
+    for invalid_value in invalid_values:
+        if invalid_value is None:
+            continue
+        with aesara.config.change_flags(mode=Mode("py")):
+            assert_equal(
+                logp(valid_dist, invalid_value).eval(),
+                -np.inf,
+                err_msg=str(invalid_value),
+            )
+
+
+def check_logcdf(
+    pymc_dist,
+    domain,
+    paramdomains,
+    scipy_logcdf,
+    decimal=None,
+    n_samples=100,
+    skip_paramdomain_inside_edge_test=False,
+    skip_paramdomain_outside_edge_test=False,
+):
+    """
+    Generic test for PyMC logcdf methods
+
+    The following tests are performed by default:
+        1. Test PyMC logcdf and equivalent scipy logcdf methods give similar
+        results for valid values and parameters inside the supported edges.
+        Edges are excluded by default, but can be artificially included by
+        creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
+        Can be skipped via skip_paramdomain_inside_edge_test
+        2. Test PyMC logcdf method returns -inf for invalid parameter values
+        outside the supported edges. Can be skipped via skip_paramdomain_outside_edge_test
+        3. Test PyMC logcdf method returns -inf and 0 for values below and
+        above the supported edge, respectively, when using valid parameters.
+        4. Test PyMC logcdf methods works with multiple value or returns
+        default informative TypeError
+
+    Parameters
+    ----------
+    pymc_dist: PyMC distribution
+    domain : Domain
+        Supported domain of distribution values
+    paramdomains : Dictionary of Parameter : Domain pairs
+        Supported domains of distribution parameters
+    scipy_logcdf : Scipy logcdf method
+        Scipy logcdf method of equivalent pymc_dist distribution
+    decimal : Int
+        Level of precision with which pymc_dist and scipy_logcdf are compared.
+        Defaults to 6 for float64 and 3 for float32
+    n_samples : Int
+        Upper limit on the number of valid domain and value combinations that
+        are compared between pymc and scipy methods. If n_samples is below the
+        total number of combinations, a random subset is evaluated. Setting
+        n_samples = -1, will return all possible combinations. Defaults to 100
+    skip_paramdomain_inside_edge_test : Bool
+        Whether to run test 1., which checks that pymc and scipy distributions
+        match for valid values and parameters inside the respective domain edges
+    skip_paramdomain_outside_edge_test : Bool
+        Whether to run test 2., which checks that pymc distribution logcdf
+        returns -inf for invalid parameter values outside the supported domain edge
+
+    Returns
+    -------
+
+    """
+    # Test pymc and scipy distributions match for values and parameters
+    # within the supported domain edges (excluding edges)
+    if not skip_paramdomain_inside_edge_test:
+        domains = paramdomains.copy()
+        domains["value"] = domain
+
+        model, param_vars = build_model(pymc_dist, domain, paramdomains)
+        rv = model["value"]
+        value = model.rvs_to_values[rv]
+        pymc_logcdf = model.compile_fn(logcdf(rv, value))
+
+        if decimal is None:
+            decimal = select_by_precision(float64=6, float32=3)
+
+        for pt in product(domains, n_samples=n_samples):
+            params = dict(pt)
+            scipy_eval = scipy_logcdf(**params)
+
+            value = params.pop("value")
+            # Update shared parameter variables in pymc_logcdf function
+            for param_name, param_value in params.items():
+                param_vars[param_name].set_value(param_value)
+            pymc_eval = pymc_logcdf({"value": value})
+
+            params["value"] = value  # for displaying in err_msg
+            assert_almost_equal(
+                pymc_eval,
+                scipy_eval,
+                decimal=decimal,
+                err_msg=str(params),
+            )
+
+    valid_value = domain.vals[0]
+    valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
+    valid_dist = pymc_dist.dist(**valid_params)
+
+    # Test pymc distribution raises ParameterValueError for parameters outside the
+    # supported domain edges (excluding edges)
+    if not skip_paramdomain_outside_edge_test:
+        # Step1: collect potential invalid parameters
+        invalid_params = {param: [None, None] for param in paramdomains}
+        for param, paramdomain in paramdomains.items():
+            if np.isfinite(paramdomain.lower):
+                invalid_params[param][0] = paramdomain.lower - 1
+            if np.isfinite(paramdomain.upper):
+                invalid_params[param][1] = paramdomain.upper + 1
+        # Step2: test invalid parameters, one a time
+        for invalid_param, invalid_edges in invalid_params.items():
+            for invalid_edge in invalid_edges:
+                if invalid_edge is not None:
+                    test_params = valid_params.copy()  # Shallow copy should be okay
+                    test_params[invalid_param] = at.as_tensor_variable(invalid_edge)
+                    # We need to remove `Assert`s introduced by checks like
+                    # `assert_negative_support` and disable test values;
+                    # otherwise, we won't be able to create the
+                    # `RandomVariable`
+                    with aesara.config.change_flags(compute_test_value="off"):
+                        invalid_dist = pymc_dist.dist(**test_params)
+                    with aesara.config.change_flags(mode=Mode("py")):
+                        with pytest.raises(ParameterValueError):
+                            logcdf(invalid_dist, valid_value).eval()
+
+    # Test that values below domain edge evaluate to -np.inf
+    if np.isfinite(domain.lower):
+        below_domain = domain.lower - 1
+        with aesara.config.change_flags(mode=Mode("py")):
+            assert_equal(
+                logcdf(valid_dist, below_domain).eval(),
+                -np.inf,
+                err_msg=str(below_domain),
+            )
+
+    # Test that values above domain edge evaluate to 0
+    if np.isfinite(domain.upper):
+        above_domain = domain.upper + 1
+        with aesara.config.change_flags(mode=Mode("py")):
+            assert_equal(
+                logcdf(valid_dist, above_domain).eval(),
+                0,
+                err_msg=str(above_domain),
+            )
+
+    # Test that method works with multiple values or raises informative TypeError
+    valid_dist = pymc_dist.dist(**valid_params, size=2)
+    with aesara.config.change_flags(mode=Mode("py")):
+        try:
+            logcdf(valid_dist, np.array([valid_value, valid_value])).eval()
+        except TypeError as err:
+            assert str(err).endswith(
+                "logcdf expects a scalar value but received a 1-dimensional object."
+            )
+
+
+def check_selfconsistency_discrete_logcdf(
+    distribution,
+    domain,
+    paramdomains,
+    decimal=None,
+    n_samples=100,
+):
+    """
+    Check that logcdf of discrete distributions matches sum of logps up to value
+    """
+    domains = paramdomains.copy()
+    domains["value"] = domain
+    if decimal is None:
+        decimal = select_by_precision(float64=6, float32=3)
+
+    model, param_vars = build_model(distribution, domain, paramdomains)
+    rv = model["value"]
+    value = model.rvs_to_values[rv]
+    dist_logcdf = model.compile_fn(logcdf(rv, value))
+    dist_logp = model.compile_fn(logp(rv, value))
+
+    for pt in product(domains, n_samples=n_samples):
+        params = dict(pt)
+        value = params.pop("value")
+        values = np.arange(domain.lower, value + 1)
+
+        # Update shared parameter variables in logp/logcdf function
+        for param_name, param_value in params.items():
+            param_vars[param_name].set_value(param_value)
+
+        with aesara.config.change_flags(mode=Mode("py")):
+            assert_almost_equal(
+                dist_logcdf({"value": value}),
+                scipy.special.logsumexp([dist_logp({"value": value}) for value in values]),
+                decimal=decimal,
+                err_msg=str(pt),
+            )
+
+
 def laplace_asymmetric_logpdf(value, kappa, b, mu):
     kapinv = 1 / kappa
     value = value - mu
@@ -624,357 +961,15 @@ def test_hierarchical_obs_logpt():
 
 
 class TestMatchesScipy:
-    def check_logp(
-        self,
-        pymc_dist,
-        domain,
-        paramdomains,
-        scipy_logp,
-        decimal=None,
-        n_samples=100,
-        extra_args=None,
-        scipy_args=None,
-        skip_paramdomain_outside_edge_test=False,
-    ):
-        """
-        Generic test for PyMC logp methods
-
-        Test PyMC logp and equivalent scipy logpmf/logpdf methods give similar
-        results for valid values and parameters inside the supported edges.
-        Edges are excluded by default, but can be artificially included by
-        creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
-
-        Parameters
-        ----------
-        pymc_dist: PyMC distribution
-        domain : Domain
-            Supported domain of distribution values
-        paramdomains : Dictionary of Parameter : Domain pairs
-            Supported domains of distribution parameters
-        scipy_logp : Scipy logpmf/logpdf method
-            Scipy logp method of equivalent pymc_dist distribution
-        decimal : Int
-            Level of precision with which pymc_dist and scipy logp are compared.
-            Defaults to 6 for float64 and 3 for float32
-        n_samples : Int
-            Upper limit on the number of valid domain and value combinations that
-            are compared between pymc and scipy methods. If n_samples is below the
-            total number of combinations, a random subset is evaluated. Setting
-            n_samples = -1, will return all possible combinations. Defaults to 100
-        extra_args : Dictionary with extra arguments needed to build pymc model
-            Dictionary is passed to helper function `build_model` from which
-            the pymc distribution logp is calculated
-        scipy_args : Dictionary with extra arguments needed to call scipy logp method
-            Usually the same as extra_args
-        """
-        if decimal is None:
-            decimal = select_by_precision(float64=6, float32=3)
-
-        if extra_args is None:
-            extra_args = {}
-
-        if scipy_args is None:
-            scipy_args = {}
-
-        def logp_reference(args):
-            args.update(scipy_args)
-            return scipy_logp(**args)
-
-        def _model_input_dict(model, param_vars, pt):
-            """Create a dict with only the necessary, transformed logp inputs."""
-            pt_d = {}
-            for k, v in pt.items():
-                rv_var = model.named_vars.get(k)
-                nv = param_vars.get(k, rv_var)
-                nv = getattr(nv.tag, "value_var", nv)
-
-                transform = getattr(nv.tag, "transform", None)
-                if transform:
-                    # todo: the compiled graph behind this should be cached and
-                    # reused (if it isn't already).
-                    v = transform.forward(rv_var, v).eval()
-
-                if nv.name in param_vars:
-                    # update the shared parameter variables in `param_vars`
-                    param_vars[nv.name].set_value(v)
-                else:
-                    # create an argument entry for the (potentially
-                    # transformed) "value" variable
-                    pt_d[nv.name] = v
-
-            return pt_d
-
-        model, param_vars = build_model(pymc_dist, domain, paramdomains, extra_args)
-        logp_pymc = model.compile_logp(jacobian=False)
-
-        # Test supported value and parameters domain matches scipy
-        domains = paramdomains.copy()
-        domains["value"] = domain
-        for pt in product(domains, n_samples=n_samples):
-            pt = dict(pt)
-            pt_d = _model_input_dict(model, param_vars, pt)
-            pt_logp = Point(pt_d, model=model)
-            pt_ref = Point(pt, filter_model_vars=False, model=model)
-            assert_almost_equal(
-                logp_pymc(pt_logp),
-                logp_reference(pt_ref),
-                decimal=decimal,
-                err_msg=str(pt),
-            )
-
-        valid_value = domain.vals[0]
-        valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
-        valid_dist = pymc_dist.dist(**valid_params, **extra_args)
-
-        # Test pymc distribution raises ParameterValueError for scalar parameters outside
-        # the supported domain edges (excluding edges)
-        if not skip_paramdomain_outside_edge_test:
-            # Step1: collect potential invalid parameters
-            invalid_params = {param: [None, None] for param in paramdomains}
-            for param, paramdomain in paramdomains.items():
-                if np.ndim(paramdomain.lower) != 0:
-                    continue
-                if np.isfinite(paramdomain.lower):
-                    invalid_params[param][0] = paramdomain.lower - 1
-                if np.isfinite(paramdomain.upper):
-                    invalid_params[param][1] = paramdomain.upper + 1
-
-            # Step2: test invalid parameters, one a time
-            for invalid_param, invalid_edges in invalid_params.items():
-                for invalid_edge in invalid_edges:
-                    if invalid_edge is None:
-                        continue
-                    test_params = valid_params.copy()  # Shallow copy should be okay
-                    test_params[invalid_param] = at.as_tensor_variable(invalid_edge)
-                    # We need to remove `Assert`s introduced by checks like
-                    # `assert_negative_support` and disable test values;
-                    # otherwise, we won't be able to create the `RandomVariable`
-                    with aesara.config.change_flags(compute_test_value="off"):
-                        invalid_dist = pymc_dist.dist(**test_params, **extra_args)
-                    with aesara.config.change_flags(mode=Mode("py")):
-                        with pytest.raises(ParameterValueError):
-                            logp(invalid_dist, valid_value).eval()
-                            pytest.fail(f"test_params={test_params}, valid_value={valid_value}")
-
-        # Test that values outside of scalar domain support evaluate to -np.inf
-        if np.ndim(domain.lower) != 0:
-            return
-        invalid_values = [None, None]
-        if np.isfinite(domain.lower):
-            invalid_values[0] = domain.lower - 1
-        if np.isfinite(domain.upper):
-            invalid_values[1] = domain.upper + 1
-
-        for invalid_value in invalid_values:
-            if invalid_value is None:
-                continue
-            with aesara.config.change_flags(mode=Mode("py")):
-                assert_equal(
-                    logp(valid_dist, invalid_value).eval(),
-                    -np.inf,
-                    err_msg=str(invalid_value),
-                )
-
-    def check_logcdf(
-        self,
-        pymc_dist,
-        domain,
-        paramdomains,
-        scipy_logcdf,
-        decimal=None,
-        n_samples=100,
-        skip_paramdomain_inside_edge_test=False,
-        skip_paramdomain_outside_edge_test=False,
-    ):
-        """
-        Generic test for PyMC logcdf methods
-
-        The following tests are performed by default:
-            1. Test PyMC logcdf and equivalent scipy logcdf methods give similar
-            results for valid values and parameters inside the supported edges.
-            Edges are excluded by default, but can be artificially included by
-            creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
-            Can be skipped via skip_paramdomain_inside_edge_test
-            2. Test PyMC logcdf method returns -inf for invalid parameter values
-            outside the supported edges. Can be skipped via skip_paramdomain_outside_edge_test
-            3. Test PyMC logcdf method returns -inf and 0 for values below and
-            above the supported edge, respectively, when using valid parameters.
-            4. Test PyMC logcdf methods works with multiple value or returns
-            default informative TypeError
-
-        Parameters
-        ----------
-        pymc_dist: PyMC distribution
-        domain : Domain
-            Supported domain of distribution values
-        paramdomains : Dictionary of Parameter : Domain pairs
-            Supported domains of distribution parameters
-        scipy_logcdf : Scipy logcdf method
-            Scipy logcdf method of equivalent pymc_dist distribution
-        decimal : Int
-            Level of precision with which pymc_dist and scipy_logcdf are compared.
-            Defaults to 6 for float64 and 3 for float32
-        n_samples : Int
-            Upper limit on the number of valid domain and value combinations that
-            are compared between pymc and scipy methods. If n_samples is below the
-            total number of combinations, a random subset is evaluated. Setting
-            n_samples = -1, will return all possible combinations. Defaults to 100
-        skip_paramdomain_inside_edge_test : Bool
-            Whether to run test 1., which checks that pymc and scipy distributions
-            match for valid values and parameters inside the respective domain edges
-        skip_paramdomain_outside_edge_test : Bool
-            Whether to run test 2., which checks that pymc distribution logcdf
-            returns -inf for invalid parameter values outside the supported domain edge
-
-        Returns
-        -------
-
-        """
-        # Test pymc and scipy distributions match for values and parameters
-        # within the supported domain edges (excluding edges)
-        if not skip_paramdomain_inside_edge_test:
-            domains = paramdomains.copy()
-            domains["value"] = domain
-
-            model, param_vars = build_model(pymc_dist, domain, paramdomains)
-            rv = model["value"]
-            value = model.rvs_to_values[rv]
-            pymc_logcdf = model.compile_fn(logcdf(rv, value))
-
-            if decimal is None:
-                decimal = select_by_precision(float64=6, float32=3)
-
-            for pt in product(domains, n_samples=n_samples):
-                params = dict(pt)
-                scipy_eval = scipy_logcdf(**params)
-
-                value = params.pop("value")
-                # Update shared parameter variables in pymc_logcdf function
-                for param_name, param_value in params.items():
-                    param_vars[param_name].set_value(param_value)
-                pymc_eval = pymc_logcdf({"value": value})
-
-                params["value"] = value  # for displaying in err_msg
-                assert_almost_equal(
-                    pymc_eval,
-                    scipy_eval,
-                    decimal=decimal,
-                    err_msg=str(params),
-                )
-
-        valid_value = domain.vals[0]
-        valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
-        valid_dist = pymc_dist.dist(**valid_params)
-
-        # Test pymc distribution raises ParameterValueError for parameters outside the
-        # supported domain edges (excluding edges)
-        if not skip_paramdomain_outside_edge_test:
-            # Step1: collect potential invalid parameters
-            invalid_params = {param: [None, None] for param in paramdomains}
-            for param, paramdomain in paramdomains.items():
-                if np.isfinite(paramdomain.lower):
-                    invalid_params[param][0] = paramdomain.lower - 1
-                if np.isfinite(paramdomain.upper):
-                    invalid_params[param][1] = paramdomain.upper + 1
-            # Step2: test invalid parameters, one a time
-            for invalid_param, invalid_edges in invalid_params.items():
-                for invalid_edge in invalid_edges:
-                    if invalid_edge is not None:
-                        test_params = valid_params.copy()  # Shallow copy should be okay
-                        test_params[invalid_param] = at.as_tensor_variable(invalid_edge)
-                        # We need to remove `Assert`s introduced by checks like
-                        # `assert_negative_support` and disable test values;
-                        # otherwise, we won't be able to create the
-                        # `RandomVariable`
-                        with aesara.config.change_flags(compute_test_value="off"):
-                            invalid_dist = pymc_dist.dist(**test_params)
-                        with aesara.config.change_flags(mode=Mode("py")):
-                            with pytest.raises(ParameterValueError):
-                                logcdf(invalid_dist, valid_value).eval()
-
-        # Test that values below domain edge evaluate to -np.inf
-        if np.isfinite(domain.lower):
-            below_domain = domain.lower - 1
-            with aesara.config.change_flags(mode=Mode("py")):
-                assert_equal(
-                    logcdf(valid_dist, below_domain).eval(),
-                    -np.inf,
-                    err_msg=str(below_domain),
-                )
-
-        # Test that values above domain edge evaluate to 0
-        if np.isfinite(domain.upper):
-            above_domain = domain.upper + 1
-            with aesara.config.change_flags(mode=Mode("py")):
-                assert_equal(
-                    logcdf(valid_dist, above_domain).eval(),
-                    0,
-                    err_msg=str(above_domain),
-                )
-
-        # Test that method works with multiple values or raises informative TypeError
-        valid_dist = pymc_dist.dist(**valid_params, size=2)
-        with aesara.config.change_flags(mode=Mode("py")):
-            try:
-                logcdf(valid_dist, np.array([valid_value, valid_value])).eval()
-            except TypeError as err:
-                assert str(err).endswith(
-                    "logcdf expects a scalar value but received a 1-dimensional object."
-                )
-
-    def check_selfconsistency_discrete_logcdf(
-        self,
-        distribution,
-        domain,
-        paramdomains,
-        decimal=None,
-        n_samples=100,
-    ):
-        """
-        Check that logcdf of discrete distributions matches sum of logps up to value
-        """
-        # This test only works for scalar random variables
-        rv_op = getattr(distribution, "rv_op", None)
-        if rv_op:
-            assert rv_op.ndim_supp == 0
-
-        domains = paramdomains.copy()
-        domains["value"] = domain
-        if decimal is None:
-            decimal = select_by_precision(float64=6, float32=3)
-
-        model, param_vars = build_model(distribution, domain, paramdomains)
-        rv = model["value"]
-        value = model.rvs_to_values[rv]
-        dist_logcdf = model.compile_fn(logcdf(rv, value))
-        dist_logp = model.compile_fn(logp(rv, value))
-
-        for pt in product(domains, n_samples=n_samples):
-            params = dict(pt)
-            value = params.pop("value")
-            values = np.arange(domain.lower, value + 1)
-
-            # Update shared parameter variables in logp/logcdf function
-            for param_name, param_value in params.items():
-                param_vars[param_name].set_value(param_value)
-
-            with aesara.config.change_flags(mode=Mode("py")):
-                assert_almost_equal(
-                    dist_logcdf({"value": value}),
-                    scipy.special.logsumexp([dist_logp({"value": value}) for value in values]),
-                    decimal=decimal,
-                    err_msg=str(pt),
-                )
-
     def test_uniform(self):
-        self.check_logp(
+        check_logp(
             Uniform,
             Runif,
             {"lower": -Rplusunif, "upper": Rplusunif},
             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower),
             skip_paramdomain_outside_edge_test=True,
         )
-        self.check_logcdf(
+        check_logcdf(
             Uniform,
             Runif,
             {"lower": -Rplusunif, "upper": Rplusunif},
@@ -988,14 +983,14 @@ class TestMatchesScipy:
             assert logcdf(invalid_dist, np.array(2.0)).eval() == -np.inf
 
     def test_triangular(self):
-        self.check_logp(
+        check_logp(
             Triangular,
             Runif,
             {"lower": -Rplusunif, "c": Runif, "upper": Rplusunif},
             lambda value, c, lower, upper: sp.triang.logpdf(value, c - lower, lower, upper - lower),
             skip_paramdomain_outside_edge_test=True,
         )
-        self.check_logcdf(
+        check_logcdf(
             Triangular,
             Runif,
             {"lower": -Rplusunif, "c": Runif, "upper": Rplusunif},
@@ -1026,14 +1021,14 @@ class TestMatchesScipy:
         reason="`polyagamma package is not available/installed.",
     )
     def test_polyagamma(self):
-        self.check_logp(
+        check_logp(
             pm.PolyaGamma,
             Rplus,
             {"h": Rplus, "z": R},
             lambda value, h, z: polyagamma_pdf(value, h, z, return_log=True),
             decimal=select_by_precision(float64=6, float32=-1),
         )
-        self.check_logcdf(
+        check_logcdf(
             pm.PolyaGamma,
             Rplus,
             {"h": Rplus, "z": R},
@@ -1042,21 +1037,21 @@ class TestMatchesScipy:
         )
 
     def test_discrete_unif(self):
-        self.check_logp(
+        check_logp(
             DiscreteUniform,
             Rdunif,
             {"lower": -Rplusdunif, "upper": Rplusdunif},
             lambda value, lower, upper: sp.randint.logpmf(value, lower, upper + 1),
             skip_paramdomain_outside_edge_test=True,
         )
-        self.check_logcdf(
+        check_logcdf(
             DiscreteUniform,
             Rdunif,
             {"lower": -Rplusdunif, "upper": Rplusdunif},
             lambda value, lower, upper: sp.randint.logcdf(value, lower, upper + 1),
             skip_paramdomain_outside_edge_test=True,
         )
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             DiscreteUniform,
             Domain([-10, 0, 10], "int64"),
             {"lower": -Rplusdunif, "upper": Rplusdunif},
@@ -1070,32 +1065,32 @@ class TestMatchesScipy:
                 logcdf(invalid_dist, 2).eval()
 
     def test_flat(self):
-        self.check_logp(Flat, R, {}, lambda value: 0)
+        check_logp(Flat, R, {}, lambda value: 0)
         with Model():
             x = Flat("a")
-        self.check_logcdf(Flat, R, {}, lambda value: np.log(0.5))
+        check_logcdf(Flat, R, {}, lambda value: np.log(0.5))
         # Check infinite cases individually.
         assert 0.0 == logcdf(Flat.dist(), np.inf).eval()
         assert -np.inf == logcdf(Flat.dist(), -np.inf).eval()
 
     def test_half_flat(self):
-        self.check_logp(HalfFlat, Rplus, {}, lambda value: 0)
+        check_logp(HalfFlat, Rplus, {}, lambda value: 0)
         with Model():
             x = HalfFlat("a", size=2)
-        self.check_logcdf(HalfFlat, Rplus, {}, lambda value: -np.inf)
+        check_logcdf(HalfFlat, Rplus, {}, lambda value: -np.inf)
         # Check infinite cases individually.
         assert 0.0 == logcdf(HalfFlat.dist(), np.inf).eval()
         assert -np.inf == logcdf(HalfFlat.dist(), -np.inf).eval()
 
     def test_normal(self):
-        self.check_logp(
+        check_logp(
             Normal,
             R,
             {"mu": R, "sigma": Rplus},
             lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma),
             decimal=select_by_precision(float64=6, float32=1),
         )
-        self.check_logcdf(
+        check_logcdf(
             Normal,
             R,
             {"mu": R, "sigma": Rplus},
@@ -1109,7 +1104,7 @@ class TestMatchesScipy:
                 value, (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma
             )
 
-        self.check_logp(
+        check_logp(
             TruncatedNormal,
             R,
             {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig, "upper": Rplusbig},
@@ -1118,7 +1113,7 @@ class TestMatchesScipy:
             skip_paramdomain_outside_edge_test=True,
         )
 
-        self.check_logp(
+        check_logp(
             TruncatedNormal,
             R,
             {"mu": R, "sigma": Rplusbig, "upper": Rplusbig},
@@ -1127,7 +1122,7 @@ class TestMatchesScipy:
             skip_paramdomain_outside_edge_test=True,
         )
 
-        self.check_logp(
+        check_logp(
             TruncatedNormal,
             R,
             {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig},
@@ -1137,14 +1132,14 @@ class TestMatchesScipy:
         )
 
     def test_half_normal(self):
-        self.check_logp(
+        check_logp(
             HalfNormal,
             Rplus,
             {"sigma": Rplus},
             lambda value, sigma: sp.halfnorm.logpdf(value, scale=sigma),
             decimal=select_by_precision(float64=6, float32=-1),
         )
-        self.check_logcdf(
+        check_logcdf(
             HalfNormal,
             Rplus,
             {"sigma": Rplus},
@@ -1152,7 +1147,7 @@ class TestMatchesScipy:
         )
 
     def test_chisquared_logp(self):
-        self.check_logp(
+        check_logp(
             ChiSquared,
             Rplus,
             {"nu": Rplus},
@@ -1164,7 +1159,7 @@ class TestMatchesScipy:
         reason="Fails on float32 due to numerical issues",
     )
     def test_chisquared_logcdf(self):
-        self.check_logcdf(
+        check_logcdf(
             ChiSquared,
             Rplus,
             {"nu": Rplus},
@@ -1172,7 +1167,7 @@ class TestMatchesScipy:
         )
 
     def test_wald_logp(self):
-        self.check_logp(
+        check_logp(
             Wald,
             Rplus,
             {"mu": Rplus, "alpha": Rplus},
@@ -1181,7 +1176,7 @@ class TestMatchesScipy:
         )
 
     def test_wald_logcdf(self):
-        self.check_logcdf(
+        check_logcdf(
             Wald,
             Rplus,
             {"mu": Rplus, "alpha": Rplus},
@@ -1218,13 +1213,13 @@ class TestMatchesScipy:
         assert_almost_equal(model.compile_logp()(pt), logp, decimal=decimals, err_msg=str(pt))
 
     def test_beta_logp(self):
-        self.check_logp(
+        check_logp(
             Beta,
             Unit,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta),
         )
-        self.check_logp(
+        check_logp(
             Beta,
             Unit,
             {"mu": Unit, "sigma": Rplus},
@@ -1236,7 +1231,7 @@ class TestMatchesScipy:
         reason="Fails on float32 due to numerical issues",
     )
     def test_beta_logcdf(self):
-        self.check_logcdf(
+        check_logcdf(
             Beta,
             Unit,
             {"alpha": Rplus, "beta": Rplus},
@@ -1253,13 +1248,13 @@ class TestMatchesScipy:
         def scipy_log_cdf(value, a, b):
             return pm.math.log1mexp_numpy(b * np.log1p(-(value**a)), negative_input=True)
 
-        self.check_logp(
+        check_logp(
             Kumaraswamy,
             Unit,
             {"a": Rplus, "b": Rplus},
             scipy_log_pdf,
         )
-        self.check_logcdf(
+        check_logcdf(
             Kumaraswamy,
             Unit,
             {"a": Rplus, "b": Rplus},
@@ -1267,13 +1262,13 @@ class TestMatchesScipy:
         )
 
     def test_exponential(self):
-        self.check_logp(
+        check_logp(
             Exponential,
             Rplus,
             {"lam": Rplus},
             lambda value, lam: sp.expon.logpdf(value, 0, 1 / lam),
         )
-        self.check_logcdf(
+        check_logcdf(
             Exponential,
             Rplus,
             {"lam": Rplus},
@@ -1281,19 +1276,19 @@ class TestMatchesScipy:
         )
 
     def test_geometric(self):
-        self.check_logp(
+        check_logp(
             Geometric,
             Nat,
             {"p": Unit},
             lambda value, p: np.log(sp.geom.pmf(value, p)),
         )
-        self.check_logcdf(
+        check_logcdf(
             Geometric,
             Nat,
             {"p": Unit},
             lambda value, p: sp.geom.logcdf(value, p),
         )
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             Geometric,
             Nat,
             {"p": Unit},
@@ -1317,19 +1312,19 @@ class TestMatchesScipy:
 
             return original_res if not np.isnan(original_res) else -np.inf
 
-        self.check_logp(
+        check_logp(
             HyperGeometric,
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
             modified_scipy_hypergeom_logpmf,
         )
-        self.check_logcdf(
+        check_logcdf(
             HyperGeometric,
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
             modified_scipy_hypergeom_logcdf,
         )
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             HyperGeometric,
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
@@ -1346,31 +1341,31 @@ class TestMatchesScipy:
         def scipy_mu_alpha_logcdf(value, mu, alpha):
             return sp.nbinom.logcdf(value, alpha, 1 - mu / (mu + alpha))
 
-        self.check_logp(
+        check_logp(
             NegativeBinomial,
             Nat,
             {"mu": Rplus, "alpha": Rplus},
             scipy_mu_alpha_logpmf,
         )
-        self.check_logp(
+        check_logp(
             NegativeBinomial,
             Nat,
             {"p": Unit, "n": Rplus},
             lambda value, p, n: sp.nbinom.logpmf(value, n, p),
         )
-        self.check_logcdf(
+        check_logcdf(
             NegativeBinomial,
             Nat,
             {"mu": Rplus, "alpha": Rplus},
             scipy_mu_alpha_logcdf,
         )
-        self.check_logcdf(
+        check_logcdf(
             NegativeBinomial,
             Nat,
             {"p": Unit, "n": Rplus},
             lambda value, p, n: sp.nbinom.logcdf(value, n, p),
         )
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             NegativeBinomial,
             Nat,
             {"mu": Rplus, "alpha": Rplus},
@@ -1397,13 +1392,13 @@ class TestMatchesScipy:
                 NegativeBinomial("x", mu=mu, p=p, alpha=alpha, n=n)
 
     def test_laplace(self):
-        self.check_logp(
+        check_logp(
             Laplace,
             R,
             {"mu": R, "b": Rplus},
             lambda value, mu, b: sp.laplace.logpdf(value, mu, b),
         )
-        self.check_logcdf(
+        check_logcdf(
             Laplace,
             R,
             {"mu": R, "b": Rplus},
@@ -1411,7 +1406,7 @@ class TestMatchesScipy:
         )
 
     def test_laplace_asymmetric(self):
-        self.check_logp(
+        check_logp(
             AsymmetricLaplace,
             R,
             {"b": Rplus, "kappa": Rplus, "mu": R},
@@ -1420,25 +1415,25 @@ class TestMatchesScipy:
         )
 
     def test_lognormal(self):
-        self.check_logp(
+        check_logp(
             LogNormal,
             Rplus,
             {"mu": R, "tau": Rplusbig},
             lambda value, mu, tau: floatX(sp.lognorm.logpdf(value, tau**-0.5, 0, np.exp(mu))),
         )
-        self.check_logp(
+        check_logp(
             LogNormal,
             Rplus,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: floatX(sp.lognorm.logpdf(value, sigma, 0, np.exp(mu))),
         )
-        self.check_logcdf(
+        check_logcdf(
             LogNormal,
             Rplus,
             {"mu": R, "tau": Rplusbig},
             lambda value, mu, tau: sp.lognorm.logcdf(value, tau**-0.5, 0, np.exp(mu)),
         )
-        self.check_logcdf(
+        check_logcdf(
             LogNormal,
             Rplus,
             {"mu": R, "sigma": Rplusbig},
@@ -1446,13 +1441,13 @@ class TestMatchesScipy:
         )
 
     def test_studentt_logp(self):
-        self.check_logp(
+        check_logp(
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "lam": Rplus},
             lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-0.5),
         )
-        self.check_logp(
+        check_logp(
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "sigma": Rplus},
@@ -1464,13 +1459,13 @@ class TestMatchesScipy:
         reason="Fails on float32 due to numerical issues",
     )
     def test_studentt_logcdf(self):
-        self.check_logcdf(
+        check_logcdf(
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "lam": Rplus},
             lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam**-0.5),
         )
-        self.check_logcdf(
+        check_logcdf(
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "sigma": Rplus},
@@ -1478,13 +1473,13 @@ class TestMatchesScipy:
         )
 
     def test_cauchy(self):
-        self.check_logp(
+        check_logp(
             Cauchy,
             R,
             {"alpha": R, "beta": Rplusbig},
             lambda value, alpha, beta: sp.cauchy.logpdf(value, alpha, beta),
         )
-        self.check_logcdf(
+        check_logcdf(
             Cauchy,
             R,
             {"alpha": R, "beta": Rplusbig},
@@ -1492,13 +1487,13 @@ class TestMatchesScipy:
         )
 
     def test_half_cauchy(self):
-        self.check_logp(
+        check_logp(
             HalfCauchy,
             Rplus,
             {"beta": Rplusbig},
             lambda value, beta: sp.halfcauchy.logpdf(value, scale=beta),
         )
-        self.check_logcdf(
+        check_logcdf(
             HalfCauchy,
             Rplus,
             {"beta": Rplusbig},
@@ -1506,7 +1501,7 @@ class TestMatchesScipy:
         )
 
     def test_gamma_logp(self):
-        self.check_logp(
+        check_logp(
             Gamma,
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
@@ -1516,7 +1511,7 @@ class TestMatchesScipy:
         def test_fun(value, mu, sigma):
             return sp.gamma.logpdf(value, mu**2 / sigma**2, scale=1.0 / (mu / sigma**2))
 
-        self.check_logp(
+        check_logp(
             Gamma,
             Rplus,
             {"mu": Rplusbig, "sigma": Rplusbig},
@@ -1528,7 +1523,7 @@ class TestMatchesScipy:
         reason="Fails on float32 due to numerical issues",
     )
     def test_gamma_logcdf(self):
-        self.check_logcdf(
+        check_logcdf(
             Gamma,
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
@@ -1536,7 +1531,7 @@ class TestMatchesScipy:
         )
 
     def test_inverse_gamma_logp(self):
-        self.check_logp(
+        check_logp(
             InverseGamma,
             Rplus,
             {"alpha": Rplus, "beta": Rplus},
@@ -1548,7 +1543,7 @@ class TestMatchesScipy:
         reason="Fails on float32 due to numerical issues",
     )
     def test_inverse_gamma_logcdf(self):
-        self.check_logcdf(
+        check_logcdf(
             InverseGamma,
             Rplus,
             {"alpha": Rplus, "beta": Rplus},
@@ -1564,7 +1559,7 @@ class TestMatchesScipy:
             alpha, beta = InverseGamma._get_alpha_beta(None, None, mu, sigma)
             return sp.invgamma.logpdf(value, alpha, scale=beta)
 
-        self.check_logp(
+        check_logp(
             InverseGamma,
             Rplus,
             {"mu": Rplus, "sigma": Rplus},
@@ -1573,13 +1568,13 @@ class TestMatchesScipy:
         )
 
     def test_pareto(self):
-        self.check_logp(
+        check_logp(
             Pareto,
             Rplus,
             {"alpha": Rplusbig, "m": Rplusbig},
             lambda value, alpha, m: sp.pareto.logpdf(value, alpha, scale=m),
         )
-        self.check_logcdf(
+        check_logcdf(
             Pareto,
             Rplus,
             {"alpha": Rplusbig, "m": Rplusbig},
@@ -1591,7 +1586,7 @@ class TestMatchesScipy:
         reason="Fails on float32 due to numerical issues",
     )
     def test_weibull_logp(self):
-        self.check_logp(
+        check_logp(
             Weibull,
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
@@ -1603,7 +1598,7 @@ class TestMatchesScipy:
         reason="Fails on float32 due to inf issues",
     )
     def test_weibull_logcdf(self):
-        self.check_logcdf(
+        check_logcdf(
             Weibull,
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
@@ -1612,15 +1607,16 @@ class TestMatchesScipy:
 
     def test_half_studentt(self):
         # this is only testing for nu=1 (halfcauchy)
-        self.check_logp(
+        check_logp(
             HalfStudentT,
             Rplus,
             {"sigma": Rplus},
             lambda value, sigma: sp.halfcauchy.logpdf(value, 0, sigma),
+            extra_args={"nu": 1},
         )
 
     def test_skew_normal(self):
-        self.check_logp(
+        check_logp(
             SkewNormal,
             R,
             {"mu": R, "sigma": Rplusbig, "alpha": R},
@@ -1629,69 +1625,69 @@ class TestMatchesScipy:
         )
 
     def test_binomial(self):
-        self.check_logp(
+        check_logp(
             Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
             lambda value, n, p: sp.binom.logpmf(value, n, p),
         )
-        self.check_logcdf(
+        check_logcdf(
             Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
             lambda value, n, p: sp.binom.logcdf(value, n, p),
         )
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
         )
 
     def test_beta_binomial(self):
-        self.check_logp(
+        check_logp(
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
             lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
         )
-        self.check_logcdf(
+        check_logcdf(
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
             lambda value, alpha, beta, n: sp.betabinom.logcdf(value, a=alpha, b=beta, n=n),
         )
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
 
     def test_bernoulli(self):
-        self.check_logp(
+        check_logp(
             Bernoulli,
             Bool,
             {"p": Unit},
             lambda value, p: sp.bernoulli.logpmf(value, p),
         )
-        self.check_logp(
+        check_logp(
             Bernoulli,
             Bool,
             {"logit_p": R},
             lambda value, logit_p: sp.bernoulli.logpmf(value, scipy.special.expit(logit_p)),
         )
-        self.check_logcdf(
+        check_logcdf(
             Bernoulli,
             Bool,
             {"p": Unit},
             lambda value, p: sp.bernoulli.logcdf(value, p),
         )
-        self.check_logcdf(
+        check_logcdf(
             Bernoulli,
             Bool,
             {"logit_p": R},
             lambda value, logit_p: sp.bernoulli.logcdf(value, scipy.special.expit(logit_p)),
         )
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             Bernoulli,
             Bool,
             {"p": Unit},
@@ -1711,40 +1707,40 @@ class TestMatchesScipy:
                 Bernoulli("x")
 
     def test_discrete_weibull(self):
-        self.check_logp(
+        check_logp(
             DiscreteWeibull,
             Nat,
             {"q": Unit, "beta": NatSmall},
             discrete_weibull_logpmf,
         )
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             DiscreteWeibull,
             Nat,
             {"q": Unit, "beta": NatSmall},
         )
 
     def test_poisson(self):
-        self.check_logp(
+        check_logp(
             Poisson,
             Nat,
             {"mu": Rplus},
             lambda value, mu: sp.poisson.logpmf(value, mu),
         )
-        self.check_logcdf(
+        check_logcdf(
             Poisson,
             Nat,
             {"mu": Rplus},
             lambda value, mu: sp.poisson.logcdf(value, mu),
         )
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             Poisson,
             Nat,
             {"mu": Rplus},
         )
 
     def test_constantdist(self):
-        self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
-        self.check_logcdf(Constant, I, {"c": I}, lambda value, c: np.log(value >= c))
+        check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
+        check_logcdf(Constant, I, {"c": I}, lambda value, c: np.log(value >= c))
 
     def test_zeroinflatedpoisson(self):
         def logp_fn(value, psi, mu):
@@ -1756,21 +1752,21 @@ class TestMatchesScipy:
         def logcdf_fn(value, psi, mu):
             return np.log((1 - psi) + psi * sp.poisson.cdf(value, mu))
 
-        self.check_logp(
+        check_logp(
             ZeroInflatedPoisson,
             Nat,
             {"psi": Unit, "mu": Rplus},
             logp_fn,
         )
 
-        self.check_logcdf(
+        check_logcdf(
             ZeroInflatedPoisson,
             Nat,
             {"psi": Unit, "mu": Rplus},
             logcdf_fn,
         )
 
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             ZeroInflatedPoisson,
             Nat,
             {"mu": Rplus, "psi": Unit},
@@ -1788,14 +1784,14 @@ class TestMatchesScipy:
             n, p = NegativeBinomial.get_n_p(mu=mu, alpha=alpha)
             return np.log((1 - psi) + psi * sp.nbinom.cdf(value, n, p))
 
-        self.check_logp(
+        check_logp(
             ZeroInflatedNegativeBinomial,
             Nat,
             {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
             logp_fn,
         )
 
-        self.check_logp(
+        check_logp(
             ZeroInflatedNegativeBinomial,
             Nat,
             {"psi": Unit, "p": Unit, "n": NatSmall},
@@ -1804,21 +1800,21 @@ class TestMatchesScipy:
             else np.log(psi * sp.nbinom.pmf(value, n, p)),
         )
 
-        self.check_logcdf(
+        check_logcdf(
             ZeroInflatedNegativeBinomial,
             Nat,
             {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
             logcdf_fn,
         )
 
-        self.check_logcdf(
+        check_logcdf(
             ZeroInflatedNegativeBinomial,
             Nat,
             {"psi": Unit, "p": Unit, "n": NatSmall},
             lambda value, psi, p, n: np.log((1 - psi) + psi * sp.nbinom.cdf(value, n, p)),
         )
 
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             ZeroInflatedNegativeBinomial,
             Nat,
             {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
@@ -1834,21 +1830,21 @@ class TestMatchesScipy:
         def logcdf_fn(value, psi, n, p):
             return np.log((1 - psi) + psi * sp.binom.cdf(value, n, p))
 
-        self.check_logp(
+        check_logp(
             ZeroInflatedBinomial,
             Nat,
             {"psi": Unit, "n": NatSmall, "p": Unit},
             logp_fn,
         )
 
-        self.check_logcdf(
+        check_logcdf(
             ZeroInflatedBinomial,
             Nat,
             {"psi": Unit, "n": NatSmall, "p": Unit},
             logcdf_fn,
         )
 
-        self.check_selfconsistency_discrete_logcdf(
+        check_selfconsistency_discrete_logcdf(
             ZeroInflatedBinomial,
             Nat,
             {"n": NatSmall, "p": Unit, "psi": Unit},
@@ -1856,33 +1852,33 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_mvnormal(self, n):
-        self.check_logp(
+        check_logp(
             MvNormal,
             RealMatrix(5, n),
             {"mu": Vector(R, n), "tau": PdMatrix(n)},
             normal_logpdf_tau,
             extra_args={"size": 5},
         )
-        self.check_logp(
+        check_logp(
             MvNormal,
             Vector(R, n),
             {"mu": Vector(R, n), "tau": PdMatrix(n)},
             normal_logpdf_tau,
         )
-        self.check_logp(
+        check_logp(
             MvNormal,
             RealMatrix(5, n),
             {"mu": Vector(R, n), "cov": PdMatrix(n)},
             normal_logpdf_cov,
             extra_args={"size": 5},
         )
-        self.check_logp(
+        check_logp(
             MvNormal,
             Vector(R, n),
             {"mu": Vector(R, n), "cov": PdMatrix(n)},
             normal_logpdf_cov,
         )
-        self.check_logp(
+        check_logp(
             MvNormal,
             RealMatrix(5, n),
             {"mu": Vector(R, n), "chol": PdMatrixChol(n)},
@@ -1890,14 +1886,14 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=-1),
             extra_args={"size": 5},
         )
-        self.check_logp(
+        check_logp(
             MvNormal,
             Vector(R, n),
             {"mu": Vector(R, n), "chol": PdMatrixChol(n)},
             normal_logpdf_chol,
             decimal=select_by_precision(float64=6, float32=0),
         )
-        self.check_logp(
+        check_logp(
             MvNormal,
             Vector(R, n),
             {"mu": Vector(R, n), "chol": PdMatrixCholUpper(n)},
@@ -1944,7 +1940,7 @@ class TestMatchesScipy:
     def test_matrixnormal(self, n):
         mat_scale = 1e3  # To reduce logp magnitude
         mean_scale = 0.1
-        self.check_logp(
+        check_logp(
             MatrixNormal,
             RealMatrix(n, n),
             {
@@ -1955,7 +1951,7 @@ class TestMatchesScipy:
             matrix_normal_logpdf_cov,
             decimal=select_by_precision(float64=5, float32=3),
         )
-        self.check_logp(
+        check_logp(
             MatrixNormal,
             RealMatrix(2, n),
             {
@@ -1966,7 +1962,7 @@ class TestMatchesScipy:
             matrix_normal_logpdf_cov,
             decimal=select_by_precision(float64=5, float32=3),
         )
-        self.check_logp(
+        check_logp(
             MatrixNormal,
             RealMatrix(3, n),
             {
@@ -1977,7 +1973,7 @@ class TestMatchesScipy:
             matrix_normal_logpdf_chol,
             decimal=select_by_precision(float64=5, float32=3),
         )
-        self.check_logp(
+        check_logp(
             MatrixNormal,
             RealMatrix(n, 3),
             {
@@ -2011,7 +2007,7 @@ class TestMatchesScipy:
             for args in [cov_args, chol_args, evd_args]:
                 args["sigma"] = sigma
 
-        self.check_logp(
+        check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -2019,7 +2015,7 @@ class TestMatchesScipy:
             extra_args=cov_args,
             scipy_args=cov_args,
         )
-        self.check_logp(
+        check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -2027,7 +2023,7 @@ class TestMatchesScipy:
             extra_args=chol_args,
             scipy_args=chol_args,
         )
-        self.check_logp(
+        check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -2041,7 +2037,7 @@ class TestMatchesScipy:
         chol_args["size"] = 2
         evd_args["size"] = 2
 
-        self.check_logp(
+        check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -2049,7 +2045,7 @@ class TestMatchesScipy:
             extra_args=cov_args,
             scipy_args=cov_args,
         )
-        self.check_logp(
+        check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -2057,7 +2053,7 @@ class TestMatchesScipy:
             extra_args=chol_args,
             scipy_args=chol_args,
         )
-        self.check_logp(
+        check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -2068,13 +2064,13 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [1, 2])
     def test_mvt(self, n):
-        self.check_logp(
+        check_logp(
             MvStudentT,
             Vector(R, n),
             {"nu": Rplus, "Sigma": PdMatrix(n), "mu": Vector(R, n)},
             mvt_logpdf,
         )
-        self.check_logp(
+        check_logp(
             MvStudentT,
             RealMatrix(2, n),
             {"nu": Rplus, "Sigma": PdMatrix(n), "mu": Vector(R, n)},
@@ -2085,11 +2081,11 @@ class TestMatchesScipy:
     @pytest.mark.parametrize("n", [2, 3, 4])
     @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_AR1(self, n):
-        self.check_logp(AR1, Vector(R, n), {"k": Unit, "tau_e": Rplus}, AR1_logpdf)
+        check_logp(AR1, Vector(R, n), {"k": Unit, "tau_e": Rplus}, AR1_logpdf)
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_wishart(self, n):
-        self.check_logp(
+        check_logp(
             Wishart,
             PdMatrix(n),
             {"nu": Domain([0, 3, 4, np.inf], "int64"), "V": PdMatrix(n)},
@@ -2107,7 +2103,7 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_dirichlet(self, n):
-        self.check_logp(
+        check_logp(
             Dirichlet,
             Simplex(n),
             {"a": Vector(Rplus, n)},
@@ -2151,7 +2147,7 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_multinomial(self, n):
-        self.check_logp(
+        check_logp(
             Multinomial,
             Vector(Nat, n),
             {"p": Simplex(n), "n": Nat},
@@ -2232,7 +2228,7 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_dirichlet_multinomial(self, n):
-        self.check_logp(
+        check_logp(
             DirichletMultinomial,
             Vector(Nat, n),
             {"a": Vector(Rplus, n), "n": Nat},
@@ -2369,7 +2365,7 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_categorical(self, n):
-        self.check_logp(
+        check_logp(
             Categorical,
             Domain(range(n), dtype="int64", edges=(0, n)),
             {"p": Simplex(n)},
@@ -2386,7 +2382,7 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedlogistic(self, n):
-        self.check_logp(
+        check_logp(
             OrderedLogistic,
             Domain(range(n), dtype="int64", edges=(None, None)),
             {"eta": R, "cutpoints": Vector(R, n - 1)},
@@ -2395,7 +2391,7 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedprobit(self, n):
-        self.check_logp(
+        check_logp(
             OrderedProbit,
             Domain(range(n), dtype="int64", edges=(None, None)),
             {"eta": Runif, "cutpoints": UnitSortedVector(n - 1)},
@@ -2473,7 +2469,7 @@ class TestMatchesScipy:
         )
 
     def test_ex_gaussian_cdf_outside_edges(self):
-        self.check_logcdf(
+        check_logcdf(
             ExGaussian,
             R,
             {"mu": R, "sigma": Rplus, "nu": Rplus},
@@ -2483,7 +2479,7 @@ class TestMatchesScipy:
 
     @pytest.mark.skipif(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_vonmises(self):
-        self.check_logp(
+        check_logp(
             VonMises,
             Circ,
             {"mu": R, "kappa": Rplus},
@@ -2491,13 +2487,13 @@ class TestMatchesScipy:
         )
 
     def test_gumbel(self):
-        self.check_logp(
+        check_logp(
             Gumbel,
             R,
             {"mu": R, "beta": Rplusbig},
             lambda value, mu, beta: sp.gumbel_r.logpdf(value, loc=mu, scale=beta),
         )
-        self.check_logcdf(
+        check_logcdf(
             Gumbel,
             R,
             {"mu": R, "beta": Rplusbig},
@@ -2505,14 +2501,14 @@ class TestMatchesScipy:
         )
 
     def test_logistic(self):
-        self.check_logp(
+        check_logp(
             Logistic,
             R,
             {"mu": R, "s": Rplus},
             lambda value, mu, s: sp.logistic.logpdf(value, mu, s),
             decimal=select_by_precision(float64=6, float32=1),
         )
-        self.check_logcdf(
+        check_logcdf(
             Logistic,
             R,
             {"mu": R, "s": Rplus},
@@ -2521,7 +2517,7 @@ class TestMatchesScipy:
         )
 
     def test_logitnormal(self):
-        self.check_logp(
+        check_logp(
             LogitNormal,
             Unit,
             {"mu": R, "sigma": Rplus},
@@ -2536,7 +2532,7 @@ class TestMatchesScipy:
         reason="Some combinations underflow to -inf in float32 in pymc version",
     )
     def test_rice(self):
-        self.check_logp(
+        check_logp(
             Rice,
             Rplus,
             {"b": Rplus, "sigma": Rplusbig},
@@ -2546,7 +2542,7 @@ class TestMatchesScipy:
             raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
     def test_rice_nu(self):
-        self.check_logp(
+        check_logp(
             Rice,
             Rplus,
             {"nu": Rplus, "sigma": Rplusbig},
@@ -2556,7 +2552,7 @@ class TestMatchesScipy:
     def test_moyal_logp(self):
         # Using a custom domain, because the standard `R` domain undeflows with scipy in float64
         value_domain = Domain([-inf, -1.5, -1, -0.01, 0.0, 0.01, 1, 1.5, inf])
-        self.check_logp(
+        check_logp(
             Moyal,
             value_domain,
             {"mu": R, "sigma": Rplusbig},
@@ -2568,7 +2564,7 @@ class TestMatchesScipy:
         reason="Pymc3 underflows earlier than scipy on float32",
     )
     def test_moyal_logcdf(self):
-        self.check_logcdf(
+        check_logcdf(
             Moyal,
             R,
             {"mu": R, "sigma": Rplusbig},
@@ -2602,7 +2598,7 @@ class TestMatchesScipy:
                         -np.inf * np.ones(value.shape),
                     )
 
-                self.check_logp(TestedInterpolated, R, {}, ref_pdf)
+                check_logp(TestedInterpolated, R, {}, ref_pdf)
 
     @pytest.mark.parametrize("transform", [UNSET, None])
     def test_interpolated_transform(self, transform):
@@ -2618,6 +2614,22 @@ class TestMatchesScipy:
         else:
             assert not np.isfinite(m.compile_logp()({"x": -1.0}))
             assert not np.isfinite(m.compile_logp()({"x": 11.0}))
+
+    def test_gaussianrandomwalk(self):
+        def ref_logp(value, mu, sigma, steps):
+            # Relying on fact that init will be normal by default
+            return (
+                scipy.stats.norm.logpdf(value[0], mu, sigma)
+                + scipy.stats.norm.logpdf(np.diff(value), mu, sigma).sum()
+            )
+
+        check_logp(
+            pm.GaussianRandomWalk,
+            Vector(R, 4),
+            {"mu": R, "sigma": Rplus, "steps": Nat},
+            ref_logp,
+            decimal=select_by_precision(float64=6, float32=1),
+        )
 
 
 class TestBound:
@@ -2756,7 +2768,7 @@ class TestBound:
             bound_shaped = Bound("boundedshaped", dist, lower=1, upper=10, shape=(3, 5))
             bound_dims = Bound("boundeddims", dist, lower=1, upper=10, dims="sample")
 
-        initial_point = m.compute_initial_point()
+        initial_point = m.initial_point()
         dist_size = initial_point["boundedsized_interval__"].shape
         dist_shape = initial_point["boundedshaped_interval__"].shape
         dist_dims = initial_point["boundeddims_interval__"].shape

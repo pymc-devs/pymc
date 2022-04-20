@@ -138,7 +138,7 @@ def test_init_groups(three_var_model, raises, grouping):
             else:
                 assert {pm.util.get_transformed(z) for z in g} == set(ig.group)
         else:
-            model_dim = sum(v.size for v in three_var_model.compute_initial_point(0).values())
+            model_dim = sum(v.size for v in three_var_model.initial_point(0).values())
             assert approx.ndim == model_dim
         trace = approx.sample(100)
 
@@ -222,9 +222,7 @@ def parametric_grouped_approxes(request):
 @pytest.fixture
 @ignore_not_implemented_inference
 def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
-    one_initial_value = three_var_model.compute_initial_point(0)[
-        three_var_model.one.tag.value_var.name
-    ]
+    one_initial_value = three_var_model.initial_point(0)[three_var_model.one.tag.value_var.name]
     dsize = np.prod(one_initial_value.shape[1:])
     cls, kw = parametric_grouped_approxes
     spec = cls.get_param_spec_for(d=dsize, **kw)
@@ -853,7 +851,7 @@ def aevb_model():
         pm.Normal("y", size=(2,))
     x = model.x
     y = model.y
-    xr = model.compute_initial_point(0)[model.rvs_to_values[x].name]
+    xr = model.initial_point(0)[model.rvs_to_values[x].name]
     mu = aesara.shared(xr)
     rho = aesara.shared(np.zeros_like(xr))
     return {"model": model, "y": y, "x": x, "replace": dict(mu=mu, rho=rho)}

@@ -13,7 +13,7 @@ developed openly and hosted in public GitHub repositories under the
 [pymc-devs GitHub organization](https://github.com/pymc-devs). Examples of
 Project Software include the PyMC library and its documentation, etc.
 The Services run by The Project consist of public websites and web-services
-that are hosted at [http://docs.pymc.io](https://docs.pymc.io)
+that are hosted at [http://www.pymc.io](https://www.pymc.io) and subdomains.
 
 The Project is developed by a team of distributed developers, called
 Contributors. Contributors are individuals who have contributed code,
@@ -21,7 +21,7 @@ documentation, designs or other work to one or more Project repositories,
 or who have done significant work to empower the Community,
 participating on [Discourse](https://discourse.pymc.io),
 organizing [PyMCon](https://pymcon.com) or helped on other platforms and events.
-Anyone can be a Contributor.
+**Anyone can be a Contributor.**
 Contributors can be affiliated with any legal entity or none.
 The foundation of Project participation is openness and transparency.
 
@@ -58,10 +58,10 @@ consensus among the Core Developers with input from the Community. The BDFL
 could, but rarely chose to, override the Core Developers and make a final
 decision on a matter.
 
-While this approach has served us well, as the Project grows and faces more
-legal and financial decisions and interacts with other institutions, we see a
+While this approach served us well, as the Project grew and faced more
+legal and financial decisions and interacted with other institutions, we saw a
 need for a more formal governance and organization model.
-We view this governance model as the formalization of what we are already doing,
+We view this governance model as the formalization of what we were already doing,
 rather than a change in direction.
 
 ## Community and Team Architecture
@@ -76,17 +76,17 @@ also members of all the groups listed above:
 * Steering Council
 * BDFL
 
-Recurring Contributors comprise what we understand as the PyMC Team.
+Core Contributors comprise what we understand as the PyMC Team.
 The Team will generally act as a single unit, except for some specific
 questions where dedicated teams will prevail.
-The PyMC project currently has Developer, Documentation and Discourse teams.
+The PyMC project currently has Developer, Documentation and Community teams.
 Team members can be part of one, some or none of these dedicated teams.
 The diagram below should help illustrate this idea.
 
 <img src="docs/community_diagram.png" alt="community diagram" width="600" height="400">
 
 Anyone working with The Project has the responsibility to personally uphold
-the Code of Conduct. Recurrent Contributors have the additional responsibility
+the Code of Conduct. Core Contributors have the additional responsibility
 of _enforcing_ the Code of Conduct to maintain a safe community.
 
 ## Recurring Contributors
@@ -121,25 +121,9 @@ in more detail in a section of its own.
 
 Interns and contractors are added to the team as Recurrent Contributors.
 We consider the selection/hiring process to replace the nomination process.
-
-#### Current Recurring Contributors
-Contributors who are also part of a dedicated team or are institutional
-contributors will have so indicated after their name.
-Dedicated teams only cover a small part of the work needed to
-get the project going, tasks like fundraising, outreach and marketing,
-or organizing events for example don't (yet) have a dedicated team.
-Contributors don't need to be part of any dedicated team.
-
-* Abhipsha Das (docs)
-* Benjamin Vincent (docs - PyMC Labs)
-* Jon Sedar
-* Kaustubh Chaudhari (dev)
-* Larry Dong (dev)
-* Lorenzo Toniazzi (docs)
-* Martin Ingram (community)
-* Olga Khan (docs)
-* Peadar Coyle
-* Raul Maldonado (docs)
+This applies to Google summer of code interns or Google season of
+docs contractors, but also to interns and contractors hired by
+tier 1 Institutional Partners who work mostly on PyMC.
 
 ## Core Contributors
 Core Contributors are those individuals entrusted with the development and
@@ -181,34 +165,36 @@ Contributors who are also part of a dedicated team or are institutional
 contributors will have so indicated after their name.
 
 Dedicated teams only cover a small part of the work needed to
-get the project going, tasks like fundraising, outreach and marketing,
-or organizing events for example don't (yet) have a dedicated team.
+get the project going, tasks like fundraising, outreach or marketing
+for example don't (yet) have a dedicated team.
 Contributors don't need to be part of any dedicated team.
 
 * Adrian Seyboldt (dev - PyMC Labs)
 * Alex Andorra (dev - PyMC Labs)
 * Austin Rochford
+* Benjamin Vincent (docs - PyMC Labs)
 * Bill Engels (dev)
 * Brandon T. Willard (dev)
 * Chris Fonnesbeck (dev, docs)
-* Christian Luhmann (discourse)
+* Christian Luhmann (community)
 * Colin Carroll (dev)
 * Eelke Spaak (dev)
 * Eric Ma (dev - PyMC Labs)
 * George Ho (dev)
-* Junpeng Lao (dev, discourse)
+* Junpeng Lao (dev, community)
 * Luciano Paz (dev - PyMC Labs)
 * Martina Cantaro (docs)
 * Maxim Kochurov (dev - PyMC Labs)
-* Meenal Jhajharia (docs)
+* Meenal Jhajharia (docs, community)
 * Michael Osthege (dev)
-* Oriol Abril-Pla (docs, discourse)
+* Oriol Abril-Pla (docs, community)
 * Osvaldo Martin (dev, docs)
-* Ravin Kumar (dev, discourse, docs)
-* Ricardo Vieira (dev, discourse)
+* Ravin Kumar (dev, community, docs)
+* Reshama Shaikh (community - PyMC Labs)
+* Ricardo Vieira (dev, community)
 * Robert P. Goldman (dev)
 * Sayam Kumar (dev, docs)
-* Thomas Wiecki (dev, discourse - PyMC Labs)
+* Thomas Wiecki (dev, community - PyMC Labs)
 
 ## Steering Council
 
@@ -253,10 +239,10 @@ In particular, the Council may:
 The current Steering Council membership comprises:
 
 - Chris Fonnesbeck (dev, docs)
-- Junpeng Lao (dev, discourse)
-- Oriol Abril-Pla (docs, discourse)
-- Ravin Kumar (dev, discourse, docs)
-- Thomas Wiecki (dev, discourse - PyMC Labs)
+- Junpeng Lao (dev, community)
+- Oriol Abril-Pla (docs, community)
+- Ravin Kumar (dev, community, docs)
+- Thomas Wiecki (dev, community - PyMC Labs)
 
 Note that as explained in the [community architecture section](#community-and-team-architecture)
 and as indicated again in the description of the Steering Council above,
@@ -604,7 +590,7 @@ The dedicated teams are work units with two main objectives: better
 distributing the work related to The Project, and to better showcase all the different tasks
 involved in The Project to attract more diverse Contributors.
 
-The PyMC project currently has Developer, Documentation and Discourse teams.
+The PyMC project currently has Developer, Documentation and Community teams.
 Team members can be part of one, some or none of these dedicated teams.
 
 Team members are expected to participate and join these dedicated teams
@@ -630,18 +616,17 @@ write all the documentation for the PyMC library.
 For current members of the documentation team, refer to the recurrent and
 core contributor membership sections.
 
-### Discourse team
-The focus of the Discourse team is managing and energizing the PyMC Discourse.
+### Community team
+The focus of the Community team is activities intended to nurture, energize, and grow the community of PyMC users and contributors.  These activities include moderation of and participation in the discussions on the PyMC Discourse, planning and organization of events such as PyMCon and sprints, and coordination of presence on various social networks.  These activites are not intended to be the sole responsibility of the Community team.  Instead, the Community team provides leadership in these efforts, but recruits other contributors and community members as needed, thus encourging participation and fostering a healthy, self-sustaining community.
 
-For current members of the discourse team, refer to the recurrent and
+For current members of the community team, refer to the recurrent and
 core contributor membership sections.
 
 ### "No-team" tasks
 All tasks related to the project that are not specifically listed in the
 description of a dedicated team are the responsibility of the PyMC team
 as a whole. At the time of writing, this includes but is not limited to:
-fundraising, issue triaging, running PyMC related events like PyMCon or
-sprints, outreach, or presence on social networks.
+enforcing this governance and the [PyMC code of conduct](https://github.com/pymc-devs/pymc/blob/main/CODE_OF_CONDUCT.md), developing project-related grants, soliciting of project sponsorships, decisions regarding the allocation of project-related funds, planning of the project roadmap, or triaging of GitHub issues.
 
 ### Team structure in practice
 This section describes how members of the PyMC team are given
@@ -663,29 +648,31 @@ Team:
   and [pymc-experimental](https://github.com/pymc-devs/pymc-experimental) repository.
 * Documentation team members are given permissions to [pymc-examples](https://github.com/pymc-devs/pymc-examples)
   and [resources](https://github.com/pymc-devs/resources) repositories.
+* Community team members are given permissions to [PyMCon](https://github.com/pymc-devs/pymcon), [PyMC Data Umbrella](https://github.com/pymc-devs/pymc-data-umbrella), and other event- and community-related repositories.
 
-In addition, Council members are given admin rights to all repositories within
+In addition, Council members are given administrative rights to all repositories within
 the [pymc-devs](https://github.com/pymc-devs) organization.
 
 #### Discourse
-Similarly to the above section, Discourse permissions are also mapped to the discourse team
+Similar to the above section, Discourse permissions are also mapped to the community team
 and the two contributor roles.
 
 Role:
-- Recurring Contributors are added to the [PyMC_team](https://discourse.pymc.io/g/PyMC_devs)
-  group and are given the "leader" trust level.
-- Core Contributors are given [moderator permissions](https://discourse.pymc.io/g/moderators)
-  if possible.
+- Recurring Contributors are given no special permissions
+- Core Contributors are added to the [PyMC_core](https://discourse.pymc.io/g/PyMC_core)
+  group independently of the teams they are part of.
+  Core Contributors in the community team are also added to the
+  [Community Team](https://discourse.pymc.io/g/Community_Team) group.
 
 #### Accounts and services ownership and administration
 The PyMC Project also has accounts and hosts services on several platforms
-such as GitHub, Discourse, Twitter, ReadTheDocs or Medium.
+such as GitHub, Discourse, Twitter, ReadTheDocs, and Medium.
 
 If possible, all Council Members and relevant Core Contributors should have
-admin rights on those platforms.
-If this were not possible, admin rights should be distributed between
+administrative rights on those platforms.
+If this is not possible, administrative rights should be distributed among
 Council Members and relevant Core Contributors and establish a rotation
-of the admin rights every 1-2 years.
+of the administrative rights every 1-2 years.
 
 #### Permission examples
 This section lists some imaginary contributors with their teams and roles to
@@ -693,10 +680,10 @@ provide examples on how to assign permissions:
 
 <details><summary>See permission examples</summary>
 
-- Arnau, recurrent contributor, discourse team
-  * Added to the Discourse PyMC_team and given "leader" trust level
+- Arnau, recurrent contributor, community team
+  * No permissions on Discourse
   * Added to all private communication channels
-  * No permissions on any GitHub
+  * Triage permissions on the pymcon, pymc-data-umbrella, and other "event" repositories
 
 - Berta, recurrent contributor, dev and doc teams
   * No permissions on Discourse
@@ -705,24 +692,25 @@ provide examples on how to assign permissions:
     of the pymc-devs organization
 
 - Carme, core contributor, doc team
-  * Added to the Discourse PyMC_team and given "leader" trust level
+  * Added to the community PyMC_core group on Discourse
   * Added to all private communication channels
   * Write permissions on pymc-examples and resources repositories, triage permissions
     to pymc and pymc-experimental repositories
-  * Admin access to ReadTheDocs accounts
+  * Administrative access to ReadTheDocs accounts
 
-- Dolors, core contributor, dev and discourse teams
-  * Added to the Discourse PyMC_team and given "leader" trust level,
-    given moderator permissions on Discourse (that might be rotating and not always active)
+- Dolors, core contributor, dev and community teams
+  * Added to the Community Team and PyMC_core Discourse groups.
+    Part of the rotation of administrative permissions on Discourse
+    (Discourse allows only 3 admins on our current plan).
   * Added to all private communication channels
-  * Write permissions on pymc and pymc-experimental repositories, triage permissions
-    to pymc-examples and resources repositories
+  * Write permissions on pymc, pymc-experimental, pymcon, pymc-data-umbrella, and other "event" repositories, triage permissions
+    on pymc-examples and resources repositories
 
 - Eudald, core contributor, no dedicated team membership
-  * Added to the Discourse PyMC_team and given "leader" trust level
+  * Added to the PyMC_core Discourse group
   * Added to all private communication channels
   * Triage permissions on all repositories
-  * Access to pymc_devs twitter account as they are the main manager
+  * Access to PyMC gmail, drive and grant application platforms (i.e. CZI slack) as they are the main grant writing coordinator
 
 </details>
 

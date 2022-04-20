@@ -1646,12 +1646,12 @@ class AsymmetricLaplace(Continuous):
 
     Parameters
     ----------
-    b : tensor_like of float
-        Scale parameter (b > 0).
     kappa : tensor_like of float
         Symmetry parameter (kappa > 0).
-    mu : tensor_like of float, default 0
+    mu : tensor_like of float
         Location parameter.
+    b : tensor_like of float
+        Scale parameter (b > 0).
 
     See Also:
     --------
@@ -1660,7 +1660,7 @@ class AsymmetricLaplace(Continuous):
     rv_op = asymmetriclaplace
 
     @classmethod
-    def dist(cls, b, kappa, mu=0, *args, **kwargs):
+    def dist(cls, kappa, mu, b, *args, **kwargs):
         b = at.as_tensor_variable(floatX(b))
         kappa = at.as_tensor_variable(floatX(kappa))
         mu = mu = at.as_tensor_variable(floatX(mu))
@@ -1899,7 +1899,7 @@ class StudentT(Continuous):
     rv_op = studentt
 
     @classmethod
-    def dist(cls, nu, mu=0, lam=None, sigma=None, *args, **kwargs):
+    def dist(cls, nu, mu=0, *, sigma=None, lam=None, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
@@ -2712,7 +2712,7 @@ class HalfStudentT(PositiveContinuous):
 
     Parameters
     ----------
-    nu : tensor_like of float, default 1
+    nu : tensor_like of float
         Degrees of freedom, also known as normality parameter (nu > 0).
     sigma : tensor_like of float, optional
         Scale parameter (sigma > 0). Converges to the standard deviation as nu
@@ -2735,7 +2735,7 @@ class HalfStudentT(PositiveContinuous):
     rv_op = halfstudentt
 
     @classmethod
-    def dist(cls, nu=1, sigma=None, lam=None, *args, **kwargs):
+    def dist(cls, nu, sigma=None, lam=None, *args, **kwargs):
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(lam, sigma)
         sigma = at.as_tensor_variable(sigma)

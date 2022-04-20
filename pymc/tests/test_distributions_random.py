@@ -42,7 +42,7 @@ from scipy.special import expit, softmax
 
 import pymc as pm
 
-from pymc.aesaraf import change_rv_size, floatX, intX
+from pymc.aesaraf import change_rv_size, compile_pymc, floatX, intX
 from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc.distributions.dist_math import clipped_beta_rvs
@@ -84,7 +84,7 @@ def pymc_random(
 
     model, param_vars = build_model(dist, valuedomain, paramdomains, extra_args)
     model_dist = change_rv_size_fn(model.named_vars["value"], size, expand=True)
-    pymc_rand = aesara.function([], model_dist)
+    pymc_rand = compile_pymc([], model_dist)
 
     domains = paramdomains.copy()
     for pt in product(domains, n_samples=100):
@@ -123,7 +123,7 @@ def pymc_random_discrete(
 
     model, param_vars = build_model(dist, valuedomain, paramdomains)
     model_dist = change_rv_size(model.named_vars["value"], size, expand=True)
-    pymc_rand = aesara.function([], model_dist)
+    pymc_rand = compile_pymc([], model_dist)
 
     domains = paramdomains.copy()
     for pt in product(domains, n_samples=100):
@@ -144,120 +144,16 @@ def pymc_random_discrete(
             e = intX(ref_rand(size=size, **pt))
             o = np.atleast_1d(o).flatten()
             e = np.atleast_1d(e).flatten()
-            observed = dict(zip(*np.unique(o, return_counts=True)))
-            expected = dict(zip(*np.unique(e, return_counts=True)))
-            for e in expected.keys():
-                expected[e] = (observed.get(e, 0), expected[e])
-            k = np.array([v for v in expected.values()])
-            if np.all(k[:, 0] == k[:, 1]):
+            bins = min(20, max(len(set(e)), len(set(o))))
+            range = (min(min(e), min(o)), max(max(e), max(o)))
+            observed, _ = np.histogram(o, bins=bins, range=range)
+            expected, _ = np.histogram(e, bins=bins, range=range)
+            if np.all(observed == expected):
                 p = 1.0
             else:
-                _, p = st.chisquare(k[:, 0], k[:, 1])
+                _, p = st.chisquare(observed + 1, expected + 1)
             f -= 1
         assert p > alpha, str(pt)
-
-
-class BaseTestCases:
-    class BaseTestCase(SeededTest):
-        shape = 5
-        # the following are the default values of the distribution that take effect
-        # when the parametrized shape/size in the test case is None.
-        # For every distribution that defaults to non-scalar shapes they must be
-        # specified by the inheriting Test class. example: TestGaussianRandomWalk
-        default_shape = ()
-        default_size = ()
-
-        def setup_method(self, *args, **kwargs):
-            super().setup_method(*args, **kwargs)
-            self.model = pm.Model()
-
-        def get_random_variable(self, shape, with_vector_params=False, name=None):
-            """Creates a RandomVariable of the parametrized distribution."""
-            if with_vector_params:
-                params = {
-                    key: value * np.ones(self.shape, dtype=np.dtype(type(value)))
-                    for key, value in self.params.items()
-                }
-            else:
-                params = self.params
-            if name is None:
-                name = self.distribution.__name__
-            with self.model:
-                try:
-                    if shape is None:
-                        # in the test case parametrization "None" means "no specified (default)"
-                        return self.distribution(name, transform=None, **params)
-                    else:
-                        ndim_supp = self.distribution.rv_op.ndim_supp
-                        if ndim_supp == 0:
-                            size = shape
-                        else:
-                            size = shape[:-ndim_supp]
-                        return self.distribution(name, size=size, transform=None, **params)
-                except TypeError:
-                    if np.sum(np.atleast_1d(shape)) == 0:
-                        pytest.skip("Timeseries must have positive shape")
-                    raise
-
-        @staticmethod
-        def sample_random_variable(random_variable, size):
-            """Draws samples from a RandomVariable."""
-            if size:
-                random_variable = change_rv_size(random_variable, size, expand=True)
-            return random_variable.eval()
-
-        @pytest.mark.parametrize("size", [None, (), 1, (1,), 5, (4, 5)], ids=str)
-        @pytest.mark.parametrize("shape", [None, ()], ids=str)
-        def test_scalar_distribution_shape(self, shape, size):
-            """Draws samples of different [size] from a scalar [shape] RV."""
-            rv = self.get_random_variable(shape)
-            exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
-            exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
-            expected = exp_size + exp_shape
-            actual = np.shape(self.sample_random_variable(rv, size))
-            assert (
-                expected == actual
-            ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
-            # check that negative size raises an error
-            with pytest.raises(ValueError):
-                self.sample_random_variable(rv, size=-2)
-            with pytest.raises(ValueError):
-                self.sample_random_variable(rv, size=(3, -2))
-
-        @pytest.mark.parametrize("size", [None, ()], ids=str)
-        @pytest.mark.parametrize(
-            "shape", [None, (), (1,), (1, 1), (1, 2), (10, 11, 1), (9, 10, 2)], ids=str
-        )
-        def test_scalar_sample_shape(self, shape, size):
-            """Draws samples of scalar [size] from a [shape] RV."""
-            rv = self.get_random_variable(shape)
-            exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
-            exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
-            expected = exp_size + exp_shape
-            actual = np.shape(self.sample_random_variable(rv, size))
-            assert (
-                expected == actual
-            ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
-
-        @pytest.mark.parametrize("size", [None, 3, (4, 5)], ids=str)
-        @pytest.mark.parametrize("shape", [None, 1, (10, 11, 1)], ids=str)
-        def test_vector_params(self, shape, size):
-            shape = self.shape
-            rv = self.get_random_variable(shape, with_vector_params=True)
-            exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
-            exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
-            expected = exp_size + exp_shape
-            actual = np.shape(self.sample_random_variable(rv, size))
-            assert (
-                expected == actual
-            ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
-    distribution = pm.GaussianRandomWalk
-    params = {"mu": 1.0, "sigma": 1.0}
-    default_shape = (1,)
 
 
 class BaseTestDistributionRandom(SeededTest):
@@ -365,6 +261,11 @@ class BaseTestDistributionRandom(SeededTest):
         for (expected_name, expected_value), actual_variable in zip(
             self.expected_rv_op_params.items(), aesara_dist_inputs
         ):
+
+            # Add additional line to evaluate symbolic inputs to distributions
+            if isinstance(expected_value, aesara.tensor.Variable):
+                expected_value = expected_value.eval()
+
             assert_almost_equal(expected_value, actual_variable.eval(), decimal=self.decimal)
 
     def check_rv_size(self):

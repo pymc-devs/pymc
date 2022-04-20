@@ -11,21 +11,120 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import numpy as np
 import pytest
+import scipy.stats
+
+import pymc as pm
 
 from pymc.aesaraf import floatX
 from pymc.distributions.continuous import Flat, Normal
-from pymc.distributions.timeseries import AR, AR1, GARCH11, EulerMaruyama
+from pymc.distributions.timeseries import (
+    AR,
+    AR1,
+    GARCH11,
+    EulerMaruyama,
+    GaussianRandomWalk,
+)
 from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
-
-# pytestmark = pytest.mark.usefixtures("seeded_test")
-pytestmark = pytest.mark.xfail(reason="Timeseries not refactored")
+from pymc.tests.test_distributions_random import BaseTestDistributionRandom
 
 
+class TestGaussianRandomWalkRandom(BaseTestDistributionRandom):
+    # Override default size for test class
+    size = None
+
+    pymc_dist = pm.GaussianRandomWalk
+    pymc_dist_params = {"mu": 1.0, "sigma": 2, "init": pm.Constant.dist(0), "steps": 4}
+    expected_rv_op_params = {"mu": 1.0, "sigma": 2, "init": pm.Constant.dist(0), "steps": 4}
+
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_inferred_size",
+    ]
+
+    def check_rv_inferred_size(self):
+        steps = self.pymc_dist_params["steps"]
+        sizes_to_check = [None, (), 1, (1,)]
+        sizes_expected = [(steps + 1,), (steps + 1,), (1, steps + 1), (1, steps + 1)]
+
+        for size, expected in zip(sizes_to_check, sizes_expected):
+            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            assert expected_symbolic == expected
+
+    def test_steps_scalar_check(self):
+        with pytest.raises(ValueError, match="steps must be an integer scalar"):
+            self.pymc_dist.dist(steps=[1])
+
+
+def test_gaussianrandomwalk_inference():
+    mu, sigma, steps = 2, 1, 1000
+    obs = np.concatenate([[0], np.random.normal(mu, sigma, size=steps)]).cumsum()
+
+    with pm.Model():
+        _mu = pm.Uniform("mu", -10, 10)
+        _sigma = pm.Uniform("sigma", 0, 10)
+
+        obs_data = pm.MutableData("obs_data", obs)
+        grw = GaussianRandomWalk("grw", _mu, _sigma, steps=steps, observed=obs_data)
+
+        trace = pm.sample(chains=1)
+
+    recovered_mu = trace.posterior["mu"].mean()
+    recovered_sigma = trace.posterior["sigma"].mean()
+    np.testing.assert_allclose([mu, sigma], [recovered_mu, recovered_sigma], atol=0.2)
+
+
+@pytest.mark.parametrize("init", [None, pm.Normal.dist()])
+def test_gaussian_random_walk_init_dist_shape(init):
+    """Test that init_dist is properly resized"""
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init)
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init, size=(5,))
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init, shape=1)
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init, shape=(5, 1))
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+
+    grw = pm.GaussianRandomWalk.dist(mu=[0, 0], sigma=1, steps=1, init=init)
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=[1, 1], steps=1, init=init)
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+
+    grw = pm.GaussianRandomWalk.dist(mu=np.zeros((3, 1)), sigma=[1, 1], steps=1, init=init)
+    assert tuple(grw.owner.inputs[-2].shape.eval()) == (3, 2)
+
+
+def test_gaussianrandomwalk_broadcasted_by_init_dist():
+    grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=4, init=pm.Normal.dist(size=(2, 3)))
+    assert tuple(grw.shape.eval()) == (2, 3, 5)
+    assert grw.eval().shape == (2, 3, 5)
+
+
+@pytest.mark.parametrize(
+    "init",
+    [
+        pm.HalfNormal.dist(sigma=2),
+        pm.StudentT.dist(nu=4, mu=1, sigma=0.5),
+    ],
+)
+def test_gaussian_random_walk_init_dist_logp(init):
+    grw = pm.GaussianRandomWalk.dist(init=init, steps=1)
+    assert np.isclose(
+        pm.logp(grw, [0, 0]).eval(),
+        pm.logp(init, 0).eval() + scipy.stats.norm.logpdf(0),
+    )
+
+
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_AR():
     # AR1
     data = np.array([0.3, 1, 2, 3, 4])
@@ -42,7 +141,7 @@ def test_AR():
         rho = Normal("rho", 0.0, 1.0)
         y1 = AR1("y1", rho, 1.0, observed=data)
         y2 = AR("y2", rho, 1.0, init=Normal.dist(0, 1), observed=data)
-    initial_point = t.compute_initial_point()
+    initial_point = t.initial_point()
     np.testing.assert_allclose(y1.logp(initial_point), y2.logp(initial_point))
 
     # AR1 + constant
@@ -63,6 +162,7 @@ def test_AR():
     np.testing.assert_allclose(ar_like, reg_like)
 
 
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_AR_nd():
     # AR2 multidimensional
     p, T, n = 3, 100, 5
@@ -77,11 +177,10 @@ def test_AR_nd():
         for i in range(n):
             AR("y_%d" % i, beta[:, i], sigma=1.0, shape=T, initval=y_tp[:, i])
 
-    np.testing.assert_allclose(
-        t0.logp(t0.compute_initial_point()), t1.logp(t1.compute_initial_point())
-    )
+    np.testing.assert_allclose(t0.logp(t0.initial_point()), t1.logp(t1.initial_point()))
 
 
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_GARCH11():
     # test data ~ N(0, 1)
     data = np.array(
@@ -142,6 +241,7 @@ def _gen_sde_path(sde, pars, dt, n, x0):
     return np.array(xs)
 
 
+@pytest.mark.xfail(reason="Timeseries not refactored")
 def test_linear():
     lam = -0.78
     sig2 = 5e-3

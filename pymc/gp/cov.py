@@ -22,6 +22,7 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
+from aesara.graph.basic import Variable
 from aesara.tensor.sharedvar import TensorSharedVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
 
@@ -91,9 +92,12 @@ class Covariance:
         raise NotImplementedError
 
     def _slice(self, X, Xs):
-        if self.input_dim != X.shape[-1]:
+        xdims = X.shape[-1]
+        if isinstance(xdims, Variable):
+            xdims = xdims.eval()
+        if self.input_dim != xdims:
             warnings.warn(
-                f"Only {self.input_dim} column(s) out of {X.shape[-1]} are"
+                f"Only {self.input_dim} column(s) out of {xdims} are"
                 " being used to compute the covariance function. If this"
                 " is not intended, increase 'input_dim' parameter to"
                 " the number of columns to use. Ignore otherwise.",

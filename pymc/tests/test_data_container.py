@@ -35,7 +35,7 @@ class TestData(SeededTest):
         with pm.Model() as model:
             X = pm.MutableData("X", data_values)
             pm.Normal("y", 0, 1, observed=X)
-            model.compile_logp()(model.compute_initial_point())
+            model.compile_logp()(model.initial_point())
 
     def test_sample(self):
         x = np.random.normal(size=100)
@@ -121,7 +121,7 @@ class TestData(SeededTest):
 
         assert pp_trace.posterior_predictive["obs"].shape == (1, 1000, 3)
         np.testing.assert_allclose(
-            new_y, pp_trace.posterior_predictive["obs"].mean(("chain", "draw")), atol=0.015
+            new_y, pp_trace.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
         )
 
     def test_shared_data_as_index(self):

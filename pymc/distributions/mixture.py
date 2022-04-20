@@ -29,30 +29,14 @@ from pymc.aesaraf import change_rv_size
 from pymc.distributions import transforms
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.distribution import (
-    Discrete,
-    Distribution,
-    SymbolicDistribution,
-    _moment,
-    moment,
-)
+from pymc.distributions.distribution import SymbolicDistribution, _moment, moment
 from pymc.distributions.logprob import logcdf, logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.util import check_dist_not_registered
-from pymc.vartypes import discrete_types
+from pymc.vartypes import continuous_types, discrete_types
 
 __all__ = ["Mixture", "NormalMixture"]
-
-
-def all_discrete(comp_dists):
-    """
-    Determine if all distributions in comp_dists are discrete
-    """
-    if isinstance(comp_dists, Distribution):
-        return isinstance(comp_dists, Discrete)
-    else:
-        return all(isinstance(comp_dist, Discrete) for comp_dist in comp_dists)
 
 
 class MarginalMixtureRV(OpFromGraph):
@@ -181,6 +165,16 @@ class Mixture(SymbolicDistribution):
                 "To disable this warning do not wrap the single component inside a list or tuple",
                 UserWarning,
             )
+
+        if len(comp_dists) > 1:
+            if not (
+                all(comp_dist.dtype in continuous_types for comp_dist in comp_dists)
+                or all(comp_dist.dtype in discrete_types for comp_dist in comp_dists)
+            ):
+                raise ValueError(
+                    "All distributions in comp_dists must be either discrete or continuous.\n"
+                    "See the following issue for more information: https://github.com/pymc-devs/pymc/issues/4511."
+                )
 
         # Check that components are not associated with a registered variable in the model
         components_ndim_supp = set()

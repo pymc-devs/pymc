@@ -132,13 +132,13 @@ def _sample_stats_to_xarray(posterior):
     return data
 
 
-def _get_log_likelihood(model: Model, samples) -> Dict:
+def _get_log_likelihood(model: Model, samples, backend=None) -> Dict:
     """Compute log-likelihood for all observations"""
     data = {}
     for v in model.observed_RVs:
         v_elemwise_logpt = model.logpt(v, sum=False)
         jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=v_elemwise_logpt)
-        result = jax.jit(jax.vmap(jax.vmap(jax_fn)))(*samples)[0]
+        result = jax.jit(jax.vmap(jax.vmap(jax_fn)), backend=backend)(*samples)[0]
         data[v.name] = result
     return data
 
@@ -226,6 +226,7 @@ def sample_blackjax_nuts(
     var_names=None,
     keep_untransformed=False,
     chain_method="parallel",
+    postprocessing_backend=None,
     idata_kwargs=None,
 ):
     """
@@ -255,6 +256,8 @@ def sample_blackjax_nuts(
         Include untransformed variables in the posterior samples. Defaults to False.
     chain_method : str, default "parallel"
         Specify how samples should be drawn. The choices include "parallel", and "vectorized".
+    postprocessing_backend : str, optional
+        Specify how postprocessing should be computed. gpu or cpu
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
         for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
@@ -341,7 +344,9 @@ def sample_blackjax_nuts(
     mcmc_samples = {}
     for v in vars_to_sample:
         jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.vmap(jax.vmap(jax_fn))(*raw_mcmc_samples)[0]
+        result = jax.jit(jax.vmap(jax.vmap(jax_fn)), backend=postprocessing_backend)(
+            *raw_mcmc_samples
+        )[0]
         mcmc_samples[v.name] = result
 
     tic4 = datetime.now()
@@ -353,7 +358,9 @@ def sample_blackjax_nuts(
         idata_kwargs = idata_kwargs.copy()
 
     if idata_kwargs.pop("log_likelihood", True):
-        log_likelihood = _get_log_likelihood(model, raw_mcmc_samples)
+        log_likelihood = _get_log_likelihood(
+            model, raw_mcmc_samples, backend=postprocessing_backend
+        )
     else:
         log_likelihood = None
 
@@ -387,6 +394,7 @@ def sample_numpyro_nuts(
     progress_bar: bool = True,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
+    postprocessing_backend: str = None,
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
 ):
@@ -421,6 +429,8 @@ def sample_numpyro_nuts(
         Include untransformed variables in the posterior samples. Defaults to False.
     chain_method : str, default "parallel"
         Specify how samples should be drawn. The choices include "sequential", "parallel", and "vectorized".
+    postprocessing_backend : Optional[str]
+        Specify how postprocessing should be computed. gpu or cpu
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
         for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
@@ -525,7 +535,9 @@ def sample_numpyro_nuts(
     mcmc_samples = {}
     for v in vars_to_sample:
         jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.vmap(jax.vmap(jax_fn))(*raw_mcmc_samples)[0]
+        result = jax.jit(jax.vmap(jax.vmap(jax_fn)), backend=postprocessing_backend)(
+            *raw_mcmc_samples
+        )[0]
         mcmc_samples[v.name] = result
 
     tic4 = datetime.now()
@@ -537,7 +549,9 @@ def sample_numpyro_nuts(
         idata_kwargs = idata_kwargs.copy()
 
     if idata_kwargs.pop("log_likelihood", True):
-        log_likelihood = _get_log_likelihood(model, raw_mcmc_samples)
+        log_likelihood = _get_log_likelihood(
+            model, raw_mcmc_samples, backend=postprocessing_backend
+        )
     else:
         log_likelihood = None
 

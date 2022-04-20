@@ -278,7 +278,7 @@ class TestElementWiseLogp(SeededTest):
         x = model.free_RVs[0]
         x_val_transf = x.tag.value_var
 
-        pt = model.compute_initial_point(0)
+        pt = model.initial_point(0)
         test_array_transf = floatX(np.random.randn(*pt[x_val_transf.name].shape))
         transform = x_val_transf.tag.transform
         test_array_untransf = transform.backward(test_array_transf, *x.owner.inputs).eval()
@@ -299,7 +299,7 @@ class TestElementWiseLogp(SeededTest):
         x = model.free_RVs[0]
         x_val_transf = x.tag.value_var
 
-        pt = model.compute_initial_point(0)
+        pt = model.initial_point(0)
         test_array_transf = floatX(np.random.randn(*pt[x_val_transf.name].shape))
         transform = x_val_transf.tag.transform
         test_array_untransf = transform.backward(test_array_transf, *x.owner.inputs).eval()

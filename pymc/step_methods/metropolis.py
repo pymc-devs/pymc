@@ -162,7 +162,7 @@ class Metropolis(ArrayStepShared):
         """
 
         model = pm.modelcontext(model)
-        initial_values = model.compute_initial_point()
+        initial_values = model.initial_point()
 
         if vars is None:
             vars = model.value_vars
@@ -426,7 +426,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         # transition probabilities
         self.transit_p = transit_p
 
-        initial_point = model.compute_initial_point()
+        initial_point = model.initial_point()
         vars = [model.rvs_to_values.get(var, var) for var in vars]
         self.dim = sum(initial_point[v.name].size for v in vars)
 
@@ -511,7 +511,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         vars = [model.rvs_to_values.get(var, var) for var in vars]
         vars = pm.inputvars(vars)
 
-        initial_point = model.compute_initial_point()
+        initial_point = model.initial_point()
 
         dimcats = []
         # The above variable is a list of pairs (aggregate dimension, number
@@ -713,7 +713,7 @@ class DEMetropolis(PopulationArrayStepShared):
     ):
 
         model = pm.modelcontext(model)
-        initial_values = model.compute_initial_point()
+        initial_values = model.initial_point()
         initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
@@ -864,7 +864,7 @@ class DEMetropolisZ(ArrayStepShared):
         **kwargs
     ):
         model = pm.modelcontext(model)
-        initial_values = model.compute_initial_point()
+        initial_values = model.initial_point()
         initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
