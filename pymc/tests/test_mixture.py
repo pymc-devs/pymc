@@ -584,7 +584,7 @@ class TestMixture(SeededTest):
         assert prior["mu0"].shape == (n_samples, D)
         assert prior["chol_cov_0"].shape == (n_samples, D * (D + 1) // 2)
 
-    @pytest.mark.xfail(reason="Mixture from single component not refactored yet")
+    @pytest.mark.xfail(reason="Nested mixtures not refactored yet")
     def test_nested_mixture(self):
         if aesara.config.floatX == "float32":
             rtol = 1e-4
