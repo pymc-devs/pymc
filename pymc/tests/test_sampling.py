@@ -1042,6 +1042,28 @@ def point_list_arg_bug_fixture() -> Tuple[pm.Model, pm.backends.base.MultiTrace]
 
 
 class TestSamplePriorPredictive(SeededTest):
+    def test_idata_output(self):
+        """This test controls that returned idata
+        contains all expected groups"""
+
+        with pm.Model() as model:
+            x = pm.MutableData("x", [1, 2, 3])
+            y = pm.MutableData("y", [1.1, 1.9, 3.1])
+            a = pm.Normal("a", mu=1, sigma=1)
+            b = pm.Normal("b", mu=0, sigma=1)
+            mu = pm.Deterministic("mu", var=a * x + b)
+            obs = pm.Normal("obs", mu=mu, sigma=1, observed=y)
+            idata = pm.sample_prior_predictive(samples=10)
+
+        test_dict = {
+            "prior": ["a", "b", "mu"],
+            "prior_predictive": ["obs"],
+            "observed_data": ["obs"],
+            "constant_data": ["x", "y"],
+        }
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
+
     def test_ignores_observed(self):
         observed = np.random.normal(10, 1, size=200)
         with pm.Model():
