@@ -169,6 +169,10 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             self.nchains = self.ndraws = 0
 
         self.prior = prior
+        self.prior_predictions = None
+        if self.prior is not None:
+            self.prior_predictions = True
+
         self.posterior_predictive = posterior_predictive
         self.log_likelihood = log_likelihood
         self.predictions = predictions
@@ -464,7 +468,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             default_dims=[],
         )
 
-    @requires(["trace", "predictions"])
+    @requires(["trace", "predictions","prior_predictions"])
     @requires("model")
     def constant_data_to_xarray(self):
         """Convert constant data to xarray."""
