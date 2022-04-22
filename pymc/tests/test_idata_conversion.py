@@ -502,7 +502,7 @@ class TestDataPyMC:
 
     @pytest.mark.parametrize("use_context", [True, False])
     def test_priors_separation(self, use_context):
-        """Test model is enough to get prior, prior predictive and observed_data."""
+        """Test model is enough to get prior, prior predictive, constant_data and observed_data."""
         with pm.Model() as model:
             x = pm.MutableData("x", [1.0, 2.0, 3.0])
             y = pm.ConstantData("y", [1.0, 2.0, 3.0])
@@ -514,6 +514,7 @@ class TestDataPyMC:
             "prior": ["beta", "~obs"],
             "observed_data": ["obs"],
             "prior_predictive": ["obs"],
+            "constant_data": ["x", "y"],
         }
         if use_context:
             with model:
