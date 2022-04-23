@@ -461,7 +461,7 @@ def align_minibatches(batches=None):
     else:
         for b in batches:
             if not isinstance(b, Minibatch):
-                raise TypeError("{b} is not a Minibatch")
+                raise TypeError(f"{b} is not a Minibatch")
             for rng in Minibatch.RNG[id(b)]:
                 rng.seed()
 
