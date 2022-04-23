@@ -94,6 +94,31 @@ class TestData(SeededTest):
             x_test, y_test.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
         )
 
+    def test_sample_posterior_predictive_after_set_data_with_coords(self):
+        y = np.array([1.0, 2.0, 3.0])
+        with pm.Model() as model:
+            x = pm.MutableData("x", [1.0, 2.0, 3.0], dims="obs_id")
+            beta = pm.Normal("beta", 0, 10.0)
+            pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y, dims="obs_id")
+            idata = pm.sample(
+                10,
+                tune=100,
+                chains=1,
+                return_inferencedata=True,
+                compute_convergence_checks=False,
+            )
+        # Predict on new data.
+        with model:
+            x_test = [5, 6]
+            pm.set_data(new_data={"x": x_test}, coords={"obs_id": ["a", "b"]})
+            pm.sample_posterior_predictive(idata, extend_inferencedata=True, predictions=True)
+
+        assert idata.predictions["obs"].shape == (1, 10, 2)
+        assert np.all(idata.predictions["obs_id"].values == np.array(["a", "b"]))
+        np.testing.assert_allclose(
+            x_test, idata.predictions["obs"].mean(("chain", "draw")), atol=1e-1
+        )
+
     def test_sample_after_set_data(self):
         with pm.Model() as model:
             x = pm.MutableData("x", [1.0, 2.0, 3.0])
