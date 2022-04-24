@@ -274,7 +274,6 @@ def gamma_logprob(op, values, *inputs, **kwargs):
 def invgamma_logprob(op, values, *inputs, **kwargs):
     (value,) = values
     alpha, beta = inputs[3:]
-    res = -(alpha + 1) * at.log(value) - at.gammaln(alpha) - 1.0 / value
     res = (
         -at.gammaln(alpha)
         + xlogy0(alpha, beta)
