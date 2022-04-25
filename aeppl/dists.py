@@ -12,7 +12,7 @@ from aesara.tensor.basic import make_vector
 from aesara.tensor.random.utils import broadcast_params, normalize_size_param
 from aesara.tensor.var import TensorVariable
 
-from aeppl.abstract import MeasurableVariable
+from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 
 
 class DiracDelta(Op):
@@ -115,6 +115,11 @@ class DiscreteMarkovChainFactory(OpFromGraph):
 
 
 MeasurableVariable.register(DiscreteMarkovChainFactory)
+
+
+@_get_measurable_outputs.register(DiscreteMarkovChainFactory)
+def _get_measurable_outputs_DiscreteMarkovChainFactory(op, node):
+    return [node.outputs[0]]
 
 
 def create_discrete_mc_op(srng, size, Gammas, gamma_0):

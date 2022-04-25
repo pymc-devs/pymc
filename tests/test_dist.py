@@ -5,9 +5,11 @@ import numpy as np
 import pytest
 import scipy.stats as sp
 from aesara.compile.mode import get_default_mode
+from aesara.graph.basic import equal_computations
 
 from aeppl import joint_logprob
 from aeppl.dists import dirac_delta, discrete_markov_chain, switching_process
+from aeppl.joint_logprob import factorized_joint_logprob
 from aeppl.logprob import logprob
 from tests.utils import simulate_poiszero_hmm
 
@@ -406,6 +408,28 @@ def test_discrete_Markov_chain_logp(Gammas, gamma_0, obs, exp_res):
         exp_res = logp_fn(Gammas, gamma_0, obs)
 
     assert np.allclose(test_logp_val, exp_res)
+
+
+def test_discrete_Markov_chain_factorized_logp():
+    """Make sure that discrete Markov chains are picked up by `factorized_joint_logprob`.
+
+    This really tests the `_get_measurable_outputs` dispatch.
+
+    """
+
+    Gammas = at.tensor(np.float64, shape=(None, None, None), name="Gammas")
+    gamma_0 = at.vector("gamma_0")
+
+    dmc_rv, _ = discrete_markov_chain(Gammas, gamma_0)
+    dmc_vv = dmc_rv.clone()
+
+    logps = factorized_joint_logprob({dmc_rv: dmc_vv})
+
+    dmc_logp = logps[dmc_vv]
+
+    ref_dmc_logp = logprob(dmc_rv, dmc_vv)
+
+    assert equal_computations([dmc_logp], [ref_dmc_logp])
 
 
 def test_switching_process_random():
