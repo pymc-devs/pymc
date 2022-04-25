@@ -9,7 +9,6 @@ from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Apply, Constant
 from aesara.graph.op import Op
 from aesara.tensor.basic import make_vector
-from aesara.tensor.random.basic import categorical
 from aesara.tensor.random.utils import broadcast_params, normalize_size_param
 from aesara.tensor.var import TensorVariable
 
@@ -112,11 +111,13 @@ class DiscreteMarkovChainFactory(OpFromGraph):
     TODO: It would be nice to express this as a `Blockwise` `Op`.
     """
 
+    default_output = 0
+
 
 MeasurableVariable.register(DiscreteMarkovChainFactory)
 
 
-def create_discrete_mc_op(rng, size, Gammas, gamma_0):
+def create_discrete_mc_op(srng, size, Gammas, gamma_0):
     """Construct a `DiscreteMarkovChainFactory` `Op`.
 
     This returns a `Scan` that performs the follow:
@@ -154,11 +155,10 @@ def create_discrete_mc_op(rng, size, Gammas, gamma_0):
     )
 
     # Sample state 0 in each state sequence
-    state_0 = categorical(
+    state_0 = srng.categorical(
         bcast_gamma_0_param,
         size=tuple(size_param) + tuple(bcast_gamma_0_param.shape[:-1]),
         # size=at.join(0, size_param, bcast_gamma_0_param.shape[:-1]),
-        rng=rng,
     )
 
     N = bcast_Gammas_param.shape[-3]
@@ -168,33 +168,39 @@ def create_discrete_mc_op(rng, size, Gammas, gamma_0):
         bcast_Gammas_param, states_shape + tuple(bcast_Gammas_param.shape[-2:])
     )
 
-    def loop_fn(n, state_nm1, Gammas_inner, rng):
+    def loop_fn(n, state_nm1, Gammas_inner):
         gamma_t = Gammas_inner[..., n, :, :]
         idx = tuple(at.ogrid[[slice(None, d) for d in tuple(state_0.shape)]]) + (
             state_nm1.T,
         )
         gamma_t = gamma_t[idx]
-        state_n = categorical(gamma_t, rng=rng)
+        state_n = srng.categorical(gamma_t)
         return state_n.T
 
-    res, _ = aesara.scan(
+    res, updates = aesara.scan(
         loop_fn,
         outputs_info=[{"initial": state_0.T, "taps": [-1]}],
         sequences=[at.arange(N)],
-        non_sequences=[bcast_Gammas_param, rng],
+        non_sequences=[bcast_Gammas_param],
         # strict=True,
     )
 
-    return DiscreteMarkovChainFactory(
-        [size_param, Gammas_param, gamma_0_param],
-        [res.T],
-        inline=True,
-        on_unused_input="ignore",
+    update_outputs = [state_0.owner.inputs[0].default_update]
+    update_outputs.extend(updates.values())
+
+    return (
+        DiscreteMarkovChainFactory(
+            [size_param, Gammas_param, gamma_0_param],
+            [res.T] + update_outputs,
+            inline=True,
+            on_unused_input="ignore",
+        ),
+        updates,
     )
 
 
 def discrete_markov_chain(
-    Gammas: TensorVariable, gamma_0: TensorVariable, size=None, rng=None, **kwargs
+    Gammas: TensorVariable, gamma_0: TensorVariable, size=None, srng=None, **kwargs
 ):
     """Construct a first-order discrete Markov chain distribution.
 
@@ -222,15 +228,20 @@ def discrete_markov_chain(
 
     size = normalize_size_param(size)
 
-    if rng is None:
-        rng = aesara.shared(np.random.RandomState(), borrow=True)
+    if srng is None:
+        srng = at.random.RandomStream()
 
-    DiscreteMarkovChainOp = create_discrete_mc_op(rng, size, Gammas, gamma_0)
-    rv_var = DiscreteMarkovChainOp(size, Gammas, gamma_0)
+    dmc_op, updates = create_discrete_mc_op(srng, size, Gammas, gamma_0)
+    rv_var = dmc_op(size, Gammas, gamma_0)
+
+    updates = {
+        rv_var.owner.inputs[-2]: rv_var.owner.outputs[-2],
+        rv_var.owner.inputs[-1]: rv_var.owner.outputs[-1],
+    }
 
     testval = kwargs.pop("testval", None)
 
     if testval is not None:
         rv_var.tag.test_value = testval
 
-    return rv_var
+    return rv_var, updates

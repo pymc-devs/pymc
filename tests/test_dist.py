@@ -57,6 +57,25 @@ def test_simulate_poiszero_hmm():
     assert np.all(y_test[~nonzeros_idx] == 0)
 
 
+def test_discrete_markov_chain_random_seed():
+
+    test_Gamma_base = np.array([[[0.5, 0.5], [0.5, 0.5]]])
+    test_Gamma = np.broadcast_to(test_Gamma_base, (10, 2, 2))
+    test_gamma_0 = np.r_[0.5, 0.5]
+
+    dmc, updates = discrete_markov_chain(test_Gamma, test_gamma_0)
+
+    dmc_fn = aesara.function((), dmc, updates=updates)
+
+    test_sample_1 = dmc_fn()
+
+    assert len(set(test_sample_1)) > 1
+
+    test_sample_2 = dmc_fn()
+
+    assert not np.array_equal(test_sample_1, test_sample_2)
+
+
 def test_discrete_markov_chain_random():
     # A single transition matrix and initial probabilities vector for each
     # element in the state sequence
@@ -64,16 +83,20 @@ def test_discrete_markov_chain_random():
     test_Gamma = np.broadcast_to(test_Gamma_base, (10, 2, 2))
     test_gamma_0 = np.r_[0.0, 1.0]
 
-    test_sample = discrete_markov_chain(test_Gamma, test_gamma_0).eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.all(test_sample == 1)
 
-    test_sample = discrete_markov_chain(test_Gamma, 1.0 - test_gamma_0, size=10).eval()
+    sample, updates = discrete_markov_chain(test_Gamma, 1.0 - test_gamma_0, size=10)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.all(test_sample == 0)
 
-    test_sample = discrete_markov_chain(test_Gamma, test_gamma_0, size=12).eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0, size=12)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert test_sample.shape == (12, 10)
 
-    test_sample = discrete_markov_chain(test_Gamma, test_gamma_0, size=2).eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0, size=2)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.array_equal(
         test_sample, np.stack([np.ones(10), np.ones(10)], 0).astype(int)
     )
@@ -83,7 +106,8 @@ def test_discrete_markov_chain_random():
     test_Gamma_base = np.array([[[0.8, 0.2], [0.2, 0.8]]])
     test_Gamma = np.broadcast_to(test_Gamma_base, (10, 2, 2))
     test_gamma_0 = np.r_[0.2, 0.8]
-    test_sample = discrete_markov_chain(test_Gamma, test_gamma_0, size=2).eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0, size=2)
+    test_sample = aesara.function((), sample, updates=updates)()
     # TODO: Fix the seed, and make sure there's at least one 0 and 1?
     assert test_sample.shape == (2, 10)
 
@@ -95,8 +119,8 @@ def test_discrete_markov_chain_random():
     test_Gamma = np.broadcast_to(test_Gamma_base, (2, 10, 2, 2))
     test_gamma_0 = np.r_[0.0, 1.0]
 
-    test_dist = discrete_markov_chain(test_Gamma, test_gamma_0)
-    test_sample = test_dist.eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.array_equal(
         test_sample, np.stack([np.ones(10), np.ones(10)], 0).astype(int)
     )
@@ -104,8 +128,8 @@ def test_discrete_markov_chain_random():
 
     # Now, the same set-up, but--this time--generate three state sequence
     # samples
-    test_dist = discrete_markov_chain(test_Gamma, test_gamma_0, size=3)
-    test_sample = test_dist.eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0, size=3)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.array_equal(
         test_sample,
         np.tile(np.stack([np.ones(10), np.ones(10)], 0).astype(int), (3, 1, 1)),
@@ -119,8 +143,8 @@ def test_discrete_markov_chain_random():
     )
     test_Gamma = np.broadcast_to(test_Gamma_base, (2, 10, 2, 2))
     test_gamma_0 = np.stack([np.r_[0.0, 1.0], np.r_[1.0, 0.0]])
-    test_dist = discrete_markov_chain(test_Gamma, test_gamma_0)
-    test_sample = test_dist.eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.array_equal(
         test_sample, np.stack([np.ones(10), np.zeros(10)], 0).astype(int)
     )
@@ -128,8 +152,8 @@ def test_discrete_markov_chain_random():
 
     # Now, the same set-up, but--this time--generate three state sequence
     # samples
-    test_dist = discrete_markov_chain(test_Gamma, test_gamma_0, size=3)
-    test_sample = test_dist.eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0, size=3)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.array_equal(
         test_sample,
         np.tile(np.stack([np.ones(10), np.zeros(10)], 0).astype(int), (3, 1, 1)),
@@ -148,14 +172,14 @@ def test_discrete_markov_chain_random():
     )
     test_gamma_0 = np.r_[1, 0]
 
-    test_dist = discrete_markov_chain(test_Gamma, test_gamma_0)
-    test_sample = test_dist.eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.array_equal(test_sample, np.r_[1, 0, 0])
 
     # Now, the same set-up, but--this time--generate three state sequence
     # samples
-    test_dist = discrete_markov_chain(test_Gamma, test_gamma_0, size=3)
-    test_sample = test_dist.eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0, size=3)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.array_equal(test_sample, np.tile(np.r_[1, 0, 0].astype(int), (3, 1)))
 
     # "Time"-varying transition matrices with two initial
@@ -170,14 +194,14 @@ def test_discrete_markov_chain_random():
     )
     test_gamma_0 = np.array([[1, 0], [0, 1]])
 
-    test_dist = discrete_markov_chain(test_Gamma, test_gamma_0)
-    test_sample = test_dist.eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.array_equal(test_sample, np.array([[1, 0, 0], [0, 1, 1]]))
 
     # Now, the same set-up, but--this time--generate three state sequence
     # samples
-    test_dist = discrete_markov_chain(test_Gamma, test_gamma_0, size=3)
-    test_sample = test_dist.eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0, size=3)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.array_equal(
         test_sample, np.tile(np.array([[1, 0, 0], [0, 1, 1]]).astype(int), (3, 1, 1))
     )
@@ -201,14 +225,14 @@ def test_discrete_markov_chain_random():
     )
     test_gamma_0 = np.array([[1, 0], [0, 1]])
 
-    test_dist = discrete_markov_chain(test_Gamma, test_gamma_0)
-    test_sample = test_dist.eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.array_equal(test_sample, np.array([[1, 0, 0], [1, 1, 0]]))
 
     # Now, the same set-up, but--this time--generate three state sequence
     # samples
-    test_dist = discrete_markov_chain(test_Gamma, test_gamma_0, size=3)
-    test_sample = test_dist.eval()
+    sample, updates = discrete_markov_chain(test_Gamma, test_gamma_0, size=3)
+    test_sample = aesara.function((), sample, updates=updates)()
     assert np.array_equal(
         test_sample, np.tile(np.array([[1, 0, 0], [1, 1, 0]]).astype(int), (3, 1, 1))
     )
@@ -356,7 +380,8 @@ def test_discrete_markov_chain_random():
     ],
 )
 def test_discrete_Markov_chain_logp(Gammas, gamma_0, obs, exp_res):
-    test_dist = discrete_markov_chain(Gammas, gamma_0)
+    test_dist, _ = discrete_markov_chain(Gammas, gamma_0)
+
     test_logp_at = logprob(test_dist, at.as_tensor(obs))
     test_logp_val = test_logp_at.eval()
 
