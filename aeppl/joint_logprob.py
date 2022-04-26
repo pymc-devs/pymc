@@ -5,16 +5,13 @@ from typing import Dict, Optional, Union
 import aesara.tensor as at
 from aesara import config
 from aesara.graph.basic import graph_inputs, io_toposort
-from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import compute_test_value
 from aesara.graph.opt import GlobalOptimizer, LocalOptimizer
-from aesara.graph.optdb import OptimizationQuery
-from aesara.tensor.basic_opt import ShapeFeature
 from aesara.tensor.var import TensorVariable
 
 from aeppl.abstract import get_measurable_outputs
 from aeppl.logprob import _logprob
-from aeppl.opt import PreserveRVMappings, logprob_rewrites_db
+from aeppl.opt import construct_ir_fgraph
 from aeppl.utils import rvs_to_value_vars
 
 
@@ -79,40 +76,12 @@ def factorized_joint_logprob(
     from the respective `RandomVariable`.
 
     """
-    # Since we're going to clone the entire graph, we need to keep a map from
-    # the old nodes to the new ones; otherwise, we won't be able to use
-    # `rv_values`.
-    # We start the `dict` with mappings from the value variables to themselves,
-    # to prevent them from being cloned.
-    memo = {v: v for v in rv_values.values()}
-
-    # We add `ShapeFeature` because it will get rid of references to the old
-    # `RandomVariable`s that have been lifted; otherwise, it will be difficult
-    # to give good warnings when an unaccounted for `RandomVariable` is
-    # encountered
-    fgraph = FunctionGraph(
-        outputs=list(rv_values.keys()),
-        clone=True,
-        memo=memo,
-        copy_orphans=False,
-        copy_inputs=False,
-        features=[ShapeFeature()],
-    )
-
-    # Update `rv_values` so that it uses the new cloned variables
-    rv_values = {memo[k]: v for k, v in rv_values.items()}
-
-    # This `Feature` preserves the relationships between the original
-    # random variables (i.e. keys in `rv_values`) and the new ones
-    # produced when `Op`s are lifted through them.
-    rv_remapper = PreserveRVMappings(rv_values)
-
-    fgraph.attach_feature(rv_remapper)
-
-    logprob_rewrites_db.query(OptimizationQuery(include=["basic"])).optimize(fgraph)
+    fgraph, rv_values, _ = construct_ir_fgraph(rv_values)
 
     if extra_rewrites is not None:
         extra_rewrites.optimize(fgraph)
+
+    rv_remapper = fgraph.preserve_rv_mappings
 
     # This is the updated random-to-value-vars map with the lifted/rewritten
     # variables.  The rewrites are supposed to produce new
