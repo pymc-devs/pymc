@@ -1,12 +1,12 @@
 from typing import List, Optional
 
 import aesara.tensor as at
-from aesara.graph.opt import local_optimizer, out2in
+from aesara.graph.opt import local_optimizer
 from aesara.tensor.extra_ops import CumOp
 
 from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
 from aeppl.logprob import _logprob, logprob
-from aeppl.opt import PreserveRVMappings, logprob_rewrites_db
+from aeppl.opt import PreserveRVMappings, measurable_ir_rewrites_db
 
 
 class MeasurableCumsum(CumOp):
@@ -81,11 +81,9 @@ def find_measurable_cumsums(fgraph, node) -> Optional[List[MeasurableCumsum]]:
     return [new_rv]
 
 
-logprob_rewrites_db.register(
+measurable_ir_rewrites_db.register(
     "find_measurable_cumsums",
-    out2in(
-        find_measurable_cumsums, name="find_measurable_cumsums", ignore_newtrees=True
-    ),
+    find_measurable_cumsums,
     0,
     "basic",
     "cumsum",

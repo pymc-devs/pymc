@@ -5,7 +5,11 @@ import aesara.tensor as at
 from aesara.graph.basic import Apply, Variable
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op, compute_test_value
-from aesara.graph.opt import local_optimizer, out2in, pre_greedy_local_optimizer
+from aesara.graph.opt import (
+    EquilibriumOptimizer,
+    local_optimizer,
+    pre_greedy_local_optimizer,
+)
 from aesara.ifelse import ifelse
 from aesara.tensor.basic import Join, MakeVector
 from aesara.tensor.random.opt import local_dimshuffle_rv_lift, local_subtensor_rv_lift
@@ -371,7 +375,9 @@ def logprob_MixtureRV(
 
 logprob_rewrites_db.register(
     "mixture_replace",
-    out2in(mixture_replace, name="mixture_replace", ignore_newtrees=True),
+    EquilibriumOptimizer(
+        [mixture_replace], max_use_ratio=aesara.config.optdb__max_use_ratio
+    ),
     0,
     "basic",
     "mixture",

@@ -7,7 +7,7 @@ import numpy as np
 from aesara.graph.basic import Variable
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import compute_test_value
-from aesara.graph.opt import local_optimizer, out2in
+from aesara.graph.opt import local_optimizer
 from aesara.graph.optdb import OptimizationQuery
 from aesara.scan.op import Scan
 from aesara.scan.opt import scan_eqopt1, scan_eqopt2
@@ -20,7 +20,7 @@ from aesara.updates import OrderedUpdates
 from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 from aeppl.joint_logprob import factorized_joint_logprob
 from aeppl.logprob import _logprob
-from aeppl.opt import inc_subtensor_ops, logprob_rewrites_db
+from aeppl.opt import inc_subtensor_ops, logprob_rewrites_db, measurable_ir_rewrites_db
 
 
 class MeasurableScan(Scan):
@@ -460,11 +460,15 @@ def find_measurable_scans(fgraph, node):
 def add_opts_to_inner_graphs(fgraph, node):
     """Update the `Mode`(s) used to compile the inner-graph of a `Scan` `Op`.
 
-    This is how we add `rv_sinking_db` and any other log-probability rewrites
-    to the "body" (i.e. inner-graph) of a `Scan` loop.
+    This is how we add the measurable IR rewrites to the "body"
+    (i.e. inner-graph) of a `Scan` loop.
     """
 
     if not isinstance(node.op, Scan):
+        return None
+
+    # Avoid unnecessarily re-applying this rewrite
+    if getattr(node.op.mode, "had_logprob_rewrites", False):
         return None
 
     inner_fgraph = FunctionGraph(
@@ -481,7 +485,11 @@ def add_opts_to_inner_graphs(fgraph, node):
 
     new_outputs = list(inner_fgraph.outputs)
 
-    op = Scan(node.op.inner_inputs, new_outputs, node.op.info, mode=node.op.mode)
+    # TODO FIXME: This is pretty hackish.
+    new_mode = copy(node.op.mode)
+    new_mode.had_logprob_rewrites = True
+
+    op = Scan(node.op.inner_inputs, new_outputs, node.op.info, mode=new_mode)
     new_node = op.make_node(*node.inputs)
 
     return dict(zip(node.outputs, new_node.outputs))
@@ -495,19 +503,20 @@ def _get_measurable_outputs_MeasurableScan(op, node):
     return [o for o in node.outputs if not isinstance(o.type, RandomType)]
 
 
-logprob_rewrites_db.register(
+measurable_ir_rewrites_db.register(
     "add_opts_to_inner_graphs",
-    out2in(
-        add_opts_to_inner_graphs, name="add_opts_to_inner_graphs", ignore_newtrees=True
-    ),
+    add_opts_to_inner_graphs,
+    # out2in(
+    #     add_opts_to_inner_graphs, name="add_opts_to_inner_graphs", ignore_newtrees=True
+    # ),
     -100,
     "basic",
     "scan",
 )
 
-logprob_rewrites_db.register(
+measurable_ir_rewrites_db.register(
     "find_measurable_scans",
-    out2in(find_measurable_scans, name="find_measurable_scans", ignore_newtrees=True),
+    find_measurable_scans,
     0,
     "basic",
     "scan",
