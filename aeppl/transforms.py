@@ -10,15 +10,23 @@ from aesara.graph.features import AlreadyThere, Feature
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op
 from aesara.graph.opt import GlobalOptimizer, in2out, local_optimizer
+from aesara.scalar import Add, Exp, Log, Mul
 from aesara.tensor.basic_opt import (
     register_specialize,
     register_stabilize,
     register_useless,
 )
+from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.var import TensorVariable
 
-from aeppl.abstract import MeasurableVariable
-from aeppl.logprob import _logprob
+from aeppl.abstract import (
+    MeasurableVariable,
+    _get_measurable_outputs,
+    assign_custom_measurable_outputs,
+)
+from aeppl.logprob import _logprob, logprob
+from aeppl.opt import PreserveRVMappings, measurable_ir_rewrites_db
+from aeppl.utils import walk_model
 
 
 @singledispatch
@@ -203,6 +211,143 @@ class TransformValuesOpt(GlobalOptimizer):
 
     def apply(self, fgraph: FunctionGraph):
         return self.default_transform_opt.optimize(fgraph)
+
+
+class MeasurableTransform(Elemwise):
+    """A placeholder used to specify a log-likelihood for a transformed measurable variable"""
+
+    # Cannot use `transform` as name because it would clash with the property added by
+    # the TransformValuesOpt
+    transform_elemwise: RVTransform
+    measurable_input_idx: int
+
+    def __init__(
+        self, *args, transform: RVTransform, measurable_input_idx: int, **kwargs
+    ):
+        self.transform_elemwise = transform
+        self.measurable_input_idx = measurable_input_idx
+        super().__init__(*args, **kwargs)
+
+
+MeasurableVariable.register(MeasurableTransform)
+
+
+@_get_measurable_outputs.register(MeasurableTransform)
+def _get_measurable_outputs_Transform(op, node):
+    return [node.default_output()]
+
+
+@_logprob.register(MeasurableTransform)
+def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwargs):
+    """Compute the log-probability graph for a `MeasurabeTransform`."""
+    # TODO: Could other rewrites affect the order of inputs?
+    (value,) = values
+    other_inputs = list(inputs)
+    measurable_input = other_inputs.pop(op.measurable_input_idx)
+
+    # The value variable must still be back-transformed to be on the natural support of
+    # the respective measurable input.
+    backward_value = op.transform_elemwise.backward(value, *other_inputs)
+    input_logprob = logprob(measurable_input, backward_value, **kwargs)
+
+    jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
+
+    return input_logprob + jacobian
+
+
+@local_optimizer([Elemwise])
+def find_measurable_transforms(
+    fgraph: FunctionGraph, node: Node
+) -> Optional[List[Node]]:
+    """Find measurable transformations from Elemwise operators."""
+    scalar_op = node.op.scalar_op
+    if not isinstance(scalar_op, (Exp, Log, Add, Mul)):
+        return None
+
+    # Node was already converted
+    if isinstance(node.op, MeasurableVariable):
+        return None  # pragma: no cover
+
+    rv_map_feature: PreserveRVMappings = getattr(fgraph, "preserve_rv_mappings", None)
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    # Check that we have a single source of measurement
+    measurable_inputs = [
+        inp
+        for idx, inp in enumerate(node.inputs)
+        if inp.owner
+        and isinstance(inp.owner.op, MeasurableVariable)
+        and inp not in rv_map_feature.rv_values
+    ]
+
+    if len(measurable_inputs) != 1:
+        return None
+
+    measurable_input: TensorVariable = measurable_inputs[0]
+
+    # Do not apply rewrite to discrete variables
+    if measurable_input.type.dtype.startswith("int"):
+        return None
+
+    # Check that other inputs are not potentially measurable, in which case this rewrite
+    # would be invalid
+    other_inputs = tuple(inp for inp in node.inputs if inp is not measurable_input)
+    if any(
+        ancestor_node
+        for ancestor_node in walk_model(
+            other_inputs,
+            walk_past_rvs=False,
+            stop_at_vars=set(rv_map_feature.rv_values),
+        )
+        if (
+            ancestor_node.owner
+            and isinstance(ancestor_node.owner.op, MeasurableVariable)
+            and ancestor_node not in rv_map_feature.rv_values
+        )
+    ):
+        return None
+
+    # Make base_measure outputs unmeasurable
+    # This seems to be the only thing preventing nested rewrites from being erased
+    measurable_input = assign_custom_measurable_outputs(measurable_input.owner)
+
+    measurable_input_idx = 0
+    transform_inputs: Tuple[TensorVariable, ...] = (measurable_input,)
+    transform: RVTransform
+    if isinstance(scalar_op, Exp):
+        transform = ExpTransform()
+    elif isinstance(scalar_op, Log):
+        transform = LogTransform()
+    elif isinstance(scalar_op, Add):
+        transform_inputs = (measurable_input, at.add(*other_inputs))
+        transform = LocTransform(
+            transform_args_fn=lambda *inputs: inputs[-1],
+        )
+    else:
+        transform_inputs = (measurable_input, at.mul(*other_inputs))
+        transform = ScaleTransform(
+            transform_args_fn=lambda *inputs: inputs[-1],
+        )
+
+    transform_op = MeasurableTransform(
+        scalar_op=scalar_op,
+        transform=transform,
+        measurable_input_idx=measurable_input_idx,
+    )
+    transform_out = transform_op.make_node(*transform_inputs).default_output()
+    transform_out.name = node.outputs[0].name
+
+    return [transform_out]
+
+
+measurable_ir_rewrites_db.register(
+    "find_measurable_transforms",
+    find_measurable_transforms,
+    0,
+    "basic",
+    "transform",
+)
 
 
 class LocTransform(RVTransform):

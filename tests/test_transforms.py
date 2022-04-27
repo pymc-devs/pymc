@@ -554,3 +554,152 @@ def test_chained_transform():
         log_jac_det.eval(),
         -np.log(scale) - np.sum(np.log(x_val_forward - loc)),
     )
+
+
+def test_exp_transform_rv():
+    base_rv = at.random.normal(0, 1, size=2, name="base_rv")
+    y_rv = at.exp(base_rv)
+    y_rv.name = "y"
+
+    y_vv = y_rv.clone()
+    logp = joint_logprob({y_rv: y_vv}, sum=False)
+    logp_fn = aesara.function([y_vv], logp)
+
+    y_val = [0.1, 0.3]
+    np.testing.assert_allclose(
+        logp_fn(y_val),
+        sp.stats.lognorm(s=1).logpdf(y_val),
+    )
+
+
+def test_log_transform_rv():
+    base_rv = at.random.lognormal(0, 1, size=2, name="base_rv")
+    y_rv = at.log(base_rv)
+    y_rv.name = "y"
+
+    y_vv = y_rv.clone()
+    logp = joint_logprob({y_rv: y_vv}, sum=False)
+    logp_fn = aesara.function([y_vv], logp)
+
+    y_val = [0.1, 0.3]
+    np.testing.assert_allclose(
+        logp_fn(y_val),
+        sp.stats.norm().logpdf(y_val),
+    )
+
+
+@pytest.mark.parametrize(
+    "rv_size, loc_type",
+    [
+        (None, at.scalar),
+        (2, at.vector),
+        ((2, 1), at.col),
+    ],
+)
+def test_loc_transform_rv(rv_size, loc_type):
+
+    loc = loc_type("loc")
+    y_rv = loc + at.random.normal(0, 1, size=rv_size, name="base_rv")
+    y_rv.name = "y"
+    y_vv = y_rv.clone()
+
+    logp = joint_logprob({y_rv: y_vv}, sum=False)
+    assert_no_rvs(logp)
+    logp_fn = aesara.function([loc, y_vv], logp)
+
+    loc_test_val = np.full(rv_size, 4.0)
+    y_test_val = np.full(rv_size, 1.0)
+
+    np.testing.assert_allclose(
+        logp_fn(loc_test_val, y_test_val),
+        sp.stats.norm(loc_test_val, 1).logpdf(y_test_val),
+    )
+
+
+@pytest.mark.parametrize(
+    "rv_size, scale_type",
+    [
+        (None, at.scalar),
+        (1, at.TensorType("floatX", (True,))),
+        ((2, 3), at.matrix),
+    ],
+)
+def test_scale_transform_rv(rv_size, scale_type):
+
+    scale = scale_type("scale")
+    y_rv = at.random.normal(0, 1, size=rv_size, name="base_rv") * scale
+    y_rv.name = "y"
+    y_vv = y_rv.clone()
+
+    logp = joint_logprob({y_rv: y_vv}, sum=False)
+    assert_no_rvs(logp)
+    logp_fn = aesara.function([scale, y_vv], logp)
+
+    scale_test_val = np.full(rv_size, 4.0)
+    y_test_val = np.full(rv_size, 1.0)
+
+    np.testing.assert_allclose(
+        logp_fn(scale_test_val, y_test_val),
+        sp.stats.norm(0, scale_test_val).logpdf(y_test_val),
+    )
+
+
+def test_transformed_rv_and_value():
+    y_rv = at.random.halfnormal(-1, 1, name="base_rv") + 1
+    y_rv.name = "y"
+    y_vv = y_rv.clone()
+
+    transform_opt = TransformValuesOpt({y_vv: LogTransform()})
+
+    logp = joint_logprob({y_rv: y_vv}, extra_rewrites=transform_opt)
+    assert_no_rvs(logp)
+    logp_fn = aesara.function([y_vv], logp)
+
+    y_test_val = -5
+
+    assert np.isclose(
+        logp_fn(y_test_val),
+        sp.stats.halfnorm(0, 1).logpdf(np.exp(y_test_val)) + y_test_val,
+    )
+
+
+def test_loc_transform_multiple_rvs_fails1():
+    x_rv1 = at.random.normal(name="x_rv1")
+    x_rv2 = at.random.normal(name="x_rv2")
+    y_rv = x_rv1 + x_rv2
+
+    y = y_rv.clone()
+
+    assert joint_logprob({y_rv: y}) is None
+
+
+def test_nested_loc_transform_multiple_rvs_fails2():
+    x_rv1 = at.random.normal(name="x_rv1")
+    x_rv2 = at.cos(at.random.normal(name="x_rv2"))
+    y_rv = x_rv1 + x_rv2
+
+    y = y_rv.clone()
+
+    assert joint_logprob({y_rv: y}) is None
+
+
+def test_discrete_rv_unary_transform_fails():
+    y_rv = at.exp(at.random.poisson(1))
+    assert joint_logprob({y_rv: y_rv.clone()}) is None
+
+
+def test_discrete_rv_multinary_transform_fails():
+    y_rv = 5 + at.random.poisson(1)
+    assert joint_logprob({y_rv: y_rv.clone()}) is None
+
+
+@pytest.mark.xfail(reason="Check not implemented yet, see #51")
+def test_invalid_broadcasted_transform_rv_fails():
+    loc = at.vector("loc")
+    y_rv = loc + at.random.normal(0, 1, size=2, name="base_rv")
+    y_rv.name = "y"
+    y_vv = y_rv.clone()
+
+    logp = joint_logprob({y_rv: y_vv})
+    logp.eval({y_vv: [0, 0, 0, 0], loc: [0, 0, 0, 0]})
+    assert False, "Should have failed before"

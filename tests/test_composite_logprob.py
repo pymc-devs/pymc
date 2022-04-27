@@ -6,6 +6,7 @@ import scipy.stats as st
 from aeppl import joint_logprob
 from aeppl.opt import construct_ir_fgraph
 from aeppl.truncation import CensoredRV
+from tests.utils import assert_no_rvs
 
 
 def test_scalar_clipped_mixture():
@@ -101,3 +102,78 @@ def test_unvalued_ir_reversion():
     # `construct_ir_fgraph` should've reverted the un-valued measurable IR
     # change
     assert measurable_y_rv not in z_fgraph
+
+
+def test_shifted_cumsum():
+    x = at.random.normal(size=(5,), name="x")
+    y = 5 + at.cumsum(x)
+    y.name = "y"
+
+    y_vv = y.clone()
+    logp = joint_logprob({y: y_vv})
+    assert np.isclose(
+        logp.eval({y_vv: np.arange(5) + 1 + 5}),
+        st.norm.logpdf(1) * 5,
+    )
+
+
+def test_double_log_transform_rv():
+    base_rv = at.random.normal(0, 1)
+    y_rv = at.log(at.log(base_rv))
+    y_rv.name = "y"
+
+    y_vv = y_rv.clone()
+    logp = joint_logprob({y_rv: y_vv}, sum=False)
+    logp_fn = aesara.function([y_vv], logp)
+
+    log_log_y_val = np.asarray(0.5)
+    log_y_val = np.exp(log_log_y_val)
+    y_val = np.exp(log_y_val)
+    np.testing.assert_allclose(
+        logp_fn(log_log_y_val),
+        st.norm().logpdf(y_val) + log_y_val + log_log_y_val,
+    )
+
+
+def test_affine_transform_rv():
+    loc = at.scalar("loc")
+    scale = at.vector("scale")
+    rv_size = 3
+
+    y_rv = loc + at.random.normal(0, 1, size=rv_size, name="base_rv") * scale
+    y_rv.name = "y"
+    y_vv = y_rv.clone()
+
+    logp = joint_logprob({y_rv: y_vv}, sum=False)
+    assert_no_rvs(logp)
+    logp_fn = aesara.function([loc, scale, y_vv], logp)
+
+    loc_test_val = 4.0
+    scale_test_val = np.full(rv_size, 0.5)
+    y_test_val = np.full(rv_size, 1.0)
+
+    np.testing.assert_allclose(
+        logp_fn(loc_test_val, scale_test_val, y_test_val),
+        st.norm(loc_test_val, scale_test_val).logpdf(y_test_val),
+    )
+
+
+def test_affine_log_transform_rv():
+    a, b = at.scalars("a", "b")
+    base_rv = at.random.lognormal(0, 1, name="base_rv", size=(1, 2))
+    y_rv = a + at.log(base_rv) * b
+    y_rv.name = "y"
+
+    y_vv = y_rv.clone()
+
+    logp = joint_logprob({y_rv: y_vv}, sum=False)
+    logp_fn = aesara.function([a, b, y_vv], logp)
+
+    a_val = -1.5
+    b_val = 3.0
+    y_val = [[0.1, 0.1]]
+
+    assert np.allclose(
+        logp_fn(a_val, b_val, y_val),
+        st.norm(a_val, b_val).logpdf(y_val),
+    )
