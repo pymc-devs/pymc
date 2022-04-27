@@ -11,10 +11,14 @@ from numdifftools import Jacobian
 from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
 from aeppl.transforms import (
     DEFAULT_TRANSFORM,
+    ChainedTransform,
+    ExpTransform,
     IntervalTransform,
+    LocTransform,
     LogOddsTransform,
     LogTransform,
     RVTransform,
+    ScaleTransform,
     TransformValuesMapping,
     TransformValuesOpt,
     _default_transformed_rv,
@@ -511,3 +515,42 @@ def test_invalid_interval_transform():
     tr = IntervalTransform(lambda *inputs: (None, None))
     with pytest.raises(ValueError, match=msg):
         tr.log_jac_det(x_vv, *x_rv.owner.inputs)
+
+
+def test_chained_transform():
+    loc = 5
+    scale = 0.1
+
+    ch = ChainedTransform(
+        transform_list=[
+            ScaleTransform(
+                transform_args_fn=lambda *inputs: at.constant(scale),
+            ),
+            ExpTransform(),
+            LocTransform(
+                transform_args_fn=lambda *inputs: at.constant(loc),
+            ),
+        ],
+        base_op=at.random.multivariate_normal,
+    )
+
+    x = at.random.multivariate_normal(np.zeros(3), np.eye(3))
+    x_val = x.eval()
+
+    x_val_forward = ch.forward(x_val, *x.owner.inputs).eval()
+    assert np.allclose(
+        x_val_forward,
+        np.exp(x_val * scale) + loc,
+    )
+
+    x_val_backward = ch.backward(x_val_forward, *x.owner.inputs, scale, loc).eval()
+    assert np.allclose(
+        x_val_backward,
+        x_val,
+    )
+
+    log_jac_det = ch.log_jac_det(x_val_forward, *x.owner.inputs, scale, loc)
+    assert np.isclose(
+        log_jac_det.eval(),
+        -np.log(scale) - np.sum(np.log(x_val_forward - loc)),
+    )

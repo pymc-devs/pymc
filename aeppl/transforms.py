@@ -205,6 +205,43 @@ class TransformValuesOpt(GlobalOptimizer):
         return self.default_transform_opt.optimize(fgraph)
 
 
+class LocTransform(RVTransform):
+    name = "loc"
+
+    def __init__(self, transform_args_fn):
+        self.transform_args_fn = transform_args_fn
+
+    def forward(self, value, *inputs):
+        loc = self.transform_args_fn(*inputs)
+        return value + loc
+
+    def backward(self, value, *inputs):
+        loc = self.transform_args_fn(*inputs)
+        return value - loc
+
+    def log_jac_det(self, value, *inputs):
+        return at.zeros_like(value)
+
+
+class ScaleTransform(RVTransform):
+    name = "scale"
+
+    def __init__(self, transform_args_fn):
+        self.transform_args_fn = transform_args_fn
+
+    def forward(self, value, *inputs):
+        scale = self.transform_args_fn(*inputs)
+        return value * scale
+
+    def backward(self, value, *inputs):
+        scale = self.transform_args_fn(*inputs)
+        return value / scale
+
+    def log_jac_det(self, value, *inputs):
+        scale = self.transform_args_fn(*inputs)
+        return -at.log(at.abs(scale))
+
+
 class LogTransform(RVTransform):
     name = "log"
 
@@ -216,6 +253,19 @@ class LogTransform(RVTransform):
 
     def log_jac_det(self, value, *inputs):
         return value
+
+
+class ExpTransform(RVTransform):
+    name = "exp"
+
+    def forward(self, value, *inputs):
+        return at.exp(value)
+
+    def backward(self, value, *inputs):
+        return at.log(value)
+
+    def log_jac_det(self, value, *inputs):
+        return -at.log(value)
 
 
 class IntervalTransform(RVTransform):
@@ -322,6 +372,42 @@ class CircularTransform(RVTransform):
 
     def log_jac_det(self, value, *inputs):
         return at.zeros(value.shape)
+
+
+class ChainedTransform(RVTransform):
+    name = "chain"
+
+    def __init__(self, transform_list, base_op):
+        self.transform_list = transform_list
+        self.base_op = base_op
+
+    def forward(self, value, *inputs):
+        for transform in self.transform_list:
+            value = transform.forward(value, *inputs)
+        return value
+
+    def backward(self, value, *inputs):
+        for transform in reversed(self.transform_list):
+            value = transform.backward(value, *inputs)
+        return value
+
+    def log_jac_det(self, value, *inputs):
+        value = at.as_tensor_variable(value)
+        det_list = []
+        ndim0 = value.ndim
+        for transform in reversed(self.transform_list):
+            det_ = transform.log_jac_det(value, *inputs)
+            det_list.append(det_)
+            ndim0 = min(ndim0, det_.ndim)
+            value = transform.backward(value, *inputs)
+        # match the shape of the smallest jacobian_det
+        det = 0.0
+        for det_ in det_list:
+            if det_.ndim > ndim0:
+                det += det_.sum(axis=-1)
+            else:
+                det += det_
+        return det
 
 
 def _create_transformed_rv_op(
