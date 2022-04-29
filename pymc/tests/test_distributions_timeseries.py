@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import aesara
 import numpy as np
 import pytest
 import scipy.stats
@@ -18,16 +19,13 @@ import scipy.stats
 import pymc as pm
 
 from pymc.aesaraf import floatX
-from pymc.distributions.continuous import Flat, Normal
-from pymc.distributions.timeseries import (
-    AR,
-    AR1,
-    GARCH11,
-    EulerMaruyama,
-    GaussianRandomWalk,
-)
+from pymc.distributions.continuous import Flat, HalfNormal, Normal
+from pymc.distributions.discrete import Constant
+from pymc.distributions.logprob import logp
+from pymc.distributions.multivariate import Dirichlet
+from pymc.distributions.timeseries import AR, GARCH11, EulerMaruyama, GaussianRandomWalk
 from pymc.model import Model
-from pymc.sampling import sample, sample_posterior_predictive
+from pymc.sampling import draw, sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
 from pymc.tests.test_distributions_moments import assert_moment_is_expected
 from pymc.tests.test_distributions_random import BaseTestDistributionRandom
@@ -166,60 +164,198 @@ class TestGaussianRandomWalk:
         assert_moment_is_expected(model, expected)
 
 
-@pytest.mark.xfail(reason="Timeseries not refactored")
-def test_AR():
-    # AR1
-    data = np.array([0.3, 1, 2, 3, 4])
-    phi = np.array([0.99])
-    with Model() as t:
-        y = AR("y", phi, sigma=1, shape=len(data))
-        z = Normal("z", mu=phi * data[:-1], sigma=1, shape=len(data) - 1)
-    ar_like = t["y"].logp({"z": data[1:], "y": data})
-    reg_like = t["z"].logp({"z": data[1:], "y": data})
-    np.testing.assert_allclose(ar_like, reg_like)
+class TestAR:
+    def test_order1_logp(self):
+        data = np.array([0.3, 1, 2, 3, 4])
+        phi = np.array([0.99])
+        with Model() as t:
+            y = AR("y", phi, sigma=1, init_dist=Flat.dist(), shape=len(data))
+            z = Normal("z", mu=phi * data[:-1], sigma=1, shape=len(data) - 1)
+        ar_like = t.compile_logp(y)({"y": data})
+        reg_like = t.compile_logp(z)({"z": data[1:]})
+        np.testing.assert_allclose(ar_like, reg_like)
 
-    # AR1 and AR(1)
-    with Model() as t:
-        rho = Normal("rho", 0.0, 1.0)
-        y1 = AR1("y1", rho, 1.0, observed=data)
-        y2 = AR("y2", rho, 1.0, init=Normal.dist(0, 1), observed=data)
-    initial_point = t.initial_point()
-    np.testing.assert_allclose(y1.logp(initial_point), y2.logp(initial_point))
+        with Model() as t_constant:
+            y = AR(
+                "y",
+                np.hstack((0.3, phi)),
+                sigma=1,
+                init_dist=Flat.dist(),
+                shape=len(data),
+                constant=True,
+            )
+            z = Normal("z", mu=0.3 + phi * data[:-1], sigma=1, shape=len(data) - 1)
+        ar_like = t_constant.compile_logp(y)({"y": data})
+        reg_like = t_constant.compile_logp(z)({"z": data[1:]})
+        np.testing.assert_allclose(ar_like, reg_like)
 
-    # AR1 + constant
-    with Model() as t:
-        y = AR("y", np.hstack((0.3, phi)), sigma=1, shape=len(data), constant=True)
-        z = Normal("z", mu=0.3 + phi * data[:-1], sigma=1, shape=len(data) - 1)
-    ar_like = t["y"].logp({"z": data[1:], "y": data})
-    reg_like = t["z"].logp({"z": data[1:], "y": data})
-    np.testing.assert_allclose(ar_like, reg_like)
+    def test_order2_logp(self):
+        data = np.array([0.3, 1, 2, 3, 4])
+        phi = np.array([0.84, 0.10])
+        with Model() as t:
+            y = AR("y", phi, sigma=1, init_dist=Flat.dist(), shape=len(data))
+            z = Normal(
+                "z", mu=phi[0] * data[1:-1] + phi[1] * data[:-2], sigma=1, shape=len(data) - 2
+            )
+        ar_like = t.compile_logp(y)({"y": data})
+        reg_like = t.compile_logp(z)({"z": data[2:]})
+        np.testing.assert_allclose(ar_like, reg_like)
 
-    # AR2
-    phi = np.array([0.84, 0.10])
-    with Model() as t:
-        y = AR("y", phi, sigma=1, shape=len(data))
-        z = Normal("z", mu=phi[0] * data[1:-1] + phi[1] * data[:-2], sigma=1, shape=len(data) - 2)
-    ar_like = t["y"].logp({"z": data[2:], "y": data})
-    reg_like = t["z"].logp({"z": data[2:], "y": data})
-    np.testing.assert_allclose(ar_like, reg_like)
+    @pytest.mark.parametrize("constant", (False, True))
+    def test_batched_size(self, constant):
+        ar_order, steps, batch_size = 3, 100, 5
+        beta_tp = np.random.randn(batch_size, ar_order + int(constant))
+        y_tp = np.random.randn(batch_size, steps)
+        with Model() as t0:
+            y = AR("y", beta_tp, shape=(batch_size, steps), initval=y_tp, constant=constant)
+        with Model() as t1:
+            for i in range(batch_size):
+                AR(f"y_{i}", beta_tp[i], sigma=1.0, shape=steps, initval=y_tp[i], constant=constant)
 
+        assert y.owner.op.ar_order == ar_order
 
-@pytest.mark.xfail(reason="Timeseries not refactored")
-def test_AR_nd():
-    # AR2 multidimensional
-    p, T, n = 3, 100, 5
-    beta_tp = np.random.randn(p, n)
-    y_tp = np.random.randn(T, n)
-    with Model() as t0:
-        beta = Normal("beta", 0.0, 1.0, shape=(p, n), initval=beta_tp)
-        AR("y", beta, sigma=1.0, shape=(T, n), initval=y_tp)
+        np.testing.assert_allclose(
+            t0.compile_logp()(t0.initial_point()),
+            t1.compile_logp()(t1.initial_point()),
+        )
 
-    with Model() as t1:
-        beta = Normal("beta", 0.0, 1.0, shape=(p, n), initval=beta_tp)
-        for i in range(n):
-            AR("y_%d" % i, beta[:, i], sigma=1.0, shape=T, initval=y_tp[:, i])
+        y_eval = draw(y, draws=2)
+        assert y_eval[0].shape == (batch_size, steps)
+        assert not np.any(np.isclose(y_eval[0], y_eval[1]))
 
-    np.testing.assert_allclose(t0.logp(t0.initial_point()), t1.logp(t1.initial_point()))
+    def test_batched_rhos(self):
+        ar_order, steps, batch_size = 3, 100, 5
+        beta_tp = np.random.randn(batch_size, ar_order)
+        y_tp = np.random.randn(batch_size, steps)
+        with Model() as t0:
+            beta = Normal("beta", 0.0, 1.0, shape=(batch_size, ar_order), initval=beta_tp)
+            AR("y", beta, sigma=1.0, shape=(batch_size, steps), initval=y_tp)
+        with Model() as t1:
+            beta = Normal("beta", 0.0, 1.0, shape=(batch_size, ar_order), initval=beta_tp)
+            for i in range(batch_size):
+                AR(f"y_{i}", beta[i], sigma=1.0, shape=steps, initval=y_tp[i])
+
+        np.testing.assert_allclose(
+            t0.compile_logp()(t0.initial_point()),
+            t1.compile_logp()(t1.initial_point()),
+        )
+
+        beta_tp[1] = 0  # Should always be close to zero
+        y_eval = t0["y"].eval({t0["beta"]: beta_tp})
+        assert y_eval.shape == (batch_size, steps)
+        assert np.all(abs(y_eval[1]) < 5)
+
+    def test_batched_sigma(self):
+        ar_order, steps, batch_size = 4, 100, (7, 5)
+        # AR order cannot be inferred from beta_tp because it is not fixed.
+        # We specify it manually below
+        beta_tp = aesara.shared(np.random.randn(ar_order))
+        sigma_tp = np.abs(np.random.randn(*batch_size))
+        y_tp = np.random.randn(*batch_size, steps)
+        with Model() as t0:
+            sigma = HalfNormal("sigma", 1.0, shape=batch_size, initval=sigma_tp)
+            AR(
+                "y",
+                beta_tp,
+                sigma=sigma,
+                size=batch_size,
+                steps=steps,
+                initval=y_tp,
+                ar_order=ar_order,
+            )
+        with Model() as t1:
+            sigma = HalfNormal("beta", 1.0, shape=batch_size, initval=sigma_tp)
+            for i in range(batch_size[0]):
+                for j in range(batch_size[1]):
+                    AR(
+                        f"y_{i}{j}",
+                        beta_tp,
+                        sigma=sigma[i][j],
+                        shape=steps,
+                        initval=y_tp[i, j],
+                        ar_order=ar_order,
+                    )
+
+        # Check logp shape
+        sigma_logp, y_logp = t0.compile_logp(sum=False)(t0.initial_point())
+        assert tuple(y_logp.shape) == batch_size
+
+        np.testing.assert_allclose(
+            sigma_logp.sum() + y_logp.sum(),
+            t1.compile_logp()(t1.initial_point()),
+        )
+
+        beta_tp.set_value(np.zeros((ar_order,)))  # Should always be close to zero
+        sigma_tp = np.full(batch_size, [0.01, 0.1, 1, 10, 100])
+        y_eval = t0["y"].eval({t0["sigma"]: sigma_tp})
+        assert y_eval.shape == (*batch_size, steps)
+        assert np.allclose(y_eval.std(axis=(0, 2)), [0.01, 0.1, 1, 10, 100], rtol=0.1)
+
+    def test_batched_init_dist(self):
+        ar_order, steps, batch_size = 3, 100, 5
+        beta_tp = aesara.shared(np.random.randn(ar_order), shape=(3,))
+        y_tp = np.random.randn(batch_size, steps)
+        with Model() as t0:
+            init_dist = Normal.dist(0.0, 0.01, size=(batch_size, ar_order))
+            AR("y", beta_tp, sigma=0.01, init_dist=init_dist, steps=steps, initval=y_tp)
+        with Model() as t1:
+            for i in range(batch_size):
+                AR(f"y_{i}", beta_tp, sigma=0.01, shape=steps, initval=y_tp[i])
+
+        np.testing.assert_allclose(
+            t0.compile_logp()(t0.initial_point()),
+            t1.compile_logp()(t1.initial_point()),
+        )
+
+        # Next values should keep close to previous ones
+        beta_tp.set_value(np.full((ar_order,), 1 / ar_order))
+        # Init dist is cloned when creating the AR, so the original variable is not
+        # part of the AR graph. We retrieve the one actually used manually
+        init_dist = t0["y"].owner.inputs[2]
+        init_dist_tp = np.full((batch_size, ar_order), (np.arange(batch_size) * 100)[:, None])
+        y_eval = t0["y"].eval({init_dist: init_dist_tp})
+        assert y_eval.shape == (batch_size, steps)
+        assert np.allclose(
+            y_eval[:, -10:].mean(-1), np.arange(batch_size) * 100, rtol=0.1, atol=0.5
+        )
+
+    def test_constant_random(self):
+        x = AR.dist(
+            rho=[100, 0, 0],
+            sigma=0.1,
+            init_dist=Normal.dist(-100.0, sigma=0.1),
+            constant=True,
+            shape=(6,),
+        )
+        x_eval = x.eval()
+        assert np.allclose(x_eval[:2], -100, rtol=0.1)
+        assert np.allclose(x_eval[2:], 100, rtol=0.1)
+
+    def test_multivariate_init_dist(self):
+        init_dist = Dirichlet.dist(a=np.full((5, 2), [1, 10]))
+        x = AR.dist(rho=[0, 0], init_dist=init_dist, steps=0)
+
+        x_eval = x.eval()
+        assert x_eval.shape == (5, 2)
+
+        init_dist_eval = init_dist.eval()
+        init_dist_logp_eval = logp(init_dist, init_dist_eval).eval()
+        x_logp_eval = logp(x, init_dist_eval).eval()
+        assert x_logp_eval.shape == (5,)
+        assert np.allclose(x_logp_eval, init_dist_logp_eval)
+
+    @pytest.mark.parametrize(
+        "size, expected",
+        [
+            (None, np.full((2, 7), [[2.0], [4.0]])),
+            ((5, 2), np.full((5, 2, 7), [[2.0], [4.0]])),
+        ],
+    )
+    def test_moment(self, size, expected):
+        with Model() as model:
+            init_dist = Constant.dist([[1.0, 2.0], [3.0, 4.0]])
+            AR("x", rho=[0, 0], init_dist=init_dist, steps=7, size=size)
+        assert_moment_is_expected(model, expected, check_finite_logp=False)
 
 
 @pytest.mark.xfail(reason="Timeseries not refactored")
