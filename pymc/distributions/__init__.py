@@ -102,7 +102,6 @@ from pymc.distributions.multivariate import (
 from pymc.distributions.simulator import Simulator
 from pymc.distributions.timeseries import (
     AR,
-    AR1,
     GARCH11,
     GaussianRandomWalk,
     MvGaussianRandomWalk,
@@ -169,7 +168,6 @@ __all__ = [
     "WishartBartlett",
     "LKJCholeskyCov",
     "LKJCorr",
-    "AR1",
     "AR",
     "AsymmetricLaplace",
     "GaussianRandomWalk",
