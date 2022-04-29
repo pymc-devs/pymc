@@ -206,6 +206,18 @@ class Mixture(SymbolicDistribution):
         return super().dist([w, *comp_dists], **kwargs)
 
     @classmethod
+    def num_rngs(cls, w, comp_dists, **kwargs):
+        if not isinstance(comp_dists, (tuple, list)):
+            # comp_dists is a single component
+            comp_dists = [comp_dists]
+        return len(comp_dists) + 1
+
+    @classmethod
+    def ndim_supp(cls, weights, *components):
+        # We already checked that all components have the same support dimensionality
+        return components[0].owner.op.ndim_supp
+
+    @classmethod
     def rv_op(cls, weights, *components, size=None, rngs=None):
         # Update rngs if provided
         if rngs is not None:
@@ -330,11 +342,6 @@ class Mixture(SymbolicDistribution):
         return [change_rv_size(component, size) for component in components]
 
     @classmethod
-    def ndim_supp(cls, weights, *components):
-        # We already checked that all components have the same support dimensionality
-        return components[0].owner.op.ndim_supp
-
-    @classmethod
     def change_size(cls, rv, new_size, expand=False):
         weights = rv.tag.weights
         components = rv.tag.components
@@ -354,14 +361,6 @@ class Mixture(SymbolicDistribution):
         components = cls._resize_components(new_size, *components)
 
         return cls.rv_op(weights, *components, rngs=rngs, size=None)
-
-    @classmethod
-    def graph_rvs(cls, rv):
-        # We return rv, which is itself a pseudo RandomVariable, that contains a
-        # mix_indexes_ RV in its inner graph. We want super().dist() to generate
-        # (components + 1) rngs for us, and it will do so based on how many elements
-        # we return here
-        return (*rv.tag.components, rv)
 
 
 @_get_measurable_outputs.register(MarginalMixtureRV)
