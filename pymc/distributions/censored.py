@@ -77,6 +77,14 @@ class Censored(SymbolicDistribution):
         return super().dist([dist, lower, upper], **kwargs)
 
     @classmethod
+    def num_rngs(cls, *args, **kwargs):
+        return 1
+
+    @classmethod
+    def ndim_supp(cls, *dist_params):
+        return 0
+
+    @classmethod
     def rv_op(cls, dist, lower=None, upper=None, size=None, rngs=None):
 
         lower = at.constant(-np.inf) if lower is None else at.as_tensor_variable(lower)
@@ -96,24 +104,12 @@ class Censored(SymbolicDistribution):
         rv_out.tag.upper = upper
 
         if rngs is not None:
-            rv_out = cls.change_rngs(rv_out, rngs)
+            rv_out = cls._change_rngs(rv_out, rngs)
 
         return rv_out
 
     @classmethod
-    def ndim_supp(cls, *dist_params):
-        return 0
-
-    @classmethod
-    def change_size(cls, rv, new_size, expand=False):
-        dist = rv.tag.dist
-        lower = rv.tag.lower
-        upper = rv.tag.upper
-        new_dist = change_rv_size(dist, new_size, expand=expand)
-        return cls.rv_op(new_dist, lower, upper)
-
-    @classmethod
-    def change_rngs(cls, rv, new_rngs):
+    def _change_rngs(cls, rv, new_rngs):
         (new_rng,) = new_rngs
         dist_node = rv.tag.dist.owner
         lower = rv.tag.lower
@@ -123,8 +119,12 @@ class Censored(SymbolicDistribution):
         return cls.rv_op(new_dist, lower, upper)
 
     @classmethod
-    def graph_rvs(cls, rv):
-        return (rv.tag.dist,)
+    def change_size(cls, rv, new_size, expand=False):
+        dist = rv.tag.dist
+        lower = rv.tag.lower
+        upper = rv.tag.upper
+        new_dist = change_rv_size(dist, new_size, expand=expand)
+        return cls.rv_op(new_dist, lower, upper)
 
 
 @_moment.register(Clip)
