@@ -11,7 +11,7 @@ h5py>=2.7
 ipython>=7.16
 myst-nb
 numpy>=1.15.0
-numpydoc<1.2
+numpydoc
 pandas>=0.24.0
 polyagamma
 pre-commit>=2.8.0
