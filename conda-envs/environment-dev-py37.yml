@@ -16,7 +16,7 @@ dependencies:
 - jax
 - myst-nb
 - numpy>=1.15.0
-- numpydoc<1.2
+- numpydoc
 - pandas>=0.24.0
 - pip
 - pre-commit>=2.8.0
