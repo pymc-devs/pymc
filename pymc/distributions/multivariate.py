@@ -30,7 +30,7 @@ from aesara.raise_op import Assert
 from aesara.sparse.basic import sp_sum
 from aesara.tensor import gammaln, sigmoid
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
-from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
+from aesara.tensor.random.basic import dirichlet, multinomial, multivariate_normal
 from aesara.tensor.random.op import RandomVariable, default_supp_shape_from_params
 from aesara.tensor.random.utils import broadcast_params, normalize_size_param
 from aesara.tensor.slinalg import Cholesky
@@ -488,30 +488,6 @@ class Dirichlet(SimplexContinuous):
             a > 0,
             msg="a > 0",
         )
-
-
-class MultinomialRV(MultinomialRV):
-    """Aesara's `MultinomialRV` doesn't broadcast; this one does."""
-
-    @classmethod
-    def rng_fn(cls, rng, n, p, size):
-        if n.ndim > 0 or p.ndim > 1:
-            n, p = broadcast_params([n, p], cls.ndims_params)
-            size = tuple(size or ())
-
-            if size:
-                n = np.broadcast_to(n, size)
-                p = np.broadcast_to(p, size + (p.shape[-1],))
-
-            res = np.empty(p.shape)
-            for idx in np.ndindex(p.shape[:-1]):
-                res[idx] = rng.multinomial(n[idx], p[idx])
-            return res
-        else:
-            return rng.multinomial(n, p, size=size)
-
-
-multinomial = MultinomialRV()
 
 
 class Multinomial(Discrete):
