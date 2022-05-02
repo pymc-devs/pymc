@@ -50,7 +50,7 @@ from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
 from pytensor.scalar import Add, Exp, Log, Mul, Reciprocal
 from pytensor.scan.op import Scan
 from pytensor.tensor.exceptions import NotScalarConstantError
-from pytensor.tensor.math import add, exp, log, mul, reciprocal, true_div
+from pytensor.tensor.math import add, exp, log, mul, neg, reciprocal, sub, true_div
 from pytensor.tensor.rewriting.basic import (
     register_specialize,
     register_stabilize,
@@ -384,6 +384,46 @@ def measurable_div_to_reciprocal_product(fgraph, node):
     return [at.mul(numerator, at.reciprocal(denominator))]
 
 
+@node_rewriter([neg])
+def measurable_neg_to_product(fgraph, node):
+    """Convert negation of `MeasurableVariable`s to product with `-1`."""
+
+    inp = node.inputs[0]
+    if not (inp.owner and isinstance(inp.owner.op, MeasurableVariable)):
+        return None
+
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    # Only apply this rewrite if the variable is unvalued
+    if inp in rv_map_feature.rv_values:
+        return None  # pragma: no cover
+
+    return [at.mul(inp, -1.0)]
+
+
+@node_rewriter([sub])
+def measurable_sub_to_neg(fgraph, node):
+    """Convert subtraction involving `MeasurableVariable`s to addition with neg"""
+    measurable_vars = [
+        var for var in node.inputs if (var.owner and isinstance(var.owner.op, MeasurableVariable))
+    ]
+    if not measurable_vars:
+        return None  # pragma: no cover
+
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    # Only apply this rewrite if there is one unvalued MeasurableVariable involved
+    if all(measurable_var in rv_map_feature.rv_values for measurable_var in measurable_vars):
+        return None  # pragma: no cover
+
+    minuend, subtrahend = node.inputs
+    return [at.add(minuend, at.neg(subtrahend))]
+
+
 @node_rewriter([exp, log, add, mul, reciprocal])
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
@@ -475,6 +515,19 @@ measurable_ir_rewrites_db.register(
     "transform",
 )
 
+measurable_ir_rewrites_db.register(
+    "measurable_neg_to_product",
+    measurable_neg_to_product,
+    "basic",
+    "transform",
+)
+
+measurable_ir_rewrites_db.register(
+    "measurable_sub_to_neg",
+    measurable_sub_to_neg,
+    "basic",
+    "transform",
+)
 
 measurable_ir_rewrites_db.register(
     "find_measurable_transforms",

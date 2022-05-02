@@ -664,17 +664,20 @@ def test_log_transform_rv():
 
 
 @pytest.mark.parametrize(
-    "rv_size, loc_type",
+    "rv_size, loc_type, addition",
     [
-        (None, at.scalar),
-        (2, at.vector),
-        ((2, 1), at.col),
+        (None, at.scalar, True),
+        (2, at.vector, False),
+        ((2, 1), at.col, True),
     ],
 )
-def test_loc_transform_rv(rv_size, loc_type):
+def test_loc_transform_rv(rv_size, loc_type, addition):
 
     loc = loc_type("loc")
-    y_rv = loc + at.random.normal(0, 1, size=rv_size, name="base_rv")
+    if addition:
+        y_rv = loc + at.random.normal(0, 1, size=rv_size, name="base_rv")
+    else:
+        y_rv = at.random.normal(0, 1, size=rv_size, name="base_rv") - at.neg(loc)
     y_rv.name = "y"
     y_vv = y_rv.clone()
 
@@ -802,6 +805,27 @@ def test_reciprocal_rv_transform(numerator):
         x_logp_fn(x_test_val),
         sp.stats.invgamma(shape, scale=scale * numerator).logpdf(x_test_val),
     )
+
+
+def test_negated_rv_transform():
+    x_rv = -at.random.halfnormal()
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}))
+
+    assert np.isclose(x_logp_fn(-1.5), sp.stats.halfnorm.logpdf(1.5))
+
+
+def test_subtracted_rv_transform():
+    # Choose base RV that is assymetric around zero
+    x_rv = 5.0 - at.random.normal(1.0)
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}))
+
+    assert np.isclose(x_logp_fn(7.3), sp.stats.norm.logpdf(5.0 - 7.3, 1.0))
 
 
 def test_scan_transform():
