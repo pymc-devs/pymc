@@ -30,6 +30,7 @@ import aesara.tensor as at
 import numpy as np
 import scipy.sparse as sps
 
+from aeppl.abstract import MeasurableVariable
 from aeppl.logprob import CheckParameterValue
 from aesara import config, scalar
 from aesara.compile.mode import Mode, get_mode
@@ -978,14 +979,21 @@ def compile_pymc(
     # TODO: This won't work for variables with InnerGraphs (Scan and OpFromGraph)
     rng_updates = {}
     output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
-    for rv in (
-        node
-        for node in vars_between(inputs, output_to_list)
-        if node.owner and isinstance(node.owner.op, RandomVariable) and node not in inputs
+    for random_var in (
+        var
+        for var in vars_between(inputs, output_to_list)
+        if var.owner
+        and isinstance(var.owner.op, (RandomVariable, MeasurableVariable))
+        and var not in inputs
     ):
-        rng = rv.owner.inputs[0]
-        if not hasattr(rng, "default_update"):
-            rng_updates[rng] = rv.owner.outputs[0]
+        if isinstance(random_var.owner.op, RandomVariable):
+            rng = random_var.owner.inputs[0]
+            if not hasattr(rng, "default_update"):
+                rng_updates[rng] = random_var.owner.outputs[0]
+        else:
+            update_fn = getattr(random_var.owner.op, "update", None)
+            if update_fn is not None:
+                rng_updates.update(update_fn(random_var.owner))
 
     # If called inside a model context, see if check_bounds flag is set to False
     try:
