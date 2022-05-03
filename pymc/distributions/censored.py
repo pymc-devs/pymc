@@ -42,9 +42,12 @@ class Censored(SymbolicDistribution):
 
     Parameters
     ----------
-    dist: PyMC unnamed distribution
-        PyMC distribution created via the `.dist()` API, which will be censored. This
-        distribution must be univariate and have a logcdf method implemented.
+    dist: unnamed distribution
+        Univariate distribution created via the `.dist()` API, which will be censored.
+        This distribution must have a logcdf method implemented for sampling.
+
+        .. warning:: dist will be cloned, rendering it independent of the one passed as input.
+
     lower: float or None
         Lower (left) censoring point. If `None` the distribution will not be left censored
     upper: float or None
