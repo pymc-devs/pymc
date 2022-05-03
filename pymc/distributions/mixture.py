@@ -21,7 +21,7 @@ from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 from aeppl.logprob import _logcdf, _logprob
 from aeppl.transforms import IntervalTransform
 from aesara.compile.builders import OpFromGraph
-from aesara.graph.basic import equal_computations
+from aesara.graph.basic import Node, equal_computations
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
@@ -43,6 +43,10 @@ class MarginalMixtureRV(OpFromGraph):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
     default_output = 1
+
+    def update(self, node: Node):
+        # Update for the internal mix_indexes RV
+        return {node.inputs[0]: node.outputs[0]}
 
 
 MeasurableVariable.register(MarginalMixtureRV)
@@ -293,10 +297,6 @@ class Mixture(SymbolicDistribution):
 
         # Create the actual MarginalMixture variable
         mix_out = mix_op(mix_indexes_rng, weights, *components)
-
-        # We need to set_default_updates ourselves, because the choices RV is hidden
-        # inside OpFromGraph and PyMC will never find it otherwise
-        mix_indexes_rng.default_update = mix_out.owner.outputs[0]
 
         # Reference nodes to facilitate identification in other classmethods
         mix_out.tag.weights = weights

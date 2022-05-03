@@ -22,7 +22,9 @@ import numpy.testing as npt
 import pytest
 import scipy.sparse as sps
 
+from aeppl.abstract import MeasurableVariable
 from aeppl.logprob import ParameterValueError
+from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Constant, Variable, ancestors, equal_computations
 from aesara.tensor.random.basic import normal, uniform
 from aesara.tensor.random.op import RandomVariable
@@ -681,3 +683,24 @@ class TestCompilePyMC:
             assert len(fn_fgraph.apply_nodes) == max(rvs_in_graph, 1)
             # Each RV adds a shared output for its rng
             assert len(fn_fgraph.outputs) == 1 + rvs_in_graph
+
+    def test_compile_pymc_custom_update_op(self):
+        """Test that custom MeasurableVariable Op updates are used by compile_pymc"""
+
+        class UnmeasurableOp(OpFromGraph):
+            def update(self, node):
+                return {node.inputs[0]: node.inputs[0] + 1}
+
+        dummy_inputs = [at.scalar(), at.scalar()]
+        dummy_outputs = [at.add(*dummy_inputs)]
+        dummy_x = UnmeasurableOp(dummy_inputs, dummy_outputs)(aesara.shared(1.0), 1.0)
+
+        # Check that there are no updates at first
+        fn = compile_pymc(inputs=[], outputs=dummy_x)
+        assert fn() == fn() == 2.0
+
+        # And they are enabled once the Op is registered as Measurable
+        MeasurableVariable.register(UnmeasurableOp)
+        fn = compile_pymc(inputs=[], outputs=dummy_x)
+        assert fn() == 2.0
+        assert fn() == 3.0

@@ -1363,13 +1363,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # size of the masked and unmasked array happened to coincide
             _, size, _, *inps = observed_rv_var.owner.inputs
             rng = self.model.next_rng()
-            observed_rv_var = observed_rv_var.owner.op(*inps, size=size, rng=rng)
-            # Add default_update to new rng
-            new_rng = observed_rv_var.owner.outputs[0]
-            observed_rv_var.update = (rng, new_rng)
-            rng.default_update = new_rng
-            observed_rv_var.name = f"{name}_observed"
-
+            observed_rv_var = observed_rv_var.owner.op(
+                *inps, size=size, rng=rng, name=f"{name}_observed"
+            )
             observed_rv_var.tag.observations = nonmissing_data
 
             self.create_value_var(observed_rv_var, transform=None, value_var=nonmissing_data)
