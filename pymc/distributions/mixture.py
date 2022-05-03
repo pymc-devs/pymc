@@ -66,11 +66,14 @@ class Mixture(SymbolicDistribution):
     w : tensor_like of float
         w >= 0 and w <= 1
         the mixture weights
-    comp_dists : iterable of PyMC distributions or single batched distribution
-        Distributions should be created via the `.dist()` API. If single distribution is
-        passed, the last size dimension (not shape) determines the number of mixture
+    comp_dists : iterable of unnamed distributions or single batched distribution
+        Distributions should be created via the `.dist()` API. If a single distribution
+        is passed, the last size dimension (not shape) determines the number of mixture
         components (e.g. `pm.Poisson.dist(..., size=components)`)
         :math:`f_1, \ldots, f_n`
+
+        .. warning:: comp_dists will be cloned, rendering them independent of the ones passed as input.
+
 
     Examples
     --------

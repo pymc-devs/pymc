@@ -147,9 +147,12 @@ class GaussianRandomWalk(distribution.Continuous):
         innovation drift, defaults to 0.0
     sigma : tensor_like of float, optional
         sigma > 0, innovation standard deviation, defaults to 1.0
-    init : Univariate PyMC distribution
+    init : unnamed distribution
         Univariate distribution of the initial value, created with the `.dist()` API.
         Defaults to Normal with same `mu` and `sigma` as the GaussianRandomWalk
+
+        .. warning:: init will be cloned, rendering them independent of the ones passed as input.
+
     steps : int
         Number of steps in Gaussian Random Walks (steps > 0).
     """

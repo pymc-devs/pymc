@@ -1271,10 +1271,13 @@ class LKJCholeskyCov:
         larger values put more weight on matrices with few correlations.
     n: int
         Dimension of the covariance matrix (n > 1).
-    sd_dist: pm.Distribution
+    sd_dist: unnamed distribution
         A positive scalar or vector distribution for the standard deviations, created
         with the `.dist()` API. Should have `shape[-1]=n`. Scalar distributions will be
         automatically resized to ensure this.
+
+        .. warning:: sd_dist will be cloned, rendering it independent of the one passed as input.
+
     compute_corr: bool, default=True
         If `True`, returns three values: the Cholesky decomposition, the correlations
         and the standard deviations of the covariance matrix. Otherwise, only returns
