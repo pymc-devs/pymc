@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 import scipy.stats.distributions as sp
 
+from aeppl.abstract import get_measurable_outputs
 from aesara.graph.basic import ancestors
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import (
@@ -32,7 +33,7 @@ from pymc import DensityDist
 from pymc.aesaraf import floatX, walk_model
 from pymc.distributions.continuous import HalfFlat, Normal, TruncatedNormal, Uniform
 from pymc.distributions.discrete import Bernoulli
-from pymc.distributions.logprob import joint_logpt, logcdf, logp
+from pymc.distributions.logprob import ignore_logprob, joint_logpt, logcdf, logp
 from pymc.model import Model, Potential
 from pymc.tests.helpers import select_by_precision
 
@@ -227,3 +228,38 @@ def test_unexpected_rvs():
 
     with pytest.raises(ValueError, match="^Random variables detected in the logp graph"):
         model.logpt()
+
+
+def test_ignore_logprob_basic():
+    x = Normal.dist()
+    (measurable_x_out,) = get_measurable_outputs(x.owner.op, x.owner)
+    assert measurable_x_out is x.owner.outputs[1]
+
+    new_x = ignore_logprob(x)
+    assert new_x is not x
+    assert isinstance(new_x.owner.op, Normal)
+    assert type(new_x.owner.op).__name__ == "UnmeasurableNormalRV"
+    # Confirm that it does not have measurable output
+    assert get_measurable_outputs(new_x.owner.op, new_x.owner) is None
+
+    # Test that it will not clone a variable that is already unmeasurable
+    new_new_x = ignore_logprob(new_x)
+    assert new_new_x is new_x
+
+
+def test_ignore_logprob_model():
+    # logp that does not depend on input
+    def logp(value, x):
+        return value
+
+    with Model() as m:
+        x = Normal.dist()
+        y = DensityDist("y", x, logp=logp)
+    # Aeppl raises a KeyError when it finds an unexpected RV
+    with pytest.raises(KeyError):
+        joint_logpt([y], {y: y.type()})
+
+    with Model() as m:
+        x = ignore_logprob(Normal.dist())
+        y = DensityDist("y", x, logp=logp)
+    assert joint_logpt([y], {y: y.type()})

@@ -20,6 +20,7 @@ import aesara.tensor as at
 import numpy as np
 
 from aeppl import factorized_joint_logprob
+from aeppl.abstract import assign_custom_measurable_outputs
 from aeppl.logprob import logcdf as logcdf_aeppl
 from aeppl.logprob import logprob as logp_aeppl
 from aeppl.transforms import TransformValuesOpt
@@ -221,7 +222,11 @@ def joint_logpt(
 
     transform_opt = TransformValuesOpt(transform_map)
     temp_logp_var_dict = factorized_joint_logprob(
-        tmp_rvs_to_values, extra_rewrites=transform_opt, use_jacobian=jacobian, **kwargs
+        tmp_rvs_to_values,
+        extra_rewrites=transform_opt,
+        use_jacobian=jacobian,
+        warn_missing_rvs=False,
+        **kwargs,
     )
 
     # Raise if there are unexpected RandomVariables in the logp graph
@@ -276,3 +281,20 @@ def logcdf(rv, value):
 
     value = at.as_tensor_variable(value, dtype=rv.dtype)
     return logcdf_aeppl(rv, value)
+
+
+def ignore_logprob(rv):
+    """Return a duplicated variable that is ignored when creating Aeppl logprob graphs
+
+    This is used in SymbolicDistributions that use other RVs as inputs but account
+    for their logp terms explicitly.
+
+    If the variable is already ignored, it is returned directly.
+    """
+    prefix = "Unmeasurable"
+    node = rv.owner
+    op_type = type(node.op)
+    if op_type.__name__.startswith(prefix):
+        return rv
+    new_node = assign_custom_measurable_outputs(node, type_prefix=prefix)
+    return new_node.outputs[node.outputs.index(rv)]
