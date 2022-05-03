@@ -57,6 +57,7 @@ from pymc.distributions.dist_math import (
     multigammaln,
 )
 from pymc.distributions.distribution import Continuous, Discrete, moment
+from pymc.distributions.logprob import ignore_logprob
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
     rv_size_is_none,
@@ -1182,11 +1183,9 @@ class _LKJCholeskyCov(Continuous):
 
         # sd_dist is part of the generative graph, but should be completely ignored
         # by the logp graph, since the LKJ logp explicitly includes these terms.
-        # Setting sd_dist.tag.ignore_logprob to True, will prevent Aeppl warning about
-        # an unnacounted RandomVariable in the graph
         # TODO: Things could be simplified a bit if we managed to extract the
         #  sd_dist prior components from the logp expression.
-        sd_dist.tag.ignore_logprob = True
+        sd_dist = ignore_logprob(sd_dist)
 
         return super().dist([n, eta, sd_dist], **kwargs)
 
