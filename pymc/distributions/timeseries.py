@@ -26,6 +26,7 @@ from pymc.aesaraf import change_rv_size, floatX, intX
 from pymc.distributions import distribution, logprob, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
+from pymc.distributions.logprob import ignore_logprob
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.util import check_dist_not_registered
 
@@ -206,7 +207,7 @@ class GaussianRandomWalk(distribution.Continuous):
                 raise TypeError("init must be a univariate distribution variable")
 
         # Ignores logprob of init var because that's accounted for in the logp method
-        init.tag.ignore_logprob = True
+        init = ignore_logprob(init)
 
         return super().dist([mu, sigma, init, steps], size=size, **kwargs)
 

@@ -30,7 +30,7 @@ from pymc.distributions import transforms
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicDistribution, _moment, moment
-from pymc.distributions.logprob import logcdf, logp
+from pymc.distributions.logprob import ignore_logprob, logcdf, logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.util import check_dist_not_registered
@@ -252,6 +252,10 @@ class Mixture(SymbolicDistribution):
 
         assert weights_ndim_batch == 0
 
+        # Component RVs terms are accounted by the Mixture logprob, so they can be
+        # safely ignored by Aeppl
+        components = [ignore_logprob(component) for component in components]
+
         # Create a OpFromGraph that encapsulates the random generating process
         # Create dummy input variables with the same type as the ones provided
         weights_ = weights.type()
@@ -298,11 +302,6 @@ class Mixture(SymbolicDistribution):
         mix_out.tag.weights = weights
         mix_out.tag.components = components
         mix_out.tag.choices_rng = mix_indexes_rng
-
-        # Component RVs terms are accounted by the Mixture logprob, so they can be
-        # safely ignore by Aeppl (this tag prevents UserWarning)
-        for component in components:
-            component.tag.ignore_logprob = True
 
         return mix_out
 
