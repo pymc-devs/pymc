@@ -103,7 +103,6 @@ def test_all_distributions_have_moments():
         dist_module.timeseries.AR,
         dist_module.timeseries.AR1,
         dist_module.timeseries.GARCH11,
-        dist_module.timeseries.GaussianRandomWalk,
         dist_module.timeseries.MvGaussianRandomWalk,
         dist_module.timeseries.MvStudentTRandomWalk,
     }

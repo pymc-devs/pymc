@@ -29,6 +29,7 @@ from pymc.distributions.timeseries import (
 from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
+from pymc.tests.test_distributions_moments import assert_moment_is_expected
 from pymc.tests.test_distributions_random import BaseTestDistributionRandom
 
 
@@ -141,6 +142,28 @@ class TestGaussianRandomWalk:
             pm.logp(grw, [0, 0]).eval(),
             pm.logp(init, 0).eval() + scipy.stats.norm.logpdf(0),
         )
+
+    @pytest.mark.parametrize(
+        "mu, sigma, init, steps, size, expected",
+        [
+            (0, 1, Normal.dist(1), 10, None, np.ones((11,))),
+            (1, 1, Normal.dist(0), 10, (2,), np.full((2, 11), np.arange(11))),
+            (1, 1, Normal.dist([0, 1]), 10, None, np.vstack((np.arange(11), np.arange(11) + 1))),
+            (0, [1, 1], Normal.dist(0), 10, None, np.zeros((2, 11))),
+            (
+                [1, -1],
+                1,
+                Normal.dist(0),
+                10,
+                (4, 2),
+                np.full((4, 2, 11), np.vstack((np.arange(11), -np.arange(11)))),
+            ),
+        ],
+    )
+    def test_moment(self, mu, sigma, init, steps, size, expected):
+        with Model() as model:
+            GaussianRandomWalk("x", mu=mu, sigma=sigma, init=init, steps=steps, size=size)
+        assert_moment_is_expected(model, expected)
 
 
 @pytest.mark.xfail(reason="Timeseries not refactored")
