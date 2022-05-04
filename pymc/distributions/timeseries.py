@@ -26,6 +26,7 @@ from pymc.aesaraf import change_rv_size, floatX, intX
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
+from pymc.distributions.distribution import moment
 from pymc.distributions.logprob import ignore_logprob, logp
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.util import check_dist_not_registered
@@ -131,7 +132,9 @@ class GaussianRandomWalkRV(RandomVariable):
         else:
             dist_shape = (*size, int(steps))
 
-        innovations = rng.normal(loc=mu, scale=sigma, size=dist_shape)
+        # Add one dimension to the right, so that mu and sigma broadcast safely along
+        # the steps dimension
+        innovations = rng.normal(loc=mu[..., None], scale=sigma[..., None], size=dist_shape)
         grw = np.concatenate([init[..., None], innovations], axis=-1)
         return np.cumsum(grw, axis=-1)
 
@@ -211,6 +214,14 @@ class GaussianRandomWalk(distribution.Continuous):
 
         return super().dist([mu, sigma, init, steps], size=size, **kwargs)
 
+    def moment(rv, size, mu, sigma, init, steps):
+        grw_moment = at.zeros_like(rv)
+        grw_moment = at.set_subtensor(grw_moment[..., 0], moment(init))
+        # Add one dimension to the right, so that mu broadcasts safely along the steps
+        # dimension
+        grw_moment = at.set_subtensor(grw_moment[..., 1:], mu[..., None])
+        return at.cumsum(grw_moment, axis=-1)
+
     def logp(
         value: at.Variable,
         mu: at.Variable,
@@ -225,7 +236,9 @@ class GaussianRandomWalk(distribution.Continuous):
 
         # Make time series stationary around the mean value
         stationary_series = value[..., 1:] - value[..., :-1]
-        series_logp = logp(Normal.dist(mu, sigma), stationary_series)
+        # Add one dimension to the right, so that mu and sigma broadcast safely along
+        # the steps dimension
+        series_logp = logp(Normal.dist(mu[..., None], sigma[..., None]), stationary_series)
 
         return check_parameters(
             init_logp + series_logp.sum(axis=-1),
