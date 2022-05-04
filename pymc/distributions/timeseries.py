@@ -23,10 +23,10 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.utils import normalize_size_param
 
 from pymc.aesaraf import change_rv_size, floatX, intX
-from pymc.distributions import distribution, logprob, multivariate
+from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.logprob import ignore_logprob
+from pymc.distributions.logprob import ignore_logprob, logp
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.util import check_dist_not_registered
 
@@ -218,27 +218,14 @@ class GaussianRandomWalk(distribution.Continuous):
         init: at.Variable,
         steps: at.Variable,
     ) -> at.TensorVariable:
-        """Calculate log-probability of Gaussian Random Walk distribution at specified value.
-
-        Parameters
-        ----------
-        value: at.Variable,
-        mu: at.Variable,
-        sigma: at.Variable,
-        init: at.Variable, Not used
-        steps: at.Variable, Not used
-
-        Returns
-        -------
-        TensorVariable
-        """
+        """Calculate log-probability of Gaussian Random Walk distribution at specified value."""
 
         # Calculate initialization logp
-        init_logp = logprob.logp(init, value[..., 0])
+        init_logp = logp(init, value[..., 0])
 
         # Make time series stationary around the mean value
         stationary_series = value[..., 1:] - value[..., :-1]
-        series_logp = logprob.logp(Normal.dist(mu, sigma), stationary_series)
+        series_logp = logp(Normal.dist(mu, sigma), stationary_series)
 
         return check_parameters(
             init_logp + series_logp.sum(axis=-1),
