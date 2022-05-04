@@ -364,6 +364,40 @@ class Distribution(metaclass=DistributionMeta):
 
 
 class SymbolicDistribution:
+    """Symbolic statistical distribution
+
+    While traditional PyMC distributions are represented by a single RandomVariable
+    graph, Symbolic distributions correspond to a larger graph that contains one or
+    more RandomVariables and an arbitrary number of deterministic operations, which
+    represent their own kind of distribution.
+
+    The graphs returned by symbolic distributions can be evaluated directly to
+    obtain valid draws and can further be parsed by Aeppl to derive the
+    corresponding logp at runtime.
+
+    Check pymc.distributions.Censored for an example of a symbolic distribution.
+
+    Symbolic distributions must implement the following classmethods:
+    cls.dist
+        Performs input validation and converts optional alternative parametrizations
+        to a canonical parametrization. It should call `super().dist()`, passing a
+        list with the default parameters as the first and only non keyword argument,
+        followed by other keyword arguments like size and rngs, and return the result
+    cls.num_rngs
+        Returns the number of rngs given the same arguments passed by the user when
+        calling the distribution
+    cls.ndim_supp
+        Returns the support of the symbolic distribution, given the default set of
+        parameters. This may not always be constant, for instance if the symbolic
+        distribution can be defined based on an arbitrary base distribution.
+    cls.rv_op
+        Returns a TensorVariable that represents the symbolic distribution
+        parametrized by a default set of parameters and a size and rngs arguments
+    cls.change_size
+        Returns an equivalent symbolic distribution with a different size. This is
+        analogous to `pymc.aesaraf.change_rv_size` for `RandomVariable`s.
+    """
+
     def __new__(
         cls,
         name: str,
@@ -378,37 +412,6 @@ class SymbolicDistribution:
     ) -> TensorVariable:
         """Adds a TensorVariable corresponding to a PyMC symbolic distribution to the
         current model.
-
-        While traditional PyMC distributions are represented by a single RandomVariable
-        graph, Symbolic distributions correspond to a larger graph that contains one or
-        more RandomVariables and an arbitrary number of deterministic operations, which
-        represent their own kind of distribution.
-
-        The graphs returned by symbolic distributions can be evaluated directly to
-        obtain valid draws and can further be parsed by Aeppl to derive the
-        corresponding logp at runtime.
-
-        Check pymc.distributions.Censored for an example of a symbolic distribution.
-
-        Symbolic distributions must implement the following classmethods:
-        cls.dist
-            Performs input validation and converts optional alternative parametrizations
-            to a canonical parametrization. It should call `super().dist()`, passing a
-            list with the default parameters as the first and only non keyword argument,
-            followed by other keyword arguments like size and rngs, and return the result
-        cls.num_rngs
-            Returns the number of rngs given the same arguments passed by the user when
-            calling the distribution
-        cls.ndim_supp
-            Returns the support of the symbolic distribution, given the default set of
-            parameters. This may not always be constant, for instance if the symbolic
-            distribution can be defined based on an arbitrary base distribution.
-        cls.rv_op
-            Returns a TensorVariable that represents the symbolic distribution
-            parametrized by a default set of parameters and a size and rngs arguments
-        cls.change_size
-            Returns an equivalent symbolic distribution with a different size. This is
-            analogous to `pymc.aesaraf.change_rv_size` for `RandomVariable`s.
 
         Parameters
         ----------
@@ -524,7 +527,6 @@ class SymbolicDistribution:
             The inputs to the `RandomVariable` `Op`.
         shape : int, tuple, Variable, optional
             A tuple of sizes for each dimension of the new RV.
-
             An Ellipsis (...) may be inserted in the last position to short-hand refer to
             all the dimensions that the RV would get if no shape/size/dims were passed at all.
         size : int, tuple, Variable, optional
