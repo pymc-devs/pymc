@@ -2414,7 +2414,7 @@ class TestMatchesScipy:
             sigma.eval()
 
         sigma = [1, 2]
-        assert_almost_equal(get_tau_sigma(sigma=sigma), [1.0 / np.array(sigma)**2, np.array(sigma)]
+        assert_almost_equal(get_tau_sigma(sigma=sigma), [1.0 / np.array(sigma)**2, np.array(sigma)])
 
     @pytest.mark.parametrize(
         "value,mu,sigma,nu,logp",
