@@ -38,8 +38,8 @@ from pymc.aesaraf import (
     _conversion_map,
     change_rv_size,
     compile_pymc,
+    convert_observed_data,
     extract_obs_data,
-    pandas_to_array,
     rvs_to_value_vars,
     take_along_axis,
     walk_model,
@@ -413,9 +413,9 @@ def test_extract_obs_data():
 
 
 @pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
-def test_pandas_to_array(input_dtype):
+def test_convert_observed_data(input_dtype):
     """
-    Ensure that pandas_to_array returns the dense array, masked array,
+    Ensure that convert_observed_data returns the dense array, masked array,
     graph variable, TensorVariable, or sparse matrix as appropriate.
     """
     pd = pytest.importorskip("pandas")
@@ -437,7 +437,7 @@ def test_pandas_to_array(input_dtype):
     square_generator = (np.array([i**2], dtype=int) for i in range(100))
 
     # Alias the function to be tested
-    func = pandas_to_array
+    func = convert_observed_data
 
     #####
     # Perform the various tests
@@ -496,7 +496,7 @@ def test_pandas_to_array(input_dtype):
 def test_pandas_to_array_pandas_index():
     pd = pytest.importorskip("pandas")
     data = pd.Index([1, 2, 3])
-    result = pandas_to_array(data)
+    result = convert_observed_data(data)
     expected = np.array([1, 2, 3])
     np.testing.assert_array_equal(result, expected)
 
