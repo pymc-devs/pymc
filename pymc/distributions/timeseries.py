@@ -13,7 +13,7 @@
 #   limitations under the License.
 import warnings
 
-from typing import Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
 import aesara
 import aesara.tensor as at
@@ -31,13 +31,20 @@ from aesara.tensor.basic_opt import ShapeFeature, topo_constant_folding
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.utils import normalize_size_param
 
-from pymc.aesaraf import change_rv_size, floatX, intX
+from pymc.aesaraf import change_rv_size, convert_observed_data, floatX, intX
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicDistribution, _moment, moment
 from pymc.distributions.logprob import ignore_logprob, logp
-from pymc.distributions.shape_utils import Shape, rv_size_is_none, to_tuple
+from pymc.distributions.shape_utils import (
+    Dims,
+    Shape,
+    convert_dims,
+    rv_size_is_none,
+    to_tuple,
+)
+from pymc.model import modelcontext
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -50,12 +57,15 @@ __all__ = [
 ]
 
 
-def get_steps_from_shape(
+def get_steps(
     steps: Optional[Union[int, np.ndarray, TensorVariable]],
-    shape: Optional[Shape],
+    *,
+    shape: Optional[Shape] = None,
+    dims: Optional[Dims] = None,
+    observed: Optional[Any] = None,
     step_shape_offset: int = 0,
 ):
-    """Extract number of steps from shape information
+    """Extract number of steps from shape / dims / observed information
 
     Parameters
     ----------
@@ -63,38 +73,45 @@ def get_steps_from_shape(
         User specified steps for timeseries distribution
     shape:
         User specified shape for timeseries distribution
+    dims:
+        User specified dims for timeseries distribution
+    observed:
+        User specified observed data from timeseries distribution
     step_shape_offset:
         Difference between last shape dimension and number of steps in timeseries
         distribution, defaults to 0
-
-    Raises
-    ------
-    ValueError
-        If neither shape nor steps are provided
 
     Returns
     -------
     steps
         Steps, if specified directly by user, or inferred from the last dimension of
-        shape. When both steps and shape are provided, a symbolic Assert is added
-        to make sure they are consistent.
+        shape / dims / observed. When two sources of step information are provided,
+        a symbolic Assert is added to ensure they are consistent.
     """
-    steps_from_shape = None
+    inferred_steps = None
     if shape is not None:
         shape = to_tuple(shape)
         if shape[-1] is not ...:
-            steps_from_shape = shape[-1] - step_shape_offset
-    if steps is None:
-        if steps_from_shape is not None:
-            steps = steps_from_shape
-        else:
-            raise ValueError("Must specify steps or shape parameter")
-    elif steps_from_shape is not None:
-        # Assert that steps and shape are consistent
-        steps = Assert(msg="Steps do not match last shape dimension")(
-            steps, at.eq(steps, steps_from_shape)
+            inferred_steps = shape[-1] - step_shape_offset
+
+    if inferred_steps is None and dims is not None:
+        dims = convert_dims(dims)
+        if dims[-1] is not ...:
+            model = modelcontext(None)
+            inferred_steps = model.dim_lengths[dims[-1]] - step_shape_offset
+
+    if inferred_steps is None and observed is not None:
+        observed = convert_observed_data(observed)
+        inferred_steps = observed.shape[-1] - step_shape_offset
+
+    if inferred_steps is None:
+        inferred_steps = steps
+    # If there are two sources of information for the steps, assert they are consistent
+    elif steps is not None:
+        inferred_steps = Assert(msg="Steps do not match last shape dimension")(
+            inferred_steps, at.eq(inferred_steps, steps)
         )
-    return steps
+    return inferred_steps
 
 
 class GaussianRandomWalkRV(RandomVariable):
@@ -212,26 +229,38 @@ class GaussianRandomWalk(distribution.Continuous):
 
         .. warning:: init will be cloned, rendering them independent of the ones passed as input.
 
-    steps : int
-        Number of steps in Gaussian Random Walks (steps > 0).
+    steps : int, optional
+        Number of steps in Gaussian Random Walk (steps > 0). Only needed if size is
+        used to specify distribution
     """
 
     rv_op = gaussianrandomwalk
 
-    def __new__(cls, name, mu=0.0, sigma=1.0, init=None, steps=None, **kwargs):
-        if init is not None:
-            check_dist_not_registered(init)
-        return super().__new__(cls, name, mu, sigma, init, steps, **kwargs)
+    def __new__(cls, *args, steps=None, **kwargs):
+        steps = get_steps(
+            steps=steps,
+            shape=None,  # Shape will be checked in `cls.dist`
+            dims=kwargs.get("dims", None),
+            observed=kwargs.get("observed", None),
+            step_shape_offset=1,
+        )
+        return super().__new__(cls, *args, steps=steps, **kwargs)
 
     @classmethod
     def dist(
-        cls, mu=0.0, sigma=1.0, init=None, steps=None, size=None, **kwargs
+        cls, mu=0.0, sigma=1.0, *, init=None, steps=None, size=None, **kwargs
     ) -> at.TensorVariable:
 
         mu = at.as_tensor_variable(floatX(mu))
         sigma = at.as_tensor_variable(floatX(sigma))
 
-        steps = get_steps_from_shape(steps, kwargs.get("shape", None), step_shape_offset=1)
+        steps = get_steps(
+            steps=steps,
+            shape=kwargs.get("shape", None),
+            step_shape_offset=1,
+        )
+        if steps is None:
+            raise ValueError("Must specify steps or shape parameter")
         steps = at.as_tensor_variable(intX(steps))
 
         # If no scalar distribution is passed then initialize with a Normal of same mu and sigma
@@ -245,6 +274,7 @@ class GaussianRandomWalk(distribution.Continuous):
                 and init.owner.op.ndim_supp == 0
             ):
                 raise TypeError("init must be a univariate distribution variable")
+            check_dist_not_registered(init)
 
         # Ignores logprob of init var because that's accounted for in the logp method
         init = ignore_logprob(init)
@@ -340,6 +370,9 @@ class AR(SymbolicDistribution):
     ar_order: int, optional
         Order of the AR process. Inferred from length of the last dimension of rho, if
         possible. ar_order = rho.shape[-1] if constant else rho.shape[-1] - 1
+    steps : int, optional
+        Number of steps in AR process (steps > 0). Only needed if size is used to
+        specify distribution
 
     Notes
     -----
@@ -359,6 +392,15 @@ class AR(SymbolicDistribution):
             ar3 = pm.AR("ar3", coefs, sigma=1.0, init_dist=init, constant=True, steps=500)
 
     """
+
+    def __new__(cls, *args, steps=None, **kwargs):
+        steps = get_steps(
+            steps=steps,
+            shape=None,  # Shape will be checked in `cls.dist`
+            dims=kwargs.get("dims", None),
+            observed=kwargs.get("observed", None),
+        )
+        return super().__new__(cls, *args, steps=steps, **kwargs)
 
     @classmethod
     def dist(
@@ -384,7 +426,9 @@ class AR(SymbolicDistribution):
             )
             init_dist = kwargs["init"]
 
-        steps = get_steps_from_shape(steps, kwargs.get("shape", None))
+        steps = get_steps(steps=steps, shape=kwargs.get("shape", None))
+        if steps is None:
+            raise ValueError("Must specify steps or shape parameter")
         steps = at.as_tensor_variable(intX(steps), ndim=0)
 
         if ar_order is None:
