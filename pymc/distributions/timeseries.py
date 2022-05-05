@@ -393,14 +393,19 @@ class AR(SymbolicDistribution):
 
     """
 
-    def __new__(cls, *args, steps=None, **kwargs):
+    def __new__(cls, name, rho, *args, steps=None, constant=False, ar_order=None, **kwargs):
+        rhos = at.atleast_1d(at.as_tensor_variable(floatX(rho)))
+        ar_order = cls._get_ar_order(rhos=rhos, constant=constant, ar_order=ar_order)
         steps = get_steps(
             steps=steps,
             shape=None,  # Shape will be checked in `cls.dist`
             dims=kwargs.get("dims", None),
             observed=kwargs.get("observed", None),
+            step_shape_offset=ar_order,
         )
-        return super().__new__(cls, *args, steps=steps, **kwargs)
+        return super().__new__(
+            cls, name, rhos, *args, steps=steps, constant=constant, ar_order=ar_order, **kwargs
+        )
 
     @classmethod
     def dist(
@@ -426,33 +431,11 @@ class AR(SymbolicDistribution):
             )
             init_dist = kwargs["init"]
 
-        steps = get_steps(steps=steps, shape=kwargs.get("shape", None))
+        ar_order = cls._get_ar_order(rhos=rhos, constant=constant, ar_order=ar_order)
+        steps = get_steps(steps=steps, shape=kwargs.get("shape", None), step_shape_offset=ar_order)
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
         steps = at.as_tensor_variable(intX(steps), ndim=0)
-
-        if ar_order is None:
-            # If ar_order is not specified we do constant folding on the shape of rhos
-            # to retrieve it. For example, this will detect that
-            # Normal(size=(5, 3)).shape[-1] == 3, which is not known by Aesara before.
-            shape_fg = FunctionGraph(
-                outputs=[rhos.shape[-1]],
-                features=[ShapeFeature()],
-                clone=True,
-            )
-            (folded_shape,) = optimize_graph(shape_fg, custom_opt=topo_constant_folding).outputs
-            folded_shape = getattr(folded_shape, "data", None)
-            if folded_shape is None:
-                raise ValueError(
-                    "Could not infer ar_order from last dimension of rho. Pass it "
-                    "explictily or make sure rho have a static shape"
-                )
-            ar_order = int(folded_shape) - int(constant)
-            if ar_order < 1:
-                raise ValueError(
-                    "Inferred ar_order is smaller than 1. Increase the last dimension "
-                    "of rho or remove constant_term"
-                )
 
         if init_dist is not None:
             if not isinstance(init_dist, TensorVariable) or not isinstance(
@@ -476,6 +459,41 @@ class AR(SymbolicDistribution):
         init_dist = ignore_logprob(init_dist)
 
         return super().dist([rhos, sigma, init_dist, steps, ar_order, constant], **kwargs)
+
+    @classmethod
+    def _get_ar_order(cls, rhos: TensorVariable, ar_order: Optional[int], constant: bool) -> int:
+        """Compute ar_order given inputs
+
+        If ar_order is not specified we do constant folding on the shape of rhos
+        to retrieve it. For example, this will detect that
+        Normal(size=(5, 3)).shape[-1] == 3, which is not known by Aesara before.
+
+        Raises
+        ------
+        ValueError
+            If inferred ar_order cannot be inferred from rhos or if it is less than 1
+        """
+        if ar_order is None:
+            shape_fg = FunctionGraph(
+                outputs=[rhos.shape[-1]],
+                features=[ShapeFeature()],
+                clone=True,
+            )
+            (folded_shape,) = optimize_graph(shape_fg, custom_opt=topo_constant_folding).outputs
+            folded_shape = getattr(folded_shape, "data", None)
+            if folded_shape is None:
+                raise ValueError(
+                    "Could not infer ar_order from last dimension of rho. Pass it "
+                    "explictily or make sure rho have a static shape"
+                )
+            ar_order = int(folded_shape) - int(constant)
+            if ar_order < 1:
+                raise ValueError(
+                    "Inferred ar_order is smaller than 1. Increase the last dimension "
+                    "of rho or remove constant_term"
+                )
+
+        return ar_order
 
     @classmethod
     def num_rngs(cls, *args, **kwargs):
@@ -540,7 +558,7 @@ class AR(SymbolicDistribution):
             fn=step,
             outputs_info=[{"initial": init_.T, "taps": range(-ar_order, 0)}],
             non_sequences=[rhos_bcast_.T[::-1], sigma_.T, noise_rng],
-            n_steps=at.max((0, steps_ - ar_order)),
+            n_steps=steps_,
             strict=True,
         )
         (noise_next_rng,) = tuple(innov_updates_.values())

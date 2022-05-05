@@ -363,7 +363,7 @@ class TestAR:
         beta_tp.set_value(np.zeros((ar_order,)))  # Should always be close to zero
         sigma_tp = np.full(batch_size, [0.01, 0.1, 1, 10, 100])
         y_eval = t0["y"].eval({t0["sigma"]: sigma_tp})
-        assert y_eval.shape == (*batch_size, steps)
+        assert y_eval.shape == (*batch_size, steps + ar_order)
         assert np.allclose(y_eval.std(axis=(0, 2)), [0.01, 0.1, 1, 10, 100], rtol=0.1)
 
     def test_batched_init_dist(self):
@@ -389,7 +389,7 @@ class TestAR:
         init_dist = t0["y"].owner.inputs[2]
         init_dist_tp = np.full((batch_size, ar_order), (np.arange(batch_size) * 100)[:, None])
         y_eval = t0["y"].eval({init_dist: init_dist_tp})
-        assert y_eval.shape == (batch_size, steps)
+        assert y_eval.shape == (batch_size, steps + ar_order)
         assert np.allclose(
             y_eval[:, -10:].mean(-1), np.arange(batch_size) * 100, rtol=0.1, atol=0.5
         )
@@ -429,7 +429,7 @@ class TestAR:
     def test_moment(self, size, expected):
         with Model() as model:
             init_dist = Constant.dist([[1.0, 2.0], [3.0, 4.0]])
-            AR("x", rho=[0, 0], init_dist=init_dist, steps=7, size=size)
+            AR("x", rho=[0, 0], init_dist=init_dist, steps=5, size=size)
         assert_moment_is_expected(model, expected, check_finite_logp=False)
 
 
