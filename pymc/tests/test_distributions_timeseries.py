@@ -16,6 +16,8 @@ import numpy as np
 import pytest
 import scipy.stats
 
+from aesara.tensor import TensorVariable
+
 import pymc as pm
 
 from pymc.aesaraf import floatX
@@ -23,12 +25,73 @@ from pymc.distributions.continuous import Flat, HalfNormal, Normal
 from pymc.distributions.discrete import Constant
 from pymc.distributions.logprob import logp
 from pymc.distributions.multivariate import Dirichlet
-from pymc.distributions.timeseries import AR, GARCH11, EulerMaruyama, GaussianRandomWalk
+from pymc.distributions.timeseries import (
+    AR,
+    GARCH11,
+    EulerMaruyama,
+    GaussianRandomWalk,
+    get_steps,
+)
 from pymc.model import Model
 from pymc.sampling import draw, sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
 from pymc.tests.test_distributions_moments import assert_moment_is_expected
 from pymc.tests.test_distributions_random import BaseTestDistributionRandom
+
+
+@pytest.mark.parametrize(
+    "steps, shape, step_shape_offset, expected_steps, consistent",
+    [
+        (10, None, 0, 10, True),
+        (10, None, 1, 10, True),
+        (None, (10,), 0, 10, True),
+        (None, (10,), 1, 9, True),
+        (None, (10, 5), 0, 5, True),
+        (None, (10, ...), 0, None, True),
+        (None, None, 0, None, True),
+        (10, (10,), 0, 10, True),
+        (10, (11,), 1, 10, True),
+        (10, (5, ...), 1, 10, True),
+        (10, (5, 5), 0, 5, False),
+        (10, (5, 10), 1, 9, False),
+    ],
+)
+@pytest.mark.parametrize("info_source", ("shape", "dims", "observed"))
+def test_get_steps(info_source, steps, shape, step_shape_offset, expected_steps, consistent):
+    if info_source == "shape":
+        inferred_steps = get_steps(steps=steps, shape=shape, step_shape_offset=step_shape_offset)
+
+    elif info_source == "dims":
+        if shape is None:
+            dims = None
+            coords = {}
+        else:
+            dims = tuple(str(i) if shape is not ... else ... for i, shape in enumerate(shape))
+            coords = {str(i): range(shape) for i, shape in enumerate(shape) if shape is not ...}
+        with Model(coords=coords):
+            inferred_steps = get_steps(steps=steps, dims=dims, step_shape_offset=step_shape_offset)
+
+    elif info_source == "observed":
+        if shape is None:
+            observed = None
+        else:
+            if ... in shape:
+                # There is no equivalent to implied dims in observed
+                return
+            observed = np.zeros(shape)
+        inferred_steps = get_steps(
+            steps=steps, observed=observed, step_shape_offset=step_shape_offset
+        )
+
+    if not isinstance(inferred_steps, TensorVariable):
+        assert inferred_steps == expected_steps
+    else:
+        if consistent:
+            assert inferred_steps.eval() == expected_steps
+        else:
+            assert inferred_steps.owner.inputs[0].eval() == expected_steps
+            with pytest.raises(AssertionError, match="Steps do not match"):
+                inferred_steps.eval()
 
 
 class TestGaussianRandomWalk:
@@ -126,6 +189,18 @@ class TestGaussianRandomWalk:
     def test_inconsistent_steps_and_shape(self):
         with pytest.raises(AssertionError, match="Steps do not match last shape dimension"):
             x = GaussianRandomWalk.dist(steps=12, shape=45)
+
+    def test_inferred_steps_from_dims(self):
+        with pm.Model(coords={"batch": range(5), "steps": range(20)}):
+            x = GaussianRandomWalk("x", dims=("batch", "steps"))
+        steps = x.owner.inputs[-1]
+        assert steps.eval() == 19
+
+    def test_inferred_steps_from_observed(self):
+        with pm.Model():
+            x = GaussianRandomWalk("x", observed=np.zeros(10))
+        steps = x.owner.inputs[-1]
+        assert steps.eval() == 9
 
     @pytest.mark.parametrize(
         "init",
