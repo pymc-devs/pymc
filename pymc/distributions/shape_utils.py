@@ -26,7 +26,7 @@ from aesara.graph.basic import Variable
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
-from pymc.aesaraf import pandas_to_array
+from pymc.aesaraf import convert_observed_data
 
 __all__ = [
     "to_tuple",
@@ -558,7 +558,7 @@ def resize_from_observed(
         Observations as numpy array or `Variable`.
     """
     if not hasattr(observed, "shape"):
-        observed = pandas_to_array(observed)
+        observed = convert_observed_data(observed)
     ndim_resize = observed.ndim - ndim_implied
     resize_shape = tuple(observed.shape[d] for d in range(ndim_resize))
     return resize_shape, observed
