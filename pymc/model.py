@@ -50,10 +50,10 @@ from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import (
     compile_pymc,
+    convert_observed_data,
     gradient,
     hessian,
     inputvars,
-    pandas_to_array,
     rvs_to_value_vars,
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
@@ -1158,7 +1158,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         if isinstance(values, list):
             values = np.array(values)
-        values = pandas_to_array(values)
+        values = convert_observed_data(values)
         dims = self.RV_dims.get(name, None) or ()
         coords = coords or {}
 
@@ -1290,7 +1290,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         """
         name = rv_var.name
-        data = pandas_to_array(data).astype(rv_var.dtype)
+        data = convert_observed_data(data).astype(rv_var.dtype)
 
         if data.ndim != rv_var.ndim:
             raise ShapeError(

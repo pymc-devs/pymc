@@ -81,16 +81,13 @@ __all__ = [
     "set_at_rng",
     "at_rng",
     "take_along_axis",
-    "pandas_to_array",
+    "convert_observed_data",
 ]
 
 
-def pandas_to_array(data):
-    """Convert a pandas object to a NumPy array.
+def convert_observed_data(data):
+    """Convert user provided dataset to accepted formats."""
 
-    XXX: When `data` is a generator, this will return an Aesara tensor!
-
-    """
     if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
         # typically, but not limited to pandas objects
         vals = data.to_numpy()
