@@ -227,7 +227,8 @@ def get_tau_sigma(tau=None, sigma=None):
                 sigma_ = check_parameters(sigma, sigma > 0, msg="sigma > 0")
             else:
                 sigma_ = np.asarray(sigma)
-                assert np.all(sigma_ > 0), "sigma must be positive"
+                if np.any(sigma_ <= 0):
+                    raise ValueError("sigma must be positive")
             tau = sigma_**-2.0
 
     else:
@@ -238,7 +239,8 @@ def get_tau_sigma(tau=None, sigma=None):
                 tau_ = check_parameters(tau, tau > 0, msg="tau > 0")
             else:
                 tau_ = np.asarray(tau)
-                assert np.all(tau_ > 0), "tau must be positive"
+                if np.any(tau_ <= 0):
+                    raise ValueError("tau must be positive")
             sigma = tau_**-0.5
 
     return floatX(tau), floatX(sigma)
