@@ -58,12 +58,15 @@ def test_get_scaling():
 
     # list or tuple tests
     # total_size contains other than Ellipsis, None and Int
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="Unrecognized `total_size` type"):
         _get_scaling([2, 4, 5, 9, 11.5], (2, 3), 2)
     # check with Ellipsis
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Double Ellipsis in `total_size` is restricted"):
         _get_scaling([1, 2, 5, Ellipsis, Ellipsis], (2, 3), 2)
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Length of `total_size` is too big, number of scalings is bigger that ndim",
+    ):
         _get_scaling([1, 2, 5, Ellipsis], (2, 3), 2)
 
     assert _get_scaling([Ellipsis], (2, 3), 2).eval() == 1
@@ -71,13 +74,19 @@ def test_get_scaling():
     assert _get_scaling([4, 5, 9, Ellipsis, 32, 12], (2, 3, 2), 5).eval() == 960
     assert _get_scaling([4, 5, 9, Ellipsis], (2, 3, 2), 5).eval() == 15
     # total_size with no Ellipsis (end = [ ])
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Length of `total_size` is too big, number of scalings is bigger that ndim",
+    ):
         _get_scaling([1, 2, 5], (2, 3), 2)
 
     assert _get_scaling([], (2, 3), 2).eval() == 1
     assert _get_scaling((), (2, 3), 2).eval() == 1
     # total_size invalid type
-    with pytest.raises(TypeError):
+    with pytest.raises(
+        TypeError,
+        match="Unrecognized `total_size` type, expected int or list of ints, got {1, 2, 5}",
+    ):
         _get_scaling({1, 2, 5}, (2, 3), 2)
 
     # test with rvar from model graph
