@@ -10,7 +10,7 @@ focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
-Check out the `PyMC overview <https://docs.pymc.io/en/latest/learn/examples/pymc_overview.html>`__,  or
+Check out the `PyMC overview <https://docs.pymc.io/en/latest/learn/core_notebooks/pymc_overview.html>`__,  or
 one of `the many examples <https://docs.pymc.io/projects/examples/en/latest/>`__!
 For questions on PyMC, head on over to our `PyMC Discourse <https://discourse.pymc.io/>`__ forum.
 
@@ -40,7 +40,7 @@ If you already know about Bayesian statistics:
 ----------------------------------------------
 
 -  `API quickstart guide <https://docs.pymc.io/en/stable/pymc-examples/examples/pymc3_howto/api_quickstart.html>`__
--  The `PyMC tutorial <https://docs.pymc.io/en/latest/learn/examples/pymc_overview.html>`__
+-  The `PyMC tutorial <https://docs.pymc.io/en/latest/learn/core_notebooks/pymc_overview.html>`__
 -  `PyMC examples <https://docs.pymc.io/projects/examples/en/latest/>`__ and the `API reference <https://docs.pymc.io/en/stable/api.html>`__
 
 Learn Bayesian statistics with a book together with PyMC
