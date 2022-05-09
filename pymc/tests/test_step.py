@@ -50,7 +50,6 @@ from pymc.step_methods import (
     CompoundStep,
     DEMetropolis,
     DEMetropolisZ,
-    EllipticalSlice,
     HamiltonianMC,
     Metropolis,
     MultivariateNormalProposal,
@@ -62,7 +61,6 @@ from pymc.step_methods import (
 from pymc.step_methods.mlda import extract_Q_estimate
 from pymc.tests.checks import close_to
 from pymc.tests.models import (
-    mv_prior_simple,
     mv_simple,
     mv_simple_coarse,
     mv_simple_discrete,
@@ -152,19 +150,6 @@ class TestStepMethods:
             )
         for step in steps:
             idata = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
-            self.check_stat(check, idata, step.__class__.__name__)
-
-    @pytest.mark.xfail(reason="EllipticalSlice not refactored for v4")
-    def test_step_elliptical_slice(self):
-        start, model, (K, L, mu, std, noise) = mv_prior_simple()
-        unc = noise**0.5
-        check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, std, unc / 10.0))
-        with model:
-            steps = (EllipticalSlice(prior_cov=K), EllipticalSlice(prior_chol=L))
-        for step in steps:
-            idata = sample(
-                5000, tune=0, step=step, start=start, model=model, random_seed=1, chains=1
-            )
             self.check_stat(check, idata, step.__class__.__name__)
 
 
@@ -1311,7 +1296,6 @@ class TestRVsAssignmentSteps:
             (HamiltonianMC, {}),
             (Metropolis, {}),
             (Slice, {}),
-            (EllipticalSlice, {"prior_cov": np.eye(1)}),
             (DEMetropolis, {}),
             (DEMetropolisZ, {}),
             # (MLDA, {}),  # TODO

@@ -14,7 +14,6 @@ Instead update the vNext section until 4.0.0 is out.
 We plan to get these working again, but at this point their inner workings have not been refactored.
 - Timeseries distributions (see [#4642](https://github.com/pymc-devs/pymc/issues/4642))
 - Nested Mixture distributions (see [#5533](https://github.com/pymc-devs/pymc/issues/5533))
-- Elliptical slice sampling (see [#5137](https://github.com/pymc-devs/pymc/issues/5137))
 - `pm.sample_posterior_predictive_w` (see [#4807](https://github.com/pymc-devs/pymc/issues/4807))
 - Partially observed Multivariate distributions (see [#5260](https://github.com/pymc-devs/pymc/issues/5260))
 
@@ -32,6 +31,7 @@ Signature and default parameters changed for several distributions (see [#5628](
     - `pm.AsymmetricLaplace` positional arguments re-ordered
     - `pm.AsymmetricLaplace` now requires `mu` to be specified (no longer defaults to 0)
 - BART was removed [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental)
+- The `pm.EllipticalSlice` sampler was removed (see [#5756](https://github.com/pymc-devs/pymc/issues/5756)).
 - `BaseStochasticGradient` was removed (see [#5630](https://github.com/pymc-devs/pymc/pull/5630))
 - ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
