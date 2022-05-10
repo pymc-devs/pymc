@@ -99,7 +99,7 @@ class TestData(SeededTest):
         with pm.Model() as model:
             x = pm.MutableData("x", [1.0, 2.0, 3.0], dims="obs_id")
             beta = pm.Normal("beta", 0, 10.0)
-            pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y, dims="obs_id")
+            pm.Normal("obs", beta * x, np.sqrt(1e-3), observed=y, dims="obs_id")
             idata = pm.sample(
                 10,
                 tune=100,
