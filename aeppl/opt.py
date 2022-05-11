@@ -1,12 +1,10 @@
 from typing import Dict, Optional, Tuple
 
-import aesara
 import aesara.tensor as at
 from aesara.compile.mode import optdb
 from aesara.graph.basic import Variable
 from aesara.graph.features import Feature
 from aesara.graph.fg import FunctionGraph
-from aesara.graph.op import compute_test_value
 from aesara.graph.opt import local_optimizer
 from aesara.graph.optdb import EquilibriumDB, OptimizationQuery, SequenceDB
 from aesara.tensor.basic_opt import (
@@ -16,12 +14,7 @@ from aesara.tensor.basic_opt import (
 )
 from aesara.tensor.elemwise import DimShuffle, Elemwise
 from aesara.tensor.extra_ops import BroadcastTo
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.opt import (
-    local_dimshuffle_rv_lift,
-    local_rv_size_lift,
-    local_subtensor_rv_lift,
-)
+from aesara.tensor.random.opt import local_subtensor_rv_lift
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -226,72 +219,6 @@ def incsubtensor_rv_replace(fgraph, node):
     return [base_rv_var]
 
 
-@local_optimizer([BroadcastTo])
-def naive_bcast_rv_lift(fgraph, node):
-    """Lift a ``BroadcastTo`` through a ``RandomVariable`` ``Op``.
-
-    XXX: This implementation simply broadcasts the ``RandomVariable``'s
-    parameters, which won't always work (e.g. multivariate distributions).
-
-    TODO: Instead, it should use ``RandomVariable.ndim_supp``--and the like--to
-    determine which dimensions of each parameter need to be broadcasted.
-    Also, this doesn't need to remove ``size`` to perform the lifting, like it
-    currently does.
-    """
-
-    if not (
-        isinstance(node.op, BroadcastTo)
-        and node.inputs[0].owner
-        and isinstance(node.inputs[0].owner.op, RandomVariable)
-    ):
-        return None  # pragma: no cover
-
-    bcast_shape = node.inputs[1:]
-
-    rv_var = node.inputs[0]
-    rv_node = rv_var.owner
-
-    if hasattr(fgraph, "dont_touch_vars") and rv_var in fgraph.dont_touch_vars:
-        return None  # pragma: no cover
-
-    # Do not replace RV if it is associated with a value variable
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(
-        fgraph, "preserve_rv_mappings", None
-    )
-    if rv_map_feature is not None and rv_var in rv_map_feature.rv_values:
-        return None
-
-    if not bcast_shape:
-        # The `BroadcastTo` is broadcasting a scalar to a scalar (i.e. doing nothing)
-        assert rv_var.ndim == 0
-        return [rv_var]
-
-    size_lift_res = local_rv_size_lift.transform(fgraph, rv_node)
-    if size_lift_res is None:
-        lifted_node = rv_node
-    else:
-        _, lifted_rv = size_lift_res
-        lifted_node = lifted_rv.owner
-
-    rng, size, dtype, *dist_params = lifted_node.inputs
-
-    new_dist_params = [
-        at.broadcast_to(
-            param,
-            at.broadcast_shape(
-                tuple(param.shape), tuple(bcast_shape), arrays_are_shapes=True
-            ),
-        )
-        for param in dist_params
-    ]
-    bcasted_node = lifted_node.op.make_node(rng, size, dtype, *new_dist_params)
-
-    if aesara.config.compute_test_value != "off":
-        compute_test_value(bcasted_node)
-
-    return [bcasted_node.outputs[1]]
-
-
 logprob_rewrites_db = SequenceDB()
 logprob_rewrites_db.name = "logprob_rewrites_db"
 logprob_rewrites_db.register(
@@ -312,13 +239,7 @@ logprob_rewrites_db.register(
 # (or eventually) the graph outputs.  Often this is done by lifting other `Op`s
 # "up" through the random/measurable variables and into their inputs.
 measurable_ir_rewrites_db.register(
-    "dimshuffle_lift", local_dimshuffle_rv_lift, -5, "basic"
-)
-measurable_ir_rewrites_db.register(
     "subtensor_lift", local_subtensor_rv_lift, -5, "basic"
-)
-measurable_ir_rewrites_db.register(
-    "broadcast_to_lift", naive_bcast_rv_lift, -5, "basic"
 )
 measurable_ir_rewrites_db.register(
     "incsubtensor_lift", incsubtensor_rv_replace, -5, "basic"

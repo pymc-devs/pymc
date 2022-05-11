@@ -25,12 +25,8 @@ from aesara.tensor.var import TensorVariable
 
 from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
 from aeppl.logprob import _logprob, logprob
-from aeppl.opt import (
-    local_lift_DiracDelta,
-    logprob_rewrites_db,
-    naive_bcast_rv_lift,
-    subtensor_ops,
-)
+from aeppl.opt import local_lift_DiracDelta, logprob_rewrites_db, subtensor_ops
+from aeppl.tensor import naive_bcast_rv_lift
 from aeppl.utils import get_constant_value
 
 
