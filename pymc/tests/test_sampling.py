@@ -27,6 +27,7 @@ import scipy.special
 import xarray as xr
 
 from aesara import Mode, shared
+from aesara.compile import SharedVariable
 from arviz import InferenceData
 from arviz import from_dict as az_from_dict
 from arviz.tests.helpers import check_multiple_attrs
@@ -38,6 +39,7 @@ from pymc.aesaraf import compile_pymc
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
+from pymc.sampling import compile_forward_sampling_function
 from pymc.tests.helpers import SeededTest, fast_unstable_sampling_mode
 from pymc.tests.models import simple_init
 
@@ -1446,3 +1448,207 @@ def test_no_init_nuts_compound(caplog):
         b = pm.Poisson("b", 1)
         pm.sample(10, tune=10)
         assert "Initializing NUTS" not in caplog.text
+
+
+class TestCompileForwardSampler:
+    @staticmethod
+    def get_function_roots(function):
+        return [
+            var
+            for var in aesara.graph.basic.graph_inputs(function.maker.fgraph.outputs)
+            if var.name
+        ]
+
+    @staticmethod
+    def get_function_inputs(function):
+        return {i for i in function.maker.fgraph.inputs if not isinstance(i, SharedVariable)}
+
+    def test_linear_model(self):
+        with pm.Model() as model:
+            x = pm.MutableData("x", np.linspace(0, 1, 10))
+            y = pm.MutableData("y", np.ones(10))
+
+            alpha = pm.Normal("alpha", 0, 0.1)
+            beta = pm.Normal("beta", 0, 0.1)
+            mu = pm.Deterministic("mu", alpha + beta * x)
+            sigma = pm.HalfNormal("sigma", 0.1)
+            obs = pm.Normal("obs", mu, sigma, observed=y)
+
+        f = compile_forward_sampling_function(
+            [obs],
+            vars_in_trace=[alpha, beta, sigma, mu],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"alpha", "beta", "sigma"}
+        assert {i.name for i in self.get_function_roots(f)} == {"x", "alpha", "beta", "sigma"}
+
+        with pm.Model() as model:
+            x = pm.ConstantData("x", np.linspace(0, 1, 10))
+            y = pm.MutableData("y", np.ones(10))
+
+            alpha = pm.Normal("alpha", 0, 0.1)
+            beta = pm.Normal("beta", 0, 0.1)
+            mu = pm.Deterministic("mu", alpha + beta * x)
+            sigma = pm.HalfNormal("sigma", 0.1)
+            obs = pm.Normal("obs", mu, sigma, observed=y)
+
+        f = compile_forward_sampling_function(
+            [obs],
+            vars_in_trace=[alpha, beta, sigma, mu],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"alpha", "beta", "sigma", "mu"}
+        assert {i.name for i in self.get_function_roots(f)} == {"mu", "sigma"}
+
+    def test_nested_observed_model(self):
+        with pm.Model() as model:
+            p = pm.ConstantData("p", np.array([0.25, 0.5, 0.25]))
+            x = pm.MutableData("x", np.zeros(10))
+            y = pm.MutableData("y", np.ones(10))
+
+            category = pm.Categorical("category", p, observed=x)
+            beta = pm.Normal("beta", 0, 0.1, size=p.shape)
+            mu = pm.Deterministic("mu", beta[category])
+            sigma = pm.HalfNormal("sigma", 0.1)
+            pm.Normal("obs", mu, sigma, observed=y)
+
+        f = compile_forward_sampling_function(
+            outputs=model.observed_RVs,
+            vars_in_trace=[beta, mu, sigma],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"beta", "sigma"}
+        assert {i.name for i in self.get_function_roots(f)} == {"x", "p", "beta", "sigma"}
+
+        f = compile_forward_sampling_function(
+            outputs=model.observed_RVs,
+            vars_in_trace=[beta, mu, sigma],
+            basic_rvs=model.basic_RVs,
+            givens_dict={category: np.zeros(10, dtype=category.dtype)},
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"beta", "sigma"}
+        assert {i.name for i in self.get_function_roots(f)} == {
+            "x",
+            "p",
+            "category",
+            "beta",
+            "sigma",
+        }
+
+    def test_volatile_parameters(self):
+        with pm.Model() as model:
+            y = pm.MutableData("y", np.ones(10))
+            mu = pm.Normal("mu", 0, 1)
+            nested_mu = pm.Normal("nested_mu", mu, 1, size=10)
+            sigma = pm.HalfNormal("sigma", 1)
+            pm.Normal("obs", nested_mu, sigma, observed=y)
+
+        f = compile_forward_sampling_function(
+            outputs=model.observed_RVs,
+            vars_in_trace=[nested_mu, sigma],  # mu isn't in the trace and will be deemed volatile
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"sigma"}
+        assert {i.name for i in self.get_function_roots(f)} == {"sigma"}
+
+        f = compile_forward_sampling_function(
+            outputs=model.observed_RVs,
+            vars_in_trace=[mu, nested_mu, sigma],
+            basic_rvs=model.basic_RVs,
+            givens_dict={
+                mu: np.array(1.0)
+            },  # mu will be considered volatile because it's in givens
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"sigma"}
+        assert {i.name for i in self.get_function_roots(f)} == {"mu", "sigma"}
+
+    def test_distributions_op_from_graph(self):
+        with pm.Model() as model:
+            w = pm.Dirichlet("w", a=np.ones(3), size=(5, 3))
+
+            mu = pm.Normal("mu", mu=np.arange(3), sigma=1)
+
+            components = pm.Normal.dist(mu=mu, sigma=1, size=w.shape)
+            mix_mu = pm.Mixture("mix_mu", w=w, comp_dists=components)
+            obs = pm.Normal("obs", mix_mu, 1, observed=np.ones((5, 3)))
+
+        f = compile_forward_sampling_function(
+            outputs=[obs],
+            vars_in_trace=[mix_mu, mu, w],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"w", "mu", "mix_mu"}
+        assert {i.name for i in self.get_function_roots(f)} == {"mix_mu"}
+
+        f = compile_forward_sampling_function(
+            outputs=[obs],
+            vars_in_trace=[mu, w],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"w", "mu"}
+        assert {i.name for i in self.get_function_roots(f)} == {"w", "mu"}
+
+        f = compile_forward_sampling_function(
+            outputs=[obs],
+            vars_in_trace=[mix_mu, mu],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"mu"}
+        assert {i.name for i in self.get_function_roots(f)} == {"mu"}
+
+    def test_distributions_no_op_from_graph(self):
+        with pm.Model() as model:
+            latent_mu = pm.Normal("latent_mu", mu=np.arange(3), sigma=1)
+            mu = pm.Censored("mu", pm.Normal.dist(mu=latent_mu, sigma=1), lower=-1, upper=1)
+            obs = pm.Normal("obs", mu, 1, observed=np.ones((10, 3)))
+
+        f = compile_forward_sampling_function(
+            outputs=[obs],
+            vars_in_trace=[latent_mu, mu],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"latent_mu", "mu"}
+        assert {i.name for i in self.get_function_roots(f)} == {"mu"}
+
+        f = compile_forward_sampling_function(
+            outputs=[obs],
+            vars_in_trace=[mu],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == set()
+        assert {i.name for i in self.get_function_roots(f)} == set()
+
+    def test_lkj_cholesky_cov(self):
+        with pm.Model() as model:
+            mu = np.zeros(3)
+            sd_dist = pm.Exponential.dist(1.0, size=3)
+            chol, corr, stds = pm.LKJCholeskyCov(  # pylint: disable=unpacking-non-sequence
+                "chol_packed", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            chol_packed = model["chol_packed"]
+            chol = pm.Deterministic("chol", chol)
+            obs = pm.MvNormal("obs", mu=mu, chol=chol, observed=np.zeros(3))
+
+        f = compile_forward_sampling_function(
+            outputs=[obs],
+            vars_in_trace=[chol_packed, chol],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"chol_packed", "chol"}
+        assert {i.name for i in self.get_function_roots(f)} == {"chol"}
+
+        f = compile_forward_sampling_function(
+            outputs=[obs],
+            vars_in_trace=[chol_packed],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == {"chol_packed"}
+        assert {i.name for i in self.get_function_roots(f)} == {"chol_packed"}
+
+        f = compile_forward_sampling_function(
+            outputs=[obs],
+            vars_in_trace=[chol],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == set()
+        assert {i.name for i in self.get_function_roots(f)} == set()
