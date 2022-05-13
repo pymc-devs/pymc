@@ -1179,16 +1179,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # Reject resizing if we already know that it would create shape problems.
             # NOTE: If there are multiple pm.MutableData containers sharing this dim, but the user only
             #       changes the values for one of them, they will run into shape problems nonetheless.
-            length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
-            if not isinstance(length_belongs_to, SharedVariable) and length_changed:
-                raise ShapeError(
-                    f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
-                    f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
-                    f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
-                    f"for example by a model variable.",
-                    actual=new_length,
-                    expected=old_length,
-                )
+            if original_coords is None:
+                length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
+                if not isinstance(length_belongs_to, SharedVariable) and length_changed:
+                    raise ShapeError(
+                        f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
+                        f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
+                        f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
+                        f"for example by a model variable.",
+                        actual=new_length,
+                        expected=old_length,
+                    )
             if original_coords is not None and length_changed:
                 if length_changed and new_coords is None:
                     raise ValueError(
