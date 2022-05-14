@@ -27,7 +27,9 @@ import pytest
 import scipy.sparse as sps
 import scipy.stats as st
 
+from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorConstant
 
 import pymc as pm
@@ -729,11 +731,38 @@ def test_valueerror_from_resize_without_coords_update():
     without passing new coords raises a ValueError.
     """
     with pm.Model() as pmodel:
-        pmodel.add_coord("shared", [1, 2, 3])
+        pmodel.add_coord("shared", [1, 2, 3], mutable=True)
         pm.MutableData("m", [1, 2, 3], dims=("shared"))
         with pytest.raises(ValueError, match="'m' variable already had 3"):
             # tries to resize m but without passing coords so raise ValueError
             pm.set_data({"m": [1, 2, 3, 4]})
+
+
+def test_coords_and_constantdata_create_immutable_dims():
+    """
+    When created from `pm.Model(coords=...)` or `pm.ConstantData`
+    a dimension should be resizable.
+    """
+    with pm.Model(coords={"group": ["A", "B"]}) as m:
+        x = pm.ConstantData("x", [0], dims="feature")
+        y = pm.Normal("y", x, 1, dims=("group", "feature"))
+    assert isinstance(m._dim_lengths["feature"], TensorConstant)
+    assert isinstance(m._dim_lengths["group"], TensorConstant)
+    assert x.eval().shape == (1,)
+    assert y.eval().shape == (2, 1)
+
+
+def test_add_coord_mutable_kwarg():
+    """
+    Checks resulting tensor type depending on mutable kwarg in add_coord.
+    """
+    with pm.Model() as m:
+        m.add_coord("fixed", values=[1], mutable=False)
+        m.add_coord("mutable1", values=[1, 2], mutable=True)
+        assert isinstance(m._dim_lengths["fixed"], TensorConstant)
+        assert isinstance(m._dim_lengths["mutable1"], ScalarSharedVariable)
+        pm.MutableData("mdata", np.ones((1, 2, 3)), dims=("fixed", "mutable1", "mutable2"))
+        assert isinstance(m._dim_lengths["mutable2"], TensorVariable)
 
 
 @pytest.mark.parametrize("jacobian", [True, False])

@@ -704,6 +704,7 @@ def Data(
                     # Note: Coordinate values can't be taken from
                     # the value, because it could be N-dimensional.
                     values=coords.get(dname, None),
+                    mutable=mutable,
                     length=xshape[d],
                 )
 

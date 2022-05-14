@@ -1071,6 +1071,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         name: str,
         values: Optional[Sequence] = None,
+        mutable: bool = False,
         *,
         length: Optional[Union[int, Variable]] = None,
     ):
@@ -1084,9 +1085,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         values : optional, array-like
             Coordinate values or ``None`` (for auto-numbering).
             If ``None`` is passed, a ``length`` must be specified.
+        mutable : bool
+            Whether the created dimension should be resizable.
+            Default is False.
         length : optional, scalar
             A scalar of the dimensions length.
-            Defaults to ``aesara.shared(len(values))``.
+            Defaults to ``aesara.tensor.constant(len(values))``.
         """
         if name in {"draw", "chain", "__sample__"}:
             raise ValueError(
@@ -1111,8 +1115,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
             if not np.array_equal(values, self.coords[name]):
                 raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
         else:
+            if mutable:
+                self._dim_lengths[name] = length or aesara.shared(len(values))
+            else:
+                self._dim_lengths[name] = length or aesara.tensor.constant(len(values))
             self._coords[name] = values
-            self._dim_lengths[name] = length or aesara.shared(len(values))
 
     def add_coords(
         self,
@@ -1192,9 +1199,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 if isinstance(length_tensor, TensorConstant):
                     raise ShapeError(
                         f"Resizing dimension '{dname}' is impossible, because "
-                        f"a 'TensorConstant' stores its length. To be able "
-                        f"to change the dimension length, 'fixed' in "
-                        f"'model.add_coord' must be set to `False`."
+                        "a 'TensorConstant' stores its length. To be able "
+                        "to change the dimension length, pass `mutable=True` when "
+                        "registering the dimension via `model.add_coord`, "
+                        "or define it via a `pm.MutableData` variable."
                     )
                 else:
                     length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
