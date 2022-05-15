@@ -435,6 +435,8 @@ def sample_numpyro_nuts(
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
         for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
         not be included in the returned object.
+    nuts_kwargs: dict, optional
+        Keyword arguments for :func:`numpyro.infer.NUTS`.
 
     Returns
     -------
