@@ -61,7 +61,7 @@ from pymc.data import GenTensorVariable, Minibatch
 from pymc.distributions import joint_logpt
 from pymc.distributions.logprob import _get_scaling
 from pymc.distributions.transforms import _default_transform
-from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
+from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
 from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
 from pymc.util import (
@@ -1180,24 +1180,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # NOTE: If there are multiple pm.MutableData containers sharing this dim, but the user only
             #       changes the values for one of them, they will run into shape problems nonetheless.
             if length_changed:
+                if original_coords is not None:
+                    if new_coords is None:
+                        raise ValueError(
+                            f"The '{name}' variable already had {len(original_coords)} coord values defined for "
+                            f"its {dname} dimension. With the new values this dimension changes to length "
+                            f"{new_length}, so new coord values for the {dname} dimension are required."
+                        )
                 if isinstance(length_tensor, TensorConstant):
                     raise ShapeError(
                         f"Resizing dimension '{dname}' is impossible, because "
                         f"a 'TensorConstant' stores its length. To be able "
                         f"to change the dimension length, 'fixed' in "
                         f"'model.add_coord' must be set to `False`."
-                    )
-                if length_tensor.owner is None:
-                    # This is the case if the dimension was initialized
-                    # from custom coords, but dimension length was not
-                    # stored in TensorConstant e.g by 'fixed' set to False
-
-                    warnings.warn(
-                        f"You're changing the shape of a variable "
-                        f"in the '{dname}' dimension which was initialized "
-                        f"from coords. Make sure to update the corresponding "
-                        f"coords, otherwise you'll get shape issues.",
-                        ShapeWarning,
                     )
                 else:
                     length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
@@ -1209,13 +1204,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
                             f"for example by another model variable.",
                             actual=new_length,
                             expected=old_length,
-                        )
-                if original_coords is not None:
-                    if new_coords is None:
-                        raise ValueError(
-                            f"The '{name}' variable already had {len(original_coords)} coord values defined for "
-                            f"its {dname} dimension. With the new values this dimension changes to length "
-                            f"{new_length}, so new coord values for the {dname} dimension are required."
                         )
                 if isinstance(length_tensor, ScalarSharedVariable):
                     # Updating the shared variable resizes dependent nodes that use this dimension for their `size`.
