@@ -1185,7 +1185,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         f"Resizing dimension '{dname}' is impossible, because "
                         f"a 'TensorConstant' stores its length. To be able "
                         f"to change the dimension length, 'fixed' in "
-                        f"'model.add_coord' must be passed False."
+                        f"'model.add_coord' must be set to `False`."
                     )
                 if length_tensor.owner is None:
                     # This is the case if the dimension was initialized
@@ -1193,7 +1193,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     # stored in TensorConstant e.g by 'fixed' set to False
 
                     warnings.warn(
-                        f"You're changing the shape of a shared variable "
+                        f"You're changing the shape of a variable "
                         f"in the '{dname}' dimension which was initialized "
                         f"from coords. Make sure to update the corresponding "
                         f"coords, otherwise you'll get shape issues.",
@@ -1206,14 +1206,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
                             f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
                             f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
                             f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
-                            f"for example by a model variable.",
+                            f"for example by another model variable.",
                             actual=new_length,
                             expected=old_length,
                         )
                 if original_coords is not None:
                     if new_coords is None:
                         raise ValueError(
-                            f"The '{name}' variable already had {len(original_coords)} coord values defined for"
+                            f"The '{name}' variable already had {len(original_coords)} coord values defined for "
                             f"its {dname} dimension. With the new values this dimension changes to length "
                             f"{new_length}, so new coord values for the {dname} dimension are required."
                         )
