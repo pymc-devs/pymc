@@ -46,7 +46,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.opt import local_subtensor_rv_lift
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.sharedvar import ScalarSharedVariable
-from aesara.tensor.var import TensorVariable
+from aesara.tensor.var import TensorVariable, TensorConstant
 
 from pymc.aesaraf import (
     compile_pymc,
@@ -61,7 +61,7 @@ from pymc.data import GenTensorVariable, Minibatch
 from pymc.distributions import joint_logpt
 from pymc.distributions.logprob import _get_scaling
 from pymc.distributions.transforms import _default_transform
-from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
+from pymc.exceptions import ImputationWarning, ShapeWarning, SamplingError, ShapeError
 from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
 from pymc.util import (
@@ -1179,24 +1179,49 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # Reject resizing if we already know that it would create shape problems.
             # NOTE: If there are multiple pm.MutableData containers sharing this dim, but the user only
             #       changes the values for one of them, they will run into shape problems nonetheless.
-            if original_coords is None:
-                length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
-                if not isinstance(length_belongs_to, SharedVariable) and length_changed:
+            if length_changed:
+                if isinstance(length_tensor,TensorConstant):
                     raise ShapeError(
-                        f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
-                        f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
-                        f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
-                        f"for example by a model variable.",
-                        actual=new_length,
-                        expected=old_length,
+                        f"Resizing dimension '{dname}' is impossible, because "
+                        f"a 'TensorConstant' stores its length. To be able "
+                        f"to change the dimension length, 'fixed' in "
+                        f"'model.add_coord' must be passed False."
                     )
-            if original_coords is not None and length_changed:
-                if length_changed and new_coords is None:
-                    raise ValueError(
-                        f"The '{name}' variable already had {len(original_coords)} coord values defined for"
-                        f"its {dname} dimension. With the new values this dimension changes to length "
-                        f"{new_length}, so new coord values for the {dname} dimension are required."
+                if length_tensor.owner is None:
+                    # This is the case if the dimension was initialized
+                    # from custom coords, but dimension length was not
+                    # stored in TensorConstant e.g by 'fixed' set to False
+
+                    warnings.warn(
+                        f"You're changing the shape of a shared variable "
+                        f"in the '{dname}' dimension which was initialized "
+                        f"from coords. Make sure to update the corresponding "
+                        f"coords, otherwise you'll get shape issues.",
+                        ShapeWarning,
                     )
+                else:
+                    length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
+                    if not isinstance(length_belongs_to, SharedVariable):
+                        raise ShapeError(
+                            f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
+                            f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
+                            f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
+                            f"for example by a model variable.",
+                            actual=new_length,
+                            expected=old_length,
+                        )
+                if original_coords is not None:
+                    if new_coords is None:
+                        raise ValueError(
+                            f"The '{name}' variable already had {len(original_coords)} coord values defined for"
+                            f"its {dname} dimension. With the new values this dimension changes to length "
+                            f"{new_length}, so new coord values for the {dname} dimension are required."
+                        )
+                if isinstance(length_tensor, ScalarSharedVariable):
+                    # Updating the shared variable resizes dependent nodes that use this dimension for their `size`.
+                    length_tensor.set_value(new_length)
+
+
             if new_coords is not None:
                 # Update the registered coord values (also if they were None)
                 if len(new_coords) != new_length:
@@ -1206,9 +1231,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         expected=new_length,
                     )
                 self._coords[dname] = new_coords
-            if isinstance(length_tensor, ScalarSharedVariable) and new_length != old_length:
-                # Updating the shared variable resizes dependent nodes that use this dimension for their `size`.
-                length_tensor.set_value(new_length)
+
 
         shared_object.set_value(values)
 
