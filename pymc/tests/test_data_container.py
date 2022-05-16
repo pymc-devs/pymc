@@ -316,7 +316,10 @@ class TestData(SeededTest):
         # pass coordinates explicitly, use numpy array in Data container
         with pm.Model(coords=coords) as pmodel:
             pm.MutableData("observations", data, dims=("rows", "columns"))
-
+            # new data with same shape
+            pm.set_data({"observations": data + 1})
+            # new data with same shape and coords
+            pm.set_data({"observations": data}, coords=coords)
         assert "rows" in pmodel.coords
         assert pmodel.coords["rows"] == ("R1", "R2", "R3", "R4", "R5")
         assert "rows" in pmodel.dim_lengths
