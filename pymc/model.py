@@ -46,7 +46,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.opt import local_subtensor_rv_lift
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.sharedvar import ScalarSharedVariable
-from aesara.tensor.var import TensorVariable, TensorConstant
+from aesara.tensor.var import TensorConstant, TensorVariable
 
 from pymc.aesaraf import (
     compile_pymc,
@@ -61,7 +61,7 @@ from pymc.data import GenTensorVariable, Minibatch
 from pymc.distributions import joint_logpt
 from pymc.distributions.logprob import _get_scaling
 from pymc.distributions.transforms import _default_transform
-from pymc.exceptions import ImputationWarning, ShapeWarning, SamplingError, ShapeError
+from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
 from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
 from pymc.util import (
@@ -1180,7 +1180,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # NOTE: If there are multiple pm.MutableData containers sharing this dim, but the user only
             #       changes the values for one of them, they will run into shape problems nonetheless.
             if length_changed:
-                if isinstance(length_tensor,TensorConstant):
+                if isinstance(length_tensor, TensorConstant):
                     raise ShapeError(
                         f"Resizing dimension '{dname}' is impossible, because "
                         f"a 'TensorConstant' stores its length. To be able "
@@ -1221,7 +1221,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     # Updating the shared variable resizes dependent nodes that use this dimension for their `size`.
                     length_tensor.set_value(new_length)
 
-
             if new_coords is not None:
                 # Update the registered coord values (also if they were None)
                 if len(new_coords) != new_length:
@@ -1231,7 +1230,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         expected=new_length,
                     )
                 self._coords[dname] = new_coords
-
 
         shared_object.set_value(values)
 
