@@ -1229,7 +1229,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         actual=len(new_coords),
                         expected=new_length,
                     )
-                self._coords[dname] = new_coords
+                # store it as tuple for immutability as in add_coord
+                self._coords[dname] = tuple(new_coords)
 
         shared_object.set_value(values)
 
