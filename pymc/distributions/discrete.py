@@ -31,7 +31,7 @@ from scipy import stats
 
 import pymc as pm
 
-from pymc.aesaraf import floatX, intX, take_along_axis
+from pymc.aesaraf import floatX, intX
 from pymc.distributions.dist_math import (
     betaln,
     binomln,
@@ -1318,7 +1318,7 @@ class Categorical(Discrete):
                 p = at.shape_padleft(p, value_clip.ndim - p_.ndim)
             pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
             a = at.log(
-                take_along_axis(
+                at.take_along_axis(
                     p.dimshuffle(pattern),
                     value_clip,
                 )
