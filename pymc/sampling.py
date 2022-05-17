@@ -58,7 +58,7 @@ from typing_extensions import TypeAlias
 
 import pymc as pm
 
-from pymc.aesaraf import change_rv_size, compile_pymc
+from pymc.aesaraf import compile_pymc
 from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray
@@ -1688,7 +1688,6 @@ def sample_posterior_predictive(
     samples: Optional[int] = None,
     model: Optional[Model] = None,
     var_names: Optional[List[str]] = None,
-    size: Optional[int] = None,
     keep_size: Optional[bool] = None,
     random_seed=None,
     progressbar: bool = True,
@@ -1721,13 +1720,9 @@ def sample_posterior_predictive(
         generally be the model used to generate the ``trace``, but it doesn't need to be.
     var_names : Iterable[str]
         Names of variables for which to compute the posterior predictive samples.
-    size : int
-        The number of random draws from the distribution specified by the parameters in each
-        sample of the trace. Not recommended unless more than ndraws times nchains posterior
-        predictive samples are needed.
     keep_size : bool, default True
         Force posterior predictive sample to have the same shape as posterior and sample stats
-        data: ``(nchains, ndraws, ...)``. Overrides samples and size parameters.
+        data: ``(nchains, ndraws, ...)``. Overrides samples parameter.
     random_seed : int
         Seed for the random number generator.
     progressbar : bool
@@ -1806,8 +1801,6 @@ def sample_posterior_predictive(
             "Should not specify both keep_size and samples arguments. "
             "See the docstring of the samples argument for more details."
         )
-    if keep_size and size is not None:
-        raise IncorrectArgumentsError("Should not specify both keep_size and size arguments")
 
     if samples is None:
         if isinstance(_trace, MultiTrace):
@@ -1867,8 +1860,6 @@ def sample_posterior_predictive(
             return trace
         return {}
 
-    if size is not None:
-        vars_to_sample = [change_rv_size(v, size, expand=True) for v in vars_to_sample]
     vars_in_trace = get_vars_in_point_list(_trace, model)
 
     if compile_kwargs is None:
