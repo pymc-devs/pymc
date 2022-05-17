@@ -584,6 +584,10 @@ class IdentityOp(scalar.UnaryScalarOp):
         return hash(type(self))
 
 
+scalar_identity = IdentityOp(scalar.upgrade_to_float, name="scalar_identity")
+identity = Elemwise(scalar_identity, name="identity")
+
+
 def make_shared_replacements(point, vars, model):
     """
     Makes shared replacements for all *other* variables than the ones passed.
@@ -686,10 +690,6 @@ class CallableTensor:
         """
         (oldinput,) = inputvars(self.tensor)
         return aesara.clone_replace(self.tensor, {oldinput: input}, strict=False)
-
-
-scalar_identity = IdentityOp(scalar.upgrade_to_float, name="scalar_identity")
-identity = Elemwise(scalar_identity, name="identity")
 
 
 class GeneratorOp(Op):
