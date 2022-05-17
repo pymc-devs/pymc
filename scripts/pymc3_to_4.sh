@@ -2,6 +2,7 @@
 
 if [ -z "$1" ]
   then
+    echo "Script to automatically convert code (*.py and *.ipynb) from PyMC3 to 4.0. Use with care."
     echo "Usage: pymc3_to_4.sh <path>"
     exit 1
 fi
