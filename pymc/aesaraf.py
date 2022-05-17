@@ -57,7 +57,7 @@ from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorConstant, TensorVariable
 
 from pymc.exceptions import ShapeError
-from pymc.vartypes import continuous_types, int_types, isgenerator, typefilter
+from pymc.vartypes import continuous_types, isgenerator, typefilter
 
 PotentialShapeType = Union[
     int, np.ndarray, Tuple[Union[int, Variable], ...], List[Union[int, Variable]], Variable
@@ -80,7 +80,6 @@ __all__ = [
     "generator",
     "set_at_rng",
     "at_rng",
-    "take_along_axis",
     "convert_observed_data",
 ]
 
@@ -852,61 +851,6 @@ def largest_common_dtype(tensors):
         str(t.dtype) if hasattr(t, "dtype") else smartfloatX(np.asarray(t)).dtype for t in tensors
     }
     return np.stack([np.ones((), dtype=dtype) for dtype in dtypes]).dtype
-
-
-def _make_along_axis_idx(arr_shape, indices, axis):
-    # compute dimensions to iterate over
-    if str(indices.dtype) not in int_types:
-        raise IndexError("`indices` must be an integer array")
-    shape_ones = (1,) * indices.ndim
-    dest_dims = list(range(axis)) + [None] + list(range(axis + 1, indices.ndim))
-
-    # build a fancy index, consisting of orthogonal aranges, with the
-    # requested index inserted at the right location
-    fancy_index = []
-    for dim, n in zip(dest_dims, arr_shape):
-        if dim is None:
-            fancy_index.append(indices)
-        else:
-            ind_shape = shape_ones[:dim] + (-1,) + shape_ones[dim + 1 :]
-            fancy_index.append(at.arange(n).reshape(ind_shape))
-
-    return tuple(fancy_index)
-
-
-def take_along_axis(arr, indices, axis=0):
-    """Take values from the input array by matching 1d index and data slices.
-
-    This iterates over matching 1d slices oriented along the specified axis in
-    the index and data arrays, and uses the former to look up values in the
-    latter. These slices can be different lengths.
-
-    Functions returning an index along an axis, like argsort and argpartition,
-    produce suitable indices for this function.
-    """
-    arr = at.as_tensor_variable(arr)
-    indices = at.as_tensor_variable(indices)
-    # normalize inputs
-    if axis is None:
-        arr = arr.flatten()
-        arr_shape = (len(arr),)  # flatiter has no .shape
-        _axis = 0
-    else:
-        if axis < 0:
-            _axis = arr.ndim + axis
-        else:
-            _axis = axis
-        if _axis < 0 or _axis >= arr.ndim:
-            raise ValueError(
-                "Supplied `axis` value {} is out of bounds of an array with "
-                "ndim = {}".format(axis, arr.ndim)
-            )
-        arr_shape = arr.shape
-    if arr.ndim != indices.ndim:
-        raise ValueError("`indices` and `arr` must have the same number of dimensions")
-
-    # use the fancy index
-    return arr[_make_along_axis_idx(arr_shape, indices, _axis)]
 
 
 @local_optimizer(tracks=[CheckParameterValue])
