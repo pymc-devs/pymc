@@ -536,13 +536,6 @@ class TestSamplePPC(SeededTest):
             _, pval = stats.kstest(ppc["a"] - trace["mu"], stats.norm(loc=0, scale=1).cdf)
             assert pval > 0.001
 
-        # size argument not introduced to fast version [2019/08/20:rpg]
-        with model:
-            ppc = pm.sample_posterior_predictive(
-                trace, size=5, var_names=["a"], return_inferencedata=False
-            )
-            assert ppc["a"].shape == (nchains * ndraws, 5)
-
     def test_normal_scalar_idata(self):
         nchains = 2
         ndraws = 500
@@ -599,13 +592,6 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (12, 2)
 
-            # size unsupported by fast_ version  argument. [2019/08/19:rpg]
-            ppc = pm.sample_posterior_predictive(
-                trace, return_inferencedata=False, samples=10, var_names=["a"], size=4
-            )
-            assert "a" in ppc
-            assert ppc["a"].shape == (10, 4, 2)
-
     def test_normal_vector_idata(self, caplog):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
@@ -632,9 +618,6 @@ class TestSamplePPC(SeededTest):
             with pytest.raises(IncorrectArgumentsError):
                 ppc = pm.sample_posterior_predictive(idata, samples=10, keep_size=True)
 
-            with pytest.raises(IncorrectArgumentsError):
-                ppc = pm.sample_posterior_predictive(idata, size=4, keep_size=True)
-
             # test wrong type argument
             bad_trace = {"mu": stats.norm.rvs(size=1000)}
             with pytest.raises(TypeError, match="type for `trace`"):
@@ -657,12 +640,6 @@ class TestSamplePPC(SeededTest):
             )
             assert "a" in ppc
             assert ppc["a"].shape == (12, 2)
-
-            ppc = pm.sample_posterior_predictive(
-                idata, return_inferencedata=False, samples=10, var_names=["a"], size=4
-            )
-            assert "a" in ppc
-            assert ppc["a"].shape == (10, 4, 2)
 
     def test_sum_normal(self):
         with pm.Model() as model:
