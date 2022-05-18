@@ -953,14 +953,12 @@ def check_exec_nuts_init(method):
         assert isinstance(start, list)
         assert len(start) == 1
         assert isinstance(start[0], dict)
-        assert model.a.tag.value_var.name in start[0]
-        assert model.b.tag.value_var.name in start[0]
+        assert set(start[0].keys()) == {v.name for v in model.value_vars}
         start, _ = pm.init_nuts(init=method, n_init=10, chains=2, seeds=[1, 2])
         assert isinstance(start, list)
         assert len(start) == 2
         assert isinstance(start[0], dict)
-        assert model.a.tag.value_var.name in start[0]
-        assert model.b.tag.value_var.name in start[0]
+        assert set(start[0].keys()) == {v.name for v in model.value_vars}
 
 
 @pytest.mark.parametrize(
