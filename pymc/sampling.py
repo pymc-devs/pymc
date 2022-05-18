@@ -2556,4 +2556,11 @@ def init_nuts(
 
     step = pm.NUTS(potential=potential, model=model, **kwargs)
 
+    # Filter deterministics from initial_points
+    value_var_names = [var.name for var in model.value_vars]
+    initial_points = [
+        {k: v for k, v in initial_point.items() if k in value_var_names}
+        for initial_point in initial_points
+    ]
+
     return initial_points, step
