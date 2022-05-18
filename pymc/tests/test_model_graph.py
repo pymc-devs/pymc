@@ -143,7 +143,7 @@ class BaseModelGraphTest(SeededTest):
     def test_inputs(self):
         for child, parents_in_plot in self.compute_graph.items():
             var = self.model[child]
-            parents_in_graph = self.model_graph.get_parents(var)
+            parents_in_graph = self.model_graph.get_parent_names(var)
             if isinstance(var, SharedVariable):
                 # observed data also doesn't have parents in the compute graph!
                 # But for the visualization we like them to become decendants of the

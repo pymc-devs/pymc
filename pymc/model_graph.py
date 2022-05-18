@@ -38,7 +38,7 @@ class ModelGraph:
 
     def get_parent_names(self, var):
         if var.owner is None or var.owner.inputs is None:
-            return []
+            return set()
 
         def _expand(x):
             if x.name:
@@ -47,7 +47,7 @@ class ModelGraph:
                 return reversed(x.owner.inputs)
             return []
 
-        parents = [get_var_name(x) for x in walk(nodes=var.owner.inputs, expand=_expand) if x.name]
+        parents = {get_var_name(x) for x in walk(nodes=var.owner.inputs, expand=_expand) if x.name}
 
         return parents
 
