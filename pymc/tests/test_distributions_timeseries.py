@@ -333,6 +333,7 @@ class TestAR:
                 "y",
                 beta_tp,
                 sigma=sigma,
+                init_dist=Normal.dist(0, sigma[..., None]),
                 size=batch_size,
                 steps=steps,
                 initval=y_tp,
@@ -346,6 +347,7 @@ class TestAR:
                         f"y_{i}{j}",
                         beta_tp,
                         sigma=sigma[i][j],
+                        init_dist=Normal.dist(0, sigma[i][j]),
                         shape=steps,
                         initval=y_tp[i, j],
                         ar_order=ar_order,
@@ -371,7 +373,7 @@ class TestAR:
         beta_tp = aesara.shared(np.random.randn(ar_order), shape=(3,))
         y_tp = np.random.randn(batch_size, steps)
         with Model() as t0:
-            init_dist = Normal.dist(0.0, 0.01, size=(batch_size, ar_order))
+            init_dist = Normal.dist(0.0, 1.0, size=(batch_size, ar_order))
             AR("y", beta_tp, sigma=0.01, init_dist=init_dist, steps=steps, initval=y_tp)
         with Model() as t1:
             for i in range(batch_size):
