@@ -27,4 +27,17 @@ Learn how the PyMC project is governed and how to become a member of PyMC [here]
 
 ## Code of Conduct
 
-In order to foster a welcoming environment, participation in our project and community is guided by this [code of conduct](https://github.com/pymc-devs/pymc/blob/main/CODE_OF_CONDUCT.md).
+In order to foster a welcoming environment, participation in our project and community is guided by the {ref}`code_of_conduct`.
+
+:::{toctree}
+:caption: Discourse resources
+
+community/how_to_ask_on_discourse
+:::
+
+:::{toctree}
+:caption: General resources
+
+community/code_of_conduct
+Blog <https://www.pymc.io/blog.html>
+:::
