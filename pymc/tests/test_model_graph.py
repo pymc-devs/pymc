@@ -202,6 +202,23 @@ def model_with_different_descendants():
     return pmodel2
 
 
+class TestParents:
+    @pytest.mark.parametrize(
+        "var_name, parent_names",
+        [
+            ("L", {"pred"}),
+            ("pred", {"intermediate"}),
+            ("intermediate", {"a", "b"}),
+            ("c", {"a", "b"}),
+            ("a", set()),
+            ("b", set()),
+        ],
+    )
+    def test_get_parent_names(self, var_name, parent_names):
+        mg = ModelGraph(model_with_different_descendants())
+        mg.get_parent_names(mg.model[var_name]) == parent_names
+
+
 class TestVariableSelection:
     @pytest.mark.parametrize(
         "var_names, vars_to_plot, compute_graph",
