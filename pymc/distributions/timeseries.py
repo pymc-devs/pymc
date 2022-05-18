@@ -225,7 +225,7 @@ class GaussianRandomWalk(distribution.Continuous):
         sigma > 0, innovation standard deviation, defaults to 1.0
     init : unnamed distribution
         Univariate distribution of the initial value, created with the `.dist()` API.
-        Defaults to Normal with same `mu` and `sigma` as the GaussianRandomWalk
+        Defaults to a unit Normal.
 
         .. warning:: init will be cloned, rendering them independent of the ones passed as input.
 
@@ -265,7 +265,7 @@ class GaussianRandomWalk(distribution.Continuous):
 
         # If no scalar distribution is passed then initialize with a Normal of same mu and sigma
         if init is None:
-            init = Normal.dist(mu, sigma)
+            init = Normal.dist(0, 1)
         else:
             if not (
                 isinstance(init, at.TensorVariable)
@@ -361,7 +361,7 @@ class AR(SymbolicDistribution):
         Whether the first element of rho should be used as a constant term in the AR
         process. Defaults to False
     init_dist: unnamed distribution, optional
-        Scalar or vector distribution for initial values. Defaults to Normal(0, sigma).
+        Scalar or vector distribution for initial values. Defaults to a unit Normal.
         Distribution should be  created via the `.dist()` API, and have  dimension
         (*size, ar_order). If not, it will be automatically resized.
 
@@ -452,8 +452,7 @@ class AR(SymbolicDistribution):
                     f"got ndim_supp={init_dist.owner.op.ndim_supp}.",
                 )
         else:
-            # Sigma must broadcast with ar_order
-            init_dist = Normal.dist(sigma=at.shape_padright(sigma), size=(*sigma.shape, ar_order))
+            init_dist = Normal.dist(0, 1, size=(*sigma.shape, ar_order))
 
         # Tell Aeppl to ignore init_dist, as it will be accounted for in the logp term
         init_dist = ignore_logprob(init_dist)
