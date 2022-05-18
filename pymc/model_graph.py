@@ -13,15 +13,15 @@
 #   limitations under the License.
 import warnings
 
-from collections import defaultdict, deque
-from typing import Dict, Iterable, Iterator, List, NewType, Optional, Set
+from collections import defaultdict
+from typing import Dict, Iterable, List, NewType, Optional, Set
 
 from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph import Apply
 from aesara.graph.basic import ancestors, walk
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.var import TensorConstant, TensorVariable
+from aesara.tensor.var import TensorConstant
 
 import pymc as pm
 
@@ -47,7 +47,7 @@ class ModelGraph:
                 return reversed(x.owner.inputs)
             return []
 
-        parents = [x.name for x in walk(nodes=var.owner.inputs, expand=_expand) if x.name]
+        parents = [get_var_name(x) for x in walk(nodes=var.owner.inputs, expand=_expand) if x.name]
 
         return parents
 
