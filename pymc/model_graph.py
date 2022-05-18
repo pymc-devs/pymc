@@ -18,6 +18,7 @@ from typing import Dict, Iterable, Iterator, List, NewType, Optional, Set
 
 from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
+from aesara.graph import Apply
 from aesara.graph.basic import ancestors, walk
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
@@ -34,73 +35,21 @@ class ModelGraph:
         self.model = model
         self._all_var_names = get_default_varnames(self.model.named_vars, include_transformed=False)
         self.var_list = self.model.named_vars.values()
-        self.transform_map = {
-            v.transformed: v.name for v in self.var_list if hasattr(v, "transformed")
-        }
-        self._deterministics = None
 
-    def get_deterministics(self, var):
-        """Compute the deterministic nodes of the graph, **not** including var itself."""
-        deterministics = []
-        attrs = ("transformed", "logpt")
-        for v in self.var_list:
-            if v != var and all(not hasattr(v, attr) for attr in attrs):
-                deterministics.append(v)
-        return deterministics
+    def get_parent_names(self, var):
+        if var.owner is None or var.owner.inputs is None:
+            return []
 
-    def _get_ancestors(self, var: TensorVariable, func) -> Set[TensorVariable]:
-        """Get all ancestors of a function, doing some accounting for deterministics."""
+        def _expand(x):
+            if x.name:
+                return [x]
+            if isinstance(x.owner, Apply):
+                return reversed(x.owner.inputs)
+            return []
 
-        # this contains all of the variables in the model EXCEPT var...
-        vars = set(self.var_list)
-        vars.remove(var)
+        parents = [x.name for x in walk(nodes=var.owner.inputs, expand=_expand) if x.name]
 
-        blockers = set()  # type: Set[TensorVariable]
-        retval = set()  # type: Set[TensorVariable]
-
-        def _expand(node) -> Optional[Iterator[TensorVariable]]:
-            if node in blockers:
-                return None
-            elif node in vars:
-                blockers.add(node)
-                retval.add(node)
-                return None
-            elif node.owner:
-                blockers.add(node)
-                return reversed(node.owner.inputs)
-            else:
-                return None
-
-        list(walk(deque([func]), _expand, bfs=True))
-        return retval
-
-    def _filter_parents(self, var, parents) -> Set[VarName]:
-        """Get direct parents of a var, as strings"""
-        keep = set()  # type: Set[VarName]
-        for p in parents:
-            if p == var:
-                continue
-            elif p.name in self._all_var_names:
-                keep.add(p.name)
-            elif p in self.transform_map:
-                if self.transform_map[p] != var.name:
-                    keep.add(self.transform_map[p])
-            else:
-                raise AssertionError(f"Do not know what to do with {get_var_name(p)}")
-        return keep
-
-    def get_parents(self, var: TensorVariable) -> Set[VarName]:
-        """Get the named nodes that are direct inputs to the var"""
-        # TODO: Update these lines, variables no longer have a `logpt` attribute
-        if hasattr(var, "transformed"):
-            func = var.transformed.logpt
-        elif hasattr(var, "logpt"):
-            func = var.logpt
-        else:
-            func = var
-
-        parents = self._get_ancestors(var, func)
-        return self._filter_parents(var, parents)
+        return parents
 
     def vars_to_plot(self, var_names: Optional[Iterable[str]] = None) -> List[str]:
         if var_names is None:
@@ -140,9 +89,8 @@ class ModelGraph:
 
         for var_name in self.vars_to_plot(var_names):
             var = self.model[var_name]
-            key = var_name
-            val = self.get_parents(var)
-            input_map[key] = input_map[key].union(val)
+            parent_name = self.get_parent_names(var)
+            input_map[var_name] = input_map[var_name].union(parent_name)
 
             if hasattr(var.tag, "observations"):
                 try:
