@@ -20,6 +20,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Union,
@@ -891,6 +892,40 @@ aesara.compile.optdb["canonicalize"].register(
     local_check_parameter_to_ninf_switch,
     use_db_name_as_tag=False,
 )
+
+
+def find_rng_nodes(variables: Iterable[TensorVariable]):
+    """Return RNG variables in a graph"""
+    return [
+        node
+        for node in graph_inputs(variables)
+        if isinstance(
+            node,
+            (
+                at.random.var.RandomStateSharedVariable,
+                at.random.var.RandomGeneratorSharedVariable,
+            ),
+        )
+    ]
+
+
+SeedSequenceSeed = Optional[Union[int, Sequence[int], np.ndarray, np.random.SeedSequence]]
+
+
+def reseed_rngs(
+    rngs: Sequence[SharedVariable],
+    seed: SeedSequenceSeed,
+) -> None:
+    """Create a new set of RandomState/Generator for each rng based on a seed"""
+    bit_generators = [
+        np.random.PCG64(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(len(rngs))
+    ]
+    for rng, bit_generator in zip(rngs, bit_generators):
+        if isinstance(rng, at.random.var.RandomStateSharedVariable):
+            new_rng = np.random.RandomState(bit_generator)
+        else:
+            new_rng = np.random.Generator(bit_generator)
+        rng.set_value(new_rng, borrow=True)
 
 
 def compile_pymc(

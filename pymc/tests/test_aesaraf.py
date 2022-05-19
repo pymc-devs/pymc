@@ -26,6 +26,7 @@ from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Constant, Variable, ancestors, equal_computations
 from aesara.tensor.random.basic import normal, uniform
 from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorVariable
 
@@ -36,6 +37,7 @@ from pymc.aesaraf import (
     compile_pymc,
     convert_observed_data,
     extract_obs_data,
+    reseed_rngs,
     rvs_to_value_vars,
     walk_model,
 )
@@ -507,3 +509,35 @@ class TestCompilePyMC:
         fn = compile_pymc(inputs=[], outputs=dummy_x)
         assert fn() == 2.0
         assert fn() == 3.0
+
+
+def test_reseed_rngs():
+    # Reseed_rngs uses the `PCG64` bit_generator, which is currently the default
+    # bit_generator used by NumPy. If this default changes in the future, this test will
+    # catch that. We will then have to decide whether to switch to the new default in
+    # PyMC or whether to stick with the older one (PCG64). This will pose a trade-off
+    # between backwards reproducibility and better/faster seeding. If we decide to change,
+    # the next line should be updated:
+    default_rng = np.random.PCG64
+    assert isinstance(np.random.default_rng().bit_generator, default_rng)
+
+    seed = 543
+
+    bit_generators = [default_rng(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(2)]
+
+    rngs = [
+        aesara.shared(rng_type(default_rng()))
+        for rng_type in (np.random.Generator, np.random.RandomState)
+    ]
+    for rng, bit_generator in zip(rngs, bit_generators):
+        if isinstance(rng, RandomStateSharedVariable):
+            assert rng.get_value()._bit_generator.state != bit_generator.state
+        else:
+            assert rng.get_value().bit_generator.state != bit_generator.state
+
+    reseed_rngs(rngs, seed)
+    for rng, bit_generator in zip(rngs, bit_generators):
+        if isinstance(rng, RandomStateSharedVariable):
+            assert rng.get_value()._bit_generator.state == bit_generator.state
+        else:
+            assert rng.get_value().bit_generator.state == bit_generator.state
