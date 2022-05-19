@@ -180,7 +180,7 @@ todo_include_todos = False
 
 # intersphinx configuration to ease linking arviz docs
 intersphinx_mapping = {
-    "arviz": ("https://arviz-devs.github.io/arviz/", None),
+    "arviz": ("https://python.arviz.org/en/latest/", None),
     "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
     "aeppl": ("https://aeppl.readthedocs.io/en/latest/", None),
     "pmx": ("https://pymc-experimental.readthedocs.io/en/latest", None),

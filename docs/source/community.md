@@ -38,6 +38,7 @@ community/how_to_ask_on_discourse
 :::{toctree}
 :caption: General resources
 
+community/calendar
 community/code_of_conduct
 Blog <https://www.pymc.io/blog.html>
 :::
