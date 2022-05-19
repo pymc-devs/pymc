@@ -228,8 +228,8 @@ html_theme_options = {
         },
     ],
     "external_links": [
-        {"name": "About", "url": "https://www.pymc.io"},
         {"name": "Examples", "url": "https://docs.pymc.io/projects/examples/en/latest/"},
+        {"name": "pymc.io", "url": "https://www.pymc.io"},
         {"name": "Blog", "url": "https://www.pymc.io/blog.html"},
     ],
     "show_prev_next": False,
