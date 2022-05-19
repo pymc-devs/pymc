@@ -183,13 +183,13 @@ intersphinx_mapping = {
     "arviz": ("https://python.arviz.org/en/latest/", None),
     "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
     "aeppl": ("https://aeppl.readthedocs.io/en/latest/", None),
-    "pmx": ("https://pymc-experimental.readthedocs.io/en/latest", None),
+    "pmx": ("https://docs.pymc.io/projects/experimental/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
-    "nb": ("https://pymc-examples.readthedocs.io/en/latest/", None),
+    "nb": ("https://docs.pymc.io/projects/examples/en/latest/", None),
     "myst": ("https://myst-parser.readthedocs.io/en/latest", None),
     "myst-nb": ("https://myst-nb.readthedocs.io/en/latest/", None),
     "python": ("https://docs.python.org/3/", None),
-    "xarray": ("https://xarray.pydata.org/en/stable/", None),
+    "xarray": ("https://docs.xarray.dev/en/stable/", None),
 }
 
 
