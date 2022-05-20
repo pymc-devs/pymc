@@ -344,7 +344,7 @@ class FlatRV(RandomVariable):
     _print_name = ("Flat", "\\operatorname{Flat}")
 
     @classmethod
-    def rng_fn(cls, rng, size):
+    def rng_fn(cls, rng, *args):
         raise NotImplementedError("Cannot sample from flat variable")
 
 
@@ -364,8 +364,8 @@ class Flat(Continuous):
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod
-    def dist(cls, *, size=None, **kwargs):
-        res = super().dist([], size=size, **kwargs)
+    def dist(cls, **kwargs):
+        res = super().dist([], **kwargs)
         return res
 
     def moment(rv, size):
@@ -415,7 +415,7 @@ class HalfFlatRV(RandomVariable):
     _print_name = ("HalfFlat", "\\operatorname{HalfFlat}")
 
     @classmethod
-    def rng_fn(cls, rng, size):
+    def rng_fn(cls, rng, *args):
         raise NotImplementedError("Cannot sample from half_flat variable")
 
 
@@ -432,8 +432,8 @@ class HalfFlat(PositiveContinuous):
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod
-    def dist(cls, *, size=None, **kwargs):
-        res = super().dist([], size=size, **kwargs)
+    def dist(cls, **kwargs):
+        res = super().dist([], **kwargs)
         return res
 
     def moment(rv, size):
