@@ -21,7 +21,7 @@ from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph import Apply
 from aesara.graph.basic import ancestors, walk
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.var import TensorConstant
+from aesara.tensor.var import TensorConstant, TensorVariable
 
 import pymc as pm
 
@@ -36,7 +36,7 @@ class ModelGraph:
         self._all_var_names = get_default_varnames(self.model.named_vars, include_transformed=False)
         self.var_list = self.model.named_vars.values()
 
-    def get_parent_names(self, var):
+    def get_parent_names(self, var: TensorVariable) -> Set[VarName]:
         if var.owner is None or var.owner.inputs is None:
             return set()
 
@@ -51,7 +51,7 @@ class ModelGraph:
 
         return parents
 
-    def vars_to_plot(self, var_names: Optional[Iterable[str]] = None) -> List[str]:
+    def vars_to_plot(self, var_names: Optional[Iterable[VarName]] = None) -> List[VarName]:
         if var_names is None:
             return self._all_var_names
 
@@ -82,10 +82,10 @@ class ModelGraph:
         return [var.name for var in selected_ancestors]
 
     def make_compute_graph(
-        self, var_names: Optional[Iterable[str]] = None
-    ) -> Dict[str, Set[VarName]]:
+        self, var_names: Optional[Iterable[VarName]] = None
+    ) -> Dict[VarName, Set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
-        input_map = defaultdict(set)  # type: Dict[str, Set[VarName]]
+        input_map = defaultdict(set)  # type: Dict[VarName, Set[VarName]]
 
         for var_name in self.vars_to_plot(var_names):
             var = self.model[var_name]
@@ -149,7 +149,7 @@ class ModelGraph:
     def _eval(self, var):
         return function([], var, mode="FAST_COMPILE")()
 
-    def get_plates(self, var_names: Optional[Iterable[str]] = None):
+    def get_plates(self, var_names: Optional[Iterable[VarName]] = None):
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
@@ -157,7 +157,7 @@ class ModelGraph:
 
         Returns
         -------
-        dict: str -> set[str]
+        dict: VarName -> set(VarName)
         """
         plates = defaultdict(set)
 
@@ -174,7 +174,7 @@ class ModelGraph:
 
         return plates
 
-    def make_graph(self, var_names=None, formatting: str = "plain"):
+    def make_graph(self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
         """Make graphviz Digraph of PyMC model
 
         Returns
@@ -211,7 +211,7 @@ class ModelGraph:
 
 
 def model_to_graphviz(
-    model=None, *, var_names: Optional[Iterable[str]] = None, formatting: str = "plain"
+    model=None, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
 ):
     """Produce a graphviz Digraph from a PyMC model.
 
@@ -227,7 +227,9 @@ def model_to_graphviz(
     ----------
     model : pm.Model
         The model to plot. Not required when called from inside a modelcontext.
-    formatting : str
+    var_names : iterable of variable names, optional
+        Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
+    formatting : str, optional
         one of { "plain" }
 
     Examples
