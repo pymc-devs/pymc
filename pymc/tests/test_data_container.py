@@ -332,6 +332,22 @@ class TestData(SeededTest):
         assert isinstance(pmodel.dim_lengths["columns"], ScalarSharedVariable)
         assert pmodel.dim_lengths["columns"].eval() == 7
 
+    def test_set_coords_through_pmdata(self):
+        with pm.Model() as pmodel:
+            pm.ConstantData(
+                "population", [100, 200], dims="city", coords={"city": ["Tinyvil", "Minitown"]}
+            )
+            pm.MutableData(
+                "temperature",
+                [[15, 20, 22, 17], [18, 22, 21, 12]],
+                dims=("city", "season"),
+                coords={"season": ["winter", "spring", "summer", "fall"]},
+            )
+        assert "city" in pmodel.coords
+        assert "season" in pmodel.coords
+        assert pmodel.coords["city"] == ("Tinyvil", "Minitown")
+        assert pmodel.coords["season"] == ("winter", "spring", "summer", "fall")
+
     def test_symbolic_coords(self):
         """
         In v4 dimensions can be created without passing coordinate values.

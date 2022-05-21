@@ -1072,7 +1072,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         name: str,
         values: Optional[Sequence] = None,
         *,
-        length: Optional[Variable] = None,
+        length: Optional[Union[int, Variable]] = None,
     ):
         """Registers a dimension coordinate with the model.
 
@@ -1085,7 +1085,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Coordinate values or ``None`` (for auto-numbering).
             If ``None`` is passed, a ``length`` must be specified.
         length : optional, scalar
-            A symbolic scalar of the dimensions length.
+            A scalar of the dimensions length.
             Defaults to ``aesara.shared(len(values))``.
         """
         if name in {"draw", "chain", "__sample__"}:
@@ -1097,7 +1097,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             raise ValueError(
                 f"Either `values` or `length` must be specified for the '{name}' dimension."
             )
-        if length is not None and not isinstance(length, Variable):
+        if isinstance(length, int):
+            length = at.constant(length)
+        elif length is not None and not isinstance(length, Variable):
             raise ValueError(
                 f"The `length` passed for the '{name}' coord must be an Aesara Variable or None."
             )
@@ -1116,7 +1118,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         coords: Dict[str, Optional[Sequence]],
         *,
-        lengths: Optional[Dict[str, Union[Variable, None]]] = None,
+        lengths: Optional[Dict[str, Optional[Union[int, Variable]]]] = None,
     ):
         """Vectorized version of ``Model.add_coord``."""
         if coords is None:

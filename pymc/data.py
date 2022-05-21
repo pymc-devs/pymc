@@ -20,7 +20,7 @@ import urllib.request
 import warnings
 
 from copy import copy
-from typing import Any, Dict, List, Optional, Sequence, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 
 import aesara
 import aesara.tensor as at
@@ -466,9 +466,15 @@ def align_minibatches(batches=None):
                 rng.seed()
 
 
-def determine_coords(model, value, dims: Optional[Sequence[str]] = None) -> Dict[str, Sequence]:
+def determine_coords(
+    model,
+    value,
+    dims: Optional[Sequence[Optional[str]]] = None,
+    coords: Optional[Dict[str, Sequence]] = None,
+) -> Tuple[Dict[str, Sequence], Sequence[Optional[str]]]:
     """Determines coordinate values from data or the model (via ``dims``)."""
-    coords = {}
+    if coords is None:
+        coords = {}
 
     # If value is a df or a series, we interpret the index as coords:
     if hasattr(value, "index"):
@@ -499,10 +505,14 @@ def determine_coords(model, value, dims: Optional[Sequence[str]] = None) -> Dict
             )
         for size, dim in zip(value.shape, dims):
             coord = model.coords.get(dim, None)
-            if coord is None:
+            if coord is None and dim is not None:
                 coords[dim] = range(size)
 
-    return coords
+    if dims is None:
+        # TODO: Also determine dim names from the index
+        dims = [None] * np.ndim(value)
+
+    return coords, dims
 
 
 def ConstantData(
@@ -510,6 +520,7 @@ def ConstantData(
     value,
     *,
     dims: Optional[Sequence[str]] = None,
+    coords: Optional[Dict[str, Sequence]] = None,
     export_index_as_coords=False,
     **kwargs,
 ) -> TensorConstant:
@@ -522,6 +533,7 @@ def ConstantData(
         name,
         value,
         dims=dims,
+        coords=coords,
         export_index_as_coords=export_index_as_coords,
         mutable=False,
         **kwargs,
@@ -534,6 +546,7 @@ def MutableData(
     value,
     *,
     dims: Optional[Sequence[str]] = None,
+    coords: Optional[Dict[str, Sequence]] = None,
     export_index_as_coords=False,
     **kwargs,
 ) -> SharedVariable:
@@ -546,6 +559,7 @@ def MutableData(
         name,
         value,
         dims=dims,
+        coords=coords,
         export_index_as_coords=export_index_as_coords,
         mutable=True,
         **kwargs,
@@ -558,6 +572,7 @@ def Data(
     value,
     *,
     dims: Optional[Sequence[str]] = None,
+    coords: Optional[Dict[str, Sequence]] = None,
     export_index_as_coords=False,
     mutable: Optional[bool] = None,
     **kwargs,
@@ -588,9 +603,11 @@ def Data(
         :ref:`arviz:quickstart`.
         If this parameter is not specified, the random variables will not have dimension
         names.
+    coords : dict, optional
+        Coordinate values to set for new dimensions introduced by this ``Data`` variable.
     export_index_as_coords : bool, default=False
-        If True, the ``Data`` container will try to infer what the coordinates should be
-        if there is an index in ``value``.
+        If True, the ``Data`` container will try to infer what the coordinates
+        and dimension names should be if there is an index in ``value``.
     mutable : bool, optional
         Switches between creating a :class:`~aesara.compile.sharedvalue.SharedVariable`
         (``mutable=True``) vs. creating a :class:`~aesara.tensor.TensorConstant`
@@ -624,6 +641,9 @@ def Data(
     ...         model.set_data('data', data_vals)
     ...         idatas.append(pm.sample())
     """
+    if coords is None:
+        coords = {}
+
     if isinstance(value, list):
         value = np.array(value)
 
@@ -665,15 +685,27 @@ def Data(
             expected=x.ndim,
         )
 
-    coords = determine_coords(model, value, dims)
-
+    # Optionally infer coords and dims from the input value.
     if export_index_as_coords:
-        model.add_coords(coords)
-    elif dims:
+        coords, dims = determine_coords(model, value, dims)
+
+    if dims:
+        if not mutable:
+            # Use the dimension lengths from the before it was tensorified.
+            # These can still be tensors, but in many cases they are numeric.
+            xshape = np.shape(arr)
+        else:
+            xshape = x.shape
         # Register new dimension lengths
         for d, dname in enumerate(dims):
             if not dname in model.dim_lengths:
-                model.add_coord(dname, values=None, length=x.shape[d])
+                model.add_coord(
+                    name=dname,
+                    # Note: Coordinate values can't be taken from
+                    # the value, because it could be N-dimensional.
+                    values=coords.get(dname, None),
+                    length=xshape[d],
+                )
 
     model.add_random_variable(x, dims=dims)
 
