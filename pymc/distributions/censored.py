@@ -49,15 +49,14 @@ class Censored(SymbolicDistribution):
     upper: float or None
         Upper (right) censoring point. If `None`, the distribution will not be right censored.
 
-    Notes
-    -----
-
-        .. warning:: Continuous censored distributions should only be used as likelihoods.
-            Continuous censored distributions are a form of discrete-continuous mixture
-            and as such cannot be sampled properly without a custom step sampler.
-            If you wish to sample such a distribution, you can add the latent uncensored
-            distribution to the model and then wrap it in a {class}`~pymc.Deterministic`
-            {func}`~pymc.math.clip`.
+    Warnings
+    --------
+    Continuous censored distributions should only be used as likelihoods.
+    Continuous censored distributions are a form of discrete-continuous mixture
+    and as such cannot be sampled properly without a custom step sampler.
+    If you wish to sample such a distribution, you can add the latent uncensored
+    distribution to the model and then wrap it in a :class:`~pymc.Deterministic`
+    :func:`~pymc.math.clip`.
 
 
     Examples
