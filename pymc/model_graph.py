@@ -85,7 +85,7 @@ class ModelGraph:
         self, var_names: Optional[Iterable[VarName]] = None
     ) -> Dict[VarName, Set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
-        input_map = defaultdict(set)  # type: Dict[VarName, Set[VarName]]
+        input_map: Dict[VarName, Set[VarName]] = defaultdict(set)
 
         for var_name in self.vars_to_plot(var_names):
             var = self.model[var_name]
@@ -149,7 +149,9 @@ class ModelGraph:
     def _eval(self, var):
         return function([], var, mode="FAST_COMPILE")()
 
-    def get_plates(self, var_names: Optional[Iterable[VarName]] = None):
+    def get_plates(
+        self, var_names: Optional[Iterable[VarName]] = None
+    ) -> Dict[str, Set[VarName]]:
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
@@ -157,7 +159,8 @@ class ModelGraph:
 
         Returns
         -------
-        dict: VarName -> set(VarName)
+        dict
+            Maps plate labels to the set of ``VarName``s inside the plate.
         """
         plates = defaultdict(set)
 
