@@ -149,9 +149,7 @@ class ModelGraph:
     def _eval(self, var):
         return function([], var, mode="FAST_COMPILE")()
 
-    def get_plates(
-        self, var_names: Optional[Iterable[VarName]] = None
-    ) -> Dict[str, Set[VarName]]:
+    def get_plates(self, var_names: Optional[Iterable[VarName]] = None) -> Dict[str, Set[VarName]]:
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
