@@ -104,6 +104,8 @@ ArrayLike: TypeAlias = Union[np.ndarray, List[float]]
 PointList: TypeAlias = List[PointType]
 Backend: TypeAlias = Union[BaseTrace, MultiTrace, NDArray]
 
+RandomSeed = Optional[Union[int, Sequence[int], np.ndarray]]
+
 _log = logging.getLogger("pymc")
 
 
@@ -437,14 +439,14 @@ def sample(
     if random_seed == -1:
         random_seed = None
     if chains == 1 and isinstance(random_seed, int):
-        random_seed = [random_seed]
+        random_seed_list = [random_seed]
 
     if random_seed is None or isinstance(random_seed, int):
         if random_seed is not None:
             np.random.seed(random_seed)
-        random_seed = [np.random.randint(2**30) for _ in range(chains)]
+        random_seed_list = [np.random.randint(2**30) for _ in range(chains)]
 
-    if not isinstance(random_seed, abc.Iterable):
+    if not isinstance(random_seed_list, abc.Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
 
     if not discard_tuned_samples and not return_inferencedata:
@@ -490,7 +492,7 @@ def sample(
             chains=chains,
             n_init=n_init,
             model=model,
-            seeds=random_seed,
+            seeds=random_seed_list,
             progressbar=progressbar,
             jitter_max_retries=jitter_max_retries,
             tune=tune,
@@ -506,7 +508,7 @@ def sample(
             jitter_rvs=filter_rvs_to_jitter(step),
             chains=chains,
         )
-        initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed)]
+        initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed_list)]
 
     # One final check that shapes and logps at the starting points are okay.
     for ip in initial_points:
@@ -523,7 +525,6 @@ def sample(
         "tune": tune,
         "progressbar": progressbar,
         "model": model,
-        "random_seed": random_seed,
         "cores": cores,
         "callback": callback,
         "discard_tuned_samples": discard_tuned_samples,
@@ -542,6 +543,19 @@ def sample(
     )
 
     parallel = cores > 1 and chains > 1 and not has_population_samplers
+    # At some point it was decided that PyMC should not set a global seed by default,
+    # unless the user specified a seed. This is a symptom of the fact that PyMC samplers
+    # are built around global seeding. This branch makes sure we maintain this unspoken
+    # rule. See https://github.com/pymc-devs/pymc/pull/1395.
+    if parallel:
+        # For parallel sampling we can pass the list of random seeds directly, as
+        # global seeding will only be called inside each process
+        sample_args["random_seed"] = random_seed_list
+    else:
+        # We pass None if the original random seed was None. The single core sampler
+        # methods will only set a global seed when it is not None.
+        sample_args["random_seed"] = random_seed if random_seed is None else random_seed_list
+
     t_start = time.time()
     if parallel:
         _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
@@ -674,7 +688,7 @@ def _sample_many(
     chain: int,
     chains: int,
     start: Sequence[PointType],
-    random_seed: list,
+    random_seed: Optional[Sequence[RandomSeed]],
     step,
     callback=None,
     **kwargs,
@@ -691,7 +705,7 @@ def _sample_many(
         Total number of chains to sample.
     start: list
         Starting points for each chain
-    random_seed: list
+    random_seed: list of random seeds, optional
         A list of seeds, one for each chain
     step: function
         Step function
@@ -708,7 +722,7 @@ def _sample_many(
             chain=chain + i,
             start=start[i],
             step=step,
-            random_seed=random_seed[i],
+            random_seed=None if random_seed is None else random_seed[i],
             callback=callback,
             **kwargs,
         )
@@ -731,7 +745,7 @@ def _sample_population(
     chain: int,
     chains: int,
     start: Sequence[PointType],
-    random_seed,
+    random_seed: RandomSeed,
     step,
     tune: int,
     model,
@@ -751,8 +765,7 @@ def _sample_population(
         The total number of chains in the population
     start : list
         Start points for each chain
-    random_seed : int or list of ints, optional
-        A list is accepted if more if ``cores`` is greater than one.
+    random_seed : single random seed, optional
     step : function
         Step function (should be or contain a population step method)
     tune : int
@@ -793,7 +806,7 @@ def _sample(
     *,
     chain: int,
     progressbar: bool,
-    random_seed,
+    random_seed: RandomSeed,
     start: PointType,
     draws: int,
     step=None,
@@ -815,8 +828,7 @@ def _sample(
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
-    random_seed : int or list of ints
-        A list is accepted if ``cores`` is greater than one.
+    random_seed : single random seed
     start : dict
         Starting point in parameter space (or partial point)
     draws : int
@@ -871,7 +883,7 @@ def iter_sample(
     chain: int = 0,
     tune: int = 0,
     model: Optional[Model] = None,
-    random_seed: Optional[Union[int, List[int]]] = None,
+    random_seed: RandomSeed = None,
     callback=None,
 ) -> Iterator[MultiTrace]:
     """Generate a trace on each iteration using the given step method.
@@ -896,8 +908,7 @@ def iter_sample(
     tune : int, optional
         Number of iterations to tune (defaults to 0).
     model : Model (optional if in ``with`` context)
-    random_seed : int or list of ints, optional
-        A list is accepted if more if ``cores`` is greater than one.
+    random_seed : single random seed, optional
     callback :
         A function which gets called for every sample from the trace of a chain. The function is
         called with the trace and the current draw and will contain all samples for a single trace.
@@ -930,7 +941,7 @@ def _iter_sample(
     chain: int = 0,
     tune: int = 0,
     model=None,
-    random_seed=None,
+    random_seed: RandomSeed = None,
     callback=None,
 ) -> Iterator[Tuple[BaseTrace, bool]]:
     """Generator for sampling one chain. (Used in singleprocess sampling.)
@@ -953,8 +964,7 @@ def _iter_sample(
     tune : int, optional
         Number of iterations to tune (defaults to 0).
     model : Model (optional if in ``with`` context)
-    random_seed : int or list of ints, optional
-        A list is accepted if more if ``cores`` is greater than one.
+    random_seed : single random seed, optional
 
     Yields
     ------
@@ -1194,7 +1204,7 @@ def _prepare_iter_population(
     parallelize: bool,
     tune: int,
     model=None,
-    random_seed=None,
+    random_seed: RandomSeed = None,
     progressbar=True,
 ) -> Iterator[Sequence[BaseTrace]]:
     """Prepare a PopulationStepper and traces for population sampling.
@@ -1214,8 +1224,7 @@ def _prepare_iter_population(
     tune : int
         Number of iterations to tune.
     model : Model (optional if in ``with`` context)
-    random_seed : int or list of ints, optional
-        A list is accepted if more if ``cores`` is greater than one.
+    random_seed : single random seed, optional
     progressbar : bool
         ``progressbar`` argument for the ``PopulationStepper``, (defaults to True)
 
@@ -1400,7 +1409,7 @@ def _mp_sample(
     chains: int,
     cores: int,
     chain: int,
-    random_seed: list,
+    random_seed: Sequence[RandomSeed],
     start: Sequence[PointType],
     progressbar: bool = True,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
@@ -1426,7 +1435,7 @@ def _mp_sample(
         The number of chains to run in parallel.
     chain : int
         Number of the first chain.
-    random_seed : list of ints
+    random_seed : list of random seeds
         Random seeds for each chain.
     start : list
         Starting points for each chain.

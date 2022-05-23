@@ -21,7 +21,7 @@ import time
 import traceback
 
 from collections import namedtuple
-from typing import Dict, List, Sequence
+from typing import TYPE_CHECKING, Dict, List, Sequence
 
 import cloudpickle
 import numpy as np
@@ -31,6 +31,10 @@ from fastprogress.fastprogress import progress_bar
 from pymc import aesaraf
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
+
+# Avoid circular import
+if TYPE_CHECKING:
+    from pymc.sampling import RandomSeed
 
 logger = logging.getLogger("pymc")
 
@@ -389,7 +393,7 @@ class ParallelSampler:
         tune: int,
         chains: int,
         cores: int,
-        seeds: list,
+        seeds: Sequence["RandomSeed"],
         start_points: Sequence[Dict[str, np.ndarray]],
         step_method,
         start_chain_num: int = 0,
