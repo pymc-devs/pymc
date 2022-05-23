@@ -2531,7 +2531,9 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        approx_sample = approx.sample(draws=chains, return_inferencedata=False)
+        approx_sample = approx.sample(
+            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+        )
         initial_points = [approx_sample[i] for i in range(chains)]
         std_apoint = approx.std.eval()
         cov = std_apoint**2
@@ -2549,7 +2551,9 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        approx_sample = approx.sample(draws=chains, return_inferencedata=False)
+        approx_sample = approx.sample(
+            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+        )
         initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
@@ -2564,7 +2568,9 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        approx_sample = approx.sample(draws=chains, return_inferencedata=False)
+        approx_sample = approx.sample(
+            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+        )
         initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
