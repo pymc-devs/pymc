@@ -93,14 +93,6 @@ class GroupError(VariationalInferenceError, TypeError):
     """Error related to VI groups"""
 
 
-class BatchedGroupError(GroupError):
-    """Error with batched variables"""
-
-
-class LocalGroupError(BatchedGroupError, AEVBInferenceError):
-    """Error raised in case of bad local_rv usage"""
-
-
 def append_name(name):
     def wrap(f):
         if name is None:
@@ -429,10 +421,6 @@ class Operator:
 
     def __init__(self, approx):
         self.approx = approx
-        if not self.supports_aevb and approx.has_local:
-            raise AEVBInferenceError(
-                "%s does not support AEVB, " "please change inference method" % self
-            )
         if self.require_logq and not approx.has_logq:
             raise ExplicitInferenceError(
                 "%s requires logq, but %s does not implement it"
@@ -760,7 +748,6 @@ class Group(WithMemoization):
     input = None
 
     # defined by approximation
-    supports_batched = True
     has_logq = True
 
     # some important defaults
@@ -789,8 +776,6 @@ class Group(WithMemoization):
 
     @classmethod
     def group_for_params(cls, params):
-        if pm.variational.flows.seems_like_flow_params(params):
-            return pm.variational.approximations.NormalizingFlowGroup
         if frozenset(params) not in cls.__param_registry:
             raise KeyError(
                 "No such group for the following params: {!r}, "
@@ -800,8 +785,6 @@ class Group(WithMemoization):
 
     @classmethod
     def group_for_short_name(cls, name):
-        if pm.variational.flows.seems_like_formula(name):
-            return pm.variational.approximations.NormalizingFlowGroup
         if name.lower() not in cls.__name_registry:
             raise KeyError(
                 "No such group: {!r}, "
@@ -829,23 +812,16 @@ class Group(WithMemoization):
         params=None,
         random_seed=None,
         model=None,
-        local=False,
         rowwise=False,
         options=None,
         **kwargs,
     ):
-        if local and not self.supports_batched:
-            raise LocalGroupError("%s does not support local groups" % self.__class__)
-        if local and rowwise:
-            raise LocalGroupError("%s does not support local grouping in rowwise mode")
         if isinstance(vfam, str):
             vfam = vfam.lower()
         if options is None:
             options = dict()
         self.options = options
         self._vfam = vfam
-        self._local = local
-        self._batched = rowwise
         self._rng = at_rng(random_seed)
         model = modelcontext(model)
         self.model = model
@@ -870,10 +846,7 @@ class Group(WithMemoization):
         start = ipfn(self.model.rng_seeder.randint(2**30, dtype=np.int64))
         group_vars = {self.model.rvs_to_values[v].name for v in self.group}
         start = {k: v for k, v in start.items() if k in group_vars}
-        if self.batched:
-            start = start[self.group[0].name][0]
-        else:
-            start = DictToArrayBijection.map(start).data
+        start = DictToArrayBijection.map(start).data
         return start
 
     @classmethod
@@ -913,10 +886,6 @@ class Group(WithMemoization):
         spec = self.get_param_spec_for(d=self.ddim, **kwargs.pop("spec_kw", {}))
         for name, param in self.user_params.items():
             shape = spec[name]
-            if self.local:
-                shape = (-1,) + shape
-            elif self.batched:
-                shape = (self.bdim,) + shape
             self._user_params[name] = at.as_tensor(param).reshape(shape)
         return True
 
@@ -931,10 +900,7 @@ class Group(WithMemoization):
         -------
         tensor
         """
-        if self.batched:
-            return at.tensor3(name)
-        else:
-            return at.matrix(name)
+        return at.matrix(name)
 
     def _input_type(self, name):
         R"""*Dev* - input type with given name. The correct type depends on `self.batched`
@@ -947,29 +913,15 @@ class Group(WithMemoization):
         -------
         tensor
         """
-        if self.batched:
-            return at.matrix(name)
-        else:
-            return at.vector(name)
+        return at.vector(name)
 
     @aesara.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         if not group:
             raise GroupError("Got empty group")
-        if self.local:
-            warnings.warn("Local inferene aka AEVB is deprecated.", DeprecationWarning)
-        if self.batched:
-            warnings.warn("Batched inferene is deprecated.", DeprecationWarning)
         if self.group is None:
             # delayed init
             self.group = group
-        if self.batched and len(group) > 1:
-            if self.local:  # better error message
-                raise LocalGroupError("Local groups with more than 1 variable are not supported")
-            else:
-                raise BatchedGroupError(
-                    "Batched groups with more than 1 variable are not supported"
-                )
         self.symbolic_initial = self._initial_type(
             self.__class__.__name__ + "_symbolic_initial_tensor"
         )
@@ -988,21 +940,8 @@ class Group(WithMemoization):
             # 3) This is the way to infer shape and dtype of the variable
             value_var = self.model.rvs_to_values[var]
             test_var = model_initial_point[value_var.name]
-            if self.batched:
-                # Leave a more complicated case for future work
-                if var.ndim < 1:
-                    if self.local:
-                        raise LocalGroupError("Local variable should not be scalar")
-                    else:
-                        raise BatchedGroupError("Batched variable should not be scalar")
-                size = test_var[0].size
-                if self.local:
-                    shape = (-1,) + test_var.shape[1:]
-                else:
-                    shape = test_var.shape
-            else:
-                shape = test_var.shape
-                size = test_var.size
+            shape = test_var.shape
+            size = test_var.size
             dtype = test_var.dtype
             vr = self.input[..., start_idx : start_idx + size].reshape(shape).astype(dtype)
             vr.name = value_var.name + "_vi_replacement"
@@ -1018,9 +957,6 @@ class Group(WithMemoization):
     def _finalize_init(self):
         """*Dev* - clean up after init"""
         del self._kwargs
-
-    local = property(lambda self: self._local)
-    batched = property(lambda self: self._local or self._batched)
 
     @property
     def params_dict(self):
@@ -1054,29 +990,15 @@ class Group(WithMemoization):
         -------
         shape vector
         """
-        if self.batched:
-            bdim = at.as_tensor(self.bdim)
-            bdim = aesara.clone_replace(bdim, more_replacements)
-            return at.stack([size, bdim, dim])
-        else:
-            return at.stack([size, dim])
+        return at.stack([size, dim])
 
     @node_property
     def bdim(self):
-        if not self.local:
-            if self.batched:
-                return next(iter(self.ordering.values()))[2][0]
-            else:
-                return 1
-        else:
-            return next(iter(self.params_dict.values())).shape[0]
+        return next(iter(self.params_dict.values())).shape[0]
 
     @node_property
     def ndim(self):
-        if self.batched:
-            return self.ordering.size * self.bdim
-        else:
-            return self.ddim
+        return self.ddim
 
     @property
     def ddim(self):
@@ -1126,28 +1048,6 @@ class Group(WithMemoization):
             sample = getattr(self._rng, dist_name)(size=shape)
             initial = at.switch(deterministic, at.ones(shape, dtype) * dist_map, sample)
             return initial
-
-    @node_property
-    def symbolic_random(self):
-        """*Dev* - abstract node that takes `self.symbolic_initial` and creates
-        approximate posterior that is parametrized with `self.params_dict`.
-
-        Implementation should take in account `self.batched`. If `self.batched` is `True`, then
-        `self.symbolic_initial` is 3d tensor, else 2d
-
-        Returns
-        -------
-        tensor
-        """
-        raise NotImplementedError
-
-    @node_property
-    def symbolic_random2d(self):
-        """*Dev* - `self.symbolic_random` flattened to matrix"""
-        if self.batched:
-            return self.symbolic_random.flatten(2)
-        else:
-            return self.symbolic_random
 
     @aesara.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
@@ -1242,13 +1142,7 @@ class Group(WithMemoization):
     @node_property
     def symbolic_logq(self):
         """*Dev* - correctly scaled `self.symbolic_logq_not_scaled`"""
-        if self.local:
-            s = self.group[0].tag.scaling
-            s = self.to_flat_input(s)
-            s = self.symbolic_single_sample(s)
-            return self.symbolic_logq_not_scaled * s
-        else:
-            return self.symbolic_logq_not_scaled
+        return self.symbolic_logq_not_scaled
 
     @node_property
     def logq(self):
@@ -1265,10 +1159,6 @@ class Group(WithMemoization):
             shp = "undefined"
         else:
             shp = str(self.ddim)
-            if self.local:
-                shp = "None, " + shp
-            elif self.batched:
-                shp = str(self.bdim) + ", " + shp
         return f"{self.__class__.__name__}[{shp}]"
 
     @node_property
@@ -1354,14 +1244,8 @@ class Approximation(WithMemoization):
     def collect(self, item, part="total"):
         if part == "total":
             return [getattr(g, item) for g in self.groups]
-        elif part == "local":
-            return [getattr(g, item) for g in self.groups if g.local]
-        elif part == "global":
-            return [getattr(g, item) for g in self.groups if not g.local]
-        elif part == "batched":
-            return [getattr(g, item) for g in self.groups if g.batched]
         else:
-            raise ValueError("unknown part %s, expected {'local', 'global', 'total', 'batched'}")
+            raise ValueError("unknown part %s, expected {'total'}")
 
     inputs = property(lambda self: self.collect("input"))
     symbolic_randoms = property(lambda self: self.collect("symbolic_random"))
@@ -1692,18 +1576,6 @@ class Approximation(WithMemoization):
     @property
     def ddim(self):
         return sum(self.collect("ddim"))
-
-    @property
-    def has_local(self):
-        return any(self.collect("local"))
-
-    @property
-    def has_global(self):
-        return any(not c for c in self.collect("local"))
-
-    @property
-    def has_batched(self):
-        return any(not c for c in self.collect("batched"))
 
     @node_property
     def symbolic_random(self):
