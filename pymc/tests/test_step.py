@@ -523,7 +523,7 @@ class TestNutsCheckTrace:
             b = at.slinalg.solve(floatX(np.eye(2)), a, check_finite=False)
             Normal("c", mu=b, size=2, initval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
-            trace = sample(20, tune=5, chains=2, return_inferencedata=False)
+            trace = sample(20, tune=5, chains=2, return_inferencedata=False, random_seed=526)
             warns = [msg.msg for msg in caplog.records]
             assert np.any(trace["diverging"])
             assert (
