@@ -15,7 +15,6 @@
 import unittest.mock as mock
 
 from contextlib import ExitStack as does_not_raise
-from itertools import combinations
 from typing import Tuple
 
 import aesara
@@ -110,35 +109,45 @@ class TestSample(SeededTest):
         else:
             assert allequal
 
-    def test_sample_does_not_set_seed(self):
-        # This tests that when random_seed is None, the global seed is not affected
-        random_numbers = []
-        for _ in range(2):
+    @mock.patch("numpy.random.seed")
+    def test_default_sample_does_not_set_global_seed(self, mocked_seed):
+        # Test that when random_seed is None, `np.random.seed` is not called in the main
+        # process. Ideally it would never be called, but PyMC step samplers still rely
+        # on global seeding for reproducible behavior.
+        kwargs = dict(tune=2, draws=2, random_seed=None)
+        with self.model:
+            pm.sample(chains=1, **kwargs)
+            pm.sample(chains=2, cores=1, **kwargs)
+            pm.sample(chains=2, cores=2, **kwargs)
+        mocked_seed.assert_not_called()
+
+    @pytest.mark.xfail(reason="Sampling relies on external global seeding")
+    def test_sample_does_not_rely_on_external_global_seeding(self):
+        # Tests that sampling does not depend on exertenal global seeding
+        kwargs = dict(
+            tune=2,
+            draws=20,
+            random_seed=None,
+            return_inferencedata=False,
+        )
+        with self.model:
             np.random.seed(1)
-            with self.model:
-                pm.sample(1, tune=0, chains=1, random_seed=None)
-                random_numbers.append(np.random.random())
-        assert random_numbers[0] == random_numbers[1]
+            idata11 = pm.sample(chains=1, **kwargs)
+            np.random.seed(1)
+            idata12 = pm.sample(chains=2, cores=1, **kwargs)
+            np.random.seed(1)
+            idata13 = pm.sample(chains=2, cores=2, **kwargs)
 
-    def test_parallel_sample_does_not_reuse_seed(self):
-        cores = 4
-        random_numbers = []
-        draws = []
-        for _ in range(2):
-            np.random.seed(1)  # seeds in other processes don't effect main process
-            with self.model:
-                idata = pm.sample(100, tune=0, cores=cores)
-            # numpy thread mentioned race condition.  might as well check none are equal
-            for first, second in combinations(range(cores), 2):
-                first_chain = idata.posterior["x"].sel(chain=first).values
-                second_chain = idata.posterior["x"].sel(chain=second).values
-                assert not np.allclose(first_chain, second_chain)
-            draws.append(idata.posterior["x"].values)
-            random_numbers.append(np.random.random())
+            np.random.seed(1)
+            idata21 = pm.sample(chains=1, **kwargs)
+            np.random.seed(1)
+            idata22 = pm.sample(chains=2, cores=1, **kwargs)
+            np.random.seed(1)
+            idata23 = pm.sample(chains=2, cores=2, **kwargs)
 
-        # Make sure future random processes aren't effected by this
-        assert random_numbers[0] == random_numbers[1]
-        assert (draws[0] == draws[1]).all()
+        assert np.all(idata11["x"] != idata21["x"])
+        assert np.all(idata12["x"] != idata22["x"])
+        assert np.all(idata13["x"] != idata23["x"])
 
     def test_sample(self):
         test_cores = [1]
