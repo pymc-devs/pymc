@@ -100,11 +100,6 @@ class TestSample(SeededTest):
         allequal = np.all(tr1["x"] == tr2["x"])
         if seeds is None:
             assert not allequal
-        # TODO: ADVI init methods are not correctly seeded, as they rely on the state of
-        #  the model RandomState/Generators which is updated in place when the function
-        #  is compiled and evaluated. This elif branch must be removed once this is fixed
-        elif init == "advi":
-            assert not allequal
         else:
             assert allequal
 
