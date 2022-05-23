@@ -1183,7 +1183,7 @@ class TestMLDA:
 
             rng = np.random.RandomState(seed)
 
-            with Model(rng_seeder=rng) as coarse_model_0:
+            with Model() as coarse_model_0:
                 if aesara.config.floatX == "float32":
                     Q = Data("Q", np.float32(0.0))
                 else:
@@ -1202,7 +1202,7 @@ class TestMLDA:
 
             rng = np.random.RandomState(seed)
 
-            with Model(rng_seeder=rng) as coarse_model_1:
+            with Model() as coarse_model_1:
                 if aesara.config.floatX == "float32":
                     Q = Data("Q", np.float32(0.0))
                 else:
@@ -1221,7 +1221,7 @@ class TestMLDA:
 
             rng = np.random.RandomState(seed)
 
-            with Model(rng_seeder=rng) as model:
+            with Model() as model:
                 if aesara.config.floatX == "float32":
                     Q = Data("Q", np.float32(0.0))
                 else:

@@ -189,7 +189,7 @@ def simple_normal(bounded_prior=False):
     sigma = 1.0
     a, b = (9, 12)  # bounds for uniform RV, need non-symmetric to reproduce issue
 
-    with pm.Model(rng_seeder=2482) as model:
+    with pm.Model() as model:
         if bounded_prior:
             mu_i = pm.Uniform("mu_i", a, b)
         else:

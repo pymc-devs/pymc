@@ -232,12 +232,8 @@ class TestMixture(SeededTest):
     @pytest.mark.parametrize("size", [None, (4,), (5, 4)])
     def test_single_multivariate_component_deterministic_weights(self, weights, component, size):
         # This test needs seeding to avoid repetitions
-        rngs = [
-            aesara.shared(np.random.default_rng(seed))
-            for seed in self.get_random_state().randint(2**30, size=2)
-        ]
-        mix = Mixture.dist(weights, component, size=size, rngs=rngs)
-        mix_eval = mix.eval()
+        mix = Mixture.dist(weights, component, size=size)
+        mix_eval = draw(mix, random_seed=self.get_random_state())
 
         # Test shape
         # component shape is either (4, 2, 3), (2, 3)
@@ -853,7 +849,7 @@ class TestMixtureVsLatent(SeededTest):
         # [[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]]
         mus = at.constant(np.full((nd, npop), np.arange(npop)))
 
-        with Model(rng_seeder=self.get_random_state()) as model:
+        with Model() as model:
             m = NormalMixture(
                 "m",
                 w=np.ones(npop) / npop,
@@ -867,8 +863,8 @@ class TestMixtureVsLatent(SeededTest):
             latent_m = Normal("latent_m", mu=mu, sigma=1e-5, shape=nd)
 
         size = 100
-        m_val = draw(m, draws=size)
-        latent_m_val = draw(latent_m, draws=size)
+        m_val = draw(m, draws=size, random_seed=self.get_random_state())
+        latent_m_val = draw(latent_m, draws=size, random_seed=self.get_random_state())
 
         assert m_val.shape == latent_m_val.shape
         # Test that each element in axis = -1 can come from independent
@@ -888,7 +884,7 @@ class TestMixtureVsLatent(SeededTest):
         # [[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]]
         mus = at.constant(np.full((nd, npop), np.arange(npop)))
 
-        with Model(rng_seeder=self.get_random_state()) as model:
+        with Model() as model:
             m = Mixture(
                 "m",
                 w=np.ones(npop) / npop,
@@ -900,8 +896,8 @@ class TestMixtureVsLatent(SeededTest):
             latent_m = Normal("latent_m", mu=mus[..., z], sigma=1e-5, shape=nd)
 
         size = 100
-        m_val = draw(m, draws=size)
-        latent_m_val = draw(latent_m, draws=size)
+        m_val = draw(m, draws=size, random_seed=998)
+        latent_m_val = draw(latent_m, draws=size, random_seed=998 * 2)
         assert m_val.shape == latent_m_val.shape
         # Test that each element in axis = -1 comes from the same mixture
         # component
