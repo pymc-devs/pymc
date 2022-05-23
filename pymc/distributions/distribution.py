@@ -47,7 +47,7 @@ from pymc.distributions.shape_utils import (
     resize_from_dims,
     resize_from_observed,
 )
-from pymc.printing import str_for_dist
+from pymc.printing import str_for_dist, str_for_symbolic_dist
 from pymc.util import UNSET
 from pymc.vartypes import string_types
 
@@ -484,15 +484,11 @@ class SymbolicDistribution:
             initval=initval,
         )
 
-        # TODO: Refactor this
-        # add in pretty-printing support
-        rv_out.str_repr = lambda *args, **kwargs: name
-        rv_out._repr_latex_ = f"\\text{name}"
-        # rv_out.str_repr = types.MethodType(str_for_dist, rv_out)
-        # rv_out._repr_latex_ = types.MethodType(
-        #     functools.partial(str_for_dist, formatting="latex"), rv_out
-        # )
-
+        set_print_name(cls, rv_out)
+        rv_out.str_repr = types.MethodType(str_for_symbolic_dist, rv_out)
+        rv_out._repr_latex_ = types.MethodType(
+            functools.partial(str_for_symbolic_dist, formatting="latex"), rv_out
+        )
         return rv_out
 
     @classmethod
@@ -521,7 +517,6 @@ class SymbolicDistribution:
         -------
         var : TensorVariable
         """
-
         if "testval" in kwargs:
             kwargs.pop("testval")
             warnings.warn(
@@ -848,3 +843,7 @@ def default_moment(rv, size, *rv_inputs, rv_name=None, has_fallback=False, ndim_
             f"Please provide a moment function when instantiating the {rv_name} "
             "random variable."
         )
+
+
+def set_print_name(cls, rv):
+    setattr(rv.owner.op, "_print_name", (f"{cls.__name__}", f"\\operatorname{{{cls.__name__}}}"))

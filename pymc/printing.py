@@ -26,6 +26,7 @@ from pymc.model import Model
 
 __all__ = [
     "str_for_dist",
+    "str_for_symbolic_dist",
     "str_for_model",
     "str_for_potential_or_deterministic",
 ]
@@ -35,6 +36,37 @@ def str_for_dist(rv: TensorVariable, formatting: str = "plain", include_params: 
     """Make a human-readable string representation of a RandomVariable in a model, either
     LaTeX or plain, optionally with distribution parameter values included."""
 
+    if include_params:
+        # first 3 args are always (rng, size, dtype), rest is relevant for distribution
+        dist_args = [_str_for_input_var(x, formatting=formatting) for x in rv.owner.inputs[3:]]
+
+    print_name = rv.name if rv.name is not None else "<unnamed>"
+    if "latex" in formatting:
+        print_name = r"\text{" + _latex_escape(print_name) + "}"
+        dist_name = rv.owner.op._print_name[1]
+        if include_params:
+            return r"${} \sim {}({})$".format(print_name, dist_name, ",~".join(dist_args))
+        else:
+            return rf"${print_name} \sim {dist_name}$"
+    else:  # plain
+        dist_name = rv.owner.op._print_name[0]
+        if include_params:
+            return r"{} ~ {}({})".format(print_name, dist_name, ", ".join(dist_args))
+        else:
+            return rf"{print_name} ~ {dist_name}"
+
+
+def str_for_symbolic_dist(
+    rv: TensorVariable, formatting: str = "plain", include_params: bool = True
+) -> str:
+
+    # code would look something like this:
+    # if "ZeroInflated" in rv.owner.op._print_name[0]:
+    #     return
+    # if "Mixture" in rv.owner.op._print_name[0]:
+    #     return
+
+    # below is copy-pasted from str_for_dist
     if include_params:
         # first 3 args are always (rng, size, dtype), rest is relevant for distribution
         dist_args = [_str_for_input_var(x, formatting=formatting) for x in rv.owner.inputs[3:]]

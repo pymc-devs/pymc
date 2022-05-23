@@ -42,7 +42,7 @@ from pymc.distributions.dist_math import (
     normal_lccdf,
     normal_lcdf,
 )
-from pymc.distributions.distribution import Discrete
+from pymc.distributions.distribution import Discrete, set_print_name
 from pymc.distributions.logprob import logp
 from pymc.distributions.mixture import Mixture
 from pymc.distributions.shape_utils import rv_size_is_none
@@ -1411,7 +1411,7 @@ class Constant(Discrete):
         )
 
 
-def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
+def _zero_inflated_mixture(*, cls, name, nonzero_p, nonzero_dist, **kwargs):
     """Helper function to create a zero-inflated mixture
 
     If name is `None`, this function returns an unregistered variable
@@ -1423,9 +1423,14 @@ def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
         nonzero_dist,
     ]
     if name is not None:
-        return Mixture(name, weights, comp_dists, **kwargs)
+        rv_out = Mixture(name, weights, comp_dists, **kwargs)
     else:
-        return Mixture.dist(weights, comp_dists, **kwargs)
+        rv_out = Mixture.dist(weights, comp_dists, **kwargs)
+
+    # overriding Mixture _print_name
+    set_print_name(cls, rv_out)
+
+    return rv_out
 
 
 class ZeroInflatedPoisson:
@@ -1481,13 +1486,13 @@ class ZeroInflatedPoisson:
 
     def __new__(cls, name, psi, mu, **kwargs):
         return _zero_inflated_mixture(
-            name=name, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=mu), **kwargs
+            cls=cls, name=name, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=mu), **kwargs
         )
 
     @classmethod
     def dist(cls, psi, mu, **kwargs):
         return _zero_inflated_mixture(
-            name=None, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=mu), **kwargs
+            cls=cls, name=None, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=mu), **kwargs
         )
 
 
@@ -1545,13 +1550,13 @@ class ZeroInflatedBinomial:
 
     def __new__(cls, name, psi, n, p, **kwargs):
         return _zero_inflated_mixture(
-            name=name, nonzero_p=psi, nonzero_dist=Binomial.dist(n=n, p=p), **kwargs
+            cls=cls, name=name, nonzero_p=psi, nonzero_dist=Binomial.dist(n=n, p=p), **kwargs
         )
 
     @classmethod
     def dist(cls, psi, n, p, **kwargs):
         return _zero_inflated_mixture(
-            name=None, nonzero_p=psi, nonzero_dist=Binomial.dist(n=n, p=p), **kwargs
+            cls=cls, name=None, nonzero_p=psi, nonzero_dist=Binomial.dist(n=n, p=p), **kwargs
         )
 
 
@@ -1638,6 +1643,7 @@ class ZeroInflatedNegativeBinomial:
 
     def __new__(cls, name, psi, mu=None, alpha=None, p=None, n=None, **kwargs):
         return _zero_inflated_mixture(
+            cls=cls,
             name=name,
             nonzero_p=psi,
             nonzero_dist=NegativeBinomial.dist(mu=mu, alpha=alpha, p=p, n=n),
@@ -1647,6 +1653,7 @@ class ZeroInflatedNegativeBinomial:
     @classmethod
     def dist(cls, psi, mu=None, alpha=None, p=None, n=None, **kwargs):
         return _zero_inflated_mixture(
+            cls=cls,
             name=None,
             nonzero_p=psi,
             nonzero_dist=NegativeBinomial.dist(mu=mu, alpha=alpha, p=p, n=n),
