@@ -227,7 +227,7 @@ class Distribution(metaclass=DistributionMeta):
             See ``Model.register_rv``.
         **kwargs
             Keyword arguments that will be forwarded to ``.dist()`` or the Aesara RV Op.
-            Most prominently: ``shape`` for ``.dist()`` and ``size`` or ``dtype`` for the Op.
+            Most prominently: ``shape`` for ``.dist()`` or ``dtype`` for the Op.
 
         Returns
         -------
