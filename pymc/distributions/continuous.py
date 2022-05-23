@@ -344,7 +344,7 @@ class FlatRV(RandomVariable):
     _print_name = ("Flat", "\\operatorname{Flat}")
 
     @classmethod
-    def rng_fn(cls, rng, *args):
+    def rng_fn(cls, rng, size):
         raise NotImplementedError("Cannot sample from flat variable")
 
 
@@ -415,7 +415,7 @@ class HalfFlatRV(RandomVariable):
     _print_name = ("HalfFlat", "\\operatorname{HalfFlat}")
 
     @classmethod
-    def rng_fn(cls, rng, *args):
+    def rng_fn(cls, rng, size):
         raise NotImplementedError("Cannot sample from half_flat variable")
 
 
