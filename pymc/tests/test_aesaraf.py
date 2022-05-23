@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from unittest import mock
 
 import aesara
 import aesara.tensor as at
@@ -489,7 +490,9 @@ class TestCompilePyMC:
             # Each RV adds a shared output for its rng
             assert len(fn_fgraph.outputs) == 1 + rvs_in_graph
 
-    def test_compile_pymc_custom_update_op(self):
+    # Disable `reseed_rngs` so that we can test with simpler update rule
+    @mock.patch("pymc.aesaraf.reseed_rngs")
+    def test_compile_pymc_custom_update_op(self, _):
         """Test that custom MeasurableVariable Op updates are used by compile_pymc"""
 
         class UnmeasurableOp(OpFromGraph):
@@ -509,6 +512,33 @@ class TestCompilePyMC:
         fn = compile_pymc(inputs=[], outputs=dummy_x)
         assert fn() == 2.0
         assert fn() == 3.0
+
+    def test_random_seed(self):
+        seedx = aesara.shared(np.random.default_rng(1))
+        seedy = aesara.shared(np.random.default_rng(1))
+        x = at.random.normal(rng=seedx)
+        y = at.random.normal(rng=seedy)
+
+        # Shared variables are the same, so outputs will be identical
+        f0 = aesara.function([], [x, y])
+        x0_eval, y0_eval = f0()
+        assert x0_eval == y0_eval
+
+        # The variables will be reseeded with new seeds by default
+        f1 = compile_pymc([], [x, y])
+        x1_eval, y1_eval = f1()
+        assert x1_eval != y1_eval
+
+        # Check that seeding works
+        f2 = compile_pymc([], [x, y], random_seed=1)
+        x2_eval, y2_eval = f2()
+        assert x2_eval != x1_eval
+        assert y2_eval != y1_eval
+
+        f3 = compile_pymc([], [x, y], random_seed=1)
+        x3_eval, y3_eval = f3()
+        assert x3_eval == x2_eval
+        assert y3_eval == y2_eval
 
 
 def test_reseed_rngs():

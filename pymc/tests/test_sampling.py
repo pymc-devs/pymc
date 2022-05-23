@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import re
 import unittest.mock as mock
 
 from contextlib import ExitStack as does_not_raise
@@ -38,7 +39,7 @@ from pymc.aesaraf import compile_pymc
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
-from pymc.sampling import compile_forward_sampling_function
+from pymc.sampling import _get_seeds_per_chain, compile_forward_sampling_function
 from pymc.tests.helpers import SeededTest, fast_unstable_sampling_mode
 from pymc.tests.models import simple_init
 
@@ -50,10 +51,8 @@ class TestInitNuts(SeededTest):
 
     def test_checks_seeds_kwarg(self):
         with self.model:
-            with pytest.raises(ValueError, match="must be array-like"):
-                pm.sampling.init_nuts(seeds=1)
             with pytest.raises(ValueError, match="Number of seeds"):
-                pm.sampling.init_nuts(chains=2, seeds=[1])
+                pm.sampling.init_nuts(chains=2, random_seed=[1])
 
 
 class TestSample(SeededTest):
@@ -75,7 +74,7 @@ class TestSample(SeededTest):
         ],
     )
     def test_random_seed(self, chains, seeds, cores, init):
-        with pm.Model(rng_seeder=3):
+        with pm.Model():
             x = pm.Normal("x", 0, 10, initval="prior")
             tr1 = pm.sample(
                 chains=chains,
@@ -121,7 +120,6 @@ class TestSample(SeededTest):
             pm.sample(chains=2, cores=2, **kwargs)
         mocked_seed.assert_not_called()
 
-    @pytest.mark.xfail(reason="Sampling relies on external global seeding")
     def test_sample_does_not_rely_on_external_global_seeding(self):
         # Tests that sampling does not depend on exertenal global seeding
         kwargs = dict(
@@ -232,7 +230,7 @@ class TestSample(SeededTest):
         with self.model:
             tune = 50
             chains = 2
-            start, step = pm.sampling.init_nuts(chains=chains, seeds=[1, 2])
+            start, step = pm.sampling.init_nuts(chains=chains, random_seed=[1, 2])
             pm.sample(draws=2, tune=tune, chains=chains, step=step, start=start, cores=1)
             assert step.potential._n_samples == tune
             assert step.step_adapt._count == tune + 1
@@ -743,12 +741,14 @@ class TestSamplePPC(SeededTest):
         y = x > 0
         x_shared = aesara.shared(x)
         y_shared = aesara.shared(y)
-        with pm.Model(rng_seeder=rng) as model:
+        with pm.Model() as model:
             coeff = pm.Normal("x", mu=0, sigma=1)
             logistic = pm.Deterministic("p", pm.math.sigmoid(coeff * x_shared))
 
             obs = pm.Bernoulli("obs", p=logistic, observed=y_shared)
-            trace = pm.sample(100, return_inferencedata=False, compute_convergence_checks=False)
+            trace = pm.sample(
+                100, return_inferencedata=False, compute_convergence_checks=False, random_seed=rng
+            )
 
         x_shared.set_value([-1, 0, 1.0])
         y_shared.set_value([0, 0, 0])
@@ -769,7 +769,7 @@ class TestSamplePPC(SeededTest):
         meas_in_1 = pm.aesaraf.floatX(2 + 4 * rng.randn(10))
         meas_in_2 = pm.aesaraf.floatX(5 + 4 * rng.randn(10))
         nchains = 2
-        with pm.Model(rng_seeder=rng) as model:
+        with pm.Model() as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 2)
             sigma_in_1 = pm.HalfNormal("sd_in_1", 1)
             mu_in_2 = pm.Normal("mu_in_2", 0, 2)
@@ -788,6 +788,7 @@ class TestSamplePPC(SeededTest):
                     step=pm.Metropolis(),
                     return_inferencedata=False,
                     compute_convergence_checks=False,
+                    random_seed=rng,
                 )
 
             rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-4
@@ -808,7 +809,7 @@ class TestSamplePPC(SeededTest):
 
         meas_in_1 = pm.aesaraf.floatX(2 + 4 * rng.randn(100))
         meas_in_2 = pm.aesaraf.floatX(5 + 4 * rng.randn(100))
-        with pm.Model(rng_seeder=rng) as model:
+        with pm.Model() as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 1, initval=0)
             sigma_in_1 = pm.HalfNormal("sd_in_1", 1, initval=1)
             mu_in_2 = pm.Normal("mu_in_2", 0, 1, initval=0)
@@ -826,6 +827,7 @@ class TestSamplePPC(SeededTest):
                     step=pm.Metropolis(),
                     return_inferencedata=False,
                     compute_convergence_checks=False,
+                    random_seed=rng,
                 )
             varnames = [v for v in trace.varnames if v != "out"]
             ppc_trace = [
@@ -1007,12 +1009,12 @@ def check_exec_nuts_init(method):
         pm.Normal("a", mu=0, sigma=1, size=2)
         pm.HalfNormal("b", sigma=1)
     with model:
-        start, _ = pm.init_nuts(init=method, n_init=10, seeds=[1])
+        start, _ = pm.init_nuts(init=method, n_init=10, random_seed=[1])
         assert isinstance(start, list)
         assert len(start) == 1
         assert isinstance(start[0], dict)
         assert set(start[0].keys()) == {v.name for v in model.value_vars}
-        start, _ = pm.init_nuts(init=method, n_init=10, chains=2, seeds=[1, 2])
+        start, _ = pm.init_nuts(init=method, n_init=10, chains=2, random_seed=[1, 2])
         assert isinstance(start, list)
         assert len(start) == 2
         assert isinstance(start[0], dict)
@@ -1143,11 +1145,11 @@ class TestSamplePriorPredictive(SeededTest):
         assert sim_ppc["obs"].shape == (20,) + mn_data.shape
 
     def test_layers(self):
-        with pm.Model(rng_seeder=232093) as model:
+        with pm.Model() as model:
             a = pm.Uniform("a", lower=0, upper=1, size=10)
             b = pm.Binomial("b", n=1, p=a, size=10)
 
-        b_sampler = compile_pymc([], b, mode="FAST_RUN")
+        b_sampler = compile_pymc([], b, mode="FAST_RUN", random_seed=232093)
         avg = np.stack([b_sampler() for i in range(10000)]).mean(0)
         npt.assert_array_almost_equal(avg, 0.5 * np.ones((10,)), decimal=2)
 
@@ -1248,13 +1250,14 @@ class TestSamplePriorPredictive(SeededTest):
             # Interval transform assuming lower bound is zero
             return np.log(x - 0) - np.log(ub - x)
 
-        with pm.Model(rng_seeder=123) as model:
+        with pm.Model() as model:
             ub = pm.HalfNormal("ub", 10)
             x = pm.Uniform("x", 0, ub)
 
             prior = pm.sample_prior_predictive(
                 var_names=["ub", "ub_log__", "x", "x_interval__"],
                 samples=10,
+                random_seed=123,
             )
 
         # Check values are correct
@@ -1265,13 +1268,14 @@ class TestSamplePriorPredictive(SeededTest):
         )
 
         # Check that it works when the original RVs are not mentioned in var_names
-        with pm.Model(rng_seeder=123) as model_transformed_only:
+        with pm.Model() as model_transformed_only:
             ub = pm.HalfNormal("ub", 10)
             x = pm.Uniform("x", 0, ub)
 
             prior_transformed_only = pm.sample_prior_predictive(
                 var_names=["ub_log__", "x_interval__"],
                 samples=10,
+                random_seed=123,
             )
         assert (
             "ub" not in prior_transformed_only.prior.data_vars
@@ -1288,19 +1292,23 @@ class TestSamplePriorPredictive(SeededTest):
         # Test that samples do not depend on var_name order or, more fundamentally,
         # that they do not depend on the set order used inside `sample_prior_predictive`
         seed = 4490
-        with pm.Model(rng_seeder=seed) as m1:
+        with pm.Model() as m1:
             a = pm.Normal("a")
             b = pm.Normal("b")
             c = pm.Normal("c")
             d = pm.Normal("d")
-            prior1 = pm.sample_prior_predictive(samples=1, var_names=["a", "b", "c", "d"])
+            prior1 = pm.sample_prior_predictive(
+                samples=1, var_names=["a", "b", "c", "d"], random_seed=seed
+            )
 
-        with pm.Model(rng_seeder=seed) as m2:
+        with pm.Model() as m2:
             a = pm.Normal("a")
             b = pm.Normal("b")
             c = pm.Normal("c")
             d = pm.Normal("d")
-            prior2 = pm.sample_prior_predictive(samples=1, var_names=["b", "a", "d", "c"])
+            prior2 = pm.sample_prior_predictive(
+                samples=1, var_names=["b", "a", "d", "c"], random_seed=seed
+            )
 
         assert prior1.prior["a"] == prior2.prior["a"]
         assert prior1.prior["b"] == prior2.prior["b"]
@@ -1442,19 +1450,21 @@ class TestDraw(SeededTest):
 
 
 def test_step_args():
-    with pm.Model(rng_seeder=1410) as model:
+    with pm.Model() as model:
         a = pm.Normal("a")
-        idata0 = pm.sample(target_accept=0.5)
-        idata1 = pm.sample(nuts={"target_accept": 0.5})
+        idata0 = pm.sample(target_accept=0.5, random_seed=1410)
+        idata1 = pm.sample(nuts={"target_accept": 0.5}, random_seed=1410 * 2)
 
     npt.assert_almost_equal(idata0.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
     npt.assert_almost_equal(idata1.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
 
-    with pm.Model(rng_seeder=1418) as model:
+    with pm.Model() as model:
         a = pm.Normal("a")
         b = pm.Poisson("b", 1)
-        idata0 = pm.sample(target_accept=0.5)
-        idata1 = pm.sample(nuts={"target_accept": 0.5}, metropolis={"scaling": 0})
+        idata0 = pm.sample(target_accept=0.5, random_seed=1418)
+        idata1 = pm.sample(
+            nuts={"target_accept": 0.5}, metropolis={"scaling": 0}, random_seed=1418 * 2
+        )
 
     npt.assert_almost_equal(idata0.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
     npt.assert_almost_equal(idata1.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
@@ -1685,3 +1695,39 @@ class TestCompileForwardSampler:
         )
         assert {i.name for i in self.get_function_inputs(f)} == set()
         assert {i.name for i in self.get_function_roots(f)} == set()
+
+
+def test_get_seeds_per_chain():
+    ret = _get_seeds_per_chain(None, chains=1)
+    assert len(ret) == 1 and isinstance(ret[0], int)
+
+    ret = _get_seeds_per_chain(None, chains=2)
+    assert len(ret) == 2 and isinstance(ret[0], int)
+
+    ret = _get_seeds_per_chain(5, chains=1)
+    assert ret == (5,)
+
+    ret = _get_seeds_per_chain(5, chains=3)
+    assert len(ret) == 3 and isinstance(ret[0], int) and not any(r == 5 for r in ret)
+
+    rng = np.random.default_rng(123)
+    expected_ret = rng.integers(2**30, dtype=np.int64, size=1)
+    rng = np.random.default_rng(123)
+    ret = _get_seeds_per_chain(rng, chains=1)
+    assert ret == expected_ret
+
+    rng = np.random.RandomState(456)
+    expected_ret = rng.randint(2**30, dtype=np.int64, size=2)
+    rng = np.random.RandomState(456)
+    ret = _get_seeds_per_chain(rng, chains=2)
+    assert np.all(ret == expected_ret)
+
+    for expected_ret in ([0, 1, 2], (0, 1, 2, 3), np.arange(5)):
+        ret = _get_seeds_per_chain(expected_ret, chains=len(expected_ret))
+        assert ret is expected_ret
+
+        with pytest.raises(ValueError, match="does not match the number of chains"):
+            _get_seeds_per_chain(expected_ret, chains=len(expected_ret) + 1)
+
+    with pytest.raises(ValueError, match=re.escape("The `seeds` must be array-like")):
+        _get_seeds_per_chain({1: 1, 2: 2}, 2)

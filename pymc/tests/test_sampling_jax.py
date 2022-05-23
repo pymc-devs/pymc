@@ -199,9 +199,16 @@ def test_get_batched_jittered_initial_points():
     assert np.all(ips[0][0] != ips[0][1])
 
 
+@pytest.mark.parametrize(
+    "sampler",
+    [
+        sample_blackjax_nuts,
+        sample_numpyro_nuts,
+    ],
+)
 @pytest.mark.parametrize("random_seed", (None, 123))
 @pytest.mark.parametrize("chains", (1, 2))
-def test_seeding(chains, random_seed):
+def test_seeding(chains, random_seed, sampler):
     sample_kwargs = dict(
         tune=100,
         draws=5,
@@ -209,20 +216,17 @@ def test_seeding(chains, random_seed):
         random_seed=random_seed,
     )
 
-    with pm.Model(rng_seeder=456) as m:
+    with pm.Model() as m:
         pm.Normal("x", mu=0, sigma=1)
-        result1 = sample_numpyro_nuts(**sample_kwargs)
+        result1 = sampler(**sample_kwargs)
+        result2 = sampler(**sample_kwargs)
 
-    with pm.Model(rng_seeder=456) as m:
-        pm.Normal("x", mu=0, sigma=1)
-        result2 = sample_numpyro_nuts(**sample_kwargs)
-        result3 = sample_numpyro_nuts(**sample_kwargs)
-
-    assert np.all(result1.posterior["x"] == result2.posterior["x"])
-    expected_equal_result3 = random_seed is not None
-    assert np.all(result2.posterior["x"] == result3.posterior["x"]) == expected_equal_result3
+    all_equal = np.all(result1.posterior["x"] == result2.posterior["x"])
+    if random_seed is None:
+        assert not all_equal
+    else:
+        assert all_equal
 
     if chains > 1:
         assert np.all(result1.posterior["x"].sel(chain=0) != result1.posterior["x"].sel(chain=1))
         assert np.all(result2.posterior["x"].sel(chain=0) != result2.posterior["x"].sel(chain=1))
-        assert np.all(result3.posterior["x"].sel(chain=0) != result3.posterior["x"].sel(chain=1))

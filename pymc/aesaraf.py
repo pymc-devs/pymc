@@ -929,9 +929,28 @@ def reseed_rngs(
 
 
 def compile_pymc(
-    inputs, outputs, mode=None, **kwargs
+    inputs,
+    outputs,
+    random_seed: SeedSequenceSeed = None,
+    mode=None,
+    **kwargs,
 ) -> Callable[..., Union[np.ndarray, List[np.ndarray]]]:
     """Use ``aesara.function`` with specialized pymc rewrites always enabled.
+
+    This function also ensures shared RandomState/Generator used by RandomVariables
+    in the graph are updated across calls, to ensure independent draws.
+
+    Parameters
+    ----------
+    inputs: list of TensorVariables, optional
+        Inputs of the compiled Aesara function
+    outputs: list of TensorVariables, optional
+        Outputs of the compiled Aesara function
+    random_seed: int, array-like of int or SeedSequence, optional
+        Seed used to override any RandomState/Generator shared variables in the graph.
+        If not specified, the value of original shared variables will still be overwritten.
+    mode: optional
+        Aesara mode used to compile the function
 
     Included rewrites
     -----------------
@@ -952,7 +971,6 @@ def compile_pymc(
     """
     # Create an update mapping of RandomVariable's RNG so that it is automatically
     # updated after every function call
-    # TODO: This won't work for variables with InnerGraphs (Scan and OpFromGraph)
     rng_updates = {}
     output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
     for random_var in (
@@ -966,10 +984,16 @@ def compile_pymc(
             rng = random_var.owner.inputs[0]
             if not hasattr(rng, "default_update"):
                 rng_updates[rng] = random_var.owner.outputs[0]
+            else:
+                rng_updates[rng] = rng.default_update
         else:
             update_fn = getattr(random_var.owner.op, "update", None)
             if update_fn is not None:
                 rng_updates.update(update_fn(random_var.owner))
+
+    # We always reseed random variables as this provides RNGs with no chances of collision
+    if rng_updates:
+        reseed_rngs(rng_updates.keys(), random_seed)
 
     # If called inside a model context, see if check_bounds flag is set to False
     try:

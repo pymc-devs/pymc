@@ -206,26 +206,14 @@ class Mixture(SymbolicDistribution):
         return super().dist([w, *comp_dists], **kwargs)
 
     @classmethod
-    def num_rngs(cls, w, comp_dists, **kwargs):
-        if not isinstance(comp_dists, (tuple, list)):
-            # comp_dists is a single component
-            comp_dists = [comp_dists]
-        return len(comp_dists) + 1
-
-    @classmethod
     def ndim_supp(cls, weights, *components):
         # We already checked that all components have the same support dimensionality
         return components[0].owner.op.ndim_supp
 
     @classmethod
-    def rv_op(cls, weights, *components, size=None, rngs=None):
-        # Update rngs if provided
-        if rngs is not None:
-            components = cls._reseed_components(rngs, *components)
-            *_, mix_indexes_rng = rngs
-        else:
-            # Create new rng for the mix_indexes internal RV
-            mix_indexes_rng = aesara.shared(np.random.default_rng())
+    def rv_op(cls, weights, *components, size=None):
+        # Create new rng for the mix_indexes internal RV
+        mix_indexes_rng = aesara.shared(np.random.default_rng())
 
         single_component = len(components) == 1
         ndim_supp = components[0].owner.op.ndim_supp
@@ -318,19 +306,6 @@ class Mixture(SymbolicDistribution):
         return mix_out
 
     @classmethod
-    def _reseed_components(cls, rngs, *components):
-        *components_rngs, mix_indexes_rng = rngs
-        assert len(components) == len(components_rngs)
-        new_components = []
-        for component, component_rng in zip(components, components_rngs):
-            component_node = component.owner
-            old_rng, *inputs = component_node.inputs
-            new_components.append(
-                component_node.op.make_node(component_rng, *inputs).default_output()
-            )
-        return new_components
-
-    @classmethod
     def _resize_components(cls, size, *components):
         if len(components) == 1:
             # If we have a single component, we need to keep the length of the mixture
@@ -345,7 +320,6 @@ class Mixture(SymbolicDistribution):
     def change_size(cls, rv, new_size, expand=False):
         weights = rv.tag.weights
         components = rv.tag.components
-        rngs = [component.owner.inputs[0] for component in components] + [rv.tag.choices_rng]
 
         if expand:
             component = rv.tag.components[0]
@@ -360,7 +334,7 @@ class Mixture(SymbolicDistribution):
 
         components = cls._resize_components(new_size, *components)
 
-        return cls.rv_op(weights, *components, rngs=rngs, size=None)
+        return cls.rv_op(weights, *components, size=None)
 
 
 @_get_measurable_outputs.register(MarginalMixtureRV)

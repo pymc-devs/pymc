@@ -1682,14 +1682,14 @@ class TestMatrixNormal(BaseTestDistributionRandom):
         def ref_rand(mu, rowcov, colcov):
             return st.matrix_normal.rvs(mean=mu, rowcov=rowcov, colcov=colcov)
 
-        with pm.Model(rng_seeder=1):
+        with pm.Model():
             matrixnormal = pm.MatrixNormal(
                 "matnormal",
                 mu=np.random.random((3, 3)),
                 rowcov=np.eye(3),
                 colcov=np.eye(3),
             )
-            check = pm.sample_prior_predictive(n_fails, return_inferencedata=False)
+            check = pm.sample_prior_predictive(n_fails, return_inferencedata=False, random_seed=1)
 
         ref_smp = ref_rand(mu=np.random.random((3, 3)), rowcov=np.eye(3), colcov=np.eye(3))
 
@@ -2328,10 +2328,10 @@ def test_car_rng_fn(sparse):
     if sparse:
         W = aesara.sparse.csr_from_dense(W)
 
-    with pm.Model(rng_seeder=1):
+    with pm.Model():
         car = pm.CAR("car", mu, W, alpha, tau, size=size)
         mn = pm.MvNormal("mn", mu, cov, size=size)
-        check = pm.sample_prior_predictive(n_fails, return_inferencedata=False)
+        check = pm.sample_prior_predictive(n_fails, return_inferencedata=False, random_seed=1)
 
     p, f = delta, n_fails
     while p <= delta and f > 0:
