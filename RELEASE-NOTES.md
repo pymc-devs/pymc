@@ -25,8 +25,8 @@ Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) fo
 
 All of the above apply to:
 
-⚠ Random seeding behavior changed!
-    - Sampling results will differ from those of V3 when passing the same random_state as before. They will be consitent across subsequent V4 releases unless mentioned otherwise.
+- ⚠ Random seeding behavior changed (see [#5787](https://github.com/pymc-devs/pymc/pull/5787))!
+    - Sampling results will differ from those of V3 when passing the same `random_seed` as before. They will be consistent across subsequent V4 releases unless mentioned otherwise.
     - Sampling functions no longer respect user-specified global seeding! Always pass `random_seed` to ensure reproducible behavior.
 - Signature and default parameters changed for several distributions:
     - `pm.StudentT` now requires either `sigma` or `lam` as kwarg (see [#5628](https://github.com/pymc-devs/pymc/pull/5628))
