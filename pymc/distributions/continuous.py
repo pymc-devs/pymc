@@ -364,8 +364,8 @@ class Flat(Continuous):
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod
-    def dist(cls, *, size=None, **kwargs):
-        res = super().dist([], size=size, **kwargs)
+    def dist(cls, **kwargs):
+        res = super().dist([], **kwargs)
         return res
 
     def moment(rv, size):
@@ -432,8 +432,8 @@ class HalfFlat(PositiveContinuous):
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod
-    def dist(cls, *, size=None, **kwargs):
-        res = super().dist([], size=size, **kwargs)
+    def dist(cls, **kwargs):
+        res = super().dist([], **kwargs)
         return res
 
     def moment(rv, size):

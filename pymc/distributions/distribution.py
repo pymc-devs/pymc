@@ -226,8 +226,8 @@ class Distribution(metaclass=DistributionMeta):
         transform : optional
             See ``Model.register_rv``.
         **kwargs
-            Keyword arguments that will be forwarded to ``.dist()``.
-            Most prominently: ``shape`` and ``size``
+            Keyword arguments that will be forwarded to ``.dist()`` or the Aesara RV Op.
+            Most prominently: ``shape`` for ``.dist()`` or ``dtype`` for the Op.
 
         Returns
         -------
@@ -298,7 +298,6 @@ class Distribution(metaclass=DistributionMeta):
         dist_params,
         *,
         shape: Optional[Shape] = None,
-        size: Optional[Size] = None,
         **kwargs,
     ) -> RandomVariable:
         """Creates a RandomVariable corresponding to the `cls` distribution.
@@ -312,8 +311,9 @@ class Distribution(metaclass=DistributionMeta):
 
             An Ellipsis (...) may be inserted in the last position to short-hand refer to
             all the dimensions that the RV would get if no shape/size/dims were passed at all.
-        size : int, tuple, Variable, optional
-            For creating the RV like in Aesara/NumPy.
+        **kwargs
+            Keyword arguments that will be forwarded to the Aesara RV Op.
+            Most prominently: ``size`` or ``dtype``.
 
         Returns
         -------
@@ -337,6 +337,7 @@ class Distribution(metaclass=DistributionMeta):
 
         if "dims" in kwargs:
             raise NotImplementedError("The use of a `.dist(dims=...)` API is not supported.")
+        size = kwargs.pop("size", None)
         if shape is not None and size is not None:
             raise ValueError(
                 f"Passing both `shape` ({shape}) and `size` ({size}) is not supported!"
