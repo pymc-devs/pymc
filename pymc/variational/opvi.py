@@ -812,7 +812,6 @@ class Group(WithMemoization):
         params=None,
         random_seed=None,
         model=None,
-        rowwise=False,
         options=None,
         **kwargs,
     ):
