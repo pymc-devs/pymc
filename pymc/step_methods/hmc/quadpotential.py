@@ -136,6 +136,9 @@ class QuadPotential:
     def reset(self):
         pass
 
+    def stats(self):
+        return {"largest_eigval": np.nan, "smallest_eigval": np.nan}
+
 
 def isquadpotential(value):
     """Check whether an object might be a QuadPotential object."""

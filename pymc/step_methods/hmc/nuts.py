@@ -105,6 +105,9 @@ class NUTS(BaseHMC):
             "process_time_diff": np.float64,
             "perf_counter_diff": np.float64,
             "perf_counter_start": np.float64,
+            "largest_eigval": np.float64,
+            "smallest_eigval": np.float64,
+            "index_in_trajectory": np.int64,
         }
     ]
 
@@ -219,7 +222,7 @@ class NUTS(BaseHMC):
 
 
 # A proposal for the next position
-Proposal = namedtuple("Proposal", "q, q_grad, energy, logp")
+Proposal = namedtuple("Proposal", "q, q_grad, energy, logp, index_in_trajectory")
 
 # A subtree of the binary tree built by nuts.
 Subtree = namedtuple(
@@ -252,7 +255,7 @@ class _Tree:
         self.start_energy = np.array(start.energy)
 
         self.left = self.right = start
-        self.proposal = Proposal(start.q.data, start.q_grad, start.energy, start.model_logp)
+        self.proposal = Proposal(start.q.data, start.q_grad, start.energy, start.model_logp, 0)
         self.depth = 0
         self.log_size = 0
         self.log_accept_sum = -np.inf
@@ -346,6 +349,7 @@ class _Tree:
                     right.q_grad,
                     right.energy,
                     right.model_logp,
+                    right.index_in_trajectory,
                 )
                 tree = Subtree(
                     right, right, right.p.data, proposal, log_size
@@ -406,4 +410,5 @@ class _Tree:
             "tree_size": self.n_proposals,
             "max_energy_error": self.max_energy_change,
             "model_logp": self.proposal.logp,
+            "index_in_trajectory": self.proposal.index_in_trajectory,
         }
