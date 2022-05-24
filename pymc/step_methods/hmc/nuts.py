@@ -339,7 +339,7 @@ class _Tree:
 
             if np.abs(energy_change) > np.abs(self.max_energy_change):
                 self.max_energy_change = energy_change
-            if np.abs(energy_change) < self.Emax:
+            if energy_change < self.Emax:
                 # Acceptance statistic
                 # e^{H(q_0, p_0) - H(q_n, p_n)} max(1, e^{H(q_0, p_0) - H(q_n, p_n)})
                 # Saturated Metropolis accept probability with Boltzmann weight
