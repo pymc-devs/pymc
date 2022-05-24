@@ -648,6 +648,13 @@ class GARCH11(distribution.Continuous):
         initial_vol >= 0, initial volatility, sigma_0
     """
 
+    def __new__(cls, *args, **kwargs):
+        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
+
     def __init__(self, omega, alpha_1, beta_1, initial_vol, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -705,6 +712,13 @@ class EulerMaruyama(distribution.Continuous):
         parameters of the SDE, passed as ``*args`` to ``sde_fn``
     """
 
+    def __new__(cls, *args, **kwargs):
+        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
+
     def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
         super().__init__(*args, **kwds)
         self.dt = dt = at.as_tensor_variable(dt)
@@ -756,6 +770,13 @@ class MvGaussianRandomWalk(distribution.Continuous):
     Only one of cov, tau or chol is required.
 
     """
+
+    def __new__(cls, *args, **kwargs):
+        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
 
     def __init__(
         self, mu=0.0, cov=None, tau=None, chol=None, lower=True, init=None, *args, **kwargs
@@ -878,6 +899,13 @@ class MvStudentTRandomWalk(MvGaussianRandomWalk):
     init: distribution
         distribution for initial value (Defaults to Flat())
     """
+
+    def __new__(cls, *args, **kwargs):
+        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
 
     def __init__(self, nu, *args, **kwargs):
         super().__init__(*args, **kwargs)

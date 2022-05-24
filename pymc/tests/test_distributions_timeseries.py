@@ -435,7 +435,7 @@ class TestAR:
         assert_moment_is_expected(model, expected, check_finite_logp=False)
 
 
-@pytest.mark.xfail(reason="Timeseries not refactored")
+@pytest.mark.xfail(reason="Timeseries not refactored", raises=NotImplementedError)
 def test_GARCH11():
     # test data ~ N(0, 1)
     data = np.array(
@@ -496,7 +496,7 @@ def _gen_sde_path(sde, pars, dt, n, x0):
     return np.array(xs)
 
 
-@pytest.mark.xfail(reason="Timeseries not refactored")
+@pytest.mark.xfail(reason="Timeseries not refactored", raises=NotImplementedError)
 def test_linear():
     lam = -0.78
     sig2 = 5e-3
