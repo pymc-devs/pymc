@@ -132,7 +132,7 @@ class Latent(Base):
         if reparameterize:
             size = np.shape(X)[0]
             v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=size, **kwargs)
-            f = pm.Deterministic(name, mu + cholesky(cov).dot(v))
+            f = pm.Deterministic(name, mu + cholesky(cov).dot(v), dims=kwargs.get("dims", None))
         else:
             f = pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
         return f
@@ -279,7 +279,7 @@ class TP(Latent):
         if reparameterize:
             size = np.shape(X)[0]
             v = pm.StudentT(name + "_rotated_", mu=0.0, sigma=1.0, nu=self.nu, size=size, **kwargs)
-            f = pm.Deterministic(name, mu + cholesky(cov).dot(v))
+            f = pm.Deterministic(name, mu + cholesky(cov).dot(v), dims=kwargs.get("dims", None))
         else:
             f = pm.MvStudentT(name, nu=self.nu, mu=mu, cov=cov, **kwargs)
         return f
