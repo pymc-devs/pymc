@@ -495,27 +495,11 @@ class AR(SymbolicDistribution):
         return ar_order
 
     @classmethod
-    def num_rngs(cls, *args, **kwargs):
-        return 2
-
-    @classmethod
     def ndim_supp(cls, *args):
         return 1
 
     @classmethod
-    def rv_op(cls, rhos, sigma, init_dist, steps, ar_order, constant_term, size=None, rngs=None):
-
-        if rngs is None:
-            rngs = [
-                aesara.shared(np.random.default_rng(seed))
-                for seed in np.random.SeedSequence().spawn(2)
-            ]
-        (init_dist_rng, noise_rng) = rngs
-        # Re-seed init_dist
-        if init_dist.owner.inputs[0] is not init_dist_rng:
-            _, *inputs = init_dist.owner.inputs
-            init_dist = init_dist.owner.op.make_node(init_dist_rng, *inputs).default_output()
-
+    def rv_op(cls, rhos, sigma, init_dist, steps, ar_order, constant_term, size=None):
         # Init dist should have shape (*size, ar_order)
         if size is not None:
             batch_size = size
@@ -542,6 +526,8 @@ class AR(SymbolicDistribution):
             # In this case init shape is one unit smaller than rhos in the last dimension
             rhos_bcast_shape_ = (*rhos_bcast_shape_[:-1], rhos_bcast_shape_[-1] + 1)
         rhos_bcast_ = at.broadcast_to(rhos_, rhos_bcast_shape_)
+
+        noise_rng = aesara.shared(np.random.default_rng())
 
         def step(*args):
             *prev_xs, reversed_rhos, sigma, rng = args
@@ -581,16 +567,12 @@ class AR(SymbolicDistribution):
             old_size = rv.shape[:-1]
             new_size = at.concatenate([new_size, old_size])
 
-        init_dist_rng = rv.owner.inputs[2].owner.inputs[0]
-        noise_rng = rv.owner.inputs[-1]
-
         op = rv.owner.op
         return cls.rv_op(
             *rv.owner.inputs,
             ar_order=op.ar_order,
             constant_term=op.constant_term,
             size=new_size,
-            rngs=(init_dist_rng, noise_rng),
         )
 
 

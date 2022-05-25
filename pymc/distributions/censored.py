@@ -86,15 +86,11 @@ class Censored(SymbolicDistribution):
         return super().dist([dist, lower, upper], **kwargs)
 
     @classmethod
-    def num_rngs(cls, *args, **kwargs):
-        return 1
-
-    @classmethod
     def ndim_supp(cls, *dist_params):
         return 0
 
     @classmethod
-    def rv_op(cls, dist, lower=None, upper=None, size=None, rngs=None):
+    def rv_op(cls, dist, lower=None, upper=None, size=None):
 
         lower = at.constant(-np.inf) if lower is None else at.as_tensor_variable(lower)
         upper = at.constant(np.inf) if upper is None else at.as_tensor_variable(upper)
@@ -112,20 +108,7 @@ class Censored(SymbolicDistribution):
         rv_out.tag.lower = lower
         rv_out.tag.upper = upper
 
-        if rngs is not None:
-            rv_out = cls._change_rngs(rv_out, rngs)
-
         return rv_out
-
-    @classmethod
-    def _change_rngs(cls, rv, new_rngs):
-        (new_rng,) = new_rngs
-        dist_node = rv.tag.dist.owner
-        lower = rv.tag.lower
-        upper = rv.tag.upper
-        olg_rng, size, dtype, *dist_params = dist_node.inputs
-        new_dist = dist_node.op.make_node(new_rng, size, dtype, *dist_params).default_output()
-        return cls.rv_op(new_dist, lower, upper)
 
     @classmethod
     def change_size(cls, rv, new_size, expand=False):

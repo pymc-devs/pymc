@@ -57,11 +57,20 @@ from aesara.graph.basic import Variable
 
 import pymc as pm
 
-from pymc.aesaraf import at_rng, compile_pymc, identity, rvs_to_value_vars
+from pymc.aesaraf import (
+    SeedSequenceSeed,
+    at_rng,
+    compile_pymc,
+    find_rng_nodes,
+    identity,
+    reseed_rngs,
+    rvs_to_value_vars,
+)
 from pymc.backends import NDArray
 from pymc.blocking import DictToArrayBijection
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
+from pymc.sampling import RandomState, _get_seeds_per_chain
 from pymc.util import WithMemoization, locally_cachedmethod
 from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
@@ -732,7 +741,7 @@ class Group(WithMemoization):
             jitter_rvs={},
             return_transformed=True,
         )
-        start = ipfn(self.model.rng_seeder.randint(2**30, dtype=np.int64))
+        start = ipfn(self.rng.integers(2**30, dtype=np.int64))
         group_vars = {self.model.rvs_to_values[v].name for v in self.group}
         start = {k: v for k, v in start.items() if k in group_vars}
         start = DictToArrayBijection.map(start).data
@@ -1412,22 +1421,30 @@ class Approximation(WithMemoization):
         sampled = [self.rslice(name) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
         sample_fn = compile_pymc([s], sampled)
+        rng_nodes = find_rng_nodes(sampled)
 
-        def inner(draws=100):
+        def inner(draws=100, *, random_seed: SeedSequenceSeed = None):
+            if random_seed is not None:
+                reseed_rngs(rng_nodes, random_seed)
             _samples = sample_fn(draws)
+
             return {v_: s_ for v_, s_ in zip(names, _samples)}
 
         return inner
 
-    def sample(self, draws=500, return_inferencedata=True, **kwargs):
+    def sample(
+        self, draws=500, *, random_seed: RandomState = None, return_inferencedata=True, **kwargs
+    ):
         """Draw samples from variational posterior.
 
         Parameters
         ----------
-        draws: `int`
+        draws : int
             Number of random samples.
-        return_inferencedata: `bool`
-            Return trace in Arviz format
+        random_seed : int, RandomState or Generator, optional
+            Seed for the random number generator.
+        return_inferencedata : bool
+            Return trace in Arviz format.
 
         Returns
         -------
@@ -1437,7 +1454,9 @@ class Approximation(WithMemoization):
         # TODO: add tests for include_transformed case
         kwargs["log_likelihood"] = False
 
-        samples = self.sample_dict_fn(draws)  # type: dict
+        if random_seed is not None:
+            (random_seed,) = _get_seeds_per_chain(random_seed, 1)
+        samples = self.sample_dict_fn(draws, random_seed=random_seed)  # type: dict
         points = ({name: records[i] for name, records in samples.items()} for i in range(draws))
 
         trace = NDArray(

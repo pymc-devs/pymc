@@ -3222,21 +3222,23 @@ def test_serialize_density_dist():
 def test_distinct_rvs():
     """Make sure `RandomVariable`s generated using a `Model`'s default RNG state all have distinct states."""
 
-    with pm.Model(rng_seeder=np.random.RandomState(2023532)) as model:
+    with pm.Model() as model:
         X_rv = pm.Normal("x")
         Y_rv = pm.Normal("y")
 
-        pp_samples = pm.sample_prior_predictive(samples=2, return_inferencedata=False)
+        pp_samples = pm.sample_prior_predictive(
+            samples=2, return_inferencedata=False, random_seed=np.random.RandomState(2023532)
+        )
 
     assert X_rv.owner.inputs[0] != Y_rv.owner.inputs[0]
 
-    assert len(model.rng_seq) == 2
-
-    with pm.Model(rng_seeder=np.random.RandomState(2023532)):
+    with pm.Model():
         X_rv = pm.Normal("x")
         Y_rv = pm.Normal("y")
 
-        pp_samples_2 = pm.sample_prior_predictive(samples=2, return_inferencedata=False)
+        pp_samples_2 = pm.sample_prior_predictive(
+            samples=2, return_inferencedata=False, random_seed=np.random.RandomState(2023532)
+        )
 
     assert np.array_equal(pp_samples["y"], pp_samples_2["y"])
 
@@ -3312,7 +3314,8 @@ class TestCensored:
         data[data <= low] = low
         data[data >= high] = high
 
-        with pm.Model(rng_seeder=17092021) as m:
+        rng = 17092021
+        with pm.Model() as m:
             mu = pm.Normal(
                 "mu",
                 mu=((high - low) / 2) + low,
@@ -3328,9 +3331,9 @@ class TestCensored:
                 observed=data,
             )
 
-            prior_pred = pm.sample_prior_predictive()
-            posterior = pm.sample(tune=500, draws=500)
-            posterior_pred = pm.sample_posterior_predictive(posterior)
+            prior_pred = pm.sample_prior_predictive(random_seed=rng)
+            posterior = pm.sample(tune=500, draws=500, random_seed=rng)
+            posterior_pred = pm.sample_posterior_predictive(posterior, random_seed=rng)
 
         expected = True if censored else False
         assert (9 < prior_pred.prior_predictive.mean() < 10) == expected

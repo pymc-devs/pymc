@@ -44,7 +44,6 @@ from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.opt import local_subtensor_rv_lift
-from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
 
@@ -445,13 +444,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         parameters can only take on valid values you can set this to
         False for increased speed. This should not be used if your model
         contains discrete variables.
-    rng_seeder: int or numpy.random.RandomState
-        The ``numpy.random.RandomState`` used to seed the
-        ``RandomStateSharedVariable`` sequence used by a model
-        ``RandomVariable``s, or an int used to seed a new
-        ``numpy.random.RandomState``.  If ``None``, a
-        ``RandomStateSharedVariable`` will be generated and used.  Incremental
-        access to the state sequence is provided by ``Model.next_rng``.
 
     Examples
     --------
@@ -549,20 +541,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         name="",
         coords=None,
         check_bounds=True,
-        rng_seeder: Optional[Union[int, np.random.RandomState]] = None,
     ):
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
 
-        if rng_seeder is None:
-            self.rng_seeder = np.random.RandomState()
-        elif isinstance(rng_seeder, int):
-            self.rng_seeder = np.random.RandomState(rng_seeder)
-        else:
-            self.rng_seeder = rng_seeder
-
-        # The sequence of model-generated RNGs
-        self.rng_seq: List[SharedVariable] = []
         self._initial_values: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]] = {}
 
         if self.parent is not None:
@@ -1016,8 +998,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         ip : dict
             Maps names of transformed variables to numeric initial values in the transformed space.
         """
-        if seed is None:
-            seed = self.rng_seeder.randint(2**30, dtype=np.int64)
         fn = make_initial_point_fn(model=self, return_transformed=True)
         return Point(fn(seed), model=self)
 
@@ -1037,20 +1017,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             initval = rv_var.type.filter(initval)
 
         self.initial_values[rv_var] = initval
-
-    def next_rng(self) -> RandomStateSharedVariable:
-        """Generate a new ``RandomStateSharedVariable``.
-
-        The new ``RandomStateSharedVariable`` is also added to
-        ``Model.rng_seq``.
-        """
-        new_seed = self.rng_seeder.randint(2**30, dtype=np.int64)
-        next_rng = aesara.shared(np.random.RandomState(new_seed), borrow=True)
-        next_rng.tag.is_rng = True
-
-        self.rng_seq.append(next_rng)
-
-        return next_rng
 
     def shape_from_dims(self, dims):
         shape = []
@@ -1379,14 +1345,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 clone=False,
             )
             (observed_rv_var,) = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
-            # Make a clone of the RV, but change the rng so that observed and missing
-            # are not treated as equivalent nodes by aesara. This would happen if the
-            # size of the masked and unmasked array happened to coincide
+            # Make a clone of the RV, but let it create a new rng so that observed and
+            # missing are not treated as equivalent nodes by aesara. This would happen
+            # if the size of the masked and unmasked array happened to coincide
             _, size, _, *inps = observed_rv_var.owner.inputs
-            rng = self.model.next_rng()
-            observed_rv_var = observed_rv_var.owner.op(
-                *inps, size=size, rng=rng, name=f"{name}_observed"
-            )
+            observed_rv_var = observed_rv_var.owner.op(*inps, size=size, name=f"{name}_observed")
             observed_rv_var.tag.observations = nonmissing_data
 
             self.create_value_var(observed_rv_var, transform=None, value_var=nonmissing_data)

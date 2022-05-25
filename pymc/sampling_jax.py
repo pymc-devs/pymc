@@ -7,7 +7,7 @@ from functools import partial
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
 from pymc.initial_point import StartDict
-from pymc.sampling import _init_jitter
+from pymc.sampling import RandomSeed, _get_seeds_per_chain, _init_jitter
 
 xla_flags = os.getenv("XLA_FLAGS", "")
 xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
@@ -147,7 +147,7 @@ def _get_batched_jittered_initial_points(
     model: Model,
     chains: int,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
-    random_seed: int,
+    random_seed: RandomSeed,
     jitter: bool = True,
     jitter_max_retries: int = 10,
 ) -> Union[np.ndarray, List[np.ndarray]]:
@@ -160,14 +160,10 @@ def _get_batched_jittered_initial_points(
         Each item has shape `(chains, *var.shape)`
     """
 
-    random_seed = np.random.default_rng(random_seed).integers(2**30, size=chains)
-
-    assert len(random_seed) == chains
-
     initial_points = _init_jitter(
         model,
         initvals,
-        seeds=random_seed,
+        seeds=_get_seeds_per_chain(random_seed, chains),
         jitter=jitter,
         jitter_max_retries=jitter_max_retries,
     )
@@ -220,7 +216,7 @@ def sample_blackjax_nuts(
     tune=1000,
     chains=4,
     target_accept=0.8,
-    random_seed=10,
+    random_seed: RandomSeed = None,
     initvals=None,
     model=None,
     var_names=None,
@@ -245,7 +241,7 @@ def sample_blackjax_nuts(
     target_accept : float in [0, 1].
         The step size is tuned such that we approximate this acceptance rate. Higher values like
         0.9 or 0.95 often work better for problematic posteriors.
-    random_seed : int, default 10
+    random_seed : int, RandomState or Generator, optional
         Random seed used by the sampling steps.
     model : Model, optional
         Model to sample from. The model needs to have free random variables. When inside a ``with`` model
@@ -291,6 +287,8 @@ def sample_blackjax_nuts(
         }
     else:
         dims = {}
+
+    (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
     tic1 = datetime.now()
     print("Compiling...", file=sys.stdout)
@@ -387,7 +385,7 @@ def sample_numpyro_nuts(
     tune: int = 1000,
     chains: int = 4,
     target_accept: float = 0.8,
-    random_seed: int = None,
+    random_seed: RandomSeed = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
     var_names=None,
@@ -414,7 +412,7 @@ def sample_numpyro_nuts(
     target_accept : float in [0, 1].
         The step size is tuned such that we approximate this acceptance rate. Higher values like
         0.9 or 0.95 often work better for problematic posteriors.
-    random_seed : int, default 10
+    random_seed : int, RandomState or Generator, optional
         Random seed used by the sampling steps.
     model : Model, optional
         Model to sample from. The model needs to have free random variables. When inside a ``with`` model
@@ -470,8 +468,7 @@ def sample_numpyro_nuts(
     else:
         dims = {}
 
-    if random_seed is None:
-        random_seed = model.rng_seeder.randint(2**30, dtype=np.int64)
+    (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
     tic1 = datetime.now()
     print("Compiling...", file=sys.stdout)
