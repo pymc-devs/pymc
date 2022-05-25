@@ -548,35 +548,10 @@ class Group(WithMemoization):
         Random seed for underlying random generator
     model :
         PyMC Model
-    local: bool
-        Indicates whether this group is local. Cannot be passed without `params`.
-        Such group should have only one variable
-    rowwise: bool
-        Indicates whether this group is independently parametrized over first dim.
-        Such group should have only one variable
     options: dict
         Special options for the group
     kwargs: Other kwargs for the group
 
-    Notes
-    -----
-    Group instance/class has some important constants:
-
-    -   **supports_batched**
-        Determines whether such variational family can be used for AEVB or rowwise approx.
-
-        AEVB approx is such approx that somehow depends on input data. It can be treated
-        as conditional distribution. You can see more about in the corresponding paper
-        mentioned in references.
-
-        Rowwise mode is a special case approximation that treats every 'row', of a tensor as
-        independent from each other. Some distributions can't do that by
-        definition e.g. :class:`Empirical` that consists of particles only.
-
-    -   **has_logq**
-        Tells that distribution is defined explicitly
-
-    These constants help providing the correct inference method for given parametrization
 
     Examples
     --------
@@ -613,24 +588,6 @@ class Group(WithMemoization):
 
     -   `{'histogram'}`: :class:`EmpiricalGroup`
 
-    -   `{0, 1, 2, 3, ..., k-1}`: :class:`NormalizingFlowGroup` of depth `k`
-
-        NormalizingFlows have other parameters than ordinary groups and should be
-        passed as nested dicts with the following keys:
-
-        -   `{'u', 'w', 'b'}`: :class:`PlanarFlow`
-
-        -   `{'a', 'b', 'z_ref'}`: :class:`RadialFlow`
-
-        -   `{'loc'}`: :class:`LocFlow`
-
-        -   `{'rho'}`: :class:`ScaleFlow`
-
-        -   `{'v'}`: :class:`HouseholderFlow`
-
-        Note that all integer keys should be present in the dictionary. An example
-        of NormalizingFlow initialization can be found below.
-
     **Using AEVB**
 
     Autoencoding variational Bayes is a powerful tool to get conditional :math:`q(\lambda|X)` distribution
@@ -640,73 +597,6 @@ class Group(WithMemoization):
     variable to have first dimension as *batch* dimension and other dimensions should stay fixed.
     With this assumptions it is possible to generalize all variational approximation families as
     batched approximations that have flexible parameters and leading axis.
-
-    Only single variable local group is supported. Params are required.
-
-    >>> # for mean field
-    >>> group = Group([latent3], params=dict(mu=my_mu, rho=my_rho), local=True)
-    >>> # or for full rank
-    >>> group = Group([latent3], params=dict(mu=my_mu, L_tril=my_L_tril), local=True)
-
-    -   An Approximation class is selected automatically based on the keys in dict.
-
-    -   `my_mu` and `my_rho` are usually estimated with neural network or function approximator.
-
-    **Using Row-Wise Group**
-
-    Batch groups have independent row wise approximations, thus using batched
-    mean field will give no effect. It is more interesting if you want each row of a matrix
-    to be parametrized independently with normalizing flow or full rank gaussian.
-
-    To tell :class:`Group` that group is batched you need set `batched` kwarg as `True`.
-    Only single variable group is allowed due to implementation details.
-
-    >>> group = Group([latent3], vfam='fr', rowwise=True) # 'fr' is alias for 'full_rank'
-
-    The resulting approximation for this variable will have the following structure
-
-    .. math::
-
-        latent3_{i, \dots} \sim \mathcal{N}(\mu_i, \Sigma_i) \forall i
-
-    **Note**: Using rowwise and user-parametrized approximation is ok, but
-    shape should be checked beforehand, it is impossible to infer it by PyMC
-
-    **Normalizing Flow Group**
-
-    In case you use simple initialization pattern using `vfam` you'll not meet any changes.
-    Passing flow formula to `vfam` you'll get correct flow parametrization for group
-
-    .. code:: python
-
-        >>> group = Group([latent3], vfam='scale-hh*5-radial*4-loc')
-
-    **Note**: Consider passing location flow as the last one and scale as the first one for stable inference.
-
-    Rowwise normalizing flow is supported as well
-
-    .. code:: python
-
-        >>> group = Group([latent3], vfam='scale-hh*2-radial-loc', rowwise=True)
-
-    Custom parameters for normalizing flow can be a real trouble for the first time.
-    They have quite different format from the rest variational families.
-
-
-    .. code:: python
-
-        >>> # int is used as key, it also tells the flow position
-        ... flow_params = {
-        ...     # `rho` parametrizes scale flow, softplus is used to map (-inf; inf) -> (0, inf)
-        ...     0: dict(rho=my_scale),
-        ...     1: dict(v=my_v1),  # Householder Flow, `v` is parameter name from the original paper
-        ...     2: dict(v=my_v2),  # do not miss any number in dict, or else error is raised
-        ...     3: dict(a=my_a, b=my_b, z_ref=my_z_ref),  # Radial flow
-        ...     4: dict(loc=my_loc)  # Location Flow
-        ... }
-        ... group = Group([latent3], params=flow_params)
-        ... # local=True can be added in case you do AEVB inference
-        ... group = Group([latent3], params=flow_params, local=True)
 
     **Delayed Initialization**
 
@@ -1196,7 +1086,6 @@ class Approximation(WithMemoization):
 
         -   :class:`MeanField`
         -   :class:`FullRank`
-        -   :class:`NormalizingFlow`
         -   :class:`Empirical`
 
     Single group accepts `local_rv` keyword with dict mapping PyMC variables
