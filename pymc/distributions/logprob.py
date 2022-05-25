@@ -269,11 +269,23 @@ def joint_logpt(
     return logp_var
 
 
-def logp(rv, value):
+def logp(rv: TensorVariable, value) -> TensorVariable:
     """Return the log-probability graph of a Random Variable"""
 
     value = at.as_tensor_variable(value, dtype=rv.dtype)
-    return logp_aeppl(rv, value)
+    try:
+        return logp_aeppl(rv, value)
+    except NotImplementedError:
+        try:
+            value = rv.type.filter_variable(value)
+        except TypeError as exc:
+            raise TypeError(
+                "When RV is not a pure distribution, value variable must have the same type"
+            ) from exc
+        try:
+            return factorized_joint_logprob({rv: value}, warn_missing_rvs=False)[value]
+        except Exception as exc:
+            raise NotImplementedError("PyMC could not infer logp of input variable.") from exc
 
 
 def logcdf(rv, value):
