@@ -824,6 +824,8 @@ class TestMarginalVsLatent:
             gp = pm.gp.Latent(mean_func=mean_func, cov_func=cov_func)
             f = gp.prior("f", self.X, reparameterize=False)
             p = gp.conditional("p", self.Xnew)
+        assert tuple(f.shape.eval()) == (self.X.shape[0],)
+        assert tuple(p.shape.eval()) == (self.Xnew.shape[0],)
         latent_logp = model.compile_logp()({"f": self.y, "p": self.pnew})
         npt.assert_allclose(latent_logp, self.logp, atol=0, rtol=1e-2)
 
@@ -834,6 +836,8 @@ class TestMarginalVsLatent:
             gp = pm.gp.Latent(mean_func=mean_func, cov_func=cov_func)
             f = gp.prior("f", self.X, reparameterize=True)
             p = gp.conditional("p", self.Xnew)
+        assert tuple(f.shape.eval()) == (self.X.shape[0],)
+        assert tuple(p.shape.eval()) == (self.Xnew.shape[0],)
         chol = np.linalg.cholesky(cov_func(self.X).eval())
         y_rotated = np.linalg.solve(chol, self.y - 0.5)
         latent_logp = model.compile_logp()({"f_rotated_": y_rotated, "p": self.pnew})
@@ -1068,6 +1072,8 @@ class TestTP:
             tp = pm.gp.TP(cov_func=cov_func, nu=self.nu)
             f = tp.prior("f", self.X, reparameterize=False)
             p = tp.conditional("p", self.Xnew)
+        assert tuple(f.shape.eval()) == (self.X.shape[0],)
+        assert tuple(p.shape.eval()) == (self.Xnew.shape[0],)
         tp_logp = model.compile_logp()({"f": self.y, "p": self.pnew})
         npt.assert_allclose(self.gp_latent_logp, tp_logp, atol=0, rtol=1e-2)
 
@@ -1077,6 +1083,8 @@ class TestTP:
             tp = pm.gp.TP(cov_func=cov_func, nu=self.nu)
             f = tp.prior("f", self.X, reparameterize=True)
             p = tp.conditional("p", self.Xnew)
+        assert tuple(f.shape.eval()) == (self.X.shape[0],)
+        assert tuple(p.shape.eval()) == (self.Xnew.shape[0],)
         chol = np.linalg.cholesky(cov_func(self.X).eval())
         f_rotated = np.linalg.solve(chol, self.y)
         tp_logp = model.compile_logp()({"f_rotated_": f_rotated, "p": self.pnew})
@@ -1129,6 +1137,8 @@ class TestLatentKron:
             kron_gp = pm.gp.LatentKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
             f = kron_gp.prior("f", self.Xs)
             p = kron_gp.conditional("p", self.Xnew)
+        assert tuple(f.shape.eval()) == (self.X.shape[0],)
+        assert tuple(p.shape.eval()) == (self.Xnew.shape[0],)
         kronlatent_logp = kron_model.compile_logp()({"f_rotated_": self.y_rotated, "p": self.pnew})
         npt.assert_allclose(kronlatent_logp, self.logp, atol=0, rtol=1e-3)
 
@@ -1186,6 +1196,8 @@ class TestMarginalKron:
             f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma)
             p = kron_gp.conditional("p", self.Xnew)
             mu, cov = kron_gp.predict(self.Xnew)
+        assert tuple(f.shape.eval()) == (self.X.shape[0],)
+        assert tuple(p.shape.eval()) == (self.Xnew.shape[0],)
         npt.assert_allclose(mu, self.mu, atol=1e-5, rtol=1e-2)
         npt.assert_allclose(cov, self.cov, atol=1e-5, rtol=1e-2)
         with kron_model:
