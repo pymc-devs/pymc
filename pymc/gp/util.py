@@ -88,29 +88,6 @@ def replace_with_values(vars_needed, replacements=None, model=None):
     return fn(**replacements)
 
 
-def infer_size(X, n_points=None):
-    R"""
-    Maybe attempt to infer the size, or N, of a Gaussian process input matrix.
-
-    If a specific shape cannot be inferred, for instance if X is symbolic, then an
-    error is raised.
-
-    Parameters
-    ----------
-    X: array-like
-        Gaussian process input matrix.
-    n_points: None or int
-        The number of rows of `X`.  If `None`, the number of rows of `X` is
-        calculated from `X` if possible.
-    """
-    if n_points is None:
-        try:
-            n_points = int(X.shape[0])
-        except TypeError:
-            raise TypeError("Cannot infer 'shape', provide as an argument")
-    return n_points
-
-
 def stabilize(K, jitter=JITTER_DEFAULT):
     R"""
     Adds small diagonal to a covariance matrix.

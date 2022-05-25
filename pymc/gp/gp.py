@@ -27,7 +27,6 @@ from pymc.gp.util import (
     JITTER_DEFAULT,
     cholesky,
     conditioned_vars,
-    infer_size,
     replace_with_values,
     solve_lower,
     solve_upper,
@@ -131,7 +130,7 @@ class Latent(Base):
         mu = self.mean_func(X)
         cov = stabilize(self.cov_func(X), jitter)
         if reparameterize:
-            size = infer_size(X, kwargs.pop("size", None))
+            size = np.shape(X)[0]
             v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=size, **kwargs)
             f = pm.Deterministic(name, mu + cholesky(cov).dot(v))
         else:
@@ -278,7 +277,7 @@ class TP(Latent):
         mu = self.mean_func(X)
         cov = stabilize(self.cov_func(X), jitter)
         if reparameterize:
-            size = infer_size(X, kwargs.pop("size", None))
+            size = np.shape(X)[0]
             v = pm.StudentT(name + "_rotated_", mu=0.0, sigma=1.0, nu=self.nu, size=size, **kwargs)
             f = pm.Deterministic(name, mu + cholesky(cov).dot(v))
         else:
