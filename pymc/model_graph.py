@@ -47,7 +47,12 @@ class ModelGraph:
                 return reversed(x.owner.inputs)
             return []
 
-        parents = {get_var_name(x) for x in walk(nodes=var.owner.inputs, expand=_expand) if x.name}
+        parents = {
+            get_var_name(x)
+            for x in walk(nodes=var.owner.inputs, expand=_expand)
+            # Only consider nodes that are in the named model variables.
+            if x.name and x.name in self._all_var_names
+        }
 
         return parents
 
