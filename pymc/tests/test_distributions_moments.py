@@ -28,6 +28,7 @@ from pymc.distributions import (
     Exponential,
     Flat,
     Gamma,
+    GaussianRandomWalk,
     Geometric,
     Gumbel,
     HalfCauchy,
@@ -1505,4 +1506,44 @@ def test_lkjcholeskycov_moment(n, eta, size, expected):
 def test_dirichlet_multinomial_moment(a, n, size, expected):
     with Model() as model:
         DirichletMultinomial("x", n=n, a=a, size=size)
+    assert_moment_is_expected(model, expected)
+
+
+even_numbers = np.insert(np.cumsum(np.tile(2, 10)), 0, 0)  # for test_gaussianrandomwalk below
+
+
+@pytest.mark.parametrize(
+    "mu, sigma, init_dist, steps, size, expected",
+    [
+        (0, 3, StudentT.dist(5), 10, None, np.zeros(11)),
+        (Normal.dist(2, 3), Gamma.dist(1, 1), StudentT.dist(5), 10, None, even_numbers),
+        (
+            Normal.dist(2, 3, size=(3, 5)),
+            Gamma.dist(1, 1),
+            StudentT.dist(5),
+            10,
+            None,
+            np.broadcast_to(even_numbers, shape=(3, 5, 11)),
+        ),
+        (
+            Normal.dist(2, 3, size=(3, 1)),
+            Gamma.dist(1, 1, size=(1, 5)),
+            StudentT.dist(5),
+            10,
+            (3, 5),
+            np.broadcast_to(even_numbers, shape=(3, 5, 11)),
+        ),
+        (
+            Normal.dist(2, 3),
+            Gamma.dist(1, 1),
+            StudentT.dist(5),
+            10,
+            (3, 5),
+            np.broadcast_to(even_numbers, shape=(3, 5, 11)),
+        ),
+    ],
+)
+def test_gaussianrandomwalk(mu, sigma, init_dist, steps, size, expected):
+    with Model() as model:
+        GaussianRandomWalk("x", mu=mu, sigma=sigma, init_dist=init_dist, steps=steps, size=size)
     assert_moment_is_expected(model, expected)

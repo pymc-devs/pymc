@@ -33,11 +33,12 @@ import pandas as pd
 import scipy.sparse as sps
 
 from aeppl.abstract import MeasurableVariable
-from aeppl.logprob import CheckParameterValue
+from aeppl.logprob import CheckParameterValue, _logprob, logprob
+from aeppl.tensor import MeasurableJoin
 from aesara import config, scalar
 from aesara.compile.mode import Mode, get_mode
 from aesara.gradient import grad
-from aesara.graph import local_optimizer
+from aesara.graph import local_optimizer, optimize_graph
 from aesara.graph.basic import (
     Apply,
     Constant,
@@ -52,6 +53,7 @@ from aesara.graph.op import Op, compute_test_value
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.scalar.basic import Cast
 from aesara.tensor.basic import _as_tensor_variable
+from aesara.tensor.basic_opt import topo_constant_folding
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import (
@@ -873,6 +875,52 @@ def largest_common_dtype(tensors):
         str(t.dtype) if hasattr(t, "dtype") else smartfloatX(np.asarray(t)).dtype for t in tensors
     }
     return np.stack([np.ones((), dtype=dtype) for dtype in dtypes]).dtype
+
+
+@_logprob.register(MeasurableJoin)
+def logprob_join_constant_shapes(op, values, axis, *base_vars, **kwargs):
+    """Compute the log-likelihood graph for a `Join`.
+
+    This overrides the implementation in Aeppl, to constant fold the shapes
+    of the base vars so that RandomVariables do not show up in the logp graph
+    """
+    (value,) = values
+
+    base_var_shapes = at.stack([base_var.shape[axis] for base_var in base_vars])
+
+    base_var_shapes = optimize_graph(
+        base_var_shapes,
+        custom_opt=topo_constant_folding,
+    )
+
+    split_values = at.split(
+        value,
+        splits_size=[base_var_shape for base_var_shape in base_var_shapes],
+        n_splits=len(base_vars),
+        axis=axis,
+    )
+
+    logps = [
+        logprob(base_var, split_value)
+        for base_var, split_value in zip(base_vars, split_values)
+    ]
+
+    if len(set(logp.ndim for logp in logps)) != 1:
+        raise ValueError(
+            "Joined logps have different number of dimensions, this can happen when "
+            "joining univariate and multivariate distributions",
+        )
+
+    base_vars_ndim_supp = split_values[0].ndim - logps[0].ndim
+    join_logprob = at.concatenate(
+        [
+            at.atleast_1d(logprob(base_var, split_value))
+            for base_var, split_value in zip(base_vars, split_values)
+        ],
+        axis=axis - base_vars_ndim_supp,
+    )
+
+    return join_logprob
 
 
 @local_optimizer(tracks=[CheckParameterValue])

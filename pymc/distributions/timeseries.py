@@ -13,7 +13,7 @@
 #   limitations under the License.
 import warnings
 
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import aesara
 import aesara.tensor as at
@@ -28,22 +28,15 @@ from aesara.graph.basic import Node
 from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
 from aesara.tensor.basic_opt import ShapeFeature, topo_constant_folding
+from aesara.tensor.extra_ops import CumOp
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.utils import normalize_size_param
 
 from pymc.aesaraf import change_rv_size, convert_observed_data, floatX, intX
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
-from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicDistribution, _moment, moment
 from pymc.distributions.logprob import ignore_logprob, logp
-from pymc.distributions.shape_utils import (
-    Dims,
-    Shape,
-    convert_dims,
-    rv_size_is_none,
-    to_tuple,
-)
+from pymc.distributions.shape_utils import Dims, Shape, convert_dims, to_tuple
 from pymc.model import modelcontext
 from pymc.util import check_dist_not_registered
 
@@ -114,110 +107,8 @@ def get_steps(
     return inferred_steps
 
 
-class GaussianRandomWalkRV(RandomVariable):
-    """
-    GaussianRandomWalk Random Variable
-    """
-
-    name = "GaussianRandomWalk"
-    ndim_supp = 1
-    ndims_params = [0, 0, 0, 0]
-    dtype = "floatX"
-    _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
-
-    def make_node(self, rng, size, dtype, mu, sigma, init_dist, steps):
-        steps = at.as_tensor_variable(steps)
-        if not steps.ndim == 0 or not steps.dtype.startswith("int"):
-            raise ValueError("steps must be an integer scalar (ndim=0).")
-
-        mu = at.as_tensor_variable(mu)
-        sigma = at.as_tensor_variable(sigma)
-        init_dist = at.as_tensor_variable(init_dist)
-
-        # Resize init distribution
-        size = normalize_size_param(size)
-        # If not explicit, size is determined by the shapes of mu, sigma, and init
-        init_dist_size = (
-            size if not rv_size_is_none(size) else at.broadcast_shape(mu, sigma, init_dist)
-        )
-        init_dist = change_rv_size(init_dist, init_dist_size)
-
-        return super().make_node(rng, size, dtype, mu, sigma, init_dist, steps)
-
-    def _supp_shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
-        steps = dist_params[3]
-
-        return (steps + 1,)
-
-    @classmethod
-    def rng_fn(
-        cls,
-        rng: np.random.RandomState,
-        mu: Union[np.ndarray, float],
-        sigma: Union[np.ndarray, float],
-        init_dist: Union[np.ndarray, float],
-        steps: int,
-        size: Tuple[int],
-    ) -> np.ndarray:
-        """Gaussian Random Walk generator.
-
-        The init value is drawn from the Normal distribution with the same sigma as the
-        innovations.
-
-        Notes
-        -----
-        Currently does not support custom init distribution
-
-        Parameters
-        ----------
-        rng: np.random.RandomState
-           Numpy random number generator
-        mu: array_like of float
-           Random walk mean
-        sigma: array_like of float
-            Standard deviation of innovation (sigma > 0)
-        init_dist: array_like of float
-            Initialization value for GaussianRandomWalk
-        steps: int
-            Length of random walk, must be greater than 1. Returned array will be of size+1 to
-            account as first value is initial value
-        size: tuple of int
-            The number of Random Walk time series generated
-
-        Returns
-        -------
-        ndarray
-        """
-
-        if steps < 1:
-            raise ValueError("Steps must be greater than 0")
-
-        # If size is None then the returned series should be (*implied_dims, 1+steps)
-        if size is None:
-            # broadcast parameters with each other to find implied dims
-            bcast_shape = np.broadcast_shapes(
-                np.asarray(mu).shape,
-                np.asarray(sigma).shape,
-                np.asarray(init_dist).shape,
-            )
-            dist_shape = (*bcast_shape, int(steps))
-
-        # If size is None then the returned series should be (*size, 1+steps)
-        else:
-            dist_shape = (*size, int(steps))
-
-        # Add one dimension to the right, so that mu and sigma broadcast safely along
-        # the steps dimension
-        innovations = rng.normal(loc=mu[..., None], scale=sigma[..., None], size=dist_shape)
-        grw = np.concatenate([init_dist[..., None], innovations], axis=-1)
-        return np.cumsum(grw, axis=-1)
-
-
-gaussianrandomwalk = GaussianRandomWalkRV()
-
-
-class GaussianRandomWalk(distribution.Continuous):
-    r"""Random Walk with Normal innovations.
+class GaussianRandomWalk(SymbolicDistribution):
+    r"""Random Walk with Normal innovations
 
     Parameters
     ----------
@@ -235,8 +126,6 @@ class GaussianRandomWalk(distribution.Continuous):
         Number of steps in Gaussian Random Walk (steps > 0). Only needed if shape is not
         provided.
     """
-
-    rv_op = gaussianrandomwalk
 
     def __new__(cls, *args, steps=None, **kwargs):
         steps = get_steps(
@@ -269,6 +158,8 @@ class GaussianRandomWalk(distribution.Continuous):
                 FutureWarning,
             )
             init_dist = kwargs.pop("init")
+        if not steps.ndim == 0:
+            raise ValueError("steps must be an integer scalar (ndim=0).")
 
         # If no scalar distribution is passed then initialize with a Normal of same mu and sigma
         if init_dist is None:
@@ -293,37 +184,65 @@ class GaussianRandomWalk(distribution.Continuous):
 
         return super().dist([mu, sigma, init_dist, steps], **kwargs)
 
-    def moment(rv, size, mu, sigma, init_dist, steps):
-        grw_moment = at.zeros_like(rv)
-        grw_moment = at.set_subtensor(grw_moment[..., 0], moment(init_dist))
-        # Add one dimension to the right, so that mu broadcasts safely along the steps
-        # dimension
-        grw_moment = at.set_subtensor(grw_moment[..., 1:], mu[..., None])
-        return at.cumsum(grw_moment, axis=-1)
+    @classmethod
+    def ndim_supp(cls, *args):
+        return 1
 
-    def logp(
-        value: at.Variable,
-        mu: at.Variable,
-        sigma: at.Variable,
-        init_dist: at.Variable,
-        steps: at.Variable,
-    ) -> at.TensorVariable:
-        """Calculate log-probability of Gaussian Random Walk distribution at specified value."""
+    @classmethod
+    def rv_op(cls, mu, sigma, init_dist, steps, size=None):
+        # If not explicit, size is determined by the shapes of mu, sigma, and init
+        if size is not None:
+            # we have all the information regarding size from users or .dist()
+            init_size = size
+        else:
+            # we infer size from parameters
+            init_size = at.broadcast_shape(
+                mu,
+                sigma,
+                init_dist,
+            )
 
-        # Calculate initialization logp
-        init_logp = logp(init_dist, value[..., 0])
+        # TODO: extend for multivariate init
+        init_dist = change_rv_size(init_dist, init_size)
+        innovation_dist = Normal.dist(mu[..., None], sigma[..., None], size=(*init_size, steps))
+        rv_out = at.cumsum(at.concatenate([init_dist[..., None], innovation_dist], axis=-1), axis=-1)
 
-        # Make time series stationary around the mean value
-        stationary_series = value[..., 1:] - value[..., :-1]
-        # Add one dimension to the right, so that mu and sigma broadcast safely along
-        # the steps dimension
-        series_logp = logp(Normal.dist(mu[..., None], sigma[..., None]), stationary_series)
+        rv_out.tag.mu = mu
+        rv_out.tag.sigma = sigma
+        rv_out.tag.init_dist = init_dist
+        rv_out.tag.innovation_dist = innovation_dist
+        rv_out.tag.steps = steps
+        rv_out.tag.is_grw = True  # for moment dispatching
 
-        return check_parameters(
-            init_logp + series_logp.sum(axis=-1),
-            steps > 0,
-            msg="steps > 0",
+        return rv_out
+
+    @classmethod
+    def change_size(cls, rv, new_size, expand=False):
+        if expand:
+            new_size = at.concatenate([new_size, rv.shape[:-1]])
+
+        return cls.rv_op(
+            mu=rv.tag.mu,
+            sigma=rv.tag.sigma,
+            init_dist=rv.tag.init_dist,
+            steps=rv.tag.steps,
+            size=new_size,
         )
+
+
+@_moment.register(CumOp)
+def moment_grw(op, rv, dist_params):
+    """
+    This moment dispatch is currently only applicable for a GaussianRandomWalk.
+    TODO: Encapsulate GRW graph in an OpFromGraph so that we can dispatch
+     the moment directly on it
+    """
+    if not getattr(rv.tag, "is_grw", False):
+        raise NotImplementedError("Moment not implemented for `CumOp`")
+    init_dist = rv.tag.init_dist
+    innovation_dist = rv.tag.innovation_dist
+    grw_moment = at.concatenate([moment(init_dist)[..., None], moment(innovation_dist)], axis=-1)
+    return at.cumsum(grw_moment, axis=-1)
 
 
 class AutoRegressiveRV(OpFromGraph):

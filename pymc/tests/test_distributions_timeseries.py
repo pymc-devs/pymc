@@ -21,7 +21,7 @@ from aesara.tensor import TensorVariable
 import pymc as pm
 
 from pymc.aesaraf import floatX
-from pymc.distributions.continuous import Flat, HalfNormal, Normal
+from pymc.distributions.continuous import Flat, HalfNormal, Normal, StudentT
 from pymc.distributions.discrete import DiracDelta
 from pymc.distributions.logprob import logp
 from pymc.distributions.multivariate import Dirichlet
@@ -36,7 +36,6 @@ from pymc.model import Model
 from pymc.sampling import draw, sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
 from pymc.tests.test_distributions_moments import assert_moment_is_expected
-from pymc.tests.test_distributions_random import BaseTestDistributionRandom
 
 
 @pytest.mark.parametrize(
@@ -95,37 +94,21 @@ def test_get_steps(info_source, steps, shape, step_shape_offset, expected_steps,
 
 
 class TestGaussianRandomWalk:
-    class TestGaussianRandomWalkRandom(BaseTestDistributionRandom):
-        # Override default size for test class
-        size = None
+    pymc_dist = pm.GaussianRandomWalk
 
-        pymc_dist = pm.GaussianRandomWalk
-        pymc_dist_params = {"mu": 1.0, "sigma": 2, "init_dist": pm.DiracDelta.dist(0), "steps": 4}
-        expected_rv_op_params = {
-            "mu": 1.0,
-            "sigma": 2,
-            "init_dist": pm.DiracDelta.dist(0),
-            "steps": 4,
-        }
+    def check_rv_inferred_size(self):
+        steps = self.pymc_dist_params["steps"]
+        sizes_to_check = [None, (), 1, (1,)]
+        sizes_expected = [(steps + 1,), (steps + 1,), (1, steps + 1), (1, steps + 1)]
 
-        checks_to_run = [
-            "check_pymc_params_match_rv_op",
-            "check_rv_inferred_size",
-        ]
+        for size, expected in zip(sizes_to_check, sizes_expected):
+            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            assert expected_symbolic == expected
 
-        def check_rv_inferred_size(self):
-            steps = self.pymc_dist_params["steps"]
-            sizes_to_check = [None, (), 1, (1,)]
-            sizes_expected = [(steps + 1,), (steps + 1,), (1, steps + 1), (1, steps + 1)]
-
-            for size, expected in zip(sizes_to_check, sizes_expected):
-                pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
-                expected_symbolic = tuple(pymc_rv.shape.eval())
-                assert expected_symbolic == expected
-
-        def test_steps_scalar_check(self):
-            with pytest.raises(ValueError, match="steps must be an integer scalar"):
-                self.pymc_dist.dist(steps=[1])
+    def test_steps_scalar_check(self):
+        with pytest.raises(ValueError, match="steps must be an integer scalar"):
+            self.pymc_dist.dist(steps=[1])
 
     def test_gaussianrandomwalk_inference(self):
         mu, sigma, steps = 2, 1, 1000
@@ -147,33 +130,37 @@ class TestGaussianRandomWalk:
     @pytest.mark.parametrize("init", [None, pm.Normal.dist()])
     def test_gaussian_random_walk_init_dist_shape(self, init):
         """Test that init_dist is properly resized"""
+
+        def get_init_dist(grw_dist):
+            return grw_dist.owner.inputs[0].owner.inputs[1].owner.inputs[0]
+
         grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+        assert tuple(get_init_dist(grw).shape.eval()) == ()
 
         grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, size=(5,))
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+        assert tuple(get_init_dist(grw).shape.eval()) == (5,)
 
         grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=2)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+        assert tuple(get_init_dist(grw).shape.eval()) == ()
 
         grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=(5, 2))
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+        assert tuple(get_init_dist(grw).shape.eval()) == (5,)
 
         grw = pm.GaussianRandomWalk.dist(mu=[0, 0], sigma=1, steps=1, init_dist=init)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+        assert tuple(get_init_dist(grw).shape.eval()) == (2,)
 
         grw = pm.GaussianRandomWalk.dist(mu=0, sigma=[1, 1], steps=1, init_dist=init)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+        assert tuple(get_init_dist(grw).shape.eval()) == (2,)
 
         grw = pm.GaussianRandomWalk.dist(mu=np.zeros((3, 1)), sigma=[1, 1], steps=1, init_dist=init)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (3, 2)
+        assert tuple(get_init_dist(grw).shape.eval()) == (3, 2)
 
     def test_shape_ellipsis(self):
         grw = pm.GaussianRandomWalk.dist(
             mu=0, sigma=1, steps=5, init_dist=pm.Normal.dist(), shape=(3, ...)
         )
         assert tuple(grw.shape.eval()) == (3, 6)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (3,)
+        assert tuple(grw.owner.inputs[0].owner.inputs[1].owner.inputs[0].shape.eval()) == (3,)
 
     def test_gaussianrandomwalk_broadcasted_by_init_dist(self):
         grw = pm.GaussianRandomWalk.dist(
@@ -185,7 +172,7 @@ class TestGaussianRandomWalk:
     @pytest.mark.parametrize("shape", ((6,), (3, 6)))
     def test_inferred_steps_from_shape(self, shape):
         x = GaussianRandomWalk.dist(shape=shape)
-        steps = x.owner.inputs[-1]
+        steps = x.owner.inputs[0].owner.inputs[2].owner.inputs[1][-1]
         assert steps.eval() == 5
 
     @pytest.mark.parametrize("shape", (None, (5, ...)))
@@ -200,13 +187,13 @@ class TestGaussianRandomWalk:
     def test_inferred_steps_from_dims(self):
         with pm.Model(coords={"batch": range(5), "steps": range(20)}):
             x = GaussianRandomWalk("x", dims=("batch", "steps"))
-        steps = x.owner.inputs[-1]
+        steps = x.owner.inputs[0].owner.inputs[2].owner.inputs[1][-1]
         assert steps.eval() == 19
 
     def test_inferred_steps_from_observed(self):
         with pm.Model():
             x = GaussianRandomWalk("x", observed=np.zeros(10))
-        steps = x.owner.inputs[-1]
+        steps = x.owner.inputs[0].owner.inputs[2].owner.inputs[1]
         assert steps.eval() == 9
 
     @pytest.mark.parametrize(
@@ -219,30 +206,30 @@ class TestGaussianRandomWalk:
     def test_gaussian_random_walk_init_dist_logp(self, init):
         grw = pm.GaussianRandomWalk.dist(init_dist=init, steps=1)
         assert np.isclose(
-            pm.logp(grw, [0, 0]).eval(),
+            pm.logp(grw, [0, 0]).eval().sum(),
             pm.logp(init, 0).eval() + scipy.stats.norm.logpdf(0),
         )
 
     @pytest.mark.parametrize(
-        "mu, sigma, init_dist, steps, size, expected",
+        "mu, sigma, init, steps, size, expected",
         [
-            (0, 1, Normal.dist(1), 10, None, np.ones((11,))),
-            (1, 1, Normal.dist(0), 10, (2,), np.full((2, 11), np.arange(11))),
+            (0, 1, StudentT.dist(5), 10, None, np.zeros((11,))),
+            (1, 1, StudentT.dist(5), 10, (2,), np.full((2, 11), np.arange(11))),
             (1, 1, Normal.dist([0, 1]), 10, None, np.vstack((np.arange(11), np.arange(11) + 1))),
-            (0, [1, 1], Normal.dist(0), 10, None, np.zeros((2, 11))),
+            (0, [1, 1], StudentT.dist(5), 10, None, np.zeros((2, 11))),
             (
                 [1, -1],
                 1,
-                Normal.dist(0),
+                StudentT.dist(5),
                 10,
                 (4, 2),
                 np.full((4, 2, 11), np.vstack((np.arange(11), -np.arange(11)))),
             ),
         ],
     )
-    def test_moment(self, mu, sigma, init_dist, steps, size, expected):
+    def test_moment(self, mu, sigma, init, steps, size, expected):
         with Model() as model:
-            GaussianRandomWalk("x", mu=mu, sigma=sigma, init_dist=init_dist, steps=steps, size=size)
+            GaussianRandomWalk("x", mu=mu, sigma=sigma, init_dist=init, steps=steps, size=size)
         assert_moment_is_expected(model, expected)
 
     def test_init_deprecated_arg(self):
