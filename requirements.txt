@@ -1,4 +1,4 @@
-aeppl==0.0.28
+aeppl==0.0.31
 aesara==2.6.2
 arviz>=0.12.0
 cachetools>=4.2.1
