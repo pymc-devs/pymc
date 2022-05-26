@@ -63,6 +63,22 @@ def find_observations(model: Optional["Model"]) -> Optional[Dict[str, Var]]:
     return observations
 
 
+def find_constants(model: Optional["Model"]) -> Optional[Dict[str, Var]]:
+    """If there are constants available, return them as a dictionary."""
+    if model is None or not model.named_vars:
+        return None
+
+    constants = {}
+    for name, var in model.named_vars.items():
+        if isinstance(var, (Constant, SharedVariable)):
+            if hasattr(var, "data"):
+                var = var.data
+            elif hasattr(var, "get_value"):
+                var = var.get_value()
+            constants[name] = var
+    return constants
+
+
 class _DefaultTrace:
     """
     Utility for collecting samples into a dictionary.

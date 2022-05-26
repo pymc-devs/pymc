@@ -30,7 +30,7 @@ from aesara.tensor import TensorVariable
 from arviz.data.base import make_attrs
 
 from pymc import Model, modelcontext
-from pymc.backends.arviz import find_observations
+from pymc.backends.arviz import find_constants, find_observations
 from pymc.util import get_default_varnames
 
 warnings.warn("This module is experimental.")
@@ -564,6 +564,7 @@ def sample_numpyro_nuts(
         posterior=posterior,
         log_likelihood=log_likelihood,
         observed_data=find_observations(model),
+        constant_data=find_constants(model),
         sample_stats=_sample_stats_to_xarray(pmap_numpyro),
         coords=coords,
         dims=dims,
