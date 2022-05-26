@@ -7,146 +7,87 @@
 PyMC Developer Guide
 ====================
 
-:doc:`PyMC <index>` is a Python package for Bayesian
-statistical modeling built on top of
-:doc:`Aesara <aesara:index>`. This
-document aims to explain the design and implementation of probabilistic
-programming in PyMC, with comparisons to other PPL like TensorFlow Probability (TFP)
-and Pyro in mind. A user-facing API
-introduction can be found in the :ref:`API quickstart <pymc_overview>`. A more accessible, user facing deep introduction can be found in
-`Peadar Coyle's probabilistic programming primer <https://github.com/springcoil/probabilisticprogrammingprimer>`__
+:doc:`PyMC <index>` is a Python package for Bayesian statistical modeling built on top of :doc:`Aesara <aesara:index>`.
+This document aims to explain the design and implementation of probabilistic programming in PyMC, with comparisons to other PPLs like TensorFlow Probability (TFP) and Pyro.
+A user-facing API introduction can be found in the :ref:`API quickstart <pymc_overview>`.
+A more accessible, user facing deep introduction can be found in `Peadar Coyle's probabilistic programming primer <https://github.com/springcoil/probabilisticprogrammingprimer>`__.
 
 Distribution
 ------------
 
-A high-level introduction of ``Distribution`` in PyMC can be found in
-the :ref:`documentation <api_distributions>`. The source
-code of the probability distributions is nested under
-:ref:`pymc/distributions <api_distributions>`,
-with the :class:`~pymc.Distribution` class defined in ``distribution.py``.
-A few important points to highlight in the Distribution Class:
+Probability distributions in PyMC are implemented as classes that inherit from :class:`~pymc.Continuous` or :class:`~pymc.Discrete`.
+Either of these inherit :class:`~pymc.Distribution` which defines the high level API.
 
-.. code:: python
+For a detailed introduction on how a new distribution should be implemented check out the :ref:`guide on implementing distributions <developer_guide_implementing_distribution>`.
 
-    class Distribution:
-        """Statistical distribution"""
-        def __new__(cls, name, *args, **kwargs):
-            ...
-            try:
-                model = Model.get_context()
-            except TypeError:
-                raise TypeError(...
-
-            if isinstance(name, string_types):
-                ...
-                dist = cls.dist(*args, **kwargs)
-                return model.Var(name, dist, ...)
-            ...
-
-In a way, the snippet above represents the unique features of pymc's
-``Distribution`` class:
-
-- Distribution objects are only usable inside of a ``Model`` context. If they are created outside of the model context manager, it raises an error.
-
-- A ``Distribution`` requires at least a name argument, and other parameters that defines the Distribution.
-
-- When a ``Distribution`` is initialized inside of a Model context, two things happen:
-
-  1. a stateless distribution is initialized ``dist = {DISTRIBUTION_cls}.dist(*args, **kwargs)``;
-  2. a random variable following the said distribution is added to the model ``model.Var(name, dist, ...)``
-
-Thus, users who are building models using ``with pm.Model() ...`` should
-be aware that they are never directly exposed to static and stateless
-distributions, but rather random variables that follow some density
-functions. Instead, to access a stateless distribution, you need to call
-``pm.SomeDistribution.dist(...)`` or ``RV.dist`` *after* you initialized
-``RV`` in a model context (see
-https://docs.pymc.io/Probability\_Distributions.html#using-pymc-distributions-without-a-model).
-
-With this distinction in mind, we can take a closer look at the
-stateless distribution part of pymc (see distribution api in :ref:`doc <api_distributions>`), which divided into:
-
-- Continuous
-
-- Discrete
-
-- Multivariate
-
-- Mixture
-
-- Timeseries
-
-Quote from the doc:
-
-    All distributions in ``pm.distributions`` will have two important
-    methods: ``random()`` and ``logp()`` with the following signatures:
-
-.. code:: python
-
-    class SomeDistribution(Continuous):
-        def __init__(...):
-            ...
-
-        def random(self, point=None, size=None):
-            ...
-            return random_samples
-
-        def logp(self, value):
-            ...
-            return total_log_prob
-
-PyMC expects the ``logp()`` method to return a log-probability
-evaluated at the passed value argument. This method is used internally
-by all of the inference methods to calculate the model log-probability,
-which is then used for fitting models. The ``random()`` method is
-used to simulate values from the variable, and is used internally for
-posterior predictive checks.
-
-In the PyMC ``Distribution`` class, the ``logp()`` method is the most
-elementary. As long as you have a well-behaved density function, we can
-use it in the model to build the model log-likelihood function. Random
-number generation is great to have, but sometimes there might not be
-efficient random number generator for some densities. Since a function
-is all you need, you can wrap almost any Aesara function into a
-distribution using ``pm.DensityDist``
-https://docs.pymc.io/Probability\_Distributions.html#custom-distributions
-
-Thus, distributions that are defined in the ``distributions`` submodule
-(e.g. look at ``pm.Normal`` in ``pymc.distributions.continuous``), each
-describes a *family* of probabilistic distribution (no different from
-distribution in other PPL library). Once it is initialised within a
-model context, it contains properties that are related to the random
-variable (*e.g.* mean/expectation). Note that if the parameters are
-constants, these properties could be the same as the distribution
-properties.
 
 Reflection
 ~~~~~~~~~~
 
-How tensor/value semantics for probability distributions is enabled in pymc:
+How tensor/value semantics for probability distributions are enabled in PyMC:
 
-In PyMC, we treat ``x = Normal('x', 0, 1)`` as defining a random
-variable (intercepted and collected under a model context, more on that
-below), and x.dist() as the associated density/mass function
-(distribution in the mathematical sense). It is not perfect, and now
-after a few years learning Bayesian statistics I also realized these
-subtleties (i.e., the distinction between *random variable* and
-*distribution*).
+In PyMC, model variables are defined by calling probability distribution classes with parameters:
 
-But when I was learning probabilistic modelling as a
-beginner, I did find this approach to be the easiest and most
-straightforward. In a perfect world, we should have
-:math:`x \sim \text{Normal}(0, 1)` which defines a random variable that
-follows a Gaussian distribution, and
-:math:`\chi = \text{Normal}(0, 1), x \sim \chi` which define a `probability
-density function <https://en.wikipedia.org/wiki/Probability_density_function>`__ that takes input :math:`x`
+.. code:: python
+    x = Normal('x', 0, 1)
+
+This is done inside the context of a ``pm.Model``, which intercepts some information, for example to capture known dimensions.
+The notation aligns with the typically used math notation:
 
 .. math::
-    X:=f(x) = \frac{1}{\sigma \sqrt{2 \pi}} \exp^{- 0.5 (\frac{x - \mu}{\sigma})^2}\vert_{\mu = 0, \sigma=1} = \frac{1}{\sqrt{2 \pi}} \exp^{- 0.5 x^2}
+    x \sim \text{Normal}(0, 1)
 
-Within a model context, RVs are essentially Aesara tensors (more on that
-below). This is different than TFP and pyro, where you need to be more
-explicit about the conversion. For example:
+A call to a :class:`~pymc.Distribution` constructor as shown above returns an Aesara :class:`~aesara.tensor.TensorVariable`, which is a symbolic representation of the model variable and the graph of inputs it depends on.
+Under the hood, the variables are created through the :method:`~pymc.Distribution.dist` API, which calls the :class:`~aesara.tensor.random.basic.RandomVariable` :class:`~aesara.graph.op.Op` corresponding to the distribution.
+
+At a high level of abstraction, the idea behind ``RandomVariable`` ``Op``s is to create symbolic variables (``TensorVariable``s) that can be associated with the properties of a probability distribution.
+For example, the ``RandomVariable`` ``Op`` which becomes part of the symbolic computation graph is associated with the random number generators or probability mass/density functions of the distribution.
+
+In the example above, where the ``TensorVariable`` ``x`` is created to be :math:`\text{Normal}(0, 1)` random variable, we can get a handle on the corresponding ``RandomVariable`` ``Op`` instance:
+
+.. code:: python
+    with pm.Model():
+        x = pm.Normal("x", 0, 1)
+    print(type(x.owner.op))
+    # ==> aesara.tensor.random.basic.NormalRV
+    isinstance(x.owner.op, aesara.tensor.random.basic.RandomVariable)
+    # ==> True
+
+Now, because the ``NormalRV`` can be associated with the `probability density function <https://en.wikipedia.org/wiki/Probability_density_function>`__ of the Normal distribution, we can now evaluate it through the special `pm.logp` function:
+
+.. code:: python
+    with pm.Model():
+        x = pm.Normal("x", 0, 1)
+    symbolic = pm.logp(rv=x, value=0.3)
+    numeric = symbolic.eval()
+    # array(-0.96393853)
+
+We can, of course, also work out the math by hand:
+
+.. math::
+    \begin{aligned}
+    pdf_{\mathcal{N}}(\mu, \sigma, x) &= \frac{1}{\sigma \sqrt{2 \pi}} \exp^{- 0.5 (\frac{x - \mu}{\sigma})^2} \\
+    pdf_{\mathcal{N}}(0, 1, 0.3) &= 0.38138782 \\
+    ln(0.38138782) &= -0.96393852
+    \end{aligned}
+
+In the probabilistic programming context, this enables PyMC and its backend libraries aeppl and Aesara to create and evaluate computation graphs to compute, for example log-prior or log-likelihood values.
+
+
+
+PyMC in Comparison
+~~~~~~~~~~~~~~~~~~
+
+Within the PyMC model context, random variables are essentially Aesara tensors that can be used in all kinds of operations as if they were NumPy arrays.
+This is different compared to TFP and pyro, where one needs to be more explicit about the conversion from random variables to tensors.
+
+Consider the following examples, which implement the below model.
+
+.. math::
+    \begin{aligned}
+    z &\sim \mathcal{N}(0, 0.5) \\
+    x &\sim \mathcal{N}(z, 1) \\
+    \end{aligned}
 
 **PyMC**
 
@@ -155,7 +96,9 @@ explicit about the conversion. For example:
     with pm.Model() as model:
         z = pm.Normal('z', mu=0., sigma=5.)             # ==> aesara.tensor.var.TensorVariable
         x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> aesara.tensor.var.TensorVariable
+    # The log-prior of z=2.5
     x.logp({'z': 2.5})                                  # ==> -4.0439386
+    # The log-posterior of z=2.5 given the observation x=5
     model.logp({'z': 2.5})                              # ==> -6.6973152
 
 **TFP**
