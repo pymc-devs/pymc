@@ -351,9 +351,7 @@ class _Tree:
                     right.model_logp,
                     right.index_in_trajectory,
                 )
-                tree = Subtree(
-                    right, right, right.p.data, proposal, log_size
-                )
+                tree = Subtree(right, right, right.p.data, proposal, log_size)
                 return tree, None, False
             else:
                 error_msg = f"Energy change in leapfrog step is too large: {energy_change}."

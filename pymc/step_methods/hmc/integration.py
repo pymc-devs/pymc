@@ -114,4 +114,12 @@ class CpuLeapfrogIntegrator:
         kinetic = pot.velocity_energy(p_new.data, v_new)
         energy = kinetic - logp
 
-        return State(q_new, p_new, v_new, q_new_grad, energy, logp, state.index_in_trajectory + int(np.sign(epsilon)))
+        return State(
+            q_new,
+            p_new,
+            v_new,
+            q_new_grad,
+            energy,
+            logp,
+            state.index_in_trajectory + int(np.sign(epsilon)),
+        )
