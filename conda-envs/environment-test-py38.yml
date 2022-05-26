@@ -4,7 +4,7 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- aeppl=0.0.28
+- aeppl=0.0.31
 - aesara=2.6.2
 - arviz>=0.12.0
 - blas

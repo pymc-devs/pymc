@@ -27,7 +27,7 @@ repos:
       - types-setuptools
       - arviz
       - aesara==2.6.2
-      - aeppl==0.0.28
+      - aeppl==0.0.31
       always_run: true
       require_serial: true
       pass_filenames: false
