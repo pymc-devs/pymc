@@ -981,6 +981,20 @@ class Group(WithMemoization):
             initial = at.switch(deterministic, at.ones(shape, dtype) * dist_map, sample)
             return initial
 
+    @node_property
+    def symbolic_random(self):
+        """*Dev* - abstract node that takes `self.symbolic_initial` and creates
+        approximate posterior that is parametrized with `self.params_dict`.
+
+        Implementation should take in account `self.batched`. If `self.batched` is `True`, then
+        `self.symbolic_initial` is 3d tensor, else 2d
+
+        Returns
+        -------
+        tensor
+        """
+        raise NotImplementedError
+
     @aesara.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
@@ -1520,7 +1534,7 @@ class Approximation(WithMemoization):
 
     @node_property
     def symbolic_random(self):
-        return at.concatenate(self.collect("symbolic_random2d"), axis=-1)
+        return at.concatenate(self.collect("symbolic_random"), axis=-1)
 
     def __str__(self):
         if len(self.groups) < 5:
