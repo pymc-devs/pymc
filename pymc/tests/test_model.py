@@ -657,7 +657,7 @@ def test_set_initval():
     # generating initial values
     rng = np.random.RandomState(392)
 
-    with pm.Model(rng_seeder=rng) as model:
+    with pm.Model() as model:
         eta = pm.Uniform("eta", 1.0, 2.0, size=(1, 1))
         mu = pm.Normal("mu", sigma=eta, initval=[[100]])
         alpha = pm.HalfNormal("alpha", initval=100)

@@ -331,7 +331,7 @@ jobs:
         run: |
           conda activate pymc-test-py39
           pip install "numpyro>=0.8.0"
-          pip install git+https://github.com/blackjax-devs/blackjax.git@main
+          pip install git+https://github.com/blackjax-devs/blackjax.git@0.7.0
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET

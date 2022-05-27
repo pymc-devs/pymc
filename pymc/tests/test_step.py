@@ -523,7 +523,7 @@ class TestNutsCheckTrace:
             b = at.slinalg.solve(floatX(np.eye(2)), a, check_finite=False)
             Normal("c", mu=b, size=2, initval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
-            trace = sample(20, tune=5, chains=2, return_inferencedata=False)
+            trace = sample(20, tune=5, chains=2, return_inferencedata=False, random_seed=526)
             warns = [msg.msg for msg in caplog.records]
             assert np.any(trace["diverging"])
             assert (
@@ -1183,7 +1183,7 @@ class TestMLDA:
 
             rng = np.random.RandomState(seed)
 
-            with Model(rng_seeder=rng) as coarse_model_0:
+            with Model() as coarse_model_0:
                 if aesara.config.floatX == "float32":
                     Q = Data("Q", np.float32(0.0))
                 else:
@@ -1202,7 +1202,7 @@ class TestMLDA:
 
             rng = np.random.RandomState(seed)
 
-            with Model(rng_seeder=rng) as coarse_model_1:
+            with Model() as coarse_model_1:
                 if aesara.config.floatX == "float32":
                     Q = Data("Q", np.float32(0.0))
                 else:
@@ -1221,7 +1221,7 @@ class TestMLDA:
 
             rng = np.random.RandomState(seed)
 
-            with Model(rng_seeder=rng) as model:
+            with Model() as model:
                 if aesara.config.floatX == "float32":
                     Q = Data("Q", np.float32(0.0))
                 else:

@@ -14,7 +14,6 @@
 
 """Functions for MCMC sampling."""
 
-import collections.abc as abc
 import logging
 import pickle
 import sys
@@ -103,6 +102,9 @@ Step: TypeAlias = Union[BlockedStep, CompoundStep]
 ArrayLike: TypeAlias = Union[np.ndarray, List[float]]
 PointList: TypeAlias = List[PointType]
 Backend: TypeAlias = Union[BaseTrace, MultiTrace, NDArray]
+
+RandomSeed = Optional[Union[int, Sequence[int], np.ndarray]]
+RandomState = Union[RandomSeed, np.random.RandomState, np.random.Generator]
 
 _log = logging.getLogger("pymc")
 
@@ -253,6 +255,56 @@ def all_continuous(vars):
         return True
 
 
+def _get_seeds_per_chain(
+    random_state: RandomState,
+    chains: int,
+) -> Union[Sequence[int], np.ndarray]:
+    """Obtain or validate specified integer seeds per chain.
+
+    This function process different possible sources of seeding and returns one integer
+    seed per chain:
+    1. If the input is an integer and a single chain is requested, the input is
+        returned inside a tuple.
+    2. If the input is a sequence or NumPy array with as many entries as chains,
+        the input is returned.
+    3. If the input is an integer and multiple chains are requested, new unique seeds
+        are generated from NumPy default Generator seeded with that integer.
+    4. If the input is None new unique seeds are generated from an unseeded NumPy default
+        Generator.
+    5. If a RandomState or Generator is provided, new unique seeds are generated from it.
+
+    Raises
+    ------
+    ValueError
+        If none of the conditions above are met
+    """
+
+    def _get_unique_seeds_per_chain(integers_fn):
+        seeds = []
+        while len(set(seeds)) != chains:
+            seeds = [int(seed) for seed in integers_fn(2**30, dtype=np.int64, size=chains)]
+        return seeds
+
+    if random_state is None or isinstance(random_state, int):
+        if chains == 1 and isinstance(random_state, int):
+            return (random_state,)
+        return _get_unique_seeds_per_chain(np.random.default_rng(random_state).integers)
+    if isinstance(random_state, np.random.Generator):
+        return _get_unique_seeds_per_chain(random_state.integers)
+    if isinstance(random_state, np.random.RandomState):
+        return _get_unique_seeds_per_chain(random_state.randint)
+
+    if not isinstance(random_state, (list, tuple, np.ndarray)):
+        raise ValueError(f"The `seeds` must be array-like. Got {type(random_state)} instead.")
+
+    if len(random_state) != chains:
+        raise ValueError(
+            f"Number of seeds ({len(random_state)}) does not match the number of chains ({chains})."
+        )
+
+    return random_state
+
+
 def sample(
     draws: int = 1000,
     step=None,
@@ -266,7 +318,7 @@ def sample(
     tune: int = 1000,
     progressbar: bool = True,
     model=None,
-    random_seed=None,
+    random_seed: RandomState = None,
     discard_tuned_samples: bool = True,
     compute_convergence_checks: bool = True,
     callback=None,
@@ -323,9 +375,10 @@ def sample(
         time until completion ("expected time of arrival"; ETA).
     model : Model (optional if in ``with`` context)
         Model to sample from. The model needs to have free random variables.
-    random_seed : int or list of ints
-        Random seed(s) used by the sampling steps. A list is accepted if ``cores`` is greater than
-        one.
+    random_seed : int, array-like of int, RandomState or Generator, optional
+        Random seed(s) used by the sampling steps. If a list, tuple or array of ints
+        is passed, each entry will be used to seed each chain. A ValueError will be
+        raised if the length does not match the number of chains.
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval.
     compute_convergence_checks : bool, default=True
@@ -434,18 +487,10 @@ def sample(
 
     if chains is None:
         chains = max(2, cores)
+
     if random_seed == -1:
         random_seed = None
-    if chains == 1 and isinstance(random_seed, int):
-        random_seed = [random_seed]
-
-    if random_seed is None or isinstance(random_seed, int):
-        if random_seed is not None:
-            np.random.seed(random_seed)
-        random_seed = [np.random.randint(2**30) for _ in range(chains)]
-
-    if not isinstance(random_seed, abc.Iterable):
-        raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
+    random_seed_list = _get_seeds_per_chain(random_seed, chains)
 
     if not discard_tuned_samples and not return_inferencedata:
         warnings.warn(
@@ -490,7 +535,7 @@ def sample(
             chains=chains,
             n_init=n_init,
             model=model,
-            seeds=random_seed,
+            random_seed=random_seed_list,
             progressbar=progressbar,
             jitter_max_retries=jitter_max_retries,
             tune=tune,
@@ -506,7 +551,7 @@ def sample(
             jitter_rvs=filter_rvs_to_jitter(step),
             chains=chains,
         )
-        initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed)]
+        initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed_list)]
 
     # One final check that shapes and logps at the starting points are okay.
     for ip in initial_points:
@@ -523,7 +568,6 @@ def sample(
         "tune": tune,
         "progressbar": progressbar,
         "model": model,
-        "random_seed": random_seed,
         "cores": cores,
         "callback": callback,
         "discard_tuned_samples": discard_tuned_samples,
@@ -542,6 +586,19 @@ def sample(
     )
 
     parallel = cores > 1 and chains > 1 and not has_population_samplers
+    # At some point it was decided that PyMC should not set a global seed by default,
+    # unless the user specified a seed. This is a symptom of the fact that PyMC samplers
+    # are built around global seeding. This branch makes sure we maintain this unspoken
+    # rule. See https://github.com/pymc-devs/pymc/pull/1395.
+    if parallel:
+        # For parallel sampling we can pass the list of random seeds directly, as
+        # global seeding will only be called inside each process
+        sample_args["random_seed"] = random_seed_list
+    else:
+        # We pass None if the original random seed was None. The single core sampler
+        # methods will only set a global seed when it is not None.
+        sample_args["random_seed"] = random_seed if random_seed is None else random_seed_list
+
     t_start = time.time()
     if parallel:
         _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
@@ -674,7 +731,7 @@ def _sample_many(
     chain: int,
     chains: int,
     start: Sequence[PointType],
-    random_seed: list,
+    random_seed: Optional[Sequence[RandomSeed]],
     step,
     callback=None,
     **kwargs,
@@ -691,7 +748,7 @@ def _sample_many(
         Total number of chains to sample.
     start: list
         Starting points for each chain
-    random_seed: list
+    random_seed: list of random seeds, optional
         A list of seeds, one for each chain
     step: function
         Step function
@@ -708,7 +765,7 @@ def _sample_many(
             chain=chain + i,
             start=start[i],
             step=step,
-            random_seed=random_seed[i],
+            random_seed=None if random_seed is None else random_seed[i],
             callback=callback,
             **kwargs,
         )
@@ -731,7 +788,7 @@ def _sample_population(
     chain: int,
     chains: int,
     start: Sequence[PointType],
-    random_seed,
+    random_seed: RandomSeed,
     step,
     tune: int,
     model,
@@ -751,8 +808,7 @@ def _sample_population(
         The total number of chains in the population
     start : list
         Start points for each chain
-    random_seed : int or list of ints, optional
-        A list is accepted if more if ``cores`` is greater than one.
+    random_seed : single random seed, optional
     step : function
         Step function (should be or contain a population step method)
     tune : int
@@ -793,7 +849,7 @@ def _sample(
     *,
     chain: int,
     progressbar: bool,
-    random_seed,
+    random_seed: RandomSeed,
     start: PointType,
     draws: int,
     step=None,
@@ -815,8 +871,7 @@ def _sample(
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
-    random_seed : int or list of ints
-        A list is accepted if ``cores`` is greater than one.
+    random_seed : single random seed
     start : dict
         Starting point in parameter space (or partial point)
     draws : int
@@ -871,7 +926,7 @@ def iter_sample(
     chain: int = 0,
     tune: int = 0,
     model: Optional[Model] = None,
-    random_seed: Optional[Union[int, List[int]]] = None,
+    random_seed: RandomSeed = None,
     callback=None,
 ) -> Iterator[MultiTrace]:
     """Generate a trace on each iteration using the given step method.
@@ -896,8 +951,7 @@ def iter_sample(
     tune : int, optional
         Number of iterations to tune (defaults to 0).
     model : Model (optional if in ``with`` context)
-    random_seed : int or list of ints, optional
-        A list is accepted if more if ``cores`` is greater than one.
+    random_seed : single random seed, optional
     callback :
         A function which gets called for every sample from the trace of a chain. The function is
         called with the trace and the current draw and will contain all samples for a single trace.
@@ -930,7 +984,7 @@ def _iter_sample(
     chain: int = 0,
     tune: int = 0,
     model=None,
-    random_seed=None,
+    random_seed: RandomSeed = None,
     callback=None,
 ) -> Iterator[Tuple[BaseTrace, bool]]:
     """Generator for sampling one chain. (Used in singleprocess sampling.)
@@ -953,8 +1007,7 @@ def _iter_sample(
     tune : int, optional
         Number of iterations to tune (defaults to 0).
     model : Model (optional if in ``with`` context)
-    random_seed : int or list of ints, optional
-        A list is accepted if more if ``cores`` is greater than one.
+    random_seed : single random seed, optional
 
     Yields
     ------
@@ -1194,7 +1247,7 @@ def _prepare_iter_population(
     parallelize: bool,
     tune: int,
     model=None,
-    random_seed=None,
+    random_seed: RandomSeed = None,
     progressbar=True,
 ) -> Iterator[Sequence[BaseTrace]]:
     """Prepare a PopulationStepper and traces for population sampling.
@@ -1214,8 +1267,7 @@ def _prepare_iter_population(
     tune : int
         Number of iterations to tune.
     model : Model (optional if in ``with`` context)
-    random_seed : int or list of ints, optional
-        A list is accepted if more if ``cores`` is greater than one.
+    random_seed : single random seed, optional
     progressbar : bool
         ``progressbar`` argument for the ``PopulationStepper``, (defaults to True)
 
@@ -1400,7 +1452,7 @@ def _mp_sample(
     chains: int,
     cores: int,
     chain: int,
-    random_seed: list,
+    random_seed: Sequence[RandomSeed],
     start: Sequence[PointType],
     progressbar: bool = True,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
@@ -1426,7 +1478,7 @@ def _mp_sample(
         The number of chains to run in parallel.
     chain : int
         Number of the first chain.
-    random_seed : list of ints
+    random_seed : list of random seeds
         Random seeds for each chain.
     start : list
         Starting points for each chain.
@@ -1695,7 +1747,7 @@ def sample_posterior_predictive(
     model: Optional[Model] = None,
     var_names: Optional[List[str]] = None,
     keep_size: Optional[bool] = None,
-    random_seed=None,
+    random_seed: RandomState = None,
     progressbar: bool = True,
     return_inferencedata: bool = True,
     extend_inferencedata: bool = False,
@@ -1729,7 +1781,7 @@ def sample_posterior_predictive(
     keep_size : bool, default True
         Force posterior predictive sample to have the same shape as posterior and sample stats
         data: ``(nchains, ndraws, ...)``. Overrides samples parameter.
-    random_seed : int
+    random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     progressbar : bool
         Whether or not to display a progress bar in the command line. The bar shows the percentage
@@ -1844,14 +1896,6 @@ def sample_posterior_predictive(
     else:
         vars_ = model.observed_RVs + model.auto_deterministics
 
-    if random_seed is not None:
-        warnings.warn(
-            "In this version, RNG seeding is managed by the Model objects. "
-            "See the `rng_seeder` argument in Model's constructor.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
     indices = np.arange(samples)
 
     if progressbar:
@@ -1868,6 +1912,9 @@ def sample_posterior_predictive(
 
     vars_in_trace = get_vars_in_point_list(_trace, model)
 
+    if random_seed is not None:
+        (random_seed,) = _get_seeds_per_chain(random_seed, 1)
+
     if compile_kwargs is None:
         compile_kwargs = {}
     compile_kwargs.setdefault("allow_input_downcast", True)
@@ -1879,6 +1926,7 @@ def sample_posterior_predictive(
             vars_in_trace=vars_in_trace,
             basic_rvs=model.basic_RVs,
             givens_dict=None,
+            random_seed=random_seed,
             **compile_kwargs,
         )
     )
@@ -1941,7 +1989,7 @@ def sample_posterior_predictive_w(
     samples: Optional[int] = None,
     models: Optional[List[Model]] = None,
     weights: Optional[ArrayLike] = None,
-    random_seed: Optional[int] = None,
+    random_seed: RandomState = None,
     progressbar: bool = True,
     return_inferencedata: bool = True,
     idata_kwargs: dict = None,
@@ -1965,7 +2013,7 @@ def sample_posterior_predictive_w(
         only be meaningful if all models share the same distributions for the observed RVs.
     weights : array-like, optional
         Individual weights for each trace. Default, same weight for each model.
-    random_seed : int, optional
+    random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     progressbar : bool, optional default True
         Whether or not to display a progress bar in the command line. The bar shows the percentage
@@ -1998,13 +2046,8 @@ def sample_posterior_predictive_w(
     if models is None:
         models = [modelcontext(models)] * len(traces)
 
-    if random_seed:
-        warnings.warn(
-            "In this version, RNG seeding is managed by the Model objects. "
-            "See the `rng_seeder` argument in Model's constructor.",
-            FutureWarning,
-            stacklevel=2,
-        )
+    if random_seed is not None:
+        (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
     for model in models:
         if model.potentials:
@@ -2114,7 +2157,7 @@ def sample_prior_predictive(
     samples: int = 500,
     model: Optional[Model] = None,
     var_names: Optional[Iterable[str]] = None,
-    random_seed=None,
+    random_seed: RandomState = None,
     return_inferencedata: bool = True,
     idata_kwargs: dict = None,
     compile_kwargs: dict = None,
@@ -2130,7 +2173,7 @@ def sample_prior_predictive(
         A list of names of variables for which to compute the prior predictive
         samples. Defaults to both observed and unobserved RVs. Transformed values
         are not included unless explicitly defined in var_names.
-    random_seed : int
+    random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     return_inferencedata : bool
         Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
@@ -2165,21 +2208,13 @@ def sample_prior_predictive(
     else:
         vars_ = set(var_names)
 
-    if random_seed is not None:
-        warnings.warn(
-            "In this version, RNG seeding is managed by the Model objects. "
-            "See the `rng_seeder` argument in Model's constructor.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-    names = get_default_varnames(vars_, include_transformed=False)
+    names = sorted(get_default_varnames(vars_, include_transformed=False))
     vars_to_sample = [model[name] for name in names]
 
     # Any variables from var_names that are missing must be transformed variables.
     # Misspelled variables would have raised a KeyError above.
     missing_names = vars_.difference(names)
-    for name in missing_names:
+    for name in sorted(missing_names):
         transformed_value_var = model[name]
         rv_var = model.values_to_rvs[transformed_value_var]
         transform = transformed_value_var.tag.transform
@@ -2194,6 +2229,9 @@ def sample_prior_predictive(
             names.append(rv_var.name)
             vars_to_sample.append(rv_var)
 
+    if random_seed is not None:
+        (random_seed,) = _get_seeds_per_chain(random_seed, 1)
+
     if compile_kwargs is None:
         compile_kwargs = {}
     compile_kwargs.setdefault("allow_input_downcast", True)
@@ -2204,6 +2242,7 @@ def sample_prior_predictive(
         vars_in_trace=[],
         basic_rvs=model.basic_RVs,
         givens_dict=None,
+        random_seed=random_seed,
         **compile_kwargs,
     )
 
@@ -2229,6 +2268,7 @@ def sample_prior_predictive(
 def draw(
     vars: Union[Variable, Sequence[Variable]],
     draws: int = 1,
+    random_seed: RandomState = None,
     **kwargs,
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """Draw samples for one variable or a list of variables
@@ -2239,6 +2279,8 @@ def draw(
         A variable or a list of variables for which to draw samples.
     draws : int, default 1
         Number of samples needed to draw.
+    random_seed : int, RandomState or Generator, optional
+        Seed for the random number generator.
     **kwargs : dict, optional
         Keyword arguments for :func:`pymc.aesara.compile_pymc`.
 
@@ -2271,8 +2313,10 @@ def draw(
             assert draws[1].shape == (num_draws, 10)
             assert draws[2].shape == (num_draws, 5)
     """
+    if random_seed is not None:
+        (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
-    draw_fn = compile_pymc(inputs=[], outputs=vars, **kwargs)
+    draw_fn = compile_pymc(inputs=[], outputs=vars, random_seed=random_seed, **kwargs)
 
     if draws == 1:
         return draw_fn()
@@ -2291,7 +2335,7 @@ def draw(
 def _init_jitter(
     model: Model,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
-    seeds: Union[List[Any], Tuple[Any, ...], np.ndarray],
+    seeds: Union[Sequence[int], np.ndarray],
     jitter: bool,
     jitter_max_retries: int,
 ) -> List[PointType]:
@@ -2348,7 +2392,7 @@ def init_nuts(
     chains: int = 1,
     n_init: int = 500_000,
     model=None,
-    seeds: Iterable[Any] = None,
+    random_seed: RandomSeed = None,
     progressbar=True,
     jitter_max_retries: int = 10,
     tune: Optional[int] = None,
@@ -2395,8 +2439,8 @@ def init_nuts(
     n_init : int
         Number of iterations of initializer. Only works for 'ADVI' init methods.
     model : Model (optional if in ``with`` context)
-    seeds : list
-        Seed values for each chain.
+    random_seed : int, array-like of int, RandomState or Generator, optional
+        Seed for the random number generator.
     progressbar : bool
         Whether or not to display a progressbar for advi sampling.
     jitter_max_retries : int
@@ -2429,14 +2473,7 @@ def init_nuts(
     if init == "auto":
         init = "jitter+adapt_diag"
 
-    if seeds is None:
-        seeds = model.rng_seeder.randint(2**30, dtype=np.int64, size=chains)
-    if not isinstance(seeds, (list, tuple, np.ndarray)):
-        raise ValueError(f"The `seeds` must be array-like. Got {type(seeds)} instead.")
-    if len(seeds) != chains:
-        raise ValueError(
-            f"Number of seeds ({len(seeds)}) does not match the number of chains ({chains})."
-        )
+    random_seed_list = _get_seeds_per_chain(random_seed, chains)
 
     _log.info(f"Initializing NUTS using {init}...")
 
@@ -2448,7 +2485,7 @@ def init_nuts(
     initial_points = _init_jitter(
         model,
         initvals,
-        seeds=seeds,
+        seeds=random_seed_list,
         jitter="jitter" in init,
         jitter_max_retries=jitter_max_retries,
     )
@@ -2486,7 +2523,7 @@ def init_nuts(
         )
     elif init == "advi+adapt_diag":
         approx = pm.fit(
-            random_seed=seeds[0],
+            random_seed=random_seed_list[0],
             n=n_init,
             method="advi",
             model=model,
@@ -2494,7 +2531,9 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        approx_sample = approx.sample(draws=chains, return_inferencedata=False)
+        approx_sample = approx.sample(
+            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+        )
         initial_points = [approx_sample[i] for i in range(chains)]
         std_apoint = approx.std.eval()
         cov = std_apoint**2
@@ -2504,7 +2543,7 @@ def init_nuts(
         potential = quadpotential.QuadPotentialDiagAdapt(n, mean, cov, weight)
     elif init == "advi":
         approx = pm.fit(
-            random_seed=seeds[0],
+            random_seed=random_seed_list[0],
             n=n_init,
             method="advi",
             model=model,
@@ -2512,27 +2551,31 @@ def init_nuts(
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        approx_sample = approx.sample(draws=chains, return_inferencedata=False)
+        approx_sample = approx.sample(
+            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+        )
         initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "advi_map":
-        start = pm.find_MAP(include_transformed=True, seed=seeds[0])
+        start = pm.find_MAP(include_transformed=True, seed=random_seed_list[0])
         approx = pm.MeanField(model=model, start=start)
         pm.fit(
-            random_seed=seeds[0],
+            random_seed=random_seed_list[0],
             n=n_init,
             method=pm.KLqp(approx),
             callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )
-        approx_sample = approx.sample(draws=chains, return_inferencedata=False)
+        approx_sample = approx.sample(
+            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+        )
         initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "map":
-        start = pm.find_MAP(include_transformed=True, seed=seeds[0])
+        start = pm.find_MAP(include_transformed=True, seed=random_seed_list[0])
         cov = pm.find_hessian(point=start)
         initial_points = [start] * chains
         potential = quadpotential.QuadPotentialFull(cov)

@@ -31,7 +31,13 @@ from aesara.tensor.subtensor import (
 
 from pymc import DensityDist
 from pymc.aesaraf import floatX, walk_model
-from pymc.distributions.continuous import HalfFlat, Normal, TruncatedNormal, Uniform
+from pymc.distributions.continuous import (
+    HalfFlat,
+    LogNormal,
+    Normal,
+    TruncatedNormal,
+    Uniform,
+)
 from pymc.distributions.discrete import Bernoulli
 from pymc.distributions.logprob import (
     _get_scaling,
@@ -233,6 +239,21 @@ def test_logp_helper():
 
     x_logp = logp(x, [0, 1])
     np.testing.assert_almost_equal(x_logp.eval(), sp.norm(0, 1).logpdf([0, 1]))
+
+
+def test_logp_helper_derived_rv():
+    assert np.isclose(
+        logp(at.exp(Normal.dist()), 5).eval(),
+        logp(LogNormal.dist(), 5).eval(),
+    )
+
+
+def test_logp_helper_exceptions():
+    with pytest.raises(TypeError, match="When RV is not a pure distribution"):
+        logp(at.exp(Normal.dist()), [1, 2])
+
+    with pytest.raises(NotImplementedError, match="PyMC could not infer logp of input variable"):
+        logp(at.cos(Normal.dist()), 1)
 
 
 def test_logcdf_helper():
