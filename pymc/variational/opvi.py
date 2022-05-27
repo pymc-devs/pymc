@@ -929,10 +929,6 @@ class Group(WithMemoization):
         return at.stack([size, dim])
 
     @node_property
-    def bdim(self):
-        return next(iter(self.params_dict.values())).shape[0]
-
-    @node_property
     def ndim(self):
         return self.ddim
 
