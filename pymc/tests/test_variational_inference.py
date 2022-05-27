@@ -9,7 +9,7 @@
 #   Unless required by applicable law or agreed to in writing, software
 #   distributed under the License is distributed on an "AS IS" BASIS,
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#   See the     License for the specific language governing permissions and
+#   See the License for the specific language governing permissions and
 #   limitations under the License.
 
 import functools
@@ -35,21 +35,10 @@ from pymc.variational.approximations import (
     MeanField,
     MeanFieldGroup,
 )
-from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI
+from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI, fit
 from pymc.variational.opvi import Approximation, Group, NotImplementedInference
 
 pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
-
-
-def ignore_not_implemented_inference(func):
-    @functools.wraps(func)
-    def new_test(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except NotImplementedInference:
-            pytest.xfail("NotImplementedInference")
-
-    return new_test
 
 
 @pytest.mark.parametrize("diff", ["relative", "absolute"])
@@ -101,6 +90,18 @@ def three_var_model():
     [
         (not_raises(), {MeanFieldGroup: None}),
         (not_raises(), {FullRankGroup: None, MeanFieldGroup: ["one"]}),
+        # (
+        #     not_raises(),
+        #     {MeanFieldGroup: ["one"], FullRankGroup: ["two"], MeanFieldGroup: ["three"]},
+        # ),
+        # (
+        #     pytest.raises(TypeError, match="Found duplicates"),
+        #     {
+        #         MeanFieldGroup: ["one"],
+        #         FullRankGroup: ["two", "one"],
+        #         MeanFieldGroup: ["three"],
+        #     },
+        # ),
         (
             pytest.raises(TypeError, match="No approximation is specified"),
             {MeanFieldGroup: ["one", "two"]},
@@ -221,68 +222,6 @@ def three_var_aevb_approx(three_var_model, three_var_aevb_groups):
     return approx
 
 
-# def test_sample_aevb(three_var_aevb_approx, aevb_initial):
-#     inf = pm.KLqp(three_var_aevb_approx)
-#     inf.fit(1, more_replacements={aevb_initial: np.zeros_like(aevb_initial.get_value())[:1]})
-#     aevb_initial.set_value(np.random.rand(7, 7).astype("float32"))
-#     trace = three_var_aevb_approx.sample(500, return_inferencedata=False)
-#     assert set(trace.varnames) == {"one", "one_log__", "two", "three"}
-#     assert len(trace) == 500
-#     assert trace[0]["one"].shape == (7, 2)
-#     assert trace[0]["two"].shape == (10,)
-#     assert trace[0]["three"].shape == (10, 1, 2)
-
-#     aevb_initial.set_value(np.random.rand(13, 7).astype("float32"))
-#     trace = three_var_aevb_approx.sample(500, return_inferencedata=False)
-#     assert set(trace.varnames) == {"one", "one_log__", "two", "three"}
-#     assert len(trace) == 500
-#     assert trace[0]["one"].shape == (13, 2)
-#     assert trace[0]["two"].shape == (10,)
-#     assert trace[0]["three"].shape == (10, 1, 2)
-
-
-# def test_replacements_in_sample_node_aevb(three_var_aevb_approx, aevb_initial):
-#     inp = at.matrix(dtype="float32")
-#     three_var_aevb_approx.sample_node(
-#         three_var_aevb_approx.model.one, 2, more_replacements={aevb_initial: inp}
-#     ).eval({inp: np.random.rand(7, 7).astype("float32")})
-
-#     three_var_aevb_approx.sample_node(
-#         three_var_aevb_approx.model.one, None, more_replacements={aevb_initial: inp}
-#     ).eval({inp: np.random.rand(7, 7).astype("float32")})
-
-
-def test_vae():
-    minibatch_size = 10
-    data = pm.floatX(np.random.rand(100))
-    x_mini = pm.Minibatch(data, minibatch_size)
-    x_inp = at.vector()
-    x_inp.tag.test_value = data[:minibatch_size]
-
-    ae = aesara.shared(pm.floatX([0.1, 0.1]))
-    be = aesara.shared(pm.floatX(1.0))
-
-    ad = aesara.shared(pm.floatX(1.0))
-    bd = aesara.shared(pm.floatX(1.0))
-
-    enc = x_inp.dimshuffle(0, "x") * ae.dimshuffle("x", 0) + be
-    mu, rho = enc[:, 0], enc[:, 1]
-
-    with pm.Model():
-        # Hidden variables
-        zs = pm.Normal("zs", mu=0, sigma=1, size=minibatch_size)
-        dec = zs * ad + bd
-        # Observation model
-        pm.Normal("xs_", mu=dec, sigma=0.1, observed=x_inp)
-
-        pm.fit(
-            1,
-            local_rv={zs: dict(mu=mu, rho=rho)},
-            more_replacements={x_inp: x_mini},
-            more_obj_params=[ae, be, ad, bd],
-        )
-
-
 def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
     approx = cls([three_var_model.one], model=three_var_model, **kw)
@@ -297,36 +236,6 @@ def test_logq_mini_2_sample_2_var(parametric_grouped_approxes, three_var_model):
     logq = approx.logq
     logq = approx.set_size_and_deterministic(logq, 2, 0)
     logq.eval()
-
-
-# def test_logq_mini_sample_aevb(three_var_aevb_groups):
-#     approx = three_var_aevb_groups[0]
-#     logq, symbolic_logq = approx.set_size_and_deterministic(
-#         [approx.logq, approx.symbolic_logq], 3, 0
-#     )
-#     e = logq.eval()
-#     es = symbolic_logq.eval()
-#     assert e.shape == ()
-#     assert es.shape == (3,)
-
-
-# def test_logq_aevb(three_var_aevb_approx):
-#     approx = three_var_aevb_approx
-#     logq, symbolic_logq = approx.set_size_and_deterministic(
-#         [approx.logq, approx.symbolic_logq], 1, 0
-#     )
-#     e = logq.eval()
-#     es = symbolic_logq.eval()
-#     assert e.shape == ()
-#     assert es.shape == (1,)
-
-#     logq, symbolic_logq = approx.set_size_and_deterministic(
-#         [approx.logq, approx.symbolic_logq], 2, 0
-#     )
-#     e = logq.eval()
-#     es = symbolic_logq.eval()
-#     assert e.shape == ()
-#     assert es.shape == (2,)
 
 
 # def test_logq_globals(three_var_approx):
@@ -635,12 +544,6 @@ def fit_kwargs(inference, use_minibatch):
         (ADVI, "mini"): dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=12000
         ),
-        (NFVI, "full"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=12000
-        ),
-        (NFVI, "mini"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=12000
-        ),
         (FullRankADVI, "full"): dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=6000
         ),
@@ -665,12 +568,12 @@ def fit_kwargs(inference, use_minibatch):
     return _select[(type(inference), key)]
 
 
-# def test_fit_oo(inference, fit_kwargs, simple_model_data):
-#     trace = inference.fit(**fit_kwargs).sample(10000)
-#     mu_post = simple_model_data["mu_post"]
-#     d = simple_model_data["d"]
-#     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
-#     np.testing.assert_allclose(np.std(trace.posterior["mu"]), np.sqrt(1.0 / d), rtol=0.2)
+def test_fit_oo(inference, fit_kwargs, simple_model_data):
+    trace = inference.fit(**fit_kwargs).sample(10000)
+    mu_post = simple_model_data["mu_post"]
+    d = simple_model_data["d"]
+    np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
+    np.testing.assert_allclose(np.std(trace.posterior["mu"]), np.sqrt(1.0 / d), rtol=0.2)
 
 
 def test_profile(inference):
@@ -741,18 +644,16 @@ def fit_method_with_object(request, another_simple_model):
         # start argument is not allowed for ASVGD
         ("asvgd", dict(start={}, total_grad_norm_constraint=10), TypeError),
         ("asvgd", dict(total_grad_norm_constraint=10), None),
-        ("nfvi", dict(start={}), None),
-        ("nfvi=scale-loc", dict(start={}), None),
         ("nfvi=bad-formula", dict(start={}), KeyError),
     ],
 )
-# def test_fit_fn_text(method, kwargs, error, another_simple_model):
-#     with another_simple_model:
-#         if error is not None:
-#             with pytest.raises(error):
-#                 fit(10, method=method, **kwargs)
-#         else:
-#             fit(10, method=method, **kwargs)
+def test_fit_fn_text(method, kwargs, error, another_simple_model):
+    with another_simple_model:
+        if error is not None:
+            with pytest.raises(error):
+                fit(10, method=method, **kwargs)
+        else:
+            fit(10, method=method, **kwargs)
 
 
 @pytest.fixture(scope="module")
@@ -766,40 +667,6 @@ def aevb_model():
     mu = aesara.shared(xr)
     rho = aesara.shared(np.zeros_like(xr))
     return {"model": model, "y": y, "x": x, "replace": dict(mu=mu, rho=rho)}
-
-
-# def test_aevb(inference_spec, aevb_model):
-#     # add to inference that supports aevb
-#     x = aevb_model["x"]
-#     y = aevb_model["y"]
-#     model = aevb_model["model"]
-#     replace = aevb_model["replace"]
-#     with model:
-#         try:
-#             inference = inference_spec(
-#                 local_rv={x: {"mu": replace["mu"] * 5, "rho": replace["rho"]}}
-#             )
-#             approx = inference.fit(3, obj_n_mc=2, more_obj_params=list(replace.values()))
-#             approx.sample(10)
-#             approx.sample_node(y, more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}).eval()
-#         except pm.opvi.AEVBInferenceError:
-#             pytest.skip("Does not support AEVB")
-
-
-def test_rowwise_approx(three_var_model, parametric_grouped_approxes):
-    # add to inference that supports aevb
-    cls, kw = parametric_grouped_approxes
-    with three_var_model:
-        try:
-            approx = Approximation(
-                [cls([three_var_model.one], rowwise=True, **kw), Group(None, vfam="mf")]
-            )
-            inference = pm.KLqp(approx)
-            approx = inference.fit(3, obj_n_mc=2)
-            approx.sample(10)
-            approx.sample_node(three_var_model.one).eval()
-        except pm.opvi.BatchedGroupError:
-            pytest.skip("Does not support rowwise grouping")
 
 
 # def test_pickle_approx(three_var_approx):
@@ -816,14 +683,6 @@ def test_pickle_single_group(three_var_approx_single_group_mf):
     dump = cloudpickle.dumps(three_var_approx_single_group_mf)
     new = cloudpickle.loads(dump)
     assert new.sample(1)
-
-
-# def test_pickle_approx_aevb(three_var_aevb_approx):
-#     import cloudpickle
-
-#     dump = cloudpickle.dumps(three_var_aevb_approx)
-#     new = cloudpickle.loads(dump)
-#     assert new.sample(1000)
 
 
 @pytest.fixture(scope="module")
