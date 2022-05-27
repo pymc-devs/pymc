@@ -1186,11 +1186,8 @@ class Approximation(WithMemoization):
     def has_logq(self):
         return all(self.collect("has_logq"))
 
-    def collect(self, item, part="total"):
-        if part == "total":
-            return [getattr(g, item) for g in self.groups]
-        else:
-            raise ValueError("unknown part %s, expected {'total'}")
+    def collect(self, item):
+        return [getattr(g, item) for g in self.groups]
 
     inputs = property(lambda self: self.collect("input"))
     symbolic_randoms = property(lambda self: self.collect("symbolic_random"))
