@@ -90,18 +90,6 @@ def three_var_model():
     [
         (not_raises(), {MeanFieldGroup: None}),
         (not_raises(), {FullRankGroup: None, MeanFieldGroup: ["one"]}),
-        # (
-        #     not_raises(),
-        #     {MeanFieldGroup: ["one"], FullRankGroup: ["two"], MeanFieldGroup: ["three"]},
-        # ),
-        # (
-        #     pytest.raises(TypeError, match="Found duplicates"),
-        #     {
-        #         MeanFieldGroup: ["one"],
-        #         FullRankGroup: ["two", "one"],
-        #         MeanFieldGroup: ["three"],
-        #     },
-        # ),
         (
             pytest.raises(TypeError, match="No approximation is specified"),
             {MeanFieldGroup: ["one", "two"]},
@@ -133,14 +121,6 @@ def test_init_groups(three_var_model, raises, grouping):
     params=[
         ({}, {MeanFieldGroup: (None, {})}),
         ({}, {FullRankGroup: (None, {}), MeanFieldGroup: (["one"], {})}),
-        (
-            {},
-            {
-                MeanFieldGroup: (["one"], {}),
-                FullRankGroup: (["two"], {}),
-                MeanFieldGroup: (["three"], {}),
-            },
-        ),
         ({}, {MeanFieldGroup: (["one"], {}), FullRankGroup: (["two", "three"], {})}),
         ({}, {MeanFieldGroup: (["one"], {}), EmpiricalGroup: (["two", "three"], {"size": 100})}),
     ],
@@ -238,25 +218,25 @@ def test_logq_mini_2_sample_2_var(parametric_grouped_approxes, three_var_model):
     logq.eval()
 
 
-# def test_logq_globals(three_var_approx):
-#     if not three_var_approx.has_logq:
-#         pytest.skip("%s does not implement logq" % three_var_approx)
-#     approx = three_var_approx
-#     logq, symbolic_logq = approx.set_size_and_deterministic(
-#         [approx.logq, approx.symbolic_logq], 1, 0
-#     )
-#     e = logq.eval()
-#     es = symbolic_logq.eval()
-#     assert e.shape == ()
-#     assert es.shape == (1,)
+def test_logq_globals(three_var_approx):
+    if not three_var_approx.has_logq:
+        pytest.skip("%s does not implement logq" % three_var_approx)
+    approx = three_var_approx
+    logq, symbolic_logq = approx.set_size_and_deterministic(
+        [approx.logq, approx.symbolic_logq], 1, 0
+    )
+    e = logq.eval()
+    es = symbolic_logq.eval()
+    assert e.shape == ()
+    assert es.shape == (1,)
 
-#     logq, symbolic_logq = approx.set_size_and_deterministic(
-#         [approx.logq, approx.symbolic_logq], 2, 0
-#     )
-#     e = logq.eval()
-#     es = symbolic_logq.eval()
-#     assert e.shape == ()
-#     assert es.shape == (2,)
+    logq, symbolic_logq = approx.set_size_and_deterministic(
+        [approx.logq, approx.symbolic_logq], 2, 0
+    )
+    e = logq.eval()
+    es = symbolic_logq.eval()
+    assert e.shape == ()
+    assert es.shape == (2,)
 
 
 @pytest.mark.parametrize(
@@ -669,12 +649,12 @@ def aevb_model():
     return {"model": model, "y": y, "x": x, "replace": dict(mu=mu, rho=rho)}
 
 
-# def test_pickle_approx(three_var_approx):
-#     import cloudpickle
+def test_pickle_approx(three_var_approx):
+    import cloudpickle
 
-#     dump = cloudpickle.dumps(three_var_approx)
-#     new = cloudpickle.loads(dump)
-#     assert new.sample(1)
+    dump = cloudpickle.dumps(three_var_approx)
+    new = cloudpickle.loads(dump)
+    assert new.sample(1)
 
 
 def test_pickle_single_group(three_var_approx_single_group_mf):
