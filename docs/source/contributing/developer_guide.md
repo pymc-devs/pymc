@@ -20,14 +20,14 @@ How tensor/value semantics for probability distributions are enabled in PyMC:
 In PyMC, model variables are defined by calling probability distribution classes with parameters:
 
 ```python
-x = Normal('x', 0, 1)
+z = Normal("z", 0, 5)
 ```
 
 This is done inside the context of a ``pm.Model``, which intercepts some information, for example to capture known dimensions.
 The notation aligns with the typically used math notation:
 
 $$
-x \sim \text{Normal}(0, 1)
+z \sim \text{Normal}(0, 5)
 $$
 
 A call to a {class}`~pymc.Distribution` constructor as shown above returns an Aesara {class}`~aesara.tensor.TensorVariable`, which is a symbolic representation of the model variable and the graph of inputs it depends on.
@@ -36,25 +36,25 @@ Under the hood, the variables are created through the {meth}`~pymc.Distribution.
 At a high level of abstraction, the idea behind ``RandomVariable`` ``Op``s is to create symbolic variables (``TensorVariable``s) that can be associated with the properties of a probability distribution.
 For example, the ``RandomVariable`` ``Op`` which becomes part of the symbolic computation graph is associated with the random number generators or probability mass/density functions of the distribution.
 
-In the example above, where the ``TensorVariable`` ``x`` is created to be {math}`\text{Normal}(0, 1)` random variable, we can get a handle on the corresponding ``RandomVariable`` ``Op`` instance:
+In the example above, where the ``TensorVariable`` ``z`` is created to be {math}`\text{Normal}(0, 5)` random variable, we can get a handle on the corresponding ``RandomVariable`` ``Op`` instance:
 
 ```python
 with pm.Model():
-    x = pm.Normal("x", 0, 1)
-print(type(x.owner.op))
+    z = pm.Normal("z", 0, 5)
+print(type(z.owner.op))
 # ==> aesara.tensor.random.basic.NormalRV
-isinstance(x.owner.op, aesara.tensor.random.basic.RandomVariable)
+isinstance(z.owner.op, aesara.tensor.random.basic.RandomVariable)
 # ==> True
 ```
 
-Now, because the [`NormalRV`` can be associated with the `probability density function](https://en.wikipedia.org/wiki/Probability_density_function) of the Normal distribution, we can now evaluate it through the special `pm.logp` function:
+Now, because the ``NormalRV`` can be associated with the [probability density function](https://en.wikipedia.org/wiki/Probability_density_function) of the Normal distribution, we can now evaluate it through the special `pm.logp` function:
 
 ```python
 with pm.Model():
-    x = pm.Normal("x", 0, 1)
-symbolic = pm.logp(rv=x, value=0.3)
+    z = pm.Normal("z", 0, 5)
+symbolic = pm.logp(z, 2.5)
 numeric = symbolic.eval()
-# array(-0.96393853)
+# array(-2.65337645)
 ```
 
 We can, of course, also work out the math by hand:
@@ -62,8 +62,8 @@ We can, of course, also work out the math by hand:
 $$
 \begin{aligned}
 pdf_{\mathcal{N}}(\mu, \sigma, x) &= \frac{1}{\sigma \sqrt{2 \pi}} \exp^{- 0.5 (\frac{x - \mu}{\sigma})^2} \\
-pdf_{\mathcal{N}}(0, 1, 0.3) &= 0.38138782 \\
-ln(0.38138782) &= -0.96393852
+pdf_{\mathcal{N}}(0, 5, 0.3) &= 0.070413 \\
+ln(0.070413) &= -2.6533
 \end{aligned}
 $$
 
@@ -79,7 +79,7 @@ Consider the following examples, which implement the below model.
 
 $$
     \begin{aligned}
-    z &\sim \mathcal{N}(0, 0.5) \\
+    z &\sim \mathcal{N}(0, 5) \\
     x &\sim \mathcal{N}(z, 1) \\
     \end{aligned}
 $$
@@ -91,8 +91,10 @@ with pm.Model() as model:
     z = pm.Normal('z', mu=0., sigma=5.)             # ==> aesara.tensor.var.TensorVariable
     x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> aesara.tensor.var.TensorVariable
 # The log-prior of z=2.5
+pm.logp(z, 2.5).eval()                              # ==> -2.65337645
+# ???????
 x.logp({'z': 2.5})                                  # ==> -4.0439386
-# The log-posterior of z=2.5 given the observation x=5
+# ???????
 model.logp({'z': 2.5})                              # ==> -6.6973152
 ```
 
