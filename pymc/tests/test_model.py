@@ -765,6 +765,39 @@ def test_add_coord_mutable_kwarg():
         assert isinstance(m._dim_lengths["mutable2"], TensorVariable)
 
 
+def test_set_dim():
+    """Test the concious re-sizing of dims created through add_coord()."""
+    with pm.Model() as pmodel:
+        pmodel.add_coord("fdim", mutable=False, length=1)
+        pmodel.add_coord("mdim", mutable=True, length=2)
+        a = pm.Normal("a", dims="mdim")
+    assert a.eval().shape == (2,)
+
+    with pytest.raises(ValueError, match="is immutable"):
+        pmodel.set_dim("fdim", 3)
+
+    pmodel.set_dim("mdim", 3)
+    assert a.eval().shape == (3,)
+
+
+def test_set_dim_with_coords():
+    """Test the concious re-sizing of dims created through add_coord() with coord value."""
+    with pm.Model() as pmodel:
+        pmodel.add_coord("mdim", mutable=True, length=2, values=["A", "B"])
+        a = pm.Normal("a", dims="mdim")
+    assert len(pmodel.coords["mdim"]) == 2
+
+    with pytest.raises(ValueError, match="has coord values"):
+        pmodel.set_dim("mdim", new_length=3)
+
+    with pytest.raises(ShapeError, match="does not match"):
+        pmodel.set_dim("mdim", new_length=3, coord_values=["A", "B"])
+
+    pmodel.set_dim("mdim", 3, ["A", "B", "C"])
+    assert a.eval().shape == (3,)
+    assert pmodel.coords["mdim"] == ("A", "B", "C")
+
+
 @pytest.mark.parametrize("jacobian", [True, False])
 def test_model_logp(jacobian):
     with pm.Model() as m:
