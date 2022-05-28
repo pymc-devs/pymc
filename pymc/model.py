@@ -1067,12 +1067,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             raise ValueError(
                 f"Either `values` or `length` must be specified for the '{name}' dimension."
             )
-        if isinstance(length, int):
-            length = at.constant(length)
-        elif length is not None and not isinstance(length, Variable):
-            raise ValueError(
-                f"The `length` passed for the '{name}' coord must be an Aesara Variable or None."
-            )
         if values is not None:
             # Conversion to a tuple ensures that the coordinate values are immutable.
             # Also unlike numpy arrays the's tuple.index(...) which is handy to work with.
@@ -1080,12 +1074,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if name in self.coords:
             if not np.array_equal(values, self.coords[name]):
                 raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
-        else:
+        if length is not None and not isinstance(length, (int, Variable)):
+            raise ValueError(
+                f"The `length` passed for the '{name}' coord must be an int, Aesara Variable or None."
+            )
+        if length is None:
+            length = len(values)
+        if not isinstance(length, Variable):
             if mutable:
-                self._dim_lengths[name] = length or aesara.shared(len(values))
+                length = aesara.shared(length)
             else:
-                self._dim_lengths[name] = length or aesara.tensor.constant(len(values))
-            self._coords[name] = values
+                length = aesara.tensor.constant(length)
+        self._dim_lengths[name] = length
+        self._coords[name] = values
 
     def add_coords(
         self,
@@ -1100,6 +1101,36 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         for name, values in coords.items():
             self.add_coord(name, values, length=lengths.get(name, None))
+
+    def set_dim(self, name: str, new_length: int, coord_values: Optional[Sequence] = None):
+        """Update a mutable dimension.
+
+        Parameters
+        ----------
+        name
+            Name of the dimension.
+        new_length
+            New length of the dimension.
+        coord_values
+            Optional sequence of coordinate values.
+        """
+        if not isinstance(self.dim_lengths[name], ScalarSharedVariable):
+            raise ValueError(f"The dimension '{name}' is immutable.")
+        if coord_values is None and self.coords.get(name, None) is not None:
+            raise ValueError(
+                f"'{name}' has coord values. Pass `set_dim(..., coord_values=...)` to update them."
+            )
+        if coord_values is not None:
+            len_cvals = len(coord_values)
+            if len_cvals != new_length:
+                raise ShapeError(
+                    f"Length of new coordinate values does not match the new dimension length.",
+                    actual=len_cvals,
+                    expected=new_length,
+                )
+            self._coords[name] = tuple(coord_values)
+        self.dim_lengths[name].set_value(new_length)
+        return
 
     def set_data(
         self,
