@@ -73,8 +73,11 @@ class Slice(ArrayStep):
             # uniformly sample from 0 to p(q), but in log space
             q_ra = RaveledVars(q, q0.point_map_info)
             y = logp(q_ra) - nr.standard_exponential()
-            ql[i] = q[i] - nr.uniform(0, self.w[i])
-            qr[i] = q[i] + self.w[i]
+
+            # Create initial interval
+            ql[i] = q[i] - nr.uniform() * self.w[i]  # q[i] + r * w
+            qr[i] = ql[i] + self.w[i]  # Equivalent to q[i] + (1-r) * w
+
             # Stepping out procedure
             cnt = 0
             while y <= logp(
@@ -104,16 +107,16 @@ class Slice(ArrayStep):
                 if cnt > self.iter_limit:
                     raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
 
-            if (
-                self.tune
-            ):  # I was under impression from MacKays lectures that slice width can be tuned without
+            if self.tune:
+                # I was under impression from MacKays lectures that slice width can be tuned without
                 # breaking markovianness. Can we do it regardless of self.tune?(@madanh)
                 self.w[i] = self.w[i] * (self.n_tunes / (self.n_tunes + 1)) + (qr[i] - ql[i]) / (
                     self.n_tunes + 1
-                )  # same as before
-                # unobvious and important: return qr and ql to the same point
-                qr[i] = q[i]
-                ql[i] = q[i]
+                )
+
+            # Set qr and ql to the accepted points (they matter for subsequent iterations)
+            qr[i] = ql[i] = q[i]
+
         if self.tune:
             self.n_tunes += 1
         return q

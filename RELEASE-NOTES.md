@@ -148,8 +148,7 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - Added the low level `compile_forward_sampling_function` method to compile the aesara function responsible for generating forward samples (see [#5759](https://github.com/pymc-devs/pymc/pull/5759)).
 - ...
 
-
-## Documentation
+### Documentation
 - Switched to the [pydata-sphinx-theme](https://pydata-sphinx-theme.readthedocs.io/en/latest/)
 - Updated our documentation tooling to use [MyST](https://myst-parser.readthedocs.io/en/latest/), [MyST-NB](https://myst-nb.readthedocs.io/en/latest/), sphinx-design, notfound.extension,
   sphinx-copybutton and sphinx-remove-toctrees.
@@ -157,7 +156,8 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - Restructured the documentation to facilitate learning paths
 - Updated API docs to document objects at the path users should use to import them
 
-### Internal changes
+### Maintenance
+- ⚠ Fixed old-time bug in Slice sampler that resulted in biased samples (see [#5816](https://github.com/pymc-devs/pymc/pull/5816)).
 - ⚠ PyMC now requires Scipy version `>= 1.4.1` (see [4857](https://github.com/pymc-devs/pymc/pull/4857)).
 - Removed float128 dtype support (see [#4514](https://github.com/pymc-devs/pymc/pull/4514)).
 - Logp method of `Uniform` and `DiscreteUniform` no longer depends on `pymc.distributions.dist_math.bound` for proper evaluation (see [#4541](https://github.com/pymc-devs/pymc/pull/4541)).
