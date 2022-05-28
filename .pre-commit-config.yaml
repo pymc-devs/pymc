@@ -95,7 +95,6 @@ repos:
           (?x)(index.md|
                404.md|
                contributing/release_checklist.md|
-               contributing/developer_guide.rst|
                learn/examples.md)
       entry: >
           (?x)(arviz-devs.github.io|
