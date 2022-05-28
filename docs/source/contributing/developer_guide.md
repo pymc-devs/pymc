@@ -287,8 +287,7 @@ note: after ``transform.apply(distribution)`` its ``.transform``
 porperty is set to ``None``, thus making sure that the above call will
 only add one ``FreeRV``. In another word, you *cannot* do chain
 transformation by nested applying multiple transforms to a Distribution
-(however, you can use `Chain
-transformation <https://docs.pymc.io/notebooks/api_quickstart.html?highlight=chain%20transformation>`__).
+(however, you can use ``Chain`` transformation.
 
 .. code:: python
 
@@ -522,16 +521,16 @@ Moreover, if we are limiting to the problem that we can solved most confidently 
 ## Inference
 
 ### MCMC
-The ability for model instance to generate conditional logp and dlogp function enable one of the unique feature of PyMC - [CompoundStep method](https://docs.pymc.io/notebooks/sampling_compound_step.html).
+The ability for model instance to generate conditional logp and dlogp function enable one of the unique feature of PyMC - {class}`~pymc.CompoundStep` method.
 On a conceptual level it is a Metropolis-within-Gibbs sampler.
-User can [specify different sampler of different RVs](https://docs.pymc.io/notebooks/sampling_compound_step.html?highlight=compoundstep#Specify-compound-steps).
+Users can specify different sampler for different RVs.
 Alternatively, it is implemented as yet another interceptor:
 The ``pm.sample(...)`` call will try to [assign the best step methods to different free\_RVs](https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/sampling.py#L86-L152) (e.g., NUTS if all free\_RVs are continous).
 Then, (conditional) logp function(s) are compiled, and the sampler called each sampler within the list of CompoundStep in a for-loop for one sample circle.
 
 For each sampler, it implements a ``step.step`` method to perform MH updates.
 Each time a dictionary (``point`` in PyMC land, same structure as ``model.initial_point``) is passed as input and output a new dictionary with the free\_RVs being sampled now has a new value (if accepted, see [here](https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/step_methods/compound.py#L27) and [here](https://github.com/pymc-devs/pymc/blob/main/pymc/step_methods/compound.py)).
-There are some example in the [CompoundStep doc](https://docs.pymc.io/notebooks/sampling_compound_step.html#Specify-compound-steps):
+There are some example in the ``CompoundStep`` doc:
 
 #### Transition kernel
 The base class for most MCMC sampler (except SMC) is in [ArrayStep](https://github.com/pymc-devs/pymc/blob/main/pymc/step_methods/arraystep.py).
@@ -664,7 +663,7 @@ There are also other error related random sample generation (e.g., [Mixture is c
     -  [Inferencing Linear Mixed Model with EM.ipynb](https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/master/Ports/Inferencing%20Linear%20Mixed%20Model%20with%20EM.ipynb)
     -  [Laplace approximation in  pymc.ipynb](https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/master/Ports/Laplace%20approximation%20in%20pymc.ipynb)
 -  Connecting it to other library within a model
-    -  [Using “black box” likelihood function by creating a custom Aesara Op](https://docs.pymc.io/notebooks/blackbox_external_likelihood.html)
+    -  Using "black box" likelihood function by creating a custom Aesara Op.
     -  Using emcee
 -  Using other library for inference
     -  Connecting to Julia for solving ODE (with gradient for solution that can be used in NUTS)
