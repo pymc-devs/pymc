@@ -37,7 +37,7 @@ import pymc as pm
 from pymc import Deterministic, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
-from pymc.exceptions import ShapeError
+from pymc.exceptions import ShapeError, ShapeWarning
 from pymc.model import Point, ValueGradFunction
 from pymc.tests.helpers import SeededTest
 
@@ -796,6 +796,24 @@ def test_set_dim_with_coords():
     pmodel.set_dim("mdim", 3, ["A", "B", "C"])
     assert a.eval().shape == (3,)
     assert pmodel.coords["mdim"] == ("A", "B", "C")
+
+
+def test_set_data_warns_resize_mutable_dim():
+    with pm.Model() as pmodel:
+        pmodel.add_coord("mdim", mutable=True, length=2)
+        pm.MutableData("mdata", [1, 2], dims="mdim")
+
+    # First resize the dimension.
+    pmodel.dim_lengths["mdim"].set_value(3)
+    # Then change the data.
+    pmodel.set_data("mdata", [1, 2, 3])
+
+    # Now the other way around.
+    # Because the dimension doesn't depend on the data variable,
+    # a warning shoudl be emitted.
+    with pytest.warns(ShapeWarning, match="update the dimension length"):
+        pmodel.set_data("mdata", [1, 2, 3, 4])
+    pass
 
 
 @pytest.mark.parametrize("jacobian", [True, False])

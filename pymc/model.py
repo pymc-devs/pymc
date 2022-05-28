@@ -60,7 +60,7 @@ from pymc.data import GenTensorVariable, Minibatch
 from pymc.distributions import joint_logpt
 from pymc.distributions.logprob import _get_scaling
 from pymc.distributions.transforms import _default_transform
-from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
+from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
 from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
 from pymc.util import (
@@ -1194,6 +1194,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
                             f"{new_length}, so new coord values for the {dname} dimension are required."
                         )
                 if isinstance(length_tensor, TensorConstant):
+                    # The dimension was fixed in length.
+                    # Resizing a data variable in this dimension would
+                    # definitely lead to shape problems.
                     raise ShapeError(
                         f"Resizing dimension '{dname}' is impossible, because "
                         "a 'TensorConstant' stores its length. To be able "
@@ -1201,7 +1204,21 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         "registering the dimension via `model.add_coord`, "
                         "or define it via a `pm.MutableData` variable."
                     )
+                elif isinstance(length_tensor, ScalarSharedVariable):
+                    # The dimension is mutable, but was defined without being linked
+                    # to a shared variable. This is allowed, but slightly dangerous.
+                    warnings.warn(
+                        f"You are resizing a variable with dimension '{dname}' which was initialized"
+                        " as a mutable dimension and is not linked to the `MutableData` variable."
+                        " Remember to update the dimension length by calling "
+                        f"`Model.set_dim({dname}, new_length={new_length})` manually,"
+                        " preferably _before_ updating `MutableData` variables that use this dimension.",
+                        ShapeWarning,
+                        stacklevel=2,
+                    )
                 else:
+                    # The dimension was created from another model variable.
+                    # If that was a non-mutable variable, there will definitely be shape problems.
                     length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
                     if not isinstance(length_belongs_to, SharedVariable):
                         raise ShapeError(
