@@ -2,9 +2,9 @@
 
 This guide provides an overview on how to implement a distribution for PyMC version `>=4.0.0`.
 It is designed for developers who wish to add a new distribution to the library.
-Users will not be aware of all this complexity and should instead make use of helper methods such as `~pymc.distributions.DensityDist`.
+Users will not be aware of all this complexity and should instead make use of helper methods such as `~pymc.DensityDist`.
 
-PyMC {class}`~pymc.distributions.Distribution` builds on top of Aesara's {class}`~aesara.tensor.random.op.RandomVariable`, and implements `logp`, `logcdf` and `moment` methods as well as other initialization and validation helpers.
+PyMC {class}`~pymc.Distribution` builds on top of Aesara's {class}`~aesara.tensor.random.op.RandomVariable`, and implements `logp`, `logcdf` and `moment` methods as well as other initialization and validation helpers.
 Most notably `shape/dims` kwargs, alternative parametrizations, and default `transforms`.
 
 Here is a summary check-list of the steps needed to implement a new distribution.
@@ -88,10 +88,10 @@ Some important things to keep in mind:
 
 1. Everything inside the `rng_fn` method is pure Python code (as are the inputs) and should not make use of other `Aesara` symbolic ops. The random method should make use of the `rng` which is a NumPy {class}`~numpy.random.RandomState`, so that samples are reproducible.
 1. Non-default `RandomVariable` dimensions will end up in the `rng_fn` via the `size` kwarg. The `rng_fn` will have to take this into consideration for correct output. `size` is the specification used by NumPy and SciPy and works like PyMC `shape` for univariate distributions, but is different for multivariate distributions. For multivariate distributions the __`size` excludes the `ndim_supp` support dimensions__, whereas the __`shape` of the resulting `TensorVariabe` or `ndarray` includes the support dimensions__. This [discussion](https://github.com/numpy/numpy/issues/17669) may be helpful to get more context.
-1. `Aesara` tries to infer the output shape of the `RandomVariable` (given a user-specified size) by introspection of the `ndim_supp` and `ndim_params` attributes. However, the default method may not work for more complex distributions. In that case, custom `_supp_shape_from_params` (and less probably, `_infer_shape`) should also be implemented in the new `RandomVariable` class. One simple example is seen in the {class}`~pymc.distributions.multivariate.DirichletMultinomialRV` where it was necessary to specify the `rep_param_idx` so that the `default_supp_shape_from_params` helper method can do its job. In more complex cases, it may not suffice to use this default helper. This could happen for instance if the argument values determined the support shape of the distribution, as happens in the `~pymc.distribution.multivarite._LKJCholeskyCovRV`.
+1. `Aesara` tries to infer the output shape of the `RandomVariable` (given a user-specified size) by introspection of the `ndim_supp` and `ndim_params` attributes. However, the default method may not work for more complex distributions. In that case, custom `_supp_shape_from_params` (and less probably, `_infer_shape`) should also be implemented in the new `RandomVariable` class. One simple example is seen in the {class}`~pymc.DirichletMultinomialRV` where it was necessary to specify the `rep_param_idx` so that the `default_supp_shape_from_params` helper method can do its job. In more complex cases, it may not suffice to use this default helper. This could happen for instance if the argument values determined the support shape of the distribution, as happens in the `~pymc.distributions.multivarite._LKJCholeskyCovRV`.
 1. It's okay to use the `rng_fn` `classmethods` of other Aesara and PyMC `RandomVariables` inside the new `rng_fn`. For example if you are implementing a negative HalfNormal `RandomVariable`, your `rng_fn` can simply return `- halfnormal.rng_fn(rng, scale, size)`.
 
-*Note: In addition to `size`, the PyMC API also provides `shape` and `dims` as alternatives to define a distribution dimensionality, but this is taken care of by {class}`~pymc.distributions.Distribution`, and should not require any extra changes.*
+*Note: In addition to `size`, the PyMC API also provides `shape` and `dims` as alternatives to define a distribution dimensionality, but this is taken care of by {class}`~pymc.Distribution`, and should not require any extra changes.*
 
 For a quick test that your new `RandomVariable` `Op` is working, you can call the `Op` with the necessary parameters and then call `eval()` on the returned object:
 
@@ -115,7 +115,7 @@ blah([0, 0], [1, 2], size=(10, 2)).eval()
 
 ## 2. Inheriting from a PyMC base `Distribution` class
 
-After implementing the new `RandomVariable` `Op`, it's time to make use of it in a new PyMC {class}`pymc.distributions.Distribution`.
+After implementing the new `RandomVariable` `Op`, it's time to make use of it in a new PyMC {class}`~pymc.Distribution`.
 PyMC `>=4.0.0` works in a very {term}`functional <Functional Programming>` way, and the `distribution` classes are there mostly to facilitate porting the `PyMC3` v3.x code to PyMC `>=4.0.0`, add PyMC API features and keep related methods organized together.
 In practice, they take care of:
 
@@ -194,7 +194,7 @@ class Blah(PositiveContinuous):
 
 Some notes:
 
-1. A distribution should at the very least inherit from {class}`~pymc.distributions.Discrete` or {class}`~pymc.distributions.Continuous`. For the latter, more specific subclasses exist: `PositiveContinuous`, `UnitContinuous`, `BoundedContinuous`, `CircularContinuous`, `SimplexContinuous`, which specify default transformations for the variables. If you need to specify a one-time custom transform you can also create a `_default_transform` dispatch function as is done for the {class}`~pymc.distributions.multivariate.LKJCholeskyCov`.
+1. A distribution should at the very least inherit from {class}`~pymc.Discrete` or {class}`~pymc.Continuous`. For the latter, more specific subclasses exist: `PositiveContinuous`, `UnitContinuous`, `BoundedContinuous`, `CircularContinuous`, `SimplexContinuous`, which specify default transformations for the variables. If you need to specify a one-time custom transform you can also create a `_default_transform` dispatch function as is done for the {class}`~pymc.distributions.multivariate.LKJCholeskyCov`.
 1. If a distribution does not have a corresponding `rng_fn` implementation, a `RandomVariable` should still be created to raise a `NotImplementedError`. This is, for example, the case in {class}`~pymc.distributions.continuous.Flat`. In this case it will be necessary to provide a `moment` method, because without a `rng_fn`, PyMC can't fall back to a random draw to use as an initial point for MCMC.
 1. As mentioned above, PyMC `>=4.0.0` works in a very {term}`functional <Functional Programming>` way, and all the information that is needed in the `logp` and `logcdf` methods is expected to be "carried" via the `RandomVariable` inputs. You may pass numerical arguments that are not strictly needed for the `rng_fn` method but are used in the `logp` and `logcdf` methods. Just keep in mind whether this affects the correct shape inference behavior of the `RandomVariable`. If specialized non-numeric information is needed you might need to define your custom`_logp` and `_logcdf` {term}`Dispatching` functions, but this should be done as a last resort.
 1. The `logcdf` method is not a requirement, but it's a nice plus!
