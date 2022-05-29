@@ -290,14 +290,14 @@ def logp(rv: TensorVariable, value) -> TensorVariable:
             raise NotImplementedError("PyMC could not infer logp of input variable.") from exc
 
 
-def logcdf(rv, value) -> TensorVariable:
+def logcdf(rv: TensorVariable, value) -> TensorVariable:
     """Return the log-cdf graph of a Random Variable"""
 
     value = at.as_tensor_variable(value, dtype=rv.dtype)
     return logcdf_aeppl(rv, value)
 
 
-def ignore_logprob(rv) -> TensorVariable:
+def ignore_logprob(rv: TensorVariable) -> TensorVariable:
     """Return a duplicated variable that is ignored when creating Aeppl logprob graphs
 
     This is used in SymbolicDistributions that use other RVs as inputs but account
