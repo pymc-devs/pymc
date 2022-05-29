@@ -167,7 +167,7 @@ def change_rv_size(
         new_size = (new_size,)
 
     # Extract the RV node that is to be resized, together with its inputs, name and tag
-    assert rw.owner.op is not None
+    assert rv.owner.op is not None
     if isinstance(rv.owner.op, SpecifyShape):
         rv = rv.owner.inputs[0]
     rv_node = rv.owner
