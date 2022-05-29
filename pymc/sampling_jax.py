@@ -370,6 +370,7 @@ def sample_blackjax_nuts(
         posterior=posterior,
         log_likelihood=log_likelihood,
         observed_data=find_observations(model),
+        constant_data=find_constants(model),
         coords=coords,
         dims=dims,
         attrs=make_attrs(attrs, library=blackjax),
