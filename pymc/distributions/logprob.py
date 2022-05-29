@@ -39,7 +39,9 @@ from aesara.tensor.var import TensorVariable
 from pymc.aesaraf import floatX
 
 
-def _get_scaling(total_size: Optional[Union[int, Sequence[int]]], shape, ndim: int) -> TensorVariable:
+def _get_scaling(
+    total_size: Optional[Union[int, Sequence[int]]], shape, ndim: int
+) -> TensorVariable:
     """
     Gets scaling constant for logp.
 
