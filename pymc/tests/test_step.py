@@ -35,7 +35,9 @@ from pymc.distributions import (
     Beta,
     Binomial,
     Categorical,
+    Dirichlet,
     HalfNormal,
+    Multinomial,
     MvNormal,
     Normal,
 )
@@ -400,6 +402,40 @@ class TestMetropolis:
             tuned = idata.warmup_sample_stats["scaling"].sel(chain=c).values[-1]
             assert tuned != 0.1
             np.testing.assert_array_equal(idata.sample_stats["scaling"].sel(chain=c).values, tuned)
+
+    @pytest.mark.parametrize(
+        "batched_dist",
+        (
+            Binomial.dist(n=5, p=0.9),  # scalar case
+            Binomial.dist(n=np.arange(40) + 1, p=np.linspace(0.1, 0.9, 40), shape=(40,)),
+            Binomial.dist(
+                n=(np.arange(20) + 1)[::-1],
+                p=np.linspace(0.1, 0.9, 20),
+                shape=(
+                    2,
+                    20,
+                ),
+            ),
+            Dirichlet.dist(a=np.ones(3) * (np.arange(40) + 1)[:, None], shape=(40, 3)),
+            Dirichlet.dist(a=np.ones(3) * (np.arange(20) + 1)[:, None], shape=(2, 20, 3)),
+        ),
+    )
+    def test_elemwise_update(self, batched_dist):
+        with Model() as m:
+            m.register_rv(batched_dist, name="batched_dist")
+            step = pm.Metropolis([batched_dist])
+            assert step.elemwise_update == (batched_dist.ndim > 0)
+            trace = pm.sample(draws=1000, chains=2, step=step, random_seed=428)
+
+        assert az.rhat(trace).max()["batched_dist"].values < 1.1
+        assert az.ess(trace).min()["batched_dist"].values > 50
+
+    def test_multinomial_no_elemwise_update(self):
+        with Model() as m:
+            batched_dist = Multinomial("batched_dist", n=5, p=np.ones(4) / 4, shape=(10, 4))
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                step = pm.Metropolis([batched_dist])
+                assert not step.elemwise_update
 
 
 class TestDEMetropolisZ:
@@ -1215,8 +1251,6 @@ class TestMLDA:
             mout = []
             coarse_models = []
 
-            rng = np.random.RandomState(seed)
-
             with Model() as coarse_model_0:
                 if aesara.config.floatX == "float32":
                     Q = Data("Q", np.float32(0.0))
@@ -1234,8 +1268,6 @@ class TestMLDA:
 
                 coarse_models.append(coarse_model_0)
 
-            rng = np.random.RandomState(seed)
-
             with Model() as coarse_model_1:
                 if aesara.config.floatX == "float32":
                     Q = Data("Q", np.float32(0.0))
@@ -1252,8 +1284,6 @@ class TestMLDA:
                 Potential("likelihood", mout[1](theta))
 
                 coarse_models.append(coarse_model_1)
-
-            rng = np.random.RandomState(seed)
 
             with Model() as model:
                 if aesara.config.floatX == "float32":
@@ -1312,8 +1342,9 @@ class TestMLDA:
                     (nchains, ndraws * nsub)
                 )
                 Q_2_1 = np.concatenate(trace.get_sampler_stats("Q_2_1")).reshape((nchains, ndraws))
-                assert Q_1_0.mean(axis=1) == 0.0
-                assert Q_2_1.mean(axis=1) == 0.0
+                # This used to be a scrict zero equality!
+                assert np.isclose(Q_1_0.mean(axis=1), 0.0, atol=1e-4)
+                assert np.isclose(Q_2_1.mean(axis=1), 0.0, atol=1e-4)
 
 
 class TestRVsAssignmentSteps:

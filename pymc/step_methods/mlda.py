@@ -787,11 +787,11 @@ class MLDA(ArrayStepShared):
         if isinstance(self.step_method_below, MLDA):
             self.base_tuning_stats = self.step_method_below.base_tuning_stats
         elif isinstance(self.step_method_below, MetropolisMLDA):
-            self.base_tuning_stats.append({"base_scaling": self.step_method_below.scaling})
+            self.base_tuning_stats.append({"base_scaling": np.mean(self.step_method_below.scaling)})
         elif isinstance(self.step_method_below, DEMetropolisZMLDA):
             self.base_tuning_stats.append(
                 {
-                    "base_scaling": self.step_method_below.scaling,
+                    "base_scaling": np.mean(self.step_method_below.scaling),
                     "base_lambda": self.step_method_below.lamb,
                 }
             )
@@ -799,10 +799,10 @@ class MLDA(ArrayStepShared):
             # Below method is CompoundStep
             for method in self.step_method_below.methods:
                 if isinstance(method, MetropolisMLDA):
-                    self.base_tuning_stats.append({"base_scaling": method.scaling})
+                    self.base_tuning_stats.append({"base_scaling": np.mean(method.scaling)})
                 elif isinstance(method, DEMetropolisZMLDA):
                     self.base_tuning_stats.append(
-                        {"base_scaling": method.scaling, "base_lambda": method.lamb}
+                        {"base_scaling": np.mean(method.scaling), "base_lambda": method.lamb}
                     )
 
         return q_new, [stats] + self.base_tuning_stats
