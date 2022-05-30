@@ -282,7 +282,7 @@ class _Tree:
             )
             leftmost_begin, leftmost_end = self.left, self.right
             rightmost_begin, rightmost_end = tree.left, tree.right
-            leftmost_p_sum = self.p_sum
+            leftmost_p_sum = self.p_sum.copy()
             rightmost_p_sum = tree.p_sum
             self.right = tree.right
         else:
@@ -292,7 +292,7 @@ class _Tree:
             leftmost_begin, leftmost_end = tree.right, tree.left
             rightmost_begin, rightmost_end = self.left, self.right
             leftmost_p_sum = tree.p_sum
-            rightmost_p_sum = self.p_sum
+            rightmost_p_sum = self.p_sum.copy()
             self.left = tree.right
 
         self.depth += 1
