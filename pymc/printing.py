@@ -59,17 +59,49 @@ def str_for_dist(rv: TensorVariable, formatting: str = "plain", include_params: 
 def str_for_symbolic_dist(
     rv: TensorVariable, formatting: str = "plain", include_params: bool = True
 ) -> str:
+    def dispatch_comp_str(var, formatting=formatting, include_params=include_params):
+        if var.name:
+            return str_for_dist(var, formatting=formatting, include_params=include_params)
+        if isinstance(var, TensorConstant):
+            return _str_for_constant(var, formatting)
+        if var.owner.op.name == "constant":
+            return "hello"
 
-    # code would look something like this:
-    # if "ZeroInflated" in rv.owner.op._print_name[0]:
-    #     return
-    # if "Mixture" in rv.owner.op._print_name[0]:
-    #     return
+        # else it's a Mixture component initialized by the .dist() API
 
-    # below is copy-pasted from str_for_dist
+        dist_args = ", ".join(
+            [_str_for_input_var(x, formatting=formatting) for x in var.owner.inputs[3:]]
+        )
+        comp_name = var.owner.op.name.capitalize()
+
+        if "latex" in formatting:
+            comp_name = r"\text{" + _latex_escape(comp_name) + "}"
+
+        return f"{comp_name}({dist_args})"
+
     if include_params:
-        # first 3 args are always (rng, size, dtype), rest is relevant for distribution
-        dist_args = [_str_for_input_var(x, formatting=formatting) for x in rv.owner.inputs[3:]]
+        if "ZeroInflated" in rv.owner.op._print_name[0]:
+            start_idx_para = 2
+        elif "Mixture" in rv.owner.op._print_name[0]:
+            start_idx_para = 1
+
+            if len(rv.owner.inputs) == 3:
+                # is a single component!
+                # (rng, weights, single_component)
+                pass
+
+        elif "Censored" in rv.owner.op._print_name[0]:
+            start_idx_para = 2
+        else:
+            raise ValueError(
+                "Latex printing not yet implemented for this SymbolicDistribution\n"
+                "Please update the str_for_symbolic_dist in pymc/printing.py file."
+            )
+
+        dist_args = [
+            dispatch_comp_str(dist_para, formatting=formatting, include_params=include_params)
+            for dist_para in rv.owner.inputs[start_idx_para:]
+        ]
 
     print_name = rv.name if rv.name is not None else "<unnamed>"
     if "latex" in formatting:
@@ -165,7 +197,14 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
 
 
 def _str_for_input_rv(var: Variable, formatting: str) -> str:
-    _str = var.name if var.name is not None else "<unnamed>"
+
+    if var.name:
+        _str = var.name
+    elif var.owner.op.name:
+        _str = var.owner.op.name.capitalize()
+    else:
+        _str = "<unnamed>"
+
     if "latex" in formatting:
         return r"\text{" + _latex_escape(_str) + "}"
     else:

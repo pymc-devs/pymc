@@ -484,7 +484,9 @@ class SymbolicDistribution:
             initval=initval,
         )
 
+        # TODO: if rv_out is a cloned variable, the line below wouldn't work
         set_print_name(cls, rv_out)
+
         rv_out.str_repr = types.MethodType(str_for_symbolic_dist, rv_out)
         rv_out._repr_latex_ = types.MethodType(
             functools.partial(str_for_symbolic_dist, formatting="latex"), rv_out
