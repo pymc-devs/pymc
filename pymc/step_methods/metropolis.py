@@ -168,10 +168,12 @@ class Metropolis(ArrayStepShared):
             vars = model.value_vars
         else:
             vars = [model.rvs_to_values.get(var, var) for var in vars]
+
         vars = pm.inputvars(vars)
 
+        initial_values_shape = [initial_values[v.name].shape for v in vars]
         if S is None:
-            S = np.ones(sum(initial_values[v.name].size for v in vars))
+            S = np.ones(int(sum(np.prod(ivs) for ivs in initial_values_shape)))
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -186,7 +188,6 @@ class Metropolis(ArrayStepShared):
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
-        self.accepted = 0
 
         # Determine type of variables
         self.discrete = np.concatenate(
@@ -195,11 +196,33 @@ class Metropolis(ArrayStepShared):
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
 
-        # remember initial settings before tuning so they can be reset
-        self._untuned_settings = dict(
-            scaling=self.scaling, steps_until_tune=tune_interval, accepted=self.accepted
+        # Metropolis will try to handle one batched dimension at a time This, however,
+        # is not safe for discrete multivariate distributions (looking at you Multinomial),
+        # due to high dependency among the support dimensions. For continuous multivariate
+        # distributions we assume they are being transformed in a way that makes each
+        # dimension semi-independent.
+        is_scalar = len(initial_values_shape) == 1 and initial_values_shape[0] == ()
+        self.elemwise_update = not (
+            is_scalar
+            or (
+                self.any_discrete
+                and max(getattr(model.values_to_rvs[var].owner.op, "ndim_supp", 1) for var in vars)
+                > 0
+            )
         )
+        if self.elemwise_update:
+            dims = int(sum(np.prod(ivs) for ivs in initial_values_shape))
+        else:
+            dims = 1
+        self.enum_dims = np.arange(dims, dtype=int)
+        self.accept_rate_iter = np.zeros(dims, dtype=float)
+        self.accepted_iter = np.zeros(dims, dtype=bool)
+        self.accepted_sum = np.zeros(dims, dtype=int)
 
+        # remember initial settings before tuning so they can be reset
+        self._untuned_settings = dict(scaling=self.scaling, steps_until_tune=tune_interval)
+
+        # TODO: This is not being used when compiling the logp function!
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
@@ -210,6 +233,7 @@ class Metropolis(ArrayStepShared):
         """Resets the tuned sampler parameters to their initial values."""
         for attr, initial_value in self._untuned_settings.items():
             setattr(self, attr, initial_value)
+        self.accepted_sum[:] = 0
         return
 
     def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
@@ -219,10 +243,10 @@ class Metropolis(ArrayStepShared):
 
         if not self.steps_until_tune and self.tune:
             # Tune scaling parameter
-            self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
+            self.scaling = tune(self.scaling, self.accepted_sum / float(self.tune_interval))
             # Reset counter
             self.steps_until_tune = self.tune_interval
-            self.accepted = 0
+            self.accepted_sum[:] = 0
 
         delta = self.proposal_dist() * self.scaling
 
@@ -237,23 +261,36 @@ class Metropolis(ArrayStepShared):
         else:
             q = floatX(q0 + delta)
 
-        accept = self.delta_logp(q, q0)
-        q_new, accepted = metrop_select(accept, q, q0)
-
-        self.accepted += accepted
+        if self.elemwise_update:
+            q_temp = q0.copy()
+            # Shuffle order of updates (probably we don't need to do this in every step)
+            np.random.shuffle(self.enum_dims)
+            for i in self.enum_dims:
+                q_temp[i] = q[i]
+                accept_rate_i = self.delta_logp(q_temp, q0)
+                q_temp_, accepted_i = metrop_select(accept_rate_i, q_temp, q0)
+                q_temp[i] = q_temp_[i]
+                self.accept_rate_iter[i] = accept_rate_i
+                self.accepted_iter[i] = accepted_i
+                self.accepted_sum[i] += accepted_i
+            q = q_temp
+        else:
+            accept_rate = self.delta_logp(q, q0)
+            q, accepted = metrop_select(accept_rate, q, q0)
+            self.accept_rate_iter = accept_rate
+            self.accepted_iter = accepted
+            self.accepted_sum += accepted
 
         self.steps_until_tune -= 1
 
         stats = {
             "tune": self.tune,
-            "scaling": self.scaling,
-            "accept": np.exp(accept),
-            "accepted": accepted,
+            "scaling": np.mean(self.scaling),
+            "accept": np.mean(np.exp(self.accept_rate_iter)),
+            "accepted": np.mean(self.accepted_iter),
         }
 
-        q_new = RaveledVars(q_new, point_map_info)
-
-        return q_new, [stats]
+        return RaveledVars(q, point_map_info), [stats]
 
     @staticmethod
     def competence(var, has_grad):
@@ -275,26 +312,38 @@ def tune(scale, acc_rate):
     >0.95         x 10
 
     """
-    if acc_rate < 0.001:
+    return scale * np.where(
+        acc_rate < 0.001,
         # reduce by 90 percent
-        return scale * 0.1
-    elif acc_rate < 0.05:
-        # reduce by 50 percent
-        return scale * 0.5
-    elif acc_rate < 0.2:
-        # reduce by ten percent
-        return scale * 0.9
-    elif acc_rate > 0.95:
-        # increase by factor of ten
-        return scale * 10.0
-    elif acc_rate > 0.75:
-        # increase by double
-        return scale * 2.0
-    elif acc_rate > 0.5:
-        # increase by ten percent
-        return scale * 1.1
-
-    return scale
+        0.1,
+        np.where(
+            acc_rate < 0.05,
+            # reduce by 50 percent
+            0.5,
+            np.where(
+                acc_rate < 0.2,
+                # reduce by ten percent
+                0.9,
+                np.where(
+                    acc_rate > 0.95,
+                    # increase by factor of ten
+                    10.0,
+                    np.where(
+                        acc_rate > 0.75,
+                        # increase by double
+                        2.0,
+                        np.where(
+                            acc_rate > 0.5,
+                            # increase by ten percent
+                            1.1,
+                            # Do not change
+                            1.0,
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
 
 
 class BinaryMetropolis(ArrayStep):
