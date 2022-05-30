@@ -1199,28 +1199,29 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     # definitely lead to shape problems.
                     raise ShapeError(
                         f"Resizing dimension '{dname}' is impossible, because "
-                        "a 'TensorConstant' stores its length. To be able "
+                        "a `TensorConstant` stores its length. To be able "
                         "to change the dimension length, pass `mutable=True` when "
                         "registering the dimension via `model.add_coord`, "
                         "or define it via a `pm.MutableData` variable."
                     )
-                elif isinstance(length_tensor, ScalarSharedVariable):
-                    # The dimension is mutable, but was defined without being linked
-                    # to a shared variable. This is allowed, but slightly dangerous.
-                    warnings.warn(
-                        f"You are resizing a variable with dimension '{dname}' which was initialized"
-                        " as a mutable dimension and is not linked to the `MutableData` variable."
-                        " Remember to update the dimension length by calling "
-                        f"`Model.set_dim({dname}, new_length={new_length})` manually,"
-                        " preferably _before_ updating `MutableData` variables that use this dimension.",
-                        ShapeWarning,
-                        stacklevel=2,
-                    )
-                else:
-                    # The dimension was created from another model variable.
-                    # If that was a non-mutable variable, there will definitely be shape problems.
+                elif length_tensor.owner is not None:
+                    # The dimension was created from a model variable.
                     length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
-                    if not isinstance(length_belongs_to, SharedVariable):
+                    if length_belongs_to is shared_object:
+                        # No surprise it's changing.
+                        pass
+                    elif isinstance(length_belongs_to, SharedVariable):
+                        # The dimension is mutable through a SharedVariable other than the one being modified.
+                        # But the other variable was not yet re-sized! Warn the user to do that!
+                        warnings.warn(
+                            f"You are resizing a variable with dimension '{dname}' which was initialized "
+                            f"as a mutable dimension by another variable ('{length_belongs_to}')."
+                            " Remember to update that variable with the correct shape to avoid shape issues.",
+                            ShapeWarning,
+                            stacklevel=2,
+                        )
+                    else:
+                        # The dimension is immutable.
                         raise ShapeError(
                             f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
                             f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
@@ -1230,8 +1231,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
                             expected=old_length,
                         )
                 if isinstance(length_tensor, ScalarSharedVariable):
-                    # Updating the shared variable resizes dependent nodes that use this dimension for their `size`.
-                    length_tensor.set_value(new_length)
+                    # The dimension is mutable, but was defined without being linked
+                    # to a shared variable. This is allowed, but a little less robust.
+                    self.set_dim(dname, new_length, coord_values=new_coords)
 
             if new_coords is not None:
                 # Update the registered coord values (also if they were None)
