@@ -2610,7 +2610,7 @@ class TestMatchesScipy:
         def ref_logp(value, mu, sigma, steps):
             # Relying on fact that init will be normal by default
             return (
-                scipy.stats.norm.logpdf(value[0])
+                scipy.stats.norm.logpdf(value[0], 0, 100)  # default init_dist has a scale 100
                 + scipy.stats.norm.logpdf(np.diff(value), mu, sigma).sum()
             )
 

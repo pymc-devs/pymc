@@ -101,7 +101,12 @@ class TestGaussianRandomWalk:
 
         pymc_dist = pm.GaussianRandomWalk
         pymc_dist_params = {"mu": 1.0, "sigma": 2, "init_dist": pm.Constant.dist(0), "steps": 4}
-        expected_rv_op_params = {"mu": 1.0, "sigma": 2, "init_dist": pm.Constant.dist(0), "steps": 4}
+        expected_rv_op_params = {
+            "mu": 1.0,
+            "sigma": 2,
+            "init_dist": pm.Constant.dist(0),
+            "steps": 4,
+        }
 
         checks_to_run = [
             "check_pymc_params_match_rv_op",
@@ -310,11 +315,25 @@ class TestAR:
         y_tp = np.random.randn(batch_size, steps)
         with Model() as t0:
             beta = Normal("beta", 0.0, 1.0, shape=(batch_size, ar_order), initval=beta_tp)
-            AR("y", beta, sigma=1.0, shape=(batch_size, steps), initval=y_tp)
+            AR(
+                "y",
+                beta,
+                sigma=1.0,
+                init_dist=Normal.dist(0, 1),
+                shape=(batch_size, steps),
+                initval=y_tp,
+            )
         with Model() as t1:
             beta = Normal("beta", 0.0, 1.0, shape=(batch_size, ar_order), initval=beta_tp)
             for i in range(batch_size):
-                AR(f"y_{i}", beta[i], sigma=1.0, shape=steps, initval=y_tp[i])
+                AR(
+                    f"y_{i}",
+                    beta[i],
+                    init_dist=Normal.dist(0, 1),
+                    sigma=1.0,
+                    shape=steps,
+                    initval=y_tp[i],
+                )
 
         np.testing.assert_allclose(
             t0.compile_logp()(t0.initial_point()),
@@ -379,7 +398,7 @@ class TestAR:
         beta_tp = aesara.shared(np.random.randn(ar_order), shape=(3,))
         y_tp = np.random.randn(batch_size, steps)
         with Model() as t0:
-            init_dist = Normal.dist(0.0, 1.0, size=(batch_size, ar_order))
+            init_dist = Normal.dist(0.0, 100.0, size=(batch_size, ar_order))
             AR("y", beta_tp, sigma=0.01, init_dist=init_dist, steps=steps, initval=y_tp)
         with Model() as t1:
             for i in range(batch_size):
