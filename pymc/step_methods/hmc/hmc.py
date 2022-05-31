@@ -51,6 +51,8 @@ class HamiltonianMC(BaseHMC):
             "process_time_diff": np.float64,
             "perf_counter_diff": np.float64,
             "perf_counter_start": np.float64,
+            "largest_eigval": np.float64,
+            "smallest_eigval": np.float64,
         }
     ]
 
@@ -162,7 +164,16 @@ class HamiltonianMC(BaseHMC):
             "model_logp": state.model_logp,
         }
         # Retrieve State q and p data from respective RaveledVars
-        end = State(end.q.data, end.p.data, end.v, end.q_grad, end.energy, end.model_logp)
+        end = State(
+            end.q.data,
+            end.p.data,
+            end.v,
+            end.q_grad,
+            end.energy,
+            end.model_logp,
+            end.index_in_trajectory,
+        )
+        stats.update(self.potential.stats())
         return HMCStepData(end, accept_stat, div_info, stats)
 
     @staticmethod

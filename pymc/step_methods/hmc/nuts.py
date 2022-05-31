@@ -78,6 +78,12 @@ class NUTS(BaseHMC):
       by the python standard library `time.perf_counter` (wall time).
     - `perf_counter_start`: The value of `time.perf_counter` at the beginning
       of the computation of the draw.
+    - `index_in_trajectory`: This is usually only interesting for debugging
+      purposes. This indicates the position of the posterior draw in the
+      trajectory. Eg a -4 would indicate that the draw was the result of the
+      fourth leapfrog step in negative direction.
+    - `largest_eigval` and `smallest_eigval`: Experimental statistics for
+      some mass matrix adaptation algorithms. This is nan if it is not used.
 
     References
     ----------

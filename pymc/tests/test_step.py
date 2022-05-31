@@ -595,6 +595,9 @@ class TestNutsCheckTrace:
             "perf_counter_diff",
             "perf_counter_start",
             "process_time_diff",
+            "index_in_trajectory",
+            "largest_eigval",
+            "smallest_eigval",
         }
         assert trace.stat_names == expected_stat_names
         for varname in trace.stat_names:
