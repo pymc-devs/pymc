@@ -7,10 +7,10 @@ sd_hide_title: true
 :::{toctree}
 :hidden:
 
-Home <home:welcome>
-Examples <nb:gallery>
+Home <https://www.pymc.io/welcome.html>
+Examples <https://docs.pymc.io/projects/examples/en/latest/gallery.html>
 learning
 api
-Community <home:community/index>
+Community <https://www.pymc.io/community/index.html>
 contributing/index
 :::
