@@ -14,6 +14,7 @@
 import abc
 
 from abc import ABC
+import sys
 from typing import Dict, cast
 import warnings
 
@@ -176,7 +177,7 @@ class SMC_KERNEL(ABC):
 
     def initialize_population(self) -> Dict[str, np.ndarray]:
         """Create an initial population from the prior distribution"""
-        print()
+        sys.stdout.write(" ")
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", category=UserWarning, message="The effect of Potentials"
