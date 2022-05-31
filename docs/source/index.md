@@ -8,7 +8,7 @@ sd_hide_title: true
 :hidden:
 
 Home <https://www.pymc.io/welcome.html>
-Examples <https://docs.pymc.io/projects/examples/en/latest/gallery.html>
+Examples <https://www.pymc.io/projects/examples/en/latest/gallery.html>
 learning
 api
 Community <https://www.pymc.io/community/index.html>
