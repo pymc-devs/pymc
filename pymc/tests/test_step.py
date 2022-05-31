@@ -174,33 +174,6 @@ class TestStepMethods:
             self.check_stat(check, idata, step.__class__.__name__)
 
 
-class TestMetropolisProposal:
-    def test_proposal_choice(self):
-        with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
-            _, model, _ = mv_simple()
-            with model:
-                initial_point = model.initial_point()
-                initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
-
-                s = np.ones(initial_point_size)
-                sampler = Metropolis(S=s)
-                assert isinstance(sampler.proposal_dist, NormalProposal)
-                s = np.diag(s)
-                sampler = Metropolis(S=s)
-                assert isinstance(sampler.proposal_dist, MultivariateNormalProposal)
-                s[0, 0] = -s[0, 0]
-                with pytest.raises(np.linalg.LinAlgError):
-                    sampler = Metropolis(S=s)
-
-    def test_mv_proposal(self):
-        np.random.seed(42)
-        cov = np.random.randn(5, 5)
-        cov = cov.dot(cov.T)
-        prop = MultivariateNormalProposal(cov)
-        samples = np.array([prop() for _ in range(10000)])
-        npt.assert_allclose(np.cov(samples.T), cov, rtol=0.2)
-
-
 class TestCompoundStep:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS, DEMetropolis)
 
@@ -383,6 +356,31 @@ class TestPopulationSamplers:
 
 
 class TestMetropolis:
+    def test_proposal_choice(self):
+        with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            _, model, _ = mv_simple()
+            with model:
+                initial_point = model.initial_point()
+                initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
+
+                s = np.ones(initial_point_size)
+                sampler = Metropolis(S=s)
+                assert isinstance(sampler.proposal_dist, NormalProposal)
+                s = np.diag(s)
+                sampler = Metropolis(S=s)
+                assert isinstance(sampler.proposal_dist, MultivariateNormalProposal)
+                s[0, 0] = -s[0, 0]
+                with pytest.raises(np.linalg.LinAlgError):
+                    sampler = Metropolis(S=s)
+
+    def test_mv_proposal(self):
+        np.random.seed(42)
+        cov = np.random.randn(5, 5)
+        cov = cov.dot(cov.T)
+        prop = MultivariateNormalProposal(cov)
+        samples = np.array([prop() for _ in range(10000)])
+        npt.assert_allclose(np.cov(samples.T), cov, rtol=0.2)
+
     def test_tuning_reset(self):
         """Re-use of the step method instance with cores=1 must not leak tuning information between chains."""
         with Model() as pmodel:
