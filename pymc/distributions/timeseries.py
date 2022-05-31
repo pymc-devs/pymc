@@ -227,7 +227,6 @@ class GaussianRandomWalk(distribution.Continuous):
         sigma > 0, innovation standard deviation, defaults to 1.0
     init_dist : unnamed distribution
         Univariate distribution of the initial value, created with the `.dist()` API.
-        Defaults to a unit Normal.
 
         .. warning:: init will be cloned, rendering them independent of the ones passed as input.
 
@@ -274,7 +273,12 @@ class GaussianRandomWalk(distribution.Continuous):
 
         # If no scalar distribution is passed then initialize with a Normal of same mu and sigma
         if init_dist is None:
-            init_dist = Normal.dist(0, 1)
+            warnings.warn(
+                "Initial distribution not specified, defaulting to `Normal.dist(0, 100)`."
+                "You can specify an init_dist manually to suppress this warning.",
+                UserWarning,
+            )
+            init_dist = Normal.dist(0, 100)
         else:
             if not (
                 isinstance(init_dist, at.TensorVariable)
@@ -369,10 +373,10 @@ class AR(SymbolicDistribution):
     constant: bool, optional
         Whether the first element of rho should be used as a constant term in the AR
         process. Defaults to False
-    init_dist: unnamed distribution, optional
-        Scalar or vector distribution for initial values. Defaults to a unit Normal.
-        Distribution should be  created via the `.dist()` API, and have  dimension
-        (*size, ar_order). If not, it will be automatically resized.
+    init_dist: unnamed distribution
+        Scalar or vector distribution for initial values. Distribution should be
+        created via the `.dist()` API, and have shape (*shape[:-1], ar_order). If not,
+        it will be automatically resized.
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
 
@@ -461,7 +465,13 @@ class AR(SymbolicDistribution):
                     f"got ndim_supp={init_dist.owner.op.ndim_supp}.",
                 )
         else:
-            init_dist = Normal.dist(0, 1, size=(*sigma.shape, ar_order))
+            warnings.warn(
+                "Initial distribution not specified, defaulting to "
+                "`Normal.dist(0, 100, shape=...)`. You can specify an init_dist "
+                "manually to suppress this warning.",
+                UserWarning,
+            )
+            init_dist = Normal.dist(0, 100, shape=(*sigma.shape, ar_order))
 
         # Tell Aeppl to ignore init_dist, as it will be accounted for in the logp term
         init_dist = ignore_logprob(init_dist)
