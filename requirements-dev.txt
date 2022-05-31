@@ -24,5 +24,6 @@ sphinx-design
 sphinx-notfound-page
 sphinx-remove-toctrees
 sphinx>=1.5
+sphinxext-rediraffe
 typing-extensions>=3.7.4
 watermark
