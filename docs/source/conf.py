@@ -50,6 +50,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_remove_toctrees",
     "jupyter_sphinx",
+    "sphinxext.rediraffe",
 ]
 
 # Don't auto-generate summary for class members.
@@ -151,6 +152,9 @@ myst_substitutions = {
 panels_add_bootstrap_css = False
 myst_heading_anchors = None
 
+rediraffe_redirects = {
+    "index.md": "learning.md",
+}
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
 # default_role = None
@@ -183,6 +187,7 @@ intersphinx_mapping = {
     "arviz": ("https://python.arviz.org/en/latest/", None),
     "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
     "aeppl": ("https://aeppl.readthedocs.io/en/latest/", None),
+    "home": ("https://www.pymc.io", None),
     "pmx": ("https://docs.pymc.io/projects/experimental/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "nb": ("https://docs.pymc.io/projects/examples/en/latest/", None),
@@ -191,6 +196,27 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "xarray": ("https://docs.xarray.dev/en/stable/", None),
 }
+
+
+def remove_index(app):
+    """
+    This removes the index pages so rediraffe generates the redirect placeholder
+    It needs to be present initially for the toctree as it defines the navbar.
+    """
+
+    index_file = Path(app.outdir) / "index.html"
+    index_file.unlink()
+
+    app.env.project.docnames -= {"index"}
+    yield "", {}, "layout.html"
+
+
+def setup(app):
+    """
+    Add extra step to sphinx build
+    """
+
+    app.connect("html-collect-pages", remove_index, 100)
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -227,13 +253,8 @@ html_theme_options = {
             "icon": "fab fa-discourse",
         },
     ],
-    "external_links": [
-        {"name": "Examples", "url": "https://docs.pymc.io/projects/examples/en/latest/"},
-        {"name": "pymc.io", "url": "https://www.pymc.io"},
-        {"name": "Blog", "url": "https://www.pymc.io/blog.html"},
-    ],
+    "logo_link": "https://www.pymc.io",
     "show_prev_next": False,
-    "navbar_align": "left",
     "navbar_start": ["navbar-logo", "navbar-version"],
     "navbar_end": ["search-field.html", "navbar-icon-links.html"],
     "page_sidebar_items": ["page-toc", "edit-this-page", "donate"],
@@ -246,11 +267,6 @@ html_context = {
     "github_repo": "pymc",
     "github_version": "main",
     "doc_path": "docs/source/",
-}
-# this controls which sidebar sections are available in which pages. [] removes the left sidebar
-html_sidebars = {
-    "community": ["sidebar-nav-bs.html", "twitter"],
-    "**": ["sidebar-nav-bs.html"],
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
