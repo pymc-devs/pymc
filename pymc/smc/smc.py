@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import abc
+import sys
+import warnings
 
 from abc import ABC
 from typing import Dict, cast
@@ -175,12 +177,18 @@ class SMC_KERNEL(ABC):
 
     def initialize_population(self) -> Dict[str, np.ndarray]:
         """Create an initial population from the prior distribution"""
-        result = sample_prior_predictive(
-            self.draws,
-            var_names=[v.name for v in self.model.unobserved_value_vars],
-            model=self.model,
-            return_inferencedata=False,
-        )
+        sys.stdout.write(" ")  # see issue #5828
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", category=UserWarning, message="The effect of Potentials"
+            )
+
+            result = sample_prior_predictive(
+                self.draws,
+                var_names=[v.name for v in self.model.unobserved_value_vars],
+                model=self.model,
+                return_inferencedata=False,
+            )
         return cast(Dict[str, np.ndarray], result)
 
     def _initialize_kernel(self):
