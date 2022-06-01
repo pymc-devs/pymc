@@ -10,7 +10,27 @@ Instead update the vNext section until 4.0.0 is out.
 ## PyMC vNext (4.0.0b1 → ... → 4.0.0b6 → 4.0.0)
 ⚠ The changes below are the delta between the releases `v3.11.5` →...→ `v4.0.0`.
 
-### New features
+### Do not miss 🚨
+
+  - ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
+  - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
+  - ⚠ Random seeding behavior changed (see [#5787](https://github.com/pymc-devs/pymc/pull/5787))!
+    - Sampling results will differ from those of V3 when passing the same `random_seed` as before. They will be consistent across subsequent V4 releases unless mentioned otherwise.
+    - Sampling functions no longer respect user-specified global seeding! Always pass `random_seed` to ensure reproducible behavior.
+  - ⚠ BART was removed from the main package [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental).
+  - ⚠ The GLM submodule was removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
+  - ⚠ PyMC now requires Scipy version `>= 1.4.1` (see [4857](https://github.com/pymc-devs/pymc/pull/4857)).
+
+  #### v3 features not yet working in v4 ⏳
+
+  We plan to get these working again, but at this point their inner workings have not been refactored.
+  - Timeseries distributions (see [#4642](https://github.com/pymc-devs/pymc/issues/4642))
+  - Nested Mixture distributions (see [#5533](https://github.com/pymc-devs/pymc/issues/5533))
+  - `pm.sample_posterior_predictive_w` (see [#4807](https://github.com/pymc-devs/pymc/issues/4807))
+  - Partially observed Multivariate distributions (see [#5260](https://github.com/pymc-devs/pymc/issues/5260))
+  - Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) for a potentially more complete list.
+
+### New features 🥳
 
 - Distributions:
   - The `CAR` distribution has been added to allow for use of conditional autoregressions which often are used in spatial and network models.
@@ -54,17 +74,7 @@ Instead update the vNext section until 4.0.0 is out.
   - Added the low level `compile_forward_sampling_function` method to compile the aesara function responsible for generating forward samples (see [#5759](https://github.com/pymc-devs/pymc/pull/5759)).
   - ...
 
-### v3 features not yet working in v4
-
-We plan to get these working again, but at this point their inner workings have not been refactored.
-- Timeseries distributions (see [#4642](https://github.com/pymc-devs/pymc/issues/4642))
-- Nested Mixture distributions (see [#5533](https://github.com/pymc-devs/pymc/issues/5533))
-- `pm.sample_posterior_predictive_w` (see [#4807](https://github.com/pymc-devs/pymc/issues/4807))
-- Partially observed Multivariate distributions (see [#5260](https://github.com/pymc-devs/pymc/issues/5260))
-
-Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) for a potentially more complete list.
-
-### Expected breaking changes
+### Expected breaking changes 💔
 
 The following breaks are expected to behave that way:
   + New API was already available in `v3`.
@@ -77,20 +87,13 @@ The following breaks are expected to behave that way:
 - `ElemwiseCategorical` step method was removed (see [#4701](https://github.com/pymc-devs/pymc/pull/4701))
 - `LKJCholeskyCov`'s `compute_corr` keyword argument is now set to `True` by default (see[#5382](https://github.com/pymc-devs/pymc/pull/5382))
 
-### Unexpected breaking changes (action needed)
+_Read on if you're a developer. Or curious. Or both._
+
+### Unexpected breaking changes (action needed) 😲
 
 The following breaks are expected to behave that way:
   + New API is not available in `v3.11.5`.
   + Old API does not work in `v4.0.0`.
-
-#### Very important:
-  - ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
-  - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
-  - ⚠ Random seeding behavior changed (see [#5787](https://github.com/pymc-devs/pymc/pull/5787))!
-    - Sampling results will differ from those of V3 when passing the same `random_seed` as before. They will be consistent across subsequent V4 releases unless mentioned otherwise.
-    - Sampling functions no longer respect user-specified global seeding! Always pass `random_seed` to ensure reproducible behavior.
-  - ⚠ BART was removed from the main package [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental).
-  - ⚠ The GLM submodule was removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
 
 #### Important:
   - Signature and default parameters changed for several distributions:
@@ -167,7 +170,6 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 
 ### Maintenance
 - ⚠ Fixed old-time bug in Slice sampler that resulted in biased samples (see [#5816](https://github.com/pymc-devs/pymc/pull/5816)).
-- ⚠ PyMC now requires Scipy version `>= 1.4.1` (see [4857](https://github.com/pymc-devs/pymc/pull/4857)).
 - Removed float128 dtype support (see [#4514](https://github.com/pymc-devs/pymc/pull/4514)).
 - Logp method of `Uniform` and `DiscreteUniform` no longer depends on `pymc.distributions.dist_math.bound` for proper evaluation (see [#4541](https://github.com/pymc-devs/pymc/pull/4541)).
 - We now include `cloudpickle` as a required dependency, and no longer depend on `dill` (see [#4858](https://github.com/pymc-devs/pymc/pull/4858)).
