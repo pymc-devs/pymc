@@ -79,7 +79,7 @@ repos:
       types: [python]
       language: pygrep
     - id: no-internal-links
-      name: Check no links that should be cross-references in docs
+      name: Check no links that should be cross-references are in the docs
       description: >-
         'A quick check for the links in the intersphinx '
         'mapping inside `docs/source/`'
