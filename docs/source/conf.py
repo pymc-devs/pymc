@@ -309,7 +309,10 @@ html_css_files = ["custom.css"]
 # html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {"**": ["sidebar-nav-bs.html"]}
+html_sidebars = {
+    "**": ["sidebar-nav-bs.html"],
+    "learn": [],
+}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
