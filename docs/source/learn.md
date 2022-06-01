@@ -1,5 +1,4 @@
 (learn)=
-:no-sidebar:
 # Learn Bayesian statistics
 
 ## ...with others!
