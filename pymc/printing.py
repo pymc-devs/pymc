@@ -17,12 +17,14 @@ import itertools
 from typing import Union
 
 from aesara.graph.basic import walk
-from aesara.tensor.basic import TensorVariable, Variable
+from aesara.tensor.basic import MakeVector, TensorVariable, Variable
 from aesara.tensor.elemwise import DimShuffle
 from aesara.tensor.random.basic import RandomVariable
 from aesara.tensor.var import TensorConstant
 
 from pymc.model import Model
+
+# from pymc.distributions.discrete import UnmeasurableConstantRV
 
 __all__ = [
     "str_for_dist",
@@ -61,11 +63,12 @@ def str_for_symbolic_dist(
 ) -> str:
     def dispatch_comp_str(var, formatting=formatting, include_params=include_params):
         if var.name:
-            return str_for_dist(var, formatting=formatting, include_params=include_params)
+            return var.name
         if isinstance(var, TensorConstant):
-            return _str_for_constant(var, formatting)
-        if var.owner.op.name == "constant":
-            return "hello"
+            return _str_for_constant(var, formatting, print_vector=True)
+        if isinstance(var.owner.op, MakeVector):
+            # psi in some zero inflated distribution
+            return dispatch_comp_str(var.owner.inputs[1])
 
         # else it's a Mixture component initialized by the .dist() API
 
@@ -81,27 +84,36 @@ def str_for_symbolic_dist(
 
     if include_params:
         if "ZeroInflated" in rv.owner.op._print_name[0]:
-            start_idx_para = 2
+            # position 2 is just a constant_rv{0, (0,), shape, False}.1
+            assert rv.owner.inputs[2].owner.op.__class__.__name__ == "UnmeasurableConstantRV"
+            dist_parameters = [rv.owner.inputs[1]] + rv.owner.inputs[3:]
+
         elif "Mixture" in rv.owner.op._print_name[0]:
-            start_idx_para = 1
 
             if len(rv.owner.inputs) == 3:
                 # is a single component!
                 # (rng, weights, single_component)
-                pass
+                rv.owner.op._print_name = (
+                    f"{rv.owner.inputs[2].owner.op.name.capitalize()}Mixture",
+                    "\\operatorname{" + f"{rv.owner.inputs[2].owner.op.name.capitalize()}Mixture}}",
+                )
+                dist_parameters = [rv.owner.inputs[1]] + rv.owner.inputs[2].owner.inputs[3:]
+            else:
+                dist_parameters = rv.owner.inputs[1:]
 
         elif "Censored" in rv.owner.op._print_name[0]:
-            start_idx_para = 2
+            dist_parameters = rv.owner.inputs[2:]
         else:
             # Latex representation for the SymbolicDistribution has not been implemented.
             # Hoping for the best here!
-            start_idx_para = 2
+            dist_parameters = rv.owner.inputs[2:]
 
         dist_args = [
             dispatch_comp_str(dist_para, formatting=formatting, include_params=include_params)
-            for dist_para in rv.owner.inputs[start_idx_para:]
+            for dist_para in dist_parameters
         ]
 
+    # code below copied from str_for_dist
     print_name = rv.name if rv.name is not None else "<unnamed>"
     if "latex" in formatting:
         print_name = r"\text{" + _latex_escape(print_name) + "}"
@@ -210,11 +222,13 @@ def _str_for_input_rv(var: Variable, formatting: str) -> str:
         return _str
 
 
-def _str_for_constant(var: TensorConstant, formatting: str) -> str:
+def _str_for_constant(var: TensorConstant, formatting: str, print_vector: bool = False) -> str:
     if len(var.data.shape) == 0:
         return f"{var.data:.3g}"
     elif len(var.data.shape) == 1 and var.data.shape[0] == 1:
         return f"{var.data[0]:.3g}"
+    elif len(var.data.shape) == 1 and print_vector:
+        return "[" + ", ".join([f"{const:.3g}" for const in var.data]) + "]"
     elif "latex" in formatting:
         return r"\text{<constant>}"
     else:
