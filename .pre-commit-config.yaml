@@ -79,7 +79,7 @@ repos:
       types: [python]
       language: pygrep
     - id: no-internal-links
-      name: Check no internal links are in the docs
+      name: Check no links that should be cross-references are in the docs
       description: >-
         'A quick check for the links in the intersphinx '
         'mapping inside `docs/source/`'
@@ -96,13 +96,16 @@ repos:
                404.md|
                contributing/release_checklist.md|
                contributing/developer_guide.rst|
+               contributing/versioned_vs_gallery_explanation.md|
                learn/examples.md)
       entry: >
           (?x)(arviz-devs.github.io|
+               python.arviz.org|
                aesara.readthedocs.io|
                aeppl.readthedocs.io|
                pymc-experimental.readthedocs.io|
                docs.pymc.io|
+               www.pymc.io|
                numpy.org/doc|
                pymc-examples.readthedocs.io|
                myst-parser.readthedocs.io|
