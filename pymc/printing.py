@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import itertools
+import warnings
 
 from typing import Union
 
@@ -23,8 +24,6 @@ from aesara.tensor.random.basic import RandomVariable
 from aesara.tensor.var import TensorConstant
 
 from pymc.model import Model
-
-# from pymc.distributions.discrete import UnmeasurableConstantRV
 
 __all__ = [
     "str_for_dist",
@@ -65,7 +64,15 @@ def str_for_symbolic_dist(
         if var.name:
             return var.name
         if isinstance(var, TensorConstant):
-            return _str_for_constant(var, formatting, print_vector=True)
+            if len(var.data.shape) > 1:
+                raise NotImplementedError
+            try:
+                if var.data.shape[0] > 1:
+                    # weights in mixture model
+                    return "[" + ",".join([str(weight) for weight in var.data]) + "]"
+            except IndexError:
+                # just a scalar
+                return _str_for_constant(var, formatting)
         if isinstance(var.owner.op, MakeVector):
             # psi in some zero inflated distribution
             return dispatch_comp_str(var.owner.inputs[1])
@@ -102,11 +109,17 @@ def str_for_symbolic_dist(
                 dist_parameters = rv.owner.inputs[1:]
 
         elif "Censored" in rv.owner.op._print_name[0]:
-            dist_parameters = rv.owner.inputs[2:]
+            dist_parameters = rv.owner.inputs
         else:
             # Latex representation for the SymbolicDistribution has not been implemented.
             # Hoping for the best here!
             dist_parameters = rv.owner.inputs[2:]
+            warnings.warn(
+                "Latex representation for this SymbolicDistribution has not been implemented. "
+                "Please have a look at str_for_symbolic_dist in pymc/printing.py",
+                FutureWarning,
+                stacklevel=2,
+            )
 
         dist_args = [
             dispatch_comp_str(dist_para, formatting=formatting, include_params=include_params)
@@ -222,13 +235,11 @@ def _str_for_input_rv(var: Variable, formatting: str) -> str:
         return _str
 
 
-def _str_for_constant(var: TensorConstant, formatting: str, print_vector: bool = False) -> str:
+def _str_for_constant(var: TensorConstant, formatting: str) -> str:
     if len(var.data.shape) == 0:
         return f"{var.data:.3g}"
     elif len(var.data.shape) == 1 and var.data.shape[0] == 1:
         return f"{var.data[0]:.3g}"
-    elif len(var.data.shape) == 1 and print_vector:
-        return "[" + ", ".join([f"{const:.3g}" for const in var.data]) + "]"
     elif "latex" in formatting:
         return r"\text{<constant>}"
     else:
