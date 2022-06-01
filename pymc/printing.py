@@ -93,10 +93,9 @@ def str_for_symbolic_dist(
         elif "Censored" in rv.owner.op._print_name[0]:
             start_idx_para = 2
         else:
-            raise ValueError(
-                "Latex printing not yet implemented for this SymbolicDistribution\n"
-                "Please update the str_for_symbolic_dist in pymc/printing.py file."
-            )
+            # Latex representation for the SymbolicDistribution has not been implemented.
+            # Hoping for the best here!
+            start_idx_para = 2
 
         dist_args = [
             dispatch_comp_str(dist_para, formatting=formatting, include_params=include_params)
