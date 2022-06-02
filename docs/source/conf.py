@@ -154,7 +154,7 @@ panels_add_bootstrap_css = False
 myst_heading_anchors = None
 
 rediraffe_redirects = {
-    "index.md": "learning.md",
+    "index.md": "learn.md",
 }
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -309,7 +309,9 @@ html_css_files = ["custom.css"]
 # html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {"**": ["sidebar-nav-bs.html"]}
+html_sidebars = {
+    "**": ["sidebar-nav-bs.html"],
+}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
