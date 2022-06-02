@@ -7,6 +7,7 @@ installation
 learn/core_notebooks/index
 learn/books
 learn/videos_and_podcasts
+learn/consulting
 glossary
 :::
 
