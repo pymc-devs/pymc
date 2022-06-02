@@ -14,7 +14,7 @@ YOu can also use pip. Activate the environment that you wish to install into, an
 
 ```console
 conda activate pymc_env
-pip install pymc --pre
+pip install pymc
 ```
 
 ### JAX sampling
@@ -31,16 +31,12 @@ Similarly, to use BlackJAX for sampling it should be installed via `pip`:
 pip install blackjax
 ```
 
-
-### PyMC3 Installation
-
-The latest release of PyMC3 can be installed from Conda Forge (conda-forge):
+### MKL (Math Kernel Library)
+If you have an Intel chip, you are strongly suggested to install MKL
 
 ```console
-conda install -c conda-forge pymc3 theano-pymc mkl mkl-service
+conda create -c conda-forge mkl mkl-service
 ```
-
-Note that you **must** specifically request `theano-pymc` or you will get an obsolete version of PyMC3 that works with the now-abandoned `theano` library.  We encourage you to test this with the `--dry-run` flag to ensure you get up-to-date versions.
 
 
 ## Windows
@@ -54,18 +50,16 @@ The Simple Install process of PyMC under Windows is recommended for most users. 
 It is usually a good idea to install into a fresh `conda` environment, which we will call `pymc_env`:
 
 ```console
-conda create -n pymc_env -c conda-forge python libpython mkl-service numba m2w64-toolchain
+conda create -n pymc_env -c conda-forge python libpython numba m2w64-toolchain
 ```
 
 Once the `conda` environment has been created, there are two options for getting a version of PyMC installed depending on your needs. You probably want Option 1, which installs the latest version of PyMC. But Option 2 is available if you know you need the older PyMC3.
-
-#### Option 1 - PyMC
 
 Next, PyMC can be installed into the environment we have created:
 
 ```console
 conda activate pymc_env
-pip install pymc --pre
+pip install pymc
 ```
 
 Until v4 is officially released, you will need to add the `--pre` flag as shown to get the correct version.
@@ -83,27 +77,6 @@ ldflags = -lblas
 
 That will signal Aesara to link against BLAS, and that should eliminate the warning message.
 
-#### Option 2 - PyMC3
-
-If you are looking for the older PyMC3, then run this to install into the environment we have created:
-
-```console
-conda activate pymc_env
-pip install pymc3
-```
-
-You might experience this warning message when running PyMC3:
-
-    WARNING (theano.tensor.blas): Using NumPy C-API based implementation for BLAS functions.
-
-If so, create a file called `.theanorc`, and put it in your home directory (usually `C:\Users\<username>`). Add these lines to `.theanorc`:
-
- ```
-[blas]
-ldflags = -lblas
-```
-
-That will signal Theano to link against BLAS, and that should eliminate the warning message.
 
 ### Fancy Install
 
@@ -116,10 +89,17 @@ choco install mingw
 Once GCC installation has completed, you can then pickup the creation of a `conda` environment and the PyMC or PyMC3 install options as described above, replacing the `conda` environment creation command with this one, which omits the `m2w64-toolchain`:
 
 ```console
-conda create -n pymc_env -c conda-forge python libpython mkl-service numba
+conda create -n pymc_env -c conda-forge python libpython numba
 ```
 
-Then follow Option 1 for PyMC or Option 2 for PyMC3 as described above.
+Then follow conda instruction above.
+
+### MKL (Math Kernel Library)
+If you have an Intel chip, you are strongly suggested to install MKL
+
+```console
+conda create -c conda-forge mkl mkl-service
+```
 
 ### JAX sampling
 
