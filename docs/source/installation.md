@@ -14,7 +14,7 @@ YOu can also use pip. Activate the environment that you wish to install into, an
 
 ```console
 conda activate pymc_env
-pip install pymc
+pip install pymc --pre
 ```
 
 ### JAX sampling
@@ -59,7 +59,7 @@ Next, PyMC can be installed into the environment we have created:
 
 ```console
 conda activate pymc_env
-pip install pymc
+pip install pymc --pre
 ```
 
 Until v4 is officially released, you will need to add the `--pre` flag as shown to get the correct version.
