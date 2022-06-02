@@ -1,14 +1,10 @@
 # Release Notes
 
-<!--
-⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠
-Do not create individual sections for the beta releases.
-Instead update the vNext section until 4.0.0 is out.
-⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠
--->
-
 ## PyMC vNext (4.0.0b1 → ... → 4.0.0b6 → 4.0.0)
 ⚠️ The changes below are the delta between the releases `v3.11.5` →...→ `v4.0.0`.
+
+We the people of PyMC know that you, our dear users, are curious folks (yes, we see you), so **we also put together a [release announcement](https://www.pymc.io/blog/v4_announcement.html) on our website**.
+Feel free to read it, print it out, and give it to people on the street -- because _everybody_ has to know PyMC 4.0 is officially out 🍾
 
 ### Do not miss 🚨
 
