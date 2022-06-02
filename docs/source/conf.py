@@ -127,7 +127,7 @@ release = version
 language = None
 
 # configure notfound extension to not add any prefix to the urls
-notfound_urls_prefix = "/en/latest/"
+notfound_urls_prefix = "/projects/docs/en/latest/"
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -189,9 +189,9 @@ intersphinx_mapping = {
     "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
     "aeppl": ("https://aeppl.readthedocs.io/en/latest/", None),
     "home": ("https://www.pymc.io", None),
-    "pmx": ("https://docs.pymc.io/projects/experimental/en/latest", None),
+    "pmx": ("https://www.pymc.io/projects/experimental/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
-    "nb": ("https://docs.pymc.io/projects/examples/en/latest/", None),
+    "nb": ("https://www.pymc.io/projects/examples/en/latest/", None),
     "myst": ("https://myst-parser.readthedocs.io/en/latest", None),
     "myst-nb": ("https://myst-nb.readthedocs.io/en/latest/", None),
     "python": ("https://docs.python.org/3/", None),
