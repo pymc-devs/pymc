@@ -32,7 +32,7 @@ Instead update the vNext section until 4.0.0 is out.
 
 ### New features 🥳
 
-- Distributions:
+- **Distributions**:
   - Univariate censored distributions are now available via `pm.Censored`. [#5169](https://github.com/pymc-devs/pymc/pull/5169)
   - The `CAR` distribution has been added to allow for use of conditional autoregressions which often are used in spatial and network models.
   - Added a `logcdf` implementation for the Kumaraswamy distribution (see [#4706](https://github.com/pymc-devs/pymc/pull/4706)).
@@ -43,7 +43,7 @@ Instead update the vNext section until 4.0.0 is out.
 
   - Added an alternative parametrization, `logit_p` to `pm.Binomial` and `pm.Categorical` distributions (see [5637](https://github.com/pymc-devs/pymc/pull/5637)).
 
-- Model dimensions:
+- **Model dimensions**:
 
   - The dimensionality of model variables can now be parametrized through either of `shape`, `dims` or `size` (see [#4696](https://github.com/pymc-devs/pymc/pull/4696)):
     - With `shape` the length of dimensions must be given numerically or as scalar Aesara `Variables`. Numeric entries in `shape` restrict the model variable to the exact length and re-sizing is no longer possible.
@@ -56,7 +56,7 @@ Instead update the vNext section until 4.0.0 is out.
     - `pm.Data` now passes additional kwargs to `aesara.shared`/`at.as_tensor`. [#5098](https://github.com/pymc-devs/pymc/pull/5098).
   - The length of `dims` in the model is now tracked symbolically through `Model.dim_lengths` (see [#4625](https://github.com/pymc-devs/pymc/pull/4625)).
 
-- Sampling:
+- **Sampling**:
   - A small change to the mass matrix tuning methods jitter+adapt_diag (the default) and adapt_diag improves performance early on during tuning for some models. [#5004](https://github.com/pymc-devs/pymc/pull/5004)
   - New experimental mass matrix tuning method jitter+adapt_diag_grad. [#5004](https://github.com/pymc-devs/pymc/pull/5004)
   - Improved support for NumPyro NUTS sampler:
@@ -64,49 +64,32 @@ Instead update the vNext section until 4.0.0 is out.
     - `pymc.sampling_jax` samplers support `log_likelihood`, `observed_data`, and `sample_stats` in returned InferenceData object (see [#5189](https://github.com/pymc-devs/pymc/pull/5189))
     - Adding support for `pm.Deterministic` in `pymc.sampling_jax` (see [#5182](https://github.com/pymc-devs/pymc/pull/5182))
 
-- BART:
+- **BART**:
   - Added partial dependence plots and individual conditional expectation plots [5091](https://github.com/pymc-devs/pymc3/pull/5091).
   - Modify how particle weights are computed. This improves accuracy of the modeled function (see [5177](https://github.com/pymc-devs/pymc3/pull/5177)).
   - Improve sampling, increase default number of particles [5229](https://github.com/pymc-devs/pymc3/pull/5229).
   - A BART variable can be combined with other random variables. The `inv_link` argument has been removed (see [4914](https://github.com/pymc-devs/pymc3/pull/4914)).
   - And many more improvements now in [pymc-experimental](https://www.pymc.io/projects/experimental/en/latest/index.html).
 
-- Miscellaneous:
+- **Miscellaneous**:
   - The new `pm.find_constrained_prior` function can be used to find optimized prior parameters of a distribution under some
   constraints (e.g lower and upper bound). See [#5231](https://github.com/pymc-devs/pymc/pull/5231).
   - Nested models now inherit the parent model's coordinates. [#5344](https://github.com/pymc-devs/pymc/pull/5344)
   - `softmax` and `log_softmax` functions added to `math` module (see [#5279](https://github.com/pymc-devs/pymc/pull/5279)).
   - Added the low level `compile_forward_sampling_function` method to compile the aesara function responsible for generating forward samples (see [#5759](https://github.com/pymc-devs/pymc/pull/5759)).
 
-### Ongoing deprecations 🚧
-- Old API still works in `v4` and has a deprecation warning.
-- Preferably, the new API should be available in `v3` already.
-
-This includes API changes we did not warn about since at least `3.11.0` (2021-01).
-
-- ⚠️ Setting initial values through `pm.Distribution(testval=...)` is now `pm.Distribution(initval=...)`.
-- ⚠️ Alternative `sd` keyword argument has been removed from all distributions. `sigma` should be used instead (see [#5583](https://github.com/pymc-devs/pymc/pull/5583)).
-
 ### Expected breaking changes 💔
-
-The following breaks are expected to behave that way:
-  + New API was already available in `v3`.
-  + Old API had deprecation warnings since at least `3.11.0` (2021-01).
-  + Old API stops working in `v4` (preferably with informative errors).
 
 - `pm.sample(return_inferencedata=True)` is now the default (see [#4744](https://github.com/pymc-devs/pymc/pull/4744)).
 - ArviZ `plots` and `stats` *wrappers* were removed. The functions are now just available by their original names (see [#4549](https://github.com/pymc-devs/pymc/pull/4471) and `3.11.2` release notes).
 - `pm.sample_posterior_predictive(vars=...)` kwarg was removed in favor of `var_names` (see [#4343](https://github.com/pymc-devs/pymc/pull/4343)).
 - `ElemwiseCategorical` step method was removed (see [#4701](https://github.com/pymc-devs/pymc/pull/4701))
 - `LKJCholeskyCov`'s `compute_corr` keyword argument is now set to `True` by default (see[#5382](https://github.com/pymc-devs/pymc/pull/5382))
+-  Alternative `sd` keyword argument has been removed from all distributions. `sigma` should be used instead (see [#5583](https://github.com/pymc-devs/pymc/pull/5583)).
 
 _Read on if you're a developer. Or curious. Or both._
 
 ### Unexpected breaking changes (action needed) 😲
-
-The following breaks are expected to behave that way:
-  + New API is not available in `v3.11.5`.
-  + Old API does not work in `v4.0.0`.
 
 #### Very important ⚠️
   - `pm.Bound` interface no longer accepts a callable class as argument, instead it requires an instantiated distribution (created via the `.dist()` API) to be passed as an argument. In addition, Bound no longer returns a class instance but works as a normal PyMC distribution. Finally, it is no longer possible to do predictive random sampling from Bounded variables. Please, consult the new documentation for details on how to use Bounded variables (see [4815](https://github.com/pymc-devs/pymc/pull/4815)).
@@ -121,8 +104,10 @@ The following breaks are expected to behave that way:
   - `pm.sample_prior_predictive`, `pm.sample_posterior_predictive` and `pm.sample_posterior_predictive_w` now return an `InferenceData` object by default, instead of a dictionary (see [#5073](https://github.com/pymc-devs/pymc/pull/5073)).
   - `pm.sample_prior_predictive` no longer returns transformed variable values by default. Pass them by name in `var_names` if you want to obtain these draws (see [4769](https://github.com/pymc-devs/pymc/pull/4769)).
   - `pm.sample(trace=...)` no longer accepts `MultiTrace` or `len(.) > 0` traces ([see 5019#](https://github.com/pymc-devs/pymc/pull/5019)).
-  - `Model.update_start_values(...)` was removed. Initial values can be set in the `Model.initial_values` dictionary directly.
-  - Test values can no longer be set through `pm.Distribution(testval=...)` and must be assigned manually.
+  - Setting of initial values:
+    - Setting initial values through `pm.Distribution(testval=...)` is now `pm.Distribution(initval=...)`.
+    - `Model.update_start_values(...)` was removed. Initial values can be set in the `Model.initial_values` dictionary directly.
+    - Test values can no longer be set through `pm.Distribution(testval=...)` and must be assigned manually.
   - `transforms` module is no longer accessible at the root level. It is accessible at `pymc.distributions.transforms` (see[#5347](https://github.com/pymc-devs/pymc/pull/5347)).
   - `logp`, `dlogp`, and `d2logp` and `nojac` variations were removed. Use `Model.compile_logp`, `compile_dlgop` and `compile_d2logp` with `jacobian` keyword instead.
   - `pm.DensityDist` no longer accepts the `logp` as its first position argument. It is now an optional keyword argument. If you pass a callable as the first positional argument, a `TypeError` will be raised (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
@@ -138,6 +123,7 @@ The following breaks are expected to behave that way:
     - `ZeroInflatedPoisson` `theta` parameter was renamed to `mu` (see [#5584](https://github.com/pymc-devs/pymc/pull/5584)).
     - `pm.GaussianRandomWalk` initial distribution defaults to unit normal instead of flat (see[#5779](https://github.com/pymc-devs/pymc/pull/5779))
     - `pm.AR` initial distribution defaults to unit normal instead of flat (see[#5779](https://github.com/pymc-devs/pymc/pull/5779))
+
   - `logpt`, `logpt_sum`, `logp_elemwiset` and `nojac` variations were removed. Use `Model.logpt(jacobian=True/False, sum=True/False)` instead.
   - `dlogp_nojact` and `d2logp_nojact` were removed. Use `Model.dlogpt` and `d2logpt` with `jacobian=False` instead.
   - `model.makefn` is now called `Model.compile_fn`, and `model.fn` was removed.
@@ -145,11 +131,14 @@ The following breaks are expected to behave that way:
   - `Model(model=...)` kwarg was removed
   - `Model(theano_config=...)` kwarg was removed
   - `Model.size` property was removed (use `Model.ndim` instead).
+
   - `dims` and `coords` handling:
     - `Model.RV_dims` and `Model.coords` are now read-only properties. To modify the `coords` dictionary use `Model.add_coord`.
     - `dims` or coordinate values that are `None` will be auto-completed (see [#4625](https://github.com/pymc-devs/pymc/pull/4625)).
     - Coordinate values passed to `Model.add_coord` are always converted to tuples (see [#5061](https://github.com/pymc-devs/pymc/pull/5061)).
+
   - `Transform.forward` and `Transform.backward` signatures changed.
+
   - Changes to the Gaussian Process (GP) submodule (see [5055](https://github.com/pymc-devs/pymc/pull/5055)):
     - The `gp.prior(..., shape=...)` kwarg was renamed to `size`.
     - Multiple methods including `gp.prior` now require explicit kwargs.
@@ -161,6 +150,7 @@ The following breaks are expected to behave that way:
     - In the gp.utils file, the `kmeans_inducing_points` function now passes through `kmeans_kwargs` to scipy's k-means function.
     - The function `replace_with_values` function has been added to `gp.utils`.
     - `MarginalSparse` has been renamed `MarginalApprox`.
+
   - Removed `MixtureSameFamily`. `Mixture` is now capable of handling batched multivariate components (see [#5438](https://github.com/pymc-devs/pymc/pull/5438)).
 
 ### Documentation
@@ -172,7 +162,7 @@ The following breaks are expected to behave that way:
 - Updated API docs to document objects at the path users should use to import them
 
 ### Maintenance
-- ⚠ Fixed old-time bug in Slice sampler that resulted in biased samples (see [#5816](https://github.com/pymc-devs/pymc/pull/5816)).
+- ⚠️ Fixed old-time bug in Slice sampler that resulted in biased samples (see [#5816](https://github.com/pymc-devs/pymc/pull/5816)).
 - Removed float128 dtype support (see [#4514](https://github.com/pymc-devs/pymc/pull/4514)).
 - Logp method of `Uniform` and `DiscreteUniform` no longer depends on `pymc.distributions.dist_math.bound` for proper evaluation (see [#4541](https://github.com/pymc-devs/pymc/pull/4541)).
 - We now include `cloudpickle` as a required dependency, and no longer depend on `dill` (see [#4858](https://github.com/pymc-devs/pymc/pull/4858)).
@@ -181,7 +171,6 @@ The following breaks are expected to behave that way:
 - Changed name of `Lognormal` distribution to `LogNormal` to harmonize CamelCase usage for distribution names.
 - Attempt to iterate over MultiTrace will raise NotImplementedError.
 - Removed silent normalisation of `p` parameters in Categorical and Multinomial distributions (see [#5370](https://github.com/pymc-devs/pymc/pull/5370)).
-- ...
 
 ## PyMC 3.11.2 (14 March 2021)
 
