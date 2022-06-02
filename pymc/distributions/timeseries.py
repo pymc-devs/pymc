@@ -231,8 +231,8 @@ class GaussianRandomWalk(distribution.Continuous):
         .. warning:: init will be cloned, rendering them independent of the ones passed as input.
 
     steps : int, optional
-        Number of steps in Gaussian Random Walk (steps > 0). Only needed if size is
-        used to specify distribution
+        Number of steps in Gaussian Random Walk (steps > 0). Only needed if shape is not
+        provided.
     """
 
     rv_op = gaussianrandomwalk
@@ -248,16 +248,14 @@ class GaussianRandomWalk(distribution.Continuous):
         return super().__new__(cls, *args, steps=steps, **kwargs)
 
     @classmethod
-    def dist(
-        cls, mu=0.0, sigma=1.0, *, init_dist=None, steps=None, size=None, **kwargs
-    ) -> at.TensorVariable:
+    def dist(cls, mu=0.0, sigma=1.0, *, init_dist=None, steps=None, **kwargs) -> at.TensorVariable:
 
         mu = at.as_tensor_variable(floatX(mu))
         sigma = at.as_tensor_variable(floatX(sigma))
 
         steps = get_steps(
             steps=steps,
-            shape=kwargs.get("shape", None),
+            shape=kwargs.get("shape"),
             step_shape_offset=1,
         )
         if steps is None:
@@ -292,7 +290,7 @@ class GaussianRandomWalk(distribution.Continuous):
         # Ignores logprob of init var because that's accounted for in the logp method
         init_dist = ignore_logprob(init_dist)
 
-        return super().dist([mu, sigma, init_dist, steps], size=size, **kwargs)
+        return super().dist([mu, sigma, init_dist, steps], **kwargs)
 
     def moment(rv, size, mu, sigma, init_dist, steps):
         grw_moment = at.zeros_like(rv)
@@ -384,8 +382,7 @@ class AR(SymbolicDistribution):
         Order of the AR process. Inferred from length of the last dimension of rho, if
         possible. ar_order = rho.shape[-1] if constant else rho.shape[-1] - 1
     steps : int, optional
-        Number of steps in AR process (steps > 0). Only needed if size is used to
-        specify distribution
+        Number of steps in AR process (steps > 0). Only needed if shape is not provided.
 
     Notes
     -----
