@@ -154,7 +154,7 @@ panels_add_bootstrap_css = False
 myst_heading_anchors = None
 
 rediraffe_redirects = {
-    "index.md": "learning.md",
+    "index.md": "learn.md",
 }
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
