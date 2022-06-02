@@ -44,7 +44,6 @@ Principled introduction to Bayesian data analysis, with practical exercises. The
 :::
 
 :::{grid-item-card} Statistical Rethinking
-
 :img-top: http://xcelab.net/rm/wp-content/uploads/2012/01/9781482253443-191x300.jpg
 
 By Richard McElreath
@@ -58,7 +57,6 @@ A Bayesian Course with Examples in R and Stan.
 :::
 
 :::{grid-item-card} Bayesian Modeling and Computation in Python
-
 :img-top: https://bayesiancomputationbook.com/_images/Cover.jpg
 
 By Osvaldo Martin, Ravin Kumar and Junpeng Lao
@@ -70,7 +68,6 @@ Hands on approach with PyMC and ArviZ focusing on the practice of applied statis
 :::
 
 :::{grid-item-card} Bayesian Cognitive Modeling: A Practical Course
-
 :img-top: https://images-na.ssl-images-amazon.com/images/I/51K33XI2I8L._SX330_BO1,204,203,200_.jpg
 
 By Michael Lee and Eric-Jan Wagenmakers
@@ -83,7 +80,6 @@ Focused on using Bayesian statistics in cognitive modeling.
 :::
 
 :::{grid-item-card} Bayesian Data Analysis
-
 :img-top: http://www.stat.columbia.edu/~gelman/book/bda_cover.png
 
 By Andrew Gelman, John Carlin, Hal Stern, David Dunson, Aki Vehtari, and Donald Rubin
