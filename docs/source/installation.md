@@ -53,9 +53,7 @@ It is usually a good idea to install into a fresh `conda` environment, which we 
 conda create -n pymc_env -c conda-forge python libpython numba m2w64-toolchain
 ```
 
-Once the `conda` environment has been created, there are two options for getting a version of PyMC installed depending on your needs. You probably want Option 1, which installs the latest version of PyMC. But Option 2 is available if you know you need the older PyMC3.
-
-Next, PyMC can be installed into the environment we have created:
+Once the `conda` environment has been created, PyMC can be installed into the environment we have created:
 
 ```console
 conda activate pymc_env
@@ -86,7 +84,7 @@ The Fancy Install of PyMC is for those who would prefer to manage the GCC compil
 choco install mingw
 ```
 
-Once GCC installation has completed, you can then pickup the creation of a `conda` environment and the PyMC or PyMC3 install options as described above, replacing the `conda` environment creation command with this one, which omits the `m2w64-toolchain`:
+Once GCC installation has completed, you can then pickup the creation of a `conda` environment and the PyMC install options as described above, replacing the `conda` environment creation command with this one, which omits the `m2w64-toolchain`:
 
 ```console
 conda create -n pymc_env -c conda-forge python libpython numba
