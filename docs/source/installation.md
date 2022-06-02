@@ -7,10 +7,10 @@ To install PyMC, select the operating system where you want to perform the insta
 We recommend using [Anaconda](https://www.anaconda.com/) (or [Miniforge](https://github.com/conda-forge/miniforge)) to install Python on MacOS, which allows for packages to be installed using its `conda` utility. We recommend installing PyMC into a clean `conda` environment, which here is called `pymc_env` but can be changed to anything else:
 
 ```console
-conda create -n pymc_env python pip
+conda create -n pymc_env pymc python pip
 ```
 
-Until PyMC v4 is officially released, it should be installed from `pip` using the `--pre` flag (N.B. running without this flag will install v2). Activate the environment that you wish to install into, and install as follows:
+YOu can also use pip. Activate the environment that you wish to install into, and install as follows:
 
 ```console
 conda activate pymc_env
