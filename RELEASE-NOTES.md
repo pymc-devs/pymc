@@ -12,23 +12,23 @@ Instead update the vNext section until 4.0.0 is out.
 
 ### Do not miss 🚨
 
-  - ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
+  - ⚠ The project was renamed to "PyMC" and the library installed as "pip install pymc" and imported like `import pymc as pm`.
   - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
   - ⚠ Random seeding behavior changed (see [#5787](https://github.com/pymc-devs/pymc/pull/5787))!
-    - Sampling results will differ from those of V3 when passing the same `random_seed` as before. They will be consistent across subsequent V4 releases unless mentioned otherwise.
+    - Sampling results will differ from those of v3 when passing the same `random_seed` as before. They will be consistent across subsequent v4 releases unless mentioned otherwise.
     - Sampling functions no longer respect user-specified global seeding! Always pass `random_seed` to ensure reproducible behavior.
-  - ⚠ BART was removed from the main package [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental).
+    - `random_seed` now accepts RandomState and Generators besides integers.
+  - ⚠ BART was removed from the main package in [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental).
   - ⚠ The GLM submodule was removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
-  - ⚠ PyMC now requires Scipy version `>= 1.4.1` (see [4857](https://github.com/pymc-devs/pymc/pull/4857)).
+  - ⚠ PyMC now requires SciPy version `>= 1.4.1` (see [#4857](https://github.com/pymc-devs/pymc/pull/4857)).
 
-  #### v3 features not yet working in v4 ⏳
+#### v3 features not yet working in v4 ⏳
 
   We plan to get these working again, but at this point their inner workings have not been refactored.
   - Timeseries distributions (see [#4642](https://github.com/pymc-devs/pymc/issues/4642))
   - Nested Mixture distributions (see [#5533](https://github.com/pymc-devs/pymc/issues/5533))
   - `pm.sample_posterior_predictive_w` (see [#4807](https://github.com/pymc-devs/pymc/issues/4807))
   - Partially observed Multivariate distributions (see [#5260](https://github.com/pymc-devs/pymc/issues/5260))
-  - Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) for a potentially more complete list.
 
 ### New features 🥳
 
@@ -57,6 +57,7 @@ Instead update the vNext section until 4.0.0 is out.
 - Sampling:
   - A small change to the mass matrix tuning methods jitter+adapt_diag (the default) and adapt_diag improves performance early on during tuning for some models. [#5004](https://github.com/pymc-devs/pymc/pull/5004)
   - New experimental mass matrix tuning method jitter+adapt_diag_grad. [#5004](https://github.com/pymc-devs/pymc/pull/5004)
+  - Improved support for NumPyro NUTS sampler
   - Adding support for blackjax's NUTS sampler `pymc.sampling_jax` (see [#5477](ihttps://github.com/pymc-devs/pymc/pull/5477))
   - `pymc.sampling_jax` samplers support `log_likelihood`, `observed_data`, and `sample_stats` in returned InferenceData object (see [#5189](https://github.com/pymc-devs/pymc/pull/5189))
   - Adding support for `pm.Deterministic` in `pymc.sampling_jax` (see [#5182](https://github.com/pymc-devs/pymc/pull/5182))
@@ -65,6 +66,7 @@ Instead update the vNext section until 4.0.0 is out.
   - Added partial dependence plots and individual conditional expectation plots [5091](https://github.com/pymc-devs/pymc3/pull/5091).
   - Modify how particle weights are computed. This improves accuracy of the modeled function (see [5177](https://github.com/pymc-devs/pymc3/pull/5177)).
   - Improve sampling, increase default number of particles [5229](https://github.com/pymc-devs/pymc3/pull/5229).
+  - And many more improvements now in pymc-experimental
 
 - Miscellaneous:
   - The new `pm.find_constrained_prior` function can be used to find optimized prior parameters of a distribution under some
