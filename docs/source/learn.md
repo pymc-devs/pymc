@@ -1,5 +1,5 @@
-(learning)=
-# User guide
+(learn)=
+# Learn PyMC & Bayesian modeling
 
 :::{toctree}
 :maxdepth: 1
