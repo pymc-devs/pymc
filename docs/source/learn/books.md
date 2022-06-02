@@ -5,10 +5,9 @@
 :gutter: 3
 
 :::{grid-item-card} Bayesian Methods for Hackers
-
+:img-top:
+https://camo.githubusercontent.com/4a0aca82ca82efab71747d00db30f3a68de98e82/687474703a2f2f692e696d6775722e636f6d2f36444b596250622e706e673f31
 By Cameron Davidson-Pilon
-
-<img src="https://camo.githubusercontent.com/4a0aca82ca82efab71747d00db30f3a68de98e82/687474703a2f2f692e696d6775722e636f6d2f36444b596250622e706e673f31">
 
 The "hacker" in the title  means learn-as-you-code. This hands-on introduction teaches intuitive definitions of the Bayesian approach to statistics, worklflow and decision-making by applying them using PyMC.
 
@@ -19,10 +18,11 @@ The "hacker" in the title  means learn-as-you-code. This hands-on introduction t
 :::
 
 :::{grid-item-card} Bayesian Analysis with Python
+:img-top:
+https://raw.githubusercontent.com/aloctavodia/BAP/master/Cover.png
 
 By Osvaldo Martin
 
-<img src="https://raw.githubusercontent.com/aloctavodia/BAP/master/Cover.png">
 
 A great introductory book written by a maintainer of PyMC. It provides a hands-on introduction to the main concepts of Bayesian statistics using synthetic and real data sets. Mastering the concepts in this book is a great foundation to pursue more advanced knowledge.
 
@@ -32,10 +32,11 @@ A great introductory book written by a maintainer of PyMC. It provides a hands-o
 :::
 
 :::{grid-item-card} Doing Bayesian Data Analysis
+:img-top:
+https://jkkweb.sitehost.iu.edu/DoingBayesianDataAnalysis/DBDA2Ecover.png
 
 By John K. Kruschke
 
-<img src="https://jkkweb.sitehost.iu.edu/DoingBayesianDataAnalysis/DBDA2Ecover.png">
 
 Principled introduction to Bayesian data analysis, with practical exercises. The book's original examples are coded in R, but notebooks with a PyMC port of the code are available through the links below.
 
@@ -47,9 +48,10 @@ Principled introduction to Bayesian data analysis, with practical exercises. The
 
 :::{grid-item-card} Statistical Rethinking
 
-By Richard McElreath
+:img-top:
+http://xcelab.net/rm/wp-content/uploads/2012/01/9781482253443-191x300.jpg
 
-<img src="http://xcelab.net/rm/wp-content/uploads/2012/01/9781482253443-191x300.jpg">
+By Richard McElreath
 
 A Bayesian Course with Examples in R and Stan.
 
@@ -60,9 +62,12 @@ A Bayesian Course with Examples in R and Stan.
 :::
 
 :::{grid-item-card} Bayesian Modeling and Computation in Python
+
+:img-top:
+https://bayesiancomputationbook.com/_images/Cover.jpg
+
 By Osvaldo Martin, Ravin Kumar and Junpeng Lao
 
-<img src="https://bayesiancomputationbook.com/_images/Cover.jpg"/>
 Hands on approach with PyMC and ArviZ focusing on the practice of applied statistics.
 
 [Website + code](https://bayesiancomputationbook.com/welcome.html)
@@ -70,8 +75,11 @@ Hands on approach with PyMC and ArviZ focusing on the practice of applied statis
 :::
 
 :::{grid-item-card} Bayesian Cognitive Modeling: A Practical Course
+
+:img-top:
+https://images-na.ssl-images-amazon.com/images/I/51K33XI2I8L._SX330_BO1,204,203,200_.jpg
+
 By Michael Lee and Eric-Jan Wagenmakers
-<img src="https://images-na.ssl-images-amazon.com/images/I/51K33XI2I8L._SX330_BO1,204,203,200_.jpg">
 
 Focused on using Bayesian statistics in cognitive modeling.
 
@@ -81,9 +89,11 @@ Focused on using Bayesian statistics in cognitive modeling.
 :::
 
 :::{grid-item-card} Bayesian Data Analysis
-By Andrew Gelman, John Carlin, Hal Stern, David Dunson, Aki Vehtari, and Donald Rubin
 
-<img src="http://www.stat.columbia.edu/~gelman/book/bda_cover.png"/>
+:img-top:
+http://www.stat.columbia.edu/~gelman/book/bda_cover.png
+
+By Andrew Gelman, John Carlin, Hal Stern, David Dunson, Aki Vehtari, and Donald Rubin
 
 A comprehensive, standard, and wonderful textbook on Bayesian methods.
 
