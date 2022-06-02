@@ -26,7 +26,7 @@ import pymc as pm
 from pymc.aesaraf import intX
 from pymc.tests import models
 from pymc.tests.helpers import not_raises
-from pymc.variational import flows, opvi
+from pymc.variational import opvi
 from pymc.variational.approximations import (
     Empirical,
     EmpiricalGroup,
@@ -34,24 +34,11 @@ from pymc.variational.approximations import (
     FullRankGroup,
     MeanField,
     MeanFieldGroup,
-    NormalizingFlow,
-    NormalizingFlowGroup,
 )
-from pymc.variational.inference import ADVI, ASVGD, NFVI, SVGD, FullRankADVI, fit
+from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI, fit
 from pymc.variational.opvi import Approximation, Group, NotImplementedInference
 
 pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
-
-
-def ignore_not_implemented_inference(func):
-    @functools.wraps(func)
-    def new_test(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except NotImplementedInference:
-            pytest.xfail("NotImplementedInference")
-
-    return new_test
 
 
 @pytest.mark.parametrize("diff", ["relative", "absolute"])
@@ -101,31 +88,30 @@ def three_var_model():
 @pytest.mark.parametrize(
     ["raises", "grouping"],
     [
-        (not_raises(), {MeanFieldGroup: None}),
-        (not_raises(), {FullRankGroup: None, MeanFieldGroup: ["one"]}),
+        (not_raises(), [(MeanFieldGroup, None)]),
+        (not_raises(), [(FullRankGroup, None), (MeanFieldGroup, ["one"])]),
+        (
+            pytest.raises(TypeError, match="No approximation is specified"),
+            [(MeanFieldGroup, ["one", "two"])],
+        ),
+        (not_raises(), [(MeanFieldGroup, ["one"]), (FullRankGroup, ["two", "three"])]),
         (
             not_raises(),
-            {MeanFieldGroup: ["one"], FullRankGroup: ["two"], NormalizingFlowGroup: ["three"]},
+            [(MeanFieldGroup, ["one"]), (FullRankGroup, ["two"]), (MeanFieldGroup, ["three"])],
         ),
         (
             pytest.raises(TypeError, match="Found duplicates"),
-            {
-                MeanFieldGroup: ["one"],
-                FullRankGroup: ["two", "one"],
-                NormalizingFlowGroup: ["three"],
-            },
+            [
+                (MeanFieldGroup, ["one"]),
+                (FullRankGroup, ["two", "one"]),
+                (MeanFieldGroup, ["three"]),
+            ],
         ),
-        (
-            pytest.raises(TypeError, match="No approximation is specified"),
-            {MeanFieldGroup: ["one", "two"]},
-        ),
-        (not_raises(), {MeanFieldGroup: ["one"], FullRankGroup: ["two", "three"]}),
     ],
 )
-@ignore_not_implemented_inference
 def test_init_groups(three_var_model, raises, grouping):
     with raises, three_var_model:
-        approxes, groups = zip(*grouping.items())
+        approxes, groups = zip(*grouping)
         groups = [
             list(map(functools.partial(getattr, three_var_model), g)) if g is not None else None
             for g in groups
@@ -147,20 +133,11 @@ def test_init_groups(three_var_model, raises, grouping):
     params=[
         ({}, {MeanFieldGroup: (None, {})}),
         ({}, {FullRankGroup: (None, {}), MeanFieldGroup: (["one"], {})}),
-        (
-            {},
-            {
-                MeanFieldGroup: (["one"], {}),
-                FullRankGroup: (["two"], {}),
-                NormalizingFlowGroup: (["three"], {"flow": "scale-hh*2-planar-radial-loc"}),
-            },
-        ),
         ({}, {MeanFieldGroup: (["one"], {}), FullRankGroup: (["two", "three"], {})}),
         ({}, {MeanFieldGroup: (["one"], {}), EmpiricalGroup: (["two", "three"], {"size": 100})}),
     ],
     ids=lambda t: ", ".join(f"{k.__name__}: {v[0]}" for k, v in t[1].items()),
 )
-@ignore_not_implemented_inference
 def three_var_groups(request, three_var_model):
     kw, grouping = request.param
     approxes, groups = zip(*grouping.items())
@@ -206,12 +183,6 @@ def aevb_initial():
     params=[
         (MeanFieldGroup, {}),
         (FullRankGroup, {}),
-        (NormalizingFlowGroup, {"flow": "scale"}),
-        (NormalizingFlowGroup, {"flow": "loc"}),
-        (NormalizingFlowGroup, {"flow": "hh"}),
-        (NormalizingFlowGroup, {"flow": "planar"}),
-        (NormalizingFlowGroup, {"flow": "radial"}),
-        (NormalizingFlowGroup, {"flow": "radial-loc"}),
     ],
     ids=lambda t: f"{t[0].__name__}: {t[1]}",
 )
@@ -220,7 +191,6 @@ def parametric_grouped_approxes(request):
 
 
 @pytest.fixture
-@ignore_not_implemented_inference
 def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
     one_initial_value = three_var_model.initial_point(0)[three_var_model.one.tag.value_var.name]
     dsize = np.prod(one_initial_value.shape[1:])
@@ -244,70 +214,6 @@ def three_var_aevb_approx(three_var_model, three_var_aevb_groups):
     return approx
 
 
-def test_sample_aevb(three_var_aevb_approx, aevb_initial):
-    inf = pm.KLqp(three_var_aevb_approx)
-    inf.fit(1, more_replacements={aevb_initial: np.zeros_like(aevb_initial.get_value())[:1]})
-    aevb_initial.set_value(np.random.rand(7, 7).astype("float32"))
-    trace = three_var_aevb_approx.sample(500, return_inferencedata=False)
-    assert set(trace.varnames) == {"one", "one_log__", "two", "three"}
-    assert len(trace) == 500
-    assert trace[0]["one"].shape == (7, 2)
-    assert trace[0]["two"].shape == (10,)
-    assert trace[0]["three"].shape == (10, 1, 2)
-
-    aevb_initial.set_value(np.random.rand(13, 7).astype("float32"))
-    trace = three_var_aevb_approx.sample(500, return_inferencedata=False)
-    assert set(trace.varnames) == {"one", "one_log__", "two", "three"}
-    assert len(trace) == 500
-    assert trace[0]["one"].shape == (13, 2)
-    assert trace[0]["two"].shape == (10,)
-    assert trace[0]["three"].shape == (10, 1, 2)
-
-
-def test_replacements_in_sample_node_aevb(three_var_aevb_approx, aevb_initial):
-    inp = at.matrix(dtype="float32")
-    three_var_aevb_approx.sample_node(
-        three_var_aevb_approx.model.one, 2, more_replacements={aevb_initial: inp}
-    ).eval({inp: np.random.rand(7, 7).astype("float32")})
-
-    three_var_aevb_approx.sample_node(
-        three_var_aevb_approx.model.one, None, more_replacements={aevb_initial: inp}
-    ).eval({inp: np.random.rand(7, 7).astype("float32")})
-
-
-@ignore_not_implemented_inference
-def test_vae():
-    minibatch_size = 10
-    data = pm.floatX(np.random.rand(100))
-    x_mini = pm.Minibatch(data, minibatch_size)
-    x_inp = at.vector()
-    x_inp.tag.test_value = data[:minibatch_size]
-
-    ae = aesara.shared(pm.floatX([0.1, 0.1]))
-    be = aesara.shared(pm.floatX(1.0))
-
-    ad = aesara.shared(pm.floatX(1.0))
-    bd = aesara.shared(pm.floatX(1.0))
-
-    enc = x_inp.dimshuffle(0, "x") * ae.dimshuffle("x", 0) + be
-    mu, rho = enc[:, 0], enc[:, 1]
-
-    with pm.Model():
-        # Hidden variables
-        zs = pm.Normal("zs", mu=0, sigma=1, size=minibatch_size)
-        dec = zs * ad + bd
-        # Observation model
-        pm.Normal("xs_", mu=dec, sigma=0.1, observed=x_inp)
-
-        pm.fit(
-            1,
-            local_rv={zs: dict(mu=mu, rho=rho)},
-            more_replacements={x_inp: x_mini},
-            more_obj_params=[ae, be, ad, bd],
-        )
-
-
-@ignore_not_implemented_inference
 def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
     approx = cls([three_var_model.one], model=three_var_model, **kw)
@@ -316,43 +222,12 @@ def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     logq.eval()
 
 
-@ignore_not_implemented_inference
 def test_logq_mini_2_sample_2_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
     approx = cls([three_var_model.one, three_var_model.two], model=three_var_model, **kw)
     logq = approx.logq
     logq = approx.set_size_and_deterministic(logq, 2, 0)
     logq.eval()
-
-
-def test_logq_mini_sample_aevb(three_var_aevb_groups):
-    approx = three_var_aevb_groups[0]
-    logq, symbolic_logq = approx.set_size_and_deterministic(
-        [approx.logq, approx.symbolic_logq], 3, 0
-    )
-    e = logq.eval()
-    es = symbolic_logq.eval()
-    assert e.shape == ()
-    assert es.shape == (3,)
-
-
-def test_logq_aevb(three_var_aevb_approx):
-    approx = three_var_aevb_approx
-    logq, symbolic_logq = approx.set_size_and_deterministic(
-        [approx.logq, approx.symbolic_logq], 1, 0
-    )
-    e = logq.eval()
-    es = symbolic_logq.eval()
-    assert e.shape == ()
-    assert es.shape == (1,)
-
-    logq, symbolic_logq = approx.set_size_and_deterministic(
-        [approx.logq, approx.symbolic_logq], 2, 0
-    )
-    e = logq.eval()
-    es = symbolic_logq.eval()
-    assert e.shape == ()
-    assert es.shape == (2,)
 
 
 def test_logq_globals(three_var_approx):
@@ -384,12 +259,6 @@ def test_logq_globals(three_var_approx):
         (not_raises(), "full_rank", FullRankGroup, {}),
         (not_raises(), "fr", FullRankGroup, {}),
         (not_raises(), "FR", FullRankGroup, {}),
-        (not_raises(), "loc", NormalizingFlowGroup, {}),
-        (not_raises(), "scale", NormalizingFlowGroup, {}),
-        (not_raises(), "hh", NormalizingFlowGroup, {}),
-        (not_raises(), "planar", NormalizingFlowGroup, {}),
-        (not_raises(), "radial", NormalizingFlowGroup, {}),
-        (not_raises(), "scale-loc", NormalizingFlowGroup, {}),
         (
             pytest.raises(ValueError, match="Need `trace` or `size`"),
             "empirical",
@@ -399,15 +268,11 @@ def test_logq_globals(three_var_approx):
         (not_raises(), "empirical", EmpiricalGroup, {"size": 100}),
     ],
 )
-@ignore_not_implemented_inference
 def test_group_api_vfam(three_var_model, raises, vfam, type_, kw):
     with three_var_model, raises:
         g = Group([three_var_model.one], vfam, **kw)
         assert isinstance(g, type_)
         assert not hasattr(g, "_kwargs")
-        if isinstance(g, NormalizingFlowGroup):
-            assert isinstance(g.flow, pm.flows.AbstractFlow)
-            assert g.flow.formula == vfam
 
 
 @pytest.mark.parametrize(
@@ -432,56 +297,12 @@ def test_group_api_vfam(three_var_model, raises, vfam, type_, kw):
             {},
             None,
         ),
-        (not_raises(), {0: dict(loc=np.ones((10, 2), "float32"))}, NormalizingFlowGroup, {}, "loc"),
-        (
-            not_raises(),
-            {0: dict(rho=np.ones((10, 2), "float32"))},
-            NormalizingFlowGroup,
-            {},
-            "scale",
-        ),
-        (
-            not_raises(),
-            {
-                0: dict(
-                    v=np.ones((10, 2), "float32"),
-                )
-            },
-            NormalizingFlowGroup,
-            {},
-            "hh",
-        ),
-        (
-            not_raises(),
-            {0: dict(u=np.ones((10, 2), "float32"), w=np.ones((10, 2), "float32"), b=1.0)},
-            NormalizingFlowGroup,
-            {},
-            "planar",
-        ),
-        (
-            not_raises(),
-            {0: dict(z_ref=np.ones((10, 2), "float32"), a=1.0, b=1.0)},
-            NormalizingFlowGroup,
-            {},
-            "radial",
-        ),
-        (
-            not_raises(),
-            {0: dict(rho=np.ones((10, 2), "float32")), 1: dict(loc=np.ones((10, 2), "float32"))},
-            NormalizingFlowGroup,
-            {},
-            "scale-loc",
-        ),
-        (not_raises(), dict(histogram=np.ones((20, 10, 2), "float32")), EmpiricalGroup, {}, None),
     ],
 )
-@ignore_not_implemented_inference
 def test_group_api_params(three_var_model, raises, params, type_, kw, formula):
     with three_var_model, raises:
         g = Group([three_var_model.one], params=params, **kw)
         assert isinstance(g, type_)
-        if isinstance(g, NormalizingFlowGroup):
-            assert g.flow.formula == formula
         if g.has_logq:
             # should work as well
             logq = g.logq
@@ -495,20 +316,14 @@ def test_group_api_params(three_var_model, raises, params, type_, kw, formula):
         (MeanFieldGroup, MeanField, {}),
         (FullRankGroup, FullRank, {}),
         (EmpiricalGroup, Empirical, {"size": 100}),
-        (NormalizingFlowGroup, NormalizingFlow, {"flow": "loc"}),
-        (NormalizingFlowGroup, NormalizingFlow, {"flow": "scale-loc-scale"}),
-        (NormalizingFlowGroup, NormalizingFlow, {}),
     ],
 )
-@ignore_not_implemented_inference
 def test_single_group_shortcuts(three_var_model, approx, kw, gcls):
     with three_var_model:
         a = approx(**kw)
     assert isinstance(a, Approximation)
     assert len(a.groups) == 1
     assert isinstance(a.groups[0], gcls)
-    if isinstance(a, NormalizingFlow):
-        assert a.flow.formula == kw.get("flow", NormalizingFlowGroup.default_flow)
 
 
 def test_elbo():
@@ -688,13 +503,12 @@ def simple_model(simple_model_data):
 @pytest.fixture(
     scope="module",
     params=[
-        dict(cls=NFVI, init=dict(flow="scale-loc")),
         dict(cls=ADVI, init=dict()),
         dict(cls=FullRankADVI, init=dict()),
         dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
         dict(cls=ASVGD, init=dict(temperature=1.0)),
     ],
-    ids=["NFVI=scale-loc", "ADVI", "FullRankADVI", "SVGD", "ASVGD"],
+    ids=["ADVI", "FullRankADVI", "SVGD", "ASVGD"],
 )
 def inference_spec(request):
     cls = request.param["cls"]
@@ -710,7 +524,6 @@ def inference_spec(request):
 
 
 @pytest.fixture(scope="function")
-@ignore_not_implemented_inference
 def inference(inference_spec, simple_model):
     with simple_model:
         return inference_spec()
@@ -721,12 +534,6 @@ def fit_kwargs(inference, use_minibatch):
     _select = {
         (ADVI, "full"): dict(obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50), n=5000),
         (ADVI, "mini"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=12000
-        ),
-        (NFVI, "full"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=12000
-        ),
-        (NFVI, "mini"): dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=12000
         ),
         (FullRankADVI, "full"): dict(
@@ -829,12 +636,9 @@ def fit_method_with_object(request, another_simple_model):
         # start argument is not allowed for ASVGD
         ("asvgd", dict(start={}, total_grad_norm_constraint=10), TypeError),
         ("asvgd", dict(total_grad_norm_constraint=10), None),
-        ("nfvi", dict(start={}), None),
-        ("nfvi=scale-loc", dict(start={}), None),
         ("nfvi=bad-formula", dict(start={}), KeyError),
     ],
 )
-@ignore_not_implemented_inference
 def test_fit_fn_text(method, kwargs, error, another_simple_model):
     with another_simple_model:
         if error is not None:
@@ -857,42 +661,6 @@ def aevb_model():
     return {"model": model, "y": y, "x": x, "replace": dict(mu=mu, rho=rho)}
 
 
-@ignore_not_implemented_inference
-def test_aevb(inference_spec, aevb_model):
-    # add to inference that supports aevb
-    x = aevb_model["x"]
-    y = aevb_model["y"]
-    model = aevb_model["model"]
-    replace = aevb_model["replace"]
-    with model:
-        try:
-            inference = inference_spec(
-                local_rv={x: {"mu": replace["mu"] * 5, "rho": replace["rho"]}}
-            )
-            approx = inference.fit(3, obj_n_mc=2, more_obj_params=list(replace.values()))
-            approx.sample(10)
-            approx.sample_node(y, more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}).eval()
-        except pm.opvi.AEVBInferenceError:
-            pytest.skip("Does not support AEVB")
-
-
-@ignore_not_implemented_inference
-def test_rowwise_approx(three_var_model, parametric_grouped_approxes):
-    # add to inference that supports aevb
-    cls, kw = parametric_grouped_approxes
-    with three_var_model:
-        try:
-            approx = Approximation(
-                [cls([three_var_model.one], rowwise=True, **kw), Group(None, vfam="mf")]
-            )
-            inference = pm.KLqp(approx)
-            approx = inference.fit(3, obj_n_mc=2)
-            approx.sample(10)
-            approx.sample_node(three_var_model.one).eval()
-        except pm.opvi.BatchedGroupError:
-            pytest.skip("Does not support rowwise grouping")
-
-
 def test_pickle_approx(three_var_approx):
     import cloudpickle
 
@@ -909,14 +677,6 @@ def test_pickle_single_group(three_var_approx_single_group_mf):
     assert new.sample(1)
 
 
-def test_pickle_approx_aevb(three_var_aevb_approx):
-    import cloudpickle
-
-    dump = cloudpickle.dumps(three_var_aevb_approx)
-    new = cloudpickle.loads(dump)
-    assert new.sample(1000)
-
-
 @pytest.fixture(scope="module")
 def binomial_model():
     n_samples = 100
@@ -928,7 +688,6 @@ def binomial_model():
 
 
 @pytest.fixture(scope="module")
-@ignore_not_implemented_inference
 def binomial_model_inference(binomial_model, inference_spec):
     with binomial_model:
         return inference_spec()
@@ -1030,85 +789,6 @@ def test_empirical_from_trace(another_simple_model):
         trace = pm.sample(100, step=step, chains=4, tune=0, return_inferencedata=False)
         emp = Empirical(trace)
         assert emp.histogram.shape[0].eval() == 400
-
-
-@pytest.fixture(
-    params=[
-        dict(cls=flows.PlanarFlow, init=dict(jitter=0.1)),
-        dict(cls=flows.RadialFlow, init=dict(jitter=0.1)),
-        dict(cls=flows.ScaleFlow, init=dict(jitter=0.1)),
-        dict(cls=flows.LocFlow, init=dict(jitter=0.1)),
-        dict(cls=flows.HouseholderFlow, init=dict(jitter=0.1)),
-    ],
-    ids=lambda d: d["cls"].__name__,
-)
-def flow_spec(request):
-    cls = request.param["cls"]
-    init = request.param["init"]
-
-    def init_(**kw):
-        k = init.copy()
-        k.update(kw)
-        return cls(**k)
-
-    init_.cls = cls
-    return init_
-
-
-def test_flow_det(flow_spec):
-    z0 = at.arange(0, 20).astype("float32")
-    flow = flow_spec(dim=20, z0=z0.dimshuffle("x", 0))
-    with aesara.config.change_flags(compute_test_value="off"):
-        z1 = flow.forward.flatten()
-        J = at.jacobian(z1, z0)
-        logJdet = at.log(at.abs_(at.nlinalg.det(J)))
-        det = flow.logdet[0]
-    np.testing.assert_allclose(logJdet.eval(), det.eval(), atol=0.0001)
-
-
-@pytest.mark.skip("normalizing flows are not fully supported")
-def test_flow_det_local(flow_spec):
-    z0 = at.arange(0, 12).astype("float32")
-    spec = flow_spec.cls.get_param_spec_for(d=12)
-    params = dict()
-    for k, shp in spec.items():
-        params[k] = np.random.randn(1, *shp).astype("float32")
-    flow = flow_spec(dim=12, z0=z0.reshape((1, 1, 12)), **params)
-    assert flow.batched
-    with aesara.config.change_flags(compute_test_value="off"):
-        z1 = flow.forward.flatten()
-        J = at.jacobian(z1, z0)
-        logJdet = at.log(at.abs_(at.nlinalg.det(J)))
-        det = flow.logdet[0]
-    np.testing.assert_allclose(logJdet.eval(), det.eval(), atol=0.0001)
-
-
-def test_flows_collect_chain():
-    initial = at.ones((3, 2))
-    flow1 = flows.PlanarFlow(dim=2, z0=initial)
-    flow2 = flows.PlanarFlow(dim=2, z0=flow1)
-    assert len(flow2.params) == 3
-    assert len(flow2.all_params) == 6
-    np.testing.assert_allclose(flow1.logdet.eval() + flow2.logdet.eval(), flow2.sum_logdets.eval())
-
-
-@pytest.mark.parametrize(
-    "formula,length,order",
-    [
-        ("planar", 1, [flows.PlanarFlow]),
-        ("planar*2", 2, [flows.PlanarFlow] * 2),
-        ("planar-planar", 2, [flows.PlanarFlow] * 2),
-        ("planar-planar*2", 3, [flows.PlanarFlow] * 3),
-        ("hh-planar*2", 3, [flows.HouseholderFlow] + [flows.PlanarFlow] * 2),
-    ],
-)
-def test_flow_formula(formula, length, order):
-    spec = flows.Formula(formula)
-    flows_list = spec.flows
-    assert len(flows_list) == length
-    if order is not None:
-        assert flows_list == order
-    spec(dim=2, jitter=1)(at.ones((3, 2))).eval()  # should work
 
 
 @pytest.mark.parametrize("score", [True, False])
