@@ -444,7 +444,7 @@ def marginal_mixture_default_transform(op, rv):
     def transform_warning():
         warnings.warn(
             f"No safe default transform found for Mixture distribution {rv}. This can "
-            "happen when compoments have different supports or default transforms.\n"
+            "happen when components have different supports or default transforms.\n"
             "If appropriate, you can specify a custom transform for more efficient sampling.",
             MixtureTransformWarning,
             stacklevel=2,
@@ -462,6 +462,9 @@ def marginal_mixture_default_transform(op, rv):
         return None
 
     default_transform = default_transforms[0]
+
+    if default_transform is None:
+        return None
 
     if not isinstance(default_transform, allowed_default_mixture_transforms):
         transform_warning()
