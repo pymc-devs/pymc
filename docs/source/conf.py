@@ -311,7 +311,6 @@ html_css_files = ["custom.css"]
 # Custom sidebar templates, maps document names to template names.
 html_sidebars = {
     "**": ["sidebar-nav-bs.html"],
-    "learn": [],
 }
 
 # Additional templates that should be rendered to pages, maps page names to
