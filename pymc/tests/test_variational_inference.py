@@ -88,18 +88,30 @@ def three_var_model():
 @pytest.mark.parametrize(
     ["raises", "grouping"],
     [
-        (not_raises(), {MeanFieldGroup: None}),
-        (not_raises(), {FullRankGroup: None, MeanFieldGroup: ["one"]}),
+        (not_raises(), [(MeanFieldGroup, None)]),
+        (not_raises(), [(FullRankGroup, None), (MeanFieldGroup, ["one"])]),
         (
             pytest.raises(TypeError, match="No approximation is specified"),
-            {MeanFieldGroup: ["one", "two"]},
+            [(MeanFieldGroup, ["one", "two"])],
         ),
-        (not_raises(), {MeanFieldGroup: ["one"], FullRankGroup: ["two", "three"]}),
+        (not_raises(), [(MeanFieldGroup, ["one"]), (FullRankGroup, ["two", "three"])]),
+        (
+            not_raises(),
+            [(MeanFieldGroup, ["one"]), (FullRankGroup, ["two"]), (MeanFieldGroup, ["three"])],
+        ),
+        (
+            pytest.raises(TypeError, match="Found duplicates"),
+            [
+                (MeanFieldGroup, ["one"]),
+                (FullRankGroup, ["two", "one"]),
+                (MeanFieldGroup, ["three"]),
+            ],
+        ),
     ],
 )
 def test_init_groups(three_var_model, raises, grouping):
     with raises, three_var_model:
-        approxes, groups = zip(*grouping.items())
+        approxes, groups = zip(*grouping)
         groups = [
             list(map(functools.partial(getattr, three_var_model), g)) if g is not None else None
             for g in groups
