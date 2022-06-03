@@ -17,7 +17,6 @@ dependencies:
 - libblas=*=*mkl
 - mkl-service
 - numpy>=1.15.0
-- pandas>=0.24.0
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
 - pytest>=3.0
