@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 # pylint: disable=wildcard-import
-__version__ = "4.0.0b6"
+__version__ = "4.0.0"
 
 import logging
 import multiprocessing as mp
