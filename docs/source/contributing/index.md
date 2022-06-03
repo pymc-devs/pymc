@@ -115,5 +115,4 @@ release_checklist
 :caption: In depth explanations
 
 versioned_vs_gallery_explanation
-developer_guide
 :::
