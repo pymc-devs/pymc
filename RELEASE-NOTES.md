@@ -15,7 +15,6 @@ Feel free to read it, print it out, and give it to people on the street -- becau
     - Sampling functions no longer respect user-specified global seeding! Always pass `random_seed` to ensure reproducible behavior.
     - `random_seed` now accepts RandomState and Generators besides integers.
   - ⚠️ The GLM submodule was removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
-  - ⚠️ BART has received various updates ([5091](https://github.com/pymc-devs/pymc3/pull/5091), [5177](https://github.com/pymc-devs/pymc3/pull/5177), [5229](https://github.com/pymc-devs/pymc3/pull/5229), [4914](https://github.com/pymc-devs/pymc3/pull/4914)) but was removed from the main package in [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental).
   - ⚠️ PyMC now requires SciPy version `>= 1.4.1` (see [#4857](https://github.com/pymc-devs/pymc/pull/4857)).
 
 #### v3 features not yet working in v4 ⏳
@@ -41,10 +40,9 @@ Feel free to read it, print it out, and give it to people on the street -- becau
 
 - **Model dimensions**:
 
-  - The dimensionality of model variables can now be parametrized through either of `shape`, `dims` or `size` (see [#4696](https://github.com/pymc-devs/pymc/pull/4696)):
+  - The dimensionality of model variables can now be parametrized through either of `shape` or `dims` (see [#4696](https://github.com/pymc-devs/pymc/pull/4696)):
     - With `shape` the length of dimensions must be given numerically or as scalar Aesara `Variables`. Numeric entries in `shape` restrict the model variable to the exact length and re-sizing is no longer possible.
     - `dims` keeps model variables re-sizeable (for example through `pm.Data`) and leads to well defined coordinates in `InferenceData` objects.
-    - The `size` kwarg behaves like it does in Aesara/NumPy. For univariate RVs it is the same as `shape`, but for multivariate RVs size = shape - the support dimensions.
     - An `Ellipsis` (`...`) in the last position of `shape` or `dims` can be used as short-hand notation for implied dimensions.
   - New features for `pm.Data` containers:
     - With `pm.Data(..., mutable=False)`, or by using `pm.ConstantData()` one can now create `TensorConstant` data variables. These can be more performant and compatible in situations where a variable doesn't need to be changed via `pm.set_data()`. See [#5295](https://github.com/pymc-devs/pymc/pull/5295). If you do need to change the variable, use `pm.Data(..., mutable=True)`, or `pm.MutableData()`.
@@ -83,6 +81,7 @@ _Read on if you're a developer. Or curious. Or both._
 
 #### Very important ⚠️
   - `pm.Bound` interface no longer accepts a callable class as argument, instead it requires an instantiated distribution (created via the `.dist()` API) to be passed as an argument. In addition, Bound no longer returns a class instance but works as a normal PyMC distribution. Finally, it is no longer possible to do predictive random sampling from Bounded variables. Please, consult the new documentation for details on how to use Bounded variables (see [4815](https://github.com/pymc-devs/pymc/pull/4815)).
+  - BART has received various updates ([5091](https://github.com/pymc-devs/pymc3/pull/5091), [5177](https://github.com/pymc-devs/pymc3/pull/5177), [5229](https://github.com/pymc-devs/pymc3/pull/5229), [4914](https://github.com/pymc-devs/pymc3/pull/4914)) but was removed from the main package in [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental).
   - Removed `AR1`. `AR` of order 1 should be used instead. (see [5734](https://github.com/pymc-devs/pymc/pull/5734)).
   - The `pm.EllipticalSlice` sampler was removed (see [#5756](https://github.com/pymc-devs/pymc/issues/5756)).
   - `BaseStochasticGradient` was removed (see [#5630](https://github.com/pymc-devs/pymc/pull/5630))
