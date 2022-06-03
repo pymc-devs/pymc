@@ -665,7 +665,7 @@ def join_nonshared_inputs(
 
     replace.update(shared)
 
-    xs_special = [aesara.clone_replace(x, replace, strict=False) for x in xs]
+    xs_special = [aesara.clone_replace(x, replace, rebuild_strict=False) for x in xs]
     return xs_special, inarray
 
 
@@ -693,7 +693,7 @@ class CallableTensor:
         input: TensorVariable
         """
         (oldinput,) = inputvars(self.tensor)
-        return aesara.clone_replace(self.tensor, {oldinput: input}, strict=False)
+        return aesara.clone_replace(self.tensor, {oldinput: input}, rebuild_strict=False)
 
 
 class GeneratorOp(Op):
