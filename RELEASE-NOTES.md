@@ -9,6 +9,7 @@ Feel free to read it, print it out, and give it to people on the street -- becau
 
   - ⚠️ The project was renamed to "PyMC". Now the library is installed as "pip install pymc" and imported like `import pymc as pm`. See this [migration guide](https://www.pymc-labs.io/blog-posts/the-quickest-migration-guide-ever-from-pymc3-to-pymc-v40/) for more details.
   - ⚠️ Theano-PyMC has been replaced with Aesara, so all external references to `theano` and `tt` need to be replaced with `aesara` and `at`, respectively (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
+  - ⚠️ Support for JAX and JAX samplers, also allows sampling on GPUs. [This benchmark](https://www.pymc-labs.io/blog-posts/pymc-stan-benchmark/) shows speed-ups of up to 11x.
   - ⚠️ Random seeding behavior changed (see [#5787](https://github.com/pymc-devs/pymc/pull/5787))!
     - Sampling results will differ from those of v3 when passing the same `random_seed` as before. They will be consistent across subsequent v4 releases unless mentioned otherwise.
     - Sampling functions no longer respect user-specified global seeding! Always pass `random_seed` to ensure reproducible behavior.
@@ -46,7 +47,7 @@ Feel free to read it, print it out, and give it to people on the street -- becau
     - The `size` kwarg behaves like it does in Aesara/NumPy. For univariate RVs it is the same as `shape`, but for multivariate RVs size = shape - the support dimensions.
     - An `Ellipsis` (`...`) in the last position of `shape` or `dims` can be used as short-hand notation for implied dimensions.
   - New features for `pm.Data` containers:
-    - With `pm.Data(..., mutable=False)`, or by using `pm.ConstantData()` one can now create `TensorConstant` data variables. These can be more performant and compatible in situations where a variable doesn't need to be changed via `pm.set_data()`. See [#5295](https://github.com/pymc-devs/pymc/pull/5295). If you do need to change the variable, use `pm.Data(..., mutable=True)`, or `pm.MutableData()`. 
+    - With `pm.Data(..., mutable=False)`, or by using `pm.ConstantData()` one can now create `TensorConstant` data variables. These can be more performant and compatible in situations where a variable doesn't need to be changed via `pm.set_data()`. See [#5295](https://github.com/pymc-devs/pymc/pull/5295). If you do need to change the variable, use `pm.Data(..., mutable=True)`, or `pm.MutableData()`.
     - New named dimensions can be introduced to the model via `pm.Data(..., dims=...)`. For mutable data variables (see above) the lengths of these dimensions are symbolic, so they can be re-sized via `pm.set_data()`.
     - `pm.Data` now passes additional kwargs to `aesara.shared`/`at.as_tensor`. [#5098](https://github.com/pymc-devs/pymc/pull/5098).
   - The length of `dims` in the model is now tracked symbolically through `Model.dim_lengths` (see [#4625](https://github.com/pymc-devs/pymc/pull/4625)).
@@ -55,6 +56,7 @@ Feel free to read it, print it out, and give it to people on the street -- becau
   - A small change to the mass matrix tuning methods jitter+adapt_diag (the default) and adapt_diag improves performance early on during tuning for some models. [#5004](https://github.com/pymc-devs/pymc/pull/5004)
   - New experimental mass matrix tuning method jitter+adapt_diag_grad. [#5004](https://github.com/pymc-devs/pymc/pull/5004)
   - Support for samplers written in JAX:
+    - Adding support for [numpyro](https://github.com/pyro-ppl/numpyro)'s NUTS sampler via `pymc.sampling_jax.sample_numpyro_nuts()`
     - Adding support for [blackjax](https://github.com/blackjax-devs/blackjax)'s NUTS sampler via `pymc.sampling_jax.sample_blackjax_nuts()` (see [#5477](ihttps://github.com/pymc-devs/pymc/pull/5477))
     - `pymc.sampling_jax` samplers support `log_likelihood`, `observed_data`, and `sample_stats` in returned `InferenceData` object (see [#5189](https://github.com/pymc-devs/pymc/pull/5189))
     - Adding support for `pm.Deterministic` in `pymc.sampling_jax` (see [#5182](https://github.com/pymc-devs/pymc/pull/5182))
