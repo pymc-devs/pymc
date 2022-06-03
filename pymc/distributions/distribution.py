@@ -47,7 +47,7 @@ from pymc.distributions.shape_utils import (
     resize_from_dims,
     resize_from_observed,
 )
-from pymc.printing import str_for_dist
+from pymc.printing import str_for_dist, str_for_symbolic_dist
 from pymc.util import UNSET
 from pymc.vartypes import string_types
 
@@ -483,15 +483,11 @@ class SymbolicDistribution:
             transform=transform,
             initval=initval,
         )
-
-        # TODO: Refactor this
         # add in pretty-printing support
-        rv_out.str_repr = lambda *args, **kwargs: name
-        rv_out._repr_latex_ = f"\\text{name}"
-        # rv_out.str_repr = types.MethodType(str_for_dist, rv_out)
-        # rv_out._repr_latex_ = types.MethodType(
-        #     functools.partial(str_for_dist, formatting="latex"), rv_out
-        # )
+        rv_out.str_repr = types.MethodType(str_for_symbolic_dist, rv_out)
+        rv_out._repr_latex_ = types.MethodType(
+            functools.partial(str_for_symbolic_dist, formatting="latex"), rv_out
+        )
 
         return rv_out
 
