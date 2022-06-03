@@ -9,7 +9,7 @@ python:
      path: .
 
 conda:
-  environment: "conda-envs/environment-dev-py38.yml"
+  environment: "conda-envs/environment-dev-py39.yml"
 
 build:
   os: "ubuntu-20.04"
