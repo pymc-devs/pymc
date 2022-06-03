@@ -246,7 +246,7 @@ class TP(Latent):
 
     .. math::
 
-       f(X) \sim \mathcal{TP}\left( \mu(X), k(X, X'), \\nu \\right)
+       f(X) \sim \mathcal{TP}\left( \mu(X), k(X, X'), \nu \right)
 
 
     Parameters
