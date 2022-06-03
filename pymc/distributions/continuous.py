@@ -226,8 +226,9 @@ def get_tau_sigma(tau=None, sigma=None):
             if isinstance(sigma, Variable):
                 sigma_ = check_parameters(sigma, sigma > 0, msg="sigma > 0")
             else:
-                assert np.all(np.asarray(sigma) > 0)
-                sigma_ = sigma
+                sigma_ = np.asarray(sigma)
+                if np.any(sigma_ <= 0):
+                    raise ValueError("sigma must be positive")
             tau = sigma_**-2.0
 
     else:
@@ -237,9 +238,9 @@ def get_tau_sigma(tau=None, sigma=None):
             if isinstance(tau, Variable):
                 tau_ = check_parameters(tau, tau > 0, msg="tau > 0")
             else:
-                assert np.all(np.asarray(tau) > 0)
-                tau_ = tau
-
+                tau_ = np.asarray(tau)
+                if np.any(tau_ <= 0):
+                    raise ValueError("tau must be positive")
             sigma = tau_**-0.5
 
     return floatX(tau), floatX(sigma)
@@ -363,8 +364,8 @@ class Flat(Continuous):
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod
-    def dist(cls, *, size=None, **kwargs):
-        res = super().dist([], size=size, **kwargs)
+    def dist(cls, **kwargs):
+        res = super().dist([], **kwargs)
         return res
 
     def moment(rv, size):
@@ -431,8 +432,8 @@ class HalfFlat(PositiveContinuous):
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod
-    def dist(cls, *, size=None, **kwargs):
-        res = super().dist([], size=size, **kwargs)
+    def dist(cls, **kwargs):
+        res = super().dist([], **kwargs)
         return res
 
     def moment(rv, size):

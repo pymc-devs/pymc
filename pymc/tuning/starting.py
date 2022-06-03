@@ -107,8 +107,6 @@ def find_MAP(
         return_transformed=True,
         overrides=start,
     )
-    if seed is None:
-        seed = model.rng_seeder.randint(2**30, dtype=np.int64)
     start = ipfn(seed)
     model.check_start_vals(start)
 

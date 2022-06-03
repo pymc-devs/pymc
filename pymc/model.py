@@ -44,16 +44,15 @@ from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.opt import local_subtensor_rv_lift
-from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.sharedvar import ScalarSharedVariable
-from aesara.tensor.var import TensorVariable
+from aesara.tensor.var import TensorConstant, TensorVariable
 
 from pymc.aesaraf import (
     compile_pymc,
+    convert_observed_data,
     gradient,
     hessian,
     inputvars,
-    pandas_to_array,
     rvs_to_value_vars,
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
@@ -445,13 +444,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         parameters can only take on valid values you can set this to
         False for increased speed. This should not be used if your model
         contains discrete variables.
-    rng_seeder: int or numpy.random.RandomState
-        The ``numpy.random.RandomState`` used to seed the
-        ``RandomStateSharedVariable`` sequence used by a model
-        ``RandomVariable``s, or an int used to seed a new
-        ``numpy.random.RandomState``.  If ``None``, a
-        ``RandomStateSharedVariable`` will be generated and used.  Incremental
-        access to the state sequence is provided by ``Model.next_rng``.
 
     Examples
     --------
@@ -549,20 +541,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         name="",
         coords=None,
         check_bounds=True,
-        rng_seeder: Optional[Union[int, np.random.RandomState]] = None,
     ):
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
 
-        if rng_seeder is None:
-            self.rng_seeder = np.random.RandomState()
-        elif isinstance(rng_seeder, int):
-            self.rng_seeder = np.random.RandomState(rng_seeder)
-        else:
-            self.rng_seeder = rng_seeder
-
-        # The sequence of model-generated RNGs
-        self.rng_seq: List[SharedVariable] = []
         self._initial_values: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]] = {}
 
         if self.parent is not None:
@@ -1016,8 +998,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         ip : dict
             Maps names of transformed variables to numeric initial values in the transformed space.
         """
-        if seed is None:
-            seed = self.rng_seeder.randint(2**30, dtype=np.int64)
         fn = make_initial_point_fn(model=self, return_transformed=True)
         return Point(fn(seed), model=self)
 
@@ -1038,20 +1018,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         self.initial_values[rv_var] = initval
 
-    def next_rng(self) -> RandomStateSharedVariable:
-        """Generate a new ``RandomStateSharedVariable``.
-
-        The new ``RandomStateSharedVariable`` is also added to
-        ``Model.rng_seq``.
-        """
-        new_seed = self.rng_seeder.randint(2**30, dtype=np.int64)
-        next_rng = aesara.shared(np.random.RandomState(new_seed), borrow=True)
-        next_rng.tag.is_rng = True
-
-        self.rng_seq.append(next_rng)
-
-        return next_rng
-
     def shape_from_dims(self, dims):
         shape = []
         if len(set(dims)) != len(dims):
@@ -1071,8 +1037,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         name: str,
         values: Optional[Sequence] = None,
+        mutable: bool = False,
         *,
-        length: Optional[Variable] = None,
+        length: Optional[Union[int, Variable]] = None,
     ):
         """Registers a dimension coordinate with the model.
 
@@ -1084,9 +1051,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         values : optional, array-like
             Coordinate values or ``None`` (for auto-numbering).
             If ``None`` is passed, a ``length`` must be specified.
+        mutable : bool
+            Whether the created dimension should be resizable.
+            Default is False.
         length : optional, scalar
-            A symbolic scalar of the dimensions length.
-            Defaults to ``aesara.shared(len(values))``.
+            A scalar of the dimensions length.
+            Defaults to ``aesara.tensor.constant(len(values))``.
         """
         if name in {"draw", "chain", "__sample__"}:
             raise ValueError(
@@ -1097,7 +1067,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             raise ValueError(
                 f"Either `values` or `length` must be specified for the '{name}' dimension."
             )
-        if length is not None and not isinstance(length, Variable):
+        if isinstance(length, int):
+            length = at.constant(length)
+        elif length is not None and not isinstance(length, Variable):
             raise ValueError(
                 f"The `length` passed for the '{name}' coord must be an Aesara Variable or None."
             )
@@ -1109,14 +1081,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
             if not np.array_equal(values, self.coords[name]):
                 raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
         else:
+            if mutable:
+                self._dim_lengths[name] = length or aesara.shared(len(values))
+            else:
+                self._dim_lengths[name] = length or aesara.tensor.constant(len(values))
             self._coords[name] = values
-            self._dim_lengths[name] = length or aesara.shared(len(values))
 
     def add_coords(
         self,
         coords: Dict[str, Optional[Sequence]],
         *,
-        lengths: Optional[Dict[str, Union[Variable, None]]] = None,
+        lengths: Optional[Dict[str, Optional[Union[int, Variable]]]] = None,
     ):
         """Vectorized version of ``Model.add_coord``."""
         if coords is None:
@@ -1158,7 +1133,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         if isinstance(values, list):
             values = np.array(values)
-        values = pandas_to_array(values)
+        values = convert_observed_data(values)
         dims = self.RV_dims.get(name, None) or ()
         coords = coords or {}
 
@@ -1179,23 +1154,37 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # Reject resizing if we already know that it would create shape problems.
             # NOTE: If there are multiple pm.MutableData containers sharing this dim, but the user only
             #       changes the values for one of them, they will run into shape problems nonetheless.
-            length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
-            if not isinstance(length_belongs_to, SharedVariable) and length_changed:
-                raise ShapeError(
-                    f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
-                    f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
-                    f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
-                    f"for example by a model variable.",
-                    actual=new_length,
-                    expected=old_length,
-                )
-            if original_coords is not None and length_changed:
-                if length_changed and new_coords is None:
-                    raise ValueError(
-                        f"The '{name}' variable already had {len(original_coords)} coord values defined for"
-                        f"its {dname} dimension. With the new values this dimension changes to length "
-                        f"{new_length}, so new coord values for the {dname} dimension are required."
+            if length_changed:
+                if original_coords is not None:
+                    if new_coords is None:
+                        raise ValueError(
+                            f"The '{name}' variable already had {len(original_coords)} coord values defined for "
+                            f"its {dname} dimension. With the new values this dimension changes to length "
+                            f"{new_length}, so new coord values for the {dname} dimension are required."
+                        )
+                if isinstance(length_tensor, TensorConstant):
+                    raise ShapeError(
+                        f"Resizing dimension '{dname}' is impossible, because "
+                        "a 'TensorConstant' stores its length. To be able "
+                        "to change the dimension length, pass `mutable=True` when "
+                        "registering the dimension via `model.add_coord`, "
+                        "or define it via a `pm.MutableData` variable."
                     )
+                else:
+                    length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
+                    if not isinstance(length_belongs_to, SharedVariable):
+                        raise ShapeError(
+                            f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
+                            f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
+                            f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
+                            f"for example by another model variable.",
+                            actual=new_length,
+                            expected=old_length,
+                        )
+                if isinstance(length_tensor, ScalarSharedVariable):
+                    # Updating the shared variable resizes dependent nodes that use this dimension for their `size`.
+                    length_tensor.set_value(new_length)
+
             if new_coords is not None:
                 # Update the registered coord values (also if they were None)
                 if len(new_coords) != new_length:
@@ -1204,10 +1193,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         actual=len(new_coords),
                         expected=new_length,
                     )
-                self._coords[dname] = new_coords
-            if isinstance(length_tensor, ScalarSharedVariable) and new_length != old_length:
-                # Updating the shared variable resizes dependent nodes that use this dimension for their `size`.
-                length_tensor.set_value(new_length)
+                # store it as tuple for immutability as in add_coord
+                self._coords[dname] = tuple(new_coords)
 
         shared_object.set_value(values)
 
@@ -1290,7 +1277,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         """
         name = rv_var.name
-        data = pandas_to_array(data).astype(rv_var.dtype)
+        data = convert_observed_data(data).astype(rv_var.dtype)
 
         if data.ndim != rv_var.ndim:
             raise ShapeError(
@@ -1358,18 +1345,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 clone=False,
             )
             (observed_rv_var,) = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
-            # Make a clone of the RV, but change the rng so that observed and missing
-            # are not treated as equivalent nodes by aesara. This would happen if the
-            # size of the masked and unmasked array happened to coincide
+            # Make a clone of the RV, but let it create a new rng so that observed and
+            # missing are not treated as equivalent nodes by aesara. This would happen
+            # if the size of the masked and unmasked array happened to coincide
             _, size, _, *inps = observed_rv_var.owner.inputs
-            rng = self.model.next_rng()
-            observed_rv_var = observed_rv_var.owner.op(*inps, size=size, rng=rng)
-            # Add default_update to new rng
-            new_rng = observed_rv_var.owner.outputs[0]
-            observed_rv_var.update = (rng, new_rng)
-            rng.default_update = new_rng
-            observed_rv_var.name = f"{name}_observed"
-
+            observed_rv_var = observed_rv_var.owner.op(*inps, size=size, name=f"{name}_observed")
             observed_rv_var.tag.observations = nonmissing_data
 
             self.create_value_var(observed_rv_var, transform=None, value_var=nonmissing_data)
@@ -1734,7 +1714,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 Model._context_class = Model
 
 
-def set_data(new_data, model=None):
+def set_data(new_data, model=None, *, coords=None):
     """Sets the value of one or more data container variables.
 
     Parameters
@@ -1771,7 +1751,7 @@ def set_data(new_data, model=None):
     model = modelcontext(model)
 
     for variable_name, new_value in new_data.items():
-        model.set_data(variable_name, new_value)
+        model.set_data(variable_name, new_value, coords=coords)
 
 
 def compile_fn(outs, mode=None, point_fn=True, model=None, **kwargs):

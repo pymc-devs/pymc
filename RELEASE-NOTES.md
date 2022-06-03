@@ -14,7 +14,6 @@ Instead update the vNext section until 4.0.0 is out.
 We plan to get these working again, but at this point their inner workings have not been refactored.
 - Timeseries distributions (see [#4642](https://github.com/pymc-devs/pymc/issues/4642))
 - Nested Mixture distributions (see [#5533](https://github.com/pymc-devs/pymc/issues/5533))
-- Elliptical slice sampling (see [#5137](https://github.com/pymc-devs/pymc/issues/5137))
 - `pm.sample_posterior_predictive_w` (see [#4807](https://github.com/pymc-devs/pymc/issues/4807))
 - Partially observed Multivariate distributions (see [#5260](https://github.com/pymc-devs/pymc/issues/5260))
 
@@ -26,12 +25,19 @@ Also check out the [milestones](https://github.com/pymc-devs/pymc/milestones) fo
 
 All of the above apply to:
 
-Signature and default parameters changed for several distributions (see [#5628](https://github.com/pymc-devs/pymc/pull/5628)):
-    - `pm.StudentT` now requires either `sigma` or `lam` as kwarg
-    - `pm.StudentT` now requires `nu` to be specified (no longer defaults to 1)
-    - `pm.AsymmetricLaplace` positional arguments re-ordered
-    - `pm.AsymmetricLaplace` now requires `mu` to be specified (no longer defaults to 0)
+- ⚠ Random seeding behavior changed (see [#5787](https://github.com/pymc-devs/pymc/pull/5787))!
+    - Sampling results will differ from those of V3 when passing the same `random_seed` as before. They will be consistent across subsequent V4 releases unless mentioned otherwise.
+    - Sampling functions no longer respect user-specified global seeding! Always pass `random_seed` to ensure reproducible behavior.
+- Signature and default parameters changed for several distributions:
+    - `pm.StudentT` now requires either `sigma` or `lam` as kwarg (see [#5628](https://github.com/pymc-devs/pymc/pull/5628))
+    - `pm.StudentT` now requires `nu` to be specified (no longer defaults to 1) (see [#5628](https://github.com/pymc-devs/pymc/pull/5628))
+    - `pm.AsymmetricLaplace` positional arguments re-ordered (see [#5628](https://github.com/pymc-devs/pymc/pull/5628))
+    - `pm.AsymmetricLaplace` now requires `mu` to be specified (no longer defaults to 0) (see [#5628](https://github.com/pymc-devs/pymc/pull/5628))
+    - `ZeroInflatedPoisson` `theta` parameter was renamed to `mu` (see [#5584](https://github.com/pymc-devs/pymc/pull/5584)).
+    - `pm.GaussianRandomWalk` initial distribution defaults to unit normal instead of flat (see[#5779](https://github.com/pymc-devs/pymc/pull/5779))
+    - `pm.AR` initial distribution defaults to unit normal instead of flat (see[#5779](https://github.com/pymc-devs/pymc/pull/5779))
 - BART was removed [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental)
+- The `pm.EllipticalSlice` sampler was removed (see [#5756](https://github.com/pymc-devs/pymc/issues/5756)).
 - `BaseStochasticGradient` was removed (see [#5630](https://github.com/pymc-devs/pymc/pull/5630))
 - ⚠ The library is now named, installed and imported as "pymc". For example: `pip install pymc`.
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc.aesaraf` (see [4471](https://github.com/pymc-devs/pymc/pull/4471)).
@@ -80,7 +86,7 @@ Signature and default parameters changed for several distributions (see [#5628](
   - The function `replace_with_values` function has been added to `gp.utils`.
   - `MarginalSparse` has been renamed `MarginalApprox`.
   - Removed `MixtureSameFamily`. `Mixture` is now capable of handling batched multivariate components (see [#5438](https://github.com/pymc-devs/pymc/pull/5438)).
-  - `ZeroInflatedPoisson` `theta` parameter was renamed to `mu` (see [#5584](https://github.com/pymc-devs/pymc/pull/5584)).
+  - Removed `AR1`, `AR` of order 1 should be used instead. (see [5734](https://github.com/pymc-devs/pymc/pull/5734)).
 - ...
 
 ### Expected breaks
@@ -139,10 +145,10 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - `pymc.sampling_jax` samplers support `log_likelihood`, `observed_data`, and `sample_stats` in returned InferenceData object (see [#5189](https://github.com/pymc-devs/pymc/pull/5189))
 - Adding support for `pm.Deterministic` in `pymc.sampling_jax` (see [#5182](https://github.com/pymc-devs/pymc/pull/5182))
 - Added an alternative parametrization, `logit_p` to `pm.Binomial` and `pm.Categorical` distributions (see [5637](https://github.com/pymc-devs/pymc/pull/5637)).
+- Added the low level `compile_forward_sampling_function` method to compile the aesara function responsible for generating forward samples (see [#5759](https://github.com/pymc-devs/pymc/pull/5759)).
 - ...
 
-
-## Documentation
+### Documentation
 - Switched to the [pydata-sphinx-theme](https://pydata-sphinx-theme.readthedocs.io/en/latest/)
 - Updated our documentation tooling to use [MyST](https://myst-parser.readthedocs.io/en/latest/), [MyST-NB](https://myst-nb.readthedocs.io/en/latest/), sphinx-design, notfound.extension,
   sphinx-copybutton and sphinx-remove-toctrees.
@@ -150,7 +156,8 @@ This includes API changes we did not warn about since at least `3.11.0` (2021-01
 - Restructured the documentation to facilitate learning paths
 - Updated API docs to document objects at the path users should use to import them
 
-### Internal changes
+### Maintenance
+- ⚠ Fixed old-time bug in Slice sampler that resulted in biased samples (see [#5816](https://github.com/pymc-devs/pymc/pull/5816)).
 - ⚠ PyMC now requires Scipy version `>= 1.4.1` (see [4857](https://github.com/pymc-devs/pymc/pull/4857)).
 - Removed float128 dtype support (see [#4514](https://github.com/pymc-devs/pymc/pull/4514)).
 - Logp method of `Uniform` and `DiscreteUniform` no longer depends on `pymc.distributions.dist_math.bound` for proper evaluation (see [#4541](https://github.com/pymc-devs/pymc/pull/4541)).

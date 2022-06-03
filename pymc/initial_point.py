@@ -20,11 +20,11 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
-from aesara.graph.basic import Variable, graph_inputs
+from aesara.graph.basic import Variable
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.var import TensorVariable
 
-from pymc.aesaraf import compile_pymc
+from pymc.aesaraf import compile_pymc, find_rng_nodes, reseed_rngs
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
 StartDict = Dict[Union[Variable, str], Union[np.ndarray, Variable, str]]
@@ -150,19 +150,6 @@ def make_initial_point_fn(
         If `True` the returned variables will correspond to transformed initial values.
     """
 
-    def find_rng_nodes(variables):
-        return [
-            node
-            for node in graph_inputs(variables)
-            if isinstance(
-                node,
-                (
-                    at.random.var.RandomStateSharedVariable,
-                    at.random.var.RandomGeneratorSharedVariable,
-                ),
-            )
-        ]
-
     sdict_overrides = convert_str_to_rv_dict(model, overrides or {})
     initval_strats = {
         **model.initial_values,
@@ -208,16 +195,7 @@ def make_initial_point_fn(
 
         @functools.wraps(func)
         def inner(seed, *args, **kwargs):
-            seeds = [
-                np.random.PCG64(sub_seed)
-                for sub_seed in np.random.SeedSequence(seed).spawn(len(rngs))
-            ]
-            for rng, seed in zip(rngs, seeds):
-                if isinstance(rng, at.random.var.RandomStateSharedVariable):
-                    new_rng = np.random.RandomState(seed)
-                else:
-                    new_rng = np.random.Generator(seed)
-                rng.set_value(new_rng, True)
+            reseed_rngs(rngs, seed)
             values = func(*args, **kwargs)
             return dict(zip(varnames, values))
 

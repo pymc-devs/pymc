@@ -100,10 +100,7 @@ def test_all_distributions_have_moments():
 
     # Distributions that have not been refactored for V4 yet
     not_implemented = {
-        dist_module.timeseries.AR,
-        dist_module.timeseries.AR1,
         dist_module.timeseries.GARCH11,
-        dist_module.timeseries.GaussianRandomWalk,
         dist_module.timeseries.MvGaussianRandomWalk,
         dist_module.timeseries.MvStudentTRandomWalk,
     }

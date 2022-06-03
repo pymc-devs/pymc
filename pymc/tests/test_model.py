@@ -27,7 +27,9 @@ import pytest
 import scipy.sparse as sps
 import scipy.stats as st
 
+from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorConstant
 
 import pymc as pm
@@ -655,7 +657,7 @@ def test_set_initval():
     # generating initial values
     rng = np.random.RandomState(392)
 
-    with pm.Model(rng_seeder=rng) as model:
+    with pm.Model() as model:
         eta = pm.Uniform("eta", 1.0, 2.0, size=(1, 1))
         mu = pm.Normal("mu", sigma=eta, initval=[[100]])
         alpha = pm.HalfNormal("alpha", initval=100)
@@ -700,6 +702,67 @@ def test_nested_model_coords():
     assert m1.coords is m2.coords
     assert m1.dim_lengths is m2.dim_lengths
     assert set(m2.RV_dims) < set(m1.RV_dims)
+
+
+def test_shapeerror_from_resize_immutable_dims():
+    """
+    Trying to resize an immutable dimension should raise a ShapeError.
+    Even if the variable being updated is a SharedVariable and has other
+    dimensions that are mutable.
+    """
+    with pm.Model() as pmodel:
+        a = pm.Normal("a", mu=[1, 2, 3], dims="fixed")
+
+        m = pm.MutableData("m", [[1, 2, 3]], dims=("one", "fixed"))
+
+        # This is fine because the "fixed" dim is not resized
+        pm.set_data({"m": [[1, 2, 3], [3, 4, 5]]})
+
+    with pytest.raises(ShapeError, match="was initialized from 'a'"):
+        # Can't work because the "fixed" dimension is linked to a constant shape:
+        # Note that the new data tries to change both dimensions
+        with pmodel:
+            pm.set_data({"m": [[1, 2], [3, 4]]})
+
+
+def test_valueerror_from_resize_without_coords_update():
+    """
+    Resizing a mutable dimension that had coords,
+    without passing new coords raises a ValueError.
+    """
+    with pm.Model() as pmodel:
+        pmodel.add_coord("shared", [1, 2, 3], mutable=True)
+        pm.MutableData("m", [1, 2, 3], dims=("shared"))
+        with pytest.raises(ValueError, match="'m' variable already had 3"):
+            # tries to resize m but without passing coords so raise ValueError
+            pm.set_data({"m": [1, 2, 3, 4]})
+
+
+def test_coords_and_constantdata_create_immutable_dims():
+    """
+    When created from `pm.Model(coords=...)` or `pm.ConstantData`
+    a dimension should be resizable.
+    """
+    with pm.Model(coords={"group": ["A", "B"]}) as m:
+        x = pm.ConstantData("x", [0], dims="feature")
+        y = pm.Normal("y", x, 1, dims=("group", "feature"))
+    assert isinstance(m._dim_lengths["feature"], TensorConstant)
+    assert isinstance(m._dim_lengths["group"], TensorConstant)
+    assert x.eval().shape == (1,)
+    assert y.eval().shape == (2, 1)
+
+
+def test_add_coord_mutable_kwarg():
+    """
+    Checks resulting tensor type depending on mutable kwarg in add_coord.
+    """
+    with pm.Model() as m:
+        m.add_coord("fixed", values=[1], mutable=False)
+        m.add_coord("mutable1", values=[1, 2], mutable=True)
+        assert isinstance(m._dim_lengths["fixed"], TensorConstant)
+        assert isinstance(m._dim_lengths["mutable1"], ScalarSharedVariable)
+        pm.MutableData("mdata", np.ones((1, 2, 3)), dims=("fixed", "mutable1", "mutable2"))
+        assert isinstance(m._dim_lengths["mutable2"], TensorVariable)
 
 
 @pytest.mark.parametrize("jacobian", [True, False])

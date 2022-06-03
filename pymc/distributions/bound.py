@@ -23,7 +23,7 @@ from pymc.aesaraf import floatX, intX
 from pymc.distributions.continuous import BoundedContinuous, bounded_cont_transform
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import Continuous, Discrete
-from pymc.distributions.logprob import logp
+from pymc.distributions.logprob import ignore_logprob, logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.model import modelcontext
@@ -193,7 +193,7 @@ class Bound:
                 raise ValueError("Given dims do not exist in model coordinates.")
 
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval)
-        dist.tag.ignore_logprob = True
+        dist = ignore_logprob(dist)
 
         if isinstance(dist.owner.op, Continuous):
             res = _ContinuousBounded(
@@ -228,7 +228,7 @@ class Bound:
 
         cls._argument_checks(dist, **kwargs)
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval=None)
-        dist.tag.ignore_logprob = True
+        dist = ignore_logprob(dist)
         if isinstance(dist.owner.op, Continuous):
             res = _ContinuousBounded.dist(
                 [dist, lower, upper],

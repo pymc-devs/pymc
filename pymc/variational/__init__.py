@@ -16,7 +16,6 @@
 from pymc.variational import (
     approximations,
     callbacks,
-    flows,
     inference,
     operators,
     opvi,
@@ -27,13 +26,11 @@ from pymc.variational.approximations import (
     Empirical,
     FullRank,
     MeanField,
-    NormalizingFlow,
     sample_approx,
 )
 from pymc.variational.inference import (
     ADVI,
     ASVGD,
-    NFVI,
     SVGD,
     FullRankADVI,
     ImplicitGradient,

@@ -21,6 +21,7 @@ import cloudpickle
 import numpy as np
 import xarray
 
+from aesara.compile import SharedVariable
 from cachetools import LRUCache, cachedmethod
 
 
@@ -349,3 +350,16 @@ def check_dist_not_registered(dist, model=None):
                 f"You should use an unregistered (unnamed) distribution created via "
                 f"the `.dist()` API instead, such as:\n`dist=pm.Normal.dist(0, 1)`"
             )
+
+
+def point_wrapper(core_function):
+    """Wrap an aesara compiled function to be able to ingest point dictionaries whilst
+    ignoring the keys that are not valid inputs to the core function.
+    """
+    ins = [i.name for i in core_function.maker.fgraph.inputs if not isinstance(i, SharedVariable)]
+
+    def wrapped(**kwargs):
+        input_point = {k: v for k, v in kwargs.items() if k in ins}
+        return core_function(**input_point)
+
+    return wrapped

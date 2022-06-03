@@ -70,5 +70,4 @@ Other step methods
    :toctree: generated/
 
    CompoundStep
-   EllipticalSlice
    Slice

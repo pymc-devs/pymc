@@ -19,7 +19,7 @@ import warnings
 
 from abc import ABCMeta
 from functools import singledispatch
-from typing import Callable, Iterable, Optional, Sequence, Tuple, Union, cast
+from typing import Callable, Optional, Sequence, Tuple, Union, cast
 
 import aesara
 import numpy as np
@@ -198,8 +198,8 @@ class Distribution(metaclass=DistributionMeta):
         total_size=None,
         transform=UNSET,
         **kwargs,
-    ) -> RandomVariable:
-        """Adds a RandomVariable corresponding to a PyMC distribution to the current model.
+    ) -> TensorVariable:
+        """Adds a tensor variable corresponding to a PyMC distribution to the current model.
 
         Note that all remaining kwargs must be compatible with ``.dist()``
 
@@ -226,13 +226,13 @@ class Distribution(metaclass=DistributionMeta):
         transform : optional
             See ``Model.register_rv``.
         **kwargs
-            Keyword arguments that will be forwarded to ``.dist()``.
-            Most prominently: ``shape`` and ``size``
+            Keyword arguments that will be forwarded to ``.dist()`` or the Aesara RV Op.
+            Most prominently: ``shape`` for ``.dist()`` or ``dtype`` for the Op.
 
         Returns
         -------
-        rv : RandomVariable
-            The created RV, registered in the Model.
+        rv : TensorVariable
+            The created random variable tensor, registered in the Model.
         """
 
         try:
@@ -258,13 +258,10 @@ class Distribution(metaclass=DistributionMeta):
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
-        if rng is None:
-            rng = model.next_rng()
-
         # Create the RV and process dims and observed to determine
         # a shape by which the created RV may need to be resized.
         rv_out, dims, observed, resize_shape = _make_rv_and_resize_shape(
-            cls=cls, dims=dims, model=model, observed=observed, args=args, rng=rng, **kwargs
+            cls=cls, dims=dims, model=model, observed=observed, args=args, **kwargs
         )
 
         if resize_shape:
@@ -298,10 +295,9 @@ class Distribution(metaclass=DistributionMeta):
         dist_params,
         *,
         shape: Optional[Shape] = None,
-        size: Optional[Size] = None,
         **kwargs,
-    ) -> RandomVariable:
-        """Creates a RandomVariable corresponding to the `cls` distribution.
+    ) -> TensorVariable:
+        """Creates a tensor variable corresponding to the `cls` distribution.
 
         Parameters
         ----------
@@ -312,13 +308,14 @@ class Distribution(metaclass=DistributionMeta):
 
             An Ellipsis (...) may be inserted in the last position to short-hand refer to
             all the dimensions that the RV would get if no shape/size/dims were passed at all.
-        size : int, tuple, Variable, optional
-            For creating the RV like in Aesara/NumPy.
+        **kwargs
+            Keyword arguments that will be forwarded to the Aesara RV Op.
+            Most prominently: ``size`` or ``dtype``.
 
         Returns
         -------
-        rv : RandomVariable
-            The created RV.
+        rv : TensorVariable
+            The created random variable tensor.
         """
         if "testval" in kwargs:
             kwargs.pop("testval")
@@ -337,6 +334,7 @@ class Distribution(metaclass=DistributionMeta):
 
         if "dims" in kwargs:
             raise NotImplementedError("The use of a `.dist(dims=...)` API is not supported.")
+        size = kwargs.pop("size", None)
         if shape is not None and size is not None:
             raise ValueError(
                 f"Passing both `shape` ({shape}) and `size` ({size}) is not supported!"
@@ -364,11 +362,41 @@ class Distribution(metaclass=DistributionMeta):
 
 
 class SymbolicDistribution:
+    """Symbolic statistical distribution
+
+    While traditional PyMC distributions are represented by a single RandomVariable
+    graph, Symbolic distributions correspond to a larger graph that contains one or
+    more RandomVariables and an arbitrary number of deterministic operations, which
+    represent their own kind of distribution.
+
+    The graphs returned by symbolic distributions can be evaluated directly to
+    obtain valid draws and can further be parsed by Aeppl to derive the
+    corresponding logp at runtime.
+
+    Check pymc.distributions.Censored for an example of a symbolic distribution.
+
+    Symbolic distributions must implement the following classmethods:
+    cls.dist
+        Performs input validation and converts optional alternative parametrizations
+        to a canonical parametrization. It should call `super().dist()`, passing a
+        list with the default parameters as the first and only non keyword argument,
+        followed by other keyword arguments like size and rngs, and return the result
+    cls.ndim_supp
+        Returns the support of the symbolic distribution, given the default set of
+        parameters. This may not always be constant, for instance if the symbolic
+        distribution can be defined based on an arbitrary base distribution.
+    cls.rv_op
+        Returns a TensorVariable that represents the symbolic distribution
+        parametrized by a default set of parameters and a size and rngs arguments
+    cls.change_size
+        Returns an equivalent symbolic distribution with a different size. This is
+        analogous to `pymc.aesaraf.change_rv_size` for `RandomVariable`s.
+    """
+
     def __new__(
         cls,
         name: str,
         *args,
-        rngs: Optional[Iterable] = None,
         dims: Optional[Dims] = None,
         initval=None,
         observed=None,
@@ -379,44 +407,12 @@ class SymbolicDistribution:
         """Adds a TensorVariable corresponding to a PyMC symbolic distribution to the
         current model.
 
-        While traditional PyMC distributions are represented by a single RandomVariable
-        graph, Symbolic distributions correspond to a larger graph that contains one or
-        more RandomVariables and an arbitrary number of deterministic operations, which
-        represent their own kind of distribution.
-
-        The graphs returned by symbolic distributions can be evaluated directly to
-        obtain valid draws and can further be parsed by Aeppl to derive the
-        corresponding logp at runtime.
-
-        Check pymc.distributions.Censored for an example of a symbolic distribution.
-
-        Symbolic distributions must implement the following classmethods:
-        cls.dist
-            Performs input validation and converts optional alternative parametrizations
-            to a canonical parametrization. It should call `super().dist()`, passing a
-            list with the default parameters as the first and only non keyword argument,
-            followed by other keyword arguments like size and rngs, and return the result
-        cls.rv_op
-            Returns a TensorVariable that represents the symbolic distribution
-            parametrized by a default set of parameters and a size and rngs arguments
-        cls.ndim_supp
-            Returns the support of the symbolic distribution, given the default
-            parameters. This may not always be constant, for instance if the symbolic
-            distribution can be defined based on an arbitrary base distribution.
-        cls.change_size
-            Returns an equivalent symbolic distribution with a different size. This is
-            analogous to `pymc.aesaraf.change_rv_size` for `RandomVariable`s.
-        cls.graph_rvs
-            Returns base RVs in a symbolic distribution.
-
         Parameters
         ----------
         cls : type
             A distribution class that inherits from SymbolicDistribution.
         name : str
             Name for the new model variable.
-        rngs : optional
-            Random number generator to use for the RandomVariable(s) in the graph.
         dims : tuple, optional
             A tuple of dimension names known to the model.
         initval : optional
@@ -464,17 +460,10 @@ class SymbolicDistribution:
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
-        if rngs is None:
-            # Create a temporary rv to obtain number of rngs needed
-            temp_graph = cls.dist(*args, rngs=None, **kwargs)
-            rngs = [model.next_rng() for _ in cls.graph_rvs(temp_graph)]
-        elif not isinstance(rngs, (list, tuple)):
-            rngs = [rngs]
-
         # Create the RV and process dims and observed to determine
         # a shape by which the created RV may need to be resized.
         rv_out, dims, observed, resize_shape = _make_rv_and_resize_shape(
-            cls=cls, dims=dims, model=model, observed=observed, args=args, rngs=rngs, **kwargs
+            cls=cls, dims=dims, model=model, observed=observed, args=args, **kwargs
         )
 
         if resize_shape:
@@ -523,7 +512,6 @@ class SymbolicDistribution:
             The inputs to the `RandomVariable` `Op`.
         shape : int, tuple, Variable, optional
             A tuple of sizes for each dimension of the new RV.
-
             An Ellipsis (...) may be inserted in the last position to short-hand refer to
             all the dimensions that the RV would get if no shape/size/dims were passed at all.
         size : int, tuple, Variable, optional
@@ -665,8 +653,8 @@ class DensityDist(NoDistribution):
         name : str
         dist_params : Tuple
             A sequence of the distribution's parameter. These will be converted into
-            Aesara tensors internally. These parameters could be other ``RandomVariable``
-            instances.
+            Aesara tensors internally. These parameters could be other ``TensorVariable``
+            instances created from , optionally created via ``RandomVariable`` ``Op``s.
         logp : Optional[Callable]
             A callable that calculates the log density of some given observed ``value``
             conditioned on certain distribution parameter values. It must have the

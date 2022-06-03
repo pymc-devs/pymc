@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 import scipy.stats.distributions as sp
 
+from aeppl.abstract import get_measurable_outputs
 from aesara.graph.basic import ancestors
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import (
@@ -30,9 +31,21 @@ from aesara.tensor.subtensor import (
 
 from pymc import DensityDist
 from pymc.aesaraf import floatX, walk_model
-from pymc.distributions.continuous import HalfFlat, Normal, TruncatedNormal, Uniform
+from pymc.distributions.continuous import (
+    HalfFlat,
+    LogNormal,
+    Normal,
+    TruncatedNormal,
+    Uniform,
+)
 from pymc.distributions.discrete import Bernoulli
-from pymc.distributions.logprob import joint_logpt, logcdf, logp
+from pymc.distributions.logprob import (
+    _get_scaling,
+    ignore_logprob,
+    joint_logpt,
+    logcdf,
+    logp,
+)
 from pymc.model import Model, Potential
 from pymc.tests.helpers import select_by_precision
 
@@ -40,6 +53,53 @@ from pymc.tests.helpers import select_by_precision
 def assert_no_rvs(var):
     assert not any(isinstance(v.owner.op, RandomVariable) for v in ancestors([var]) if v.owner)
     return var
+
+
+def test_get_scaling():
+
+    assert _get_scaling(None, (2, 3), 2).eval() == 1
+    # ndim >=1 & ndim<1
+    assert _get_scaling(45, (2, 3), 1).eval() == 22.5
+    assert _get_scaling(45, (2, 3), 0).eval() == 45
+
+    # list or tuple tests
+    # total_size contains other than Ellipsis, None and Int
+    with pytest.raises(TypeError, match="Unrecognized `total_size` type"):
+        _get_scaling([2, 4, 5, 9, 11.5], (2, 3), 2)
+    # check with Ellipsis
+    with pytest.raises(ValueError, match="Double Ellipsis in `total_size` is restricted"):
+        _get_scaling([1, 2, 5, Ellipsis, Ellipsis], (2, 3), 2)
+    with pytest.raises(
+        ValueError,
+        match="Length of `total_size` is too big, number of scalings is bigger that ndim",
+    ):
+        _get_scaling([1, 2, 5, Ellipsis], (2, 3), 2)
+
+    assert _get_scaling([Ellipsis], (2, 3), 2).eval() == 1
+
+    assert _get_scaling([4, 5, 9, Ellipsis, 32, 12], (2, 3, 2), 5).eval() == 960
+    assert _get_scaling([4, 5, 9, Ellipsis], (2, 3, 2), 5).eval() == 15
+    # total_size with no Ellipsis (end = [ ])
+    with pytest.raises(
+        ValueError,
+        match="Length of `total_size` is too big, number of scalings is bigger that ndim",
+    ):
+        _get_scaling([1, 2, 5], (2, 3), 2)
+
+    assert _get_scaling([], (2, 3), 2).eval() == 1
+    assert _get_scaling((), (2, 3), 2).eval() == 1
+    # total_size invalid type
+    with pytest.raises(
+        TypeError,
+        match="Unrecognized `total_size` type, expected int or list of ints, got {1, 2, 5}",
+    ):
+        _get_scaling({1, 2, 5}, (2, 3), 2)
+
+    # test with rvar from model graph
+    with Model() as m2:
+        rv_var = Uniform("a", 0.0, 1.0)
+    total_size = []
+    assert _get_scaling(total_size, shape=rv_var.shape, ndim=rv_var.ndim).eval() == 1.0
 
 
 def test_joint_logpt_basic():
@@ -181,6 +241,21 @@ def test_logp_helper():
     np.testing.assert_almost_equal(x_logp.eval(), sp.norm(0, 1).logpdf([0, 1]))
 
 
+def test_logp_helper_derived_rv():
+    assert np.isclose(
+        logp(at.exp(Normal.dist()), 5).eval(),
+        logp(LogNormal.dist(), 5).eval(),
+    )
+
+
+def test_logp_helper_exceptions():
+    with pytest.raises(TypeError, match="When RV is not a pure distribution"):
+        logp(at.exp(Normal.dist()), [1, 2])
+
+    with pytest.raises(NotImplementedError, match="PyMC could not infer logp of input variable"):
+        logp(at.cos(Normal.dist()), 1)
+
+
 def test_logcdf_helper():
     value = at.vector("value")
     x = Normal.dist(0, 1)
@@ -227,3 +302,38 @@ def test_unexpected_rvs():
 
     with pytest.raises(ValueError, match="^Random variables detected in the logp graph"):
         model.logpt()
+
+
+def test_ignore_logprob_basic():
+    x = Normal.dist()
+    (measurable_x_out,) = get_measurable_outputs(x.owner.op, x.owner)
+    assert measurable_x_out is x.owner.outputs[1]
+
+    new_x = ignore_logprob(x)
+    assert new_x is not x
+    assert isinstance(new_x.owner.op, Normal)
+    assert type(new_x.owner.op).__name__ == "UnmeasurableNormalRV"
+    # Confirm that it does not have measurable output
+    assert get_measurable_outputs(new_x.owner.op, new_x.owner) is None
+
+    # Test that it will not clone a variable that is already unmeasurable
+    new_new_x = ignore_logprob(new_x)
+    assert new_new_x is new_x
+
+
+def test_ignore_logprob_model():
+    # logp that does not depend on input
+    def logp(value, x):
+        return value
+
+    with Model() as m:
+        x = Normal.dist()
+        y = DensityDist("y", x, logp=logp)
+    # Aeppl raises a KeyError when it finds an unexpected RV
+    with pytest.raises(KeyError):
+        joint_logpt([y], {y: y.type()})
+
+    with Model() as m:
+        x = ignore_logprob(Normal.dist())
+        y = DensityDist("y", x, logp=logp)
+    assert joint_logpt([y], {y: y.type()})

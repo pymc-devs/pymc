@@ -20,6 +20,7 @@ import aesara.tensor as at
 import numpy as np
 
 from aeppl import factorized_joint_logprob
+from aeppl.abstract import assign_custom_measurable_outputs
 from aeppl.logprob import logcdf as logcdf_aeppl
 from aeppl.logprob import logprob as logp_aeppl
 from aeppl.transforms import TransformValuesOpt
@@ -38,7 +39,9 @@ from aesara.tensor.var import TensorVariable
 from pymc.aesaraf import floatX
 
 
-def _get_scaling(total_size: Optional[Union[int, Sequence[int]]], shape, ndim: int):
+def _get_scaling(
+    total_size: Optional[Union[int, Sequence[int]]], shape, ndim: int
+) -> TensorVariable:
     """
     Gets scaling constant for logp.
 
@@ -221,7 +224,11 @@ def joint_logpt(
 
     transform_opt = TransformValuesOpt(transform_map)
     temp_logp_var_dict = factorized_joint_logprob(
-        tmp_rvs_to_values, extra_rewrites=transform_opt, use_jacobian=jacobian, **kwargs
+        tmp_rvs_to_values,
+        extra_rewrites=transform_opt,
+        use_jacobian=jacobian,
+        warn_missing_rvs=False,
+        **kwargs,
     )
 
     # Raise if there are unexpected RandomVariables in the logp graph
@@ -264,15 +271,44 @@ def joint_logpt(
     return logp_var
 
 
-def logp(rv, value):
+def logp(rv: TensorVariable, value) -> TensorVariable:
     """Return the log-probability graph of a Random Variable"""
 
     value = at.as_tensor_variable(value, dtype=rv.dtype)
-    return logp_aeppl(rv, value)
+    try:
+        return logp_aeppl(rv, value)
+    except NotImplementedError:
+        try:
+            value = rv.type.filter_variable(value)
+        except TypeError as exc:
+            raise TypeError(
+                "When RV is not a pure distribution, value variable must have the same type"
+            ) from exc
+        try:
+            return factorized_joint_logprob({rv: value}, warn_missing_rvs=False)[value]
+        except Exception as exc:
+            raise NotImplementedError("PyMC could not infer logp of input variable.") from exc
 
 
-def logcdf(rv, value):
+def logcdf(rv: TensorVariable, value) -> TensorVariable:
     """Return the log-cdf graph of a Random Variable"""
 
     value = at.as_tensor_variable(value, dtype=rv.dtype)
     return logcdf_aeppl(rv, value)
+
+
+def ignore_logprob(rv: TensorVariable) -> TensorVariable:
+    """Return a duplicated variable that is ignored when creating Aeppl logprob graphs
+
+    This is used in SymbolicDistributions that use other RVs as inputs but account
+    for their logp terms explicitly.
+
+    If the variable is already ignored, it is returned directly.
+    """
+    prefix = "Unmeasurable"
+    node = rv.owner
+    op_type = type(node.op)
+    if op_type.__name__.startswith(prefix):
+        return rv
+    new_node = assign_custom_measurable_outputs(node, type_prefix=prefix)
+    return new_node.outputs[node.outputs.index(rv)]

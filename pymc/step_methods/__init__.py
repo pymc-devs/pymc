@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 from pymc.step_methods.compound import CompoundStep
-from pymc.step_methods.elliptical_slice import EllipticalSlice
 from pymc.step_methods.hmc import NUTS, HamiltonianMC
 from pymc.step_methods.metropolis import (
     BinaryGibbsMetropolis,

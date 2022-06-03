@@ -14,7 +14,7 @@ repos:
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v0.942
+  rev: v0.950
   hooks:
     - id: mypy
       name: Run static type checks
@@ -26,8 +26,8 @@ repos:
       - types-filelock
       - types-setuptools
       - arviz
-      - aesara==2.5.1
-      - aeppl==0.0.27
+      - aesara==2.6.6
+      - aeppl==0.0.31
       always_run: true
       require_serial: true
       pass_filenames: false
@@ -37,7 +37,7 @@ repos:
     - id: isort
       name: isort
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.32.0
+  rev: v2.32.1
   hooks:
     - id: pyupgrade
       args: [--py37-plus]
@@ -46,7 +46,7 @@ repos:
   hooks:
     - id: black
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.13.5
+  rev: v2.13.8
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
@@ -79,7 +79,7 @@ repos:
       types: [python]
       language: pygrep
     - id: no-internal-links
-      name: Check no internal links are in the docs
+      name: Check no links that should be cross-references are in the docs
       description: >-
         'A quick check for the links in the intersphinx '
         'mapping inside `docs/source/`'
@@ -96,13 +96,16 @@ repos:
                404.md|
                contributing/release_checklist.md|
                contributing/developer_guide.rst|
+               contributing/versioned_vs_gallery_explanation.md|
                learn/examples.md)
       entry: >
           (?x)(arviz-devs.github.io|
+               python.arviz.org|
                aesara.readthedocs.io|
                aeppl.readthedocs.io|
                pymc-experimental.readthedocs.io|
                docs.pymc.io|
+               www.pymc.io|
                numpy.org/doc|
                pymc-examples.readthedocs.io|
                myst-parser.readthedocs.io|

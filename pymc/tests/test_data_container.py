@@ -19,7 +19,7 @@ import pytest
 
 from aesara import shared
 from aesara.compile.sharedvalue import SharedVariable
-from aesara.tensor.sharedvar import ScalarSharedVariable
+from aesara.tensor import TensorConstant
 from aesara.tensor.var import TensorVariable
 
 import pymc as pm
@@ -92,6 +92,31 @@ class TestData(SeededTest):
         assert y_test.posterior_predictive["obs"].shape == (1, 1000, 3)
         np.testing.assert_allclose(
             x_test, y_test.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
+        )
+
+    def test_sample_posterior_predictive_after_set_data_with_coords(self):
+        y = np.array([1.0, 2.0, 3.0])
+        with pm.Model() as model:
+            x = pm.MutableData("x", [1.0, 2.0, 3.0], dims="obs_id")
+            beta = pm.Normal("beta", 0, 10.0)
+            pm.Normal("obs", beta * x, np.sqrt(1e-3), observed=y, dims="obs_id")
+            idata = pm.sample(
+                10,
+                tune=100,
+                chains=1,
+                return_inferencedata=True,
+                compute_convergence_checks=False,
+            )
+        # Predict on new data.
+        with model:
+            x_test = [5, 6]
+            pm.set_data(new_data={"x": x_test}, coords={"obs_id": ["a", "b"]})
+            pm.sample_posterior_predictive(idata, extend_inferencedata=True, predictions=True)
+
+        assert idata.predictions["obs"].shape == (1, 10, 2)
+        assert np.all(idata.predictions["obs_id"].values == np.array(["a", "b"]))
+        np.testing.assert_allclose(
+            x_test, idata.predictions["obs"].mean(("chain", "draw")), atol=1e-1
         )
 
     def test_sample_after_set_data(self):
@@ -290,19 +315,39 @@ class TestData(SeededTest):
         }
         # pass coordinates explicitly, use numpy array in Data container
         with pm.Model(coords=coords) as pmodel:
+            # Dims created from coords are constant by default
+            assert isinstance(pmodel.dim_lengths["rows"], TensorConstant)
+            assert isinstance(pmodel.dim_lengths["columns"], TensorConstant)
             pm.MutableData("observations", data, dims=("rows", "columns"))
-
+            # new data with same (!) shape
+            pm.set_data({"observations": data + 1})
+            # new data with same (!) shape and coords
+            pm.set_data({"observations": data}, coords=coords)
         assert "rows" in pmodel.coords
         assert pmodel.coords["rows"] == ("R1", "R2", "R3", "R4", "R5")
         assert "rows" in pmodel.dim_lengths
-        assert isinstance(pmodel.dim_lengths["rows"], ScalarSharedVariable)
         assert pmodel.dim_lengths["rows"].eval() == 5
         assert "columns" in pmodel.coords
         assert pmodel.coords["columns"] == ("C1", "C2", "C3", "C4", "C5", "C6", "C7")
         assert pmodel.RV_dims == {"observations": ("rows", "columns")}
         assert "columns" in pmodel.dim_lengths
-        assert isinstance(pmodel.dim_lengths["columns"], ScalarSharedVariable)
         assert pmodel.dim_lengths["columns"].eval() == 7
+
+    def test_set_coords_through_pmdata(self):
+        with pm.Model() as pmodel:
+            pm.ConstantData(
+                "population", [100, 200], dims="city", coords={"city": ["Tinyvil", "Minitown"]}
+            )
+            pm.MutableData(
+                "temperature",
+                [[15, 20, 22, 17], [18, 22, 21, 12]],
+                dims=("city", "season"),
+                coords={"season": ["winter", "spring", "summer", "fall"]},
+            )
+        assert "city" in pmodel.coords
+        assert "season" in pmodel.coords
+        assert pmodel.coords["city"] == ("Tinyvil", "Minitown")
+        assert pmodel.coords["season"] == ("winter", "spring", "summer", "fall")
 
     def test_symbolic_coords(self):
         """
@@ -310,6 +355,7 @@ class TestData(SeededTest):
         Their lengths are then automatically linked to the corresponding Tensor dimension.
         """
         with pm.Model() as pmodel:
+            # Dims created from MutableData are TensorVariables linked to the SharedVariable.shape
             intensity = pm.MutableData("intensity", np.ones((2, 3)), dims=("row", "column"))
             assert "row" in pmodel.dim_lengths
             assert "column" in pmodel.dim_lengths

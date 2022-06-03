@@ -22,7 +22,7 @@ from aeppl.transforms import (
     LogOddsTransform,
     LogTransform,
     RVTransform,
-    Simplex,
+    SimplexTransform,
 )
 from aesara.graph import Op
 from aesara.tensor import TensorVariable
@@ -174,9 +174,9 @@ class Chain(RVTransform):
         return det
 
 
-simplex = Simplex()
+simplex = SimplexTransform()
 simplex.__doc__ = """
-Instantiation of :class:`aeppl.transforms.Simplex`
+Instantiation of :class:`aeppl.transforms.SimplexTransform`
 for use in the ``transform`` argument of a random variable."""
 
 logodds = LogOddsTransform()

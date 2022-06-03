@@ -4,8 +4,8 @@ channels:
 - defaults
 dependencies:
  # base dependencies (see install guide for Windows)
-- aeppl=0.0.27
-- aesara=2.5.1
+- aeppl=0.0.31
+- aesara=2.6.6
 - arviz>=0.12.0
 - blas
 - cachetools>=4.2.1
@@ -22,7 +22,7 @@ dependencies:
 # Extra stuff for dev, testing and docs build
 - ipython>=7.16
 - myst-nb
-- numpydoc<1.2
+- numpydoc
 - pre-commit>=2.8.0
 - pydata-sphinx-theme
 - pytest-cov>=2.5

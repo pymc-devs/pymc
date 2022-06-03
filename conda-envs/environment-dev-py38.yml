@@ -4,8 +4,8 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- aeppl=0.0.27
-- aesara=2.5.1
+- aeppl=0.0.31
+- aesara=2.6.6
 - arviz>=0.12.0
 - blas
 - cachetools>=4.2.1
@@ -16,7 +16,7 @@ dependencies:
 - jax
 - myst-nb
 - numpy>=1.15.0
-- numpydoc<1.2
+- numpydoc
 - pandas>=0.24.0
 - pip
 - pre-commit>=2.8.0
@@ -29,6 +29,7 @@ dependencies:
 - sphinx-copybutton
 - sphinx-notfound-page
 - sphinx>=1.5
+- sphinxext-rediraffe
 - typing-extensions>=3.7.4
 - watermark
 - pip:

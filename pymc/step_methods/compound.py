@@ -33,6 +33,9 @@ class CompoundStep:
         for method in self.methods:
             if method.generates_stats:
                 self.stats_dtypes.extend(method.stats_dtypes)
+        self.name = (
+            f"Compound[{', '.join(getattr(m, 'name', 'UNNAMED_STEP') for m in self.methods)}]"
+        )
 
     def step(self, point):
         if self.generates_stats:

@@ -60,7 +60,6 @@ import pymc as pm
 
 from pymc.aesaraf import floatX, intX
 from pymc.distributions import (
-    AR1,
     CAR,
     AsymmetricLaplace,
     Bernoulli,
@@ -832,14 +831,6 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
     norm = lgamma((nu + d) / 2.0) - 0.5 * d * np.log(nu * np.pi) - lgamma(nu / 2.0)
     logp_mvt = norm - logdet - (nu + d) / 2.0 * np.log1p((trafo * trafo).sum(-1) / nu)
     return logp_mvt.sum()
-
-
-def AR1_logpdf(value, k, tau_e):
-    tau = tau_e * (1 - k**2)
-    return (
-        sp.norm(loc=0, scale=1 / np.sqrt(tau)).logpdf(value[0])
-        + sp.norm(loc=k * value[:-1], scale=1 / np.sqrt(tau_e)).logpdf(value[1:]).sum()
-    )
 
 
 def invlogit(x, eps=sys.float_info.epsilon):
@@ -2078,11 +2069,6 @@ class TestMatchesScipy:
             extra_args={"size": 2},
         )
 
-    @pytest.mark.parametrize("n", [2, 3, 4])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_AR1(self, n):
-        check_logp(AR1, Vector(R, n), {"k": Unit, "tau_e": Rplus}, AR1_logpdf)
-
     @pytest.mark.parametrize("n", [2, 3])
     def test_wishart(self, n):
         check_logp(
@@ -2413,6 +2399,11 @@ class TestMatchesScipy:
         with pytest.raises(ParameterValueError):
             sigma.eval()
 
+        sigma = [1, 2]
+        assert_almost_equal(
+            get_tau_sigma(sigma=sigma), [1.0 / np.array(sigma) ** 2, np.array(sigma)]
+        )
+
     @pytest.mark.parametrize(
         "value,mu,sigma,nu,logp",
         [
@@ -2619,7 +2610,7 @@ class TestMatchesScipy:
         def ref_logp(value, mu, sigma, steps):
             # Relying on fact that init will be normal by default
             return (
-                scipy.stats.norm.logpdf(value[0], mu, sigma)
+                scipy.stats.norm.logpdf(value[0], 0, 100)  # default init_dist has a scale 100
                 + scipy.stats.norm.logpdf(np.diff(value), mu, sigma).sum()
             )
 
@@ -3231,21 +3222,23 @@ def test_serialize_density_dist():
 def test_distinct_rvs():
     """Make sure `RandomVariable`s generated using a `Model`'s default RNG state all have distinct states."""
 
-    with pm.Model(rng_seeder=np.random.RandomState(2023532)) as model:
+    with pm.Model() as model:
         X_rv = pm.Normal("x")
         Y_rv = pm.Normal("y")
 
-        pp_samples = pm.sample_prior_predictive(samples=2, return_inferencedata=False)
+        pp_samples = pm.sample_prior_predictive(
+            samples=2, return_inferencedata=False, random_seed=np.random.RandomState(2023532)
+        )
 
     assert X_rv.owner.inputs[0] != Y_rv.owner.inputs[0]
 
-    assert len(model.rng_seq) == 2
-
-    with pm.Model(rng_seeder=np.random.RandomState(2023532)):
+    with pm.Model():
         X_rv = pm.Normal("x")
         Y_rv = pm.Normal("y")
 
-        pp_samples_2 = pm.sample_prior_predictive(samples=2, return_inferencedata=False)
+        pp_samples_2 = pm.sample_prior_predictive(
+            samples=2, return_inferencedata=False, random_seed=np.random.RandomState(2023532)
+        )
 
     assert np.array_equal(pp_samples["y"], pp_samples_2["y"])
 
@@ -3321,7 +3314,8 @@ class TestCensored:
         data[data <= low] = low
         data[data >= high] = high
 
-        with pm.Model(rng_seeder=17092021) as m:
+        rng = 17092021
+        with pm.Model() as m:
             mu = pm.Normal(
                 "mu",
                 mu=((high - low) / 2) + low,
@@ -3337,9 +3331,9 @@ class TestCensored:
                 observed=data,
             )
 
-            prior_pred = pm.sample_prior_predictive()
-            posterior = pm.sample(tune=500, draws=500)
-            posterior_pred = pm.sample_posterior_predictive(posterior)
+            prior_pred = pm.sample_prior_predictive(random_seed=rng)
+            posterior = pm.sample(tune=500, draws=500, random_seed=rng)
+            posterior_pred = pm.sample_posterior_predictive(posterior, random_seed=rng)
 
         expected = True if censored else False
         assert (9 < prior_pred.prior_predictive.mean() < 10) == expected
@@ -3380,6 +3374,18 @@ class TestCensored:
 
         new_dist = pm.Censored.change_size(base_dist, (4,), expand=True)
         assert new_dist.eval().shape == (4, 3, 2)
+
+    def test_dist_broadcasted_by_lower_upper(self):
+        x = pm.Censored.dist(pm.Normal.dist(), lower=np.zeros((2,)), upper=None)
+        assert tuple(x.owner.inputs[0].shape.eval()) == (2,)
+
+        x = pm.Censored.dist(pm.Normal.dist(), lower=np.zeros((2,)), upper=np.zeros((4, 2)))
+        assert tuple(x.owner.inputs[0].shape.eval()) == (4, 2)
+
+        x = pm.Censored.dist(
+            pm.Normal.dist(size=(3, 4, 2)), lower=np.zeros((2,)), upper=np.zeros((4, 2))
+        )
+        assert tuple(x.owner.inputs[0].shape.eval()) == (3, 4, 2)
 
 
 class TestLKJCholeskCov:
@@ -3425,8 +3431,18 @@ class TestLKJCholeskCov:
             pm.MvNormal.dist(np.ones(3), np.eye(3)),
         ],
     )
-    def test_sd_dist_automatically_resized(self, sd_dist):
-        x = pm.LKJCholeskyCov.dist(n=3, eta=1, sd_dist=sd_dist, size=10, compute_corr=False)
+    @pytest.mark.parametrize(
+        "size, shape",
+        [
+            ((10,), None),
+            (None, (10, 6)),
+            (None, (10, ...)),
+        ],
+    )
+    def test_sd_dist_automatically_resized(self, sd_dist, size, shape):
+        x = pm.LKJCholeskyCov.dist(
+            n=3, eta=1, sd_dist=sd_dist, size=size, shape=shape, compute_corr=False
+        )
         resized_sd_dist = x.owner.inputs[-1]
         assert resized_sd_dist.eval().shape == (10, 3)
         # LKJCov has support shape `(n * (n+1)) // 2`

@@ -247,8 +247,6 @@ class Simulator(NoDistribution):
         #  in which case this would not be needed. However, that would have to be
         #  done for every sampler that may accomodate Simulators
         rng = aesara.shared(np.random.default_rng())
-        rng.tag.is_rng = True
-
         # Create a new simulatorRV with identical inputs as the original one
         sim_value = sim_op.make_node(rng, *sim_inputs[1:]).default_output()
         sim_value.name = "sim_value"

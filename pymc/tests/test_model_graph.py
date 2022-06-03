@@ -143,7 +143,7 @@ class BaseModelGraphTest(SeededTest):
     def test_inputs(self):
         for child, parents_in_plot in self.compute_graph.items():
             var = self.model[child]
-            parents_in_graph = self.model_graph.get_parents(var)
+            parents_in_graph = self.model_graph.get_parent_names(var)
             if isinstance(var, SharedVariable):
                 # observed data also doesn't have parents in the compute graph!
                 # But for the visualization we like them to become decendants of the
@@ -181,6 +181,85 @@ class TestRadonModel(BaseModelGraphTest):
             model_to_graphviz(self.model, formatting="latex")
         with pytest.warns(UserWarning, match="currently not supported"):
             model_to_graphviz(self.model, formatting="plain_with_params")
+
+
+def model_with_different_descendants():
+    """
+    Model proposed by Michael to test variable selection functionality
+    From here: https://github.com/pymc-devs/pymc/pull/5634#pullrequestreview-916297509
+    """
+    with pm.Model() as pmodel2:
+        a = pm.Normal("a")
+        b = pm.Normal("b")
+        pm.Normal("c", a * b)
+        intermediate = pm.Deterministic("intermediate", a + b)
+        pred = pm.Deterministic("pred", intermediate * 3)
+
+        obs = pm.ConstantData("obs", 1.75)
+
+        L = pm.Normal("L", mu=1 + 0.5 * pred, observed=obs)
+
+    return pmodel2
+
+
+class TestParents:
+    @pytest.mark.parametrize(
+        "var_name, parent_names",
+        [
+            ("L", {"pred"}),
+            ("pred", {"intermediate"}),
+            ("intermediate", {"a", "b"}),
+            ("c", {"a", "b"}),
+            ("a", set()),
+            ("b", set()),
+        ],
+    )
+    def test_get_parent_names(self, var_name, parent_names):
+        mg = ModelGraph(model_with_different_descendants())
+        mg.get_parent_names(mg.model[var_name]) == parent_names
+
+
+class TestVariableSelection:
+    @pytest.mark.parametrize(
+        "var_names, vars_to_plot, compute_graph",
+        [
+            (["c"], ["a", "b", "c"], {"c": {"a", "b"}, "a": set(), "b": set()}),
+            (
+                ["L"],
+                ["pred", "obs", "L", "intermediate", "a", "b"],
+                {
+                    "pred": {"intermediate"},
+                    "obs": {"L"},
+                    "L": {"pred"},
+                    "intermediate": {"a", "b"},
+                    "a": set(),
+                    "b": set(),
+                },
+            ),
+            (
+                ["obs"],
+                ["pred", "obs", "L", "intermediate", "a", "b"],
+                {
+                    "pred": {"intermediate"},
+                    "obs": {"L"},
+                    "L": {"pred"},
+                    "intermediate": {"a", "b"},
+                    "a": set(),
+                    "b": set(),
+                },
+            ),
+            # selecting ["c", "L"] is akin to selecting the entire graph
+            (
+                ["c", "L"],
+                ModelGraph(model_with_different_descendants()).vars_to_plot(),
+                ModelGraph(model_with_different_descendants()).make_compute_graph(),
+            ),
+        ],
+    )
+    def test_subgraph(self, var_names, vars_to_plot, compute_graph):
+        mg = ModelGraph(model_with_different_descendants())
+        assert set(mg.vars_to_plot(var_names=var_names)) == set(vars_to_plot)
+        assert mg.make_compute_graph(var_names=var_names) == compute_graph
 
 
 class TestImputationModel(BaseModelGraphTest):

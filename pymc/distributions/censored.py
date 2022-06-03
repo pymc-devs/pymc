@@ -18,6 +18,7 @@ from aesara.scalar import Clip
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
+from pymc.aesaraf import change_rv_size
 from pymc.distributions.distribution import SymbolicDistribution, _moment
 from pymc.util import check_dist_not_registered
 
@@ -41,13 +42,25 @@ class Censored(SymbolicDistribution):
 
     Parameters
     ----------
-    dist: PyMC unnamed distribution
-        PyMC distribution created via the `.dist()` API, which will be censored. This
-        distribution must be univariate and have a logcdf method implemented.
+    dist: unnamed distribution
+        Univariate distribution created via the `.dist()` API, which will be censored.
+        This distribution must have a logcdf method implemented for sampling.
+
+        .. warning:: dist will be cloned, rendering it independent of the one passed as input.
+
     lower: float or None
         Lower (left) censoring point. If `None` the distribution will not be left censored
     upper: float or None
         Upper (right) censoring point. If `None`, the distribution will not be right censored.
+
+    Warnings
+    --------
+    Continuous censored distributions should only be used as likelihoods.
+    Continuous censored distributions are a form of discrete-continuous mixture
+    and as such cannot be sampled properly without a custom step sampler.
+    If you wish to sample such a distribution, you can add the latent uncensored
+    distribution to the model and then wrap it in a :class:`~pymc.Deterministic`
+    :func:`~pymc.math.clip`.
 
 
     Examples
@@ -73,11 +86,18 @@ class Censored(SymbolicDistribution):
         return super().dist([dist, lower, upper], **kwargs)
 
     @classmethod
-    def rv_op(cls, dist, lower=None, upper=None, size=None, rngs=None):
-        if lower is None:
-            lower = at.constant(-np.inf)
-        if upper is None:
-            upper = at.constant(np.inf)
+    def ndim_supp(cls, *dist_params):
+        return 0
+
+    @classmethod
+    def rv_op(cls, dist, lower=None, upper=None, size=None):
+
+        lower = at.constant(-np.inf) if lower is None else at.as_tensor_variable(lower)
+        upper = at.constant(np.inf) if upper is None else at.as_tensor_variable(upper)
+
+        # When size is not specified, dist may have to be broadcasted according to lower/upper
+        dist_shape = size if size is not None else at.broadcast_shape(dist, lower, upper)
+        dist = change_rv_size(dist, dist_shape)
 
         # Censoring is achieved by clipping the base distribution between lower and upper
         rv_out = at.clip(dist, lower, upper)
@@ -88,40 +108,15 @@ class Censored(SymbolicDistribution):
         rv_out.tag.lower = lower
         rv_out.tag.upper = upper
 
-        if size is not None:
-            rv_out = cls.change_size(rv_out, size)
-        if rngs is not None:
-            rv_out = cls.change_rngs(rv_out, rngs)
-
         return rv_out
 
     @classmethod
-    def ndim_supp(cls, *dist_params):
-        return 0
-
-    @classmethod
     def change_size(cls, rv, new_size, expand=False):
-        dist_node = rv.tag.dist.owner
+        dist = rv.tag.dist
         lower = rv.tag.lower
         upper = rv.tag.upper
-        rng, old_size, dtype, *dist_params = dist_node.inputs
-        new_size = new_size if not expand else tuple(new_size) + tuple(old_size)
-        new_dist = dist_node.op.make_node(rng, new_size, dtype, *dist_params).default_output()
+        new_dist = change_rv_size(dist, new_size, expand=expand)
         return cls.rv_op(new_dist, lower, upper)
-
-    @classmethod
-    def change_rngs(cls, rv, new_rngs):
-        (new_rng,) = new_rngs
-        dist_node = rv.tag.dist.owner
-        lower = rv.tag.lower
-        upper = rv.tag.upper
-        olg_rng, size, dtype, *dist_params = dist_node.inputs
-        new_dist = dist_node.op.make_node(new_rng, size, dtype, *dist_params).default_output()
-        return cls.rv_op(new_dist, lower, upper)
-
-    @classmethod
-    def graph_rvs(cls, rv):
-        return (rv.tag.dist,)
 
 
 @_moment.register(Clip)
