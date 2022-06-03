@@ -9,6 +9,7 @@ from pymc.distributions import (
     NegativeBinomial,
     Normal,
     Uniform,
+    ZeroInflatedPoisson,
 )
 from pymc.math import dot
 from pymc.model import Deterministic, Model, Potential
@@ -47,6 +48,9 @@ class TestStrAndLatexRepr:
             # )
             nb2 = NegativeBinomial("nb_with_p_n", p=Uniform("nbp"), n=10)
 
+            # Symbolic distribution
+            zip = ZeroInflatedPoisson("zip", 0.5, 5)
+
             # Expected value of outcome
             mu = Deterministic("mu", floatX(alpha + dot(X, b)))
 
@@ -76,7 +80,7 @@ class TestStrAndLatexRepr:
             # add a potential as well
             pot = Potential("pot", mu**2)
 
-        self.distributions = [alpha, sigma, mu, b, Z, nb2, Y_obs, pot]
+        self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, Y_obs, pot]
         self.deterministics_or_potentials = [mu, pot]
         # tuples of (formatting, include_params
         self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
@@ -88,6 +92,7 @@ class TestStrAndLatexRepr:
                 r"beta ~ N(0, 10)",
                 r"Z ~ N(f(), f())",
                 r"nb_with_p_n ~ NB(10, nbp)",
+                r"zip ~ MarginalMixtureRV{inline=False}",
                 r"Y_obs ~ N(mu, sigma)",
                 r"pot ~ Potential(f(beta, alpha))",
             ],
@@ -98,6 +103,7 @@ class TestStrAndLatexRepr:
                 r"beta ~ N",
                 r"Z ~ N",
                 r"nb_with_p_n ~ NB",
+                r"zip ~ MarginalMixtureRV{inline=False}",
                 r"Y_obs ~ N",
                 r"pot ~ Potential",
             ],
@@ -108,6 +114,7 @@ class TestStrAndLatexRepr:
                 r"$\text{beta} \sim \operatorname{N}(0,~10)$",
                 r"$\text{Z} \sim \operatorname{N}(f(),~f())$",
                 r"$\text{nb_with_p_n} \sim \operatorname{NB}(10,~\text{nbp})$",
+                r"$\text{zip} \sim \text{MarginalMixtureRV{inline=False}}$",
                 r"$\text{Y_obs} \sim \operatorname{N}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
             ],
@@ -118,6 +125,7 @@ class TestStrAndLatexRepr:
                 r"$\text{beta} \sim \operatorname{N}$",
                 r"$\text{Z} \sim \operatorname{N}$",
                 r"$\text{nb_with_p_n} \sim \operatorname{NB}$",
+                r"$\text{zip} \sim \text{MarginalMixtureRV{inline=False}}$",
                 r"$\text{Y_obs} \sim \operatorname{N}$",
                 r"$\text{pot} \sim \operatorname{Potential}$",
             ],

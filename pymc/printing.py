@@ -55,6 +55,18 @@ def str_for_dist(rv: TensorVariable, formatting: str = "plain", include_params: 
             return rf"{print_name} ~ {dist_name}"
 
 
+def str_for_symbolic_dist(
+    rv: TensorVariable, formatting: str = "plain", include_params: bool = True
+) -> str:
+    """Make a human-readable string representation of a SymbolicDistribution in a model,
+    either LaTeX or plain, optionally with distribution parameter values included."""
+
+    if "latex" in formatting:
+        return rf"$\text{{{rv.name}}} \sim \text{{{rv.owner.op}}}$"
+    else:
+        return rf"{rv.name} ~ {rv.owner.op}"
+
+
 def str_for_model(model: Model, formatting: str = "plain", include_params: bool = True) -> str:
     """Make a human-readable string representation of Model, listing all random variables
     and their distributions, optionally including parameter values."""
