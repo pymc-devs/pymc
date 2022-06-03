@@ -4,6 +4,17 @@
 ::::{grid} 1 2 2 3
 :gutter: 3
 
+:::{grid-item-card} Bayesian Modeling and Computation in Python
+:img-top: https://bayesiancomputationbook.com/_images/Cover.jpg
+
+By Osvaldo Martin, Ravin Kumar and Junpeng Lao
+
+Hands on approach with PyMC and ArviZ focusing on the practice of applied statistics.
+
+[Website + code](https://bayesiancomputationbook.com/welcome.html)
+
+:::
+
 :::{grid-item-card} Bayesian Methods for Hackers
 :img-top: https://camo.githubusercontent.com/4a0aca82ca82efab71747d00db30f3a68de98e82/687474703a2f2f692e696d6775722e636f6d2f36444b596250622e706e673f31
 By Cameron Davidson-Pilon
@@ -53,17 +64,6 @@ A Bayesian Course with Examples in R and Stan.
 [Book website](http://xcelab.net/rm/statistical-rethinking/)
 
 [PyMC 3.x port of the code](https://github.com/pymc-devs/resources/tree/master/Rethinking)
-
-:::
-
-:::{grid-item-card} Bayesian Modeling and Computation in Python
-:img-top: https://bayesiancomputationbook.com/_images/Cover.jpg
-
-By Osvaldo Martin, Ravin Kumar and Junpeng Lao
-
-Hands on approach with PyMC and ArviZ focusing on the practice of applied statistics.
-
-[Website + code](https://bayesiancomputationbook.com/welcome.html)
 
 :::
 
