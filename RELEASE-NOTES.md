@@ -3,7 +3,7 @@
 ## PyMC 4.0.0
 ⚠️ The changes below are the delta between the releases `v3.11.5` →...→ `v4.0.0`.
 
-We the people of PyMC know that you, our dear users, are curious folks (yes, we see you), so **we also put together a [release announcement](https://www.pymc.io/blog/v4_announcement.html) on our website**.
+**If you want a description of the highlights of this release, check out the [release announcement](https://www.pymc.io/blog/v4_announcement.html) on our [new website](https://www.pymc.io)**.
 Feel free to read it, print it out, and give it to people on the street -- because _everybody_ has to know PyMC 4.0 is officially out 🍾
 
 ### Do not miss 🚨
