@@ -1206,6 +1206,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     )
                 elif length_tensor.owner is not None:
                     # The dimension was created from a model variable.
+                    # Get a handle on the tensor from which this dimension length was
+                    # obtained by doing subindexing on the shape as in `.shape[i]`.
+                    # Needed to check if it was another shared variable.
+                    # TODO: Consider checking the graph is what we are assuming it is
+                    # isinstance(length_tensor.owner.op, Subtensor)
+                    # isinstance(length_tensor.owner.inputs[0].owner.op, Shape)
                     length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
                     if length_belongs_to is shared_object:
                         # No surprise it's changing.
