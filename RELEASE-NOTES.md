@@ -15,7 +15,7 @@ Feel free to read it, print it out, and give it to people on the street -- becau
     - Sampling functions no longer respect user-specified global seeding! Always pass `random_seed` to ensure reproducible behavior.
     - `random_seed` now accepts RandomState and Generators besides integers.
   - ⚠️ The GLM submodule was removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
-  - ⚠️ BART was removed from the main package in [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental).
+  - ⚠️ BART has received various updates ([5091](https://github.com/pymc-devs/pymc3/pull/5091), [5177](https://github.com/pymc-devs/pymc3/pull/5177), [5229](https://github.com/pymc-devs/pymc3/pull/5229), [4914](https://github.com/pymc-devs/pymc3/pull/4914)) but was removed from the main package in [#5566](https://github.com/pymc-devs/pymc/pull/5566). It is now available from [pymc-experimental](https://github.com/pymc-devs/pymc-experimental).
   - ⚠️ PyMC now requires SciPy version `>= 1.4.1` (see [#4857](https://github.com/pymc-devs/pymc/pull/4857)).
 
 #### v3 features not yet working in v4 ⏳
@@ -60,13 +60,6 @@ Feel free to read it, print it out, and give it to people on the street -- becau
     - Adding support for [blackjax](https://github.com/blackjax-devs/blackjax)'s NUTS sampler via `pymc.sampling_jax.sample_blackjax_nuts()` (see [#5477](ihttps://github.com/pymc-devs/pymc/pull/5477))
     - `pymc.sampling_jax` samplers support `log_likelihood`, `observed_data`, and `sample_stats` in returned `InferenceData` object (see [#5189](https://github.com/pymc-devs/pymc/pull/5189))
     - Adding support for `pm.Deterministic` in `pymc.sampling_jax` (see [#5182](https://github.com/pymc-devs/pymc/pull/5182))
-
-- **BART**:
-  - Added partial dependence plots and individual conditional expectation plots [5091](https://github.com/pymc-devs/pymc3/pull/5091).
-  - Modify how particle weights are computed. This improves accuracy of the modeled function (see [5177](https://github.com/pymc-devs/pymc3/pull/5177)).
-  - Improve sampling, increase default number of particles [5229](https://github.com/pymc-devs/pymc3/pull/5229).
-  - A BART variable can be combined with other random variables. The `inv_link` argument has been removed (see [4914](https://github.com/pymc-devs/pymc3/pull/4914)).
-  - And many more improvements now in [pymc-experimental](https://www.pymc.io/projects/experimental/en/latest/index.html).
 
 - **Miscellaneous**:
   - The new `pm.find_constrained_prior` function can be used to find optimized prior parameters of a distribution under some
