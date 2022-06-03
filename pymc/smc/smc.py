@@ -571,7 +571,7 @@ def _logp_forw(point, out_vars, in_vars, shared):
             else:
                 new_in_vars.append(in_var)
 
-        out_vars = clone_replace(out_vars, replace_int_input, strict=False)
+        out_vars = clone_replace(out_vars, replace_int_input, rebuild_strict=False)
         in_vars = new_in_vars
 
     out_list, inarray0 = join_nonshared_inputs(point, out_vars, in_vars, shared)
