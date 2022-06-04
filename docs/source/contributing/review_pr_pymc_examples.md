@@ -14,7 +14,7 @@ The most important guideline is the following: **When you aren't _completely_
 sure about something communicate it, ask around and (re)read the documentation**.
 :::
 
-pymc-examples is a huge collection of notebooks, covering many fields
+[pymc-examples](https://github.com/pymc-devs/pymc-examples/) is a huge collection of notebooks, covering many fields
 and applications of PyMC and Bayesian statistics. In addition,
 its HTML generation infrastructure has been improved by specialized
 people who were also paid so they could dedicate themselves to this task.
