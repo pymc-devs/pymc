@@ -1,3 +1,4 @@
+(implementing-a-distribution)=
 # Implementing a Distribution
 
 This guide provides an overview on how to implement a distribution for PyMC version `>=4.0.0`.
