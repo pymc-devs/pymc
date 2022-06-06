@@ -10,7 +10,7 @@ We recommend using [Anaconda](https://www.anaconda.com/) (or [Miniforge](https:/
 conda create -n pymc_env pymc python pip
 ```
 
-YOu can also use pip. Activate the environment that you wish to install into, and install as follows:
+You can also use pip. Activate the environment that you wish to install into, and install as follows:
 
 ```console
 conda activate pymc_env
