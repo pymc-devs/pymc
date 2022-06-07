@@ -1825,7 +1825,7 @@ def compile_fn(outs, mode=None, point_fn=True, model=None, **kwargs):
     Compiled Aesara function as point function.
     """
     model = modelcontext(model)
-    return model.compile_fn(outs, mode, point_fn=point_fn, **kwargs)
+    return model.compile_fn(outs, mode=mode, point_fn=point_fn, **kwargs)
 
 
 def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
