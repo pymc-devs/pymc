@@ -690,7 +690,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         return self.model.compile_fn(self.d2logpt(vars=vars, jacobian=jacobian))
 
-    def logpt(
+    def logpt(self, *args, **kwargs):
+        warnings.warn(
+            "Model.logpt has been deprecated. Use Model.logp instead.",
+            FutureWarning,
+        )
+        return self.logp(*args, **kwargs)
+
+    def logp(
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
