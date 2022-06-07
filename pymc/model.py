@@ -671,7 +671,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian:
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.model.compile_fn(self.dlogpt(vars=vars, jacobian=jacobian))
+        return self.model.compile_fn(self.dlogp(vars=vars, jacobian=jacobian))
 
     def compile_d2logp(
         self,
@@ -688,7 +688,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian:
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.model.compile_fn(self.d2logpt(vars=vars, jacobian=jacobian))
+        return self.model.compile_fn(self.d2logp(vars=vars, jacobian=jacobian))
 
     def logpt(self, *args, **kwargs):
         warnings.warn(
@@ -771,7 +771,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
         logp_scalar.name = logp_scalar_name
         return logp_scalar
 
-    def dlogpt(
+    def dlogpt(self, *args, **kwargs):
+        warnings.warn(
+            "Model.dlogpt has been deprecated. Use Model.dlogp instead.",
+            FutureWarning,
+        )
+        return self.logp(*args, **kwargs)
+
+    def dlogp(
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
@@ -809,7 +816,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
         cost = self.logpt(jacobian=jacobian)
         return gradient(cost, value_vars)
 
-    def d2logpt(
+    def d2logpt(self, *args, **kwargs):
+        warnings.warn(
+            "Model.d2logpt has been deprecated. Use Model.d2logp instead.",
+            FutureWarning,
+        )
+        return self.logp(*args, **kwargs)
+
+    def d2logp(
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
