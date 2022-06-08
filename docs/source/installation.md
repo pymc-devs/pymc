@@ -27,4 +27,3 @@ pip install jax jaxlib blackjax
 ```
 
 Note that JAX is not directly supported on Windows systems at the moment.
-
