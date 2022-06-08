@@ -776,7 +776,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             "Model.dlogpt has been deprecated. Use Model.dlogp instead.",
             FutureWarning,
         )
-        return self.logp(*args, **kwargs)
+        return self.dlogp(*args, **kwargs)
 
     def dlogp(
         self,
