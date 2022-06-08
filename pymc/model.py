@@ -821,7 +821,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             "Model.d2logpt has been deprecated. Use Model.d2logp instead.",
             FutureWarning,
         )
-        return self.logp(*args, **kwargs)
+        return self.d2logp(*args, **kwargs)
 
     def d2logp(
         self,
