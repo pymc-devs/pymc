@@ -966,3 +966,16 @@ def test_deterministic():
 
 def test_empty_model_representation():
     assert pm.Model().str_repr() == ""
+
+
+def test_compile_fn():
+    with pm.Model() as m:
+        x = pm.Normal("x", 0, 1, size=2)
+        y = pm.LogNormal("y", 0, 1, size=2)
+
+    test_vals = np.array([0.0, -1.0])
+    state = {"x": test_vals, "y_log__": test_vals}
+    result_expect = m.compile_fn([x, y])(state)
+    result_compute = pm.compile_fn([x, y])(state)
+    for a, b in zip(result_compute, result_expect):
+        np.testing.assert_allclose(a, b)
