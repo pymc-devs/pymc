@@ -119,7 +119,15 @@ subtensor_types = (
 )
 
 
-def joint_logpt(
+def joint_logpt(self, *args, **kwargs):
+    warnings.warn(
+        "logprob.joint_logpt has been deprecated. Use logprob.joint_logp instead.",
+        FutureWarning,
+    )
+    return self.joint_logp(*args, **kwargs)
+
+
+def joint_logp(
     var: Union[TensorVariable, List[TensorVariable]],
     rv_values: Optional[Union[TensorVariable, Dict[TensorVariable, TensorVariable]]] = None,
     *,
@@ -159,14 +167,14 @@ def joint_logpt(
 
     """
     # TODO: In future when we drop support for tag.value_var most of the following
-    # logic can be removed and logpt can just be a wrapper function that calls aeppl's
+    # logic can be removed and logp can just be a wrapper function that calls aeppl's
     # joint_logprob directly.
 
     # If var is not a list make it one.
     if not isinstance(var, (list, tuple)):
         var = [var]
 
-    # If logpt isn't provided values it is assumed that the tagged value var or
+    # If logp isn't provided values it is assumed that the tagged value var or
     # observation is the value variable for that particular RV.
     if rv_values is None:
         rv_values = {}
@@ -251,7 +259,7 @@ def joint_logpt(
             "reference nonlocal variables."
         )
 
-    # aeppl returns the logpt for every single value term we provided to it. This includes
+    # aeppl returns the logp for every single value term we provided to it. This includes
     # the extra values we plugged in above, so we filter those we actually wanted in the
     # same order they were given in.
     logp_var_dict = {}

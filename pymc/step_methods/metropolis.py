@@ -226,7 +226,7 @@ class Metropolis(ArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
         super().__init__(vars, shared)
 
     def reset_tuning(self):
@@ -794,7 +794,7 @@ class DEMetropolis(PopulationArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
         super().__init__(vars, shared)
 
     def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
@@ -957,7 +957,7 @@ class DEMetropolisZ(ArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
         super().__init__(vars, shared)
 
     def reset_tuning(self):

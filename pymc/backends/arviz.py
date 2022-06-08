@@ -251,7 +251,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 (
                     var,
                     self.model.compile_fn(
-                        self.model.logpt(var, sum=False)[0],
+                        self.model.logp(var, sum=False)[0],
                         inputs=self.model.value_vars,
                         on_unused_input="ignore",
                     ),
@@ -263,7 +263,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 (
                     var,
                     self.model.compile_fn(
-                        self.model.logpt(var, sum=False)[0],
+                        self.model.logp(var, sum=False)[0],
                         inputs=self.model.value_vars,
                         on_unused_input="ignore",
                     ),

@@ -677,7 +677,7 @@ def test_set_initval():
     assert y in model.initial_values
 
 
-def test_datalogpt_multiple_shapes():
+def test_datalogp_multiple_shapes():
     with pm.Model() as m:
         x = pm.Normal("x", 0, 1)
         z1 = pm.Potential("z1", x)
@@ -688,7 +688,7 @@ def test_datalogpt_multiple_shapes():
 
     # This would raise a TypeError, see #4803 and #4804
     x_val = m.rvs_to_values[x]
-    m.datalogpt.eval({x_val: 0})
+    m.datalogp.eval({x_val: 0})
 
 
 def test_nested_model_coords():

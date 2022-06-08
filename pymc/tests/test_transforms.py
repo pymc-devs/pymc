@@ -24,7 +24,7 @@ import pymc as pm
 import pymc.distributions.transforms as tr
 
 from pymc.aesaraf import floatX, jacobian
-from pymc.distributions import joint_logpt
+from pymc.distributions import joint_logp
 from pymc.tests.checks import close_to, close_to_logical
 from pymc.tests.helpers import SeededTest
 from pymc.tests.test_distributions import (
@@ -287,10 +287,10 @@ class TestElementWiseLogp(SeededTest):
         x_val_untransf = at.constant(test_array_untransf).type()
 
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
-        assert joint_logpt(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
+        assert joint_logp(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
 
-        v1 = joint_logpt(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
-        v2 = joint_logpt(x, x_val_untransf, transformed=False).eval(
+        v1 = joint_logp(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
+        v2 = joint_logp(x, x_val_untransf, transformed=False).eval(
             {x_val_untransf: test_array_untransf}
         )
         close_to(v1, v2, tol)
@@ -310,13 +310,13 @@ class TestElementWiseLogp(SeededTest):
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
         # Original distribution is univariate
         if x.owner.op.ndim_supp == 0:
-            assert joint_logpt(x, sum=False)[0].ndim == x.ndim == (jacob_det.ndim + 1)
+            assert joint_logp(x, sum=False)[0].ndim == x.ndim == (jacob_det.ndim + 1)
         # Original distribution is multivariate
         else:
-            assert joint_logpt(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
+            assert joint_logp(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
 
-        a = joint_logpt(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
-        b = joint_logpt(x, x_val_untransf, transformed=False).eval(
+        a = joint_logp(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
+        b = joint_logp(x, x_val_untransf, transformed=False).eval(
             {x_val_untransf: test_array_untransf}
         )
         # Hack to get relative tolerance

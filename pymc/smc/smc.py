@@ -219,10 +219,10 @@ class SMC_KERNEL(ABC):
         shared = make_shared_replacements(initial_point, self.variables, self.model)
 
         self.prior_logp_func = _logp_forw(
-            initial_point, [self.model.varlogpt], self.variables, shared
+            initial_point, [self.model.varlogp], self.variables, shared
         )
         self.likelihood_logp_func = _logp_forw(
-            initial_point, [self.model.datalogpt], self.variables, shared
+            initial_point, [self.model.datalogp], self.variables, shared
         )
 
         priors = [self.prior_logp_func(sample) for sample in self.tempered_posterior]

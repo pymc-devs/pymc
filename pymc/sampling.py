@@ -204,7 +204,7 @@ def assign_step_methods(model, step=None, methods=None, step_kwargs=None):
     # Use competence classmethods to select step methods for remaining
     # variables
     selected_steps = defaultdict(list)
-    model_logpt = model.logpt()
+    model_logp = model.logp()
 
     for var in model.value_vars:
         if var not in assigned_vars:
@@ -212,7 +212,7 @@ def assign_step_methods(model, step=None, methods=None, step_kwargs=None):
             has_gradient = var.dtype not in discrete_types
             if has_gradient:
                 try:
-                    tg.grad(model_logpt, var)
+                    tg.grad(model_logp, var)
                 except (NotImplementedError, tg.NullTypeGradError):
                     has_gradient = False
 
