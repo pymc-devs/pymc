@@ -2558,7 +2558,7 @@ class ChiSquared(PositiveContinuous):
         return logcdf(Gamma.dist(alpha=nu / 2, beta=0.5), value)
 
 
-# TODO: Remove this once logpt for multiplication is working!
+# TODO: Remove this once logp for multiplication is working!
 class WeibullBetaRV(WeibullRV):
     ndims_params = [0, 0]
 
