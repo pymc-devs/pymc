@@ -204,8 +204,8 @@ distribution. It has the following signature:
 
 In the ``logp`` method, parameters and values are either Aesara tensors,
 or could be converted to tensors. It is rather convenient as the
-evaluation of logp is represented as a tensor (``RV.logpt``), and when
-we linked different ``logp`` together (e.g., summing all ``RVs.logpt``
+evaluation of logp is represented as a tensor (``RV.logp``), and when
+we linked different ``logp`` together (e.g., summing all ``RVs.logp``
 to get the model totall logp) the dependence is taken care of by Aesara
 when the graph is built and compiled. Again, since the compiled function
 depends on the nodes that already in the graph, whenever you want to generate
@@ -293,8 +293,8 @@ a model:
 
     print(type(x))                              # ==> <class 'aesara.tensor.var.TensorVariable'>
     print(m.free_RVs)                           # ==> [x]
-    print(logpt(x, 5.0))                        # ==> Elemwise{switch,no_inplace}.0
-    print(logpt(x, 5.).eval({}))                # ==> -13.418938533204672
+    print(logp(x, 5.0))                        # ==> Elemwise{switch,no_inplace}.0
+    print(logp(x, 5.).eval({}))                # ==> -13.418938533204672
     print(m.logp({'x': 5.}))                    # ==> -13.418938533204672
 
 
@@ -431,7 +431,7 @@ initialised within the same model) as input, for example:
 
     ['d2logp',
      'd2logp_nojac',
-     'datalogpt',
+     'datalogp',
      'dlogp',
      'dlogp_array',
      'dlogp_nojac',
@@ -447,8 +447,8 @@ initialised within the same model) as input, for example:
      'logp_elemwise',
      'logp_nojac',
      'logp_nojact',
-     'logpt',
-     'varlogpt']
+     'logp',
+     'varlogp']
 
 
 
@@ -462,10 +462,10 @@ sum them together to get the model logp:
 .. code:: python
 
     @property
-    def logpt(self):
+    def logp(self):
         """Aesara scalar of log-probability of the model"""
         with self:
-            factors = [var.logpt for var in self.basic_RVs] + self.potentials
+            factors = [var.logp for var in self.basic_RVs] + self.potentials
             logp = at.sum([at.sum(factor) for factor in factors])
             ...
             return logp
@@ -491,12 +491,12 @@ using aesara.clone_replace to replace the inputs to a tensor.
 
 .. code:: python
 
-    type(m.logpt)         # ==> aesara.tensor.var.TensorVariable
+    type(m.logp)         # ==> aesara.tensor.var.TensorVariable
 
 
 .. code:: python
 
-    m.logpt.eval({x: np.random.randn(*x.tag.test_value.shape) for x in m.free_RVs})
+    m.logp.eval({x: np.random.randn(*x.tag.test_value.shape) for x in m.free_RVs})
 
 output:
 
@@ -507,7 +507,7 @@ output:
 
 
 PyMC then compiles a logp function with gradient that takes
-``model.free_RVs`` as input and ``model.logpt`` as output. It could be a
+``model.free_RVs`` as input and ``model.logp`` as output. It could be a
 subset of tensors in ``model.free_RVs`` if we want a conditional
 logp/dlogp function:
 
@@ -521,11 +521,11 @@ logp/dlogp function:
         varnames = [var.name for var in grad_vars]  # In a simple case with only continous RVs,
                                                     # this is all the free_RVs
         extra_vars = [var for var in self.free_RVs if var.name not in varnames]
-        return ValueGradFunction(self.logpt, grad_vars, extra_vars, **kwargs)
+        return ValueGradFunction(self.logp, grad_vars, extra_vars, **kwargs)
 
 ``ValueGradFunction`` is a callable class which isolates part of the
 Aesara graph to compile additional Aesara functions. PyMC relies on
-``aesara.clone_replace`` to copy the ``model.logpt`` and replace its input. It
+``aesara.clone_replace`` to copy the ``model.logp`` and replace its input. It
 does not edit or rewrite the graph directly.
 
 The important parts of the above function is highlighted and commented.
@@ -595,7 +595,7 @@ logp function in Aesara directly:
 .. code:: python
 
     import aesara
-    func = aesara.function(m.free_RVs, m.logpt)
+    func = aesara.function(m.free_RVs, m.logp)
     func(*inputlist)
 
 
@@ -607,8 +607,8 @@ logp function in Aesara directly:
 
 .. code:: python
 
-    logpt_grad = aesara.grad(m.logpt, m.free_RVs)
-    func_d = aesara.function(m.free_RVs, logpt_grad)
+    logp_grad = aesara.grad(m.logp, m.free_RVs)
+    func_d = aesara.function(m.free_RVs, logp_grad)
     func_d(*inputlist)
 
 
@@ -626,11 +626,11 @@ Similarly, build a conditional logp:
 .. code:: python
 
     shared = aesara.shared(inputlist[1])
-    func2 = aesara.function([m.free_RVs[0]], m.logpt, givens=[(m.free_RVs[1], shared)])
+    func2 = aesara.function([m.free_RVs[0]], m.logp, givens=[(m.free_RVs[1], shared)])
     print(func2(inputlist[0]))
 
-    logpt_grad2 = aesara.grad(m.logpt, m.free_RVs[0])
-    func_d2 = aesara.function([m.free_RVs[0]], logpt_grad2, givens=[(m.free_RVs[1], shared)])
+    logp_grad2 = aesara.grad(m.logp, m.free_RVs[0])
+    func_d2 = aesara.function([m.free_RVs[0]], logp_grad2, givens=[(m.free_RVs[1], shared)])
     print(func_d2(inputlist[0]))
 
 
@@ -647,7 +647,7 @@ everything into a single function:
 
 .. code:: python
 
-    func_logp_and_grad = aesara.function(m.free_RVs, [m.logpt, logpt_grad])  # ==> ERROR
+    func_logp_and_grad = aesara.function(m.free_RVs, [m.logp, logp_grad])  # ==> ERROR
 
 
 We want to have a function that return the evaluation and its gradient
