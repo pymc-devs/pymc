@@ -862,12 +862,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return hessian(cost, value_vars)
 
     @property
-    def datalogpt(self, *args, **kwargs):
+    def datalogpt(self):
         warnings.warn(
             "Model.datalogpt has been deprecated. Use Model.datalogp instead.",
             FutureWarning,
         )
-        return self.datalogp(*args, **kwargs)
+        return self.datalogp
 
     @property
     def datalogp(self) -> Variable:
@@ -876,12 +876,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.observedlogp + self.potentiallogp
 
     @property
-    def varlogpt(self, *args, **kwargs):
+    def varlogpt(self):
         warnings.warn(
             "Model.varlogpt has been deprecated. Use Model.varlogp instead.",
             FutureWarning,
         )
-        return self.varlogp(*args, **kwargs)
+        return self.varlogp
 
     @property
     def varlogp(self) -> Variable:
@@ -896,12 +896,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.logp(vars=self.free_RVs, jacobian=False)
 
     @property
-    def observedlogpt(self, *args, **kwargs):
+    def observedlogpt(self):
         warnings.warn(
             "Model.observedlogpt has been deprecated. Use Model.observedlogp instead.",
             FutureWarning,
         )
-        return self.observedlogp(*args, **kwargs)
+        return self.observedlogp
 
     @property
     def observedlogp(self) -> Variable:
@@ -909,12 +909,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.logp(vars=self.observed_RVs)
 
     @property
-    def potentiallogpt(self, *args, **kwargs):
+    def potentiallogpt(self):
         warnings.warn(
             "Model.potentiallogpt has been deprecated. Use Model.potentiallogp instead.",
             FutureWarning,
         )
-        return self.potentiallogp(*args, **kwargs)
+        return self.potentiallogp
 
     @property
     def potentiallogp(self) -> Variable:

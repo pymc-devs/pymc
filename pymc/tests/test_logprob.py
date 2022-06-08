@@ -43,6 +43,7 @@ from pymc.distributions.logprob import (
     _get_scaling,
     ignore_logprob,
     joint_logp,
+    joint_logpt,
     logcdf,
     logp,
 )
@@ -120,6 +121,9 @@ def test_joint_logp_basic():
     c_value_var = m.rvs_to_values[c]
 
     b_logp = joint_logp(b, b_value_var, sum=False)
+
+    with pytest.warns(FutureWarning):
+        b_logpt = joint_logpt(b, b_value_var, sum=False)
 
     res_ancestors = list(walk_model(b_logp, walk_past_rvs=True))
     res_rv_ancestors = [
