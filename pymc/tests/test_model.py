@@ -887,17 +887,24 @@ def test_model_logpt_deprecation_warning():
 
     with pytest.warns(FutureWarning):
         m.logpt()
+
     with pytest.warns(FutureWarning):
         m.dlogpt()
+
     with pytest.warns(FutureWarning):
         m.d2logpt()
 
     with pytest.warns(FutureWarning):
         m.datalogpt
+
     with pytest.warns(FutureWarning):
         m.varlogpt
+
     with pytest.warns(FutureWarning):
         m.observedlogpt
+
+    with pytest.warns(FutureWarning):
+        m.potentiallogpt
 
 
 @pytest.mark.parametrize("jacobian", [True, False])
