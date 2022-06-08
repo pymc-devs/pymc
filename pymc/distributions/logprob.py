@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 from collections.abc import Mapping
 from typing import Dict, List, Optional, Sequence, Union
@@ -119,12 +120,12 @@ subtensor_types = (
 )
 
 
-def joint_logpt(self, *args, **kwargs):
+def joint_logpt(*args, **kwargs):
     warnings.warn(
         "logprob.joint_logpt has been deprecated. Use logprob.joint_logp instead.",
         FutureWarning,
     )
-    return self.joint_logp(*args, **kwargs)
+    return joint_logp(*args, **kwargs)
 
 
 def joint_logp(

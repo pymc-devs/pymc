@@ -880,6 +880,26 @@ def test_set_data_indirect_resize_with_coords():
         pmodel.set_data("mdata", [1, 2], coords=dict(mdim=[1, 2, 3]))
 
 
+def test_model_logpt_deprecation_warning():
+    with pm.Model() as m:
+        x = pm.Normal("x", 0, 1, size=2)
+        y = pm.LogNormal("y", 0, 1, size=2)
+
+    with pytest.warns(FutureWarning):
+        m.logpt()
+    with pytest.warns(FutureWarning):
+        m.dlogpt()
+    with pytest.warns(FutureWarning):
+        m.d2logpt()
+
+    with pytest.warns(FutureWarning):
+        m.datalogpt
+    with pytest.warns(FutureWarning):
+        m.varlogpt
+    with pytest.warns(FutureWarning):
+        m.observedlogpt
+
+
 @pytest.mark.parametrize("jacobian", [True, False])
 def test_model_logp(jacobian):
     with pm.Model() as m:
