@@ -976,6 +976,7 @@ def test_compile_fn():
     test_vals = np.array([0.0, -1.0])
     state = {"x": test_vals, "y_log__": test_vals}
     result_expect = m.compile_fn([x, y])(state)
-    result_compute = pm.compile_fn([x, y])(state)
+    with m:
+        result_compute = pm.compile_fn([x, y])(state)
     for a, b in zip(result_compute, result_expect):
         np.testing.assert_allclose(a, b)
