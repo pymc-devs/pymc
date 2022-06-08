@@ -14,16 +14,16 @@ If you like, replace the name `pymc_env` with whatever environment name you pref
 
 ## JAX sampling
 
-If you wish to enable sampling using the JAX backend via NumPyro (experimental), the following should also be installed:
+If you wish to enable sampling using the JAX backend via NumPyro, the following should also be installed:
 
 ```console
-pip install jax jaxlib numpyro
+pip install numpyro
 ```
 
 Similarly, to use BlackJAX for sampling it should be installed via `pip`:
 
 ```console
-pip install blackjax
+pip install jax jaxlib blackjax
 ```
 
 Note that JAX is not directly supported on Windows systems at the moment.
