@@ -198,10 +198,6 @@ class EmpiricalGroup(Group):
                 # Initialize particles
                 histogram = np.tile(start, (size, 1))
                 histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
-        elif isinstance(trace, InferenceData):
-            raise NotImplementedError(
-                "InferenceData is not supported, use return_inference_data=False"
-            )
         else:
             histogram = np.empty((len(trace) * len(trace.chains), self.ddim))
             i = 0
@@ -213,7 +209,11 @@ class EmpiricalGroup(Group):
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
-        if trace is not None and not all(
+        if isinstance(trace, InferenceData):
+            raise NotImplementedError(
+                "InferenceData is not supported, use return_inferencedata=False"
+            )
+        elif trace is not None and not all(
             [self.model.rvs_to_values[var].name in trace.varnames for var in self.group]
         ):
             raise ValueError("trace has not all free RVs in the group")
