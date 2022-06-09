@@ -18,7 +18,7 @@ import numpy as np
 from aesara import tensor as at
 from aesara.graph.basic import Variable
 from aesara.tensor.var import TensorVariable
-
+from arviz import InferenceData
 import pymc as pm
 
 from pymc.blocking import DictToArrayBijection
@@ -198,7 +198,10 @@ class EmpiricalGroup(Group):
                 # Initialize particles
                 histogram = np.tile(start, (size, 1))
                 histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
-
+        elif isinstance(trace, InferenceData):
+            raise NotImplementedError(
+                "InferenceData is not supported, use return_inference_data=False"
+            )
         else:
             histogram = np.empty((len(trace) * len(trace.chains), self.ddim))
             i = 0
