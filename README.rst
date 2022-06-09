@@ -62,12 +62,7 @@ Audio & Video
 Installation
 ============
 
-To install PyMC on your system, follow the instructions on the appropriate installation guide:
-
--  `Installing PyMC on MacOS <https://github.com/pymc-devs/pymc/wiki/Installation-Guide-(MacOS)>`__
--  `Installing PyMC on Linux <https://github.com/pymc-devs/pymc/wiki/Installation-Guide-(Linux)>`__
--  `Installing PyMC on Windows <https://github.com/pymc-devs/pymc/wiki/Installation-Guide-(Windows)>`__
-
+To install PyMC on your system, follow the instructions on the `installation guide <https://www.pymc.io/projects/docs/en/latest/installation.html>`__.
 
 Citing PyMC
 ===========
