@@ -100,8 +100,13 @@ class TestGaussianRandomWalk:
         size = None
 
         pymc_dist = pm.GaussianRandomWalk
-        pymc_dist_params = {"mu": 1.0, "sigma": 2, "init": pm.Constant.dist(0), "steps": 4}
-        expected_rv_op_params = {"mu": 1.0, "sigma": 2, "init": pm.Constant.dist(0), "steps": 4}
+        pymc_dist_params = {"mu": 1.0, "sigma": 2, "init_dist": pm.Constant.dist(0), "steps": 4}
+        expected_rv_op_params = {
+            "mu": 1.0,
+            "sigma": 2,
+            "init_dist": pm.Constant.dist(0),
+            "steps": 4,
+        }
 
         checks_to_run = [
             "check_pymc_params_match_rv_op",
@@ -142,36 +147,38 @@ class TestGaussianRandomWalk:
     @pytest.mark.parametrize("init", [None, pm.Normal.dist()])
     def test_gaussian_random_walk_init_dist_shape(self, init):
         """Test that init_dist is properly resized"""
-        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init)
+        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init)
         assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
 
-        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init, size=(5,))
+        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, size=(5,))
         assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
 
-        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init, shape=2)
+        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=2)
         assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
 
-        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init=init, shape=(5, 2))
+        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=(5, 2))
         assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
 
-        grw = pm.GaussianRandomWalk.dist(mu=[0, 0], sigma=1, steps=1, init=init)
+        grw = pm.GaussianRandomWalk.dist(mu=[0, 0], sigma=1, steps=1, init_dist=init)
         assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
 
-        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=[1, 1], steps=1, init=init)
+        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=[1, 1], steps=1, init_dist=init)
         assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
 
-        grw = pm.GaussianRandomWalk.dist(mu=np.zeros((3, 1)), sigma=[1, 1], steps=1, init=init)
+        grw = pm.GaussianRandomWalk.dist(mu=np.zeros((3, 1)), sigma=[1, 1], steps=1, init_dist=init)
         assert tuple(grw.owner.inputs[-2].shape.eval()) == (3, 2)
 
     def test_shape_ellipsis(self):
         grw = pm.GaussianRandomWalk.dist(
-            mu=0, sigma=1, steps=5, init=pm.Normal.dist(), shape=(3, ...)
+            mu=0, sigma=1, steps=5, init_dist=pm.Normal.dist(), shape=(3, ...)
         )
         assert tuple(grw.shape.eval()) == (3, 6)
         assert tuple(grw.owner.inputs[-2].shape.eval()) == (3,)
 
     def test_gaussianrandomwalk_broadcasted_by_init_dist(self):
-        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=4, init=pm.Normal.dist(size=(2, 3)))
+        grw = pm.GaussianRandomWalk.dist(
+            mu=0, sigma=1, steps=4, init_dist=pm.Normal.dist(size=(2, 3))
+        )
         assert tuple(grw.shape.eval()) == (2, 3, 5)
         assert grw.eval().shape == (2, 3, 5)
 
@@ -210,14 +217,14 @@ class TestGaussianRandomWalk:
         ],
     )
     def test_gaussian_random_walk_init_dist_logp(self, init):
-        grw = pm.GaussianRandomWalk.dist(init=init, steps=1)
+        grw = pm.GaussianRandomWalk.dist(init_dist=init, steps=1)
         assert np.isclose(
             pm.logp(grw, [0, 0]).eval(),
             pm.logp(init, 0).eval() + scipy.stats.norm.logpdf(0),
         )
 
     @pytest.mark.parametrize(
-        "mu, sigma, init, steps, size, expected",
+        "mu, sigma, init_dist, steps, size, expected",
         [
             (0, 1, Normal.dist(1), 10, None, np.ones((11,))),
             (1, 1, Normal.dist(0), 10, (2,), np.full((2, 11), np.arange(11))),
@@ -233,10 +240,14 @@ class TestGaussianRandomWalk:
             ),
         ],
     )
-    def test_moment(self, mu, sigma, init, steps, size, expected):
+    def test_moment(self, mu, sigma, init_dist, steps, size, expected):
         with Model() as model:
-            GaussianRandomWalk("x", mu=mu, sigma=sigma, init=init, steps=steps, size=size)
+            GaussianRandomWalk("x", mu=mu, sigma=sigma, init_dist=init_dist, steps=steps, size=size)
         assert_moment_is_expected(model, expected)
+
+    def test_init_deprecated_arg(self):
+        with pytest.warns(FutureWarning, match="init parameter is now called init_dist"):
+            pm.GaussianRandomWalk.dist(init=Normal.dist(), shape=(10,))
 
 
 class TestAR:
@@ -304,11 +315,25 @@ class TestAR:
         y_tp = np.random.randn(batch_size, steps)
         with Model() as t0:
             beta = Normal("beta", 0.0, 1.0, shape=(batch_size, ar_order), initval=beta_tp)
-            AR("y", beta, sigma=1.0, shape=(batch_size, steps), initval=y_tp)
+            AR(
+                "y",
+                beta,
+                sigma=1.0,
+                init_dist=Normal.dist(0, 1),
+                shape=(batch_size, steps),
+                initval=y_tp,
+            )
         with Model() as t1:
             beta = Normal("beta", 0.0, 1.0, shape=(batch_size, ar_order), initval=beta_tp)
             for i in range(batch_size):
-                AR(f"y_{i}", beta[i], sigma=1.0, shape=steps, initval=y_tp[i])
+                AR(
+                    f"y_{i}",
+                    beta[i],
+                    init_dist=Normal.dist(0, 1),
+                    sigma=1.0,
+                    shape=steps,
+                    initval=y_tp[i],
+                )
 
         np.testing.assert_allclose(
             t0.compile_logp()(t0.initial_point()),
@@ -373,7 +398,7 @@ class TestAR:
         beta_tp = aesara.shared(np.random.randn(ar_order), shape=(3,))
         y_tp = np.random.randn(batch_size, steps)
         with Model() as t0:
-            init_dist = Normal.dist(0.0, 1.0, size=(batch_size, ar_order))
+            init_dist = Normal.dist(0.0, 100.0, size=(batch_size, ar_order))
             AR("y", beta_tp, sigma=0.01, init_dist=init_dist, steps=steps, initval=y_tp)
         with Model() as t1:
             for i in range(batch_size):
@@ -434,8 +459,12 @@ class TestAR:
             AR("x", rho=[0, 0], init_dist=init_dist, steps=5, size=size)
         assert_moment_is_expected(model, expected, check_finite_logp=False)
 
+    def test_init_deprecated_arg(self):
+        with pytest.warns(FutureWarning, match="init parameter is now called init_dist"):
+            pm.AR.dist(rho=[1, 2, 3], init=Normal.dist(), shape=(10,))
 
-@pytest.mark.xfail(reason="Timeseries not refactored")
+
+@pytest.mark.xfail(reason="Timeseries not refactored", raises=NotImplementedError)
 def test_GARCH11():
     # test data ~ N(0, 1)
     data = np.array(
@@ -496,7 +525,7 @@ def _gen_sde_path(sde, pars, dt, n, x0):
     return np.array(xs)
 
 
-@pytest.mark.xfail(reason="Timeseries not refactored")
+@pytest.mark.xfail(reason="Timeseries not refactored", raises=NotImplementedError)
 def test_linear():
     lam = -0.78
     sig2 = 5e-3

@@ -1322,3 +1322,9 @@ class TestMixtureDefaultTransforms:
             with pytest.warns(None) as rec:
                 Mixture("mix5", w=[0.5, 0.5], comp_dists=comp_dists, observed=1)
             assert not rec
+
+            # Case where the appropriate default transform is None
+            comp_dists = [Normal.dist(), Normal.dist()]
+            with pytest.warns(None) as rec:
+                Mixture("mix6", w=[0.5, 0.5], comp_dists=comp_dists)
+            assert not rec

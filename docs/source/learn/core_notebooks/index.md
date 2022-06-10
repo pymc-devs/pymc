@@ -9,4 +9,5 @@ GLM_linear
 model_comparison
 posterior_predictive
 dimensionality
+pymc_aesara
 :::

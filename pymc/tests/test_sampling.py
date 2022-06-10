@@ -935,8 +935,10 @@ class TestSamplePPC(SeededTest):
         assert np.all(np.abs(ppc.posterior_predictive.c + 4) <= 0.1)
 
 
+@pytest.mark.xfail(
+    reason="sample_posterior_predictive_w not refactored for v4", raises=NotImplementedError
+)
 class TestSamplePPCW(SeededTest):
-    @pytest.mark.xfail(reason="sample_posterior_predictive_w not refactored for v4")
     def test_sample_posterior_predictive_w(self):
         data0 = np.random.normal(0, 1, size=50)
         warning_msg = "The number of samples is too small to check convergence reliably"
@@ -986,7 +988,6 @@ class TestSamplePPCW(SeededTest):
         ):
             pm.sample_posterior_predictive_w([trace_0, trace_2], 100, [model_0, model_2])
 
-    @pytest.mark.xfail(reason="sample_posterior_predictive_w not refactored for v4")
     def test_potentials_warning(self):
         warning_msg = "The effect of Potentials on other parameters is ignored during"
         with pm.Model() as m:

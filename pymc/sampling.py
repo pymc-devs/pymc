@@ -2032,6 +2032,8 @@ def sample_posterior_predictive_w(
         weighted models (default), or a dictionary with variable names as keys, and samples as
         numpy arrays.
     """
+    raise NotImplementedError(f"sample_posterior_predictive_w has not yet been ported to PyMC 4.0.")
+
     if isinstance(traces[0], InferenceData):
         n_samples = [
             trace.posterior.sizes["chain"] * trace.posterior.sizes["draw"] for trace in traces

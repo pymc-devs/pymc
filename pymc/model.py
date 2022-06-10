@@ -60,7 +60,7 @@ from pymc.data import GenTensorVariable, Minibatch
 from pymc.distributions import joint_logpt
 from pymc.distributions.logprob import _get_scaling
 from pymc.distributions.transforms import _default_transform
-from pymc.exceptions import ImputationWarning, SamplingError, ShapeError
+from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
 from pymc.initial_point import make_initial_point_fn
 from pymc.math import flatten_list
 from pymc.util import (
@@ -1067,12 +1067,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             raise ValueError(
                 f"Either `values` or `length` must be specified for the '{name}' dimension."
             )
-        if isinstance(length, int):
-            length = at.constant(length)
-        elif length is not None and not isinstance(length, Variable):
-            raise ValueError(
-                f"The `length` passed for the '{name}' coord must be an Aesara Variable or None."
-            )
         if values is not None:
             # Conversion to a tuple ensures that the coordinate values are immutable.
             # Also unlike numpy arrays the's tuple.index(...) which is handy to work with.
@@ -1080,12 +1074,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if name in self.coords:
             if not np.array_equal(values, self.coords[name]):
                 raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
-        else:
+        if length is not None and not isinstance(length, (int, Variable)):
+            raise ValueError(
+                f"The `length` passed for the '{name}' coord must be an int, Aesara Variable or None."
+            )
+        if length is None:
+            length = len(values)
+        if not isinstance(length, Variable):
             if mutable:
-                self._dim_lengths[name] = length or aesara.shared(len(values))
+                length = aesara.shared(length)
             else:
-                self._dim_lengths[name] = length or aesara.tensor.constant(len(values))
-            self._coords[name] = values
+                length = aesara.tensor.constant(length)
+        self._dim_lengths[name] = length
+        self._coords[name] = values
 
     def add_coords(
         self,
@@ -1100,6 +1101,36 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         for name, values in coords.items():
             self.add_coord(name, values, length=lengths.get(name, None))
+
+    def set_dim(self, name: str, new_length: int, coord_values: Optional[Sequence] = None):
+        """Update a mutable dimension.
+
+        Parameters
+        ----------
+        name
+            Name of the dimension.
+        new_length
+            New length of the dimension.
+        coord_values
+            Optional sequence of coordinate values.
+        """
+        if not isinstance(self.dim_lengths[name], ScalarSharedVariable):
+            raise ValueError(f"The dimension '{name}' is immutable.")
+        if coord_values is None and self.coords.get(name, None) is not None:
+            raise ValueError(
+                f"'{name}' has coord values. Pass `set_dim(..., coord_values=...)` to update them."
+            )
+        if coord_values is not None:
+            len_cvals = len(coord_values)
+            if len_cvals != new_length:
+                raise ShapeError(
+                    f"Length of new coordinate values does not match the new dimension length.",
+                    actual=len_cvals,
+                    expected=new_length,
+                )
+            self._coords[name] = tuple(coord_values)
+        self.dim_lengths[name].set_value(new_length)
+        return
 
     def set_data(
         self,
@@ -1163,16 +1194,40 @@ class Model(WithMemoization, metaclass=ContextMeta):
                             f"{new_length}, so new coord values for the {dname} dimension are required."
                         )
                 if isinstance(length_tensor, TensorConstant):
+                    # The dimension was fixed in length.
+                    # Resizing a data variable in this dimension would
+                    # definitely lead to shape problems.
                     raise ShapeError(
                         f"Resizing dimension '{dname}' is impossible, because "
-                        "a 'TensorConstant' stores its length. To be able "
+                        "a `TensorConstant` stores its length. To be able "
                         "to change the dimension length, pass `mutable=True` when "
                         "registering the dimension via `model.add_coord`, "
                         "or define it via a `pm.MutableData` variable."
                     )
-                else:
+                elif length_tensor.owner is not None:
+                    # The dimension was created from a model variable.
+                    # Get a handle on the tensor from which this dimension length was
+                    # obtained by doing subindexing on the shape as in `.shape[i]`.
+                    # Needed to check if it was another shared variable.
+                    # TODO: Consider checking the graph is what we are assuming it is
+                    # isinstance(length_tensor.owner.op, Subtensor)
+                    # isinstance(length_tensor.owner.inputs[0].owner.op, Shape)
                     length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
-                    if not isinstance(length_belongs_to, SharedVariable):
+                    if length_belongs_to is shared_object:
+                        # No surprise it's changing.
+                        pass
+                    elif isinstance(length_belongs_to, SharedVariable):
+                        # The dimension is mutable through a SharedVariable other than the one being modified.
+                        # But the other variable was not yet re-sized! Warn the user to do that!
+                        warnings.warn(
+                            f"You are resizing a variable with dimension '{dname}' which was initialized "
+                            f"as a mutable dimension by another variable ('{length_belongs_to}')."
+                            " Remember to update that variable with the correct shape to avoid shape issues.",
+                            ShapeWarning,
+                            stacklevel=2,
+                        )
+                    else:
+                        # The dimension is immutable.
                         raise ShapeError(
                             f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
                             f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
@@ -1182,8 +1237,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
                             expected=old_length,
                         )
                 if isinstance(length_tensor, ScalarSharedVariable):
-                    # Updating the shared variable resizes dependent nodes that use this dimension for their `size`.
-                    length_tensor.set_value(new_length)
+                    # The dimension is mutable, but was defined without being linked
+                    # to a shared variable. This is allowed, but a little less robust.
+                    self.set_dim(dname, new_length, coord_values=new_coords)
 
             if new_coords is not None:
                 # Update the registered coord values (also if they were None)

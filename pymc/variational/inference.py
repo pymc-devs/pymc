@@ -23,12 +23,7 @@ from fastprogress.fastprogress import progress_bar
 import pymc as pm
 
 from pymc.variational import opvi, test_functions
-from pymc.variational.approximations import (
-    Empirical,
-    FullRank,
-    MeanField,
-    NormalizingFlow,
-)
+from pymc.variational.approximations import Empirical, FullRank, MeanField
 from pymc.variational.operators import KL, KSD
 
 logger = logging.getLogger(__name__)
@@ -38,7 +33,6 @@ __all__ = [
     "FullRankADVI",
     "SVGD",
     "ASVGD",
-    "NFVI",
     "Inference",
     "ImplicitGradient",
     "KLqp",
@@ -672,61 +666,6 @@ class ASVGD(ImplicitGradient):
         return super().run_profiling(n=n, score=score, obj_n_mc=obj_n_mc, **kwargs)
 
 
-class NFVI(KLqp):
-    r"""**Normalizing Flow based :class:`KLqp` inference**
-
-    Normalizing flow is a series of invertible transformations on initial distribution.
-
-    .. math::
-
-        z_K = f_K \circ \dots \circ f_2 \circ f_1(z_0)
-
-    In that case we can compute tractable density for the flow.
-
-    .. math::
-
-        \ln q_K(z_K) = \ln q_0(z_0) - \sum_{k=1}^{K}\ln \left|\frac{\partial f_k}{\partial z_{k-1}}\right|
-
-
-    Every :math:`f_k` here is a parametric function with defined determinant.
-    We can choose every step here. For example the here is a simple flow
-    is an affine transform:
-
-    .. math::
-
-        z = loc(scale(z_0)) = \mu + \sigma * z_0
-
-    Here we get mean field approximation if :math:`z_0 \sim \mathcal{N}(0, 1)`
-
-    **Flow Formulas**
-
-    In PyMC there is a flexible way to define flows with formulas. We have 5 of them by the moment:
-
-    -   Loc (:code:`loc`): :math:`z' = z + \mu`
-    -   Scale (:code:`scale`): :math:`z' = \sigma * z`
-    -   Planar (:code:`planar`): :math:`z' = z + u * \tanh(w^T z + b)`
-    -   Radial (:code:`radial`): :math:`z' = z + \beta (\alpha + (z-z_r))^{-1}(z-z_r)`
-    -   Householder (:code:`hh`): :math:`z' = H z`
-
-    Formula can be written as a string, e.g. `'scale-loc'`, `'scale-hh*4-loc'`, `'panar*10'`.
-    Every step is separated with `'-'`, repeated flow is marked with `'*'` producing `'flow*repeats'`.
-
-    Parameters
-    ----------
-    flow: str|AbstractFlow
-        formula or initialized Flow, default is `'scale-loc'` that
-        is identical to MeanField
-    model: :class:`pymc.Model`
-        PyMC model for inference
-    random_seed: None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(NormalizingFlow(*args, **kwargs))
-
-
 def fit(
     n=10000,
     local_rv=None,
@@ -812,14 +751,10 @@ def fit(
         inf_kwargs["start"] = start
     if model is None:
         model = pm.modelcontext(model)
-    _select = dict(advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD, nfvi=NFVI)
+    _select = dict(advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD)
     if isinstance(method, str):
         method = method.lower()
-        if method.startswith("nfvi="):
-            formula = method[5:]
-            inference = NFVI(formula, **inf_kwargs)
-        elif method in _select:
-
+        if method in _select:
             inference = _select[method](model=model, **inf_kwargs)
         else:
             raise KeyError(f"method should be one of {set(_select.keys())} or Inference instance")

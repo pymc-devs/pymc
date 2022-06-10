@@ -47,7 +47,7 @@ from pymc.distributions.shape_utils import (
     resize_from_dims,
     resize_from_observed,
 )
-from pymc.printing import str_for_dist
+from pymc.printing import str_for_dist, str_for_symbolic_dist
 from pymc.util import UNSET
 from pymc.vartypes import string_types
 
@@ -198,8 +198,8 @@ class Distribution(metaclass=DistributionMeta):
         total_size=None,
         transform=UNSET,
         **kwargs,
-    ) -> RandomVariable:
-        """Adds a RandomVariable corresponding to a PyMC distribution to the current model.
+    ) -> TensorVariable:
+        """Adds a tensor variable corresponding to a PyMC distribution to the current model.
 
         Note that all remaining kwargs must be compatible with ``.dist()``
 
@@ -231,8 +231,8 @@ class Distribution(metaclass=DistributionMeta):
 
         Returns
         -------
-        rv : RandomVariable
-            The created RV, registered in the Model.
+        rv : TensorVariable
+            The created random variable tensor, registered in the Model.
         """
 
         try:
@@ -296,8 +296,8 @@ class Distribution(metaclass=DistributionMeta):
         *,
         shape: Optional[Shape] = None,
         **kwargs,
-    ) -> RandomVariable:
-        """Creates a RandomVariable corresponding to the `cls` distribution.
+    ) -> TensorVariable:
+        """Creates a tensor variable corresponding to the `cls` distribution.
 
         Parameters
         ----------
@@ -314,8 +314,8 @@ class Distribution(metaclass=DistributionMeta):
 
         Returns
         -------
-        rv : RandomVariable
-            The created RV.
+        rv : TensorVariable
+            The created random variable tensor.
         """
         if "testval" in kwargs:
             kwargs.pop("testval")
@@ -483,15 +483,11 @@ class SymbolicDistribution:
             transform=transform,
             initval=initval,
         )
-
-        # TODO: Refactor this
         # add in pretty-printing support
-        rv_out.str_repr = lambda *args, **kwargs: name
-        rv_out._repr_latex_ = f"\\text{name}"
-        # rv_out.str_repr = types.MethodType(str_for_dist, rv_out)
-        # rv_out._repr_latex_ = types.MethodType(
-        #     functools.partial(str_for_dist, formatting="latex"), rv_out
-        # )
+        rv_out.str_repr = types.MethodType(str_for_symbolic_dist, rv_out)
+        rv_out._repr_latex_ = types.MethodType(
+            functools.partial(str_for_symbolic_dist, formatting="latex"), rv_out
+        )
 
         return rv_out
 
@@ -653,8 +649,8 @@ class DensityDist(NoDistribution):
         name : str
         dist_params : Tuple
             A sequence of the distribution's parameter. These will be converted into
-            Aesara tensors internally. These parameters could be other ``RandomVariable``
-            instances.
+            Aesara tensors internally. These parameters could be other ``TensorVariable``
+            instances created from , optionally created via ``RandomVariable`` ``Op``s.
         logp : Optional[Callable]
             A callable that calculates the log density of some given observed ``value``
             conditioned on certain distribution parameter values. It must have the

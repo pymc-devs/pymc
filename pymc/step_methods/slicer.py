@@ -66,34 +66,42 @@ class Slice(ArrayStep):
     def astep(self, q0, logp):
         q0_val = q0.data
         self.w = np.resize(self.w, len(q0_val))  # this is a repmat
-        q = np.copy(q0_val)  # TODO: find out if we need this
+
+        q = np.copy(q0_val)
         ql = np.copy(q0_val)  # l for left boundary
         qr = np.copy(q0_val)  # r for right boudary
-        for i in range(len(q0_val)):
+
+        # The points are not copied, so it's fine to update them inplace in the
+        # loop below
+        q_ra = RaveledVars(q, q0.point_map_info)
+        ql_ra = RaveledVars(ql, q0.point_map_info)
+        qr_ra = RaveledVars(qr, q0.point_map_info)
+
+        for i, wi in enumerate(self.w):
             # uniformly sample from 0 to p(q), but in log space
-            q_ra = RaveledVars(q, q0.point_map_info)
             y = logp(q_ra) - nr.standard_exponential()
-            ql[i] = q[i] - nr.uniform(0, self.w[i])
-            qr[i] = q[i] + self.w[i]
+
+            # Create initial interval
+            ql[i] = q[i] - nr.uniform() * wi  # q[i] + r * w
+            qr[i] = ql[i] + wi  # Equivalent to q[i] + (1-r) * w
+
             # Stepping out procedure
             cnt = 0
-            while y <= logp(
-                RaveledVars(ql, q0.point_map_info)
-            ):  # changed lt to leq  for locally uniform posteriors
-                ql[i] -= self.w[i]
+            while y <= logp(ql_ra):  # changed lt to leq  for locally uniform posteriors
+                ql[i] -= wi
                 cnt += 1
                 if cnt > self.iter_limit:
                     raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
             cnt = 0
-            while y <= logp(RaveledVars(qr, q0.point_map_info)):
-                qr[i] += self.w[i]
+            while y <= logp(qr_ra):
+                qr[i] += wi
                 cnt += 1
                 if cnt > self.iter_limit:
                     raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
 
             cnt = 0
             q[i] = nr.uniform(ql[i], qr[i])
-            while logp(q_ra) < y:  # Changed leq to lt, to accomodate for locally flat posteriors
+            while y > logp(q_ra):  # Changed leq to lt, to accomodate for locally flat posteriors
                 # Sample uniformly from slice
                 if q[i] > q0_val[i]:
                     qr[i] = q[i]
@@ -104,18 +112,19 @@ class Slice(ArrayStep):
                 if cnt > self.iter_limit:
                     raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
 
-            if (
-                self.tune
-            ):  # I was under impression from MacKays lectures that slice width can be tuned without
+            if self.tune:
+                # I was under impression from MacKays lectures that slice width can be tuned without
                 # breaking markovianness. Can we do it regardless of self.tune?(@madanh)
-                self.w[i] = self.w[i] * (self.n_tunes / (self.n_tunes + 1)) + (qr[i] - ql[i]) / (
+                self.w[i] = wi * (self.n_tunes / (self.n_tunes + 1)) + (qr[i] - ql[i]) / (
                     self.n_tunes + 1
-                )  # same as before
-                # unobvious and important: return qr and ql to the same point
-                qr[i] = q[i]
-                ql[i] = q[i]
+                )
+
+            # Set qr and ql to the accepted points (they matter for subsequent iterations)
+            qr[i] = ql[i] = q[i]
+
         if self.tune:
             self.n_tunes += 1
+
         return q
 
     @staticmethod

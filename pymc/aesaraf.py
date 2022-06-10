@@ -52,6 +52,10 @@ from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.scalar.basic import Cast
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.random.var import (
+    RandomGeneratorSharedVariable,
+    RandomStateSharedVariable,
+)
 from aesara.tensor.shape import SpecifyShape
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -60,9 +64,7 @@ from aesara.tensor.var import TensorConstant, TensorVariable
 from pymc.exceptions import ShapeError
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
-PotentialShapeType = Union[
-    int, np.ndarray, Tuple[Union[int, Variable], ...], List[Union[int, Variable]], Variable
-]
+PotentialShapeType = Union[int, np.ndarray, Sequence[Union[int, Variable]], TensorVariable]
 
 
 __all__ = [
@@ -165,6 +167,7 @@ def change_rv_size(
         new_size = (new_size,)
 
     # Extract the RV node that is to be resized, together with its inputs, name and tag
+    assert rv.owner.op is not None
     if isinstance(rv.owner.op, SpecifyShape):
         rv = rv.owner.inputs[0]
     rv_node = rv.owner
@@ -894,18 +897,14 @@ aesara.compile.optdb["canonicalize"].register(
 )
 
 
-def find_rng_nodes(variables: Iterable[TensorVariable]):
+def find_rng_nodes(
+    variables: Iterable[Variable],
+) -> List[Union[RandomStateSharedVariable, RandomGeneratorSharedVariable]]:
     """Return RNG variables in a graph"""
     return [
         node
         for node in graph_inputs(variables)
-        if isinstance(
-            node,
-            (
-                at.random.var.RandomStateSharedVariable,
-                at.random.var.RandomGeneratorSharedVariable,
-            ),
-        )
+        if isinstance(node, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
     ]
 
 
@@ -921,6 +920,7 @@ def reseed_rngs(
         np.random.PCG64(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(len(rngs))
     ]
     for rng, bit_generator in zip(rngs, bit_generators):
+        new_rng: Union[np.random.RandomState, np.random.Generator]
         if isinstance(rng, at.random.var.RandomStateSharedVariable):
             new_rng = np.random.RandomState(bit_generator)
         else:
@@ -980,6 +980,9 @@ def compile_pymc(
         and isinstance(var.owner.op, (RandomVariable, MeasurableVariable))
         and var not in inputs
     ):
+        # All nodes in `vars_between(inputs, outputs)` have owners.
+        # But mypy doesn't know, so we just assert it:
+        assert random_var.owner.op is not None
         if isinstance(random_var.owner.op, RandomVariable):
             rng = random_var.owner.inputs[0]
             if not hasattr(rng, "default_update"):

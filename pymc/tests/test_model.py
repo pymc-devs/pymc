@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import unittest
+import warnings
 
 from functools import reduce
 
@@ -37,7 +38,7 @@ import pymc as pm
 from pymc import Deterministic, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
-from pymc.exceptions import ShapeError
+from pymc.exceptions import ShapeError, ShapeWarning
 from pymc.model import Point, ValueGradFunction
 from pymc.tests.helpers import SeededTest
 
@@ -704,25 +705,45 @@ def test_nested_model_coords():
     assert set(m2.RV_dims) < set(m1.RV_dims)
 
 
-def test_shapeerror_from_resize_immutable_dims():
+def test_shapeerror_from_set_data_dimensionality():
+    with pm.Model() as pmodel:
+        pm.MutableData("m", np.ones((3,)), dims="one")
+        with pytest.raises(ValueError, match="must have 1 dimensions"):
+            pmodel.set_data("m", np.ones((3, 4)))
+
+
+def test_shapeerror_from_resize_immutable_dim_from_RV():
     """
     Trying to resize an immutable dimension should raise a ShapeError.
     Even if the variable being updated is a SharedVariable and has other
     dimensions that are mutable.
     """
     with pm.Model() as pmodel:
-        a = pm.Normal("a", mu=[1, 2, 3], dims="fixed")
+        pm.Normal("a", mu=[1, 2, 3], dims="fixed")
+        assert isinstance(pmodel.dim_lengths["fixed"], TensorVariable)
 
-        m = pm.MutableData("m", [[1, 2, 3]], dims=("one", "fixed"))
+        pm.MutableData("m", [[1, 2, 3]], dims=("one", "fixed"))
 
         # This is fine because the "fixed" dim is not resized
-        pm.set_data({"m": [[1, 2, 3], [3, 4, 5]]})
+        pmodel.set_data("m", [[1, 2, 3], [3, 4, 5]])
 
     with pytest.raises(ShapeError, match="was initialized from 'a'"):
-        # Can't work because the "fixed" dimension is linked to a constant shape:
+        # Can't work because the "fixed" dimension is linked to a
+        # TensorVariable with constant shape.
         # Note that the new data tries to change both dimensions
-        with pmodel:
-            pm.set_data({"m": [[1, 2], [3, 4]]})
+        pmodel.set_data("m", [[1, 2], [3, 4]])
+
+
+def test_shapeerror_from_resize_immutable_dim_from_coords():
+    with pm.Model(coords={"immutable": [1, 2]}) as pmodel:
+        assert isinstance(pmodel.dim_lengths["immutable"], TensorConstant)
+        pm.MutableData("m", [1, 2], dims="immutable")
+        # Data can be changed
+        pmodel.set_data("m", [3, 4])
+
+    with pytest.raises(ShapeError, match="`TensorConstant` stores its length"):
+        # But the length is linked to a TensorConstant
+        pmodel.set_data("m", [1, 2, 3], coords=dict(immutable=[1, 2, 3]))
 
 
 def test_valueerror_from_resize_without_coords_update():
@@ -763,6 +784,100 @@ def test_add_coord_mutable_kwarg():
         assert isinstance(m._dim_lengths["mutable1"], ScalarSharedVariable)
         pm.MutableData("mdata", np.ones((1, 2, 3)), dims=("fixed", "mutable1", "mutable2"))
         assert isinstance(m._dim_lengths["mutable2"], TensorVariable)
+
+
+def test_set_dim():
+    """Test the concious re-sizing of dims created through add_coord()."""
+    with pm.Model() as pmodel:
+        pmodel.add_coord("fdim", mutable=False, length=1)
+        pmodel.add_coord("mdim", mutable=True, length=2)
+        a = pm.Normal("a", dims="mdim")
+    assert a.eval().shape == (2,)
+
+    with pytest.raises(ValueError, match="is immutable"):
+        pmodel.set_dim("fdim", 3)
+
+    pmodel.set_dim("mdim", 3)
+    assert a.eval().shape == (3,)
+
+
+def test_set_dim_with_coords():
+    """Test the concious re-sizing of dims created through add_coord() with coord value."""
+    with pm.Model() as pmodel:
+        pmodel.add_coord("mdim", mutable=True, length=2, values=["A", "B"])
+        a = pm.Normal("a", dims="mdim")
+    assert len(pmodel.coords["mdim"]) == 2
+
+    with pytest.raises(ValueError, match="has coord values"):
+        pmodel.set_dim("mdim", new_length=3)
+
+    with pytest.raises(ShapeError, match="does not match"):
+        pmodel.set_dim("mdim", new_length=3, coord_values=["A", "B"])
+
+    pmodel.set_dim("mdim", 3, ["A", "B", "C"])
+    assert a.eval().shape == (3,)
+    assert pmodel.coords["mdim"] == ("A", "B", "C")
+
+
+def test_set_data_indirect_resize():
+    with pm.Model() as pmodel:
+        pmodel.add_coord("mdim", mutable=True, length=2)
+        pm.MutableData("mdata", [1, 2], dims="mdim")
+
+    # First resize the dimension.
+    pmodel.dim_lengths["mdim"].set_value(3)
+    # Then change the data.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        pmodel.set_data("mdata", [1, 2, 3])
+
+    # Now the other way around.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        pmodel.set_data("mdata", [1, 2, 3, 4])
+
+
+def test_set_data_warns_on_resize_of_dims_defined_by_other_mutabledata():
+    with pm.Model() as pmodel:
+        pm.MutableData("m1", [1, 2], dims="mutable")
+        pm.MutableData("m2", [3, 4], dims="mutable")
+
+        # Resizing the non-defining variable first gives a warning
+        with pytest.warns(ShapeWarning, match="by another variable"):
+            pmodel.set_data("m2", [4, 5, 6])
+            pmodel.set_data("m1", [1, 2, 3])
+
+        # Resizing the definint variable first is silent
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pmodel.set_data("m1", [1, 2])
+            pmodel.set_data("m2", [3, 4])
+
+
+def test_set_data_indirect_resize_with_coords():
+    with pm.Model() as pmodel:
+        pmodel.add_coord("mdim", ["A", "B"], mutable=True, length=2)
+        pm.MutableData("mdata", [1, 2], dims="mdim")
+
+    assert pmodel.coords["mdim"] == ("A", "B")
+
+    # First resize the dimension.
+    pmodel.set_dim("mdim", 3, ["A", "B", "C"])
+    assert pmodel.coords["mdim"] == ("A", "B", "C")
+    # Then change the data.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        pmodel.set_data("mdata", [1, 2, 3])
+
+    # Now the other way around.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        pmodel.set_data("mdata", [1, 2, 3, 4], coords=dict(mdim=["A", "B", "C", "D"]))
+    assert pmodel.coords["mdim"] == ("A", "B", "C", "D")
+
+    # This time with incorrectly sized coord values
+    with pytest.raises(ShapeError, match="new coordinate values"):
+        pmodel.set_data("mdata", [1, 2], coords=dict(mdim=[1, 2, 3]))
 
 
 @pytest.mark.parametrize("jacobian", [True, False])
