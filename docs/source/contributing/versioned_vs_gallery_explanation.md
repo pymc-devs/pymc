@@ -16,14 +16,14 @@ publish PyMC releases. Consequently, PyMC has two documentation
 websites: the versioned docs and the example gallery
 
 ## Versioned docs
-We publish the versioned docs directly at `docs.pymc.io`. The only additions
+We publish the versioned docs directly at `www.docs.pymc.io`. The only additions
 to the url are the language and version of the documentation.
 
 The versioned docs are synced with PyMC releases and contain a handful of
 guides about core functionality and the API documentation among other things.
 
 ## Example gallery
-We publish the example gallery as a sub-project of the versioned docs: `docs.pymc.io/projects/examples`
+We publish the example gallery as a sub-project of the versioned docs: `www.docs.pymc.io/projects/examples`
 This means that the building process, language and version of the
 example gallery are independent from the versioned docs. However,
 the {ref}`search bar in the versioned docs <pymc:search>` searches
