@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # PyMC Developer Guide
 
 {doc}`PyMC <index>` is a Python package for Bayesian statistical modeling built on top of {doc}`Aesara <aesara:index>`.
