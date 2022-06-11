@@ -9,7 +9,7 @@ All 3 websites share the same nabvar to give the appeareance of
 a single website to users, but their generation process is completely independent from one another.
 :::
 
-The content that appears under the `Home` and `Community` sections is generated from the source at [pymc.io](https://github.com/pymc-devs/pymc.io); 
+The content that appears under the `Home` and `Community` sections is generated from the source at [pymc.io](https://github.com/pymc-devs/pymc.io);
 the content that appears under `Learn`, `API` and `Contributing`
 is generated from the source at [pymc](https://github.com/pymc-devs/pymc/tree/main/docs/source) and the content under `Examples` is generated from [pymc-examples](https://github.com/pymc-devs/pymc-examples).
 
@@ -29,12 +29,12 @@ community resources like the calendar or the code of conduct and
 the PyMC blog.
 
 ## Versioned docs: `www.pymc.io/projects/docs`
-We publish the versioned docs at `www.pymc.io/projects/docs` 
+We publish the versioned docs at `www.pymc.io/projects/docs`
 plus the language and version indicators. By default `/en/stable/`.
 
 The versioned docs **are synced with PyMC releases** and contain a handful of
 guides about core functionality, the API documentation and the
-contributing guides. 
+contributing guides.
 Being synced with the releases means that the same exact code
 we tag on GitHub and that goes to PyPI is used to generate the docs.
 Therefore, even if the `latest` version is updated with every commit,
