@@ -114,5 +114,5 @@ release_checklist
 :maxdepth: 1
 :caption: In depth explanations
 
-versioned_vs_gallery_explanation
+versioning_schemes_explanation
 :::
