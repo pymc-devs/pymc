@@ -120,7 +120,7 @@ class Metropolis(ArrayStepShared):
     stats_dtypes = [
         {
             "accept": np.float64,
-            "accepted": bool,
+            "accepted": np.float64,
             "tune": bool,
             "scaling": np.float64,
         }
