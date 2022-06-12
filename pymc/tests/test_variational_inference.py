@@ -795,9 +795,8 @@ def test_empirical_does_not_support_inference_data(another_simple_model):
     with another_simple_model:
         step = pm.Metropolis()
         trace = pm.sample(100, step=step, chains=1, tune=0, return_inferencedata=True)
-        with pytest.raises(NotImplementedError) as e:
-            emp = Empirical(trace)
-        assert e.match("use return_inferencedata=False")
+        with pytest.raises(NotImplementedError, match="return_inferencedata=False"):
+            Empirical(trace)
 
 
 @pytest.mark.parametrize("score", [True, False])
