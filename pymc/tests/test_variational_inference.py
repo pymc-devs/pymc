@@ -791,6 +791,14 @@ def test_empirical_from_trace(another_simple_model):
         assert emp.histogram.shape[0].eval() == 400
 
 
+def test_empirical_does_not_support_inference_data(another_simple_model):
+    with another_simple_model:
+        step = pm.Metropolis()
+        trace = pm.sample(100, step=step, chains=1, tune=0, return_inferencedata=True)
+        with pytest.raises(NotImplementedError, match="return_inferencedata=False"):
+            Empirical(trace)
+
+
 @pytest.mark.parametrize("score", [True, False])
 def test_fit_with_nans(score):
     X_mean = pm.floatX(np.linspace(0, 10, 10))

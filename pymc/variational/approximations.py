@@ -18,6 +18,7 @@ import numpy as np
 from aesara import tensor as at
 from aesara.graph.basic import Variable
 from aesara.tensor.var import TensorVariable
+from arviz import InferenceData
 
 import pymc as pm
 
@@ -198,7 +199,6 @@ class EmpiricalGroup(Group):
                 # Initialize particles
                 histogram = np.tile(start, (size, 1))
                 histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
-
         else:
             histogram = np.empty((len(trace) * len(trace.chains), self.ddim))
             i = 0
@@ -210,7 +210,13 @@ class EmpiricalGroup(Group):
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
-        if trace is not None and not all(
+        if isinstance(trace, InferenceData):
+            raise NotImplementedError(
+                "The `Empirical` approximation does not yet support `InferenceData` inputs."
+                " Pass `pm.sample(return_inferencedata=False)` to get a `MultiTrace` to use with `Empirical`."
+                " Please help us to refactor: https://github.com/pymc-devs/pymc/issues/5884"
+            )
+        elif trace is not None and not all(
             [self.model.rvs_to_values[var].name in trace.varnames for var in self.group]
         ):
             raise ValueError("trace has not all free RVs in the group")
