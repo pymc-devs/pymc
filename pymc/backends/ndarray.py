@@ -95,7 +95,6 @@ class NDArray(base.BaseTrace):
             for data, vars in zip(self._stats, sampler_vars):
                 if vars.keys() != data.keys():
                     raise ValueError("Sampler vars can't change")
-                old_draws = len(self)
                 for varname, dtype in vars.items():
                     old = data[varname]
                     new = np.zeros(draws, dtype=dtype)
