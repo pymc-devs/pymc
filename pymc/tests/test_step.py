@@ -86,6 +86,15 @@ class TestStepMethods:
             s = stat(group[var].sel(chain=0), axis=0)
             close_to(s, value, bound, name)
 
+    def check_stat_dtype(self, step, idata):
+        # TODO: This check does not confirm the announced dtypes are correct as the
+        #  sampling machinery will convert them automatically.
+        for stats_dtypes in getattr(step, "stats_dtypes", []):
+            for stat, dtype in stats_dtypes.items():
+                if stat == "tune":
+                    continue
+                assert idata.sample_stats[stat].dtype == np.dtype(dtype)
+
     @pytest.mark.parametrize(
         "step_fn, draws",
         [
@@ -139,6 +148,7 @@ class TestStepMethods:
                 random_seed=1,
             )
             self.check_stat(check, idata, step.__class__.__name__)
+            self.check_stat_dtype(idata, step)
 
     def test_step_discrete(self):
         start, model, (mu, C) = mv_simple_discrete()
@@ -156,6 +166,7 @@ class TestStepMethods:
                 random_seed=1,
             )
             self.check_stat(check, idata, step.__class__.__name__)
+            self.check_stat_dtype(idata, step)
 
     @pytest.mark.parametrize("proposal", ["uniform", "proportional"])
     def test_step_categorical(self, proposal):
@@ -174,6 +185,7 @@ class TestStepMethods:
                 random_seed=1,
             )
             self.check_stat(check, idata, step.__class__.__name__)
+            self.check_stat_dtype(idata, step)
 
 
 class TestCompoundStep:
