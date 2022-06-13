@@ -110,7 +110,7 @@ class TestSMC(SeededTest):
         assert np.isclose(smc.prior_logp_func(floatX(np.array([0.51]))), np.log(0.7))
         assert smc.prior_logp_func(floatX(np.array([1.51]))) == -np.inf
 
-    def test_unobserved_discrete(self):
+    def test_unobserved_bernoulli(self):
         n = 10
         rng = self.get_random_state()
         z_true = np.zeros(n, dtype=int)
@@ -125,6 +125,15 @@ class TestSMC(SeededTest):
             trace = pm.sample_smc(chains=1, return_inferencedata=False)
 
         assert np.all(np.median(trace["z"], axis=0) == z_true)
+
+    def test_unobserved_categorical(self):
+        with pm.Model() as m:
+            mu = pm.Categorical("mu", p=[0.1, 0.3, 0.6], size=2)
+            pm.Normal("like", mu=mu, sigma=0.1, observed=[1, 2])
+
+            trace = pm.sample_smc(chains=1, return_inferencedata=False)
+
+        assert np.all(np.median(trace["mu"], axis=0) == [1, 2])
 
     def test_marginal_likelihood(self):
         """

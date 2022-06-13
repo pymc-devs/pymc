@@ -567,7 +567,7 @@ def _logp_forw(point, out_vars, in_vars, shared):
             if in_var.dtype in discrete_types:
                 float_var = at.TensorType("floatX", in_var.broadcastable)(in_var.name)
                 new_in_vars.append(float_var)
-                replace_int_input[in_var] = at.round(float_var)
+                replace_int_input[in_var] = at.round(float_var).astype(in_var.dtype)
             else:
                 new_in_vars.append(in_var)
 
