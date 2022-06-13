@@ -906,6 +906,9 @@ def test_model_logpt_deprecation_warning():
     with pytest.warns(FutureWarning):
         m.potentiallogpt
 
+    with pytest.warns(FutureWarning):
+        m.varlogp_nojact
+
 
 @pytest.mark.parametrize("jacobian", [True, False])
 def test_model_logp(jacobian):

@@ -890,7 +890,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.logp(vars=self.free_RVs)
 
     @property
-    def varlogp_nojact(self) -> Variable:
+    def varlogp_nojact(self):
+        warnings.warn(
+            "Model.varlogp_nojact has been deprecated. Use Model.varlogp_nojac instead.",
+            FutureWarning,
+        )
+        return self.varlogp_nojac
+
+    @property
+    def varlogp_nojac(self) -> Variable:
         """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic) without jacobian term."""
         return self.logp(vars=self.free_RVs, jacobian=False)
