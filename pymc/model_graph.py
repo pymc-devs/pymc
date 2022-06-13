@@ -100,7 +100,7 @@ class ModelGraph:
             if hasattr(var.tag, "observations"):
                 try:
                     obs_name = var.tag.observations.name
-                    if obs_name:
+                    if obs_name and obs_name != var_name:
                         input_map[var_name] = input_map[var_name].difference({obs_name})
                         input_map[obs_name] = input_map[obs_name].union({var_name})
                 except AttributeError:

@@ -132,6 +132,28 @@ def model_with_dims():
     return pmodel, compute_graph, plates
 
 
+def model_unnamed_observed_node():
+    """
+    Model at the source of the following issue: https://github.com/pymc-devs/pymc/issues/5892
+    """
+    data = [-1, 0, 0.5, 1]
+
+    with pm.Model() as model:
+        mu = pm.Normal(name="mu", mu=0.0, sigma=5.0)
+        y = pm.Normal(name="y", mu=mu, sigma=3.0, observed=data)
+
+    compute_graph = {
+        "mu": set(),
+        "y": {"mu"},
+    }
+    plates = {
+        "": {"mu"},
+        "4": {"y"},
+    }
+
+    return model, compute_graph, plates
+
+
 class BaseModelGraphTest(SeededTest):
     model_func = None
 
@@ -202,21 +224,16 @@ def model_with_different_descendants():
     return pmodel2
 
 
-class TestParents:
-    @pytest.mark.parametrize(
-        "var_name, parent_names",
-        [
-            ("L", {"pred"}),
-            ("pred", {"intermediate"}),
-            ("intermediate", {"a", "b"}),
-            ("c", {"a", "b"}),
-            ("a", set()),
-            ("b", set()),
-        ],
-    )
-    def test_get_parent_names(self, var_name, parent_names):
-        mg = ModelGraph(model_with_different_descendants())
-        mg.get_parent_names(mg.model[var_name]) == parent_names
+class TestImputationModel(BaseModelGraphTest):
+    model_func = model_with_imputations
+
+
+class TestModelWithDims(BaseModelGraphTest):
+    model_func = model_with_dims
+
+
+class TestUnnamedObservedNodes(BaseModelGraphTest):
+    model_func = model_unnamed_observed_node
 
 
 class TestVariableSelection:
@@ -260,11 +277,3 @@ class TestVariableSelection:
         mg = ModelGraph(model_with_different_descendants())
         assert set(mg.vars_to_plot(var_names=var_names)) == set(vars_to_plot)
         assert mg.make_compute_graph(var_names=var_names) == compute_graph
-
-
-class TestImputationModel(BaseModelGraphTest):
-    model_func = model_with_imputations
-
-
-class TestModelWithDims(BaseModelGraphTest):
-    model_func = model_with_dims
