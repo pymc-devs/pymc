@@ -113,8 +113,8 @@ _Read on if you're a developer. Or curious. Or both._
     - `pm.GaussianRandomWalk` initial distribution defaults to zero-centered normal with sigma=100 instead of flat (see[#5779](https://github.com/pymc-devs/pymc/pull/5779))
     - `pm.AR` initial distribution defaults to unit normal instead of flat (see[#5779](https://github.com/pymc-devs/pymc/pull/5779))
 
-  - `logpt`, `logpt_sum`, `logp_elemwiset` and `nojac` variations were removed. Use `Model.logp(jacobian=True/False, sum=True/False)` instead.
-  - `dlogp_nojact` and `d2logp_nojact` were removed. Use `Model.dlogp` and `d2logp` with `jacobian=False` instead.
+  - `logpt`, `logpt_sum`, `logp_elemwiset` and `nojac` variations were removed. Use `Model.logpt(jacobian=True/False, sum=True/False)` instead.
+  - `dlogp_nojact` and `d2logp_nojact` were removed. Use `Model.dlogpt` and `d2logpt` with `jacobian=False` instead.
   - `model.makefn` is now called `Model.compile_fn`, and `model.fn` was removed.
   - Methods starting with `fast_*`, such as `Model.fast_logp`, were removed. Same applies to `PointFunc` classes
   - `Model(model=...)` kwarg was removed
