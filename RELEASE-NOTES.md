@@ -3,7 +3,7 @@
 ## PyMC 4.0.1 (vNext)
 + Fixed an incorrect entry in `pm.Metropolis.stats_dtypes` (see #5582).
 + Added a check in `Empirical` approximation which does not yet support `InferenceData` inputs (see #5874, #5884).
-+ ...
++ Fixed bug when sampling discrete variables with SMC (see #5887).
 
 ## PyMC 4.0.0 (2022-06-03)
 
