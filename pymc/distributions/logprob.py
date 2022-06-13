@@ -122,7 +122,7 @@ subtensor_types = (
 
 def joint_logpt(*args, **kwargs):
     warnings.warn(
-        "logprob.joint_logpt has been deprecated. Use logprob.joint_logp instead.",
+        "joint_logpt has been deprecated. Use joint_logp instead.",
         FutureWarning,
     )
     return joint_logp(*args, **kwargs)
