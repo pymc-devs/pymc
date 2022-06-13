@@ -47,6 +47,13 @@ class Slice(ArrayStep):
 
     name = "slice"
     default_blocked = False
+    generates_stats = True
+    stats_dtypes = [
+        {
+            "nstep_out": int,
+            "nstep_in": int,
+        }
+    ]
 
     def __init__(self, vars=None, w=1.0, tune=True, model=None, iter_limit=np.inf, **kwargs):
         self.model = modelcontext(model)
@@ -66,6 +73,8 @@ class Slice(ArrayStep):
     def astep(self, q0, logp):
         q0_val = q0.data
         self.w = np.resize(self.w, len(q0_val))  # this is a repmat
+
+        nstep_out = nstep_in = 0
 
         q = np.copy(q0_val)
         ql = np.copy(q0_val)  # l for left boundary
@@ -92,12 +101,15 @@ class Slice(ArrayStep):
                 cnt += 1
                 if cnt > self.iter_limit:
                     raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
+            nstep_out += cnt
+
             cnt = 0
             while y <= logp(qr_ra):
                 qr[i] += wi
                 cnt += 1
                 if cnt > self.iter_limit:
                     raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
+            nstep_out += cnt
 
             cnt = 0
             q[i] = nr.uniform(ql[i], qr[i])
@@ -111,6 +123,7 @@ class Slice(ArrayStep):
                 cnt += 1
                 if cnt > self.iter_limit:
                     raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
+            nstep_in += cnt
 
             if self.tune:
                 # I was under impression from MacKays lectures that slice width can be tuned without
@@ -125,7 +138,12 @@ class Slice(ArrayStep):
         if self.tune:
             self.n_tunes += 1
 
-        return q
+        stats = {
+            "nstep_out": nstep_out,
+            "nstep_in": nstep_in,
+        }
+
+        return q, (stats,)
 
     @staticmethod
     def competence(var, has_grad):
