@@ -4,7 +4,7 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-# base dependencies
+# Base dependencies
 - aeppl=0.0.31
 - aesara=2.7.2
 - arviz>=0.12.0
@@ -22,7 +22,7 @@ dependencies:
 - python-graphviz
 - scipy>=1.4.1
 - typing-extensions>=3.7.4
-# Extra stuff for testing
+# Extra dependencies for testing
 - ipython>=7.16
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
