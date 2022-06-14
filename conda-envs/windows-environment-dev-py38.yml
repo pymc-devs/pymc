@@ -1,3 +1,4 @@
+# "dev" conda envs are to be used by devs in setting their local environments
 name: pymc-dev-py38
 channels:
 - conda-forge

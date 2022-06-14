@@ -1,3 +1,4 @@
+# "test" conda envs are used to set up our CI environment in GitHub actions
 name: pymc-test-py38
 channels:
 - conda-forge
