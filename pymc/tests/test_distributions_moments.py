@@ -71,7 +71,7 @@ from pymc.distributions import (
     ZeroInflatedPoisson,
 )
 from pymc.distributions.distribution import _moment, moment
-from pymc.distributions.logprob import joint_logpt
+from pymc.distributions.logprob import joint_logp
 from pymc.distributions.shape_utils import rv_size_is_none, to_tuple
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import Model
@@ -163,7 +163,7 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
     assert np.allclose(moment, expected)
 
     if check_finite_logp:
-        logp_moment = joint_logpt(model["x"], at.constant(moment), transformed=False).eval()
+        logp_moment = joint_logp(model["x"], at.constant(moment), transformed=False).eval()
         assert np.isfinite(logp_moment)
 
 

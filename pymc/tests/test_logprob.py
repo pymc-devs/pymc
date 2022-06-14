@@ -42,6 +42,7 @@ from pymc.distributions.discrete import Bernoulli
 from pymc.distributions.logprob import (
     _get_scaling,
     ignore_logprob,
+    joint_logp,
     joint_logpt,
     logcdf,
     logp,
@@ -102,7 +103,7 @@ def test_get_scaling():
     assert _get_scaling(total_size, shape=rv_var.shape, ndim=rv_var.ndim).eval() == 1.0
 
 
-def test_joint_logpt_basic():
+def test_joint_logp_basic():
     """Make sure we can compute a log-likelihood for a hierarchical model with transforms."""
 
     with Model() as m:
@@ -119,7 +120,10 @@ def test_joint_logpt_basic():
 
     c_value_var = m.rvs_to_values[c]
 
-    b_logp = joint_logpt(b, b_value_var, sum=False)
+    b_logp = joint_logp(b, b_value_var, sum=False)
+
+    with pytest.warns(FutureWarning):
+        b_logpt = joint_logpt(b, b_value_var, sum=False)
 
     res_ancestors = list(walk_model(b_logp, walk_past_rvs=True))
     res_rv_ancestors = [
@@ -142,7 +146,7 @@ def test_joint_logpt_basic():
         ((np.array([0, 1, 4]), np.array([0, 1, 4])), (5, 5)),
     ],
 )
-def test_joint_logpt_incsubtensor(indices, size):
+def test_joint_logp_incsubtensor(indices, size):
     """Make sure we can compute a log-likelihood for ``Y[idx] = data`` where ``Y`` is univariate."""
 
     mu = floatX(np.power(10, np.arange(np.prod(size)))).reshape(size)
@@ -163,7 +167,7 @@ def test_joint_logpt_incsubtensor(indices, size):
     a_idx_value_var = a_idx.type()
     a_idx_value_var.name = "a_idx_value"
 
-    a_idx_logp = joint_logpt(a_idx, {a_idx: a_value_var}, sum=False)
+    a_idx_logp = joint_logp(a_idx, {a_idx: a_value_var}, sum=False)
 
     logp_vals = a_idx_logp[0].eval({a_value_var: a_val})
 
@@ -177,7 +181,7 @@ def test_joint_logpt_incsubtensor(indices, size):
     np.testing.assert_almost_equal(logp_vals, exp_obs_logps)
 
 
-def test_joint_logpt_subtensor():
+def test_joint_logp_subtensor():
     """Make sure we can compute a log-likelihood for ``Y[I]`` where ``Y`` and ``I`` are random variables."""
 
     size = 5
@@ -205,7 +209,7 @@ def test_joint_logpt_subtensor():
     I_value_var = I_rv.type()
     I_value_var.name = "I_value"
 
-    A_idx_logps = joint_logpt(A_idx, {A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False)
+    A_idx_logps = joint_logp(A_idx, {A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False)
     A_idx_logp = at.add(*A_idx_logps)
 
     logp_vals_fn = aesara.function([A_idx_value_var, I_value_var], A_idx_logp)
@@ -289,8 +293,8 @@ def test_model_unchanged_logprob_access():
         c = Uniform("c", lower=a - 1, upper=1)
 
     original_inputs = set(aesara.graph.graph_inputs([c]))
-    # Extract model.logpt
-    model.logpt()
+    # Extract model.logp
+    model.logp()
     new_inputs = set(aesara.graph.graph_inputs([c]))
     assert original_inputs == new_inputs
 
@@ -301,7 +305,7 @@ def test_unexpected_rvs():
         y = DensityDist("y", logp=lambda *args: x)
 
     with pytest.raises(ValueError, match="^Random variables detected in the logp graph"):
-        model.logpt()
+        model.logp()
 
 
 def test_ignore_logprob_basic():
@@ -331,9 +335,9 @@ def test_ignore_logprob_model():
         y = DensityDist("y", x, logp=logp)
     # Aeppl raises a KeyError when it finds an unexpected RV
     with pytest.raises(KeyError):
-        joint_logpt([y], {y: y.type()})
+        joint_logp([y], {y: y.type()})
 
     with Model() as m:
         x = ignore_logprob(Normal.dist())
         y = DensityDist("y", x, logp=logp)
-    assert joint_logpt([y], {y: y.type()})
+    assert joint_logp([y], {y: y.type()})

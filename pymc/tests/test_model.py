@@ -677,7 +677,7 @@ def test_set_initval():
     assert y in model.initial_values
 
 
-def test_datalogpt_multiple_shapes():
+def test_datalogp_multiple_shapes():
     with pm.Model() as m:
         x = pm.Normal("x", 0, 1)
         z1 = pm.Potential("z1", x)
@@ -688,7 +688,7 @@ def test_datalogpt_multiple_shapes():
 
     # This would raise a TypeError, see #4803 and #4804
     x_val = m.rvs_to_values[x]
-    m.datalogpt.eval({x_val: 0})
+    m.datalogp.eval({x_val: 0})
 
 
 def test_nested_model_coords():
@@ -878,6 +878,36 @@ def test_set_data_indirect_resize_with_coords():
     # This time with incorrectly sized coord values
     with pytest.raises(ShapeError, match="new coordinate values"):
         pmodel.set_data("mdata", [1, 2], coords=dict(mdim=[1, 2, 3]))
+
+
+def test_model_logpt_deprecation_warning():
+    with pm.Model() as m:
+        x = pm.Normal("x", 0, 1, size=2)
+        y = pm.LogNormal("y", 0, 1, size=2)
+
+    with pytest.warns(FutureWarning):
+        m.logpt()
+
+    with pytest.warns(FutureWarning):
+        m.dlogpt()
+
+    with pytest.warns(FutureWarning):
+        m.d2logpt()
+
+    with pytest.warns(FutureWarning):
+        m.datalogpt
+
+    with pytest.warns(FutureWarning):
+        m.varlogpt
+
+    with pytest.warns(FutureWarning):
+        m.observedlogpt
+
+    with pytest.warns(FutureWarning):
+        m.potentiallogpt
+
+    with pytest.warns(FutureWarning):
+        m.varlogp_nojact
 
 
 @pytest.mark.parametrize("jacobian", [True, False])
