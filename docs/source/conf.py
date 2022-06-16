@@ -144,13 +144,13 @@ exclude_patterns = [
     "about/featured_testimonials.md",
 ]
 
-# myst and panels config
-jupyter_execute_notebooks = "force"
+# myst config
+nb_execution_mode = "force"
+nb_kernel_rgx_aliases = {".*": "python3"}
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "substitution"]
 myst_substitutions = {
     "version_slug": rtd_version,
 }
-panels_add_bootstrap_css = False
 myst_heading_anchors = None
 
 rediraffe_redirects = {
