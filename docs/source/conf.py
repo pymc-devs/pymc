@@ -268,6 +268,7 @@ html_context = {
     "github_repo": "pymc",
     "github_version": "main",
     "doc_path": "docs/source/",
+    "default_mode": "light",
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
