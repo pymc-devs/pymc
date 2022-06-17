@@ -1736,8 +1736,8 @@ class TestMatchesScipy:
 
     def test_constantdist(self):
         with pytest.warns(FutureWarning, match="DiracDelta"):
-            with pm.Model() as m:
-                x = pm.Constant("x", c=1)
+            with Model() as m:
+                x = Constant("x", c=1)
                 assert isinstance(x.owner.op, pm.distributions.discrete.DiracDeltaRV)
 
     def test_zeroinflatedpoisson(self):
