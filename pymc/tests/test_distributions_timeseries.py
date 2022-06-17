@@ -22,7 +22,7 @@ import pymc as pm
 
 from pymc.aesaraf import floatX
 from pymc.distributions.continuous import Flat, HalfNormal, Normal
-from pymc.distributions.discrete import Constant
+from pymc.distributions.discrete import DiractDelta
 from pymc.distributions.logprob import logp
 from pymc.distributions.multivariate import Dirichlet
 from pymc.distributions.timeseries import (
@@ -100,11 +100,11 @@ class TestGaussianRandomWalk:
         size = None
 
         pymc_dist = pm.GaussianRandomWalk
-        pymc_dist_params = {"mu": 1.0, "sigma": 2, "init_dist": pm.Constant.dist(0), "steps": 4}
+        pymc_dist_params = {"mu": 1.0, "sigma": 2, "init_dist": pm.DiractDelta.dist(0), "steps": 4}
         expected_rv_op_params = {
             "mu": 1.0,
             "sigma": 2,
-            "init_dist": pm.Constant.dist(0),
+            "init_dist": pm.DiractDelta.dist(0),
             "steps": 4,
         }
 
@@ -455,7 +455,7 @@ class TestAR:
     )
     def test_moment(self, size, expected):
         with Model() as model:
-            init_dist = Constant.dist([[1.0, 2.0], [3.0, 4.0]])
+            init_dist = DiractDelta.dist([[1.0, 2.0], [3.0, 4.0]])
             AR("x", rho=[0, 0], init_dist=init_dist, steps=5, size=size)
         assert_moment_is_expected(model, expected, check_finite_logp=False)
 
