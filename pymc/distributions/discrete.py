@@ -1411,6 +1411,23 @@ class DiracDelta(Discrete):
         )
 
 
+class Constant:
+    def __new__(cls, *args, **kwargs):
+        warnings.warn(
+            "pm.Constant has been deprecated. Use pm.DiracDelta instead.",
+            FutureWarning,
+        )
+        return DiracDelta(*args, **kwargs)
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        warnings.warn(
+            "pm.Constant has been deprecated. Use pm.DiracDelta instead.",
+            FutureWarning,
+        )
+        return DiracDelat.dist(*args, **kwargs)
+
+
 def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
     """Helper function to create a zero-inflated mixture
 
