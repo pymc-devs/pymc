@@ -12,7 +12,7 @@ Discrete
    DiscreteWeibull
    Poisson
    NegativeBinomial
-   Constant
+   DiracDelta
    ZeroInflatedPoisson
    ZeroInflatedBinomial
    ZeroInflatedNegativeBinomial
