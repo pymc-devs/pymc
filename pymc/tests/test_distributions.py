@@ -1735,7 +1735,7 @@ class TestMatchesScipy:
         check_logcdf(DiracDelta, I, {"c": I}, lambda value, c: np.log(value >= c))
 
     def test_constantdist(self):
-        with pytest.warns(FutureWarning):
+        with pytest.warns(FutureWarning, match="DiracDelta"):
             with pm.Model() as m:
                 x = pm.Constant("x", c=1)
                 assert isinstance(x.owner.op, pm.distributions.discrete.DiracDeltaRV)
