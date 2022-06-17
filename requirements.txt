@@ -1,9 +1,5 @@
 aeppl==0.0.31
-<<<<<<< HEAD
 aesara==2.7.2
-=======
-aesara==2.6.2
->>>>>>> Pin aesara 2.7.0. Remove some dev envs for older python versions. Remove pandas from envs.
 arviz>=0.12.0
 cachetools>=4.2.1
 cloudpickle
