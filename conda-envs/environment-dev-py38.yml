@@ -14,6 +14,7 @@ dependencies:
 - h5py>=2.7
 - ipython>=7.16
 - jax
+- jupyter-sphinx
 - myst-nb
 - numpy>=1.15.0
 - numpydoc
