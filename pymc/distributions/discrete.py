@@ -57,6 +57,7 @@ __all__ = [
     "Poisson",
     "NegativeBinomial",
     "DiracDelta",
+    "Constant",
     "ZeroInflatedPoisson",
     "ZeroInflatedBinomial",
     "ZeroInflatedNegativeBinomial",
@@ -1425,7 +1426,7 @@ class Constant:
             "pm.Constant has been deprecated. Use pm.DiracDelta instead.",
             FutureWarning,
         )
-        return DiracDelat.dist(*args, **kwargs)
+        return DiracDelta.dist(*args, **kwargs)
 
 
 def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
