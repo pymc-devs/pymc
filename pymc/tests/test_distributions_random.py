@@ -1501,17 +1501,17 @@ class TestDiscreteUniform(BaseTestDistributionRandom):
     ]
 
 
-class TestConstant(BaseTestDistributionRandom):
-    def constant_rng_fn(self, size, c):
+class TestDiracDelta(BaseTestDistributionRandom):
+    def diracdelta_rng_fn(self, size, c):
         if size is None:
             return c
         return np.full(size, c)
 
-    pymc_dist = pm.Constant
+    pymc_dist = pm.DiracDelta
     pymc_dist_params = {"c": 3}
     expected_rv_op_params = {"c": 3}
     reference_dist_params = {"c": 3}
-    reference_dist = lambda self: self.constant_rng_fn
+    reference_dist = lambda self: self.diracdelta_rng_fn
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -1524,10 +1524,10 @@ class TestConstant(BaseTestDistributionRandom):
     )
     def test_dtype(self, floatX):
         with aesara.config.change_flags(floatX=floatX):
-            assert pm.Constant.dist(2**4).dtype == "int8"
-            assert pm.Constant.dist(2**16).dtype == "int32"
-            assert pm.Constant.dist(2**32).dtype == "int64"
-            assert pm.Constant.dist(2.0).dtype == floatX
+            assert pm.DiracDelta.dist(2**4).dtype == "int8"
+            assert pm.DiracDelta.dist(2**16).dtype == "int32"
+            assert pm.DiracDelta.dist(2**32).dtype == "int64"
+            assert pm.DiracDelta.dist(2.0).dtype == floatX
 
 
 class TestOrderedLogistic(BaseTestDistributionRandom):
@@ -1860,8 +1860,8 @@ class TestLKJCorr(BaseTestDistributionRandom):
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):
     pymc_dist = _LKJCholeskyCov
-    pymc_dist_params = {"eta": 1.0, "n": 3, "sd_dist": pm.Constant.dist([0.5, 1.0, 2.0])}
-    expected_rv_op_params = {"n": 3, "eta": 1.0, "sd_dist": pm.Constant.dist([0.5, 1.0, 2.0])}
+    pymc_dist_params = {"eta": 1.0, "n": 3, "sd_dist": pm.DiracDelta.dist([0.5, 1.0, 2.0])}
+    expected_rv_op_params = {"n": 3, "eta": 1.0, "sd_dist": pm.DiracDelta.dist([0.5, 1.0, 2.0])}
     size = None
 
     sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
@@ -1891,7 +1891,7 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
     def check_draws_match_expected(self):
         # TODO: Find better comparison:
         rng = aesara.shared(self.get_random_state(reset=True))
-        x = _LKJCholeskyCov.dist(n=2, eta=10_000, sd_dist=pm.Constant.dist([0.5, 2.0]), rng=rng)
+        x = _LKJCholeskyCov.dist(n=2, eta=10_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]), rng=rng)
         assert np.all(np.abs(x.eval() - np.array([0.5, 0, 2.0])) < 0.01)
 
 

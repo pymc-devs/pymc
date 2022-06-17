@@ -56,7 +56,7 @@ __all__ = [
     "DiscreteWeibull",
     "Poisson",
     "NegativeBinomial",
-    "Constant",
+    "DiracDelta",
     "ZeroInflatedPoisson",
     "ZeroInflatedBinomial",
     "ZeroInflatedNegativeBinomial",
@@ -1337,11 +1337,11 @@ class Categorical(Discrete):
         )
 
 
-class ConstantRV(RandomVariable):
-    name = "constant"
+class DiracDeltaRV(RandomVariable):
+    name = "diracdelta"
     ndim_supp = 0
     ndims_params = [0]
-    _print_name = ("Constant", "\\operatorname{Constant}")
+    _print_name = ("DiracDelta", "\\operatorname{DiracDelta}")
 
     def make_node(self, rng, size, dtype, c):
         c = at.as_tensor_variable(c)
@@ -1354,22 +1354,22 @@ class ConstantRV(RandomVariable):
         return np.full(size, c)
 
 
-constant = ConstantRV()
+diracdelta = DiracDeltaRV()
 
 
-class Constant(Discrete):
+class DiracDelta(Discrete):
     r"""
-    Constant log-likelihood.
+    DiracDelta log-likelihood.
 
     Parameters
     ----------
     c: float or int
-        Constant parameter. The dtype of `c` determines the dtype of the distribution.
-        This can affect which sampler is assigned to Constant variables, or variables
-        that use Constant, such as Mixtures.
+        Dirac Delta parameter. The dtype of `c` determines the dtype of the distribution.
+        This can affect which sampler is assigned to DiracDelta variables, or variables
+        that use DiracDelta, such as Mixtures.
     """
 
-    rv_op = constant
+    rv_op = diracdelta
 
     @classmethod
     def dist(cls, c, *args, **kwargs):
@@ -1385,7 +1385,7 @@ class Constant(Discrete):
 
     def logp(value, c):
         r"""
-        Calculate log-probability of Constant distribution at specified value.
+        Calculate log-probability of DiracDelta distribution at specified value.
 
         Parameters
         ----------
@@ -1419,7 +1419,7 @@ def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
     nonzero_p = at.as_tensor_variable(floatX(nonzero_p))
     weights = at.stack([1 - nonzero_p, nonzero_p], axis=-1)
     comp_dists = [
-        Constant.dist(0),
+        DiracDelta.dist(0),
         nonzero_dist,
     ]
     if name is not None:

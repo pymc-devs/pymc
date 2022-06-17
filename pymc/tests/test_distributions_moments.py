@@ -18,7 +18,7 @@ from pymc.distributions import (
     Categorical,
     Cauchy,
     ChiSquared,
-    Constant,
+    DiracDelta,
     DensityDist,
     Dirichlet,
     DirichletMultinomial,
@@ -617,9 +617,9 @@ def test_negative_binomial_moment(n, p, size, expected):
         (np.arange(1, 6), None, np.arange(1, 6)),
     ],
 )
-def test_constant_moment(c, size, expected):
+def test_diracdelta_moment(c, size, expected):
     with Model() as model:
-        Constant("x", c=c, size=size)
+        DiracDelta("x", c=c, size=size)
     assert_moment_is_expected(model, expected)
 
 

@@ -70,7 +70,7 @@ from pymc.distributions import (
     Categorical,
     Cauchy,
     ChiSquared,
-    Constant,
+    DiracDelta,
     Dirichlet,
     DirichletMultinomial,
     DiscreteUniform,
@@ -1729,9 +1729,9 @@ class TestMatchesScipy:
             {"mu": Rplus},
         )
 
-    def test_constantdist(self):
-        check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
-        check_logcdf(Constant, I, {"c": I}, lambda value, c: np.log(value >= c))
+    def test_diracdeltadist(self):
+        check_logp(DiracDelta, I, {"c": I}, lambda value, c: np.log(c == value))
+        check_logcdf(DiracDelta, I, {"c": I}, lambda value, c: np.log(value >= c))
 
     def test_zeroinflatedpoisson(self):
         def logp_fn(value, psi, mu):
@@ -3065,7 +3065,7 @@ class TestBugfixes:
         assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
 
         with pm.Model(check_bounds=False) as m:
-            x = pm.Constant("x", 1, size=10)
+            x = pm.DiracDelta("x", 1, size=10)
         assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), 0 * 10)
 
 
