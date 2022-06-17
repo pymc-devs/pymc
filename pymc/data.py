@@ -70,7 +70,7 @@ def get_data(filename):
 
 class GenTensorVariable(TensorVariable):
     def __init__(self, op, type, name=None):
-        super().__init__(type=type, name=name)
+        super().__init__(type=type, owner=None, name=name)
         self.op = op
 
     def set_gen(self, gen):

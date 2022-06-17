@@ -2,13 +2,14 @@
 # See that file for comments about the need/usage of each dependency.
 
 aeppl==0.0.31
-aesara==2.6.6
+aesara==2.7.2
 arviz>=0.12.0
 cachetools>=4.2.1
 cloudpickle
 fastprogress>=0.2.0
 h5py>=2.7
 ipython>=7.16
+jupyter-sphinx
 myst-nb
 numpy>=1.15.0
 numpydoc

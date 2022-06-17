@@ -26,7 +26,7 @@ repos:
       - types-filelock
       - types-setuptools
       - arviz
-      - aesara==2.6.6
+      - aesara==2.7.2
       - aeppl==0.0.31
       always_run: true
       require_serial: true
@@ -45,6 +45,7 @@ repos:
   rev: 22.3.0
   hooks:
     - id: black
+    - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
   rev: v2.14.0
   hooks:
