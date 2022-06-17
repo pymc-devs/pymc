@@ -1734,12 +1734,6 @@ class TestMatchesScipy:
         check_logp(DiracDelta, I, {"c": I}, lambda value, c: np.log(c == value))
         check_logcdf(DiracDelta, I, {"c": I}, lambda value, c: np.log(value >= c))
 
-    def test_constantdist(self):
-        with pytest.warns(FutureWarning, match="DiracDelta"):
-            with Model() as m:
-                x = Constant("x", c=1)
-                assert isinstance(x.owner.op, pm.distributions.discrete.DiracDeltaRV)
-
     def test_zeroinflatedpoisson(self):
         def logp_fn(value, psi, mu):
             if value == 0:
@@ -3335,3 +3329,10 @@ def test_zero_inflated_dists_dtype_and_broadcast(dist, non_psi_args):
     x = dist([0.5, 0.5, 0.5], *non_psi_args)
     assert x.dtype in discrete_types
     assert x.eval().shape == (3,)
+
+
+def test_constantdist_deprecated():
+    with pytest.warns(FutureWarning, match="DiracDelta"):
+        with Model() as m:
+            x = Constant("x", c=1)
+            assert isinstance(x.owner.op, pm.distributions.discrete.DiracDeltaRV)
