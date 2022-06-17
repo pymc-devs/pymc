@@ -70,6 +70,7 @@ from pymc.distributions import (
     Categorical,
     Cauchy,
     ChiSquared,
+    Constant,
     DiracDelta,
     Dirichlet,
     DirichletMultinomial,
@@ -1732,6 +1733,12 @@ class TestMatchesScipy:
     def test_diracdeltadist(self):
         check_logp(DiracDelta, I, {"c": I}, lambda value, c: np.log(c == value))
         check_logcdf(DiracDelta, I, {"c": I}, lambda value, c: np.log(value >= c))
+
+    def test_constantdist(self):
+        with pytest.warns(FutureWarning):
+            with pm.Model() as m:
+                x = pm.Constant("x", c=1)
+                assert isinstance(x.owner.op, pm.distributions.discrete.DiracDeltaRV)
 
     def test_zeroinflatedpoisson(self):
         def logp_fn(value, psi, mu):
