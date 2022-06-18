@@ -1314,7 +1314,7 @@ class TestSamplePriorPredictive(SeededTest):
     def test_aesara_function_kwargs(self):
         sharedvar = aesara.shared(0)
         with pm.Model() as m:
-            x = pm.Constant("x", 0)
+            x = pm.DiracDelta("x", 0)
             y = pm.Deterministic("y", x + sharedvar)
 
             prior = pm.sample_prior_predictive(
@@ -1361,7 +1361,7 @@ class TestSamplePosteriorPredictive:
     def test_aesara_function_kwargs(self):
         sharedvar = aesara.shared(0)
         with pm.Model() as m:
-            x = pm.Constant("x", 0.0)
+            x = pm.DiracDelta("x", 0.0)
             y = pm.Deterministic("y", x + sharedvar)
 
             pp = pm.sample_posterior_predictive(
@@ -1434,7 +1434,7 @@ class TestDraw(SeededTest):
 
     def test_draw_aesara_function_kwargs(self):
         sharedvar = aesara.shared(0)
-        x = pm.Constant.dist(0.0)
+        x = pm.DiracDelta.dist(0.0)
         y = x + sharedvar
         draws = pm.draw(
             y,
