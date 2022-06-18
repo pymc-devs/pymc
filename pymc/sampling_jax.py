@@ -6,6 +6,8 @@ import warnings
 from functools import partial
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
+import aesara
+
 from pymc.initial_point import StartDict
 from pymc.sampling import RandomSeed, _get_seeds_per_chain, _init_jitter
 
@@ -136,9 +138,9 @@ def _get_log_likelihood(model: Model, samples, backend=None) -> Dict:
     """Compute log-likelihood for all observations"""
     data = {}
     for v in model.observed_RVs:
-        v_elemwise_logp = model.logp(v, sum=False)
-        jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=v_elemwise_logp)
-        result = jax.jit(jax.vmap(jax.vmap(jax_fn)), backend=backend)(*samples)[0]
+        v_elemwise_logpt = model.logpt(v, sum=False)
+        jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=v_elemwise_logpt)
+        result = jax.vmap(jax.vmap(jax_fn))(*jax.device_put(samples, jax.devices(backend)[0]))[0]
         data[v.name] = result
     return data
 
@@ -342,8 +344,8 @@ def sample_blackjax_nuts(
     mcmc_samples = {}
     for v in vars_to_sample:
         jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.jit(jax.vmap(jax.vmap(jax_fn)), backend=postprocessing_backend)(
-            *raw_mcmc_samples
+        result = jax.vmap(jax.vmap(jax_fn))(
+            *jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0])
         )[0]
         mcmc_samples[v.name] = result
 
@@ -534,8 +536,8 @@ def sample_numpyro_nuts(
     mcmc_samples = {}
     for v in vars_to_sample:
         jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.jit(jax.vmap(jax.vmap(jax_fn)), backend=postprocessing_backend)(
-            *raw_mcmc_samples
+        result = jax.vmap(jax.vmap(jax_fn))(
+            *jax.device_put(raw_mcmc_samples, jax.devices("cpu")[0])
         )[0]
         mcmc_samples[v.name] = result
 
