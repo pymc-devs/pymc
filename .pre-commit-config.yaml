@@ -57,8 +57,6 @@ repos:
   hooks:
     - id: no-print-statements
       files: ^pymc/
-    - id: conda-env-sorter
-      files: ^conda-envs/environment-dev-py.+\.yml$
 - repo: local
   hooks:
     - id: check-no-tests-are-ignored
