@@ -677,6 +677,16 @@ def reshape_t(x, shape):
         return x[0]
 
 
+class PointFunc:
+    """Wraps so a function so it takes a dict of arguments instead of arguments."""
+
+    def __init__(self, f):
+        self.f = f
+
+    def __call__(self, state):
+        return self.f(**state)
+
+
 class CallableTensor:
     """Turns a symbolic variable with one input into a function that returns symbolic arguments
     with the one variable replaced with the input.
