@@ -48,6 +48,7 @@ from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
 
 from pymc.aesaraf import (
+    PointFunc,
     compile_pymc,
     convert_observed_data,
     gradient,
@@ -640,7 +641,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
         sum: bool = True,
-    ):
+    ) -> PointFunc:
         """Compiled log probability density function.
 
         Parameters
@@ -660,7 +661,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
-    ):
+    ) -> PointFunc:
         """Compiled log probability density gradient function.
 
         Parameters
@@ -677,7 +678,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
-    ):
+    ) -> PointFunc:
         """Compiled log probability density hessian function.
 
         Parameters
@@ -1597,7 +1598,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         mode=None,
         point_fn: bool = True,
         **kwargs,
-    ) -> Union["PointFunc", Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
+    ) -> Union[PointFunc, Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
         """Compiles an Aesara function
 
         Parameters
@@ -1911,16 +1912,6 @@ def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
         for k, v in d.items()
         if not filter_model_vars or (get_var_name(k) in map(get_var_name, model.value_vars))
     }
-
-
-class PointFunc:
-    """Wraps so a function so it takes a dict of arguments instead of arguments."""
-
-    def __init__(self, f):
-        self.f = f
-
-    def __call__(self, state):
-        return self.f(**state)
 
 
 def Deterministic(name, var, model=None, dims=None, auto=False):
