@@ -1603,10 +1603,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        outs: Aesara variable or iterable of Aesara variables
-        inputs: Aesara input variables, defaults to aesaraf.inputvars(outs).
-        mode: Aesara compilation mode, default=None
-        point_fn:
+        outs
+            Aesara variable or iterable of Aesara variables.
+        inputs
+            Aesara input variables, defaults to aesaraf.inputvars(outs).
+        mode
+            Aesara compilation mode, default=None.
+        point_fn : bool
             Whether to wrap the compiled function in a PointFunc, which takes a Point
             dictionary with model variable names and values as input.
 
@@ -1872,16 +1875,24 @@ def set_data(new_data, model=None, *, coords=None):
         model.set_data(variable_name, new_value, coords=coords)
 
 
-def compile_fn(outs, mode=None, point_fn=True, model=None, **kwargs):
+def compile_fn(
+    outs, mode=None, point_fn: bool = True, model: Optional[Model] = None, **kwargs
+) -> Union[PointFunc, Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
     """Compiles an Aesara function which returns ``outs`` and takes values of model
     vars as a dict as an argument.
+
     Parameters
     ----------
-    outs: Aesara variable or iterable of Aesara variables
-    mode: Aesara compilation mode
-    point_fn:
+    outs
+        Aesara variable or iterable of Aesara variables.
+    mode
+        Aesara compilation mode, default=None.
+    point_fn : bool
         Whether to wrap the compiled function in a PointFunc, which takes a Point
         dictionary with model variable names and values as input.
+    model : Model, optional
+        Current model on stack.
+
     Returns
     -------
     Compiled Aesara function as point function.
