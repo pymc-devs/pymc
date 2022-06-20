@@ -1,5 +1,5 @@
 # "test" conda envs are used to set up our CI environment in GitHub actions
-name: pymc-test-py38
+name: pymc-test
 channels:
 - conda-forge
 - defaults
@@ -20,7 +20,6 @@ dependencies:
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pip
-- python=3.8
 - python-graphviz
 - scipy>=1.4.1
 - typing-extensions>=3.7.4
