@@ -136,13 +136,10 @@ def _sample_stats_to_xarray(posterior):
 
 def _get_log_likelihood(model: Model, samples, backend=None) -> Dict:
     """Compute log-likelihood for all observations"""
-    data = {}
-    for v in model.observed_RVs:
-        v_elemwise_logpt = model.logpt(v, sum=False)
-        jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=v_elemwise_logpt)
-        result = jax.vmap(jax.vmap(jax_fn))(*jax.device_put(samples, jax.devices(backend)[0]))[0]
-        data[v.name] = result
-    return data
+    elemwise_logpt = [model.logp(v, sum=False)[0] for v in model.observed_RVs]
+    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logpt)
+    result = jax.vmap(jax.vmap(jax_fn))(*jax.device_put(samples, jax.devices(backend)[0]))
+    return {v.name: r for v, r in zip(model.observed_RVs, result)}
 
 
 def _get_batched_jittered_initial_points(
@@ -341,13 +338,11 @@ def sample_blackjax_nuts(
     print("Sampling time = ", tic3 - tic2, file=sys.stdout)
 
     print("Transforming variables...", file=sys.stdout)
-    mcmc_samples = {}
-    for v in vars_to_sample:
-        jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.vmap(jax.vmap(jax_fn))(
-            *jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0])
-        )[0]
-        mcmc_samples[v.name] = result
+    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
+    result = jax.vmap(jax.vmap(jax_fn))(
+        *jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0])
+    )
+    mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
 
     tic4 = datetime.now()
     print("Transformation time = ", tic4 - tic3, file=sys.stdout)
@@ -533,13 +528,11 @@ def sample_numpyro_nuts(
     print("Sampling time = ", tic3 - tic2, file=sys.stdout)
 
     print("Transforming variables...", file=sys.stdout)
-    mcmc_samples = {}
-    for v in vars_to_sample:
-        jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.vmap(jax.vmap(jax_fn))(
-            *jax.device_put(raw_mcmc_samples, jax.devices("cpu")[0])
-        )[0]
-        mcmc_samples[v.name] = result
+    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
+    result = jax.vmap(jax.vmap(jax_fn))(
+        *jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0])
+    )
+    mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
 
     tic4 = datetime.now()
     print("Transformation time = ", tic4 - tic3, file=sys.stdout)
