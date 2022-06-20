@@ -57,7 +57,7 @@ __Pre-commit repeatedly complains about the same formatting changes__
 
 Check the unstaged changes (see previous point).
 
-__Whitespace changes in the `environment-dev-*.yml` files__
+__Whitespace changes in the `environment-dev.yml` files__
 
 On Windows, there are some bugs in pre-commit hooks that can lead to changes in some environment YAML files.
 Until this is fixed upstream, you should __ignore these changes__.

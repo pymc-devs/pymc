@@ -8,9 +8,9 @@ ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 # Switch to jovyan to avoid container runs as root
 USER $NB_UID
 
-COPY /conda-envs/environment-dev-py39.yml .
-RUN mamba env create -f environment-dev-py39.yml && \
-    /bin/bash -c ". activate pymc-dev-py39 && \
+COPY /conda-envs/environment-dev.yml .
+RUN mamba env create -f environment-dev.yml && \
+    /bin/bash -c ". activate pymc-dev && \
     mamba install -c conda-forge -y pymc" && \
     conda clean --all -f -y
 
@@ -22,7 +22,7 @@ WORKDIR /home/jovyan/work
 
 # For running from bash
 SHELL ["/bin/bash","-c"]
-RUN echo "conda activate pymc-dev-py39" >> ~/.bashrc && \
+RUN echo "conda activate pymc-dev" >> ~/.bashrc && \
     source ~/.bashrc
 
 # For running from jupyter notebook
