@@ -30,11 +30,11 @@ dependencies:
 - pytest-cov>=2.5
 - pytest>=3.0
 - sphinx-copybutton
+- sphinx-design
 - sphinx-notfound-page
 - sphinx>=1.5
 - sphinxext-rediraffe
 - watermark
 - pip:
   - polyagamma
-  - sphinx-design
   - sphinx-remove-toctrees
