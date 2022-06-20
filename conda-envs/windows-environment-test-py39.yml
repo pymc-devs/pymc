@@ -1,12 +1,12 @@
 # "test" conda envs are used to set up our CI environment in GitHub actions
-name: pymc-test-py38
+name: pymc-test-py39
 channels:
 - conda-forge
 - defaults
 dependencies:
 # Base dependencies (see install guide for Windows)
 - aeppl=0.0.31
-- aesara=2.7.2
+- aesara=2.6.6
 - arviz>=0.12.0
 - blas
 - cachetools>=4.2.1
@@ -20,7 +20,7 @@ dependencies:
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pip
-- python=3.8
+- python=3.9
 - python-graphviz
 - scipy>=1.4.1
 - typing-extensions>=3.7.4

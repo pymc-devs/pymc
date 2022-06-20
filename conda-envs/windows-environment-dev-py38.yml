@@ -1,9 +1,10 @@
+# "dev" conda envs are to be used by devs in setting their local environments
 name: pymc-dev-py38
 channels:
 - conda-forge
 - defaults
 dependencies:
- # base dependencies (see install guide for Windows)
+# Base dependencies (see install guide for Windows)
 - aeppl=0.0.31
 - aesara=2.7.2
 - arviz>=0.12.0
@@ -20,7 +21,7 @@ dependencies:
 - python-graphviz
 - scipy>=1.4.1
 - typing-extensions>=3.7.4
-# Extra stuff for dev, testing and docs build
+# Extra dependencies for dev, testing and docs build
 - ipython>=7.16
 - myst-nb
 - numpydoc
