@@ -43,11 +43,8 @@ _log = logging.getLogger("pymc")
 Var = Any  # pylint: disable=invalid-name
 
 
-def find_observations(model: Optional["Model"]) -> Optional[Dict[str, Var]]:
+def find_observations(model: "Model") -> Dict[str, Var]:
     """If there are observations available, return them as a dictionary."""
-    if model is None:
-        return None
-
     observations = {}
     for obs in model.observed_RVs:
         aux_obs = getattr(obs.tag, "observations", None)
@@ -61,6 +58,36 @@ def find_observations(model: Optional["Model"]) -> Optional[Dict[str, Var]]:
             warnings.warn(f"No data for observation {obs}")
 
     return observations
+
+
+def find_constants(model: "Model") -> Dict[str, Var]:
+    """If there are constants available, return them as a dictionary."""
+    # The constant data vars must be either pm.Data or TensorConstant or SharedVariable
+    def is_data(name, var, model) -> bool:
+        observations = find_observations(model)
+        return (
+            var not in model.deterministics
+            and var not in model.observed_RVs
+            and var not in model.free_RVs
+            and var not in model.potentials
+            and var not in model.value_vars
+            and name not in observations
+            and isinstance(var, (Constant, SharedVariable))
+        )
+
+    # The assumption is that constants (like pm.Data) are named
+    # variables that aren't observed or free RVs, nor are they
+    # deterministics, and then we eliminate observations.
+    constant_data = {}
+    for name, var in model.named_vars.items():
+        if is_data(name, var, model):
+            if hasattr(var, "get_value"):
+                var = var.get_value()
+            elif hasattr(var, "data"):
+                var = var.data
+            constant_data[name] = var
+
+    return constant_data
 
 
 class _DefaultTrace:
@@ -467,40 +494,9 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
     @requires("model")
     def constant_data_to_xarray(self):
         """Convert constant data to xarray."""
-        # For constant data, we are concerned only with deterministics and
-        # data.  The constant data vars must be either pm.Data
-        # (TensorConstant/SharedVariable) or pm.Deterministic
-        constant_data_vars = {}  # type: Dict[str, Var]
-
-        def is_data(name, var) -> bool:
-            assert self.model is not None
-            return (
-                var not in self.model.deterministics
-                and var not in self.model.observed_RVs
-                and var not in self.model.free_RVs
-                and var not in self.model.potentials
-                and var not in self.model.value_vars
-                and (self.observations is None or name not in self.observations)
-                and isinstance(var, (Constant, SharedVariable))
-            )
-
-        # I don't know how to find pm.Data, except that they are named
-        # variables that aren't observed or free RVs, nor are they
-        # deterministics, and then we eliminate observations.
-        for name, var in self.model.named_vars.items():
-            if is_data(name, var):
-                constant_data_vars[name] = var
-
-        if not constant_data_vars:
+        constant_data = find_constants(self.model)
+        if not constant_data:
             return None
-
-        constant_data = {}
-        for name, vals in constant_data_vars.items():
-            if hasattr(vals, "get_value"):
-                vals = vals.get_value()
-            elif hasattr(vals, "data"):
-                vals = vals.data
-            constant_data[name] = vals
 
         return dict_to_dataset(
             constant_data,
