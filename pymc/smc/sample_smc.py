@@ -74,7 +74,7 @@ def sample_smc(
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
         system.
     compute_convergence_checks : bool
-        Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
+        Whether to compute sampler statistics like ``R hat`` and ``effective_n``.
         Defaults to ``True``.
     return_inferencedata : bool, default=True
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
@@ -89,16 +89,9 @@ def sample_smc(
                 Determines the change of beta from stage to stage, i.e. indirectly the number of stages,
                 the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
                 It should be between 0 and 1.
-            n_steps: int
-                The number of steps of each Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
-                for the first stage and for the others it will be determined automatically based on the
-                acceptance rate and `p_acc_rate`, the max number of steps is ``n_steps``.
-            tune_steps: bool
-                Whether to compute the number of steps automatically or not. Defaults to True
-            p_acc_rate: float
-                Used to compute ``n_steps`` when ``tune_steps == True``. The higher the value of
-                ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.85.
-                It should be between 0 and 1.
+            correlation_threshold: float
+                The lower the value the higher the number of MCMC steps computed automatically.
+                Defaults to 0.01. It should be between 0 and 1.
         Keyword arguments for other kernels should be checked in the respective docstrings
 
     Notes
@@ -124,11 +117,11 @@ def sample_smc(
         likelihoods of a sample at stage i+1 and stage i.
      5. Obtain :math:`S_{w}` by re-sampling according to W.
      6. Use W to compute the mean and covariance for the proposal distribution, a MVNormal.
-     7. For stages other than 0 use the acceptance rate from the previous stage to estimate
-        `n_steps`.
-     8. Run N independent Metropolis-Hastings (IMH) chains (each one of length `n_steps`),
-        starting each one from a different sample in :math:`S_{w}`. Samples are IMH as the proposal
-        mean is the of the previous posterior stage and not the current point in parameter space.
+     7. Run N independent MCMC chains, starting each one from a different sample
+        in :math:`S_{w}`. For the IMH kernel, the mean of the proposal distribution is the
+        mean of the previous posterior stage and not the current point in parameter space.
+     8. The N chains are run until the autocorrelation with the samples from the previous
+        stops decreasing given a certain threshold.
      9. Repeat from step 3 until :math:`\beta \ge 1`.
      10. The final result is a collection of N samples from the posterior.
 

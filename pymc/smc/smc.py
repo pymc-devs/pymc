@@ -43,7 +43,7 @@ from pymc.vartypes import discrete_types
 class SMC_KERNEL(ABC):
     """Base class for the Sequential Monte Carlo kernels
 
-    To creat a new SMC kernel you should subclass from this.
+    To create a new SMC kernel you should subclass from this.
 
     Before sampling, the following methods are called once in order:
 
