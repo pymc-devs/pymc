@@ -313,15 +313,7 @@ class SingleGroupApproximation(Approximation):
     _group_class = None
 
     def __init__(self, *args, **kwargs):
-        local_rv = kwargs.get("local_rv")
         groups = [self._group_class(None, *args, **kwargs)]
-        if local_rv is not None:
-            groups.extend(
-                [
-                    Group([v], params=p, local=True, model=kwargs.get("model"))
-                    for v, p in local_rv.items()
-                ]
-            )
         super().__init__(groups, model=kwargs.get("model"))
 
     def __getattr__(self, item):
@@ -360,8 +352,6 @@ class Empirical(SingleGroupApproximation):
     _group_class = EmpiricalGroup
 
     def __init__(self, trace=None, size=None, **kwargs):
-        if kwargs.get("local_rv", None) is not None:
-            raise opvi.LocalGroupError("Empirical approximation does not support local variables")
         super().__init__(trace=trace, size=size, **kwargs)
 
     def evaluate_over_trace(self, node):

@@ -22,7 +22,7 @@ from fastprogress.fastprogress import progress_bar
 
 import pymc as pm
 
-from pymc.variational import opvi, test_functions
+from pymc.variational import test_functions
 from pymc.variational.approximations import Empirical, FullRank, MeanField
 from pymc.variational.operators import KL, KSD
 
@@ -334,7 +334,7 @@ class ADVI(KLqp):
     The last ones are local random variables
     :math:`{\cal Z}=\{\mathbf{z}_{i}\}_{i=1}^{N}`, where
     :math:`\mathbf{z}_{i}=\{\mathbf{z}_{i}^{k}\}_{k=1}^{V_{l}}`.
-    These RVs are used only in AEVB.
+    These RVs are used only in AEVB (which is not implemented in PyMC).
 
     The goal of ADVI is to approximate the posterior distribution
     :math:`p(\Theta,{\cal Z}|{\cal Y})` by variational posterior
@@ -408,8 +408,8 @@ class ADVI(KLqp):
 
     -   The probabilistic model
 
-        `model` with three types of RVs (`observed_RVs`,
-        `global_RVs` and `local_RVs`).
+        `model` with two types of RVs (`observed_RVs`,
+        `global_RVs`).
 
     -   (optional) Minibatches
 
@@ -428,10 +428,6 @@ class ADVI(KLqp):
 
     Parameters
     ----------
-    local_rv: dict[var->tuple]
-        mapping {model_variable -> approx params}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
     model: :class:`pymc.Model`
         PyMC model for inference
     random_seed: None or int
@@ -463,10 +459,6 @@ class FullRankADVI(KLqp):
 
     Parameters
     ----------
-    local_rv: dict[var->tuple]
-        mapping {model_variable -> approx params}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
     model: :class:`pymc.Model`
         PyMC model for inference
     random_seed: None or int
@@ -571,8 +563,6 @@ class SVGD(ImplicitGradient):
         kernel=test_functions.rbf,
         **kwargs,
     ):
-        if kwargs.get("local_rv") is not None:
-            raise opvi.AEVBInferenceError("SVGD does not support local groups")
         empirical = Empirical(
             size=n_particles,
             jitter=jitter,
@@ -639,9 +629,7 @@ class ASVGD(ImplicitGradient):
             "is often **underestimated** when using temperature = 1."
         )
         if approx is None:
-            approx = FullRank(
-                model=kwargs.pop("model", None), local_rv=kwargs.pop("local_rv", None)
-            )
+            approx = FullRank(model=kwargs.pop("model", None))
         super().__init__(estimator=estimator, approx=approx, kernel=kernel, **kwargs)
 
     def fit(
