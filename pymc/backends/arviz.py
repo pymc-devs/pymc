@@ -43,11 +43,8 @@ _log = logging.getLogger("pymc")
 Var = Any  # pylint: disable=invalid-name
 
 
-def find_observations(model: Optional["Model"]) -> Dict[str, Var]:
+def find_observations(model: "Model") -> Dict[str, Var]:
     """If there are observations available, return them as a dictionary."""
-    if model is None:
-        return {}
-
     observations = {}
     for obs in model.observed_RVs:
         aux_obs = getattr(obs.tag, "observations", None)
@@ -63,12 +60,9 @@ def find_observations(model: Optional["Model"]) -> Dict[str, Var]:
     return observations
 
 
-def find_constants(model: Optional["Model"]) -> Dict[str, Var]:
+def find_constants(model: "Model") -> Dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
     # The constant data vars must be either pm.Data or TensorConstant or SharedVariable
-    if model is None:
-        return {}
-
     def is_data(name, var, model) -> bool:
         observations = find_observations(model)
         return (

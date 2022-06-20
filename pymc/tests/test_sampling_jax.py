@@ -171,8 +171,9 @@ def test_get_jaxified_logp():
 def test_idata_kwargs(sampler, idata_kwargs, postprocessing_backend):
     with pm.Model() as m:
         x = pm.Normal("x")
-        z = pm.Normal("z")
         y = pm.Normal("y", x, observed=0)
+        pm.ConstantData("constantdata", [1, 2, 3])
+        pm.MutableData("mutabledata", 2)
         idata = sampler(
             tune=50,
             draws=50,
@@ -180,6 +181,8 @@ def test_idata_kwargs(sampler, idata_kwargs, postprocessing_backend):
             idata_kwargs=idata_kwargs,
             postprocessing_backend=postprocessing_backend,
         )
+    assert "constantdata" in idata.constant_data
+    assert "mutabledata" in idata.constant_data
 
     if idata_kwargs.get("log_likelihood", True):
         assert "log_likelihood" in idata
