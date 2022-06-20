@@ -1145,9 +1145,6 @@ class Approximation(WithMemoization):
         -   :class:`FullRank`
         -   :class:`Empirical`
 
-    Single group accepts `local_rv` keyword with dict mapping PyMC variables
-    to their local Group parameters dict
-
     See Also
     --------
     :class:`Group`
