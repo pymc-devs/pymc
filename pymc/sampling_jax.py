@@ -134,13 +134,10 @@ def _sample_stats_to_xarray(posterior):
 
 def _get_log_likelihood(model: Model, samples, backend=None) -> Dict:
     """Compute log-likelihood for all observations"""
-    data = {}
-    for v in model.observed_RVs:
-        v_elemwise_logp = model.logp(v, sum=False)
-        jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=v_elemwise_logp)
-        result = jax.jit(jax.vmap(jax.vmap(jax_fn)), backend=backend)(*samples)[0]
-        data[v.name] = result
-    return data
+    elemwise_logp = model.logp(model.observed_RVs, sum=False)
+    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
+    result = jax.vmap(jax.vmap(jax_fn))(*jax.device_put(samples, jax.devices(backend)[0]))
+    return {v.name: r for v, r in zip(model.observed_RVs, result)}
 
 
 def _get_batched_jittered_initial_points(
@@ -339,13 +336,11 @@ def sample_blackjax_nuts(
     print("Sampling time = ", tic3 - tic2, file=sys.stdout)
 
     print("Transforming variables...", file=sys.stdout)
-    mcmc_samples = {}
-    for v in vars_to_sample:
-        jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.jit(jax.vmap(jax.vmap(jax_fn)), backend=postprocessing_backend)(
-            *raw_mcmc_samples
-        )[0]
-        mcmc_samples[v.name] = result
+    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
+    result = jax.vmap(jax.vmap(jax_fn))(
+        *jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0])
+    )
+    mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
 
     tic4 = datetime.now()
     print("Transformation time = ", tic4 - tic3, file=sys.stdout)
@@ -355,10 +350,14 @@ def sample_blackjax_nuts(
     else:
         idata_kwargs = idata_kwargs.copy()
 
-    if idata_kwargs.pop("log_likelihood", True):
+    if idata_kwargs.pop("log_likelihood", bool(model.observed_RVs)):
+        tic5 = datetime.now()
+        print("Computing Log Likelihood...", file=sys.stdout)
         log_likelihood = _get_log_likelihood(
             model, raw_mcmc_samples, backend=postprocessing_backend
         )
+        tic6 = datetime.now()
+        print("Log Likelihood time = ", tic6 - tic5, file=sys.stdout)
     else:
         log_likelihood = None
 
@@ -531,13 +530,11 @@ def sample_numpyro_nuts(
     print("Sampling time = ", tic3 - tic2, file=sys.stdout)
 
     print("Transforming variables...", file=sys.stdout)
-    mcmc_samples = {}
-    for v in vars_to_sample:
-        jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[v])
-        result = jax.jit(jax.vmap(jax.vmap(jax_fn)), backend=postprocessing_backend)(
-            *raw_mcmc_samples
-        )[0]
-        mcmc_samples[v.name] = result
+    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
+    result = jax.vmap(jax.vmap(jax_fn))(
+        *jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0])
+    )
+    mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
 
     tic4 = datetime.now()
     print("Transformation time = ", tic4 - tic3, file=sys.stdout)
@@ -547,10 +544,14 @@ def sample_numpyro_nuts(
     else:
         idata_kwargs = idata_kwargs.copy()
 
-    if idata_kwargs.pop("log_likelihood", True):
+    if idata_kwargs.pop("log_likelihood", bool(model.observed_RVs)):
+        tic5 = datetime.now()
+        print("Computing Log Likelihood...", file=sys.stdout)
         log_likelihood = _get_log_likelihood(
             model, raw_mcmc_samples, backend=postprocessing_backend
         )
+        tic6 = datetime.now()
+        print("Log Likelihood time = ", tic6 - tic5, file=sys.stdout)
     else:
         log_likelihood = None
 
