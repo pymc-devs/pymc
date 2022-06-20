@@ -120,7 +120,7 @@ def sample_smc(
      7. Run N independent MCMC chains, starting each one from a different sample
         in :math:`S_{w}`. For the IMH kernel, the mean of the proposal distribution is the
         mean of the previous posterior stage and not the current point in parameter space.
-     8. The N chains are run until the autocorrelation with the samples from the previous
+     8. The N chains are run until the autocorrelation with the samples from the previous stage
         stops decreasing given a certain threshold.
      9. Repeat from step 3 until :math:`\beta \ge 1`.
      10. The final result is a collection of N samples from the posterior.
