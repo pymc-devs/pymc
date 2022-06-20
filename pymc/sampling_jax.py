@@ -6,8 +6,6 @@ import warnings
 from functools import partial
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
-import aesara
-
 from pymc.initial_point import StartDict
 from pymc.sampling import RandomSeed, _get_seeds_per_chain, _init_jitter
 
