@@ -34,6 +34,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
+        python-version: ["3.7"]
         test-subset:
           - |
             pymc/tests/test_util.py
@@ -88,12 +89,12 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v3
         env:
-          # Increase this value to reset cache if environment-test-py37.yml has not changed
+          # Increase this value to reset cache if environment-test.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-test-py37.yml') }}
+          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/environment-test.yml') }}
       - name: Cache multiple paths
         uses: actions/cache@v3
         env:
@@ -111,20 +112,21 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           mamba-version: "*"
-          activate-environment: pymc-test-py37
+          activate-environment: pymc-test
           channel-priority: strict
-          environment-file: conda-envs/environment-test-py37.yml
+          environment-file: conda-envs/environment-test.yml
+          python-version: ${{matrix.python-version}}
           use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install-pymc
         run: |
-          conda activate pymc-test-py37
+          conda activate pymc-test
           pip install -e .
           pip install --pre -U polyagamma
           python --version
       - name: Run tests
         run: |
-          conda activate pymc-test-py37
+          conda activate pymc-test
           python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
@@ -137,6 +139,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float64]
+        python-version: ["3.8"]
         test-subset:
           - pymc/tests/test_variational_inference.py pymc/tests/test_initial_point.py
           - pymc/tests/test_pickling.py pymc/tests/test_profile.py pymc/tests/test_step.py
@@ -156,12 +159,12 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v3
         env:
-          # Increase this value to reset cache if conda-envs/environment-test-py38.yml has not changed
+          # Increase this value to reset cache if conda-envs/windows-environment-test.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/windows-environment-test-py38.yml') }}
+          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/windows-environment-test.yml') }}
       - name: Cache multiple paths
         uses: actions/cache@v3
         env:
@@ -179,14 +182,15 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           mamba-version: "*"
-          activate-environment: pymc-test-py38
+          activate-environment: pymc-test
           channel-priority: strict
-          environment-file: conda-envs/windows-environment-test-py38.yml
+          environment-file: conda-envs/windows-environment-test.yml
+          python-version: ${{matrix.python-version}}
           use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install-pymc
         run: |
-          conda activate pymc-test-py38
+          conda activate pymc-test
           pip install -e .
           pip install --pre -U polyagamma
           python --version
@@ -194,7 +198,7 @@ jobs:
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
-          conda activate pymc-test-py38 &&
+          conda activate pymc-test &&
           python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
@@ -207,6 +211,7 @@ jobs:
       matrix:
         os: [macos-latest]
         floatx: [float64]
+        python-version: ["3.9"]
         test-subset:
           - |
             pymc/tests/test_parallel_sampling.py
@@ -232,12 +237,12 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v3
         env:
-          # Increase this value to reset cache if environment-test-py39.yml has not changed
+          # Increase this value to reset cache if environment-test.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-test-py39.yml') }}
+          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/environment-test.yml') }}
       - name: Cache multiple paths
         uses: actions/cache@v3
         env:
@@ -255,14 +260,15 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           mamba-version: "*"
-          activate-environment: pymc-test-py39
+          activate-environment: pymc-test
           channel-priority: strict
-          environment-file: conda-envs/environment-test-py39.yml
+          environment-file: conda-envs/environment-test.yml
+          python-version: ${{matrix.python-version}}
           use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install pymc
         run: |
-          conda activate pymc-test-py39
+          conda activate pymc-test
           pip install -e .
           python --version
       - name: Run tests
@@ -279,6 +285,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
+        python-version: ["3.9"]
         test-subset:
           - pymc/tests/test_sampling_jax.py
       fail-fast: false
@@ -294,12 +301,12 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v3
         env:
-          # Increase this value to reset cache if environment-test-py39.yml has not changed
+          # Increase this value to reset cache if environment-test.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-test-py39.yml') }}
+          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/environment-test.yml') }}
       - name: Cache multiple paths
         uses: actions/cache@v3
         env:
@@ -317,19 +324,20 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           mamba-version: "*"
-          activate-environment: pymc-test-py39
+          activate-environment: pymc-test
           channel-priority: strict
-          environment-file: conda-envs/environment-test-py39.yml
+          environment-file: conda-envs/environment-test.yml
+          python-version: ${{matrix.python-version}}
           use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install pymc
         run: |
-          conda activate pymc-test-py39
+          conda activate pymc-test
           pip install -e .
           python --version
       - name: Install jax specific dependencies
         run: |
-          conda activate pymc-test-py39
+          conda activate pymc-test
           pip install "numpyro>=0.8.0"
           pip install git+https://github.com/blackjax-devs/blackjax.git@0.7.0
       - name: Run tests
@@ -346,6 +354,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float32]
+        python-version: ["3.8"]
         test-subset:
         - pymc/tests/test_sampling.py pymc/tests/test_ode.py
       fail-fast: false
@@ -361,12 +370,12 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v3
         env:
-          # Increase this value to reset cache if conda-envs/environment-test-py38.yml has not changed
+          # Increase this value to reset cache if conda-envs/windows-environment-test.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/windows-environment-test-py38.yml') }}
+          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/windows-environment-test.yml') }}
       - name: Cache multiple paths
         uses: actions/cache@v3
         env:
@@ -384,14 +393,15 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           mamba-version: "*"
-          activate-environment: pymc-test-py38
+          activate-environment: pymc-test
           channel-priority: strict
-          environment-file: conda-envs/windows-environment-test-py38.yml
+          environment-file: conda-envs/windows-environment-test.yml
+          python-verision: ${{matrix.python-version}}
           use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install-pymc
         run: |
-          conda activate pymc-test-py38
+          conda activate pymc-test
           pip install -e .
           pip install --pre -U polyagamma
           python --version
@@ -399,7 +409,7 @@ jobs:
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
-          conda activate pymc-test-py38 &&
+          conda activate pymc-test &&
           python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
