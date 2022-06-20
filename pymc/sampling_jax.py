@@ -351,9 +351,13 @@ def sample_blackjax_nuts(
         idata_kwargs = idata_kwargs.copy()
 
     if idata_kwargs.pop("log_likelihood", True):
+        tic5 = datetime.now()
+        print("Computing Log Likelihood...", file=sys.stdout)
         log_likelihood = _get_log_likelihood(
             model, raw_mcmc_samples, backend=postprocessing_backend
         )
+        tic6 = datetime.now()
+        print("Log Likelihood time = ", tic6 - tic5, file=sys.stdout)
     else:
         log_likelihood = None
 
@@ -541,9 +545,13 @@ def sample_numpyro_nuts(
         idata_kwargs = idata_kwargs.copy()
 
     if idata_kwargs.pop("log_likelihood", True):
+        tic5 = datetime.now()
+        print("Computing Log Likelihood...", file=sys.stdout)
         log_likelihood = _get_log_likelihood(
             model, raw_mcmc_samples, backend=postprocessing_backend
         )
+        tic6 = datetime.now()
+        print("Log Likelihood time = ", tic6 - tic5, file=sys.stdout)
     else:
         log_likelihood = None
 
