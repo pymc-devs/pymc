@@ -668,7 +668,6 @@ class ASVGD(ImplicitGradient):
 
 def fit(
     n=10000,
-    local_rv=None,
     method="advi",
     model=None,
     random_seed=None,
@@ -682,10 +681,6 @@ def fit(
     ----------
     n: `int`
         number of iterations
-    local_rv: dict[var->tuple]
-        mapping {model_variable -> approx params}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
     method: str or :class:`Inference`
         string name is case insensitive in:
 
@@ -693,8 +688,6 @@ def fit(
         -   'fullrank_advi'  for FullRankADVI
         -   'svgd'  for Stein Variational Gradient Descent
         -   'asvgd'  for Amortized Stein Variational Gradient Descent
-        -   'nfvi'  for Normalizing Flow with default `scale-loc` flow
-        -   'nfvi=<formula>'  for Normalizing Flow using formula
 
     model: :class:`Model`
         PyMC model for inference
@@ -743,8 +736,6 @@ def fit(
         inf_kwargs = dict()
     else:
         inf_kwargs = inf_kwargs.copy()
-    if local_rv is not None:
-        inf_kwargs["local_rv"] = local_rv
     if random_seed is not None:
         inf_kwargs["random_seed"] = random_seed
     if start is not None:
