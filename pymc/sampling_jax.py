@@ -134,7 +134,7 @@ def _sample_stats_to_xarray(posterior):
 
 def _get_log_likelihood(model: Model, samples, backend=None) -> Dict:
     """Compute log-likelihood for all observations"""
-    elemwise_logpt = [model.logp(v, sum=False)[0] for v in model.observed_RVs]
+    elemwise_logp = model.logp(model.observed_RVs, sum=False)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
     result = jax.vmap(jax.vmap(jax_fn))(*jax.device_put(samples, jax.devices(backend)[0]))
     return {v.name: r for v, r in zip(model.observed_RVs, result)}
