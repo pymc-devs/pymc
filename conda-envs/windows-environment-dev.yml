@@ -29,9 +29,9 @@ dependencies:
 - pytest>=3.0
 - sphinx-autobuild>=0.7
 - sphinx-copybutton
+- sphinx-design
 - sphinx-notfound-page
 - sphinx>=1.5
 - watermark
 - pip:
-  - sphinx-design
   - sphinx-remove-toctrees
