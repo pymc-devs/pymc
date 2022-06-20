@@ -1,5 +1,5 @@
 # "dev" conda envs are to be used by devs in setting their local environments
-name: pymc-dev-py37
+name: pymc-dev
 channels:
 - conda-forge
 - defaults
@@ -16,7 +16,6 @@ dependencies:
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pip
-- python=3.7
 - python-graphviz
 - scipy>=1.4.1
 - typing-extensions>=3.7.4

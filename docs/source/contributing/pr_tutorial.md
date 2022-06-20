@@ -34,18 +34,18 @@ The preferred workflow for contributing to PyMC is to fork the [GitHub repositor
    :::{tab-item} Linux/MacOS
 
    ```bash
-   conda env create -f conda-envs/environment-dev-py39.yml  # or py3x
+   conda env create -f conda-envs/environment-dev.yml
    ```
    :::
    :::{tab-item} Windows
    ```bash
-   conda env create -f .\conda-envs\windows-environment-dev-py39.yml
+   conda env create -f .\conda-envs\windows-environment-dev.yml
    ```
    :::
    ::::
 
    ```bash
-   conda activate pymc-dev-py39
+   conda activate pymc-dev
    pip install -e .
    ```
 

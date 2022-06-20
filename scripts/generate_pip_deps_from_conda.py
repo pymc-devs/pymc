@@ -31,7 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-Check requirements-dev.txt has been generated from conda-envs/environment-dev-py3*.yml
+Check requirements-dev.txt has been generated from conda-envs/environment-dev.yml
 
 This is intended to be used as a pre-commit hook, see `.pre-commit-config.yaml`.
 You can run it manually with `pre-commit run pip-from-conda --all`.
