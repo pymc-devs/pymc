@@ -5,13 +5,14 @@ channels:
 dependencies:
  # base dependencies (see install guide for Windows)
 - aeppl=0.0.31
-- aesara=2.6.6
+- aesara=2.7.2
 - arviz>=0.12.0
 - blas
 - cachetools>=4.2.1
 - cloudpickle
 - fastprogress>=0.2.0
 - h5py>=2.7
+- jupyter-sphinx
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pip

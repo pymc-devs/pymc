@@ -219,10 +219,10 @@ class SMC_KERNEL(ABC):
         shared = make_shared_replacements(initial_point, self.variables, self.model)
 
         self.prior_logp_func = _logp_forw(
-            initial_point, [self.model.varlogpt], self.variables, shared
+            initial_point, [self.model.varlogp], self.variables, shared
         )
         self.likelihood_logp_func = _logp_forw(
-            initial_point, [self.model.datalogpt], self.variables, shared
+            initial_point, [self.model.datalogp], self.variables, shared
         )
 
         priors = [self.prior_logp_func(sample) for sample in self.tempered_posterior]
@@ -567,11 +567,11 @@ def _logp_forw(point, out_vars, in_vars, shared):
             if in_var.dtype in discrete_types:
                 float_var = at.TensorType("floatX", in_var.broadcastable)(in_var.name)
                 new_in_vars.append(float_var)
-                replace_int_input[in_var] = at.round(float_var)
+                replace_int_input[in_var] = at.round(float_var).astype(in_var.dtype)
             else:
                 new_in_vars.append(in_var)
 
-        out_vars = clone_replace(out_vars, replace_int_input, strict=False)
+        out_vars = clone_replace(out_vars, replace_int_input, rebuild_strict=False)
         in_vars = new_in_vars
 
     out_list, inarray0 = join_nonshared_inputs(point, out_vars, in_vars, shared)

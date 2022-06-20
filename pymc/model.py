@@ -57,7 +57,7 @@ from pymc.aesaraf import (
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
-from pymc.distributions import joint_logpt
+from pymc.distributions import joint_logp
 from pymc.distributions.logprob import _get_scaling
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
@@ -623,9 +623,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     raise ValueError(f"Can only compute the gradient of continuous types: {var}")
 
         if tempered:
-            costs = [self.varlogpt, self.datalogpt]
+            costs = [self.varlogp, self.datalogp]
         else:
-            costs = [self.logpt()]
+            costs = [self.logp()]
 
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
         extra_vars = [self.rvs_to_values.get(var, var) for var in self.free_RVs]
@@ -654,7 +654,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Whether to sum all logp terms or return elemwise logp for each variable.
             Defaults to True.
         """
-        return self.model.compile_fn(self.logpt(vars=vars, jacobian=jacobian, sum=sum))
+        return self.model.compile_fn(self.logp(vars=vars, jacobian=jacobian, sum=sum))
 
     def compile_dlogp(
         self,
@@ -671,7 +671,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian:
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.model.compile_fn(self.dlogpt(vars=vars, jacobian=jacobian))
+        return self.model.compile_fn(self.dlogp(vars=vars, jacobian=jacobian))
 
     def compile_d2logp(
         self,
@@ -688,9 +688,16 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian:
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.model.compile_fn(self.d2logpt(vars=vars, jacobian=jacobian))
+        return self.model.compile_fn(self.d2logp(vars=vars, jacobian=jacobian))
 
-    def logpt(
+    def logpt(self, *args, **kwargs):
+        warnings.warn(
+            "Model.logpt has been deprecated. Use Model.logp instead.",
+            FutureWarning,
+        )
+        return self.logp(*args, **kwargs)
+
+    def logp(
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
@@ -742,7 +749,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         rv_logps: List[TensorVariable] = []
         if rv_values:
-            rv_logps = joint_logpt(list(rv_values.keys()), rv_values, sum=False, jacobian=jacobian)
+            rv_logps = joint_logp(list(rv_values.keys()), rv_values, sum=False, jacobian=jacobian)
             assert isinstance(rv_logps, list)
 
         # Replace random variables by their value variables in potential terms
@@ -764,7 +771,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
         logp_scalar.name = logp_scalar_name
         return logp_scalar
 
-    def dlogpt(
+    def dlogpt(self, *args, **kwargs):
+        warnings.warn(
+            "Model.dlogpt has been deprecated. Use Model.dlogp instead.",
+            FutureWarning,
+        )
+        return self.dlogp(*args, **kwargs)
+
+    def dlogp(
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
@@ -799,10 +813,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         f"Requested variable {var} not found among the model variables"
                     )
 
-        cost = self.logpt(jacobian=jacobian)
+        cost = self.logp(jacobian=jacobian)
         return gradient(cost, value_vars)
 
-    def d2logpt(
+    def d2logpt(self, *args, **kwargs):
+        warnings.warn(
+            "Model.d2logpt has been deprecated. Use Model.d2logp instead.",
+            FutureWarning,
+        )
+        return self.d2logp(*args, **kwargs)
+
+    def d2logp(
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
@@ -837,34 +858,74 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         f"Requested variable {var} not found among the model variables"
                     )
 
-        cost = self.logpt(jacobian=jacobian)
+        cost = self.logp(jacobian=jacobian)
         return hessian(cost, value_vars)
 
     @property
-    def datalogpt(self) -> Variable:
+    def datalogpt(self):
+        warnings.warn(
+            "Model.datalogpt has been deprecated. Use Model.datalogp instead.",
+            FutureWarning,
+        )
+        return self.datalogp
+
+    @property
+    def datalogp(self) -> Variable:
         """Aesara scalar of log-probability of the observed variables and
         potential terms"""
-        return self.observedlogpt + self.potentiallogpt
+        return self.observedlogp + self.potentiallogp
 
     @property
-    def varlogpt(self) -> Variable:
+    def varlogpt(self):
+        warnings.warn(
+            "Model.varlogpt has been deprecated. Use Model.varlogp instead.",
+            FutureWarning,
+        )
+        return self.varlogp
+
+    @property
+    def varlogp(self) -> Variable:
         """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic)."""
-        return self.logpt(vars=self.free_RVs)
+        return self.logp(vars=self.free_RVs)
 
     @property
-    def varlogp_nojact(self) -> Variable:
+    def varlogp_nojact(self):
+        warnings.warn(
+            "Model.varlogp_nojact has been deprecated. Use Model.varlogp_nojac instead.",
+            FutureWarning,
+        )
+        return self.varlogp_nojac
+
+    @property
+    def varlogp_nojac(self) -> Variable:
         """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic) without jacobian term."""
-        return self.logpt(vars=self.free_RVs, jacobian=False)
+        return self.logp(vars=self.free_RVs, jacobian=False)
 
     @property
-    def observedlogpt(self) -> Variable:
+    def observedlogpt(self):
+        warnings.warn(
+            "Model.observedlogpt has been deprecated. Use Model.observedlogp instead.",
+            FutureWarning,
+        )
+        return self.observedlogp
+
+    @property
+    def observedlogp(self) -> Variable:
         """Aesara scalar of log-probability of the observed variables"""
-        return self.logpt(vars=self.observed_RVs)
+        return self.logp(vars=self.observed_RVs)
 
     @property
-    def potentiallogpt(self) -> Variable:
+    def potentiallogpt(self):
+        warnings.warn(
+            "Model.potentiallogpt has been deprecated. Use Model.potentiallogp instead.",
+            FutureWarning,
+        )
+        return self.potentiallogp
+
+    @property
+    def potentiallogp(self) -> Variable:
         """Aesara scalar of log-probability of the Potential terms"""
         # Convert random variables in Potential expression into their log-likelihood
         # inputs and apply their transforms, if any
@@ -1755,7 +1816,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             point = self.initial_point()
 
         factors = self.basic_RVs + self.potentials
-        factor_logps_fn = [at.sum(factor) for factor in self.logpt(factors, sum=False)]
+        factor_logps_fn = [at.sum(factor) for factor in self.logp(factors, sum=False)]
         return {
             factor.name: np.round(np.asarray(factor_logp), round_vals)
             for factor, factor_logp in zip(

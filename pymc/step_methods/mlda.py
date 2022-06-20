@@ -538,7 +538,7 @@ class MLDA(ArrayStepShared):
         # Construct Aesara function for current-level model likelihood
         # (for use in acceptance)
         shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logpt(), vars, shared)
+        self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
 
         # Construct Aesara function for below-level model likelihood
         # (for use in acceptance)
@@ -547,7 +547,7 @@ class MLDA(ArrayStepShared):
         vars_below = pm.inputvars(vars_below)
         shared_below = pm.make_shared_replacements(initial_values, vars_below, model_below)
         self.delta_logp_below = delta_logp(
-            initial_values, model_below.logpt(), vars_below, shared_below
+            initial_values, model_below.logp(), vars_below, shared_below
         )
 
         super().__init__(vars, shared)

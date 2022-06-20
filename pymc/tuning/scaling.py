@@ -75,7 +75,7 @@ def find_hessian_diag(point, vars=None, model=None):
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
-    H = model.compile_fn(hessian_diag(model.logpt(), vars))
+    H = model.compile_fn(hessian_diag(model.logp(), vars))
     return H(Point(point, model=model))
 
 

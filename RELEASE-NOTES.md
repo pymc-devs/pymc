@@ -3,7 +3,17 @@
 ## PyMC 4.0.1 (vNext)
 + Fixed an incorrect entry in `pm.Metropolis.stats_dtypes` (see #5582).
 + Added a check in `Empirical` approximation which does not yet support `InferenceData` inputs (see #5874, #5884).
-+ ...
++ Fixed bug when sampling discrete variables with SMC (see #5887).
++ Removed trailing `t` (for tensor) in functions and properties from the model class and from `jointlogpt` (see #5859).
+  + `Model.logpt` → `Model.logp`
+  + `Model.dlogpt` → `Model.dlogp`
+  + `Model.d2logpt` → `Model.d2logp`
+  + `Model.datalogpt` → `Model.datalogp`
+  + `Model.varlogpt` → `Model.varlogp`
+  + `Model.observedlogpt` → `Model.observedlogp`
+  + `Model.potentiallogpt` → `Model.potentiallogp`
+  + `Model.varlogp_nojact` → `Model.varlogp_nojac`
+  + `logprob.joint_logpt` → `logprob.joint_logp`
 
 ## PyMC 4.0.0 (2022-06-03)
 

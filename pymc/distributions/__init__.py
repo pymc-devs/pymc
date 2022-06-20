@@ -15,6 +15,7 @@
 from pymc.distributions.logprob import (  # isort:skip
     logcdf,
     logp,
+    joint_logp,
     joint_logpt,
 )
 
@@ -62,6 +63,7 @@ from pymc.distributions.discrete import (
     Binomial,
     Categorical,
     Constant,
+    DiracDelta,
     DiscreteUniform,
     DiscreteWeibull,
     Geometric,
@@ -139,6 +141,7 @@ __all__ = [
     "Bernoulli",
     "Poisson",
     "NegativeBinomial",
+    "DiracDelta",
     "Constant",
     "ZeroInflatedPoisson",
     "ZeroInflatedNegativeBinomial",
@@ -191,6 +194,7 @@ __all__ = [
     "CAR",
     "PolyaGamma",
     "joint_logpt",
+    "joint_logp",
     "logp",
     "logcdf",
 ]

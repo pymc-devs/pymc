@@ -927,7 +927,7 @@ class TestMixtureVsLatent(SeededTest):
         def loose_logp(model, vars):
             """Return logp function that accepts dictionary with unused variables as input"""
             return model.compile_fn(
-                model.logpt(vars=vars, sum=False),
+                model.logp(vars=vars, sum=False),
                 inputs=model.value_vars,
                 on_unused_input="ignore",
             )

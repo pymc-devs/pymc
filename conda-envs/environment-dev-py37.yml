@@ -5,7 +5,7 @@ channels:
 - defaults
 dependencies:
 - aeppl=0.0.31
-- aesara=2.6.6
+- aesara=2.7.2
 - arviz>=0.12.0
 - blas
 - cachetools>=4.2.1
@@ -14,6 +14,7 @@ dependencies:
 - h5py>=2.7
 - ipython>=7.16
 - jax
+- jupyter-sphinx
 - myst-nb
 - numpy>=1.15.0
 - numpydoc

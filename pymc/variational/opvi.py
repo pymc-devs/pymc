@@ -1232,7 +1232,7 @@ class Approximation(WithMemoization):
     def _sized_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `aesara.scan`"""
         varlogp_s, datalogp_s = self.symbolic_sample_over_posterior(
-            [self.model.varlogpt, self.model.datalogpt]
+            [self.model.varlogp, self.model.datalogp]
         )
         return varlogp_s, datalogp_s  # both shape (s,)
 
@@ -1269,7 +1269,7 @@ class Approximation(WithMemoization):
     @node_property
     def _single_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `aesara.scan`"""
-        varlogp, datalogp = self.symbolic_single_sample([self.model.varlogpt, self.model.datalogpt])
+        varlogp, datalogp = self.symbolic_single_sample([self.model.varlogp, self.model.datalogp])
         return varlogp, datalogp
 
     @node_property
