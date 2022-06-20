@@ -33,6 +33,7 @@ pymc/distributions/__init__.py
 pymc/distributions/bound.py
 pymc/distributions/censored.py
 pymc/distributions/discrete.py
+pymc/distributions/logprob.py
 pymc/distributions/shape_utils.py
 pymc/distributions/simulator.py
 pymc/distributions/transforms.py
@@ -164,7 +165,7 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
     elif unexpected_passing:
         print(f"{len(unexpected_passing)} files unexpectedly passed the type checks:")
         print("\n".join(sorted(map(str, unexpected_passing))))
-        print("This is good news! Go to scripts/run-mypy.py and add them to the list.")
+        print("This is good news! Go to scripts/run_mypy.py and add them to the list.")
         if all_files.issubset(passing):
             print("WOW! All files are passing the mypy type checks!")
             print("scripts\\run_mypy.py may no longer be needed.")
