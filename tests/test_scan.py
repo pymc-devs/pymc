@@ -345,6 +345,7 @@ def test_scan_joint_logprob(require_inner_rewrites):
     assert np.allclose(y_logp_val, y_logp_ref_val)
 
 
+@pytest.mark.xfail(reason="see #148")
 @aesara.config.change_flags(compute_test_value="raise")
 @pytest.mark.xfail(reason="see #148")
 def test_initial_values():
