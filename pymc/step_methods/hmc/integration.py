@@ -20,7 +20,7 @@ from scipy import linalg
 
 from pymc.blocking import RaveledVars
 
-State = namedtuple("State", "q, p, v, q_grad, energy, model_logp")
+State = namedtuple("State", "q, p, v, q_grad, energy, model_logp, index_in_trajectory")
 
 
 class IntegrationError(RuntimeError):
@@ -49,7 +49,7 @@ class CpuLeapfrogIntegrator:
         v = self._potential.velocity(p.data)
         kinetic = self._potential.energy(p.data, velocity=v)
         energy = kinetic - logp
-        return State(q, p, v, dlogp, energy, logp)
+        return State(q, p, v, dlogp, energy, logp, 0)
 
     def step(self, epsilon, state):
         """Leapfrog integrator step.
@@ -114,4 +114,12 @@ class CpuLeapfrogIntegrator:
         kinetic = pot.velocity_energy(p_new.data, v_new)
         energy = kinetic - logp
 
-        return State(q_new, p_new, v_new, q_new_grad, energy, logp)
+        return State(
+            q_new,
+            p_new,
+            v_new,
+            q_new_grad,
+            energy,
+            logp,
+            state.index_in_trajectory + int(np.sign(epsilon)),
+        )

@@ -136,6 +136,9 @@ class QuadPotential:
     def reset(self):
         pass
 
+    def stats(self):
+        return {"largest_eigval": np.nan, "smallest_eigval": np.nan}
+
 
 def isquadpotential(value):
     """Check whether an object might be a QuadPotential object."""
@@ -254,6 +257,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
     def _update_from_weightvar(self, weightvar):
         weightvar.current_variance(out=self._var)
+        self._var = np.clip(self._var, 1e-12, 1e12)
         np.sqrt(self._var, out=self._stds)
         np.divide(1, self._stds, out=self._inv_stds)
         self._var_aesara.set_value(self._var)

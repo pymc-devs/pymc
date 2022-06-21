@@ -236,6 +236,7 @@ class BaseHMC(GradientSharedStep):
 
         stats.update(hmc_step.stats)
         stats.update(self.step_adapt.stats())
+        stats.update(self.potential.stats())
 
         return hmc_step.end.q, [stats]
 
