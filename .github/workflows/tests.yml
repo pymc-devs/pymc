@@ -34,7 +34,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
-        python-version: ["3.7"]
+        python-version: ["3.10"]
         test-subset:
           - |
             pymc/tests/test_util.py
@@ -354,7 +354,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float32]
-        python-version: ["3.8"]
+        python-version: ["3.10"]
         test-subset:
         - pymc/tests/test_sampling.py pymc/tests/test_ode.py
       fail-fast: false
