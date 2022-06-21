@@ -396,7 +396,7 @@ jobs:
           activate-environment: pymc-test
           channel-priority: strict
           environment-file: conda-envs/windows-environment-test.yml
-          python-verision: ${{matrix.python-version}}
+          python-version: ${{matrix.python-version}}
           use-mamba: true
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install-pymc
