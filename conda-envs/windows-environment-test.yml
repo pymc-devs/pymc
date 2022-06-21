@@ -14,8 +14,7 @@ dependencies:
 - fastprogress>=0.2.0
 - h5py>=2.7
 - libpython
-- mkl==2020.4
-- mkl-service==2.3.0
+- mkl-service>=2.3.0
 - m2w64-toolchain
 - numpy>=1.15.0
 - pandas>=0.24.0

@@ -12,11 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import os
 import re
 
 from codecs import open
-from datetime import datetime, timezone
 from os.path import dirname, join, realpath
 
 from setuptools import find_packages, setup
@@ -31,9 +29,9 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
@@ -86,7 +84,7 @@ if __name__ == "__main__":
         # package_data={'docs': ['*']},
         include_package_data=True,
         classifiers=classifiers,
-        python_requires=">=3.7",
+        python_requires=">=3.8",
         install_requires=install_reqs,
         tests_require=test_reqs,
     )
