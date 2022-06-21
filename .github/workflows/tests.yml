@@ -105,7 +105,7 @@ jobs:
             ~/.cache/pip
             $RUNNER_TOOL_CACHE/Python/*
             ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
             hashFiles('requirements.txt') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
@@ -175,7 +175,7 @@ jobs:
             ~/.cache/pip
             $RUNNER_TOOL_CACHE/Python/*
             ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
             hashFiles('requirements.txt') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
@@ -253,7 +253,7 @@ jobs:
             ~/.cache/pip
             $RUNNER_TOOL_CACHE/Python/*
             ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
             hashFiles('requirements.txt') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
@@ -317,7 +317,7 @@ jobs:
             ~/.cache/pip
             $RUNNER_TOOL_CACHE/Python/*
             ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
             hashFiles('requirements.txt') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
@@ -386,7 +386,7 @@ jobs:
             ~/.cache/pip
             $RUNNER_TOOL_CACHE/Python/*
             ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
             hashFiles('requirements.txt') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
