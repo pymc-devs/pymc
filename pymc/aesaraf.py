@@ -1031,3 +1031,15 @@ def compile_pymc(
         **kwargs,
     )
     return aesara_function
+
+
+def pd_df_to_aesara_tensor(df):
+    try:
+        import pandas as pd
+
+        @_as_tensor_variable.register(pd.DataFrame)
+        def dataframe_to_tensor_variable(df, *args, **kwargs):
+            return at.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+
+    except ModuleNotFoundError:
+        pass
