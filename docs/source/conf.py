@@ -81,7 +81,8 @@ numpydoc_xref_aliases = {
     "SMC_kernel": ":ref:`SMC Kernel <smc_kernels>`",
     "Aesara_Op": ":class:`Aesara Op <aesara.graph.op.Op>`",
     "tensor_like": ":term:`tensor_like`",
-    "numpy_Generator": ":class:`~numpy.random.Generator`"
+    "numpy_Generator": ":class:`~numpy.random.Generator`",
+    "Distribution": ":ref:`Distribution <api_distributions>`",
 }
 
 # Show the documentation of __init__ and the class docstring
