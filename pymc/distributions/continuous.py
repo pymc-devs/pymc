@@ -1653,10 +1653,6 @@ class AsymmetricLaplace(Continuous):
         Location parameter.
     b : tensor_like of float
         Scale parameter (b > 0).
-
-    See Also:
-    --------
-    `Reference <https://en.wikipedia.org/wiki/Asymmetric_Laplace_distribution>`_
     """
     rv_op = asymmetriclaplace
 

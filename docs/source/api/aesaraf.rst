@@ -6,6 +6,7 @@ Aesara utils
 .. autosummary::
    :toctree: generated/
 
+   compile_pymc
    gradient
    hessian
    hessian_diag

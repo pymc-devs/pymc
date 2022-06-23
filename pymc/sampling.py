@@ -2277,14 +2277,14 @@ def draw(
 
     Parameters
     ----------
-    vars : Variable or iterable of Variable
+    vars : TensorVariable or iterable of TensorVariable
         A variable or a list of variables for which to draw samples.
     draws : int, default 1
         Number of samples needed to draw.
-    random_seed : int, RandomState or Generator, optional
+    random_seed : int, RandomState or numpy_Generator, optional
         Seed for the random number generator.
     **kwargs : dict, optional
-        Keyword arguments for :func:`pymc.aesara.compile_pymc`.
+        Keyword arguments for :func:`pymc.aesaraf.compile_pymc`.
 
     Returns
     -------

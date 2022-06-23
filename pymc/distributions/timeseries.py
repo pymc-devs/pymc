@@ -217,16 +217,17 @@ gaussianrandomwalk = GaussianRandomWalkRV()
 
 
 class GaussianRandomWalk(distribution.Continuous):
-    r"""Random Walk with Normal innovations
+    r"""Random Walk with Normal innovations.
 
     Parameters
     ----------
-    mu : tensor_like of float
-        innovation drift, defaults to 0.0
-    sigma : tensor_like of float, optional
-        sigma > 0, innovation standard deviation, defaults to 1.0
-    init_dist : unnamed distribution
-        Univariate distribution of the initial value, created with the `.dist()` API.
+    mu : tensor_like of float, default 0
+        innovation drift
+    sigma : tensor_like of float, default 1
+        sigma > 0, innovation standard deviation.
+    init_dist : Distribution
+        Unnamed univariate distribution of the initial value. Unnamed refers to distributions
+         created with the ``.dist()`` API.
 
         .. warning:: init will be cloned, rendering them independent of the ones passed as input.
 

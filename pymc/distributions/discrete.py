@@ -988,11 +988,11 @@ class HyperGeometric(Discrete):
 
     Parameters
     ----------
-    N : tensor_like of integer
+    N : tensor_like of int
         Total size of the population (N > 0)
-    k : tensor_like of integer
+    k : tensor_like of int
         Number of successful individuals in the population (0 <= k <= N)
-    n : tensor_like of integer
+    n : tensor_like of int
         Number of samples drawn from the population (0 <= n <= N)
     """
 
