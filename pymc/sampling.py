@@ -2277,7 +2277,7 @@ def draw(
 
     Parameters
     ----------
-    vars : RandomVariable or iterable of RandomVariable
+    vars : TensorVariable or iterable of TensorVariable
         A variable or a list of variables for which to draw samples.
     draws : int, default 1
         Number of samples needed to draw.

@@ -231,7 +231,7 @@ class GaussianRandomWalk(distribution.Continuous):
 
         .. warning:: init will be cloned, rendering them independent of the ones passed as input.
 
-    steps : tensor_like of int, optional
+    steps : int, optional
         Number of steps in Gaussian Random Walk (steps > 0). Only needed if shape is not
         provided.
     """
