@@ -29,6 +29,7 @@ from typing import (
 import aesara
 import aesara.tensor as at
 import numpy as np
+import pandas as pd
 import scipy.sparse as sps
 
 from aeppl.abstract import MeasurableVariable
@@ -140,6 +141,11 @@ def convert_observed_data(data):
     # needed for uses of this function other than with pm.Data:
     else:
         return floatX(ret)
+
+
+@_as_tensor_variable.register(pd.DataFrame)
+def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
+    return at.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
 
 def change_rv_size(
@@ -1031,15 +1037,3 @@ def compile_pymc(
         **kwargs,
     )
     return aesara_function
-
-
-def pd_df_to_aesara_tensor(df):
-    try:
-        import pandas as pd
-
-        @_as_tensor_variable.register(pd.DataFrame)
-        def dataframe_to_tensor_variable(df, *args, **kwargs):
-            return at.as_tensor_variable(df.to_numpy(), *args, **kwargs)
-
-    except ModuleNotFoundError:
-        pass
