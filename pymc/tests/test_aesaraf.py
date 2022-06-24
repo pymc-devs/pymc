@@ -57,6 +57,19 @@ def test_pd_as_tensor_variable(np_array: np.ndarray) -> None:
     np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
 
 
+def test_pd_as_tensor_variable_multiindex() -> None:
+    pd = pytest.importorskip("pandas")
+
+    tuples = [("L", "Q"), ("L", "I"), ("O", "L"), ("O", "I")]
+
+    index = pd.MultiIndex.from_tuples(tuples, names=["Id1", "Id2"])
+
+    df = pd.DataFrame({"A": [12.0, 80.0, 30.0, 20.0], "B": [120.0, 700.0, 30.0, 20.0]}, index=index)
+    np_array = np.array([[12.0, 80.0, 30.0, 20.0], [120.0, 700.0, 30.0, 20.0]]).T
+    assert isinstance(df.index, pd.MultiIndex)
+    np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
+
+
 def test_change_rv_size():
     loc = at.as_tensor_variable([1, 2])
     rv = normal(loc=loc)
