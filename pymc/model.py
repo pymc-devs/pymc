@@ -403,6 +403,9 @@ class ValueGradFunction:
             raise ValueError("Extra values are not set.")
 
         if isinstance(grad_vars, RaveledVars):
+            names = [info.name for info in grad_vars.point_map_info]
+            if names != [var.name for var in self._grad_vars]:
+                raise ValueError("Incorrect gradient variables")
             grad_vars = list(DictToArrayBijection.rmap(grad_vars).values())
 
         cost, *grads = self._aesara_function(*grad_vars)
@@ -424,6 +427,14 @@ class ValueGradFunction:
     def profile(self):
         """Profiling information of the underlying Aesara function."""
         return self._aesara_function.profile
+
+    def dict_to_array(self, point):
+        grad_vars = {}
+        for var in self._grad_vars:
+            name = var.name
+            grad_vars[name] = point[name]
+
+        return DictToArrayBijection.map(grad_vars)
 
 
 class Model(WithMemoization, metaclass=ContextMeta):
@@ -619,7 +630,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if grad_vars is None:
             grad_vars = [self.rvs_to_values[v] for v in typefilter(self.free_RVs, continuous_types)]
         else:
-            for i, var in enumerate(grad_vars):
+            for var in grad_vars:
                 if var.dtype not in continuous_types:
                     raise ValueError(f"Can only compute the gradient of continuous types: {var}")
 

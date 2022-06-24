@@ -17,12 +17,21 @@ pymc.blocking
 
 Classes for working with subsets of parameters.
 """
-import collections
-
 from functools import partial
-from typing import Callable, Dict, Optional, TypeVar
+from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, TypeVar
 
 import numpy as np
+
+try:
+    from math import prod
+except ImportError:
+
+    def prod(vals):
+        product = 1
+        for val in vals:
+            product *= val
+        return product
+
 
 __all__ = ["DictToArrayBijection"]
 
@@ -30,9 +39,20 @@ __all__ = ["DictToArrayBijection"]
 T = TypeVar("T")
 PointType = Dict[str, np.ndarray]
 
-# `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
-# each of the raveled variables.
-RaveledVars = collections.namedtuple("RaveledVars", "data, point_map_info")
+
+class PointMapItem(NamedTuple):
+    name: str
+    shape: Tuple[int]
+    dtype: np.dtype
+    data_slice: slice
+
+
+PointMapInfo = List[PointMapItem]
+
+
+class RaveledVars(NamedTuple):
+    data: np.ndarray
+    point_map_info: PointMapInfo
 
 
 class Compose:
@@ -58,13 +78,23 @@ class DictToArrayBijection:
     @staticmethod
     def map(var_dict: PointType) -> RaveledVars:
         """Map a dictionary of names and variables to a concatenated 1D array space."""
-        vars_info = tuple((v, k, v.shape, v.dtype) for k, v in var_dict.items())
-        raveled_vars = [v[0].ravel() for v in vars_info]
-        if raveled_vars:
-            result = np.concatenate(raveled_vars)
+
+        count = 0
+        infos = []
+        raveled = []
+        for name, variable in var_dict.items():
+            size = prod(variable.shape)
+            data_slice = slice(count, count + size)
+            count += size
+            infos.append(PointMapItem(name, variable.shape, variable.dtype, data_slice))
+            raveled.append(variable.ravel())
+
+        if raveled:
+            joined = np.concatenate(raveled)
         else:
-            result = np.array([])
-        return RaveledVars(result, tuple(v[1:] for v in vars_info))
+            joined = np.array([], dtpye=np.float64)
+
+        return RaveledVars(joined, infos)
 
     @staticmethod
     def rmap(
@@ -89,12 +119,9 @@ class DictToArrayBijection:
         if not isinstance(array, RaveledVars):
             raise TypeError("`array` must be a `RaveledVars` type")
 
-        last_idx = 0
-        for name, shape, dtype in array.point_map_info:
-            arr_len = np.prod(shape, dtype=int)
-            var = array.data[last_idx : last_idx + arr_len].reshape(shape).astype(dtype)
-            result[name] = var
-            last_idx += arr_len
+        for info in array.point_map_info:
+            values = array.data[info.data_slice].reshape(info.shape).astype(info.dtype)
+            result[info.name] = values
 
         return result
 

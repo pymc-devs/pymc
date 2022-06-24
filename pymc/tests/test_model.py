@@ -36,7 +36,7 @@ from aesara.tensor.var import TensorConstant
 import pymc as pm
 
 from pymc import Deterministic, Potential
-from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.blocking import DictToArrayBijection
 from pymc.distributions import Normal, transforms
 from pymc.exceptions import ShapeError, ShapeWarning
 from pymc.model import Point, ValueGradFunction
@@ -297,16 +297,11 @@ class TestValueGradFunction(unittest.TestCase):
 
     def test_grad(self):
         self.f_grad.set_extra_values({"extra1": 5})
-        size = self.val1_.size + self.val2_.size
-        array = RaveledVars(
-            np.ones(size, dtype=self.f_grad.dtype),
-            (
-                ("val1", self.val1_.shape, self.val1_.dtype),
-                ("val2", self.val2_.shape, self.val2_.dtype),
-            ),
+        array = self.f_grad.dict_to_array(
+            {"val1": 2 * np.ones(self.val1_.shape), "val2": np.ones(self.val2_.shape)}
         )
         val, grad = self.f_grad(array)
-        assert val == 21
+        assert val == 2 * 5 * self.val1_.size + self.val2_.size
         npt.assert_allclose(grad, [5, 5, 5, 1, 1, 1, 1, 1, 1])
 
     @pytest.mark.xfail(reason="Test not refactored for v4")

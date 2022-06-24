@@ -242,7 +242,7 @@ class ProcessAdapter:
         self._shared_point = {}
         self._point = {}
 
-        for name, shape, dtype in DictToArrayBijection.map(start).point_map_info:
+        for name, shape, dtype, slice_ in DictToArrayBijection.map(start).point_map_info:
             size = 1
             for dim in shape:
                 size *= int(dim)
