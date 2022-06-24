@@ -18,6 +18,7 @@ import aesara.tensor as at
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
+import pandas as pd
 import pytest
 import scipy.sparse as sps
 
@@ -45,6 +46,17 @@ from pymc.aesaraf import (
 from pymc.distributions.dist_math import check_parameters
 from pymc.exceptions import ShapeError
 from pymc.vartypes import int_types
+
+
+@pytest.mark.parametrize(
+    argnames="df, np_array",
+    argvalues=[
+        (pd.DataFrame(data={"col": [1.0, 2.0, -1.0]}), np.array([[1.0], [2.0], [-1.0]])),
+        (pd.DataFrame([np.ones(3), np.zeros(3)]), np.array([[1.0, 1.0, 1.0], [0.0, 0.0, 0.0]])),
+    ],
+)
+def test_pd_as_tensor_variable(df: pd.DataFrame, np_array: np.ndarray) -> None:
+    np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
 
 
 def test_change_rv_size():
