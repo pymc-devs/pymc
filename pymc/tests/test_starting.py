@@ -98,6 +98,32 @@ def test_find_MAP():
     close_to(map_est2["sigma"], 1, tol)
 
 
+def test_find_MAP_issue_5923():
+    # Test that gradient-based minimization works well regardless of the order
+    # of variables in `vars`, and even when starting a reasonable distance from
+    # the MAP.
+    tol = 2.0**-11  # 16 bit machine epsilon, a low bar
+    data = np.random.randn(100)
+    # data should be roughly mean 0, std 1, but let's
+    # normalize anyway to get it really close
+    data = (data - np.mean(data)) / np.std(data)
+
+    with Model():
+        mu = Uniform("mu", -1, 1)
+        sigma = Uniform("sigma", 0.5, 1.5)
+        Normal("y", mu=mu, tau=sigma**-2, observed=data)
+
+        start = {"mu": -0.5, "sigma": 1.25}
+        map_est1 = starting.find_MAP(progressbar=False, vars=[mu, sigma], start=start)
+        map_est2 = starting.find_MAP(progressbar=False, vars=[sigma, mu], start=start)
+
+    close_to(map_est1["mu"], 0, tol)
+    close_to(map_est1["sigma"], 1, tol)
+
+    close_to(map_est2["mu"], 0, tol)
+    close_to(map_est2["sigma"], 1, tol)
+
+
 def test_find_MAP_issue_4488():
     # Test for https://github.com/pymc-devs/pymc/issues/4488
     with Model() as m:

@@ -110,9 +110,9 @@ def find_MAP(
     start = ipfn(seed)
     model.check_start_vals(start)
 
-    var_names = {var.name for var in vars}
+    vars_dict = {var.name: var for var in vars}
     x0 = DictToArrayBijection.map(
-        {var_name: value for var_name, value in start.items() if var_name in var_names}
+        {var_name: value for var_name, value in start.items() if var_name in vars_dict}
     )
 
     # TODO: If the mapping is fixed, we can simply create graphs for the
@@ -120,7 +120,7 @@ def find_MAP(
     compiled_logp_func = DictToArrayBijection.mapf(model.compile_logp(jacobian=False), start)
     logp_func = lambda x: compiled_logp_func(RaveledVars(x, x0.point_map_info))
 
-    rvs = [model.values_to_rvs[value] for value in vars]
+    rvs = [model.values_to_rvs[vars_dict[name]] for name, _, _ in x0.point_map_info]
     try:
         # This might be needed for calls to `dlogp_func`
         # start_map_info = tuple((v.name, v.shape, v.dtype) for v in vars)
