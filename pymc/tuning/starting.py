@@ -25,7 +25,7 @@ import aesara.gradient as tg
 import numpy as np
 
 from fastprogress.fastprogress import ProgressBar, progress_bar
-from numpy import isfinite, nan_to_num
+from numpy import isfinite
 from scipy.optimize import minimize
 
 import pymc as pm
@@ -181,10 +181,6 @@ def allfinite(x):
     return np.all(isfinite(x))
 
 
-def nan_to_high(x):
-    return np.where(isfinite(x), x, 1.0e100)
-
-
 def allinmodel(vars, model):
     notin = [v for v in vars if v not in model.value_vars]
     if notin:
@@ -214,12 +210,12 @@ class CostFuncWrapper:
 
     def __call__(self, x):
         neg_value = np.float64(self.logp_func(pm.floatX(x)))
-        value = -1.0 * nan_to_high(neg_value)
+        value = -1.0 * neg_value
         if self.use_gradient:
             neg_grad = self.dlogp_func(pm.floatX(x))
             if np.all(np.isfinite(neg_grad)):
                 self.previous_x = x
-            grad = nan_to_num(-1.0 * neg_grad)
+            grad = -1.0 * neg_grad
             grad = grad.astype(np.float64)
         else:
             self.previous_x = x
