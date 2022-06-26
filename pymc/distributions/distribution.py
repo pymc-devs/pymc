@@ -266,7 +266,9 @@ class Distribution(metaclass=DistributionMeta):
 
         if resize_shape:
             # A batch size was specified through `dims`, or implied by `observed`.
-            rv_out = change_rv_size(rv=rv_out, new_size=resize_shape, expand=True)
+            rv_out = change_rv_size(
+                rv=rv_out, new_size=resize_shape, new_size_dims=dims, expand=True
+            )
 
         rv_out = model.register_rv(
             rv_out,

@@ -145,6 +145,7 @@ def convert_observed_data(data):
 def change_rv_size(
     rv: TensorVariable,
     new_size: PotentialShapeType,
+    new_size_dims: Optional[tuple] = (None,),
     expand: Optional[bool] = False,
 ) -> TensorVariable:
     """Change or expand the size of a `RandomVariable`.
@@ -155,6 +156,8 @@ def change_rv_size(
         The old `RandomVariable` output.
     new_size
         The new size.
+    new_size_dims
+        dim names of the new size vector
     expand:
         Expand the existing size by `new_size`.
 
@@ -165,6 +168,10 @@ def change_rv_size(
         raise ShapeError("The `new_size` must be ≤1-dimensional.", actual=new_size_ndim)
     elif new_size_ndim == 0:
         new_size = (new_size,)
+
+    # wrap None in tuple, if new_size_dims are None
+    if new_size_dims is None:
+        new_size_dims = (None,)
 
     # Extract the RV node that is to be resized, together with its inputs, name and tag
     assert rv.owner.op is not None
@@ -180,9 +187,13 @@ def change_rv_size(
         size = shape[: len(shape) - rv_node.op.ndim_supp]
         new_size = tuple(new_size) + tuple(size)
 
+    # create the name of the RV's resizing tensor
+    # TODO: add information where the dim is coming from (obseverd, prior, ...)
+    new_size_name = f"Broadcast to {new_size_dims[0]}_dim"
+
     # Make sure the new size is a tensor. This dtype-aware conversion helps
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
-    new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
+    new_size = at.as_tensor(new_size, ndim=1, dtype="int64", name=new_size_name)
 
     new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
     new_rv = new_rv_node.outputs[-1]
