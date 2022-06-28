@@ -49,11 +49,25 @@ from pymc.vartypes import int_types
 
 @pytest.mark.parametrize(
     argnames="np_array",
-    argvalues=[np.array([[1.0], [2.0], [-1.0]]), np.array([[1.0, 1.0, 1.0], [0.0, 0.0, 0.0]])],
+    argvalues=[
+        np.array([[1.0], [2.0], [-1.0]]),
+        np.array([[1.0, 1.0, 1.0], [0.0, 0.0, 0.0]]),
+        np.ones(shape=(10, 1)),
+    ],
 )
-def test_pd_as_tensor_variable(np_array: np.ndarray) -> None:
+def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
     pd = pytest.importorskip("pandas")
     df: pd.DataFrame = pd.DataFrame(np_array)
+    np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
+
+
+@pytest.mark.parametrize(
+    argnames="np_array",
+    argvalues=[np.array([1.0, 2.0, -1.0]), np.ones(shape=4), np.zeros(shape=10), [1, 2, 3, 4]],
+)
+def test_pd_series_as_tensor_variable(np_array: np.ndarray) -> None:
+    pd = pytest.importorskip("pandas")
+    df: pd.DataFrame = pd.Series(np_array)
     np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
 
 

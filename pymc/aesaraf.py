@@ -29,6 +29,7 @@ from typing import (
 import aesara
 import aesara.tensor as at
 import numpy as np
+import pandas as pd
 import scipy.sparse as sps
 
 from aeppl.abstract import MeasurableVariable
@@ -143,18 +144,10 @@ def convert_observed_data(data):
         return floatX(ret)
 
 
-try:
-    import pandas as pd
-
-    _pd_available: bool = True
-except ModuleNotFoundError:
-    _pd_available: bool = False
-
-if _pd_available:
-
-    @_as_tensor_variable.register(pd.DataFrame)
-    def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
-        return at.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+@_as_tensor_variable.register(pd.Series)
+@_as_tensor_variable.register(pd.DataFrame)
+def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
+    return at.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
 
 def change_rv_size(
