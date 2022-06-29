@@ -27,4 +27,4 @@ RUN echo "conda activate pymc-dev" >> ~/.bashrc && \
 
 # For running from jupyter notebook
 EXPOSE 8888
-CMD ["conda", "run", "--no-capture-output", "-n", "pymc-dev-py39", "jupyter","notebook","--ip=0.0.0.0","--port=8888","--no-browser"]
+CMD ["conda", "run", "--no-capture-output", "-n", "pymc-dev", "jupyter","notebook","--ip=0.0.0.0","--port=8888","--no-browser"]
