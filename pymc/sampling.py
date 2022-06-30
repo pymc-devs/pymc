@@ -138,7 +138,6 @@ def instantiate_steppers(
     """
     if step_kwargs is None:
         step_kwargs = {}
-
     used_keys = set()
     for step_class, vars in selected_steps.items():
         if vars:
@@ -698,6 +697,7 @@ def sample(
 
         if return_inferencedata:
             return idata
+    self.trace = mtrace
     return mtrace
 
 
