@@ -18,6 +18,7 @@ import aesara.tensor as at
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
+import pandas as pd
 import pytest
 import scipy.sparse as sps
 
@@ -56,7 +57,6 @@ from pymc.vartypes import int_types
     ],
 )
 def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
-    pd = pytest.importorskip("pandas")
     df: pd.DataFrame = pd.DataFrame(np_array)
     np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
 
@@ -66,13 +66,11 @@ def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
     argvalues=[np.array([1.0, 2.0, -1.0]), np.ones(shape=4), np.zeros(shape=10), [1, 2, 3, 4]],
 )
 def test_pd_series_as_tensor_variable(np_array: np.ndarray) -> None:
-    pd = pytest.importorskip("pandas")
     df: pd.DataFrame = pd.Series(np_array)
     np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
 
 
 def test_pd_as_tensor_variable_multiindex() -> None:
-    pd = pytest.importorskip("pandas")
 
     tuples = [("L", "Q"), ("L", "I"), ("O", "L"), ("O", "I")]
 
@@ -261,7 +259,6 @@ def test_convert_observed_data(input_dtype):
     Ensure that convert_observed_data returns the dense array, masked array,
     graph variable, TensorVariable, or sparse matrix as appropriate.
     """
-    pd = pytest.importorskip("pandas")
     # Create the various inputs to the function
     sparse_input = sps.csr_matrix(np.eye(3)).astype(input_dtype)
     dense_input = np.arange(9).reshape((3, 3)).astype(input_dtype)
@@ -337,7 +334,6 @@ def test_convert_observed_data(input_dtype):
 
 
 def test_pandas_to_array_pandas_index():
-    pd = pytest.importorskip("pandas")
     data = pd.Index([1, 2, 3])
     result = convert_observed_data(data)
     expected = np.array([1, 2, 3])
