@@ -4,6 +4,7 @@ To build the docs, run these commands at pymc repository root:
 
 ```bash
 $ pip install -r requirements-dev.txt  # Make sure the dev requirements are installed
+$ pip install numpyro  # Make sure `sampling_jax` docs can be built
 $ make clean  # clean built docs from previous runs and intermediate outputs
 $ make html   # Build docs
 $ python -m http.server --directory docs/_build/  # Render docs
