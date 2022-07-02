@@ -1,6 +1,11 @@
 # Build documentation locally
 
-To build the docs, run these commands at pymc repository root:
+:::{warning}
+Docs build is not supported on Windows.
+To build docs on Windows we recommend running inside a Docker container.
+:::
+
+To build the docs, run these commands at PyMC repository root:
 
 ```bash
 $ pip install -r requirements-dev.txt  # Make sure the dev requirements are installed
@@ -9,7 +14,7 @@ $ make html   # Build docs
 $ python -m http.server --directory docs/_build/  # Render docs
 ```
 
-Check the printed url where docs are being served and open it.
+Check the printed URL where docs are being served and open it.
 
 The `make clean` step is not always necessary, if you are working on a specific page
 for example, you can rebuild the docs without the clean step and everything should
