@@ -11,3 +11,5 @@ Quick links
 * [Running the test suite](https://docs.pymc.io/en/latest/contributing/running_the_test_suite.html)
 * [Running PyMC in Docker](https://docs.pymc.io/en/latest/contributing/docker_container.html)
 * [Submitting a bug report or feature request](https://github.com/pymc-devs/pymc/issues)
+
+For a complete list visit [the contributing section of the documentation](https://docs.pymc.io/en/latest/contributing/index.html).
