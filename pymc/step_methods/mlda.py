@@ -365,6 +365,11 @@ class MLDA(ArrayStepShared):
         adaptive_error_model: bool = False,
         **kwargs,
     ) -> None:
+        warnings.warn(
+            "The MLDA stepper will be migrated to the pymc-experimental project!"
+            " See https://github.com/pymc-devs/pymc/issues/5942",
+            DeprecationWarning,
+        )
 
         # this variable is used to identify MLDA objects which are
         # not in the finest level (i.e. child MLDA objects)
