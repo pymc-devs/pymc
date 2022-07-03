@@ -18,7 +18,6 @@ import numpy as np
 import pytest
 
 from aesara import shared
-from aesara.compile.sharedvalue import SharedVariable
 from aesara.tensor import TensorConstant
 from aesara.tensor.var import TensorVariable
 
@@ -431,9 +430,9 @@ class TestData(SeededTest):
 
     def test_data_mutable_default_warning(self):
         with pm.Model():
-            with pytest.warns(FutureWarning, match="`mutable` kwarg was not specified"):
+            with pytest.warns(UserWarning, match="`mutable` kwarg was not specified"):
                 data = pm.Data("x", [1, 2, 3])
-            assert isinstance(data, SharedVariable)
+            assert isinstance(data, TensorConstant)
         pass
 
 

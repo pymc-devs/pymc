@@ -29,7 +29,7 @@ from aesara.graph.op import Op
 import pymc as pm
 
 from pymc.aesaraf import floatX
-from pymc.data import Data
+from pymc.data import Data, MutableData
 from pymc.distributions import (
     Bernoulli,
     Beta,
@@ -1109,7 +1109,7 @@ class TestMLDA:
                 intercept = inputs[0][0]
                 x_coeff = inputs[0][1]
 
-                temp = intercept + x_coeff * x + self.pymc_model.bias.get_value()
+                temp = intercept + x_coeff * x + self.pymc_model.bias.data
                 with self.pymc_model:
                     set_data({"model_output": temp})
                 outputs[0][0] = np.array(temp)
@@ -1120,9 +1120,9 @@ class TestMLDA:
 
         with Model() as coarse_model_0:
             bias = Data("bias", 3.5 * np.ones(y.shape, dtype=p))
-            mu_B = Data("mu_B", -1.3 * np.ones(y.shape, dtype=p))
-            Sigma_B = Data("Sigma_B", np.zeros((y.shape[0], y.shape[0]), dtype=p))
-            model_output = Data("model_output", np.zeros(y.shape, dtype=p))
+            mu_B = MutableData("mu_B", -1.3 * np.ones(y.shape, dtype=p))
+            Sigma_B = MutableData("Sigma_B", np.zeros((y.shape[0], y.shape[0]), dtype=p))
+            model_output = MutableData("model_output", np.zeros(y.shape, dtype=p))
             Sigma_e = Data("Sigma_e", s)
 
             # Define priors
@@ -1140,9 +1140,9 @@ class TestMLDA:
 
         with Model() as coarse_model_1:
             bias = Data("bias", 2.2 * np.ones(y.shape, dtype=p))
-            mu_B = Data("mu_B", -2.2 * np.ones(y.shape, dtype=p))
-            Sigma_B = Data("Sigma_B", np.zeros((y.shape[0], y.shape[0]), dtype=p))
-            model_output = Data("model_output", np.zeros(y.shape, dtype=p))
+            mu_B = MutableData("mu_B", -2.2 * np.ones(y.shape, dtype=p))
+            Sigma_B = MutableData("Sigma_B", np.zeros((y.shape[0], y.shape[0]), dtype=p))
+            model_output = MutableData("model_output", np.zeros(y.shape, dtype=p))
             Sigma_e = Data("Sigma_e", s)
 
             # Define priors
@@ -1161,7 +1161,7 @@ class TestMLDA:
         # fine model and inference
         with Model() as model:
             bias = Data("bias", np.zeros(y.shape, dtype=p))
-            model_output = Data("model_output", np.zeros(y.shape, dtype=p))
+            model_output = MutableData("model_output", np.zeros(y.shape, dtype=p))
             Sigma_e = Data("Sigma_e", s)
 
             # Define priors
@@ -1268,9 +1268,9 @@ class TestMLDA:
 
             with Model() as coarse_model_0:
                 if aesara.config.floatX == "float32":
-                    Q = Data("Q", np.float32(0.0))
+                    Q = MutableData("Q", np.float32(0.0))
                 else:
-                    Q = Data("Q", np.float64(0.0))
+                    Q = MutableData("Q", np.float64(0.0))
 
                 # Define priors
                 intercept = Normal("Intercept", true_intercept, sigma=1)
@@ -1285,9 +1285,9 @@ class TestMLDA:
 
             with Model() as coarse_model_1:
                 if aesara.config.floatX == "float32":
-                    Q = Data("Q", np.float32(0.0))
+                    Q = MutableData("Q", np.float32(0.0))
                 else:
-                    Q = Data("Q", np.float64(0.0))
+                    Q = MutableData("Q", np.float64(0.0))
 
                 # Define priors
                 intercept = Normal("Intercept", true_intercept, sigma=1)
@@ -1302,9 +1302,9 @@ class TestMLDA:
 
             with Model() as model:
                 if aesara.config.floatX == "float32":
-                    Q = Data("Q", np.float32(0.0))
+                    Q = MutableData("Q", np.float32(0.0))
                 else:
-                    Q = Data("Q", np.float64(0.0))
+                    Q = MutableData("Q", np.float64(0.0))
 
                 # Define priors
                 intercept = Normal("Intercept", true_intercept, sigma=1)
