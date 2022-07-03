@@ -661,16 +661,14 @@ def Data(
     arr = convert_observed_data(value)
 
     if mutable is None:
-        major, minor = (int(v) for v in pm.__version__.split(".")[:2])
-        mutable = major == 4 and minor < 1
-        if mutable:
-            warnings.warn(
-                "The `mutable` kwarg was not specified. Currently it defaults to `pm.Data(mutable=True)`,"
-                " which is equivalent to using `pm.MutableData()`."
-                " In v4.1.0 the default will change to `pm.Data(mutable=False)`, equivalent to `pm.ConstantData`."
-                " Set `pm.Data(..., mutable=False/True)`, or use `pm.ConstantData`/`pm.MutableData`.",
-                FutureWarning,
-            )
+        warnings.warn(
+            "The `mutable` kwarg was not specified. Before v4.1.0 it defaulted to `pm.Data(mutable=True)`,"
+            " which is equivalent to using `pm.MutableData()`."
+            " In v4.1.0 the default changed to `pm.Data(mutable=False)`, equivalent to `pm.ConstantData`."
+            " Use `pm.ConstantData`/`pm.MutableData` or pass `pm.Data(..., mutable=False/True)` to avoid this warning.",
+            UserWarning,
+        )
+        mutable = False
     if mutable:
         x = aesara.shared(arr, name, **kwargs)
     else:
