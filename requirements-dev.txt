@@ -2,7 +2,7 @@
 # See that file for comments about the need/usage of each dependency.
 
 aeppl==0.0.31
-aesara==2.7.3
+aesara==2.7.4
 arviz>=0.12.0
 cachetools>=4.2.1
 cloudpickle
