@@ -42,12 +42,12 @@ repos:
     - id: pyupgrade
       args: [--py37-plus]
 - repo: https://github.com/psf/black
-  rev: 22.3.0
+  rev: 22.6.0
   hooks:
     - id: black
     - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.14.3
+  rev: v2.14.4
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
