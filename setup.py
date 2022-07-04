@@ -10,7 +10,7 @@ setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description="PPL tools for Aesara",
-    url="http://github.com/aesara-devs/aeppl",
+    url="https://github.com/aesara-devs/aeppl",
     maintainer="Aesara Developers",
     maintainer_email="aesara-devs@gmail.com",
     packages=["aeppl"],
