@@ -1568,7 +1568,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Checks if name has prefix and adds if needed"""
         name = self._validate_name(name)
         if self.prefix:
-            if not name.startswith(self.prefix):
+            if not name.startswith(self.prefix + "::"):
                 return f"{self.prefix}::{name}"
             else:
                 return name
