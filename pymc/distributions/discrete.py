@@ -82,6 +82,7 @@ class Binomial(Discrete):
     .. math:: f(x \mid n, p) = \binom{n}{x} p^x (1-p)^{n-x}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
