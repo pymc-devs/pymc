@@ -29,6 +29,7 @@ from typing import (
 import aesara
 import aesara.tensor as at
 import numpy as np
+import pandas as pd
 import scipy.sparse as sps
 
 from aeppl.abstract import MeasurableVariable
@@ -50,6 +51,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op, compute_test_value
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.scalar.basic import Cast
+from aesara.tensor.basic import _as_tensor_variable
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import (
@@ -140,6 +142,12 @@ def convert_observed_data(data):
     # needed for uses of this function other than with pm.Data:
     else:
         return floatX(ret)
+
+
+@_as_tensor_variable.register(pd.Series)
+@_as_tensor_variable.register(pd.DataFrame)
+def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
+    return at.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
 
 def change_rv_size(

@@ -1014,3 +1014,20 @@ def test_compile_fn():
     result_expect = func(state)
 
     np.testing.assert_allclose(result_compute, result_expect)
+
+
+def test_model_aesara_config():
+    assert aesara.config.mode != "JAX"
+    with pm.Model(aesara_config=dict(mode="JAX")) as model:
+        assert aesara.config.mode == "JAX"
+    assert aesara.config.mode != "JAX"
+
+
+def test_model_parent_set_programmatically():
+    with pm.Model() as model:
+        x = pm.Normal("x")
+
+    with pm.Model(model=model):
+        y = pm.Normal("y")
+
+    assert "y" in model.named_vars

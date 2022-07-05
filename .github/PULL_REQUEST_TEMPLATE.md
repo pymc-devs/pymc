@@ -1,11 +1,20 @@
+<!-- !! Thank your for opening a PR !! -->
 
-**Thank your for opening a PR!**
+**What is this PR about?**
+...
 
-Before you proceed, please make sure that [the pre-commit linting/style checks pass](https://docs.pymc.io/en/latest/contributing/python_style.html).
+**Checklist**
++ [ ] Explain important implementation details 👆
++ [ ] Make sure that [the pre-commit linting/style checks pass](https://docs.pymc.io/en/latest/contributing/python_style.html).
++ [ ] Link relevant issues (preferably in [nice commit messages](https://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html))
++ [ ] Are the changes covered by tests and docstrings?
++ [ ] Fill out the short summary sections 👇
 
-Depending on what your PR does, here are a few things you might want to address in the description:
-+ [ ] what are the (breaking) changes that this PR makes?
-+ [ ] important background, or details about the implementation
-+ [ ] are the changes—especially new features—covered by tests and docstrings?
-+ [ ] [consider adding/updating relevant example notebooks](https://github.com/pymc-devs/pymc-examples)
-+ [ ] right before it's ready to merge, mention the PR in the RELEASE-NOTES.md
+## Major / Breaking Changes
+- ...
+
+## Bugfixes / New features
+- ...
+
+## Docs / Maintenance
+- ...

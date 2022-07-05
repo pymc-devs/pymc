@@ -554,7 +554,11 @@ class Model(WithMemoization, base, metaclass=ContextMeta):
         name="",
         coords=None,
         check_bounds=True,
+        *,
+        aesara_config=None,
+        model=None,
     ):
+        del aesara_config, model  # used in __new__
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
 

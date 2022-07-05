@@ -260,7 +260,7 @@ class MLDA(ArrayStepShared):
         sum of the quantity of interest after sampling. In order to use
         variance reduction, the user needs to do the following when defining
         the PyMC model (also demonstrated in the example notebook):
-            - Include a `pm.Data()` variable with the name `Q` in the
+            - Include a `pm.MutableData()` variable with the name `Q` in the
             model description of all levels.
             - Use an Aesara Op to calculate the forward model (or the
             combination of a forward model and a likelihood). This Op
@@ -286,7 +286,7 @@ class MLDA(ArrayStepShared):
             definition at all levels except the finest one, the
             extra variables mu_B and Sigma_B, which will capture
             the bias between different levels. All these variables
-            should be instantiated using the pm.Data method.
+            should be instantiated using the pm.MutableData method.
             - Use an Aesara Op to define the forward model (and
             optionally the likelihood) for all levels. The Op needs
             to store the result of each forward model calculation
@@ -365,6 +365,11 @@ class MLDA(ArrayStepShared):
         adaptive_error_model: bool = False,
         **kwargs,
     ) -> None:
+        warnings.warn(
+            "The MLDA stepper will be migrated to the pymc-experimental project!"
+            " See https://github.com/pymc-devs/pymc/issues/5942",
+            DeprecationWarning,
+        )
 
         # this variable is used to identify MLDA objects which are
         # not in the finest level (i.e. child MLDA objects)
@@ -401,12 +406,12 @@ class MLDA(ArrayStepShared):
                     "the variable in the model definition"
                     "for variance reduction to work or"
                     "for storing the fine Q."
-                    "Use pm.Data() to define it."
+                    "Use pm.MutableData() to define it."
                 )
             if not isinstance(self.model.Q, TensorSharedVariable):
                 raise TypeError(
                     "The variable 'Q' in the model definition is not of type "
-                    "'TensorSharedVariable'. Use pm.Data() to define the"
+                    "'TensorSharedVariable'. Use pm.MutableData() to define the"
                     "variable."
                 )
 
@@ -427,7 +432,7 @@ class MLDA(ArrayStepShared):
                     "variable 'mu_B'. You need to include"
                     "the variable in the model definition"
                     "for adaptive error model to work."
-                    "Use pm.Data() to define it."
+                    "Use pm.MutableData() to define it."
                 )
             if not hasattr(self.model_below, "Sigma_B"):
                 raise AttributeError(
@@ -435,7 +440,7 @@ class MLDA(ArrayStepShared):
                     "variable 'Sigma_B'. You need to include"
                     "the variable in the model definition"
                     "for adaptive error model to work."
-                    "Use pm.Data() to define it."
+                    "Use pm.MutableData() to define it."
                 )
             if not (
                 isinstance(self.model_below.mu_B, TensorSharedVariable)
@@ -444,7 +449,7 @@ class MLDA(ArrayStepShared):
                 raise TypeError(
                     "At least one of the variables 'mu_B' and 'Sigma_B' "
                     "in the definition of the below model is not of type "
-                    "'TensorSharedVariable'. Use pm.Data() to define those "
+                    "'TensorSharedVariable'. Use pm.MutableData() to define those "
                     "variables."
                 )
 
