@@ -159,6 +159,11 @@ class TestNested:
             with pm.Model() as sub:
                 assert model is sub.root
 
+    def test_prefix_add_uses_separator(self):
+        with pm.Model("foo"):
+            foobar = pm.Normal("foobar")
+            assert foobar.name == "foo::foobar"
+
     def test_nested_named_model_repeated(self):
         with pm.Model("sub") as model:
             b = pm.Normal("var")
