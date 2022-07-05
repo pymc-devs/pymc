@@ -1,3 +1,5 @@
+import warnings
+
 import aesara
 import aesara.tensor as at
 import numpy as np
@@ -260,6 +262,10 @@ def test_warn_random_not_found():
 
     with pytest.warns(UserWarning):
         factorized_joint_logprob({y_rv: y_vv})
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        factorized_joint_logprob({y_rv: y_vv}, warn_missing_rvs=False)
 
 
 def test_multiple_rvs_to_same_value_raises():

@@ -122,11 +122,12 @@ def factorized_joint_logprob(
         if not outputs:
             continue
 
-        if warn_missing_rvs and any(o not in updated_rv_values for o in outputs):
-            warnings.warn(
-                "Found a random variable that was neither among the observations "
-                f"nor the conditioned variables: {node.outputs}"
-            )
+        if any(o not in updated_rv_values for o in outputs):
+            if warn_missing_rvs:
+                warnings.warn(
+                    "Found a random variable that was neither among the observations "
+                    f"nor the conditioned variables: {node.outputs}"
+                )
             continue
 
         q_value_vars = [replacements[q_rv_var] for q_rv_var in outputs]
