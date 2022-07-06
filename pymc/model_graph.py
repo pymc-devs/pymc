@@ -135,8 +135,10 @@ class ModelGraph:
                 style = "filled"
             else:
                 shape = "ellipse"
-                syle = None
-            symbol = v.owner.op.__class__.__name__.strip("RV")
+                style = None
+            symbol = v.owner.op.__class__.__name__
+            if symbol.endswith("RV"):
+                symbol = symbol[:-2]
             label = f"{var_name}\n~\n{symbol}"
         else:
             shape = "box"
