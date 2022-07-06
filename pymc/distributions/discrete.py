@@ -82,6 +82,7 @@ class Binomial(Discrete):
     .. math:: f(x \mid n, p) = \binom{n}{x} p^x (1-p)^{n-x}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -107,11 +108,11 @@ class Binomial(Discrete):
 
     Parameters
     ----------
-    n : int
+    n : tensor_like of int
         Number of Bernoulli trials (n >= 0).
-    p : float
+    p : tensor_like of float
         Probability of success in each trial (0 < p < 1).
-    logit_p : float
+    logit_p : tensor_like of float
         Alternative log odds for the probability of success.
     """
     rv_op = binomial
