@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 import aesara
 import aesara.tensor as at
 import numpy as np
@@ -333,11 +335,17 @@ def test_ignore_logprob_model():
     with Model() as m:
         x = Normal.dist()
         y = DensityDist("y", x, logp=logp)
-    # Aeppl raises a KeyError when it finds an unexpected RV
-    with pytest.raises(KeyError):
-        joint_logp([y], {y: y.type()})
+    with pytest.warns(
+        UserWarning,
+        match="Found a random variable that was neither among the observations "
+        "nor the conditioned variables",
+    ):
+        assert joint_logp([y], {y: y.type()})
 
+    # The above warning should go away with ignore_logprob.
     with Model() as m:
         x = ignore_logprob(Normal.dist())
         y = DensityDist("y", x, logp=logp)
-    assert joint_logp([y], {y: y.type()})
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert joint_logp([y], {y: y.type()})
