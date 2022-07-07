@@ -236,7 +236,6 @@ def joint_logp(
         tmp_rvs_to_values,
         extra_rewrites=transform_opt,
         use_jacobian=jacobian,
-        warn_missing_rvs=False,
         **kwargs,
     )
 
