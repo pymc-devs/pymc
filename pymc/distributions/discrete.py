@@ -211,6 +211,7 @@ class BetaBinomial(Discrete):
            \frac{B(x + \alpha, n - x + \beta)}{B(\alpha, \beta)}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -244,11 +245,11 @@ class BetaBinomial(Discrete):
 
     Parameters
     ----------
-    n: int
+    n: tensor_like of int
         Number of Bernoulli trials (n >= 0).
-    alpha: float
+    alpha: tensor_like of float
         alpha > 0.
-    beta: float
+    beta: tensor_like of float
         beta > 0.
     """
 
