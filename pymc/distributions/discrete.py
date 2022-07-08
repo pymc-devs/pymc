@@ -337,6 +337,7 @@ class Bernoulli(Discrete):
     .. math:: f(x \mid p) = p^{x} (1-p)^{1-x}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -366,9 +367,9 @@ class Bernoulli(Discrete):
 
     Parameters
     ----------
-    p: float
+    p: tensor_like of float
         Probability of success (0 < p < 1).
-    logit_p: float
+    logit_p: tensor_like of float
         Alternative log odds for the probability of success.
     """
     rv_op = bernoulli
@@ -568,6 +569,7 @@ class Poisson(Discrete):
     .. math:: f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -592,7 +594,7 @@ class Poisson(Discrete):
 
     Parameters
     ----------
-    mu: float
+    mu: tensor_like of float
         Expected number of occurrences during the given interval
         (mu >= 0).
 
@@ -685,6 +687,7 @@ class NegativeBinomial(Discrete):
            (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -732,13 +735,13 @@ class NegativeBinomial(Discrete):
 
     Parameters
     ----------
-    alpha: float
+    alpha: tensor_like of float
         Gamma distribution shape parameter (alpha > 0).
-    mu: float
+    mu: tensor_like of float
         Gamma distribution mean (mu > 0).
-    p: float
+    p: tensor_like of float
         Alternative probability of success in each trial (0 < p < 1).
-    n: float
+    n: tensor_like of float
         Alternative number of target success trials (n > 0)
     """
     rv_op = nbinom
@@ -853,6 +856,7 @@ class Geometric(Discrete):
     .. math:: f(x \mid p) = p(1-p)^{x-1}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -876,7 +880,7 @@ class Geometric(Discrete):
 
     Parameters
     ----------
-    p: float
+    p: tensor_like of float
         Probability of success on an individual trial (0 < p <= 1).
     """
 
@@ -962,6 +966,7 @@ class HyperGeometric(Discrete):
     .. math:: f(x \mid N, n, k) = \frac{\binom{k}{x}\binom{N-k}{n-x}}{\binom{N}{n}}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
