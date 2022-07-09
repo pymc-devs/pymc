@@ -245,11 +245,11 @@ class BetaBinomial(Discrete):
 
     Parameters
     ----------
-    n: tensor_like of int
+    n : tensor_like of int
         Number of Bernoulli trials (n >= 0).
-    alpha: tensor_like of float
+    alpha : tensor_like of float
         alpha > 0.
-    beta: tensor_like of float
+    beta : tensor_like of float
         beta > 0.
     """
 
