@@ -1560,11 +1560,11 @@ class ZeroInflatedBinomial:
 
     Parameters
     ----------
-    psi: float
+    psi : tensor_like of float
         Expected proportion of Binomial variates (0 < psi < 1)
-    n: int
+    n : tensor_like of int
         Number of Bernoulli trials (n >= 0).
-    p: float
+    p : tensor_like of float
         Probability of success in each trial (0 < p < 1).
 
     """
@@ -1650,15 +1650,15 @@ class ZeroInflatedNegativeBinomial:
 
     Parameters
     ----------
-    psi: float
+    psi : tensor_like of float
         Expected proportion of NegativeBinomial variates (0 < psi < 1)
-    mu: float
+    mu : tensor_like of float
         Poission distribution parameter (mu > 0).
-    alpha: float
+    alpha : tensor_like of float
         Gamma distribution parameter (alpha > 0).
-    p: float
+    p : tensor_like of float
         Alternative probability of success in each trial (0 < p < 1).
-    n: float
+    n : tensor_like of float
         Alternative number of target success trials (n > 0)
     """
 
@@ -1846,18 +1846,19 @@ class OrderedProbit:
 
     Parameters
     ----------
-    eta: float
+    eta : tensor_like of float
         The predictor.
-    cutpoints: array
+    cutpoints : tensor_like array of floats
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
-    sigma: float, default 1.0
+    sigma : tensor_like of float, default 1.0
          Standard deviation of the probit function.
-    compute_p: boolean, default True
+    compute_p : boolean, default True
         Whether to compute and store in the trace the inferred probabilities of each categories,
         based on the cutpoints' values. Defaults to True.
         Might be useful to disable it if memory usage is of interest.
+
     Example
     --------
     .. code:: python
