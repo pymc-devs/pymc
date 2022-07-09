@@ -1365,7 +1365,7 @@ class DiracDelta(Discrete):
 
     Parameters
     ----------
-    c: float or int
+    c : tensor_like of float or int
         Dirac Delta parameter. The dtype of `c` determines the dtype of the distribution.
         This can affect which sampler is assigned to DiracDelta variables, or variables
         that use DiracDelta, such as Mixtures.
@@ -1491,9 +1491,9 @@ class ZeroInflatedPoisson:
 
     Parameters
     ----------
-    psi: float
+    psi : tensor_like of float
         Expected proportion of Poisson variates (0 < psi < 1)
-    mu: float
+    mu : tensor_like of float
         Expected number of occurrences during the given interval
         (mu >= 0).
     """
@@ -1726,9 +1726,9 @@ class OrderedLogistic:
 
     Parameters
     ----------
-    eta: float
+    eta : tensor_like of float
         The predictor.
-    cutpoints: array
+    cutpoints : tensor_like of array
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
