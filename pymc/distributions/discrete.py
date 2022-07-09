@@ -1463,6 +1463,7 @@ class ZeroInflatedPoisson:
             \end{array} \right.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
