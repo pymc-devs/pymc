@@ -1990,9 +1990,7 @@ class Pareto(BoundedContinuous):
     bound_args_indices = (4, None)  # lower-bounded by `m`
 
     @classmethod
-    def dist(
-        cls, alpha: float = None, m: float = None, **kwargs
-    ) -> RandomVariable:
+    def dist(cls, alpha: float = None, m: float = None, **kwargs) -> RandomVariable:
         alpha = at.as_tensor_variable(floatX(alpha))
         m = at.as_tensor_variable(floatX(m))
 
@@ -3257,9 +3255,7 @@ class Gumbel(Continuous):
     rv_op = gumbel
 
     @classmethod
-    def dist(
-        cls, mu: float = None, beta: float = None, **kwargs
-    ) -> RandomVariable:
+    def dist(cls, mu: float = None, beta: float = None, **kwargs) -> RandomVariable:
 
         mu = at.as_tensor_variable(floatX(mu))
         beta = at.as_tensor_variable(floatX(beta))
