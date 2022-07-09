@@ -541,16 +541,13 @@ class Normal(Continuous):
     rv_op = normal
 
     @classmethod
-    def dist(cls, mu=0, sigma=None, tau=None, no_assert=False, **kwargs):
+    def dist(cls, mu=0, sigma=None, tau=None, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
 
         # tau = at.as_tensor_variable(tau)
         # mean = median = mode = mu = at.as_tensor_variable(floatX(mu))
         # variance = 1.0 / self.tau
-
-        if not no_assert:
-            assert_negative_support(sigma, "sigma", "Normal")
 
         return super().dist([mu, sigma], **kwargs)
 
@@ -707,8 +704,6 @@ class TruncatedNormal(BoundedContinuous):
         sigma = at.as_tensor_variable(sigma)
         tau = at.as_tensor_variable(tau)
         mu = at.as_tensor_variable(floatX(mu))
-        assert_negative_support(sigma, "sigma", "TruncatedNormal")
-        assert_negative_support(tau, "tau", "TruncatedNormal")
 
         lower = at.as_tensor_variable(floatX(lower)) if lower is not None else at.constant(-np.inf)
         upper = at.as_tensor_variable(floatX(upper)) if upper is not None else at.constant(np.inf)
@@ -863,9 +858,6 @@ class HalfNormal(PositiveContinuous):
     def dist(cls, sigma=None, tau=None, *args, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        assert_negative_support(tau, "tau", "HalfNormal")
-        assert_negative_support(sigma, "sigma", "HalfNormal")
-
         return super().dist([0.0, sigma], **kwargs)
 
     def moment(rv, size, loc, sigma):
@@ -1013,10 +1005,6 @@ class Wald(PositiveContinuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         mu = at.as_tensor_variable(floatX(mu))
         lam = at.as_tensor_variable(floatX(lam))
-
-        assert_negative_support(phi, "phi", "Wald")
-        assert_negative_support(mu, "mu", "Wald")
-        assert_negative_support(lam, "lam", "Wald")
 
         return super().dist([mu, lam, alpha], **kwargs)
 
@@ -1223,9 +1211,6 @@ class Beta(UnitContinuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
 
-        assert_negative_support(alpha, "alpha", "Beta")
-        assert_negative_support(beta, "beta", "Beta")
-
         return super().dist([alpha, beta], **kwargs)
 
     def moment(rv, size, alpha, beta):
@@ -1354,9 +1339,6 @@ class Kumaraswamy(UnitContinuous):
         a = at.as_tensor_variable(floatX(a))
         b = at.as_tensor_variable(floatX(b))
 
-        assert_negative_support(a, "a", "Kumaraswamy")
-        assert_negative_support(b, "b", "Kumaraswamy")
-
         return super().dist([a, b], *args, **kwargs)
 
     def moment(rv, size, a, b):
@@ -1474,8 +1456,6 @@ class Exponential(PositiveContinuous):
     def dist(cls, lam, *args, **kwargs):
         lam = at.as_tensor_variable(floatX(lam))
 
-        assert_negative_support(lam, "lam", "Exponential")
-
         # Aesara exponential op is parametrized in terms of mu (1/lam)
         return super().dist([at.inv(lam)], **kwargs)
 
@@ -1560,7 +1540,6 @@ class Laplace(Continuous):
         b = at.as_tensor_variable(floatX(b))
         mu = at.as_tensor_variable(floatX(mu))
 
-        assert_negative_support(b, "b", "Laplace")
         return super().dist([mu, b], *args, **kwargs)
 
     def moment(rv, size, mu, b):
@@ -1664,9 +1643,6 @@ class AsymmetricLaplace(Continuous):
 
         # mean = mu - (kappa - 1 / kappa) / b
         # variance = (1 + kappa ** 4) / (kappa ** 2 * b ** 2)
-
-        assert_negative_support(kappa, "kappa", "AsymmetricLaplace")
-        assert_negative_support(b, "b", "AsymmetricLaplace")
 
         return super().dist([b, kappa, mu], *args, **kwargs)
 
@@ -1775,9 +1751,6 @@ class LogNormal(PositiveContinuous):
 
         mu = at.as_tensor_variable(floatX(mu))
         sigma = at.as_tensor_variable(floatX(sigma))
-
-        assert_negative_support(tau, "tau", "LogNormal")
-        assert_negative_support(sigma, "sigma", "LogNormal")
 
         return super().dist([mu, sigma], *args, **kwargs)
 
@@ -1901,9 +1874,6 @@ class StudentT(Continuous):
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
 
-        assert_negative_support(sigma, "sigma (lam)", "StudentT")
-        assert_negative_support(nu, "nu", "StudentT")
-
         return super().dist([nu, mu, sigma], **kwargs)
 
     def moment(rv, size, nu, mu, sigma):
@@ -2014,13 +1984,10 @@ class Pareto(BoundedContinuous):
 
     @classmethod
     def dist(
-        cls, alpha: float = None, m: float = None, no_assert: bool = False, **kwargs
+        cls, alpha: float = None, m: float = None, **kwargs
     ) -> RandomVariable:
         alpha = at.as_tensor_variable(floatX(alpha))
         m = at.as_tensor_variable(floatX(m))
-
-        assert_negative_support(alpha, "alpha", "Pareto")
-        assert_negative_support(m, "m", "Pareto")
 
         return super().dist([alpha, m], **kwargs)
 
@@ -2122,7 +2089,6 @@ class Cauchy(Continuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
 
-        assert_negative_support(beta, "beta", "Cauchy")
         return super().dist([alpha, beta], **kwargs)
 
     def moment(rv, size, alpha, beta):
@@ -2198,7 +2164,6 @@ class HalfCauchy(PositiveContinuous):
     @classmethod
     def dist(cls, beta, *args, **kwargs):
         beta = at.as_tensor_variable(floatX(beta))
-        assert_negative_support(beta, "beta", "HalfCauchy")
         return super().dist([0.0, beta], **kwargs)
 
     def moment(rv, size, loc, beta):
@@ -2292,14 +2257,10 @@ class Gamma(PositiveContinuous):
     rv_op = gamma
 
     @classmethod
-    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, no_assert=False, **kwargs):
+    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, **kwargs):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
-
-        if not no_assert:
-            assert_negative_support(alpha, "alpha", "Gamma")
-            assert_negative_support(beta, "beta", "Gamma")
 
         # The Aesara `GammaRV` `Op` will invert the `beta` parameter itself
         return super().dist([alpha, beta], **kwargs)
@@ -2413,9 +2374,6 @@ class InverseGamma(PositiveContinuous):
         alpha, beta = cls._get_alpha_beta(alpha, beta, mu, sigma)
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
-
-        assert_negative_support(alpha, "alpha", "InverseGamma")
-        assert_negative_support(beta, "beta", "InverseGamma")
 
         return super().dist([alpha, beta], **kwargs)
 
@@ -2619,9 +2577,6 @@ class Weibull(PositiveContinuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
 
-        assert_negative_support(alpha, "alpha", "Weibull")
-        assert_negative_support(beta, "beta", "Weibull")
-
         return super().dist([alpha, beta], *args, **kwargs)
 
     def moment(rv, size, alpha, beta):
@@ -2736,10 +2691,6 @@ class HalfStudentT(PositiveContinuous):
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(lam, sigma)
         sigma = at.as_tensor_variable(sigma)
-
-        assert_negative_support(nu, "nu", "HalfStudentT")
-        assert_negative_support(lam, "lam", "HalfStudentT")
-        assert_negative_support(sigma, "sigma", "HalfStudentT")
 
         return super().dist([nu, sigma], *args, **kwargs)
 
@@ -2869,9 +2820,6 @@ class ExGaussian(Continuous):
         mu = at.as_tensor_variable(floatX(mu))
         sigma = at.as_tensor_variable(floatX(sigma))
         nu = at.as_tensor_variable(floatX(nu))
-
-        assert_negative_support(sigma, "sigma", "ExGaussian")
-        assert_negative_support(nu, "nu", "ExGaussian")
 
         return super().dist([mu, sigma, nu], *args, **kwargs)
 
@@ -3006,7 +2954,6 @@ class VonMises(CircularContinuous):
     def dist(cls, mu=0.0, kappa=None, *args, **kwargs):
         mu = at.as_tensor_variable(floatX(mu))
         kappa = at.as_tensor_variable(floatX(kappa))
-        assert_negative_support(kappa, "kappa", "VonMises")
         return super().dist([mu, kappa], *args, **kwargs)
 
     def moment(rv, size, mu, kappa):
@@ -3103,9 +3050,6 @@ class SkewNormal(Continuous):
         mu = at.as_tensor_variable(floatX(mu))
         tau = at.as_tensor_variable(tau)
         sigma = at.as_tensor_variable(sigma)
-
-        assert_negative_support(tau, "tau", "SkewNormal")
-        assert_negative_support(sigma, "sigma", "SkewNormal")
 
         return super().dist([mu, sigma, alpha], *args, **kwargs)
 
@@ -3307,14 +3251,11 @@ class Gumbel(Continuous):
 
     @classmethod
     def dist(
-        cls, mu: float = None, beta: float = None, no_assert: bool = False, **kwargs
+        cls, mu: float = None, beta: float = None, **kwargs
     ) -> RandomVariable:
 
         mu = at.as_tensor_variable(floatX(mu))
         beta = at.as_tensor_variable(floatX(beta))
-
-        if not no_assert:
-            assert_negative_support(beta, "beta", "Gumbel")
 
         return super().dist([mu, beta], **kwargs)
 
@@ -3647,8 +3588,6 @@ class LogitNormal(UnitContinuous):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = at.as_tensor_variable(sigma)
         tau = at.as_tensor_variable(tau)
-        assert_negative_support(sigma, "sigma", "LogitNormal")
-        assert_negative_support(tau, "tau", "LogitNormal")
 
         return super().dist([mu, sigma], **kwargs)
 
@@ -3904,8 +3843,6 @@ class Moyal(Continuous):
     def dist(cls, mu=0, sigma=1.0, *args, **kwargs):
         mu = at.as_tensor_variable(floatX(mu))
         sigma = at.as_tensor_variable(floatX(sigma))
-
-        assert_negative_support(sigma, "sigma", "Moyal")
 
         return super().dist([mu, sigma], *args, **kwargs)
 
