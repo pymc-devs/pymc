@@ -367,9 +367,9 @@ class Bernoulli(Discrete):
 
     Parameters
     ----------
-    p: tensor_like of float
+    p : tensor_like of float
         Probability of success (0 < p < 1).
-    logit_p: tensor_like of float
+    logit_p : tensor_like of float
         Alternative log odds for the probability of success.
     """
     rv_op = bernoulli
@@ -594,7 +594,7 @@ class Poisson(Discrete):
 
     Parameters
     ----------
-    mu: tensor_like of float
+    mu : tensor_like of float
         Expected number of occurrences during the given interval
         (mu >= 0).
 
@@ -735,13 +735,13 @@ class NegativeBinomial(Discrete):
 
     Parameters
     ----------
-    alpha: tensor_like of float
+    alpha : tensor_like of float
         Gamma distribution shape parameter (alpha > 0).
-    mu: tensor_like of float
+    mu : tensor_like of float
         Gamma distribution mean (mu > 0).
-    p: tensor_like of float
+    p : tensor_like of float
         Alternative probability of success in each trial (0 < p < 1).
-    n: tensor_like of float
+    n : tensor_like of float
         Alternative number of target success trials (n > 0)
     """
     rv_op = nbinom
@@ -880,7 +880,7 @@ class Geometric(Discrete):
 
     Parameters
     ----------
-    p: tensor_like of float
+    p : tensor_like of float
         Probability of success on an individual trial (0 < p <= 1).
     """
 
