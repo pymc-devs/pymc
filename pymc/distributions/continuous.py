@@ -18,6 +18,8 @@ A collection of common probability distributions for stochastic
 nodes in PyMC.
 """
 
+import warnings
+
 from typing import List, Optional, Tuple, Union
 
 import aesara
@@ -192,6 +194,11 @@ def bounded_cont_transform(op, rv, bound_args_indices=None):
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):
+    warnings.warn(
+        "The assert_negative_support function will be deprecated in future versions!"
+        " See https://github.com/pymc-devs/pymc/issues/5162",
+        DeprecationWarning,
+    )
     msg = f"The variable specified for {label} has negative support for {distname}, "
     msg += "likely making it unsuitable for this parameter."
     return Assert(msg)(var, at.all(at.ge(var, 0.0)))
