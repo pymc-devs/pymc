@@ -1,7 +1,10 @@
 """
 This submodule contains tools used to perform inference on ordinary differential equations.
-Due to the nature of the model (as well as included solvers), this may perform slowly.
-A library based on PyMC--sunode--has implemented Adams' method and BDF (backward differentation formula).  More information about sunode is available at: https://github.com/aseyboldt/sunode.
+
+Due to the nature of the model (as well as included solvers), ODE solution may perform slowly.
+Another library based on PyMC--sunode--has implemented Adams' method and BDF (backward differentation formula) using the very fast SUNDIALS suite of ODE and PDE solvers.
+It is much faster than the ``pm.ode`` implementation.
+More information about ``sunode`` is available at: https://github.com/aseyboldt/sunode.
 """
 #   Copyright 2020 The PyMC Developers
 #
@@ -16,7 +19,6 @@ A library based on PyMC--sunode--has implemented Adams' method and BDF (backward
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 
 from pymc.ode import utils
 from pymc.ode.ode import DifferentialEquation

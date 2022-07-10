@@ -34,6 +34,9 @@ class DifferentialEquation(Op):
     r"""
     Specify an ordinary differential equation
 
+    Due to the nature of the model (as well as included solvers), the process of ODE solution may perform slowly.  A faster alternative library based on PyMC--sunode--has implemented Adams' method and BDF (backward differentation formula).  More information about sunode is available at: https://github.com/aseyboldt/sunode.
+
+
     .. math::
         \dfrac{dy}{dt} = f(y,t,p) \quad y(t_0) = y_0
 
@@ -65,8 +68,6 @@ class DifferentialEquation(Op):
 
         ode_model = DifferentialEquation(func=odefunc, times=times, n_states=1, n_theta=1, t0=0)
 
-    Due to the nature of the model (as well as included solvers), the process of ODE solution may perform slowly.
-    A faster alternative library based on PyMC--sunode--has implemented Adams' method and BDF (backward differentation formula).  More information about sunode is available at: https://github.com/aseyboldt/sunode.
     """
     _itypes = [
         TensorType(floatX, (False,)),  # y0 as 1D floatX vector
