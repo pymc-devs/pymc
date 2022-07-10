@@ -67,8 +67,9 @@ def find_constrained_prior(
     Returns
     -------
     opt_params: dict
-        The optimized distribution parameters as a dictionary with the parameters' and
-        name as key and the optimized value as value.
+        The optimized distribution parameters as a dictionary.
+        Dictionary keys are the parameter names and
+        dictionary values are the optimized parameter values.
 
     Examples
     --------
