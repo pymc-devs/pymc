@@ -36,7 +36,8 @@ def find_constrained_prior(
 ) -> Dict[str, float]:
     """
     Find optimal parameters to get `mass` % of probability
-    of a `pm_dist` between `lower` and `upper`.
+    of a :ref:`distribution <api_distributions>` between `lower` and `upper`.
+    
     Note: only works for one- and two-parameter distributions, as there
     are exactly two constraints. Fix some combination of parameters
     if you want to use it on >=3-parameter distributions.
