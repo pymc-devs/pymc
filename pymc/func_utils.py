@@ -51,7 +51,7 @@ def find_constrained_prior(
         Lower bound to get `mass` % of probability of `pm_dist`.
     upper : float
         Upper bound to get `mass` % of probability of `pm_dist`.
-    init_guess : dict of {str : float} 
+    init_guess : dict of {str : float}
         Initial guess for ``scipy.optimize.least_squares`` to find the
         optimal parameters of `pm_dist` fitting the interval constraint.
         Must be a dictionary with the name of the PyMC distribution's
