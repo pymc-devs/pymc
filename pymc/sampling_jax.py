@@ -298,8 +298,7 @@ def sample_blackjax_nuts(
     )
 
     if chains == 1:
-        init_params = [np.stack(init_params)]
-        init_params = [np.stack(init_state) for init_state in zip(*init_params)]
+        init_params = [np.stack(init_state) for init_state in zip(init_params)]
 
     logprob_fn = get_jaxified_logp(model)
 
