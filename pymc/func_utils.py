@@ -56,7 +56,7 @@ def find_constrained_prior(
         optimal parameters of `pm_dist` fitting the interval constraint.
         Must be a dictionary with the name of the PyMC distribution's
         parameter as keys and the initial guess as values.
-    mass : float, default to 0.95
+    mass : float, default 0.95
         Share of the probability mass we want between ``lower`` and ``upper``.
         Defaults to 95%.
     fixed_params : str or float, optional, default None
