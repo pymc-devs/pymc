@@ -44,7 +44,7 @@ def find_constrained_prior(
 
     Parameters
     ----------
-    distribution : pm.Distribution
+    distribution : Distribution
         PyMC distribution you want to set a prior on.
         Needs to have a ``logcdf`` method implemented in PyMC.
     lower : float
