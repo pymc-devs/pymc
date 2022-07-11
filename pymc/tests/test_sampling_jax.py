@@ -45,8 +45,8 @@ def test_transform_samples(sampler, postprocessing_backend, chains):
     obs_at = aesara.shared(obs, borrow=True, name="obs")
     with pm.Model() as model:
         a = pm.Uniform("a", -20, 20)
-        sigma = pm.HalfNormal("sigma")
-        b = pm.Normal("b", a, sigma=sigma, observed=obs_at)
+        sigma = pm.HalfNormal("sigma", shape=(2,))
+        b = pm.Normal("b", a, sigma=sigma.mean(), observed=obs_at)
 
         trace = sampler(
             chains=chains,
