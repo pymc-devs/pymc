@@ -37,7 +37,7 @@ repos:
     - id: isort
       name: isort
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.34.0
+  rev: v2.37.0
   hooks:
     - id: pyupgrade
       args: [--py37-plus]
