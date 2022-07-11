@@ -41,9 +41,9 @@ jobs:
           load: true
           tags: ${{ env.CONTAINER_NAME }}
 
-      - name: Test
+      - name: Test importing pymc
         run: |
-           docker run --rm ${{ env.CONTAINER_NAME }} bash
+           docker run --rm build-test conda run -n pymc-dev python -c 'import pymc;print(pymc.__version__)'
 
       - name: Build and push
         uses: docker/build-push-action@v3
