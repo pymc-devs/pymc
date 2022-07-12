@@ -27,9 +27,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"
-      - name: Build the sdist
+      - name: Build the sdist and the wheel
         run: |
-          python setup.py sdist
+          pip install wheel
+          python setup.py sdist bdist_wheel
       - name: Check the sdist installs and imports
         run: |
           mkdir -p test-sdist
