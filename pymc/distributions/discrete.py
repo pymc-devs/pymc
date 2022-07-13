@@ -211,6 +211,7 @@ class BetaBinomial(Discrete):
            \frac{B(x + \alpha, n - x + \beta)}{B(\alpha, \beta)}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
