@@ -3,7 +3,7 @@ name: tests
 on:
   pull_request:
     paths:
-      - ".github/workflows/*.yml"
+      - ".github/workflows/tests.yml"
       - "pymc/**.py"
       - "*.py"
       - "conda-envs/**"
@@ -12,7 +12,7 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/*.yml"
+      - ".github/workflows/tests.yml"
       - "pymc/**.py"
       - "*.py"
       - "conda-envs/**"
