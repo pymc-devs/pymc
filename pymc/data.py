@@ -310,6 +310,7 @@ class Minibatch(TensorVariable):
         batch_size=128,
         dtype=None,
         broadcastable=None,
+        shape=None,
         name="Minibatch",
         random_seed=42,
         update_shared_f=None,
@@ -324,9 +325,15 @@ class Minibatch(TensorVariable):
         self.update_shared_f = update_shared_f
         self.random_slc = self.make_random_slices(self.shared.shape, batch_size, random_seed)
         minibatch = self.shared[self.random_slc]
-        if broadcastable is None:
-            broadcastable = (False,) * minibatch.ndim
-        minibatch = at.patternbroadcast(minibatch, broadcastable)
+        if broadcastable is not None:
+            warnings.warn(
+                "Minibatch `broadcastable` argument is deprecated. Use `shape` instead",
+                FutureWarning,
+            )
+            assert shape is None
+            shape = [1 if b else None for b in broadcastable]
+        if shape is not None:
+            minibatch = at.specify_shape(minibatch, shape)
         self.minibatch = minibatch
         super().__init__(self.minibatch.type, None, None, name=name)
         Apply(aesara.compile.view_op, inputs=[self.minibatch], outputs=[self])
