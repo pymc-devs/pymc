@@ -365,6 +365,7 @@ def sample_blackjax_nuts(
     }
 
     posterior = mcmc_samples
+    # Use 'partial' to set default arguments before passing 'idata_kwargs'
     az_trace = partial(
         az.from_dict,
         posterior=posterior,
@@ -560,6 +561,7 @@ def sample_numpyro_nuts(
     }
 
     posterior = mcmc_samples
+    # Use 'partial' to set default arguments before passing 'idata_kwargs'
     az_trace = partial(
         az.from_dict,
         posterior=posterior,
