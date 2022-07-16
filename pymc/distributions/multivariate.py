@@ -199,13 +199,13 @@ class MvNormal(Continuous):
 
     Parameters
     ----------
-    mu: array
+    mu : tensor_like of float
         Vector of means.
-    cov: array
+    cov : tensor_like of float, optional
         Covariance matrix. Exactly one of cov, tau, or chol is needed.
-    tau: array
+    tau : tensor_like of float, optional
         Precision matrix. Exactly one of cov, tau, or chol is needed.
-    chol: array
+    chol : tensor_like of float, optional
         Cholesky decomposition of covariance matrix. Exactly one of cov,
         tau, or chol is needed.
     lower: bool, default=True
@@ -353,19 +353,19 @@ class MvStudentT(Continuous):
 
     Parameters
     ----------
-    nu: float
+    nu : tensor_like of float
         Degrees of freedom, should be a positive scalar.
-    Sigma: matrix
+    Sigma : tensor_like of float, optional
         Covariance matrix. Use `cov` in new code.
-    mu: array
+    mu : tensor_like of float, optional
         Vector of means.
-    cov: matrix
+    cov : tensor_like of float, optional
         The covariance matrix.
-    tau: matrix
+    tau : tensor_like of float, optional
         The precision matrix.
-    chol: matrix
+    chol : tensor_like of float, optional
         The cholesky factor of the covariance matrix.
-    lower: bool, default=True
+    lower : bool, default=True
         Whether the cholesky fatcor is given as a lower triangular matrix.
     """
     rv_op = mv_studentt
@@ -439,7 +439,7 @@ class Dirichlet(SimplexContinuous):
 
     Parameters
     ----------
-    a: float array
+    a: tensor_like of float
         Concentration parameters (a > 0). The number of categories is given by the
         length of the last axis.
     """
@@ -515,9 +515,9 @@ class Multinomial(Discrete):
 
     Parameters
     ----------
-    n: int
+    n : tensor_like of int
         Total counts in each replicate (n > 0).
-    p: float array
+    p : tensor_like of float
         Probability of each one of the different outcomes (0 <= p <= 1). The number of
         categories is given by the length of the last axis. Elements are expected to sum
         to 1 along the last axis, and they will be automatically rescaled otherwise.
@@ -644,10 +644,10 @@ class DirichletMultinomial(Discrete):
 
     Parameters
     ----------
-    n : int
+    n : tensor_like of int
         Total counts in each replicate (n > 0).
 
-    a : float array
+    a : tensor_like of float
         Dirichlet concentration parameters (a > 0). The number of categories is given by
         the length of the last axis.
     """
@@ -757,15 +757,15 @@ class OrderedMultinomial:
 
     Parameters
     ----------
-    eta: float
+    eta : tensor_like of float
         The predictor.
-    cutpoints: array
+    cutpoints : tensor_like of float
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
-    n: int
+    n : tensor_like of int
         The total number of multinomial trials.
-    compute_p: boolean, default True
+    compute_p : boolean, default=True
         Whether to compute and store in the trace the inferred probabilities of each
         categories,
         based on the cutpoints' values. Defaults to True.
@@ -916,9 +916,9 @@ class Wishart(Continuous):
 
     Parameters
     ----------
-    nu: int
+    nu : tensor_like of int
         Degrees of freedom, > 0.
-    V: array
+    V : array_like
         p x p positive definite matrix.
 
     Notes
@@ -1007,18 +1007,18 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initv
 
     Parameters
     ----------
-    S: ndarray
+    S : ndarray
         p x p positive definite matrix
         Or:
         p x p lower-triangular matrix that is the Cholesky factor
         of the covariance matrix.
-    nu: int
+    nu : tensor_like of int
         Degrees of freedom, > dim(S).
-    is_cholesky: bool (default=False)
+    is_cholesky : bool, default=False
         Input matrix S is already Cholesky decomposed as S.T * S
-    return_cholesky: bool (default=False)
+    return_cholesky : bool, default=False
         Only return the Cholesky decomposed matrix.
-    initval: ndarray
+    initval : ndarray
         p x p positive definite matrix used to initialize
 
     Notes
