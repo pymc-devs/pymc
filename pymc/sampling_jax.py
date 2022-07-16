@@ -365,7 +365,8 @@ def sample_blackjax_nuts(
     }
 
     posterior = mcmc_samples
-    az_trace = az.from_dict(
+    az_trace = partial(
+        az.from_dict,
         posterior=posterior,
         log_likelihood=log_likelihood,
         observed_data=find_observations(model),
@@ -373,8 +374,7 @@ def sample_blackjax_nuts(
         coords=coords,
         dims=dims,
         attrs=make_attrs(attrs, library=blackjax),
-        **idata_kwargs,
-    )
+    )(**idata_kwargs)
 
     return az_trace
 
@@ -560,7 +560,8 @@ def sample_numpyro_nuts(
     }
 
     posterior = mcmc_samples
-    az_trace = az.from_dict(
+    az_trace = partial(
+        az.from_dict,
         posterior=posterior,
         log_likelihood=log_likelihood,
         observed_data=find_observations(model),
@@ -569,7 +570,6 @@ def sample_numpyro_nuts(
         coords=coords,
         dims=dims,
         attrs=make_attrs(attrs, library=numpyro),
-        **idata_kwargs,
-    )
+    )(**idata_kwargs)
 
     return az_trace
