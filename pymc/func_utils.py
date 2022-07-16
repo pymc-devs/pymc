@@ -11,8 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import warnings
-
 from typing import Callable, Dict, Optional, Union
 
 import aesara.tensor as aet
@@ -33,6 +31,8 @@ def find_constrained_prior(
     init_guess: Dict[str, float],
     mass: float = 0.95,
     fixed_params: Optional[Dict[str, float]] = None,
+    mass_below_lower: Optional[float] = None,
+    **kwargs,
 ) -> Dict[str, float]:
     """
     Find optimal parameters to get `mass` % of probability
@@ -64,6 +64,11 @@ def find_constrained_prior(
         Dictionary of fixed parameters, so that there are only 2 to optimize.
         For instance, for a StudentT, you fix nu to a constant and get the optimized
         mu and sigma.
+    mass_below_lower : float, optional, default None
+        The probability mass below the ``lower`` bound. If ``None``,
+        defaults to ``(1 - mass) / 2``, which implies that the probability
+        mass below the ``lower`` value will be equal to the probability
+        mass above the ``upper`` value.
 
     Returns
     -------
@@ -71,6 +76,11 @@ def find_constrained_prior(
         The optimized distribution parameters as a dictionary.
         Dictionary keys are the parameter names and
         dictionary values are the optimized parameter values.
+
+    Notes
+    -----
+    Optional keyword arguments can be passed to ``find_constrained_prior``. These will be
+    delivered to the underlying call to :external:py:func:`scipy.optimize.minimize`.
 
     Examples
     --------
@@ -96,11 +106,31 @@ def find_constrained_prior(
             init_guess={"mu": 5, "sigma": 2},
             fixed_params={"nu": 7},
         )
+
+    Under some circumstances, you might not want to have the same cummulative
+    probability below the ``lower`` threshold and above the ``upper`` threshold.
+    For example, you might want to constrain an Exponential distribution to
+    find the parameter that yields 90% of the mass below the ``upper`` bound,
+    and have zero mass below ``lower``. You can do that with the following call
+    to ``find_constrained_prior``
+
+    .. code-block:: python
+
+        opt_params = pm.find_constrained_prior(
+            pm.Exponential,
+            lower=0,
+            upper=3.,
+            mass=0.9,
+            init_guess={"lam": 1},
+            mass_below_lower=0,
+        )
     """
     assert 0.01 <= mass <= 0.99, (
         "This function optimizes the mass of the given distribution +/- "
         f"1%, so `mass` has to be between 0.01 and 0.99. You provided {mass}."
     )
+    if mass_below_lower is None:
+        mass_below_lower = (1 - mass) / 2
 
     # exit when any parameter is not scalar:
     if np.any(np.asarray(distribution.rv_op.ndims_params) != 0):
@@ -129,20 +159,34 @@ def find_constrained_prior(
             "need it."
         )
 
-    cdf_error = (pm.math.exp(logcdf_upper) - pm.math.exp(logcdf_lower)) - mass
-    cdf_error_fn = pm.aesaraf.compile_pymc([dist_params], cdf_error, allow_input_downcast=True)
+    target = (aet.exp(logcdf_lower) - mass_below_lower) ** 2
+    target_fn = pm.aesaraf.compile_pymc([dist_params], target, allow_input_downcast=True)
+
+    constraint = aet.exp(logcdf_upper) - aet.exp(logcdf_lower)
+    constraint_fn = pm.aesaraf.compile_pymc([dist_params], constraint, allow_input_downcast=True)
 
     jac: Union[str, Callable]
+    constraint_jac: Union[str, Callable]
     try:
-        aesara_jac = pm.gradient(cdf_error, [dist_params])
+        aesara_jac = pm.gradient(target, [dist_params])
         jac = pm.aesaraf.compile_pymc([dist_params], aesara_jac, allow_input_downcast=True)
+        aesara_constraint_jac = pm.gradient(constraint, [dist_params])
+        constraint_jac = pm.aesaraf.compile_pymc(
+            [dist_params], aesara_constraint_jac, allow_input_downcast=True
+        )
     # when PyMC cannot compute the gradient
     except (NotImplementedError, NullTypeGradError):
         jac = "2-point"
+        constraint_jac = "2-point"
+    cons = optimize.NonlinearConstraint(constraint_fn, lb=mass, ub=mass, jac=constraint_jac)
 
-    opt = optimize.least_squares(cdf_error_fn, x0=list(init_guess.values()), jac=jac)
+    opt = optimize.minimize(
+        target_fn, x0=list(init_guess.values()), jac=jac, constraints=cons, **kwargs
+    )
     if not opt.success:
-        raise ValueError("Optimization of parameters failed.")
+        raise ValueError(
+            f"Optimization of parameters failed.\nOptimization termination details:\n{opt}"
+        )
 
     # save optimal parameters
     opt_params = {
@@ -150,18 +194,4 @@ def find_constrained_prior(
     }
     if fixed_params is not None:
         opt_params.update(fixed_params)
-
-    # check mass in interval is not too far from `mass`
-    opt_dist = distribution.dist(**opt_params)
-    mass_in_interval = (
-        pm.math.exp(pm.logcdf(opt_dist, upper)) - pm.math.exp(pm.logcdf(opt_dist, lower))
-    ).eval()
-    if (np.abs(mass_in_interval - mass)) > 0.01:
-        warnings.warn(
-            f"Final optimization has {(mass_in_interval if mass_in_interval.ndim < 1 else mass_in_interval[0])* 100:.0f}% of probability mass between "
-            f"{lower} and {upper} instead of the requested {mass * 100:.0f}%.\n"
-            "You may need to use a more flexible distribution, change the fixed parameters in the "
-            "`fixed_params` dictionary, or provide better initial guesses."
-        )
-
     return opt_params
