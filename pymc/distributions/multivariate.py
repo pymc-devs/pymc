@@ -439,7 +439,7 @@ class Dirichlet(SimplexContinuous):
 
     Parameters
     ----------
-    a: tensor_like of float
+    a : tensor_like of float
         Concentration parameters (a > 0). The number of categories is given by the
         length of the last axis.
     """
