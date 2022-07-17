@@ -254,7 +254,9 @@ def sample_blackjax_nuts(
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
         for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
-        not be included in the returned object.
+        not be included in the returned object. Values for ``observed_data``, ``constant_data``,
+        ``coords``, and ``dims`` are inferred from the ``model`` argument if not provided
+        in ``idata_kwargs``.
 
     Returns
     -------
@@ -365,16 +367,17 @@ def sample_blackjax_nuts(
     }
 
     posterior = mcmc_samples
-    az_trace = az.from_dict(
-        posterior=posterior,
+    # Use 'partial' to set default arguments before passing 'idata_kwargs'
+    to_trace = partial(
+        az.from_dict,
         log_likelihood=log_likelihood,
         observed_data=find_observations(model),
         constant_data=find_constants(model),
         coords=coords,
         dims=dims,
         attrs=make_attrs(attrs, library=blackjax),
-        **idata_kwargs,
     )
+    az_trace = to_trace(posterior=posterior, **idata_kwargs)
 
     return az_trace
 
@@ -431,7 +434,9 @@ def sample_numpyro_nuts(
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
         for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
-        not be included in the returned object.
+        not be included in the returned object. Values for ``observed_data``, ``constant_data``,
+        ``coords``, and ``dims`` are inferred from the ``model`` argument if not provided
+        in ``idata_kwargs``.
     nuts_kwargs: dict, optional
         Keyword arguments for :func:`numpyro.infer.NUTS`.
 
@@ -560,8 +565,9 @@ def sample_numpyro_nuts(
     }
 
     posterior = mcmc_samples
-    az_trace = az.from_dict(
-        posterior=posterior,
+    # Use 'partial' to set default arguments before passing 'idata_kwargs'
+    to_trace = partial(
+        az.from_dict,
         log_likelihood=log_likelihood,
         observed_data=find_observations(model),
         constant_data=find_constants(model),
@@ -569,7 +575,7 @@ def sample_numpyro_nuts(
         coords=coords,
         dims=dims,
         attrs=make_attrs(attrs, library=numpyro),
-        **idata_kwargs,
     )
+    az_trace = to_trace(posterior=posterior, **idata_kwargs)
 
     return az_trace
