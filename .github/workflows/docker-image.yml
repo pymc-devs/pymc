@@ -1,9 +1,12 @@
 name: docker-image
 
 on:
-  release:
-    types:
-      - created
+  # Commenting for testing purposes
+  # release:
+  #   types:
+  #     - created
+  push:
+    branches: [fix/gh-docker-image]
 
 env:
   CONTAINER_NAME: build-test
@@ -23,7 +26,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-                name=pymc/pymc,enable=true
+              name=pymc/pymc,enable=true
           tags: |
               type=ref,event=branch
               type=ref,event=pr
@@ -42,11 +45,12 @@ jobs:
         run: |
            docker run --rm ${{ env.CONTAINER_NAME }} conda run -n pymc-dev python -c 'import pymc;print(pymc.__version__)'
 
-      - name: Build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          push: true
-          file: scripts/Dockerfile
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      # Commenting for testing purposes
+      # - name: Build and push
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     context: .
+      #     push: true
+      #     file: scripts/Dockerfile
+      #     tags: ${{ steps.meta.outputs.tags }}
+      #     labels: ${{ steps.meta.outputs.labels }}
