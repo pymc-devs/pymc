@@ -211,6 +211,7 @@ class BetaBinomial(Discrete):
            \frac{B(x + \alpha, n - x + \beta)}{B(\alpha, \beta)}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -337,6 +338,7 @@ class Bernoulli(Discrete):
     .. math:: f(x \mid p) = p^{x} (1-p)^{1-x}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -366,9 +368,9 @@ class Bernoulli(Discrete):
 
     Parameters
     ----------
-    p: float
+    p : tensor_like of float
         Probability of success (0 < p < 1).
-    logit_p: float
+    logit_p : tensor_like of float
         Alternative log odds for the probability of success.
     """
     rv_op = bernoulli
@@ -568,6 +570,7 @@ class Poisson(Discrete):
     .. math:: f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -592,7 +595,7 @@ class Poisson(Discrete):
 
     Parameters
     ----------
-    mu: float
+    mu : tensor_like of float
         Expected number of occurrences during the given interval
         (mu >= 0).
 
@@ -685,6 +688,7 @@ class NegativeBinomial(Discrete):
            (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -732,13 +736,13 @@ class NegativeBinomial(Discrete):
 
     Parameters
     ----------
-    alpha: float
+    alpha : tensor_like of float
         Gamma distribution shape parameter (alpha > 0).
-    mu: float
+    mu : tensor_like of float
         Gamma distribution mean (mu > 0).
-    p: float
+    p : tensor_like of float
         Alternative probability of success in each trial (0 < p < 1).
-    n: float
+    n : tensor_like of float
         Alternative number of target success trials (n > 0)
     """
     rv_op = nbinom
@@ -853,6 +857,7 @@ class Geometric(Discrete):
     .. math:: f(x \mid p) = p(1-p)^{x-1}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -876,7 +881,7 @@ class Geometric(Discrete):
 
     Parameters
     ----------
-    p: float
+    p : tensor_like of float
         Probability of success on an individual trial (0 < p <= 1).
     """
 
@@ -962,6 +967,7 @@ class HyperGeometric(Discrete):
     .. math:: f(x \mid N, n, k) = \frac{\binom{k}{x}\binom{N-k}{n-x}}{\binom{N}{n}}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1365,7 +1371,7 @@ class DiracDelta(Discrete):
 
     Parameters
     ----------
-    c: float or int
+    c : tensor_like of float or int
         Dirac Delta parameter. The dtype of `c` determines the dtype of the distribution.
         This can affect which sampler is assigned to DiracDelta variables, or variables
         that use DiracDelta, such as Mixtures.
@@ -1463,6 +1469,7 @@ class ZeroInflatedPoisson:
             \end{array} \right.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1491,9 +1498,9 @@ class ZeroInflatedPoisson:
 
     Parameters
     ----------
-    psi: float
+    psi : tensor_like of float
         Expected proportion of Poisson variates (0 < psi < 1)
-    mu: float
+    mu : tensor_like of float
         Expected number of occurrences during the given interval
         (mu >= 0).
     """
@@ -1553,11 +1560,11 @@ class ZeroInflatedBinomial:
 
     Parameters
     ----------
-    psi: float
+    psi : tensor_like of float
         Expected proportion of Binomial variates (0 < psi < 1)
-    n: int
+    n : tensor_like of int
         Number of Bernoulli trials (n >= 0).
-    p: float
+    p : tensor_like of float
         Probability of success in each trial (0 < p < 1).
 
     """
@@ -1643,15 +1650,15 @@ class ZeroInflatedNegativeBinomial:
 
     Parameters
     ----------
-    psi: float
+    psi : tensor_like of float
         Expected proportion of NegativeBinomial variates (0 < psi < 1)
-    mu: float
+    mu : tensor_like of float
         Poission distribution parameter (mu > 0).
-    alpha: float
+    alpha : tensor_like of float
         Gamma distribution parameter (alpha > 0).
-    p: float
+    p : tensor_like of float
         Alternative probability of success in each trial (0 < p < 1).
-    n: float
+    n : tensor_like of float
         Alternative number of target success trials (n > 0)
     """
 
@@ -1726,9 +1733,9 @@ class OrderedLogistic:
 
     Parameters
     ----------
-    eta: float
+    eta : tensor_like of float
         The predictor.
-    cutpoints: array
+    cutpoints : tensor_like of array
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
@@ -1839,18 +1846,19 @@ class OrderedProbit:
 
     Parameters
     ----------
-    eta: float
+    eta : tensor_like of float
         The predictor.
-    cutpoints: array
+    cutpoints : tensor_like array of floats
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
-    sigma: float, default 1.0
+    sigma : tensor_like of float, default 1.0
          Standard deviation of the probit function.
-    compute_p: boolean, default True
+    compute_p : boolean, default True
         Whether to compute and store in the trace the inferred probabilities of each categories,
         based on the cutpoints' values. Defaults to True.
         Might be useful to disable it if memory usage is of interest.
+
     Example
     --------
     .. code:: python

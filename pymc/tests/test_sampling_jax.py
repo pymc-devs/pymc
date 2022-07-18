@@ -45,8 +45,8 @@ def test_transform_samples(sampler, postprocessing_backend, chains):
     obs_at = aesara.shared(obs, borrow=True, name="obs")
     with pm.Model() as model:
         a = pm.Uniform("a", -20, 20)
-        sigma = pm.HalfNormal("sigma")
-        b = pm.Normal("b", a, sigma=sigma, observed=obs_at)
+        sigma = pm.HalfNormal("sigma", shape=(2,))
+        b = pm.Normal("b", a, sigma=sigma.mean(), observed=obs_at)
 
         trace = sampler(
             chains=chains,
@@ -153,6 +153,16 @@ def test_get_jaxified_logp():
     assert not np.isinf(jax_fn((np.array(5000.0), np.array(5000.0))))
 
 
+@pytest.fixture
+def model_test_idata_kwargs(scope="module"):
+    with pm.Model(coords={"x_coord": ["a", "b"], "x_coord2": [1, 2]}) as m:
+        x = pm.Normal("x", shape=(2,), dims=["x_coord"])
+        y = pm.Normal("y", x, observed=[0, 0])
+        pm.ConstantData("constantdata", [1, 2, 3])
+        pm.MutableData("mutabledata", 2)
+    return m
+
+
 @pytest.mark.parametrize(
     "sampler",
     [
@@ -165,15 +175,17 @@ def test_get_jaxified_logp():
     [
         dict(),
         dict(log_likelihood=False),
+        # Overwrite models coords
+        dict(coords={"x_coord": ["x1", "x2"]}),
+        # Overwrite dims from dist specification in model
+        dict(dims={"x": ["x_coord2"]}),
+        # Overwrite both coords and dims
+        dict(coords={"x_coord3": ["A", "B"]}, dims={"x": ["x_coord3"]}),
     ],
 )
 @pytest.mark.parametrize("postprocessing_backend", [None, "cpu"])
-def test_idata_kwargs(sampler, idata_kwargs, postprocessing_backend):
-    with pm.Model() as m:
-        x = pm.Normal("x")
-        y = pm.Normal("y", x, observed=0)
-        pm.ConstantData("constantdata", [1, 2, 3])
-        pm.MutableData("mutabledata", 2)
+def test_idata_kwargs(model_test_idata_kwargs, sampler, idata_kwargs, postprocessing_backend):
+    with model_test_idata_kwargs:
         idata = sampler(
             tune=50,
             draws=50,
@@ -188,6 +200,12 @@ def test_idata_kwargs(sampler, idata_kwargs, postprocessing_backend):
         assert "log_likelihood" in idata
     else:
         assert "log_likelihood" not in idata
+
+    x_dim_expected = idata_kwargs.get("dims", model_test_idata_kwargs.RV_dims)["x"][0]
+    assert idata.posterior.x.dims[-1] == x_dim_expected
+
+    x_coords_expected = idata_kwargs.get("coords", model_test_idata_kwargs.coords)[x_dim_expected]
+    assert list(x_coords_expected) == list(idata.posterior.x.coords[x_dim_expected].values)
 
 
 def test_get_batched_jittered_initial_points():

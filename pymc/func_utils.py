@@ -36,38 +36,41 @@ def find_constrained_prior(
 ) -> Dict[str, float]:
     """
     Find optimal parameters to get `mass` % of probability
-    of `pm_dist` between `lower` and `upper`.
+    of a :ref:`distribution <api_distributions>` between `lower` and `upper`.
+
     Note: only works for one- and two-parameter distributions, as there
     are exactly two constraints. Fix some combination of parameters
     if you want to use it on >=3-parameter distributions.
 
     Parameters
     ----------
-    distribution : pm.Distribution
+    distribution : Distribution
         PyMC distribution you want to set a prior on.
         Needs to have a ``logcdf`` method implemented in PyMC.
     lower : float
         Lower bound to get `mass` % of probability of `pm_dist`.
     upper : float
         Upper bound to get `mass` % of probability of `pm_dist`.
-    init_guess: Dict[str, float]
+    init_guess : dict of {str : float}
         Initial guess for ``scipy.optimize.least_squares`` to find the
         optimal parameters of `pm_dist` fitting the interval constraint.
         Must be a dictionary with the name of the PyMC distribution's
         parameter as keys and the initial guess as values.
-    mass: float, default to 0.95
+    mass : float, default 0.95
         Share of the probability mass we want between ``lower`` and ``upper``.
         Defaults to 95%.
-    fixed_params: Dict[str, float], Optional, default None
+    fixed_params : str or float, optional, default None
         Only used when `pm_dist` has at least three parameters.
         Dictionary of fixed parameters, so that there are only 2 to optimize.
-        For instance, for a StudenT, you fix nu to a constant and get the optimized
+        For instance, for a StudentT, you fix nu to a constant and get the optimized
         mu and sigma.
 
     Returns
     -------
-    The optimized distribution parameters as a dictionary with the parameters'
-    name as key and the optimized value as value.
+    opt_params : dict
+        The optimized distribution parameters as a dictionary.
+        Dictionary keys are the parameter names and
+        dictionary values are the optimized parameter values.
 
     Examples
     --------

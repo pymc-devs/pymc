@@ -1030,7 +1030,7 @@ class Group(WithMemoization):
         """
         node = self.to_flat_input(node)
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
-        random = at.patternbroadcast(random, self.symbolic_initial.broadcastable)
+        random = at.specify_shape(random, self.symbolic_initial.type.shape)
 
         def sample(post, node):
             return aesara.clone_replace(node, {self.input: post})
@@ -1065,7 +1065,7 @@ class Group(WithMemoization):
         dict with replacements for initial
         """
         initial = self._new_initial(s, d, more_replacements)
-        initial = at.patternbroadcast(initial, self.symbolic_initial.broadcastable)
+        initial = at.specify_shape(initial, self.symbolic_initial.type.shape)
         if more_replacements:
             initial = aesara.clone_replace(initial, more_replacements)
         return {self.symbolic_initial: initial}
