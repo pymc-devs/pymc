@@ -5,6 +5,7 @@ on:
   # release:
   #   types:
   #     - created
+  pull_request:
   push:
     branches: [fix/gh-docker-image]
 
