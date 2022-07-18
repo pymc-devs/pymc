@@ -40,7 +40,7 @@ jobs:
 
       - name: Test importing pymc
         run: |
-           docker run --rm build-test conda run -n pymc-dev python -c 'import pymc;print(pymc.__version__)'
+           docker run --rm ${{ env.CONTAINER_NAME }} conda run -n pymc-dev python -c 'import pymc;print(pymc.__version__)'
 
       - name: Build and push
         uses: docker/build-push-action@v3
