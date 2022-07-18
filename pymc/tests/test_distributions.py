@@ -81,6 +81,7 @@ from pymc.distributions import (
     Exponential,
     Flat,
     Gamma,
+    GeneralizedGamma,
     Geometric,
     Gumbel,
     HalfCauchy,
@@ -1490,6 +1491,20 @@ class TestMatchesScipy:
             Rplus,
             {"beta": Rplusbig},
             lambda value, beta: sp.halfcauchy.logcdf(value, scale=beta),
+        )
+
+    def test_generalized_gamma(self):
+        check_logp(
+            GeneralizedGamma,
+            Rplus,
+            {"alpha": Rplusbig, "p": Rplusbig, "lambd": Rplusbig},
+            lambda value, alpha, p, lambd: sp.gengamma.logpdf(value, a=alpha / p, c=p, scale=lambd),
+        )
+        check_logcdf(
+            GeneralizedGamma,
+            Rplus,
+            {"alpha": Rplusbig, "p": Rplusbig, "lambd": Rplusbig},
+            lambda value, alpha, p, lambd: sp.gengamma.logcdf(value, a=alpha / p, c=p, scale=lambd),
         )
 
     def test_gamma_logp(self):

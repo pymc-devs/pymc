@@ -840,6 +840,18 @@ class TestHalfCauchy(BaseTestDistributionRandom):
     ]
 
 
+class TestGeneralizedGamma(BaseTestDistributionRandom):
+    pymc_dist = pm.GeneralizedGamma
+    pymc_dist_params = {"alpha": 2.0, "p": 3.0, "lambd": 5.0}
+    expected_rv_op_params = {"alpha": 2.0, "p": 3.0, "lambd": 5.0}
+    reference_dist_params = {"a": 2.0 / 3.0, "c": 3.0, "scale": 5.0}
+    reference_dist = seeded_scipy_distribution_builder("gengamma")
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+    ]
+
+
 class TestGamma(BaseTestDistributionRandom):
     pymc_dist = pm.Gamma
     pymc_dist_params = {"alpha": 2.0, "beta": 5.0}

@@ -20,6 +20,7 @@ Continuous
    HalfCauchy
    Gamma
    Weibull
+   GeneralizedGamma
    HalfStudentT
    LogNormal
    ChiSquared
