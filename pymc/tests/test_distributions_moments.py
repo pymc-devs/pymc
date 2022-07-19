@@ -892,19 +892,32 @@ def test_categorical_moment(p, size, expected):
             np.array([-4, -1, 3, 9, 19]),
             np.array([0.1, 0.15, 0.2, 0.25, 0.3]),
             None,
-            1.5458937198067635,
+            9.34782609,
         ),
         (
             np.array([-22, -4, 0, 8, 13]),
             np.tile(1 / 5, 5),
             (5, 3),
-            np.full((5, 3), -0.14285714285714296),
+            np.full((5, 3), -4.5),
         ),
         (
             np.arange(-100, 10),
             np.arange(1, 111) / 6105,
             (2, 5, 3),
-            np.full((2, 5, 3), -27.584097859327223),
+            np.full((2, 5, 3), -27.65765766),
+        ),
+        (
+            # from https://github.com/pymc-devs/pymc/issues/5959
+            np.linspace(0, 10, 10),
+            st.norm.pdf(np.linspace(0, 10, 10), loc=2.5, scale=1),
+            None,
+            2.5270134,
+        ),
+        (
+            np.linspace(0, 10, 100),
+            st.norm.pdf(np.linspace(0, 10, 100), loc=2.5, scale=1),
+            None,
+            2.51771721,
         ),
     ],
 )
