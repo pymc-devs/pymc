@@ -53,7 +53,7 @@ This guide does not teach nor cover MyST extensively, only gives some opinionate
 * Above all, stay consistent with variable names within the notebook. Notebooks using multiple names for the same variable will not be merged.
 * Use meaningful variable names wherever possible. Our users come from different backgrounds and not everyone is familiar with the same naming conventions.
   - Annotate dimensions too. Notebooks are published to be read, so even if the shape is derived
-    from the inputs or you don't like to use named dims and don't use them in your presonal
+    from the inputs or you don't like to use named dims and don't use them in your personal
     code, notebooks must use dims, even if annotating and not setting the shape.
     It makes the code easier to follow, especially for newcomers.
 * Sometimes it makes sense to use Greek letters to refer to variables, for example when writing equations, as this makes them easier to read. In that case, use LaTeX to insert the Greek letter like this `$\theta$` instead of using Unicode like `θ`.
