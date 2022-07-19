@@ -158,7 +158,7 @@ class NUTS(BaseHMC):
         scaling: array_like, ndim = {1,2}
             The inverse mass, or precision matrix. One dimensional arrays are
             interpreted as diagonal matrices. If `is_cov` is set to True,
-            this will be interpreded as the mass or covariance matrix.
+            this will be interpreted as the mass or covariance matrix.
         is_cov: bool, default=False
             Treat the scaling as mass or covariance matrix.
         potential: Potential, optional

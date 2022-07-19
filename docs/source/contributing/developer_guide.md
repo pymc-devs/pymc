@@ -151,7 +151,7 @@ def logp(self, value):
 ```
 
 In the ``logp`` method, parameters and values are either Aesara tensors, or could be converted to tensors.
-It is rather convenient as the evaluation of logp is represented as a tensor (``RV.logpt``), and when we linked different ``logp`` together (e.g., summing all ``RVs.logpt`` to get the model totall logp) the dependence  is taken care of by Aesara when the graph is built and compiled.
+It is rather convenient as the evaluation of logp is represented as a tensor (``RV.logpt``), and when we linked different ``logp`` together (e.g., summing all ``RVs.logpt`` to get the model total logp) the dependence  is taken care of by Aesara when the graph is built and compiled.
 Again, since the compiled function depends on the nodes that already in the graph, whenever you want to generate a new function that takes new input tensors you either need to regenerate the graph with the appropriate dependencies, or replace the node by editing the existing graph.
 In PyMC we use the second approach by using ``aesara.clone_replace()`` when it is needed.
 
