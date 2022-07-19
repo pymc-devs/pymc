@@ -3734,8 +3734,11 @@ class Interpolated(BoundedContinuous):
         return super().dist([x_points, pdf_points, cdf_points], **kwargs)
 
     def moment(rv, size, x_points, pdf_points, cdf_points):
-        # cdf_points argument is unused
-        moment = at.sum(at.mul(x_points, pdf_points))
+        """
+        Estimates the expectation integral using the trapezoid rule; cdf_points are not used.
+        """
+        x_fx = at.mul(x_points, pdf_points)  # x_i * f(x_i) for all xi's in x_points
+        moment = at.sum(at.mul(at.diff(x_points), x_fx[1:] + x_fx[:-1])) / 2
 
         if not rv_size_is_none(size):
             moment = at.full(size, moment)
