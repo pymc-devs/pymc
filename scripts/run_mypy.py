@@ -43,6 +43,7 @@ pymc/gp/cov.py
 pymc/gp/gp.py
 pymc/gp/mean.py
 pymc/gp/util.py
+pymc/gp/pivoted_cholesky.py
 pymc/math.py
 pymc/ode/__init__.py
 pymc/ode/ode.py
