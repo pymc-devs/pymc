@@ -397,6 +397,8 @@ After the notebook content finishes, there should be an `## Authors` section wit
 to provide attribution to the people who contributed to the the general pattern should be:
 
 ```markdown
+## Author
+
 * <verb> by <author> on <date> ([repo#PR](https://link-to.pr))
 ```
 
@@ -413,6 +415,8 @@ adapted
   in order to include a link or reference to the original source:
 
   ```markdown
+  ## Author
+
   Adapted from Alice's [blogpost](blog.alice.com) by Bob and Carol on ...
   ```
 
@@ -427,6 +431,8 @@ updated
 some examples:
 
 ```markdown
+## Author
+
 * Authored by Chris Fonnesbeck in May, 2017 ([pymc#2124](https://github.com/pymc-devs/pymc/pull/2124))
 * Updated by Colin Carroll in June, 2018 ([pymc#3049](https://github.com/pymc-devs/pymc/pull/3049))
 * Updated by Alex Andorra in January, 2020 ([pymc#3765](https://github.com/pymc-devs/pymc/pull/3765))
@@ -437,6 +443,8 @@ some examples:
 and
 
 ```markdown
+## Author
+
 * Adapted from chapter 5 of Bayesian Data Analysis 3rd Edition {cite:p}`gelman2013bayesian`
   by Demetri Pananos and Junpeng Lao on June, 2018 ([pymc#3054](https://github.com/pymc-devs/pymc/pull/3054))
 * Reexecuted by Ravin Kumar with PyMC 3.6 on March, 2019 ([pymc#3397](https://github.com/pymc-devs/pymc/pull/3397))
