@@ -918,7 +918,7 @@ class Wishart(Continuous):
     ----------
     nu : tensor_like of int
         Degrees of freedom, > 0.
-    V : array_like
+    V : tensor_like of float
         p x p positive definite matrix.
 
     Notes
@@ -1262,27 +1262,27 @@ class LKJCholeskyCov:
 
     Parameters
     ----------
-    name: str
+    name : str
         The name given to the variable in the model.
-    eta: float
+    eta : tensor_like of float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
-    n: int
+    n : tensor_like of int
         Dimension of the covariance matrix (n > 1).
-    sd_dist: unnamed distribution
+    sd_dist : Distribution
         A positive scalar or vector distribution for the standard deviations, created
         with the `.dist()` API. Should have `shape[-1]=n`. Scalar distributions will be
         automatically resized to ensure this.
 
         .. warning:: sd_dist will be cloned, rendering it independent of the one passed as input.
 
-    compute_corr: bool, default=True
+    compute_corr : bool, default=True
         If `True`, returns three values: the Cholesky decomposition, the correlations
         and the standard deviations of the covariance matrix. Otherwise, only returns
         the packed Cholesky decomposition. Defaults to `True`.
         compatibility.
-    store_in_trace: bool, default=True
+    store_in_trace : bool, default=True
         Whether to store the correlations and standard deviations of the covariance
         matrix in the posterior trace. If `True`, they will automatically be named as
         `{name}_corr` and `{name}_stds` respectively. Effective only when
@@ -1290,13 +1290,13 @@ class LKJCholeskyCov:
 
     Returns
     -------
-    chol:  TensorVariable
+    chol :  TensorVariable
         If `compute_corr=True`. The unpacked Cholesky covariance decomposition.
-    corr: TensorVariable
+    corr : TensorVariable
         If `compute_corr=True`. The correlations of the covariance matrix.
-    stds: TensorVariable
+    stds : TensorVariable
         If `compute_corr=True`. The standard deviations of the covariance matrix.
-    packed_chol: TensorVariable
+    packed_chol : TensorVariable
         If `compute_corr=False` The packed Cholesky covariance decomposition.
 
     Notes
@@ -1507,9 +1507,9 @@ class LKJCorr(BoundedContinuous):
 
     Parameters
     ----------
-    n: int
+    n : tensor_like of int
         Dimension of the covariance matrix (n > 1).
-    eta: float
+    eta : tensor_like of float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
@@ -1649,20 +1649,20 @@ class MatrixNormal(Continuous):
 
     Parameters
     ----------
-    mu: array
+    mu : tensor_like of float
         Array of means. Must be broadcastable with the random variable X such
         that the shape of mu + X is (m,n).
-    rowcov: mxm array
+    rowcov : mxm tensor_like of float, optional
         Among-row covariance matrix. Defines variance within
         columns. Exactly one of rowcov or rowchol is needed.
-    rowchol: mxm array
+    rowchol : mxm tensor_like of float, optional
         Cholesky decomposition of among-row covariance matrix. Exactly one of
         rowcov or rowchol is needed.
-    colcov: nxn array
+    colcov : nxn tensor_like of float, optional
         Among-column covariance matrix. If rowcov is the identity matrix,
         this functions as `cov` in MvNormal.
         Exactly one of colcov or colchol is needed.
-    colchol: nxn array
+    colchol : nxn tensor_like of float, optional
         Cholesky decomposition of among-column covariance matrix. Exactly one
         of colcov or colchol is needed.
 
@@ -1855,22 +1855,21 @@ class KroneckerNormal(Continuous):
 
     Parameters
     ----------
-    mu: array
+    mu : tensor_like of float
         Vector of means, just as in `MvNormal`.
-    covs: list of arrays
+    covs : list of arrays
         The set of covariance matrices :math:`[K_1, K_2, ...]` to be
         Kroneckered in the order provided :math:`\bigotimes K_i`.
-    chols: list of arrays
+    chols : list of arrays
         The set of lower cholesky matrices :math:`[L_1, L_2, ...]` such that
         :math:`K_i = L_i L_i'`.
-    evds: list of tuples
+    evds : list of tuples
         The set of eigenvalue-vector, eigenvector-matrix pairs
         :math:`[(v_1, Q_1), (v_2, Q_2), ...]` such that
         :math:`K_i = Q_i \text{diag}(v_i) Q_i'`. For example::
 
             v_i, Q_i = at.nlinalg.eigh(K_i)
-
-    sigma: scalar, variable
+    sigma : scalar, variable
         Standard deviation of the Gaussian white noise.
 
     Examples
@@ -2102,18 +2101,18 @@ class CAR(Continuous):
 
     Parameters
     ----------
-    mu: array
+    mu : tensor_like of float
         Real-valued mean vector
-    W: Numpy matrix
+    W : ndarray of int
         Symmetric adjacency matrix of 1s and 0s indicating
         adjacency between elements.
-    alpha: float or array
+    alpha : tensor_like of float
         Autoregression parameter taking values between -1 and 1. Values closer to 0 indicate weaker
         correlation and values closer to 1 indicate higher autocorrelation. For most use cases, the
         support of alpha should be restricted to (0, 1)
-    tau: float or array
+    tau : tensor_like of float
         Positive precision variable controlling the scale of the underlying normal variates.
-    sparse: bool, default=False
+    sparse : bool, default=False
         Determines whether or not sparse computations are used
 
     References
@@ -2267,9 +2266,9 @@ class StickBreakingWeights(SimplexContinuous):
 
     Parameters
     ----------
-    alpha: float
+    alpha : tensor_like of float
         Concentration parameter (alpha > 0).
-    K: int
+    K : tensor_like of int
         The number of "sticks" to break off from an initial one-unit stick. The length of the weight
         vector is K + 1, where the last weight is one minus the sum of all the first sticks.
 
