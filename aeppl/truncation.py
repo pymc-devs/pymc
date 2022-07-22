@@ -94,7 +94,7 @@ def censor_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
     ):
         is_upper_bounded = True
 
-        logccdf = at.log(1 - at.exp(logcdf))
+        logccdf = at.log1mexp(logcdf)
         # For right censored discrete RVs, we need to add an extra term
         # corresponding to the pmf at the upper bound
         if base_rv_op.dtype == "int64":
