@@ -101,7 +101,7 @@ def mypy_to_pandas(input_lines: Iterator[str]) -> pandas.DataFrame:
         "file": [],
         "line": [],
         "type": [],
-        "section": [],
+        "errorcode": [],
         "message": [],
     }
     for line in input_lines:
@@ -120,7 +120,7 @@ def mypy_to_pandas(input_lines: Iterator[str]) -> pandas.DataFrame:
             data["file"].append(file)
             data["line"].append(lineno)
             data["type"].append(message_type)
-            data["section"].append(current_section)
+            data["errorcode"].append(current_section)
             data["message"].append(message)
         except Exception as ex:
             print(elems)
@@ -154,21 +154,29 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
     if not unexpected_failing:
         print(f"{len(passing)}/{len(all_files)} files pass as expected.")
     else:
-        print(f"{len(unexpected_failing)} files unexpectedly failed:")
+        print("!!!!!!!!!")
+        print(f"{len(unexpected_failing)} files unexpectedly failed.")
         print("\n".join(sorted(map(str, unexpected_failing))))
+        print(
+            "These files did not fail before, so please check the above output"
+            f" for errors in {unexpected_failing} and fix them."
+        )
+        print("!!!!!!!!!")
         sys.exit(1)
 
     if unexpected_passing == {"pymc/sampling_jax.py"}:
         print("Letting you know that 'pymc/sampling_jax.py' unexpectedly passed.")
         print("But this file is known to sometimes pass and sometimes not.")
-        print("Unless tried to resolve problems in sampling_jax.py just ignore this message.")
+        print("Unless you tried to resolve problems in sampling_jax.py just ignore this message.")
     elif unexpected_passing:
+        print("!!!!!!!!!")
         print(f"{len(unexpected_passing)} files unexpectedly passed the type checks:")
         print("\n".join(sorted(map(str, unexpected_passing))))
         print("This is good news! Go to scripts/run_mypy.py and add them to the list.")
         if all_files.issubset(passing):
             print("WOW! All files are passing the mypy type checks!")
             print("scripts\\run_mypy.py may no longer be needed.")
+        print("!!!!!!!!!")
         sys.exit(1)
     return
 
@@ -176,21 +184,37 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
 if __name__ == "__main__":
     # Enforce PEP 561 for some important dependencies that
     # have relevant type hints but don't tell that to mypy.
-    enforce_pep561("aesara")
     enforce_pep561("aeppl")
 
-    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser = argparse.ArgumentParser(description="Run mypy type checks on PyMC codebase.")
     parser.add_argument(
         "--verbose", action="count", default=0, help="Pass this to print mypy output."
+    )
+    parser.add_argument(
+        "--groupby",
+        default="file",
+        help="How to group verbose output. One of {file|errorcode|message}.",
     )
     args, _ = parser.parse_known_args()
 
     cp = subprocess.run(
-        ["mypy", "--exclude", "pymc/tests", "pymc"],
+        ["mypy", "--show-error-codes", "--exclude", "pymc/tests", "pymc"],
         capture_output=True,
     )
     output = cp.stdout.decode()
     if args.verbose:
-        print(output)
+        df = mypy_to_pandas(output.split("\n"))
+        for section, sdf in df.reset_index().groupby(args.groupby):
+            print(f"\n\n[{section}]")
+            for row in sdf.itertuples():
+                print(f"{row.file}:{row.line}: {row.type}: {row.message}")
+        print()
+    else:
+        print(
+            "Mypy output hidden."
+            " Run `python run_mypy.py --verbose` to see the full output,"
+            " or `python run_mypy.py --help` for other options."
+        )
+
     check_no_unexpected_results(output.split("\n"))
     sys.exit(0)
