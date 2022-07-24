@@ -20,7 +20,7 @@ import numpy as np
 from pymc.distributions import Normal
 from pymc.model import Model
 from pymc.sampling import sample
-from pymc.step_methods import MLDA, NUTS, HamiltonianMC, Metropolis, Slice
+from pymc.step_methods import NUTS, HamiltonianMC, Metropolis, Slice
 
 
 class TestType:
@@ -59,39 +59,3 @@ class TestType:
         for sampler in self.samplers:
             with model:
                 sample(draws=10, tune=10, chains=1, step=sampler())
-
-    @aesara.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
-    def test_float64_MLDA(self):
-        data = np.random.randn(5)
-
-        with Model() as coarse_model:
-            x = Normal("x", initval=np.array(1.0, dtype="float64"))
-            obs = Normal("obs", mu=x, sigma=1.0, observed=data + 0.5)
-
-        with Model() as model:
-            x = Normal("x", initval=np.array(1.0, dtype="float64"))
-            obs = Normal("obs", mu=x, sigma=1.0, observed=data)
-
-        assert x.dtype == "float64"
-        assert obs.dtype == "float64"
-
-        with model:
-            sample(draws=10, tune=10, chains=1, step=MLDA(coarse_models=[coarse_model]))
-
-    @aesara.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
-    def test_float32_MLDA(self):
-        data = np.random.randn(5).astype("float32")
-
-        with Model() as coarse_model:
-            x = Normal("x", initval=np.array(1.0, dtype="float32"))
-            obs = Normal("obs", mu=x, sigma=1.0, observed=data + 0.5)
-
-        with Model() as model:
-            x = Normal("x", initval=np.array(1.0, dtype="float32"))
-            obs = Normal("obs", mu=x, sigma=1.0, observed=data)
-
-        assert x.dtype == "float32"
-        assert obs.dtype == "float32"
-
-        with model:
-            sample(draws=10, tune=10, chains=1, step=MLDA(coarse_models=[coarse_model]))

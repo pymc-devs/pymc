@@ -28,12 +28,6 @@ from pymc.step_methods.metropolis import (
     PoissonProposal,
     UniformProposal,
 )
-from pymc.step_methods.mlda import (
-    MLDA,
-    DEMetropolisZMLDA,
-    MetropolisMLDA,
-    RecursiveDAProposal,
-)
 from pymc.step_methods.slicer import Slice
 
 STEP_METHODS = (
