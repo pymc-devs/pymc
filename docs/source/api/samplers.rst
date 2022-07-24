@@ -52,17 +52,6 @@ Metropolis family
     PoissonProposal
     UniformProposal
 
-MLDA family
------------
-
-.. autosummary::
-   :toctree: generated/
-
-   MLDA
-   DEMetropolisZMLDA
-   MetropolisMLDA
-   RecursiveDAProposal
-
 Other step methods
 ------------------
 
