@@ -176,7 +176,6 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
 if __name__ == "__main__":
     # Enforce PEP 561 for some important dependencies that
     # have relevant type hints but don't tell that to mypy.
-    enforce_pep561("aesara")
     enforce_pep561("aeppl")
 
     parser = argparse.ArgumentParser(description="Process some integers.")
