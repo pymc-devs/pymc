@@ -1651,18 +1651,18 @@ class MatrixNormal(Continuous):
     ----------
     mu : tensor_like of float
         Array of means. Must be broadcastable with the random variable X such
-        that the shape of mu + X is (m,n).
-    rowcov : mxm tensor_like of float, optional
+        that the shape of mu + X is (M, N).
+    rowcov : (M, M) tensor_like of float, optional
         Among-row covariance matrix. Defines variance within
         columns. Exactly one of rowcov or rowchol is needed.
-    rowchol : mxm tensor_like of float, optional
+    rowchol : (M, M) tensor_like of float, optional
         Cholesky decomposition of among-row covariance matrix. Exactly one of
         rowcov or rowchol is needed.
-    colcov : nxn tensor_like of float, optional
+    colcov : (N, N) tensor_like of float, optional
         Among-column covariance matrix. If rowcov is the identity matrix,
         this functions as `cov` in MvNormal.
         Exactly one of colcov or colchol is needed.
-    colchol : nxn tensor_like of float, optional
+    colchol : (N, N) tensor_like of float, optional
         Cholesky decomposition of among-column covariance matrix. Exactly one
         of colcov or colchol is needed.
 
