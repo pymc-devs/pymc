@@ -68,6 +68,7 @@ pymc/step_methods/step_sizes.py
 pymc/tuning/__init__.py
 pymc/tuning/scaling.py
 pymc/tuning/starting.py
+pymc/util.py
 pymc/variational/__init__.py
 pymc/variational/callbacks.py
 pymc/variational/inference.py

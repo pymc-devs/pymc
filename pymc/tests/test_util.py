@@ -14,13 +14,20 @@
 
 import numpy as np
 import pytest
+import xarray
 
 from cachetools import cached
 
 import pymc as pm
 
 from pymc.distributions.transforms import RVTransform
-from pymc.util import UNSET, hash_key, hashable, locally_cachedmethod
+from pymc.util import (
+    UNSET,
+    dataset_to_point_list,
+    hash_key,
+    hashable,
+    locally_cachedmethod,
+)
 
 
 class TestTransformName:
@@ -142,3 +149,18 @@ def test_unset_repr(capsys):
     help(fn)
     captured = capsys.readouterr()
     assert "a=UNSET" in captured.out
+
+
+def test_dataset_to_point_list():
+    ds = xarray.Dataset()
+    ds["A"] = xarray.DataArray([[1, 2, 3]] * 2, dims=("chain", "draw"))
+    pl = dataset_to_point_list(ds)
+    assert isinstance(pl, list)
+    assert len(pl) == 6
+    assert isinstance(pl[0], dict)
+    assert isinstance(pl[0]["A"], np.ndarray)
+
+    # Check that non-str keys are caught
+    ds[3] = xarray.DataArray([1, 2, 3])
+    with pytest.raises(ValueError, match="must be str"):
+        dataset_to_point_list(ds)

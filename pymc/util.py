@@ -14,7 +14,7 @@
 
 import functools
 
-from typing import Dict, List, Tuple, Union, cast
+from typing import Dict, Hashable, List, Tuple, Union, cast
 
 import arviz
 import cloudpickle
@@ -232,15 +232,18 @@ def biwrap(wrapper):
 
 
 def dataset_to_point_list(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
+    # All keys of the dataset must be a str
+    for vn in ds.keys():
+        if not isinstance(vn, str):
+            raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
     # make dicts
-    points: List[Dict[str, np.ndarray]] = []
-    vn: str
+    points: List[Dict[Hashable, np.ndarray]] = []
     da: "xarray.DataArray"
     for c in ds.chain:
         for d in ds.draw:
             points.append({vn: da.sel(chain=c, draw=d).values for vn, da in ds.items()})
     # use the list of points
-    return points
+    return cast(List[Dict[str, np.ndarray]], points)
 
 
 def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tuple[int, int]:
