@@ -417,3 +417,108 @@ jobs:
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
+  ubuntu_37:
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+        floatx: [float64]
+        python-version: ["3.7"]
+        test-subset:
+          - |
+            pymc/tests/test_util.py
+            pymc/tests/test_logprob.py
+            pymc/tests/test_aesaraf.py
+            pymc/tests/test_math.py
+            pymc/tests/test_posdef_sym.py
+            pymc/tests/test_ndarray_backend.py
+            pymc/tests/test_hmc.py
+            pymc/tests/test_func_utils.py
+            pymc/tests/test_shape_handling.py
+            pymc/tests/test_starting.py
+            pymc/tests/test_mixture.py
+
+          - |
+            pymc/tests/test_distributions.py
+
+          - |
+            pymc/tests/test_tuning.py
+            pymc/tests/test_shared.py
+            pymc/tests/test_types.py
+            pymc/tests/test_distributions_moments.py
+
+          - |
+            pymc/tests/test_modelcontext.py
+            pymc/tests/test_dist_math.py
+            pymc/tests/test_minibatches.py
+            pymc/tests/test_pickling.py
+            pymc/tests/test_transforms.py
+            pymc/tests/test_parallel_sampling.py
+
+          - |
+            pymc/tests/test_distributions_random.py
+            pymc/tests/test_distributions_timeseries.py
+            pymc/tests/test_gp.py
+            pymc/tests/test_model.py
+            pymc/tests/test_model_graph.py
+            pymc/tests/test_ode.py
+            pymc/tests/test_profile.py
+            pymc/tests/test_quadpotential.py
+
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      AESARA_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache conda
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if environment-test.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/environment-test.yml') }}
+      - name: Cache multiple paths
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if requirements.txt has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: |
+            ~/.cache/pip
+            $RUNNER_TOOL_CACHE/Python/*
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('requirements.txt') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          mamba-version: "*"
+          activate-environment: pymc-test
+          channel-priority: strict
+          environment-file: conda-envs/environment-test.yml
+          python-version: ${{matrix.python-version}}
+          use-mamba: true
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Install-pymc
+        run: |
+          conda activate pymc-test
+          pip install -e .
+          pip install --pre -U polyagamma
+          python --version
+      - name: Run tests
+        run: |
+          conda activate pymc-test
+          python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          env_vars: TEST_SUBSET
+          name: ${{ matrix.os }} ${{ matrix.floatx }}
+          fail_ci_if_error: false
