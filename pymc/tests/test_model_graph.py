@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 
 from aesara.compile.sharedvalue import SharedVariable
+from aesara.tensor.var import TensorConstant
 
 import pymc as pm
 
@@ -154,6 +155,25 @@ def model_unnamed_observed_node():
     return model, compute_graph, plates
 
 
+def model_observation_dtype_casting():
+    """
+    Model at the source of the following issue: https://github.com/pymc-devs/pymc/issues/5795
+    """
+    with pm.Model() as model:
+        data = pm.ConstantData("data", [0, 0, 1, 1], dtype=int)
+        p = pm.Beta("p", 1, 1)
+        bern = pm.Bernoulli("response", p, observed=data)
+
+    compute_graph = {
+        "p": set(),
+        "response": {"p"},
+        "data": {"response"},
+    }
+    plates = {"": {"p"}, "4": {"data", "response"}}
+
+    return model, compute_graph, plates
+
+
 class BaseModelGraphTest(SeededTest):
     model_func = None
 
@@ -166,7 +186,7 @@ class BaseModelGraphTest(SeededTest):
         for child, parents_in_plot in self.compute_graph.items():
             var = self.model[child]
             parents_in_graph = self.model_graph.get_parent_names(var)
-            if isinstance(var, SharedVariable):
+            if isinstance(var, (SharedVariable, TensorConstant)):
                 # observed data also doesn't have parents in the compute graph!
                 # But for the visualization we like them to become decendants of the
                 # RVs that these observations belong to.
@@ -234,6 +254,10 @@ class TestModelWithDims(BaseModelGraphTest):
 
 class TestUnnamedObservedNodes(BaseModelGraphTest):
     model_func = model_unnamed_observed_node
+
+
+class TestObservationDtypeCasting(BaseModelGraphTest):
+    model_func = model_observation_dtype_casting
 
 
 class TestVariableSelection:
