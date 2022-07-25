@@ -20,6 +20,8 @@ from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph import Apply
 from aesara.graph.basic import ancestors, walk
+from aesara.scalar.basic import Cast
+from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
 
@@ -97,14 +99,21 @@ class ModelGraph:
             parent_name = self.get_parent_names(var)
             input_map[var_name] = input_map[var_name].union(parent_name)
 
-            if hasattr(var.tag, "observations"):
-                try:
-                    obs_name = var.tag.observations.name
+            while True:
+                if hasattr(var.tag, "observations"):
+                    obs_node = var.tag.observations
+                    obs_name = obs_node.name
                     if obs_name and obs_name != var_name:
                         input_map[var_name] = input_map[var_name].difference({obs_name})
                         input_map[obs_name] = input_map[obs_name].union({var_name})
-                except AttributeError:
-                    pass
+                        break
+                    elif isinstance(obs_node.owner.op, Elemwise) and isinstance(
+                        obs_node.owner.inputs[0].owner.op.scalar_op, Cast
+                    ):
+                        # go to the beginning of the loop
+                        var.tag.observations = obs_node.owner.inputs[0].owner.inputs[0]
+                else:
+                    break
 
         return input_map
 
