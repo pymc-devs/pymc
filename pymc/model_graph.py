@@ -118,9 +118,7 @@ class ModelGraph:
                         and isinstance(obs_node.owner.op, Elemwise)
                         and isinstance(obs_node.owner.op.scalar_op, Cast)
                     ):
-                        # go to the beginning of the loop
-                        # this comment is going up the graph to retrieve the node, i.e.
-                        # observations here, is subject to dtype casting
+                        # we can retrieve the observation node by going up the graph
                         obs_node = obs_node.owner.inputs[0]
                     else:
                         break
