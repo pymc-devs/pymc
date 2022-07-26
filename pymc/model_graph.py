@@ -100,6 +100,8 @@ class ModelGraph:
             input_map[var_name] = input_map[var_name].union(parent_name)
 
             while True:
+                # loop created so that the elif block can go through this again
+                # and remove any intermediate ops, notably dtype casting, to observations
                 if hasattr(var.tag, "observations"):
                     obs_node = var.tag.observations
                     obs_name = obs_node.name
@@ -108,11 +110,15 @@ class ModelGraph:
                         input_map[obs_name] = input_map[obs_name].union({var_name})
                         break
                     elif (
+                        # for cases where observations are cast to a certain dtype
+                        # see issue 5795: https://github.com/pymc-devs/pymc/issues/5795
                         obs_node.owner
                         and isinstance(obs_node.owner.op, Elemwise)
                         and isinstance(obs_node.owner.inputs[0].owner.op.scalar_op, Cast)
                     ):
                         # go to the beginning of the loop
+                        # this comment is going up the graph to retrieve the node, i.e.
+                        # observations here, is subject to dtype casting
                         var.tag.observations = obs_node.owner.inputs[0].owner.inputs[0]
                     else:
                         break
