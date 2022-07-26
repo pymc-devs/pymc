@@ -107,11 +107,15 @@ class ModelGraph:
                         input_map[var_name] = input_map[var_name].difference({obs_name})
                         input_map[obs_name] = input_map[obs_name].union({var_name})
                         break
-                    elif isinstance(obs_node.owner.op, Elemwise) and isinstance(
-                        obs_node.owner.inputs[0].owner.op.scalar_op, Cast
+                    elif (
+                        obs_node.owner
+                        and isinstance(obs_node.owner.op, Elemwise)
+                        and isinstance(obs_node.owner.inputs[0].owner.op.scalar_op, Cast)
                     ):
                         # go to the beginning of the loop
                         var.tag.observations = obs_node.owner.inputs[0].owner.inputs[0]
+                    else:
+                        break
                 else:
                     break
 
