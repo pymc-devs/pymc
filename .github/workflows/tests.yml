@@ -34,7 +34,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
-        python-version: ["3,7", "3.10"]
+        python-version: ["3.7", "3.10"]
         test-subset:
           - |
             pymc/tests/test_util.py
