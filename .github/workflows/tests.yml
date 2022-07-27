@@ -139,7 +139,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float64]
-        python-version: ["3,7", "3.8"]
+        python-version: ["3.7", "3.8"]
         test-subset:
           - pymc/tests/test_variational_inference.py pymc/tests/test_initial_point.py
           - pymc/tests/test_pickling.py pymc/tests/test_profile.py pymc/tests/test_step.py
@@ -211,7 +211,7 @@ jobs:
       matrix:
         os: [macos-latest]
         floatx: [float64]
-        python-version: ["3,7", "3.9"]
+        python-version: ["3.7", "3.9"]
         test-subset:
           - |
             pymc/tests/test_parallel_sampling.py
@@ -285,7 +285,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
-        python-version: ["3,7", "3.9"]
+        python-version: ["3.7", "3.9"]
         test-subset:
           - pymc/tests/test_sampling_jax.py
       fail-fast: false
@@ -354,7 +354,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float32]
-        python-version: ["3,7", "3.10"]
+        python-version: ["3.7", "3.10"]
         test-subset:
         - pymc/tests/test_sampling.py pymc/tests/test_ode.py
       fail-fast: false
