@@ -474,7 +474,14 @@ def sample(
         )
         initvals = kwargs.pop("start")
     if "target_accept" in kwargs:
-        kwargs.setdefault("nuts", {"target_accept": kwargs.pop("target_accept")})
+        if "nuts" in kwargs and "target_accept" in kwargs["nuts"]:
+            raise ValueError(
+                "`target_accept` was defined twice. Please specify it either as a direct keyword argument or in the `nuts` kwarg."
+            )
+        if "nuts" in kwargs:
+            kwargs["nuts"].update({"target_accept": kwargs.pop("target_accept")})
+        else:
+            kwargs = {"nuts": {"target_accept": kwargs.pop("target_accept")}}
 
     model = modelcontext(model)
     if not model.free_RVs:
