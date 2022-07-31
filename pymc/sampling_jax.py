@@ -4,7 +4,7 @@ import sys
 import warnings
 
 from functools import partial
-from typing import Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Union
 
 from pymc.initial_point import StartDict
 from pymc.sampling import RandomSeed, _get_seeds_per_chain, _init_jitter
@@ -209,19 +209,19 @@ def _blackjax_inference_loop(
 
 
 def sample_blackjax_nuts(
-    draws=1000,
-    tune=1000,
-    chains=4,
-    target_accept=0.8,
-    random_seed: RandomSeed = None,
-    initvals=None,
-    model=None,
-    var_names=None,
-    keep_untransformed=False,
-    chain_method="parallel",
-    postprocessing_backend=None,
-    idata_kwargs=None,
-):
+    draws: int = 1000,
+    tune: int = 1000,
+    chains: int = 4,
+    target_accept: float = 0.8,
+    random_seed: Optional[RandomSeed] = None,
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    model: Optional[Model] = None,
+    var_names: Optional[Iterable[str]] = None,
+    keep_untransformed: bool = False,
+    chain_method: str = "parallel",
+    postprocessing_backend: Optional[str] = None,
+    idata_kwargs: Optional[Dict[str, Any]] = None,
+) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
 
