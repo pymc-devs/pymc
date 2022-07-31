@@ -4,7 +4,7 @@ import sys
 import warnings
 
 from functools import partial
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from pymc.initial_point import StartDict
 from pymc.sampling import RandomSeed, _get_seeds_per_chain, _init_jitter
@@ -398,10 +398,10 @@ def sample_numpyro_nuts(
     tune: int = 1000,
     chains: int = 4,
     target_accept: float = 0.8,
-    random_seed: RandomSeed = None,
+    random_seed: Optional[RandomSeed] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
-    var_names: Optional[Iterable[str]] = None,
+    var_names: Optional[Sequence[str]] = None,
     progress_bar: bool = True,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
@@ -436,9 +436,9 @@ def sample_numpyro_nuts(
         Model to sample from. The model needs to have free random variables. When inside
         a ``with`` model context, it defaults to that model, otherwise the model must be
         passed explicitly.
-    var_names : iterable of str, optional
+    var_names : sequence of str, optional
         Names of variables for which to compute the posterior samples. Defaults to all
-        variables in the posterior
+        variables in the posterior.
     progress_bar : bool, default True
         Whether or not to display a progress bar in the command line. The bar shows the
         percentage of completion, the sampling speed in samples per second (SPS), and
