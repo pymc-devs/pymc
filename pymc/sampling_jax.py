@@ -4,7 +4,7 @@ import sys
 import warnings
 
 from functools import partial
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from pymc.initial_point import StartDict
 from pymc.sampling import RandomSeed, _get_seeds_per_chain, _init_jitter
@@ -249,9 +249,9 @@ def sample_blackjax_nuts(
         Model to sample from. The model needs to have free random variables. When inside
         a ``with`` model context, it defaults to that model, otherwise the model must be
         passed explicitly.
-    var_names : iterable of str, optional
+    var_names : sequence of str, optional
         Names of variables for which to compute the posterior samples. Defaults to all
-        variables in the posterior
+        variables in the posterior.
     keep_untransformed : bool, default False
         Include untransformed variables in the posterior samples. Defaults to False.
     chain_method : str, default "parallel"
