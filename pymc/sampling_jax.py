@@ -408,7 +408,7 @@ def sample_numpyro_nuts(
     postprocessing_backend: Optional[str] = None,
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
-):
+) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
 
