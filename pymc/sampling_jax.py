@@ -405,7 +405,7 @@ def sample_numpyro_nuts(
     progress_bar: bool = True,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
-    postprocessing_backend: str = None,
+    postprocessing_backend: Optional[str] = None,
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
 ):
