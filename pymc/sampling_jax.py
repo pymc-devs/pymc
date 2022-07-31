@@ -4,7 +4,7 @@ import sys
 import warnings
 
 from functools import partial
-from typing import Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from pymc.initial_point import StartDict
 from pymc.sampling import RandomSeed, _get_seeds_per_chain, _init_jitter
@@ -382,6 +382,17 @@ def sample_blackjax_nuts(
     return az_trace
 
 
+def _update_numpyro_nuts_kwargs(nuts_kwargs: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    nuts_kwargs_defaults = {
+        "adapt_step_size": True,
+        "adapt_mass_matrix": True,
+        "dense_mass": False,
+    }
+    if nuts_kwargs is not None:
+        nuts_kwargs_defaults.update(nuts_kwargs)
+    return nuts_kwargs_defaults
+
+
 def sample_numpyro_nuts(
     draws: int = 1000,
     tune: int = 1000,
@@ -486,14 +497,10 @@ def sample_numpyro_nuts(
 
     logp_fn = get_jaxified_logp(model, negative_logp=False)
 
-    if nuts_kwargs is None:
-        nuts_kwargs = {}
+    nuts_kwargs = _update_numpyro_nuts_kwargs(nuts_kwargs)
     nuts_kernel = NUTS(
         potential_fn=logp_fn,
         target_accept_prob=target_accept,
-        adapt_step_size=True,
-        adapt_mass_matrix=True,
-        dense_mass=False,
         **nuts_kwargs,
     )
 
