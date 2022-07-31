@@ -216,7 +216,7 @@ def sample_blackjax_nuts(
     random_seed: Optional[RandomSeed] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
-    var_names: Optional[Iterable[str]] = None,
+    var_names: Optional[Sequence[str]] = None,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Optional[str] = None,
