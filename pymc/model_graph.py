@@ -20,6 +20,8 @@ from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph import Apply
 from aesara.graph.basic import ancestors, walk
+from aesara.scalar.basic import Cast
+from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
 
@@ -98,13 +100,28 @@ class ModelGraph:
             input_map[var_name] = input_map[var_name].union(parent_name)
 
             if hasattr(var.tag, "observations"):
-                try:
-                    obs_name = var.tag.observations.name
+                obs_node = var.tag.observations
+
+                # loop created so that the elif block can go through this again
+                # and remove any intermediate ops, notably dtype casting, to observations
+                while True:
+
+                    obs_name = obs_node.name
                     if obs_name and obs_name != var_name:
                         input_map[var_name] = input_map[var_name].difference({obs_name})
                         input_map[obs_name] = input_map[obs_name].union({var_name})
-                except AttributeError:
-                    pass
+                        break
+                    elif (
+                        # for cases where observations are cast to a certain dtype
+                        # see issue 5795: https://github.com/pymc-devs/pymc/issues/5795
+                        obs_node.owner
+                        and isinstance(obs_node.owner.op, Elemwise)
+                        and isinstance(obs_node.owner.op.scalar_op, Cast)
+                    ):
+                        # we can retrieve the observation node by going up the graph
+                        obs_node = obs_node.owner.inputs[0]
+                    else:
+                        break
 
         return input_map
 
