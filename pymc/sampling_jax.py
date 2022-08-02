@@ -382,12 +382,18 @@ def sample_blackjax_nuts(
     return az_trace
 
 
-def _update_numpyro_nuts_kwargs(nuts_kwargs: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    nuts_kwargs_defaults = {
+def _numpyro_nuts_defaults() -> Dict[str, Any]:
+    """Defaults parameters for Numpyro NUTS."""
+    return {
         "adapt_step_size": True,
         "adapt_mass_matrix": True,
         "dense_mass": False,
     }
+
+
+def _update_numpyro_nuts_kwargs(nuts_kwargs: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Update default Numpyro NUTS parameters with new values."""
+    nuts_kwargs_defaults = _numpyro_nuts_defaults()
     if nuts_kwargs is not None:
         nuts_kwargs_defaults.update(nuts_kwargs)
     return nuts_kwargs_defaults

@@ -1,5 +1,8 @@
+from typing import Any, Dict
+
 import aesara
 import aesara.tensor as at
+import arviz as az
 import jax
 import numpy as np
 import pytest
@@ -12,7 +15,9 @@ import pymc as pm
 from pymc.sampling_jax import (
     _get_batched_jittered_initial_points,
     _get_log_likelihood,
+    _numpyro_nuts_defaults,
     _replace_shared_variables,
+    _update_numpyro_nuts_kwargs,
     get_jaxified_graph,
     get_jaxified_logp,
     sample_blackjax_nuts,
@@ -270,3 +275,47 @@ def test_seeding(chains, random_seed, sampler):
     if chains > 1:
         assert np.all(result1.posterior["x"].sel(chain=0) != result1.posterior["x"].sel(chain=1))
         assert np.all(result2.posterior["x"].sel(chain=0) != result2.posterior["x"].sel(chain=1))
+
+
+@pytest.mark.parametrize(
+    "nuts_kwargs",
+    [
+        {"adapt_step_size": False},
+        {"adapt_mass_matrix": True},
+        {"dense_mass": True},
+        {"adapt_step_size": False, "adapt_mass_matrix": True, "dense_mass": True},
+        {"fake-key": "fake-value"},
+    ],
+)
+def test_update_numpyro_nuts_kwargs(nuts_kwargs: Dict[str, Any]):
+    original_kwargs = nuts_kwargs.copy()
+    new_kwargs = _update_numpyro_nuts_kwargs(nuts_kwargs)
+
+    # Maintains original key-value pairs.
+    for k, v in original_kwargs.items():
+        assert new_kwargs[k] == v
+
+    for k, v in _numpyro_nuts_defaults().items():
+        if k not in original_kwargs:
+            assert new_kwargs[k] == v
+
+
+@pytest.mark.parametrize(
+    "nuts_kwargs",
+    [
+        {"adapt_step_size": False},
+        {"adapt_mass_matrix": True},
+        {"dense_mass": True},
+        {"adapt_step_size": False, "adapt_mass_matrix": True, "dense_mass": True},
+        {"adapt_step_size": False, "step_size": 0.13},
+    ],
+)
+def test_numpyro_nuts_kwargs_are_used(nuts_kwargs: Dict[str, Any]):
+    with pm.Model():
+        pm.Normal("a")
+        trace = sample_numpyro_nuts(10, tune=10, chains=1, nuts_kwargs=nuts_kwargs)
+
+    assert isinstance(trace, az.InferenceData)  # to help IDE
+    assert hasattr(trace, "sample_stats")
+    if "step_size" in nuts_kwargs:
+        assert np.allclose(trace.sample_stats["step_size"], nuts_kwargs["step_size"])
