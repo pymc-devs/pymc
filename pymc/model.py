@@ -82,8 +82,6 @@ from pymc.util import (
 )
 from pymc.vartypes import continuous_types, discrete_types, typefilter
 
-from pymc.base import base
-
 __all__ = [
     "Model",
     "modelcontext",
@@ -438,7 +436,7 @@ class ValueGradFunction:
         return self._aesara_function.profile
 
 
-class Model(WithMemoization, base, metaclass=ContextMeta):
+class Model(WithMemoization, metaclass=ContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
@@ -1844,84 +1842,6 @@ class Model(WithMemoization, base, metaclass=ContextMeta):
                 self.compile_fn(factor_logps_fn)(point),
             )
         }
-    def save(self,file_prefix,filepath,save_format=None):
-        if save_format:
-            super().save(file_prefix,filepath,save_format)
-        else:
-            super().save(file_prefix,filepath)
-
-    def load(self,filepath):
-        M = super().load(filepath)
-        return M
-
-    def fit(
-        self,
-        draws: int = 1000,
-        step=None,
-        init: str = "auto",
-        n_init: int = 200_000,
-        initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
-        trace = None,
-        chain_idx: int = 0,
-        chains: Optional[int] = None,
-        cores: Optional[int] = None,
-        tune: int = 1000,
-        progressbar: bool = True,
-        model=None,
-        random_seed: RandomState = None,
-        discard_tuned_samples: bool = True,
-        compute_convergence_checks: bool = True,
-        callback=None,
-        jitter_max_retries: int = 10,
-        return_inferencedata: bool = True,
-        idata_kwargs: dict = None,
-        mp_ctx=None,
-        **kwargs,
-        ):
-
-        t = super().fit(
-                draws,
-                step,
-                init,
-                n_init,
-                initvals,
-                trace,
-                chain_idx,
-                chains,
-                cores,
-                tune,
-                progressbar,
-                model,
-                random_seed,
-                discard_tuned_samples,
-                compute_convergence_checks,
-                callback,
-                jitter_max_retries,
-                return_inferencedata,
-                idata_kwargs,
-                mp_ctx,
-                **kwargs,
-                )
-
-        return t
-
-    def predict(self,
-                X,
-                samples: int = 500,
-                var_names: Optional[Iterable[str]] = None,
-                random_seed=None,
-                return_inferencedata: bool = True,
-                idata_kwargs: dict = None,
-                compile_kwargs: dict = None):
-        p = super().predict(
-                X,
-                samples,
-                var_names,
-                random_seed,
-                return_inferencedata,
-                idata_kwargs,
-                compile_kwargs)
-        return p
 
 # this is really disgusting, but it breaks a self-loop: I can't pass Model
 # itself as context class init arg.
