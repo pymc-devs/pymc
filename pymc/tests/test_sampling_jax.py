@@ -2,13 +2,14 @@ from typing import Any, Dict
 
 import aesara
 import aesara.tensor as at
-import arviz as az
 import jax
 import numpy as np
+import numpyro
 import pytest
 
 from aesara.compile import SharedVariable
 from aesara.graph import graph_inputs
+from numpyro.infer import MCMC, NUTS
 
 import pymc as pm
 
@@ -300,22 +301,25 @@ def test_update_numpyro_nuts_kwargs(nuts_kwargs: Dict[str, Any]):
             assert new_kwargs[k] == v
 
 
-@pytest.mark.parametrize(
-    "nuts_kwargs",
-    [
-        {"adapt_step_size": False},
-        {"adapt_mass_matrix": True},
-        {"dense_mass": True},
-        {"adapt_step_size": False, "adapt_mass_matrix": True, "dense_mass": True},
-        {"adapt_step_size": False, "step_size": 0.13},
-    ],
-)
-def test_numpyro_nuts_kwargs_are_used(nuts_kwargs: Dict[str, Any]):
+class MockMCMC(MCMC):
+    def __init__(self, sampler: NUTS, *args, **kwargs) -> None:
+        assert sampler._step_size == 0.13
+        assert sampler._dense_mass
+        assert not sampler._adapt_step_size
+        assert sampler._adapt_mass_matrix
+        assert sampler._target_accept_prob == 0.78
+        super().__init__(sampler, *args, **kwargs)
+        return None
+
+
+def test_numpyro_nuts_kwargs_are_used(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(numpyro.infer, "MCMC", MockMCMC)
     with pm.Model():
         pm.Normal("a")
-        trace = sample_numpyro_nuts(10, tune=10, chains=1, nuts_kwargs=nuts_kwargs)
-
-    assert isinstance(trace, az.InferenceData)  # to help IDE
-    assert hasattr(trace, "sample_stats")
-    if "step_size" in nuts_kwargs:
-        assert np.allclose(trace.sample_stats["step_size"], nuts_kwargs["step_size"])
+        sample_numpyro_nuts(
+            10,
+            tune=10,
+            chains=1,
+            target_accept=0.78,
+            nuts_kwargs={"step_size": 0.13, "dense_mass": True, "adapt_step_size": False},
+        )
