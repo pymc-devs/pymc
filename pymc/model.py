@@ -24,7 +24,6 @@ from typing import (
     Any,
     Callable,
     Dict,
-    Iterable,
     List,
     Optional,
     Sequence,
@@ -45,7 +44,6 @@ from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.opt import local_subtensor_rv_lift
-from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
 
@@ -65,12 +63,6 @@ from pymc.distributions.logprob import _get_scaling
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
 from pymc.initial_point import make_initial_point_fn
-from pymc.initial_point import (
-    PointType,
-    StartDict,
-    filter_rvs_to_jitter,
-    make_initial_point_fns_per_chain,
-)
 from pymc.math import flatten_list
 from pymc.util import (
     UNSET,
@@ -93,9 +85,6 @@ __all__ = [
 ]
 
 FlatView = collections.namedtuple("FlatView", "input, replacements")
-
-RandomSeed = Optional[Union[int, Sequence[int], np.ndarray]]
-RandomState = Union[RandomSeed, np.random.RandomState, np.random.Generator]
 
 class InstanceMethod:
     """Class for hiding references to instance methods so they can be pickled.

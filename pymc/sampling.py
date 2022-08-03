@@ -697,7 +697,6 @@ def sample(
 
         if return_inferencedata:
             return idata
-    self.trace = mtrace
     return mtrace
 
 
