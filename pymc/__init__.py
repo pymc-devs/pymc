@@ -16,8 +16,6 @@
 __version__ = "4.1.4"
 
 import logging
-import multiprocessing as mp
-import platform
 
 _log = logging.getLogger("pymc")
 
