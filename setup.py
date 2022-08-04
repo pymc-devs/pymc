@@ -29,7 +29,6 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -85,7 +84,7 @@ if __name__ == "__main__":
         # package_data={'docs': ['*']},
         include_package_data=True,
         classifiers=classifiers,
-        python_requires=">=3.7",
+        python_requires=">=3.8",
         install_requires=install_reqs,
         tests_require=test_reqs,
     )
