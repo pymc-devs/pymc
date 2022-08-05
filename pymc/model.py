@@ -1870,7 +1870,7 @@ def set_data(new_data, model=None, *, coords=None):
         >>> with model:
         ...     pm.set_data({'x': [5., 6., 9.]})
         ...     y_test = pm.sample_posterior_predictive(idata)
-        >>> y_test['obs'].mean(axis=0)
+        >>> y_test.posterior_predictive['obs'].mean(('chain', 'draw'))
         array([4.6088569 , 5.54128318, 8.32953844])
     """
     model = modelcontext(model)
