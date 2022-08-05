@@ -47,6 +47,20 @@ __all__ = [
 ]
 
 
+def _verify_scalar(value):
+    if (
+        isinstance(value, pytensor.compile.SharedVariable)
+        and value.get_value().squeeze().shape == ()
+    ):
+        return at.squeeze(value)
+    elif np.asarray(value).squeeze().shape == ():
+        return np.squeeze(value)
+    elif isinstance(value, Number):
+        return value
+
+    raise ValueError("A scalar value is required.")
+
+
 class Covariance:
     r"""
     Base class for all kernels/covariance functions.
@@ -68,6 +82,14 @@ class Covariance:
         else:
             self.active_dims = np.asarray(active_dims, int)
 
+    @property
+    def D(self):
+        """ The dimensionality of the input, as taken from the
+        `active_dims`. 
+        """
+        # Evaluate lazily in-case this changes.
+        return len(self.active_dims)
+            
     def __call__(self, X, Xs=None, diag=False):
         r"""
         Evaluate the kernel/covariance function.
@@ -122,19 +144,7 @@ class Covariance:
         return self.__mul__(other)
 
     def __pow__(self, other):
-        if (
-            isinstance(other, pytensor.compile.SharedVariable)
-            and other.get_value().squeeze().shape == ()
-        ):
-            other = at.squeeze(other)
-            return Exponentiated(self, other)
-        elif isinstance(other, Number):
-            return Exponentiated(self, other)
-        elif np.asarray(other).squeeze().shape == ():
-            other = np.squeeze(other)
-            return Exponentiated(self, other)
-
-        raise ValueError("A covariance function can only be exponentiated by a scalar value")
+        return Exponentiated(self, self._maybe_squeeze(other))
 
     def __array_wrap__(self, result):
         """
@@ -160,6 +170,9 @@ class Covariance:
             raise TypeError(
                 f"Unknown Covariance combination type {result[0][0]}.  Known types are `Add` or `Prod`."
             )
+            
+    def psd(self):
+        raise NotImplementedError("Only covariance functions of type `Stationary` may implement a `.psd`.")
 
 
 class Combination(Covariance):
@@ -175,7 +188,10 @@ class Combination(Covariance):
             else:
                 self.factor_list.append(factor)
 
-    def merge_factors(self, X, Xs=None, diag=False):
+    def merge_factors_cov(self, X, Xs=None, diag=False):
+        """ Called to evaluate either all the sums or all the 
+        products of kernels that are possible to evaluate.
+        """
         factor_list = []
         for factor in self.factor_list:
             # make sure diag=True is handled properly
@@ -202,15 +218,51 @@ class Combination(Covariance):
                 factor_list.append(factor)
         return factor_list
 
+    def merge_factors_psd(self, omega):
+        """ Called to evaluatate spectral densities of combination
+        kernels when possible.  Implements a more restricted set
+        of rules than `merge_factors_cov` -- just additivity of
+        stationary covariances with defined power spectral densities
+        and mutliplication by scalars.
+        """
+        factor_list = []
+        for i, factor in enumerate(self.factor_list):
+            if isinstance(factor, Covariance):
+                # If it's a covariance, calculate the psd
+                factor_list.append(factor.psd(omega))
+            elif isinstance(
+                factor,
+                (
+                    TensorConstant,
+                    TensorVariable,
+                    TensorSharedVariable,
+                ),
+            ):
+                # If it's an pytensor variable, make sure it's a scalar
+                ## TODO this check doesnt do the right thing, arrays pass through
+                factor = _maybe_squeeze(factor)
+                factor_list.append(factor)
+            
+            else:
+                # Otherwise try to keep going
+                factor_list.append(factor)
+        return factor_list
+    
 
 class Add(Combination):
     def __call__(self, X, Xs=None, diag=False):
-        return reduce(add, self.merge_factors(X, Xs, diag))
+        return reduce(add, self.merge_factors_cov(X, Xs, diag))
 
+    def psd(self, omega):
+        return reduce(add, self.merge_factors_psd(omega))
+    
 
 class Prod(Combination):
     def __call__(self, X, Xs=None, diag=False):
-        return reduce(mul, self.merge_factors(X, Xs, diag))
+        return reduce(mul, self.merge_factors_cov(X, Xs, diag))
+
+    def psd(self, omega):
+        return reduce(mul, self.merge_factors_psd(omega))
 
 
 class Exponentiated(Covariance):
@@ -407,6 +459,9 @@ class Stationary(Covariance):
 
     def full(self, X, Xs=None):
         raise NotImplementedError
+        
+    def psd(self, omega):
+        raise NotImplementedError
 
 
 class Periodic(Stationary):
@@ -451,11 +506,24 @@ class ExpQuad(Stationary):
     .. math::
 
        k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{2 \ell^2} \right]
+    
+    The power spectral density is:
+       
+    .. math::
+        
+       S(\boldsymbol\omega) = 
+           (\sqrt(2 \pi)^D \prod_{i}^{D}\ell_i 
+            \exp\left( -\frac{1}{2} \sum_{i}^{D}\ell_i^2 \omega_i^{2} \right)
     """
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
         return at.exp(-0.5 * self.square_dist(X, Xs))
+    
+    def psd(self, omega):
+        ls = at.ones(self.D) * self.ls
+        c = at.power(at.sqrt(2.0 * np.pi), self.D) * at.prod(ls)
+        return c * at.exp(-0.5 * at.dot(at.square(omega), at.square(ls)))
 
 
 class RatQuad(Stationary):
@@ -488,12 +556,29 @@ class Matern52(Stationary):
        k(x, x') = \left(1 + \frac{\sqrt{5(x - x')^2}}{\ell} +
                    \frac{5(x-x')^2}{3\ell^2}\right)
                    \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
+    
+    The power spectral density is:
+       
+    .. math::
+        
+       S(\boldsymbol\omega) = 
+           \frac{2^D \pi^{\frac{D}{2}} \Gamma(\frac{D+5}{2}) 5^{5/2}}
+                {\frac{3}{4}\sqrt{\pi}}
+           \prod_{i=1}^{D}\ell_{i}
+           \left(5 + \sum_{i=1}^{D}\ell_{i}^2 \boldsymbol\omega_{i}^{2}\right)^{-\frac{D+5}{2}}
     """
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
         r = self.euclidean_dist(X, Xs)
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * at.square(r)) * at.exp(-1.0 * np.sqrt(5.0) * r)
+    
+    def psd(self, omega):
+        ls = at.ones(self.D) * self.ls
+        D52 = (self.D + 5) / 2
+        num = at.power(2, self.D) * at.power(np.pi, self.D / 2) * at.gamma(D52) * at.power(5, 5 / 2)
+        den = 0.75 * at.sqrt(np.pi)
+        return (num / den) * at.prod(ls) * at.power(5.0 + at.dot(at.square(omega), at.square(ls)), -1 * D52)
 
 
 class Matern32(Stationary):
@@ -504,12 +589,29 @@ class Matern32(Stationary):
 
        k(x, x') = \left(1 + \frac{\sqrt{3(x - x')^2}}{\ell}\right)
                   \mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]
+    
+    The power spectral density is:
+       
+    .. math::
+        
+        S(\boldsymbol\omega) = 
+            \frac{2^D \pi^{D/2} \Gamma\left(\frac{D+3}{2}\right) 3^{3/2}}
+                 {\frac{1}{2}\sqrt{\pi}}
+           \prod_{i=1}^{D}\ell_{i}
+           \left(3 + \sum_{i=1}^{D}\ell_{i}^2 \boldsymbol\omega_{i}^{2}\right)^{-\frac{D+3}{2}}
     """
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
         r = self.euclidean_dist(X, Xs)
         return (1.0 + np.sqrt(3.0) * r) * at.exp(-np.sqrt(3.0) * r)
+    
+    def psd(self, omega):
+        ls = at.ones(self.D) * self.ls
+        D32 = (self.D + 3) / 2
+        num = at.power(2, self.D) * at.power(np.pi, self.D / 2) * at.gamma(D32) * at.power(3, 3 / 2)
+        den = 0.5 * at.sqrt(np.pi)
+        return (num / den) * at.prod(ls) * at.power(3.0 + at.dot(at.square(omega), at.square(ls)), -1 * D32)
 
 
 class Matern12(Stationary):
