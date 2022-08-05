@@ -64,7 +64,7 @@ numpydoc_xref_param_type = True
 # fmt: off
 numpydoc_xref_ignore = {
     "of", "or", "optional", "default", "numeric", "type", "scalar", "1D", "2D", "3D", "nD", "array",
-    "instance"
+    "instance", "M", "N"
 }
 # fmt: on
 numpydoc_xref_aliases = {
