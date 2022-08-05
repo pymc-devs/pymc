@@ -391,69 +391,95 @@ def sample_blackjax_nuts(
     return az_trace
 
 
+def _numpyro_nuts_defaults() -> Dict[str, Any]:
+    """Defaults parameters for Numpyro NUTS."""
+    return {
+        "adapt_step_size": True,
+        "adapt_mass_matrix": True,
+        "dense_mass": False,
+    }
+
+
+def _update_numpyro_nuts_kwargs(nuts_kwargs: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Update default Numpyro NUTS parameters with new values."""
+    nuts_kwargs_defaults = _numpyro_nuts_defaults()
+    if nuts_kwargs is not None:
+        nuts_kwargs_defaults.update(nuts_kwargs)
+    return nuts_kwargs_defaults
+
+
 def sample_numpyro_nuts(
     draws: int = 1000,
     tune: int = 1000,
     chains: int = 4,
     target_accept: float = 0.8,
-    random_seed: RandomSeed = None,
+    random_seed: Optional[RandomSeed] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
-    var_names=None,
+    var_names: Optional[Sequence[str]] = None,
     progress_bar: bool = True,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
-    postprocessing_backend: str = None,
+    postprocessing_backend: Optional[str] = None,
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
-):
+) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
 
     Parameters
     ----------
     draws : int, default 1000
-        The number of samples to draw. The number of tuned samples are discarded by default.
+        The number of samples to draw. The number of tuned samples are discarded by
+        default.
     tune : int, default 1000
         Number of iterations to tune. Samplers adjust the step sizes, scalings or
-        similar during tuning. Tuning samples will be drawn in addition to the number specified in
-        the ``draws`` argument.
+        similar during tuning. Tuning samples will be drawn in addition to the number
+        specified in the ``draws`` argument.
     chains : int, default 4
         The number of chains to sample.
     target_accept : float in [0, 1].
-        The step size is tuned such that we approximate this acceptance rate. Higher values like
-        0.9 or 0.95 often work better for problematic posteriors.
+        The step size is tuned such that we approximate this acceptance rate. Higher
+        values like 0.9 or 0.95 often work better for problematic posteriors.
     random_seed : int, RandomState or Generator, optional
         Random seed used by the sampling steps.
+    initvals: StartDict or Sequence[Optional[StartDict]], optional
+        Initial values for random variables provided as a dictionary (or sequence of
+        dictionaries) mapping the random variable (by name or reference) to desired
+        starting values.
     model : Model, optional
-        Model to sample from. The model needs to have free random variables. When inside a ``with`` model
-        context, it defaults to that model, otherwise the model must be passed explicitly.
-    var_names : iterable of str, optional
-        Names of variables for which to compute the posterior samples. Defaults to all variables in the posterior
+        Model to sample from. The model needs to have free random variables. When inside
+        a ``with`` model context, it defaults to that model, otherwise the model must be
+        passed explicitly.
+    var_names : sequence of str, optional
+        Names of variables for which to compute the posterior samples. Defaults to all
+        variables in the posterior.
     progress_bar : bool, default True
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
+        Whether or not to display a progress bar in the command line. The bar shows the
+        percentage of completion, the sampling speed in samples per second (SPS), and
+        the estimated remaining time until completion ("expected time of arrival"; ETA).
     keep_untransformed : bool, default False
         Include untransformed variables in the posterior samples. Defaults to False.
     chain_method : str, default "parallel"
-        Specify how samples should be drawn. The choices include "sequential", "parallel", and "vectorized".
+        Specify how samples should be drawn. The choices include "sequential",
+        "parallel", and "vectorized".
     postprocessing_backend : Optional[str]
         Specify how postprocessing should be computed. gpu or cpu
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
-        for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
-        not be included in the returned object. Values for ``observed_data``, ``constant_data``,
-        ``coords``, and ``dims`` are inferred from the ``model`` argument if not provided
-        in ``idata_kwargs``.
+        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
+        value for the ``log_likelihood`` key to indicate that the pointwise log
+        likelihood should not be included in the returned object. Values for
+        ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
+        the ``model`` argument if not provided in ``idata_kwargs``.
     nuts_kwargs: dict, optional
         Keyword arguments for :func:`numpyro.infer.NUTS`.
 
     Returns
     -------
     InferenceData
-        ArviZ ``InferenceData`` object that contains the posterior samples, together with their respective sample stats and
-        pointwise log likeihood values (unless skipped with ``idata_kwargs``).
+        ArviZ ``InferenceData`` object that contains the posterior samples, together
+        with their respective sample stats and pointwise log likeihood values (unless
+        skipped with ``idata_kwargs``).
     """
 
     import numpyro
@@ -495,14 +521,10 @@ def sample_numpyro_nuts(
 
     logp_fn = get_jaxified_logp(model, negative_logp=False)
 
-    if nuts_kwargs is None:
-        nuts_kwargs = {}
+    nuts_kwargs = _update_numpyro_nuts_kwargs(nuts_kwargs)
     nuts_kernel = NUTS(
         potential_fn=logp_fn,
         target_accept_prob=target_accept,
-        adapt_step_size=True,
-        adapt_mass_matrix=True,
-        dense_mass=False,
         **nuts_kwargs,
     )
 

@@ -1,3 +1,6 @@
+from typing import Any, Dict
+from unittest import mock
+
 import aesara
 import aesara.tensor as at
 import jax
@@ -6,13 +9,16 @@ import pytest
 
 from aesara.compile import SharedVariable
 from aesara.graph import graph_inputs
+from numpyro.infer import MCMC
 
 import pymc as pm
 
 from pymc.sampling_jax import (
     _get_batched_jittered_initial_points,
     _get_log_likelihood,
+    _numpyro_nuts_defaults,
     _replace_shared_variables,
+    _update_numpyro_nuts_kwargs,
     get_jaxified_graph,
     get_jaxified_logp,
     sample_blackjax_nuts,
@@ -270,3 +276,57 @@ def test_seeding(chains, random_seed, sampler):
     if chains > 1:
         assert np.all(result1.posterior["x"].sel(chain=0) != result1.posterior["x"].sel(chain=1))
         assert np.all(result2.posterior["x"].sel(chain=0) != result2.posterior["x"].sel(chain=1))
+
+
+@pytest.mark.parametrize(
+    "nuts_kwargs",
+    [
+        {"adapt_step_size": False},
+        {"adapt_mass_matrix": True},
+        {"dense_mass": True},
+        {"adapt_step_size": False, "adapt_mass_matrix": True, "dense_mass": True},
+        {"fake-key": "fake-value"},
+    ],
+)
+def test_update_numpyro_nuts_kwargs(nuts_kwargs: Dict[str, Any]):
+    original_kwargs = nuts_kwargs.copy()
+    new_kwargs = _update_numpyro_nuts_kwargs(nuts_kwargs)
+
+    # Maintains original key-value pairs.
+    for k, v in original_kwargs.items():
+        assert new_kwargs[k] == v
+
+    for k, v in _numpyro_nuts_defaults().items():
+        if k not in original_kwargs:
+            assert new_kwargs[k] == v
+
+
+@mock.patch("numpyro.infer.MCMC")
+def test_numpyro_nuts_kwargs_are_used(mocked: mock.MagicMock):
+    mocked.side_effect = MCMC
+
+    step_size = 0.13
+    dense_mass = True
+    adapt_step_size = False
+    target_accept = 0.78
+
+    with pm.Model():
+        pm.Normal("a")
+        sample_numpyro_nuts(
+            10,
+            tune=10,
+            chains=1,
+            target_accept=target_accept,
+            nuts_kwargs={
+                "step_size": step_size,
+                "dense_mass": dense_mass,
+                "adapt_step_size": adapt_step_size,
+            },
+        )
+    mocked.assert_called_once()
+    nuts_sampler = mocked.call_args.args[0]
+    assert nuts_sampler._step_size == step_size
+    assert nuts_sampler._dense_mass == dense_mass
+    assert nuts_sampler._adapt_step_size == adapt_step_size
+    assert nuts_sampler._adapt_mass_matrix
+    assert nuts_sampler._target_accept_prob == target_accept
