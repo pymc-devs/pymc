@@ -74,11 +74,11 @@ class Simulator(NoDistribution):
 
     Parameters
     ----------
-    fn: callable
+    fn : callable
         Python random simulator function. Should expect the following signature
         ``(rng, arg1, arg2, ... argn, size)``, where rng is a ``numpy.random.RandomStream()``
         and ``size`` defines the size of the desired sample.
-    params: list
+    params : list
         Parameters used by the Simulator random function. Parameters can also
         be passed by order, in which case the keyword argument ``params`` is
         ignored. Alternatively, each parameter can be passed by order after fn,
@@ -98,17 +98,17 @@ class Simulator(NoDistribution):
         ``distance="gaussian"`` + ``sum_stat="sort"`` is equivalent to the 1D 2-wasserstein distance
 
         ``distance="laplace"`` + ``sum_stat="sort"`` is equivalent to the the 1D 1-wasserstein distance
-    sum_stat: Aesara Op, callable or str
+    sum_stat : Aesara Op, callable or str
         Summary statistic function. Available options are ``"indentity"`` (default),
         ``"sort"``, ``"mean"``, ``"median"``. If a callable (or Aesara Op) is defined,
         it should return a 1d numpy array (or Aesara vector).
-    epsilon: float or array
+    epsilon : float or array
         Scaling parameter for the distance functions. It should be a float or
         an array of the same size of the output of ``sum_stat``. Defaults to ``1.0``
     ndim_supp : int
         Number of dimensions of the SimulatorRV (0 for scalar, 1 for vector, etc.)
         Defaults to ``0``.
-    ndims_params: list[int]
+    ndims_params : list[int]
         Number of minimum dimensions of each parameter of the RV. For example,
         if the Simulator accepts two scalar inputs, it should be ``[0, 0]``.
         Defaults to ``0`` for each parameter.
