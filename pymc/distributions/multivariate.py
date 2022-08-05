@@ -1850,7 +1850,7 @@ class KroneckerNormal(Continuous):
     ========  ==========================
     Support   :math:`x \in \mathbb{R}^N`
     Mean      :math:`\mu`
-    Variance  :math:`K = \bigotimes K_i` + \sigma^2 I_N
+    Variance  :math:`K = \bigotimes K_i + \sigma^2 I_N`
     ========  ==========================
 
     Parameters
@@ -1869,7 +1869,7 @@ class KroneckerNormal(Continuous):
         :math:`K_i = Q_i \text{diag}(v_i) Q_i'`. For example::
 
             v_i, Q_i = at.nlinalg.eigh(K_i)
-    sigma : scalar, variable
+    sigma : scalar, optional
         Standard deviation of the Gaussian white noise.
 
     Examples
@@ -2103,17 +2103,18 @@ class CAR(Continuous):
     ----------
     mu : tensor_like of float
         Real-valued mean vector
-    W : ndarray of int
+    W : (M, M) tensor_like of int
         Symmetric adjacency matrix of 1s and 0s indicating
-        adjacency between elements.
+        adjacency between elements. If possible, *W* is converted
+        to a sparse matrix, falling back to a dense variable.
+        :func:`~aesara.sparse.basic.as_sparse_or_tensor_variable` is
+        used for this sparse or tensorvariable conversion.
     alpha : tensor_like of float
         Autoregression parameter taking values between -1 and 1. Values closer to 0 indicate weaker
         correlation and values closer to 1 indicate higher autocorrelation. For most use cases, the
-        support of alpha should be restricted to (0, 1)
+        support of alpha should be restricted to (0, 1).
     tau : tensor_like of float
         Positive precision variable controlling the scale of the underlying normal variates.
-    sparse : bool, default=False
-        Determines whether or not sparse computations are used
 
     References
     ----------
