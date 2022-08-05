@@ -61,7 +61,7 @@ from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
-from pymc.exceptions import IncorrectArgumentsError, SamplingError
+from pymc.exceptions import SamplingError
 from pymc.initial_point import (
     PointType,
     StartDict,
@@ -1769,10 +1769,8 @@ def compile_forward_sampling_function(
 
 def sample_posterior_predictive(
     trace,
-    samples: Optional[int] = None,
     model: Optional[Model] = None,
     var_names: Optional[List[str]] = None,
-    keep_size: Optional[bool] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
     return_inferencedata: bool = True,
@@ -1788,25 +1786,11 @@ def sample_posterior_predictive(
     trace : backend, list, xarray.Dataset, arviz.InferenceData, or MultiTrace
         Trace generated from MCMC sampling, or a list of dicts (eg. points or from find_MAP()),
         or xarray.Dataset (eg. InferenceData.posterior or InferenceData.prior)
-    samples : int
-        Number of posterior predictive samples to generate. Defaults to one posterior predictive
-        sample per posterior sample, that is, the number of draws times the number of chains.
-
-        It is not recommended to modify this value; when modified, some chains may not be
-        represented in the posterior predictive sample. Instead, in cases when generating
-        posterior predictive samples is too expensive to do it once per posterior sample,
-        the recommended approach is to thin the ``trace`` argument
-        before passing it to ``sample_posterior_predictive``. In such cases it
-        might be advisable to set ``extend_inferencedata`` to ``False`` and extend
-        the inferencedata manually afterwards.
     model : Model (optional if in ``with`` context)
         Model to be used to generate the posterior predictive samples. It will
         generally be the model used to generate the ``trace``, but it doesn't need to be.
     var_names : Iterable[str]
         Names of variables for which to compute the posterior predictive samples.
-    keep_size : bool, default True
-        Force posterior predictive sample to have the same shape as posterior and sample stats
-        data: ``(nchains, ndraws, ...)``. Overrides samples parameter.
     random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     progressbar : bool
@@ -1882,38 +1866,18 @@ def sample_posterior_predictive(
     else:
         raise TypeError(f"Unsupported type for `trace` argument: {type(trace)}.")
 
-    if keep_size is None:
-        # This will allow users to set return_inferencedata=False and
-        # automatically get the old behaviour instead of needing to
-        # set both return_inferencedata and keep_size to False
-        keep_size = return_inferencedata
-
-    if keep_size and samples is not None:
-        raise IncorrectArgumentsError(
-            "Should not specify both keep_size and samples arguments. "
-            "See the docstring of the samples argument for more details."
+    if isinstance(_trace, MultiTrace):
+        samples = sum(len(v) for v in _trace._straces.values())
+    elif isinstance(_trace, list):
+        # this is a list of points
+        samples = len(_trace)
+    else:
+        raise TypeError(
+            "Do not know how to compute number of samples for trace argument of type %s"
+            % type(_trace)
         )
-
-    if samples is None:
-        if isinstance(_trace, MultiTrace):
-            samples = sum(len(v) for v in _trace._straces.values())
-        elif isinstance(_trace, list):
-            # this is a list of points
-            samples = len(_trace)
-        else:
-            raise TypeError(
-                "Do not know how to compute number of samples for trace argument of type %s"
-                % type(_trace)
-            )
 
     assert samples is not None
-    if samples < len_trace * nchain:
-        warnings.warn(
-            "samples parameter is smaller than nchains times ndraws, some draws "
-            "and/or chains may not be represented in the returned posterior "
-            "predictive sample",
-            stacklevel=2,
-        )
 
     model = modelcontext(model)
 
@@ -2001,9 +1965,9 @@ def sample_posterior_predictive(
         pass
 
     ppc_trace = ppc_trace_t.trace_dict
-    if keep_size:
-        for k, ary in ppc_trace.items():
-            ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
+
+    for k, ary in ppc_trace.items():
+        ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
 
     if not return_inferencedata:
         return ppc_trace

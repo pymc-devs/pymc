@@ -546,7 +546,7 @@ class TestMixture(SeededTest):
         with model:
             prior = sample_prior_predictive(samples=n_samples, return_inferencedata=False)
             ppc = sample_posterior_predictive(
-                [self.get_inital_point(model)], samples=n_samples, return_inferencedata=False
+                n_samples * [self.get_inital_point(model)], return_inferencedata=False
             )
 
         assert prior["like0"].shape == (n_samples, 20)
@@ -592,7 +592,7 @@ class TestMixture(SeededTest):
         with model:
             prior = sample_prior_predictive(samples=n_samples, return_inferencedata=False)
             ppc = sample_posterior_predictive(
-                [self.get_inital_point(model)], samples=n_samples, return_inferencedata=False
+                n_samples * [self.get_inital_point(model)], return_inferencedata=False
             )
         assert ppc["x_obs"].shape == (n_samples,) + X.shape
         assert prior["x_obs"].shape == (n_samples,) + X.shape
