@@ -43,12 +43,7 @@ import pymc as pm
 
 from pymc.aesaraf import change_rv_size, floatX, intX
 from pymc.distributions import transforms
-from pymc.distributions.continuous import (
-    BoundedContinuous,
-    ChiSquared,
-    Normal,
-    assert_negative_support,
-)
+from pymc.distributions.continuous import BoundedContinuous, ChiSquared, Normal
 from pymc.distributions.dist_math import (
     betaln,
     check_parameters,
@@ -381,7 +376,7 @@ class MvStudentT(Continuous):
         cov = quaddist_matrix(cov, chol, tau, lower)
         # Aesara is stricter about the shape of mu, than PyMC used to be
         mu = at.broadcast_arrays(mu, cov[..., -1])[0]
-        assert_negative_support(nu, "nu", "MvStudentT")
+
         return super().dist([nu, mu, cov], **kwargs)
 
     def moment(rv, size, nu, mu, cov):
@@ -2287,9 +2282,6 @@ class StickBreakingWeights(SimplexContinuous):
     def dist(cls, alpha, K, *args, **kwargs):
         alpha = at.as_tensor_variable(floatX(alpha))
         K = at.as_tensor_variable(intX(K))
-
-        assert_negative_support(alpha, "alpha", "StickBreakingWeights")
-        assert_negative_support(K, "K", "StickBreakingWeights")
 
         return super().dist([alpha, K], **kwargs)
 
