@@ -83,9 +83,9 @@ class Simulator(NoDistribution):
         be passed by order, in which case the keyword argument ``params`` is
         ignored. Alternatively, each parameter can be passed by order after fn,
         ``param1, param2, ..., paramN``
-    distance : Aesara Op, callable or str
-        Distance function. Available options are ``"gaussian"`` (default), ``"laplace"``,
-        ``"kullback_leibler"`` or a user defined function (or Aesara Op) that takes
+    distance : Aesara_Op, callable or str, default "gaussian"
+        Distance function. Available options are ``"gaussian"``, ``"laplace"``,
+        ``"kullback_leibler"`` or a user defined function (or Aesara_Op) that takes
         ``epsilon``, the summary statistics of observed_data and the summary statistics
         of simulated_data as input.
 
@@ -98,20 +98,18 @@ class Simulator(NoDistribution):
         ``distance="gaussian"`` + ``sum_stat="sort"`` is equivalent to the 1D 2-wasserstein distance
 
         ``distance="laplace"`` + ``sum_stat="sort"`` is equivalent to the the 1D 1-wasserstein distance
-    sum_stat : Aesara Op, callable or str
-        Summary statistic function. Available options are ``"indentity"`` (default),
-        ``"sort"``, ``"mean"``, ``"median"``. If a callable (or Aesara Op) is defined,
+    sum_stat : Aesara_Op, callable or str, default "identity"
+        Summary statistic function. Available options are ``"identity"``,
+        ``"sort"``, ``"mean"``, ``"median"``. If a callable (or Aesara_Op) is defined,
         it should return a 1d numpy array (or Aesara vector).
-    epsilon : float or array
+    epsilon : float or array, default 1.0
         Scaling parameter for the distance functions. It should be a float or
-        an array of the same size of the output of ``sum_stat``. Defaults to ``1.0``
-    ndim_supp : int
+        an array of the same size of the output of ``sum_stat``.
+    ndim_supp : int, default 0
         Number of dimensions of the SimulatorRV (0 for scalar, 1 for vector, etc.)
-        Defaults to ``0``.
-    ndims_params : list[int]
+    ndims_params : list[int], default 0 for each parameter.
         Number of minimum dimensions of each parameter of the RV. For example,
         if the Simulator accepts two scalar inputs, it should be ``[0, 0]``.
-        Defaults to ``0`` for each parameter.
 
     Examples
     --------
