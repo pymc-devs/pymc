@@ -198,7 +198,7 @@ class Combination(Covariance):
             else:
                 self.factor_list.append(factor)
 
-    def merge_factors_cov(self, X, Xs=None, diag=False):
+    def _merge_factors_cov(self, X, Xs=None, diag=False):
         """ Called to evaluate either all the sums or all the 
         products of kernels that are possible to evaluate.
         """
@@ -228,10 +228,10 @@ class Combination(Covariance):
                 factor_list.append(factor)
         return factor_list
 
-    def merge_factors_psd(self, omega):
+    def _merge_factors_psd(self, omega):
         """ Called to evaluatate spectral densities of combination
         kernels when possible.  Implements a more restricted set
-        of rules than `merge_factors_cov` -- just additivity of
+        of rules than `_merge_factors_cov` -- just additivity of
         stationary covariances with defined power spectral densities
         and multiplication by scalars.
         """
@@ -266,15 +266,15 @@ class Combination(Covariance):
 
 class Add(Combination):
     def __call__(self, X, Xs=None, diag=False):
-        return reduce(add, self.merge_factors_cov(X, Xs, diag))
+        return reduce(add, self._merge_factors_cov(X, Xs, diag))
 
     def psd(self, omega):
-        return reduce(add, self.merge_factors_psd(omega))
+        return reduce(add, self._merge_factors_psd(omega))
     
 
 class Prod(Combination):
     def __call__(self, X, Xs=None, diag=False):
-        return reduce(mul, self.merge_factors_cov(X, Xs, diag))
+        return reduce(mul, self._merge_factors_cov(X, Xs, diag))
 
     def psd(self, omega):
         check = Counter(
@@ -289,7 +289,7 @@ class Prod(Combination):
                 "functions is not implemented."
             )
         
-        return reduce(mul, self.merge_factors_psd(omega))
+        return reduce(mul, self._merge_factors_psd(omega))
 
 
 class Exponentiated(Covariance):
