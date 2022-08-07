@@ -460,22 +460,6 @@ class TestStability:
             cov = pm.gp.cov.ExpQuad(2, 0.1)
         dists = cov.square_dist(X, X).eval()
         assert not np.any(dists < 0)
-
-
-def test_psd_1d_matches_2d(cov_func):
-    L = 10.0
-    M = 100
-    cov_1d = cov_func(1, ls=0.1)
-    omega_1d = np.pi * np.arange(1, M + 1) / (2 * L)
-    psd_1d = cov_1d.psd(omega_1d[:, None]).eval()
-
-    cov_2d = cov_func(2, ls=0.1)
-    S = np.meshgrid(*[np.arange(1, 1 + M) for _ in range(cov_2d.D)])
-    S = np.vstack([s.flatten() for s in S]).T
-    omega_2d = np.pi * S / (2 * L)
-    psd_2d = cov_2d.psd(omega_2d).eval().reshape(M, M)
-    
-    npt.assert_allclose(psd_1d, np.sqrt(np.diag(psd_2d)), atol=1e-3)
     
         
 class TestExpQuad:
@@ -491,8 +475,6 @@ class TestExpQuad:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
         
-    def test_psd_1d_matches_2d(self):
-        test_psd_1d_matches_2d(pm.gp.cov.ExpQuad)
 
     def test_2d(self):
         X = np.linspace(0, 1, 10).reshape(5, 2)
@@ -601,9 +583,6 @@ class TestMatern52:
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
-    
-    def test_psd_1d_matches_2d(self):
-        test_psd_1d_matches_2d(pm.gp.cov.Matern52)
 
 
 class TestMatern32:
@@ -618,9 +597,6 @@ class TestMatern32:
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
-    
-    def test_psd_1d_matches_2d(self):
-        test_psd_1d_matches_2d(pm.gp.cov.Matern32)
 
 
 class TestMatern12:
