@@ -266,12 +266,12 @@ class TestCovPSD:
         with pm.Model() as model:
             cov1 = 2 * pm.gp.cov.ExpQuad(1, 0.1)
             cov2 = 5 * pm.gp.cov.ExpQuad(1, 1.0)
-            cov = cov1 + cov2    
+            cov = cov1 + cov2
         psd1 = cov1.psd(omega[:, None]).eval()
         psd2 = cov2.psd(omega[:, None]).eval()
         psd = cov.psd(omega[:, None]).eval()
         npt.assert_allclose(psd, psd1 + psd2)
-       
+
     def test_copsd_multiply(self):
         # This could be implemented via convolution
         L = 10.0
@@ -279,41 +279,40 @@ class TestCovPSD:
         with pm.Model() as model:
             cov1 = 2 * pm.gp.cov.ExpQuad(1, ls=1)
             cov2 = pm.gp.cov.ExpQuad(1, ls=1)
-            
+
         with pytest.raises(NotImplementedError):
             psd = (cov1 * cov2).psd(omega[:, None]).eval()
-    
+
     def test_covpsd_nonstationary1(self):
         L = 10.0
         omega = np.pi * np.arange(1, 101) / (2 * L)
         with pm.Model() as model:
             cov = 2 * pm.gp.cov.Linear(1, c=5)
-        
+
         with pytest.raises(ValueError):
             psd = cov.psd(omega[:, None]).eval()
-    
+
     def test_covpsd_nonstationary2(self):
         L = 10.0
         omega = np.pi * np.arange(1, 101) / (2 * L)
         with pm.Model() as model:
             cov = 2 * pm.gp.cov.ExpQuad(1, ls=1) + 10.0
-        
+
         with pytest.raises(ValueError):
             psd = cov.psd(omega[:, None]).eval()
-    
+
     def test_covpsd_notimplemented(self):
-        
         class NewStationaryCov(pm.gp.cov.Stationary):
             pass
-        
+
         L = 10.0
         omega = np.pi * np.arange(1, 101) / (2 * L)
         with pm.Model() as model:
             cov = 2 * NewStationaryCov(1, ls=1)
-        
+
         with pytest.raises(NotImplementedError):
             psd = cov.psd(omega[:, None]).eval()
-        
+
 
 class TestCovExponentiation:
     def test_symexp_cov(self):
@@ -460,8 +459,8 @@ class TestStability:
             cov = pm.gp.cov.ExpQuad(2, 0.1)
         dists = cov.square_dist(X, X).eval()
         assert not np.any(dists < 0)
-    
-        
+
+
 class TestExpQuad:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -474,7 +473,6 @@ class TestExpQuad:
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
-        
 
     def test_2d(self):
         X = np.linspace(0, 1, 10).reshape(5, 2)

@@ -48,10 +48,7 @@ __all__ = [
 
 
 def _verify_scalar(value):
-    if (
-        isinstance(value, aesara.compile.SharedVariable)
-        and value.get_value().squeeze().shape == ()
-    ):
+    if isinstance(value, aesara.compile.SharedVariable) and value.get_value().squeeze().shape == ():
         return at.squeeze(value)
     elif np.asarray(value).squeeze().shape == ():
         return np.squeeze(value)
@@ -84,12 +81,12 @@ class Covariance:
 
     @property
     def D(self):
-        """ The dimensionality of the input, as taken from the
-        `active_dims`. 
+        """The dimensionality of the input, as taken from the
+        `active_dims`.
         """
         # Evaluate lazily in-case this changes.
         return len(self.active_dims)
-            
+
     def __call__(self, X, Xs=None, diag=False):
         r"""
         Evaluate the kernel/covariance function.
@@ -139,7 +136,7 @@ class Covariance:
                 other = Constant(c=_verify_scalar(other))
             except ValueError:
                 pass
-            
+
         return Add([self, other])
 
     def __mul__(self, other):
@@ -183,7 +180,7 @@ class Covariance:
                 f"Unknown Covariance combination type {result[0][0]}.  "
                 "Known types are `Add` or `Prod`."
             )
-            
+
 
 class Combination(Covariance):
     def __init__(self, factor_list):
@@ -199,7 +196,7 @@ class Combination(Covariance):
                 self.factor_list.append(factor)
 
     def _merge_factors_cov(self, X, Xs=None, diag=False):
-        """ Called to evaluate either all the sums or all the 
+        """Called to evaluate either all the sums or all the
         products of kernels that are possible to evaluate.
         """
         factor_list = []
@@ -229,7 +226,7 @@ class Combination(Covariance):
         return factor_list
 
     def _merge_factors_psd(self, omega):
-        """ Called to evaluatate spectral densities of combination
+        """Called to evaluatate spectral densities of combination
         kernels when possible.  Implements a more restricted set
         of rules than `_merge_factors_cov` -- just additivity of
         stationary covariances with defined power spectral densities
@@ -241,28 +238,28 @@ class Combination(Covariance):
                 # If it's a covariance try to calculate the psd
                 try:
                     factor_list.append(factor.psd(omega))
-                
+
                 except (AttributeError, NotImplementedError) as e:
-                    
+
                     if isinstance(factor, Stationary):
                         raise NotImplementedError(
                             "No power spectral density method has been "
                             f"implemented for {factor}."
                         ) from e
-                    
+
                     else:
                         raise ValueError(
                             "Power specral densities, `.psd(omega)`, can only "
                             "be calculated for `Stationary` covariance "
                             f"functions.  {factor} is non-stationary."
                         ) from e
-                    
+
             else:
                 # Otherwise defer the reduction to later
                 factor_list.append(factor)
-                
+
         return factor_list
-    
+
 
 class Add(Combination):
     def __call__(self, X, Xs=None, diag=False):
@@ -270,25 +267,20 @@ class Add(Combination):
 
     def psd(self, omega):
         return reduce(add, self._merge_factors_psd(omega))
-    
+
 
 class Prod(Combination):
     def __call__(self, X, Xs=None, diag=False):
         return reduce(mul, self._merge_factors_cov(X, Xs, diag))
 
     def psd(self, omega):
-        check = Counter(
-            [
-                isinstance(factor, Covariance) 
-                for factor in self.factor_list
-            ]
-        )
+        check = Counter([isinstance(factor, Covariance) for factor in self.factor_list])
         if check.get(True) >= 2:
             raise NotImplementedError(
                 "The power spectral density of products of covariance "
                 "functions is not implemented."
             )
-        
+
         return reduce(mul, self._merge_factors_psd(omega))
 
 
@@ -486,7 +478,7 @@ class Stationary(Covariance):
 
     def full(self, X, Xs=None):
         raise NotImplementedError
-        
+
     def psd(self, omega):
         raise NotImplementedError
 
@@ -533,20 +525,20 @@ class ExpQuad(Stationary):
     .. math::
 
        k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{2 \ell^2} \right]
-    
+
     The power spectral density is:
-       
+
     .. math::
-        
-       S(\boldsymbol\omega) = 
-           (\sqrt(2 \pi)^D \prod_{i}^{D}\ell_i 
+
+       S(\boldsymbol\omega) =
+           (\sqrt(2 \pi)^D \prod_{i}^{D}\ell_i
             \exp\left( -\frac{1}{2} \sum_{i}^{D}\ell_i^2 \omega_i^{2} \right)
     """
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
         return at.exp(-0.5 * self.square_dist(X, Xs))
-    
+
     def psd(self, omega):
         ls = at.ones(self.D) * self.ls
         c = at.power(at.sqrt(2.0 * np.pi), self.D)
@@ -584,12 +576,12 @@ class Matern52(Stationary):
        k(x, x') = \left(1 + \frac{\sqrt{5(x - x')^2}}{\ell} +
                    \frac{5(x-x')^2}{3\ell^2}\right)
                    \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
-    
+
     The power spectral density is:
-       
+
     .. math::
-        
-       S(\boldsymbol\omega) = 
+
+       S(\boldsymbol\omega) =
            \frac{2^D \pi^{\frac{D}{2}} \Gamma(\frac{D+5}{2}) 5^{5/2}}
                 {\frac{3}{4}\sqrt{\pi}}
            \prod_{i=1}^{D}\ell_{i}
@@ -600,7 +592,7 @@ class Matern52(Stationary):
         X, Xs = self._slice(X, Xs)
         r = self.euclidean_dist(X, Xs)
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * at.square(r)) * at.exp(-1.0 * np.sqrt(5.0) * r)
-    
+
     def psd(self, omega):
         ls = at.ones(self.D) * self.ls
         D52 = (self.D + 5) / 2
@@ -618,12 +610,12 @@ class Matern32(Stationary):
 
        k(x, x') = \left(1 + \frac{\sqrt{3(x - x')^2}}{\ell}\right)
                   \mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]
-    
+
     The power spectral density is:
-       
+
     .. math::
-        
-        S(\boldsymbol\omega) = 
+
+        S(\boldsymbol\omega) =
             \frac{2^D \pi^{D/2} \Gamma\left(\frac{D+3}{2}\right) 3^{3/2}}
                  {\frac{1}{2}\sqrt{\pi}}
            \prod_{i=1}^{D}\ell_{i}
@@ -634,7 +626,7 @@ class Matern32(Stationary):
         X, Xs = self._slice(X, Xs)
         r = self.euclidean_dist(X, Xs)
         return (1.0 + np.sqrt(3.0) * r) * at.exp(-np.sqrt(3.0) * r)
-    
+
     def psd(self, omega):
         ls = at.ones(self.D) * self.ls
         D32 = (self.D + 3) / 2
