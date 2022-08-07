@@ -14,6 +14,7 @@
 
 import warnings
 
+from collections import Counter
 from functools import reduce
 from numbers import Number
 from operator import add, mul
@@ -132,6 +133,14 @@ class Covariance:
         return X, Xs
 
     def __add__(self, other):
+        if isinstance(other, Number):
+            # If it's a scalar, cast as Constant covariance.  This
+            # allows validation for power spectral density calc.
+            try:
+                other = Constant(c=_verify_scalar(other))
+            except ValueError:
+                pass
+            
         return Add([self, other])
 
     def __mul__(self, other):
@@ -144,7 +153,7 @@ class Covariance:
         return self.__mul__(other)
 
     def __pow__(self, other):
-        return Exponentiated(self, self._maybe_squeeze(other))
+        return Exponentiated(self, _verify_scalar(other))
 
     def __array_wrap__(self, result):
         """
@@ -161,19 +170,21 @@ class Covariance:
         A = np.zeros((r, c))
         for i in range(r):
             for j in range(c):
-                A[i, j] = result[i, j].factor_list[1]
+                r = result[i, j].factor_list[1]
+                if isinstance(r, Constant):
+                    # Counteract the elemwise Add edgecase
+                    r = r.c
+                A[i, j] = r
         if isinstance(result[0][0], Add):
             return result[0][0].factor_list[0] + A
         elif isinstance(result[0][0], Prod):
             return result[0][0].factor_list[0] * A
         else:
             raise TypeError(
-                f"Unknown Covariance combination type {result[0][0]}.  Known types are `Add` or `Prod`."
+                f"Unknown Covariance combination type {result[0][0]}.  "
+                "Known types are `Add` or `Prod`."
             )
             
-    def psd(self):
-        raise NotImplementedError("Only covariance functions of type `Stationary` may implement a `.psd`.")
-
 
 class Combination(Covariance):
     def __init__(self, factor_list):
@@ -223,29 +234,34 @@ class Combination(Covariance):
         kernels when possible.  Implements a more restricted set
         of rules than `merge_factors_cov` -- just additivity of
         stationary covariances with defined power spectral densities
-        and mutliplication by scalars.
+        and multiplication by scalars.
         """
         factor_list = []
-        for i, factor in enumerate(self.factor_list):
+        for factor in self.factor_list:
             if isinstance(factor, Covariance):
-                # If it's a covariance, calculate the psd
-                factor_list.append(factor.psd(omega))
-            elif isinstance(
-                factor,
-                (
-                    TensorConstant,
-                    TensorVariable,
-                    TensorSharedVariable,
-                ),
-            ):
-                # If it's an pytensor variable, make sure it's a scalar
-                ## TODO this check doesnt do the right thing, arrays pass through
-                factor = _maybe_squeeze(factor)
-                factor_list.append(factor)
-            
+                # If it's a covariance try to calculate the psd
+                try:
+                    factor_list.append(factor.psd(omega))
+                
+                except (AttributeError, NotImplementedError) as e:
+                    
+                    if isinstance(factor, Stationary):
+                        raise NotImplementedError(
+                            "No power spectral density method has been "
+                            f"implemented for {factor}."
+                        ) from e
+                    
+                    else:
+                        raise ValueError(
+                            "Power specral densities, `.psd(omega)`, can only "
+                            "be calculated for `Stationary` covariance "
+                            f"functions.  {factor} is non-stationary."
+                        ) from e
+                    
             else:
-                # Otherwise try to keep going
+                # Otherwise defer the reduction to later
                 factor_list.append(factor)
+                
         return factor_list
     
 
@@ -262,6 +278,18 @@ class Prod(Combination):
         return reduce(mul, self.merge_factors_cov(X, Xs, diag))
 
     def psd(self, omega):
+        check = Counter(
+            [
+                isinstance(factor, Covariance) 
+                for factor in self.factor_list
+            ]
+        )
+        if check.get(True) >= 2:
+            raise NotImplementedError(
+                "The power spectral density of products of covariance "
+                "functions is not implemented."
+            )
+        
         return reduce(mul, self.merge_factors_psd(omega))
 
 
@@ -522,8 +550,9 @@ class ExpQuad(Stationary):
     
     def psd(self, omega):
         ls = at.ones(self.D) * self.ls
-        c = at.power(at.sqrt(2.0 * np.pi), self.D) * at.prod(ls)
-        return c * at.exp(-0.5 * at.dot(at.square(omega), at.square(ls)))
+        c = at.power(at.sqrt(2.0 * np.pi), self.D)
+        exp = at.exp(-0.5 * at.dot(at.square(omega), at.square(ls)))
+        return c * at.prod(ls) * exp
 
 
 class RatQuad(Stationary):
@@ -578,7 +607,8 @@ class Matern52(Stationary):
         D52 = (self.D + 5) / 2
         num = at.power(2, self.D) * at.power(np.pi, self.D / 2) * at.gamma(D52) * at.power(5, 5 / 2)
         den = 0.75 * at.sqrt(np.pi)
-        return (num / den) * at.prod(ls) * at.power(5.0 + at.dot(at.square(omega), at.square(ls)), -1 * D52)
+        pow = at.power(5.0 + at.dot(at.square(omega), at.square(ls)), -1 * D52)
+        return (num / den) * at.prod(ls) * pow
 
 
 class Matern32(Stationary):
@@ -611,7 +641,8 @@ class Matern32(Stationary):
         D32 = (self.D + 3) / 2
         num = at.power(2, self.D) * at.power(np.pi, self.D / 2) * at.gamma(D32) * at.power(3, 3 / 2)
         den = 0.5 * at.sqrt(np.pi)
-        return (num / den) * at.prod(ls) * at.power(3.0 + at.dot(at.square(omega), at.square(ls)), -1 * D32)
+        pow = at.power(3.0 + at.dot(at.square(omega), at.square(ls)), -1 * D32)
+        return (num / den) * at.prod(ls) * pow
 
 
 class Matern12(Stationary):

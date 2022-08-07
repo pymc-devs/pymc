@@ -181,6 +181,62 @@ class TestCovProd:
             cov = M + pm.gp.cov.ExpQuad(1, 1.0)
 
 
+class TestCovPSD:
+    def test_covpsd_add(self):
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov1 = 2 * pm.gp.cov.ExpQuad(1, 0.1)
+            cov2 = 5 * pm.gp.cov.ExpQuad(1, 1.0)
+            cov = cov1 + cov2    
+        psd1 = cov1.psd(omega[:, None]).eval()
+        psd2 = cov2.psd(omega[:, None]).eval()
+        psd = cov.psd(omega[:, None]).eval()
+        npt.assert_allclose(psd, psd1 + psd2)
+       
+    def test_copsd_multiply(self):
+        # This could be implemented via convolution
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov1 = 2 * pm.gp.cov.ExpQuad(1, ls=1)
+            cov2 = pm.gp.cov.ExpQuad(1, ls=1)
+            
+        with pytest.raises(NotImplementedError):
+            psd = (cov1 * cov2).psd(omega[:, None]).eval()
+    
+    def test_covpsd_nonstationary1(self):
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov = 2 * pm.gp.cov.Linear(1, c=5)
+        
+        with pytest.raises(ValueError):
+            psd = cov.psd(omega[:, None]).eval()
+    
+    def test_covpsd_nonstationary2(self):
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov = 2 * pm.gp.cov.ExpQuad(1, ls=1) + 10.0
+        
+        with pytest.raises(ValueError):
+            psd = cov.psd(omega[:, None]).eval()
+    
+    def test_covpsd_notimplemented(self):
+        
+        class NewStationaryCov(pm.gp.cov.Stationary):
+            pass
+        
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov = 2 * NewStationaryCov(1, ls=1)
+        
+        with pytest.raises(NotImplementedError):
+            psd = cov.psd(omega[:, None]).eval()
+        
+
 class TestCovExponentiation:
     def test_symexp_cov(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -228,7 +284,7 @@ class TestCovExponentiation:
 
     def test_invalid_covexp(self):
         X = np.linspace(0, 1, 10)[:, None]
-        with pytest.raises(ValueError, match=r"can only be exponentiated by a scalar value"):
+        with pytest.raises(ValueError, match=r"scalar value is required"):
             with pm.Model() as model:
                 a = np.array([[1.0, 2.0]])
                 cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
@@ -328,6 +384,22 @@ class TestStability:
         assert not np.any(dists < 0)
 
 
+def test_psd_1d_matches_2d(cov_func):
+    L = 10.0
+    M = 100
+    cov_1d = cov_func(1, ls=0.1)
+    omega_1d = np.pi * np.arange(1, M + 1) / (2 * L)
+    psd_1d = cov_1d.psd(omega_1d[:, None]).eval()
+
+    cov_2d = cov_func(2, ls=0.1)
+    S = np.meshgrid(*[np.arange(1, 1 + M) for _ in range(cov_2d.D)])
+    S = np.vstack([s.flatten() for s in S]).T
+    omega_2d = np.pi * S / (2 * L)
+    psd_2d = cov_2d.psd(omega_2d).eval().reshape(M, M)
+    
+    npt.assert_allclose(psd_1d, np.sqrt(np.diag(psd_2d)), atol=1e-3)
+    
+        
 class TestExpQuad:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -340,6 +412,9 @@ class TestExpQuad:
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+        
+    def test_psd_1d_matches_2d(self):
+        test_psd_1d_matches_2d(pm.gp.cov.ExpQuad)
 
     def test_2d(self):
         X = np.linspace(0, 1, 10).reshape(5, 2)
@@ -448,6 +523,9 @@ class TestMatern52:
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+    
+    def test_psd_1d_matches_2d(self):
+        test_psd_1d_matches_2d(pm.gp.cov.Matern52)
 
 
 class TestMatern32:
@@ -462,6 +540,9 @@ class TestMatern32:
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+    
+    def test_psd_1d_matches_2d(self):
+        test_psd_1d_matches_2d(pm.gp.cov.Matern32)
 
 
 class TestMatern12:
