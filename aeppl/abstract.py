@@ -69,15 +69,20 @@ def assign_custom_measurable_outputs(
 
     new_node = node.clone()
     op_type = type(new_node.op)
+
+    if op_type in _get_measurable_outputs.registry.keys():
+        if _get_measurable_outputs.registry[op_type] != measurable_outputs_fn:
+            raise ValueError(
+                f"The type {op_type.__name__} with hash value {hash(op_type)} "
+                "has already been dispatched a measurable outputs function."
+            )
+        return node
+
     new_op_type = type(
         f"{type_prefix}{op_type.__name__}", (op_type,), op_type.__dict__.copy()
     )
-
     new_node.op = copy(new_node.op)
     new_node.op.__class__ = new_op_type
-
-    # TODO: The above could be a stand-alone utility function for all sorts of
-    # instance-based dispatching
 
     _get_measurable_outputs.register(new_op_type)(measurable_outputs_fn)
 
