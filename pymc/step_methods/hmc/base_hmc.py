@@ -60,7 +60,7 @@ class BaseHMC(GradientSharedStep):
         t0=10,
         adapt_step_size=True,
         step_rand=None,
-        **aesara_kwargs
+        **aesara_kwargs,
     ):
         """Set up Hamiltonian samplers with common structures.
 
