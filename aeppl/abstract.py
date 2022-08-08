@@ -5,6 +5,7 @@ from typing import Callable, List
 
 from aesara.graph.basic import Apply, Variable
 from aesara.graph.op import Op
+from aesara.graph.utils import MetaType
 from aesara.tensor.random.op import RandomVariable
 
 
@@ -13,6 +14,29 @@ class MeasurableVariable(abc.ABC):
 
 
 MeasurableVariable.register(RandomVariable)
+
+
+class UnmeasurableMeta(MetaType):
+    def __new__(cls, name, bases, dict):
+        if "id_obj" not in dict:
+            dict["id_obj"] = None
+
+        return super().__new__(cls, name, bases, dict)
+
+    def __eq__(self, other):
+        if isinstance(other, UnmeasurableMeta):
+            return hash(self.id_obj) == hash(other.id_obj)
+        return False
+
+    def __hash__(self):
+        return hash(self.id_obj)
+
+
+class UnmeasurableVariable(metaclass=UnmeasurableMeta):
+    """
+    id_obj is an attribute, i.e. tuple of length two, of the unmeasurable class object.
+    e.g. id_obj = (NormalRV, noop_measurable_outputs_fn)
+    """
 
 
 def get_measurable_outputs(op: Op, node: Apply) -> List[Variable]:
@@ -70,7 +94,9 @@ def assign_custom_measurable_outputs(
     new_node = node.clone()
     op_type = type(new_node.op)
 
-    if op_type in _get_measurable_outputs.registry.keys():
+    if op_type in _get_measurable_outputs.registry.keys() and isinstance(
+        op_type, UnmeasurableMeta
+    ):
         if _get_measurable_outputs.registry[op_type] != measurable_outputs_fn:
             raise ValueError(
                 f"The type {op_type.__name__} with hash value {hash(op_type)} "
@@ -78,8 +104,11 @@ def assign_custom_measurable_outputs(
             )
         return node
 
+    new_op_dict = op_type.__dict__.copy()
+    new_op_dict["id_obj"] = (new_node.op, measurable_outputs_fn)
+
     new_op_type = type(
-        f"{type_prefix}{op_type.__name__}", (op_type,), op_type.__dict__.copy()
+        f"{type_prefix}{op_type.__name__}", (op_type, UnmeasurableVariable), new_op_dict
     )
     new_node.op = copy(new_node.op)
     new_node.op.__class__ = new_op_type
