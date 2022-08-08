@@ -165,7 +165,7 @@ class BaseHMC(GradientSharedStep):
             self.potential.raise_ok(q0.point_map_info)
             message_energy = (
                 "Bad initial energy, check any log probabilities that "
-                "are inf or -inf, nan or very small:\n{}".format(error_logp.to_string())
+                f"are inf or -inf, nan or very small:\n{error_logp}"
             )
             warning = SamplerWarning(
                 WarningType.BAD_ENERGY,
