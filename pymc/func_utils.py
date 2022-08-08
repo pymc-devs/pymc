@@ -107,7 +107,7 @@ def find_constrained_prior(
             fixed_params={"nu": 7},
         )
 
-    Under some circumstances, you might not want to have the same cummulative
+    Under some circumstances, you might not want to have the same cumulative
     probability below the ``lower`` threshold and above the ``upper`` threshold.
     For example, you might want to constrain an Exponential distribution to
     find the parameter that yields 90% of the mass below the ``upper`` bound,
