@@ -19,31 +19,32 @@ import pymc as pm
 
 
 @pytest.mark.parametrize(
-    "distribution, lower, upper, init_guess, fixed_params",
+    "distribution, lower, upper, init_guess, fixed_params, mass_below_lower",
     [
-        (pm.Gamma, 0.1, 0.4, {"alpha": 1, "beta": 10}, {}),
-        (pm.Normal, 155, 180, {"mu": 170, "sigma": 3}, {}),
-        (pm.StudentT, 0.1, 0.4, {"mu": 10, "sigma": 3}, {"nu": 7}),
-        (pm.StudentT, 0, 1, {"mu": 5, "sigma": 2, "nu": 7}, {}),
-        (pm.Exponential, 0, 1, {"lam": 1}, {}),
-        (pm.HalfNormal, 0, 1, {"sigma": 1}, {}),
-        (pm.Binomial, 0, 8, {"p": 0.5}, {"n": 10}),
-        (pm.Poisson, 1, 15, {"mu": 10}, {}),
-        (pm.Poisson, 19, 41, {"mu": 30}, {}),
+        (pm.Gamma, 0.1, 0.4, {"alpha": 1, "beta": 10}, {}, None),
+        (pm.Normal, 155, 180, {"mu": 170, "sigma": 3}, {}, None),
+        (pm.StudentT, 0.1, 0.4, {"mu": 10, "sigma": 3}, {"nu": 7}, None),
+        (pm.StudentT, 0, 1, {"mu": 5, "sigma": 2, "nu": 7}, {}, None),
+        (pm.Exponential, 0, 1, {"lam": 1}, {}, 0),
+        (pm.HalfNormal, 0, 1, {"sigma": 1}, {}, 0),
+        (pm.Binomial, 0, 8, {"p": 0.5}, {"n": 10}, None),
+        (pm.Poisson, 1, 15, {"mu": 10}, {}, None),
+        (pm.Poisson, 19, 41, {"mu": 30}, {}, None),
     ],
 )
 @pytest.mark.parametrize("mass", [0.5, 0.75, 0.95])
-def test_find_constrained_prior(distribution, lower, upper, init_guess, fixed_params, mass):
-    with pytest.warns(None) as record:
-        opt_params = pm.find_constrained_prior(
-            distribution,
-            lower=lower,
-            upper=upper,
-            mass=mass,
-            init_guess=init_guess,
-            fixed_params=fixed_params,
-        )
-    assert len(record) == 0
+def test_find_constrained_prior(
+    distribution, lower, upper, init_guess, fixed_params, mass, mass_below_lower
+):
+    opt_params = pm.find_constrained_prior(
+        distribution,
+        lower=lower,
+        upper=upper,
+        mass=mass,
+        init_guess=init_guess,
+        fixed_params=fixed_params,
+        mass_below_lower=mass_below_lower,
+    )
 
     opt_distribution = distribution.dist(**opt_params)
     mass_in_interval = (
@@ -64,7 +65,9 @@ def test_find_constrained_prior(distribution, lower, upper, init_guess, fixed_pa
 def test_find_constrained_prior_error_too_large(
     distribution, lower, upper, init_guess, fixed_params
 ):
-    with pytest.warns(UserWarning, match="instead of the requested 95%"):
+    with pytest.raises(
+        ValueError, match="Optimization of parameters failed.\nOptimization termination details:\n"
+    ):
         pm.find_constrained_prior(
             distribution,
             lower=lower,
