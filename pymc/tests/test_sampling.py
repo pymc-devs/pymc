@@ -1396,7 +1396,7 @@ class TestSamplePriorPredictive(SeededTest):
             sim_ppc["obs"].shape
             == (
                 1,
-                20,
+                20
             )
             + mn_data.shape
         )
