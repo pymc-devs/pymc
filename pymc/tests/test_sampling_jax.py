@@ -162,9 +162,12 @@ def test_get_jaxified_logp():
 
 @pytest.fixture(scope="module")
 def model_test_idata_kwargs() -> pm.Model:
-    with pm.Model(coords={"x_coord": ["a", "b"], "x_coord2": [1, 2]}) as m:
+    with pm.Model(
+        coords={"x_coord": ["a", "b"], "x_coord2": [1, 2], "z_coord": ["apple", "banana", "orange"]}
+    ) as m:
         x = pm.Normal("x", shape=(2,), dims=["x_coord"])
         _ = pm.Normal("y", x, observed=[0, 0])
+        _ = pm.Normal("z", 0, 1, dims="z_coord")
         pm.ConstantData("constantdata", [1, 2, 3])
         pm.MutableData("mutabledata", 2)
     return m
@@ -227,6 +230,9 @@ def test_idata_kwargs(
     x_coords_expected = idata_kwargs.get("coords", model_test_idata_kwargs.coords)[x_dim_expected]
     assert x_coords_expected is not None
     assert list(x_coords_expected) == list(posterior["x"].coords[x_dim_expected].values)
+
+    assert posterior["z"].dims[2] == "z_coord"
+    assert set(posterior["z"].coords["z_coord"].values) == {"apple", "banana", "orange"}
 
 
 def test_get_batched_jittered_initial_points():
