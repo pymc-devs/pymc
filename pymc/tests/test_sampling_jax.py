@@ -173,7 +173,6 @@ def model_test_idata_kwargs() -> pm.Model:
     return m
 
 
-@pytest.mark.DEV
 @pytest.mark.parametrize(
     "sampler",
     [
