@@ -80,15 +80,15 @@ class Simulator(NoDistribution):
         and ``size`` defines the size of the desired sample.
 
     *unnamed_params : list of TensorVariable
-        Parameters used by the Simulator random function. Each parameter can be passed 
-        by order after fn, for example ``param1, param2, ..., paramN``. params can also 
+        Parameters used by the Simulator random function. Each parameter can be passed
+        by order after fn, for example ``param1, param2, ..., paramN``. params can also
         be passed with keyword argument "params".
-    
+
     params : list of TenssorVariable
-        Keyword form of ''unnamed_params''. 
-        One of unnamed_params or params must be provided. 
-        If passed both unnamed_params and params, an error is raised. 
-        
+        Keyword form of ''unnamed_params''.
+        One of unnamed_params or params must be provided.
+        If passed both unnamed_params and params, an error is raised.
+
     distance : Aesara_Op, callable or str, default "gaussian"
         Distance function. Available options are ``"gaussian"``, ``"laplace"``,
         ``"kullback_leibler"`` or a user defined function (or Aesara_Op) that takes
@@ -113,9 +113,9 @@ class Simulator(NoDistribution):
         an array of the same size of the output of ``sum_stat``.
     ndim_supp : int, default 0
         Number of dimensions of the SimulatorRV (0 for scalar, 1 for vector, etc.)
-    ndims_params : list of int, optional 
+    ndims_params : list of int, optional
         Number of minimum dimensions of each parameter of the RV. For example,
-        if the Simulator accepts two scalar inputs, it should be ``[0, 0]``. 
+        if the Simulator accepts two scalar inputs, it should be ``[0, 0]``.
         Default to list of 0 with length equal to the number of parameters.
 
     Examples
