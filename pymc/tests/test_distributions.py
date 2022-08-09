@@ -2291,6 +2291,24 @@ class TestMatchesScipy:
                 3,
                 np.array([1.29317672, 1.50126157]),
             ),
+            (
+                np.array([5, 4, 3, 2, 1]) / 15,
+                np.array([0.5, 1, 2], dtype="float64"),
+                4,
+                np.array([1.51263013, 2.93119375, 2.99573227]),
+            ),
+            (
+                np.array([5, 4, 3, 2, 1]) / 15,
+                np.arange(1, 10, dtype="float64").reshape(3, 3),
+                4,
+                np.array(
+                    [
+                        [2.93119375, 2.99573227, 1.9095425],
+                        [0.35222059, -1.4632554, -3.44201938],
+                        [-5.53346686, -7.70739149, -9.94430955],
+                    ]
+                ),
+            ),
         ],
     )
     def test_stickbreakingweights_logp(self, value, alpha, K, logp):

@@ -2192,9 +2192,6 @@ class StickBreakingWeightsRV(RandomVariable):
         alpha = at.as_tensor_variable(alpha)
         K = at.as_tensor_variable(intX(K))
 
-        if alpha.ndim > 0:
-            raise ValueError("The concentration parameter needs to be a scalar.")
-
         if K.ndim > 0:
             raise ValueError("K must be a scalar.")
 
@@ -2205,20 +2202,17 @@ class StickBreakingWeightsRV(RandomVariable):
 
         size = tuple(size)
 
-        return size + (K + 1,)
+        return size + tuple(alpha.shape) + (K + 1,)
 
     @classmethod
     def rng_fn(cls, rng, alpha, K, size):
         if K < 0:
             raise ValueError("K needs to be positive.")
 
-        if size is None:
-            size = (K,)
-        elif isinstance(size, int):
-            size = (size,) + (K,)
-        else:
-            size = tuple(size) + (K,)
+        distribution_shape = alpha.shape + (K,)
+        size = to_tuple(size) + distribution_shape
 
+        alpha = alpha[..., np.newaxis]
         betas = rng.beta(1, alpha, size=size)
 
         sticks = np.concatenate(
@@ -2262,7 +2256,7 @@ class StickBreakingWeights(SimplexContinuous):
 
     Parameters
     ----------
-    alpha : tensor_like of float
+    alpha: float or array_like of floats
         Concentration parameter (alpha > 0).
     K : tensor_like of int
         The number of "sticks" to break off from an initial one-unit stick. The length of the weight
