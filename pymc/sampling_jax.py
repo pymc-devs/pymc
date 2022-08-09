@@ -275,7 +275,8 @@ def sample_blackjax_nuts(
         value for the ``log_likelihood`` key to indicate that the pointwise log
         likelihood should not be included in the returned object. Values for
         ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
-        the ``model`` argument if not provided in ``idata_kwargs``.
+        the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
+        ``dims`` are provided, they are used to update the inferred dictionaries.
 
     Returns
     -------
@@ -483,7 +484,8 @@ def sample_numpyro_nuts(
         value for the ``log_likelihood`` key to indicate that the pointwise log
         likelihood should not be included in the returned object. Values for
         ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
-        the ``model`` argument if not provided in ``idata_kwargs``.
+        the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
+        ``dims`` are provided, they are used to update the inferred dictionaries.
     nuts_kwargs: dict, optional
         Keyword arguments for :func:`numpyro.infer.NUTS`.
 
