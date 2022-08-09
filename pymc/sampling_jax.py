@@ -172,6 +172,17 @@ def _get_batched_jittered_initial_points(
     return initial_points
 
 
+def _update_coords_and_dims(
+    coords: dict[str, Any], dims: dict[str, Any], idata_kwargs: dict[str, Any]
+) -> None:
+    """Update 'coords' and 'dims' dicts with values in 'idata_kwargs'."""
+    if "coords" in idata_kwargs:
+        coords.update(idata_kwargs.pop("coords"))
+    if "dims" in idata_kwargs:
+        dims.update(idata_kwargs.pop("dims"))
+    return None
+
+
 @partial(jax.jit, static_argnums=(2, 3, 4, 5, 6))
 def _blackjax_inference_loop(
     seed,
@@ -376,6 +387,8 @@ def sample_blackjax_nuts(
     }
 
     posterior = mcmc_samples
+    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'.
+    _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
         az.from_dict,
@@ -596,6 +609,8 @@ def sample_numpyro_nuts(
     }
 
     posterior = mcmc_samples
+    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'.
+    _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
         az.from_dict,
@@ -608,5 +623,4 @@ def sample_numpyro_nuts(
         attrs=make_attrs(attrs, library=numpyro),
     )
     az_trace = to_trace(posterior=posterior, **idata_kwargs)
-
     return az_trace
