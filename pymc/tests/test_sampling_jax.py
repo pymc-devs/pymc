@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 from unittest import mock
 
 import aesara
@@ -197,10 +197,10 @@ def model_test_idata_kwargs() -> pm.Model:
 def test_idata_kwargs(
     model_test_idata_kwargs: pm.Model,
     sampler: Callable[..., az.InferenceData],
-    idata_kwargs: dict[str, Any],
-    postprocessing_backend: str | None,
+    idata_kwargs: Dict[str, Any],
+    postprocessing_backend: Optional[str],
 ):
-    idata: az.InferenceData | None = None
+    idata: Optional[az.InferenceData] = None
     with model_test_idata_kwargs:
         idata = sampler(
             tune=50,

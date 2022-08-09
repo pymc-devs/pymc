@@ -173,7 +173,7 @@ def _get_batched_jittered_initial_points(
 
 
 def _update_coords_and_dims(
-    coords: dict[str, Any], dims: dict[str, Any], idata_kwargs: dict[str, Any]
+    coords: Dict[str, Any], dims: Dict[str, Any], idata_kwargs: Dict[str, Any]
 ) -> None:
     """Update 'coords' and 'dims' dicts with values in 'idata_kwargs'."""
     if "coords" in idata_kwargs:
