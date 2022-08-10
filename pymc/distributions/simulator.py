@@ -66,7 +66,7 @@ class SimulatorRV(RandomVariable):
 class Simulator(NoDistribution):
     r"""
     Simulator distribution, used for Approximate Bayesian Inference (ABC)
-    with Sequential Monte Carlo (SMC) sampling via ``~pymc.sample_smc``.
+    with Sequential Monte Carlo (SMC) sampling via :func:`~pymc.sample_smc`.
 
     Simulator distributions have a stochastic pseudo-loglikelihood defined by
     a distance metric between the observed and simulated data, and tweaked
@@ -78,17 +78,14 @@ class Simulator(NoDistribution):
         Python random simulator function. Should expect the following signature
         ``(rng, arg1, arg2, ... argn, size)``, where rng is a ``numpy.random.RandomStream()``
         and ``size`` defines the size of the desired sample.
-
     *unnamed_params : list of TensorVariable
         Parameters used by the Simulator random function. Each parameter can be passed
         by order after fn, for example ``param1, param2, ..., paramN``. params can also
         be passed with keyword argument "params".
-
-    params : list of TenssorVariable
+    params : list of TensorVariable
         Keyword form of ''unnamed_params''.
         One of unnamed_params or params must be provided.
         If passed both unnamed_params and params, an error is raised.
-
     distance : Aesara_Op, callable or str, default "gaussian"
         Distance function. Available options are ``"gaussian"``, ``"laplace"``,
         ``"kullback_leibler"`` or a user defined function (or Aesara_Op) that takes
