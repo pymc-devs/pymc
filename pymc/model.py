@@ -466,24 +466,24 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 # will get model's name prefix
 
                 # 3) you can create variables with Var method
-                self.Var('v1', Normal.dist(mu=mean, sigma=sd))
-                # this will create variable named like '{prefix::}v1'
+                self.register_rv(pm.Normal.dist(mu=mean, sigma=sigma), 'v1', initval=1)
+                # this will create variable named like '{name::}v1'
                 # and assign attribute 'v1' to instance created
                 # variable can be accessed with self.v1 or self['v1']
 
                 # 4) this syntax will also work as we are in the
                 # context of instance itself, names are given as usual
-                Normal('v2', mu=mean, sigma=sd)
+                pm.Normal('v2', mu=mean, sigma=sigma
 
                 # something more complex is allowed, too
-                half_cauchy = HalfCauchy('sigma', beta=10, initval=1.)
-                Normal('v3', mu=mean, sigma=half_cauchy)
+                half_cauchy =  pm.HalfCauchy('sd', beta=10, initval=1.)
+                pm.Normal('v3', mu=mean, sigma=half_cauchy)
 
                 # Deterministic variables can be used in usual way
-                Deterministic('v3_sq', self.v3 ** 2)
+                pm.Deterministic('v3_sq', self.v3 ** 2)
 
                 # Potentials too
-                Potential('p1', at.constant(1))
+                pm.Potential('p1', at.constant(1))
 
         # After defining a class CustomModel you can use it in several
         # ways
@@ -497,7 +497,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # II:
         #   use new class as entering point in context
         with CustomModel() as model:
-            Normal('new_normal_var', mu=1, sigma=0)
+            pm.Normal('new_normal_var', mu=1, sigma=0)
 
         # III:
         #   just get model instance with all that was defined in it
@@ -510,7 +510,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             CustomModel(mean=2, name='second')
 
         # variables inside both scopes will be named like `first::*`, `second::*`
-
     """
 
     if TYPE_CHECKING:
