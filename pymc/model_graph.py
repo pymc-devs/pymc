@@ -259,12 +259,17 @@ class ModelGraph:
         graphnetwork = networkx.DiGraph(name=self.model.name)
         for plate_label, all_var_names in self.get_plates(var_names).items():
             if plate_label:
-                # must be preceded by 'cluster' to get a box around it
-                with graphnetwork.subgraph(name="cluster" + plate_label) as sub:
-                    for var_name in all_var_names:
-                        self._make_node(var_name, graphnetwork,  nx=True, cluster="cluster" + plate_label, formatting=formatting)
-                    # plate label goes bottom right
-                    sub.attr(label=plate_label, labeljust="r", labelloc="b", style="rounded")
+                # # must be preceded by 'cluster' to get a box around it
+                subgraphnetwork = networkx.DiGraph(name="cluster" + plate_label,label=plate_label)
+                for var_name in all_var_names:
+                    self._make_node(var_name, subgraphnetwork,  nx=True, cluster="cluster" + plate_label, formatting=formatting,)    
+                for sgn in subgraphnetwork.nodes:
+                    networkx.set_node_attributes(subgraphnetwork,{sgn:{'labeljust':"r", 'labelloc':"b", 'style':"rounded"}})
+                node_data = {e[0]:e[1] for e in graphnetwork.nodes(data=True) & subgraphnetwork.nodes(data=True)}
+                
+                graphnetwork = networkx.compose( graphnetwork, subgraphnetwork )  
+                networkx.set_node_attributes(graphnetwork,node_data)  
+                graphnetwork.graph['name']=self.model.name 
             else:
                 for var_name in all_var_names:
                     self._make_node(var_name, graphnetwork, nx=True, formatting=formatting)
