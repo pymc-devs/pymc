@@ -276,7 +276,9 @@ class ModelGraph:
         return graphnetwork
 
 
-def model_to_networkx(model=None, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
+def model_to_networkx(
+    model=None, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
+):
     """Produce a networkx Digraph from a PyMC model.
     Requires networkx, which may be installed most easily with
         conda install neworkx
@@ -319,7 +321,9 @@ def model_to_networkx(model=None, *, var_names: Optional[Iterable[VarName]] = No
     model = pm.modelcontext(model)
     return ModelGraph(model).make_networkx(var_names=var_names, formatting=formatting)
 
-def model_to_graphviz(model=None, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
+def model_to_graphviz(
+    model=None, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
+):
     """Produce a graphviz Digraph from a PyMC model.
     Requires graphviz, which may be installed most easily with
         conda install -c conda-forge python-graphviz
