@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import warnings
+
 from collections import defaultdict
 from typing import Dict, Iterable, List, NewType, Optional, Set
 
@@ -317,11 +318,11 @@ def model_to_networkx(
 
     Requires networkx, which may be installed most easily with
         conda install neworkx
+        
     Alternatively, you may install using pip with
-        pip install networkx
-    See
-    https://networkx.org/documentation/stable/
+    pip install networkx  See https://networkx.org/documentation/stable/
     for more information.
+    
     Parameters
     ----------
     model : pm.Model
@@ -330,21 +331,30 @@ def model_to_networkx(
         Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
     formatting : str, optional
         one of { "plain" }
+        
     Examples
     --------
     How to plot the graph of the model.
+    
     .. code-block:: python
+    
         import numpy as np
-        from pymc import HalfCauchy, Model, Normal, model_to_graphviz
+        from pymc import HalfCauchy, Model, Normal, model_to_networkx
+        
         J = 8
         y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
         sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
+        
         with Model() as schools:
+        
             eta = Normal("eta", 0, 1, shape=J)
             mu = Normal("mu", 0, sigma=1e6)
             tau = HalfCauchy("tau", 25)
+            
             theta = mu + tau * eta
+            
             obs = Normal("obs", theta, sigma=sigma, observed=y)
+            
         model_to_networkx(schools)
     """
     if not "plain" in formatting:
@@ -371,10 +381,12 @@ def model_to_graphviz(
 
     Requires graphviz, which may be installed most easily with
         conda install -c conda-forge python-graphviz
+        
     Alternatively, you may install the `graphviz` binaries yourself,
     and then `pip install graphviz` to get the python bindings.  See
     http://graphviz.readthedocs.io/en/stable/manual.html
     for more information.
+    
     Parameters
     ----------
     model : pm.Model
@@ -383,21 +395,30 @@ def model_to_graphviz(
         Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
     formatting : str, optional
         one of { "plain" }
+        
     Examples
     --------
     How to plot the graph of the model.
+    
     .. code-block:: python
+    
         import numpy as np
         from pymc import HalfCauchy, Model, Normal, model_to_graphviz
+        
         J = 8
         y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
         sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
+        
         with Model() as schools:
+        
             eta = Normal("eta", 0, 1, shape=J)
             mu = Normal("mu", 0, sigma=1e6)
             tau = HalfCauchy("tau", 25)
+            
             theta = mu + tau * eta
+            
             obs = Normal("obs", theta, sigma=sigma, observed=y)
+            
         model_to_graphviz(schools)
     """
     if not "plain" in formatting:
