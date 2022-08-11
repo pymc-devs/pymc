@@ -66,6 +66,7 @@ from pymc.math import (
 )
 from pymc.model import *
 from pymc.model_graph import model_to_graphviz
+from pymc.model_graph import model_to_networkx
 from pymc.plots import *
 from pymc.printing import *
 from pymc.sampling import *
