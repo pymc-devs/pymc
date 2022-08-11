@@ -20,7 +20,7 @@ from aesara.tensor.var import TensorConstant
 
 import pymc as pm
 
-from pymc.model_graph import ModelGraph, model_to_graphviz
+from pymc.model_graph import ModelGraph, model_to_graphviz, model_to_networkx
 from pymc.tests.helpers import SeededTest
 
 def school_model():
