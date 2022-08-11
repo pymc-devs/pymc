@@ -23,6 +23,7 @@ import pymc as pm
 from pymc.model_graph import ModelGraph, model_to_graphviz, model_to_networkx
 from pymc.tests.helpers import SeededTest
 
+
 def school_model():
     """
     Schools model to use in testing model_to_networkx function
@@ -39,40 +40,38 @@ def school_model():
     return schools
 
 class BaseModelNXTest(SeededTest):
-    network_model = {'graph_attr_dict_factory': dict,
-    'node_dict_factory': dict,
-    'node_attr_dict_factory': dict,
-    'adjlist_outer_dict_factory': dict,
-    'adjlist_inner_dict_factory': dict,
-    'edge_attr_dict_factory': dict,
-    'graph': {'name': '', 'label': '8'},
-    '_node': {'eta': {'shape': 'ellipse',
-    'style': 'rounded',
-    'label': 'eta\n~\nNormal',
-    'cluster': 'cluster8',
-    'labeljust': 'r',
-    'labelloc': 'b'},
-    'obs': {'shape': 'ellipse',
-    'style': 'rounded',
-    'label': 'obs\n~\nNormal',
-    'cluster': 'cluster8',
-    'labeljust': 'r',
-    'labelloc': 'b'},
-    'tau': {'shape': 'ellipse', 'style': None, 'label': 'tau\n~\nHalfCauchy'},
-    'mu': {'shape': 'ellipse', 'style': None, 'label': 'mu\n~\nNormal'}},
-    '_adj': {'eta': {'obs': {}},
-    'obs': {},
-    'tau': {'obs': {}},
-    'mu': {'obs': {}}},
-    '_pred': {'eta': {},
-    'obs': {'tau': {}, 'eta': {}, 'mu': {}},
-    'tau': {},
-    'mu': {}},
-    '_succ': {'eta': {'obs': {}},
-    'obs': {},
-    'tau': {'obs': {}},
-    'mu': {'obs': {}}}}
-
+    network_model = {
+        "graph_attr_dict_factory": dict,
+        "node_dict_factory": dict,
+        "node_attr_dict_factory": dict,
+        "adjlist_outer_dict_factory": dict,
+        "adjlist_inner_dict_factory": dict,
+        "edge_attr_dict_factory": dict,
+        "graph": {"name": "", "label": "8"},
+        "_node": {
+            "eta": {
+                "shape": "ellipse",
+                "style": "rounded",
+                "label": "eta\n~\nNormal",
+                "cluster": "cluster8",
+                "labeljust": "r",
+                "labelloc": "b",
+            },
+            "obs": {
+                "shape": "ellipse",
+                "style": "rounded",
+                "label": "obs\n~\nNormal",
+                "cluster": "cluster8",
+                "labeljust": "r",
+                "labelloc": "b",
+            },
+            "tau": {"shape": "ellipse", "style": None, "label": "tau\n~\nHalfCauchy"},
+            "mu": {"shape": "ellipse", "style": None, "label": "mu\n~\nNormal"},
+        },
+        "_adj": {"eta": {"obs": {}}, "obs": {}, "tau": {"obs": {}}, "mu": {"obs": {}}},
+        "_pred": {"eta": {}, "obs": {"tau": {}, "eta": {}, "mu": {}}, "tau": {}, "mu": {}},
+        "_succ": {"eta": {"obs": {}}, "obs": {}, "tau": {"obs": {}}, "mu": {"obs": {}}},
+    }
     def test_networkx(self):
         assert self.network_model == model_to_networkx(school_model()).__dict__
         
