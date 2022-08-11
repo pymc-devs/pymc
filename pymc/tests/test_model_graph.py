@@ -23,7 +23,60 @@ import pymc as pm
 from pymc.model_graph import ModelGraph, model_to_graphviz
 from pymc.tests.helpers import SeededTest
 
+def school_model():
+    """
+    Schools model to use in testing model_to_networkx function
+    """
+    J = 8
+    y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
+    sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
+    with pm.Model() as schools:
+        eta = pm.Normal("eta", 0, 1, shape=J)
+        mu = pm.Normal("mu", 0, sigma=1e6)
+        tau = pm.HalfCauchy("tau", 25)
+        theta = mu + tau * eta
+        obs = pm.Normal("obs", theta, sigma=sigma, observed=y)
+    return schools
 
+class BaseModelNXTest(SeededTest):
+    network_model = {'graph_attr_dict_factory': dict,
+    'node_dict_factory': dict,
+    'node_attr_dict_factory': dict,
+    'adjlist_outer_dict_factory': dict,
+    'adjlist_inner_dict_factory': dict,
+    'edge_attr_dict_factory': dict,
+    'graph': {'name': '', 'label': '8'},
+    '_node': {'eta': {'shape': 'ellipse',
+    'style': 'rounded',
+    'label': 'eta\n~\nNormal',
+    'cluster': 'cluster8',
+    'labeljust': 'r',
+    'labelloc': 'b'},
+    'obs': {'shape': 'ellipse',
+    'style': 'rounded',
+    'label': 'obs\n~\nNormal',
+    'cluster': 'cluster8',
+    'labeljust': 'r',
+    'labelloc': 'b'},
+    'tau': {'shape': 'ellipse', 'style': None, 'label': 'tau\n~\nHalfCauchy'},
+    'mu': {'shape': 'ellipse', 'style': None, 'label': 'mu\n~\nNormal'}},
+    '_adj': {'eta': {'obs': {}},
+    'obs': {},
+    'tau': {'obs': {}},
+    'mu': {'obs': {}}},
+    '_pred': {'eta': {},
+    'obs': {'tau': {}, 'eta': {}, 'mu': {}},
+    'tau': {},
+    'mu': {}},
+    '_succ': {'eta': {'obs': {}},
+    'obs': {},
+    'tau': {'obs': {}},
+    'mu': {'obs': {}}}}
+
+    def test_networkx(self):
+        assert self.network_model == model_to_networkx(school_model()).__dict__
+        
+        
 def radon_model():
     """Similar in shape to the Radon model"""
     n_homes = 919
