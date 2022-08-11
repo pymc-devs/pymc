@@ -186,6 +186,7 @@ class ModelGraph:
 
     def get_plates(self, var_names: Optional[Iterable[VarName]] = None) -> Dict[str, Set[VarName]]:
         """Rough but surprisingly accurate plate detection.
+        
         Just groups by the shape of the underlying distribution.  Will be wrong
         if there are two plates with the same shape.
         Returns
@@ -210,6 +211,7 @@ class ModelGraph:
 
     def make_graph(self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
         """Make graphviz Digraph of PyMC model
+        
         Returns
         -------
         graphviz.Digraph
@@ -244,6 +246,7 @@ class ModelGraph:
 
     def make_networkx(self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
         """Make networkx Digraph of PyMC model
+        
         Returns
         -------
         networkx.Digraph
@@ -331,6 +334,7 @@ def model_to_graphviz(
     model=None, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
 ):
     """Produce a graphviz Digraph from a PyMC model.
+    
     Requires graphviz, which may be installed most easily with
         conda install -c conda-forge python-graphviz
     Alternatively, you may install the `graphviz` binaries yourself,
