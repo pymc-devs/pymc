@@ -79,7 +79,7 @@ class Covariance:
             self.active_dims = np.arange(input_dim)
         else:
             self.active_dims = np.asarray(active_dims, int)
-            
+
         if max(self.active_dims) > self.input_dim:
             raise ValueError("Values in `active_dims` can't be larger than `input_dim`.")
 
@@ -131,7 +131,7 @@ class Covariance:
         if Xs is not None:
             Xs = at.as_tensor_variable(Xs[:, self.active_dims])
         return X, Xs
-    
+
     def __add__(self, other):
         if isinstance(other, Number):
             # If it's a scalar, cast as Constant covariance.  This
@@ -188,33 +188,33 @@ class Covariance:
 
 class Combination(Covariance):
     def __init__(self, factor_list):
-        """Use constituent factors to get input_dim and active_dims for the Combination covariance.
-        """
+        """Use constituent factors to get input_dim and active_dims for the Combination covariance."""
         # Check if all input_dim are the same in factor_list
-        input_dims = set(
-            factor.input_dim 
-            for factor in factor_list 
-            if isinstance(factor, Covariance)
-        )
+        input_dims = {factor.input_dim for factor in factor_list if isinstance(factor, Covariance)}
         if len(input_dims) != 1:
             raise ValueError("All covariances must have the same `input_dim`.")
         else:
             input_dim = input_dims.pop()
-    
+
         # Union all active_dims sets in factor_list for the combination covariance
         active_dims = np.sort(
-            np.asarray(list(set.union(
-                *[
-                    set(factor.active_dims) 
-                    for factor in factor_list 
-                    if isinstance(factor, Covariance)
-                ]
-            )), dtype=int)
+            np.asarray(
+                list(
+                    set.union(
+                        *[
+                            set(factor.active_dims)
+                            for factor in factor_list
+                            if isinstance(factor, Covariance)
+                        ]
+                    )
+                ),
+                dtype=int,
+            )
         )
-        
+
         super().__init__(input_dim=input_dim, active_dims=active_dims)
-        
-        # Set up combination kernel, flatten out factor_list so that 
+
+        # Set up combination kernel, flatten out factor_list so that
         self._factor_list = []
         for factor in factor_list:
             if isinstance(factor, self.__class__):
@@ -254,21 +254,21 @@ class Combination(Covariance):
 
     def _merge_factors_psd(self, omega):
         """Called to evaluatate spectral densities of combination kernels when possible.  Implements
-        a more restricted set of rules than `_merge_factors_cov` -- just additivity of stationary 
-        covariances with defined power spectral densities and multiplication by scalars.  Also, the 
+        a more restricted set of rules than `_merge_factors_cov` -- just additivity of stationary
+        covariances with defined power spectral densities and multiplication by scalars.  Also, the
         active_dims for all covariances in the sum must be the same.
         """
         factor_list = []
         for factor in self._factor_list:
             if isinstance(factor, Covariance):
-                
+
                 # Allow merging covariances for psd only if active_dims are the same
                 if set(self.active_dims) != set(factor.active_dims):
                     raise ValueError(
                         "For power spectral density calculations `active_dims` must be the same "
                         "for all covariances in the sum."
                     )
-                
+
                 # If it's a covariance try to calculate the psd
                 try:
                     factor_list.append(factor.psd(omega))
