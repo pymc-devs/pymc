@@ -74,8 +74,8 @@ class BaseModelNXTest(SeededTest):
     }
     def test_networkx(self):
         assert self.network_model == model_to_networkx(school_model()).__dict__
-        
-        
+
+
 def radon_model():
     """Similar in shape to the Radon model"""
     n_homes = 919

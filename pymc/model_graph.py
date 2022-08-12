@@ -239,6 +239,7 @@ class ModelGraph:
 
         return graph
 
+
     def make_networkx(self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
         """Make networkx Digraph of PyMC model
 
@@ -258,7 +259,11 @@ class ModelGraph:
         for plate_label, all_var_names in self.get_plates(var_names).items():
             if plate_label:
                 # # must be preceded by 'cluster' to get a box around it
-                subgraphnetwork = networkx.DiGraph(name="cluster" + plate_label, label=plate_label)
+
+                subgraphnetwork = networkx.DiGraph(
+                    name="cluster" + plate_label, label=plate_label
+                )
+
                 for var_name in all_var_names:
                     self._make_node(
                         var_name,
@@ -274,7 +279,8 @@ class ModelGraph:
                     )
                 node_data = {
                     e[0]: e[1]
-                    for e in graphnetwork.nodes(data=True) & subgraphnetwork.nodes(data=True)
+                    for e in graphnetwork.nodes(data=True)
+                    & subgraphnetwork.nodes(data=True)
                 }
 
                 graphnetwork = networkx.compose(graphnetwork, subgraphnetwork)
@@ -282,7 +288,11 @@ class ModelGraph:
                 graphnetwork.graph["name"] = self.model.name
             else:
                 for var_name in all_var_names:
-                    self._make_node(var_name, graphnetwork, nx=True, formatting=formatting)
+
+                    self._make_node(
+                        var_name, graphnetwork, nx=True, formatting=formatting
+                    )
+
 
         for child, parents in self.make_compute_graph(var_names=var_names).items():
             # parents is a set of rv names that preceed child rv nodes
@@ -291,19 +301,16 @@ class ModelGraph:
         return graphnetwork
 
 
-def model_to_networkx(
-    model=None,
-    *,
-    var_names: Optional[Iterable[VarName]] = None,
-    formatting: str = "plain",
-):
+def model_to_networkx(model=None, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain",):
     """Produce a networkx Digraph from a PyMC model.
 
     Requires networkx, which may be installed most easily with
         conda install networkx
 
     Alternatively, you may install using pip with
-    pip install networkx  See https://networkx.org/documentation/stable/
+        pip install networkx
+    See
+    https://networkx.org/documentation/stable/
     for more information.
 
     Parameters
@@ -341,7 +348,11 @@ def model_to_networkx(
         model_to_networkx(schools)
     """
     if not "plain" in formatting:
-        raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
+
+        raise ValueError(
+            f"Unsupported formatting for graph nodes: '{formatting}'. See docstring."
+        )
+
     if formatting != "plain":
         warnings.warn(
             "Formattings other than 'plain' are currently not supported.",
