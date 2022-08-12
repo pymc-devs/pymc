@@ -239,9 +239,8 @@ class ModelGraph:
 
         return graph
 
-  def make_networkx(
-        self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
-    ):
+
+    def make_networkx(self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
         """Make networkx Digraph of PyMC model
 
         Returns
@@ -306,7 +305,7 @@ def model_to_networkx(model=None, *, var_names: Optional[Iterable[VarName]] = No
     """Produce a networkx Digraph from a PyMC model.
 
     Requires networkx, which may be installed most easily with
-        conda install neworkx
+        conda install networkx
 
     Alternatively, you may install using pip with
         pip install networkx
