@@ -79,6 +79,9 @@ class Covariance:
             self.active_dims = np.arange(input_dim)
         else:
             self.active_dims = np.asarray(active_dims, int)
+            
+        if max(self.active_dims) > self.input_dim:
+            raise ValueError("Values in `active_dims` can't be larger than `input_dim`.")
 
     @property
     def D(self):
@@ -109,10 +112,10 @@ class Covariance:
     def diag(self, X):
         raise NotImplementedError
 
-    def full(self, X, Xs):
+    def full(self, X, Xs=None):
         raise NotImplementedError
 
-    def _slice(self, X, Xs):
+    def _slice(self, X, Xs=None):
         xdims = X.shape[-1]
         if isinstance(xdims, Variable):
             xdims = xdims.eval()
@@ -128,7 +131,7 @@ class Covariance:
         if Xs is not None:
             Xs = at.as_tensor_variable(Xs[:, self.active_dims])
         return X, Xs
-
+    
     def __add__(self, other):
         if isinstance(other, Number):
             # If it's a scalar, cast as Constant covariance.  This
@@ -167,15 +170,15 @@ class Covariance:
         A = np.zeros((r, c))
         for i in range(r):
             for j in range(c):
-                r = result[i, j].factor_list[1]
+                r = result[i, j]._factor_list[1]
                 if isinstance(r, Constant):
                     # Counteract the elemwise Add edgecase
                     r = r.c
                 A[i, j] = r
         if isinstance(result[0][0], Add):
-            return result[0][0].factor_list[0] + A
+            return result[0][0]._factor_list[0] + A
         elif isinstance(result[0][0], Prod):
-            return result[0][0].factor_list[0] * A
+            return result[0][0]._factor_list[0] * A
         else:
             raise TypeError(
                 f"Unknown Covariance combination type {result[0][0]}.  "
@@ -185,23 +188,46 @@ class Covariance:
 
 class Combination(Covariance):
     def __init__(self, factor_list):
-        input_dim = max(
-            factor.input_dim for factor in factor_list if isinstance(factor, Covariance)
+        """Use constituent factors to get input_dim and active_dims for the Combination covariance.
+        """
+        # Check if all input_dim are the same in factor_list
+        input_dims = set(
+            factor.input_dim 
+            for factor in factor_list 
+            if isinstance(factor, Covariance)
         )
-        super().__init__(input_dim=input_dim)
-        self.factor_list = []
+        if len(input_dims) != 1:
+            raise ValueError("All covariances must have the same `input_dim`.")
+        else:
+            input_dim = input_dims.pop()
+    
+        # Union all active_dims sets in factor_list for the combination covariance
+        active_dims = np.sort(
+            np.asarray(list(set.union(
+                *[
+                    set(factor.active_dims) 
+                    for factor in factor_list 
+                    if isinstance(factor, Covariance)
+                ]
+            )), dtype=int)
+        )
+        
+        super().__init__(input_dim=input_dim, active_dims=active_dims)
+        
+        # Set up combination kernel, flatten out factor_list so that 
+        self._factor_list = []
         for factor in factor_list:
             if isinstance(factor, self.__class__):
-                self.factor_list.extend(factor.factor_list)
+                self._factor_list.extend(factor._factor_list)
             else:
-                self.factor_list.append(factor)
+                self._factor_list.append(factor)
 
     def _merge_factors_cov(self, X, Xs=None, diag=False):
         """Called to evaluate either all the sums or all the
         products of kernels that are possible to evaluate.
         """
         factor_list = []
-        for factor in self.factor_list:
+        for factor in self._factor_list:
             # make sure diag=True is handled properly
             if isinstance(factor, Covariance):
                 factor_list.append(factor(X, Xs, diag))
@@ -227,15 +253,22 @@ class Combination(Covariance):
         return factor_list
 
     def _merge_factors_psd(self, omega):
-        """Called to evaluatate spectral densities of combination
-        kernels when possible.  Implements a more restricted set
-        of rules than `_merge_factors_cov` -- just additivity of
-        stationary covariances with defined power spectral densities
-        and multiplication by scalars.
+        """Called to evaluatate spectral densities of combination kernels when possible.  Implements
+        a more restricted set of rules than `_merge_factors_cov` -- just additivity of stationary 
+        covariances with defined power spectral densities and multiplication by scalars.  Also, the 
+        active_dims for all covariances in the sum must be the same.
         """
         factor_list = []
-        for factor in self.factor_list:
+        for factor in self._factor_list:
             if isinstance(factor, Covariance):
+                
+                # Allow merging covariances for psd only if active_dims are the same
+                if set(self.active_dims) != set(factor.active_dims):
+                    raise ValueError(
+                        "For power spectral density calculations `active_dims` must be the same "
+                        "for all covariances in the sum."
+                    )
+                
                 # If it's a covariance try to calculate the psd
                 try:
                     factor_list.append(factor.psd(omega))
@@ -244,15 +277,13 @@ class Combination(Covariance):
 
                     if isinstance(factor, Stationary):
                         raise NotImplementedError(
-                            "No power spectral density method has been "
-                            f"implemented for {factor}."
+                            f"No power spectral density method has been implemented for {factor}."
                         ) from e
 
                     else:
                         raise ValueError(
-                            "Power specral densities, `.psd(omega)`, can only "
-                            "be calculated for `Stationary` covariance "
-                            f"functions.  {factor} is non-stationary."
+                            "Power spectral densities, `.psd(omega)`, can only be calculated for "
+                            f"`Stationary` covariance functions.  {factor} is non-stationary."
                         ) from e
 
             else:
@@ -275,7 +306,7 @@ class Prod(Combination):
         return reduce(mul, self._merge_factors_cov(X, Xs, diag))
 
     def psd(self, omega):
-        check = Counter([isinstance(factor, Covariance) for factor in self.factor_list])
+        check = Counter([isinstance(factor, Covariance) for factor in self._factor_list])
         if check.get(True) >= 2:
             raise NotImplementedError(
                 "The power spectral density of products of covariance "
@@ -315,7 +346,7 @@ class Kron(Covariance):
         self.input_dims = [factor.input_dim for factor in factor_list]
         input_dim = sum(self.input_dims)
         super().__init__(input_dim=input_dim)
-        self.factor_list = factor_list
+        self._factor_list = factor_list
 
     def _split(self, X, Xs):
         indices = np.cumsum(self.input_dims)
@@ -328,11 +359,12 @@ class Kron(Covariance):
 
     def __call__(self, X, Xs=None, diag=False):
         X_split, Xs_split = self._split(X, Xs)
-        covs = [cov(x, xs, diag) for cov, x, xs in zip(self.factor_list, X_split, Xs_split)]
+        covs = [cov(x, xs, diag) for cov, x, xs in zip(self._factor_list, X_split, Xs_split)]
         return reduce(mul, covs)
 
 
-class Constant(Covariance):
+class Constant:
+    # Don't subclass `Covariance` so input_dim and active_dims aren't required.
     r"""
     Constant valued covariance function.
 
@@ -342,7 +374,6 @@ class Constant(Covariance):
     """
 
     def __init__(self, c):
-        super().__init__(1, None)
         self.c = c
 
     def diag(self, X):
@@ -364,8 +395,8 @@ class WhiteNoise(Covariance):
        k(x, x') = \sigma^2 \mathrm{I}
     """
 
-    def __init__(self, sigma):
-        super().__init__(1, None)
+    def __init__(self, input_dim, sigma, active_dims=None):
+        super().__init__(input_dim, active_dims)
         self.sigma = sigma
 
     def diag(self, X):
