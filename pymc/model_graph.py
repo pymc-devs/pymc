@@ -184,7 +184,6 @@ class ModelGraph:
 
         Just groups by the shape of the underlying distribution.  Will be wrong
         if there are two plates with the same shape.
-
         Returns
         -------
         dict
@@ -240,7 +239,7 @@ class ModelGraph:
 
         return graph
 
-def make_networkx(
+  def make_networkx(
         self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
     ):
         """Make networkx Digraph of PyMC model
@@ -261,9 +260,11 @@ def make_networkx(
         for plate_label, all_var_names in self.get_plates(var_names).items():
             if plate_label:
                 # # must be preceded by 'cluster' to get a box around it
+
                 subgraphnetwork = networkx.DiGraph(
                     name="cluster" + plate_label, label=plate_label
                 )
+
                 for var_name in all_var_names:
                     self._make_node(
                         var_name,
@@ -288,9 +289,11 @@ def make_networkx(
                 graphnetwork.graph["name"] = self.model.name
             else:
                 for var_name in all_var_names:
+
                     self._make_node(
                         var_name, graphnetwork, nx=True, formatting=formatting
                     )
+
 
         for child, parents in self.make_compute_graph(var_names=var_names).items():
             # parents is a set of rv names that preceed child rv nodes
@@ -304,11 +307,13 @@ def model_to_networkx(model=None, *, var_names: Optional[Iterable[VarName]] = No
 
     Requires networkx, which may be installed most easily with
         conda install neworkx
+
     Alternatively, you may install using pip with
         pip install networkx
     See
     https://networkx.org/documentation/stable/
     for more information.
+
     Parameters
     ----------
     model : pm.Model
@@ -317,6 +322,7 @@ def model_to_networkx(model=None, *, var_names: Optional[Iterable[VarName]] = No
         Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
     formatting : str, optional
         one of { "plain" }
+
     Examples
     --------
     How to plot the graph of the model.
@@ -343,9 +349,11 @@ def model_to_networkx(model=None, *, var_names: Optional[Iterable[VarName]] = No
         model_to_networkx(schools)
     """
     if not "plain" in formatting:
+
         raise ValueError(
             f"Unsupported formatting for graph nodes: '{formatting}'. See docstring."
         )
+
     if formatting != "plain":
         warnings.warn(
             "Formattings other than 'plain' are currently not supported.",
@@ -357,7 +365,10 @@ def model_to_networkx(model=None, *, var_names: Optional[Iterable[VarName]] = No
 
 
 def model_to_graphviz(
-    model=None, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
+    model=None,
+    *,
+    var_names: Optional[Iterable[VarName]] = None,
+    formatting: str = "plain",
 ):
     """Produce a graphviz Digraph from a PyMC model.
 
@@ -407,7 +418,9 @@ def model_to_graphviz(
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
     if formatting != "plain":
         warnings.warn(
-            "Formattings other than 'plain' are currently not supported.", UserWarning, stacklevel=2
+            "Formattings other than 'plain' are currently not supported.",
+            UserWarning,
+            stacklevel=2,
         )
     model = pm.modelcontext(model)
     return ModelGraph(model).make_graph(var_names=var_names, formatting=formatting)
