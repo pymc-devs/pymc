@@ -239,9 +239,7 @@ class ModelGraph:
 
         return graph
 
-    def make_networkx(
-        self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
-    ):
+    def make_networkx(self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
         """Make networkx Digraph of PyMC model
 
         Returns
