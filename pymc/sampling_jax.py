@@ -180,7 +180,6 @@ def _update_coords_and_dims(
         coords.update(idata_kwargs.pop("coords"))
     if "dims" in idata_kwargs:
         dims.update(idata_kwargs.pop("dims"))
-    return None
 
 
 @partial(jax.jit, static_argnums=(2, 3, 4, 5, 6))
@@ -388,7 +387,8 @@ def sample_blackjax_nuts(
     }
 
     posterior = mcmc_samples
-    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'.
+    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
+    # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
     _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
@@ -611,7 +611,8 @@ def sample_numpyro_nuts(
     }
 
     posterior = mcmc_samples
-    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'.
+    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
+    # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
     _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(

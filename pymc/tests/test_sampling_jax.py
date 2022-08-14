@@ -231,7 +231,9 @@ def test_idata_kwargs(
     assert list(x_coords_expected) == list(posterior["x"].coords[x_dim_expected].values)
 
     assert posterior["z"].dims[2] == "z_coord"
-    assert set(posterior["z"].coords["z_coord"].values) == {"apple", "banana", "orange"}
+    assert np.all(
+        posterior["z"].coords["z_coord"].values == np.array(["apple", "banana", "orange"])
+    )
 
 
 def test_get_batched_jittered_initial_points():
