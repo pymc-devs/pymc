@@ -5,6 +5,7 @@ from aesara import tensor as at
 from aesara.graph.op import compute_test_value
 from aesara.graph.opt import local_optimizer
 from aesara.tensor.basic import Join, MakeVector
+from aesara.tensor.elemwise import DimShuffle
 from aesara.tensor.extra_ops import BroadcastTo
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.opt import local_dimshuffle_rv_lift, local_rv_size_lift
@@ -185,9 +186,89 @@ def find_measurable_stacks(
     return [measurable_stack]
 
 
+class MeasurableDimShuffle(DimShuffle):
+    """A placeholder used to specify a log-likelihood for a dimshuffle sub-graph."""
+
+    # Need to get the absolute path of `c_func_file`, otherwise it tries to
+    # find it locally and fails when a new `Op` is initialized
+    c_func_file = DimShuffle.get_path(DimShuffle.c_func_file)
+
+
+MeasurableVariable.register(MeasurableDimShuffle)
+
+
+@_logprob.register(MeasurableDimShuffle)
+def logprob_dimshuffle(op, values, base_var, **kwargs):
+    """Compute the log-likelihood graph for a `MeasurableDimShuffle`."""
+    (value,) = values
+
+    # Reverse the effects of dimshuffle on the value variable
+    # First, drop any augmented dimensions and reinsert any dropped dimensions
+    undo_ds: List[Union[int, str]] = [i for i, o in enumerate(op.new_order) if o != "x"]
+    dropped_dims = tuple(sorted(set(op.transposition) - set(op.shuffle)))
+    for dropped_dim in dropped_dims:
+        undo_ds.insert(dropped_dim, "x")
+    value = value.dimshuffle(undo_ds)
+
+    # Then, reshuffle remaining dims
+    undo_ds = op.shuffle
+    for dropped_dim in dropped_dims:
+        undo_ds.insert(dropped_dim, dropped_dim)
+    value = value.dimshuffle(undo_ds)
+
+    raw_logp = logprob(base_var, value)
+
+    # Re-apply original dimshuffle, ignoring any support dimensions consumed by
+    # the logprob function. This assumes that support dimensions are always in
+    # the rightmost positions, and all we need to do is to discard the highest
+    # indexes in the original dimshuffle order. Otherwise, there is no way of
+    # knowing which dimensions were consumed by the logprob function.
+    redo_ds = [o for o in op.new_order if o == "x" or o < raw_logp.ndim]
+    return raw_logp.dimshuffle(redo_ds)
+
+
+@local_optimizer([DimShuffle])
+def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuffle]]:
+    r"""Finds `Dimshuffle`\s for which a `logprob` can be computed."""
+
+    if isinstance(node.op, MeasurableDimShuffle):
+        return None  # pragma: no cover
+
+    rv_map_feature: PreserveRVMappings = getattr(fgraph, "preserve_rv_mappings", None)
+
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    base_var = node.inputs[0]
+
+    if not (
+        base_var.owner
+        and isinstance(base_var.owner.op, MeasurableVariable)
+        and base_var not in rv_map_feature.rv_values
+    ):
+        return None  # pragma: no cover
+
+    # Make base_vars unmeasurable
+    base_var = assign_custom_measurable_outputs(base_var.owner)
+
+    measurable_dimshuffle = MeasurableDimShuffle(
+        node.op.input_broadcastable, node.op.new_order
+    )(base_var)
+    measurable_dimshuffle.name = node.outputs[0].name
+
+    return [measurable_dimshuffle]
+
+
 measurable_ir_rewrites_db.register(
     "dimshuffle_lift", local_dimshuffle_rv_lift, -5, "basic", "tensor"
 )
+
+
+# We register this later than `dimshuffle_lift` so that it is only applied as a fallback
+measurable_ir_rewrites_db.register(
+    "find_measurable_dimshuffles", find_measurable_dimshuffles, 0, "basic", "tensor"
+)
+
 
 measurable_ir_rewrites_db.register(
     "broadcast_to_lift", naive_bcast_rv_lift, -5, "basic", "tensor"

@@ -1,3 +1,4 @@
+import aesara
 import numpy as np
 import pytest
 from aesara import tensor as at
@@ -204,3 +205,53 @@ def test_join_mixed_ndim_supp():
         ValueError, match="Joined logps have different number of dimensions"
     ):
         joint_logprob({y_rv: y_vv})
+
+
+@aesara.config.change_flags(cxx="")
+@pytest.mark.parametrize(
+    "ds_order",
+    [
+        (0, 2, 1),  # Swap
+        (2, 1, 0),  # Swap
+        (0, 1, 2, "x"),  # Expand
+        ("x", 0, 1, 2),  # Expand
+        (
+            0,
+            2,
+        ),  # Drop
+        (2, 0),  # Swap and drop
+        (2, 1, "x", 0),  # Swap and expand
+        ("x", 0, 2),  # Expand and drop
+        (2, "x", 0),  # Swap, expand and drop
+    ],
+)
+@pytest.mark.parametrize("multivariate", (False, True))
+def test_measurable_dimshuffle(ds_order, multivariate):
+    if multivariate:
+        base_rv = at.random.dirichlet([1, 2, 3], size=(2, 1))
+    else:
+        base_rv = at.exp(at.random.beta(1, 2, size=(2, 1, 3)))
+
+    ds_rv = base_rv.dimshuffle(ds_order)
+    base_vv = base_rv.clone()
+    ds_vv = ds_rv.clone()
+
+    # Remove support dimension axis from ds_order (i.e., 2, for multivariate)
+    if multivariate:
+        logp_ds_order = [o for o in ds_order if o == "x" or o < 2]
+    else:
+        logp_ds_order = ds_order
+
+    ref_logp = joint_logprob({base_rv: base_vv}, sum=False).dimshuffle(logp_ds_order)
+    ds_logp = joint_logprob({ds_rv: ds_vv}, sum=False)
+    assert ds_logp is not None
+
+    ref_logp_fn = aesara.function([base_vv], ref_logp)
+    ds_logp_fn = aesara.function([ds_vv], ds_logp)
+
+    base_test_value = base_rv.eval()
+    ds_test_value = at.constant(base_test_value).dimshuffle(ds_order).eval()
+
+    np.testing.assert_array_equal(
+        ref_logp_fn(base_test_value), ds_logp_fn(ds_test_value)
+    )
