@@ -304,7 +304,8 @@ def model_to_networkx(
 ):
     """Produce a networkx Digraph from a PyMC model.
 
-    Requires networkx, which may be installed most easily with
+    Requires networkx, which may be installed most easily with::
+    
         conda install networkx
 
     Alternatively, you may install using pip with
