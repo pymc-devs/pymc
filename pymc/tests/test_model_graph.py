@@ -39,6 +39,7 @@ def school_model():
         obs = pm.Normal("obs", theta, sigma=sigma, observed=y)
     return schools
 
+
 class BaseModelNXTest(SeededTest):
     network_model = {
         "graph_attr_dict_factory": dict,
@@ -72,6 +73,7 @@ class BaseModelNXTest(SeededTest):
         "_pred": {"eta": {}, "obs": {"tau": {}, "eta": {}, "mu": {}}, "tau": {}, "mu": {}},
         "_succ": {"eta": {"obs": {}}, "obs": {}, "tau": {"obs": {}}, "mu": {"obs": {}}},
     }
+
     def test_networkx(self):
         assert self.network_model == model_to_networkx(school_model()).__dict__
 
