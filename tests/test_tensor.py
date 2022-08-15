@@ -188,7 +188,6 @@ def test_measurable_join_multivariate(
         y_testval = np.concatenate((base1_testval, base2_testval), axis=axis)
     else:
         y_testval = np.stack((base1_testval, base2_testval), axis=axis)
-    print(base_logps.eval({base1_vv: base1_testval, base2_vv: base2_testval}).shape)
     np.testing.assert_allclose(
         base_logps.eval({base1_vv: base1_testval, base2_vv: base2_testval}),
         y_logp.eval({y_vv: y_testval}),
