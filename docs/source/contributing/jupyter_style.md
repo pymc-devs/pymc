@@ -490,6 +490,11 @@ extra_bibtex_id_2
 ## Watermark
 Once you're finished with your NB, add a very last cell with [the watermark package](https://github.com/rasbt/watermark). This will automatically print the versions of Python and the packages you used to run the NB -- reproducibility rocks! Here is some example code. Note that the `-p` argument may not be necessary (or it may need to have different libraries as input), but all the other arguments must be present.
 
+
+```markdown
+## Watermark
+```
+
 ```python
 %load_ext watermark
 %watermark -n -u -v -iv -w -p aesara,aeppl,xarray
