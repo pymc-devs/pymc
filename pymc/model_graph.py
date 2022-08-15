@@ -314,7 +314,7 @@ def model_to_networkx(
 
     Parameters
     ----------
-    model : pm.Model
+    model : Model
         The model to plot. Not required when called from inside a modelcontext.
     var_names : iterable of str, optional
         Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
