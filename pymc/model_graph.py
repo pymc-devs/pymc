@@ -308,8 +308,10 @@ def model_to_networkx(
     
         conda install networkx
 
-    Alternatively, you may install using pip with
+    Alternatively, you may install using pip with::
+    
         pip install networkx
+        
     See https://networkx.org/documentation/stable/ for more information.
 
     Parameters
