@@ -19,6 +19,7 @@ dependencies:
 - numpy>=1.15.0
 - pandas>=0.24.0
 - python-graphviz
+- networkx
 - scipy>=1.4.1
 - typing-extensions>=3.7.4
 # Extra dependencies for testing

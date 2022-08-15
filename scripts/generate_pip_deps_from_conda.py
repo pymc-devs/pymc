@@ -51,6 +51,7 @@ EXCLUDE = {
     "mkl-service",
     "numba",
     "python-graphviz",
+    "networkx",
     "blas",
     "jax",
 }

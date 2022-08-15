@@ -125,8 +125,8 @@ class ModelGraph:
 
         return input_map
 
-    def _make_node(self, var_name, graph, *, formatting: str = "plain"):
-        """Attaches the given variable to a graphviz Digraph"""
+    def _make_node(self, var_name, graph, *, nx=False, cluster=False, formatting: str = "plain"):
+        """Attaches the given variable to a graphviz or networkx Digraph"""
         v = self.model[var_name]
 
         shape = None
@@ -168,7 +168,13 @@ class ModelGraph:
             "label": label,
         }
 
-        graph.node(var_name.replace(":", "&"), **kwargs)
+        if cluster:
+            kwargs["cluster"] = cluster
+
+        if nx:
+            graph.add_node(var_name.replace(":", "&"), **kwargs)
+        else:
+            graph.node(var_name.replace(":", "&"), **kwargs)
 
     def _eval(self, var):
         return function([], var, mode="FAST_COMPILE")()
@@ -178,7 +184,6 @@ class ModelGraph:
 
         Just groups by the shape of the underlying distribution.  Will be wrong
         if there are two plates with the same shape.
-
         Returns
         -------
         dict
@@ -234,9 +239,134 @@ class ModelGraph:
 
         return graph
 
+    def make_networkx(
+        self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
+    ):
+        """Make networkx Digraph of PyMC model
+
+        Returns
+        -------
+        networkx.Digraph
+        """
+        try:
+            import networkx
+        except ImportError:
+            raise ImportError(
+                "This function requires the python library networkx, along with binaries. "
+                "The easiest way to install all of this is by running\n\n"
+                "\tconda install networkx"
+            )
+        graphnetwork = networkx.DiGraph(name=self.model.name)
+        for plate_label, all_var_names in self.get_plates(var_names).items():
+            if plate_label:
+                # # must be preceded by 'cluster' to get a box around it
+
+                subgraphnetwork = networkx.DiGraph(name="cluster" + plate_label, label=plate_label)
+
+                for var_name in all_var_names:
+                    self._make_node(
+                        var_name,
+                        subgraphnetwork,
+                        nx=True,
+                        cluster="cluster" + plate_label,
+                        formatting=formatting,
+                    )
+                for sgn in subgraphnetwork.nodes:
+                    networkx.set_node_attributes(
+                        subgraphnetwork,
+                        {sgn: {"labeljust": "r", "labelloc": "b", "style": "rounded"}},
+                    )
+                node_data = {
+                    e[0]: e[1]
+                    for e in graphnetwork.nodes(data=True) & subgraphnetwork.nodes(data=True)
+                }
+
+                graphnetwork = networkx.compose(graphnetwork, subgraphnetwork)
+                networkx.set_node_attributes(graphnetwork, node_data)
+                graphnetwork.graph["name"] = self.model.name
+            else:
+                for var_name in all_var_names:
+
+                    self._make_node(var_name, graphnetwork, nx=True, formatting=formatting)
+
+        for child, parents in self.make_compute_graph(var_names=var_names).items():
+            # parents is a set of rv names that preceed child rv nodes
+            for parent in parents:
+                graphnetwork.add_edge(parent.replace(":", "&"), child.replace(":", "&"))
+        return graphnetwork
+
+
+def model_to_networkx(
+    model=None,
+    *,
+    var_names: Optional[Iterable[VarName]] = None,
+    formatting: str = "plain",
+):
+    """Produce a networkx Digraph from a PyMC model.
+
+    Requires networkx, which may be installed most easily with::
+
+        conda install networkx
+
+    Alternatively, you may install using pip with::
+
+        pip install networkx
+
+    See https://networkx.org/documentation/stable/ for more information.
+
+    Parameters
+    ----------
+    model : Model
+        The model to plot. Not required when called from inside a modelcontext.
+    var_names : iterable of str, optional
+        Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
+    formatting : str, optional
+        one of { "plain" }
+
+    Examples
+    --------
+    How to plot the graph of the model.
+
+    .. code-block:: python
+
+        import numpy as np
+        from pymc import HalfCauchy, Model, Normal, model_to_networkx
+
+        J = 8
+        y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
+        sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
+
+        with Model() as schools:
+
+            eta = Normal("eta", 0, 1, shape=J)
+            mu = Normal("mu", 0, sigma=1e6)
+            tau = HalfCauchy("tau", 25)
+
+            theta = mu + tau * eta
+
+            obs = Normal("obs", theta, sigma=sigma, observed=y)
+
+        model_to_networkx(schools)
+    """
+    if not "plain" in formatting:
+
+        raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
+
+    if formatting != "plain":
+        warnings.warn(
+            "Formattings other than 'plain' are currently not supported.",
+            UserWarning,
+            stacklevel=2,
+        )
+    model = pm.modelcontext(model)
+    return ModelGraph(model).make_networkx(var_names=var_names, formatting=formatting)
+
 
 def model_to_graphviz(
-    model=None, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
+    model=None,
+    *,
+    var_names: Optional[Iterable[VarName]] = None,
+    formatting: str = "plain",
 ):
     """Produce a graphviz Digraph from a PyMC model.
 
@@ -286,7 +416,9 @@ def model_to_graphviz(
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
     if formatting != "plain":
         warnings.warn(
-            "Formattings other than 'plain' are currently not supported.", UserWarning, stacklevel=2
+            "Formattings other than 'plain' are currently not supported.",
+            UserWarning,
+            stacklevel=2,
         )
     model = pm.modelcontext(model)
     return ModelGraph(model).make_graph(var_names=var_names, formatting=formatting)
