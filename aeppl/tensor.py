@@ -98,7 +98,7 @@ def logprob_make_vector(op, values, *base_vars, **kwargs):
 
 
 class MeasurableJoin(Join):
-    """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
+    """A placeholder used to specify a log-likelihood for a join sub-graph."""
 
 
 MeasurableVariable.register(MeasurableJoin)
