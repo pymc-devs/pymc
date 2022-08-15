@@ -2197,20 +2197,17 @@ class StickBreakingWeightsRV(RandomVariable):
 
         return super().make_node(rng, size, dtype, alpha, K)
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
-        alpha, K = dist_params
-
-        size = tuple(size)
-
-        return size + tuple(alpha.shape) + (K + 1,)
+    def _supp_shape_from_params(self, dist_params, **kwargs):
+        K = dist_params[1]
+        return (K + 1,)
 
     @classmethod
     def rng_fn(cls, rng, alpha, K, size):
         if K < 0:
             raise ValueError("K needs to be positive.")
 
-        distribution_shape = alpha.shape + (K,)
-        size = to_tuple(size) + distribution_shape
+        size = to_tuple(size)
+        size = np.broadcast_shapes(alpha.shape, size) + (K,)
 
         alpha = alpha[..., np.newaxis]
         betas = rng.beta(1, alpha, size=size)
@@ -2256,7 +2253,7 @@ class StickBreakingWeights(SimplexContinuous):
 
     Parameters
     ----------
-    alpha: float or array_like of floats
+    alpha : tensor_like of float
         Concentration parameter (alpha > 0).
     K : tensor_like of int
         The number of "sticks" to break off from an initial one-unit stick. The length of the weight

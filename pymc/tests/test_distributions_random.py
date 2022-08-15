@@ -1287,26 +1287,25 @@ class TestDirichletMultinomial_1D_n_2D_a(BaseTestDistributionRandom):
 
 
 class TestStickBreakingWeights(BaseTestDistributionRandom):
-    parameters = [
-        (np.array(3.5), 19),
-        (np.array([1, 2, 3], dtype="float64"), 17),
-        (np.arange(1, 10, dtype="float64").reshape(3, 3), 15),
-        (np.arange(1, 25, dtype="float64").reshape(2, 3, 4), 5),
+    pymc_dist = pm.StickBreakingWeights
+    pymc_dist_params = {"alpha": 2.0, "K": 19}
+    expected_rv_op_params = {"alpha": 2.0, "K": 19}
+    sizes_to_check = [None, 17, (5,), (11, 5), (3, 13, 5)]
+    sizes_expected = [
+        (20,),
+        (17, 20),
+        (
+            5,
+            20,
+        ),
+        (11, 5, 20),
+        (3, 13, 5, 20),
     ]
-    for alpha, K in parameters:
-        pymc_dist = pm.StickBreakingWeights
-        pymc_dist_params = {"alpha": alpha, "K": K}
-        expected_rv_op_params = {"alpha": alpha, "K": K}
-        sizes_to_check = [None, 17, (5,), (11, 5), (3, 13, 5)]
-        sizes_expected = []
-        for size in sizes_to_check:
-            sizes_expected.append(to_tuple(size) + alpha.shape + (K + 1,))
-
-        checks_to_run = [
-            "check_pymc_params_match_rv_op",
-            "check_rv_size",
-            "check_basic_properties",
-        ]
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_basic_properties",
+    ]
 
     def check_basic_properties(self):
         default_rng = aesara.shared(np.random.default_rng(1234))
