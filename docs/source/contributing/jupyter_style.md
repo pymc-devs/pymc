@@ -501,7 +501,7 @@ First, add a Markdown cell with the `## Watermark` title only so it appears in t
 
 ```python
 %load_ext watermark
-%watermark -n -u -v -iv -w 
+%watermark -n -u -v -iv -w -p aesara,aeppl,xarray
 ```
 
 The `p` flag is optional (or it may need to have different libraries as input), but should be added if Aesara or xarray are not imported explicitly.  This will also be checked by `pre-commit` (because we all forget to do things sometimes 😳).
