@@ -1325,8 +1325,8 @@ class TestStickBreakingWeights_1D_alpha(BaseTestDistributionRandom):
     pymc_dist = pm.StickBreakingWeights
     pymc_dist_params = {"alpha": [1.0, 2.0, 3.0], "K": 19}
     expected_rv_op_params = {"alpha": [1.0, 2.0, 3.0], "K": 19}
-    sizes_to_check = [None]
-    sizes_expected = [(3, 20)]
+    sizes_to_check = [None, (3,), (5, 3)]
+    sizes_expected = [(3, 20), (3, 20), (5, 3, 20)]
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",

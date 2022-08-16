@@ -2206,11 +2206,9 @@ class StickBreakingWeightsRV(RandomVariable):
         if K < 0:
             raise ValueError("K needs to be positive.")
 
-        if size is None:
-            size = alpha.shape + (K,)
-            alpha = alpha[..., np.newaxis]
-        else:
-            size = size + (K,)
+        size = size if size is not None else alpha.shape
+        size = size + (K,)
+        alpha = alpha[..., np.newaxis]
 
         betas = rng.beta(1, alpha, size=size)
 

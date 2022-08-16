@@ -23,8 +23,8 @@ import numpy.random as nr
 from aeppl.logprob import ParameterValueError
 from aesara.tensor.random.utils import broadcast_params
 
+from pymc.aesaraf import compile_pymc
 from pymc.distributions.continuous import get_tau_sigma
-from pymc.distributions.dist_math import betaln
 from pymc.util import UNSET
 
 try:
@@ -951,38 +951,6 @@ def test_hierarchical_obs_logp():
     ops = {a.owner.op for a in logp_ancestors if a.owner}
     assert len(ops) > 0
     assert not any(isinstance(o, RandomVariable) for o in ops)
-
-
-def _stickbreakingweights_logpdf(value, alpha, K):
-    logp = -at.sum(
-        at.log(
-            at.cumsum(
-                value[..., ::-1],
-                axis=-1,
-            )
-        ),
-        axis=-1,
-    )
-    logp += -K * betaln(1, alpha)
-    logp += alpha * at.log(value[..., -1])
-    logp = at.switch(
-        at.or_(
-            at.any(
-                at.and_(at.le(value, 0), at.ge(value, 1)),
-                axis=-1,
-            ),
-            at.or_(
-                at.bitwise_not(at.allclose(value.sum(-1), 1)),
-                at.neq(value.shape[-1], K + 1),
-            ),
-        ),
-        -np.inf,
-        logp,
-    )
-    return logp.eval()
-
-
-stickbreakingweights_logpdf = np.vectorize(_stickbreakingweights_logpdf, signature="(n),(),()->()")
 
 
 class TestMatchesScipy:
@@ -2348,15 +2316,24 @@ class TestMatchesScipy:
     @pytest.mark.parametrize(
         "value, alpha, K",
         [
-            (np.array([5, 4, 3, 2, 1]) / 15, [0.5, 1.0, 2.0], 19),
+            (np.array([5, 4, 3, 2, 1]) / 15, [0.5, 1.0, 2.0], 4),
             (
                 np.append(0.5 ** np.arange(1, 20), 0.5**20),
                 np.arange(1, 7, dtype="float64").reshape(2, 3),
-                4,
+                19,
             ),
         ],
     )
     def test_stickbreakingweights_vectorized(self, value, alpha, K):
+        _value = at.vector()
+        _alpha = at.scalar()
+        _k = at.iscalar()
+        _logp = logp(StickBreakingWeights.dist(_alpha, _k), _value)
+        _stickbreakingweights_logpdf = compile_pymc([_value, _alpha, _k], _logp)
+        stickbreakingweights_logpdf = np.vectorize(
+            _stickbreakingweights_logpdf, signature="(n),(),()->()"
+        )
+
         with Model():
             sbw = StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
         pt = {"sbw": value}
