@@ -6,7 +6,7 @@ channels:
 dependencies:
 # Base dependencies
 - aeppl=0.0.34
-- aesara=2.7.9
+- aesara=2.7.10
 - arviz>=0.12.0
 - blas
 - cachetools>=4.2.1
