@@ -504,14 +504,6 @@ First, add a Markdown cell with the `## Watermark` title only so it appears in t
 %watermark -n -u -v -iv -w 
 ```
 
-These are some of the watermark arguments:  
-- `-n`: prints the date
-- `-u`: appends a string "Last updated: "
-- `-v`: prints Python and IPython version
-- `-iv`: prints the name/version of all imported modules
-- `-w`: prints the current version of watermark
-- `-p`: prints versions of specified Python modules and packages
-
 The `p` flag is optional (or it may need to have different libraries as input), but should be added if Aesara or xarray are not imported explicitly.  This will also be checked by `pre-commit` (because we all forget to do things sometimes 😳).
 
 ```markdown
