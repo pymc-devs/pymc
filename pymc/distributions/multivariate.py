@@ -2206,10 +2206,12 @@ class StickBreakingWeightsRV(RandomVariable):
         if K < 0:
             raise ValueError("K needs to be positive.")
 
-        size = to_tuple(size)
-        size = np.broadcast_shapes(alpha.shape, size) + (K,)
+        if size is None:
+            size = alpha.shape + (K,)
+            alpha = alpha[..., np.newaxis]
+        else:
+            size = size + (K,)
 
-        alpha = alpha[..., np.newaxis]
         betas = rng.beta(1, alpha, size=size)
 
         sticks = np.concatenate(

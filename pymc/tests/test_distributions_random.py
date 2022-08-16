@@ -1321,6 +1321,18 @@ class TestStickBreakingWeights(BaseTestDistributionRandom):
         assert np.all(draws <= 1)
 
 
+class TestStickBreakingWeights_1D_alpha(BaseTestDistributionRandom):
+    pymc_dist = pm.StickBreakingWeights
+    pymc_dist_params = {"alpha": [1.0, 2.0, 3.0], "K": 19}
+    expected_rv_op_params = {"alpha": [1.0, 2.0, 3.0], "K": 19}
+    sizes_to_check = [None]
+    sizes_expected = [(3, 20)]
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+    ]
+
+
 class TestCategorical(BaseTestDistributionRandom):
     pymc_dist = pm.Categorical
     pymc_dist_params = {"p": np.array([0.28, 0.62, 0.10])}
