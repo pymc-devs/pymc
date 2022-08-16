@@ -493,20 +493,18 @@ extra_bibtex_id_2
 
 This library should be in your virtual environment if you installed our `requirements-dev.txt`.  Otherwise, run `pip install watermark`.
 
-First, add a Markdown cell with the `## Watermark` title only so it appears in the table of contents. This is the second to last section, above the epilogue/footer.
+First, add a Markdown cell with the `## Watermark` title only so it appears in the table of contents. This is the second to last section, above the epilogue/footer.  Then, add a code cell to print the versions of Python and packages used in the notebook.
 
 ```markdown
 ## Watermark
 ```
-
-Then, add a code cell to print the versions of Python and packages used in the notebook.
 
 ```python
 %load_ext watermark
 %watermark -n -u -v -iv -w 
 ```
 
-These are some of the watermark arguments:
+These are some of the watermark arguments:  
 - `-n`: prints the date
 - `-u`: appends a string "Last updated: "
 - `-v`: prints Python and IPython version
@@ -515,6 +513,10 @@ These are some of the watermark arguments:
 - `-p`: prints versions of specified Python modules and packages
 
 The `p` flag is optional (or it may need to have different libraries as input), but should be added if Aesara or xarray are not imported explicitly.  This will also be checked by `pre-commit` (because we all forget to do things sometimes 😳).
+
+```markdown
+## Watermark
+```
 
 ```python
 %load_ext watermark
