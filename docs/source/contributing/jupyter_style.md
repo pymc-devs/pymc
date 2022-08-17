@@ -493,7 +493,7 @@ extra_bibtex_id_2
 
 This library should be in your virtual environment if you installed our `requirements-dev.txt`.  Otherwise, run `pip install watermark`.
 
-First, add a Markdown cell with the `## Watermark` title only so it appears in the table of contents. This is the second to last section, above the epilogue/footer.  Then, add a code cell to print the versions of Python and packages used in the notebook.
+First, add a Markdown cell with the `## Watermark` title only so it appears in the table of contents. This is the second to last section, above the epilogue/footer.  Then, add a code cell to print the versions of Python and packages used in the notebook. This is the last *code* cell in the notebook.
 
 The `p` flag is optional (or it may need to have different libraries as input), but should be added if Aesara or xarray are not imported explicitly.  This will also be checked by `pre-commit` (because we all forget to do things sometimes 😳).
 
