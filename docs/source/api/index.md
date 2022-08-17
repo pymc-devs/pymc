@@ -24,7 +24,7 @@
   cumsum
   dists
   mixture
-  opt
+  rewriting
   printing
   scan
   transforms

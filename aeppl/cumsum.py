@@ -1,12 +1,12 @@
 from typing import List, Optional
 
 import aesara.tensor as at
-from aesara.graph.opt import local_optimizer
+from aesara.graph.rewriting.basic import node_rewriter
 from aesara.tensor.extra_ops import CumOp
 
 from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
 from aeppl.logprob import _logprob, logprob
-from aeppl.opt import PreserveRVMappings, measurable_ir_rewrites_db
+from aeppl.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 
 
 class MeasurableCumsum(CumOp):
@@ -40,7 +40,7 @@ def logprob_cumsum(op, values, base_rv, **kwargs):
     return cumsum_logp
 
 
-@local_optimizer([CumOp])
+@node_rewriter([CumOp])
 def find_measurable_cumsums(fgraph, node) -> Optional[List[MeasurableCumsum]]:
     r"""Finds `Cumsums`\s for which a `logprob` can be computed."""
 

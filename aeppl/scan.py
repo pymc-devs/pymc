@@ -7,10 +7,10 @@ import numpy as np
 from aesara.graph.basic import Variable
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import compute_test_value
-from aesara.graph.opt import local_optimizer
-from aesara.graph.optdb import OptimizationQuery
+from aesara.graph.rewriting.basic import node_rewriter
+from aesara.graph.rewriting.db import RewriteDatabaseQuery
 from aesara.scan.op import Scan
-from aesara.scan.opt import scan_eqopt1, scan_eqopt2
+from aesara.scan.rewriting import scan_eqopt1, scan_eqopt2
 from aesara.scan.utils import ScanArgs
 from aesara.tensor.random.type import RandomType
 from aesara.tensor.subtensor import Subtensor, indices_from_subtensor
@@ -20,7 +20,11 @@ from aesara.updates import OrderedUpdates
 from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 from aeppl.joint_logprob import factorized_joint_logprob
 from aeppl.logprob import _logprob
-from aeppl.opt import inc_subtensor_ops, logprob_rewrites_db, measurable_ir_rewrites_db
+from aeppl.rewriting import (
+    inc_subtensor_ops,
+    logprob_rewrites_db,
+    measurable_ir_rewrites_db,
+)
 
 
 class MeasurableScan(Scan):
@@ -301,7 +305,7 @@ def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
     return logp_scan_out
 
 
-@local_optimizer([Scan])
+@node_rewriter([Scan])
 def find_measurable_scans(fgraph, node):
     r"""Finds `Scan`\s for which a `logprob` can be computed.
 
@@ -456,7 +460,7 @@ def find_measurable_scans(fgraph, node):
     return dict(zip(node.outputs, new_node.outputs))
 
 
-@local_optimizer([Scan])
+@node_rewriter([Scan])
 def add_opts_to_inner_graphs(fgraph, node):
     """Update the `Mode`(s) used to compile the inner-graph of a `Scan` `Op`.
 
@@ -479,7 +483,7 @@ def add_opts_to_inner_graphs(fgraph, node):
         copy_orphans=False,
     )
 
-    logprob_rewrites_db.query(OptimizationQuery(include=["basic"])).optimize(
+    logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"])).rewrite(
         inner_fgraph
     )
 

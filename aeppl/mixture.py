@@ -5,14 +5,17 @@ import aesara.tensor as at
 from aesara.graph.basic import Apply, Variable
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op, compute_test_value
-from aesara.graph.opt import (
-    EquilibriumOptimizer,
-    local_optimizer,
-    pre_greedy_local_optimizer,
+from aesara.graph.rewriting.basic import (
+    EquilibriumGraphRewriter,
+    node_rewriter,
+    pre_greedy_node_rewriter,
 )
 from aesara.ifelse import ifelse
 from aesara.tensor.basic import Join, MakeVector
-from aesara.tensor.random.opt import local_dimshuffle_rv_lift, local_subtensor_rv_lift
+from aesara.tensor.random.rewriting import (
+    local_dimshuffle_rv_lift,
+    local_subtensor_rv_lift,
+)
 from aesara.tensor.shape import shape_tuple
 from aesara.tensor.subtensor import (
     as_index_literal,
@@ -25,7 +28,7 @@ from aesara.tensor.var import TensorVariable
 
 from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
 from aeppl.logprob import _logprob, logprob
-from aeppl.opt import local_lift_DiracDelta, logprob_rewrites_db, subtensor_ops
+from aeppl.rewriting import local_lift_DiracDelta, logprob_rewrites_db, subtensor_ops
 from aeppl.tensor import naive_bcast_rv_lift
 from aeppl.utils import get_constant_value
 
@@ -159,7 +162,7 @@ def rv_pull_down(x: TensorVariable, dont_touch_vars=None) -> TensorVariable:
     """Pull a ``RandomVariable`` ``Op`` down through a graph, when possible."""
     fgraph = FunctionGraph(outputs=dont_touch_vars or [], clone=False)
 
-    return pre_greedy_local_optimizer(
+    return pre_greedy_node_rewriter(
         fgraph,
         [
             local_dimshuffle_rv_lift,
@@ -238,7 +241,7 @@ def get_stack_mixture_vars(
     return mixture_rvs, join_axis
 
 
-@local_optimizer(subtensor_ops)
+@node_rewriter(subtensor_ops)
 def mixture_replace(fgraph, node):
     r"""Identify mixture sub-graphs and replace them with a place-holder `Op`.
 
@@ -364,7 +367,7 @@ def logprob_MixtureRV(
 
 logprob_rewrites_db.register(
     "mixture_replace",
-    EquilibriumOptimizer(
+    EquilibriumGraphRewriter(
         [mixture_replace], max_use_ratio=aesara.config.optdb__max_use_ratio
     ),
     0,

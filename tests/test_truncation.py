@@ -5,7 +5,7 @@ import scipy as sp
 import scipy.stats as st
 
 from aeppl import factorized_joint_logprob, joint_logprob
-from aeppl.transforms import LogTransform, TransformValuesOpt
+from aeppl.transforms import LogTransform, TransformValuesRewrite
 from tests.utils import assert_no_rvs
 
 
@@ -177,7 +177,7 @@ def test_censored_transform():
 
     cens_x_vv = cens_x_rv.clone()
 
-    transform = TransformValuesOpt({cens_x_vv: LogTransform()})
+    transform = TransformValuesRewrite({cens_x_vv: LogTransform()})
     logp = joint_logprob({cens_x_rv: cens_x_vv}, extra_rewrites=transform)
 
     cens_x_vv_testval = -1

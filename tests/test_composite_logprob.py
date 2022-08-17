@@ -4,7 +4,7 @@ import numpy as np
 import scipy.stats as st
 
 from aeppl import joint_logprob
-from aeppl.opt import construct_ir_fgraph
+from aeppl.rewriting import construct_ir_fgraph
 from aeppl.truncation import CensoredRV
 from tests.utils import assert_no_rvs
 

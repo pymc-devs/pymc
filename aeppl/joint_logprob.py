@@ -6,19 +6,19 @@ import aesara.tensor as at
 from aesara import config
 from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.graph.op import compute_test_value
-from aesara.graph.opt import GlobalOptimizer, LocalOptimizer
+from aesara.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from aesara.tensor.var import TensorVariable
 
 from aeppl.abstract import get_measurable_outputs
 from aeppl.logprob import _logprob
-from aeppl.opt import construct_ir_fgraph
+from aeppl.rewriting import construct_ir_fgraph
 from aeppl.utils import rvs_to_value_vars
 
 
 def factorized_joint_logprob(
     rv_values: Dict[TensorVariable, TensorVariable],
     warn_missing_rvs: bool = True,
-    extra_rewrites: Optional[Union[GlobalOptimizer, LocalOptimizer]] = None,
+    extra_rewrites: Optional[Union[GraphRewriter, NodeRewriter]] = None,
     **kwargs,
 ) -> Dict[TensorVariable, TensorVariable]:
     r"""Create a map between variables and their log-probabilities such that the
@@ -79,7 +79,7 @@ def factorized_joint_logprob(
     fgraph, rv_values, _ = construct_ir_fgraph(rv_values)
 
     if extra_rewrites is not None:
-        extra_rewrites.optimize(fgraph)
+        extra_rewrites.rewrite(fgraph)
 
     rv_remapper = fgraph.preserve_rv_mappings
 

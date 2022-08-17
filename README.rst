@@ -74,11 +74,11 @@ Graphs can also be pretty printed:
   # \end{equation}
 
   # Simplify the graph so that it's easier to read
-  from aesara.graph.opt_utils import optimize_graph
-  from aesara.tensor.basic_opt import topo_constant_folding
+  from aesara.graph.rewriting.utils import rewrite_graph
+  from aesara.tensor.rewriting.basic import topo_constant_folding
 
 
-  logprob = optimize_graph(logprob, custom_opt=topo_constant_folding)
+  logprob = rewrite_graph(logprob, custom_rewrite=topo_constant_folding)
 
 
   print(pprint(logprob))
@@ -109,7 +109,7 @@ Joint log-probabilities can be computed for some terms that are *derived* from
   logprob = joint_logprob({M_rv: m, Z_rv: z, I_rv: i})
 
 
-  logprob = optimize_graph(logprob, custom_opt=topo_constant_folding)
+  logprob = rewrite_graph(logprob, custom_rewrite=topo_constant_folding)
 
   print(pprint(logprob))
   # i in Z, m in R, a in Z

@@ -17,7 +17,7 @@ setup(
     install_requires=[
         "numpy>=1.18.1",
         "scipy>=1.4.0",
-        "aesara >= 2.3.2",
+        "aesara >= 2.8.0",
     ],
     tests_require=["pytest"],
     long_description=open("README.rst").read() if exists("README.rst") else "",

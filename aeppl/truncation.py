@@ -4,7 +4,7 @@ import aesara.tensor as at
 import numpy as np
 from aesara.graph.basic import Node
 from aesara.graph.fg import FunctionGraph
-from aesara.graph.opt import local_optimizer
+from aesara.graph.rewriting.basic import node_rewriter
 from aesara.scalar.basic import Clip
 from aesara.scalar.basic import clip as scalar_clip
 from aesara.tensor.elemwise import Elemwise
@@ -12,7 +12,7 @@ from aesara.tensor.var import TensorConstant
 
 from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
 from aeppl.logprob import CheckParameterValue, _logcdf, _logprob
-from aeppl.opt import measurable_ir_rewrites_db
+from aeppl.rewriting import measurable_ir_rewrites_db
 
 
 class CensoredRV(Elemwise):
@@ -22,7 +22,7 @@ class CensoredRV(Elemwise):
 MeasurableVariable.register(CensoredRV)
 
 
-@local_optimizer(tracks=[Elemwise])
+@node_rewriter(tracks=[Elemwise])
 def find_censored_rvs(fgraph: FunctionGraph, node: Node) -> Optional[List[CensoredRV]]:
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
 

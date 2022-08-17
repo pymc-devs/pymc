@@ -20,13 +20,13 @@ from aesara.printing import (
 from aesara.printing import pprint as at_pprint
 from aesara.raise_op import Assert
 from aesara.scalar.basic import Add, Mul
-from aesara.tensor.basic_opt import ShapeFeature
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.exceptions import NotScalarConstantError
 from aesara.tensor.math import _dot
 from aesara.tensor.random.basic import NormalRV
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
+from aesara.tensor.rewriting.basic import ShapeFeature
 from aesara.tensor.subtensor import AdvancedSubtensor, AdvancedSubtensor1, Subtensor
 from aesara.tensor.type import float_dtypes, int_dtypes, uint_dtypes
 from aesara.tensor.var import TensorConstant, TensorVariable
@@ -589,7 +589,7 @@ pprint.printers.insert(
 )
 
 # This handles the in-place versions of `Add` and `Mul` produced by
-# optimizations
+# rewrites
 pprint.assign(
     lambda pstate, r: getattr(r, "owner", None)
     and isinstance(r.owner.op, Elemwise)

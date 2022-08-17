@@ -2,8 +2,8 @@ import aesara
 import numpy as np
 import pytest
 from aesara import tensor as at
-from aesara.graph import optimize_graph
-from aesara.graph.opt import in2out
+from aesara.graph.rewriting.basic import in2out
+from aesara.graph.rewriting.utils import rewrite_graph
 from aesara.tensor.extra_ops import BroadcastTo
 from scipy import stats as st
 
@@ -19,7 +19,7 @@ def test_naive_bcast_rv_lift():
     # Make sure we're testing what we intend to test
     assert isinstance(Z_at.owner.op, BroadcastTo)
 
-    res = optimize_graph(Z_at, custom_opt=in2out(naive_bcast_rv_lift), clone=False)
+    res = rewrite_graph(Z_at, custom_rewrite=in2out(naive_bcast_rv_lift), clone=False)
     assert res is X_rv
 
 

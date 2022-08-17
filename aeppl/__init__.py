@@ -10,7 +10,7 @@ from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
 from aeppl.printing import latex_pprint, pprint
 
 # isort: off
-# Add optimizations to the DBs
+# Add rewrites to the DBs
 import aeppl.cumsum
 import aeppl.mixture
 import aeppl.scan

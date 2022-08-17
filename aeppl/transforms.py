@@ -9,14 +9,14 @@ from aesara.graph.basic import Apply, Node, Variable
 from aesara.graph.features import AlreadyThere, Feature
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op
-from aesara.graph.opt import GlobalOptimizer, in2out, local_optimizer
+from aesara.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
 from aesara.scalar import Add, Exp, Log, Mul
-from aesara.tensor.basic_opt import (
+from aesara.tensor.elemwise import Elemwise
+from aesara.tensor.rewriting.basic import (
     register_specialize,
     register_stabilize,
     register_useless,
 )
-from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.var import TensorVariable
 
 from aeppl.abstract import (
@@ -25,7 +25,7 @@ from aeppl.abstract import (
     assign_custom_measurable_outputs,
 )
 from aeppl.logprob import _logprob, logprob
-from aeppl.opt import PreserveRVMappings, measurable_ir_rewrites_db
+from aeppl.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from aeppl.utils import walk_model
 
 
@@ -73,7 +73,7 @@ transformed_variable = TransformedVariable()
 @register_specialize
 @register_stabilize
 @register_useless
-@local_optimizer([TransformedVariable])
+@node_rewriter([TransformedVariable])
 def remove_TransformedVariables(fgraph, node):
     if isinstance(node.op, TransformedVariable):
         return [node.inputs[0]]
@@ -107,7 +107,7 @@ class DefaultTransformSentinel:
 DEFAULT_TRANSFORM = DefaultTransformSentinel()
 
 
-@local_optimizer(tracks=None)
+@node_rewriter(tracks=None)
 def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Apply transforms to value variables.
 
@@ -181,10 +181,10 @@ class TransformValuesMapping(Feature):
         fgraph.values_to_transforms = self.values_to_transforms
 
 
-class TransformValuesOpt(GlobalOptimizer):
+class TransformValuesRewrite(GraphRewriter):
     r"""Transforms value variables according to a map and/or per-`RandomVariable` defaults."""
 
-    default_transform_opt = in2out(transform_values, ignore_newtrees=True)
+    default_transform_rewrite = in2out(transform_values, ignore_newtrees=True)
 
     def __init__(
         self,
@@ -210,14 +210,14 @@ class TransformValuesOpt(GlobalOptimizer):
         fgraph.attach_feature(values_transforms_feature)
 
     def apply(self, fgraph: FunctionGraph):
-        return self.default_transform_opt.optimize(fgraph)
+        return self.default_transform_rewrite.rewrite(fgraph)
 
 
 class MeasurableTransform(Elemwise):
     """A placeholder used to specify a log-likelihood for a transformed measurable variable"""
 
     # Cannot use `transform` as name because it would clash with the property added by
-    # the TransformValuesOpt
+    # the `TransformValuesRewrite`
     transform_elemwise: RVTransform
     measurable_input_idx: int
 
@@ -255,7 +255,7 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     return input_logprob + jacobian
 
 
-@local_optimizer([Elemwise])
+@node_rewriter([Elemwise])
 def find_measurable_transforms(
     fgraph: FunctionGraph, node: Node
 ) -> Optional[List[Node]]:

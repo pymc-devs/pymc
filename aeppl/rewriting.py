@@ -5,16 +5,16 @@ from aesara.compile.mode import optdb
 from aesara.graph.basic import Variable
 from aesara.graph.features import Feature
 from aesara.graph.fg import FunctionGraph
-from aesara.graph.opt import local_optimizer
-from aesara.graph.optdb import EquilibriumDB, OptimizationQuery, SequenceDB
-from aesara.tensor.basic_opt import (
+from aesara.graph.rewriting.basic import node_rewriter
+from aesara.graph.rewriting.db import EquilibriumDB, RewriteDatabaseQuery, SequenceDB
+from aesara.tensor.elemwise import DimShuffle, Elemwise
+from aesara.tensor.extra_ops import BroadcastTo
+from aesara.tensor.random.rewriting import local_subtensor_rv_lift
+from aesara.tensor.rewriting.basic import (
     ShapeFeature,
     register_canonicalize,
     register_useless,
 )
-from aesara.tensor.elemwise import DimShuffle, Elemwise
-from aesara.tensor.extra_ops import BroadcastTo
-from aesara.tensor.random.opt import local_subtensor_rv_lift
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -36,9 +36,9 @@ subtensor_ops = (AdvancedSubtensor, AdvancedSubtensor1, Subtensor)
 class NoCallbackEquilibriumDB(EquilibriumDB):
     r"""This `EquilibriumDB` doesn't hide its exceptions.
 
-    By setting `failure_callback` to ``None`` in the `EquilibriumOptimizer`\s
+    By setting `failure_callback` to ``None`` in the `EquilibriumGraphRewriter`\s
     that `EquilibriumDB` generates, we're able to directly emit the desired
-    exceptions from within the `LocalOptimization`\s themselves.
+    exceptions from within the `NodeRewriter`\s themselves.
     """
 
     def query(self, *tags, **kwtags):
@@ -137,7 +137,7 @@ class PreserveRVMappings(Feature):
 
 
 @register_canonicalize
-@local_optimizer((Elemwise, BroadcastTo, DimShuffle) + subtensor_ops)
+@node_rewriter((Elemwise, BroadcastTo, DimShuffle) + subtensor_ops)
 def local_lift_DiracDelta(fgraph, node):
     r"""Lift basic `Op`\s through `DiracDelta`\s."""
 
@@ -161,14 +161,14 @@ def local_lift_DiracDelta(fgraph, node):
 
 
 @register_useless
-@local_optimizer((DiracDelta,))
+@node_rewriter((DiracDelta,))
 def local_remove_DiracDelta(fgraph, node):
     r"""Remove `DiracDelta`\s."""
     dd_val = node.inputs[0]
     return [dd_val]
 
 
-@local_optimizer(inc_subtensor_ops)
+@node_rewriter(inc_subtensor_ops)
 def incsubtensor_rv_replace(fgraph, node):
     r"""Replace `*IncSubtensor*` `Op`\s and their value variables for log-probability calculations.
 
@@ -316,7 +316,7 @@ def construct_ir_fgraph(
     rv_remapper = PreserveRVMappings(rv_values)
     fgraph.attach_feature(rv_remapper)
 
-    logprob_rewrites_db.query(OptimizationQuery(include=["basic"])).optimize(fgraph)
+    logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"])).rewrite(fgraph)
 
     if rv_remapper.measurable_conversions:
         # Undo un-valued measurable IR rewrites

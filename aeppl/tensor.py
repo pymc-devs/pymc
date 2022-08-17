@@ -3,19 +3,19 @@ from typing import List, Optional, Union
 import aesara
 from aesara import tensor as at
 from aesara.graph.op import compute_test_value
-from aesara.graph.opt import local_optimizer
+from aesara.graph.rewriting.basic import node_rewriter
 from aesara.tensor.basic import Join, MakeVector
 from aesara.tensor.elemwise import DimShuffle
 from aesara.tensor.extra_ops import BroadcastTo
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.opt import local_dimshuffle_rv_lift, local_rv_size_lift
+from aesara.tensor.random.rewriting import local_dimshuffle_rv_lift, local_rv_size_lift
 
 from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
 from aeppl.logprob import _logprob, logprob
-from aeppl.opt import PreserveRVMappings, measurable_ir_rewrites_db
+from aeppl.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 
 
-@local_optimizer([BroadcastTo])
+@node_rewriter([BroadcastTo])
 def naive_bcast_rv_lift(fgraph, node):
     """Lift a ``BroadcastTo`` through a ``RandomVariable`` ``Op``.
 
@@ -140,7 +140,7 @@ def logprob_join(op, values, axis, *base_vars, **kwargs):
     return join_logprob
 
 
-@local_optimizer([MakeVector, Join])
+@node_rewriter([MakeVector, Join])
 def find_measurable_stacks(
     fgraph, node
 ) -> Optional[List[Union[MeasurableMakeVector, MeasurableJoin]]]:
@@ -227,7 +227,7 @@ def logprob_dimshuffle(op, values, base_var, **kwargs):
     return raw_logp.dimshuffle(redo_ds)
 
 
-@local_optimizer([DimShuffle])
+@node_rewriter([DimShuffle])
 def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuffle]]:
     r"""Finds `Dimshuffle`\s for which a `logprob` can be computed."""
 
