@@ -488,19 +488,24 @@ extra_bibtex_id_2
 ```
 
 ## Watermark
-Once you're finished with your NB, add a very last cell with [the watermark package](https://github.com/rasbt/watermark). This will automatically print the versions of Python and the packages you used to run the NB -- reproducibility rocks! Here is some example code. Note that the `-p` argument may not be necessary (or it may need to have different libraries as input), but all the other arguments must be present.
+
+[`watermark`](https://github.com/rasbt/watermark) is a library which automatically prints the versions of Python and the packages you used to run the NB -- reproducibility rocks!
+
+This library should be in your virtual environment if you installed our `requirements-dev.txt`.  Otherwise, run `pip install watermark`.
+
+First, add a Markdown cell with the `## Watermark` title only so it appears in the table of contents. This is the second to last section, above the epilogue/footer.  Then, add a code cell to print the versions of Python and packages used in the notebook. This is the last *code* cell in the notebook.
+
+The `p` flag is optional (or it may need to have different libraries as input), but should be added if Aesara or xarray are not imported explicitly.  This will also be checked by `pre-commit` (because we all forget to do things sometimes 😳).
+
+```markdown
+## Watermark
+```
 
 ```python
 %load_ext watermark
 %watermark -n -u -v -iv -w -p aesara,aeppl,xarray
 ```
 
-This second to last code cell should be preceded by a markdown cell with the `## Watermark` title only so it appears in the table of contents.
-
-`watermark` should be in your virtual environment if you installed our `requirements-dev.txt`.
-Otherwise, just run `pip install watermark`.
-The `p` flag is optional but should be added if Aesara or xarray are not imported explicitly.
-This will also be checked by `pre-commit` (because we all forget to do things sometimes 😳).
 
 ## Epilogue
 The last cell in the notebooks should be a markdown cell with exactly the following content:
@@ -515,5 +520,4 @@ update the path to page footer for the include to work.
 
 ---
 
-You're all set now 🎉 You can push your changes, open a pull request, and, once it's merged, rest with the feeling of a job well done 👏
-Thanks a lot for your contribution to open-source, we really appreciate it!
+You're all set now 🎉. You can push your changes, open a pull request, and, once it's merged, rest with the feeling of a job well done 👏. Thanks a lot for your contribution to open-source, we really appreciate it!
