@@ -658,7 +658,7 @@ class TestSamplePPC(SeededTest):
             # test default case
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"], return_inferencedata=False)
             assert "a" in ppc
-            assert ppc["a"].shape == (nchains * ndraws,)
+            assert ppc["a"].shape == (nchains, ndraws)
             # mu's standard deviation may have changed thanks to a's observed
             _, pval = stats.kstest(ppc["a"] - trace["mu"], stats.norm(loc=0, scale=1).cdf)
             assert pval > 0.001
@@ -804,7 +804,7 @@ class TestSamplePPC(SeededTest):
                 trace, return_inferencedata=False, var_names=["p", "obs"]
             )
 
-        expected_p = np.array([logistic.eval({coeff: val}) for val in trace["x"][:samples]])
+        expected_p = np.array([[logistic.eval({coeff: val}) for val in trace["x"][:samples]]])
         assert post_pred["obs"].shape == (1, samples, 3)
         npt.assert_allclose(post_pred["p"], expected_p)
 
@@ -1392,14 +1392,7 @@ class TestSamplePriorPredictive(SeededTest):
         )
         assert sim_priors["probs"].shape == (20, 6)
         assert sim_priors["obs"].shape == (20,) + mn_data.shape
-        assert (
-            sim_ppc["obs"].shape
-            == (
-                1,
-                20
-            )
-            + mn_data.shape
-        )
+        assert sim_ppc["obs"].shape == (1, 20) + mn_data.shape
 
     def test_layers(self):
         with pm.Model() as model:

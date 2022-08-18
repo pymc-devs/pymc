@@ -554,10 +554,10 @@ class TestMixture(SeededTest):
         assert prior["like2"].shape == (n_samples, 20)
         assert prior["like3"].shape == (n_samples, 20)
 
-        assert ppc["like0"].shape == (n_samples, 20)
-        assert ppc["like1"].shape == (n_samples, 20)
-        assert ppc["like2"].shape == (n_samples, 20)
-        assert ppc["like3"].shape == (n_samples, 20)
+        assert ppc["like0"].shape == (1, n_samples, 20)
+        assert ppc["like1"].shape == (1, n_samples, 20)
+        assert ppc["like2"].shape == (1, n_samples, 20)
+        assert ppc["like3"].shape == (1, n_samples, 20)
 
     def test_list_mvnormals_predictive_sampling_shape(self):
         N = 100  # number of data points
@@ -594,7 +594,14 @@ class TestMixture(SeededTest):
             ppc = sample_posterior_predictive(
                 n_samples * [self.get_inital_point(model)], return_inferencedata=False
             )
-        assert ppc["x_obs"].shape == (n_samples,) + X.shape
+        assert (
+            ppc["x_obs"].shape
+            == (
+                1,
+                n_samples,
+            )
+            + X.shape
+        )
         assert prior["x_obs"].shape == (n_samples,) + X.shape
         assert prior["mu0"].shape == (n_samples, D)
         assert prior["chol_cov_0"].shape == (n_samples, D * (D + 1) // 2)
