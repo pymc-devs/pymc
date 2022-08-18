@@ -2206,7 +2206,7 @@ class StickBreakingWeightsRV(RandomVariable):
         if K < 0:
             raise ValueError("K needs to be positive.")
 
-        size = size if size is not None else alpha.shape
+        size = to_tuple(size) if size is not None else alpha.shape
         size = size + (K,)
         alpha = alpha[..., np.newaxis]
 
