@@ -473,7 +473,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
                 # 4) this syntax will also work as we are in the
                 # context of instance itself, names are given as usual
-                pm.Normal('v2', mu=mean, sigma=sigma
+                pm.Normal('v2', mu=mean, sigma=sigma)
 
                 # something more complex is allowed, too
                 half_cauchy =  pm.HalfCauchy('sd', beta=10, initval=1.)
@@ -490,7 +490,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         # I:
         #   state the model within a context
-        with Model() as model:
+        with pm.Model() as model:
             CustomModel()
             # arbitrary actions
 
@@ -505,7 +505,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         # IV:
         #   use many custom models within one context
-        with Model() as model:
+        with pm.Model() as model:
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
 
