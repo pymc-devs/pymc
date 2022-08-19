@@ -3,13 +3,14 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 import scipy.stats.distributions as sp
-from aesara.graph.basic import Variable
+from aesara.graph.basic import Variable, equal_computations
 from aesara.tensor.random.basic import CategoricalRV
 from aesara.tensor.shape import shape_tuple
 from aesara.tensor.subtensor import as_index_constant
 
 from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
-from aeppl.mixture import expand_indices
+from aeppl.mixture import MixtureRV, expand_indices
+from aeppl.rewriting import construct_ir_fgraph
 from tests.test_logprob import scipy_logprob
 from tests.utils import assert_no_rvs
 
@@ -67,7 +68,14 @@ def test_mixture_basics():
 
 
 @aesara.config.change_flags(compute_test_value="warn")
-def test_compute_test_value():
+@pytest.mark.parametrize(
+    "op_constructor",
+    [
+        lambda _I, _X, _Y: at.stack([_X, _Y])[_I],
+        lambda _I, _X, _Y: at.switch(_I, _X, _Y),
+    ],
+)
+def test_compute_test_value(op_constructor):
 
     srng = at.random.RandomStream(29833)
 
@@ -82,7 +90,7 @@ def test_compute_test_value():
     i_vv = I_rv.clone()
     i_vv.name = "i"
 
-    M_rv = at.stack([X_rv, Y_rv])[I_rv]
+    M_rv = op_constructor(I_rv, X_rv, Y_rv)
     M_rv.name = "M"
 
     m_vv = M_rv.clone()
@@ -705,3 +713,49 @@ def test_mixture_with_DiracDelta():
     logp_res = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
 
     assert m_vv in logp_res
+
+
+def test_switch_mixture():
+    srng = at.random.RandomStream(29833)
+
+    X_rv = srng.normal(-10.0, 0.1, name="X")
+    Y_rv = srng.normal(10.0, 0.1, name="Y")
+
+    I_rv = srng.bernoulli(0.5, name="I")
+    i_vv = I_rv.clone()
+    i_vv.name = "i"
+
+    Z1_rv = at.switch(I_rv, X_rv, Y_rv)
+    z_vv = Z1_rv.clone()
+    z_vv.name = "z1"
+
+    fgraph, _, _ = construct_ir_fgraph({Z1_rv: z_vv, I_rv: i_vv})
+
+    assert isinstance(fgraph.outputs[0].owner.op, MixtureRV)
+    assert not hasattr(
+        fgraph.outputs[0].tag, "test_value"
+    )  # aesara.config.compute_test_value == "off"
+    assert fgraph.outputs[0].name is None
+
+    Z1_rv.name = "Z1"
+
+    fgraph, _, _ = construct_ir_fgraph({Z1_rv: z_vv, I_rv: i_vv})
+
+    assert fgraph.outputs[0].name == "Z1-mixture"
+
+    # building the identical graph but with a stack to check that mixture computations are identical
+
+    Z2_rv = at.stack((X_rv, Y_rv))[I_rv]
+
+    fgraph2, _, _ = construct_ir_fgraph({Z2_rv: z_vv, I_rv: i_vv})
+
+    assert equal_computations(fgraph.outputs, fgraph2.outputs)
+
+    z1_logp = joint_logprob({Z1_rv: z_vv, I_rv: i_vv})
+    z2_logp = joint_logprob({Z2_rv: z_vv, I_rv: i_vv})
+
+    # below should follow immediately from the equal_computations assertion above
+    assert equal_computations([z1_logp], [z2_logp])
+
+    np.testing.assert_almost_equal(0.69049938, z1_logp.eval({z_vv: -10, i_vv: 0}))
+    np.testing.assert_almost_equal(0.69049938, z2_logp.eval({z_vv: -10, i_vv: 0}))
