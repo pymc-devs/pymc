@@ -1,8 +1,9 @@
-from typing import Any, Dict
+from typing import Any, Callable, Dict, Optional
 from unittest import mock
 
 import aesara
 import aesara.tensor as at
+import arviz as az
 import jax
 import numpy as np
 import pytest
@@ -159,11 +160,14 @@ def test_get_jaxified_logp():
     assert not np.isinf(jax_fn((np.array(5000.0), np.array(5000.0))))
 
 
-@pytest.fixture
-def model_test_idata_kwargs(scope="module"):
-    with pm.Model(coords={"x_coord": ["a", "b"], "x_coord2": [1, 2]}) as m:
+@pytest.fixture(scope="module")
+def model_test_idata_kwargs() -> pm.Model:
+    with pm.Model(
+        coords={"x_coord": ["a", "b"], "x_coord2": [1, 2], "z_coord": ["apple", "banana", "orange"]}
+    ) as m:
         x = pm.Normal("x", shape=(2,), dims=["x_coord"])
-        y = pm.Normal("y", x, observed=[0, 0])
+        _ = pm.Normal("y", x, observed=[0, 0])
+        _ = pm.Normal("z", 0, 1, dims="z_coord")
         pm.ConstantData("constantdata", [1, 2, 3])
         pm.MutableData("mutabledata", 2)
     return m
@@ -190,7 +194,13 @@ def model_test_idata_kwargs(scope="module"):
     ],
 )
 @pytest.mark.parametrize("postprocessing_backend", [None, "cpu"])
-def test_idata_kwargs(model_test_idata_kwargs, sampler, idata_kwargs, postprocessing_backend):
+def test_idata_kwargs(
+    model_test_idata_kwargs: pm.Model,
+    sampler: Callable[..., az.InferenceData],
+    idata_kwargs: Dict[str, Any],
+    postprocessing_backend: Optional[str],
+):
+    idata: Optional[az.InferenceData] = None
     with model_test_idata_kwargs:
         idata = sampler(
             tune=50,
@@ -199,19 +209,31 @@ def test_idata_kwargs(model_test_idata_kwargs, sampler, idata_kwargs, postproces
             idata_kwargs=idata_kwargs,
             postprocessing_backend=postprocessing_backend,
         )
-    assert "constantdata" in idata.constant_data
-    assert "mutabledata" in idata.constant_data
+    assert idata is not None
+    const_data = idata.get("constant_data")
+    assert const_data is not None
+    assert "constantdata" in const_data
+    assert "mutabledata" in const_data
 
     if idata_kwargs.get("log_likelihood", True):
         assert "log_likelihood" in idata
     else:
         assert "log_likelihood" not in idata
 
+    posterior = idata.get("posterior")
+    assert posterior is not None
     x_dim_expected = idata_kwargs.get("dims", model_test_idata_kwargs.RV_dims)["x"][0]
-    assert idata.posterior.x.dims[-1] == x_dim_expected
+    assert x_dim_expected is not None
+    assert posterior["x"].dims[-1] == x_dim_expected
 
     x_coords_expected = idata_kwargs.get("coords", model_test_idata_kwargs.coords)[x_dim_expected]
-    assert list(x_coords_expected) == list(idata.posterior.x.coords[x_dim_expected].values)
+    assert x_coords_expected is not None
+    assert list(x_coords_expected) == list(posterior["x"].coords[x_dim_expected].values)
+
+    assert posterior["z"].dims[2] == "z_coord"
+    assert np.all(
+        posterior["z"].coords["z_coord"].values == np.array(["apple", "banana", "orange"])
+    )
 
 
 def test_get_batched_jittered_initial_points():

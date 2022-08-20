@@ -172,6 +172,16 @@ def _get_batched_jittered_initial_points(
     return initial_points
 
 
+def _update_coords_and_dims(
+    coords: Dict[str, Any], dims: Dict[str, Any], idata_kwargs: Dict[str, Any]
+) -> None:
+    """Update 'coords' and 'dims' dicts with values in 'idata_kwargs'."""
+    if "coords" in idata_kwargs:
+        coords.update(idata_kwargs.pop("coords"))
+    if "dims" in idata_kwargs:
+        dims.update(idata_kwargs.pop("dims"))
+
+
 @partial(jax.jit, static_argnums=(2, 3, 4, 5, 6))
 def _blackjax_inference_loop(
     seed,
@@ -264,7 +274,8 @@ def sample_blackjax_nuts(
         value for the ``log_likelihood`` key to indicate that the pointwise log
         likelihood should not be included in the returned object. Values for
         ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
-        the ``model`` argument if not provided in ``idata_kwargs``.
+        the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
+        ``dims`` are provided, they are used to update the inferred dictionaries.
 
     Returns
     -------
@@ -376,6 +387,9 @@ def sample_blackjax_nuts(
     }
 
     posterior = mcmc_samples
+    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
+    # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
+    _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
         az.from_dict,
@@ -470,7 +484,8 @@ def sample_numpyro_nuts(
         value for the ``log_likelihood`` key to indicate that the pointwise log
         likelihood should not be included in the returned object. Values for
         ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
-        the ``model`` argument if not provided in ``idata_kwargs``.
+        the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
+        ``dims`` are provided, they are used to update the inferred dictionaries.
     nuts_kwargs: dict, optional
         Keyword arguments for :func:`numpyro.infer.NUTS`.
 
@@ -596,6 +611,9 @@ def sample_numpyro_nuts(
     }
 
     posterior = mcmc_samples
+    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
+    # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
+    _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
         az.from_dict,
@@ -608,5 +626,4 @@ def sample_numpyro_nuts(
         attrs=make_attrs(attrs, library=numpyro),
     )
     az_trace = to_trace(posterior=posterior, **idata_kwargs)
-
     return az_trace
