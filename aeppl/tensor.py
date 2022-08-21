@@ -241,9 +241,17 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuf
 
     base_var = node.inputs[0]
 
+    # We can only apply this rewrite directly to `RandomVariable`s, as those are
+    # the only `Op`s for which we always know the support axis. Other measurable
+    # variables can have arbitrary support axes (e.g., if they contain separate
+    # `MeasurableDimShuffle`s). Most measurable variables with `DimShuffle`s
+    # should still be supported as long as the `DimShuffle`s can be merged/
+    # lifted towards the base RandomVariable.
+    # TODO: If we include the support axis as meta information in each
+    # intermediate MeasurableVariable, we can lift this restriction.
     if not (
         base_var.owner
-        and isinstance(base_var.owner.op, MeasurableVariable)
+        and isinstance(base_var.owner.op, RandomVariable)
         and base_var not in rv_map_feature.rv_values
     ):
         return None  # pragma: no cover
