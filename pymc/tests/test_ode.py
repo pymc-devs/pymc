@@ -12,8 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import sys
-
 import aesara
 import aesara.tensor as at
 import numpy as np
@@ -27,9 +25,6 @@ import pymc as pm
 from pymc.ode import DifferentialEquation
 from pymc.ode.utils import augment_system
 from pymc.tests.helpers import fast_unstable_sampling_mode
-
-IS_FLOAT32 = aesara.config.floatX == "float32"
-IS_WINDOWS = sys.platform == "win32"
 
 
 def test_gradients():
