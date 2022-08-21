@@ -126,8 +126,8 @@ class DirichletScipyDist:
         ),
         (
             at.random.weibull,
-            (1.5, 10.5),
-            lambda alpha, beta: sp.stats.weibull_min(alpha, scale=beta),
+            (1.5,),
+            lambda c: sp.stats.weibull_min(c),
             (),
         ),
         (

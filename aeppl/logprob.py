@@ -344,17 +344,10 @@ def wald_logprob(op, values, *inputs, **kwargs):
 @_logprob.register(arb.WeibullRV)
 def weibull_logprob(op, values, *inputs, **kwargs):
     (value,) = values
-    alpha, beta = inputs[3:]
-    res = (
-        at.log(alpha)
-        - at.log(beta)
-        + (alpha - 1.0) * at.log(value / beta)
-        - at.pow(value / beta, alpha)
-    )
+    (c,) = inputs[3:]
+    res = at.log(c) + (c - 1.0) * at.log(value) - at.pow(value, c)
     res = at.switch(at.ge(value, 0.0), res, -np.inf)
-    res = CheckParameterValue("alpha > 0, beta > 0")(
-        res, at.all(at.gt(alpha, 0.0)), at.all(at.gt(beta, 0.0))
-    )
+    res = CheckParameterValue("c > 0")(res, at.all(at.gt(c, 0.0)))
     return res
 
 
