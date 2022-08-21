@@ -231,7 +231,7 @@ def exponential_logprob(op, values, *inputs, **kwargs):
 def laplace_logprob(op, values, *inputs, **kwargs):
     (value,) = values
     mu, b = inputs[3:]
-    res = -at.log(2 * b) - at.abs_(value - mu) / b
+    res = -at.log(2 * b) - at.abs(value - mu) / b
     res = CheckParameterValue("b > 0")(res, at.all(at.gt(b, 0.0)))
     return res
 
@@ -579,7 +579,7 @@ def mvnormal_logprob(op, values, *inputs, **kwargs):
     # factor = {'f': 1E3, 'd': 1E6}
     # t = s.numpy_dtype.char.lower()
     # cond = factor[t] * np.finfo(t).eps
-    # eps = cond * at.max(at.abs_(s))
+    # eps = cond * at.max(at.abs(s))
     # n = s[at.gt(s, eps)]
 
     all_pos_definite = at.all(at.gt(cov_chol_diag, 0))

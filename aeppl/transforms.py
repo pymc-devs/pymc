@@ -93,7 +93,7 @@ class RVTransform(abc.ABC):
         # jac = at.reshape(
         #     gradient(at.sum(self.backward(value, *inputs)), [value]), value.shape
         # )
-        # return at.log(at.abs_(jac))
+        # return at.log(at.abs(jac))
         phi_inv = self.backward(value, *inputs)
         return at.log(
             at.abs(at.nlinalg.det(at.atleast_2d(jacobian(phi_inv, [value])[0])))
