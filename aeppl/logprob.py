@@ -6,7 +6,7 @@ import aesara.tensor.random.basic as arb
 import numpy as np
 from aesara.graph.op import Op
 from aesara.raise_op import CheckAndRaise
-from aesara.tensor.slinalg import Cholesky, solve_lower_triangular
+from aesara.tensor.slinalg import Cholesky, solve_triangular
 from aesara.tensor.var import TensorVariable
 
 from aeppl.dists import DiracDelta, DiscreteMarkovChainFactory
@@ -585,7 +585,7 @@ def mvnormal_logprob(op, values, *inputs, **kwargs):
     all_pos_definite = at.all(at.gt(cov_chol_diag, 0))
     cov_chol = at.switch(all_pos_definite, cov_chol, 1)
 
-    z_T = solve_lower_triangular(cov_chol, r.T).T
+    z_T = solve_triangular(cov_chol, r.T, lower=True).T
     quaddist = at.pow(z_T, 2).sum(axis=-1)
 
     logdet = at.sum(at.log(cov_chol_diag))

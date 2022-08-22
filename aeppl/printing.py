@@ -263,7 +263,7 @@ class VariableWithShapePrinter:
                 output,
                 (
                     TensorVariable,
-                    aesara.scalar.basic.Scalar,
+                    aesara.scalar.basic.ScalarType,
                     aesara.scalar.basic.ScalarVariable,
                 ),
             )
@@ -575,7 +575,7 @@ pprint = PreamblePPrinter()
 pprint.printers.insert(
     0,
     (
-        lambda pstate, r: isinstance(r, (aesara.scalar.basic.Scalar, Variable)),
+        lambda pstate, r: isinstance(r, (aesara.scalar.basic.ScalarType, Variable)),
         VariableWithShapePrinter,
     ),
 )
