@@ -65,6 +65,7 @@ jobs:
             pymc/tests/test_pickling.py
             pymc/tests/test_transforms.py
             pymc/tests/test_parallel_sampling.py
+            pymc/tests/test_printing.py
 
           - |
             pymc/tests/test_distributions_random.py
