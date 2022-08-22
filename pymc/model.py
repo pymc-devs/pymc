@@ -465,8 +465,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 # variables in several ways note, that all variables
                 # will get model's name prefix
 
-                # 3) you can create variables with Var method
-                self.register_rv(pm.Normal.dist(mu=mean, sigma=sigma), 'v1', initval=1)
+                # 3) you can create variables with the register_rv method
+                self.register_rv(Normal.dist(mu=mean, sigma=sigma), 'v1', initval=1)
                 # this will create variable named like '{name::}v1'
                 # and assign attribute 'v1' to instance created
                 # variable can be accessed with self.v1 or self['v1']
