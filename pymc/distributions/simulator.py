@@ -272,7 +272,7 @@ def gaussian(epsilon, obs_data, sim_data):
 
 def laplace(epsilon, obs_data, sim_data):
     """Laplace kernel."""
-    return -at.abs_((obs_data - sim_data) / epsilon)
+    return -at.abs((obs_data - sim_data) / epsilon)
 
 
 class KullbackLeibler:

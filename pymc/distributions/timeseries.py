@@ -23,7 +23,7 @@ from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 from aeppl.logprob import _logprob
 from aesara import scan
 from aesara.compile.builders import OpFromGraph
-from aesara.graph import FunctionGraph, optimize_graph
+from aesara.graph import FunctionGraph, rewrite_graph
 from aesara.graph.basic import Node
 from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
@@ -495,7 +495,7 @@ class AR(SymbolicDistribution):
                 features=[ShapeFeature()],
                 clone=True,
             )
-            (folded_shape,) = optimize_graph(shape_fg, custom_opt=topo_constant_folding).outputs
+            (folded_shape,) = rewrite_graph(shape_fg, custom_opt=topo_constant_folding).outputs
             folded_shape = getattr(folded_shape, "data", None)
             if folded_shape is None:
                 raise ValueError(
