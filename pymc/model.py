@@ -473,31 +473,31 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
                 # 4) this syntax will also work as we are in the
                 # context of instance itself, names are given as usual
-                pm.Normal('v2', mu=mean, sigma=sigma)
+                Normal('v2', mu=mean, sigma=sigma)
 
                 # something more complex is allowed, too
-                half_cauchy =  pm.HalfCauchy('sd', beta=10, initval=1.)
-                pm.Normal('v3', mu=mean, sigma=half_cauchy)
+                half_cauchy =  HalfCauchy('sd', beta=10, initval=1.)
+                Normal('v3', mu=mean, sigma=half_cauchy)
 
                 # Deterministic variables can be used in usual way
-                pm.Deterministic('v3_sq', self.v3 ** 2)
+                Deterministic('v3_sq', self.v3 ** 2)
 
                 # Potentials too
-                pm.Potential('p1', at.constant(1))
+                Potential('p1', at.constant(1))
 
         # After defining a class CustomModel you can use it in several
         # ways
 
         # I:
         #   state the model within a context
-        with pm.Model() as model:
+        with Model() as model:
             CustomModel()
             # arbitrary actions
 
         # II:
         #   use new class as entering point in context
         with CustomModel() as model:
-            pm.Normal('new_normal_var', mu=1, sigma=0)
+            Normal('new_normal_var', mu=1, sigma=0)
 
         # III:
         #   just get model instance with all that was defined in it
@@ -505,7 +505,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         # IV:
         #   use many custom models within one context
-        with pm.Model() as model:
+        with Model() as model:
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
 
