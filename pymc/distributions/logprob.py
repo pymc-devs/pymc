@@ -24,7 +24,7 @@ from aeppl import factorized_joint_logprob
 from aeppl.abstract import assign_custom_measurable_outputs
 from aeppl.logprob import logcdf as logcdf_aeppl
 from aeppl.logprob import logprob as logp_aeppl
-from aeppl.transforms import TransformValuesOpt
+from aeppl.transforms import TransformValuesRewrite
 from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import (
@@ -231,7 +231,7 @@ def joint_logp(
                 if original_value_var is not None and hasattr(original_value_var.tag, "transform"):
                     transform_map[value_var] = original_value_var.tag.transform
 
-    transform_opt = TransformValuesOpt(transform_map)
+    transform_opt = TransformValuesRewrite(transform_map)
     temp_logp_var_dict = factorized_joint_logprob(
         tmp_rvs_to_values,
         extra_rewrites=transform_opt,

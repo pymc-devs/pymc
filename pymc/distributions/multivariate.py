@@ -539,7 +539,7 @@ class Multinomial(Discrete):
         n = at.shape_padright(n)
         mode = at.round(n * p)
         diff = n - at.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = at.abs_(diff) > 0
+        inc_bool_arr = at.abs(diff) > 0
         mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         if not rv_size_is_none(size):
             output_size = at.concatenate([size, [p.shape[-1]]])

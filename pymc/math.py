@@ -30,7 +30,7 @@ from aesara.graph.op import Op
 
 # pylint: disable=unused-import
 from aesara.tensor import (
-    abs_,
+    abs,
     and_,
     ceil,
     clip,
@@ -90,7 +90,7 @@ from pymc.aesaraf import floatX, ix_, largest_common_dtype
 # pylint: enable=unused-import
 
 __all__ = [
-    "abs_",
+    "abs",
     "and_",
     "ceil",
     "clip",

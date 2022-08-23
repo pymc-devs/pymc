@@ -100,7 +100,7 @@ def check_jacobian_det(
     if not elemwise:
         jac = at.log(at.nlinalg.det(jacobian(x, [y])))
     else:
-        jac = at.log(at.abs_(at.diag(jacobian(x, [y]))))
+        jac = at.log(at.abs(at.diag(jacobian(x, [y]))))
 
     # ljd = log jacobian det
     actual_ljd = aesara.function([y], jac)

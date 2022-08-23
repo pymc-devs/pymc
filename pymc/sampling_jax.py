@@ -93,7 +93,7 @@ def get_jaxified_graph(
             if not (hasattr(fgraph, "destroyers") and fgraph.has_destroyers([input]))
         )
     )
-    mode.JAX.optimizer.optimize(fgraph)
+    mode.JAX.optimizer.rewrite(fgraph)
 
     # We now jaxify the optimized fgraph
     return jax_funcify(fgraph)

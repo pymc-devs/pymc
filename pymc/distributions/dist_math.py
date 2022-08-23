@@ -157,7 +157,7 @@ def sigma2rho(sigma):
     """
     `sigma -> rho` Aesara converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
-    return at.log(at.exp(at.abs_(sigma)) - 1.0)
+    return at.log(at.exp(at.abs(sigma)) - 1.0)
 
 
 def rho2sigma(rho):
@@ -213,7 +213,7 @@ def log_normal(x, mean, **kwargs):
     else:
         std = tau ** (-1)
     std += f(eps)
-    return f(c) - at.log(at.abs_(std)) - (x - mean) ** 2 / (2.0 * std**2)
+    return f(c) - at.log(at.abs(std)) - (x - mean) ** 2 / (2.0 * std**2)
 
 
 def MvNormalLogp():
