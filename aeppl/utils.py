@@ -18,7 +18,8 @@ from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import compute_test_value
 from aesara.graph.rewriting.utils import rewrite_graph
 from aesara.link.c.type import CType
-from aesara.tensor.rewriting.basic import ShapeFeature, topo_constant_folding
+from aesara.tensor.rewriting.basic import topo_constant_folding
+from aesara.tensor.rewriting.shape import ShapeFeature
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorVariable

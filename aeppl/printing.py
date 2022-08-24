@@ -26,7 +26,7 @@ from aesara.tensor.math import _dot
 from aesara.tensor.random.basic import NormalRV
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
-from aesara.tensor.rewriting.basic import ShapeFeature
+from aesara.tensor.rewriting.shape import ShapeFeature
 from aesara.tensor.subtensor import AdvancedSubtensor, AdvancedSubtensor1, Subtensor
 from aesara.tensor.type import float_dtypes, int_dtypes, uint_dtypes
 from aesara.tensor.var import TensorConstant, TensorVariable
