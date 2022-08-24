@@ -116,7 +116,7 @@ def test_kron_solve_lower():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then solve
     big = kronecker(*Ls)
-    slow_ans = at.slinalg.solve_lower_triangular(big, x)
+    slow_ans = at.slinalg.solve_triangular(big, x, lower=True)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_solve_lower(Ls, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
