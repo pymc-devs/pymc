@@ -19,14 +19,9 @@ import numpy as np
 
 from aesara.compile import SharedVariable
 from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
+    SolveTriangular,
     cholesky,
     solve,
-)
-from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
-    solve_lower_triangular as solve_lower,
-)
-from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
-    solve_upper_triangular as solve_upper,
 )
 from aesara.tensor.var import TensorConstant
 from scipy.cluster.vq import kmeans
@@ -40,6 +35,9 @@ assert NoDistribution  # keep both pylint and black happy
 from pymc.model import modelcontext
 
 JITTER_DEFAULT = 1e-6
+
+solve_lower = SolveTriangular(lower=True)
+solve_upper = SolveTriangular(lower=False)
 
 
 def replace_with_values(vars_needed, replacements=None, model=None):

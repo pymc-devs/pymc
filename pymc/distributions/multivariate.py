@@ -33,9 +33,7 @@ from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import dirichlet, multinomial, multivariate_normal
 from aesara.tensor.random.op import RandomVariable, default_supp_shape_from_params
 from aesara.tensor.random.utils import broadcast_params, normalize_size_param
-from aesara.tensor.slinalg import Cholesky
-from aesara.tensor.slinalg import solve_lower_triangular as solve_lower
-from aesara.tensor.slinalg import solve_upper_triangular as solve_upper
+from aesara.tensor.slinalg import Cholesky, SolveTriangular
 from aesara.tensor.type import TensorType
 from scipy import linalg, stats
 
@@ -78,6 +76,9 @@ __all__ = [
     "CAR",
     "StickBreakingWeights",
 ]
+
+solve_lower = SolveTriangular(lower=True)
+solve_upper = SolveTriangular(lower=False)
 
 
 class SimplexContinuous(Continuous):
