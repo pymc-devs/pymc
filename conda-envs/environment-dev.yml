@@ -36,6 +36,5 @@ dependencies:
 - sphinx>=1.5
 - sphinxext-rediraffe
 - watermark
-- pip:
-  - polyagamma
-  - sphinx-remove-toctrees
+- polyagamma
+- sphinx-remove-toctrees
