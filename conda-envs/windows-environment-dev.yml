@@ -34,5 +34,4 @@ dependencies:
 - sphinx-notfound-page
 - sphinx>=1.5
 - watermark
-- pip:
-  - sphinx-remove-toctrees
+- sphinx-remove-toctrees
