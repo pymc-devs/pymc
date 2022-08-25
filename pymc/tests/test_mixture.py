@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from contextlib import ExitStack as does_not_raise
 
 import aesara
@@ -655,10 +657,10 @@ class TestMixture(SeededTest):
         assert_allclose(priorlogp + mixmixlogpg.sum(), model.logp(test_point), rtol=rtol)
 
     def test_iterable_single_component_warning(self):
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             Mixture.dist(w=[0.5, 0.5], comp_dists=Normal.dist(size=2))
             Mixture.dist(w=[0.5, 0.5], comp_dists=[Normal.dist(size=2), Normal.dist(size=2)])
-        assert not record
 
         with pytest.warns(UserWarning, match="Single component will be treated as a mixture"):
             Mixture.dist(w=[0.5, 0.5], comp_dists=[Normal.dist(size=2)])
@@ -1303,9 +1305,9 @@ class TestMixtureDefaultTransforms:
     def test_warning(self):
         with Model() as m:
             comp_dists = [HalfNormal.dist(), Exponential.dist(1)]
-            with pytest.warns(None) as rec:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
                 Mixture("mix1", w=[0.5, 0.5], comp_dists=comp_dists)
-            assert not rec
 
             comp_dists = [Uniform.dist(0, 1), Uniform.dist(0, 2)]
             with pytest.warns(MixtureTransformWarning):
@@ -1315,16 +1317,16 @@ class TestMixtureDefaultTransforms:
             with pytest.warns(MixtureTransformWarning):
                 Mixture("mix3", w=[0.5, 0.5], comp_dists=comp_dists)
 
-            with pytest.warns(None) as rec:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
                 Mixture("mix4", w=[0.5, 0.5], comp_dists=comp_dists, transform=None)
-            assert not rec
 
-            with pytest.warns(None) as rec:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
                 Mixture("mix5", w=[0.5, 0.5], comp_dists=comp_dists, observed=1)
-            assert not rec
 
             # Case where the appropriate default transform is None
             comp_dists = [Normal.dist(), Normal.dist()]
-            with pytest.warns(None) as rec:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
                 Mixture("mix6", w=[0.5, 0.5], comp_dists=comp_dists)
-            assert not rec

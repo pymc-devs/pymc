@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 import aesara
 import aesara.tensor as at
 import numpy as np
@@ -154,9 +156,9 @@ def test_log1mexp():
 
 def test_log1mexp_numpy_no_warning():
     """Assert RuntimeWarning is not raised for very small numbers"""
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         log1mexp_numpy(-1e-25, negative_input=True)
-    assert not record
 
 
 def test_log1mexp_numpy_integer_input():
@@ -170,9 +172,9 @@ def test_log1mexp_deprecation_warnings():
     ):
         res_pos = log1mexp_numpy(2)
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         res_neg = log1mexp_numpy(-2, negative_input=True)
-    assert not record
 
     with pytest.warns(
         FutureWarning,
@@ -180,7 +182,8 @@ def test_log1mexp_deprecation_warnings():
     ):
         res_pos_at = log1mexp(2).eval()
 
-    with pytest.warns(None):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         res_neg_at = log1mexp(-2, negative_input=True).eval()
 
     assert np.isclose(res_pos, res_neg)
@@ -262,9 +265,9 @@ def test_invlogit_deprecation_warning():
     ):
         res = invlogit(np.array(-750.0), 1e-5).eval()
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         res_zero_eps = invlogit(np.array(-750.0)).eval()
-    assert not record
 
     assert np.isclose(res, res_zero_eps)
 
@@ -280,11 +283,10 @@ def test_softmax_logsoftmax_no_warnings(aesara_function, pymc_wrapper):
     """Test that wrappers for aesara functions do not issue Warnings"""
 
     vector = at.vector("vector")
-    with pytest.warns(None) as record:
+    with pytest.warns(Warning) as record:
         aesara_function(vector)
-    warnings = {warning.category for warning in record.list}
-    assert warnings == {UserWarning, FutureWarning}
+    assert {w.category for w in record.list} == {UserWarning, FutureWarning}
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         pymc_wrapper(vector)
-    assert not record

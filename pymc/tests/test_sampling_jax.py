@@ -1,3 +1,5 @@
+import warnings
+
 from typing import Any, Callable, Dict, Optional
 from unittest import mock
 
@@ -113,9 +115,9 @@ def test_get_jaxified_graph():
     # be removed once https://github.com/aesara-devs/aesara/issues/637 is sorted.
     x = at.scalar("x")
     y = at.exp(x)
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         fn = get_jaxified_graph(inputs=[x], outputs=[y])
-    assert not record
     assert np.isclose(fn(0), 1)
 
 

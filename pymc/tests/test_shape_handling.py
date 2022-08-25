@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 import aesara
 import numpy as np
 import pytest
@@ -238,7 +240,8 @@ class TestShapeDimsSize:
         with pm.Model(coords=coords) as pmodel:
             mu = aesara.shared(np.random.normal(size=param_shape))
 
-            with pytest.warns(None):
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
                 if parametrization == "implicit":
                     rv = pm.Normal("rv", mu=mu).shape == param_shape
                 else:
