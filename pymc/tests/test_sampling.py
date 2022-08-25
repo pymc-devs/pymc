@@ -1606,7 +1606,7 @@ class TestCompileForwardSampler:
             beta = pm.Normal("beta", 0, 0.1)
             mu = pm.Deterministic("mu", alpha + beta * x)
             sigma = pm.HalfNormal("sigma", 0.1)
-            obs = pm.Normal("obs", mu, sigma, observed=y)
+            obs = pm.Normal("obs", mu, sigma, observed=y, shape=x.shape)
 
         f = compile_forward_sampling_function(
             [obs],
@@ -1624,7 +1624,7 @@ class TestCompileForwardSampler:
             beta = pm.Normal("beta", 0, 0.1)
             mu = pm.Deterministic("mu", alpha + beta * x)
             sigma = pm.HalfNormal("sigma", 0.1)
-            obs = pm.Normal("obs", mu, sigma, observed=y)
+            obs = pm.Normal("obs", mu, sigma, observed=y, shape=x.shape)
 
         f = compile_forward_sampling_function(
             [obs],
@@ -1644,7 +1644,7 @@ class TestCompileForwardSampler:
             beta = pm.Normal("beta", 0, 0.1, size=p.shape)
             mu = pm.Deterministic("mu", beta[category])
             sigma = pm.HalfNormal("sigma", 0.1)
-            pm.Normal("obs", mu, sigma, observed=y)
+            pm.Normal("obs", mu, sigma, observed=y, shape=mu.shape)
 
         f = compile_forward_sampling_function(
             outputs=model.observed_RVs,
@@ -1675,7 +1675,7 @@ class TestCompileForwardSampler:
             mu = pm.Normal("mu", 0, 1)
             nested_mu = pm.Normal("nested_mu", mu, 1, size=10)
             sigma = pm.HalfNormal("sigma", 1)
-            pm.Normal("obs", nested_mu, sigma, observed=y)
+            pm.Normal("obs", nested_mu, sigma, observed=y, shape=nested_mu.shape)
 
         f = compile_forward_sampling_function(
             outputs=model.observed_RVs,
