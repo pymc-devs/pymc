@@ -320,6 +320,21 @@ class TestShapeDimsSize:
             # The change should propagate all the way through
             assert effect.eval().shape == (4,)
 
+    def test_define_dims_on_the_fly_from_observed(self):
+        with pm.Model() as pmodel:
+            data = aesara.shared(np.zeros((4, 5)))
+            x = pm.Normal("x", observed=data, dims=("patient", "trials"))
+            assert pmodel.dim_lengths["patient"].eval() == 4
+            assert pmodel.dim_lengths["trials"].eval() == 5
+
+            # Use dim to create a new RV
+            x_noisy = pm.Normal("x_noisy", 0, dims=("patient", "trials"))
+            assert x_noisy.eval().shape == (4, 5)
+
+            # Change data patient dims
+            data.set_value(np.zeros((10, 6)))
+            assert x_noisy.eval().shape == (10, 6)
+
     def test_can_resize_data_defined_size(self):
         with pm.Model() as pmodel:
             x = pm.MutableData("x", [[1, 2, 3, 4]], dims=("first", "second"))
