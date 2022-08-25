@@ -3145,7 +3145,7 @@ def test_distinct_rvs():
     [
         ("logp", r"pm.logp\(rv, x\)"),
         ("logcdf", r"pm.logcdf\(rv, x\)"),
-        ("random", r"rv.eval\(\)"),
+        ("random", r"pm.draw\(rv\)"),
     ],
 )
 def test_logp_gives_migration_instructions(method, newcode):
