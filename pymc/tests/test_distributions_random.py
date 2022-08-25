@@ -1613,7 +1613,7 @@ class TestOrderedMultinomial(BaseTestDistributionRandom):
 
 class TestWishart(BaseTestDistributionRandom):
     def wishart_rng_fn(self, size, nu, V, rng):
-        return st.wishart.rvs(np.int(nu), V, size=size, random_state=rng)
+        return st.wishart.rvs(int(nu), V, size=size, random_state=rng)
 
     pymc_dist = pm.Wishart
 
