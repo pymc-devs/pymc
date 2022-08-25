@@ -348,7 +348,7 @@ class TestValueGradFunction(unittest.TestCase):
 
         assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
 
-        pnt = m.test_point.copy()
+        pnt = m.initial_point(seed=None).copy()
         del pnt["x2_missing"]
 
         res = [gf(DictToArrayBijection.map(Point(pnt, model=m))) for i in range(5)]
@@ -526,7 +526,7 @@ def test_make_obs_var():
     assert masked_output != fake_distribution
     assert not isinstance(masked_output, RandomVariable)
     # Ensure it has missing values
-    assert {"testing_inputs_missing"} == {v.name for v in fake_model.vars}
+    assert {"testing_inputs_missing"} == {v.name for v in fake_model.value_vars}
     assert {"testing_inputs", "testing_inputs_observed"} == {
         v.name for v in fake_model.observed_RVs
     }
