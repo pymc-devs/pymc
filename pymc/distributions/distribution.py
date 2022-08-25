@@ -292,7 +292,7 @@ class Distribution(metaclass=DistributionMeta):
 
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
-        rv_out.random = _make_nice_attr_error("rv.random()", "rv.eval()")
+        rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
         return rv_out
 
     @classmethod
@@ -351,7 +351,7 @@ class Distribution(metaclass=DistributionMeta):
 
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
-        rv_out.random = _make_nice_attr_error("rv.random()", "rv.eval()")
+        rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
         return rv_out
 
 
@@ -488,6 +488,10 @@ class SymbolicDistribution:
             functools.partial(str_for_symbolic_dist, formatting="latex"), rv_out
         )
 
+        rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
+        rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
+        rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
+
         return rv_out
 
     @classmethod
@@ -546,10 +550,9 @@ class SymbolicDistribution:
         # This is needed for resizing from dims in `__new__`
         rv_out.tag.ndim_supp = ndim_supp
 
-        # TODO: Create new attr error stating that these are not available for DerivedDistribution
-        # rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
-        # rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
-        # rv_out.random = _make_nice_attr_error("rv.random()", "rv.eval()")
+        rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
+        rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
+        rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
         return rv_out
 
 
