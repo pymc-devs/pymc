@@ -204,7 +204,7 @@ class TestSample(SeededTest):
                 tune=5,
                 cores=2,
                 discard_tuned_samples=False,
-                start=[{"x": [10, 10]}, {"x": [-10, -10]}],
+                initvals=[{"x": [10, 10]}, {"x": [-10, -10]}],
                 random_seed=self.random_seed,
             )
         assert idata.warmup_posterior["x"].sel(chain=0, draw=0).values[0] > 0
@@ -226,7 +226,7 @@ class TestSample(SeededTest):
             tune = 50
             chains = 2
             start, step = pm.sampling.init_nuts(chains=chains, random_seed=[1, 2])
-            pm.sample(draws=2, tune=tune, chains=chains, step=step, start=start, cores=1)
+            pm.sample(draws=2, tune=tune, chains=chains, step=step, initvals=start, cores=1)
             assert step.potential._n_samples == tune
             assert step.step_adapt._count == tune + 1
 
@@ -403,12 +403,12 @@ def test_sample_find_MAP_does_not_modify_start():
 
         # make sure sample does not modify the start dict
         start = {"untransformed": 0.2}
-        pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=3)
+        pm.sample(draws=10, step=pm.Metropolis(), tune=5, initvals=start, chains=3)
         assert start == {"untransformed": 0.2}
 
         # make sure sample does not modify the start when passes as list of dict
         start = [{"untransformed": 2}, {"untransformed": 0.2}]
-        pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=2)
+        pm.sample(draws=10, step=pm.Metropolis(), tune=5, initvals=start, chains=2)
         assert start == [{"untransformed": 2}, {"untransformed": 0.2}]
 
 
