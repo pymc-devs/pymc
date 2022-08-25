@@ -27,9 +27,9 @@ from aesara.graph import FunctionGraph, rewrite_graph
 from aesara.graph.basic import Node
 from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
-from aesara.tensor.basic_opt import ShapeFeature, topo_constant_folding
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.utils import normalize_size_param
+from aesara.tensor.rewriting.basic import ShapeFeature, topo_constant_folding
 
 from pymc.aesaraf import change_rv_size, convert_observed_data, floatX, intX
 from pymc.distributions import distribution, multivariate
@@ -495,7 +495,7 @@ class AR(SymbolicDistribution):
                 features=[ShapeFeature()],
                 clone=True,
             )
-            (folded_shape,) = rewrite_graph(shape_fg, custom_opt=topo_constant_folding).outputs
+            (folded_shape,) = rewrite_graph(shape_fg, custom_rewrite=topo_constant_folding).outputs
             folded_shape = getattr(folded_shape, "data", None)
             if folded_shape is None:
                 raise ValueError(
