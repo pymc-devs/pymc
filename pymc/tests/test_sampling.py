@@ -474,7 +474,7 @@ def test_choose_chains(n_points, tune, expected_length, expected_n_traces):
 @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):
     def test_shared_named(self):
-        G_var = shared(value=np.atleast_2d(1.0), broadcastable=(True, False), name="G")
+        G_var = shared(value=np.atleast_2d(1.0), shape=(True, False), name="G")
 
         with pm.Model():
             theta0 = pm.Normal(
@@ -491,7 +491,7 @@ class TestNamedSampling(SeededTest):
             assert np.isclose(res, 0.0)
 
     def test_shared_unnamed(self):
-        G_var = shared(value=np.atleast_2d(1.0), broadcastable=(True, False))
+        G_var = shared(value=np.atleast_2d(1.0), shape=(True, False))
         with pm.Model():
             theta0 = pm.Normal(
                 "theta0",

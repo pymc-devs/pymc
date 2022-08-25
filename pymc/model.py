@@ -362,7 +362,7 @@ class ValueGradFunction:
         self._extra_vars_shared = {}
         for var, value in extra_vars_and_values.items():
             shared = aesara.shared(
-                value, var.name + "_shared__", broadcastable=[s == 1 for s in value.shape]
+                value, var.name + "_shared__", shape=[s == 1 for s in value.shape]
             )
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
