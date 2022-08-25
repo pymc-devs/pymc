@@ -876,7 +876,7 @@ class WishartRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, nu, V, size):
         scipy_size = size if size else 1  # Default size for Scipy's wishart.rvs is 1
-        result = stats.wishart.rvs(np.int(nu), V, size=scipy_size, random_state=rng)
+        result = stats.wishart.rvs(int(nu), V, size=scipy_size, random_state=rng)
         if size == (1,):
             return result[np.newaxis, ...]
         else:

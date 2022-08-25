@@ -2077,7 +2077,7 @@ class TestMatchesScipy:
             Wishart,
             PdMatrix(n),
             {"nu": Domain([0, 3, 4, np.inf], "int64"), "V": PdMatrix(n)},
-            lambda value, nu, V: scipy.stats.wishart.logpdf(value, np.int(nu), V),
+            lambda value, nu, V: scipy.stats.wishart.logpdf(value, int(nu), V),
         )
 
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
