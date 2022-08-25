@@ -516,7 +516,7 @@ class Multinomial(Discrete):
     p : tensor_like of float
         Probability of each one of the different outcomes (0 <= p <= 1). The number of
         categories is given by the length of the last axis. Elements are expected to sum
-        to 1 along the last axis, and they will be automatically rescaled otherwise.
+        to 1 along the last axis.
     """
     rv_op = multinomial
 

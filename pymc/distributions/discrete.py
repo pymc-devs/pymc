@@ -1268,8 +1268,7 @@ class Categorical(Discrete):
     Parameters
     ----------
     p : array of floats
-        p > 0 and the elements of p must sum to 1. They will be automatically
-        rescaled otherwise.
+        p > 0 and the elements of p must sum to 1.
     logit_p : float
         Alternative log odds for the probability of success.
     """
