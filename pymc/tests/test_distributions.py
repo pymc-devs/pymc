@@ -14,6 +14,7 @@
 import functools
 import itertools
 import sys
+import warnings
 
 import aesara
 import aesara.tensor as at
@@ -3288,9 +3289,9 @@ class TestLKJCholeskCov:
         with pm.Model() as m:
             sd_dist = pm.Exponential.dist(1, size=3)
             x = pm.LKJCholeskyCov("x", n=3, eta=1, sd_dist=sd_dist)
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             m.logp()
-        assert not record
 
     @pytest.mark.parametrize(
         "sd_dist",

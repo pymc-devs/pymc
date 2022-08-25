@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 import aesara
 import numpy as np
 import pytest
@@ -271,7 +273,8 @@ class TestRadonModel(BaseModelGraphTest):
     model_func = radon_model
 
     def test_checks_formatting(self):
-        with pytest.warns(None):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             model_to_graphviz(self.model, formatting="plain")
         with pytest.raises(ValueError, match="Unsupported formatting"):
             model_to_graphviz(self.model, formatting="latex")
