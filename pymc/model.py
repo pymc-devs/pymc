@@ -43,6 +43,8 @@ import scipy.sparse as sps
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
+from aesara.scalar import Cast
+from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.rewriting import local_subtensor_rv_lift
 from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
@@ -1367,6 +1369,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 isinstance(data, Variable)
                 and not isinstance(data, (GenTensorVariable, Minibatch))
                 and data.owner is not None
+                # The only Aesara operation we allow on observed data is type casting
+                # Although we could allow for any graph that does not depend on other RVs
+                and not (
+                    isinstance(data.owner.op, Elemwise)
+                    and isinstance(data.owner.op.scalar_op, Cast)
+                )
             ):
                 raise TypeError(
                     "Variables that depend on other nodes cannot be used for observed data."

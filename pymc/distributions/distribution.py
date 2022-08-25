@@ -33,18 +33,18 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
-from pymc.aesaraf import change_rv_size
+from pymc.aesaraf import change_rv_size, convert_observed_data
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
     Size,
+    StrongDims,
     StrongShape,
     convert_dims,
     convert_shape,
     convert_size,
     find_size,
-    resize_from_dims,
-    resize_from_observed,
+    shape_from_dims,
 )
 from pymc.printing import str_for_dist, str_for_symbolic_dist
 from pymc.util import UNSET
@@ -152,29 +152,28 @@ def _make_nice_attr_error(oldcode: str, newcode: str):
 def _make_rv_and_resize_shape(
     *,
     cls,
-    dims: Optional[Dims],
+    dims: Optional[StrongDims],
     model,
     observed,
     args,
     **kwargs,
-) -> Tuple[Variable, Optional[Dims], Optional[Union[np.ndarray, Variable]], StrongShape]:
-    """Creates the RV and processes dims or observed to determine a resize shape."""
-    # Create the RV without dims information, because that's not something tracked at the Aesara level.
-    # If necessary we'll later replicate to a different size implied by already known dims.
-    rv_out = cls.dist(*args, **kwargs)
-    ndim_actual = rv_out.ndim
+) -> Tuple[Variable, StrongShape]:
+    """Creates the RV, possibly using dims or observed to determine a resize shape (if needed)."""
     resize_shape = None
+    size_or_shape = kwargs.get("size") or kwargs.get("shape")
 
-    # # `dims` are only available with this API, because `.dist()` can be used
-    # # without a modelcontext and dims are not tracked at the Aesara level.
-    dims = convert_dims(dims)
-    dims_can_resize = kwargs.get("shape", None) is None and kwargs.get("size", None) is None
-    if dims is not None:
-        if dims_can_resize:
-            resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
-    elif observed is not None:
-        resize_shape, observed = resize_from_observed(observed, ndim_actual)
-    return rv_out, dims, observed, resize_shape
+    # Create the RV without dims or observed information
+    rv_out = cls.dist(*args, **kwargs)
+
+    # Preference is given to size or shape, if not provided we use dims and observed
+    # to resize the variable
+    if not size_or_shape:
+        if dims is not None:
+            resize_shape = shape_from_dims(dims, tuple(rv_out.shape), model)
+        elif observed is not None:
+            resize_shape = tuple(observed.shape)
+
+    return rv_out, resize_shape
 
 
 class Distribution(metaclass=DistributionMeta):
@@ -254,15 +253,20 @@ class Distribution(metaclass=DistributionMeta):
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
-        # Create the RV and process dims and observed to determine
-        # a shape by which the created RV may need to be resized.
-        rv_out, dims, observed, resize_shape = _make_rv_and_resize_shape(
+        dims = convert_dims(dims)
+        if observed is not None:
+            observed = convert_observed_data(observed)
+
+        # Create the RV, possibly taking into consideration dims and observed to
+        # determine its shape
+        rv_out, resize_shape = _make_rv_and_resize_shape(
             cls=cls, dims=dims, model=model, observed=observed, args=args, **kwargs
         )
 
+        # A shape was specified only through `dims`, or implied by `observed`.
         if resize_shape:
-            # A batch size was specified through `dims`, or implied by `observed`.
-            rv_out = change_rv_size(rv=rv_out, new_size=resize_shape, expand=True)
+            resize_size = find_size(shape=resize_shape, size=None, ndim_supp=cls.rv_op.ndim_supp)
+            rv_out = change_rv_size(rv=rv_out, new_size=resize_size, expand=False)
 
         rv_out = model.register_rv(
             rv_out,
@@ -336,11 +340,7 @@ class Distribution(metaclass=DistributionMeta):
         shape = convert_shape(shape)
         size = convert_size(size)
 
-        create_size, ndim_expected, ndim_batch, ndim_supp = find_size(
-            shape=shape, size=size, ndim_supp=cls.rv_op.ndim_supp
-        )
-        # Create the RV with a `size` right away.
-        # This is not necessarily the final result.
+        create_size = find_size(shape=shape, size=size, ndim_supp=cls.rv_op.ndim_supp)
         rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
 
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
@@ -448,19 +448,20 @@ class SymbolicDistribution:
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
-        # Create the RV and process dims and observed to determine
-        # a shape by which the created RV may need to be resized.
-        rv_out, dims, observed, resize_shape = _make_rv_and_resize_shape(
+        dims = convert_dims(dims)
+        if observed is not None:
+            observed = convert_observed_data(observed)
+
+        # Create the RV, possibly taking into consideration dims and observed to
+        # determine its shape
+        rv_out, resize_shape = _make_rv_and_resize_shape(
             cls=cls, dims=dims, model=model, observed=observed, args=args, **kwargs
         )
 
+        # A shape was specified only through `dims`, or implied by `observed`.
         if resize_shape:
-            # A batch size was specified through `dims`, or implied by `observed`.
-            rv_out = cls.change_size(
-                rv=rv_out,
-                new_size=resize_shape,
-                expand=True,
-            )
+            resize_size = find_size(shape=resize_shape, size=None, ndim_supp=rv_out.tag.ndim_supp)
+            rv_out = cls.change_size(rv=rv_out, new_size=resize_size, expand=False)
 
         rv_out = model.register_rv(
             rv_out,
@@ -529,18 +530,17 @@ class SymbolicDistribution:
         shape = convert_shape(shape)
         size = convert_size(size)
 
-        create_size, ndim_expected, ndim_batch, ndim_supp = find_size(
-            shape=shape, size=size, ndim_supp=cls.ndim_supp(*dist_params)
-        )
-        # Create the RV with a `size` right away.
-        # This is not necessarily the final result.
-        graph = cls.rv_op(*dist_params, size=create_size, **kwargs)
+        ndim_supp = cls.ndim_supp(*dist_params)
+        create_size = find_size(shape=shape, size=size, ndim_supp=ndim_supp)
+        rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
+        # This is needed for resizing from dims in `__new__`
+        rv_out.tag.ndim_supp = ndim_supp
 
         # TODO: Create new attr error stating that these are not available for DerivedDistribution
         # rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
         # rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
         # rv_out.random = _make_nice_attr_error("rv.random()", "rv.eval()")
-        return graph
+        return rv_out
 
 
 @singledispatch

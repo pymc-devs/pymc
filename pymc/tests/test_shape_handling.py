@@ -204,7 +204,7 @@ class TestSamplesBroadcasting:
 
 
 class TestShapeDimsSize:
-    @pytest.mark.parametrize("param_shape", [(), (3,)])
+    @pytest.mark.parametrize("param_shape", [(), (2,)])
     @pytest.mark.parametrize("batch_shape", [(), (3,)])
     @pytest.mark.parametrize(
         "parametrization",
@@ -256,6 +256,16 @@ class TestShapeDimsSize:
                     else:
                         raise NotImplementedError("Invalid test case parametrization.")
 
+    def test_broadcast_by_dims(self):
+        with pm.Model(coords={"broadcast_dim": range(3)}) as m:
+            x = pm.Normal("x", mu=np.zeros((1,)), dims=("broadcast_dim",))
+            assert x.eval().shape == (3,)
+
+    def test_broadcast_by_observed(self):
+        with pm.Model() as m:
+            x = pm.Normal("x", mu=np.zeros((1,)), observed=np.zeros((3,)))
+            assert x.eval().shape == (3,)
+
     def test_simultaneous_shape_and_dims(self):
         with pm.Model() as pmodel:
             x = pm.ConstantData("x", [1, 2, 3], dims="ddata")
@@ -281,6 +291,16 @@ class TestShapeDimsSize:
             assert "dsize" in pmodel.dim_lengths
             assert y.eval().shape == (2, 3, 4)
 
+    def test_simultaneous_dims_and_observed(self):
+        with pm.Model() as pmodel:
+            x = pm.ConstantData("x", [1, 2, 3], dims="ddata")
+            assert "ddata" in pmodel.dim_lengths
+
+            # Note: No checks are performed that observed and dims actually match.
+            y = pm.Normal("y", observed=[0, 0, 0], dims="ddata")
+            assert pmodel.RV_dims["y"] == ("ddata",)
+            assert y.eval().shape == (3,)
+
     def test_define_dims_on_the_fly(self):
         with pm.Model() as pmodel:
             agedata = aesara.shared(np.array([10, 20, 30]))
@@ -304,7 +324,7 @@ class TestShapeDimsSize:
         with pm.Model() as pmodel:
             x = pm.MutableData("x", [[1, 2, 3, 4]], dims=("first", "second"))
             y = pm.Normal("y", mu=0, dims=("first", "second"))
-            z = pm.Normal("z", mu=y, observed=np.ones((1, 4)))
+            z = pm.Normal("z", mu=y, observed=np.ones((1, 4)), size=y.shape)
             assert x.eval().shape == (1, 4)
             assert y.eval().shape == (1, 4)
             assert z.eval().shape == (1, 4)

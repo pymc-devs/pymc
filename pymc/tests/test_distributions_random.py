@@ -1905,7 +1905,6 @@ class TestDensityDist:
                 mu,
                 random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
                 observed=np.random.randn(100, *size),
-                size=size,
             )
 
         assert obs.eval().shape == (100,) + size
@@ -1937,7 +1936,6 @@ class TestDensityDist:
                     mean=mu, cov=np.eye(len(mu)), size=size
                 ),
                 observed=np.random.randn(100, *size, supp_shape),
-                size=size,
                 ndims_params=[1],
                 ndim_supp=1,
             )
