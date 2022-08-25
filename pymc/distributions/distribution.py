@@ -19,7 +19,7 @@ import warnings
 
 from abc import ABCMeta
 from functools import singledispatch
-from typing import Callable, Optional, Sequence, Tuple, Union, cast
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import aesara
 import numpy as np
@@ -39,7 +39,6 @@ from pymc.distributions.shape_utils import (
     Shape,
     Size,
     StrongShape,
-    WeakDims,
     convert_dims,
     convert_shape,
     convert_size,
@@ -158,7 +157,7 @@ def _make_rv_and_resize_shape(
     observed,
     args,
     **kwargs,
-) -> Tuple[Variable, Optional[WeakDims], Optional[Union[np.ndarray, Variable]], StrongShape]:
+) -> Tuple[Variable, Optional[Dims], Optional[Union[np.ndarray, Variable]], StrongShape]:
     """Creates the RV and processes dims or observed to determine a resize shape."""
     # Create the RV without dims information, because that's not something tracked at the Aesara level.
     # If necessary we'll later replicate to a different size implied by already known dims.
@@ -173,9 +172,6 @@ def _make_rv_and_resize_shape(
     if dims is not None:
         if dims_can_resize:
             resize_shape, dims = resize_from_dims(dims, ndim_actual, model)
-        elif Ellipsis in dims:
-            # Replace ... with None entries to match the actual dimensionality.
-            dims = (*dims[:-1], *[None] * ndim_actual)[:ndim_actual]
     elif observed is not None:
         resize_shape, observed = resize_from_observed(observed, ndim_actual)
     return rv_out, dims, observed, resize_shape
@@ -305,9 +301,6 @@ class Distribution(metaclass=DistributionMeta):
             The inputs to the `RandomVariable` `Op`.
         shape : int, tuple, Variable, optional
             A tuple of sizes for each dimension of the new RV.
-
-            An Ellipsis (...) may be inserted in the last position to short-hand refer to
-            all the dimensions that the RV would get if no shape/size/dims were passed at all.
         **kwargs
             Keyword arguments that will be forwarded to the Aesara RV Op.
             Most prominently: ``size`` or ``dtype``.
@@ -349,11 +342,6 @@ class Distribution(metaclass=DistributionMeta):
         # Create the RV with a `size` right away.
         # This is not necessarily the final result.
         rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
-
-        # Replicate dimensions may be prepended via a shape with Ellipsis as the last element:
-        if shape is not None and Ellipsis in shape:
-            replicate_shape = cast(StrongShape, shape[:-1])
-            rv_out = change_rv_size(rv=rv_out, new_size=replicate_shape, expand=True)
 
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
@@ -508,8 +496,6 @@ class SymbolicDistribution:
             The inputs to the `RandomVariable` `Op`.
         shape : int, tuple, Variable, optional
             A tuple of sizes for each dimension of the new RV.
-            An Ellipsis (...) may be inserted in the last position to short-hand refer to
-            all the dimensions that the RV would get if no shape/size/dims were passed at all.
         size : int, tuple, Variable, optional
             For creating the RV like in Aesara/NumPy.
 
@@ -549,11 +535,6 @@ class SymbolicDistribution:
         # Create the RV with a `size` right away.
         # This is not necessarily the final result.
         graph = cls.rv_op(*dist_params, size=create_size, **kwargs)
-
-        # Replicate dimensions may be prepended via a shape with Ellipsis as the last element:
-        if shape is not None and Ellipsis in shape:
-            replicate_shape = cast(StrongShape, shape[:-1])
-            graph = cls.change_size(rv=graph, new_size=replicate_shape, expand=True)
 
         # TODO: Create new attr error stating that these are not available for DerivedDistribution
         # rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
