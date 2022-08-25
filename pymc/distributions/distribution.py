@@ -149,7 +149,7 @@ def _make_nice_attr_error(oldcode: str, newcode: str):
     return fn
 
 
-def _make_rv_and_resize_shape(
+def _make_rv_and_resize_shape_from_dims(
     *,
     cls,
     dims: Optional[StrongDims],
@@ -159,21 +159,23 @@ def _make_rv_and_resize_shape(
     **kwargs,
 ) -> Tuple[Variable, StrongShape]:
     """Creates the RV, possibly using dims or observed to determine a resize shape (if needed)."""
-    resize_shape = None
+    resize_shape_from_dims = None
     size_or_shape = kwargs.get("size") or kwargs.get("shape")
 
-    # Create the RV without dims or observed information
+    # Preference is given to size or shape. If not specified, we rely on dims and
+    # finally, observed, to determine the shape of the variable. Because dims can be
+    # specified on the fly, we need a two-step process where we first create the RV
+    # without dims information and then resize it.
+    if not size_or_shape and observed is not None:
+        kwargs["shape"] = tuple(observed.shape)
+
+    # Create the RV without dims information
     rv_out = cls.dist(*args, **kwargs)
 
-    # Preference is given to size or shape, if not provided we use dims and observed
-    # to resize the variable
-    if not size_or_shape:
-        if dims is not None:
-            resize_shape = shape_from_dims(dims, tuple(rv_out.shape), model)
-        elif observed is not None:
-            resize_shape = tuple(observed.shape)
+    if not size_or_shape and dims is not None:
+        resize_shape_from_dims = shape_from_dims(dims, tuple(rv_out.shape), model)
 
-    return rv_out, resize_shape
+    return rv_out, resize_shape_from_dims
 
 
 class Distribution(metaclass=DistributionMeta):
@@ -257,16 +259,17 @@ class Distribution(metaclass=DistributionMeta):
         if observed is not None:
             observed = convert_observed_data(observed)
 
-        # Create the RV, possibly taking into consideration dims and observed to
-        # determine its shape
-        rv_out, resize_shape = _make_rv_and_resize_shape(
+        # Create the RV, without taking `dims` into consideration
+        rv_out, resize_shape_from_dims = _make_rv_and_resize_shape_from_dims(
             cls=cls, dims=dims, model=model, observed=observed, args=args, **kwargs
         )
 
-        # A shape was specified only through `dims`, or implied by `observed`.
-        if resize_shape:
-            resize_size = find_size(shape=resize_shape, size=None, ndim_supp=cls.rv_op.ndim_supp)
-            rv_out = change_rv_size(rv=rv_out, new_size=resize_size, expand=False)
+        # Resize variable based on `dims` information
+        if resize_shape_from_dims:
+            resize_size_from_dims = find_size(
+                shape=resize_shape_from_dims, size=None, ndim_supp=cls.rv_op.ndim_supp
+            )
+            rv_out = change_rv_size(rv=rv_out, new_size=resize_size_from_dims, expand=False)
 
         rv_out = model.register_rv(
             rv_out,
@@ -452,16 +455,17 @@ class SymbolicDistribution:
         if observed is not None:
             observed = convert_observed_data(observed)
 
-        # Create the RV, possibly taking into consideration dims and observed to
-        # determine its shape
-        rv_out, resize_shape = _make_rv_and_resize_shape(
+        # Create the RV, without taking `dims` into consideration
+        rv_out, resize_shape_from_dims = _make_rv_and_resize_shape_from_dims(
             cls=cls, dims=dims, model=model, observed=observed, args=args, **kwargs
         )
 
-        # A shape was specified only through `dims`, or implied by `observed`.
-        if resize_shape:
-            resize_size = find_size(shape=resize_shape, size=None, ndim_supp=rv_out.tag.ndim_supp)
-            rv_out = cls.change_size(rv=rv_out, new_size=resize_size, expand=False)
+        # Resize variable based on `dims` information
+        if resize_shape_from_dims:
+            resize_size_from_dims = find_size(
+                shape=resize_shape_from_dims, size=None, ndim_supp=rv_out.tag.ndim_supp
+            )
+            rv_out = cls.change_size(rv=rv_out, new_size=resize_size_from_dims, expand=False)
 
         rv_out = model.register_rv(
             rv_out,
