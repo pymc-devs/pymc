@@ -476,7 +476,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 Normal('v2', mu=mean, sigma=sigma)
 
                 # something more complex is allowed, too
-                half_cauchy =  HalfCauchy('sd', beta=10, initval=1.)
+                half_cauchy = HalfCauchy('sigma', beta=10, initval=1.)
                 Normal('v3', mu=mean, sigma=half_cauchy)
 
                 # Deterministic variables can be used in usual way
