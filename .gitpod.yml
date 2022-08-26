@@ -9,7 +9,7 @@ tasks:
       conda activate pymc-dev
       pip install -e .
     command: |
-      conda init bash && echo "conda activate pymc-test-py39" >> ~/.bashrc && source ~/.bashrc && conda activate pymc-dev
+      conda init bash && echo "conda activate pymc-dev" >> ~/.bashrc && source ~/.bashrc && conda activate pymc-dev
 
 vscode:
   extensions:
