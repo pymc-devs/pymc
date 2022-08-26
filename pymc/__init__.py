@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 # pylint: disable=wildcard-import
-__version__ = "4.1.6"
+__version__ = "4.1.7"
 
 import logging
 
