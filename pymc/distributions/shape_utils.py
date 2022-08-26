@@ -17,12 +17,17 @@
 A collection of common shape operations needed for broadcasting
 samples from probability distributions for stochastic nodes in PyMC.
 """
-
+from functools import singledispatch
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from aesara import config
+from aesara import tensor as at
 from aesara.graph.basic import Variable
+from aesara.graph.op import Op, compute_test_value
+from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.shape import SpecifyShape
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
@@ -34,7 +39,11 @@ __all__ = [
     "broadcast_distribution_samples",
     "broadcast_dist_samples_to",
     "rv_size_is_none",
+    "change_dist_size",
 ]
+
+from pymc.aesaraf import PotentialShapeType
+from pymc.exceptions import ShapeError
 
 
 def to_tuple(shape):
@@ -541,3 +550,112 @@ def find_size(
 def rv_size_is_none(size: Variable) -> bool:
     """Check wether an rv size is None (ie., at.Constant([]))"""
     return size.type.shape == (0,)  # type: ignore [attr-defined]
+
+
+@singledispatch
+def _change_dist_size(op: Op, dist: TensorVariable, new_size, expand):
+    raise NotImplementedError(
+        f"Variable {dist} of type {op} has no _change_dist_size implementation."
+    )
+
+
+def change_dist_size(
+    dist: TensorVariable,
+    new_size: PotentialShapeType,
+    expand: bool = False,
+) -> TensorVariable:
+    """Change or expand the size of a Distribution.
+
+    Parameters
+    ----------
+    dist:
+        The old distribution to be resized.
+    new_size:
+        The new size of the distribution.
+    expand: bool, optional
+        If True, `new_size` is prepended to the existing distribution `size`, so that
+        the final size is equal to (*new_size, *dist.size). Defaults to false.
+
+    Returns
+    -------
+    A new distribution variable that is equivalent to the original distribution with
+    the new size. The new distribution may reuse the same RandomState/Generator inputs
+    as the original distribution.
+
+    Examples
+    --------
+    .. code-block:: python
+        x = Normal.dist(shape=(2, 3))
+        new_x = change_dist_size(x, new_size=(5, 3), expand=False)
+        assert new_x.eval().shape == (5, 3)
+
+        new_x = change_dist_size(x, new_size=(5, 3), expand=True)
+        assert new_x.eval().shape == (5, 3, 2, 3)
+
+    """
+    # Check the dimensionality of the `new_size` kwarg
+    new_size_ndim = np.ndim(new_size)  # type: ignore
+    if new_size_ndim > 1:
+        raise ShapeError("The `new_size` must be ≤1-dimensional.", actual=new_size_ndim)
+    elif new_size_ndim == 0:
+        new_size = (new_size,)  # type: ignore
+    else:
+        new_size = tuple(new_size)  # type: ignore
+
+    new_dist = _change_dist_size(dist.owner.op, dist, new_size=new_size, expand=expand)
+
+    new_dist.name = dist.name
+    for k, v in dist.tag.__dict__.items():
+        new_dist.tag.__dict__.setdefault(k, v)
+
+    if config.compute_test_value != "off":
+        compute_test_value(new_dist)
+
+    return new_dist
+
+
+@_change_dist_size.register(RandomVariable)
+def change_rv_size(op, rv, new_size, expand) -> TensorVariable:
+    # Extract the RV node that is to be resized
+    rv_node = rv.owner
+    rng, size, dtype, *dist_params = rv_node.inputs
+
+    if expand:
+        shape = tuple(rv_node.op._infer_shape(size, dist_params))
+        size = shape[: len(shape) - rv_node.op.ndim_supp]
+        new_size = tuple(new_size) + tuple(size)
+
+    # Make sure the new size is a tensor. This dtype-aware conversion helps
+    # to not unnecessarily pick up a `Cast` in some cases (see #4652).
+    new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
+
+    new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
+    new_rv = new_rv_node.outputs[-1]
+
+    # Update "traditional" rng default_update, if that was set for old RV
+    default_update = getattr(rng, "default_update", None)
+    if default_update is not None and default_update is rv_node.outputs[0]:
+        rng.default_update = new_rv_node.outputs[0]
+
+    return new_rv
+
+
+@_change_dist_size.register(SpecifyShape)
+def change_specify_shape_size(op, ss, new_size, expand) -> TensorVariable:
+    inner_var, *shapes = ss.owner.inputs
+    new_var = _change_dist_size(inner_var.owner.op, inner_var, new_size=new_size, expand=expand)
+
+    new_shapes = [None] * new_var.ndim
+    # Old specify_shape is still valid
+    if expand:
+        if len(shapes) > 0:
+            new_shapes[-len(shapes) :] = shapes
+    # Old specify_shape is still valid for support dimensions. We do not reintroduce
+    # checks for resized dimensions, although we could...
+    else:
+        ndim_supp = new_var.owner.op.ndim_supp
+        if ndim_supp > 0:
+            new_shapes[-ndim_supp:] = shapes[-ndim_supp:]
+
+    # specify_shape has a wrong signature https://github.com/aesara-devs/aesara/issues/1164
+    return at.specify_shape(new_var, new_shapes)  # type: ignore

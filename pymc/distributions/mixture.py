@@ -23,7 +23,6 @@ from aesara.graph.basic import Node, equal_computations
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
-from pymc.aesaraf import change_rv_size
 from pymc.distributions import transforms
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
@@ -34,7 +33,7 @@ from pymc.distributions.distribution import (
     moment,
 )
 from pymc.distributions.logprob import ignore_logprob, logcdf, logp
-from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.distributions.transforms import _default_transform
 from pymc.util import check_dist_not_registered
 from pymc.vartypes import continuous_types, discrete_types
@@ -310,26 +309,25 @@ class Mixture(SymbolicDistribution):
             mix_size = components[0].shape[mix_axis]
             size = tuple(size) + (mix_size,)
 
-        return [change_rv_size(component, size) for component in components]
+        return [change_dist_size(component, size) for component in components]
 
-    @classmethod
-    def change_size(cls, rv, new_size, expand=False):
-        weights, *components = rv.owner.inputs[1:]
 
-        if expand:
-            component = components[0]
-            # Old size is equal to `shape[:-ndim_supp]`, with care needed for `ndim_supp == 0`
-            size_dims = component.ndim - component.owner.op.ndim_supp
-            if len(components) == 1:
-                # If we have a single component, new size should ignore the mixture axis
-                # dimension, as that is not touched by `_resize_components`
-                size_dims -= 1
-            old_size = components[0].shape[:size_dims]
-            new_size = to_tuple(new_size) + tuple(old_size)
+@_change_dist_size.register(MarginalMixtureRV)
+def change_marginal_mixture_size(op, dist, new_size, expand=False):
+    weights, *components = dist.owner.inputs[1:]
 
-        components = cls._resize_components(new_size, *components)
+    if expand:
+        component = components[0]
+        # Old size is equal to `shape[:-ndim_supp]`, with care needed for `ndim_supp == 0`
+        size_dims = component.ndim - component.owner.op.ndim_supp
+        if len(components) == 1:
+            # If we have a single component, new size should ignore the mixture axis
+            # dimension, as that is not touched by `_resize_components`
+            size_dims -= 1
+        old_size = components[0].shape[:size_dims]
+        new_size = tuple(new_size) + tuple(old_size)
 
-        return cls.rv_op(weights, *components, size=None)
+    return Mixture.rv_op(weights, *components, size=new_size)
 
 
 @_logprob.register(MarginalMixtureRV)

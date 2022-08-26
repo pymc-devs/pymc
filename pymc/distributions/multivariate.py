@@ -39,7 +39,7 @@ from scipy import linalg, stats
 
 import pymc as pm
 
-from pymc.aesaraf import change_rv_size, floatX, intX
+from pymc.aesaraf import floatX, intX
 from pymc.distributions import transforms
 from pymc.distributions.continuous import BoundedContinuous, ChiSquared, Normal
 from pymc.distributions.dist_math import (
@@ -53,6 +53,7 @@ from pymc.distributions.distribution import Continuous, Discrete, moment
 from pymc.distributions.logprob import ignore_logprob
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_to,
+    change_dist_size,
     rv_size_is_none,
     to_tuple,
 )
@@ -1122,10 +1123,10 @@ class _LKJCholeskyCovRV(RandomVariable):
         # implied batched dimensions for the time being.
         size = normalize_size_param(size)
         if D.owner.op.ndim_supp == 0:
-            D = change_rv_size(D, at.concatenate((size, (n,))))
+            D = change_dist_size(D, at.concatenate((size, (n,))))
         else:
             # The support shape must be `n` but we have no way of controlling it
-            D = change_rv_size(D, size)
+            D = change_dist_size(D, size)
 
         return super().make_node(rng, size, dtype, n, eta, D)
 

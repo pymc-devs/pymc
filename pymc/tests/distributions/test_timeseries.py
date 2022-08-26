@@ -28,6 +28,7 @@ from pymc.distributions.continuous import Flat, HalfNormal, Normal
 from pymc.distributions.discrete import DiracDelta
 from pymc.distributions.logprob import logp
 from pymc.distributions.multivariate import Dirichlet
+from pymc.distributions.shape_utils import change_dist_size
 from pymc.distributions.timeseries import (
     AR,
     GARCH11,
@@ -502,6 +503,15 @@ class TestAR:
     def test_init_deprecated_arg(self):
         with pytest.warns(FutureWarning, match="init parameter is now called init_dist"):
             pm.AR.dist(rho=[1, 2, 3], init=Normal.dist(), shape=(10,))
+
+    def test_change_dist_size(self):
+        base_dist = pm.AR.dist(rho=[0.5, 0.5], init_dist=pm.Normal.dist(size=(2,)), shape=(3, 10))
+
+        new_dist = change_dist_size(base_dist, (4,))
+        assert new_dist.eval().shape == (4, 10)
+
+        new_dist = change_dist_size(base_dist, (4,), expand=True)
+        assert new_dist.eval().shape == (4, 3, 10)
 
 
 @pytest.mark.xfail(reason="Timeseries not refactored", raises=NotImplementedError)

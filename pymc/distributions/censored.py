@@ -17,12 +17,12 @@ import numpy as np
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
-from pymc.aesaraf import change_rv_size
 from pymc.distributions.distribution import (
     SymbolicDistribution,
     SymbolicRandomVariable,
     _moment,
 )
+from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.util import check_dist_not_registered
 
 
@@ -106,7 +106,7 @@ class Censored(SymbolicDistribution):
 
         # When size is not specified, dist may have to be broadcasted according to lower/upper
         dist_shape = size if size is not None else at.broadcast_shape(dist, lower, upper)
-        dist = change_rv_size(dist, dist_shape)
+        dist = change_dist_size(dist, dist_shape)
 
         # Censoring is achieved by clipping the base distribution between lower and upper
         dist_, lower_, upper_ = dist.type(), lower.type(), upper.type()
@@ -118,11 +118,13 @@ class Censored(SymbolicDistribution):
             ndim_supp=0,
         )(dist, lower, upper)
 
-    @classmethod
-    def change_size(cls, rv, new_size, expand=False):
-        dist, lower, upper = rv.owner.inputs
-        new_dist = change_rv_size(dist, new_size, expand=expand)
-        return cls.rv_op(new_dist, lower, upper)
+
+@_change_dist_size.register(CensoredRV)
+def change_censored_size(cls, dist, new_size, expand=False):
+    uncensored_dist, lower, upper = dist.owner.inputs
+    if expand:
+        new_size = tuple(new_size) + tuple(uncensored_dist.shape)
+    return Censored.rv_op(uncensored_dist, lower, upper, size=new_size)
 
 
 @_moment.register(CensoredRV)

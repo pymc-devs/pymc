@@ -17,6 +17,8 @@ import pytest
 
 import pymc as pm
 
+from pymc.distributions.shape_utils import change_dist_size
+
 
 class TestCensored:
     @pytest.mark.parametrize("censored", (False, True))
@@ -88,13 +90,13 @@ class TestCensored:
             ):
                 x = pm.Censored("x", registered_dist, lower=None, upper=None)
 
-    def test_change_size(self):
+    def test_change_dist_size(self):
         base_dist = pm.Censored.dist(pm.Normal.dist(), -1, 1, size=(3, 2))
 
-        new_dist = pm.Censored.change_size(base_dist, (4,))
+        new_dist = change_dist_size(base_dist, (4,))
         assert new_dist.eval().shape == (4,)
 
-        new_dist = pm.Censored.change_size(base_dist, (4,), expand=True)
+        new_dist = change_dist_size(base_dist, (4,), expand=True)
         assert new_dist.eval().shape == (4, 3, 2)
 
     def test_dist_broadcasted_by_lower_upper(self):
