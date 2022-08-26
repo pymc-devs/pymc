@@ -1180,7 +1180,7 @@ class _LKJCholeskyCov(Distribution):
         if not (
             isinstance(sd_dist, Variable)
             and sd_dist.owner is not None
-            and isinstance(sd_dist.owner.op, RandomVariable)
+            and isinstance(sd_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
             and sd_dist.owner.op.ndim_supp < 2
         ):
             raise TypeError("sd_dist must be a scalar or vector distribution variable")

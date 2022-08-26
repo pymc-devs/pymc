@@ -151,6 +151,9 @@ def str_for_potential_or_deterministic(
 
 
 def _str_for_input_var(var: Variable, formatting: str) -> str:
+    # Avoid circular import
+    from pymc.distributions.distribution import SymbolicRandomVariable
+
     def _is_potential_or_determinstic(var: Variable) -> bool:
         try:
             return var.str_repr.__func__.func is str_for_potential_or_deterministic
@@ -160,7 +163,9 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
 
     if isinstance(var, TensorConstant):
         return _str_for_constant(var, formatting)
-    elif isinstance(var.owner.op, RandomVariable) or _is_potential_or_determinstic(var):
+    elif isinstance(
+        var.owner.op, (RandomVariable, SymbolicRandomVariable)
+    ) or _is_potential_or_determinstic(var):
         # show the names for RandomVariables, Deterministics, and Potentials, rather
         # than the full expression
         return _str_for_input_rv(var, formatting)
@@ -194,15 +199,18 @@ def _str_for_constant(var: TensorConstant, formatting: str) -> str:
 
 
 def _str_for_expression(var: Variable, formatting: str) -> str:
+    # Avoid circular import
+    from pymc.distributions.distribution import SymbolicRandomVariable
+
     # construct a string like f(a1, ..., aN) listing all random variables a as arguments
     def _expand(x):
-        if x.owner and (not isinstance(x.owner.op, RandomVariable)):
+        if x.owner and (not isinstance(x.owner.op, (RandomVariable, SymbolicRandomVariable))):
             return reversed(x.owner.inputs)
 
     parents = [
         x
         for x in walk(nodes=var.owner.inputs, expand=_expand)
-        if x.owner and isinstance(x.owner.op, RandomVariable)
+        if x.owner and isinstance(x.owner.op, (RandomVariable, SymbolicRandomVariable))
     ]
     names = [x.name for x in parents]
 

@@ -86,7 +86,9 @@ class Censored(Distribution):
 
     @classmethod
     def dist(cls, dist, lower, upper, **kwargs):
-        if not isinstance(dist, TensorVariable) or not isinstance(dist.owner.op, RandomVariable):
+        if not isinstance(dist, TensorVariable) or not isinstance(
+            dist.owner.op, (RandomVariable, SymbolicRandomVariable)
+        ):
             raise ValueError(
                 f"Censoring dist must be a distribution created via the `.dist()` API, got {type(dist)}"
             )
