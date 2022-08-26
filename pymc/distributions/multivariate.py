@@ -15,7 +15,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from asyncio import Future
 import warnings
 
 from functools import reduce
