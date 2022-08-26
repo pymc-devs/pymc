@@ -371,7 +371,7 @@ class MvStudentT(Continuous):
         if kwargs.get('cov') is not None:
             warnings.warn(
                 "Use the scale argument to specify the scale matrix."
-                "cov will be removed in future versions."
+                "cov will be removed in future versions.",
                 DeprecationWarning,
             )
             scale = kwargs.get('cov')

@@ -270,7 +270,7 @@ class TP(Latent):
         if cov_func is not None:
             warnings.warn(
                 "Use the scale_func argument to specify the scale function."
-                "cov_func will be removed in future versions."
+                "cov_func will be removed in future versions.",
                 DeprecationWarning,
             )
             scale_func = cov_func
