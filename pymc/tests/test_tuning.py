@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 import numpy as np
 import pytest
@@ -24,7 +25,9 @@ from pymc.tuning import find_MAP, scaling
 
 def test_adjust_precision():
     a = np.array([-10, -0.01, 0, 10, 1e300, -inf, inf])
-    a1 = scaling.adjust_precision(a)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
+        a1 = scaling.adjust_precision(a)
     assert all((a1 > 0) & (a1 < 1e200))
 
 

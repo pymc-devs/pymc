@@ -14,6 +14,7 @@
 import multiprocessing
 import os
 import platform
+import warnings
 
 import aesara
 import aesara.tensor as at
@@ -34,7 +35,9 @@ def test_context():
     with pm.Model():
         pm.Normal("x")
         ctx = multiprocessing.get_context("spawn")
-        pm.sample(tune=2, draws=2, chains=2, cores=2, mp_ctx=ctx)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pm.sample(tune=2, draws=2, chains=2, cores=2, mp_ctx=ctx)
 
 
 class NoUnpickle:
@@ -194,7 +197,9 @@ def test_spawn_densitydist_function():
             return -2 * (x**2).sum()
 
         obs = pm.DensityDist("density_dist", logp=func, observed=np.random.randn(100))
-        pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
 
 
 def test_spawn_densitydist_bound_method():
@@ -208,4 +213,6 @@ def test_spawn_densitydist_bound_method():
             return out
 
         obs = pm.DensityDist("density_dist", mu, logp=logp, observed=np.random.randn(N), size=N)
-        pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")

@@ -22,6 +22,7 @@ from aesara.tensor.var import TensorConstant
 
 import pymc as pm
 
+from pymc.exceptions import ImputationWarning
 from pymc.model_graph import ModelGraph, model_to_graphviz, model_to_networkx
 from pymc.tests.helpers import SeededTest
 
@@ -138,7 +139,8 @@ def model_with_imputations():
 
     with pm.Model() as model:
         a = pm.Normal("a")
-        pm.Normal("L", a, 1.0, observed=x)
+        with pytest.warns(ImputationWarning):
+            pm.Normal("L", a, 1.0, observed=x)
 
     compute_graph = {
         "a": set(),

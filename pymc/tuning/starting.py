@@ -142,10 +142,11 @@ def find_MAP(
         )
         method = "Powell"
 
-    if compute_gradient:
+    if compute_gradient and method != "Powell":
         cost_func = CostFuncWrapper(maxeval, progressbar, logp_func, dlogp_func)
     else:
         cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
+        compute_gradient = False
 
     try:
         opt_result = minimize(

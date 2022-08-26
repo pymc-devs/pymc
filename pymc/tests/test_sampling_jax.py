@@ -16,17 +16,18 @@ from numpyro.infer import MCMC
 
 import pymc as pm
 
-from pymc.sampling_jax import (
-    _get_batched_jittered_initial_points,
-    _get_log_likelihood,
-    _numpyro_nuts_defaults,
-    _replace_shared_variables,
-    _update_numpyro_nuts_kwargs,
-    get_jaxified_graph,
-    get_jaxified_logp,
-    sample_blackjax_nuts,
-    sample_numpyro_nuts,
-)
+with pytest.warns(UserWarning, match="module is experimental"):
+    from pymc.sampling_jax import (
+        _get_batched_jittered_initial_points,
+        _get_log_likelihood,
+        _numpyro_nuts_defaults,
+        _replace_shared_variables,
+        _update_numpyro_nuts_kwargs,
+        get_jaxified_graph,
+        get_jaxified_logp,
+        sample_blackjax_nuts,
+        sample_numpyro_nuts,
+    )
 
 
 @pytest.mark.parametrize(
@@ -129,7 +130,9 @@ def test_get_log_likelihood():
         sigma = pm.HalfNormal("sigma")
         b = pm.Normal("b", a, sigma=sigma, observed=obs_at)
 
-        trace = pm.sample(tune=10, draws=10, chains=2, random_seed=1322)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            trace = pm.sample(tune=10, draws=10, chains=2, random_seed=1322)
 
     b_true = trace.log_likelihood.b.values
     a = np.array(trace.posterior.a)
