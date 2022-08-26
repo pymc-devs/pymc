@@ -18,7 +18,7 @@ from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
 from pymc.distributions.distribution import (
-    SymbolicDistribution,
+    Distribution,
     SymbolicRandomVariable,
     _moment,
 )
@@ -33,7 +33,7 @@ class CensoredRV(SymbolicRandomVariable):
     _print_name = ("Censored", "\\operatorname{Censored}")
 
 
-class Censored(SymbolicDistribution):
+class Censored(Distribution):
     r"""
     Censored distribution
 
@@ -82,6 +82,8 @@ class Censored(SymbolicDistribution):
             censored_normal = pm.Censored("censored_normal", normal_dist, lower=-1, upper=1)
     """
 
+    rv_type = CensoredRV
+
     @classmethod
     def dist(cls, dist, lower, upper, **kwargs):
         if not isinstance(dist, TensorVariable) or not isinstance(dist.owner.op, RandomVariable):
@@ -94,10 +96,6 @@ class Censored(SymbolicDistribution):
             )
         check_dist_not_registered(dist)
         return super().dist([dist, lower, upper], **kwargs)
-
-    @classmethod
-    def ndim_supp(cls, *dist_params):
-        return 0
 
     @classmethod
     def rv_op(cls, dist, lower=None, upper=None, size=None):

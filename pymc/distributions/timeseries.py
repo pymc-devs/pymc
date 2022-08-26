@@ -34,7 +34,7 @@ from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import (
-    SymbolicDistribution,
+    Distribution,
     SymbolicRandomVariable,
     _moment,
     moment,
@@ -332,6 +332,7 @@ class GaussianRandomWalk(distribution.Continuous):
 class AutoRegressiveRV(SymbolicRandomVariable):
     """A placeholder used to specify a log-likelihood for an AR sub-graph."""
 
+    _print_name = ("AR", "\\operatorname{AR}")
     default_output = 1
     ar_order: int
     constant_term: bool
@@ -348,7 +349,7 @@ class AutoRegressiveRV(SymbolicRandomVariable):
         return {node.inputs[-1]: node.outputs[0]}
 
 
-class AR(SymbolicDistribution):
+class AR(Distribution):
     r"""Autoregressive process with p lags.
 
     .. math::
@@ -407,6 +408,8 @@ class AR(SymbolicDistribution):
             ar3 = pm.AR("ar3", coefs, sigma=1.0, init_dist=init, constant=True, steps=500)
 
     """
+
+    rv_type = AutoRegressiveRV
 
     def __new__(cls, name, rho, *args, steps=None, constant=False, ar_order=None, **kwargs):
         rhos = at.atleast_1d(at.as_tensor_variable(floatX(rho)))
@@ -527,7 +530,7 @@ class AR(SymbolicDistribution):
         else:
             # In this case the size of the init_dist depends on the parameters shape
             # The last dimension of rho and init_dist does not matter
-            batch_size = at.broadcast_shape(sigma, rhos[..., 0], init_dist[..., 0])
+            batch_size = at.broadcast_shape(sigma, rhos[..., 0], at.atleast_1d(init_dist)[..., 0])
         if init_dist.owner.op.ndim_supp == 0:
             init_dist_size = (*batch_size, ar_order)
         else:
