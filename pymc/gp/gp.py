@@ -271,7 +271,7 @@ class TP(Latent):
             warnings.warn(
                 "Use the scale_func argument to specify the scale function."
                 "cov_func will be removed in future versions.",
-                DeprecationWarning,
+                FutureWarning,
             )
             scale_func = cov_func
         self.nu = nu

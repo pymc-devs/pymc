@@ -15,6 +15,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from asyncio import Future
 import warnings
 
 from functools import reduce
@@ -372,7 +373,7 @@ class MvStudentT(Continuous):
             warnings.warn(
                 "Use the scale argument to specify the scale matrix."
                 "cov will be removed in future versions.",
-                DeprecationWarning,
+                FutureWarning,
             )
             scale = kwargs.pop("cov")
         if Sigma is not None:
