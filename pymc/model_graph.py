@@ -42,16 +42,25 @@ class ModelGraph:
         if var.owner is None or var.owner.inputs is None:
             return set()
 
+        def _filter_non_parameter_inputs(var):
+            node = var.owner
+            if isinstance(node.op, RandomVariable):
+                # Filter out rng, dtype and size parameters or RandomVariable nodes
+                return node.inputs[3:]
+            else:
+                # Otherwise return all inputs
+                return node.inputs
+
         def _expand(x):
             if x.name:
                 return [x]
             if isinstance(x.owner, Apply):
-                return reversed(x.owner.inputs)
+                return reversed(_filter_non_parameter_inputs(x))
             return []
 
         parents = {
             get_var_name(x)
-            for x in walk(nodes=var.owner.inputs, expand=_expand)
+            for x in walk(nodes=_filter_non_parameter_inputs(var), expand=_expand)
             # Only consider nodes that are in the named model variables.
             if x.name and x.name in self._all_var_names
         }
