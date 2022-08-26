@@ -38,7 +38,7 @@ import pymc as pm
 from pymc import Deterministic, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
-from pymc.exceptions import ShapeError, ShapeWarning
+from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.model import Point, ValueGradFunction
 from pymc.tests.helpers import SeededTest
 
@@ -341,7 +341,8 @@ class TestValueGradFunction(unittest.TestCase):
         X = np.ma.masked_values(X, value=-1)
         with pm.Model() as m:
             x1 = pm.Uniform("x1", 0.0, 1.0)
-            x2 = pm.Bernoulli("x2", x1, observed=X)
+            with pytest.warns(ImputationWarning):
+                x2 = pm.Bernoulli("x2", x1, observed=X)
 
         gf = m.logp_dlogp_function()
         gf._extra_are_set = True
@@ -522,7 +523,8 @@ def test_make_obs_var():
     del fake_model.named_vars[fake_distribution.name]
 
     # Here the RandomVariable is split into observed/imputed and a Deterministic is returned
-    masked_output = fake_model.make_obs_var(fake_distribution, masked_array_input, None, None)
+    with pytest.warns(ImputationWarning):
+        masked_output = fake_model.make_obs_var(fake_distribution, masked_array_input, None, None)
     assert masked_output != fake_distribution
     assert not isinstance(masked_output, RandomVariable)
     # Ensure it has missing values

@@ -148,7 +148,10 @@ def test_log1mexp():
     )
     actual = at.log1mexp(-vals).eval()
     npt.assert_allclose(actual, expected)
-    actual_ = log1mexp_numpy(-vals, negative_input=True)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
+        warnings.filterwarnings("ignore", "invalid value encountered in log", RuntimeWarning)
+        actual_ = log1mexp_numpy(-vals, negative_input=True)
     npt.assert_allclose(actual_, expected)
     # Check that input was not changed in place
     npt.assert_allclose(vals, vals_)
@@ -193,7 +196,9 @@ def test_log1mexp_deprecation_warnings():
 
 def test_logdiffexp():
     a = np.log([1, 2, 3, 4])
-    b = np.log([0, 1, 2, 3])
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
+        b = np.log([0, 1, 2, 3])
 
     assert np.allclose(logdiffexp_numpy(a, b), 0)
     assert np.allclose(logdiffexp(a, b).eval(), 0)

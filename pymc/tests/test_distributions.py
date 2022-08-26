@@ -1700,12 +1700,14 @@ class TestMatchesScipy:
                 Bernoulli("x")
 
     def test_discrete_weibull(self):
-        check_logp(
-            DiscreteWeibull,
-            Nat,
-            {"q": Unit, "beta": NatSmall},
-            discrete_weibull_logpmf,
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
+            check_logp(
+                DiscreteWeibull,
+                Nat,
+                {"q": Unit, "beta": NatSmall},
+                discrete_weibull_logpmf,
+            )
         check_selfconsistency_discrete_logcdf(
             DiscreteWeibull,
             Nat,
@@ -1732,8 +1734,10 @@ class TestMatchesScipy:
         )
 
     def test_diracdeltadist(self):
-        check_logp(DiracDelta, I, {"c": I}, lambda value, c: np.log(c == value))
-        check_logcdf(DiracDelta, I, {"c": I}, lambda value, c: np.log(value >= c))
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
+            check_logp(DiracDelta, I, {"c": I}, lambda value, c: np.log(c == value))
+            check_logcdf(DiracDelta, I, {"c": I}, lambda value, c: np.log(value >= c))
 
     def test_zeroinflatedpoisson(self):
         def logp_fn(value, psi, mu):
@@ -2370,12 +2374,15 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedlogistic(self, n):
-        check_logp(
-            OrderedLogistic,
-            Domain(range(n), dtype="int64", edges=(None, None)),
-            {"eta": R, "cutpoints": Vector(R, n - 1)},
-            lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints),
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "invalid value encountered in log", RuntimeWarning)
+            warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
+            check_logp(
+                OrderedLogistic,
+                Domain(range(n), dtype="int64", edges=(None, None)),
+                {"eta": R, "cutpoints": Vector(R, n - 1)},
+                lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints),
+            )
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedprobit(self, n):
@@ -2622,6 +2629,7 @@ class TestMatchesScipy:
             {"mu": R, "sigma": Rplus, "steps": Nat},
             ref_logp,
             decimal=select_by_precision(float64=6, float32=1),
+            extra_args={"init_dist": Normal.dist(0, 100)},
         )
 
 
@@ -2631,8 +2639,14 @@ class TestBound:
     def test_continuous(self):
         with Model() as model:
             dist = Normal.dist(mu=0, sigma=1)
-            UnboundedNormal = Bound("unbound", dist, transform=None)
-            InfBoundedNormal = Bound("infbound", dist, lower=-np.inf, upper=np.inf, transform=None)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", "invalid value encountered in add", RuntimeWarning
+                )
+                UnboundedNormal = Bound("unbound", dist, transform=None)
+                InfBoundedNormal = Bound(
+                    "infbound", dist, lower=-np.inf, upper=np.inf, transform=None
+                )
             LowerNormal = Bound("lower", dist, lower=0, transform=None)
             UpperNormal = Bound("upper", dist, upper=0, transform=None)
             BoundedNormal = Bound("bounded", dist, lower=1, upper=10, transform=None)
@@ -2667,7 +2681,11 @@ class TestBound:
     def test_discrete(self):
         with Model() as model:
             dist = Poisson.dist(mu=4)
-            UnboundedPoisson = Bound("unbound", dist)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", "invalid value encountered in add", RuntimeWarning
+                )
+                UnboundedPoisson = Bound("unbound", dist)
             LowerPoisson = Bound("lower", dist, lower=1)
             UpperPoisson = Bound("upper", dist, upper=10)
             BoundedPoisson = Bound("bounded", dist, lower=1, upper=10)
@@ -2714,8 +2732,12 @@ class TestBound:
         msg = "Cannot transform discrete variable."
         with pm.Model() as m:
             x = pm.Poisson.dist(0.5)
-            with pytest.raises(ValueError, match=msg):
-                pm.Bound("bound", x, transform=pm.distributions.transforms.log)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", "invalid value encountered in add", RuntimeWarning
+                )
+                with pytest.raises(ValueError, match=msg):
+                    pm.Bound("bound", x, transform=pm.distributions.transforms.log)
 
         msg = "Given dims do not exist in model coordinates."
         with pm.Model() as m:
@@ -2784,8 +2806,12 @@ class TestBound:
     def test_array_bound(self):
         with Model() as model:
             dist = Normal.dist()
-            LowerPoisson = Bound("lower", dist, lower=[1, None], transform=None)
-            UpperPoisson = Bound("upper", dist, upper=[np.inf, 10], transform=None)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", "invalid value encountered in add", RuntimeWarning
+                )
+                LowerPoisson = Bound("lower", dist, lower=[1, None], transform=None)
+                UpperPoisson = Bound("upper", dist, upper=[np.inf, 10], transform=None)
             BoundedPoisson = Bound("bounded", dist, lower=[1, 2], upper=[9, 10], transform=None)
 
         first, second = joint_logp(LowerPoisson, [0, 0], sum=False)[0].eval()
@@ -3081,7 +3107,9 @@ def test_serialize_density_dist():
     with pm.Model():
         pm.Normal("x")
         y = pm.DensityDist("y", logp=func, random=random)
-        pm.sample(draws=5, tune=1, mp_ctx="spawn")
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pm.sample(draws=5, tune=1, mp_ctx="spawn")
 
     import cloudpickle
 

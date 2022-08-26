@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import logging
+import warnings
 
 import numpy as np
 import numpy.testing as npt
@@ -59,9 +60,11 @@ def test_nuts_tuning():
     with pymc.Model():
         pymc.Normal("mu", mu=0, sigma=1)
         step = pymc.NUTS()
-        idata = pymc.sample(
-            10, step=step, tune=5, discard_tuned_samples=False, progressbar=False, chains=1
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            idata = pymc.sample(
+                10, step=step, tune=5, discard_tuned_samples=False, progressbar=False, chains=1
+            )
 
     assert not step.tune
     ss_tuned = idata.warmup_sample_stats["step_size"][0, -1]

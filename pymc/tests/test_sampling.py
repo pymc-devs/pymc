@@ -11,9 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import re
 import unittest.mock as mock
+import warnings
 
 from contextlib import ExitStack as does_not_raise
 from typing import Tuple
@@ -110,9 +110,11 @@ class TestSample(SeededTest):
         # on global seeding for reproducible behavior.
         kwargs = dict(tune=2, draws=2, random_seed=None)
         with self.model:
-            pm.sample(chains=1, **kwargs)
-            pm.sample(chains=2, cores=1, **kwargs)
-            pm.sample(chains=2, cores=2, **kwargs)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                pm.sample(chains=1, **kwargs)
+                pm.sample(chains=2, cores=1, **kwargs)
+                pm.sample(chains=2, cores=2, **kwargs)
         mocked_seed.assert_not_called()
 
     def test_sample_does_not_rely_on_external_global_seeding(self):
@@ -124,19 +126,21 @@ class TestSample(SeededTest):
             return_inferencedata=False,
         )
         with self.model:
-            np.random.seed(1)
-            idata11 = pm.sample(chains=1, **kwargs)
-            np.random.seed(1)
-            idata12 = pm.sample(chains=2, cores=1, **kwargs)
-            np.random.seed(1)
-            idata13 = pm.sample(chains=2, cores=2, **kwargs)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                np.random.seed(1)
+                idata11 = pm.sample(chains=1, **kwargs)
+                np.random.seed(1)
+                idata12 = pm.sample(chains=2, cores=1, **kwargs)
+                np.random.seed(1)
+                idata13 = pm.sample(chains=2, cores=2, **kwargs)
 
-            np.random.seed(1)
-            idata21 = pm.sample(chains=1, **kwargs)
-            np.random.seed(1)
-            idata22 = pm.sample(chains=2, cores=1, **kwargs)
-            np.random.seed(1)
-            idata23 = pm.sample(chains=2, cores=2, **kwargs)
+                np.random.seed(1)
+                idata21 = pm.sample(chains=1, **kwargs)
+                np.random.seed(1)
+                idata22 = pm.sample(chains=2, cores=1, **kwargs)
+                np.random.seed(1)
+                idata23 = pm.sample(chains=2, cores=2, **kwargs)
 
         assert np.all(idata11["x"] != idata21["x"])
         assert np.all(idata12["x"] != idata22["x"])
@@ -147,13 +151,18 @@ class TestSample(SeededTest):
         with self.model:
             for cores in test_cores:
                 for steps in [1, 10, 300]:
-                    pm.sample(
-                        steps,
-                        tune=0,
-                        step=self.step,
-                        cores=cores,
-                        random_seed=self.random_seed,
-                    )
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                        warnings.filterwarnings(
+                            "ignore", "More chains .* than draws .*", UserWarning
+                        )
+                        pm.sample(
+                            steps,
+                            tune=0,
+                            step=self.step,
+                            cores=cores,
+                            random_seed=self.random_seed,
+                        )
 
     def test_sample_init(self):
         with self.model:
@@ -167,13 +176,20 @@ class TestSample(SeededTest):
                 "adapt_full",
                 "jitter+adapt_full",
             ):
-                pm.sample(
-                    init=init,
-                    tune=120,
-                    n_init=1000,
-                    draws=50,
-                    random_seed=self.random_seed,
-                )
+                kwargs = {
+                    "init": init,
+                    "tune": 120,
+                    "n_init": 1000,
+                    "draws": 50,
+                    "random_seed": self.random_seed,
+                }
+                with warnings.catch_warnings(record=True) as rec:
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    if init.endswith("adapt_full"):
+                        with pytest.warns(UserWarning, match="experimental feature"):
+                            pm.sample(**kwargs)
+                    else:
+                        pm.sample(**kwargs)
 
     def test_sample_args(self):
         with self.model:
@@ -199,34 +215,45 @@ class TestSample(SeededTest):
 
     def test_parallel_start(self):
         with self.model:
-            idata = pm.sample(
-                0,
-                tune=5,
-                cores=2,
-                discard_tuned_samples=False,
-                initvals=[{"x": [10, 10]}, {"x": [-10, -10]}],
-                random_seed=self.random_seed,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                idata = pm.sample(
+                    0,
+                    tune=5,
+                    cores=2,
+                    discard_tuned_samples=False,
+                    initvals=[{"x": [10, 10]}, {"x": [-10, -10]}],
+                    random_seed=self.random_seed,
+                )
         assert idata.warmup_posterior["x"].sel(chain=0, draw=0).values[0] > 0
         assert idata.warmup_posterior["x"].sel(chain=1, draw=0).values[0] < 0
 
     def test_sample_tune_len(self):
         with self.model:
-            trace = pm.sample(draws=100, tune=50, cores=1, return_inferencedata=False)
-            assert len(trace) == 100
-            trace = pm.sample(
-                draws=100, tune=50, cores=1, return_inferencedata=False, discard_tuned_samples=False
-            )
-            assert len(trace) == 150
-            trace = pm.sample(draws=100, tune=50, cores=4, return_inferencedata=False)
-            assert len(trace) == 100
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                warnings.filterwarnings("ignore", "Tuning samples will be included.*", UserWarning)
+                trace = pm.sample(draws=100, tune=50, cores=1, return_inferencedata=False)
+                assert len(trace) == 100
+                trace = pm.sample(
+                    draws=100,
+                    tune=50,
+                    cores=1,
+                    return_inferencedata=False,
+                    discard_tuned_samples=False,
+                )
+                assert len(trace) == 150
+                trace = pm.sample(draws=100, tune=50, cores=4, return_inferencedata=False)
+                assert len(trace) == 100
 
     def test_reset_tuning(self):
         with self.model:
             tune = 50
             chains = 2
             start, step = pm.sampling.init_nuts(chains=chains, random_seed=[1, 2])
-            pm.sample(draws=2, tune=tune, chains=chains, step=step, initvals=start, cores=1)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                pm.sample(draws=2, tune=tune, chains=chains, step=step, initvals=start, cores=1)
             assert step.potential._n_samples == tune
             assert step.step_adapt._count == tune + 1
 
@@ -236,15 +263,19 @@ class TestSample(SeededTest):
         with self.model:
             # add more variables, because stats are 2D with CompoundStep!
             pm.Uniform("uni")
-            trace = pm.sample(
-                draws=100,
-                tune=50,
-                cores=1,
-                discard_tuned_samples=discard,
-                step=step_cls(),
-                compute_convergence_checks=False,
-                return_inferencedata=False,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", ".*Tuning samples will be included.*", UserWarning
+                )
+                trace = pm.sample(
+                    draws=100,
+                    tune=50,
+                    cores=1,
+                    discard_tuned_samples=discard,
+                    step=step_cls(),
+                    compute_convergence_checks=False,
+                    return_inferencedata=False,
+                )
             assert trace.report.n_tune == 50
             assert trace.report.n_draws == 100
             assert isinstance(trace.report.t_sampling, float)
@@ -286,14 +317,17 @@ class TestSample(SeededTest):
     @pytest.mark.parametrize("cores", [1, 2])
     def test_sampler_stat_tune(self, cores):
         with self.model:
-            tune_stat = pm.sample(
-                tune=5,
-                draws=7,
-                cores=cores,
-                discard_tuned_samples=False,
-                return_inferencedata=False,
-                step=pm.Metropolis(),
-            ).get_sampler_stats("tune", chains=1)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                warnings.filterwarnings("ignore", "Tuning samples will be included.*", UserWarning)
+                tune_stat = pm.sample(
+                    tune=5,
+                    draws=7,
+                    cores=cores,
+                    discard_tuned_samples=False,
+                    return_inferencedata=False,
+                    step=pm.Metropolis(),
+                ).get_sampler_stats("tune", chains=1)
             assert list(tune_stat).count(True) == 5
             assert list(tune_stat).count(False) == 7
 
@@ -320,15 +354,17 @@ class TestSample(SeededTest):
         with self.model:
             for cores in test_cores:
                 for chain in test_chains:
-                    pm.sample(
-                        10,
-                        tune=0,
-                        chains=chain,
-                        step=self.step,
-                        cores=cores,
-                        random_seed=self.random_seed,
-                        callback=callback,
-                    )
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                        pm.sample(
+                            10,
+                            tune=0,
+                            chains=chain,
+                            step=self.step,
+                            cores=cores,
+                            random_seed=self.random_seed,
+                            callback=callback,
+                        )
                     assert callback.called
 
     def test_callback_can_cancel(self):
@@ -339,29 +375,35 @@ class TestSample(SeededTest):
                 raise KeyboardInterrupt()
 
         with self.model:
-            trace = pm.sample(
-                10,
-                tune=0,
-                chains=1,
-                step=self.step,
-                cores=1,
-                random_seed=self.random_seed,
-                callback=callback,
-                return_inferencedata=False,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = pm.sample(
+                    10,
+                    tune=0,
+                    chains=1,
+                    step=self.step,
+                    cores=1,
+                    random_seed=self.random_seed,
+                    callback=callback,
+                    return_inferencedata=False,
+                )
             assert len(trace) == trace_cancel_length
 
     def test_sequential_backend(self):
         with self.model:
             backend = NDArray()
-            pm.sample(10, cores=1, chains=2, trace=backend)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                pm.sample(10, cores=1, chains=2, trace=backend)
 
     def test_exceptions(self):
         # Test iteration over MultiTrace NotImplementedError
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
-            trace = pm.sample(tune=0, draws=10, chains=2, return_inferencedata=False)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = pm.sample(tune=0, draws=10, chains=2, return_inferencedata=False)
             with pytest.raises(NotImplementedError):
                 xvars = [t["mu"] for t in trace]
 
@@ -386,7 +428,9 @@ class TestSample(SeededTest):
                 bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
             )
             y = pm.Uniform("y", lower=0, upper=x, transform=transform)
-            trace = pm.sample(tune=10, draws=50, return_inferencedata=False, random_seed=336)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = pm.sample(tune=10, draws=50, return_inferencedata=False, random_seed=336)
 
         assert np.allclose(scipy.special.expit(trace["y_interval__"]), trace["y"])
 
@@ -403,12 +447,16 @@ def test_sample_find_MAP_does_not_modify_start():
 
         # make sure sample does not modify the start dict
         start = {"untransformed": 0.2}
-        pm.sample(draws=10, step=pm.Metropolis(), tune=5, initvals=start, chains=3)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pm.sample(draws=10, step=pm.Metropolis(), tune=5, initvals=start, chains=3)
         assert start == {"untransformed": 0.2}
 
         # make sure sample does not modify the start when passes as list of dict
         start = [{"untransformed": 2}, {"untransformed": 0.2}]
-        pm.sample(draws=10, step=pm.Metropolis(), tune=5, initvals=start, chains=2)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pm.sample(draws=10, step=pm.Metropolis(), tune=5, initvals=start, chains=2)
         assert start == [{"untransformed": 2}, {"untransformed": 0.2}]
 
 
@@ -593,12 +641,14 @@ class TestSamplePPC(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=0.0)
-            trace = pm.sample(
-                draws=ndraws,
-                chains=nchains,
-                return_inferencedata=False,
-                discard_tuned_samples=False,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "Tuning samples will be included.*", UserWarning)
+                trace = pm.sample(
+                    draws=ndraws,
+                    chains=nchains,
+                    return_inferencedata=False,
+                    discard_tuned_samples=False,
+                )
 
         assert not isinstance(trace, InferenceData)
 
@@ -621,9 +671,13 @@ class TestSamplePPC(SeededTest):
             ppc0 = pm.sample_posterior_predictive(
                 [model.initial_point()], return_inferencedata=False, samples=10
             )
-            ppc = pm.sample_posterior_predictive(
-                trace, return_inferencedata=False, samples=12, var_names=[]
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", ".*smaller than nchains times ndraws.*", UserWarning
+                )
+                ppc = pm.sample_posterior_predictive(
+                    trace, return_inferencedata=False, samples=12, var_names=[]
+                )
             assert len(ppc) == 0
 
             # test keep_size parameter
@@ -686,9 +740,13 @@ class TestSamplePPC(SeededTest):
             # TODO: Assert something about the output
             # ppc = pm.sample_posterior_predictive(idata, samples=12, var_names=[])
             # assert len(ppc) == 0
-            ppc = pm.sample_posterior_predictive(
-                idata, return_inferencedata=False, samples=12, var_names=["a"]
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", ".*smaller than nchains times ndraws.*", UserWarning
+                )
+                ppc = pm.sample_posterior_predictive(
+                    idata, return_inferencedata=False, samples=12, var_names=["a"]
+                )
             assert "a" in ppc
             assert ppc["a"].shape == (12, 2)
 
@@ -700,13 +758,17 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            ppc0 = pm.sample_posterior_predictive(
-                [model.initial_point()], return_inferencedata=False, samples=10
-            )
-            assert ppc0 == {}
-            ppc = pm.sample_posterior_predictive(
-                idata, return_inferencedata=False, samples=1000, var_names=["b"]
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", ".*smaller than nchains times ndraws.*", UserWarning
+                )
+                ppc0 = pm.sample_posterior_predictive(
+                    [model.initial_point()], return_inferencedata=False, samples=10
+                )
+                assert ppc0 == {}
+                ppc = pm.sample_posterior_predictive(
+                    idata, return_inferencedata=False, samples=1000, var_names=["b"]
+                )
             assert len(ppc) == 1
             assert ppc["b"].shape == (1000,)
             scale = np.sqrt(1 + 0.2**2)
@@ -720,13 +782,19 @@ class TestSamplePPC(SeededTest):
             mu = pm.HalfFlat("sigma")
             pm.Poisson("foo", mu=mu, observed=data)
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
-                idata = pm.sample(tune=10, draws=40, chains=1)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    idata = pm.sample(tune=10, draws=40, chains=1)
 
         with model:
             with pytest.raises(NotImplementedError) as excinfo:
                 pm.sample_prior_predictive(50)
             assert "Cannot sample" in str(excinfo.value)
-            samples = pm.sample_posterior_predictive(idata, 40, return_inferencedata=False)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", ".*smaller than nchains times ndraws.*", UserWarning
+                )
+                samples = pm.sample_posterior_predictive(idata, 40, return_inferencedata=False)
             assert samples["foo"].shape == (40, 200)
 
     def test_model_shared_variable(self):
@@ -750,9 +818,13 @@ class TestSamplePPC(SeededTest):
 
         samples = 100
         with model:
-            post_pred = pm.sample_posterior_predictive(
-                trace, return_inferencedata=False, samples=samples, var_names=["p", "obs"]
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", ".*smaller than nchains times ndraws.*", UserWarning
+                )
+                post_pred = pm.sample_posterior_predictive(
+                    trace, return_inferencedata=False, samples=samples, var_names=["p", "obs"]
+                )
 
         expected_p = np.array([logistic.eval({coeff: val}) for val in trace["x"][:samples]])
         assert post_pred["obs"].shape == (samples, 3)
@@ -850,7 +922,11 @@ class TestSamplePPC(SeededTest):
                 )
 
         with model:
-            ppc = pm.sample_posterior_predictive(trace, return_inferencedata=False, samples=1)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", ".*smaller than nchains times ndraws.*", UserWarning
+                )
+                ppc = pm.sample_posterior_predictive(trace, return_inferencedata=False, samples=1)
             assert ppc["a"].dtype.kind == "f"
             assert ppc["b"].dtype.kind == "i"
 
@@ -1031,7 +1107,11 @@ def check_exec_nuts_init(method):
     ],
 )
 def test_exec_nuts_init(method):
-    check_exec_nuts_init(method)
+    if method.endswith("adapt_full"):
+        with pytest.warns(UserWarning, match="experimental feature"):
+            check_exec_nuts_init(method)
+    else:
+        check_exec_nuts_init(method)
 
 
 @pytest.mark.skip(reason="Test requires monkey patching of RandomGenerator")
@@ -1463,9 +1543,13 @@ def test_step_args():
         a = pm.Normal("a")
         b = pm.Poisson("b", 1)
         idata0 = pm.sample(target_accept=0.5, random_seed=1418)
-        idata1 = pm.sample(
-            nuts={"target_accept": 0.5}, metropolis={"scaling": 0}, random_seed=1418 * 2
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", "invalid value encountered in double_scalars", RuntimeWarning
+            )
+            idata1 = pm.sample(
+                nuts={"target_accept": 0.5}, metropolis={"scaling": 0}, random_seed=1418 * 2
+            )
 
     npt.assert_almost_equal(idata0.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
     npt.assert_almost_equal(idata1.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
@@ -1475,14 +1559,18 @@ def test_step_args():
 def test_init_nuts(caplog):
     with pm.Model() as model:
         a = pm.Normal("a")
-        pm.sample(10, tune=10)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pm.sample(10, tune=10)
         assert "Initializing NUTS" in caplog.text
 
 
 def test_no_init_nuts_step(caplog):
     with pm.Model() as model:
         a = pm.Normal("a")
-        pm.sample(10, tune=10, step=pm.NUTS([a]))
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pm.sample(10, tune=10, step=pm.NUTS([a]))
         assert "Initializing NUTS" not in caplog.text
 
 
@@ -1490,7 +1578,9 @@ def test_no_init_nuts_compound(caplog):
     with pm.Model() as model:
         a = pm.Normal("a")
         b = pm.Poisson("b", 1)
-        pm.sample(10, tune=10)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pm.sample(10, tune=10)
         assert "Initializing NUTS" not in caplog.text
 
 

@@ -293,10 +293,25 @@ class TestAR:
         beta_tp = np.random.randn(batch_size, ar_order + int(constant))
         y_tp = np.random.randn(batch_size, steps)
         with Model() as t0:
-            y = AR("y", beta_tp, shape=(batch_size, steps), initval=y_tp, constant=constant)
+            y = AR(
+                "y",
+                beta_tp,
+                shape=(batch_size, steps),
+                initval=y_tp,
+                constant=constant,
+                init_dist=Normal.dist(0, 100, shape=(batch_size, steps)),
+            )
         with Model() as t1:
             for i in range(batch_size):
-                AR(f"y_{i}", beta_tp[i], sigma=1.0, shape=steps, initval=y_tp[i], constant=constant)
+                AR(
+                    f"y_{i}",
+                    beta_tp[i],
+                    sigma=1.0,
+                    shape=steps,
+                    initval=y_tp[i],
+                    constant=constant,
+                    init_dist=Normal.dist(0, 100, shape=steps),
+                )
 
         assert y.owner.op.ar_order == ar_order
 
@@ -402,7 +417,14 @@ class TestAR:
             AR("y", beta_tp, sigma=0.01, init_dist=init_dist, steps=steps, initval=y_tp)
         with Model() as t1:
             for i in range(batch_size):
-                AR(f"y_{i}", beta_tp, sigma=0.01, shape=steps, initval=y_tp[i])
+                AR(
+                    f"y_{i}",
+                    beta_tp,
+                    sigma=0.01,
+                    shape=steps,
+                    initval=y_tp[i],
+                    init_dist=Normal.dist(0, 100, shape=steps),
+                )
 
         np.testing.assert_allclose(
             t0.compile_logp()(t0.initial_point()),

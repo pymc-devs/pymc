@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 import aesara
 import aesara.tensor as at
@@ -363,7 +364,9 @@ class TestDiffEqModel:
             y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
-                idata = pm.sample(50, tune=0, chains=1)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    idata = pm.sample(50, tune=0, chains=1)
 
         assert idata.posterior["alpha"].shape == (1, 50)
         assert idata.posterior["y0"].shape == (1, 50)
@@ -394,7 +397,9 @@ class TestDiffEqModel:
             y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
-                idata = pm.sample(50, tune=0, chains=1)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    idata = pm.sample(50, tune=0, chains=1)
 
         assert idata.posterior["alpha"].shape == (1, 50)
         assert idata.posterior["beta"].shape == (1, 50)
@@ -436,7 +441,9 @@ class TestDiffEqModel:
             y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
-                idata = pm.sample(50, tune=0, chains=1)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    idata = pm.sample(50, tune=0, chains=1)
 
         assert idata.posterior["R"].shape == (1, 50)
         assert idata.posterior["sigma"].shape == (1, 50, 2)
@@ -477,7 +484,9 @@ class TestDiffEqModel:
             y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
-                idata = pm.sample(50, tune=0, chains=1)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    idata = pm.sample(50, tune=0, chains=1)
 
         assert idata.posterior["beta"].shape == (1, 50)
         assert idata.posterior["gamma"].shape == (1, 50)

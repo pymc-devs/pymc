@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import functools
 import io
 import operator
@@ -517,7 +516,11 @@ def inference_spec(request):
     def init_(**kw):
         k = init.copy()
         k.update(kw)
-        return cls(**k)
+        if cls == ASVGD:
+            with pytest.warns(UserWarning, match="experimental inference Operator"):
+                return cls(**k)
+        else:
+            return cls(**k)
 
     init_.cls = cls
     return init_
@@ -641,11 +644,19 @@ def fit_method_with_object(request, another_simple_model):
 )
 def test_fit_fn_text(method, kwargs, error, another_simple_model):
     with another_simple_model:
-        if error is not None:
-            with pytest.raises(error):
-                fit(10, method=method, **kwargs)
+        if method == "asvgd":
+            with pytest.warns(UserWarning, match="experimental inference Operator"):
+                if error is not None:
+                    with pytest.raises(error):
+                        fit(10, method=method, **kwargs)
+                else:
+                    fit(10, method=method, **kwargs)
         else:
-            fit(10, method=method, **kwargs)
+            if error is not None:
+                with pytest.raises(error):
+                    fit(10, method=method, **kwargs)
+            else:
+                fit(10, method=method, **kwargs)
 
 
 @pytest.fixture(scope="module")

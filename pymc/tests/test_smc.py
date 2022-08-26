@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 import aesara
 import aesara.tensor as at
@@ -170,14 +171,16 @@ class TestSMC(SeededTest):
 
     def test_kernel_kwargs(self):
         with self.fast_model:
-            trace = pm.sample_smc(
-                draws=10,
-                chains=1,
-                threshold=0.7,
-                correlation_threshold=0.02,
-                return_inferencedata=False,
-                kernel=pm.smc.IMH,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = pm.sample_smc(
+                    draws=10,
+                    chains=1,
+                    threshold=0.7,
+                    correlation_threshold=0.02,
+                    return_inferencedata=False,
+                    kernel=pm.smc.IMH,
+                )
 
             assert trace.report.threshold == 0.7
             assert trace.report.n_draws == 10
@@ -185,14 +188,16 @@ class TestSMC(SeededTest):
             assert trace.report.correlation_threshold == 0.02
 
         with self.fast_model:
-            trace = pm.sample_smc(
-                draws=10,
-                chains=1,
-                threshold=0.95,
-                correlation_threshold=0.02,
-                return_inferencedata=False,
-                kernel=pm.smc.MH,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = pm.sample_smc(
+                    draws=10,
+                    chains=1,
+                    threshold=0.95,
+                    correlation_threshold=0.02,
+                    return_inferencedata=False,
+                    kernel=pm.smc.MH,
+                )
 
             assert trace.report.threshold == 0.95
             assert trace.report.n_draws == 10
@@ -203,8 +208,11 @@ class TestSMC(SeededTest):
         draws = 10
 
         with self.fast_model:
-            idata = pm.sample_smc(chains=chains, draws=draws)
-            mt = pm.sample_smc(chains=chains, draws=draws, return_inferencedata=False)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                warnings.filterwarnings("ignore", "More chains .* than draws .*", UserWarning)
+                idata = pm.sample_smc(chains=chains, draws=draws)
+                mt = pm.sample_smc(chains=chains, draws=draws, return_inferencedata=False)
 
         assert isinstance(idata, InferenceData)
         assert "sample_stats" in idata
@@ -342,7 +350,9 @@ class TestSimulator(SeededTest):
             assert self.count_rvs(m.logp()) == 1
 
             with m:
-                pm.sample_smc(draws=100)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", "More chains .* than draws .*", UserWarning)
+                    pm.sample_smc(draws=100)
 
     @pytest.mark.parametrize("floatX", ["float32", "float64"])
     def test_custom_dist_sum_stat_scalar(self, floatX):
@@ -529,7 +539,12 @@ class TestSimulator(SeededTest):
     def test_name_is_string_type(self):
         with self.SMABC_potential:
             assert not self.SMABC_potential.name
-            trace = pm.sample_smc(draws=10, chains=1, return_inferencedata=False)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                warnings.filterwarnings(
+                    "ignore", "invalid value encountered in true_divide", RuntimeWarning
+                )
+                trace = pm.sample_smc(draws=10, chains=1, return_inferencedata=False)
             assert isinstance(trace._straces[0].name, str)
 
     def test_named_model(self):
@@ -542,7 +557,9 @@ class TestSimulator(SeededTest):
             b = pm.HalfNormal("b", sigma=1)
             s = pm.Simulator("s", self.normal_sim, a, b, observed=self.data)
 
-            trace = pm.sample_smc(draws=10, chains=2, return_inferencedata=False)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = pm.sample_smc(draws=10, chains=2, return_inferencedata=False)
             assert f"{name}::a" in trace.varnames
             assert f"{name}::b" in trace.varnames
             assert f"{name}::b_log__" in trace.varnames
@@ -568,9 +585,11 @@ class TestMHKernel(SeededTest):
         with pm.Model() as m:
             x = pm.Normal("x", 0, 1)
             y = pm.Normal("y", x, 1, observed=0)
-            trace = pm.sample_smc(
-                draws=10,
-                chains=1,
-                kernel=pm.smc.MH,
-                return_inferencedata=False,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = pm.sample_smc(
+                    draws=10,
+                    chains=1,
+                    kernel=pm.smc.MH,
+                    return_inferencedata=False,
+                )

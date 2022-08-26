@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 from copy import copy
 
@@ -45,7 +46,9 @@ class TestType:
 
         for sampler in self.samplers:
             with model:
-                sample(draws=10, tune=10, chains=1, step=sampler())
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    sample(draws=10, tune=10, chains=1, step=sampler())
 
     @aesara.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
     def test_float32(self):
@@ -58,4 +61,6 @@ class TestType:
 
         for sampler in self.samplers:
             with model:
-                sample(draws=10, tune=10, chains=1, step=sampler())
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    sample(draws=10, tune=10, chains=1, step=sampler())
