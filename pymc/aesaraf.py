@@ -32,7 +32,6 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sps
 
-from aeppl.abstract import MeasurableVariable
 from aeppl.logprob import CheckParameterValue
 from aesara import config, scalar
 from aesara.compile.mode import Mode, get_mode
@@ -987,6 +986,9 @@ def compile_pymc(
         this function is called within a model context and the model `check_bounds` flag
         is set to False.
     """
+    # Avoid circular import
+    from pymc.distributions.distribution import SymbolicRandomVariable
+
     # Create an update mapping of RandomVariable's RNG so that it is automatically
     # updated after every function call
     rng_updates = {}
@@ -995,7 +997,7 @@ def compile_pymc(
         var
         for var in vars_between(inputs, output_to_list)
         if var.owner
-        and isinstance(var.owner.op, (RandomVariable, MeasurableVariable))
+        and isinstance(var.owner.op, (RandomVariable, SymbolicRandomVariable))
         and var not in inputs
     ):
         # All nodes in `vars_between(inputs, outputs)` have owners.
@@ -1008,9 +1010,7 @@ def compile_pymc(
             else:
                 rng_updates[rng] = rng.default_update
         else:
-            update_fn = getattr(random_var.owner.op, "update", None)
-            if update_fn is not None:
-                rng_updates.update(update_fn(random_var.owner))
+            rng_updates.update(random_var.owner.op.update(random_var.owner))
 
     # We always reseed random variables as this provides RNGs with no chances of collision
     if rng_updates:

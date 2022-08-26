@@ -12,3 +12,4 @@ Distribution utilities
     Continuous
     NoDistribution
     DensityDist
+    SymbolicRandomVariable

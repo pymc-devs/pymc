@@ -14,13 +14,22 @@
 import aesara.tensor as at
 import numpy as np
 
-from aesara.scalar import Clip
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
 from pymc.aesaraf import change_rv_size
-from pymc.distributions.distribution import SymbolicDistribution, _moment
+from pymc.distributions.distribution import (
+    SymbolicDistribution,
+    SymbolicRandomVariable,
+    _moment,
+)
 from pymc.util import check_dist_not_registered
+
+
+class CensoredRV(SymbolicRandomVariable):
+    """Censored random variable"""
+
+    inline_aeppl = True
 
 
 class Censored(SymbolicDistribution):
@@ -100,26 +109,23 @@ class Censored(SymbolicDistribution):
         dist = change_rv_size(dist, dist_shape)
 
         # Censoring is achieved by clipping the base distribution between lower and upper
-        rv_out = at.clip(dist, lower, upper)
+        dist_, lower_, upper_ = dist.type(), lower.type(), upper.type()
+        censored_rv_ = at.clip(dist_, lower_, upper_)
 
-        # Reference nodes to facilitate identification in other classmethods, without
-        # worring about possible dimshuffles
-        rv_out.tag.dist = dist
-        rv_out.tag.lower = lower
-        rv_out.tag.upper = upper
-
-        return rv_out
+        return CensoredRV(
+            inputs=[dist_, lower_, upper_],
+            outputs=[censored_rv_],
+            ndim_supp=0,
+        )(dist, lower, upper)
 
     @classmethod
     def change_size(cls, rv, new_size, expand=False):
-        dist = rv.tag.dist
-        lower = rv.tag.lower
-        upper = rv.tag.upper
+        dist, lower, upper = rv.owner.inputs
         new_dist = change_rv_size(dist, new_size, expand=expand)
         return cls.rv_op(new_dist, lower, upper)
 
 
-@_moment.register(Clip)
+@_moment.register(CensoredRV)
 def moment_censored(op, rv, dist, lower, upper):
     moment = at.switch(
         at.eq(lower, -np.inf),

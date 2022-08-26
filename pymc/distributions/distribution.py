@@ -24,12 +24,17 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 import aesara
 import numpy as np
 
+from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 from aeppl.logprob import _logcdf, _logprob
+from aeppl.rewriting import logprob_rewrites_db
 from aesara import tensor as at
-from aesara.graph.basic import Variable
+from aesara.compile.builders import OpFromGraph
+from aesara.graph import node_rewriter
+from aesara.graph.basic import Node, Variable, clone_replace
+from aesara.graph.rewriting.basic import in2out
 from aesara.tensor.basic import as_tensor_variable
-from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.random.type import RandomType
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
@@ -58,6 +63,7 @@ __all__ = [
     "Continuous",
     "Discrete",
     "NoDistribution",
+    "SymbolicRandomVariable",
 ]
 
 DIST_PARAMETER_TYPES: TypeAlias = Union[np.ndarray, int, float, TensorVariable]
@@ -176,6 +182,50 @@ def _make_rv_and_resize_shape_from_dims(
         resize_shape_from_dims = shape_from_dims(dims, tuple(rv_out.shape), model)
 
     return rv_out, resize_shape_from_dims
+
+
+class SymbolicRandomVariable(OpFromGraph):
+    """Symbolic Random Variable
+
+    This is a subclasse of `OpFromGraph` which is used to encapsulate the symbolic
+    random graph of complex distributions which are built on top of pure
+    `RandomVariable`s.
+
+    These graphs may vary structurally based on the inputs (e.g., their dimensionality),
+    and usually require that random inputs have specific shapes for correct outputs
+    (e.g., avoiding broadcasting of random inputs). Due to this, most distributions that
+    return SymbolicRandomVariable create their these graphs at runtime via the
+    classmethod `cls.rv_op`, taking care to clone and resize random inputs, if needed.
+    """
+
+    ndim_supp: int = None
+    """Number of support dimensions as in RandomVariables
+    (0 for scalar, 1 for vector, ...)
+     """
+
+    inline_aeppl: bool = False
+    """Specifies whether the logprob function is derived automatically by introspection
+    of the inner graph.
+
+    If `False`, a logprob function must be dispatched directly to the subclass type.
+    """
+
+    _print_name: Tuple[str, str] = ("Unknown", "\\operatorname{Unknown}")
+    """Tuple of (name, latex name) used for for pretty-printing variables of this type"""
+
+    def __init__(self, *args, ndim_supp, **kwargs):
+        self.ndim_supp = ndim_supp
+        kwargs.setdefault("inline", True)
+        super().__init__(*args, **kwargs)
+
+    def update(self, node: Node):
+        """Symbolic update expression for input random state variables
+
+        Returns a dictionary with the symbolic expressions required for correct updating
+        of random state input variables repeated function evaluations. This is used by
+        `aesaraf.compile_pymc`.
+        """
+        return {}
 
 
 class Distribution(metaclass=DistributionMeta):
@@ -469,7 +519,7 @@ class SymbolicDistribution:
         # Resize variable based on `dims` information
         if resize_shape_from_dims:
             resize_size_from_dims = find_size(
-                shape=resize_shape_from_dims, size=None, ndim_supp=rv_out.tag.ndim_supp
+                shape=resize_shape_from_dims, size=None, ndim_supp=rv_out.owner.op.ndim_supp
             )
             rv_out = cls.change_size(rv=rv_out, new_size=resize_size_from_dims, expand=False)
 
@@ -547,13 +597,41 @@ class SymbolicDistribution:
         ndim_supp = cls.ndim_supp(*dist_params)
         create_size = find_size(shape=shape, size=size, ndim_supp=ndim_supp)
         rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
-        # This is needed for resizing from dims in `__new__`
-        rv_out.tag.ndim_supp = ndim_supp
 
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
         rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
         return rv_out
+
+
+# Let Aeppl know that the SymbolicRandomVariable has a logprob.
+MeasurableVariable.register(SymbolicRandomVariable)
+
+
+@_get_measurable_outputs.register(SymbolicRandomVariable)
+def _get_measurable_outputs_symbolic_random_variable(op, node):
+    # This tells Aeppl that any non RandomType outputs are measurable
+    return [out for out in node.outputs if not isinstance(out.type, RandomType)]
+
+
+@node_rewriter([SymbolicRandomVariable])
+def inline_symbolic_random_variable(fgraph, node):
+    """
+    This optimization expands the internal graph of a SymbolicRV when obtaining logp
+    from Aeppl, if the flag `inline_aeppl` is True.
+    """
+    op = node.op
+    if op.inline_aeppl:
+        return clone_replace(op.inner_outputs, {u: v for u, v in zip(op.inner_inputs, node.inputs)})
+
+
+# Registered before pre-canonicalization which happens at position=-10
+logprob_rewrites_db.register(
+    "inline_SymbolicRandomVariable",
+    in2out(inline_symbolic_random_variable),
+    "basic",
+    position=-20,
+)
 
 
 @singledispatch
@@ -569,12 +647,6 @@ def moment(rv: TensorVariable) -> TensorVariable:
     for which the value is to be derived.
     """
     return _moment(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
-
-
-@_moment.register(Elemwise)
-def moment_elemwise(op, rv, *dist_params):
-    """For Elemwise Ops, dispatch on respective scalar_op"""
-    return _moment(op.scalar_op, rv, *dist_params)
 
 
 class Discrete(Distribution):

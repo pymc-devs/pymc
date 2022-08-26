@@ -1697,7 +1697,7 @@ class TestCompileForwardSampler:
         assert {i.name for i in self.get_function_inputs(f)} == {"sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {"mu", "sigma"}
 
-    def test_distributions_op_from_graph(self):
+    def test_mixture(self):
         with pm.Model() as model:
             w = pm.Dirichlet("w", a=np.ones(3), size=(5, 3))
 
@@ -1731,7 +1731,7 @@ class TestCompileForwardSampler:
         assert {i.name for i in self.get_function_inputs(f)} == {"mu"}
         assert {i.name for i in self.get_function_roots(f)} == {"mu"}
 
-    def test_distributions_no_op_from_graph(self):
+    def test_censored(self):
         with pm.Model() as model:
             latent_mu = pm.Normal("latent_mu", mu=np.arange(3), sigma=1)
             mu = pm.Censored("mu", pm.Normal.dist(mu=latent_mu, sigma=1), lower=-1, upper=1)
