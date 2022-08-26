@@ -368,13 +368,13 @@ class MvStudentT(Continuous):
 
     @classmethod
     def dist(cls, nu, Sigma=None, mu=None, scale=None, tau=None, chol=None, lower=True, **kwargs):
-        if kwargs.get('cov') is not None:
+        if kwargs.get("cov") is not None:
             warnings.warn(
                 "Use the scale argument to specify the scale matrix."
                 "cov will be removed in future versions.",
                 DeprecationWarning,
             )
-            scale = kwargs.get('cov')
+            scale = kwargs.get("cov")
         if Sigma is not None:
             if scale is not None:
                 raise ValueError("Specify only one of scale and Sigma")
