@@ -27,8 +27,8 @@ from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
 from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
-from arviz.data.base import make_attrs
 from aesara.tensor.shape import SpecifyShape
+from arviz.data.base import make_attrs
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations
