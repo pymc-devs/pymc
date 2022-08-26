@@ -352,42 +352,49 @@ class MvStudentT(Continuous):
     nu : tensor_like of float
         Degrees of freedom, should be a positive scalar.
     Sigma : tensor_like of float, optional
-        Covariance matrix. Use `cov` in new code.
+        Scale matrix. Use `scale` in new code.
     mu : tensor_like of float, optional
         Vector of means.
-    cov : tensor_like of float, optional
-        The covariance matrix.
+    scale : tensor_like of float, optional
+        The scale matrix.
     tau : tensor_like of float, optional
         The precision matrix.
     chol : tensor_like of float, optional
-        The cholesky factor of the covariance matrix.
+        The cholesky factor of the scale matrix.
     lower : bool, default=True
         Whether the cholesky fatcor is given as a lower triangular matrix.
     """
     rv_op = mv_studentt
 
     @classmethod
-    def dist(cls, nu, Sigma=None, mu=None, cov=None, tau=None, chol=None, lower=True, **kwargs):
+    def dist(cls, nu, Sigma=None, mu=None, scale=None, tau=None, chol=None, lower=True, **kwargs):
+        if kwargs.get('cov') is not None:
+            warnings.warn(
+                "Use the scale argument to specify the scale matrix."
+                "cov will be removed in future versions."
+                DeprecationWarning,
+            )
+            scale = kwargs.get('cov')
         if Sigma is not None:
-            if cov is not None:
-                raise ValueError("Specify only one of cov and Sigma")
-            cov = Sigma
+            if scale is not None:
+                raise ValueError("Specify only one of scale and Sigma")
+            scale = Sigma
         nu = at.as_tensor_variable(floatX(nu))
         mu = at.as_tensor_variable(floatX(mu))
-        cov = quaddist_matrix(cov, chol, tau, lower)
+        scale = quaddist_matrix(scale, chol, tau, lower)
         # Aesara is stricter about the shape of mu, than PyMC used to be
-        mu = at.broadcast_arrays(mu, cov[..., -1])[0]
+        mu = at.broadcast_arrays(mu, scale[..., -1])[0]
 
-        return super().dist([nu, mu, cov], **kwargs)
+        return super().dist([nu, mu, scale], **kwargs)
 
-    def moment(rv, size, nu, mu, cov):
+    def moment(rv, size, nu, mu, scale):
         moment = mu
         if not rv_size_is_none(size):
             moment_size = at.concatenate([size, [mu.shape[-1]]])
             moment = at.full(moment_size, moment)
         return moment
 
-    def logp(value, nu, mu, cov):
+    def logp(value, nu, mu, scale):
         """
         Calculate log-probability of Multivariate Student's T distribution
         at specified value.
@@ -401,7 +408,7 @@ class MvStudentT(Continuous):
         -------
         TensorVariable
         """
-        quaddist, logdet, ok = quaddist_parse(value, mu, cov)
+        quaddist, logdet, ok = quaddist_parse(value, mu, scale)
         k = floatX(value.shape[-1])
 
         norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * at.log(nu * np.pi)
