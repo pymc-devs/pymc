@@ -191,7 +191,7 @@ class Mixture(Distribution):
             # TODO: Allow these to not be a RandomVariable as long as we can call `ndim_supp` on them
             #  and resize them
             if not isinstance(dist, TensorVariable) or not isinstance(
-                dist.owner.op, RandomVariable
+                dist.owner.op, (RandomVariable, SymbolicRandomVariable)
             ):
                 raise ValueError(
                     f"Component dist must be a distribution created via the `.dist()` API, got {type(dist)}"

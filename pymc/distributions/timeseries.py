@@ -155,7 +155,7 @@ class RandomWalk(Distribution):
         if not (
             isinstance(init_dist, at.TensorVariable)
             and init_dist.owner is not None
-            and isinstance(init_dist.owner.op, RandomVariable)
+            and isinstance(init_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
             # TODO: Lift univariate constraint on init_dist
             and init_dist.owner.op.ndim_supp == 0
         ):
@@ -165,7 +165,7 @@ class RandomWalk(Distribution):
         if not (
             isinstance(innovation_dist, at.TensorVariable)
             and init_dist.owner is not None
-            and isinstance(init_dist.owner.op, RandomVariable)
+            and isinstance(init_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
             # TODO: Lift univariate constraint on inovvation_dist
             and init_dist.owner.op.ndim_supp == 0
         ):
@@ -434,7 +434,7 @@ class AR(Distribution):
 
         if init_dist is not None:
             if not isinstance(init_dist, TensorVariable) or not isinstance(
-                init_dist.owner.op, RandomVariable
+                init_dist.owner.op, (RandomVariable, SymbolicRandomVariable)
             ):
                 raise ValueError(
                     f"Init dist must be a distribution created via the `.dist()` API, "
