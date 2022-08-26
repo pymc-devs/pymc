@@ -29,7 +29,7 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.utils import normalize_size_param
 from aesara.tensor.rewriting.basic import ShapeFeature, topo_constant_folding
 
-from pymc.aesaraf import change_rv_size, convert_observed_data, floatX, intX
+from pymc.aesaraf import convert_observed_data, floatX, intX
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
@@ -43,6 +43,8 @@ from pymc.distributions.logprob import ignore_logprob, logp
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
+    _change_dist_size,
+    change_dist_size,
     convert_dims,
     rv_size_is_none,
     to_tuple,
@@ -141,7 +143,7 @@ class GaussianRandomWalkRV(RandomVariable):
         init_dist_size = (
             size if not rv_size_is_none(size) else at.broadcast_shape(mu, sigma, init_dist)
         )
-        init_dist = change_rv_size(init_dist, init_dist_size)
+        init_dist = change_dist_size(init_dist, init_dist_size)
 
         return super().make_node(rng, size, dtype, mu, sigma, init_dist, steps)
 
@@ -530,7 +532,7 @@ class AR(SymbolicDistribution):
         else:
             # In this case the support dimension must cover for ar_order
             init_dist_size = batch_size
-        init_dist = change_rv_size(init_dist, init_dist_size)
+        init_dist = change_dist_size(init_dist, init_dist_size)
 
         # Create OpFromGraph representing random draws form AR process
         # Variables with underscore suffix are dummy inputs into the OpFromGraph
@@ -578,20 +580,20 @@ class AR(SymbolicDistribution):
         ar = ar_op(rhos, sigma, init_dist, steps)
         return ar
 
-    @classmethod
-    def change_size(cls, rv, new_size, expand=False):
 
-        if expand:
-            old_size = rv.shape[:-1]
-            new_size = at.concatenate([new_size, old_size])
+@_change_dist_size.register(AutoRegressiveRV)
+def change_ar_size(op, dist, new_size, expand=False):
 
-        op = rv.owner.op
-        return cls.rv_op(
-            *rv.owner.inputs,
-            ar_order=op.ar_order,
-            constant_term=op.constant_term,
-            size=new_size,
-        )
+    if expand:
+        old_size = dist.shape[:-1]
+        new_size = tuple(new_size) + tuple(old_size)
+
+    return AR.rv_op(
+        *dist.owner.inputs[:-1],
+        ar_order=op.ar_order,
+        constant_term=op.constant_term,
+        size=new_size,
+    )
 
 
 @_logprob.register(AutoRegressiveRV)

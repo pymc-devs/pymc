@@ -38,13 +38,14 @@ from aesara.tensor.random.type import RandomType
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
-from pymc.aesaraf import change_rv_size, convert_observed_data
+from pymc.aesaraf import convert_observed_data
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
     Size,
     StrongDims,
     StrongShape,
+    change_dist_size,
     convert_dims,
     convert_shape,
     convert_size,
@@ -322,7 +323,7 @@ class Distribution(metaclass=DistributionMeta):
             resize_size_from_dims = find_size(
                 shape=resize_shape_from_dims, size=None, ndim_supp=cls.rv_op.ndim_supp
             )
-            rv_out = change_rv_size(rv=rv_out, new_size=resize_size_from_dims, expand=False)
+            rv_out = change_dist_size(dist=rv_out, new_size=resize_size_from_dims, expand=False)
 
         rv_out = model.register_rv(
             rv_out,
@@ -432,9 +433,6 @@ class SymbolicDistribution:
     cls.rv_op
         Returns a TensorVariable that represents the symbolic distribution
         parametrized by a default set of parameters and a size and rngs arguments
-    cls.change_size
-        Returns an equivalent symbolic distribution with a different size. This is
-        analogous to `pymc.aesaraf.change_rv_size` for `RandomVariable`s.
     """
 
     def __new__(
@@ -521,7 +519,7 @@ class SymbolicDistribution:
             resize_size_from_dims = find_size(
                 shape=resize_shape_from_dims, size=None, ndim_supp=rv_out.owner.op.ndim_supp
             )
-            rv_out = cls.change_size(rv=rv_out, new_size=resize_size_from_dims, expand=False)
+            rv_out = change_dist_size(rv_out, new_size=resize_size_from_dims, expand=False)
 
         rv_out = model.register_rv(
             rv_out,

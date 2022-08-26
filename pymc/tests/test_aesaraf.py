@@ -24,7 +24,7 @@ import scipy.sparse as sps
 
 from aeppl.logprob import ParameterValueError
 from aesara.compile.builders import OpFromGraph
-from aesara.graph.basic import Constant, Variable, ancestors, equal_computations
+from aesara.graph.basic import Variable, equal_computations
 from aesara.tensor.random.basic import normal, uniform
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
@@ -34,7 +34,6 @@ from aesara.tensor.var import TensorVariable
 import pymc as pm
 
 from pymc.aesaraf import (
-    change_rv_size,
     compile_pymc,
     convert_observed_data,
     extract_obs_data,
@@ -44,7 +43,6 @@ from pymc.aesaraf import (
 )
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicRandomVariable
-from pymc.exceptions import ShapeError
 from pymc.vartypes import int_types
 
 
@@ -80,75 +78,6 @@ def test_pd_as_tensor_variable_multiindex() -> None:
     np_array = np.array([[12.0, 80.0, 30.0, 20.0], [120.0, 700.0, 30.0, 20.0]]).T
     assert isinstance(df.index, pd.MultiIndex)
     np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
-
-
-def test_change_rv_size():
-    loc = at.as_tensor_variable([1, 2])
-    rv = normal(loc=loc)
-    assert rv.ndim == 1
-    assert tuple(rv.shape.eval()) == (2,)
-
-    with pytest.raises(ShapeError, match="must be ≤1-dimensional"):
-        change_rv_size(rv, new_size=[[2, 3]])
-    with pytest.raises(ShapeError, match="must be ≤1-dimensional"):
-        change_rv_size(rv, new_size=at.as_tensor_variable([[2, 3], [4, 5]]))
-
-    rv_new = change_rv_size(rv, new_size=(3,), expand=True)
-    assert rv_new.ndim == 2
-    assert tuple(rv_new.shape.eval()) == (3, 2)
-
-    # Make sure that the shape used to determine the expanded size doesn't
-    # depend on the old `RandomVariable`.
-    rv_new_ancestors = set(ancestors((rv_new,)))
-    assert loc in rv_new_ancestors
-    assert rv not in rv_new_ancestors
-
-    rv_newer = change_rv_size(rv_new, new_size=(4,), expand=True)
-    assert rv_newer.ndim == 3
-    assert tuple(rv_newer.shape.eval()) == (4, 3, 2)
-
-    # Make sure we avoid introducing a `Cast` by converting the new size before
-    # constructing the new `RandomVariable`
-    rv = normal(0, 1)
-    new_size = np.array([4, 3], dtype="int32")
-    rv_newer = change_rv_size(rv, new_size=new_size, expand=False)
-    assert rv_newer.ndim == 2
-    assert isinstance(rv_newer.owner.inputs[1], Constant)
-    assert tuple(rv_newer.shape.eval()) == (4, 3)
-
-    rv = normal(0, 1)
-    new_size = at.as_tensor(np.array([4, 3], dtype="int32"))
-    rv_newer = change_rv_size(rv, new_size=new_size, expand=True)
-    assert rv_newer.ndim == 2
-    assert tuple(rv_newer.shape.eval()) == (4, 3)
-
-    rv = normal(0, 1)
-    new_size = at.as_tensor(2, dtype="int32")
-    rv_newer = change_rv_size(rv, new_size=new_size, expand=True)
-    assert rv_newer.ndim == 1
-    assert tuple(rv_newer.shape.eval()) == (2,)
-
-
-def test_change_rv_size_default_update():
-    rng = aesara.shared(np.random.default_rng(0))
-    x = normal(rng=rng)
-
-    # Test that "traditional" default_update is updated
-    rng.default_update = x.owner.outputs[0]
-    new_x = change_rv_size(x, new_size=(2,))
-    assert rng.default_update is not x.owner.outputs[0]
-    assert rng.default_update is new_x.owner.outputs[0]
-
-    # Test that "non-traditional" default_update is left unchanged
-    next_rng = aesara.shared(np.random.default_rng(1))
-    rng.default_update = next_rng
-    new_x = change_rv_size(x, new_size=(2,))
-    assert rng.default_update is next_rng
-
-    # Test that default_update is not set if there was none before
-    del rng.default_update
-    new_x = change_rv_size(x, new_size=(2,))
-    assert not hasattr(rng, "default_update")
 
 
 class TestBroadcasting:

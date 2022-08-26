@@ -51,7 +51,7 @@ from pymc.distributions import (
 )
 from pymc.distributions.logprob import logp
 from pymc.distributions.mixture import MixtureTransformWarning
-from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.math import expand_packed_triangular
 from pymc.model import Model
@@ -387,21 +387,21 @@ class TestMixture(SeededTest):
         ),
     )
     @pytest.mark.parametrize("expand", (False, True))
-    def test_change_size(self, comp_dists, expand):
+    def test_change_dist_size(self, comp_dists, expand):
         if isinstance(comp_dists, list):
             univariate = comp_dists[0].owner.op.ndim_supp == 0
         else:
             univariate = comp_dists.owner.op.ndim_supp == 0
 
         mix = Mixture.dist(w=Dirichlet.dist([1, 1]), comp_dists=comp_dists)
-        mix = Mixture.change_size(mix, new_size=(4,), expand=expand)
+        mix = change_dist_size(mix, new_size=(4,), expand=expand)
         draws = mix.eval()
         expected_shape = (4,) if univariate else (4, 3)
         assert draws.shape == expected_shape
         assert np.unique(draws).size == draws.size
 
         mix = Mixture.dist(w=Dirichlet.dist([1, 1]), comp_dists=comp_dists, size=(3,))
-        mix = Mixture.change_size(mix, new_size=(5, 4), expand=expand)
+        mix = change_dist_size(mix, new_size=(5, 4), expand=expand)
         draws = mix.eval()
         expected_shape = (5, 4) if univariate else (5, 4, 3)
         if expand:
@@ -847,7 +847,6 @@ class TestNormalMixture(SeededTest):
             extra_args={"comp_shape": 2},
             size=1000,
             ref_rand=ref_rand,
-            change_rv_size_fn=Mixture.change_size,
         )
         pymc_random(
             NormalMixture,
@@ -859,7 +858,6 @@ class TestNormalMixture(SeededTest):
             extra_args={"comp_shape": 3},
             size=1000,
             ref_rand=ref_rand,
-            change_rv_size_fn=Mixture.change_size,
         )
 
 
