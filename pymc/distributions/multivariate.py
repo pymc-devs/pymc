@@ -374,7 +374,7 @@ class MvStudentT(Continuous):
                 "cov will be removed in future versions.",
                 DeprecationWarning,
             )
-            scale = kwargs.get("cov")
+            scale = kwargs.pop("cov")
         if Sigma is not None:
             if scale is not None:
                 raise ValueError("Specify only one of scale and Sigma")
