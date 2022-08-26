@@ -27,6 +27,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
 from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
+from aesara.tensor.shape import SpecifyShape
 from arviz.data.base import make_attrs
 
 from pymc import Model, modelcontext
@@ -38,6 +39,7 @@ warnings.warn("This module is experimental.")
 
 @jax_funcify.register(Assert)
 @jax_funcify.register(CheckParameterValue)
+@jax_funcify.register(SpecifyShape)
 def jax_funcify_Assert(op, **kwargs):
     # Jax does not allow assert whose values aren't known during JIT compilation
     # within it's JIT-ed code. Hence we need to make a simple pass through
