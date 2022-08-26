@@ -27,7 +27,7 @@ from pymc.distributions import transforms
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import (
-    SymbolicDistribution,
+    Distribution,
     SymbolicRandomVariable,
     _moment,
     moment,
@@ -52,7 +52,7 @@ class MarginalMixtureRV(SymbolicRandomVariable):
         return {node.inputs[0]: node.outputs[0]}
 
 
-class Mixture(SymbolicDistribution):
+class Mixture(Distribution):
     R"""
     Mixture log-likelihood
 
@@ -161,6 +161,8 @@ class Mixture(SymbolicDistribution):
             like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
     """
 
+    rv_type = MarginalMixtureRV
+
     @classmethod
     def dist(cls, w, comp_dists, **kwargs):
         if not isinstance(comp_dists, (tuple, list)):
@@ -204,11 +206,6 @@ class Mixture(SymbolicDistribution):
 
         w = at.as_tensor_variable(w)
         return super().dist([w, *comp_dists], **kwargs)
-
-    @classmethod
-    def ndim_supp(cls, weights, *components):
-        # We already checked that all components have the same support dimensionality
-        return components[0].owner.op.ndim_supp
 
     @classmethod
     def rv_op(cls, weights, *components, size=None):

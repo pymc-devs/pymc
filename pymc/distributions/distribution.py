@@ -32,6 +32,7 @@ from aesara.compile.builders import OpFromGraph
 from aesara.graph import node_rewriter
 from aesara.graph.basic import Node, Variable, clone_replace
 from aesara.graph.rewriting.basic import in2out
+from aesara.graph.utils import MetaType
 from aesara.tensor.basic import as_tensor_variable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.type import RandomType
@@ -42,7 +43,6 @@ from pymc.aesaraf import convert_observed_data
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
-    Size,
     StrongDims,
     StrongShape,
     change_dist_size,
@@ -60,7 +60,6 @@ __all__ = [
     "DensityDistRV",
     "DensityDist",
     "Distribution",
-    "SymbolicDistribution",
     "Continuous",
     "Discrete",
     "NoDistribution",
@@ -112,6 +111,7 @@ class DistributionMeta(ABCMeta):
 
         if isinstance(rv_op, RandomVariable):
             rv_type = type(rv_op)
+            clsdict["rv_type"] = rv_type
 
         new_cls = super().__new__(cls, name, bases, clsdict)
 
@@ -232,8 +232,8 @@ class SymbolicRandomVariable(OpFromGraph):
 class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
-    rv_class = None
-    rv_op: RandomVariable = None
+    rv_op: [RandomVariable, SymbolicRandomVariable] = None
+    rv_type: MetaType = None
 
     def __new__(
         cls,
@@ -321,7 +321,7 @@ class Distribution(metaclass=DistributionMeta):
         # Resize variable based on `dims` information
         if resize_shape_from_dims:
             resize_size_from_dims = find_size(
-                shape=resize_shape_from_dims, size=None, ndim_supp=cls.rv_op.ndim_supp
+                shape=resize_shape_from_dims, size=None, ndim_supp=rv_out.owner.op.ndim_supp
             )
             rv_out = change_dist_size(dist=rv_out, new_size=resize_size_from_dims, expand=False)
 
@@ -397,202 +397,10 @@ class Distribution(metaclass=DistributionMeta):
         shape = convert_shape(shape)
         size = convert_size(size)
 
-        create_size = find_size(shape=shape, size=size, ndim_supp=cls.rv_op.ndim_supp)
-        rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
-
-        rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
-        rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
-        rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
-        return rv_out
-
-
-class SymbolicDistribution:
-    """Symbolic statistical distribution
-
-    While traditional PyMC distributions are represented by a single RandomVariable
-    graph, Symbolic distributions correspond to a larger graph that contains one or
-    more RandomVariables and an arbitrary number of deterministic operations, which
-    represent their own kind of distribution.
-
-    The graphs returned by symbolic distributions can be evaluated directly to
-    obtain valid draws and can further be parsed by Aeppl to derive the
-    corresponding logp at runtime.
-
-    Check pymc.distributions.Censored for an example of a symbolic distribution.
-
-    Symbolic distributions must implement the following classmethods:
-    cls.dist
-        Performs input validation and converts optional alternative parametrizations
-        to a canonical parametrization. It should call `super().dist()`, passing a
-        list with the default parameters as the first and only non keyword argument,
-        followed by other keyword arguments like size and rngs, and return the result
-    cls.ndim_supp
-        Returns the support of the symbolic distribution, given the default set of
-        parameters. This may not always be constant, for instance if the symbolic
-        distribution can be defined based on an arbitrary base distribution.
-    cls.rv_op
-        Returns a TensorVariable that represents the symbolic distribution
-        parametrized by a default set of parameters and a size and rngs arguments
-    """
-
-    def __new__(
-        cls,
-        name: str,
-        *args,
-        dims: Optional[Dims] = None,
-        initval=None,
-        observed=None,
-        total_size=None,
-        transform=UNSET,
-        **kwargs,
-    ) -> TensorVariable:
-        """Adds a TensorVariable corresponding to a PyMC symbolic distribution to the
-        current model.
-
-        Parameters
-        ----------
-        cls : type
-            A distribution class that inherits from SymbolicDistribution.
-        name : str
-            Name for the new model variable.
-        dims : tuple, optional
-            A tuple of dimension names known to the model. When shape is not provided,
-            the shape of dims is used to define the shape of the variable.
-        initval : optional
-            Numeric or symbolic untransformed initial value of matching shape,
-            or one of the following initial value strategies: "moment", "prior".
-            Depending on the sampler's settings, a random jitter may be added to numeric,
-            symbolic or moment-based initial values in the transformed space.
-        observed : optional
-            Observed data to be passed when registering the random variable in the model.
-            When neither shape nor dims is provided, the shape of observed is used to
-            define the shape of the variable.
-            See ``Model.register_rv``.
-        total_size : float, optional
-            See ``Model.register_rv``.
-        transform : optional
-            See ``Model.register_rv``.
-        **kwargs
-            Keyword arguments that will be forwarded to ``.dist()``.
-            Most prominently: ``shape`` and ``size``
-
-        Returns
-        -------
-        var : TensorVariable
-            The created variable, registered in the Model.
-        """
-
-        try:
-            from pymc.model import Model
-
-            model = Model.get_context()
-        except TypeError:
-            raise TypeError(
-                "No model on context stack, which is needed to "
-                "instantiate distributions. Add variable inside "
-                "a 'with model:' block, or use the '.dist' syntax "
-                "for a standalone distribution."
-            )
-
-        if "testval" in kwargs:
-            initval = kwargs.pop("testval")
-            warnings.warn(
-                "The `testval` argument is deprecated; use `initval`.",
-                FutureWarning,
-                stacklevel=2,
-            )
-
-        if not isinstance(name, string_types):
-            raise TypeError(f"Name needs to be a string but got: {name}")
-
-        dims = convert_dims(dims)
-        if observed is not None:
-            observed = convert_observed_data(observed)
-
-        # Create the RV, without taking `dims` into consideration
-        rv_out, resize_shape_from_dims = _make_rv_and_resize_shape_from_dims(
-            cls=cls, dims=dims, model=model, observed=observed, args=args, **kwargs
-        )
-
-        # Resize variable based on `dims` information
-        if resize_shape_from_dims:
-            resize_size_from_dims = find_size(
-                shape=resize_shape_from_dims, size=None, ndim_supp=rv_out.owner.op.ndim_supp
-            )
-            rv_out = change_dist_size(rv_out, new_size=resize_size_from_dims, expand=False)
-
-        rv_out = model.register_rv(
-            rv_out,
-            name,
-            observed,
-            total_size,
-            dims=dims,
-            transform=transform,
-            initval=initval,
-        )
-        # add in pretty-printing support
-        rv_out.str_repr = types.MethodType(str_for_dist, rv_out)
-        rv_out._repr_latex_ = types.MethodType(
-            functools.partial(str_for_dist, formatting="latex"), rv_out
-        )
-
-        rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
-        rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
-        rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
-
-        return rv_out
-
-    @classmethod
-    def dist(
-        cls,
-        dist_params,
-        *,
-        shape: Optional[Shape] = None,
-        size: Optional[Size] = None,
-        **kwargs,
-    ) -> TensorVariable:
-        """Creates a TensorVariable corresponding to the `cls` symbolic distribution.
-
-        Parameters
-        ----------
-        dist_params : array-like
-            The inputs to the `RandomVariable` `Op`.
-        shape : int, tuple, Variable, optional
-            A tuple of sizes for each dimension of the new RV.
-        size : int, tuple, Variable, optional
-            For creating the RV like in Aesara/NumPy.
-
-        Returns
-        -------
-        var : TensorVariable
-        """
-
-        if "testval" in kwargs:
-            kwargs.pop("testval")
-            warnings.warn(
-                "The `.dist(testval=...)` argument is deprecated and has no effect. "
-                "Initial values for sampling/optimization can be specified with `initval` in a modelcontext. "
-                "For using Aesara's test value features, you must assign the `.tag.test_value` yourself.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        if "initval" in kwargs:
-            raise TypeError(
-                "Unexpected keyword argument `initval`. "
-                "This argument is not available for the `.dist()` API."
-            )
-
-        if "dims" in kwargs:
-            raise NotImplementedError("The use of a `.dist(dims=...)` API is not supported.")
-        if shape is not None and size is not None:
-            raise ValueError(
-                f"Passing both `shape` ({shape}) and `size` ({size}) is not supported!"
-            )
-
-        shape = convert_shape(shape)
-        size = convert_size(size)
-
-        ndim_supp = cls.ndim_supp(*dist_params)
+        # SymbolicRVs don't have `ndim_supp` until they are created
+        ndim_supp = getattr(cls.rv_op, "ndim_supp", None)
+        if ndim_supp is None:
+            ndim_supp = cls.rv_op(*dist_params, **kwargs).owner.op.ndim_supp
         create_size = find_size(shape=shape, size=size, ndim_supp=ndim_supp)
         rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
 

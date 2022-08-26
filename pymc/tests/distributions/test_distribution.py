@@ -94,7 +94,7 @@ def test_all_distributions_have_moments():
     dists = (getattr(dist_module, dist) for dist in dist_module.__all__)
     dists = (dist for dist in dists if isinstance(dist, DistributionMeta))
     missing_moments = {
-        dist for dist in dists if type(getattr(dist, "rv_op", None)) not in _moment.registry
+        dist for dist in dists if getattr(dist, "rv_type", None) not in _moment.registry
     }
 
     # Ignore super classes
