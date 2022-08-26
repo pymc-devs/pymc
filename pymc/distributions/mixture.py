@@ -17,10 +17,8 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 from aeppl.logprob import _logcdf, _logprob
 from aeppl.transforms import IntervalTransform
-from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Node, equal_computations
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
@@ -29,7 +27,12 @@ from pymc.aesaraf import change_rv_size
 from pymc.distributions import transforms
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.distribution import SymbolicDistribution, _moment, moment
+from pymc.distributions.distribution import (
+    SymbolicDistribution,
+    SymbolicRandomVariable,
+    _moment,
+    moment,
+)
 from pymc.distributions.logprob import ignore_logprob, logcdf, logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.distributions.transforms import _default_transform
@@ -39,7 +42,7 @@ from pymc.vartypes import continuous_types, discrete_types
 __all__ = ["Mixture", "NormalMixture"]
 
 
-class MarginalMixtureRV(OpFromGraph):
+class MarginalMixtureRV(SymbolicRandomVariable):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
     default_output = 1
@@ -47,9 +50,6 @@ class MarginalMixtureRV(OpFromGraph):
     def update(self, node: Node):
         # Update for the internal mix_indexes RV
         return {node.inputs[0]: node.outputs[0]}
-
-
-MeasurableVariable.register(MarginalMixtureRV)
 
 
 class Mixture(SymbolicDistribution):
@@ -293,15 +293,11 @@ class Mixture(SymbolicDistribution):
         mix_op = MarginalMixtureRV(
             inputs=[mix_indexes_rng_, weights_, *components_],
             outputs=[mix_indexes_rng_next_, mix_out_],
+            ndim_supp=components[0].owner.op.ndim_supp,
         )
 
         # Create the actual MarginalMixture variable
         mix_out = mix_op(mix_indexes_rng, weights, *components)
-
-        # Reference nodes to facilitate identification in other classmethods
-        mix_out.tag.weights = weights
-        mix_out.tag.components = components
-        mix_out.tag.choices_rng = mix_indexes_rng
 
         return mix_out
 
@@ -318,14 +314,13 @@ class Mixture(SymbolicDistribution):
 
     @classmethod
     def change_size(cls, rv, new_size, expand=False):
-        weights = rv.tag.weights
-        components = rv.tag.components
+        weights, *components = rv.owner.inputs[1:]
 
         if expand:
-            component = rv.tag.components[0]
+            component = components[0]
             # Old size is equal to `shape[:-ndim_supp]`, with care needed for `ndim_supp == 0`
             size_dims = component.ndim - component.owner.op.ndim_supp
-            if len(rv.tag.components) == 1:
+            if len(components) == 1:
                 # If we have a single component, new size should ignore the mixture axis
                 # dimension, as that is not touched by `_resize_components`
                 size_dims -= 1
@@ -335,12 +330,6 @@ class Mixture(SymbolicDistribution):
         components = cls._resize_components(new_size, *components)
 
         return cls.rv_op(weights, *components, size=None)
-
-
-@_get_measurable_outputs.register(MarginalMixtureRV)
-def _get_measurable_outputs_MarginalMixtureRV(op, node):
-    # This tells Aeppl that the second output is the measurable one
-    return [node.outputs[1]]
 
 
 @_logprob.register(MarginalMixtureRV)

@@ -22,7 +22,6 @@ import pandas as pd
 import pytest
 import scipy.sparse as sps
 
-from aeppl.abstract import MeasurableVariable
 from aeppl.logprob import ParameterValueError
 from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Constant, Variable, ancestors, equal_computations
@@ -44,6 +43,7 @@ from pymc.aesaraf import (
     walk_model,
 )
 from pymc.distributions.dist_math import check_parameters
+from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.exceptions import ShapeError
 from pymc.vartypes import int_types
 
@@ -528,20 +528,20 @@ class TestCompilePyMC:
     def test_compile_pymc_custom_update_op(self, _):
         """Test that custom MeasurableVariable Op updates are used by compile_pymc"""
 
-        class UnmeasurableOp(OpFromGraph):
+        class NonSymbolicRV(OpFromGraph):
             def update(self, node):
                 return {node.inputs[0]: node.inputs[0] + 1}
 
         dummy_inputs = [at.scalar(), at.scalar()]
         dummy_outputs = [at.add(*dummy_inputs)]
-        dummy_x = UnmeasurableOp(dummy_inputs, dummy_outputs)(aesara.shared(1.0), 1.0)
+        dummy_x = NonSymbolicRV(dummy_inputs, dummy_outputs)(aesara.shared(1.0), 1.0)
 
         # Check that there are no updates at first
         fn = compile_pymc(inputs=[], outputs=dummy_x)
         assert fn() == fn() == 2.0
 
-        # And they are enabled once the Op is registered as Measurable
-        MeasurableVariable.register(UnmeasurableOp)
+        # And they are enabled once the Op is registered as a SymbolicRV
+        SymbolicRandomVariable.register(NonSymbolicRV)
         fn = compile_pymc(inputs=[], outputs=dummy_x)
         assert fn() == 2.0
         assert fn() == 3.0

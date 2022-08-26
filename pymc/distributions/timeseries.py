@@ -19,10 +19,8 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 from aeppl.logprob import _logprob
 from aesara import scan
-from aesara.compile.builders import OpFromGraph
 from aesara.graph import FunctionGraph, rewrite_graph
 from aesara.graph.basic import Node
 from aesara.raise_op import Assert
@@ -35,7 +33,12 @@ from pymc.aesaraf import change_rv_size, convert_observed_data, floatX, intX
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.distribution import SymbolicDistribution, _moment, moment
+from pymc.distributions.distribution import (
+    SymbolicDistribution,
+    SymbolicRandomVariable,
+    _moment,
+    moment,
+)
 from pymc.distributions.logprob import ignore_logprob, logp
 from pymc.distributions.shape_utils import (
     Dims,
@@ -324,7 +327,7 @@ class GaussianRandomWalk(distribution.Continuous):
         )
 
 
-class AutoRegressiveRV(OpFromGraph):
+class AutoRegressiveRV(SymbolicRandomVariable):
     """A placeholder used to specify a log-likelihood for an AR sub-graph."""
 
     default_output = 1
@@ -569,7 +572,7 @@ class AR(SymbolicDistribution):
             outputs=[noise_next_rng, ar_],
             ar_order=ar_order,
             constant_term=constant_term,
-            inline=True,
+            ndim_supp=1,
         )
 
         ar = ar_op(rhos, sigma, init_dist, steps)
@@ -589,15 +592,6 @@ class AR(SymbolicDistribution):
             constant_term=op.constant_term,
             size=new_size,
         )
-
-
-MeasurableVariable.register(AutoRegressiveRV)
-
-
-@_get_measurable_outputs.register(AutoRegressiveRV)
-def _get_measurable_outputs_ar(op, node):
-    # This tells Aeppl that the second output is the measurable one
-    return [node.outputs[1]]
 
 
 @_logprob.register(AutoRegressiveRV)
