@@ -250,8 +250,8 @@ class TP(Latent):
 
     Parameters
     ----------
-    cov_func : None, 2D array, or instance of Covariance
-        The covariance function.  Defaults to zero.
+    scale_func : None, 2D array, or instance of Covariance
+        The scale function.  Defaults to zero.
     mean_func : None, instance of Mean
         The mean function.  Defaults to zero.
     nu : float
@@ -263,11 +263,18 @@ class TP(Latent):
         Processes as Alternatives to Gaussian Processes.  arXiv preprint arXiv:1402.4306.
     """
 
-    def __init__(self, *, mean_func=Zero(), cov_func=Constant(0.0), nu=None):
+    def __init__(self, *, mean_func=Zero(), scale_func=Constant(0.0), cov_func=None, nu=None):
         if nu is None:
             raise ValueError("Student's T process requires a degrees of freedom parameter, 'nu'")
+        if cov_func is not None:
+            warnings.warn(
+                "Use the scale_func argument to specify the scale function."
+                "cov_func will be removed in future versions.",
+                FutureWarning,
+            )
+            scale_func = cov_func
         self.nu = nu
-        super().__init__(mean_func=mean_func, cov_func=cov_func)
+        super().__init__(mean_func=mean_func, cov_func=scale_func)
 
     def __add__(self, other):
         raise TypeError("Student's T processes aren't additive")
