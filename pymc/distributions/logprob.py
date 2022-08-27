@@ -187,7 +187,7 @@ def joint_logp(
     # Else we assume we were given a single rv and respective value
     elif not isinstance(rv_values, Mapping):
         if len(var) == 1:
-            rv_values = {var[0]: at.as_tensor_variable(rv_values).astype(var[0].type)}
+            rv_values = {var[0]: at.as_tensor_variable(rv_values).astype(var[0].dtype)}
         else:
             raise ValueError("rv_values must be a dict if more than one var is requested")
 
