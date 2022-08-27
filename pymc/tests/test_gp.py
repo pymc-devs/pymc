@@ -869,7 +869,7 @@ class TestMarginalVsMarginalApprox:
         self.sigma = sigma
         self.pnew = pnew
         self.gp = gp
-
+        
     @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
     def testApproximations(self, approx):
         with pm.Model() as model:
@@ -879,7 +879,7 @@ class TestMarginalVsMarginalApprox:
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
             p = gp.conditional("p", self.Xnew)
         approx_logp = model.compile_logp()({"p": self.pnew})
-        npt.assert_allclose(approx_logp, self.logp, atol=0, rtol=1e-2)
+        npt.assert_allclose(approx_logp, self.logp, atol=1e-2, rtol=1e-2)
 
     @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
     def testPredictVar(self, approx):
@@ -890,8 +890,8 @@ class TestMarginalVsMarginalApprox:
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
             mu1, var1 = self.gp.predict(self.Xnew, diag=True)
             mu2, var2 = gp.predict(self.Xnew, diag=True)
-        npt.assert_allclose(mu1, mu2, atol=0, rtol=1e-3)
-        npt.assert_allclose(var1, var2, atol=0, rtol=1e-3)
+        npt.assert_allclose(mu1, mu2, atol=1e-2, rtol=1e-2)
+        npt.assert_allclose(var1, var2, atol=1e-2, rtol=1e-2)
 
     def testPredictCov(self):
         with pm.Model() as model:
@@ -901,9 +901,39 @@ class TestMarginalVsMarginalApprox:
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
             mu1, cov1 = self.gp.predict(self.Xnew, pred_noise=True)
             mu2, cov2 = gp.predict(self.Xnew, pred_noise=True)
-        npt.assert_allclose(mu1, mu2, atol=0, rtol=1e-3)
-        npt.assert_allclose(cov1, cov2, atol=0, rtol=1e-3)
+        npt.assert_allclose(mu1, mu2, atol=1e-2, rtol=1e-2)
+        npt.assert_allclose(cov1, cov2, atol=1e-2, rtol=1e-2)
 
+                            
+class TestMarginalVsMarginalApproxFit:
+    R"""
+    Compare test fits of models Marginal and MarginalApprox.
+    Should be nearly equal when inducing points are same as inputs.
+    """
+    def setup_method(self):
+        self.sigma = 0.1
+        self.x = np.linspace(-5, 5, 30)
+        self.y = 0.25 * self.x + self.sigma*np.random.randn(len(self.x))
+        with pm.Model() as model:
+            cov_func = pm.gp.cov.Linear(1, c=0.0)
+            c = pm.Normal("c", mu=20.0, sigma=100.0) # far from true value
+            mean_func = pm.gp.mean.Constant(c)
+            gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
+            gp.marginal_likelihood("lik", self.x[:, None], self.y, self.sigma)
+            map_full = pm.find_MAP(method="bfgs")
+        self.c_full = map_full["c"]
+
+    @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
+    def test_fits(self, approx):
+        with pm.Model() as model:
+            cov_func = pm.gp.cov.Linear(1, c=0.0)
+            c = pm.Normal("c", mu=20.0, sigma=100.0)
+            mean_func = pm.gp.mean.Constant(c)
+            gp = pm.gp.MarginalApprox(mean_func=mean_func, cov_func=cov_func, approx="VFE")
+            gp.marginal_likelihood("lik", self.x[:, None], self.x[:, None], self.y, self.sigma)
+            map_approx = pm.find_MAP(method="bfgs")
+        npt.assert_allclose(self.c_full, map_approx["c"], atol=0.1, rtol=0.01)
+                            
 
 class TestGPAdditive:
     def setup_method(self):
