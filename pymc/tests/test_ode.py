@@ -366,6 +366,9 @@ class TestDiffEqModel:
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    warnings.filterwarnings(
+                        "ignore", "invalid value encountered in log", RuntimeWarning
+                    )
                     idata = pm.sample(50, tune=0, chains=1)
 
         assert idata.posterior["alpha"].shape == (1, 50)
@@ -399,6 +402,9 @@ class TestDiffEqModel:
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    warnings.filterwarnings(
+                        "ignore", "invalid value encountered in log", RuntimeWarning
+                    )
                     idata = pm.sample(50, tune=0, chains=1)
 
         assert idata.posterior["alpha"].shape == (1, 50)
@@ -443,6 +449,9 @@ class TestDiffEqModel:
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    warnings.filterwarnings(
+                        "ignore", "invalid value encountered in log", RuntimeWarning
+                    )
                     idata = pm.sample(50, tune=0, chains=1)
 
         assert idata.posterior["R"].shape == (1, 50)
@@ -486,6 +495,9 @@ class TestDiffEqModel:
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    warnings.filterwarnings(
+                        "ignore", "invalid value encountered in log", RuntimeWarning
+                    )
                     idata = pm.sample(50, tune=0, chains=1)
 
         assert idata.posterior["beta"].shape == (1, 50)
