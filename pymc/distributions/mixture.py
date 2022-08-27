@@ -510,7 +510,7 @@ class NormalMixture:
     ========  =======================================
     Support   :math:`x \in \mathbb{R}`
     Mean      :math:`\sum_{i = 1}^n w_i \mu_i`
-    Variance  :math:`\sum_{i = 1}^n w_i^2 \sigma^2_i`
+    Variance  :math:`\sum_{i = 1}^n w_i (\sigma^2_i + \mu_i^2) - \left(\sum_{i = 1}^n w_i \mu_i\right)^2`
     ========  =======================================
 
     Parameters
