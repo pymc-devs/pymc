@@ -685,17 +685,12 @@ class MarginalApprox(Marginal):
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
-        # new_gp will default to FITC approx
         new_gp = super().__add__(other)
-        # make sure new gp has correct approx
         if not self.approx == other.approx:
             raise TypeError("Cannot add GPs with different approximations")
         new_gp.approx = self.approx
         return new_gp
 
-    # Use y as first argument, so that we can use functools.partial
-    # in marginal_likelihood instead of lambda. This makes pickling
-    # possible.
     def _build_marginal_likelihood_logp(self, y, X, Xu, sigma, jitter):
         sigma2 = at.square(sigma)
         Kuu = self.cov_func(Xu)
@@ -765,7 +760,7 @@ class MarginalApprox(Marginal):
             self.sigma = noise
 
         approx_logp = self._build_marginal_likelihood_logp(y, X, Xu, noise, JITTER_DEFAULT)
-        pm.Potential("marginalapprox_logp_" + name, approx_logp)
+        pm.Potential(f"marginalapprox_logp_{name}", approx_logp)
 
     def _build_conditional(
         self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total, jitter
