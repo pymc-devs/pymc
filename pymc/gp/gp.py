@@ -763,7 +763,7 @@ class MarginalApprox(Marginal):
             raise ValueError("noise argument must be specified")
         else:
             self.sigma = noise
-            
+
         approx_logp = self._build_marginal_likelihood_logp(y, X, Xu, noise, JITTER_DEFAULT)
         pm.Potential("marginalapprox_logp_" + name, approx_logp)
 

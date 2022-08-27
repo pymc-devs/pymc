@@ -843,30 +843,31 @@ class TestMarginalVsLatent:
         latent_logp = model.compile_logp()({"f_rotated_": y_rotated, "p": self.pnew})
         npt.assert_allclose(latent_logp, self.logp, atol=5)
 
-                            
+
 class TestMarginalVsMarginalApprox:
     R"""
     Compare test fits of models Marginal and MarginalApprox.
     """
+
     def setup_method(self):
         self.sigma = 0.1
         self.x = np.linspace(-5, 5, 30)
-        self.y = 0.25 * self.x + self.sigma*np.random.randn(len(self.x))
+        self.y = 0.25 * self.x + self.sigma * np.random.randn(len(self.x))
         with pm.Model() as model:
             cov_func = pm.gp.cov.Linear(1, c=0.0)
-            c = pm.Normal("c", mu=20.0, sigma=100.0) # far from true value
+            c = pm.Normal("c", mu=20.0, sigma=100.0)  # far from true value
             mean_func = pm.gp.mean.Constant(c)
             self.gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
             sigma = pm.HalfNormal("sigma", sigma=100)
             self.gp.marginal_likelihood("lik", self.x[:, None], self.y, sigma)
-            self.map_full = pm.find_MAP(method="bfgs") # bfgs seems to work much better than lbfgsb
-        
+            self.map_full = pm.find_MAP(method="bfgs")  # bfgs seems to work much better than lbfgsb
+
         self.x_new = np.linspace(-6, 6, 20)
         with model:
             self.pred_mu, self.pred_var = self.gp.predict(
                 self.x_new[:, None], point=self.map_full, pred_noise=True, diag=True
             )
-        
+
         with model:
             self.pred_mu, self.pred_covar = self.gp.predict(
                 self.x_new[:, None], point=self.map_full, pred_noise=False, diag=False
@@ -883,12 +884,12 @@ class TestMarginalVsMarginalApprox:
             sigma = pm.HalfNormal("sigma", sigma=100, initval=50.0)
             gp.marginal_likelihood("lik", self.x[:, None], self.x[:, None], self.y, sigma)
             map_approx = pm.find_MAP(method="bfgs")
-            
+
         # use wide tolerances (but narrow relative to initial values of unknown parameters) because
         # test is likely flakey
         npt.assert_allclose(self.map_full["c"], map_approx["c"], atol=0.01, rtol=0.1)
         npt.assert_allclose(self.map_full["sigma"], map_approx["sigma"], atol=0.01, rtol=0.1)
-          
+
         # check that predict (and conditional) work, include noise, with diagonal non-full pred var
         with model:
             pred_mu_approx, pred_var_approx = gp.predict(
@@ -896,7 +897,7 @@ class TestMarginalVsMarginalApprox:
             )
         npt.assert_allclose(self.pred_mu, pred_mu_approx, atol=0.0, rtol=0.1)
         npt.assert_allclose(self.pred_var, pred_var_approx, atol=0.0, rtol=0.1)
-        
+
         # check that predict (and conditional) work, no noise, full pred covariance
         with model:
             pred_mu_approx, pred_var_approx = gp.predict(
@@ -904,8 +905,7 @@ class TestMarginalVsMarginalApprox:
             )
         npt.assert_allclose(self.pred_mu, pred_mu_approx, atol=0.0, rtol=0.1)
         npt.assert_allclose(self.pred_var, pred_var_approx, atol=0.0, rtol=0.1)
-    
-    
+
 
 class TestGPAdditive:
     def setup_method(self):
