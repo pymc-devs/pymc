@@ -747,9 +747,6 @@ class MarginalApprox(Marginal):
             noise.  Must have shape `(n, )`.
         noise: scalar, Variable
             Standard deviation of the Gaussian noise.
-        is_observed: bool
-            Whether to set `y` as an `observed` variable in the `model`.
-            Default is `True`.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
@@ -766,39 +763,9 @@ class MarginalApprox(Marginal):
             raise ValueError("noise argument must be specified")
         else:
             self.sigma = noise
-
-        if is_observed:
-            return pm.DensityDist(
-                name,
-                X,
-                Xu,
-                self.sigma,
-                jitter,
-                logp=self._build_marginal_likelihood_logp,
-                observed=y,
-                ndims_params=[2, 2, 0],
-                size=X.shape[0],
-                **kwargs,
-            )
-        else:
-            warnings.warn(
-                "The 'is_observed' argument has been deprecated.  If the GP is "
-                "unobserved use gp.Latent instead.",
-                FutureWarning,
-            )
-            return pm.DensityDist(
-                name,
-                X,
-                Xu,
-                self.sigma,
-                jitter,
-                logp=self._build_marginal_likelihood_logp,
-                observed=y,
-                ndims_params=[2, 2, 0],
-                # ndim_supp=1,
-                size=X.shape[0],
-                **kwargs,
-            )
+            
+        approx_logp = self._build_marginal_likelihood_logp(y, X, Xu, noise, JITTER_DEFAULT)
+        pm.Potential("marginalapprox_logp_" + name, approx_logp)
 
     def _build_conditional(
         self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total, jitter
