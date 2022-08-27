@@ -230,7 +230,11 @@ class BaseTestDistributionRandom(SeededTest):
 
     def test_distribution(self):
         self.validate_tests_list()
-        self._instantiate_pymc_rv()
+        if self.pymc_dist == pm.Wishart:
+            with pytest.warns(UserWarning, match="can currently not be used for MCMC sampling"):
+                self._instantiate_pymc_rv()
+        else:
+            self._instantiate_pymc_rv()
         if self.reference_dist is not None:
             self.reference_dist_draws = self.reference_dist()(
                 size=self.size, **self.reference_dist_params
@@ -240,7 +244,11 @@ class BaseTestDistributionRandom(SeededTest):
                 raise ValueError(
                     "Custom check cannot start with `test_` or else it will be executed twice."
                 )
-            getattr(self, check_name)()
+            if self.pymc_dist == pm.Wishart and check_name.startswith("check_rv_size"):
+                with pytest.warns(UserWarning, match="can currently not be used for MCMC sampling"):
+                    getattr(self, check_name)()
+            else:
+                getattr(self, check_name)()
 
     def _instantiate_pymc_rv(self, dist_params=None):
         params = dist_params if dist_params else self.pymc_dist_params

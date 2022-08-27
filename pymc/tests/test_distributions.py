@@ -2077,12 +2077,13 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_wishart(self, n):
-        check_logp(
-            Wishart,
-            PdMatrix(n),
-            {"nu": Domain([0, 3, 4, np.inf], "int64"), "V": PdMatrix(n)},
-            lambda value, nu, V: scipy.stats.wishart.logpdf(value, int(nu), V),
-        )
+        with pytest.warns(UserWarning, match="Wishart distribution can currently not be used"):
+            check_logp(
+                Wishart,
+                PdMatrix(n),
+                {"nu": Domain([0, 3, 4, np.inf], "int64"), "V": PdMatrix(n)},
+                lambda value, nu, V: scipy.stats.wishart.logpdf(value, int(nu), V),
+            )
 
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
     def test_lkjcorr(self, x, eta, n, lp):

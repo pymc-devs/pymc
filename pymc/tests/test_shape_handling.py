@@ -110,10 +110,14 @@ class TestShapesBroadcasting:
         ids=str,
     )
     def test_type_check_raises(self, bad_input):
-        with pytest.raises(TypeError):
-            shapes_broadcasting(bad_input, tuple(), raise_exception=True)
-        with pytest.raises(TypeError):
-            shapes_broadcasting(bad_input, tuple(), raise_exception=False)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", ".*ragged nested sequences.*", np.VisibleDeprecationWarning
+            )
+            with pytest.raises(TypeError):
+                shapes_broadcasting(bad_input, tuple(), raise_exception=True)
+            with pytest.raises(TypeError):
+                shapes_broadcasting(bad_input, tuple(), raise_exception=False)
 
     def test_type_check_success(self):
         inputs = [3, 3.0, tuple(), [3], (3,), np.array(3), np.array([3])]
