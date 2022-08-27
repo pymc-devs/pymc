@@ -3653,11 +3653,22 @@ def _interpolated_argcdf(p, pdf, cdf, x):
     index = np.searchsorted(cdf, p) - 1
     slope = (pdf[index + 1] - pdf[index]) / (x[index + 1] - x[index])
 
-    return x[index] + np.where(
-        np.abs(slope) <= 1e-8,
-        np.where(np.abs(pdf[index]) <= 1e-8, np.zeros(index.shape), (p - cdf[index]) / pdf[index]),
-        (-pdf[index] + np.sqrt(pdf[index] ** 2 + 2 * slope * (p - cdf[index]))) / slope,
+    # First term (constant) of the Taylor expansion around slope = 0
+    small_slopes = np.where(
+        np.abs(pdf[index]) <= 1e-8, np.zeros(index.shape), (p - cdf[index]) / pdf[index]
     )
+
+    # This warning happens when we divide by slope = 0: we can ignore it
+    # because the other result will be returned
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", ".*invalid value encountered in true_divide.*", RuntimeWarning
+        )
+        large_slopes = (
+            -pdf[index] + np.sqrt(pdf[index] ** 2 + 2 * slope * (p - cdf[index]))
+        ) / slope
+
+    return x[index] + np.where(np.abs(slope) <= 1e-8, small_slopes, large_slopes)
 
 
 class InterpolatedRV(RandomVariable):
