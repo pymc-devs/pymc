@@ -691,7 +691,7 @@ class MarginalApprox(Marginal):
         new_gp.approx = self.approx
         return new_gp
 
-    def _build_marginal_likelihood_logp(self, y, X, Xu, sigma, jitter):
+    def _build_marginal_likelihood_loglik(self, y, X, Xu, sigma, jitter):
         sigma2 = at.square(sigma)
         Kuu = self.cov_func(Xu)
         Kuf = self.cov_func(Xu, X)
@@ -720,9 +720,7 @@ class MarginalApprox(Marginal):
         quadratic = 0.5 * (at.dot(r, r_l) - at.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
-    def marginal_likelihood(
-        self, name, X, Xu, y, noise=None, is_observed=True, jitter=JITTER_DEFAULT, **kwargs
-    ):
+    def marginal_likelihood(self, name, X, Xu, y, noise=None, jitter=JITTER_DEFAULT, **kwargs):
         R"""
         Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
@@ -759,8 +757,8 @@ class MarginalApprox(Marginal):
         else:
             self.sigma = noise
 
-        approx_logp = self._build_marginal_likelihood_logp(y, X, Xu, noise, JITTER_DEFAULT)
-        pm.Potential(f"marginalapprox_logp_{name}", approx_logp)
+        approx_loglik = self._build_marginal_likelihood_loglik(y, X, Xu, noise, jitter)
+        pm.Potential(f"marginalapprox_loglik_{name}", approx_loglik, **kwargs)
 
     def _build_conditional(
         self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total, jitter

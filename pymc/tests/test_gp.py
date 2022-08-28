@@ -852,7 +852,7 @@ class TestMarginalVsMarginalApprox:
     def setup_method(self):
         self.sigma = 0.1
         self.x = np.linspace(-5, 5, 30)
-        self.y = 0.25 * self.x + self.sigma * np.random.randn(len(self.x))
+        self.y = np.random.normal(0.25 * self.x, self.sigma)
         with pm.Model() as model:
             cov_func = pm.gp.cov.Linear(1, c=0.0)
             c = pm.Normal("c", mu=20.0, sigma=100.0)  # far from true value
