@@ -954,21 +954,14 @@ def test_hierarchical_obs_logp():
 
 
 @pytest.fixture(scope="module")
-def _compile_stickbreakingweights_logpdf():
+def stickbreakingweights_logpdf():
     _value = at.vector()
     _alpha = at.scalar()
     _k = at.iscalar()
     _logp = logp(StickBreakingWeights.dist(_alpha, _k), _value)
-    return compile_pymc([_value, _alpha, _k], _logp)
+    core_fn = compile_pymc([_value, _alpha, _k], _logp)
 
-
-def _stickbreakingweights_logpdf(value, alpha, k, _compile_stickbreakingweights_logpdf):
-    return _compile_stickbreakingweights_logpdf(value, alpha, k)
-
-
-stickbreakingweights_logpdf = np.vectorize(
-    _stickbreakingweights_logpdf, signature="(n),(),(),()->()"
-)
+    return np.vectorize(core_fn, signature="(n),(),()->()")
 
 
 class TestMatchesScipy:
@@ -2338,14 +2331,14 @@ class TestMatchesScipy:
             (np.arange(1, 7, dtype="float64").reshape(2, 3), 5),
         ],
     )
-    def test_stickbreakingweights_vectorized(self, alpha, K, _compile_stickbreakingweights_logpdf):
+    def test_stickbreakingweights_vectorized(self, alpha, K, stickbreakingweights_logpdf):
         value = pm.StickBreakingWeights.dist(alpha, K).eval()
         with Model():
             sbw = StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
         pt = {"sbw": value}
         assert_almost_equal(
             pm.logp(sbw, value).eval(),
-            stickbreakingweights_logpdf(value, alpha, K, _compile_stickbreakingweights_logpdf),
+            stickbreakingweights_logpdf(value, alpha, K),
             decimal=select_by_precision(float64=6, float32=2),
             err_msg=str(pt),
         )

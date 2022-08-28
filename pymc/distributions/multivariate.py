@@ -2277,9 +2277,10 @@ class StickBreakingWeights(SimplexContinuous):
         return super().dist([alpha, K], **kwargs)
 
     def moment(rv, size, alpha, K):
+        alpha = alpha[..., np.newaxis]
         moment = (alpha / (1 + alpha)) ** at.arange(K)
         moment *= 1 / (1 + alpha)
-        moment = at.concatenate([moment, [(alpha / (1 + alpha)) ** K]], axis=-1)
+        moment = at.concatenate([moment, (alpha / (1 + alpha)) ** K], axis=-1)
         if not rv_size_is_none(size):
             moment_size = at.concatenate(
                 [
