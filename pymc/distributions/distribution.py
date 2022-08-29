@@ -209,7 +209,8 @@ class Distribution(metaclass=DistributionMeta):
         rng : optional
             Random number generator to use with the RandomVariable.
         dims : tuple, optional
-            A tuple of dimension names known to the model.
+            A tuple of dimension names known to the model. When shape is not provided,
+            the shape of dims is used to define the shape of the variable.
         initval : optional
             Numeric or symbolic untransformed initial value of matching shape,
             or one of the following initial value strategies: "moment", "prior".
@@ -217,6 +218,8 @@ class Distribution(metaclass=DistributionMeta):
             or moment-based initial values in the transformed space.
         observed : optional
             Observed data to be passed when registering the random variable in the model.
+            When neither shape nor dims is provided, the shape of observed is used to
+            define the shape of the variable.
             See ``Model.register_rv``.
         total_size : float, optional
             See ``Model.register_rv``.
@@ -405,7 +408,8 @@ class SymbolicDistribution:
         name : str
             Name for the new model variable.
         dims : tuple, optional
-            A tuple of dimension names known to the model.
+            A tuple of dimension names known to the model. When shape is not provided,
+            the shape of dims is used to define the shape of the variable.
         initval : optional
             Numeric or symbolic untransformed initial value of matching shape,
             or one of the following initial value strategies: "moment", "prior".
@@ -413,6 +417,8 @@ class SymbolicDistribution:
             symbolic or moment-based initial values in the transformed space.
         observed : optional
             Observed data to be passed when registering the random variable in the model.
+            When neither shape nor dims is provided, the shape of observed is used to
+            define the shape of the variable.
             See ``Model.register_rv``.
         total_size : float, optional
             See ``Model.register_rv``.
