@@ -53,21 +53,6 @@ with open(REQUIREMENTS_FILE) as f:
 
 test_reqs = ["pytest", "pytest-cov"]
 
-
-def get_version():
-    version_file = join("pymc", "__init__.py")
-    lines = open(version_file).readlines()
-    version_regex = r"^__version__ = ['\"]([^'\"]*)['\"]"
-    for line in lines:
-        mo = re.search(version_regex, line, re.M)
-        if mo:
-            version = mo.group(1)
-
-            return version
-
-    raise RuntimeError(f"Unable to find version in {version_file}.")
-
-
 if __name__ == "__main__":
     setup(
         name="pymc",
