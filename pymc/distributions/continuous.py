@@ -35,7 +35,6 @@ from aesara.tensor.extra_ops import broadcast_shape
 from aesara.tensor.math import tanh
 from aesara.tensor.random.basic import (
     BetaRV,
-    WeibullRV,
     cauchy,
     chisquare,
     exponential,
@@ -1464,7 +1463,7 @@ class Exponential(PositiveContinuous):
         lam = at.as_tensor_variable(floatX(lam))
 
         # Aesara exponential op is parametrized in terms of mu (1/lam)
-        return super().dist([at.inv(lam)], **kwargs)
+        return super().dist([at.reciprocal(lam)], **kwargs)
 
     def moment(rv, size, mu):
         if not rv_size_is_none(size):
@@ -1487,7 +1486,7 @@ class Exponential(PositiveContinuous):
         -------
         TensorVariable
         """
-        lam = at.inv(mu)
+        lam = at.reciprocal(mu)
         res = at.switch(
             at.lt(value, 0),
             -np.inf,
@@ -2313,7 +2312,7 @@ class Gamma(PositiveContinuous):
         -------
         TensorVariable
         """
-        beta = at.inv(inv_beta)
+        beta = at.reciprocal(inv_beta)
         res = at.switch(
             at.lt(value, 0),
             -np.inf,
@@ -2518,8 +2517,15 @@ class ChiSquared(PositiveContinuous):
 
 
 # TODO: Remove this once logp for multiplication is working!
-class WeibullBetaRV(WeibullRV):
+class WeibullBetaRV(RandomVariable):
+    name = "weibull"
+    ndim_supp = 0
     ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("Weibull", "\\operatorname{Weibull}")
+
+    def __call__(self, alpha, beta, size=None, **kwargs):
+        return super().__call__(alpha, beta, size=size, **kwargs)
 
     @classmethod
     def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
@@ -2613,6 +2619,16 @@ class Weibull(PositiveContinuous):
             at.log1mexp(-a),
         )
 
+        return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
+
+    def logp(value, alpha, beta):
+        res = (
+            at.log(alpha)
+            - at.log(beta)
+            + (alpha - 1.0) * at.log(value / beta)
+            - at.pow(value / beta, alpha)
+        )
+        res = at.switch(at.ge(value, 0.0), res, -np.inf)
         return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
 
 
@@ -3637,11 +3653,22 @@ def _interpolated_argcdf(p, pdf, cdf, x):
     index = np.searchsorted(cdf, p) - 1
     slope = (pdf[index + 1] - pdf[index]) / (x[index + 1] - x[index])
 
-    return x[index] + np.where(
-        np.abs(slope) <= 1e-8,
-        np.where(np.abs(pdf[index]) <= 1e-8, np.zeros(index.shape), (p - cdf[index]) / pdf[index]),
-        (-pdf[index] + np.sqrt(pdf[index] ** 2 + 2 * slope * (p - cdf[index]))) / slope,
+    # First term (constant) of the Taylor expansion around slope = 0
+    small_slopes = np.where(
+        np.abs(pdf[index]) <= 1e-8, np.zeros(index.shape), (p - cdf[index]) / pdf[index]
     )
+
+    # This warning happens when we divide by slope = 0: we can ignore it
+    # because the other result will be returned
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", ".*invalid value encountered in true_divide.*", RuntimeWarning
+        )
+        large_slopes = (
+            -pdf[index] + np.sqrt(pdf[index] ** 2 + 2 * slope * (p - cdf[index]))
+        ) / slope
+
+    return x[index] + np.where(np.abs(slope) <= 1e-8, small_slopes, large_slopes)
 
 
 class InterpolatedRV(RandomVariable):
@@ -3960,9 +3987,9 @@ class _PolyaGammaLogDistFunc(Op):
         x = at.as_tensor_variable(floatX(x))
         h = at.as_tensor_variable(floatX(h))
         z = at.as_tensor_variable(floatX(z))
-        shape = broadcast_shape(x, h, z)
-        broadcastable = [] if not shape else [False] * len(shape)
-        return Apply(self, [x, h, z], [at.TensorType(aesara.config.floatX, broadcastable)()])
+        bshape = broadcast_shape(x, h, z)
+        shape = [False] * len(bshape)
+        return Apply(self, [x, h, z], [at.TensorType(aesara.config.floatX, shape=shape)()])
 
     def perform(self, node, ins, outs):
         x, h, z = ins[0], ins[1], ins[2]

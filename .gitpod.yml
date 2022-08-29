@@ -1,0 +1,36 @@
+image: ghcr.io/conda/conda-ci:main-linux-python3.9
+tasks:
+  - name: initialize
+    init: |
+      mkdir -p .vscode
+      echo '{"python.defaultInterpreterPath": "/home/gitpod/.conda/envs/pymc-dev/bin/python"}' > .vscode/settings.json
+      conda init bash && source ~/.bashrc
+      conda env update -f conda-envs/environment-dev.yml
+      conda activate pymc-dev
+      pip install -e .
+    command: |
+      conda init bash && echo "conda activate pymc-dev" >> ~/.bashrc && source ~/.bashrc && conda activate pymc-dev
+
+vscode:
+  extensions:
+    - eamodio.gitlens
+    - ms-python.python
+
+github:
+  prebuilds:
+    # enable for master branch
+    master: true
+    # enable for other branches (defaults to false)
+    branches: true
+    # enable for pull requests coming from this repo (defaults to true)
+    pullRequests: true
+    # enable for pull requests coming from forks (defaults to false)
+    pullRequestsFromForks: false
+    # add a check to pull requests (defaults to true)
+    addCheck: true
+    # add a "Review in Gitpod" button as a comment to pull requests (defaults to false)
+    addComment: false
+    # add a "Review in Gitpod" button to the pull request's description (defaults to false)
+    addBadge: false
+    # add a label once the prebuild is ready to pull requests (defaults to false)
+    addLabel: false

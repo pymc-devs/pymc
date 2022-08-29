@@ -1,4 +1,5 @@
 # pylint: disable=no-member, invalid-name, redefined-outer-name, protected-access, too-many-public-methods
+import warnings
 
 from typing import Dict, Tuple
 
@@ -18,6 +19,7 @@ from pymc.backends.arviz import (
     predictions_to_inference_data,
     to_inference_data,
 )
+from pymc.exceptions import ImputationWarning
 
 
 @pytest.fixture(scope="module")
@@ -204,9 +206,13 @@ class TestDataPyMC:
 
     def test_posterior_predictive_warning(self, data, eight_schools_params, caplog):
         with data.model:
-            posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, 370, return_inferencedata=False, keep_size=False
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", ".*smaller than nchains times ndraws.*", UserWarning
+                )
+                posterior_predictive = pm.sample_posterior_predictive(
+                    data.obj, 370, return_inferencedata=False, keep_size=False
+                )
             with pytest.warns(UserWarning, match="shape of variables"):
                 inference_data = to_inference_data(
                     trace=data.obj,
@@ -222,7 +228,9 @@ class TestDataPyMC:
         with data.model:
             draws = 20
             thin_by = 4
-            idata = pm.sample(tune=5, draws=draws, chains=2, return_inferencedata=True)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                idata = pm.sample(tune=5, draws=draws, chains=2, return_inferencedata=True)
             thinned_idata = idata.sel(draw=slice(None, None, thin_by))
             idata.extend(pm.sample_posterior_predictive(thinned_idata))
         test_dict = {
@@ -275,9 +283,13 @@ class TestDataPyMC:
                 step=pm.Metropolis(),
             )
             if use_context:
-                idata = to_inference_data(trace=trace)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", "More chains .* than draws.*", UserWarning)
+                    idata = to_inference_data(trace=trace)
         if not use_context:
-            idata = to_inference_data(trace=trace, model=model)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "More chains .* than draws.*", UserWarning)
+                idata = to_inference_data(trace=trace, model=model)
 
         assert "city" in list(idata.posterior.dims)
         assert "city" in list(idata.observed_data.dims)
@@ -320,7 +332,8 @@ class TestDataPyMC:
         model = pm.Model()
         with model:
             x = pm.Normal("x", 1, 1)
-            y = pm.Normal("y", x, 1, observed=data)
+            with pytest.warns(ImputationWarning):
+                y = pm.Normal("y", x, 1, observed=data)
             inference_data = pm.sample(100, chains=2, return_inferencedata=True)
 
         # make sure that data is really missing
@@ -349,7 +362,8 @@ class TestDataPyMC:
             # pylint: disable=unpacking-non-sequence
             chol, *_ = pm.LKJCholeskyCov("chol_cov", n=2, eta=1, sd_dist=sd_dist, compute_corr=True)
             # pylint: enable=unpacking-non-sequence
-            y = pm.MvNormal("y", mu=mu, chol=chol, observed=data)
+            with pytest.warns(ImputationWarning):
+                y = pm.MvNormal("y", mu=mu, chol=chol, observed=data)
             inference_data = pm.sample(100, chains=2, return_inferencedata=True)
 
         # make sure that data is really missing
@@ -457,7 +471,11 @@ class TestDataPyMC:
             # this should be four chains of 100 samples
             # assert predictive_trace["obs"].shape == (400, 2)
             # but the shape seems to vary between pymc versions
-            inference_data = predictions_to_inference_data(predictive_trace, posterior_trace=trace)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "More chains .* than draws.*", UserWarning)
+                inference_data = predictions_to_inference_data(
+                    predictive_trace, posterior_trace=trace
+                )
         test_dict = {"posterior": ["beta"], "~observed_data": ""}
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails, "Posterior data not copied over as expected."
@@ -542,7 +560,9 @@ class TestDataPyMC:
             p = pm.Beta("p", 1, 1, size=(3,))
             p = p / p.sum()
             pm.Multinomial("y", 20, p, dims=("experiment", "direction"), observed=data)
-            idata = pm.sample(draws=50, chains=2, tune=100, return_inferencedata=True)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                idata = pm.sample(draws=50, chains=2, tune=100, return_inferencedata=True)
         test_dict = {
             "posterior": ["p"],
             "sample_stats": ["lp"],
@@ -626,16 +646,19 @@ class TestPyMCWarmupHandling:
         with pm.Model():
             pm.Uniform("u1")
             pm.Normal("n1")
-            idata = pm.sample(
-                tune=tune,
-                draws=draws,
-                chains=chains,
-                cores=1,
-                step=pm.Metropolis(),
-                discard_tuned_samples=False,
-                return_inferencedata=True,
-                idata_kwargs={"save_warmup": save_warmup},
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                warnings.filterwarnings("ignore", "More chains .* than draws.*", UserWarning)
+                idata = pm.sample(
+                    tune=tune,
+                    draws=draws,
+                    chains=chains,
+                    cores=1,
+                    step=pm.Metropolis(),
+                    discard_tuned_samples=False,
+                    return_inferencedata=True,
+                    idata_kwargs={"save_warmup": save_warmup},
+                )
         warmup_prefix = "" if save_warmup and (tune > 0) else "~"
         post_prefix = "" if draws > 0 else "~"
         test_dict = {
@@ -659,15 +682,17 @@ class TestPyMCWarmupHandling:
         with pm.Model():
             pm.Uniform("u1")
             pm.Normal("n1")
-            trace = pm.sample(
-                tune=100,
-                draws=200,
-                chains=2,
-                cores=1,
-                step=pm.Metropolis(),
-                discard_tuned_samples=False,
-                return_inferencedata=False,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "Tuning samples will be included.*", UserWarning)
+                trace = pm.sample(
+                    tune=100,
+                    draws=200,
+                    chains=2,
+                    cores=1,
+                    step=pm.Metropolis(),
+                    discard_tuned_samples=False,
+                    return_inferencedata=False,
+                )
             assert isinstance(trace, pm.backends.base.MultiTrace)
             assert len(trace) == 300
 

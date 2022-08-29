@@ -14,8 +14,6 @@
 import unittest
 import warnings
 
-from functools import reduce
-
 import aesara
 import aesara.sparse as sparse
 import aesara.tensor as at
@@ -38,7 +36,7 @@ import pymc as pm
 from pymc import Deterministic, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
-from pymc.exceptions import ShapeError, ShapeWarning
+from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.model import Point, ValueGradFunction
 from pymc.tests.helpers import SeededTest
 
@@ -341,19 +339,21 @@ class TestValueGradFunction(unittest.TestCase):
         X = np.ma.masked_values(X, value=-1)
         with pm.Model() as m:
             x1 = pm.Uniform("x1", 0.0, 1.0)
-            x2 = pm.Bernoulli("x2", x1, observed=X)
+            with pytest.warns(ImputationWarning):
+                x2 = pm.Bernoulli("x2", x1, observed=X)
 
         gf = m.logp_dlogp_function()
         gf._extra_are_set = True
 
         assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
 
-        pnt = m.test_point.copy()
+        pnt = m.initial_point(seed=None).copy()
         del pnt["x2_missing"]
 
         res = [gf(DictToArrayBijection.map(Point(pnt, model=m))) for i in range(5)]
 
-        assert reduce(lambda x, y: np.array_equal(x, y) and y, res) is not False
+        # Assert that all the elements of res are equal
+        assert res[1:] == res[:-1]
 
     def test_aesara_switch_broadcast_edge_cases_1(self):
         # Tests against two subtle issues related to a previous bug in Theano
@@ -522,11 +522,12 @@ def test_make_obs_var():
     del fake_model.named_vars[fake_distribution.name]
 
     # Here the RandomVariable is split into observed/imputed and a Deterministic is returned
-    masked_output = fake_model.make_obs_var(fake_distribution, masked_array_input, None, None)
+    with pytest.warns(ImputationWarning):
+        masked_output = fake_model.make_obs_var(fake_distribution, masked_array_input, None, None)
     assert masked_output != fake_distribution
     assert not isinstance(masked_output, RandomVariable)
     # Ensure it has missing values
-    assert {"testing_inputs_missing"} == {v.name for v in fake_model.vars}
+    assert {"testing_inputs_missing"} == {v.name for v in fake_model.value_vars}
     assert {"testing_inputs", "testing_inputs_observed"} == {
         v.name for v in fake_model.observed_RVs
     }

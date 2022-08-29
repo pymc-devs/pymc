@@ -1123,8 +1123,8 @@ class TestTP:
 
     def testTPvsLatent(self):
         with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            tp = pm.gp.TP(cov_func=cov_func, nu=self.nu)
+            scale_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
+            tp = pm.gp.TP(scale_func=scale_func, nu=self.nu)
             f = tp.prior("f", self.X, reparameterize=False)
             p = tp.conditional("p", self.Xnew)
         assert tuple(f.shape.eval()) == (self.X.shape[0],)
@@ -1134,22 +1134,22 @@ class TestTP:
 
     def testTPvsLatentReparameterized(self):
         with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            tp = pm.gp.TP(cov_func=cov_func, nu=self.nu)
+            scale_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
+            tp = pm.gp.TP(scale_func=scale_func, nu=self.nu)
             f = tp.prior("f", self.X, reparameterize=True)
             p = tp.conditional("p", self.Xnew)
         assert tuple(f.shape.eval()) == (self.X.shape[0],)
         assert tuple(p.shape.eval()) == (self.Xnew.shape[0],)
-        chol = np.linalg.cholesky(cov_func(self.X).eval())
+        chol = np.linalg.cholesky(scale_func(self.X).eval())
         f_rotated = np.linalg.solve(chol, self.y)
         tp_logp = model.compile_logp()({"f_rotated_": f_rotated, "p": self.pnew})
         npt.assert_allclose(self.gp_latent_logp, tp_logp, atol=0, rtol=1e-2)
 
     def testAdditiveTPRaises(self):
         with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            gp1 = pm.gp.TP(cov_func=cov_func, nu=10)
-            gp2 = pm.gp.TP(cov_func=cov_func, nu=10)
+            scale_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
+            gp1 = pm.gp.TP(scale_func=scale_func, nu=10)
+            gp2 = pm.gp.TP(scale_func=scale_func, nu=10)
             with pytest.raises(Exception) as e_info:
                 gp1 + gp2
 

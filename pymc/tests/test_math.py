@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 import aesara
 import aesara.tensor as at
 import numpy as np
@@ -116,7 +118,7 @@ def test_kron_solve_lower():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then solve
     big = kronecker(*Ls)
-    slow_ans = at.slinalg.solve_lower_triangular(big, x)
+    slow_ans = at.slinalg.solve_triangular(big, x, lower=True)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_solve_lower(Ls, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
@@ -146,7 +148,10 @@ def test_log1mexp():
     )
     actual = at.log1mexp(-vals).eval()
     npt.assert_allclose(actual, expected)
-    actual_ = log1mexp_numpy(-vals, negative_input=True)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
+        warnings.filterwarnings("ignore", "invalid value encountered in log", RuntimeWarning)
+        actual_ = log1mexp_numpy(-vals, negative_input=True)
     npt.assert_allclose(actual_, expected)
     # Check that input was not changed in place
     npt.assert_allclose(vals, vals_)
@@ -154,9 +159,9 @@ def test_log1mexp():
 
 def test_log1mexp_numpy_no_warning():
     """Assert RuntimeWarning is not raised for very small numbers"""
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         log1mexp_numpy(-1e-25, negative_input=True)
-    assert not record
 
 
 def test_log1mexp_numpy_integer_input():
@@ -170,9 +175,9 @@ def test_log1mexp_deprecation_warnings():
     ):
         res_pos = log1mexp_numpy(2)
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         res_neg = log1mexp_numpy(-2, negative_input=True)
-    assert not record
 
     with pytest.warns(
         FutureWarning,
@@ -180,7 +185,8 @@ def test_log1mexp_deprecation_warnings():
     ):
         res_pos_at = log1mexp(2).eval()
 
-    with pytest.warns(None):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         res_neg_at = log1mexp(-2, negative_input=True).eval()
 
     assert np.isclose(res_pos, res_neg)
@@ -190,7 +196,9 @@ def test_log1mexp_deprecation_warnings():
 
 def test_logdiffexp():
     a = np.log([1, 2, 3, 4])
-    b = np.log([0, 1, 2, 3])
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
+        b = np.log([0, 1, 2, 3])
 
     assert np.allclose(logdiffexp_numpy(a, b), 0)
     assert np.allclose(logdiffexp(a, b).eval(), 0)
@@ -262,9 +270,9 @@ def test_invlogit_deprecation_warning():
     ):
         res = invlogit(np.array(-750.0), 1e-5).eval()
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         res_zero_eps = invlogit(np.array(-750.0)).eval()
-    assert not record
 
     assert np.isclose(res, res_zero_eps)
 
@@ -280,11 +288,10 @@ def test_softmax_logsoftmax_no_warnings(aesara_function, pymc_wrapper):
     """Test that wrappers for aesara functions do not issue Warnings"""
 
     vector = at.vector("vector")
-    with pytest.warns(None) as record:
+    with pytest.warns(Warning) as record:
         aesara_function(vector)
-    warnings = {warning.category for warning in record.list}
-    assert warnings == {UserWarning, FutureWarning}
+    assert {w.category for w in record.list} == {UserWarning, FutureWarning}
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         pymc_wrapper(vector)
-    assert not record

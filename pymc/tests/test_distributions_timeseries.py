@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 import aesara
 import numpy as np
 import pytest
@@ -125,7 +127,7 @@ class TestGaussianRandomWalk:
 
         def test_steps_scalar_check(self):
             with pytest.raises(ValueError, match="steps must be an integer scalar"):
-                self.pymc_dist.dist(steps=[1])
+                self.pymc_dist.dist(steps=[1], init_dist=pm.DiracDelta.dist(0))
 
     def test_gaussianrandomwalk_inference(self):
         mu, sigma, steps = 2, 1, 1000
@@ -136,7 +138,9 @@ class TestGaussianRandomWalk:
             _sigma = pm.Uniform("sigma", 0, 10)
 
             obs_data = pm.MutableData("obs_data", obs)
-            grw = GaussianRandomWalk("grw", _mu, _sigma, steps=steps, observed=obs_data)
+            grw = GaussianRandomWalk(
+                "grw", _mu, _sigma, steps=steps, observed=obs_data, init_dist=Normal.dist(0, 100)
+            )
 
             trace = pm.sample(chains=1)
 
@@ -147,26 +151,30 @@ class TestGaussianRandomWalk:
     @pytest.mark.parametrize("init", [None, pm.Normal.dist()])
     def test_gaussian_random_walk_init_dist_shape(self, init):
         """Test that init_dist is properly resized"""
-        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "Initial distribution not specified.*", UserWarning)
+            grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init)
+            assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
 
-        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, size=(5,))
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+            grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, size=(5,))
+            assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
 
-        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=2)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+            grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=2)
+            assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
 
-        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=(5, 2))
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+            grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=(5, 2))
+            assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
 
-        grw = pm.GaussianRandomWalk.dist(mu=[0, 0], sigma=1, steps=1, init_dist=init)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+            grw = pm.GaussianRandomWalk.dist(mu=[0, 0], sigma=1, steps=1, init_dist=init)
+            assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
 
-        grw = pm.GaussianRandomWalk.dist(mu=0, sigma=[1, 1], steps=1, init_dist=init)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+            grw = pm.GaussianRandomWalk.dist(mu=0, sigma=[1, 1], steps=1, init_dist=init)
+            assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
 
-        grw = pm.GaussianRandomWalk.dist(mu=np.zeros((3, 1)), sigma=[1, 1], steps=1, init_dist=init)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (3, 2)
+            grw = pm.GaussianRandomWalk.dist(
+                mu=np.zeros((3, 1)), sigma=[1, 1], steps=1, init_dist=init
+            )
+            assert tuple(grw.owner.inputs[-2].shape.eval()) == (3, 2)
 
     def test_shape_ellipsis(self):
         grw = pm.GaussianRandomWalk.dist(
@@ -184,28 +192,28 @@ class TestGaussianRandomWalk:
 
     @pytest.mark.parametrize("shape", ((6,), (3, 6)))
     def test_inferred_steps_from_shape(self, shape):
-        x = GaussianRandomWalk.dist(shape=shape)
+        x = GaussianRandomWalk.dist(shape=shape, init_dist=Normal.dist(0, 100))
         steps = x.owner.inputs[-1]
         assert steps.eval() == 5
 
     @pytest.mark.parametrize("shape", (None, (5, ...)))
     def test_missing_steps(self, shape):
         with pytest.raises(ValueError, match="Must specify steps or shape parameter"):
-            GaussianRandomWalk.dist(shape=shape)
+            GaussianRandomWalk.dist(shape=shape, init_dist=Normal.dist(0, 100))
 
     def test_inconsistent_steps_and_shape(self):
         with pytest.raises(AssertionError, match="Steps do not match last shape dimension"):
-            x = GaussianRandomWalk.dist(steps=12, shape=45)
+            x = GaussianRandomWalk.dist(steps=12, shape=45, init_dist=Normal.dist(0, 100))
 
     def test_inferred_steps_from_dims(self):
         with pm.Model(coords={"batch": range(5), "steps": range(20)}):
-            x = GaussianRandomWalk("x", dims=("batch", "steps"))
+            x = GaussianRandomWalk("x", dims=("batch", "steps"), init_dist=Normal.dist(0, 100))
         steps = x.owner.inputs[-1]
         assert steps.eval() == 19
 
     def test_inferred_steps_from_observed(self):
         with pm.Model():
-            x = GaussianRandomWalk("x", observed=np.zeros(10))
+            x = GaussianRandomWalk("x", observed=np.zeros(10), init_dist=Normal.dist(0, 100))
         steps = x.owner.inputs[-1]
         assert steps.eval() == 9
 
@@ -293,10 +301,25 @@ class TestAR:
         beta_tp = np.random.randn(batch_size, ar_order + int(constant))
         y_tp = np.random.randn(batch_size, steps)
         with Model() as t0:
-            y = AR("y", beta_tp, shape=(batch_size, steps), initval=y_tp, constant=constant)
+            y = AR(
+                "y",
+                beta_tp,
+                shape=(batch_size, steps),
+                initval=y_tp,
+                constant=constant,
+                init_dist=Normal.dist(0, 100, shape=(batch_size, steps)),
+            )
         with Model() as t1:
             for i in range(batch_size):
-                AR(f"y_{i}", beta_tp[i], sigma=1.0, shape=steps, initval=y_tp[i], constant=constant)
+                AR(
+                    f"y_{i}",
+                    beta_tp[i],
+                    sigma=1.0,
+                    shape=steps,
+                    initval=y_tp[i],
+                    constant=constant,
+                    init_dist=Normal.dist(0, 100, shape=steps),
+                )
 
         assert y.owner.op.ar_order == ar_order
 
@@ -402,7 +425,14 @@ class TestAR:
             AR("y", beta_tp, sigma=0.01, init_dist=init_dist, steps=steps, initval=y_tp)
         with Model() as t1:
             for i in range(batch_size):
-                AR(f"y_{i}", beta_tp, sigma=0.01, shape=steps, initval=y_tp[i])
+                AR(
+                    f"y_{i}",
+                    beta_tp,
+                    sigma=0.01,
+                    shape=steps,
+                    initval=y_tp[i],
+                    init_dist=Normal.dist(0, 100, shape=steps),
+                )
 
         np.testing.assert_allclose(
             t0.compile_logp()(t0.initial_point()),

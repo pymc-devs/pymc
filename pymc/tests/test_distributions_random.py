@@ -230,7 +230,11 @@ class BaseTestDistributionRandom(SeededTest):
 
     def test_distribution(self):
         self.validate_tests_list()
-        self._instantiate_pymc_rv()
+        if self.pymc_dist == pm.Wishart:
+            with pytest.warns(UserWarning, match="can currently not be used for MCMC sampling"):
+                self._instantiate_pymc_rv()
+        else:
+            self._instantiate_pymc_rv()
         if self.reference_dist is not None:
             self.reference_dist_draws = self.reference_dist()(
                 size=self.size, **self.reference_dist_params
@@ -240,7 +244,11 @@ class BaseTestDistributionRandom(SeededTest):
                 raise ValueError(
                     "Custom check cannot start with `test_` or else it will be executed twice."
                 )
-            getattr(self, check_name)()
+            if self.pymc_dist == pm.Wishart and check_name.startswith("check_rv_size"):
+                with pytest.warns(UserWarning, match="can currently not be used for MCMC sampling"):
+                    getattr(self, check_name)()
+            else:
+                getattr(self, check_name)()
 
     def _instantiate_pymc_rv(self, dist_params=None):
         params = dist_params if dist_params else self.pymc_dist_params
@@ -1613,7 +1621,7 @@ class TestOrderedMultinomial(BaseTestDistributionRandom):
 
 class TestWishart(BaseTestDistributionRandom):
     def wishart_rng_fn(self, size, nu, V, rng):
-        return st.wishart.rvs(np.int(nu), V, size=size, random_state=rng)
+        return st.wishart.rvs(int(nu), V, size=size, random_state=rng)
 
     pymc_dist = pm.Wishart
 
@@ -1905,7 +1913,6 @@ class TestDensityDist:
                 mu,
                 random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
                 observed=np.random.randn(100, *size),
-                size=size,
             )
 
         assert obs.eval().shape == (100,) + size
@@ -1937,7 +1944,6 @@ class TestDensityDist:
                     mean=mu, cov=np.eye(len(mu)), size=size
                 ),
                 observed=np.random.randn(100, *size, supp_shape),
-                size=size,
                 ndims_params=[1],
                 ndim_supp=1,
             )

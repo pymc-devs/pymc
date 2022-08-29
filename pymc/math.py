@@ -30,7 +30,7 @@ from aesara.graph.op import Op
 
 # pylint: disable=unused-import
 from aesara.tensor import (
-    abs_,
+    abs,
     and_,
     ceil,
     clip,
@@ -90,7 +90,7 @@ from pymc.aesaraf import floatX, ix_, largest_common_dtype
 # pylint: enable=unused-import
 
 __all__ = [
-    "abs_",
+    "abs",
     "and_",
     "ceil",
     "clip",
@@ -230,8 +230,8 @@ def kron_matrix_op(krons, m, op):
 
 # Define kronecker functions that work on 1D and 2D arrays
 kron_dot = partial(kron_matrix_op, op=at.dot)
-kron_solve_lower = partial(kron_matrix_op, op=at.slinalg.solve_lower_triangular)
-kron_solve_upper = partial(kron_matrix_op, op=at.slinalg.solve_upper_triangular)
+kron_solve_lower = partial(kron_matrix_op, op=at.slinalg.SolveTriangular(lower=True))
+kron_solve_upper = partial(kron_matrix_op, op=at.slinalg.SolveTriangular(lower=False))
 
 
 def flat_outer(a, b):

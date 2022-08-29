@@ -450,7 +450,7 @@ class Circular(Covariance):
             Xs = at.transpose(X)
         else:
             Xs = at.transpose(Xs)
-        return at.abs_((X - Xs + self.c) % (self.c * 2) - self.c)
+        return at.abs((X - Xs + self.c) % (self.c * 2) - self.c)
 
     def weinland(self, t):
         return (1 + self.tau * t / self.c) * at.clip(1 - t / self.c, 0, np.inf) ** self.tau

@@ -42,6 +42,12 @@ The preferred workflow for contributing to PyMC is to fork the [GitHub repositor
    conda env create -f .\conda-envs\windows-environment-dev.yml
    ```
    :::
+   :::{tab-item} Windows (Git Bash)
+
+   ```bash
+   conda env create -f conda-envs/windows-environment-dev.yml
+   ```
+   :::
    ::::
 
    ```bash

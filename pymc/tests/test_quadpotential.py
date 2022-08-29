@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 import numpy as np
 import numpy.testing as npt
@@ -150,7 +151,9 @@ def test_user_potential():
     pot = Potential(floatX([1]))
     with model:
         step = pymc.NUTS(potential=pot)
-        pymc.sample(10, step=step, chains=1)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pymc.sample(10, step=step, chains=1)
     assert called
 
 
@@ -206,7 +209,8 @@ def test_full_adapt_sample_p(seed=4566):
     )
 
     n_samples = 1000
-    pot = quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), m_inv, 1)
+    with pytest.warns(UserWarning, match="experimental feature"):
+        pot = quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), m_inv, 1)
     samples = [pot.random() for n in range(n_samples)]
     sample_cov = np.cov(samples, rowvar=0)
 
@@ -218,7 +222,8 @@ def test_full_adapt_sample_p(seed=4566):
 def test_full_adapt_update_window(seed=1123):
     np.random.seed(seed)
     init_cov = np.array([[1.0, 0.02], [0.02, 0.8]])
-    pot = quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), init_cov, 1, update_window=50)
+    with pytest.warns(UserWarning, match="experimental feature"):
+        pot = quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), init_cov, 1, update_window=50)
     assert np.allclose(pot._cov, init_cov)
     for i in range(49):
         pot.update(np.random.randn(2), None, True)
@@ -230,17 +235,19 @@ def test_full_adapt_update_window(seed=1123):
 def test_full_adapt_adaptation_window(seed=8978):
     np.random.seed(seed)
     window = 10
-    pot = quadpotential.QuadPotentialFullAdapt(
-        2, np.zeros(2), np.eye(2), 1, adaptation_window=window
-    )
+    with pytest.warns(UserWarning, match="experimental feature"):
+        pot = quadpotential.QuadPotentialFullAdapt(
+            2, np.zeros(2), np.eye(2), 1, adaptation_window=window
+        )
     for i in range(window + 1):
         pot.update(np.random.randn(2), None, True)
     assert pot._previous_update == window
     assert pot.adaptation_window == window * pot.adaptation_window_multiplier
 
-    pot = quadpotential.QuadPotentialFullAdapt(
-        2, np.zeros(2), np.eye(2), 1, adaptation_window=window
-    )
+    with pytest.warns(UserWarning, match="experimental feature"):
+        pot = quadpotential.QuadPotentialFullAdapt(
+            2, np.zeros(2), np.eye(2), 1, adaptation_window=window
+        )
     for i in range(window + 1):
         pot.update(np.random.randn(2), None, True)
     assert pot._previous_update == window
@@ -249,11 +256,16 @@ def test_full_adapt_adaptation_window(seed=8978):
 
 def test_full_adapt_not_invertible():
     window = 10
-    pot = quadpotential.QuadPotentialFullAdapt(
-        2, np.zeros(2), np.eye(2), 0, adaptation_window=window
-    )
+    with pytest.warns(UserWarning, match="experimental feature"):
+        pot = quadpotential.QuadPotentialFullAdapt(
+            2, np.zeros(2), np.eye(2), 0, adaptation_window=window
+        )
     for i in range(window + 1):
-        pot.update(np.ones(2), None, True)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", "invalid value encountered in true_divide", RuntimeWarning
+            )
+            pot.update(np.ones(2), None, True)
     with pytest.raises(ValueError):
         pot.raise_ok(None)
 
@@ -276,6 +288,11 @@ def test_full_adapt_sampling(seed=289586):
         initial_point = model.initial_point()
         initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
 
-        pot = quadpotential.QuadPotentialFullAdapt(initial_point_size, np.zeros(initial_point_size))
+        with pytest.warns(UserWarning, match="experimental feature"):
+            pot = quadpotential.QuadPotentialFullAdapt(
+                initial_point_size, np.zeros(initial_point_size)
+            )
         step = pymc.NUTS(model=model, potential=pot)
-        pymc.sample(draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pymc.sample(draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1)

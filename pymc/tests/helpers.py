@@ -21,7 +21,7 @@ import numpy as np
 import numpy.random as nr
 
 from aesara.gradient import verify_grad as at_verify_grad
-from aesara.graph.opt import in2out
+from aesara.graph.rewriting.basic import in2out
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 
 from pymc.aesaraf import at_rng, local_check_parameter_to_ninf_switch, set_at_rng

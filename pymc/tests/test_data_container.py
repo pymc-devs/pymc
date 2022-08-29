@@ -45,7 +45,7 @@ class TestData(SeededTest):
         with pm.Model():
             x_shared = pm.MutableData("x_shared", x)
             b = pm.Normal("b", 0.0, 10.0)
-            pm.Normal("obs", b * x_shared, np.sqrt(1e-2), observed=y)
+            pm.Normal("obs", b * x_shared, np.sqrt(1e-2), observed=y, shape=x_shared.shape)
 
             prior_trace0 = pm.sample_prior_predictive(1000)
             idata = pm.sample(1000, tune=1000, chains=1)

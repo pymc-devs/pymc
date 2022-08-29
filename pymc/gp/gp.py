@@ -160,7 +160,7 @@ class Latent(Base):
             variable by the Cholesky factor of the covariance matrix.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
-            covariance matrices to ensure numerical stability.  Default value is 1e-6.
+            covariance matrices to ensure numerical stability.
         **kwargs
             Extra keyword arguments that are passed to distribution constructor.
         """
@@ -196,7 +196,7 @@ class Latent(Base):
         cov = Kss - at.dot(at.transpose(A), A)
         return mu, cov
 
-    def conditional(self, name, Xnew, given=None, jitter=0.0, **kwargs):
+    def conditional(self, name, Xnew, given=None, jitter=JITTER_DEFAULT, **kwargs):
         R"""
         Returns the conditional distribution evaluated over new input
         locations `Xnew`.
@@ -223,8 +223,7 @@ class Latent(Base):
             models in PyMC for more information.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
-            covariance matrices to ensure numerical stability.  For conditionals
-            the default value is 0.0.
+            covariance matrices to ensure numerical stability.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
@@ -251,8 +250,8 @@ class TP(Latent):
 
     Parameters
     ----------
-    cov_func : None, 2D array, or instance of Covariance
-        The covariance function.  Defaults to zero.
+    scale_func : None, 2D array, or instance of Covariance
+        The scale function.  Defaults to zero.
     mean_func : None, instance of Mean
         The mean function.  Defaults to zero.
     nu : float
@@ -264,11 +263,18 @@ class TP(Latent):
         Processes as Alternatives to Gaussian Processes.  arXiv preprint arXiv:1402.4306.
     """
 
-    def __init__(self, *, mean_func=Zero(), cov_func=Constant(0.0), nu=None):
+    def __init__(self, *, mean_func=Zero(), scale_func=Constant(0.0), cov_func=None, nu=None):
         if nu is None:
             raise ValueError("Student's T process requires a degrees of freedom parameter, 'nu'")
+        if cov_func is not None:
+            warnings.warn(
+                "Use the scale_func argument to specify the scale function."
+                "cov_func will be removed in future versions.",
+                FutureWarning,
+            )
+            scale_func = cov_func
         self.nu = nu
-        super().__init__(mean_func=mean_func, cov_func=cov_func)
+        super().__init__(mean_func=mean_func, cov_func=scale_func)
 
     def __add__(self, other):
         raise TypeError("Student's T processes aren't additive")
@@ -324,7 +330,7 @@ class TP(Latent):
         covT = (self.nu + beta - 2) / (nu2 - 2) * cov
         return nu2, mu, covT
 
-    def conditional(self, name, Xnew, jitter=0.0, **kwargs):
+    def conditional(self, name, Xnew, jitter=JITTER_DEFAULT, **kwargs):
         R"""
         Returns the conditional distribution evaluated over new input
         locations `Xnew`.
@@ -341,8 +347,7 @@ class TP(Latent):
             Function input values.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
-            covariance matrices to ensure numerical stability.  For conditionals
-            the default value is 0.0.
+            covariance matrices to ensure numerical stability.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
@@ -407,7 +412,9 @@ class Marginal(Base):
         cov = Kxx + Knx
         return mu, stabilize(cov, jitter)
 
-    def marginal_likelihood(self, name, X, y, noise, jitter=0.0, is_observed=True, **kwargs):
+    def marginal_likelihood(
+        self, name, X, y, noise, jitter=JITTER_DEFAULT, is_observed=True, **kwargs
+    ):
         R"""
         Returns the marginal likelihood distribution, given the input
         locations `X` and the data `y`.
@@ -433,7 +440,7 @@ class Marginal(Base):
             non-white noise.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
-            covariance matrices to ensure numerical stability.  Default value is 0.0.
+            covariance matrices to ensure numerical stability.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
@@ -497,7 +504,9 @@ class Marginal(Base):
                 cov += noise(Xnew)
             return mu, cov if pred_noise else stabilize(cov, jitter)
 
-    def conditional(self, name, Xnew, pred_noise=False, given=None, jitter=0.0, **kwargs):
+    def conditional(
+        self, name, Xnew, pred_noise=False, given=None, jitter=JITTER_DEFAULT, **kwargs
+    ):
         R"""
         Returns the conditional distribution evaluated over new input
         locations `Xnew`.
@@ -527,8 +536,7 @@ class Marginal(Base):
             models in PyMC for more information.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
-            covariance matrices to ensure numerical stability.  For conditionals
-            the default value is 0.0.
+            covariance matrices to ensure numerical stability.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
@@ -539,7 +547,14 @@ class Marginal(Base):
         return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
     def predict(
-        self, Xnew, point=None, diag=False, pred_noise=False, given=None, jitter=0.0, model=None
+        self,
+        Xnew,
+        point=None,
+        diag=False,
+        pred_noise=False,
+        given=None,
+        jitter=JITTER_DEFAULT,
+        model=None,
     ):
         R"""
         Return the mean vector and covariance matrix of the conditional
@@ -563,15 +578,14 @@ class Marginal(Base):
             Same as `conditional` method.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
-            covariance matrices to ensure numerical stability.  For conditionals
-            the default value is 0.0.
+            covariance matrices to ensure numerical stability.
         """
         if given is None:
             given = {}
         mu, cov = self._predict_at(Xnew, diag, pred_noise, given, jitter)
         return replace_with_values([mu, cov], replacements=point, model=model)
 
-    def _predict_at(self, Xnew, diag=False, pred_noise=False, given=None, jitter=0.0):
+    def _predict_at(self, Xnew, diag=False, pred_noise=False, given=None, jitter=JITTER_DEFAULT):
         R"""
         Return the mean vector and covariance matrix of the conditional
         distribution as symbolic variables.
@@ -712,7 +726,7 @@ class MarginalApprox(Marginal):
         return -1.0 * (constant + logdet + quadratic + trace)
 
     def marginal_likelihood(
-        self, name, X, Xu, y, noise=None, is_observed=True, jitter=0.0, **kwargs
+        self, name, X, Xu, y, noise=None, is_observed=True, jitter=JITTER_DEFAULT, **kwargs
     ):
         R"""
         Returns the approximate marginal likelihood distribution, given the input
@@ -738,7 +752,7 @@ class MarginalApprox(Marginal):
             Default is `True`.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
-            covariance matrices to ensure numerical stability.  Default value is 0.0.
+            covariance matrices to ensure numerical stability.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
@@ -836,7 +850,9 @@ class MarginalApprox(Marginal):
             X, Xu, y, sigma = self.X, self.Xu, self.y, self.sigma
         return X, Xu, y, sigma, cov_total, mean_total
 
-    def conditional(self, name, Xnew, pred_noise=False, given=None, jitter=0.0, **kwargs):
+    def conditional(
+        self, name, Xnew, pred_noise=False, given=None, jitter=JITTER_DEFAULT, **kwargs
+    ):
         R"""
         Returns the approximate conditional distribution of the GP evaluated over
         new input locations `Xnew`.
@@ -857,8 +873,7 @@ class MarginalApprox(Marginal):
             models in PyMC for more information.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
-            covariance matrices to ensure numerical stability.  For conditionals
-            the default value is 0.0.
+            covariance matrices to ensure numerical stability.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
@@ -968,7 +983,7 @@ class LatentKron(Base):
             `cartesian(*Xs)`.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
-            covariance matrices to ensure numerical stability.  Default value is 1e-6.
+            covariance matrices to ensure numerical stability.
         **kwargs
             Extra keyword arguments that are passed to the `KroneckerNormal`
             distribution constructor.
@@ -998,7 +1013,7 @@ class LatentKron(Base):
         cov = stabilize(Kss - at.dot(at.transpose(A), A), jitter)
         return mu, cov
 
-    def conditional(self, name, Xnew, jitter=0.0, **kwargs):
+    def conditional(self, name, Xnew, jitter=JITTER_DEFAULT, **kwargs):
         """
         Returns the conditional distribution evaluated over new input
         locations `Xnew`.
@@ -1027,8 +1042,7 @@ class LatentKron(Base):
             vector with shape `(n, 1)`.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
-            covariance matrices to ensure numerical stability.  For conditionals
-            the default value is 0.0.
+            covariance matrices to ensure numerical stability.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.

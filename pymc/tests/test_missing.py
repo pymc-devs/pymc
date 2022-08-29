@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 import aesara
 import numpy as np
@@ -87,7 +88,9 @@ def test_missing_dual_observations():
         prior_trace = sample_prior_predictive(return_inferencedata=False)
         assert {"beta1", "beta2", "theta", "o1", "o2"} <= set(prior_trace.keys())
         # TODO: Assert something
-        trace = sample(chains=1, draws=50)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            trace = sample(chains=1, draws=50)
 
 
 def test_interval_missing_observations():
@@ -154,7 +157,8 @@ def test_double_counting():
     assert logp_val == -4.0
 
     with Model(check_bounds=False) as m2:
-        x = Gamma("x", 1, 1, observed=[1, 1, 1, np.nan])
+        with pytest.warns(ImputationWarning):
+            x = Gamma("x", 1, 1, observed=[1, 1, 1, np.nan])
 
     logp_val = m2.compile_logp()({"x_missing_log__": np.array([0])})
     assert logp_val == -4.0
@@ -167,8 +171,9 @@ def test_missing_logp():
     m_logp = m.compile_logp()({})
 
     with Model() as m_missing:
-        theta1 = Normal("theta1", 0, 5, observed=np.array([0, 1, np.nan, 3, np.nan]))
-        theta2 = Normal("theta2", mu=theta1, observed=np.array([np.nan, np.nan, 2, np.nan, 4]))
+        with pytest.warns(ImputationWarning):
+            theta1 = Normal("theta1", 0, 5, observed=np.array([0, 1, np.nan, 3, np.nan]))
+            theta2 = Normal("theta2", mu=theta1, observed=np.array([np.nan, np.nan, 2, np.nan, 4]))
     m_missing_logp = m_missing.compile_logp()(
         {"theta1_missing": [2, 4], "theta2_missing": [0, 1, 3]}
     )
@@ -184,9 +189,10 @@ def test_missing_multivariate():
             NotImplementedError,
             match="Automatic inputation is only supported for univariate RandomVariables",
         ):
-            x = Dirichlet(
-                "x", a=[1, 2, 3], observed=np.array([[0.3, 0.3, 0.4], [np.nan, np.nan, np.nan]])
-            )
+            with pytest.warns(ImputationWarning):
+                x = Dirichlet(
+                    "x", a=[1, 2, 3], observed=np.array([[0.3, 0.3, 0.4], [np.nan, np.nan, np.nan]])
+                )
 
     # TODO: Test can be used when local_subtensor_rv_lift supports multivariate distributions
     # from pymc.distributions.transforms import simplex
@@ -203,12 +209,13 @@ def test_missing_multivariate():
 
 def test_missing_vector_parameter():
     with Model() as m:
-        x = Normal(
-            "x",
-            np.array([-10, 10]),
-            0.1,
-            observed=np.array([[np.nan, 10], [-10, np.nan], [np.nan, np.nan]]),
-        )
+        with pytest.warns(ImputationWarning):
+            x = Normal(
+                "x",
+                np.array([-10, 10]),
+                0.1,
+                observed=np.array([[np.nan, 10], [-10, np.nan], [np.nan, np.nan]]),
+            )
     x_draws = x.eval()
     assert x_draws.shape == (3, 2)
     assert np.all(x_draws[:, 0] < 0)
@@ -228,7 +235,8 @@ def test_missing_symmetric():
     buling the logp graph
     """
     with Model() as m:
-        x = Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
+        with pytest.warns(ImputationWarning):
+            x = Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
 
     x_obs_rv = m["x_observed"]
     x_obs_vv = m.rvs_to_values[x_obs_rv]

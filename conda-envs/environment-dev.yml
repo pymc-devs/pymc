@@ -5,8 +5,8 @@ channels:
 - defaults
 dependencies:
 # Base dependencies
-- aeppl=0.0.33
-- aesara=2.7.9
+- aeppl=0.0.35
+- aesara=2.8.2
 - arviz>=0.12.0
 - blas
 - cachetools>=4.2.1
@@ -17,6 +17,7 @@ dependencies:
 - pandas>=0.24.0
 - pip
 - python-graphviz
+- networkx
 - scipy>=1.4.1
 - typing-extensions>=3.7.4
 # Extra dependencies for dev, testing and docs build
@@ -35,6 +36,5 @@ dependencies:
 - sphinx>=1.5
 - sphinxext-rediraffe
 - watermark
-- pip:
-  - polyagamma
-  - sphinx-remove-toctrees
+- polyagamma
+- sphinx-remove-toctrees

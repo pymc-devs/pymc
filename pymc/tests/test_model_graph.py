@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 import aesara
 import numpy as np
 import pytest
@@ -20,8 +22,63 @@ from aesara.tensor.var import TensorConstant
 
 import pymc as pm
 
-from pymc.model_graph import ModelGraph, model_to_graphviz
+from pymc.exceptions import ImputationWarning
+from pymc.model_graph import ModelGraph, model_to_graphviz, model_to_networkx
 from pymc.tests.helpers import SeededTest
+
+
+def school_model():
+    """
+    Schools model to use in testing model_to_networkx function
+    """
+    J = 8
+    y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
+    sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
+    with pm.Model() as schools:
+        eta = pm.Normal("eta", 0, 1, shape=J)
+        mu = pm.Normal("mu", 0, sigma=1e6)
+        tau = pm.HalfCauchy("tau", 25)
+        theta = mu + tau * eta
+        obs = pm.Normal("obs", theta, sigma=sigma, observed=y)
+    return schools
+
+
+class BaseModelNXTest(SeededTest):
+    network_model = {
+        "graph_attr_dict_factory": dict,
+        "node_dict_factory": dict,
+        "node_attr_dict_factory": dict,
+        "adjlist_outer_dict_factory": dict,
+        "adjlist_inner_dict_factory": dict,
+        "edge_attr_dict_factory": dict,
+        "graph": {"name": "", "label": "8"},
+        "_node": {
+            "eta": {
+                "shape": "ellipse",
+                "style": "rounded",
+                "label": "eta\n~\nNormal",
+                "cluster": "cluster8",
+                "labeljust": "r",
+                "labelloc": "b",
+            },
+            "obs": {
+                "shape": "ellipse",
+                "style": "rounded",
+                "label": "obs\n~\nNormal",
+                "cluster": "cluster8",
+                "labeljust": "r",
+                "labelloc": "b",
+            },
+            "tau": {"shape": "ellipse", "style": None, "label": "tau\n~\nHalfCauchy"},
+            "mu": {"shape": "ellipse", "style": None, "label": "mu\n~\nNormal"},
+        },
+        "_adj": {"eta": {"obs": {}}, "obs": {}, "tau": {"obs": {}}, "mu": {"obs": {}}},
+        "_pred": {"eta": {}, "obs": {"tau": {}, "eta": {}, "mu": {}}, "tau": {}, "mu": {}},
+        "_succ": {"eta": {"obs": {}}, "obs": {}, "tau": {"obs": {}}, "mu": {"obs": {}}},
+    }
+
+    def test_networkx(self):
+        assert self.network_model == model_to_networkx(school_model()).__dict__
 
 
 def radon_model():
@@ -82,7 +139,8 @@ def model_with_imputations():
 
     with pm.Model() as model:
         a = pm.Normal("a")
-        pm.Normal("L", a, 1.0, observed=x)
+        with pytest.warns(ImputationWarning):
+            pm.Normal("L", a, 1.0, observed=x)
 
     compute_graph = {
         "a": set(),
@@ -217,7 +275,8 @@ class TestRadonModel(BaseModelGraphTest):
     model_func = radon_model
 
     def test_checks_formatting(self):
-        with pytest.warns(None):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             model_to_graphviz(self.model, formatting="plain")
         with pytest.raises(ValueError, match="Unsupported formatting"):
             model_to_graphviz(self.model, formatting="latex")

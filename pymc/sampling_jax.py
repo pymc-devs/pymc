@@ -4,7 +4,7 @@ import sys
 import warnings
 
 from functools import partial
-from typing import Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from pymc.initial_point import StartDict
 from pymc.sampling import RandomSeed, _get_seeds_per_chain, _init_jitter
@@ -27,6 +27,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.link.jax.dispatch import jax_funcify
 from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
+from aesara.tensor.shape import SpecifyShape
 from arviz.data.base import make_attrs
 
 from pymc import Model, modelcontext
@@ -38,6 +39,7 @@ warnings.warn("This module is experimental.")
 
 @jax_funcify.register(Assert)
 @jax_funcify.register(CheckParameterValue)
+@jax_funcify.register(SpecifyShape)
 def jax_funcify_Assert(op, **kwargs):
     # Jax does not allow assert whose values aren't known during JIT compilation
     # within it's JIT-ed code. Hence we need to make a simple pass through
@@ -93,7 +95,7 @@ def get_jaxified_graph(
             if not (hasattr(fgraph, "destroyers") and fgraph.has_destroyers([input]))
         )
     )
-    mode.JAX.optimizer.optimize(fgraph)
+    mode.JAX.optimizer.rewrite(fgraph)
 
     # We now jaxify the optimized fgraph
     return jax_funcify(fgraph)
@@ -172,6 +174,16 @@ def _get_batched_jittered_initial_points(
     return initial_points
 
 
+def _update_coords_and_dims(
+    coords: Dict[str, Any], dims: Dict[str, Any], idata_kwargs: Dict[str, Any]
+) -> None:
+    """Update 'coords' and 'dims' dicts with values in 'idata_kwargs'."""
+    if "coords" in idata_kwargs:
+        coords.update(idata_kwargs.pop("coords"))
+    if "dims" in idata_kwargs:
+        dims.update(idata_kwargs.pop("dims"))
+
+
 @partial(jax.jit, static_argnums=(2, 3, 4, 5, 6))
 def _blackjax_inference_loop(
     seed,
@@ -209,60 +221,70 @@ def _blackjax_inference_loop(
 
 
 def sample_blackjax_nuts(
-    draws=1000,
-    tune=1000,
-    chains=4,
-    target_accept=0.8,
-    random_seed: RandomSeed = None,
-    initvals=None,
-    model=None,
-    var_names=None,
-    keep_untransformed=False,
-    chain_method="parallel",
-    postprocessing_backend=None,
-    idata_kwargs=None,
-):
+    draws: int = 1000,
+    tune: int = 1000,
+    chains: int = 4,
+    target_accept: float = 0.8,
+    random_seed: Optional[RandomSeed] = None,
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    model: Optional[Model] = None,
+    var_names: Optional[Sequence[str]] = None,
+    keep_untransformed: bool = False,
+    chain_method: str = "parallel",
+    postprocessing_backend: Optional[str] = None,
+    idata_kwargs: Optional[Dict[str, Any]] = None,
+) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
 
     Parameters
     ----------
     draws : int, default 1000
-        The number of samples to draw. The number of tuned samples are discarded by default.
+        The number of samples to draw. The number of tuned samples are discarded by
+        default.
     tune : int, default 1000
         Number of iterations to tune. Samplers adjust the step sizes, scalings or
-        similar during tuning. Tuning samples will be drawn in addition to the number specified in
-        the ``draws`` argument.
+        similar during tuning. Tuning samples will be drawn in addition to the number
+        specified in the ``draws`` argument.
     chains : int, default 4
         The number of chains to sample.
     target_accept : float in [0, 1].
-        The step size is tuned such that we approximate this acceptance rate. Higher values like
-        0.9 or 0.95 often work better for problematic posteriors.
+        The step size is tuned such that we approximate this acceptance rate. Higher
+        values like 0.9 or 0.95 often work better for problematic posteriors.
     random_seed : int, RandomState or Generator, optional
         Random seed used by the sampling steps.
+    initvals: StartDict or Sequence[Optional[StartDict]], optional
+        Initial values for random variables provided as a dictionary (or sequence of
+        dictionaries) mapping the random variable (by name or reference) to desired
+        starting values.
     model : Model, optional
-        Model to sample from. The model needs to have free random variables. When inside a ``with`` model
-        context, it defaults to that model, otherwise the model must be passed explicitly.
-    var_names : iterable of str, optional
-        Names of variables for which to compute the posterior samples. Defaults to all variables in the posterior
+        Model to sample from. The model needs to have free random variables. When inside
+        a ``with`` model context, it defaults to that model, otherwise the model must be
+        passed explicitly.
+    var_names : sequence of str, optional
+        Names of variables for which to compute the posterior samples. Defaults to all
+        variables in the posterior.
     keep_untransformed : bool, default False
         Include untransformed variables in the posterior samples. Defaults to False.
     chain_method : str, default "parallel"
-        Specify how samples should be drawn. The choices include "parallel", and "vectorized".
+        Specify how samples should be drawn. The choices include "parallel", and
+        "vectorized".
     postprocessing_backend : str, optional
         Specify how postprocessing should be computed. gpu or cpu
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
-        for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
-        not be included in the returned object. Values for ``observed_data``, ``constant_data``,
-        ``coords``, and ``dims`` are inferred from the ``model`` argument if not provided
-        in ``idata_kwargs``.
+        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
+        value for the ``log_likelihood`` key to indicate that the pointwise log
+        likelihood should not be included in the returned object. Values for
+        ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
+        the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
+        ``dims`` are provided, they are used to update the inferred dictionaries.
 
     Returns
     -------
     InferenceData
-        ArviZ ``InferenceData`` object that contains the posterior samples, together with their respective sample stats and
-        pointwise log likeihood values (unless skipped with ``idata_kwargs``).
+        ArviZ ``InferenceData`` object that contains the posterior samples, together
+        with their respective sample stats and pointwise log likeihood values (unless
+        skipped with ``idata_kwargs``).
     """
     import blackjax
 
@@ -367,6 +389,9 @@ def sample_blackjax_nuts(
     }
 
     posterior = mcmc_samples
+    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
+    # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
+    _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
         az.from_dict,
@@ -382,69 +407,96 @@ def sample_blackjax_nuts(
     return az_trace
 
 
+def _numpyro_nuts_defaults() -> Dict[str, Any]:
+    """Defaults parameters for Numpyro NUTS."""
+    return {
+        "adapt_step_size": True,
+        "adapt_mass_matrix": True,
+        "dense_mass": False,
+    }
+
+
+def _update_numpyro_nuts_kwargs(nuts_kwargs: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Update default Numpyro NUTS parameters with new values."""
+    nuts_kwargs_defaults = _numpyro_nuts_defaults()
+    if nuts_kwargs is not None:
+        nuts_kwargs_defaults.update(nuts_kwargs)
+    return nuts_kwargs_defaults
+
+
 def sample_numpyro_nuts(
     draws: int = 1000,
     tune: int = 1000,
     chains: int = 4,
     target_accept: float = 0.8,
-    random_seed: RandomSeed = None,
+    random_seed: Optional[RandomSeed] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
-    var_names=None,
+    var_names: Optional[Sequence[str]] = None,
     progress_bar: bool = True,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
-    postprocessing_backend: str = None,
+    postprocessing_backend: Optional[str] = None,
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
-):
+) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
 
     Parameters
     ----------
     draws : int, default 1000
-        The number of samples to draw. The number of tuned samples are discarded by default.
+        The number of samples to draw. The number of tuned samples are discarded by
+        default.
     tune : int, default 1000
         Number of iterations to tune. Samplers adjust the step sizes, scalings or
-        similar during tuning. Tuning samples will be drawn in addition to the number specified in
-        the ``draws`` argument.
+        similar during tuning. Tuning samples will be drawn in addition to the number
+        specified in the ``draws`` argument.
     chains : int, default 4
         The number of chains to sample.
     target_accept : float in [0, 1].
-        The step size is tuned such that we approximate this acceptance rate. Higher values like
-        0.9 or 0.95 often work better for problematic posteriors.
+        The step size is tuned such that we approximate this acceptance rate. Higher
+        values like 0.9 or 0.95 often work better for problematic posteriors.
     random_seed : int, RandomState or Generator, optional
         Random seed used by the sampling steps.
+    initvals: StartDict or Sequence[Optional[StartDict]], optional
+        Initial values for random variables provided as a dictionary (or sequence of
+        dictionaries) mapping the random variable (by name or reference) to desired
+        starting values.
     model : Model, optional
-        Model to sample from. The model needs to have free random variables. When inside a ``with`` model
-        context, it defaults to that model, otherwise the model must be passed explicitly.
-    var_names : iterable of str, optional
-        Names of variables for which to compute the posterior samples. Defaults to all variables in the posterior
+        Model to sample from. The model needs to have free random variables. When inside
+        a ``with`` model context, it defaults to that model, otherwise the model must be
+        passed explicitly.
+    var_names : sequence of str, optional
+        Names of variables for which to compute the posterior samples. Defaults to all
+        variables in the posterior.
     progress_bar : bool, default True
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
+        Whether or not to display a progress bar in the command line. The bar shows the
+        percentage of completion, the sampling speed in samples per second (SPS), and
+        the estimated remaining time until completion ("expected time of arrival"; ETA).
     keep_untransformed : bool, default False
         Include untransformed variables in the posterior samples. Defaults to False.
     chain_method : str, default "parallel"
-        Specify how samples should be drawn. The choices include "sequential", "parallel", and "vectorized".
+        Specify how samples should be drawn. The choices include "sequential",
+        "parallel", and "vectorized".
     postprocessing_backend : Optional[str]
         Specify how postprocessing should be computed. gpu or cpu
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as value
-        for the ``log_likelihood`` key to indicate that the pointwise log likelihood should
-        not be included in the returned object. Values for ``observed_data``, ``constant_data``,
-        ``coords``, and ``dims`` are inferred from the ``model`` argument if not provided
-        in ``idata_kwargs``.
+        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
+        value for the ``log_likelihood`` key to indicate that the pointwise log
+        likelihood should not be included in the returned object. Values for
+        ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
+        the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
+        ``dims`` are provided, they are used to update the inferred dictionaries.
     nuts_kwargs: dict, optional
         Keyword arguments for :func:`numpyro.infer.NUTS`.
 
     Returns
     -------
     InferenceData
-        ArviZ ``InferenceData`` object that contains the posterior samples, together with their respective sample stats and
-        pointwise log likeihood values (unless skipped with ``idata_kwargs``).
+        ArviZ ``InferenceData`` object that contains the posterior samples, together
+        with their respective sample stats and pointwise log likeihood values (unless
+        skipped with ``idata_kwargs``).
     """
 
     import numpyro
@@ -486,14 +538,10 @@ def sample_numpyro_nuts(
 
     logp_fn = get_jaxified_logp(model, negative_logp=False)
 
-    if nuts_kwargs is None:
-        nuts_kwargs = {}
+    nuts_kwargs = _update_numpyro_nuts_kwargs(nuts_kwargs)
     nuts_kernel = NUTS(
         potential_fn=logp_fn,
         target_accept_prob=target_accept,
-        adapt_step_size=True,
-        adapt_mass_matrix=True,
-        dense_mass=False,
         **nuts_kwargs,
     )
 
@@ -565,6 +613,9 @@ def sample_numpyro_nuts(
     }
 
     posterior = mcmc_samples
+    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
+    # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
+    _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
         az.from_dict,
@@ -577,5 +628,4 @@ def sample_numpyro_nuts(
         attrs=make_attrs(attrs, library=numpyro),
     )
     az_trace = to_trace(posterior=posterior, **idata_kwargs)
-
     return az_trace

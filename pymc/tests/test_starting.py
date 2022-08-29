@@ -26,6 +26,7 @@ from pymc import (
     Uniform,
     find_MAP,
 )
+from pymc.exceptions import ImputationWarning
 from pymc.tests.checks import close_to
 from pymc.tests.helpers import select_by_precision
 from pymc.tests.models import non_normal, simple_arbitrary_det, simple_model
@@ -127,7 +128,8 @@ def test_find_MAP_issue_5923():
 def test_find_MAP_issue_4488():
     # Test for https://github.com/pymc-devs/pymc/issues/4488
     with Model() as m:
-        x = Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
+        with pytest.warns(ImputationWarning):
+            x = Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
         y = Deterministic("y", x + 1)
         map_estimate = find_MAP()
 

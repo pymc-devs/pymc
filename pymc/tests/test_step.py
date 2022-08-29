@@ -11,10 +11,10 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import shutil
 import sys
 import tempfile
+import warnings
 
 import aesara
 import aesara.tensor as at
@@ -121,15 +121,17 @@ class TestStepMethods:
         _, model_coarse, _ = mv_simple_coarse()
         with model:
             step = step_fn(C, model_coarse)
-            idata = sample(
-                tune=1000,
-                draws=draws,
-                chains=1,
-                step=step,
-                start=start,
-                model=model,
-                random_seed=1,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "More chains .* than draws .*", UserWarning)
+                idata = sample(
+                    tune=1000,
+                    draws=draws,
+                    chains=1,
+                    step=step,
+                    initvals=start,
+                    model=model,
+                    random_seed=1,
+                )
             self.check_stat(check, idata, step.__class__.__name__)
             self.check_stat_dtype(idata, step)
 
@@ -144,7 +146,7 @@ class TestStepMethods:
                 draws=2000,
                 chains=1,
                 step=step,
-                start=start,
+                initvals=start,
                 model=model,
                 random_seed=1,
             )
@@ -163,7 +165,7 @@ class TestStepMethods:
                 draws=2000,
                 chains=1,
                 step=step,
-                start=start,
+                initvals=start,
                 model=model,
                 random_seed=1,
             )
@@ -294,25 +296,29 @@ class TestPopulationSamplers:
             n = Normal("n", mu=0, sigma=1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
-                with pytest.raises(ValueError):
-                    sample(draws=10, tune=10, chains=1, cores=1, step=step)
-                # don't parallelize to make test faster
-                sample(draws=10, tune=10, chains=4, cores=1, step=step)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    with pytest.raises(ValueError):
+                        sample(draws=10, tune=10, chains=1, cores=1, step=step)
+                    # don't parallelize to make test faster
+                    sample(draws=10, tune=10, chains=4, cores=1, step=step)
 
     def test_demcmc_warning_on_small_populations(self):
         """Test that a warning is raised when n_chains <= n_dims"""
         with Model() as model:
             Normal("n", mu=0, sigma=1, size=(2, 3))
-            with pytest.warns(UserWarning) as record:
-                sample(
-                    draws=5,
-                    tune=5,
-                    chains=6,
-                    step=DEMetropolis(),
-                    # make tests faster by not parallelizing; disable convergence warning
-                    cores=1,
-                    compute_convergence_checks=False,
-                )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                with pytest.warns(UserWarning) as record:
+                    sample(
+                        draws=5,
+                        tune=5,
+                        chains=6,
+                        step=DEMetropolis(),
+                        # make tests faster by not parallelizing; disable convergence warning
+                        cores=1,
+                        compute_convergence_checks=False,
+                    )
 
     def test_demcmc_tune_parameter(self):
         """Tests that validity of the tune setting is checked"""
@@ -336,7 +342,9 @@ class TestPopulationSamplers:
             x = Normal("x", 0, 1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
-                idata = sample(chains=4, cores=1, draws=20, tune=0, step=DEMetropolis())
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    idata = sample(chains=4, cores=1, draws=20, tune=0, step=DEMetropolis())
                 samples = idata.posterior["x"].values[:, 5]
 
                 assert len(set(samples)) == 4, f"Parallelized {stepper} chains are identical."
@@ -346,7 +354,9 @@ class TestPopulationSamplers:
             x = Normal("x", 0, 1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
-                idata = sample(chains=4, cores=4, draws=20, tune=0, step=DEMetropolis())
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    idata = sample(chains=4, cores=4, draws=20, tune=0, step=DEMetropolis())
                 samples = idata.posterior["x"].values[:, 5]
 
                 assert len(set(samples)) == 4, f"Parallelized {stepper} chains are identical."
@@ -546,14 +556,16 @@ class TestDEMetropolisZ:
         with Model() as pmodel:
             D = 3
             Normal("n", 0, 2, size=(D,))
-            trace = sample(
-                tune=100,
-                draws=50,
-                step=DEMetropolisZ(proposal_dist=NormalProposal),
-                cores=1,
-                chains=3,
-                discard_tuned_samples=False,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = sample(
+                    tune=100,
+                    draws=50,
+                    step=DEMetropolisZ(proposal_dist=NormalProposal),
+                    cores=1,
+                    chains=3,
+                    discard_tuned_samples=False,
+                )
 
 
 class TestNutsCheckTrace:
@@ -562,7 +574,9 @@ class TestNutsCheckTrace:
             prob = Beta("prob", alpha=5.0, beta=3.0)
             Binomial("outcome", n=1, p=prob)
             caplog.clear()
-            sample(3, tune=2, discard_tuned_samples=False, n_init=None, chains=1)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                sample(3, tune=2, discard_tuned_samples=False, n_init=None, chains=1)
             messages = [msg.msg for msg in caplog.records]
             assert all("boolean index did not" not in msg for msg in messages)
 
@@ -588,7 +602,9 @@ class TestNutsCheckTrace:
             b = at.slinalg.solve(floatX(np.eye(2)), a, check_finite=False)
             Normal("c", mu=b, size=2, initval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
-            trace = sample(20, tune=5, chains=2, return_inferencedata=False, random_seed=526)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = sample(20, tune=5, chains=2, return_inferencedata=False, random_seed=526)
             warns = [msg.msg for msg in caplog.records]
             assert np.any(trace["diverging"])
             assert (
@@ -606,7 +622,9 @@ class TestNutsCheckTrace:
     def test_sampler_stats(self):
         with Model() as model:
             Normal("x", mu=0, sigma=1)
-            trace = sample(draws=10, tune=1, chains=1, return_inferencedata=False)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = sample(draws=10, tune=1, chains=1, return_inferencedata=False)
 
         # Assert stats exist and have the correct shape.
         expected_stat_names = {

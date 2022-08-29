@@ -66,7 +66,7 @@ class SimulatorRV(RandomVariable):
 class Simulator(NoDistribution):
     r"""
     Simulator distribution, used for Approximate Bayesian Inference (ABC)
-    with Sequential Monte Carlo (SMC) sampling via ``pm.sample_smc``.
+    with Sequential Monte Carlo (SMC) sampling via :func:`~pymc.sample_smc`.
 
     Simulator distributions have a stochastic pseudo-loglikelihood defined by
     a distance metric between the observed and simulated data, and tweaked
@@ -74,18 +74,21 @@ class Simulator(NoDistribution):
 
     Parameters
     ----------
-    fn: callable
+    fn : callable
         Python random simulator function. Should expect the following signature
         ``(rng, arg1, arg2, ... argn, size)``, where rng is a ``numpy.random.RandomStream()``
         and ``size`` defines the size of the desired sample.
-    params: list
-        Parameters used by the Simulator random function. Parameters can also
-        be passed by order, in which case the keyword argument ``params`` is
-        ignored. Alternatively, each parameter can be passed by order after fn,
-        ``param1, param2, ..., paramN``
-    distance : Aesara Op, callable or str
-        Distance function. Available options are ``"gaussian"`` (default), ``"laplace"``,
-        ``"kullback_leibler"`` or a user defined function (or Aesara Op) that takes
+    *unnamed_params : list of TensorVariable
+        Parameters used by the Simulator random function. Each parameter can be passed
+        by order after fn, for example ``param1, param2, ..., paramN``. params can also
+        be passed with keyword argument "params".
+    params : list of TensorVariable
+        Keyword form of ''unnamed_params''.
+        One of unnamed_params or params must be provided.
+        If passed both unnamed_params and params, an error is raised.
+    distance : Aesara_Op, callable or str, default "gaussian"
+        Distance function. Available options are ``"gaussian"``, ``"laplace"``,
+        ``"kullback_leibler"`` or a user defined function (or Aesara_Op) that takes
         ``epsilon``, the summary statistics of observed_data and the summary statistics
         of simulated_data as input.
 
@@ -98,20 +101,19 @@ class Simulator(NoDistribution):
         ``distance="gaussian"`` + ``sum_stat="sort"`` is equivalent to the 1D 2-wasserstein distance
 
         ``distance="laplace"`` + ``sum_stat="sort"`` is equivalent to the the 1D 1-wasserstein distance
-    sum_stat: Aesara Op, callable or str
-        Summary statistic function. Available options are ``"indentity"`` (default),
-        ``"sort"``, ``"mean"``, ``"median"``. If a callable (or Aesara Op) is defined,
+    sum_stat : Aesara_Op, callable or str, default "identity"
+        Summary statistic function. Available options are ``"identity"``,
+        ``"sort"``, ``"mean"``, ``"median"``. If a callable (or Aesara_Op) is defined,
         it should return a 1d numpy array (or Aesara vector).
-    epsilon: float or array
+    epsilon : tensor_like of float, default 1.0
         Scaling parameter for the distance functions. It should be a float or
-        an array of the same size of the output of ``sum_stat``. Defaults to ``1.0``
-    ndim_supp : int
+        an array of the same size of the output of ``sum_stat``.
+    ndim_supp : int, default 0
         Number of dimensions of the SimulatorRV (0 for scalar, 1 for vector, etc.)
-        Defaults to ``0``.
-    ndims_params: list[int]
+    ndims_params : list of int, optional
         Number of minimum dimensions of each parameter of the RV. For example,
         if the Simulator accepts two scalar inputs, it should be ``[0, 0]``.
-        Defaults to ``0`` for each parameter.
+        Default to list of 0 with length equal to the number of parameters.
 
     Examples
     --------
@@ -158,7 +160,7 @@ class Simulator(NoDistribution):
             elif distance == "kullback_leibler":
                 raise NotImplementedError("KL not refactored yet")
                 # TODO: Wrap KL in aesara OP
-                # distance = KullbackLiebler(observed)
+                # distance = KullbackLeibler(observed)
                 # if sum_stat != "identity":
                 #     _log.info(f"Automatically setting sum_stat to identity as expected by {distance}")
                 #     sum_stat = "identity"
@@ -270,11 +272,11 @@ def gaussian(epsilon, obs_data, sim_data):
 
 def laplace(epsilon, obs_data, sim_data):
     """Laplace kernel."""
-    return -at.abs_((obs_data - sim_data) / epsilon)
+    return -at.abs((obs_data - sim_data) / epsilon)
 
 
-class KullbackLiebler:
-    """Approximate Kullback-Liebler."""
+class KullbackLeibler:
+    """Approximate Kullback-Leibler."""
 
     def __init__(self, obs_data):
         if obs_data.ndim == 1:

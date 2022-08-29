@@ -34,12 +34,13 @@ from aesara.graph.op import Op
 from aesara.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from aesara.tensor import gammaln
 from aesara.tensor.elemwise import Elemwise
-from aesara.tensor.slinalg import Cholesky
-from aesara.tensor.slinalg import solve_lower_triangular as solve_lower
-from aesara.tensor.slinalg import solve_upper_triangular as solve_upper
+from aesara.tensor.slinalg import Cholesky, SolveTriangular
 
 from pymc.aesaraf import floatX
 from pymc.distributions.shape_utils import to_tuple
+
+solve_lower = SolveTriangular(lower=True)
+solve_upper = SolveTriangular(lower=False)
 
 f = floatX
 c = -0.5 * np.log(2.0 * np.pi)
@@ -157,7 +158,7 @@ def sigma2rho(sigma):
     """
     `sigma -> rho` Aesara converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
-    return at.log(at.exp(at.abs_(sigma)) - 1.0)
+    return at.log(at.exp(at.abs(sigma)) - 1.0)
 
 
 def rho2sigma(rho):
@@ -213,7 +214,7 @@ def log_normal(x, mean, **kwargs):
     else:
         std = tau ** (-1)
     std += f(eps)
-    return f(c) - at.log(at.abs_(std)) - (x - mean) ** 2 / (2.0 * std**2)
+    return f(c) - at.log(at.abs(std)) - (x - mean) ** 2 / (2.0 * std**2)
 
 
 def MvNormalLogp():

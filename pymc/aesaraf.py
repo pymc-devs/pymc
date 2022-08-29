@@ -37,7 +37,7 @@ from aeppl.logprob import CheckParameterValue
 from aesara import config, scalar
 from aesara.compile.mode import Mode, get_mode
 from aesara.gradient import grad
-from aesara.graph import local_optimizer
+from aesara.graph import node_rewriter
 from aesara.graph.basic import (
     Apply,
     Constant,
@@ -619,7 +619,7 @@ def make_shared_replacements(point, vars, model):
     """
     othervars = set(model.value_vars) - set(vars)
     return {
-        var: aesara.shared(point[var.name], var.name + "_shared", broadcastable=var.broadcastable)
+        var: aesara.shared(point[var.name], var.name + "_shared", shape=var.broadcastable)
         for var in othervars
     }
 
@@ -875,7 +875,7 @@ def largest_common_dtype(tensors):
     return np.stack([np.ones((), dtype=dtype) for dtype in dtypes]).dtype
 
 
-@local_optimizer(tracks=[CheckParameterValue])
+@node_rewriter(tracks=[CheckParameterValue])
 def local_remove_check_parameter(fgraph, node):
     """Rewrite that removes Aeppl's CheckParameterValue
 
@@ -885,7 +885,7 @@ def local_remove_check_parameter(fgraph, node):
         return [node.inputs[0]]
 
 
-@local_optimizer(tracks=[CheckParameterValue])
+@node_rewriter(tracks=[CheckParameterValue])
 def local_check_parameter_to_ninf_switch(fgraph, node):
     if isinstance(node.op, CheckParameterValue):
         logp_expr, *logp_conds = node.inputs

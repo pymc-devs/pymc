@@ -43,7 +43,9 @@ import scipy.sparse as sps
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
-from aesara.tensor.random.opt import local_subtensor_rv_lift
+from aesara.scalar import Cast
+from aesara.tensor.elemwise import Elemwise
+from aesara.tensor.random.rewriting import local_subtensor_rv_lift
 from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
 
@@ -362,7 +364,7 @@ class ValueGradFunction:
         self._extra_vars_shared = {}
         for var, value in extra_vars_and_values.items():
             shared = aesara.shared(
-                value, var.name + "_shared__", broadcastable=[s == 1 for s in value.shape]
+                value, var.name + "_shared__", shape=[s == 1 for s in value.shape]
             )
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
@@ -465,15 +467,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 # variables in several ways note, that all variables
                 # will get model's name prefix
 
-                # 3) you can create variables with Var method
-                self.Var('v1', Normal.dist(mu=mean, sigma=sd))
-                # this will create variable named like '{prefix::}v1'
+                # 3) you can create variables with the register_rv method
+                self.register_rv(Normal.dist(mu=mean, sigma=sigma), 'v1', initval=1)
+                # this will create variable named like '{name::}v1'
                 # and assign attribute 'v1' to instance created
                 # variable can be accessed with self.v1 or self['v1']
 
                 # 4) this syntax will also work as we are in the
                 # context of instance itself, names are given as usual
-                Normal('v2', mu=mean, sigma=sd)
+                Normal('v2', mu=mean, sigma=sigma)
 
                 # something more complex is allowed, too
                 half_cauchy = HalfCauchy('sigma', beta=10, initval=1.)
@@ -510,7 +512,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             CustomModel(mean=2, name='second')
 
         # variables inside both scopes will be named like `first::*`, `second::*`
-
     """
 
     if TYPE_CHECKING:
@@ -1368,6 +1369,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 isinstance(data, Variable)
                 and not isinstance(data, (GenTensorVariable, Minibatch))
                 and data.owner is not None
+                # The only Aesara operation we allow on observed data is type casting
+                # Although we could allow for any graph that does not depend on other RVs
+                and not (
+                    isinstance(data.owner.op, Elemwise)
+                    and isinstance(data.owner.op.scalar_op, Cast)
+                )
             ):
                 raise TypeError(
                     "Variables that depend on other nodes cannot be used for observed data."
@@ -1870,7 +1877,7 @@ def set_data(new_data, model=None, *, coords=None):
         >>> with model:
         ...     pm.set_data({'x': [5., 6., 9.]})
         ...     y_test = pm.sample_posterior_predictive(idata)
-        >>> y_test['obs'].mean(axis=0)
+        >>> y_test.posterior_predictive['obs'].mean(('chain', 'draw'))
         array([4.6088569 , 5.54128318, 8.32953844])
     """
     model = modelcontext(model)
