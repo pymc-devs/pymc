@@ -18,6 +18,7 @@ from codecs import open
 from os.path import dirname, join, realpath
 
 from setuptools import find_packages, setup
+import versioneer
 
 DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Aesara"
 AUTHOR = "PyMC Developers"
@@ -70,7 +71,8 @@ def get_version():
 if __name__ == "__main__":
     setup(
         name="pymc",
-        version=get_version(),
+        version=versioneer.get_version(),
+        cmdclass=versioneer.get_cmdclass(),
         maintainer=AUTHOR,
         maintainer_email=AUTHOR_EMAIL,
         description=DESCRIPTION,
