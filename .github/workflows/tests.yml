@@ -55,6 +55,7 @@ jobs:
             pymc/tests/distributions/test_continuous.py
             pymc/tests/distributions/test_multivariate.py
             pymc/tests/distributions/test_simulator.py
+            pymc/tests/distributions/test_truncated.py
 
           - |
             pymc/tests/tuning/test_scaling.py
