@@ -361,25 +361,25 @@ class AR(SymbolicDistribution):
 
     Parameters
     ----------
-    rho: tensor_like of float
+    rho : tensor_like of float
         Tensor of autoregressive coefficients. The n-th entry in the last dimension is
         the coefficient for the n-th lag.
-    sigma: tensor_like of float, optional
-        Standard deviation of innovation (sigma > 0). Defaults to 1. Only required if
+    sigma : tensor_like of float, default 1
+        Standard deviation of innovation (sigma > 0). Only required if
         tau is not specified.
-    tau: tensor_like of float
+    tau : tensor_like of float, optional
         Precision of innovation (tau > 0).
-    constant: bool, optional
+    constant : bool, default False
         Whether the first element of rho should be used as a constant term in the AR
-        process. Defaults to False
-    init_dist: unnamed distribution
-        Scalar or vector distribution for initial values. Distribution should be
-        created via the `.dist()` API, and have shape (*shape[:-1], ar_order). If not,
-        it will be automatically resized.
+        process.
+    init_dist : unnamed distribution
+        Scalar or vector distribution for initial values. Unnamed refers to distributions
+         created with the ``.dist()`` API. Distributions should have shape (*shape[:-1], ar_order).
+        If not, it will be automatically resized.
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
 
-    ar_order: int, optional
+    ar_order : int, optional
         Order of the AR process. Inferred from length of the last dimension of rho, if
         possible. ar_order = rho.shape[-1] if constant else rho.shape[-1] - 1
     steps : int, optional
