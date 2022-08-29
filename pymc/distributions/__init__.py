@@ -110,6 +110,7 @@ from pymc.distributions.timeseries import (
     MvStudentTRandomWalk,
     RandomWalk,
 )
+from pymc.distributions.truncated import Truncated
 
 __all__ = [
     "Uniform",
@@ -192,6 +193,7 @@ __all__ = [
     "Rice",
     "Moyal",
     "Simulator",
+    "Truncated",
     "Censored",
     "CAR",
     "PolyaGamma",
