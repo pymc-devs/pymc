@@ -337,9 +337,9 @@ class TestMixture(SeededTest):
     @pytest.mark.parametrize(
         "comp_dists",
         (
-            [Normal.dist(size=(2,))],
+            Normal.dist(size=(2,)),
             [Normal.dist(), Normal.dist()],
-            [MvNormal.dist(np.ones(3), np.eye(3), size=(2,))],
+            MvNormal.dist(np.ones(3), np.eye(3), size=(2,)),
             [
                 MvNormal.dist(np.ones(3), np.eye(3)),
                 MvNormal.dist(np.ones(3), np.eye(3)),
@@ -348,7 +348,10 @@ class TestMixture(SeededTest):
     )
     def test_components_expanded_by_weights(self, comp_dists):
         """Test that components are expanded when size or weights are larger than components"""
-        univariate = comp_dists[0].owner.op.ndim_supp == 0
+        if isinstance(comp_dists, list):
+            univariate = comp_dists[0].owner.op.ndim_supp == 0
+        else:
+            univariate = comp_dists.owner.op.ndim_supp == 0
 
         mix = Mixture.dist(
             w=Dirichlet.dist([1, 1], shape=(3, 2)),
@@ -371,9 +374,9 @@ class TestMixture(SeededTest):
     @pytest.mark.parametrize(
         "comp_dists",
         (
-            [Normal.dist(size=(2,))],
+            Normal.dist(size=(2,)),
             [Normal.dist(), Normal.dist()],
-            [MvNormal.dist(np.ones(3), np.eye(3), size=(2,))],
+            MvNormal.dist(np.ones(3), np.eye(3), size=(2,)),
             [
                 MvNormal.dist(np.ones(3), np.eye(3)),
                 MvNormal.dist(np.ones(3), np.eye(3)),
@@ -382,7 +385,10 @@ class TestMixture(SeededTest):
     )
     @pytest.mark.parametrize("expand", (False, True))
     def test_change_size(self, comp_dists, expand):
-        univariate = comp_dists[0].owner.op.ndim_supp == 0
+        if isinstance(comp_dists, list):
+            univariate = comp_dists[0].owner.op.ndim_supp == 0
+        else:
+            univariate = comp_dists.owner.op.ndim_supp == 0
 
         mix = Mixture.dist(w=Dirichlet.dist([1, 1]), comp_dists=comp_dists)
         mix = Mixture.change_size(mix, new_size=(4,), expand=expand)
@@ -444,6 +450,7 @@ class TestMixture(SeededTest):
             step = Metropolis()
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", "More chains .* than draws.*", UserWarning)
+                warnings.filterwarnings("ignore", "overflow encountered in exp", RuntimeWarning)
                 trace = sample(
                     5000,
                     step,
@@ -467,6 +474,7 @@ class TestMixture(SeededTest):
             Mixture("x_obs", w, [Poisson.dist(mu[0]), Poisson.dist(mu[1])], observed=pois_x)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", "More chains .* than draws.*", UserWarning)
+                warnings.filterwarnings("ignore", "overflow encountered in exp", RuntimeWarning)
                 trace = sample(
                     5000,
                     chains=1,
@@ -497,6 +505,7 @@ class TestMixture(SeededTest):
             )
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", "More chains .* than draws.*", UserWarning)
+                warnings.filterwarnings("ignore", "overflow encountered in exp", RuntimeWarning)
                 trace = sample(
                     5000,
                     chains=1,
@@ -755,6 +764,7 @@ class TestNormalMixture(SeededTest):
             step = Metropolis()
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", "More chains .* than draws.*", UserWarning)
+                warnings.filterwarnings("ignore", "overflow encountered in exp", RuntimeWarning)
                 trace = sample(
                     5000,
                     step,
@@ -989,7 +999,8 @@ class TestMixtureSameFamily(SeededTest):
         w = np.ones(self.mixture_comps) / self.mixture_comps
         mixture_axis = len(batch_shape)
         with Model() as model:
-            comp_dists = Multinomial.dist(p=p, n=n, shape=(*batch_shape, self.mixture_comps, 3))
+            with pytest.warns(UserWarning, match="parameters sum up to"):
+                comp_dists = Multinomial.dist(p=p, n=n, shape=(*batch_shape, self.mixture_comps, 3))
             mixture = Mixture(
                 "mixture",
                 w=w,

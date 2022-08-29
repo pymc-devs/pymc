@@ -18,15 +18,13 @@ A collection of common shape operations needed for broadcasting
 samples from probability distributions for stochastic nodes in PyMC.
 """
 
-from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union, cast
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from aesara.graph.basic import Variable
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
-
-from pymc.aesaraf import convert_observed_data
 
 __all__ = [
     "to_tuple",
@@ -409,34 +407,18 @@ def broadcast_dist_samples_to(to_shape, samples, size=None):
     return [np.broadcast_to(o, to_shape) for o in samples]
 
 
-# Workaround to annotate the Ellipsis type, posted by the BDFL himself.
-# See https://github.com/python/typing/issues/684#issuecomment-548203158
-if TYPE_CHECKING:
-    from enum import Enum
-
-    class ellipsis(Enum):
-        Ellipsis = "..."
-
-    Ellipsis = ellipsis.Ellipsis
-else:
-    ellipsis = type(Ellipsis)
-
 # User-provided can be lazily specified as scalars
-Shape: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, Variable, ellipsis]]]
-Dims: TypeAlias = Union[str, Sequence[Optional[Union[str, ellipsis]]]]
+Shape: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, Variable]]]
+Dims: TypeAlias = Union[str, Sequence[Optional[str]]]
 Size: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, Variable]]]
 
 # After conversion to vectors
-WeakShape: TypeAlias = Union[TensorVariable, Tuple[Union[int, Variable, ellipsis], ...]]
-WeakDims: TypeAlias = Tuple[Optional[Union[str, ellipsis]], ...]
-
-# After Ellipsis were substituted
 StrongShape: TypeAlias = Union[TensorVariable, Tuple[Union[int, Variable], ...]]
 StrongDims: TypeAlias = Sequence[Optional[str]]
 StrongSize: TypeAlias = Union[TensorVariable, Tuple[Union[int, Variable], ...]]
 
 
-def convert_dims(dims: Optional[Dims]) -> Optional[WeakDims]:
+def convert_dims(dims: Optional[Dims]) -> Optional[StrongDims]:
     """Process a user-provided dims variable into None or a valid dims tuple."""
     if dims is None:
         return None
@@ -448,13 +430,10 @@ def convert_dims(dims: Optional[Dims]) -> Optional[WeakDims]:
     else:
         raise ValueError(f"The `dims` parameter must be a tuple, str or list. Actual: {type(dims)}")
 
-    if any(d == Ellipsis for d in dims[:-1]):
-        raise ValueError(f"Ellipsis in `dims` may only appear in the last position. Actual: {dims}")
-
     return dims
 
 
-def convert_shape(shape: Shape) -> Optional[WeakShape]:
+def convert_shape(shape: Shape) -> Optional[StrongShape]:
     """Process a user-provided shape variable into None or a valid shape object."""
     if shape is None:
         return None
@@ -467,10 +446,6 @@ def convert_shape(shape: Shape) -> Optional[WeakShape]:
     else:
         raise ValueError(
             f"The `shape` parameter must be a tuple, TensorVariable, int or list. Actual: {type(shape)}"
-        )
-    if isinstance(shape, tuple) and any(s == Ellipsis for s in shape[:-1]):
-        raise ValueError(
-            f"Ellipsis in `shape` may only appear in the last position. Actual: {shape}"
         )
 
     return shape
@@ -490,85 +465,50 @@ def convert_size(size: Size) -> Optional[StrongSize]:
         raise ValueError(
             f"The `size` parameter must be a tuple, TensorVariable, int or list. Actual: {type(size)}"
         )
-    if isinstance(size, tuple) and Ellipsis in size:
-        raise ValueError(f"The `size` parameter cannot contain an Ellipsis. Actual: {size}")
 
     return size
 
 
-def resize_from_dims(dims: WeakDims, ndim_implied: int, model) -> Tuple[StrongSize, StrongDims]:
-    """Determines a potential resize shape from a `dims` tuple.
+def shape_from_dims(
+    dims: StrongDims, shape_implied: Sequence[TensorVariable], model
+) -> StrongShape:
+    """Determines shape from a `dims` tuple.
 
     Parameters
     ----------
     dims : array-like
-        A vector of dimension names, None or Ellipsis.
-    ndim_implied : int
-        Number of RV dimensions that were implied from its inputs alone.
+        A vector of dimension names or None.
+    shape_implied : tensor_like of int
+        Shape of RV implied from its inputs alone.
     model : pm.Model
         The current model on stack.
 
     Returns
     -------
-    resize_shape : array-like
-        Shape of new dimensions that should be prepended.
     dims : tuple of (str or None)
-        Names or None for all dimensions after resizing.
+        Names or None for all RV dimensions.
     """
-    if Ellipsis in dims:
-        # Auto-complete the dims tuple to the full length.
-        # We don't have a way to know the names of implied
-        # dimensions, so they will be `None`.
-        dims = (*dims[:-1], *[None] * ndim_implied)
-    sdims = cast(StrongDims, dims)
+    ndim_resize = len(dims) - len(shape_implied)
 
-    ndim_resize = len(sdims) - ndim_implied
-
-    # All resize dims must be known already (numerically or symbolically).
-    unknowndim_resize_dims = set(sdims[:ndim_resize]) - set(model.dim_lengths)
+    # Dims must be known already or be inferrable from implied dimensions of the RV
+    unknowndim_resize_dims = set(dims[:ndim_resize]) - set(model.dim_lengths)
     if unknowndim_resize_dims:
         raise KeyError(
             f"Dimensions {unknowndim_resize_dims} are unknown to the model and cannot be used to specify a `size`."
         )
 
     # The numeric/symbolic resize tuple can be created using model.RV_dim_lengths
-    resize_shape: Tuple[Variable, ...] = tuple(
-        model.dim_lengths[dname] for dname in sdims[:ndim_resize]
+    return tuple(
+        model.dim_lengths[dname] if dname in model.dim_lengths else shape_implied[i]
+        for i, dname in enumerate(dims)
     )
-    return resize_shape, sdims
-
-
-def resize_from_observed(
-    observed, ndim_implied: int
-) -> Tuple[StrongSize, Union[np.ndarray, Variable]]:
-    """Determines a potential resize shape from observations.
-
-    Parameters
-    ----------
-    observed : scalar, array-like
-        The value of the `observed` kwarg to the RV creation.
-    ndim_implied : int
-        Number of RV dimensions that were implied from its inputs alone.
-
-    Returns
-    -------
-    resize_shape : array-like
-        Shape of new dimensions that should be prepended.
-    observed : scalar, array-like
-        Observations as numpy array or `Variable`.
-    """
-    if not hasattr(observed, "shape"):
-        observed = convert_observed_data(observed)
-    ndim_resize = observed.ndim - ndim_implied
-    resize_shape = tuple(observed.shape[d] for d in range(ndim_resize))
-    return resize_shape, observed
 
 
 def find_size(
-    shape: Optional[WeakShape],
+    shape: Optional[StrongShape],
     size: Optional[StrongSize],
     ndim_supp: int,
-) -> Tuple[Optional[StrongSize], Optional[int], Optional[int], int]:
+) -> Optional[StrongSize]:
     """Determines the size keyword argument for creating a Distribution.
 
     Parameters
@@ -583,37 +523,19 @@ def find_size(
 
     Returns
     -------
-    create_size : int, optional
-        The size argument to be passed to the distribution
-    ndim_expected : int, optional
-        Number of dimensions expected after distribution was created
-    ndim_batch : int, optional
-        Number of batch dimensions
-    ndim_supp : int
-        Number of support dimensions
+    size : tuble of int or TensorVariable, optional
+        The size argument for creating the Distribution
     """
 
-    ndim_expected: Optional[int] = None
-    ndim_batch: Optional[int] = None
-    create_size: Optional[StrongSize] = None
+    if size is not None:
+        return size
 
     if shape is not None:
-        if Ellipsis in shape:
-            # Ellipsis short-hands all implied dimensions. Therefore
-            # we don't know how many dimensions to expect.
-            ndim_expected = ndim_batch = None
-            # Create the RV with its implied shape and resize later
-            create_size = None
-        else:
-            ndim_expected = len(tuple(shape))
-            ndim_batch = ndim_expected - ndim_supp
-            create_size = tuple(shape)[:ndim_batch]
-    elif size is not None:
-        ndim_expected = ndim_supp + len(tuple(size))
+        ndim_expected = len(tuple(shape))
         ndim_batch = ndim_expected - ndim_supp
-        create_size = size
+        return tuple(shape)[:ndim_batch]
 
-    return create_size, ndim_expected, ndim_batch, ndim_supp
+    return None
 
 
 def rv_size_is_none(size: Variable) -> bool:

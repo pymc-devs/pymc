@@ -14,8 +14,6 @@
 import unittest
 import warnings
 
-from functools import reduce
-
 import aesara
 import aesara.sparse as sparse
 import aesara.tensor as at
@@ -354,7 +352,8 @@ class TestValueGradFunction(unittest.TestCase):
 
         res = [gf(DictToArrayBijection.map(Point(pnt, model=m))) for i in range(5)]
 
-        assert reduce(lambda x, y: np.array_equal(x, y) and y, res) is not False
+        # Assert that all the elements of res are equal
+        assert res[1:] == res[:-1]
 
     def test_aesara_switch_broadcast_edge_cases_1(self):
         # Tests against two subtle issues related to a previous bug in Theano

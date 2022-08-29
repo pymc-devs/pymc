@@ -47,7 +47,7 @@ repos:
     - id: black
     - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.14.5
+  rev: v2.15.0
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
