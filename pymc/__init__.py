@@ -75,3 +75,6 @@ from pymc.step_methods import *
 from pymc.tuning import *
 from pymc.variational import *
 from pymc.vartypes import *
+
+from . import _version
+__version__ = _version.get_versions()['version']
