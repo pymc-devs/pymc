@@ -372,10 +372,10 @@ class AR(SymbolicDistribution):
     constant : bool, default False
         Whether the first element of rho should be used as a constant term in the AR
         process.
-    init_dist : unnamed distribution
+    init_dist : unnamed distribution, optional
         Scalar or vector distribution for initial values. Unnamed refers to distributions
          created with the ``.dist()`` API. Distributions should have shape (*shape[:-1], ar_order).
-        If not, it will be automatically resized.
+        If not, it will be automatically resized. Defaults to pm.Normal.dist(0, 100, shape=...).
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
 
