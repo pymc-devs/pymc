@@ -378,3 +378,17 @@ def test_hierarchical_obs_logp():
     ops = {a.owner.op for a in logp_ancestors if a.owner}
     assert len(ops) > 0
     assert not any(isinstance(o, RandomVariable) for o in ops)
+
+
+def test_logprob_join_constant_shapes():
+    x = at.random.normal(size=5)
+    y = at.random.normal(size=3)
+    xy = at.join(x, y)
+    xy_vv = at.vector("xy_vv")
+
+    xy_logp = logp(xy, xy_vv)
+    # This is what Aeppl does not do!
+    assert_no_rvs(xy_logp)
+
+    f = aesara.function([xy_vv], xy_logp)
+    np.testing.assert_array_equal(f(np.zeros(8)), sp.norm.logpdf(np.zeros(8)))

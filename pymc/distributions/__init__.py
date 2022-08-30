@@ -109,6 +109,7 @@ from pymc.distributions.timeseries import (
     GaussianRandomWalk,
     MvGaussianRandomWalk,
     MvStudentTRandomWalk,
+    RandomWalk,
 )
 
 __all__ = [
@@ -173,6 +174,7 @@ __all__ = [
     "LKJCholeskyCov",
     "LKJCorr",
     "AsymmetricLaplace",
+    "RandomWalk",
     "GaussianRandomWalk",
     "MvGaussianRandomWalk",
     "MvStudentTRandomWalk",

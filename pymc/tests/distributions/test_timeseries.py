@@ -39,8 +39,6 @@ from pymc.distributions.timeseries import (
 from pymc.model import Model
 from pymc.sampling import draw, sample, sample_posterior_predictive
 from pymc.tests.distributions.util import (
-    BaseTestDistributionRandom,
-    Nat,
     R,
     Rplus,
     Vector,
@@ -101,51 +99,20 @@ def test_get_steps(info_source, steps, shape, step_shape_offset, expected_steps,
 
 
 class TestGaussianRandomWalk:
-    class TestGaussianRandomWalkRandom(BaseTestDistributionRandom):
-        # Override default size for test class
-        size = None
-
-        pymc_dist = pm.GaussianRandomWalk
-        pymc_dist_params = {"mu": 1.0, "sigma": 2, "init_dist": pm.DiracDelta.dist(0), "steps": 4}
-        expected_rv_op_params = {
-            "mu": 1.0,
-            "sigma": 2,
-            "init_dist": pm.DiracDelta.dist(0),
-            "steps": 4,
-        }
-
-        checks_to_run = [
-            "check_pymc_params_match_rv_op",
-            "check_rv_inferred_size",
-        ]
-
-        def check_rv_inferred_size(self):
-            steps = self.pymc_dist_params["steps"]
-            sizes_to_check = [None, (), 1, (1,)]
-            sizes_expected = [(steps + 1,), (steps + 1,), (1, steps + 1), (1, steps + 1)]
-
-            for size, expected in zip(sizes_to_check, sizes_expected):
-                pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
-                expected_symbolic = tuple(pymc_rv.shape.eval())
-                assert expected_symbolic == expected
-
-        def test_steps_scalar_check(self):
-            with pytest.raises(ValueError, match="steps must be an integer scalar"):
-                self.pymc_dist.dist(steps=[1], init_dist=pm.DiracDelta.dist(0))
-
     def test_logp(self):
-        def ref_logp(value, mu, sigma, steps):
+        def ref_logp(value, mu, sigma):
             return (
-                st.norm.logpdf(value[0], 0, 100) + st.norm.logpdf(np.diff(value), mu, sigma).sum()
+                st.norm.logpdf(value[0], 0, 100)  # default init_dist has a scale 100
+                + st.norm.logpdf(np.diff(value), mu, sigma).sum()
             )
 
         check_logp(
             pm.GaussianRandomWalk,
             Vector(R, 4),
-            {"mu": R, "sigma": Rplus, "steps": Nat},
+            {"mu": R, "sigma": Rplus},
             ref_logp,
             decimal=select_by_precision(float64=6, float32=1),
-            extra_args={"init_dist": Normal.dist(0, 100)},
+            extra_args={"steps": 3, "init_dist": Normal.dist(0, 100)},
         )
 
     def test_gaussianrandomwalk_inference(self):
@@ -173,27 +140,27 @@ class TestGaussianRandomWalk:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "Initial distribution not specified.*", UserWarning)
             grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init)
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+            assert tuple(grw.owner.inputs[0].shape.eval()) == ()
 
             grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, size=(5,))
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+            assert tuple(grw.owner.inputs[0].shape.eval()) == (5,)
 
             grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=2)
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+            assert tuple(grw.owner.inputs[0].shape.eval()) == ()
 
             grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=(5, 2))
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+            assert tuple(grw.owner.inputs[0].shape.eval()) == (5,)
 
             grw = pm.GaussianRandomWalk.dist(mu=[0, 0], sigma=1, steps=1, init_dist=init)
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+            assert tuple(grw.owner.inputs[0].shape.eval()) == (2,)
 
             grw = pm.GaussianRandomWalk.dist(mu=0, sigma=[1, 1], steps=1, init_dist=init)
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+            assert tuple(grw.owner.inputs[0].shape.eval()) == (2,)
 
             grw = pm.GaussianRandomWalk.dist(
                 mu=np.zeros((3, 1)), sigma=[1, 1], steps=1, init_dist=init
             )
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == (3, 2)
+            assert tuple(grw.owner.inputs[0].shape.eval()) == (3, 2)
 
     def test_gaussianrandomwalk_broadcasted_by_init_dist(self):
         grw = pm.GaussianRandomWalk.dist(
