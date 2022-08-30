@@ -17,6 +17,8 @@
 A collection of common shape operations needed for broadcasting
 samples from probability distributions for stochastic nodes in PyMC.
 """
+import warnings
+
 from functools import singledispatch
 from typing import Optional, Sequence, Tuple, Union
 
@@ -579,8 +581,8 @@ def change_dist_size(
     Returns
     -------
     A new distribution variable that is equivalent to the original distribution with
-    the new size. The new distribution may reuse the same RandomState/Generator inputs
-    as the original distribution.
+    the new size. The new distribution will not reuse the old RandomState/Generator
+    input, so it will be independent from the original distribution.
 
     Examples
     --------
@@ -618,24 +620,29 @@ def change_dist_size(
 def change_rv_size(op, rv, new_size, expand) -> TensorVariable:
     # Extract the RV node that is to be resized
     rv_node = rv.owner
-    rng, size, dtype, *dist_params = rv_node.inputs
+    old_rng, old_size, dtype, *dist_params = rv_node.inputs
 
     if expand:
-        shape = tuple(rv_node.op._infer_shape(size, dist_params))
-        size = shape[: len(shape) - rv_node.op.ndim_supp]
-        new_size = tuple(new_size) + tuple(size)
+        shape = tuple(rv_node.op._infer_shape(old_size, dist_params))
+        old_size = shape[: len(shape) - rv_node.op.ndim_supp]
+        new_size = tuple(new_size) + tuple(old_size)
 
     # Make sure the new size is a tensor. This dtype-aware conversion helps
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
     new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
 
-    new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
-    new_rv = new_rv_node.outputs[-1]
+    new_rv = rv_node.op(*dist_params, size=new_size, dtype=dtype)
 
-    # Update "traditional" rng default_update, if that was set for old RV
-    default_update = getattr(rng, "default_update", None)
-    if default_update is not None and default_update is rv_node.outputs[0]:
-        rng.default_update = new_rv_node.outputs[0]
+    # Replicate "traditional" rng default_update, if that was set for old_rng
+    default_update = getattr(old_rng, "default_update", None)
+    if default_update is not None:
+        if default_update is rv_node.outputs[0]:
+            new_rv.owner.inputs[0].default_update = new_rv.owner.outputs[0]
+        else:
+            warnings.warn(
+                f"Update expression of {rv} RNG could not be replicated in resized variable",
+                UserWarning,
+            )
 
     return new_rv
 

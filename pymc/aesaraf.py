@@ -864,6 +864,31 @@ def find_rng_nodes(
     ]
 
 
+def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:
+    """Replace any RNG nodes upsteram of outputs by new RNGs of the same type
+
+    This can be used when combining a pre-existing graph with a cloned one, to ensure
+    RNGs are unique across the two graphs.
+    """
+    rng_nodes = find_rng_nodes(outputs)
+
+    # Nothing to do here
+    if not rng_nodes:
+        return outputs
+
+    graph = FunctionGraph(outputs=outputs, clone=False)
+    new_rng_nodes: List[Union[np.random.RandomState, np.random.Generator]] = []
+    for rng_node in rng_nodes:
+        rng_cls: type
+        if isinstance(rng_node, at.random.var.RandomStateSharedVariable):
+            rng_cls = np.random.RandomState
+        else:
+            rng_cls = np.random.Generator
+        new_rng_nodes.append(aesara.shared(rng_cls(np.random.PCG64())))
+    graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
+    return graph.outputs
+
+
 SeedSequenceSeed = Optional[Union[int, Sequence[int], np.ndarray, np.random.SeedSequence]]
 
 
@@ -944,12 +969,21 @@ def compile_pymc(
         assert random_var.owner.op is not None
         if isinstance(random_var.owner.op, RandomVariable):
             rng = random_var.owner.inputs[0]
-            if not hasattr(rng, "default_update"):
-                rng_updates[rng] = random_var.owner.outputs[0]
+            if hasattr(rng, "default_update"):
+                update_map = {rng: rng.default_update}
             else:
-                rng_updates[rng] = rng.default_update
+                update_map = {rng: random_var.owner.outputs[0]}
         else:
-            rng_updates.update(random_var.owner.op.update(random_var.owner))
+            update_map = random_var.owner.op.update(random_var.owner)
+        # Check that we are not setting different update expressions for the same variables
+        for rng, update in update_map.items():
+            if rng not in rng_updates:
+                rng_updates[rng] = update
+            # When a variable has multiple outputs, it will be called twice with the same
+            # update expression. We don't want to raise in that case, only if the update
+            # expression in different from the one already registered
+            elif rng_updates[rng] is not update:
+                raise ValueError(f"Multiple update expressions found for the variable {rng}")
 
     # We always reseed random variables as this provides RNGs with no chances of collision
     if rng_updates:

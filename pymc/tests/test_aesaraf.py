@@ -37,6 +37,7 @@ from pymc.aesaraf import (
     compile_pymc,
     convert_observed_data,
     extract_obs_data,
+    replace_rng_nodes,
     reseed_rngs,
     rvs_to_value_vars,
     walk_model,
@@ -501,6 +502,42 @@ class TestCompilePyMC:
         x3_eval, y3_eval = f3()
         assert x3_eval == x2_eval
         assert y3_eval == y2_eval
+
+    def test_multiple_updates_same_variable(self):
+        rng = aesara.shared(np.random.default_rng(), name="rng")
+        x = at.random.normal(rng=rng)
+        y = at.random.normal(rng=rng)
+
+        assert compile_pymc([], [x])
+        assert compile_pymc([], [y])
+        msg = "Multiple update expressions found for the variable rng"
+        with pytest.raises(ValueError, match=msg):
+            compile_pymc([], [x, y])
+
+
+def test_replace_rng_nodes():
+    rng = aesara.shared(np.random.default_rng())
+    x = at.random.normal(rng=rng)
+    x_rng, *x_non_rng_inputs = x.owner.inputs
+
+    cloned_x = x.owner.clone().default_output()
+    cloned_x_rng, *cloned_x_non_rng_inputs = cloned_x.owner.inputs
+
+    # RNG inputs are the same across the two variables
+    assert x_rng is cloned_x_rng
+
+    (new_x,) = replace_rng_nodes([cloned_x])
+    new_x_rng, *new_x_non_rng_inputs = new_x.owner.inputs
+
+    # Variables are still the same
+    assert new_x is cloned_x
+
+    # RNG inputs are not the same as before
+    assert new_x_rng is not x_rng
+
+    # All other inputs are the same as before
+    for non_rng_inputs, new_non_rng_inputs in zip(x_non_rng_inputs, new_x_non_rng_inputs):
+        assert non_rng_inputs is new_non_rng_inputs
 
 
 def test_reseed_rngs():
