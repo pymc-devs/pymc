@@ -506,7 +506,8 @@ def test_rv_size_is_none():
 
 def test_change_rv_size():
     loc = at.as_tensor_variable([1, 2])
-    rv = normal(loc=loc)
+    rng = aesara.shared(np.random.default_rng())
+    rv = normal(loc=loc, rng=rng)
     assert rv.ndim == 1
     assert tuple(rv.shape.eval()) == (2,)
 
@@ -524,6 +525,9 @@ def test_change_rv_size():
     rv_new_ancestors = set(ancestors((rv_new,)))
     assert loc in rv_new_ancestors
     assert rv not in rv_new_ancestors
+
+    # Check that the old rng is not reused
+    assert rv_new.owner.inputs[0] is not rng
 
     rv_newer = change_dist_size(rv_new, new_size=(4,), expand=True)
     assert rv_newer.ndim == 3
@@ -555,22 +559,27 @@ def test_change_rv_size_default_update():
     rng = aesara.shared(np.random.default_rng(0))
     x = normal(rng=rng)
 
-    # Test that "traditional" default_update is updated
+    # Test that "traditional" default_update is translated to the new rng
     rng.default_update = x.owner.outputs[0]
     new_x = change_dist_size(x, new_size=(2,))
-    assert rng.default_update is not x.owner.outputs[0]
-    assert rng.default_update is new_x.owner.outputs[0]
+    new_rng = new_x.owner.inputs[0]
+    assert rng.default_update is x.owner.outputs[0]
+    assert new_rng.default_update is new_x.owner.outputs[0]
 
-    # Test that "non-traditional" default_update is left unchanged
+    # Test that "non-traditional" default_update raises UserWarning
     next_rng = aesara.shared(np.random.default_rng(1))
     rng.default_update = next_rng
-    new_x = change_dist_size(x, new_size=(2,))
+    with pytest.warns(UserWarning, match="could not be replicated in resized variable"):
+        new_x = change_dist_size(x, new_size=(2,))
+    new_rng = new_x.owner.inputs[0]
     assert rng.default_update is next_rng
+    assert not hasattr(new_rng, "default_update")
 
     # Test that default_update is not set if there was none before
     del rng.default_update
     new_x = change_dist_size(x, new_size=(2,))
-    assert not hasattr(rng, "default_update")
+    new_rng = new_x.owner.inputs[0]
+    assert not hasattr(new_rng, "default_update")
 
 
 def test_change_specify_shape_size_univariate():

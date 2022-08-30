@@ -248,10 +248,10 @@ class Simulator(NoDistribution):
         # TODO: Model rngs should be updated prior to multiprocessing split,
         #  in which case this would not be needed. However, that would have to be
         #  done for every sampler that may accomodate Simulators
-        rng = aesara.shared(np.random.default_rng())
+        rng = aesara.shared(np.random.default_rng(), name="simulator_rng")
         # Create a new simulatorRV with identical inputs as the original one
         sim_value = sim_op.make_node(rng, *sim_inputs[1:]).default_output()
-        sim_value.name = "sim_value"
+        sim_value.name = "simulator_value"
 
         return sim_op.distance(
             sim_op.epsilon,

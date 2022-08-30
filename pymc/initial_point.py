@@ -24,7 +24,7 @@ from aesara.graph.basic import Variable
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.var import TensorVariable
 
-from pymc.aesaraf import compile_pymc, find_rng_nodes, reseed_rngs
+from pymc.aesaraf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
 StartDict = Dict[Union[Variable, str], Union[np.ndarray, Variable, str]]
@@ -167,18 +167,8 @@ def make_initial_point_fn(
 
     # Replace original rng shared variables so that we don't mess with them
     # when calling the final seeded function
-    graph = FunctionGraph(outputs=initial_values, clone=False)
-    rng_nodes = find_rng_nodes(graph.outputs)
-    new_rng_nodes: List[Union[np.random.RandomState, np.random.Generator]] = []
-    for rng_node in rng_nodes:
-        rng_cls: type
-        if isinstance(rng_node, at.random.var.RandomStateSharedVariable):
-            rng_cls = np.random.RandomState
-        else:
-            rng_cls = np.random.Generator
-        new_rng_nodes.append(aesara.shared(rng_cls(np.random.PCG64())))
-    graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
-    func = compile_pymc(inputs=[], outputs=graph.outputs, mode=aesara.compile.mode.FAST_COMPILE)
+    initial_values = replace_rng_nodes(initial_values)
+    func = compile_pymc(inputs=[], outputs=initial_values, mode=aesara.compile.mode.FAST_COMPILE)
 
     varnames = []
     for var in model.free_RVs:

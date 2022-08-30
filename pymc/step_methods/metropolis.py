@@ -23,7 +23,14 @@ from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
 
 import pymc as pm
 
-from pymc.aesaraf import compile_pymc, floatX, rvs_to_value_vars
+from pymc.aesaraf import (
+    CallableTensor,
+    compile_pymc,
+    floatX,
+    join_nonshared_inputs,
+    replace_rng_nodes,
+    rvs_to_value_vars,
+)
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.step_methods.arraystep import (
     ArrayStep,
@@ -1046,12 +1053,14 @@ def sample_except(limit, excluded):
 
 
 def delta_logp(point, logp, vars, shared):
-    [logp0], inarray0 = pm.join_nonshared_inputs(point, [logp], vars, shared)
+    [logp0], inarray0 = join_nonshared_inputs(point, [logp], vars, shared)
 
     tensor_type = inarray0.type
     inarray1 = tensor_type("inarray1")
 
-    logp1 = pm.CallableTensor(logp0)(inarray1)
+    logp1 = CallableTensor(logp0)(inarray1)
+    # Replace any potential duplicated RNG nodes
+    (logp1,) = replace_rng_nodes((logp1,))
 
     f = compile_pymc([inarray1, inarray0], logp1 - logp0)
     f.trust_input = True
