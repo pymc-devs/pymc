@@ -24,6 +24,7 @@ import aesara.tensor as at
 import numpy as np
 import scipy
 
+from aeppl.logprob import _logprob
 from aesara.graph.basic import Apply, Constant, Variable
 from aesara.graph.op import Op
 from aesara.raise_op import Assert
@@ -32,7 +33,7 @@ from aesara.tensor import gammaln, sigmoid
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from aesara.tensor.random.basic import dirichlet, multinomial, multivariate_normal
 from aesara.tensor.random.op import RandomVariable, default_supp_shape_from_params
-from aesara.tensor.random.utils import broadcast_params, normalize_size_param
+from aesara.tensor.random.utils import broadcast_params
 from aesara.tensor.slinalg import Cholesky, SolveTriangular
 from aesara.tensor.type import TensorType
 from scipy import linalg, stats
@@ -49,9 +50,17 @@ from pymc.distributions.dist_math import (
     logpow,
     multigammaln,
 )
-from pymc.distributions.distribution import Continuous, Discrete, moment
+from pymc.distributions.distribution import (
+    Continuous,
+    Discrete,
+    Distribution,
+    SymbolicRandomVariable,
+    _moment,
+    moment,
+)
 from pymc.distributions.logprob import ignore_logprob
 from pymc.distributions.shape_utils import (
+    _change_dist_size,
     broadcast_dist_samples_to,
     change_dist_size,
     rv_size_is_none,
@@ -1097,12 +1106,12 @@ def _lkj_normalizing_constant(eta, n):
     return result
 
 
-class _LKJCholeskyCovRV(RandomVariable):
-    name = "_lkjcholeskycov"
+class _LKJCholeskyCovBaseRV(RandomVariable):
+    name = "_lkjcholeskycovbase"
     ndim_supp = 1
     ndims_params = [0, 0, 1]
     dtype = "floatX"
-    _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
+    _print_name = ("_lkjcholeskycovbase", "\\operatorname{_lkjcholeskycovbase}")
 
     def make_node(self, rng, size, dtype, n, eta, D):
         n = at.as_tensor_variable(n)
@@ -1115,35 +1124,19 @@ class _LKJCholeskyCovRV(RandomVariable):
 
         D = at.as_tensor_variable(D)
 
-        # We resize the sd_dist `D` automatically so that it has (size x n) independent
-        # draws which is what the `_LKJCholeskyCovRV.rng_fn` expects. This makes the
-        # random and logp methods equivalent, as the latter also assumes a unique value
-        # for each diagonal element.
-        # Since `eta` and `n` are forced to be scalars we don't need to worry about
-        # implied batched dimensions for the time being.
-        size = normalize_size_param(size)
-        if D.owner.op.ndim_supp == 0:
-            D = change_dist_size(D, at.concatenate((size, (n,))))
-        else:
-            # The support shape must be `n` but we have no way of controlling it
-            D = change_dist_size(D, size)
-
         return super().make_node(rng, size, dtype, n, eta, D)
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
+    def _supp_shape_from_params(self, dist_params, param_shapes):
         n = dist_params[0]
-        dist_shape = tuple(size) + ((n * (n + 1)) // 2,)
-        return dist_shape
+        return ((n * (n + 1)) // 2,)
 
     def rng_fn(self, rng, n, eta, D, size):
         # We flatten the size to make operations easier, and then rebuild it
         if size is None:
-            flat_size = 1
-        else:
-            flat_size = np.prod(size)
+            size = D.shape[:-1]
+        flat_size = np.prod(size).astype(int)
 
-        C = LKJCorrRV._random_corr_matrix(rng, n, eta, flat_size)
-
+        C = LKJCorrRV._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
         D = D.reshape(flat_size, n)
         C *= D[..., :, np.newaxis] * D[..., np.newaxis, :]
 
@@ -1159,23 +1152,30 @@ class _LKJCholeskyCovRV(RandomVariable):
         return samples
 
 
-_ljk_cholesky_cov = _LKJCholeskyCovRV()
+_ljk_cholesky_cov_base = _LKJCholeskyCovBaseRV()
 
 
-class _LKJCholeskyCov(Continuous):
+# _LKJCholeskyCovBaseRV requires a properly shaped `D`, which means the variable can't
+# be safely resized. Because of this, we add the thin SymbolicRandomVariable wrapper
+class _LKJCholeskyCovRV(SymbolicRandomVariable):
+    default_output = 1
+    _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
+
+    def update(self, node):
+        return {node.inputs[0]: node.outputs[0]}
+
+
+class _LKJCholeskyCov(Distribution):
     r"""Underlying class for covariance matrix with LKJ distributed correlations.
     See docs for LKJCholeskyCov function for more details on how to use it in models.
     """
-    rv_op = _ljk_cholesky_cov
 
-    def __new__(cls, name, eta, n, sd_dist, **kwargs):
-        check_dist_not_registered(sd_dist)
-        return super().__new__(cls, name, eta, n, sd_dist, **kwargs)
+    rv_type = _LKJCholeskyCovRV
 
     @classmethod
-    def dist(cls, eta, n, sd_dist, **kwargs):
-        eta = at.as_tensor_variable(floatX(eta))
+    def dist(cls, n, eta, sd_dist, **kwargs):
         n = at.as_tensor_variable(intX(n))
+        eta = at.as_tensor_variable(floatX(eta))
 
         if not (
             isinstance(sd_dist, Variable)
@@ -1185,75 +1185,105 @@ class _LKJCholeskyCov(Continuous):
         ):
             raise TypeError("sd_dist must be a scalar or vector distribution variable")
 
+        check_dist_not_registered(sd_dist)
         # sd_dist is part of the generative graph, but should be completely ignored
         # by the logp graph, since the LKJ logp explicitly includes these terms.
-        # TODO: Things could be simplified a bit if we managed to extract the
-        #  sd_dist prior components from the logp expression.
         sd_dist = ignore_logprob(sd_dist)
-
         return super().dist([n, eta, sd_dist], **kwargs)
 
-    def moment(rv, size, n, eta, sd_dists):
-        diag_idxs = (at.cumsum(at.arange(1, n + 1)) - 1).astype("int32")
-        moment = at.zeros_like(rv)
-        moment = at.set_subtensor(moment[..., diag_idxs], 1)
-        return moment
+    @classmethod
+    def rv_op(cls, n, eta, sd_dist, size=None):
+        # We resize the sd_dist automatically so that it has (size x n) independent
+        # draws which is what the `_LKJCholeskyCovBaseRV.rng_fn` expects. This makes the
+        # random and logp methods equivalent, as the latter also assumes a unique value
+        # for each diagonal element.
+        # Since `eta` and `n` are forced to be scalars we don't need to worry about
+        # implied batched dimensions from those for the time being.
+        if size is None:
+            size = sd_dist.shape[:-1]
+        shape = tuple(size) + (n,)
+        if sd_dist.owner.op.ndim_supp == 0:
+            sd_dist = change_dist_size(sd_dist, shape)
+        else:
+            # The support shape must be `n` but we have no way of controlling it
+            sd_dist = change_dist_size(sd_dist, shape[:-1])
 
-    def logp(value, n, eta, sd_dist):
-        """
-        Calculate log-probability of Covariance matrix with LKJ
-        distributed correlations at specified value.
+        # Create new rng for the _lkjcholeskycov internal RV
+        rng = aesara.shared(np.random.default_rng())
 
-        Parameters
-        ----------
-        value: numeric
-            Value for which log-probability is calculated.
+        rng_, n_, eta_, sd_dist_ = rng.type(), n.type(), eta.type(), sd_dist.type()
+        next_rng_, lkjcov_ = _ljk_cholesky_cov_base(n_, eta_, sd_dist_, rng=rng_).owner.outputs
 
-        Returns
-        -------
-        TensorVariable
-        """
-
-        if value.ndim > 1:
-            raise ValueError("LKJCholeskyCov logp is only implemented for vector values (ndim=1)")
-
-        diag_idxs = at.cumsum(at.arange(1, n + 1)) - 1
-        cumsum = at.cumsum(value**2)
-        variance = at.zeros(at.atleast_1d(n))
-        variance = at.inc_subtensor(variance[0], value[0] ** 2)
-        variance = at.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
-        sd_vals = at.sqrt(variance)
-
-        logp_sd = pm.logp(sd_dist, sd_vals).sum()
-        corr_diag = value[diag_idxs] / sd_vals
-
-        logp_lkj = (2 * eta - 3 + n - at.arange(n)) * at.log(corr_diag)
-        logp_lkj = at.sum(logp_lkj)
-
-        # Compute the log det jacobian of the second transformation
-        # described in the docstring.
-        idx = at.arange(n)
-        det_invjac = at.log(corr_diag) - idx * at.log(sd_vals)
-        det_invjac = det_invjac.sum()
-
-        # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
-        if not isinstance(n, Constant):
-            raise NotImplementedError("logp only implemented for constant `n`")
-        n = int(n.data)
-
-        if not isinstance(eta, Constant):
-            raise NotImplementedError("logp only implemented for constant `eta`")
-        eta = float(eta.data)
-
-        norm = _lkj_normalizing_constant(eta, n)
-
-        return norm + logp_lkj + logp_sd + det_invjac
+        return _LKJCholeskyCovRV(
+            inputs=[rng_, n_, eta_, sd_dist_],
+            outputs=[next_rng_, lkjcov_],
+            ndim_supp=1,
+        )(rng, n, eta, sd_dist)
 
 
-@_default_transform.register(_LKJCholeskyCov)
-def lkjcholeskycov_default_transform(op, rv):
-    _, _, _, n, _, _ = rv.owner.inputs
+@_change_dist_size.register(_LKJCholeskyCovRV)
+def change_LKJCholeksyCovRV_size(op, dist, new_size, expand=False):
+    n, eta, sd_dist = dist.owner.inputs[1:]
+
+    if expand:
+        old_size = sd_dist.shape[:-1]
+        new_size = tuple(new_size) + tuple(old_size)
+
+    return _LKJCholeskyCov.rv_op(n, eta, sd_dist, size=new_size)
+
+
+@_moment.register(_LKJCholeskyCovRV)
+def _LKJCholeksyCovRV_moment(op, rv, rng, n, eta, sd_dist):
+    diag_idxs = (at.cumsum(at.arange(1, n + 1)) - 1).astype("int32")
+    moment = at.zeros_like(rv)
+    moment = at.set_subtensor(moment[..., diag_idxs], 1)
+    return moment
+
+
+@_default_transform.register(_LKJCholeskyCovRV)
+def _LKJCholeksyCovRV_default_transform(op, rv):
+    _, n, _, _ = rv.owner.inputs
     return transforms.CholeskyCovPacked(n)
+
+
+@_logprob.register(_LKJCholeskyCovRV)
+def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
+    (value,) = values
+
+    if value.ndim > 1:
+        raise ValueError("_LKJCholeskyCov logp is only implemented for vector values (ndim=1)")
+
+    diag_idxs = at.cumsum(at.arange(1, n + 1)) - 1
+    cumsum = at.cumsum(value**2)
+    variance = at.zeros(at.atleast_1d(n))
+    variance = at.inc_subtensor(variance[0], value[0] ** 2)
+    variance = at.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
+    sd_vals = at.sqrt(variance)
+
+    logp_sd = pm.logp(sd_dist, sd_vals).sum()
+    corr_diag = value[diag_idxs] / sd_vals
+
+    logp_lkj = (2 * eta - 3 + n - at.arange(n)) * at.log(corr_diag)
+    logp_lkj = at.sum(logp_lkj)
+
+    # Compute the log det jacobian of the second transformation
+    # described in the docstring.
+    idx = at.arange(n)
+    det_invjac = at.log(corr_diag) - idx * at.log(sd_vals)
+    det_invjac = det_invjac.sum()
+
+    # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
+    if not isinstance(n, Constant):
+        raise NotImplementedError("logp only implemented for constant `n`")
+    n = int(n.data)
+
+    if not isinstance(eta, Constant):
+        raise NotImplementedError("logp only implemented for constant `eta`")
+    eta = float(eta.data)
+
+    norm = _lkj_normalizing_constant(eta, n)
+
+    return norm + logp_lkj + logp_sd + det_invjac
 
 
 class LKJCholeskyCov:
@@ -1462,7 +1492,7 @@ class LKJCorrRV(RandomVariable):
         else:
             flat_size = np.prod(size)
 
-        C = cls._random_corr_matrix(rng, n, eta, flat_size)
+        C = cls._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
 
         triu_idx = np.triu_indices(n, k=1)
         samples = C[..., triu_idx[0], triu_idx[1]]
