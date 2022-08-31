@@ -46,7 +46,7 @@ def __set_compiler_flags():
 
 __set_compiler_flags()
 
-from pymc import gp, ode, sampling
+from pymc import _version, gp, ode, sampling
 from pymc.aesaraf import *
 from pymc.backends import *
 from pymc.blocking import *
@@ -75,5 +75,4 @@ from pymc.tuning import *
 from pymc.variational import *
 from pymc.vartypes import *
 
-from . import _version
-__version__ = _version.get_versions()['version']
+__version__ = _version.get_versions()["version"]

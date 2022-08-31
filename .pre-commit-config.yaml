@@ -52,11 +52,13 @@ repos:
     - id: pylint
       args: [--rcfile=.pylintrc]
       files: ^pymc/
+      exclude: (?x)(pymc/_version.py)
 - repo: https://github.com/MarcoGorelli/madforhooks
   rev: 0.3.0
   hooks:
     - id: no-print-statements
       files: ^pymc/
+      exclude: (?x)(pymc/_version.py)
 - repo: local
   hooks:
     - id: check-no-tests-are-ignored
@@ -77,6 +79,7 @@ repos:
       entry: from \.[\.\w]* import
       types: [python]
       language: pygrep
+      exclude: (?x)(pymc/_version.py|versioneer.py)
     - id: no-internal-links
       name: Check no links that should be cross-references are in the docs
       description: >-
