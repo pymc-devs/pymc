@@ -571,6 +571,14 @@ def test_fit_oo(inference, fit_kwargs, simple_model_data):
     np.testing.assert_allclose(np.std(trace.posterior["mu"]), np.sqrt(1.0 / d), rtol=0.2)
 
 
+def test_fit_data(inference, fit_kwargs, simple_model_data):
+    fitted = inference.fit(**fit_kwargs)
+    mu_post = simple_model_data["mu_post"]
+    d = simple_model_data["d"]
+    np.testing.assert_allclose(fitted.mean_data["mu"].values, mu_post, rtol=0.05)
+    np.testing.assert_allclose(fitted.std_data["mu"], np.sqrt(1.0 / d), rtol=0.2)
+
+
 def test_profile(inference):
     inference.run_profiling(n=100).summary()
 

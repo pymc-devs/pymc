@@ -52,6 +52,7 @@ import warnings
 import aesara
 import aesara.tensor as at
 import numpy as np
+import xarray
 
 from aesara.graph.basic import Variable
 
@@ -1118,6 +1119,27 @@ class Group(WithMemoization):
     @node_property
     def mean(self):
         raise NotImplementedError
+
+    def var_to_data(self, shared):
+        shared = shared.eval()
+        result = dict()
+        for name, s, shape, _ in self.ordering.values():
+            dims = self.model.RV_dims.get(name, None)
+            if dims is not None:
+                coords = {d: np.array(self.model.coords[d]) for d in dims}
+            else:
+                coords = None
+            values = np.array(shared[s]).reshape(shape)
+            result[name] = xarray.DataArray(values, coords=coords, dims=dims, name=name)
+        return xarray.Dataset(result)
+
+    @property
+    def mean_data(self):
+        return self.var_to_data(self.mean)
+
+    @property
+    def std_data(self):
+        return self.var_to_data(self.std)
 
 
 group_for_params = Group.group_for_params
