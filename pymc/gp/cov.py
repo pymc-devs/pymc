@@ -59,37 +59,10 @@ def _verify_scalar(value):
     raise ValueError("A scalar value is required.")
 
 
-class Covariance:
-    r"""
-    Base class for all kernels/covariance functions.
-
-    Parameters
-    ----------
-    input_dim: integer
-        The number of input dimensions, or columns of X (or Xs)
-        the kernel will operate on.
-    active_dims: List of integers
-        Indicate which dimension or column of X the covariance
-        function operates on.
+class BaseCovariance:
     """
-
-    def __init__(self, input_dim, active_dims=None):
-        self.input_dim = input_dim
-        if active_dims is None:
-            self.active_dims = np.arange(input_dim)
-        else:
-            self.active_dims = np.asarray(active_dims, int)
-
-        if max(self.active_dims) > self.input_dim:
-            raise ValueError("Values in `active_dims` can't be larger than `input_dim`.")
-
-    @property
-    def D(self):
-        """The dimensionality of the input, as taken from the
-        `active_dims`.
-        """
-        # Evaluate lazily in-case this changes.
-        return len(self.active_dims)
+    Base class for kernels/covariance functions.
+    """
 
     def __call__(self, X, Xs=None, diag=False):
         r"""
@@ -115,27 +88,10 @@ class Covariance:
     def full(self, X, Xs=None):
         raise NotImplementedError
 
-    def _slice(self, X, Xs=None):
-        xdims = X.shape[-1]
-        if isinstance(xdims, Variable):
-            xdims = xdims.eval()
-        if self.input_dim != xdims:
-            warnings.warn(
-                f"Only {self.input_dim} column(s) out of {xdims} are"
-                " being used to compute the covariance function. If this"
-                " is not intended, increase 'input_dim' parameter to"
-                " the number of columns to use. Ignore otherwise.",
-                UserWarning,
-            )
-        X = at.as_tensor_variable(X[:, self.active_dims])
-        if Xs is not None:
-            Xs = at.as_tensor_variable(Xs[:, self.active_dims])
-        return X, Xs
-
     def __add__(self, other):
+        # If it's a scalar, cast as Constant covariance.  This allows validation for power spectral
+        # density calc.
         if isinstance(other, Number):
-            # If it's a scalar, cast as Constant covariance.  This
-            # allows validation for power spectral density calc.
             try:
                 other = Constant(c=_verify_scalar(other))
             except ValueError:
@@ -186,15 +142,67 @@ class Covariance:
             )
 
 
+class Covariance(BaseCovariance):
+    """
+    Base class for kernels/covariance functions with input_dim and active_dims, which excludes
+    kernels like `Constant` and `WhiteNoise`.
+
+    Parameters
+    ----------
+    input_dim: integer
+        The number of input dimensions, or columns of X (or Xs)
+        the kernel will operate on.
+    active_dims: List of integers
+        Indicate which dimension or column of X the covariance
+        function operates on.
+    """
+
+    def __init__(self, input_dim, active_dims=None):
+        self.input_dim = input_dim
+        if active_dims is None:
+            self.active_dims = np.arange(input_dim)
+        else:
+            self.active_dims = np.asarray(active_dims, int)
+
+        if max(self.active_dims) > self.input_dim:
+            raise ValueError("Values in `active_dims` can't be larger than `input_dim`.")
+
+    @property
+    def D(self):
+        """The dimensionality of the input, as taken from the
+        `active_dims`.
+        """
+        # Evaluate lazily in-case this changes.
+        return len(self.active_dims)
+
+    def _slice(self, X, Xs=None):
+        xdims = X.shape[-1]
+        if isinstance(xdims, Variable):
+            xdims = xdims.eval()
+        if self.input_dim != xdims:
+            warnings.warn(
+                f"Only {self.input_dim} column(s) out of {xdims} are"
+                " being used to compute the covariance function. If this"
+                " is not intended, increase 'input_dim' parameter to"
+                " the number of columns to use. Ignore otherwise.",
+                UserWarning,
+            )
+        X = at.as_tensor_variable(X[:, self.active_dims])
+        if Xs is not None:
+            Xs = at.as_tensor_variable(Xs[:, self.active_dims])
+        return X, Xs
+
+
 class Combination(Covariance):
     def __init__(self, factor_list):
         """Use constituent factors to get input_dim and active_dims for the Combination covariance."""
+
         # Check if all input_dim are the same in factor_list
         input_dims = {factor.input_dim for factor in factor_list if isinstance(factor, Covariance)}
+
         if len(input_dims) != 1:
             raise ValueError("All covariances must have the same `input_dim`.")
-        else:
-            input_dim = input_dims.pop()
+        input_dim = input_dims.pop()
 
         # Union all active_dims sets in factor_list for the combination covariance
         active_dims = np.sort(
@@ -228,14 +236,17 @@ class Combination(Covariance):
         """
         factor_list = []
         for factor in self._factor_list:
+
             # make sure diag=True is handled properly
-            if isinstance(factor, Covariance):
+            if isinstance(factor, BaseCovariance):
                 factor_list.append(factor(X, Xs, diag))
+
             elif isinstance(factor, np.ndarray):
                 if np.ndim(factor) == 2 and diag:
                     factor_list.append(np.diag(factor))
                 else:
                     factor_list.append(factor)
+
             elif isinstance(
                 factor,
                 (
@@ -244,12 +255,15 @@ class Combination(Covariance):
                     TensorSharedVariable,
                 ),
             ):
+
                 if factor.ndim == 2 and diag:
                     factor_list.append(at.diag(factor))
                 else:
                     factor_list.append(factor)
+
             else:
                 factor_list.append(factor)
+
         return factor_list
 
     def _merge_factors_psd(self, omega):
@@ -363,8 +377,7 @@ class Kron(Covariance):
         return reduce(mul, covs)
 
 
-class Constant:
-    # Don't subclass `Covariance` so input_dim and active_dims aren't required.
+class Constant(BaseCovariance):
     r"""
     Constant valued covariance function.
 
@@ -395,8 +408,7 @@ class WhiteNoise(Covariance):
        k(x, x') = \sigma^2 \mathrm{I}
     """
 
-    def __init__(self, input_dim, sigma, active_dims=None):
-        super().__init__(input_dim, active_dims)
+    def __init__(self, sigma):
         self.sigma = sigma
 
     def diag(self, X):
