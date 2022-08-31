@@ -48,12 +48,12 @@ from pymc.model import modelcontext
 from pymc.util import check_dist_not_registered
 
 __all__ = [
-    "AR",
     "GaussianRandomWalk",
-    "GARCH11",
-    "EulerMaruyama",
     "MvGaussianRandomWalk",
     "MvStudentTRandomWalk",
+    "AR",
+    "GARCH11",
+    "EulerMaruyama",
 ]
 
 

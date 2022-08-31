@@ -111,6 +111,7 @@ def test_all_distributions_have_moments():
         dist_module.timeseries.GARCH11,
         dist_module.timeseries.MvGaussianRandomWalk,
         dist_module.timeseries.MvStudentTRandomWalk,
+        dist_module.timeseries.EulerMaruyama,
     }
 
     # Distributions that have been refactored but don't yet have moments
