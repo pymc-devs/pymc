@@ -1849,6 +1849,13 @@ Model._context_class = Model
 def set_data(new_data, model=None, *, coords=None):
     """Sets the value of one or more data container variables.
 
+    When doing prediction or posterior predictive sampling, make sure that
+    the random variable acting as the likelihood (`observed` is True) is dynamically
+    resized when the data is updated.  Set the `shape` argument of the random
+    variable acting as the likelihood to the shape of the relevant
+    :class:`pymc.data.MutableData` object, as shown in the example below
+    (the `shape=x.shape` of `obs`).
+
     Parameters
     ----------
     new_data: dict
@@ -1867,7 +1874,7 @@ def set_data(new_data, model=None, *, coords=None):
         ...     x = pm.MutableData('x', [1., 2., 3.])
         ...     y = pm.MutableData('y', [1., 2., 3.])
         ...     beta = pm.Normal('beta', 0, 1)
-        ...     obs = pm.Normal('obs', x * beta, 1, observed=y)
+        ...     obs = pm.Normal('obs', x * beta, 1, observed=y, shape=x.shape)
         ...     idata = pm.sample(1000, tune=1000)
 
     Set the value of `x` to predict on new data.
@@ -1875,10 +1882,10 @@ def set_data(new_data, model=None, *, coords=None):
     .. code:: ipython
 
         >>> with model:
-        ...     pm.set_data({'x': [5., 6., 9.]})
+        ...     pm.set_data({'x': [5., 6., 9., 12., 15.]})
         ...     y_test = pm.sample_posterior_predictive(idata)
         >>> y_test.posterior_predictive['obs'].mean(('chain', 'draw'))
-        array([4.6088569 , 5.54128318, 8.32953844])
+        array([4.6088569 , 5.54128318, 8.32953844, 11.14044852, 13.94178173])
     """
     model = modelcontext(model)
 
