@@ -1110,14 +1110,17 @@ class Group(WithMemoization):
 
     @node_property
     def std(self):
+        """Standard deviation of the latent variables as an unstructured 1-dimensional Aesara variable"""
         raise NotImplementedError
 
     @node_property
     def cov(self):
+        """Covariance between the latent variables as an unstructured 2-dimensional Aesara variable"""
         raise NotImplementedError
 
     @node_property
     def mean(self):
+        """Mean of the latent variables as an unstructured 1-dimensional Aesara variable"""
         raise NotImplementedError
 
     def var_to_data(self, shared):
@@ -1135,10 +1138,12 @@ class Group(WithMemoization):
 
     @property
     def mean_data(self):
+        """Mean of the latent variables as an xarray Dataset"""
         return self.var_to_data(self.mean)
 
     @property
     def std_data(self):
+        """Standard deviation of the latent variables as an xarray Dataset"""
         return self.var_to_data(self.std)
 
 
