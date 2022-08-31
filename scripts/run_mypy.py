@@ -22,6 +22,7 @@ import pandas
 DP_ROOT = pathlib.Path(__file__).absolute().parent.parent
 PASSING = """
 pymc/__init__.py
+pymc/_version.py
 pymc/backends/__init__.py
 pymc/backends/arviz.py
 pymc/backends/base.py
