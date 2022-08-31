@@ -1822,3 +1822,27 @@ def test_get_seeds_per_chain():
 
     with pytest.raises(ValueError, match=re.escape("The `seeds` must be array-like")):
         _get_seeds_per_chain({1: 1, 2: 2}, 2)
+
+
+def test_distinct_rvs():
+    """Make sure `RandomVariable`s generated using a `Model`'s default RNG state all have distinct states."""
+
+    with pm.Model() as model:
+        X_rv = pm.Normal("x")
+        Y_rv = pm.Normal("y")
+
+        pp_samples = pm.sample_prior_predictive(
+            samples=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
+        )
+
+    assert X_rv.owner.inputs[0] != Y_rv.owner.inputs[0]
+
+    with pm.Model():
+        X_rv = pm.Normal("x")
+        Y_rv = pm.Normal("y")
+
+        pp_samples_2 = pm.sample_prior_predictive(
+            samples=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
+        )
+
+    assert np.array_equal(pp_samples["y"], pp_samples_2["y"])

@@ -1,0 +1,238 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+import warnings
+
+import aesara
+import aesara.tensor as at
+import numpy as np
+import numpy.random as npr
+import pytest
+
+from aesara.tensor.var import TensorVariable
+from numpy.testing import assert_almost_equal
+from scipy import integrate
+
+import pymc as pm
+
+from pymc.distributions import MvNormal, MvStudentT, joint_logp, logp
+from pymc.distributions.shape_utils import to_tuple
+from pymc.vartypes import continuous_types
+
+
+def integrate_nd(f, domain, shape, dtype):
+    if shape == () or shape == (1,):
+        if dtype in continuous_types:
+            return integrate.quad(f, domain.lower, domain.upper, epsabs=1e-8)[0]
+        else:
+            return sum(f(j) for j in range(domain.lower, domain.upper + 1))
+    elif shape == (2,):
+
+        def f2(a, b):
+            return f([a, b])
+
+        return integrate.dblquad(
+            f2,
+            domain.lower[0],
+            domain.upper[0],
+            lambda _: domain.lower[1],
+            lambda _: domain.upper[1],
+        )[0]
+    elif shape == (3,):
+
+        def f3(a, b, c):
+            return f([a, b, c])
+
+        return integrate.tplquad(
+            f3,
+            domain.lower[0],
+            domain.upper[0],
+            lambda _: domain.lower[1],
+            lambda _: domain.upper[1],
+            lambda _, __: domain.lower[2],
+            lambda _, __: domain.upper[2],
+        )[0]
+    else:
+        raise ValueError("Dont know how to integrate shape: " + str(shape))
+
+
+class TestBugfixes:
+    @pytest.mark.parametrize("dist_cls,kwargs", [(MvNormal, dict()), (MvStudentT, dict(nu=2))])
+    @pytest.mark.parametrize("dims", [1, 2, 4])
+    def test_issue_3051(self, dims, dist_cls, kwargs):
+        mu = np.repeat(0, dims)
+        d = dist_cls.dist(mu=mu, cov=np.eye(dims), **kwargs, size=(20))
+
+        X = npr.normal(size=(20, dims))
+        actual_t = logp(d, X)
+        assert isinstance(actual_t, TensorVariable)
+        actual_a = actual_t.eval()
+        assert isinstance(actual_a, np.ndarray)
+        assert actual_a.shape == (X.shape[0],)
+
+    def test_issue_4499(self):
+        # Test for bug in Uniform and DiscreteUniform logp when setting check_bounds = False
+        # https://github.com/pymc-devs/pymc/issues/4499
+        with pm.Model(check_bounds=False) as m:
+            x = pm.Uniform("x", 0, 2, size=10, transform=None)
+        assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
+
+        with pm.Model(check_bounds=False) as m:
+            x = pm.DiscreteUniform("x", 0, 1, size=10)
+        assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
+
+        with pm.Model(check_bounds=False) as m:
+            x = pm.DiracDelta("x", 1, size=10)
+        assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), 0 * 10)
+
+
+def test_serialize_density_dist():
+    def func(x):
+        return -2 * (x**2).sum()
+
+    def random(rng, size):
+        return rng.uniform(-2, 2, size=size)
+
+    with pm.Model():
+        pm.Normal("x")
+        y = pm.DensityDist("y", logp=func, random=random)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            pm.sample(draws=5, tune=1, mp_ctx="spawn")
+
+    import cloudpickle
+
+    cloudpickle.loads(cloudpickle.dumps(y))
+
+
+@pytest.mark.parametrize(
+    "method,newcode",
+    [
+        ("logp", r"pm.logp\(rv, x\)"),
+        ("logcdf", r"pm.logcdf\(rv, x\)"),
+        ("random", r"pm.draw\(rv\)"),
+    ],
+)
+def test_logp_gives_migration_instructions(method, newcode):
+    rv = pm.Normal.dist()
+    f = getattr(rv, method)
+    with pytest.raises(AttributeError, match=rf"use `{newcode}`"):
+        f()
+
+    # A dim-induced resize of the rv created by the `.dist()` API,
+    # happening in Distribution.__new__ would make us loose the monkeypatches.
+    # So this triggers it to test if the monkeypatch still works.
+    with pm.Model(coords={"year": [2019, 2021, 2022]}):
+        rv = pm.Normal("n", dims="year")
+        f = getattr(rv, method)
+        with pytest.raises(AttributeError, match=rf"use `{newcode}`"):
+            f()
+    pass
+
+
+def test_density_dist_old_api_error():
+    with pm.Model():
+        with pytest.raises(
+            TypeError, match="The DensityDist API has changed, you are using the old API"
+        ):
+            pm.DensityDist("a", lambda x: x)
+
+
+@pytest.mark.parametrize("size", [None, (), (2,)], ids=str)
+def test_density_dist_multivariate_logp(size):
+    supp_shape = 5
+    with pm.Model() as model:
+
+        def logp(value, mu):
+            return pm.MvNormal.logp(value, mu, at.eye(mu.shape[0]))
+
+        mu = pm.Normal("mu", size=supp_shape)
+        a = pm.DensityDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
+    mu_val = npr.normal(loc=0, scale=1, size=supp_shape).astype(aesara.config.floatX)
+    a_val = npr.normal(loc=mu_val, scale=1, size=to_tuple(size) + (supp_shape,)).astype(
+        aesara.config.floatX
+    )
+
+    log_densityt = joint_logp(a, a.tag.value_var, sum=False)[0]
+    assert log_densityt.eval(
+        {a.tag.value_var: a_val, mu.tag.value_var: mu_val},
+    ).shape == to_tuple(size)
+
+    def test_density_dist_default_moment_univariate(self, moment, size, expected):
+        if moment == "custom_moment":
+            moment = lambda rv, size, *rv_inputs: 5 * at.ones(size, dtype=rv.dtype)
+        with pm.Model() as model:
+            pm.DensityDist("x", moment=moment, size=size)
+        assert_moment_is_expected(model, expected, check_finite_logp=False)
+
+    @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
+    def test_density_dist_custom_moment_univariate(self, size):
+        def density_moment(rv, size, mu):
+            return (at.ones(size) * mu).astype(rv.dtype)
+
+        mu_val = np.array(np.random.normal(loc=2, scale=1)).astype(aesara.config.floatX)
+        with pm.Model():
+            mu = pm.Normal("mu")
+            a = pm.DensityDist("a", mu, moment=density_moment, size=size)
+        evaled_moment = moment(a).eval({mu: mu_val})
+        assert evaled_moment.shape == to_tuple(size)
+        assert np.all(evaled_moment == mu_val)
+
+    @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
+    def test_density_dist_custom_moment_multivariate(self, size):
+        def density_moment(rv, size, mu):
+            return (at.ones(size)[..., None] * mu).astype(rv.dtype)
+
+        mu_val = np.random.normal(loc=2, scale=1, size=5).astype(aesara.config.floatX)
+        with pm.Model():
+            mu = pm.Normal("mu", size=5)
+            a = pm.DensityDist(
+                "a", mu, moment=density_moment, ndims_params=[1], ndim_supp=1, size=size
+            )
+        evaled_moment = moment(a).eval({mu: mu_val})
+        assert evaled_moment.shape == to_tuple(size) + (5,)
+        assert np.all(evaled_moment == mu_val)
+
+    @pytest.mark.parametrize(
+        "with_random, size",
+        [
+            (True, ()),
+            (True, (2,)),
+            (True, (3, 2)),
+            (False, ()),
+            (False, (2,)),
+        ],
+    )
+    def test_density_dist_default_moment_multivariate(self, with_random, size):
+        def _random(mu, rng=None, size=None):
+            return rng.normal(mu, scale=1, size=to_tuple(size) + mu.shape)
+
+        if with_random:
+            random = _random
+        else:
+            random = None
+
+        mu_val = np.random.normal(loc=2, scale=1, size=5).astype(aesara.config.floatX)
+        with pm.Model():
+            mu = pm.Normal("mu", size=5)
+            a = pm.DensityDist("a", mu, random=random, ndims_params=[1], ndim_supp=1, size=size)
+        if with_random:
+            evaled_moment = moment(a).eval({mu: mu_val})
+            assert evaled_moment.shape == to_tuple(size) + (5,)
+            assert np.all(evaled_moment == 0)
+        else:
+            with pytest.raises(
+                TypeError,
+                match="Cannot safely infer the size of a multivariate random variable's moment.",
+            ):
+                evaled_moment = moment(a).eval({mu: mu_val})

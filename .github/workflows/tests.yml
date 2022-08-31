@@ -38,38 +38,43 @@ jobs:
         test-subset:
           - |
             pymc/tests/test_util.py
-            pymc/tests/test_logprob.py
+            pymc/tests/distributions/test_logprob.py
             pymc/tests/test_aesaraf.py
             pymc/tests/test_math.py
             pymc/tests/test_posdef_sym.py
             pymc/tests/test_ndarray_backend.py
             pymc/tests/test_hmc.py
             pymc/tests/test_func_utils.py
-            pymc/tests/test_shape_handling.py
+            pymc/tests/distributions/test_shape_utils.py
             pymc/tests/test_starting.py
-            pymc/tests/test_mixture.py
+            pymc/tests/distributions/test_mixture.py
 
           - |
-            pymc/tests/test_distributions.py
+            pymc/tests/distributions/test_distribution.py
+            pymc/tests/distributions/test_bound.py
+            pymc/tests/distributions/test_censored.py
+            pymc/tests/distributions/test_discrete.py
+            pymc/tests/distributions/test_continuous.py
+            pymc/tests/distributions/test_multivariate.py
 
           - |
             pymc/tests/test_tuning.py
             pymc/tests/test_shared.py
             pymc/tests/test_types.py
-            pymc/tests/test_distributions_moments.py
+            pymc/tests/distributions/test_moments.py
 
           - |
             pymc/tests/test_modelcontext.py
-            pymc/tests/test_dist_math.py
+            pymc/tests/distributions/test_dist_math.py
             pymc/tests/test_minibatches.py
             pymc/tests/test_pickling.py
-            pymc/tests/test_transforms.py
+            pymc/tests/distributions/test_transform.py
             pymc/tests/test_parallel_sampling.py
             pymc/tests/test_printing.py
 
           - |
-            pymc/tests/test_distributions_random.py
-            pymc/tests/test_distributions_timeseries.py
+            pymc/tests/distributions/test_random.py
+            pymc/tests/distributions/test_timeseries.py
             pymc/tests/test_gp.py
             pymc/tests/test_model.py
             pymc/tests/test_model_graph.py

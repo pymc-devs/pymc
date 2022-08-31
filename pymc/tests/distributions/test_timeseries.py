@@ -16,7 +16,7 @@ import warnings
 import aesara
 import numpy as np
 import pytest
-import scipy.stats
+import scipy.stats as st
 
 from aesara.tensor import TensorVariable
 
@@ -36,9 +36,10 @@ from pymc.distributions.timeseries import (
 )
 from pymc.model import Model
 from pymc.sampling import draw, sample, sample_posterior_predictive
+from pymc.tests.distributions.test_moments import assert_moment_is_expected
+from pymc.tests.distributions.test_random import BaseTestDistributionRandom
+from pymc.tests.distributions.util import Nat, R, Rplus, Vector, check_logp
 from pymc.tests.helpers import select_by_precision
-from pymc.tests.test_distributions_moments import assert_moment_is_expected
-from pymc.tests.test_distributions_random import BaseTestDistributionRandom
 
 
 @pytest.mark.parametrize(
@@ -128,6 +129,21 @@ class TestGaussianRandomWalk:
         def test_steps_scalar_check(self):
             with pytest.raises(ValueError, match="steps must be an integer scalar"):
                 self.pymc_dist.dist(steps=[1], init_dist=pm.DiracDelta.dist(0))
+
+    def test_logp(self):
+        def ref_logp(value, mu, sigma, steps):
+            return (
+                st.norm.logpdf(value[0], 0, 100) + st.norm.logpdf(np.diff(value), mu, sigma).sum()
+            )
+
+        check_logp(
+            pm.GaussianRandomWalk,
+            Vector(R, 4),
+            {"mu": R, "sigma": Rplus, "steps": Nat},
+            ref_logp,
+            decimal=select_by_precision(float64=6, float32=1),
+            extra_args={"init_dist": Normal.dist(0, 100)},
+        )
 
     def test_gaussianrandomwalk_inference(self):
         mu, sigma, steps = 2, 1, 1000
@@ -228,7 +244,7 @@ class TestGaussianRandomWalk:
         grw = pm.GaussianRandomWalk.dist(init_dist=init, steps=1)
         assert np.isclose(
             pm.logp(grw, [0, 0]).eval(),
-            pm.logp(init, 0).eval() + scipy.stats.norm.logpdf(0),
+            pm.logp(init, 0).eval() + st.norm.logpdf(0),
         )
 
     @pytest.mark.parametrize(

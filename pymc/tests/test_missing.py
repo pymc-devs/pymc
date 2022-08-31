@@ -16,7 +16,7 @@ import warnings
 import aesara
 import numpy as np
 import pytest
-import scipy.stats
+import scipy.stats as st
 
 from aesara.graph import graph_inputs
 from numpy import array, ma
@@ -222,7 +222,7 @@ def test_missing_vector_parameter():
     assert np.all(x_draws[:, 1] > 0)
     assert np.isclose(
         m.compile_logp()({"x_missing": np.array([-10, 10, -10, 10])}),
-        scipy.stats.norm(scale=0.1).logpdf(0) * 6,
+        st.norm(scale=0.1).logpdf(0) * 6,
     )
 
 

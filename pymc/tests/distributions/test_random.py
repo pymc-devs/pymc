@@ -22,6 +22,7 @@ import aesara
 import numpy as np
 import numpy.testing as npt
 import pytest
+import scipy.special as sp
 import scipy.stats as st
 
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
@@ -38,8 +39,6 @@ except ImportError:  # pragma: no cover
         raise RuntimeError("polyagamma package is not installed!")
 
 
-from scipy.special import expit, softmax
-
 import pymc as pm
 
 from pymc.aesaraf import change_rv_size, compile_pymc, floatX, intX
@@ -53,8 +52,7 @@ from pymc.distributions.multivariate import (
     quaddist_matrix,
 )
 from pymc.distributions.shape_utils import to_tuple
-from pymc.tests.helpers import SeededTest, select_by_precision
-from pymc.tests.test_distributions import (
+from pymc.tests.distributions.util import (
     Domain,
     R,
     RandomPdMatrix,
@@ -62,6 +60,7 @@ from pymc.tests.test_distributions import (
     build_model,
     product,
 )
+from pymc.tests.helpers import SeededTest, select_by_precision
 
 
 def pymc_random(
@@ -713,7 +712,7 @@ class TestNormal(BaseTestDistributionRandom):
 
 class TestLogitNormal(BaseTestDistributionRandom):
     def logit_normal_rng_fn(self, rng, size, loc, scale):
-        return expit(st.norm.rvs(loc=loc, scale=scale, size=size, random_state=rng))
+        return sp.expit(st.norm.rvs(loc=loc, scale=scale, size=size, random_state=rng))
 
     pymc_dist = pm.LogitNormal
     pymc_dist_params = {"mu": 5.0, "sigma": 10.0}
@@ -918,7 +917,7 @@ class TestBinomial(BaseTestDistributionRandom):
 class TestLogitBinomial(BaseTestDistributionRandom):
     pymc_dist = pm.Binomial
     pymc_dist_params = {"n": 100, "logit_p": 0.5}
-    expected_rv_op_params = {"n": 100, "p": expit(0.5)}
+    expected_rv_op_params = {"n": 100, "p": sp.expit(0.5)}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
     @pytest.mark.parametrize(
@@ -969,7 +968,7 @@ class TestBernoulli(BaseTestDistributionRandom):
 class TestBernoulliLogitP(BaseTestDistributionRandom):
     pymc_dist = pm.Bernoulli
     pymc_dist_params = {"logit_p": 1.0}
-    expected_rv_op_params = {"p": expit(1.0)}
+    expected_rv_op_params = {"p": sp.expit(1.0)}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
@@ -1355,7 +1354,7 @@ class TestLogitCategorical(BaseTestDistributionRandom):
     pymc_dist = pm.Categorical
     pymc_dist_params = {"logit_p": np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]])}
     expected_rv_op_params = {
-        "p": softmax(np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]]), axis=-1)
+        "p": sp.softmax(np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]]), axis=-1)
     }
     tests_to_run = [
         "check_pymc_params_match_rv_op",
