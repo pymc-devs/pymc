@@ -24,6 +24,7 @@ import numpy.random as nr
 from aeppl.logprob import ParameterValueError
 from aesara.tensor.random.utils import broadcast_params
 
+from pymc.aesaraf import compile_pymc
 from pymc.distributions.continuous import get_tau_sigma
 from pymc.util import UNSET
 
@@ -951,6 +952,17 @@ def test_hierarchical_obs_logp():
     ops = {a.owner.op for a in logp_ancestors if a.owner}
     assert len(ops) > 0
     assert not any(isinstance(o, RandomVariable) for o in ops)
+
+
+@pytest.fixture(scope="module")
+def stickbreakingweights_logpdf():
+    _value = at.vector()
+    _alpha = at.scalar()
+    _k = at.iscalar()
+    _logp = logp(StickBreakingWeights.dist(_alpha, _k), _value)
+    core_fn = compile_pymc([_value, _alpha, _k], _logp)
+
+    return np.vectorize(core_fn, signature="(n),(),()->()")
 
 
 class TestMatchesScipy:
@@ -2317,6 +2329,25 @@ class TestMatchesScipy:
         assert pm.logp(sbw, np.array([1.1, 0.3, 0.2, 0.1])).eval() == -np.inf
         assert pm.logp(sbw, np.array([0.4, 0.3, 0.2, -0.1])).eval() == -np.inf
         assert pm.logp(sbw_wrong_K, np.array([0.4, 0.3, 0.2, 0.1])).eval() == -np.inf
+
+    @pytest.mark.parametrize(
+        "alpha,K",
+        [
+            (np.array([0.5, 1.0, 2.0]), 3),
+            (np.arange(1, 7, dtype="float64").reshape(2, 3), 5),
+        ],
+    )
+    def test_stickbreakingweights_vectorized(self, alpha, K, stickbreakingweights_logpdf):
+        value = pm.StickBreakingWeights.dist(alpha, K).eval()
+        with Model():
+            sbw = StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
+        pt = {"sbw": value}
+        assert_almost_equal(
+            pm.logp(sbw, value).eval(),
+            stickbreakingweights_logpdf(value, alpha, K),
+            decimal=select_by_precision(float64=6, float32=2),
+            err_msg=str(pt),
+        )
 
     @aesara.config.change_flags(compute_test_value="raise")
     def test_categorical_bounds(self):

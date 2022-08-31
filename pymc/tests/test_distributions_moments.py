@@ -1166,6 +1166,32 @@ def test_rice_moment(nu, sigma, size, expected):
                 fill_value=np.append((1 / 3) ** np.arange(5) * 2 / 3, (1 / 3) ** 5),
             ),
         ),
+        (
+            np.array([1, 3]),
+            11,
+            None,
+            np.array(
+                [
+                    np.append((1 / 2) ** np.arange(11) * 1 / 2, (1 / 2) ** 11),
+                    np.append((3 / 4) ** np.arange(11) * 1 / 4, (3 / 4) ** 11),
+                ]
+            ),
+        ),
+        (
+            np.array([1, 3, 5]),
+            9,
+            (5, 3),
+            np.full(
+                shape=(5, 3, 10),
+                fill_value=np.array(
+                    [
+                        np.append((1 / 2) ** np.arange(9) * 1 / 2, (1 / 2) ** 9),
+                        np.append((3 / 4) ** np.arange(9) * 1 / 4, (3 / 4) ** 9),
+                        np.append((5 / 6) ** np.arange(9) * 1 / 6, (5 / 6) ** 9),
+                    ]
+                ),
+            ),
+        ),
     ],
 )
 def test_stickbreakingweights_moment(alpha, K, size, expected):
