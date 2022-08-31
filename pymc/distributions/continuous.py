@@ -3711,16 +3711,16 @@ class Interpolated(BoundedContinuous):
         from scipy.stats import gamma
         plt.style.use('arviz-darkgrid')
         rv = gamma(1.99)
-        x = np.linspace(rv.ppf(0.01),rv.ppf(0.99), 1000)
+        x = np.linspace(rv.ppf(0.01), rv.ppf(0.99), 1000)
         points = np.linspace(x[0], x[-1], 50)
         pdf = rv.pdf(points)
         interpolated = pm.Interpolated.dist(points, pdf)
         fig, ax = plt.subplots(1, 1)
-        ax.plot(x, rv.pdf(x), 'C0', linestyle = '--',  label='Original Gamma pdf',alpha=0.8,lw=2)
-        ax.plot(points, pdf, color='black', marker='o', label='Lattice Points',alpha=0.5,linestyle='')
-        ax.plot(x, np.exp(interpolated.logp(x).eval()),'C1',label='Interpolated pdf',alpha=0.8,lw=3)
-        r = interpolated.random(size=1000)
-        ax.hist(r, density=True, alpha=0.4,align ='mid',color='grey')
+        ax.plot(x, rv.pdf(x), 'C0', linestyle = '--',  label='Original Gamma pdf', alpha=0.8, lw=2)
+        ax.plot(points, pdf, color='black', marker='o', label='Lattice Points', alpha=0.5, linestyle='')
+        ax.plot(x, np.exp(pm.logp(interpolated, x).eval()), 'C1', label='Interpolated pdf', alpha=0.8, lw=3)
+        r = pm.draw(interpolated, draws=1000)
+        ax.hist(r, density=True, alpha=0.4, align ='mid', color='grey')
         ax.legend(loc='best', frameon=False)
         plt.show()
 
@@ -4008,6 +4008,7 @@ class PolyaGamma(PositiveContinuous):
     .. math::
 
        f(x \mid h, z) = cosh^h(\frac{z}{2})e^{-\frac{1}{2}xz^2}f(x \mid h, 0),
+
     where :math:`f(x \mid h, 0)` is the pdf of a :math:`PG(h, 0)` variable.
     Notice that the pdf of this distribution is expressed as an alternating-sign
     sum of inverse-Gaussian densities.
