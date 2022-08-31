@@ -395,7 +395,7 @@ class TestCovKron:
                 + pm.gp.cov.ExpQuad(1, 0.1)
                 + pm.gp.cov.ExpQuad(1, 0.1) * pm.gp.cov.ExpQuad(1, 0.1)
             )
-            cov2 = pm.gp.cov.ExpQuad(1, 0.1) * pm.gp.cov.ExpQuad(2, 0.1)
+            cov2 = pm.gp.cov.ExpQuad(2, 0.1) * pm.gp.cov.ExpQuad(2, 0.1)
             cov = pm.gp.cov.Kron([cov1, cov2])
         K_true = kronecker(cov1(X1).eval(), cov2(X2).eval()).eval()
         K = cov(X).eval()
