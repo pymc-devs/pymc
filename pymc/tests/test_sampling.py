@@ -1788,6 +1788,25 @@ class TestCompileForwardSampler:
         assert {i.name for i in self.get_function_inputs(f)} == set()
         assert {i.name for i in self.get_function_roots(f)} == set()
 
+    def test_non_random_model_variable(self):
+        with pm.Model() as model:
+            # A user may register non-pure RandomVariables that can nevertheless be
+            # sampled, as long as a custom logprob is dispatched or Aeppl can infer
+            # its logprob (which is the case for `clip`)
+            y = at.clip(pm.Normal.dist(), -1, 1)
+            y = model.register_rv(y, name="y")
+            y_abs = pm.Deterministic("y_abs", at.abs(y))
+            obs = pm.Normal("obs", y_abs, observed=np.zeros(10))
+
+        # y_abs should be resampled even if in the trace, because the source y is missing
+        f = compile_forward_sampling_function(
+            outputs=[obs],
+            vars_in_trace=[y_abs],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == set()
+        assert {i.name for i in self.get_function_roots(f)} == set()
+
 
 def test_get_seeds_per_chain():
     ret = _get_seeds_per_chain(None, chains=1)
