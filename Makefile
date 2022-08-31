@@ -61,7 +61,7 @@ clean:
 html:
 	$(SPHINXBUILD) $(SOURCEDIR) $(BUILDDIR) -b html
 	@echo
-	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
+	@echo "Build finished. The HTML pages are in $(BUILDDIR)."
 
 dirhtml:
 	$(SPHINXBUILD) -b dirhtml $(ALLSPHINXOPTS) $(BUILDDIR)/dirhtml
@@ -199,4 +199,4 @@ pseudoxml:
 	@echo "Build finished. The pseudo-XML files are in $(BUILDDIR)/pseudoxml."
 
 serve: html
-	cd $(BUILDDIR)/html && python -m http.server
+	python -m http.server --directory $(BUILDDIR)
