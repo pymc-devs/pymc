@@ -62,10 +62,10 @@ from pymc.sampling import (
     sample_prior_predictive,
 )
 from pymc.step_methods import Metropolis
+from pymc.tests.distributions.test_moments import assert_moment_is_expected
+from pymc.tests.distributions.test_random import pymc_random
+from pymc.tests.distributions.util import Domain, Simplex
 from pymc.tests.helpers import SeededTest
-from pymc.tests.test_distributions import Domain, Simplex
-from pymc.tests.test_distributions_moments import assert_moment_is_expected
-from pymc.tests.test_distributions_random import pymc_random
 
 
 def generate_normal_mixture_data(w, mu, sigma, size=1000):

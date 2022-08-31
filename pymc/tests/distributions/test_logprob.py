@@ -31,6 +31,8 @@ from aesara.tensor.subtensor import (
     Subtensor,
 )
 
+import pymc as pm
+
 from pymc import DensityDist
 from pymc.aesaraf import floatX, walk_model
 from pymc.distributions.continuous import (
@@ -349,3 +351,30 @@ def test_ignore_logprob_model():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         assert joint_logp([y], {y: y.type()})
+
+
+def test_hierarchical_logp():
+    """Make sure there are no random variables in a model's log-likelihood graph."""
+    with pm.Model() as m:
+        x = pm.Uniform("x", lower=0, upper=1)
+        y = pm.Uniform("y", lower=0, upper=x)
+
+    logp_ancestors = list(ancestors([m.logp()]))
+    ops = {a.owner.op for a in logp_ancestors if a.owner}
+    assert len(ops) > 0
+    assert not any(isinstance(o, RandomVariable) for o in ops)
+    assert x.tag.value_var in logp_ancestors
+    assert y.tag.value_var in logp_ancestors
+
+
+def test_hierarchical_obs_logp():
+    obs = np.array([0.5, 0.4, 5, 2])
+
+    with pm.Model() as model:
+        x = pm.Uniform("x", 0, 1, observed=obs)
+        pm.Uniform("y", x, 2, observed=obs)
+
+    logp_ancestors = list(ancestors([model.logp()]))
+    ops = {a.owner.op for a in logp_ancestors if a.owner}
+    assert len(ops) > 0
+    assert not any(isinstance(o, RandomVariable) for o in ops)
