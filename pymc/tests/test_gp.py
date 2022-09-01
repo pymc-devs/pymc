@@ -846,63 +846,71 @@ class TestMarginalVsLatent:
 
 class TestMarginalVsMarginalApprox:
     R"""
-    Compare logp of models Marginal and MarginalApprox.
-    Should be nearly equal when inducing points are same as inputs.
+    Compare test fits of models Marginal and MarginalApprox.
     """
 
     def setup_method(self):
-        X = np.random.randn(50, 3)
-        y = np.random.randn(50)
-        Xnew = np.random.randn(60, 3)
-        pnew = np.random.randn(60)
+        self.sigma = 0.1
+        self.x = np.linspace(-5, 5, 30)
+        self.y = np.random.normal(0.25 * self.x, self.sigma)
         with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
-            sigma = 0.1
-            f = gp.marginal_likelihood("f", X, y, noise=sigma)
-            p = gp.conditional("p", Xnew)
-        self.logp = model.compile_logp()({"p": pnew})
-        self.X = X
-        self.Xnew = Xnew
-        self.y = y
-        self.sigma = sigma
-        self.pnew = pnew
-        self.gp = gp
+            cov_func = pm.gp.cov.Linear(1, c=0.0)
+            c = pm.Normal("c", mu=20.0, sigma=100.0)  # far from true value
+            mean_func = pm.gp.mean.Constant(c)
+            self.gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
+            sigma = pm.HalfNormal("sigma", sigma=100)
+            self.gp.marginal_likelihood("lik", self.x[:, None], self.y, sigma)
+            self.map_full = pm.find_MAP(method="bfgs")  # bfgs seems to work much better than lbfgsb
+
+        self.x_new = np.linspace(-6, 6, 20)
+
+        # Include additive Gaussian noise, return diagonal of predicted covariance matrix
+        with model:
+            self.pred_mu, self.pred_var = self.gp.predict(
+                self.x_new[:, None], point=self.map_full, pred_noise=True, diag=True
+            )
+
+        # Dont include additive Gaussian noise, return full predicted covariance matrix
+        with model:
+            self.pred_mu, self.pred_covar = self.gp.predict(
+                self.x_new[:, None], point=self.map_full, pred_noise=False, diag=False
+            )
 
     @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
-    def testApproximations(self, approx):
-        with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.MarginalApprox(mean_func=mean_func, cov_func=cov_func, approx=approx)
-            f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
-            p = gp.conditional("p", self.Xnew)
-        approx_logp = model.compile_logp()({"p": self.pnew})
-        npt.assert_allclose(approx_logp, self.logp, atol=0, rtol=1e-2)
+    def test_fits_and_preds(self, approx):
+        """Get MAP estimate for GP approximation, compare results and predictions to what's returned
+        by an unapproximated GP.  The tolerances are fairly wide, but narrow relative to initial
+        values of the unknown parameters.
+        """
 
-    @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
-    def testPredictVar(self, approx):
         with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
+            cov_func = pm.gp.cov.Linear(1, c=0.0)
+            c = pm.Normal("c", mu=20.0, sigma=100.0, initval=-500.0)
+            mean_func = pm.gp.mean.Constant(c)
             gp = pm.gp.MarginalApprox(mean_func=mean_func, cov_func=cov_func, approx=approx)
-            f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
-            mu1, var1 = self.gp.predict(self.Xnew, diag=True)
-            mu2, var2 = gp.predict(self.Xnew, diag=True)
-        npt.assert_allclose(mu1, mu2, atol=0, rtol=1e-3)
-        npt.assert_allclose(var1, var2, atol=0, rtol=1e-3)
+            sigma = pm.HalfNormal("sigma", sigma=100, initval=50.0)
+            gp.marginal_likelihood("lik", self.x[:, None], self.x[:, None], self.y, sigma)
+            map_approx = pm.find_MAP(method="bfgs")
 
-    def testPredictCov(self):
-        with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.MarginalApprox(mean_func=mean_func, cov_func=cov_func, approx="DTC")
-            f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
-            mu1, cov1 = self.gp.predict(self.Xnew, pred_noise=True)
-            mu2, cov2 = gp.predict(self.Xnew, pred_noise=True)
-        npt.assert_allclose(mu1, mu2, atol=0, rtol=1e-3)
-        npt.assert_allclose(cov1, cov2, atol=0, rtol=1e-3)
+        # Check MAP gets approximately correct result
+        npt.assert_allclose(self.map_full["c"], map_approx["c"], atol=0.01, rtol=0.1)
+        npt.assert_allclose(self.map_full["sigma"], map_approx["sigma"], atol=0.01, rtol=0.1)
+
+        # Check that predict (and conditional) work, include noise, with diagonal non-full pred var.
+        with model:
+            pred_mu_approx, pred_var_approx = gp.predict(
+                self.x_new[:, None], point=map_approx, pred_noise=True, diag=True
+            )
+        npt.assert_allclose(self.pred_mu, pred_mu_approx, atol=0.0, rtol=0.1)
+        npt.assert_allclose(self.pred_var, pred_var_approx, atol=0.0, rtol=0.1)
+
+        # Check that predict (and conditional) work, no noise, full pred covariance.
+        with model:
+            pred_mu_approx, pred_var_approx = gp.predict(
+                self.x_new[:, None], point=map_approx, pred_noise=True, diag=True
+            )
+        npt.assert_allclose(self.pred_mu, pred_mu_approx, atol=0.0, rtol=0.1)
+        npt.assert_allclose(self.pred_var, pred_var_approx, atol=0.0, rtol=0.1)
 
 
 class TestGPAdditive:

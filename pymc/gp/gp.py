@@ -685,18 +685,13 @@ class MarginalApprox(Marginal):
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
-        # new_gp will default to FITC approx
         new_gp = super().__add__(other)
-        # make sure new gp has correct approx
         if not self.approx == other.approx:
             raise TypeError("Cannot add GPs with different approximations")
         new_gp.approx = self.approx
         return new_gp
 
-    # Use y as first argument, so that we can use functools.partial
-    # in marginal_likelihood instead of lambda. This makes pickling
-    # possible.
-    def _build_marginal_likelihood_logp(self, y, X, Xu, sigma, jitter):
+    def _build_marginal_likelihood_loglik(self, y, X, Xu, sigma, jitter):
         sigma2 = at.square(sigma)
         Kuu = self.cov_func(Xu)
         Kuf = self.cov_func(Xu, X)
@@ -725,9 +720,7 @@ class MarginalApprox(Marginal):
         quadratic = 0.5 * (at.dot(r, r_l) - at.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
-    def marginal_likelihood(
-        self, name, X, Xu, y, noise=None, is_observed=True, jitter=JITTER_DEFAULT, **kwargs
-    ):
+    def marginal_likelihood(self, name, X, Xu, y, noise=None, jitter=JITTER_DEFAULT, **kwargs):
         R"""
         Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
@@ -747,9 +740,6 @@ class MarginalApprox(Marginal):
             noise.  Must have shape `(n, )`.
         noise: scalar, Variable
             Standard deviation of the Gaussian noise.
-        is_observed: bool
-            Whether to set `y` as an `observed` variable in the `model`.
-            Default is `True`.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
@@ -767,38 +757,8 @@ class MarginalApprox(Marginal):
         else:
             self.sigma = noise
 
-        if is_observed:
-            return pm.DensityDist(
-                name,
-                X,
-                Xu,
-                self.sigma,
-                jitter,
-                logp=self._build_marginal_likelihood_logp,
-                observed=y,
-                ndims_params=[2, 2, 0],
-                size=X.shape[0],
-                **kwargs,
-            )
-        else:
-            warnings.warn(
-                "The 'is_observed' argument has been deprecated.  If the GP is "
-                "unobserved use gp.Latent instead.",
-                FutureWarning,
-            )
-            return pm.DensityDist(
-                name,
-                X,
-                Xu,
-                self.sigma,
-                jitter,
-                logp=self._build_marginal_likelihood_logp,
-                observed=y,
-                ndims_params=[2, 2, 0],
-                # ndim_supp=1,
-                size=X.shape[0],
-                **kwargs,
-            )
+        approx_loglik = self._build_marginal_likelihood_loglik(y, X, Xu, noise, jitter)
+        pm.Potential(f"marginalapprox_loglik_{name}", approx_loglik, **kwargs)
 
     def _build_conditional(
         self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total, jitter
