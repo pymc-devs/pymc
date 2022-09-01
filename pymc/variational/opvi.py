@@ -1124,6 +1124,11 @@ class Group(WithMemoization):
         raise NotImplementedError
 
     def var_to_data(self, shared):
+        """Takes a flat 1-dimensional Aesara variable and maps it to an xarray data set based on the information in
+        `self.ordering`.
+        """
+        # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
+        # `RaveledVars` and need to take the information from `self.ordering` instead
         shared = shared.eval()
         result = dict()
         for name, s, shape, dtype in self.ordering.values():
