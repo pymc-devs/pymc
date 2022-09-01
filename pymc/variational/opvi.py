@@ -1126,13 +1126,13 @@ class Group(WithMemoization):
     def var_to_data(self, shared):
         shared = shared.eval()
         result = dict()
-        for name, s, shape, _ in self.ordering.values():
+        for name, s, shape, dtype in self.ordering.values():
             dims = self.model.RV_dims.get(name, None)
             if dims is not None:
                 coords = {d: np.array(self.model.coords[d]) for d in dims}
             else:
                 coords = None
-            values = np.array(shared[s]).reshape(shape)
+            values = np.array(shared[s]).reshape(shape).astype(dtype)
             result[name] = xarray.DataArray(values, coords=coords, dims=dims, name=name)
         return xarray.Dataset(result)
 
