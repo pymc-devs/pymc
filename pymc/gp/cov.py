@@ -570,7 +570,7 @@ class ExpQuad(Stationary):
 
        k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{2 \ell^2} \right]
 
-    The power spectral density is:
+    The power spectral density (`psd`) is:
 
     .. math::
 
