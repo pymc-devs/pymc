@@ -2200,32 +2200,23 @@ class StickBreakingWeightsRV(RandomVariable):
         alpha = at.as_tensor_variable(alpha)
         K = at.as_tensor_variable(intX(K))
 
-        if alpha.ndim > 0:
-            raise ValueError("The concentration parameter needs to be a scalar.")
-
         if K.ndim > 0:
             raise ValueError("K must be a scalar.")
 
         return super().make_node(rng, size, dtype, alpha, K)
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
-        alpha, K = dist_params
-
-        size = tuple(size)
-
-        return size + (K + 1,)
+    def _supp_shape_from_params(self, dist_params, **kwargs):
+        K = dist_params[1]
+        return (K + 1,)
 
     @classmethod
     def rng_fn(cls, rng, alpha, K, size):
         if K < 0:
             raise ValueError("K needs to be positive.")
 
-        if size is None:
-            size = (K,)
-        elif isinstance(size, int):
-            size = (size,) + (K,)
-        else:
-            size = tuple(size) + (K,)
+        size = to_tuple(size) if size is not None else alpha.shape
+        size = size + (K,)
+        alpha = alpha[..., np.newaxis]
 
         betas = rng.beta(1, alpha, size=size)
 
@@ -2294,9 +2285,10 @@ class StickBreakingWeights(SimplexContinuous):
         return super().dist([alpha, K], **kwargs)
 
     def moment(rv, size, alpha, K):
+        alpha = alpha[..., np.newaxis]
         moment = (alpha / (1 + alpha)) ** at.arange(K)
         moment *= 1 / (1 + alpha)
-        moment = at.concatenate([moment, [(alpha / (1 + alpha)) ** K]], axis=-1)
+        moment = at.concatenate([moment, (alpha / (1 + alpha)) ** K], axis=-1)
         if not rv_size_is_none(size):
             moment_size = at.concatenate(
                 [

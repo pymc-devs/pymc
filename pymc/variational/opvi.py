@@ -565,17 +565,6 @@ class Group(WithMemoization):
     -----
     Group instance/class has some important constants:
 
-    -   **supports_batched**
-        Determines whether such variational family can be used for AEVB or rowwise approx.
-
-        AEVB approx is such approx that somehow depends on input data. It can be treated
-        as conditional distribution. You can see more about in the corresponding paper
-        mentioned in references.
-
-        Rowwise mode is a special case approximation that treats every 'row', of a tensor as
-        independent from each other. Some distributions can't do that by
-        definition e.g. :class:`Empirical` that consists of particles only.
-
     -   **has_logq**
         Tells that distribution is defined explicitly
 
@@ -615,34 +604,6 @@ class Group(WithMemoization):
     -   `{'mu', 'L_tril'}`: :class:`FullRankGroup`
 
     -   `{'histogram'}`: :class:`EmpiricalGroup`
-
-    -   `{0, 1, 2, 3, ..., k-1}`: :class:`NormalizingFlowGroup` of depth `k`
-
-        NormalizingFlows have other parameters than ordinary groups and should be
-        passed as nested dicts with the following keys:
-
-        -   `{'u', 'w', 'b'}`: :class:`PlanarFlow`
-
-        -   `{'a', 'b', 'z_ref'}`: :class:`RadialFlow`
-
-        -   `{'loc'}`: :class:`LocFlow`
-
-        -   `{'rho'}`: :class:`ScaleFlow`
-
-        -   `{'v'}`: :class:`HouseholderFlow`
-
-        Note that all integer keys should be present in the dictionary. An example
-        of NormalizingFlow initialization can be found below.
-
-    **Using AEVB**
-
-    Autoencoding variational Bayes is a powerful tool to get conditional :math:`q(\lambda|X)` distribution
-    on latent variables. It is well supported by PyMC and all you need is to provide a dictionary
-    with well shaped variational parameters, the correct approximation will be autoselected as mentioned
-    in section above. However we have some implementation restrictions in AEVB. They require autoencoded
-    variable to have first dimension as *batch* dimension and other dimensions should stay fixed.
-    With this assumptions it is possible to generalize all variational approximation families as
-    batched approximations that have flexible parameters and leading axis.
 
     **Delayed Initialization**
 
