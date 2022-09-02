@@ -433,8 +433,10 @@ class ADVI(KLqp):
     random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start: `Point`
+    start: `dict[str, np.ndarray]` or `StartDict`
         starting point for inference
+    start_sigma: `dict[str, np.ndarray]`
+        starting standard deviation for inference, only available for method 'advi'
 
     References
     ----------
@@ -660,6 +662,7 @@ def fit(
     model=None,
     random_seed=None,
     start=None,
+    start_sigma=None,
     inf_kwargs=None,
     **kwargs,
 ):
@@ -684,8 +687,10 @@ def fit(
         valid value to create instance specific one
     inf_kwargs: dict
         additional kwargs passed to :class:`Inference`
-    start: `Point`
+    start: `dict[str, np.ndarray]` or `StartDict`
         starting point for inference
+    start_sigma: `dict[str, np.ndarray]`
+        starting standard deviation for inference, only available for method 'advi'
 
     Other Parameters
     ----------------
@@ -728,6 +733,10 @@ def fit(
         inf_kwargs["random_seed"] = random_seed
     if start is not None:
         inf_kwargs["start"] = start
+    if start_sigma is not None:
+        if method != "advi":
+            raise NotImplementedError("start_sigma is only available for method advi")
+        inf_kwargs["start_sigma"] = start_sigma
     if model is None:
         model = pm.modelcontext(model)
     _select = dict(advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD)

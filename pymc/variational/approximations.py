@@ -67,16 +67,32 @@ class MeanFieldGroup(Group):
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
-            self.shared_params = self.create_shared_params(self._kwargs.get("start", None))
+            self.shared_params = self.create_shared_params(
+                self._kwargs.get("start", None), self._kwargs.get("start_sigma", None)
+            )
         self._finalize_init()
 
-    def create_shared_params(self, start=None):
+    def create_shared_params(self, start=None, start_sigma=None):
+        # NOTE: `Group._prepare_start` uses `self.model.free_RVs` to identify free variables and
+        # `DictToArrayBijection` to turn them into a flat array, while `Approximation.rslice` assumes that the free
+        # variables are given by `self.group` and that the mapping between original variables and flat array is given
+        # by `self.ordering`. In the cases I looked into these turn out to be the same, but there may be edge cases or
+        # future code changes that break this assumption.
         start = self._prepare_start(start)
-        rho = np.zeros((self.ddim,))
+        rho = self._prepare_start_sigma(start_sigma)
         return {
             "mu": aesara.shared(pm.floatX(start), "mu"),
             "rho": aesara.shared(pm.floatX(rho), "rho"),
         }
+
+    def _prepare_start_sigma(self, start_sigma):
+        rho = np.zeros((self.ddim,))
+        if start_sigma is not None:
+            for name, slice_, *_ in self.ordering.items():
+                sigma = start_sigma.get(name)
+                if sigma is not None:
+                    rho[slice_] = np.log(np.exp(np.abs(sigma)) - 1.0)
+        return rho
 
     @node_property
     def symbolic_random(self):
