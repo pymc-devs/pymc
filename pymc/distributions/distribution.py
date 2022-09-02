@@ -622,23 +622,9 @@ class DensityDist(NoDistribution):
     Creates a Distribution and registers the supplied log density function to be used
     for inference. It is also possible to supply a `random` method in order to be able
     to sample from the prior or posterior predictive distributions.
-    """
+    
+    Parameters
 
-    def __new__(
-        cls,
-        name: str,
-        *dist_params,
-        logp: Optional[Callable] = None,
-        logcdf: Optional[Callable] = None,
-        random: Optional[Callable] = None,
-        moment: Optional[Callable] = None,
-        ndim_supp: int = 0,
-        ndims_params: Optional[Sequence[int]] = None,
-        dtype: str = "floatX",
-        **kwargs,
-    ):
-        """
-        Parameters
         ----------
         name : str
         dist_params : Tuple
@@ -731,8 +717,21 @@ class DensityDist(NoDistribution):
                     )
                     prior = pm.sample_prior_predictive(10).prior_predictive['density_dist']
                 assert prior.shape == (1, 10, 100, 3)
+    """
 
-        """
+    def __new__(
+        cls,
+        name: str,
+        *dist_params,
+        logp: Optional[Callable] = None,
+        logcdf: Optional[Callable] = None,
+        random: Optional[Callable] = None,
+        moment: Optional[Callable] = None,
+        ndim_supp: int = 0,
+        ndims_params: Optional[Sequence[int]] = None,
+        dtype: str = "floatX",
+        **kwargs,
+    ):
 
         if dist_params is None:
             dist_params = []
