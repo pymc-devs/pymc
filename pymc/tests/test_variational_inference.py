@@ -499,6 +499,63 @@ def simple_model(simple_model_data):
     return model
 
 
+@pytest.fixture
+def hierarchical_model_data():
+    group_coords = {
+        "group_d1": np.arange(3),
+        "group_d2": np.arange(7),
+    }
+    group_shape = tuple(len(d) for d in group_coords.values())
+    data_coords = {"data_d": np.arange(11)} | group_coords
+
+    data_shape = tuple(len(d) for d in data_coords.values())
+
+    mu = -5.0
+
+    sigma_group_mu = 3
+    group_mu = sigma_group_mu * np.random.randn(*group_shape)
+
+    sigma = 3.0
+
+    data = sigma * np.random.randn(*data_shape) + group_mu + mu
+
+    return dict(
+        group_coords=group_coords,
+        group_shape=group_shape,
+        data_coords=data_coords,
+        data_shape=data_shape,
+        mu=mu,
+        sigma_group_mu=sigma_group_mu,
+        sigma=sigma,
+        group_mu=group_mu,
+        data=data,
+    )
+
+
+@pytest.fixture
+def hierarchical_model(hierarchical_model_data):
+    with pm.Model(coords=hierarchical_model_data["data_coords"]) as model:
+        mu = pm.Normal("mu", mu=0, sigma=10)
+        sigma_group_mu = pm.HalfNormal("sigma_group_mu", sigma=5)
+
+        group_mu = pm.Normal(
+            "group_mu",
+            mu=0,
+            sigma=sigma_group_mu,
+            dims=list(hierarchical_model_data["group_coords"].keys()),
+        )
+
+        sigma = pm.HalfNormal("sigma", sigma=3)
+
+        pm.Normal(
+            "data",
+            mu=(mu + group_mu),
+            sigma=sigma,
+            observed=hierarchical_model_data["data"],
+        )
+    return model
+
+
 @pytest.fixture(
     scope="module",
     params=[
@@ -577,6 +634,19 @@ def test_fit_data(inference, fit_kwargs, simple_model_data):
     d = simple_model_data["d"]
     np.testing.assert_allclose(fitted.mean_data["mu"].values, mu_post, rtol=0.05)
     np.testing.assert_allclose(fitted.std_data["mu"], np.sqrt(1.0 / d), rtol=0.2)
+
+
+def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
+    with hierarchical_model:
+        fitted = pm.fit(1)
+
+    for data in [fitted.mean_data, fitted.std_data]:
+        assert set(data.keys()) == {"sigma_group_mu_log__", "sigma_log__", "group_mu", "mu"}
+        assert data["group_mu"].shape == hierarchical_model_data["group_shape"]
+        assert list(data["group_mu"].coords.keys()) == list(
+            hierarchical_model_data["group_coords"].keys()
+        )
+        assert data["mu"].shape == tuple()
 
 
 def test_profile(inference):
