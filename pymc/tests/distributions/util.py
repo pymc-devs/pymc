@@ -16,6 +16,8 @@ import pymc as pm
 
 from pymc.aesaraf import floatX
 from pymc.distributions import logcdf, logp
+from pymc.distributions.logprob import joint_logp
+from pymc.initial_point import make_initial_point_fn
 from pymc.tests.helpers import select_by_precision
 
 
@@ -555,3 +557,25 @@ def check_selfconsistency_discrete_logcdf(
                 decimal=decimal,
                 err_msg=str(pt),
             )
+
+
+def assert_moment_is_expected(model, expected, check_finite_logp=True):
+    fn = make_initial_point_fn(
+        model=model,
+        return_transformed=False,
+        default_strategy="moment",
+    )
+    moment = fn(0)["x"]
+    expected = np.asarray(expected)
+    try:
+        random_draw = model["x"].eval()
+    except NotImplementedError:
+        random_draw = moment
+
+    assert moment.shape == expected.shape
+    assert expected.shape == random_draw.shape
+    assert np.allclose(moment, expected)
+
+    if check_finite_logp:
+        logp_moment = joint_logp(model["x"], at.constant(moment), transformed=False).eval()
+        assert np.isfinite(logp_moment)

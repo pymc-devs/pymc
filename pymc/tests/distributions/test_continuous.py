@@ -39,6 +39,7 @@ from pymc.tests.distributions.util import (
     Rplusunif,
     Runif,
     Unit,
+    assert_moment_is_expected,
     check_logcdf,
     check_logp,
 )
@@ -899,3 +900,633 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=2),
             err_msg=str(pt),
         )
+
+
+class TestMoments:
+    @pytest.mark.parametrize(
+        "size, expected",
+        [
+            (None, 0),
+            (5, np.zeros(5)),
+            ((2, 5), np.zeros((2, 5))),
+        ],
+    )
+    def test_flat_moment(self, size, expected):
+        with pm.Model() as model:
+            pm.Flat("x", size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "size, expected",
+        [
+            (None, 1),
+            (5, np.ones(5)),
+            ((2, 5), np.ones((2, 5))),
+        ],
+    )
+    def test_halfflat_moment(self, size, expected):
+        with pm.Model() as model:
+            pm.HalfFlat("x", size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "lower, upper, size, expected",
+        [
+            (-1, 1, None, 0),
+            (-1, 1, 5, np.zeros(5)),
+            (0, np.arange(1, 6), None, np.arange(1, 6) / 2),
+            (0, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6) / 2)),
+        ],
+    )
+    def test_uniform_moment(self, lower, upper, size, expected):
+        with pm.Model() as model:
+            pm.Uniform("x", lower=lower, upper=upper, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, sigma, size, expected",
+        [
+            (0, 1, None, 0),
+            (0, np.ones(5), None, np.zeros(5)),
+            (np.arange(5), 1, None, np.arange(5)),
+            (np.arange(5), np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(5))),
+        ],
+    )
+    def test_normal_moment(self, mu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.Normal("x", mu=mu, sigma=sigma, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "sigma, size, expected",
+        [
+            (1, None, 1),
+            (1, 5, np.ones(5)),
+            (np.arange(1, 6), None, np.arange(1, 6)),
+            (np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
+        ],
+    )
+    def test_halfnormal_moment(self, sigma, size, expected):
+        with pm.Model() as model:
+            pm.HalfNormal("x", sigma=sigma, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "nu, sigma, size, expected",
+        [
+            (1, 1, None, 1),
+            (1, 1, 5, np.ones(5)),
+            (1, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
+            (np.arange(1, 6), 1, None, np.full(5, 1)),
+        ],
+    )
+    def test_halfstudentt_moment(self, nu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.HalfStudentT("x", nu=nu, sigma=sigma, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, sigma, lower, upper, size, expected",
+        [
+            (0.9, 1, -5, 5, None, 0),
+            (1, np.ones(5), -10, np.inf, None, np.full(5, -9)),
+            (np.arange(5), 1, None, 10, (2, 5), np.full((2, 5), 9)),
+            (1, 1, [-np.inf, -np.inf, -np.inf], 10, None, np.full(3, 9)),
+        ],
+    )
+    def test_truncatednormal_moment(self, mu, sigma, lower, upper, size, expected):
+        with pm.Model() as model:
+            pm.TruncatedNormal("x", mu=mu, sigma=sigma, lower=lower, upper=upper, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "alpha, beta, size, expected",
+        [
+            (1, 1, None, 0.5),
+            (1, 1, 5, np.full(5, 0.5)),
+            (1, np.arange(1, 6), None, 1 / np.arange(2, 7)),
+            (1, np.arange(1, 6), (2, 5), np.full((2, 5), 1 / np.arange(2, 7))),
+        ],
+    )
+    def test_beta_moment(self, alpha, beta, size, expected):
+        with pm.Model() as model:
+            pm.Beta("x", alpha=alpha, beta=beta, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "nu, size, expected",
+        [
+            (1, None, 1),
+            (1, 5, np.full(5, 1)),
+            (np.arange(1, 6), None, np.arange(1, 6)),
+        ],
+    )
+    def test_chisquared_moment(self, nu, size, expected):
+        with pm.Model() as model:
+            pm.ChiSquared("x", nu=nu, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "lam, size, expected",
+        [
+            (2, None, 0.5),
+            (2, 5, np.full(5, 0.5)),
+            (np.arange(1, 5), None, 1 / np.arange(1, 5)),
+            (np.arange(1, 5), (2, 4), np.full((2, 4), 1 / np.arange(1, 5))),
+        ],
+    )
+    def test_exponential_moment(self, lam, size, expected):
+        with pm.Model() as model:
+            pm.Exponential("x", lam=lam, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, b, size, expected",
+        [
+            (0, 1, None, 0),
+            (0, np.ones(5), None, np.zeros(5)),
+            (np.arange(5), 1, None, np.arange(5)),
+            (np.arange(5), np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(5))),
+        ],
+    )
+    def test_laplace_moment(self, mu, b, size, expected):
+        with pm.Model() as model:
+            pm.Laplace("x", mu=mu, b=b, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, nu, sigma, size, expected",
+        [
+            (0, 1, 1, None, 0),
+            (0, np.ones(5), 1, None, np.zeros(5)),
+            (np.arange(5), 10, np.arange(1, 6), None, np.arange(5)),
+            (
+                np.arange(5),
+                10,
+                np.arange(1, 6),
+                (2, 5),
+                np.full((2, 5), np.arange(5)),
+            ),
+        ],
+    )
+    def test_studentt_moment(self, mu, nu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.StudentT("x", mu=mu, nu=nu, sigma=sigma, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "alpha, beta, size, expected",
+        [
+            (0, 1, None, 0),
+            (0, np.ones(5), None, np.zeros(5)),
+            (np.arange(5), 1, None, np.arange(5)),
+            (np.arange(5), np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(5))),
+        ],
+    )
+    def test_cauchy_moment(self, alpha, beta, size, expected):
+        with pm.Model() as model:
+            pm.Cauchy("x", alpha=alpha, beta=beta, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "a, b, size, expected",
+        [
+            (1, 1, None, 0.5),
+            (1, 1, 5, np.full(5, 0.5)),
+            (1, np.arange(1, 6), None, 1 / np.arange(2, 7)),
+            (np.arange(1, 6), 1, None, np.arange(1, 6) / np.arange(2, 7)),
+            (1, np.arange(1, 6), (2, 5), np.full((2, 5), 1 / np.arange(2, 7))),
+        ],
+    )
+    def test_kumaraswamy_moment(self, a, b, size, expected):
+        with pm.Model() as model:
+            pm.Kumaraswamy("x", a=a, b=b, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, sigma, size, expected",
+        [
+            (0, 1, None, np.exp(0.5)),
+            (0, 1, 5, np.full(5, np.exp(0.5))),
+            (np.arange(5), 1, None, np.exp(np.arange(5) + 0.5)),
+            (
+                np.arange(5),
+                np.arange(1, 6),
+                (2, 5),
+                np.full((2, 5), np.exp(np.arange(5) + 0.5 * np.arange(1, 6) ** 2)),
+            ),
+        ],
+    )
+    def test_lognormal_moment(self, mu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.LogNormal("x", mu=mu, sigma=sigma, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "beta, size, expected",
+        [
+            (1, None, 1),
+            (1, 5, np.ones(5)),
+            (np.arange(1, 5), None, np.arange(1, 5)),
+            (
+                np.arange(1, 5),
+                (2, 4),
+                np.full((2, 4), np.arange(1, 5)),
+            ),
+        ],
+    )
+    def test_halfcauchy_moment(self, beta, size, expected):
+        with pm.Model() as model:
+            pm.HalfCauchy("x", beta=beta, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "alpha, beta, size, expected",
+        [
+            (1, 1, None, 1),
+            (1, 1, 5, np.full(5, 1)),
+            (np.arange(1, 6), 1, None, np.arange(1, 6)),
+            (
+                np.arange(1, 6),
+                2 * np.arange(1, 6),
+                (2, 5),
+                np.full((2, 5), 0.5),
+            ),
+        ],
+    )
+    def test_gamma_moment(self, alpha, beta, size, expected):
+        with pm.Model() as model:
+            pm.Gamma("x", alpha=alpha, beta=beta, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "alpha, beta, size, expected",
+        [
+            (5, 1, None, 1 / 4),
+            (0.5, 1, None, 1 / 1.5),
+            (5, 1, 5, np.full(5, 1 / (5 - 1))),
+            (np.arange(1, 6), 1, None, np.array([0.5, 1, 1 / 2, 1 / 3, 1 / 4])),
+        ],
+    )
+    def test_inverse_gamma_moment(self, alpha, beta, size, expected):
+        with pm.Model() as model:
+            pm.InverseGamma("x", alpha=alpha, beta=beta, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "alpha, m, size, expected",
+        [
+            (2, 1, None, 1 * 2 ** (1 / 2)),
+            (2, 1, 5, np.full(5, 1 * 2 ** (1 / 2))),
+            (np.arange(2, 7), np.arange(1, 6), None, np.arange(1, 6) * 2 ** (1 / np.arange(2, 7))),
+            (
+                np.arange(2, 7),
+                np.arange(1, 6),
+                (2, 5),
+                np.full((2, 5), np.arange(1, 6) * 2 ** (1 / np.arange(2, 7))),
+            ),
+        ],
+    )
+    def test_pareto_moment(self, alpha, m, size, expected):
+        with pm.Model() as model:
+            pm.Pareto("x", alpha=alpha, m=m, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, kappa, size, expected",
+        [
+            (0, 1, None, 0),
+            (0, np.ones(4), None, np.zeros(4)),
+            (np.arange(4), 0.5, None, np.arange(4)),
+            (np.arange(4), np.arange(1, 5), (2, 4), np.full((2, 4), np.arange(4))),
+        ],
+    )
+    def test_vonmises_moment(self, mu, kappa, size, expected):
+        with pm.Model() as model:
+            pm.VonMises("x", mu=mu, kappa=kappa, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, lam, phi, size, expected",
+        [
+            (2, None, None, None, 2),
+            (None, 1, 1, 5, np.full(5, 1)),
+            (1, None, np.ones(5), None, np.full(5, 1)),
+            (3, np.full(5, 2), None, None, np.full(5, 3)),
+            (np.arange(1, 6), None, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
+        ],
+    )
+    def test_wald_moment(self, mu, lam, phi, size, expected):
+        with pm.Model() as model:
+            pm.Wald("x", mu=mu, lam=lam, phi=phi, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "alpha, beta, size, expected",
+        [
+            (1, 1, None, 1),
+            (1, 1, 5, np.full(5, 1)),
+            (np.arange(1, 6), 1, None, sp.gamma(1 + 1 / np.arange(1, 6))),
+            (
+                np.arange(1, 6),
+                np.arange(2, 7),
+                (2, 5),
+                np.full(
+                    (2, 5),
+                    np.arange(2, 7) * sp.gamma(1 + 1 / np.arange(1, 6)),
+                ),
+            ),
+        ],
+    )
+    def test_weibull_moment(self, alpha, beta, size, expected):
+        with pm.Model() as model:
+            pm.Weibull("x", alpha=alpha, beta=beta, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, s, size, expected",
+        [
+            (1, 1, None, 1),
+            (1, 1, 5, np.full(5, 1)),
+            (2, np.arange(1, 6), None, np.full(5, 2)),
+            (
+                np.arange(1, 6),
+                np.arange(1, 6),
+                (2, 5),
+                np.full((2, 5), np.arange(1, 6)),
+            ),
+        ],
+    )
+    def test_logistic_moment(self, mu, s, size, expected):
+        with pm.Model() as model:
+            pm.Logistic("x", mu=mu, s=s, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, nu, sigma, size, expected",
+        [
+            (1, 1, 1, None, 2),
+            (1, 1, np.ones((2, 5)), None, np.full([2, 5], 2)),
+            (1, 1, 3, 5, np.full(5, 2)),
+            (1, np.arange(1, 6), 5, None, np.arange(2, 7)),
+            (1, np.arange(1, 6), 1, (2, 5), np.full((2, 5), np.arange(2, 7))),
+        ],
+    )
+    def test_exgaussian_moment(self, mu, nu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.ExGaussian("x", mu=mu, sigma=sigma, nu=nu, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, beta, size, expected",
+        [
+            (0, 2, None, 2 * np.euler_gamma),
+            (1, np.arange(1, 4), None, 1 + np.arange(1, 4) * np.euler_gamma),
+            (np.arange(5), 2, None, np.arange(5) + 2 * np.euler_gamma),
+            (1, 2, 5, np.full(5, 1 + 2 * np.euler_gamma)),
+            (
+                np.arange(5),
+                np.arange(1, 6),
+                (2, 5),
+                np.full((2, 5), np.arange(5) + np.arange(1, 6) * np.euler_gamma),
+            ),
+        ],
+    )
+    def test_gumbel_moment(self, mu, beta, size, expected):
+        with pm.Model() as model:
+            pm.Gumbel("x", mu=mu, beta=beta, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "c, lower, upper, size, expected",
+        [
+            (1, 0, 5, None, 2),
+            (3, np.arange(-3, 6, 3), np.arange(3, 12, 3), None, np.array([1, 3, 5])),
+            (np.arange(-3, 6, 3), -3, 3, None, np.array([-1, 0, 1])),
+            (3, -3, 6, 5, np.full(5, 2)),
+            (
+                np.arange(-3, 6, 3),
+                np.arange(-9, -2, 3),
+                np.arange(3, 10, 3),
+                (2, 3),
+                np.full((2, 3), np.array([-3, 0, 3])),
+            ),
+        ],
+    )
+    def test_triangular_moment(self, c, lower, upper, size, expected):
+        with pm.Model() as model:
+            pm.Triangular("x", c=c, lower=lower, upper=upper, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, sigma, size, expected",
+        [
+            (1, 2, None, sp.expit(1)),
+            (0, np.arange(1, 5), None, sp.expit(np.zeros(4))),
+            (np.arange(4), 1, None, sp.expit(np.arange(4))),
+            (1, 5, 4, sp.expit(np.ones(4))),
+            (np.arange(4), np.arange(1, 5), (2, 4), np.full((2, 4), sp.expit(np.arange(4)))),
+        ],
+    )
+    def test_logitnormal_moment(self, mu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.LogitNormal("x", mu=mu, sigma=sigma, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "x_points, pdf_points, size, expected",
+        [
+            (np.array([-1, 1]), np.array([0.4, 0.6]), None, 0.2),
+            (
+                np.array([-4, -1, 3, 9, 19]),
+                np.array([0.1, 0.15, 0.2, 0.25, 0.3]),
+                None,
+                9.34782609,
+            ),
+            (
+                np.array([-22, -4, 0, 8, 13]),
+                np.tile(1 / 5, 5),
+                (5, 3),
+                np.full((5, 3), -4.5),
+            ),
+            (
+                np.arange(-100, 10),
+                np.arange(1, 111) / 6105,
+                (2, 5, 3),
+                np.full((2, 5, 3), -27.65765766),
+            ),
+            (
+                # from https://github.com/pymc-devs/pymc/issues/5959
+                np.linspace(0, 10, 10),
+                st.norm.pdf(np.linspace(0, 10, 10), loc=2.5, scale=1),
+                None,
+                2.5270134,
+            ),
+            (
+                np.linspace(0, 10, 100),
+                st.norm.pdf(np.linspace(0, 10, 100), loc=2.5, scale=1),
+                None,
+                2.51771721,
+            ),
+        ],
+    )
+    def test_interpolated_moment(self, x_points, pdf_points, size, expected):
+        with pm.Model() as model:
+            pm.Interpolated("x", x_points=x_points, pdf_points=pdf_points, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, sigma, size, expected",
+        [
+            (4.0, 3.0, None, 7.8110885363844345),
+            (4.0, np.full(5, 3), None, np.full(5, 7.8110885363844345)),
+            (np.arange(5), 1, None, np.arange(5) + 1.2703628454614782),
+            (np.arange(5), np.ones(5), (2, 5), np.full((2, 5), np.arange(5) + 1.2703628454614782)),
+        ],
+    )
+    def test_moyal_moment(self, mu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.Moyal("x", mu=mu, sigma=sigma, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "alpha, mu, sigma, size, expected",
+        [
+            (1.0, 1.0, 1.0, None, 1.56418958),
+            (1.0, np.ones(5), 1.0, None, np.full(5, 1.56418958)),
+            (np.ones(5), 1, np.ones(5), None, np.full(5, 1.56418958)),
+            (
+                np.arange(5),
+                np.arange(1, 6),
+                np.arange(1, 6),
+                None,
+                (1.0, 3.12837917, 5.14094894, 7.02775903, 8.87030861),
+            ),
+            (
+                np.arange(5),
+                np.arange(1, 6),
+                np.arange(1, 6),
+                (2, 5),
+                np.full((2, 5), (1.0, 3.12837917, 5.14094894, 7.02775903, 8.87030861)),
+            ),
+        ],
+    )
+    def test_skewnormal_moment(self, alpha, mu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.SkewNormal("x", alpha=alpha, mu=mu, sigma=sigma, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "b, kappa, mu, size, expected",
+        [
+            (1.0, 1.0, 1.0, None, 1.0),
+            (1.0, np.ones(5), 1.0, None, np.full(5, 1.0)),
+            (np.arange(1, 6), 1.0, np.ones(5), None, np.full(5, 1.0)),
+            (
+                np.arange(1, 6),
+                np.arange(1, 6),
+                np.arange(1, 6),
+                None,
+                (1.0, 1.25, 2.111111111111111, 3.0625, 4.04),
+            ),
+            (
+                np.arange(1, 6),
+                np.arange(1, 6),
+                np.arange(1, 6),
+                (2, 5),
+                np.full((2, 5), (1.0, 1.25, 2.111111111111111, 3.0625, 4.04)),
+            ),
+        ],
+    )
+    def test_asymmetriclaplace_moment(self, b, kappa, mu, size, expected):
+        with pm.Model() as model:
+            pm.AsymmetricLaplace("x", b=b, kappa=kappa, mu=mu, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "nu, sigma, size, expected",
+        [
+            (1.0, 1.0, None, 1.5485724605511453),
+            (1.0, np.ones(5), None, np.full(5, 1.5485724605511453)),
+            (
+                np.arange(1, 6),
+                1.0,
+                None,
+                (
+                    1.5485724605511453,
+                    2.2723834280687427,
+                    3.1725772879007166,
+                    4.127193542536757,
+                    5.101069639492123,
+                ),
+            ),
+            (
+                np.arange(1, 6),
+                np.ones(5),
+                (2, 5),
+                np.full(
+                    (2, 5),
+                    (
+                        1.5485724605511453,
+                        2.2723834280687427,
+                        3.1725772879007166,
+                        4.127193542536757,
+                        5.101069639492123,
+                    ),
+                ),
+            ),
+        ],
+    )
+    def test_rice_moment(self, nu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.Rice("x", nu=nu, sigma=sigma, size=size)
+
+    @pytest.mark.parametrize(
+        "h, z, size, expected",
+        [
+            (1.0, 0.0, None, 0.25),
+            (
+                1.0,
+                np.arange(5),
+                None,
+                (
+                    0.25,
+                    0.23105857863000487,
+                    0.1903985389889412,
+                    0.1508580422741444,
+                    0.12050344750947711,
+                ),
+            ),
+            (
+                np.arange(1, 6),
+                np.arange(5),
+                None,
+                (
+                    0.25,
+                    0.46211715726000974,
+                    0.5711956169668236,
+                    0.6034321690965776,
+                    0.6025172375473855,
+                ),
+            ),
+            (
+                np.arange(1, 6),
+                np.arange(5),
+                (2, 5),
+                np.full(
+                    (2, 5),
+                    (
+                        0.25,
+                        0.46211715726000974,
+                        0.5711956169668236,
+                        0.6034321690965776,
+                        0.6025172375473855,
+                    ),
+                ),
+            ),
+        ],
+    )
+    def test_polyagamma_moment(self, h, z, size, expected):
+        with pm.Model() as model:
+            pm.PolyaGamma("x", h=h, z=z, size=size)
+        assert_moment_is_expected(model, expected)

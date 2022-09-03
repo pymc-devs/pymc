@@ -29,6 +29,7 @@ import pymc as pm
 
 from pymc.aesaraf import compile_pymc, floatX, intX
 from pymc.distributions import logp
+from pymc.distributions.shape_utils import to_tuple
 from pymc.math import kronecker
 from pymc.tests.distributions.util import (
     Domain,
@@ -39,6 +40,7 @@ from pymc.tests.distributions.util import (
     Rplus,
     Simplex,
     Vector,
+    assert_moment_is_expected,
     check_logp,
 )
 from pymc.tests.helpers import select_by_precision
@@ -857,3 +859,332 @@ class TestLKJCholeskCov:
         assert resized_sd_dist.eval().shape == (10, 3)
         # LKJCov has support shape `(n * (n+1)) // 2`
         assert x.eval().shape == (10, 6)
+
+
+# Used for MvStudentT moment test
+rand1d = np.random.rand(2)
+rand2d = np.random.rand(2, 3)
+
+
+class TestMoments:
+    @pytest.mark.parametrize(
+        "p, n, size, expected",
+        [
+            (np.array([0.25, 0.25, 0.25, 0.25]), 1, None, np.array([1, 0, 0, 0])),
+            (np.array([0.3, 0.6, 0.05, 0.05]), 2, None, np.array([1, 1, 0, 0])),
+            (np.array([0.3, 0.6, 0.05, 0.05]), 10, None, np.array([4, 6, 0, 0])),
+            (
+                np.array([[0.3, 0.6, 0.05, 0.05], [0.25, 0.25, 0.25, 0.25]]),
+                10,
+                None,
+                np.array([[4, 6, 0, 0], [4, 2, 2, 2]]),
+            ),
+            (
+                np.array([0.3, 0.6, 0.05, 0.05]),
+                np.array([2, 10]),
+                (1, 2),
+                np.array([[[1, 1, 0, 0], [4, 6, 0, 0]]]),
+            ),
+            (
+                np.array([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]]),
+                np.array([1, 10]),
+                None,
+                np.array([[1, 0, 0, 0], [2, 3, 3, 2]]),
+            ),
+            (
+                np.array([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]]),
+                np.array([1, 10]),
+                (3, 2),
+                np.full((3, 2, 4), [[1, 0, 0, 0], [2, 3, 3, 2]]),
+            ),
+        ],
+    )
+    def test_multinomial_moment(self, p, n, size, expected):
+        with pm.Model() as model:
+            pm.Multinomial("x", n=n, p=p, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "a, size, expected",
+        [
+            (
+                np.array([2, 3, 5, 7, 11]),
+                None,
+                np.array([2, 3, 5, 7, 11]) / 28,
+            ),
+            (
+                np.array([[1, 2, 3], [5, 6, 7]]),
+                None,
+                np.array([[1, 2, 3], [5, 6, 7]]) / np.array([6, 18])[..., np.newaxis],
+            ),
+            (
+                np.array([[1, 2, 3], [5, 6, 7]]),
+                (7, 2),
+                np.apply_along_axis(
+                    lambda x: np.divide(x, np.array([6, 18])),
+                    1,
+                    np.broadcast_to([[1, 2, 3], [5, 6, 7]], shape=[7, 2, 3]),
+                ),
+            ),
+            (
+                np.full(shape=np.array([7, 3]), fill_value=np.array([13, 17, 19])),
+                (11, 5, 7),
+                np.broadcast_to([13, 17, 19], shape=[11, 5, 7, 3]) / 49,
+            ),
+        ],
+    )
+    def test_dirichlet_moment(self, a, size, expected):
+        with pm.Model() as model:
+            pm.Dirichlet("x", a=a, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, cov, size, expected",
+        [
+            (np.ones(1), np.identity(1), None, np.ones(1)),
+            (np.ones(3), np.identity(3), None, np.ones(3)),
+            (np.ones((2, 2)), np.identity(2), None, np.ones((2, 2))),
+            (np.array([1, 0, 3.0]), np.identity(3), None, np.array([1, 0, 3.0])),
+            (np.array([1, 0, 3.0]), np.identity(3), (4, 2), np.full((4, 2, 3), [1, 0, 3.0])),
+            (
+                np.array([1, 3.0]),
+                np.identity(2),
+                5,
+                np.full((5, 2), [1, 3.0]),
+            ),
+            (
+                np.array([1, 3.0]),
+                np.array([[1.0, 0.5], [0.5, 2]]),
+                (4, 5),
+                np.full((4, 5, 2), [1, 3.0]),
+            ),
+            (
+                np.array([[3.0, 5], [1, 4]]),
+                np.identity(2),
+                (4, 5, 2),
+                np.full((4, 5, 2, 2), [[3.0, 5], [1, 4]]),
+            ),
+        ],
+    )
+    def test_mv_normal_moment(self, mu, cov, size, expected):
+        with pm.Model() as model:
+            x = pm.MvNormal("x", mu=mu, cov=cov, size=size)
+
+        # MvNormal logp is only implemented for up to 2D variables
+        assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
+
+    @pytest.mark.parametrize(
+        "mu, size, expected",
+        [
+            (
+                np.array([1, 0, 3.0, 4]),
+                None,
+                np.array([1, 0, 3.0, 4]),
+            ),
+            (np.array([1, 0, 3.0, 4]), 6, np.full((6, 4), [1, 0, 3.0, 4])),
+            (np.array([1, 0, 3.0, 4]), (5, 3), np.full((5, 3, 4), [1, 0, 3.0, 4])),
+            (
+                np.array([[3.0, 5, 2, 1], [1, 4, 0.5, 9]]),
+                (4, 5, 2),
+                np.full((4, 5, 2, 4), [[3.0, 5, 2, 1], [1, 4, 0.5, 9]]),
+            ),
+        ],
+    )
+    def test_car_moment(self, mu, size, expected):
+        W = np.array(
+            [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
+        )
+        tau = 2
+        alpha = 0.5
+        with pm.Model() as model:
+            pm.CAR("x", mu=mu, W=W, alpha=alpha, tau=tau, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "nu, mu, cov, size, expected",
+        [
+            (2, np.ones(1), np.eye(1), None, np.ones(1)),
+            (2, rand1d, np.eye(2), None, rand1d),
+            (2, rand1d, np.eye(2), 2, np.full((2, 2), rand1d)),
+            (2, rand1d, np.eye(2), (2, 5), np.full((2, 5, 2), rand1d)),
+            (2, rand2d, np.eye(3), None, rand2d),
+            (2, rand2d, np.eye(3), (2, 2), np.full((2, 2, 3), rand2d)),
+            (2, rand2d, np.eye(3), (2, 5, 2), np.full((2, 5, 2, 3), rand2d)),
+        ],
+    )
+    def test_mvstudentt_moment(self, nu, mu, cov, size, expected):
+        with pm.Model() as model:
+            x = pm.MvStudentT("x", nu=nu, mu=mu, cov=cov, size=size)
+
+        # MvStudentT logp is only impemented for up to 2D variables
+        assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
+
+    @pytest.mark.parametrize(
+        "mu, rowchol, colchol, size, expected",
+        [
+            (np.ones((1, 1)), np.eye(1), np.eye(1), None, np.ones((1, 1))),
+            (np.ones((1, 1)), np.eye(2), np.eye(3), None, np.ones((2, 3))),
+            (rand2d, np.eye(2), np.eye(3), None, rand2d),
+            (rand2d, np.eye(2), np.eye(3), 2, np.full((2, 2, 3), rand2d)),
+            (rand2d, np.eye(2), np.eye(3), (2, 5), np.full((2, 5, 2, 3), rand2d)),
+        ],
+    )
+    def test_matrixnormal_moment(self, mu, rowchol, colchol, size, expected):
+        with pm.Model() as model:
+            x = pm.MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
+
+        # MatrixNormal logp is only implemented for 2d values
+        check_logp = x.ndim == 2
+        assert_moment_is_expected(model, expected, check_finite_logp=check_logp)
+
+    @pytest.mark.parametrize(
+        "alpha, K, size, expected",
+        [
+            (3, 11, None, np.append((3 / 4) ** np.arange(11) * 1 / 4, (3 / 4) ** 11)),
+            (5, 19, None, np.append((5 / 6) ** np.arange(19) * 1 / 6, (5 / 6) ** 19)),
+            (
+                1,
+                7,
+                (13,),
+                np.full(
+                    shape=(13, 8),
+                    fill_value=np.append((1 / 2) ** np.arange(7) * 1 / 2, (1 / 2) ** 7),
+                ),
+            ),
+            (
+                0.5,
+                5,
+                (3, 5, 7),
+                np.full(
+                    shape=(3, 5, 7, 6),
+                    fill_value=np.append((1 / 3) ** np.arange(5) * 2 / 3, (1 / 3) ** 5),
+                ),
+            ),
+            (
+                np.array([1, 3]),
+                11,
+                None,
+                np.array(
+                    [
+                        np.append((1 / 2) ** np.arange(11) * 1 / 2, (1 / 2) ** 11),
+                        np.append((3 / 4) ** np.arange(11) * 1 / 4, (3 / 4) ** 11),
+                    ]
+                ),
+            ),
+            (
+                np.array([1, 3, 5]),
+                9,
+                (5, 3),
+                np.full(
+                    shape=(5, 3, 10),
+                    fill_value=np.array(
+                        [
+                            np.append((1 / 2) ** np.arange(9) * 1 / 2, (1 / 2) ** 9),
+                            np.append((3 / 4) ** np.arange(9) * 1 / 4, (3 / 4) ** 9),
+                            np.append((5 / 6) ** np.arange(9) * 1 / 6, (5 / 6) ** 9),
+                        ]
+                    ),
+                ),
+            ),
+        ],
+    )
+    def test_stickbreakingweights_moment(self, alpha, K, size, expected):
+        with pm.Model() as model:
+            pm.StickBreakingWeights("x", alpha=alpha, K=K, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, covs, size, expected",
+        [
+            (np.ones(1), [np.identity(1), np.identity(1)], None, np.ones(1)),
+            (np.ones(6), [np.identity(2), np.identity(3)], 5, np.ones((5, 6))),
+            (np.zeros(6), [np.identity(2), np.identity(3)], 6, np.zeros((6, 6))),
+            (np.zeros(3), [np.identity(3), np.identity(1)], 6, np.zeros((6, 3))),
+            (
+                np.array([1, 2, 3, 4]),
+                [
+                    np.array([[1.0, 0.5], [0.5, 2]]),
+                    np.array([[1.0, 0.4], [0.4, 2]]),
+                ],
+                2,
+                np.array(
+                    [
+                        [1, 2, 3, 4],
+                        [1, 2, 3, 4],
+                    ]
+                ),
+            ),
+        ],
+    )
+    def test_kronecker_normal_moment(self, mu, covs, size, expected):
+        with pm.Model() as model:
+            pm.KroneckerNormal("x", mu=mu, covs=covs, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "n, eta, size, expected",
+        [
+            (3, 1, None, np.zeros(3)),
+            (5, 1, None, np.zeros(10)),
+            (3, 1, 1, np.zeros((1, 3))),
+            (5, 1, (2, 3), np.zeros((2, 3, 10))),
+        ],
+    )
+    def test_lkjcorr_moment(self, n, eta, size, expected):
+        with pm.Model() as model:
+            pm.LKJCorr("x", n=n, eta=eta, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "n, eta, size, expected",
+        [
+            (3, 1, None, np.array([1, 0, 1, 0, 0, 1])),
+            (4, 1, None, np.array([1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])),
+            (3, 1, 1, np.array([[1, 0, 1, 0, 0, 1]])),
+            (
+                4,
+                1,
+                (2, 3),
+                np.full((2, 3, 10), np.array([1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])),
+            ),
+        ],
+    )
+    def test_lkjcholeskycov_moment(self, n, eta, size, expected):
+        with pm.Model() as model:
+            sd_dist = pm.Exponential.dist(1, size=(*to_tuple(size), n))
+            pm.LKJCholeskyCov("x", n=n, eta=eta, sd_dist=sd_dist, size=size, compute_corr=False)
+        assert_moment_is_expected(model, expected, check_finite_logp=size is None)
+
+    @pytest.mark.parametrize(
+        "a, n, size, expected",
+        [
+            (np.array([2, 2, 2, 2]), 1, None, np.array([1, 0, 0, 0])),
+            (np.array([3, 6, 0.5, 0.5]), 2, None, np.array([1, 1, 0, 0])),
+            (np.array([30, 60, 5, 5]), 10, None, np.array([4, 6, 0, 0])),
+            (
+                np.array([[30, 60, 5, 5], [26, 26, 26, 22]]),
+                10,
+                (1, 2),
+                np.array([[[4, 6, 0, 0], [2, 3, 3, 2]]]),
+            ),
+            (
+                np.array([26, 26, 26, 22]),
+                np.array([1, 10]),
+                None,
+                np.array([[1, 0, 0, 0], [2, 3, 3, 2]]),
+            ),
+            (
+                np.array([[26, 26, 26, 22]]),  # Dim: 1 x 4
+                np.array([[1], [10]]),  # Dim: 2 x 1
+                (2, 1, 2, 1),
+                np.full(
+                    (2, 1, 2, 1, 4),
+                    np.array([[[1, 0, 0, 0]], [[2, 3, 3, 2]]]),  # Dim: 2 x 1 x 4
+                ),
+            ),
+        ],
+    )
+    def test_dirichlet_multinomial_moment(self, a, n, size, expected):
+        with pm.Model() as model:
+            pm.DirichletMultinomial("x", n=n, a=a, size=size)
+        assert_moment_is_expected(model, expected)

@@ -3661,9 +3661,7 @@ def _interpolated_argcdf(p, pdf, cdf, x):
     # This warning happens when we divide by slope = 0: we can ignore it
     # because the other result will be returned
     with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", ".*invalid value encountered in true_divide.*", RuntimeWarning
-        )
+        warnings.filterwarnings("ignore", ".*invalid value encountered in.*", RuntimeWarning)
         large_slopes = (
             -pdf[index] + np.sqrt(pdf[index] ** 2 + 2 * slope * (p - cdf[index]))
         ) / slope
