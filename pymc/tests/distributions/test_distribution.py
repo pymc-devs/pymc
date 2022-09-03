@@ -21,7 +21,6 @@ import numpy.testing as npt
 import pytest
 
 from aesara.tensor import TensorVariable
-from scipy import integrate
 
 import pymc as pm
 
@@ -29,43 +28,6 @@ from pymc.distributions import MvNormal, MvStudentT, joint_logp, logp
 from pymc.distributions.distribution import _moment, moment
 from pymc.distributions.shape_utils import to_tuple
 from pymc.tests.distributions.util import assert_moment_is_expected
-from pymc.vartypes import continuous_types
-
-
-def integrate_nd(f, domain, shape, dtype):
-    if shape == () or shape == (1,):
-        if dtype in continuous_types:
-            return integrate.quad(f, domain.lower, domain.upper, epsabs=1e-8)[0]
-        else:
-            return sum(f(j) for j in range(domain.lower, domain.upper + 1))
-    elif shape == (2,):
-
-        def f2(a, b):
-            return f([a, b])
-
-        return integrate.dblquad(
-            f2,
-            domain.lower[0],
-            domain.upper[0],
-            lambda _: domain.lower[1],
-            lambda _: domain.upper[1],
-        )[0]
-    elif shape == (3,):
-
-        def f3(a, b, c):
-            return f([a, b, c])
-
-        return integrate.tplquad(
-            f3,
-            domain.lower[0],
-            domain.upper[0],
-            lambda _: domain.lower[1],
-            lambda _: domain.upper[1],
-            lambda _, __: domain.lower[2],
-            lambda _, __: domain.upper[2],
-        )[0]
-    else:
-        raise ValueError("Dont know how to integrate shape: " + str(shape))
 
 
 class TestBugfixes:
