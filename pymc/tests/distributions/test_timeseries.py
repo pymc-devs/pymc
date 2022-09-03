@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import itertools as it
 import warnings
 
 import aesara
@@ -36,8 +37,8 @@ from pymc.distributions.timeseries import (
 )
 from pymc.model import Model
 from pymc.sampling import draw, sample, sample_posterior_predictive
-from pymc.tests.distributions.test_random import BaseTestDistributionRandom
 from pymc.tests.distributions.util import (
+    BaseTestDistributionRandom,
     Nat,
     R,
     Rplus,
@@ -45,7 +46,7 @@ from pymc.tests.distributions.util import (
     assert_moment_is_expected,
     check_logp,
 )
-from pymc.tests.helpers import select_by_precision
+from pymc.tests.helpers import SeededTest, select_by_precision
 
 
 @pytest.mark.parametrize(
@@ -602,3 +603,79 @@ def test_linear():
     assert (lo < lam) and (lam < hi)
     lo, hi = np.percentile(ppc["zh"], p95, axis=0)
     assert ((lo < z) * (z < hi)).mean() > 0.95
+
+
+def generate_shapes(include_params=False):
+    # fmt: off
+    mudim_as_event = [
+        [None, 1, 3, 10, (10, 3), 100],
+        [(3,)],
+        [(1,), (3,)],
+        ["cov", "chol", "tau"]
+    ]
+    # fmt: on
+    mudim_as_dist = [
+        [None, 1, 3, 10, (10, 3), 100],
+        [(10, 3)],
+        [(1,), (3,), (1, 1), (1, 3), (10, 1), (10, 3)],
+        ["cov", "chol", "tau"],
+    ]
+    if not include_params:
+        del mudim_as_event[-1]
+        del mudim_as_dist[-1]
+    data = it.chain(it.product(*mudim_as_event), it.product(*mudim_as_dist))
+    return data
+
+
+@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
+class TestMvGaussianRandomWalk(SeededTest):
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape", "param"],
+        generate_shapes(include_params=True),
+        ids=str,
+    )
+    def test_with_np_arrays(self, sample_shape, dist_shape, mu_shape, param):
+        dist = pm.MvGaussianRandomWalk.dist(
+            mu=np.ones(mu_shape), **{param: np.eye(3)}, shape=dist_shape
+        )
+        output_shape = to_tuple(sample_shape) + dist_shape
+        assert dist.random(size=sample_shape).shape == output_shape
+
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape"],
+        generate_shapes(include_params=False),
+        ids=str,
+    )
+    def test_with_chol_rv(self, sample_shape, dist_shape, mu_shape):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            # pylint: disable=unpacking-non-sequence
+            chol, corr, stds = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            # pylint: enable=unpacking-non-sequence
+            mv = pm.MvGaussianRandomWalk("mv", mu, chol=chol, shape=dist_shape)
+            prior = pm.sample_prior_predictive(samples=sample_shape)
+
+        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
+
+    @pytest.mark.xfail
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape"],
+        generate_shapes(include_params=False),
+        ids=str,
+    )
+    def test_with_cov_rv(self, sample_shape, dist_shape, mu_shape):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            # pylint: disable=unpacking-non-sequence
+            chol, corr, stds = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            # pylint: enable=unpacking-non-sequence
+            mv = pm.MvGaussianRandomWalk("mv", mu, cov=pm.math.dot(chol, chol.T), shape=dist_shape)
+            prior = pm.sample_prior_predictive(samples=sample_shape)
+
+        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape

@@ -62,8 +62,12 @@ from pymc.sampling import (
     sample_prior_predictive,
 )
 from pymc.step_methods import Metropolis
-from pymc.tests.distributions.test_random import pymc_random
-from pymc.tests.distributions.util import Domain, Simplex, assert_moment_is_expected
+from pymc.tests.distributions.util import (
+    Domain,
+    Simplex,
+    assert_moment_is_expected,
+    pymc_random,
+)
 from pymc.tests.helpers import SeededTest
 
 
