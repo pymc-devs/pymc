@@ -73,7 +73,6 @@ jobs:
             pymc/tests/test_printing.py
 
           - |
-            pymc/tests/distributions/test_random.py
             pymc/tests/distributions/test_timeseries.py
             pymc/tests/test_gp.py
             pymc/tests/test_model.py

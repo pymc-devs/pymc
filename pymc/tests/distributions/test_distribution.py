@@ -17,10 +17,10 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 import numpy.random as npr
+import numpy.testing as npt
 import pytest
 
-from aesara.tensor.var import TensorVariable
-from numpy.testing import assert_almost_equal
+from aesara.tensor import TensorVariable
 from scipy import integrate
 
 import pymc as pm
@@ -87,15 +87,15 @@ class TestBugfixes:
         # https://github.com/pymc-devs/pymc/issues/4499
         with pm.Model(check_bounds=False) as m:
             x = pm.Uniform("x", 0, 2, size=10, transform=None)
-        assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
+        npt.assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
 
         with pm.Model(check_bounds=False) as m:
             x = pm.DiscreteUniform("x", 0, 1, size=10)
-        assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
+        npt.assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
 
         with pm.Model(check_bounds=False) as m:
             x = pm.DiracDelta("x", 1, size=10)
-        assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), 0 * 10)
+        npt.assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), 0 * 10)
 
 
 @pytest.mark.parametrize(

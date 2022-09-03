@@ -12,26 +12,36 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import functools as ft
+import re
 import warnings
 
 import aesara
 import aesara.tensor as at
 import numpy as np
 import numpy.random as npr
+import numpy.testing as npt
 import pytest
 import scipy.special as sp
 import scipy.stats as st
 
 from aeppl.logprob import ParameterValueError
+from aesara.tensor import TensorVariable
 from aesara.tensor.random.utils import broadcast_params
 
 import pymc as pm
 
 from pymc.aesaraf import compile_pymc, floatX, intX
 from pymc.distributions import logp
+from pymc.distributions.multivariate import (
+    _LKJCholeskyCov,
+    _OrderedMultinomial,
+    quaddist_matrix,
+)
 from pymc.distributions.shape_utils import to_tuple
 from pymc.math import kronecker
 from pymc.tests.distributions.util import (
+    BaseTestDistributionRandom,
     Domain,
     Nat,
     R,
@@ -42,6 +52,7 @@ from pymc.tests.distributions.util import (
     Vector,
     assert_moment_is_expected,
     check_logp,
+    seeded_numpy_distribution_builder,
 )
 from pymc.tests.helpers import select_by_precision
 
@@ -470,9 +481,7 @@ class TestMatchesScipy:
 
         pt = {"lkj": x}
         decimals = select_by_precision(float64=6, float32=4)
-        np.testing.assert_almost_equal(
-            model.compile_logp()(pt), lp, decimal=decimals, err_msg=str(pt)
-        )
+        npt.assert_almost_equal(model.compile_logp()(pt), lp, decimal=decimals, err_msg=str(pt))
 
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_dirichlet(self, n):
@@ -511,7 +520,7 @@ class TestMatchesScipy:
         dir = pm.Dirichlet.dist(a=a, size=size)
         vals = dir.eval()
 
-        np.testing.assert_almost_equal(
+        npt.assert_almost_equal(
             dirichlet_logpdf(vals, a),
             pm.logp(dir, vals).eval(),
             decimal=4,
@@ -586,7 +595,7 @@ class TestMatchesScipy:
         mn = pm.Multinomial.dist(n=n, p=p, size=size)
         vals = mn.eval()
 
-        np.testing.assert_almost_equal(
+        npt.assert_almost_equal(
             st.multinomial.logpmf(vals, n, p),
             pm.logp(mn, vals).eval(),
             decimal=4,
@@ -598,6 +607,17 @@ class TestMatchesScipy:
         mn = pm.Multinomial.dist(n=100, p=[0.0, 0.0, 1.0])
         assert pm.logp(mn, np.array([0, 0, 100])).eval() >= 0
         assert pm.logp(mn, np.array([50, 50, 0])).eval() == -np.inf
+
+    def test_ordered_multinomial_probs(self):
+        with pm.Model() as m:
+            pm.OrderedMultinomial("om_p", n=1000, cutpoints=np.array([-2, 0, 2]), eta=0)
+            pm.OrderedMultinomial(
+                "om_no_p", n=1000, cutpoints=np.array([-2, 0, 2]), eta=0, compute_p=False
+            )
+        assert len(m.deterministics) == 1
+
+        x = pm.OrderedMultinomial.dist(n=1000, cutpoints=np.array([-2, 0, 2]), eta=0)
+        assert isinstance(x, TensorVariable)
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_dirichlet_multinomial(self, n):
@@ -631,7 +651,7 @@ class TestMatchesScipy:
         dm = pm.DirichletMultinomial.dist(n=n, a=[a, b], size=2)
         dm_logp = logp(dm, ns_dm).eval().ravel()
 
-        np.testing.assert_almost_equal(
+        npt.assert_almost_equal(
             dm_logp,
             bb_logp,
             decimal=select_by_precision(float64=6, float32=3),
@@ -657,7 +677,7 @@ class TestMatchesScipy:
         dm = pm.DirichletMultinomial.dist(n=n, a=a, size=size)
         vals = dm.eval()
 
-        np.testing.assert_almost_equal(
+        npt.assert_almost_equal(
             dirichlet_multinomial_logpmf(vals, n, a),
             pm.logp(dm, vals).eval(),
             decimal=4,
@@ -683,7 +703,7 @@ class TestMatchesScipy:
         with pm.Model() as model:
             sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
         pt = {"sbw": value}
-        np.testing.assert_almost_equal(
+        npt.assert_almost_equal(
             pm.logp(sbw, value).eval(),
             logp,
             decimal=select_by_precision(float64=6, float32=2),
@@ -710,7 +730,7 @@ class TestMatchesScipy:
         with pm.Model():
             sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
         pt = {"sbw": value}
-        np.testing.assert_almost_equal(
+        npt.assert_almost_equal(
             pm.logp(sbw, value).eval(),
             stickbreakingweights_logpdf(value, alpha, K),
             decimal=select_by_precision(float64=6, float32=2),
@@ -1188,3 +1208,650 @@ class TestMoments:
         with pm.Model() as model:
             pm.DirichletMultinomial("x", n=n, a=a, size=size)
         assert_moment_is_expected(model, expected)
+
+
+class TestMvNormalCov(BaseTestDistributionRandom):
+    pymc_dist = pm.MvNormal
+    pymc_dist_params = {
+        "mu": np.array([1.0, 2.0]),
+        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    expected_rv_op_params = {
+        "mu": np.array([1.0, 2.0]),
+        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    sizes_to_check = [None, (1), (2, 3)]
+    sizes_expected = [(2,), (1, 2), (2, 3, 2)]
+    reference_dist_params = {
+        "mean": np.array([1.0, 2.0]),
+        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    reference_dist = seeded_numpy_distribution_builder("multivariate_normal")
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+        "check_mu_broadcast_helper",
+    ]
+
+    def check_mu_broadcast_helper(self):
+        """Test that mu is broadcasted to the shape of cov"""
+        x = pm.MvNormal.dist(mu=1, cov=np.eye(3))
+        mu = x.owner.inputs[3]
+        assert mu.eval().shape == (3,)
+
+        x = pm.MvNormal.dist(mu=np.ones(1), cov=np.eye(3))
+        mu = x.owner.inputs[3]
+        assert mu.eval().shape == (3,)
+
+        x = pm.MvNormal.dist(mu=np.ones((1, 1)), cov=np.eye(3))
+        mu = x.owner.inputs[3]
+        assert mu.eval().shape == (1, 3)
+
+        x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.eye(3))
+        mu = x.owner.inputs[3]
+        assert mu.eval().shape == (10, 3)
+
+        # Cov is artificually limited to being 2D
+        # x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.full((2, 3, 3), np.eye(3)))
+        # mu = x.owner.inputs[3]
+        # assert mu.eval().shape == (10, 2, 3)
+
+
+class TestMvNormalChol(BaseTestDistributionRandom):
+    pymc_dist = pm.MvNormal
+    pymc_dist_params = {
+        "mu": np.array([1.0, 2.0]),
+        "chol": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    expected_rv_op_params = {
+        "mu": np.array([1.0, 2.0]),
+        "cov": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(),
+    }
+    checks_to_run = ["check_pymc_params_match_rv_op"]
+
+
+class TestMvNormalTau(BaseTestDistributionRandom):
+    pymc_dist = pm.MvNormal
+    pymc_dist_params = {
+        "mu": np.array([1.0, 2.0]),
+        "tau": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    expected_rv_op_params = {
+        "mu": np.array([1.0, 2.0]),
+        "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(),
+    }
+    checks_to_run = ["check_pymc_params_match_rv_op"]
+
+
+class TestMvNormalMisc:
+    def test_with_chol_rv(self):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, size=3)
+            sd_dist = pm.Exponential.dist(1.0, size=3)
+            # pylint: disable=unpacking-non-sequence
+            chol, _, _ = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            # pylint: enable=unpacking-non-sequence
+            mv = pm.MvNormal("mv", mu, chol=chol, size=4)
+            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+
+        assert prior["mv"].shape == (10, 4, 3)
+
+    def test_with_cov_rv(
+        self,
+    ):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, shape=3)
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            # pylint: disable=unpacking-non-sequence
+            chol, corr, stds = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            # pylint: enable=unpacking-non-sequence
+            mv = pm.MvNormal("mv", mu, cov=pm.math.dot(chol, chol.T), size=4)
+            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+
+        assert prior["mv"].shape == (10, 4, 3)
+
+    def test_issue_3758(self):
+        np.random.seed(42)
+        ndim = 50
+        with pm.Model() as model:
+            a = pm.Normal("a", sigma=100, shape=ndim)
+            b = pm.Normal("b", mu=a, sigma=1, shape=ndim)
+            c = pm.MvNormal("c", mu=a, chol=np.linalg.cholesky(np.eye(ndim)), shape=ndim)
+            d = pm.MvNormal("d", mu=a, cov=np.eye(ndim), shape=ndim)
+            samples = pm.sample_prior_predictive(1000, return_inferencedata=False)
+
+        for var in "abcd":
+            assert not np.isnan(np.std(samples[var]))
+
+        for var in "bcd":
+            std = np.std(samples[var] - samples["a"])
+            npt.assert_allclose(std, 1, rtol=2e-2)
+
+    def test_issue_3829(self):
+        with pm.Model() as model:
+            x = pm.MvNormal("x", mu=np.zeros(5), cov=np.eye(5), shape=(2, 5))
+            trace_pp = pm.sample_prior_predictive(50, return_inferencedata=False)
+
+        assert np.shape(trace_pp["x"][0]) == (2, 5)
+
+    def test_issue_3706(self):
+        N = 10
+        Sigma = np.eye(2)
+
+        with pm.Model() as model:
+            X = pm.MvNormal("X", mu=np.zeros(2), cov=Sigma, shape=(N, 2))
+            betas = pm.Normal("betas", 0, 1, shape=2)
+            y = pm.Deterministic("y", pm.math.dot(X, betas))
+
+            prior_pred = pm.sample_prior_predictive(1, return_inferencedata=False)
+
+        assert prior_pred["X"].shape == (1, N, 2)
+
+
+class TestMvStudentTCov(BaseTestDistributionRandom):
+    def mvstudentt_rng_fn(self, size, nu, mu, cov, rng):
+        mv_samples = rng.multivariate_normal(np.zeros_like(mu), cov, size=size)
+        chi2_samples = rng.chisquare(nu, size=size)
+        return (mv_samples / np.sqrt(chi2_samples[:, None] / nu)) + mu
+
+    pymc_dist = pm.MvStudentT
+    pymc_dist_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    expected_rv_op_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    sizes_to_check = [None, (1), (2, 3)]
+    sizes_expected = [(2,), (1, 2), (2, 3, 2)]
+    reference_dist_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    reference_dist = lambda self: ft.partial(self.mvstudentt_rng_fn, rng=self.get_random_state())
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+        "check_errors",
+        "check_mu_broadcast_helper",
+    ]
+
+    def check_errors(self):
+        msg = "nu must be a scalar (ndim=0)."
+        with pm.Model():
+            with pytest.raises(ValueError, match=re.escape(msg)):
+                mvstudentt = pm.MvStudentT(
+                    "mvstudentt",
+                    nu=np.array([1, 2]),
+                    mu=np.ones(2),
+                    cov=np.full((2, 2), np.ones(2)),
+                )
+
+    def check_mu_broadcast_helper(self):
+        """Test that mu is broadcasted to the shape of cov"""
+        x = pm.MvStudentT.dist(nu=4, mu=1, cov=np.eye(3))
+        mu = x.owner.inputs[4]
+        assert mu.eval().shape == (3,)
+
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones(1), cov=np.eye(3))
+        mu = x.owner.inputs[4]
+        assert mu.eval().shape == (3,)
+
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones((1, 1)), cov=np.eye(3))
+        mu = x.owner.inputs[4]
+        assert mu.eval().shape == (1, 3)
+
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), cov=np.eye(3))
+        mu = x.owner.inputs[4]
+        assert mu.eval().shape == (10, 3)
+
+        # Cov is artificually limited to being 2D
+        # x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), cov=np.full((2, 3, 3), np.eye(3)))
+        # mu = x.owner.inputs[4]
+        # assert mu.eval().shape == (10, 2, 3)
+
+
+class TestMvStudentTChol(BaseTestDistributionRandom):
+    pymc_dist = pm.MvStudentT
+    pymc_dist_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "chol": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    expected_rv_op_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "cov": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(),
+    }
+    checks_to_run = ["check_pymc_params_match_rv_op"]
+
+
+class TestMvStudentTTau(BaseTestDistributionRandom):
+    pymc_dist = pm.MvStudentT
+    pymc_dist_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "tau": np.array([[2.0, 0.0], [0.0, 3.5]]),
+    }
+    expected_rv_op_params = {
+        "nu": 5,
+        "mu": np.array([1.0, 2.0]),
+        "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(),
+    }
+    checks_to_run = ["check_pymc_params_match_rv_op"]
+
+
+class TestDirichlet(BaseTestDistributionRandom):
+    pymc_dist = pm.Dirichlet
+    pymc_dist_params = {"a": np.array([1.0, 2.0])}
+    expected_rv_op_params = {"a": np.array([1.0, 2.0])}
+    sizes_to_check = [None, (1), (4,), (3, 4)]
+    sizes_expected = [(2,), (1, 2), (4, 2), (3, 4, 2)]
+    reference_dist_params = {"alpha": np.array([1.0, 2.0])}
+    reference_dist = seeded_numpy_distribution_builder("dirichlet")
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestMultinomial(BaseTestDistributionRandom):
+    pymc_dist = pm.Multinomial
+    pymc_dist_params = {"n": 85, "p": np.array([0.28, 0.62, 0.10])}
+    expected_rv_op_params = {"n": 85, "p": np.array([0.28, 0.62, 0.10])}
+    sizes_to_check = [None, (1), (4,), (3, 2)]
+    sizes_expected = [(3,), (1, 3), (4, 3), (3, 2, 3)]
+    reference_dist_params = {"n": 85, "pvals": np.array([0.28, 0.62, 0.10])}
+    reference_dist = seeded_numpy_distribution_builder("multinomial")
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestDirichletMultinomial(BaseTestDistributionRandom):
+    pymc_dist = pm.DirichletMultinomial
+
+    pymc_dist_params = {"n": 85, "a": np.array([1.0, 2.0, 1.5, 1.5])}
+    expected_rv_op_params = {"n": 85, "a": np.array([1.0, 2.0, 1.5, 1.5])}
+
+    sizes_to_check = [None, 1, (4,), (3, 4)]
+    sizes_expected = [(4,), (1, 4), (4, 4), (3, 4, 4)]
+
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_random_draws",
+    ]
+
+    def check_random_draws(self):
+        default_rng = aesara.shared(np.random.default_rng(1234))
+        draws = pm.DirichletMultinomial.dist(
+            n=np.array([5, 100]),
+            a=np.array([[0.001, 0.001, 0.001, 1000], [1000, 1000, 0.001, 0.001]]),
+            size=(2, 3, 2),
+            rng=default_rng,
+        ).eval()
+        assert np.all(draws.sum(-1) == np.array([5, 100]))
+        assert np.all((draws.sum(-2)[:, :, 0] > 30) & (draws.sum(-2)[:, :, 0] <= 70))
+        assert np.all((draws.sum(-2)[:, :, 1] > 30) & (draws.sum(-2)[:, :, 1] <= 70))
+        assert np.all((draws.sum(-2)[:, :, 2] >= 0) & (draws.sum(-2)[:, :, 2] <= 2))
+        assert np.all((draws.sum(-2)[:, :, 3] > 3) & (draws.sum(-2)[:, :, 3] <= 5))
+
+
+class TestDirichletMultinomial_1D_n_2D_a(BaseTestDistributionRandom):
+    pymc_dist = pm.DirichletMultinomial
+    pymc_dist_params = {
+        "n": np.array([23, 29]),
+        "a": np.array([[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]]),
+    }
+    sizes_to_check = [None, (1, 2), (4, 2), (3, 4, 2)]
+    sizes_expected = [(2, 4), (1, 2, 4), (4, 2, 4), (3, 4, 2, 4)]
+    checks_to_run = ["check_rv_size"]
+
+
+class TestStickBreakingWeights(BaseTestDistributionRandom):
+    pymc_dist = pm.StickBreakingWeights
+    pymc_dist_params = {"alpha": 2.0, "K": 19}
+    expected_rv_op_params = {"alpha": 2.0, "K": 19}
+    sizes_to_check = [None, 17, (5,), (11, 5), (3, 13, 5)]
+    sizes_expected = [
+        (20,),
+        (17, 20),
+        (
+            5,
+            20,
+        ),
+        (11, 5, 20),
+        (3, 13, 5, 20),
+    ]
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_basic_properties",
+    ]
+
+    def check_basic_properties(self):
+        default_rng = aesara.shared(np.random.default_rng(1234))
+        draws = pm.StickBreakingWeights.dist(
+            alpha=3.5,
+            K=19,
+            size=(2, 3, 5),
+            rng=default_rng,
+        ).eval()
+
+        assert np.allclose(draws.sum(-1), 1)
+        assert np.all(draws >= 0)
+        assert np.all(draws <= 1)
+
+
+class TestStickBreakingWeights_1D_alpha(BaseTestDistributionRandom):
+    pymc_dist = pm.StickBreakingWeights
+    pymc_dist_params = {"alpha": [1.0, 2.0, 3.0], "K": 19}
+    expected_rv_op_params = {"alpha": [1.0, 2.0, 3.0], "K": 19}
+    sizes_to_check = [None, (3,), (5, 3)]
+    sizes_expected = [(3, 20), (3, 20), (5, 3, 20)]
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+    ]
+
+
+class TestWishart(BaseTestDistributionRandom):
+    def wishart_rng_fn(self, size, nu, V, rng):
+        return st.wishart.rvs(int(nu), V, size=size, random_state=rng)
+
+    pymc_dist = pm.Wishart
+
+    V = np.eye(3)
+    pymc_dist_params = {"nu": 4, "V": V}
+    reference_dist_params = {"nu": 4, "V": V}
+    expected_rv_op_params = {"nu": 4, "V": V}
+    sizes_to_check = [None, 1, (4, 5)]
+    sizes_expected = [
+        (3, 3),
+        (1, 3, 3),
+        (4, 5, 3, 3),
+    ]
+    reference_dist = lambda self: ft.partial(self.wishart_rng_fn, rng=self.get_random_state())
+    checks_to_run = [
+        "check_rv_size",
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size_batched_params",
+    ]
+
+    def check_rv_size_batched_params(self):
+        for size in (None, (2,), (1, 2), (4, 3, 2)):
+            x = pm.Wishart.dist(nu=4, V=np.stack([np.eye(3), np.eye(3)]), size=size)
+
+            if size is None:
+                expected_shape = (2, 3, 3)
+            else:
+                expected_shape = size + (3, 3)
+
+            assert tuple(x.shape.eval()) == expected_shape
+
+            # RNG does not currently support batched parameters, whet it does this test
+            # should be updated to check that draws also have the expected shape
+            with pytest.raises(ValueError):
+                x.eval()
+
+
+class TestMatrixNormal(BaseTestDistributionRandom):
+
+    pymc_dist = pm.MatrixNormal
+
+    mu = np.random.random((3, 3))
+    row_cov = np.eye(3)
+    col_cov = np.eye(3)
+    pymc_dist_params = {"mu": mu, "rowcov": row_cov, "colcov": col_cov}
+    expected_rv_op_params = {"mu": mu, "rowcov": row_cov, "colcov": col_cov}
+
+    sizes_to_check = (None, (1,), (2, 4))
+    sizes_expected = [(3, 3), (1, 3, 3), (2, 4, 3, 3)]
+
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_draws",
+        "check_errors",
+        "check_random_variable_prior",
+    ]
+
+    def check_draws(self):
+        delta = 0.05  # limit for KS p-value
+        n_fails = 10  # Allows the KS fails a certain number of times
+
+        def ref_rand(mu, rowcov, colcov):
+            return st.matrix_normal.rvs(mean=mu, rowcov=rowcov, colcov=colcov)
+
+        with pm.Model():
+            matrixnormal = pm.MatrixNormal(
+                "matnormal",
+                mu=np.random.random((3, 3)),
+                rowcov=np.eye(3),
+                colcov=np.eye(3),
+            )
+            check = pm.sample_prior_predictive(n_fails, return_inferencedata=False, random_seed=1)
+
+        ref_smp = ref_rand(mu=np.random.random((3, 3)), rowcov=np.eye(3), colcov=np.eye(3))
+
+        p, f = delta, n_fails
+        while p <= delta and f > 0:
+            matrixnormal_smp = check["matnormal"]
+
+            p = np.min(
+                [
+                    st.ks_2samp(
+                        np.atleast_1d(matrixnormal_smp).flatten(),
+                        np.atleast_1d(ref_smp).flatten(),
+                    )
+                ]
+            )
+            f -= 1
+
+        assert p > delta
+
+    def check_errors(self):
+        with pm.Model():
+            matrixnormal = pm.MatrixNormal(
+                "matnormal",
+                mu=np.random.random((3, 3)),
+                rowcov=np.eye(3),
+                colcov=np.eye(3),
+            )
+            with pytest.raises(ValueError):
+                logp(matrixnormal, aesara.tensor.ones((3, 3, 3)))
+
+    def check_random_variable_prior(self):
+        """
+        This test checks for shape correctness when using MatrixNormal distribution
+        with parameters as random variables.
+        Originally reported - https://github.com/pymc-devs/pymc/issues/3585
+        """
+        K = 3
+        D = 15
+        mu_0 = np.zeros((D, K))
+        lambd = 1.0
+        with pm.Model() as model:
+            sd_dist = pm.HalfCauchy.dist(beta=2.5, size=D)
+            packedL = pm.LKJCholeskyCov("packedL", eta=2, n=D, sd_dist=sd_dist, compute_corr=False)
+            L = pm.expand_packed_triangular(D, packedL, lower=True)
+            Sigma = pm.Deterministic("Sigma", L.dot(L.T))  # D x D covariance
+            mu = pm.MatrixNormal(
+                "mu", mu=mu_0, rowcov=(1 / lambd) * Sigma, colcov=np.eye(K), shape=(D, K)
+            )
+            prior = pm.sample_prior_predictive(2, return_inferencedata=False)
+
+        assert prior["mu"].shape == (2, D, K)
+
+
+class TestKroneckerNormal(BaseTestDistributionRandom):
+    def kronecker_rng_fn(self, size, mu, covs=None, sigma=None, rng=None):
+        cov = pm.math.kronecker(covs[0], covs[1]).eval()
+        cov += sigma**2 * np.identity(cov.shape[0])
+        return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
+
+    pymc_dist = pm.KroneckerNormal
+
+    n = 3
+    N = n**2
+    covs = [RandomPdMatrix(n), RandomPdMatrix(n)]
+    mu = np.random.random(N) * 0.1
+    sigma = 1
+
+    pymc_dist_params = {"mu": mu, "covs": covs, "sigma": sigma}
+    expected_rv_op_params = {"mu": mu, "covs": covs, "sigma": sigma}
+    reference_dist_params = {"mu": mu, "covs": covs, "sigma": sigma}
+    sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+    sizes_expected = [(N,), (N,), (1, N), (1, N), (5, N), (4, 5, N), (2, 4, 2, N)]
+
+    reference_dist = lambda self: ft.partial(self.kronecker_rng_fn, rng=self.get_random_state())
+    checks_to_run = [
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestOrderedMultinomial(BaseTestDistributionRandom):
+    pymc_dist = _OrderedMultinomial
+    pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2]), "n": 1000}
+    sizes_to_check = [None, (1), (4,), (3, 2)]
+    sizes_expected = [(4,), (1, 4), (4, 4), (3, 2, 4)]
+    expected_rv_op_params = {
+        "n": 1000,
+        "p": np.array([0.11920292, 0.38079708, 0.38079708, 0.11920292]),
+    }
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+    ]
+
+
+class TestLKJCorr(BaseTestDistributionRandom):
+    pymc_dist = pm.LKJCorr
+    pymc_dist_params = {"n": 3, "eta": 1.0}
+    expected_rv_op_params = {"n": 3, "eta": 1.0}
+
+    sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+    sizes_expected = [
+        (3,),
+        (3,),
+        (1, 3),
+        (1, 3),
+        (5, 3),
+        (4, 5, 3),
+        (2, 4, 2, 3),
+    ]
+
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_draws_match_expected",
+    ]
+
+    def check_draws_match_expected(self):
+        def ref_rand(size, n, eta):
+            shape = int(n * (n - 1) // 2)
+            beta = eta - 1 + n / 2
+            return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
+
+        pymc_random(
+            pm.LKJCorr,
+            {
+                "n": Domain([2, 10, 50], edges=(None, None)),
+                "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
+            },
+            ref_rand=ref_rand,
+            size=1000,
+        )
+
+
+class TestLKJCholeskyCov(BaseTestDistributionRandom):
+    pymc_dist = _LKJCholeskyCov
+    pymc_dist_params = {"eta": 1.0, "n": 3, "sd_dist": pm.DiracDelta.dist([0.5, 1.0, 2.0])}
+    expected_rv_op_params = {"n": 3, "eta": 1.0, "sd_dist": pm.DiracDelta.dist([0.5, 1.0, 2.0])}
+    size = None
+
+    sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+    sizes_expected = [
+        (6,),
+        (6,),
+        (1, 6),
+        (1, 6),
+        (5, 6),
+        (4, 5, 6),
+        (2, 4, 2, 6),
+    ]
+
+    tests_to_run = [
+        "check_rv_size",
+        "check_draws_match_expected",
+    ]
+
+    def check_rv_size(self):
+        for size, expected in zip(self.sizes_to_check, self.sizes_expected):
+            sd_dist = pm.Exponential.dist(1, size=(*to_tuple(size), 3))
+            pymc_rv = self.pymc_dist.dist(n=3, eta=1, sd_dist=sd_dist, size=size)
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            actual = pymc_rv.eval().shape
+            assert actual == expected_symbolic == expected
+
+    def check_draws_match_expected(self):
+        # TODO: Find better comparison:
+        rng = aesara.shared(self.get_random_state(reset=True))
+        x = _LKJCholeskyCov.dist(n=2, eta=10_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]), rng=rng)
+        assert np.all(np.abs(x.eval() - np.array([0.5, 0, 2.0])) < 0.01)
+
+
+@pytest.mark.parametrize("sparse", [True, False])
+def test_car_rng_fn(sparse):
+    delta = 0.05  # limit for KS p-value
+    n_fails = 20  # Allows the KS fails a certain number of times
+    size = (100,)
+
+    W = np.array(
+        [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
+    )
+
+    tau = 2
+    alpha = 0.5
+    mu = np.array([1, 1, 1, 1])
+
+    D = W.sum(axis=0)
+    prec = tau * (np.diag(D) - alpha * W)
+    cov = np.linalg.inv(prec)
+    W = aesara.tensor.as_tensor_variable(W)
+    if sparse:
+        W = aesara.sparse.csr_from_dense(W)
+
+    with pm.Model():
+        car = pm.CAR("car", mu, W, alpha, tau, size=size)
+        mn = pm.MvNormal("mn", mu, cov, size=size)
+        check = pm.sample_prior_predictive(n_fails, return_inferencedata=False, random_seed=1)
+
+    p, f = delta, n_fails
+    while p <= delta and f > 0:
+        car_smp, mn_smp = check["car"][f - 1, :, :], check["mn"][f - 1, :, :]
+        p = min(
+            st.ks_2samp(
+                np.atleast_1d(car_smp[..., idx]).flatten(),
+                np.atleast_1d(mn_smp[..., idx]).flatten(),
+            )[1]
+            for idx in range(car_smp.shape[-1])
+        )
+        f -= 1
+    assert p > delta
