@@ -88,7 +88,7 @@ class MeanFieldGroup(Group):
     def _prepare_start_sigma(self, start_sigma):
         rho = np.zeros((self.ddim,))
         if start_sigma is not None:
-            for name, slice_, *_ in self.ordering.items():
+            for name, slice_, *_ in self.ordering.values():
                 sigma = start_sigma.get(name)
                 if sigma is not None:
                     rho[slice_] = np.log(np.exp(np.abs(sigma)) - 1.0)

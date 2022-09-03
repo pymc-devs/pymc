@@ -257,7 +257,9 @@ class Inference:
                     )
                 )
         else:
-            if n < 10:
+            if n == 0:
+                logger.info(f"Initialization only")
+            elif n < 10:
                 logger.info(f"Finished [100%]: Loss = {scores[-1]:,.5g}")
             else:
                 avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
@@ -466,7 +468,7 @@ class FullRankADVI(KLqp):
     random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start: `Point`
+    start: `dict[str, np.ndarray]` or `StartDict`
         starting point for inference
 
     References
@@ -534,13 +536,11 @@ class SVGD(ImplicitGradient):
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
     temperature: float
         parameter responsible for exploration, higher temperature gives more broad posterior estimate
-    start: `dict`
+    start: `dict[str, np.ndarray]` or `StartDict`
         initial point for inference
     random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start: `Point`
-        starting point for inference
     kwargs: other keyword arguments passed to estimator
 
     References
@@ -631,7 +631,11 @@ class ASVGD(ImplicitGradient):
             "is often **underestimated** when using temperature = 1."
         )
         if approx is None:
-            approx = FullRank(model=kwargs.pop("model", None))
+            approx = FullRank(
+                model=kwargs.pop("model", None),
+                random_seed=kwargs.pop("random_seed", None),
+                start=kwargs.pop("start", None),
+            )
         super().__init__(estimator=estimator, approx=approx, kernel=kernel, **kwargs)
 
     def fit(
