@@ -30,6 +30,7 @@ from pymc.distributions.shape_utils import (
     convert_shape,
     convert_size,
     get_broadcastable_dist_samples,
+    rv_size_is_none,
     shapes_broadcasting,
     to_tuple,
 )
@@ -476,3 +477,22 @@ class TestShapeDimsSize:
         # Confirm that the rng is properly offset, otherwise the second value of the first
         # draw, would match the first value of the second draw
         assert fn()[1] != fn()[0]
+
+
+def test_rv_size_is_none():
+    rv = pm.Normal.dist(0, 1, size=None)
+    assert rv_size_is_none(rv.owner.inputs[1])
+
+    rv = pm.Normal.dist(0, 1, size=())
+    assert rv_size_is_none(rv.owner.inputs[1])
+
+    rv = pm.Normal.dist(0, 1, size=1)
+    assert not rv_size_is_none(rv.owner.inputs[1])
+
+    size = pm.Bernoulli.dist(0.5)
+    rv = pm.Normal.dist(0, 1, size=size)
+    assert not rv_size_is_none(rv.owner.inputs[1])
+
+    size = pm.Normal.dist(0, 1).size
+    rv = pm.Normal.dist(0, 1, size=size)
+    assert not rv_size_is_none(rv.owner.inputs[1])

@@ -56,12 +56,12 @@ jobs:
             pymc/tests/distributions/test_discrete.py
             pymc/tests/distributions/test_continuous.py
             pymc/tests/distributions/test_multivariate.py
+            pymc/tests/distributions/test_simulator.py
 
           - |
             pymc/tests/test_tuning.py
             pymc/tests/test_shared.py
             pymc/tests/test_types.py
-            pymc/tests/distributions/test_moments.py
 
           - |
             pymc/tests/test_modelcontext.py

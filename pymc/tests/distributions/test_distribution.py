@@ -26,7 +26,9 @@ from scipy import integrate
 import pymc as pm
 
 from pymc.distributions import MvNormal, MvStudentT, joint_logp, logp
+from pymc.distributions.distribution import _moment, moment
 from pymc.distributions.shape_utils import to_tuple
+from pymc.tests.distributions.util import assert_moment_is_expected
 from pymc.vartypes import continuous_types
 
 
@@ -96,25 +98,6 @@ class TestBugfixes:
         assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), 0 * 10)
 
 
-def test_serialize_density_dist():
-    def func(x):
-        return -2 * (x**2).sum()
-
-    def random(rng, size):
-        return rng.uniform(-2, 2, size=size)
-
-    with pm.Model():
-        pm.Normal("x")
-        y = pm.DensityDist("y", logp=func, random=random)
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-            pm.sample(draws=5, tune=1, mp_ctx="spawn")
-
-    import cloudpickle
-
-    cloudpickle.loads(cloudpickle.dumps(y))
-
-
 @pytest.mark.parametrize(
     "method,newcode",
     [
@@ -140,34 +123,155 @@ def test_logp_gives_migration_instructions(method, newcode):
     pass
 
 
-def test_density_dist_old_api_error():
-    with pm.Model():
-        with pytest.raises(
-            TypeError, match="The DensityDist API has changed, you are using the old API"
-        ):
-            pm.DensityDist("a", lambda x: x)
+def test_all_distributions_have_moments():
+    import pymc.distributions as dist_module
+
+    from pymc.distributions.distribution import DistributionMeta
+
+    dists = (getattr(dist_module, dist) for dist in dist_module.__all__)
+    dists = (dist for dist in dists if isinstance(dist, DistributionMeta))
+    missing_moments = {
+        dist for dist in dists if type(getattr(dist, "rv_op", None)) not in _moment.registry
+    }
+
+    # Ignore super classes
+    missing_moments -= {
+        dist_module.Distribution,
+        dist_module.Discrete,
+        dist_module.Continuous,
+        dist_module.NoDistribution,
+        dist_module.DensityDist,
+        dist_module.simulator.Simulator,
+    }
+
+    # Distributions that have not been refactored for V4 yet
+    not_implemented = {
+        dist_module.timeseries.GARCH11,
+        dist_module.timeseries.MvGaussianRandomWalk,
+        dist_module.timeseries.MvStudentTRandomWalk,
+    }
+
+    # Distributions that have been refactored but don't yet have moments
+    not_implemented |= {
+        dist_module.multivariate.Wishart,
+    }
+
+    unexpected_implemented = not_implemented - missing_moments
+    if unexpected_implemented:
+        raise Exception(
+            f"Distributions {unexpected_implemented} have a `moment` implemented. "
+            "This test must be updated to expect this."
+        )
+
+    unexpected_not_implemented = missing_moments - not_implemented
+    if unexpected_not_implemented:
+        raise NotImplementedError(
+            f"Unexpected by this test, distributions {unexpected_not_implemented} do "
+            "not have a `moment` implementation. Either add a moment or filter "
+            "these distributions in this test."
+        )
 
 
-@pytest.mark.parametrize("size", [None, (), (2,)], ids=str)
-def test_density_dist_multivariate_logp(size):
-    supp_shape = 5
-    with pm.Model() as model:
+class TestDensityDist:
+    @pytest.mark.parametrize("size", [(), (3,), (3, 2)], ids=str)
+    def test_density_dist_with_random(self, size):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0, 1)
+            obs = pm.DensityDist(
+                "density_dist",
+                mu,
+                random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
+                observed=np.random.randn(100, *size),
+            )
 
-        def logp(value, mu):
-            return pm.MvNormal.logp(value, mu, at.eye(mu.shape[0]))
+        assert obs.eval().shape == (100,) + size
 
-        mu = pm.Normal("mu", size=supp_shape)
-        a = pm.DensityDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
-    mu_val = npr.normal(loc=0, scale=1, size=supp_shape).astype(aesara.config.floatX)
-    a_val = npr.normal(loc=mu_val, scale=1, size=to_tuple(size) + (supp_shape,)).astype(
-        aesara.config.floatX
+    def test_density_dist_without_random(self):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0, 1)
+            pm.DensityDist(
+                "density_dist",
+                mu,
+                logp=lambda value, mu: logp(pm.Normal.dist(mu, 1, size=100), value),
+                observed=np.random.randn(100),
+                initval=0,
+            )
+            idata = pm.sample(tune=50, draws=100, cores=1, step=pm.Metropolis())
+
+        with pytest.raises(NotImplementedError):
+            pm.sample_posterior_predictive(idata, model=model)
+
+    @pytest.mark.parametrize("size", [(), (3,), (3, 2)], ids=str)
+    def test_density_dist_with_random_multivariate(self, size):
+        supp_shape = 5
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0, 1, size=supp_shape)
+            obs = pm.DensityDist(
+                "density_dist",
+                mu,
+                random=lambda mu, rng=None, size=None: rng.multivariate_normal(
+                    mean=mu, cov=np.eye(len(mu)), size=size
+                ),
+                observed=np.random.randn(100, *size, supp_shape),
+                ndims_params=[1],
+                ndim_supp=1,
+            )
+
+        assert obs.eval().shape == (100,) + size + (supp_shape,)
+
+    def test_serialize_density_dist(self):
+        def func(x):
+            return -2 * (x**2).sum()
+
+        def random(rng, size):
+            return rng.uniform(-2, 2, size=size)
+
+        with pm.Model():
+            pm.Normal("x")
+            y = pm.DensityDist("y", logp=func, random=random)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                pm.sample(draws=5, tune=1, mp_ctx="spawn")
+
+        import cloudpickle
+
+        cloudpickle.loads(cloudpickle.dumps(y))
+
+    def test_density_dist_old_api_error(self):
+        with pm.Model():
+            with pytest.raises(
+                TypeError, match="The DensityDist API has changed, you are using the old API"
+            ):
+                pm.DensityDist("a", lambda x: x)
+
+    @pytest.mark.parametrize("size", [None, (), (2,)], ids=str)
+    def test_density_dist_multivariate_logp(self, size):
+        supp_shape = 5
+        with pm.Model() as model:
+
+            def logp(value, mu):
+                return pm.MvNormal.logp(value, mu, at.eye(mu.shape[0]))
+
+            mu = pm.Normal("mu", size=supp_shape)
+            a = pm.DensityDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
+        mu_val = npr.normal(loc=0, scale=1, size=supp_shape).astype(aesara.config.floatX)
+        a_val = npr.normal(loc=mu_val, scale=1, size=to_tuple(size) + (supp_shape,)).astype(
+            aesara.config.floatX
+        )
+        log_densityt = joint_logp(a, a.tag.value_var, sum=False)[0]
+        assert log_densityt.eval(
+            {a.tag.value_var: a_val, mu.tag.value_var: mu_val},
+        ).shape == to_tuple(size)
+
+    @pytest.mark.parametrize(
+        "moment, size, expected",
+        [
+            (None, None, 0.0),
+            (None, 5, np.zeros(5)),
+            ("custom_moment", None, 5),
+            ("custom_moment", (2, 5), np.full((2, 5), 5)),
+        ],
     )
-
-    log_densityt = joint_logp(a, a.tag.value_var, sum=False)[0]
-    assert log_densityt.eval(
-        {a.tag.value_var: a_val, mu.tag.value_var: mu_val},
-    ).shape == to_tuple(size)
-
     def test_density_dist_default_moment_univariate(self, moment, size, expected):
         if moment == "custom_moment":
             moment = lambda rv, size, *rv_inputs: 5 * at.ones(size, dtype=rv.dtype)

@@ -36,9 +36,15 @@ from pymc.distributions.timeseries import (
 )
 from pymc.model import Model
 from pymc.sampling import draw, sample, sample_posterior_predictive
-from pymc.tests.distributions.test_moments import assert_moment_is_expected
 from pymc.tests.distributions.test_random import BaseTestDistributionRandom
-from pymc.tests.distributions.util import Nat, R, Rplus, Vector, check_logp
+from pymc.tests.distributions.util import (
+    Nat,
+    R,
+    Rplus,
+    Vector,
+    assert_moment_is_expected,
+    check_logp,
+)
 from pymc.tests.helpers import select_by_precision
 
 

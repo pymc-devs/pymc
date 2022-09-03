@@ -46,6 +46,7 @@ from pymc.tests.distributions.util import (
     Unit,
     UnitSortedVector,
     Vector,
+    assert_moment_is_expected,
     check_logcdf,
     check_logp,
     check_selfconsistency_discrete_logcdf,
@@ -622,3 +623,243 @@ def test_constantdist_deprecated():
         with pm.Model() as m:
             x = pm.Constant("x", c=1)
             assert isinstance(x.owner.op, pm.distributions.discrete.DiracDeltaRV)
+
+
+class TestMoments:
+    @pytest.mark.parametrize(
+        "p, size, expected",
+        [
+            (0.3, None, 0),
+            (0.9, 5, np.ones(5)),
+            (np.linspace(0, 1, 4), None, [0, 0, 1, 1]),
+            (np.linspace(0, 1, 4), (2, 4), np.full((2, 4), [0, 0, 1, 1])),
+        ],
+    )
+    def test_bernoulli_moment(self, p, size, expected):
+        with pm.Model() as model:
+            pm.Bernoulli("x", p=p, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "n, alpha, beta, size, expected",
+        [
+            (10, 1, 1, None, 5),
+            (10, 1, 1, 5, np.full(5, 5)),
+            (10, 1, np.arange(1, 6), None, np.round(10 / np.arange(2, 7))),
+            (10, 1, np.arange(1, 6), (2, 5), np.full((2, 5), np.round(10 / np.arange(2, 7)))),
+        ],
+    )
+    def test_beta_binomial_moment(self, alpha, beta, n, size, expected):
+        with pm.Model() as model:
+            pm.BetaBinomial("x", alpha=alpha, beta=beta, n=n, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "n, p, size, expected",
+        [
+            (7, 0.7, None, 5),
+            (7, 0.3, 5, np.full(5, 2)),
+            (10, np.arange(1, 6) / 10, None, np.arange(1, 6)),
+            (10, np.arange(1, 6) / 10, (2, 5), np.full((2, 5), np.arange(1, 6))),
+        ],
+    )
+    def test_binomial_moment(self, n, p, size, expected):
+        with pm.Model() as model:
+            pm.Binomial("x", n=n, p=p, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, size, expected",
+        [
+            (2.7, None, 2),
+            (2.3, 5, np.full(5, 2)),
+            (np.arange(1, 5), None, np.arange(1, 5)),
+            (np.arange(1, 5), (2, 4), np.full((2, 4), np.arange(1, 5))),
+        ],
+    )
+    def test_poisson_moment(self, mu, size, expected):
+        with pm.Model() as model:
+            pm.Poisson("x", mu=mu, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "n, p, size, expected",
+        [
+            (10, 0.7, None, 4),
+            (10, 0.7, 5, np.full(5, 4)),
+            (np.full(3, 10), np.arange(1, 4) / 10, None, np.array([90, 40, 23])),
+            (
+                10,
+                np.arange(1, 4) / 10,
+                (2, 3),
+                np.full((2, 3), np.array([90, 40, 23])),
+            ),
+        ],
+    )
+    def test_negative_binomial_moment(self, n, p, size, expected):
+        with pm.Model() as model:
+            pm.NegativeBinomial("x", n=n, p=p, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "c, size, expected",
+        [
+            (1, None, 1),
+            (1, 5, np.full(5, 1)),
+            (np.arange(1, 6), None, np.arange(1, 6)),
+        ],
+    )
+    def test_diracdelta_moment(self, c, size, expected):
+        with pm.Model() as model:
+            pm.DiracDelta("x", c=c, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "psi, mu, size, expected",
+        [
+            (0.9, 3.0, None, 3),
+            (0.8, 2.9, 5, np.full(5, 2)),
+            (0.2, np.arange(1, 5) * 5, None, np.arange(1, 5)),
+            (0.2, np.arange(1, 5) * 5, (2, 4), np.full((2, 4), np.arange(1, 5))),
+        ],
+    )
+    def test_zero_inflated_poisson_moment(self, psi, mu, size, expected):
+        with pm.Model() as model:
+            pm.ZeroInflatedPoisson("x", psi=psi, mu=mu, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "psi, n, p, size, expected",
+        [
+            (0.8, 7, 0.7, None, 4),
+            (0.8, 7, 0.3, 5, np.full(5, 2)),
+            (0.4, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
+            (
+                0.4,
+                25,
+                np.arange(1, 6) / 10,
+                (2, 5),
+                np.full((2, 5), np.arange(1, 6)),
+            ),
+        ],
+    )
+    def test_zero_inflated_binomial_moment(self, psi, n, p, size, expected):
+        with pm.Model() as model:
+            pm.ZeroInflatedBinomial("x", psi=psi, n=n, p=p, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "p, size, expected",
+        [
+            (0.5, None, 2),
+            (0.2, 5, 5 * np.ones(5)),
+            (np.linspace(0.25, 1, 4), None, [4, 2, 1, 1]),
+            (np.linspace(0.25, 1, 4), (2, 4), np.full((2, 4), [4, 2, 1, 1])),
+        ],
+    )
+    def test_geometric_moment(self, p, size, expected):
+        with pm.Model() as model:
+            pm.Geometric("x", p=p, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "N, k, n, size, expected",
+        [
+            (50, 10, 20, None, 4),
+            (50, 10, 23, 5, np.full(5, 5)),
+            (50, 10, np.arange(23, 28), None, np.full(5, 5)),
+            (
+                50,
+                10,
+                np.arange(18, 23),
+                (2, 5),
+                np.full((2, 5), 4),
+            ),
+        ],
+    )
+    def test_hyper_geometric_moment(self, N, k, n, size, expected):
+        with pm.Model() as model:
+            pm.HyperGeometric("x", N=N, k=k, n=n, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "lower, upper, size, expected",
+        [
+            (1, 5, None, 3),
+            (1, 5, 5, np.full(5, 3)),
+            (1, np.arange(5, 22, 4), None, np.arange(3, 13, 2)),
+            (
+                1,
+                np.arange(5, 22, 4),
+                (2, 5),
+                np.full((2, 5), np.arange(3, 13, 2)),
+            ),
+        ],
+    )
+    def test_discrete_uniform_moment(self, lower, upper, size, expected):
+        with pm.Model() as model:
+            pm.DiscreteUniform("x", lower=lower, upper=upper, size=size)
+            assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "q, beta, size, expected",
+        [
+            (0.5, 0.5, None, 0),
+            (0.6, 0.1, 5, (20,) * 5),
+            (np.linspace(0.25, 0.99, 4), 0.42, None, [0, 0, 6, 23862]),
+            (
+                np.linspace(0.5, 0.99, 3),
+                [[1, 1.25, 1.75], [1.25, 0.75, 0.5]],
+                None,
+                [[0, 0, 10], [0, 2, 4755]],
+            ),
+        ],
+    )
+    def test_discrete_weibull_moment(self, q, beta, size, expected):
+        with pm.Model() as model:
+            pm.DiscreteWeibull("x", q=q, beta=beta, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "p, size, expected",
+        [
+            (np.array([0.1, 0.3, 0.6]), None, 2),
+            (np.array([0.6, 0.1, 0.3]), 5, np.full(5, 0)),
+            (np.full((2, 3), np.array([0.6, 0.1, 0.3])), None, [0, 0]),
+            (
+                np.full((2, 3), np.array([0.1, 0.3, 0.6])),
+                (3, 2),
+                np.full((3, 2), [2, 2]),
+            ),
+        ],
+    )
+    def test_categorical_moment(self, p, size, expected):
+        with pm.Model() as model:
+            pm.Categorical("x", p=p, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "psi, mu, alpha, size, expected",
+        [
+            (0.2, 10, 3, None, 2),
+            (0.2, 10, 4, 5, np.full(5, 2)),
+            (
+                0.4,
+                np.arange(1, 5),
+                np.arange(2, 6),
+                None,
+                np.array([0, 1, 1, 2] if aesara.config.floatX == "float64" else [0, 0, 1, 1]),
+            ),
+            (
+                np.linspace(0.2, 0.6, 3),
+                np.arange(1, 10, 4),
+                np.arange(1, 4),
+                (2, 3),
+                np.full((2, 3), np.array([0, 2, 5])),
+            ),
+        ],
+    )
+    def test_zero_inflated_negative_binomial_moment(self, psi, mu, alpha, size, expected):
+        with pm.Model() as model:
+            pm.ZeroInflatedNegativeBinomial("x", psi=psi, mu=mu, alpha=alpha, size=size)
+        assert_moment_is_expected(model, expected)
