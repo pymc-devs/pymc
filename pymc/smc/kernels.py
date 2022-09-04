@@ -135,16 +135,16 @@ class SMC_KERNEL(ABC):
 
         Parameters
         ----------
-        draws : int, default = 2000
+        draws : int, default 2000
             The number of samples to draw from the posterior (i.e. last stage). Also the number of
             independent chains. Defaults to 2000.
-        start : dict, or array of dict, default = None
+        start : dict, or array of dict, default None
             Starting point in parameter space. It should be a list of dict with length `chains`.
             When None (default) the starting point is sampled from the prior distribution.
         model : Model (optional if in ``with`` context).
         random_seed : int, array_like of int, RandomState or Generator, optional
-            Random seed(s) used by the sampling steps.
-        threshold : float, default = 0.5
+            Value used to initialize the random number generator.
+        threshold : float, default 0.5
             Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
             the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
             It should be between 0 and 1.
@@ -353,11 +353,12 @@ class IMH(SMC_KERNEL):
         """
         Parameters
         ----------
-        correlation_threshold : float, default = 0.01
+        correlation_threshold : float, default 0.01
             The lower the value, the higher the number of IMH steps computed automatically.
             Defaults to 0.01. It should be between 0 and 1.
         **kwargs : dict, optional
-            Keyword arguments passed to the SMC_kernel.
+            Keyword arguments passed to the SMC_kernel.  Refer to SMC_kernel documentation for a
+        list of all possible arguments.
 
         """
         super().__init__(*args, **kwargs)
@@ -458,11 +459,13 @@ class MH(SMC_KERNEL):
         """
         Parameters
         ----------
-        correlation_threshold : float, default = 0.01
+        correlation_threshold : float, default 0.01
             The lower the value, the higher the number of MH steps computed automatically.
             Defaults to 0.01. It should be between 0 and 1.
         **kwargs : dict, optional
-            Keyword arguments passed to the SMC_kernel.
+            Keyword arguments passed to the SMC_kernel.  Refer to SMC_kernel documentation for a
+            list of all possible arguments.
+
         """
         super().__init__(*args, **kwargs)
         self.correlation_threshold = correlation_threshold
@@ -591,11 +594,11 @@ def _logp_forw(point, out_vars, in_vars, shared):
     Parameters
     ----------
     out_vars : list
-        containing Distribution for the output variables
+        Containing Distribution for the output variables
     in_vars : list
-        containing Distribution for the input variables
+        Containing Distribution for the input variables
     shared : list
-        containing TensorVariable for depended shared data
+        Containing TensorVariable for depended shared data
     """
 
     # Replace integer inputs with rounded float inputs
