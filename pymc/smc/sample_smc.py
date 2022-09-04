@@ -102,7 +102,7 @@ def sample_smc(
     SMC works by moving through successive stages. At each stage the inverse temperature
     :math:`\beta` is increased a little bit (starting from 0 up to 1). When :math:`\beta` = 0
     we have the prior distribution and when :math:`\beta` = 1 we have the posterior distribution.
-    In general terms, we are always computing samples from a tempered posterior that we can
+    So in more general terms, we are always computing samples from a tempered posterior that we can
     write as:
 
     .. math::
@@ -154,7 +154,7 @@ def sample_smc(
 
     if kernel_kwargs.pop("save_sim_data", None) is not None:
         warnings.warn(
-            "Save_sim_data has been deprecated. Use pm.sample_posterior_predictive "
+            "save_sim_data has been deprecated. Use pm.sample_posterior_predictive "
             "to obtain the same type of samples.",
             FutureWarning,
             stacklevel=2,
@@ -162,7 +162,7 @@ def sample_smc(
 
     if kernel_kwargs.pop("save_log_pseudolikelihood", None) is not None:
         warnings.warn(
-            "Save_log_pseudolikelihood has been deprecated. This information is "
+            "save_log_pseudolikelihood has been deprecated. This information is "
             "now saved as log_likelihood in models with Simulator distributions.",
             FutureWarning,
             stacklevel=2,
