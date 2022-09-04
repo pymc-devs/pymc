@@ -53,7 +53,7 @@ class SMC_KERNEL(ABC):
             to sampling from the prior distribution. This method is only called
             if `start` is not specified.
 
-        _initialize_kernel: default
+        _initialize_kernel : default
             Creates initial population of particles in the variable
             `self.tempered_posterior` and populates the `self.var_info` dictionary
             with information about model variables shape and size as
@@ -70,13 +70,13 @@ class SMC_KERNEL(ABC):
 
             This method should not be modified.
 
-        setup_kernel: optional
+        setup_kernel : optional
             May include any logic that should be performed before sampling
             starts.
 
     During each sampling stage the following methods are called in order:
 
-        update_beta_and_weights: default
+        update_beta_and_weights : default
             The inverse temperature self.beta is updated based on the self.likelihood_logp
             and `threshold` parameter
 
@@ -88,7 +88,7 @@ class SMC_KERNEL(ABC):
             Finally the model log_marginal_likelihood of the tempered posterior
             is updated from these weights
 
-        resample: default
+        resample : default
             The particles in self.posterior are sampled with replacement based
             on self.weights, and the used resampling indexes are saved in
             `self.resampling_indexes`.
@@ -97,27 +97,27 @@ class SMC_KERNEL(ABC):
             to the order of the resampled particles. self.tempered_posterior_logp
             is computed from these and the current self.beta
 
-        tune: optional
+        tune : optional
             May include logic that should be performed before every mutation step
 
-        mutate: REQUIRED
+        mutate : REQUIRED
             Mutate particles in self.tempered_posterior
 
             This method is further responsible to update the self.prior_logp,
             self.likelihod_logp and self.tempered_posterior_logp, corresponding
             to each mutated particle
 
-        sample_stats: default
+        sample_stats : default
             Returns important sampling_stats at the end of each stage in a dictionary
             format. This will be saved in the final InferenceData objcet under `sample_stats`.
 
     Finally, at the end of sampling the following methods are called:
 
-        _posterior_to_trace: default
+        _posterior_to_trace : default
             Convert final population of particles to a posterior trace object.
             This method should not be modified.
 
-        sample_settings: default:
+        sample_settings : default:
             Returns important sample_settings at the end of sampling in a dictionary
             format. This will be saved in the final InferenceData objcet under `sample_stats`.
 
@@ -135,16 +135,16 @@ class SMC_KERNEL(ABC):
 
         Parameters
         ----------
-        draws: int
-            The number of samples to draw from the posterior (i.e. last stage). And also the number of
+        draws : int, default = 2000
+            The number of samples to draw from the posterior (i.e. last stage). Also the number of
             independent chains. Defaults to 2000.
-        start: dict, or array of dict
+        start : dict, or array of dict, default = None
             Starting point in parameter space. It should be a list of dict with length `chains`.
             When None (default) the starting point is sampled from the prior distribution.
-        model: Model (optional if in ``with`` context)).
-        random_seed: int
+        model : Model (optional if in ``with`` context).
+        random_seed : {None, int, array_like[ints]}
             Value used to initialize the random number generator.
-        threshold: float
+        threshold : float, default = 0.5
             Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
             the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
             It should be between 0 and 1.
@@ -349,7 +349,7 @@ class IMH(SMC_KERNEL):
         """
         Parameters
         ----------
-        correlation_threshold: float
+        correlation_threshold : float, default = 0.01
             The lower the value the higher the number of IMH steps computed automatically.
             Defaults to 0.01. It should be between 0 and 1.
         """
@@ -451,7 +451,7 @@ class MH(SMC_KERNEL):
         """
         Parameters
         ----------
-        correlation_threshold: float
+        correlation_threshold : float, default = 0.01
             The lower the value the higher the number of MH steps computed automatically.
             Defaults to 0.01. It should be between 0 and 1.
         """
@@ -551,11 +551,11 @@ def _logp_forw(point, out_vars, in_vars, shared):
 
     Parameters
     ----------
-    out_vars: List
+    out_vars : list
         containing :class:`pymc.Distribution` for the output variables
-    in_vars: List
+    in_vars : list
         containing :class:`pymc.Distribution` for the input variables
-    shared: List
+    shared : list
         containing :class:`aesara.tensor.Tensor` for depended shared data
     """
 
