@@ -56,41 +56,43 @@ def sample_smc(
 
     Parameters
     ----------
-    draws : int, default = 2000
+    draws : int, default 2000
         The number of samples to draw from the posterior (i.e. last stage). And also the number of
         independent chains. Defaults to 2000.
-    kernel : class, default = pm.smc.smc.IMH
-        SMC Kernel used. Defaults to pm.smc.IMH (Independent Metropolis Hastings)
-    start : dict, or array of dict, default = None
+    kernel : class, default `pymc.smc.smc.IMH`
+        SMC_Kernel used. Defaults to :class:`pymc.smc.smc.IMH` (Independent Metropolis Hastings)
+    start : dict, or array of dict, default None
         Starting point in parameter space. It should be a list of dict with length `chains`.
         When None (default) the starting point is sampled from the prior distribution.
-    model : Model (optional if in ``with`` context)).
-    random_seed : {None, int, array_like[ints]}
-        Value used to initialize the random number generator.
-    chains : int, default = None
+    model : Model (optional if in ``with`` context).
+    random_seed :  int, array_like of int, RandomState or Generator, optional
+        Random seed(s) used by the sampling steps. If a list, tuple or array of ints
+        is passed, each entry will be used to seed each chain. A ValueError will be
+        raised if the length does not match the number of chains.
+    chains : int, default None
         The number of chains to sample. Running independent chains is important for some
         convergence statistics. If ``None`` (default), then set to either ``cores`` or 2, whichever
         is larger.
-    cores : int, default = None
+    cores : int, default None
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
         system.
-    compute_convergence_checks : bool, default = True
+    compute_convergence_checks : bool, default True
         Whether to compute sampler statistics like ``R hat`` and ``effective_n``.
         Defaults to ``True``.
-    return_inferencedata : bool, default = True
-        Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
+    return_inferencedata : bool, default True
+        Whether to return the trace as an InferenceData (True) object or a MultiTrace (False).
         Defaults to ``True``.
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data`
-    progressbar : bool, optional, default = True
+        Keyword arguments for :func:`pymc.to_inference_data`.
+    progressbar : bool, optional, default True
         Whether or not to display a progress bar in the command line.
-    **kernel_kwargs : keyword arguments passed to the SMC kernel.
-        The default IMH kernel takes the following keywords:
-            threshold : float, default = 0.5
+    **kernel_kwargs : dict, optional
+        Keyword arguments passed to the SMC_kernel. The default IMH kernel takes the following keywords:
+            threshold : float, default 0.5
                 Determines the change of beta from stage to stage, i.e. indirectly the number of stages,
                 the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
                 It should be between 0 and 1.
-            correlation_threshold : float, default = 0.01
+            correlation_threshold : float, default 0.01
                 The lower the value the higher the number of MCMC steps computed automatically.
                 Defaults to 0.01. It should be between 0 and 1.
         Keyword arguments for other kernels should be checked in the respective docstrings.
@@ -112,7 +114,7 @@ def sample_smc(
      1. Initialize :math:`\beta` at zero and stage at zero.
      2. Generate N samples :math:`S_{\beta}` from the prior (because when :math `\beta = 0` the
         tempered posterior is the prior).
-     3. Increase :math:`\beta` in order to make the effective sample size equals some predefined
+     3. Increase :math:`\beta` in order to make the effective sample size equal some predefined
         value (we use :math:`Nt`, where :math:`t` is 0.5 by default).
      4. Compute a set of N importance weights W. The weights are computed as the ratio of the
         likelihoods of a sample at stage i+1 and stage i.
@@ -152,7 +154,7 @@ def sample_smc(
 
     if kernel_kwargs.pop("save_sim_data", None) is not None:
         warnings.warn(
-            "save_sim_data has been deprecated. Use pm.sample_posterior_predictive "
+            "Save_sim_data has been deprecated. Use pm.sample_posterior_predictive "
             "to obtain the same type of samples.",
             FutureWarning,
             stacklevel=2,
@@ -160,7 +162,7 @@ def sample_smc(
 
     if kernel_kwargs.pop("save_log_pseudolikelihood", None) is not None:
         warnings.warn(
-            "save_log_pseudolikelihood has been deprecated. This information is "
+            "Save_log_pseudolikelihood has been deprecated. This information is "
             "now saved as log_likelihood in models with Simulator distributions.",
             FutureWarning,
             stacklevel=2,
