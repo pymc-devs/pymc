@@ -45,6 +45,7 @@ class MarginalMixtureRV(SymbolicRandomVariable):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
     default_output = 1
+    _print_name = ("MarginalMixture", "\\operatorname{MarginalMixture}")
 
     def update(self, node: Node):
         # Update for the internal mix_indexes RV

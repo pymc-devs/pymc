@@ -52,7 +52,7 @@ from pymc.distributions.shape_utils import (
     find_size,
     shape_from_dims,
 )
-from pymc.printing import str_for_dist, str_for_symbolic_dist
+from pymc.printing import str_for_dist
 from pymc.util import UNSET
 from pymc.vartypes import string_types
 
@@ -531,9 +531,9 @@ class SymbolicDistribution:
             initval=initval,
         )
         # add in pretty-printing support
-        rv_out.str_repr = types.MethodType(str_for_symbolic_dist, rv_out)
+        rv_out.str_repr = types.MethodType(str_for_dist, rv_out)
         rv_out._repr_latex_ = types.MethodType(
-            functools.partial(str_for_symbolic_dist, formatting="latex"), rv_out
+            functools.partial(str_for_dist, formatting="latex"), rv_out
         )
 
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")

@@ -335,6 +335,7 @@ class AutoRegressiveRV(SymbolicRandomVariable):
     default_output = 1
     ar_order: int
     constant_term: bool
+    _print_name = ("AR", "\\operatorname{AR}")
 
     def __init__(self, *args, ar_order, constant_term, **kwargs):
         self.ar_order = ar_order
