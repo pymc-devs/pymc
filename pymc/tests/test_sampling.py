@@ -39,6 +39,7 @@ import pymc as pm
 from pymc.aesaraf import compile_pymc
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
+from pymc.distributions import transforms
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
 from pymc.sampling import _get_seeds_per_chain, compile_forward_sampling_function
 from pymc.tests.helpers import SeededTest, fast_unstable_sampling_mode
@@ -408,9 +409,15 @@ class TestSample(SeededTest):
             with pytest.raises(NotImplementedError):
                 xvars = [t["mu"] for t in trace]
 
-    def test_deterministic_of_unobserved(self):
+    @pytest.mark.parametrize("symbolic_rv", (False, True))
+    def test_deterministic_of_unobserved(self, symbolic_rv):
         with pm.Model() as model:
-            x = pm.HalfNormal("x", 1)
+            if symbolic_rv:
+                x = pm.Censored(
+                    "x", pm.HalfNormal.dist(1), lower=None, upper=10, transform=transforms.log
+                )
+            else:
+                x = pm.HalfNormal("x", 1)
             y = pm.Deterministic("y", x + 100)
             idata = pm.sample(
                 chains=1,
@@ -421,10 +428,15 @@ class TestSample(SeededTest):
 
         np.testing.assert_allclose(idata.posterior["y"], idata.posterior["x"] + 100)
 
-    def test_transform_with_rv_dependency(self):
+    @pytest.mark.parametrize("symbolic_rv", (False, True))
+    def test_transform_with_rv_dependency(self, symbolic_rv):
         # Test that untransformed variables that depend on upstream variables are properly handled
         with pm.Model() as m:
-            x = pm.HalfNormal("x", observed=1)
+            if symbolic_rv:
+                x = pm.Censored("x", pm.HalfNormal.dist(1), lower=0, upper=1, observed=1)
+            else:
+                x = pm.HalfNormal("x", observed=1)
+
             transform = pm.distributions.transforms.Interval(
                 bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
             )

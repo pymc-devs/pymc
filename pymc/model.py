@@ -761,7 +761,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # Replace random variables by their value variables in potential terms
         potential_logps = []
         if potentials:
-            potential_logps, _ = rvs_to_value_vars(potentials, apply_transforms=True)
+            potential_logps = rvs_to_value_vars(potentials)
 
         logp_factors = [None] * len(varlist)
         for logp_order, logp in zip((rv_order + potential_order), (rv_logps + potential_logps)):
@@ -935,7 +935,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Aesara scalar of log-probability of the Potential terms"""
         # Convert random variables in Potential expression into their log-likelihood
         # inputs and apply their transforms, if any
-        potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+        potentials = rvs_to_value_vars(self.potentials)
         if potentials:
             return at.sum([at.sum(factor) for factor in potentials])
         else:
@@ -976,10 +976,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             vars.append(value_var)
 
         # Remove rvs from untransformed values graph
-        untransformed_vars, _ = rvs_to_value_vars(untransformed_vars, apply_transforms=True)
+        untransformed_vars = rvs_to_value_vars(untransformed_vars)
 
         # Remove rvs from deterministics graph
-        deterministics, _ = rvs_to_value_vars(self.deterministics, apply_transforms=True)
+        deterministics = rvs_to_value_vars(self.deterministics)
 
         return vars + untransformed_vars + deterministics
 

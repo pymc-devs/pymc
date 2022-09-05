@@ -129,7 +129,7 @@ def test_joint_logp_basic():
     with pytest.warns(FutureWarning):
         b_logpt = joint_logpt(b, b_value_var, sum=False)
 
-    res_ancestors = list(walk_model(b_logp, walk_past_rvs=True))
+    res_ancestors = list(walk_model(b_logp))
     res_rv_ancestors = [
         v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
     ]

@@ -44,6 +44,7 @@ from pymc.aesaraf import (
 )
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicRandomVariable
+from pymc.distributions.transforms import Interval
 from pymc.vartypes import int_types
 
 
@@ -271,33 +272,53 @@ def test_pandas_to_array_pandas_index():
 
 
 def test_walk_model():
-    d = at.vector("d")
-    b = at.vector("b")
-    c = uniform(0.0, d)
+    a = at.vector("a")
+    b = uniform(0.0, a, name="b")
+    c = at.log(b)
     c.name = "c"
-    e = at.log(c)
-    a = normal(e, b)
-    a.name = "a"
+    d = at.vector("d")
+    e = normal(c, d, name="e")
 
-    test_graph = at.exp(a + 1)
+    test_graph = at.exp(e + 1)
+
     res = list(walk_model((test_graph,)))
     assert a in res
-    assert c not in res
-
-    res = list(walk_model((test_graph,), walk_past_rvs=True))
-    assert a in res
+    assert b in res
     assert c in res
+    assert d in res
+    assert e in res
 
-    res = list(walk_model((test_graph,), walk_past_rvs=True, stop_at_vars={e}))
-    assert a in res
-    assert c not in res
+    res = list(walk_model((test_graph,), stop_at_vars={c}))
+    assert a not in res
+    assert b not in res
+    assert c in res
+    assert d in res
+    assert e in res
+
+    res = list(walk_model((test_graph,), stop_at_vars={b}))
+    assert a not in res
+    assert b in res
+    assert c in res
+    assert d in res
+    assert e in res
 
 
-def test_rvs_to_value_vars():
+@pytest.mark.parametrize("symbolic_rv", (False, True))
+@pytest.mark.parametrize("apply_transforms", (True, False))
+def test_rvs_to_value_vars(symbolic_rv, apply_transforms):
+
+    # Interval transform between last two arguments
+    interval = Interval(bounds_fn=lambda *args: (args[-2], args[-1]))
 
     with pm.Model() as m:
         a = pm.Uniform("a", 0.0, 1.0)
-        b = pm.Uniform("b", 0, a + 1.0)
+        if symbolic_rv:
+            raw_b = pm.Uniform.dist(0, a + 1.0)
+            b = pm.Censored("b", raw_b, lower=0, upper=a + 1.0, transform=interval)
+            # If not True, another distribution has to be used
+            assert isinstance(b.owner.op, SymbolicRandomVariable)
+        else:
+            b = pm.Uniform("b", 0, a + 1.0, transform=interval)
         c = pm.Normal("c")
         d = at.log(c + b) + 2.0
 
@@ -307,7 +328,7 @@ def test_rvs_to_value_vars():
     b_value_var = m.rvs_to_values[b]
     c_value_var = m.rvs_to_values[c]
 
-    (res,), replaced = rvs_to_value_vars((d,))
+    (res,) = rvs_to_value_vars((d,), apply_transforms=apply_transforms)
 
     assert res.owner.op == at.add
     log_output = res.owner.inputs[0]
@@ -320,9 +341,14 @@ def test_rvs_to_value_vars():
     # with their value variables
     assert c_output == c_value_var
     b_output = log_add_output.owner.inputs[1]
-    assert b_output == b_value_var
+    # When transforms are applied, the input is the back-transformation of the value_var,
+    # otherwise it is the value_var itself
+    if apply_transforms:
+        assert b_output != b_value_var
+    else:
+        assert b_output == b_value_var
 
-    res_ancestors = list(walk_model((res,), walk_past_rvs=True))
+    res_ancestors = list(walk_model((res,)))
     res_rv_ancestors = [
         v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
     ]
@@ -331,19 +357,12 @@ def test_rvs_to_value_vars():
     assert len(res_rv_ancestors) == 0
     assert b_value_var in res_ancestors
     assert c_value_var in res_ancestors
-    assert a_value_var not in res_ancestors
-
-    (res,), replaced = rvs_to_value_vars((d,), apply_transforms=True)
-
-    res_ancestors = list(walk_model((res,), walk_past_rvs=True))
-    res_rv_ancestors = [
-        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
-    ]
-
-    assert len(res_rv_ancestors) == 0
-    assert a_value_var in res_ancestors
-    assert b_value_var in res_ancestors
-    assert c_value_var in res_ancestors
+    # When transforms are used, `d` depends on `a` through the back-transformation of
+    # `b`, otherwise there is no direct connection between `d` and `a`
+    if apply_transforms:
+        assert a_value_var in res_ancestors
+    else:
+        assert a_value_var not in res_ancestors
 
 
 def test_rvs_to_value_vars_nested():
@@ -360,11 +379,32 @@ def test_rvs_to_value_vars_nested():
         before = aesara.clone_replace(m.free_RVs)
 
         # This call would change the model free_RVs in place in #5172
-        res, _ = rvs_to_value_vars(m.potentials, apply_transforms=True)
+        res = rvs_to_value_vars(m.potentials, apply_transforms=True)
 
         after = aesara.clone_replace(m.free_RVs)
 
         assert equal_computations(before, after)
+
+
+def test_rvs_to_value_vars_unvalued_rv():
+    with pm.Model() as m:
+        x = pm.Normal("x")
+        y = pm.Normal.dist(x)
+        z = pm.Normal("z", y)
+        out = z + y
+
+    x_value = m.rvs_to_values[x]
+    z_value = m.rvs_to_values[z]
+
+    (res,) = rvs_to_value_vars((out,))
+
+    assert res.owner.op == at.add
+    assert res.owner.inputs[0] is z_value
+    res_y = res.owner.inputs[1]
+    # Graph should have be cloned, and therefore y and res_y should have different ids
+    assert res_y is not y
+    assert res_y.owner.op == at.random.normal
+    assert res_y.owner.inputs[3] is x_value
 
 
 class TestCompilePyMC:

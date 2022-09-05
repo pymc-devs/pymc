@@ -1386,7 +1386,7 @@ class Approximation(WithMemoization):
             node = aesara.clone_replace(node, more_replacements)
         if not isinstance(node, (list, tuple)):
             node = [node]
-        node, _ = rvs_to_value_vars(node, apply_transforms=True)
+        node = rvs_to_value_vars(node)
         if not isinstance(node_in, (list, tuple)):
             node = node[0]
         if size is None:
