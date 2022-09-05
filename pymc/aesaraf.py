@@ -11,8 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import warnings
-
 from typing import (
     Callable,
     Dict,
@@ -147,32 +145,6 @@ def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVar
     return at.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
 
-def extract_rv_and_value_vars(
-    var: TensorVariable,
-) -> Tuple[TensorVariable, TensorVariable]:
-    """Return a random variable and it's observations or value variable, or ``None``.
-
-    Parameters
-    ==========
-    var
-        A variable corresponding to a ``RandomVariable``.
-
-    Returns
-    =======
-    The first value in the tuple is the ``RandomVariable``, and the second is the
-    measure/log-likelihood value variable that corresponds with the latter.
-
-    """
-    if not var.owner:
-        return None, None
-
-    if isinstance(var.owner.op, RandomVariable):
-        rv_value = getattr(var.tag, "observations", getattr(var.tag, "value_var", None))
-        return var, rv_value
-
-    return None, None
-
-
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
     """Extract data from observed symbolic variables.
 
@@ -200,20 +172,15 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
 
 def walk_model(
     graphs: Iterable[TensorVariable],
-    walk_past_rvs: bool = False,
     stop_at_vars: Optional[Set[TensorVariable]] = None,
     expand_fn: Callable[[TensorVariable], Iterable[TensorVariable]] = lambda var: [],
 ) -> Generator[TensorVariable, None, None]:
     """Walk model graphs and yield their nodes.
 
-    By default, these walks will not go past ``RandomVariable`` nodes.
-
     Parameters
     ==========
     graphs
         The graphs to walk.
-    walk_past_rvs
-        If ``True``, the walk will not terminate at ``RandomVariable``s.
     stop_at_vars
         A list of variables at which the walk will terminate.
     expand_fn
@@ -225,16 +192,12 @@ def walk_model(
     def expand(var):
         new_vars = expand_fn(var)
 
-        if (
-            var.owner
-            and (walk_past_rvs or not isinstance(var.owner.op, RandomVariable))
-            and (var not in stop_at_vars)
-        ):
+        if var.owner and var not in stop_at_vars:
             new_vars.extend(reversed(var.owner.inputs))
 
         return new_vars
 
-    yield from walk(graphs, expand, False)
+    yield from walk(graphs, expand, bfs=False)
 
 
 def replace_rvs_in_graphs(
@@ -263,7 +226,11 @@ def replace_rvs_in_graphs(
 
     def expand_replace(var):
         new_nodes = []
-        if var.owner and isinstance(var.owner.op, RandomVariable):
+        if var.owner:
+            # Call replacement_fn to update replacements dict inplace and, optionally,
+            # specify new nodes that should also be walked for replacements. This
+            # includes `value` variables that are not simple input variables, and may
+            # contain other `random` variables in their graphs (e.g., IntervalTransform)
             new_nodes.extend(replacement_fn(var, replacements))
         return new_nodes
 
@@ -290,10 +257,10 @@ def replace_rvs_in_graphs(
 
 def rvs_to_value_vars(
     graphs: Iterable[TensorVariable],
-    apply_transforms: bool = False,
+    apply_transforms: bool = True,
     initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
     **kwargs,
-) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
+) -> TensorVariable:
     """Clone and replace random variables in graphs with their value variables.
 
     This will *not* recompute test values in the resulting graphs.
@@ -309,38 +276,30 @@ def rvs_to_value_vars(
 
     """
 
-    # Avoid circular dependency
-    from pymc.distributions import NoDistribution
+    def populate_replacements(
+        random_var: TensorVariable, replacements: Dict[TensorVariable, TensorVariable]
+    ) -> List[TensorVariable]:
+        # Populate replacements dict with {rv: value} pairs indicating which graph
+        # RVs should be replaced by what value variables.
 
-    def transform_replacements(var, replacements):
-        rv_var, rv_value_var = extract_rv_and_value_vars(var)
+        value_var = getattr(
+            random_var.tag, "observations", getattr(random_var.tag, "value_var", None)
+        )
 
-        if rv_value_var is None:
-            # If RandomVariable does not have a value_var and corresponds to
-            # a NoDistribution, we allow further replacements in upstream graph
-            if isinstance(rv_var.owner.op, NoDistribution):
-                return rv_var.owner.inputs
+        # No value variable to replace RV with
+        if value_var is None:
+            return []
 
-            else:
-                warnings.warn(
-                    f"No value variable found for {rv_var}; "
-                    "the random variable will not be replaced."
-                )
-                return []
+        transform = getattr(value_var.tag, "transform", None)
+        if transform is not None and apply_transforms:
+            # We want to replace uses of the RV by the back-transformation of its value
+            value_var = transform.backward(value_var, *random_var.owner.inputs)
 
-        transform = getattr(rv_value_var.tag, "transform", None)
+        replacements[random_var] = value_var
 
-        if transform is None or not apply_transforms:
-            replacements[var] = rv_value_var
-            # In case the value variable is itself a graph, we walk it for
-            # potential replacements
-            return [rv_value_var]
-
-        trans_rv_value = transform.backward(rv_value_var, *rv_var.owner.inputs)
-        replacements[var] = trans_rv_value
-
-        # Walk the transformed variable and make replacements
-        return [trans_rv_value]
+        # Also walk the graph of the value variable to make any additional replacements
+        # if that is not a simple input variable
+        return [value_var]
 
     # Clone original graphs
     inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
@@ -352,7 +311,14 @@ def rvs_to_value_vars(
             equiv.get(k, k): equiv.get(v, v) for k, v in initial_replacements.items()
         }
 
-    return replace_rvs_in_graphs(graphs, transform_replacements, initial_replacements, **kwargs)
+    graphs, _ = replace_rvs_in_graphs(
+        graphs,
+        replacement_fn=populate_replacements,
+        initial_replacements=initial_replacements,
+        **kwargs,
+    )
+
+    return graphs
 
 
 def inputvars(a):

@@ -583,7 +583,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
             if isinstance(distr, CategoricalRV):
                 k_graph = rv_var.owner.inputs[3].shape[-1]
-                (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
+                (k_graph,) = rvs_to_value_vars((k_graph,))
                 k = model.compile_fn(k_graph, inputs=model.value_vars, on_unused_input="ignore")(
                     initial_point
                 )

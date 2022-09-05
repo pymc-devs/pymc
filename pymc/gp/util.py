@@ -57,7 +57,7 @@ def replace_with_values(vars_needed, replacements=None, model=None):
     model = modelcontext(model)
 
     inputs, input_names = [], []
-    for rv in walk_model(vars_needed, walk_past_rvs=True):
+    for rv in walk_model(vars_needed):
         if rv in model.named_vars.values() and not isinstance(rv, SharedVariable):
             inputs.append(rv)
             input_names.append(rv.name)
