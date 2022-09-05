@@ -1758,7 +1758,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
         (2, 4, 2, 3),
     ]
 
-    tests_to_run = [
+    checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",
         "check_draws_match_expected",
@@ -1798,7 +1798,7 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
         (2, 4, 2, 6),
     ]
 
-    tests_to_run = [
+    checks_to_run = [
         "check_rv_size",
         "check_draws_match_expected",
     ]
