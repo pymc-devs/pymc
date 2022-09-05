@@ -29,6 +29,7 @@ from aesara.tensor.sort import SortOp
 import pymc as pm
 
 from pymc import floatX
+from pymc.aesaraf import compile_pymc
 from pymc.initial_point import make_initial_point_fn
 from pymc.smc.smc import IMH
 from pymc.tests.helpers import SeededTest
@@ -363,3 +364,17 @@ class TestSimulator(SeededTest):
         cutoff = st.norm().ppf(1 - (alpha / 2))
 
         assert np.all(np.abs((result - expected_sample_mean) / expected_sample_mean_std) < cutoff)
+
+    def test_dist(self):
+        x = pm.Simulator.dist(self.normal_sim, 0, 1, sum_stat="sort", shape=(3,), class_name="test")
+        x_logp = pm.logp(x, [0, 1, 2])
+
+        x_logp_fn = compile_pymc([], x_logp, random_seed=1)
+        res1, res2 = x_logp_fn(), x_logp_fn()
+        assert res1.shape == (3,)
+        assert np.all(res1 != res2)
+
+        x_logp_fn = compile_pymc([], x_logp, random_seed=1)
+        res3, res4 = x_logp_fn(), x_logp_fn()
+        assert np.all(res1 == res3)
+        assert np.all(res2 == res4)
