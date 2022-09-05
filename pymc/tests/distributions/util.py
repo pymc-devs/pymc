@@ -690,7 +690,7 @@ class BaseTestDistributionRandom(SeededTest):
     `check_pymc_draws_match_reference`
     3. Shape variable inference is correct, via `check_rv_size`
 
-    Each desired test must be referenced by name in `tests_to_run`, when
+    Each desired test must be referenced by name in `checks_to_run`, when
     subclassing this distribution. Custom tests can be added to each class as
     well. See `TestFlat` for an example.
 
@@ -706,7 +706,7 @@ class BaseTestDistributionRandom(SeededTest):
         ```python
         sizes_to_check = [None, (1), (2, 3)]
         sizes_expected = [(3,), (1, 3), (2, 3, 3)]
-        tests_to_run = ["check_rv_size"]
+        checks_to_run = ["check_rv_size"]
         ```
 
         This is usually needed for Multivariate distributions. You can see an
@@ -833,7 +833,7 @@ class BaseTestDistributionRandom(SeededTest):
     def validate_tests_list(self):
         assert len(self.checks_to_run) == len(
             set(self.checks_to_run)
-        ), "There are duplicates in the list of tests_to_run"
+        ), "There are duplicates in the list of checks_to_run"
 
 
 def seeded_scipy_distribution_builder(dist_name: str) -> Callable:
