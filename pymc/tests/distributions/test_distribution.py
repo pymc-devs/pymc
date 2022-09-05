@@ -19,6 +19,7 @@ import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
 import pytest
+import scipy.stats as st
 
 from aeppl.abstract import get_measurable_outputs
 from aesara.tensor import TensorVariable
@@ -303,6 +304,22 @@ class TestDensityDist:
                 match="Cannot safely infer the size of a multivariate random variable's moment.",
             ):
                 evaled_moment = moment(a).eval({mu: mu_val})
+
+    def test_dist(self):
+        mu = 1
+        x = pm.DensityDist.dist(
+            mu,
+            class_name="test",
+            logp=lambda value, mu: pm.logp(pm.Normal.dist(mu), value),
+            random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
+            shape=(3,),
+        )
+
+        test_value = pm.draw(x, random_seed=1)
+        assert np.all(test_value == pm.draw(x, random_seed=1))
+
+        x_logp = pm.logp(x, test_value)
+        assert np.allclose(x_logp.eval(), st.norm(1).logpdf(test_value))
 
 
 class TestSymbolicRandomVarible:
