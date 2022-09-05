@@ -81,7 +81,6 @@ from pymc.distributions.distribution import (
     DensityDist,
     Discrete,
     Distribution,
-    NoDistribution,
     SymbolicRandomVariable,
 )
 from pymc.distributions.mixture import Mixture, NormalMixture
@@ -159,7 +158,6 @@ __all__ = [
     "SymbolicRandomVariable",
     "Continuous",
     "Discrete",
-    "NoDistribution",
     "MvNormal",
     "MatrixNormal",
     "KroneckerNormal",

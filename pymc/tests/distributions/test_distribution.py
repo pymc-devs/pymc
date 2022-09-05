@@ -102,7 +102,6 @@ def test_all_distributions_have_moments():
         dist_module.Distribution,
         dist_module.Discrete,
         dist_module.Continuous,
-        dist_module.NoDistribution,
         dist_module.DensityDist,
         dist_module.simulator.Simulator,
     }

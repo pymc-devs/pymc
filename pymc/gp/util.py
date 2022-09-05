@@ -29,9 +29,9 @@ from scipy.cluster.vq import kmeans
 from pymc.aesaraf import compile_pymc, walk_model
 
 # Avoid circular dependency when importing modelcontext
-from pymc.distributions.distribution import NoDistribution
+from pymc.distributions.distribution import Distribution
 
-assert NoDistribution  # keep both pylint and black happy
+assert Distribution  # keep both pylint and black happy
 from pymc.model import modelcontext
 
 JITTER_DEFAULT = 1e-6

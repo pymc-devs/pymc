@@ -62,7 +62,6 @@ __all__ = [
     "Distribution",
     "Continuous",
     "Discrete",
-    "NoDistribution",
     "SymbolicRandomVariable",
 ]
 
@@ -470,13 +469,6 @@ class Continuous(Distribution):
     """Base class for continuous distributions"""
 
 
-class NoDistribution(Distribution):
-    """Base class for artifical distributions
-
-    RandomVariables that share this type are allowed in logprob graphs
-    """
-
-
 class DensityDistRV(RandomVariable):
     """
     Base class for DensityDistRV
@@ -494,7 +486,7 @@ class DensityDistRV(RandomVariable):
         return cls._random_fn(*args, rng=rng, size=size)
 
 
-class DensityDist(NoDistribution):
+class DensityDist(Distribution):
     """A distribution that can be used to wrap black-box log density functions.
 
     Creates a Distribution and registers the supplied log density function to be used
