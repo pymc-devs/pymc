@@ -18,7 +18,7 @@ from aesara.compile.mode import Mode
 
 import pymc as pm
 
-from pymc.aesaraf import change_rv_size, compile_pymc, floatX
+from pymc.aesaraf import change_rv_size, compile_pymc, floatX, intX
 from pymc.distributions import logcdf, logp
 from pymc.distributions.logprob import joint_logp
 from pymc.initial_point import make_initial_point_fn

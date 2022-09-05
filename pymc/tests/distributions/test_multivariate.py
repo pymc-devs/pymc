@@ -52,6 +52,7 @@ from pymc.tests.distributions.util import (
     Vector,
     assert_moment_is_expected,
     check_logp,
+    pymc_random,
     seeded_numpy_distribution_builder,
 )
 from pymc.tests.helpers import select_by_precision
