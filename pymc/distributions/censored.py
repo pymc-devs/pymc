@@ -30,6 +30,7 @@ class CensoredRV(SymbolicRandomVariable):
     """Censored random variable"""
 
     inline_aeppl = True
+    _print_name = ("Censored", "\\operatorname{Censored}")
 
 
 class Censored(SymbolicDistribution):

@@ -20,6 +20,10 @@ from aesara.graph.basic import walk
 from aesara.tensor.basic import TensorVariable, Variable
 from aesara.tensor.elemwise import DimShuffle
 from aesara.tensor.random.basic import RandomVariable
+from aesara.tensor.random.var import (
+    RandomGeneratorSharedVariable,
+    RandomStateSharedVariable,
+)
 from aesara.tensor.var import TensorConstant
 
 from pymc.model import Model
@@ -31,40 +35,62 @@ __all__ = [
 ]
 
 
-def str_for_dist(rv: TensorVariable, formatting: str = "plain", include_params: bool = True) -> str:
-    """Make a human-readable string representation of a RandomVariable in a model, either
+def str_for_dist(
+    dist: TensorVariable, formatting: str = "plain", include_params: bool = True
+) -> str:
+    """Make a human-readable string representation of a Distribution in a model, either
     LaTeX or plain, optionally with distribution parameter values included."""
 
     if include_params:
         # first 3 args are always (rng, size, dtype), rest is relevant for distribution
-        dist_args = [_str_for_input_var(x, formatting=formatting) for x in rv.owner.inputs[3:]]
-
-    print_name = rv.name if rv.name is not None else "<unnamed>"
-    if "latex" in formatting:
-        print_name = r"\text{" + _latex_escape(print_name) + "}"
-        dist_name = rv.owner.op._print_name[1]
-        if include_params:
-            return r"${} \sim {}({})$".format(print_name, dist_name, ",~".join(dist_args))
+        if isinstance(dist.owner.op, RandomVariable):
+            dist_args = [
+                _str_for_input_var(x, formatting=formatting) for x in dist.owner.inputs[3:]
+            ]
         else:
-            return rf"${print_name} \sim {dist_name}$"
+            dist_args = [
+                _str_for_input_var(x, formatting=formatting)
+                for x in dist.owner.inputs
+                if not isinstance(x, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
+            ]
+
+    print_name = dist.name
+
+    if "latex" in formatting:
+        if print_name is not None:
+            print_name = r"\text{" + _latex_escape(dist.name) + "}"
+
+        op_name = (
+            dist.owner.op._print_name[1]
+            if hasattr(dist.owner.op, "_print_name")
+            else r"\\operatorname{Unknown}"
+        )
+        if include_params:
+            if print_name:
+                return r"${} \sim {}({})$".format(print_name, op_name, ",~".join(dist_args))
+            else:
+                return r"${}({})$".format(op_name, ",~".join(dist_args))
+
+        else:
+            if print_name:
+                return rf"${print_name} \sim {op_name}$"
+            else:
+                return rf"${op_name}$"
+
     else:  # plain
-        dist_name = rv.owner.op._print_name[0]
+        dist_name = (
+            dist.owner.op._print_name[0] if hasattr(dist.owner.op, "_print_name") else "Unknown"
+        )
         if include_params:
-            return r"{} ~ {}({})".format(print_name, dist_name, ", ".join(dist_args))
+            if print_name:
+                return r"{} ~ {}({})".format(print_name, dist_name, ", ".join(dist_args))
+            else:
+                return r"{}({})".format(dist_name, ", ".join(dist_args))
         else:
-            return rf"{print_name} ~ {dist_name}"
-
-
-def str_for_symbolic_dist(
-    rv: TensorVariable, formatting: str = "plain", include_params: bool = True
-) -> str:
-    """Make a human-readable string representation of a SymbolicDistribution in a model,
-    either LaTeX or plain, optionally with distribution parameter values included."""
-
-    if "latex" in formatting:
-        return rf"$\text{{{rv.name}}} \sim \text{{{rv.owner.op}}}$"
-    else:
-        return rf"{rv.name} ~ {rv.owner.op}"
+            if print_name:
+                return rf"{print_name} ~ {dist_name}"
+            else:
+                return dist_name
 
 
 def str_for_model(model: Model, formatting: str = "plain", include_params: bool = True) -> str:
@@ -145,7 +171,11 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
 
 
 def _str_for_input_rv(var: Variable, formatting: str) -> str:
-    _str = var.name if var.name is not None else "<unnamed>"
+    _str = (
+        var.name
+        if var.name is not None
+        else str_for_dist(var, formatting=formatting, include_params=True)
+    )
     if "latex" in formatting:
         return r"\text{" + _latex_escape(_str) + "}"
     else:
