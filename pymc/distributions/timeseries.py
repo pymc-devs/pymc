@@ -91,14 +91,12 @@ def get_steps(
     inferred_steps = None
     if shape is not None:
         shape = to_tuple(shape)
-        if shape[-1] is not ...:
-            inferred_steps = shape[-1] - step_shape_offset
+        inferred_steps = shape[-1] - step_shape_offset
 
     if inferred_steps is None and dims is not None:
         dims = convert_dims(dims)
-        if dims[-1] is not ...:
-            model = modelcontext(None)
-            inferred_steps = model.dim_lengths[dims[-1]] - step_shape_offset
+        model = modelcontext(None)
+        inferred_steps = model.dim_lengths[dims[-1]] - step_shape_offset
 
     if inferred_steps is None and observed is not None:
         observed = convert_observed_data(observed)

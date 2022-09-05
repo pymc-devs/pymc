@@ -57,11 +57,9 @@ from pymc.tests.helpers import SeededTest, select_by_precision
         (None, (10,), 0, 10, True),
         (None, (10,), 1, 9, True),
         (None, (10, 5), 0, 5, True),
-        (None, (10, ...), 0, None, True),
         (None, None, 0, None, True),
         (10, (10,), 0, 10, True),
         (10, (11,), 1, 10, True),
-        (10, (5, ...), 1, 10, True),
         (10, (5, 5), 0, 5, False),
         (10, (5, 10), 1, 9, False),
     ],
@@ -76,8 +74,8 @@ def test_get_steps(info_source, steps, shape, step_shape_offset, expected_steps,
             dims = None
             coords = {}
         else:
-            dims = tuple(str(i) if shape is not ... else ... for i, shape in enumerate(shape))
-            coords = {str(i): range(shape) for i, shape in enumerate(shape) if shape is not ...}
+            dims = tuple(str(i) for i, shape in enumerate(shape))
+            coords = {str(i): range(shape) for i, shape in enumerate(shape)}
         with Model(coords=coords):
             inferred_steps = get_steps(steps=steps, dims=dims, step_shape_offset=step_shape_offset)
 
@@ -85,9 +83,6 @@ def test_get_steps(info_source, steps, shape, step_shape_offset, expected_steps,
         if shape is None:
             observed = None
         else:
-            if ... in shape:
-                # There is no equivalent to implied dims in observed
-                return
             observed = np.zeros(shape)
         inferred_steps = get_steps(
             steps=steps, observed=observed, step_shape_offset=step_shape_offset
@@ -199,13 +194,6 @@ class TestGaussianRandomWalk:
             )
             assert tuple(grw.owner.inputs[-2].shape.eval()) == (3, 2)
 
-    def test_shape_ellipsis(self):
-        grw = pm.GaussianRandomWalk.dist(
-            mu=0, sigma=1, steps=5, init_dist=pm.Normal.dist(), shape=(3, ...)
-        )
-        assert tuple(grw.shape.eval()) == (3, 6)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (3,)
-
     def test_gaussianrandomwalk_broadcasted_by_init_dist(self):
         grw = pm.GaussianRandomWalk.dist(
             mu=0, sigma=1, steps=4, init_dist=pm.Normal.dist(size=(2, 3))
@@ -219,10 +207,9 @@ class TestGaussianRandomWalk:
         steps = x.owner.inputs[-1]
         assert steps.eval() == 5
 
-    @pytest.mark.parametrize("shape", (None, (5, ...)))
-    def test_missing_steps(self, shape):
+    def test_missing_steps(self):
         with pytest.raises(ValueError, match="Must specify steps or shape parameter"):
-            GaussianRandomWalk.dist(shape=shape, init_dist=Normal.dist(0, 100))
+            GaussianRandomWalk.dist(shape=None, init_dist=Normal.dist(0, 100))
 
     def test_inconsistent_steps_and_shape(self):
         with pytest.raises(AssertionError, match="Steps do not match last shape dimension"):
