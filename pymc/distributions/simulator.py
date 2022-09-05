@@ -25,7 +25,7 @@ from aesara.tensor.var import TensorVariable
 from scipy.spatial import cKDTree
 
 from pymc.aesaraf import floatX
-from pymc.distributions.distribution import NoDistribution, _moment
+from pymc.distributions.distribution import Distribution, _moment
 
 __all__ = ["Simulator"]
 
@@ -63,7 +63,7 @@ class SimulatorRV(RandomVariable):
         return cls._sum_stat(*args, **kwargs)
 
 
-class Simulator(NoDistribution):
+class Simulator(Distribution):
     r"""
     Simulator distribution, used for Approximate Bayesian Inference (ABC)
     with Sequential Monte Carlo (SMC) sampling via :func:`~pymc.sample_smc`.
@@ -213,11 +213,8 @@ class Simulator(NoDistribution):
         )()
 
         # The logp function is registered to the more general SimulatorRV,
-        # in order to avoid issues with multiprocessing / pickling
-
-        # rv_type = type(sim_op)
-        # NoDistribution.register(rv_type)
-        NoDistribution.register(SimulatorRV)
+        # in order to avoid issues with multiprocessing / pickling,
+        # otherwise it would be registered to `type(sim_op)`
 
         @_logprob.register(SimulatorRV)
         def logp(op, value_var_list, *dist_params, **kwargs):
