@@ -79,20 +79,19 @@ class MeanFieldGroup(Group):
         # by `self.ordering`. In the cases I looked into these turn out to be the same, but there may be edge cases or
         # future code changes that break this assumption.
         start = self._prepare_start(start)
-        rho = self._prepare_start_sigma(start_sigma)
-        return {
-            "mu": aesara.shared(pm.floatX(start), "mu"),
-            "rho": aesara.shared(pm.floatX(rho), "rho"),
-        }
+        rho1 = np.zeros((self.ddim,))
 
-    def _prepare_start_sigma(self, start_sigma):
-        rho = np.zeros((self.ddim,))
         if start_sigma is not None:
             for name, slice_, *_ in self.ordering.values():
                 sigma = start_sigma.get(name)
                 if sigma is not None:
-                    rho[slice_] = np.log(np.exp(np.abs(sigma)) - 1.0)
-        return rho
+                    rho1[slice_] = np.log(np.expm1(np.abs(sigma)))
+        rho = rho1
+
+        return {
+            "mu": aesara.shared(pm.floatX(start), "mu"),
+            "rho": aesara.shared(pm.floatX(rho), "rho"),
+        }
 
     @node_property
     def symbolic_random(self):
