@@ -40,6 +40,11 @@ def binomln(n, k):
     return at.gammaln(n + 1) - at.gammaln(k + 1) - at.gammaln(n - k + 1)
 
 
+def logdiffexp(a, b):
+    """log(exp(a) - exp(b))"""
+    return a + at.log1mexp(b - a)
+
+
 def xlogy0(m, x):
     # TODO: This should probably be a basic Aesara stabilization
     return at.switch(at.eq(x, 0), at.switch(at.eq(m, 0), 0.0, -np.inf), m * at.log(x))

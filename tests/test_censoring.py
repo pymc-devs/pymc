@@ -188,3 +188,33 @@ def test_clip_transform():
     )
 
     assert np.isclose(obs_logp, exp_logp)
+
+
+@pytest.mark.parametrize("rounding_op", (at.round, at.floor, at.ceil))
+def test_rounding(rounding_op):
+    loc = 1
+    scale = 2
+    test_value = np.arange(-3, 4)
+
+    x = at.random.normal(loc, scale, size=test_value.shape, name="x")
+    xr = rounding_op(x)
+    xr.name = "xr"
+
+    xr_vv = xr.clone()
+    logp = joint_logprob({xr: xr_vv}, sum=False)
+    assert logp is not None
+
+    x_sp = st.norm(loc, scale)
+    if rounding_op == at.round:
+        expected_logp = np.log(x_sp.cdf(test_value + 0.5) - x_sp.cdf(test_value - 0.5))
+    elif rounding_op == at.floor:
+        expected_logp = np.log(x_sp.cdf(test_value + 1.0) - x_sp.cdf(test_value))
+    elif rounding_op == at.ceil:
+        expected_logp = np.log(x_sp.cdf(test_value) - x_sp.cdf(test_value - 1.0))
+    else:
+        raise NotImplementedError()
+
+    assert np.allclose(
+        logp.eval({xr_vv: test_value}),
+        expected_logp,
+    )
