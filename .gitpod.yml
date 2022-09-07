@@ -6,7 +6,7 @@ tasks:
       echo '{"python.defaultInterpreterPath": "/workspace/pymc/env/bin/python"}' > .vscode/settings.json
       conda init bash && source ~/.bashrc
       conda env update -f conda-envs/environment-dev.yml -p /workspace/pymc/env
-      conda activate pymc-dev
+      conda activate /workspace/pymc/env
       pip install -e .
     command: |
       conda init bash && echo "conda activate /workspace/pymc/env" >> ~/.bashrc && source ~/.bashrc
