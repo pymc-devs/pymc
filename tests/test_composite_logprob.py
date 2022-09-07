@@ -4,8 +4,8 @@ import numpy as np
 import scipy.stats as st
 
 from aeppl import joint_logprob
+from aeppl.censoring import MeasurableClip
 from aeppl.rewriting import construct_ir_fgraph
-from aeppl.truncation import CensoredRV
 from tests.utils import assert_no_rvs
 
 
@@ -97,7 +97,7 @@ def test_unvalued_ir_reversion():
     assert memo[y_rv] in z_fgraph.preserve_rv_mappings.measurable_conversions
 
     measurable_y_rv = z_fgraph.preserve_rv_mappings.measurable_conversions[memo[y_rv]]
-    assert isinstance(measurable_y_rv.owner.op, CensoredRV)
+    assert isinstance(measurable_y_rv.owner.op, MeasurableClip)
 
     # `construct_ir_fgraph` should've reverted the un-valued measurable IR
     # change

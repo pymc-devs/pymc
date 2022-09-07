@@ -11,7 +11,7 @@ from tests.utils import assert_no_rvs
 
 
 @aesara.config.change_flags(compute_test_value="raise")
-def test_continuous_rv_censoring():
+def test_continuous_rv_clip():
     x_rv = at.random.normal(0.5, 1)
     cens_x_rv = at.clip(x_rv, -2, 2)
 
@@ -32,7 +32,7 @@ def test_continuous_rv_censoring():
     assert np.isclose(logp_fn(0), ref_scipy.logpdf(0))
 
 
-def test_discrete_rv_censoring():
+def test_discrete_rv_clip():
     x_rv = at.random.poisson(2)
     cens_x_rv = at.clip(x_rv, 1, 4)
 
@@ -52,7 +52,7 @@ def test_discrete_rv_censoring():
     assert np.isclose(logp_fn(2), ref_scipy.logpmf(2))
 
 
-def test_one_sided_censoring():
+def test_one_sided_clip():
     x_rv = at.random.normal(0, 1)
     lb_cens_x_rv = at.clip(x_rv, -1, x_rv)
     ub_cens_x_rv = at.clip(x_rv, x_rv, 1)
@@ -74,7 +74,7 @@ def test_one_sided_censoring():
     np.testing.assert_almost_equal(logp_fn(1, -1), ref_scipy.logpdf(-1))
 
 
-def test_useless_censoring():
+def test_useless_clip():
     x_rv = at.random.normal(0.5, 1, size=3)
     cens_x_rv = at.clip(x_rv, x_rv, x_rv)
 
@@ -89,7 +89,7 @@ def test_useless_censoring():
     np.testing.assert_allclose(logp_fn([-2, 0, 2]), ref_scipy.logpdf([-2, 0, 2]))
 
 
-def test_random_censoring():
+def test_random_clip():
     lb_rv = at.random.normal(0, 1, size=2)
     x_rv = at.random.normal(0, 2)
     cens_x_rv = at.clip(x_rv, lb_rv, [1, 1])
@@ -105,7 +105,7 @@ def test_random_censoring():
     assert res[1] != -np.inf
 
 
-def test_broadcasted_censoring_constant():
+def test_broadcasted_clip_constant():
     lb_rv = at.random.uniform(0, 1)
     x_rv = at.random.normal(0, 2)
     cens_x_rv = at.clip(x_rv, lb_rv, [1, 1])
@@ -117,7 +117,7 @@ def test_broadcasted_censoring_constant():
     assert_no_rvs(logp)
 
 
-def test_broadcasted_censoring_random():
+def test_broadcasted_clip_random():
     lb_rv = at.random.normal(0, 1)
     x_rv = at.random.normal(0, 2, size=2)
     cens_x_rv = at.clip(x_rv, lb_rv, 1)
@@ -129,7 +129,7 @@ def test_broadcasted_censoring_random():
     assert_no_rvs(logp)
 
 
-def test_fail_base_and_censored_have_values():
+def test_fail_base_and_clip_have_values():
     """Test failure when both base_rv and clipped_rv are given value vars"""
     x_rv = at.random.normal(0, 1)
     cens_x_rv = at.clip(x_rv, x_rv, 1)
@@ -141,7 +141,7 @@ def test_fail_base_and_censored_have_values():
         factorized_joint_logprob({cens_x_rv: cens_x_vv, x_rv: x_vv})
 
 
-def test_fail_multiple_censored_single_base():
+def test_fail_multiple_clip_single_base():
     """Test failure when multiple clipped_rvs share a single base_rv"""
     base_rv = at.random.normal(0, 1)
     cens_rv1 = at.clip(base_rv, -1, 1)
@@ -172,7 +172,7 @@ def test_deterministic_clipping():
     )
 
 
-def test_censored_transform():
+def test_clip_transform():
     x_rv = at.random.normal(0.5, 1)
     cens_x_rv = at.clip(x_rv, 0, x_rv)
 

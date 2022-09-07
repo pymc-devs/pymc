@@ -15,22 +15,24 @@ from aeppl.logprob import CheckParameterValue, _logcdf, _logprob
 from aeppl.rewriting import measurable_ir_rewrites_db
 
 
-class CensoredRV(Elemwise):
-    """A placeholder used to specify a log-likelihood for a censored RV sub-graph."""
+class MeasurableClip(Elemwise):
+    """A placeholder used to specify a log-likelihood for a clipped RV sub-graph."""
 
 
-MeasurableVariable.register(CensoredRV)
+MeasurableVariable.register(MeasurableClip)
 
 
 @node_rewriter(tracks=[Elemwise])
-def find_censored_rvs(fgraph: FunctionGraph, node: Node) -> Optional[List[CensoredRV]]:
+def find_measurable_clips(
+    fgraph: FunctionGraph, node: Node
+) -> Optional[List[MeasurableClip]]:
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
 
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
 
-    if isinstance(node.op, CensoredRV):
+    if isinstance(node.op, MeasurableClip):
         return None  # pragma: no cover
 
     if not (isinstance(node.op, Elemwise) and isinstance(node.op.scalar_op, Clip)):
@@ -47,35 +49,48 @@ def find_censored_rvs(fgraph: FunctionGraph, node: Node) -> Optional[List[Censor
         return None
 
     # Replace bounds by `+-inf` if `y = clip(x, x, ?)` or `y=clip(x, ?, x)`
-    # This is used in `censor_logprob` to generate a more succint logprob graph
-    # for one-sided censored random variables
+    # This is used in `clip_logprob` to generate a more succint logprob graph
+    # for one-sided clipped random variables
     lower_bound = lower_bound if (lower_bound is not base_var) else at.constant(-np.inf)
     upper_bound = upper_bound if (upper_bound is not base_var) else at.constant(np.inf)
 
-    censored_op = CensoredRV(scalar_clip)
+    clipped_op = MeasurableClip(scalar_clip)
     # Make base_var unmeasurable
     unmeasurable_base_var = assign_custom_measurable_outputs(base_var.owner)
-    censored_rv_node = censored_op.make_node(
+    clipped_rv_node = clipped_op.make_node(
         unmeasurable_base_var, lower_bound, upper_bound
     )
-    censored_rv = censored_rv_node.outputs[0]
+    clipped_rv = clipped_rv_node.outputs[0]
 
-    censored_rv.name = clipped_var.name
+    clipped_rv.name = clipped_var.name
 
-    return [censored_rv]
+    return [clipped_rv]
 
 
 measurable_ir_rewrites_db.register(
-    "find_censored_rvs",
-    find_censored_rvs,
+    "find_measurable_clips",
+    find_measurable_clips,
     0,
     "basic",
     "censoring",
 )
 
 
-@_logprob.register(CensoredRV)
-def censor_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
+@_logprob.register(MeasurableClip)
+def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
+    r"""Logprob of a clipped censored distribution
+
+    The probability is given by
+    .. math::
+        \begin{cases}
+            0 & \text{for } x < lower, \\
+            \text{CDF}(lower, dist) & \text{for } x = lower, \\
+            \text{P}(x, dist) & \text{for } lower < x < upper, \\
+            1-\text{CDF}(upper, dist) & \text {for} x = upper, \\
+            0 & \text{for } x > upper,
+        \end{cases}
+
+    """
     (value,) = values
 
     base_rv_op = base_rv.owner.op
@@ -95,7 +110,7 @@ def censor_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
         is_upper_bounded = True
 
         logccdf = at.log1mexp(logcdf)
-        # For right censored discrete RVs, we need to add an extra term
+        # For right clipped discrete RVs, we need to add an extra term
         # corresponding to the pmf at the upper bound
         if base_rv.dtype.startswith("int"):
             logccdf = at.logaddexp(logccdf, logprob)
