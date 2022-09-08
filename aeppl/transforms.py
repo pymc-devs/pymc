@@ -20,6 +20,7 @@ from aesara.tensor.rewriting.basic import (
 from aesara.tensor.var import TensorVariable
 
 from aeppl.abstract import (
+    MeasurableElemwise,
     MeasurableVariable,
     _get_measurable_outputs,
     assign_custom_measurable_outputs,
@@ -213,8 +214,10 @@ class TransformValuesRewrite(GraphRewriter):
         return self.default_transform_rewrite.rewrite(fgraph)
 
 
-class MeasurableTransform(Elemwise):
+class MeasurableTransform(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a transformed measurable variable"""
+
+    valid_scalar_types = (Exp, Log, Add, Mul)
 
     # Cannot use `transform` as name because it would clash with the property added by
     # the `TransformValuesRewrite`
@@ -227,9 +230,6 @@ class MeasurableTransform(Elemwise):
         self.transform_elemwise = transform
         self.measurable_input_idx = measurable_input_idx
         super().__init__(*args, **kwargs)
-
-
-MeasurableVariable.register(MeasurableTransform)
 
 
 @_get_measurable_outputs.register(MeasurableTransform)
@@ -261,7 +261,7 @@ def find_measurable_transforms(
 ) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
     scalar_op = node.op.scalar_op
-    if not isinstance(scalar_op, (Exp, Log, Add, Mul)):
+    if not isinstance(scalar_op, MeasurableTransform.valid_scalar_types):
         return None
 
     # Node was already converted

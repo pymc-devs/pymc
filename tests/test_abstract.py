@@ -1,8 +1,13 @@
+import re
+
 import aesara.tensor as at
 import pytest
+from aesara.scalar import Exp, exp
 from aesara.tensor.random.basic import NormalRV
 
 from aeppl.abstract import (
+    MeasurableElemwise,
+    MeasurableVariable,
     UnmeasurableVariable,
     _get_measurable_outputs,
     assign_custom_measurable_outputs,
@@ -92,3 +97,16 @@ def test_assign_custom_measurable_outputs():
 
     with pytest.raises(ValueError):
         assign_custom_measurable_outputs(unmeas_X_rv.owner, lambda x: x)
+
+
+def test_measurable_elemwise():
+    # Default does not accept any scalar_op
+    with pytest.raises(TypeError, match=re.escape("scalar_op exp is not valid")):
+        MeasurableElemwise(exp)
+
+    class TestMeasurableElemwise(MeasurableElemwise):
+        valid_scalar_types = (Exp,)
+
+    measurable_exp_op = TestMeasurableElemwise(scalar_op=exp)
+    measurable_exp = measurable_exp_op(0.0)
+    assert isinstance(measurable_exp.owner.op, MeasurableVariable)

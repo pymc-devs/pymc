@@ -10,16 +10,22 @@ from aesara.scalar.basic import clip as scalar_clip
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.var import TensorConstant
 
-from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
+from aeppl.abstract import (
+    MeasurableElemwise,
+    MeasurableVariable,
+    assign_custom_measurable_outputs,
+)
 from aeppl.logprob import CheckParameterValue, _logcdf, _logprob
 from aeppl.rewriting import measurable_ir_rewrites_db
 
 
-class MeasurableClip(Elemwise):
+class MeasurableClip(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a clipped RV sub-graph."""
 
+    valid_scalar_types = (Clip,)
 
-MeasurableVariable.register(MeasurableClip)
+
+measurable_clip = MeasurableClip(scalar_clip)
 
 
 @node_rewriter(tracks=[Elemwise])
@@ -54,10 +60,9 @@ def find_measurable_clips(
     lower_bound = lower_bound if (lower_bound is not base_var) else at.constant(-np.inf)
     upper_bound = upper_bound if (upper_bound is not base_var) else at.constant(np.inf)
 
-    clipped_op = MeasurableClip(scalar_clip)
     # Make base_var unmeasurable
     unmeasurable_base_var = assign_custom_measurable_outputs(base_var.owner)
-    clipped_rv_node = clipped_op.make_node(
+    clipped_rv_node = measurable_clip.make_node(
         unmeasurable_base_var, lower_bound, upper_bound
     )
     clipped_rv = clipped_rv_node.outputs[0]
