@@ -80,7 +80,8 @@ jobs:
             pymc/tests/gp/test_util.py
             pymc/tests/test_model.py
             pymc/tests/test_model_graph.py
-            pymc/tests/test_ode.py
+            pymc/tests/ode/test_ode.py
+            pymc/tests/ode/test_utils.py
             pymc/tests/test_profile.py
             pymc/tests/test_quadpotential.py
 
@@ -151,7 +152,7 @@ jobs:
         test-subset:
           - pymc/tests/test_variational_inference.py pymc/tests/test_initial_point.py
           - pymc/tests/test_pickling.py pymc/tests/test_profile.py pymc/tests/test_step.py
-          - pymc/tests/gp/test_cov.py pymc/tests/gp/test_gp.py pymc/tests/gp/test_mean.py pymc/tests/gp/test_util.py pymc/tests/test_ode.py pymc/tests/test_smc.py pymc/tests/test_parallel_sampling.py
+          - pymc/tests/gp/test_cov.py pymc/tests/gp/test_gp.py pymc/tests/gp/test_mean.py pymc/tests/gp/test_util.py pymc/tests/ode/test_ode.py pymc/tests/ode/test_utils.py pymc/tests/test_smc.py pymc/tests/test_parallel_sampling.py
           - pymc/tests/test_sampling.py pymc/tests/test_posteriors.py
 
       fail-fast: false
@@ -364,7 +365,7 @@ jobs:
         floatx: [float32]
         python-version: ["3.10"]
         test-subset:
-        - pymc/tests/test_sampling.py pymc/tests/test_ode.py
+        - pymc/tests/test_sampling.py pymc/tests/ode/test_ode.py pymc/tests/ode/test_utils.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
