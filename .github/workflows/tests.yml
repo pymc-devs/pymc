@@ -49,11 +49,13 @@ jobs:
 
           - |
             pymc/tests/distributions/test_distribution.py
-            pymc/tests/distributions/test_bound.py
-            pymc/tests/distributions/test_censored.py
             pymc/tests/distributions/test_discrete.py
             pymc/tests/distributions/test_continuous.py
             pymc/tests/distributions/test_multivariate.py
+
+          - |
+            pymc/tests/distributions/test_bound.py
+            pymc/tests/distributions/test_censored.py
             pymc/tests/distributions/test_simulator.py
             pymc/tests/distributions/test_truncated.py
 
@@ -62,8 +64,6 @@ jobs:
             pymc/tests/tuning/test_starting.py
             pymc/tests/test_shared.py
             pymc/tests/test_types.py
-
-          - |
             pymc/tests/distributions/test_dist_math.py
             pymc/tests/distributions/test_transform.py
             pymc/tests/test_parallel_sampling.py
