@@ -172,6 +172,7 @@ Contributors don't need to be part of any dedicated team.
 * Adrian Seyboldt (dev - PyMC Labs)
 * Alex Andorra (dev - PyMC Labs)
 * Austin Rochford
+* Ben Mares
 * Benjamin Vincent (docs - PyMC Labs)
 * Bill Engels (dev)
 * Brandon T. Willard (dev)
@@ -180,6 +181,7 @@ Contributors don't need to be part of any dedicated team.
 * Colin Carroll (dev)
 * Eelke Spaak (dev)
 * Eric Ma (dev - PyMC Labs)
+* Fernando Irarrazaval (community)
 * George Ho (dev)
 * Junpeng Lao (dev, community)
 * Luciano Paz (dev - PyMC Labs)
