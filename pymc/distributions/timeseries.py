@@ -681,9 +681,6 @@ class GARCH11(Distribution):
 
         return super().dist([omega, alpha_1, beta_1, initial_vol, init_dist, steps], **kwargs)
 
-    @classmethod
-    def ndim_supp(cls, *args):
-        return 1
 
     @classmethod
     def rv_op(cls, omega, alpha_1, beta_1, initial_vol, init_dist, steps, size=None):
