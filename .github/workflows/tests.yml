@@ -59,7 +59,8 @@ jobs:
             pymc/tests/distributions/test_simulator.py
 
           - |
-            pymc/tests/test_tuning.py
+            pymc/tests/tuning/test_scaling.py
+            pymc/tests/tuning/test_starting.py
             pymc/tests/test_shared.py
             pymc/tests/test_types.py
 
