@@ -36,6 +36,7 @@ from pymc.distributions import logp
 from pymc.distributions.multivariate import (
     _LKJCholeskyCov,
     _OrderedMultinomial,
+    posdef,
     quaddist_matrix,
 )
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
@@ -1874,3 +1875,28 @@ def test_car_rng_fn(sparse):
         )
         f -= 1
     assert p > delta
+
+
+def test_posdef_symmetric1():
+    data = np.array([[1.0, 0], [0, 1]], dtype=aesara.config.floatX)
+    assert posdef(data) == 1
+
+
+def test_posdef_symmetric2():
+    data = np.array([[1.0, 2], [2, 1]], dtype=aesara.config.floatX)
+    assert posdef(data) == 0
+
+
+def test_posdef_symmetric3():
+    """The test return 0 if the matrix has 0 eigenvalue.
+
+    Is this correct?
+    """
+    data = np.array([[1.0, 1], [1, 1]], dtype=aesara.config.floatX)
+    assert posdef(data) == 0
+
+
+def test_posdef_symmetric4():
+    d = np.array([[1, 0.99, 1], [0.99, 1, 0.999], [1, 0.999, 1]], aesara.config.floatX)
+
+    assert posdef(d) == 0
