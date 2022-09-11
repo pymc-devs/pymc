@@ -481,7 +481,6 @@ class TestAR:
         assert new_dist.eval().shape == (4, 3, 10)
 
 
-@pytest.mark.xfail(reason="Timeseries not refactored", raises=NotImplementedError)
 def test_GARCH11():
     # test data ~ N(0, 1)
     data = np.array(
@@ -527,8 +526,8 @@ def test_GARCH11():
             shape=data.shape,
         )
         z = Normal("z", mu=0, sigma=vol, shape=data.shape)
-    garch_like = t["y"].logp({"z": data, "y": data})
-    reg_like = t["z"].logp({"z": data, "y": data})
+    garch_like = t.compile_logp(y)({"y": data})
+    reg_like = t.compile_logp(z)({"z": data})
     decimal = select_by_precision(float64=7, float32=4)
     np.testing.assert_allclose(garch_like, reg_like, 10 ** (-decimal))
 
