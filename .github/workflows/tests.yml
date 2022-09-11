@@ -65,7 +65,6 @@ jobs:
 
           - |
             pymc/tests/distributions/test_dist_math.py
-            pymc/tests/test_pickling.py
             pymc/tests/distributions/test_transform.py
             pymc/tests/test_parallel_sampling.py
             pymc/tests/test_printing.py
@@ -149,7 +148,7 @@ jobs:
         python-version: ["3.8"]
         test-subset:
           - pymc/tests/test_variational_inference.py pymc/tests/test_initial_point.py
-          - pymc/tests/test_pickling.py pymc/tests/test_profile.py pymc/tests/test_step.py
+          - pymc/tests/test_model.py pymc/tests/test_profile.py pymc/tests/test_step.py
           - pymc/tests/gp/test_cov.py pymc/tests/gp/test_gp.py pymc/tests/gp/test_mean.py pymc/tests/gp/test_util.py pymc/tests/ode/test_ode.py pymc/tests/ode/test_utils.py pymc/tests/test_smc.py pymc/tests/test_parallel_sampling.py
           - pymc/tests/test_sampling.py pymc/tests/test_posteriors.py
 

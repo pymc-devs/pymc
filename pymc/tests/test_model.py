@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import pickle
 import threading
 import unittest
 import warnings
@@ -40,6 +41,7 @@ from pymc.distributions import Normal, transforms
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.model import Point, ValueGradFunction, modelcontext
 from pymc.tests.helpers import SeededTest
+from pymc.tests.models import simple_model
 
 
 class NewModel(pm.Model):
@@ -444,24 +446,39 @@ def test_tempered_logp_dlogp():
     npt.assert_allclose(func_temp_nograd(x), func_temp(x)[0])
 
 
-def test_model_pickle(tmpdir):
-    """Tests that PyMC models are pickleable"""
-    with pm.Model() as model:
-        x = pm.Normal("x")
-        pm.Normal("y", observed=1)
+class TestPickling:
+    def test_model_pickle(self, tmpdir):
+        """Tests that PyMC models are pickleable"""
+        with pm.Model() as model:
+            x = pm.Normal("x")
+            pm.Normal("y", observed=1)
 
-    cloudpickle.loads(cloudpickle.dumps(model))
+        cloudpickle.loads(cloudpickle.dumps(model))
 
+    def test_model_pickle_deterministic(self, tmpdir):
+        """Tests that PyMC models are pickleable"""
+        with pm.Model() as model:
+            x = pm.Normal("x")
+            z = pm.Normal("z")
+            pm.Deterministic("w", x / z)
+            pm.Normal("y", observed=1)
 
-def test_model_pickle_deterministic(tmpdir):
-    """Tests that PyMC models are pickleable"""
-    with pm.Model() as model:
-        x = pm.Normal("x")
-        z = pm.Normal("z")
-        pm.Deterministic("w", x / z)
-        pm.Normal("y", observed=1)
+        cloudpickle.loads(cloudpickle.dumps(model))
 
-    cloudpickle.loads(cloudpickle.dumps(model))
+    def setup_method(self):
+        _, self.model, _ = simple_model()
+
+    def test_model_roundtrip(self):
+        m = self.model
+        for proto in range(pickle.HIGHEST_PROTOCOL + 1):
+            try:
+                s = cloudpickle.dumps(m, proto)
+                cloudpickle.loads(s)
+            except Exception:
+                raise AssertionError(
+                    "Exception while trying roundtrip with pickle protocol %d:\n" % proto
+                    + "".join(traceback.format_exc())
+                )
 
 
 def test_model_vars():
