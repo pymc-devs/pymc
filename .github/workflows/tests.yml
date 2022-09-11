@@ -64,7 +64,6 @@ jobs:
             pymc/tests/test_types.py
 
           - |
-            pymc/tests/test_modelcontext.py
             pymc/tests/distributions/test_dist_math.py
             pymc/tests/test_pickling.py
             pymc/tests/distributions/test_transform.py
