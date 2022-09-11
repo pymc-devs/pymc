@@ -46,7 +46,6 @@ jobs:
             pymc/tests/test_hmc.py
             pymc/tests/test_func_utils.py
             pymc/tests/distributions/test_shape_utils.py
-            pymc/tests/test_starting.py
             pymc/tests/distributions/test_mixture.py
 
           - |
