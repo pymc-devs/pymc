@@ -224,7 +224,7 @@ jobs:
         test-subset:
           - |
             pymc/tests/test_parallel_sampling.py
-            pymc/tests/test_data_container.py
+            pymc/tests/test_data.py
             pymc/tests/test_missing.py
 
           - |
