@@ -227,7 +227,7 @@ jobs:
 
           - |
             pymc/tests/backends/test_arviz.py
-            pymc/tests/test_updates.py
+            pymc/tests/variational/test_updates.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
