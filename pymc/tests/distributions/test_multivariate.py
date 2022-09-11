@@ -1877,26 +1877,19 @@ def test_car_rng_fn(sparse):
     assert p > delta
 
 
-def test_posdef_symmetric1():
-    data = np.array([[1.0, 0], [0, 1]], dtype=aesara.config.floatX)
-    assert posdef(data) == 1
-
-
-def test_posdef_symmetric2():
-    data = np.array([[1.0, 2], [2, 1]], dtype=aesara.config.floatX)
-    assert posdef(data) == 0
-
-
-def test_posdef_symmetric3():
-    """The test return 0 if the matrix has 0 eigenvalue.
+@pytest.mark.parametrize(
+    "matrix, result",
+    [
+        ([[1.0, 0], [0, 1]], 1),
+        ([[1.0, 2], [2, 1]], 0),
+        ([[1.0, 1], [1, 1]], 0),
+        ([[1, 0.99, 1], [0.99, 1, 0.999], [1, 0.999, 1]], 0),
+    ],
+)
+def test_posdef_symmetric(matrix, result):
+    """The test returns 0 if the matrix has 0 eigenvalue.
 
     Is this correct?
     """
-    data = np.array([[1.0, 1], [1, 1]], dtype=aesara.config.floatX)
-    assert posdef(data) == 0
-
-
-def test_posdef_symmetric4():
-    d = np.array([[1, 0.99, 1], [0.99, 1, 0.999], [1, 0.999, 1]], aesara.config.floatX)
-
-    assert posdef(d) == 0
+    data = np.array(matrix, dtype=aesara.config.floatX)
+    assert posdef(data) == result
