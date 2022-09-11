@@ -231,7 +231,7 @@ jobs:
             pymc/tests/test_sampling.py
 
           - |
-            pymc/tests/test_idata_conversion.py
+            pymc/tests/backends/test_arviz.py
             pymc/tests/test_updates.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
