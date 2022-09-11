@@ -572,21 +572,13 @@ def join_nonshared_inputs(
     for var in vars:
         shape = point[var.name].shape
         arr_len = np.prod(shape, dtype=int)
-        replace[var] = reshape_t(inarray[last_idx : last_idx + arr_len], shape).astype(var.dtype)
+        replace[var] = inarray[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
         last_idx += arr_len
 
     replace.update(shared)
 
     xs_special = [aesara.clone_replace(x, replace, rebuild_strict=False) for x in xs]
     return xs_special, inarray
-
-
-def reshape_t(x, shape):
-    """Work around fact that x.reshape(()) doesn't work"""
-    if shape != ():
-        return x.reshape(shape)
-    else:
-        return x[0]
 
 
 class PointFunc:
