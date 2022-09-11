@@ -616,7 +616,7 @@ def ar_moment(op, rv, rhos, sigma, init_dist, steps, noise_rng):
 
 
 class GARCH11RV(SymbolicRandomVariable):
-    """A placeholder used to specify a log-likelihood for an AR sub-graph."""
+    """A placeholder used to specify a GARCH11 graph."""
 
     default_output = 1
     _print_name = ("GARCH11", "\\operatorname{GARCH11}")
