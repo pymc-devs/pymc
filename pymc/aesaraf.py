@@ -581,14 +581,6 @@ def join_nonshared_inputs(
     return xs_special, inarray
 
 
-def reshape_t(x, shape):
-    """Work around fact that x.reshape(()) doesn't work"""
-    if shape != ():
-        return x.reshape(shape)
-    else:
-        return x[0]
-
-
 class PointFunc:
     """Wraps so a function so it takes a dict of arguments instead of arguments."""
 
