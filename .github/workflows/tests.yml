@@ -80,7 +80,7 @@ jobs:
             pymc/tests/ode/test_ode.py
             pymc/tests/ode/test_utils.py
             pymc/tests/test_profile.py
-            pymc/tests/test_quadpotential.py
+            pymc/tests/step_methods/hmc/test_quadpotential.py
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
