@@ -1802,6 +1802,46 @@ class TestTruncatedNormalUpperArray(BaseTestDistributionRandom):
     ]
 
 
+class TestZeroSumNormal(BaseTestDistributionRandom):
+    COORDS = {
+        "regions": ["a", "b", "c"],
+        "answers": ["yes", "no", "whatever", "don't understand question"],
+    }
+    with pm.Model(coords=COORDS) as m:
+        v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes="answers")
+        s = pm.sample(10)
+
+    assert np.isclose(
+        s.posterior.v.mean(dim="answers"), 0
+    ).all(), "A zerosum_axis is not summing to 0 across all axes."
+    assert not np.isclose(
+        s.posterior.v.mean(dim="regions"), 0
+    ).all(), "A non zerosum_axis is nonetheless summing to 0 across all samples."
+    assert s.posterior.v.shape == (4, 10, 3, 4)
+
+    with pm.Model(coords=COORDS) as m:
+        v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=("regions", "answers"))
+        s = pm.sample(10)
+
+    assert np.isclose(
+        s.posterior.v.mean(dim="answers"), 0
+    ).all(), "A zerosum_axis is not summing to 0 across all axes."
+    assert np.isclose(
+        s.posterior.v.mean(dim="regions"), 0
+    ).all(), "A zerosum_axis is not summing to 0 across all axes."
+
+    with pm.Model(coords=COORDS) as m:
+        v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=1)
+        s = pm.sample(10)
+
+    assert np.isclose(
+        s.posterior.v.mean(dim="answers"), 0
+    ).all(), "A zerosum_axis is not summing to 0 across all axes."
+    assert not np.isclose(
+        s.posterior.v.mean(dim="regions"), 0
+    ).all(), "A non zerosum_axis is nonetheless summing to 0 across all samples."
+
+
 class TestWald(BaseTestDistributionRandom):
     pymc_dist = pm.Wald
     mu, lam, alpha = 1.0, 1.0, 0.0
