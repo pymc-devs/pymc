@@ -257,18 +257,13 @@ def test_measurable_dimshuffle(ds_order, multivariate):
     )
 
 
-@pytest.mark.xfail(
-    reason="Graphs with DimShuffles that cannot be lifted/merged are currently not supported",
-    raises=AssertionError,
-)
 def test_unmeargeable_dimshuffles():
+    # Test that graphs with DimShuffles that cannot be lifted/merged fail
+
     # Initial support axis is at axis=-1
     x = at.random.dirichlet(
         np.ones((3,)),
-        size=(
-            4,
-            2,
-        ),
+        size=(4, 2),
     )
     # Support axis is now at axis=-2
     y = x.dimshuffle((0, 2, 1))
@@ -279,8 +274,6 @@ def test_unmeargeable_dimshuffles():
     w = z.dimshuffle((1, 0, 2))
 
     w_vv = w.clone()
-    logp = joint_logprob({w: w_vv})
-    assert logp is not None
-
     # TODO: Check that logp is correct if this type of graphs is ever supported
-    raise NotImplementedError("Test for supported behavior not written")
+    with pytest.raises(RuntimeError, match="could not be derived"):
+        joint_logprob({w: w_vv})

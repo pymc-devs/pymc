@@ -1,6 +1,7 @@
 import aesara
 import aesara.tensor as at
 import numpy as np
+import pytest
 import scipy as sp
 import scipy.stats as st
 
@@ -136,8 +137,8 @@ def test_fail_base_and_censored_have_values():
 
     x_vv = x_rv.clone()
     cens_x_vv = cens_x_rv.clone()
-    logp_terms = factorized_joint_logprob({cens_x_rv: cens_x_vv, x_rv: x_vv})
-    assert cens_x_vv not in logp_terms
+    with pytest.raises(RuntimeError, match="could not be derived: {cens_x}"):
+        factorized_joint_logprob({cens_x_rv: cens_x_vv, x_rv: x_vv})
 
 
 def test_fail_multiple_censored_single_base():
@@ -150,8 +151,8 @@ def test_fail_multiple_censored_single_base():
 
     cens_vv1 = cens_rv1.clone()
     cens_vv2 = cens_rv2.clone()
-    logp_terms = factorized_joint_logprob({cens_rv1: cens_vv1, cens_rv2: cens_vv2})
-    assert cens_rv2 not in logp_terms
+    with pytest.raises(RuntimeError, match="could not be derived: {cens2}"):
+        factorized_joint_logprob({cens_rv1: cens_vv1, cens_rv2: cens_vv2})
 
 
 def test_deterministic_clipping():

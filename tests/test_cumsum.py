@@ -60,10 +60,8 @@ def test_destructive_cumsum_fails():
     """Test that a cumsum that mixes dimensions fails"""
     x_rv = at.random.normal(size=(2, 2, 2)).cumsum()
     x_vv = x_rv.clone()
-    with pytest.warns(UserWarning):
-        res = joint_logprob({x_rv: x_vv})
-
-    assert res is None
+    with pytest.raises(RuntimeError, match="could not be derived"):
+        joint_logprob({x_rv: x_vv})
 
 
 def test_deterministic_cumsum():

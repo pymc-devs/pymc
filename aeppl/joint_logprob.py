@@ -175,6 +175,12 @@ def factorized_joint_logprob(
             for node in io_toposort(graph_inputs(q_logprob_vars), q_logprob_vars):
                 compute_test_value(node)
 
+    missing_value_terms = set(original_values.values()) - set(logprob_vars.keys())
+    if missing_value_terms:
+        raise RuntimeError(
+            f"The logprob terms of the following value variables could not be derived: {missing_value_terms}"
+        )
+
     return logprob_vars
 
 

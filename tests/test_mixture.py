@@ -40,8 +40,6 @@ def test_mixture_basics():
 
         return locals()
 
-    # TODO: This should raise explicitly, see #90
-    # with pytest.raises(ValueError, match=".*value variable was specified.*"):
     env = create_mix_model(None, 0)
     X_rv = env["X_rv"]
     I_rv = env["I_rv"]
@@ -52,9 +50,8 @@ def test_mixture_basics():
     x_vv = X_rv.clone()
     x_vv.name = "x"
 
-    assert set(
-        factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv, X_rv: x_vv}).keys()
-    ) == {x_vv, i_vv}
+    with pytest.raises(RuntimeError, match="could not be derived: {m}"):
+        factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv, X_rv: x_vv})
 
     with pytest.raises(NotImplementedError):
         axis_at = at.lscalar("axis")

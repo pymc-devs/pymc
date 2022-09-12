@@ -672,7 +672,8 @@ def test_loc_transform_multiple_rvs_fails1():
 
     y = y_rv.clone()
 
-    assert joint_logprob({y_rv: y}) is None
+    with pytest.raises(RuntimeError, match="could not be derived"):
+        joint_logprob({y_rv: y})
 
 
 def test_nested_loc_transform_multiple_rvs_fails2():
@@ -682,17 +683,20 @@ def test_nested_loc_transform_multiple_rvs_fails2():
 
     y = y_rv.clone()
 
-    assert joint_logprob({y_rv: y}) is None
+    with pytest.raises(RuntimeError, match="could not be derived"):
+        joint_logprob({y_rv: y})
 
 
 def test_discrete_rv_unary_transform_fails():
     y_rv = at.exp(at.random.poisson(1))
-    assert joint_logprob({y_rv: y_rv.clone()}) is None
+    with pytest.raises(RuntimeError, match="could not be derived"):
+        joint_logprob({y_rv: y_rv.clone()})
 
 
 def test_discrete_rv_multinary_transform_fails():
     y_rv = 5 + at.random.poisson(1)
-    assert joint_logprob({y_rv: y_rv.clone()}) is None
+    with pytest.raises(RuntimeError, match="could not be derived"):
+        joint_logprob({y_rv: y_rv.clone()})
 
 
 @pytest.mark.xfail(reason="Check not implemented yet, see #51")
