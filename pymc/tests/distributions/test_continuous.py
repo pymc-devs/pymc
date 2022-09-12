@@ -1802,7 +1802,7 @@ class TestTruncatedNormalUpperArray(BaseTestDistributionRandom):
     ]
 
 
-class TestZeroSumNormal(BaseTestDistributionRandom):
+class TestZeroSumNormal:
     COORDS = {
         "regions": ["a", "b", "c"],
         "answers": ["yes", "no", "whatever", "don't understand question"],
