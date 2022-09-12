@@ -27,6 +27,10 @@ from aeppl.transforms import (
 from aesara.graph import Op
 from aesara.tensor import TensorVariable
 
+# ignore mypy error because it somehow considers that
+# "numpy.core.numeric has no attribute normalize_axis_tuple"
+from numpy.core.numeric import normalize_axis_tuple  # type: ignore
+
 __all__ = [
     "RVTransform",
     "simplex",
@@ -314,14 +318,7 @@ def extend_axis(array, axis):
     return out - norm
 
 
-from numpy.core.numeric import normalize_axis_tuple  # type: ignore
-
-
 def extend_axis_rev(array, axis):
-    # if axis < 0:
-    #     axis = axis % array.ndim
-    # assert axis >= 0 and axis < array.ndim
-
     normalized_axis = normalize_axis_tuple(axis, array.ndim)[0]
 
     n = array.shape[normalized_axis]
