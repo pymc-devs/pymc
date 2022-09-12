@@ -319,6 +319,8 @@ def extend_axis_rev(array, axis):
         axis = axis % array.ndim
     assert axis >= 0 and axis < array.ndim
 
+    # normalized_axis = normalize_axis_tuple(axis, array.ndim)[0]
+
     n = array.shape[axis]
     last = at.take(array, [-1], axis=axis)
 
