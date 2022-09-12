@@ -39,6 +39,7 @@ __all__ = [
     "circular",
     "CholeskyCovPacked",
     "Chain",
+    "ZeroSumTransform",
 ]
 
 
@@ -264,6 +265,68 @@ class Interval(IntervalTransform):
                 return lower, upper
 
         super().__init__(args_fn=bounds_fn)
+
+
+class ZeroSumTransform(RVTransform):
+    """
+    Constrains the samples of a Normal distribution to sum to zero
+    along the user-provided ``zerosum_axes``.
+    By default (``zerosum_axes=[-1]``), the sum-to-zero constraint is imposed
+    on the last axis.
+    """
+
+    name = "zerosum"
+
+    __props__ = ("zerosum_axes",)
+
+    def __init__(self, zerosum_axes):
+        """
+        Parameters
+        ----------
+        zerosum_axes : list of ints
+            Must be a list of integers (positive or negative).
+            By default (``zerosum_axes=[-1]``), the sum-to-zero constraint is imposed
+            on the last axis.
+        """
+        self.zerosum_axes = zerosum_axes
+
+    def forward(self, value, *rv_inputs):
+        for axis in self.zerosum_axes:
+            value = extend_axis_rev(value, axis=axis)
+        return value
+
+    def backward(self, value, *rv_inputs):
+        for axis in self.zerosum_axes:
+            value = extend_axis(value, axis=axis)
+        return value
+
+    def log_jac_det(self, value, *rv_inputs):
+        return at.constant(0.0)
+
+
+def extend_axis(array, axis):
+    n = array.shape[axis] + 1
+    sum_vals = array.sum(axis, keepdims=True)
+    norm = sum_vals / (np.sqrt(n) + n)
+    fill_val = norm - sum_vals / np.sqrt(n)
+
+    out = at.concatenate([array, fill_val], axis=axis)
+    return out - norm
+
+
+def extend_axis_rev(array, axis):
+    if axis < 0:
+        axis = axis % array.ndim
+    assert axis >= 0 and axis < array.ndim
+
+    n = array.shape[axis]
+    last = at.take(array, [-1], axis=axis)
+
+    sum_vals = -last * np.sqrt(n)
+    norm = sum_vals / (np.sqrt(n) + n)
+    slice_before = (slice(None, None),) * axis
+
+    return array[slice_before + (slice(None, -1),)] + norm
 
 
 log_exp_m1 = LogExpM1()

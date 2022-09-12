@@ -56,6 +56,7 @@ from pymc.distributions.continuous import (
     VonMises,
     Wald,
     Weibull,
+    ZeroSumNormal,
 )
 from pymc.distributions.discrete import (
     Bernoulli,
@@ -115,8 +116,9 @@ __all__ = [
     "Uniform",
     "Flat",
     "HalfFlat",
-    "TruncatedNormal",
     "Normal",
+    "TruncatedNormal",
+    "ZeroSumNormal",
     "Beta",
     "Kumaraswamy",
     "Exponential",

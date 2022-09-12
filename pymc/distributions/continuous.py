@@ -69,9 +69,12 @@ except ImportError:  # pragma: no cover
         raise RuntimeError("polyagamma package is not installed!")
 
 
+from numpy.core.numeric import normalize_axis_tuple
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
+
+import pymc as pm
 
 from pymc.aesaraf import floatX
 from pymc.distributions import transforms
@@ -86,9 +89,20 @@ from pymc.distributions.dist_math import (
     normal_lcdf,
     zvalue,
 )
-from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous
-from pymc.distributions.shape_utils import rv_size_is_none
-from pymc.distributions.transforms import _default_transform
+from pymc.distributions.distribution import (
+    DIST_PARAMETER_TYPES,
+    Continuous,
+    Distribution,
+    SymbolicRandomVariable,
+    _moment,
+)
+from pymc.distributions.logprob import ignore_logprob
+from pymc.distributions.shape_utils import (
+    _change_dist_size,
+    convert_dims,
+    rv_size_is_none,
+)
+from pymc.distributions.transforms import ZeroSumTransform, _default_transform
 from pymc.math import invlogit, logdiffexp, logit
 
 __all__ = [
@@ -96,6 +110,7 @@ __all__ = [
     "Flat",
     "HalfFlat",
     "Normal",
+    "ZeroSumNormal",
     "TruncatedNormal",
     "Beta",
     "Kumaraswamy",
@@ -583,6 +598,172 @@ class Normal(Continuous):
             0 < sigma,
             msg="sigma > 0",
         )
+
+
+class ZeroSumNormalRV(SymbolicRandomVariable):
+    """ZeroSumNormal random variable"""
+
+    _print_name = ("ZeroSumNormal", "\\operatorname{ZeroSumNormal}")
+    zerosum_axes = None
+
+    def __init__(self, *args, zerosum_axes, **kwargs):
+        self.zerosum_axes = zerosum_axes
+        super().__init__(*args, **kwargs)
+
+
+class ZeroSumNormal(Distribution):
+    r"""
+    ZeroSumNormal distribution, i.e Normal distribution where one or
+    several axes are constrained to sum to zero.
+    By default, the last axis is constrained to sum to zero.
+    See `zerosum_axes` kwarg for more details.
+
+    Parameters
+    ----------
+    sigma : tensor_like of float
+        Standard deviation (sigma > 0).
+        Defaults to 1 if not specified.
+        For now, ``sigma`` has to be a scalar, to ensure the zero-sum constraint.
+    zerosum_axes: list or tuple of strings or integers
+        Axis (or axes) along which the zero-sum constraint is enforced.
+        Defaults to [-1], i.e the last axis.
+        If strings are passed, then ``dims`` is needed.
+        Otherwise, ``shape`` and ``size`` work as they do for other PyMC distributions.
+    dims: list or tuple of strings, optional
+        The dimension names of the axes.
+        Necessary when ``zerosum_axes`` is specified with strings.
+
+    Warnings
+    --------
+    ``sigma`` has to be a scalar, to ensure the zero-sum constraint.
+    The ability to specifiy a vector of ``sigma`` may be added in future versions.
+
+    Examples
+    --------
+    .. code-block:: python
+        COORDS = {
+            "regions": ["a", "b", "c"],
+            "answers": ["yes", "no", "whatever", "don't understand question"],
+        }
+        with pm.Model(coords=COORDS) as m:
+    ...:     v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes="answers")
+
+        with pm.Model(coords=COORDS) as m:
+    ...:     v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=("regions", "answers"))
+
+        with pm.Model(coords=COORDS) as m:
+    ...:     v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=1)
+    """
+    rv_type = ZeroSumNormalRV
+
+    def __new__(cls, *args, zerosum_axes=None, dims=None, **kwargs):
+        dims = convert_dims(dims)
+        if zerosum_axes is None:
+            zerosum_axes = [-1]
+        if not isinstance(zerosum_axes, (list, tuple)):
+            zerosum_axes = [zerosum_axes]
+
+        if isinstance(zerosum_axes[0], str):
+            if not dims:
+                raise ValueError("You need to specify dims if zerosum_axes are strings.")
+            else:
+                zerosum_axes_ = []
+                for axis in zerosum_axes:
+                    zerosum_axes_.append(dims.index(axis))
+                zerosum_axes = zerosum_axes_
+
+        return super().__new__(cls, *args, zerosum_axes=zerosum_axes, dims=dims, **kwargs)
+
+    @classmethod
+    def dist(cls, sigma=1, zerosum_axes=None, **kwargs):
+        if zerosum_axes is None:
+            zerosum_axes = [-1]
+
+        sigma = at.as_tensor_variable(floatX(sigma))
+        if sigma.ndim > 0:
+            raise ValueError("sigma has to be a scalar")
+
+        return super().dist([sigma], zerosum_axes=zerosum_axes, **kwargs)
+
+    # TODO: This is if we want ZeroSum constraint on other dists than Normal
+    # def dist(cls, dist, lower, upper, **kwargs):
+    #     if not isinstance(dist, TensorVariable) or not isinstance(
+    #         dist.owner.op, (RandomVariable, SymbolicRandomVariable)
+    #     ):
+    #         raise ValueError(
+    #             f"Censoring dist must be a distribution created via the `.dist()` API, got {type(dist)}"
+    #         )
+    #     if dist.owner.op.ndim_supp > 0:
+    #         raise NotImplementedError(
+    #             "Censoring of multivariate distributions has not been implemented yet"
+    #         )
+    #     check_dist_not_registered(dist)
+    #     return super().dist([dist, lower, upper], **kwargs)
+
+    @classmethod
+    def rv_op(cls, sigma, zerosum_axes, size=None):
+        if size is None:
+            zerosum_axes_ = np.asarray(zerosum_axes)
+            # just a placeholder size to infer minimum shape
+            size = np.ones(
+                max((max(np.abs(zerosum_axes_) - 1), max(zerosum_axes_))) + 1, dtype=int
+            ).tolist()
+
+        # check if zerosum_axes is valid
+        normalize_axis_tuple(zerosum_axes, len(size))
+
+        normal_dist = ignore_logprob(pm.Normal.dist(sigma=sigma, size=size))
+        normal_dist_, sigma_ = normal_dist.type(), sigma.type()
+
+        # Zerosum-normaling is achieved by substracting the mean along the given zerosum_axes
+        zerosum_rv_ = normal_dist_
+        for axis in zerosum_axes:
+            zerosum_rv_ -= zerosum_rv_.mean(axis=axis, keepdims=True)
+
+        return ZeroSumNormalRV(
+            inputs=[normal_dist_, sigma_],
+            outputs=[zerosum_rv_],
+            zerosum_axes=zerosum_axes,
+            ndim_supp=0,
+        )(normal_dist, sigma)
+
+
+@_logprob.register(ZeroSumNormalRV)
+def zerosumnormal_logp(op, values, normal_dist, sigma, **kwargs):
+    (value,) = values
+    shape = value.shape
+    _deg_free_shape = at.inc_subtensor(shape[at.as_tensor_variable(op.zerosum_axes)], -1)
+    _full_size = at.prod(shape)
+    _degrees_of_freedom = at.prod(_deg_free_shape)
+    zerosums = [
+        at.all(at.isclose(at.mean(value, axis=axis), 0, atol=1e-9)) for axis in op.zerosum_axes
+    ]
+    # out = at.sum(
+    #     pm.logp(dist, value) * _degrees_of_freedom / _full_size,
+    #     axis=op.zerosum_axes,
+    # )
+    # figure out how dimensionality should be handled for logp
+    # for now, we assume ZSN is a scalar distribut, which is not correct
+    out = pm.logp(normal_dist, value) * _degrees_of_freedom / _full_size
+    return check_parameters(out, *zerosums, msg="at.mean(value, axis=zerosum_axes) == 0")
+
+
+@_moment.register(ZeroSumNormalRV)
+def zerosumnormal_moment(op, rv, *rv_inputs):
+    return at.zeros_like(rv)
+
+
+@_change_dist_size.register(ZeroSumNormalRV)
+def change_zerosum_size(op, normal_dist, new_size, expand=False):
+    normal_dist, sigma = normal_dist.owner.inputs
+    if expand:
+        new_size = tuple(new_size) + tuple(normal_dist.shape)
+    return ZeroSumNormal.rv_op(sigma=sigma, zerosum_axes=op.zerosum_axes, size=new_size)
+
+
+@_default_transform.register(ZeroSumNormalRV)
+def zerosum_default_transform(op, rv):
+    return ZeroSumTransform(op.zerosum_axes)
 
 
 class TruncatedNormalRV(RandomVariable):
