@@ -81,8 +81,7 @@ from pymc.distributions.distribution import (
     DensityDist,
     Discrete,
     Distribution,
-    NoDistribution,
-    SymbolicDistribution,
+    SymbolicRandomVariable,
 )
 from pymc.distributions.mixture import Mixture, NormalMixture
 from pymc.distributions.multivariate import (
@@ -105,9 +104,11 @@ from pymc.distributions.simulator import Simulator
 from pymc.distributions.timeseries import (
     AR,
     GARCH11,
+    EulerMaruyama,
     GaussianRandomWalk,
     MvGaussianRandomWalk,
     MvStudentTRandomWalk,
+    RandomWalk,
 )
 
 __all__ = [
@@ -154,10 +155,9 @@ __all__ = [
     "OrderedProbit",
     "DensityDist",
     "Distribution",
-    "SymbolicDistribution",
+    "SymbolicRandomVariable",
     "Continuous",
     "Discrete",
-    "NoDistribution",
     "MvNormal",
     "MatrixNormal",
     "KroneckerNormal",
@@ -171,11 +171,13 @@ __all__ = [
     "WishartBartlett",
     "LKJCholeskyCov",
     "LKJCorr",
-    "AR",
     "AsymmetricLaplace",
+    "RandomWalk",
     "GaussianRandomWalk",
     "MvGaussianRandomWalk",
     "MvStudentTRandomWalk",
+    "AR",
+    "EulerMaruyama",
     "GARCH11",
     "SkewNormal",
     "Mixture",

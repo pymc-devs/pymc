@@ -51,7 +51,7 @@ from pymc.distributions import (
 )
 from pymc.distributions.logprob import logp
 from pymc.distributions.mixture import MixtureTransformWarning
-from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.math import expand_packed_triangular
 from pymc.model import Model
@@ -387,21 +387,21 @@ class TestMixture(SeededTest):
         ),
     )
     @pytest.mark.parametrize("expand", (False, True))
-    def test_change_size(self, comp_dists, expand):
+    def test_change_dist_size(self, comp_dists, expand):
         if isinstance(comp_dists, list):
             univariate = comp_dists[0].owner.op.ndim_supp == 0
         else:
             univariate = comp_dists.owner.op.ndim_supp == 0
 
         mix = Mixture.dist(w=Dirichlet.dist([1, 1]), comp_dists=comp_dists)
-        mix = Mixture.change_size(mix, new_size=(4,), expand=expand)
+        mix = change_dist_size(mix, new_size=(4,), expand=expand)
         draws = mix.eval()
         expected_shape = (4,) if univariate else (4, 3)
         assert draws.shape == expected_shape
         assert np.unique(draws).size == draws.size
 
         mix = Mixture.dist(w=Dirichlet.dist([1, 1]), comp_dists=comp_dists, size=(3,))
-        mix = Mixture.change_size(mix, new_size=(5, 4), expand=expand)
+        mix = change_dist_size(mix, new_size=(5, 4), expand=expand)
         draws = mix.eval()
         expected_shape = (5, 4) if univariate else (5, 4, 3)
         if expand:
@@ -599,13 +599,17 @@ class TestMixture(SeededTest):
         assert prior["mu0"].shape == (n_samples, D)
         assert prior["chol_cov_0"].shape == (n_samples, D * (D + 1) // 2)
 
-    @pytest.mark.xfail(reason="Nested mixtures not refactored yet")
     def test_nested_mixture(self):
         if aesara.config.floatX == "float32":
             rtol = 1e-4
         else:
             rtol = 1e-7
         nbr = 4
+
+        norm_x = generate_normal_mixture_data(
+            np.r_[0.75, 0.25], np.r_[0.0, 5.0], np.r_[1.0, 1.0], size=1000
+        )
+
         with Model() as model:
             # mixtures components
             g_comp = Normal.dist(
@@ -622,7 +626,7 @@ class TestMixture(SeededTest):
             l_mix = Mixture.dist(w=l_w, comp_dists=l_comp)
             # mixture of mixtures
             mix_w = Dirichlet("mix_w", a=floatX(np.ones(2)), transform=None, shape=(2,))
-            mix = Mixture("mix", w=mix_w, comp_dists=[g_mix, l_mix], observed=np.exp(self.norm_x))
+            mix = Mixture("mix", w=mix_w, comp_dists=[g_mix, l_mix], observed=np.exp(norm_x))
 
         test_point = model.initial_point()
 
@@ -658,21 +662,23 @@ class TestMixture(SeededTest):
             )
             return priorlogp, mixmixlogpg
 
-        value = np.exp(self.norm_x)[:, None]
+        value = np.exp(norm_x)[:, None]
         priorlogp, mixmixlogpg = mixmixlogp(value, test_point)
 
         # check logp of mixture
-        assert_allclose(mixmixlogpg, mix.logp_elemwise(test_point), rtol=rtol)
+        mix_logp_fn = model.compile_logp(vars=[mix], sum=False)
+        assert_allclose(mixmixlogpg, mix_logp_fn(test_point)[0], rtol=rtol)
 
         # check model logp
-        assert_allclose(priorlogp + mixmixlogpg.sum(), model.logp(test_point), rtol=rtol)
+        model_logp_fn = model.compile_logp()
+        assert_allclose(priorlogp + mixmixlogpg.sum(), model_logp_fn(test_point), rtol=rtol)
 
         # check input and check logp again
         test_point["g_w"] = np.asarray([0.1, 0.1, 0.2, 0.6])
         test_point["mu_g"] = np.exp(np.random.randn(nbr))
         priorlogp, mixmixlogpg = mixmixlogp(value, test_point)
-        assert_allclose(mixmixlogpg, mix.logp_elemwise(test_point), rtol=rtol)
-        assert_allclose(priorlogp + mixmixlogpg.sum(), model.logp(test_point), rtol=rtol)
+        assert_allclose(mixmixlogpg, mix_logp_fn(test_point)[0], rtol=rtol)
+        assert_allclose(priorlogp + mixmixlogpg.sum(), model_logp_fn(test_point), rtol=rtol)
 
     def test_iterable_single_component_warning(self):
         with warnings.catch_warnings():
@@ -847,7 +853,6 @@ class TestNormalMixture(SeededTest):
             extra_args={"comp_shape": 2},
             size=1000,
             ref_rand=ref_rand,
-            change_rv_size_fn=Mixture.change_size,
         )
         pymc_random(
             NormalMixture,
@@ -859,7 +864,6 @@ class TestNormalMixture(SeededTest):
             extra_args={"comp_shape": 3},
             size=1000,
             ref_rand=ref_rand,
-            change_rv_size_fn=Mixture.change_size,
         )
 
 

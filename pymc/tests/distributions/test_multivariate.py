@@ -38,8 +38,9 @@ from pymc.distributions.multivariate import (
     _OrderedMultinomial,
     quaddist_matrix,
 )
-from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.math import kronecker
+from pymc.sampling import draw
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,
     Domain,
@@ -52,6 +53,7 @@ from pymc.tests.distributions.util import (
     Vector,
     assert_moment_is_expected,
     check_logp,
+    pymc_random,
     seeded_numpy_distribution_builder,
 )
 from pymc.tests.helpers import select_by_precision
@@ -879,6 +881,18 @@ class TestLKJCholeskCov:
         assert resized_sd_dist.eval().shape == (10, 3)
         # LKJCov has support shape `(n * (n+1)) // 2`
         assert x.eval().shape == (10, 6)
+
+    def test_change_dist_size(self):
+        x1 = pm.LKJCholeskyCov.dist(
+            n=3, eta=1, sd_dist=pm.Dirichlet.dist(np.ones(3)), size=(5,), compute_corr=False
+        )
+        x2 = change_dist_size(x1, new_size=(10, 3), expand=False)
+        x3 = change_dist_size(x2, new_size=(3,), expand=True)
+
+        draw_x1, draw_x2, draw_x3 = pm.draw([x1, x2, x3])
+        assert draw_x1.shape == (5, 6)
+        assert draw_x2.shape == (10, 3, 6)
+        assert draw_x3.shape == (3, 10, 3, 6)
 
 
 # Used for MvStudentT moment test
@@ -1757,7 +1771,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
         (2, 4, 2, 3),
     ]
 
-    tests_to_run = [
+    checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",
         "check_draws_match_expected",
@@ -1782,7 +1796,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):
     pymc_dist = _LKJCholeskyCov
-    pymc_dist_params = {"eta": 1.0, "n": 3, "sd_dist": pm.DiracDelta.dist([0.5, 1.0, 2.0])}
+    pymc_dist_params = {"n": 3, "eta": 1.0, "sd_dist": pm.DiracDelta.dist([0.5, 1.0, 2.0])}
     expected_rv_op_params = {"n": 3, "eta": 1.0, "sd_dist": pm.DiracDelta.dist([0.5, 1.0, 2.0])}
     size = None
 
@@ -1797,10 +1811,15 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
         (2, 4, 2, 6),
     ]
 
-    tests_to_run = [
+    checks_to_run = [
         "check_rv_size",
         "check_draws_match_expected",
     ]
+
+    def _instantiate_pymc_rv(self, dist_params=None):
+        # RNG cannot be passed through the PyMC class
+        params = dist_params if dist_params else self.pymc_dist_params
+        self.pymc_rv = self.pymc_dist.dist(**params, size=self.size)
 
     def check_rv_size(self):
         for size, expected in zip(self.sizes_to_check, self.sizes_expected):
@@ -1812,9 +1831,9 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
 
     def check_draws_match_expected(self):
         # TODO: Find better comparison:
-        rng = aesara.shared(self.get_random_state(reset=True))
-        x = _LKJCholeskyCov.dist(n=2, eta=10_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]), rng=rng)
-        assert np.all(np.abs(x.eval() - np.array([0.5, 0, 2.0])) < 0.01)
+        rng = self.get_random_state(reset=True)
+        x = _LKJCholeskyCov.dist(n=2, eta=10_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]))
+        assert np.all(np.abs(draw(x, random_seed=rng) - np.array([0.5, 0, 2.0])) < 0.01)
 
 
 @pytest.mark.parametrize("sparse", [True, False])

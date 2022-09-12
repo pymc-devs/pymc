@@ -25,7 +25,7 @@ from aesara.tensor.var import TensorVariable
 from scipy.spatial import cKDTree
 
 from pymc.aesaraf import floatX
-from pymc.distributions.distribution import NoDistribution, _moment
+from pymc.distributions.distribution import Distribution, _moment
 
 __all__ = ["Simulator"]
 
@@ -63,7 +63,7 @@ class SimulatorRV(RandomVariable):
         return cls._sum_stat(*args, **kwargs)
 
 
-class Simulator(NoDistribution):
+class Simulator(Distribution):
     r"""
     Simulator distribution, used for Approximate Bayesian Inference (ABC)
     with Sequential Monte Carlo (SMC) sampling via :func:`~pymc.sample_smc`.
@@ -86,6 +86,15 @@ class Simulator(NoDistribution):
         Keyword form of ''unnamed_params''.
         One of unnamed_params or params must be provided.
         If passed both unnamed_params and params, an error is raised.
+    class_name : str
+        Name for the RandomVariable class which will wrap the Simulator methods.
+        When not specified, it will be given the name of the variable.
+
+        .. warning:: New Simulators created with the same class_name will override the
+            methods dispatched onto the previous classes. If using Simulators with
+            different methods across separate models, be sure to use distinct
+            class_names.
+
     distance : Aesara_Op, callable or str, default "gaussian"
         Distance function. Available options are ``"gaussian"``, ``"laplace"``,
         ``"kullback_leibler"`` or a user defined function (or Aesara_Op) that takes
@@ -137,12 +146,19 @@ class Simulator(NoDistribution):
 
     """
 
-    def __new__(
+    rv_type = SimulatorRV
+
+    def __new__(cls, name, *args, **kwargs):
+        kwargs.setdefault("class_name", name)
+        return super().__new__(cls, name, *args, **kwargs)
+
+    @classmethod
+    def dist(  # type: ignore
         cls,
-        name,
         fn,
         *unnamed_params,
         params=None,
+        class_name: str,
         distance="gaussian",
         sum_stat="identity",
         epsilon=1,
@@ -196,11 +212,38 @@ class Simulator(NoDistribution):
         if ndims_params is None:
             ndims_params = [0] * len(params)
 
+        return super().dist(
+            params,
+            class_name=class_name,
+            fn=fn,
+            ndim_supp=ndim_supp,
+            ndims_params=ndims_params,
+            dtype=dtype,
+            distance=distance,
+            sum_stat=sum_stat,
+            epsilon=epsilon,
+            **kwargs,
+        )
+
+    @classmethod
+    def rv_op(
+        cls,
+        *params,
+        class_name,
+        fn,
+        ndim_supp,
+        ndims_params,
+        dtype,
+        distance,
+        sum_stat,
+        epsilon,
+        **kwargs,
+    ):
         sim_op = type(
-            f"Simulator_{name}",
+            f"Simulator_{class_name}",
             (SimulatorRV,),
             dict(
-                name="Simulator",
+                name=f"Simulator_{class_name}",
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
                 dtype=dtype,
@@ -211,53 +254,35 @@ class Simulator(NoDistribution):
                 epsilon=epsilon,
             ),
         )()
+        return sim_op(*params, **kwargs)
 
-        # The logp function is registered to the more general SimulatorRV,
-        # in order to avoid issues with multiprocessing / pickling
 
-        # rv_type = type(sim_op)
-        # NoDistribution.register(rv_type)
-        NoDistribution.register(SimulatorRV)
+@_moment.register(SimulatorRV)  # type: ignore
+def simulator_moment(op, rv, *inputs):
+    sim_inputs = inputs[3:]
+    # Take the mean of 10 draws
+    multiple_sim = rv.owner.op(*sim_inputs, size=at.concatenate([[10], rv.shape]))
+    return at.mean(multiple_sim, axis=0)
 
-        @_logprob.register(SimulatorRV)
-        def logp(op, value_var_list, *dist_params, **kwargs):
-            _dist_params = dist_params[3:]
-            value_var = value_var_list[0]
-            return cls.logp(value_var, op, dist_params)
 
-        @_moment.register(SimulatorRV)
-        def moment(op, rv, rng, size, dtype, *rv_inputs):
-            return cls.moment(rv, *rv_inputs)
+@_logprob.register(SimulatorRV)
+def simulator_logp(op, values, *inputs, **kwargs):
+    (value,) = values
 
-        cls.rv_op = sim_op
-        return super().__new__(cls, name, *params, **kwargs)
+    # Use a new rng to avoid non-randomness in parallel sampling
+    # TODO: Model rngs should be updated prior to multiprocessing split,
+    #  in which case this would not be needed. However, that would have to be
+    #  done for every sampler that may accomodate Simulators
+    rng = aesara.shared(np.random.default_rng(), name="simulator_rng")
+    # Create a new simulatorRV with identical inputs as the original one
+    sim_value = op.make_node(rng, *inputs[1:]).default_output()
+    sim_value.name = "simulator_value"
 
-    @classmethod
-    def dist(cls, *params, **kwargs):
-        return super().dist(params, **kwargs)
-
-    @classmethod
-    def moment(cls, rv, *sim_inputs):
-        # Take the mean of 10 draws
-        multiple_sim = rv.owner.op(*sim_inputs, size=at.concatenate([[10], rv.shape]))
-        return at.mean(multiple_sim, axis=0)
-
-    @classmethod
-    def logp(cls, value, sim_op, sim_inputs):
-        # Use a new rng to avoid non-randomness in parallel sampling
-        # TODO: Model rngs should be updated prior to multiprocessing split,
-        #  in which case this would not be needed. However, that would have to be
-        #  done for every sampler that may accomodate Simulators
-        rng = aesara.shared(np.random.default_rng())
-        # Create a new simulatorRV with identical inputs as the original one
-        sim_value = sim_op.make_node(rng, *sim_inputs[1:]).default_output()
-        sim_value.name = "sim_value"
-
-        return sim_op.distance(
-            sim_op.epsilon,
-            sim_op.sum_stat(value),
-            sim_op.sum_stat(sim_value),
-        )
+    return op.distance(
+        op.epsilon,
+        op.sum_stat(value),
+        op.sum_stat(sim_value),
+    )
 
 
 def identity(x):

@@ -891,7 +891,7 @@ class TestLogitBinomial(BaseTestDistributionRandom):
     pymc_dist = pm.Binomial
     pymc_dist_params = {"n": 100, "logit_p": 0.5}
     expected_rv_op_params = {"n": 100, "p": sp.expit(0.5)}
-    tests_to_run = ["check_pymc_params_match_rv_op"]
+    checks_to_run = ["check_pymc_params_match_rv_op"]
 
     @pytest.mark.parametrize(
         "n, p, logit_p, expected",
@@ -968,7 +968,10 @@ class TestLogitCategorical(BaseTestDistributionRandom):
     expected_rv_op_params = {
         "p": sp.softmax(np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]]), axis=-1)
     }
-    tests_to_run = [
+    sizes_to_check = [None, (), (2,), (4, 2), (1, 2)]
+    sizes_expected = [(2,), (2,), (2,), (4, 2), (1, 2)]
+
+    checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",
     ]

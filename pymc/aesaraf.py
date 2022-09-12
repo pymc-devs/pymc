@@ -11,8 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import warnings
-
 from typing import (
     Callable,
     Dict,
@@ -32,9 +30,8 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sps
 
-from aeppl.abstract import MeasurableVariable
 from aeppl.logprob import CheckParameterValue
-from aesara import config, scalar
+from aesara import scalar
 from aesara.compile.mode import Mode, get_mode
 from aesara.gradient import grad
 from aesara.graph import node_rewriter
@@ -48,7 +45,7 @@ from aesara.graph.basic import (
     walk,
 )
 from aesara.graph.fg import FunctionGraph
-from aesara.graph.op import Op, compute_test_value
+from aesara.graph.op import Op
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.scalar.basic import Cast
 from aesara.tensor.basic import _as_tensor_variable
@@ -58,12 +55,10 @@ from aesara.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
 )
-from aesara.tensor.shape import SpecifyShape
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorConstant, TensorVariable
 
-from pymc.exceptions import ShapeError
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
 PotentialShapeType = Union[int, np.ndarray, Sequence[Union[int, Variable]], TensorVariable]
@@ -150,91 +145,6 @@ def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVar
     return at.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
 
-def change_rv_size(
-    rv: TensorVariable,
-    new_size: PotentialShapeType,
-    expand: Optional[bool] = False,
-) -> TensorVariable:
-    """Change or expand the size of a `RandomVariable`.
-
-    Parameters
-    ==========
-    rv
-        The old `RandomVariable` output.
-    new_size
-        The new size.
-    expand:
-        Expand the existing size by `new_size`.
-
-    """
-    # Check the dimensionality of the `new_size` kwarg
-    new_size_ndim = np.ndim(new_size)
-    if new_size_ndim > 1:
-        raise ShapeError("The `new_size` must be ≤1-dimensional.", actual=new_size_ndim)
-    elif new_size_ndim == 0:
-        new_size = (new_size,)
-
-    # Extract the RV node that is to be resized, together with its inputs, name and tag
-    assert rv.owner.op is not None
-    if isinstance(rv.owner.op, SpecifyShape):
-        rv = rv.owner.inputs[0]
-    rv_node = rv.owner
-    rng, size, dtype, *dist_params = rv_node.inputs
-    name = rv.name
-    tag = rv.tag
-
-    if expand:
-        shape = tuple(rv_node.op._infer_shape(size, dist_params))
-        size = shape[: len(shape) - rv_node.op.ndim_supp]
-        new_size = tuple(new_size) + tuple(size)
-
-    # Make sure the new size is a tensor. This dtype-aware conversion helps
-    # to not unnecessarily pick up a `Cast` in some cases (see #4652).
-    new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
-
-    new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
-    new_rv = new_rv_node.outputs[-1]
-    new_rv.name = name
-    for k, v in tag.__dict__.items():
-        new_rv.tag.__dict__.setdefault(k, v)
-
-    # Update "traditional" rng default_update, if that was set for old RV
-    default_update = getattr(rng, "default_update", None)
-    if default_update is not None and default_update is rv_node.outputs[0]:
-        rng.default_update = new_rv_node.outputs[0]
-
-    if config.compute_test_value != "off":
-        compute_test_value(new_rv_node)
-
-    return new_rv
-
-
-def extract_rv_and_value_vars(
-    var: TensorVariable,
-) -> Tuple[TensorVariable, TensorVariable]:
-    """Return a random variable and it's observations or value variable, or ``None``.
-
-    Parameters
-    ==========
-    var
-        A variable corresponding to a ``RandomVariable``.
-
-    Returns
-    =======
-    The first value in the tuple is the ``RandomVariable``, and the second is the
-    measure/log-likelihood value variable that corresponds with the latter.
-
-    """
-    if not var.owner:
-        return None, None
-
-    if isinstance(var.owner.op, RandomVariable):
-        rv_value = getattr(var.tag, "observations", getattr(var.tag, "value_var", None))
-        return var, rv_value
-
-    return None, None
-
-
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
     """Extract data from observed symbolic variables.
 
@@ -262,20 +172,15 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
 
 def walk_model(
     graphs: Iterable[TensorVariable],
-    walk_past_rvs: bool = False,
     stop_at_vars: Optional[Set[TensorVariable]] = None,
     expand_fn: Callable[[TensorVariable], Iterable[TensorVariable]] = lambda var: [],
 ) -> Generator[TensorVariable, None, None]:
     """Walk model graphs and yield their nodes.
 
-    By default, these walks will not go past ``RandomVariable`` nodes.
-
     Parameters
     ==========
     graphs
         The graphs to walk.
-    walk_past_rvs
-        If ``True``, the walk will not terminate at ``RandomVariable``s.
     stop_at_vars
         A list of variables at which the walk will terminate.
     expand_fn
@@ -287,16 +192,12 @@ def walk_model(
     def expand(var):
         new_vars = expand_fn(var)
 
-        if (
-            var.owner
-            and (walk_past_rvs or not isinstance(var.owner.op, RandomVariable))
-            and (var not in stop_at_vars)
-        ):
+        if var.owner and var not in stop_at_vars:
             new_vars.extend(reversed(var.owner.inputs))
 
         return new_vars
 
-    yield from walk(graphs, expand, False)
+    yield from walk(graphs, expand, bfs=False)
 
 
 def replace_rvs_in_graphs(
@@ -325,7 +226,11 @@ def replace_rvs_in_graphs(
 
     def expand_replace(var):
         new_nodes = []
-        if var.owner and isinstance(var.owner.op, RandomVariable):
+        if var.owner:
+            # Call replacement_fn to update replacements dict inplace and, optionally,
+            # specify new nodes that should also be walked for replacements. This
+            # includes `value` variables that are not simple input variables, and may
+            # contain other `random` variables in their graphs (e.g., IntervalTransform)
             new_nodes.extend(replacement_fn(var, replacements))
         return new_nodes
 
@@ -352,10 +257,10 @@ def replace_rvs_in_graphs(
 
 def rvs_to_value_vars(
     graphs: Iterable[TensorVariable],
-    apply_transforms: bool = False,
+    apply_transforms: bool = True,
     initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
     **kwargs,
-) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
+) -> TensorVariable:
     """Clone and replace random variables in graphs with their value variables.
 
     This will *not* recompute test values in the resulting graphs.
@@ -371,38 +276,30 @@ def rvs_to_value_vars(
 
     """
 
-    # Avoid circular dependency
-    from pymc.distributions import NoDistribution
+    def populate_replacements(
+        random_var: TensorVariable, replacements: Dict[TensorVariable, TensorVariable]
+    ) -> List[TensorVariable]:
+        # Populate replacements dict with {rv: value} pairs indicating which graph
+        # RVs should be replaced by what value variables.
 
-    def transform_replacements(var, replacements):
-        rv_var, rv_value_var = extract_rv_and_value_vars(var)
+        value_var = getattr(
+            random_var.tag, "observations", getattr(random_var.tag, "value_var", None)
+        )
 
-        if rv_value_var is None:
-            # If RandomVariable does not have a value_var and corresponds to
-            # a NoDistribution, we allow further replacements in upstream graph
-            if isinstance(rv_var.owner.op, NoDistribution):
-                return rv_var.owner.inputs
+        # No value variable to replace RV with
+        if value_var is None:
+            return []
 
-            else:
-                warnings.warn(
-                    f"No value variable found for {rv_var}; "
-                    "the random variable will not be replaced."
-                )
-                return []
+        transform = getattr(value_var.tag, "transform", None)
+        if transform is not None and apply_transforms:
+            # We want to replace uses of the RV by the back-transformation of its value
+            value_var = transform.backward(value_var, *random_var.owner.inputs)
 
-        transform = getattr(rv_value_var.tag, "transform", None)
+        replacements[random_var] = value_var
 
-        if transform is None or not apply_transforms:
-            replacements[var] = rv_value_var
-            # In case the value variable is itself a graph, we walk it for
-            # potential replacements
-            return [rv_value_var]
-
-        trans_rv_value = transform.backward(rv_value_var, *rv_var.owner.inputs)
-        replacements[var] = trans_rv_value
-
-        # Walk the transformed variable and make replacements
-        return [trans_rv_value]
+        # Also walk the graph of the value variable to make any additional replacements
+        # if that is not a simple input variable
+        return [value_var]
 
     # Clone original graphs
     inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
@@ -414,7 +311,14 @@ def rvs_to_value_vars(
             equiv.get(k, k): equiv.get(v, v) for k, v in initial_replacements.items()
         }
 
-    return replace_rvs_in_graphs(graphs, transform_replacements, initial_replacements, **kwargs)
+    graphs, _ = replace_rvs_in_graphs(
+        graphs,
+        replacement_fn=populate_replacements,
+        initial_replacements=initial_replacements,
+        **kwargs,
+    )
+
+    return graphs
 
 
 def inputvars(a):
@@ -668,21 +572,13 @@ def join_nonshared_inputs(
     for var in vars:
         shape = point[var.name].shape
         arr_len = np.prod(shape, dtype=int)
-        replace[var] = reshape_t(inarray[last_idx : last_idx + arr_len], shape).astype(var.dtype)
+        replace[var] = inarray[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
         last_idx += arr_len
 
     replace.update(shared)
 
     xs_special = [aesara.clone_replace(x, replace, rebuild_strict=False) for x in xs]
     return xs_special, inarray
-
-
-def reshape_t(x, shape):
-    """Work around fact that x.reshape(()) doesn't work"""
-    if shape != ():
-        return x.reshape(shape)
-    else:
-        return x[0]
 
 
 class PointFunc:
@@ -926,6 +822,31 @@ def find_rng_nodes(
     ]
 
 
+def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:
+    """Replace any RNG nodes upsteram of outputs by new RNGs of the same type
+
+    This can be used when combining a pre-existing graph with a cloned one, to ensure
+    RNGs are unique across the two graphs.
+    """
+    rng_nodes = find_rng_nodes(outputs)
+
+    # Nothing to do here
+    if not rng_nodes:
+        return outputs
+
+    graph = FunctionGraph(outputs=outputs, clone=False)
+    new_rng_nodes: List[Union[np.random.RandomState, np.random.Generator]] = []
+    for rng_node in rng_nodes:
+        rng_cls: type
+        if isinstance(rng_node, at.random.var.RandomStateSharedVariable):
+            rng_cls = np.random.RandomState
+        else:
+            rng_cls = np.random.Generator
+        new_rng_nodes.append(aesara.shared(rng_cls(np.random.PCG64())))
+    graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
+    return graph.outputs
+
+
 SeedSequenceSeed = Optional[Union[int, Sequence[int], np.ndarray, np.random.SeedSequence]]
 
 
@@ -987,6 +908,9 @@ def compile_pymc(
         this function is called within a model context and the model `check_bounds` flag
         is set to False.
     """
+    # Avoid circular import
+    from pymc.distributions.distribution import SymbolicRandomVariable
+
     # Create an update mapping of RandomVariable's RNG so that it is automatically
     # updated after every function call
     rng_updates = {}
@@ -995,7 +919,7 @@ def compile_pymc(
         var
         for var in vars_between(inputs, output_to_list)
         if var.owner
-        and isinstance(var.owner.op, (RandomVariable, MeasurableVariable))
+        and isinstance(var.owner.op, (RandomVariable, SymbolicRandomVariable))
         and var not in inputs
     ):
         # All nodes in `vars_between(inputs, outputs)` have owners.
@@ -1003,14 +927,21 @@ def compile_pymc(
         assert random_var.owner.op is not None
         if isinstance(random_var.owner.op, RandomVariable):
             rng = random_var.owner.inputs[0]
-            if not hasattr(rng, "default_update"):
-                rng_updates[rng] = random_var.owner.outputs[0]
+            if hasattr(rng, "default_update"):
+                update_map = {rng: rng.default_update}
             else:
-                rng_updates[rng] = rng.default_update
+                update_map = {rng: random_var.owner.outputs[0]}
         else:
-            update_fn = getattr(random_var.owner.op, "update", None)
-            if update_fn is not None:
-                rng_updates.update(update_fn(random_var.owner))
+            update_map = random_var.owner.op.update(random_var.owner)
+        # Check that we are not setting different update expressions for the same variables
+        for rng, update in update_map.items():
+            if rng not in rng_updates:
+                rng_updates[rng] = update
+            # When a variable has multiple outputs, it will be called twice with the same
+            # update expression. We don't want to raise in that case, only if the update
+            # expression in different from the one already registered
+            elif rng_updates[rng] is not update:
+                raise ValueError(f"Multiple update expressions found for the variable {rng}")
 
     # We always reseed random variables as this provides RNGs with no chances of collision
     if rng_updates:

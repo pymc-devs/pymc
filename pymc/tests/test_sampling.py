@@ -39,6 +39,7 @@ import pymc as pm
 from pymc.aesaraf import compile_pymc
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
+from pymc.distributions import transforms
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
 from pymc.sampling import _get_seeds_per_chain, compile_forward_sampling_function
 from pymc.tests.helpers import SeededTest, fast_unstable_sampling_mode
@@ -408,9 +409,15 @@ class TestSample(SeededTest):
             with pytest.raises(NotImplementedError):
                 xvars = [t["mu"] for t in trace]
 
-    def test_deterministic_of_unobserved(self):
+    @pytest.mark.parametrize("symbolic_rv", (False, True))
+    def test_deterministic_of_unobserved(self, symbolic_rv):
         with pm.Model() as model:
-            x = pm.HalfNormal("x", 1)
+            if symbolic_rv:
+                x = pm.Censored(
+                    "x", pm.HalfNormal.dist(1), lower=None, upper=10, transform=transforms.log
+                )
+            else:
+                x = pm.HalfNormal("x", 1)
             y = pm.Deterministic("y", x + 100)
             idata = pm.sample(
                 chains=1,
@@ -421,10 +428,15 @@ class TestSample(SeededTest):
 
         np.testing.assert_allclose(idata.posterior["y"], idata.posterior["x"] + 100)
 
-    def test_transform_with_rv_dependency(self):
+    @pytest.mark.parametrize("symbolic_rv", (False, True))
+    def test_transform_with_rv_dependency(self, symbolic_rv):
         # Test that untransformed variables that depend on upstream variables are properly handled
         with pm.Model() as m:
-            x = pm.HalfNormal("x", observed=1)
+            if symbolic_rv:
+                x = pm.Censored("x", pm.HalfNormal.dist(1), lower=0, upper=1, observed=1)
+            else:
+                x = pm.HalfNormal("x", observed=1)
+
             transform = pm.distributions.transforms.Interval(
                 bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
             )
@@ -1697,7 +1709,7 @@ class TestCompileForwardSampler:
         assert {i.name for i in self.get_function_inputs(f)} == {"sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {"mu", "sigma"}
 
-    def test_distributions_op_from_graph(self):
+    def test_mixture(self):
         with pm.Model() as model:
             w = pm.Dirichlet("w", a=np.ones(3), size=(5, 3))
 
@@ -1731,7 +1743,7 @@ class TestCompileForwardSampler:
         assert {i.name for i in self.get_function_inputs(f)} == {"mu"}
         assert {i.name for i in self.get_function_roots(f)} == {"mu"}
 
-    def test_distributions_no_op_from_graph(self):
+    def test_censored(self):
         with pm.Model() as model:
             latent_mu = pm.Normal("latent_mu", mu=np.arange(3), sigma=1)
             mu = pm.Censored("mu", pm.Normal.dist(mu=latent_mu, sigma=1), lower=-1, upper=1)
@@ -1783,6 +1795,25 @@ class TestCompileForwardSampler:
         f = compile_forward_sampling_function(
             outputs=[obs],
             vars_in_trace=[chol],
+            basic_rvs=model.basic_RVs,
+        )
+        assert {i.name for i in self.get_function_inputs(f)} == set()
+        assert {i.name for i in self.get_function_roots(f)} == set()
+
+    def test_non_random_model_variable(self):
+        with pm.Model() as model:
+            # A user may register non-pure RandomVariables that can nevertheless be
+            # sampled, as long as a custom logprob is dispatched or Aeppl can infer
+            # its logprob (which is the case for `clip`)
+            y = at.clip(pm.Normal.dist(), -1, 1)
+            y = model.register_rv(y, name="y")
+            y_abs = pm.Deterministic("y_abs", at.abs(y))
+            obs = pm.Normal("obs", y_abs, observed=np.zeros(10))
+
+        # y_abs should be resampled even if in the trace, because the source y is missing
+        f = compile_forward_sampling_function(
+            outputs=[obs],
+            vars_in_trace=[y_abs],
             basic_rvs=model.basic_RVs,
         )
         assert {i.name for i in self.get_function_inputs(f)} == set()

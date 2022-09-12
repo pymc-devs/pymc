@@ -13,47 +13,51 @@
 #   limitations under the License.
 import warnings
 
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import aesara
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
+from aeppl.abstract import _get_measurable_outputs
 from aeppl.logprob import _logprob
 from aesara import scan
-from aesara.compile.builders import OpFromGraph
 from aesara.graph import FunctionGraph, rewrite_graph
-from aesara.graph.basic import Node
+from aesara.graph.basic import Node, clone_replace
 from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.utils import normalize_size_param
 from aesara.tensor.rewriting.basic import ShapeFeature, topo_constant_folding
 
-from pymc.aesaraf import change_rv_size, convert_observed_data, floatX, intX
+from pymc.aesaraf import convert_observed_data, floatX, intX
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
-from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.distribution import SymbolicDistribution, _moment, moment
+from pymc.distributions.distribution import (
+    Distribution,
+    SymbolicRandomVariable,
+    _moment,
+    moment,
+)
 from pymc.distributions.logprob import ignore_logprob, logp
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
+    _change_dist_size,
+    change_dist_size,
     convert_dims,
-    rv_size_is_none,
     to_tuple,
 )
 from pymc.model import modelcontext
 from pymc.util import check_dist_not_registered
 
 __all__ = [
-    "AR",
+    "RandomWalk",
     "GaussianRandomWalk",
-    "GARCH11",
-    "EulerMaruyama",
     "MvGaussianRandomWalk",
     "MvStudentTRandomWalk",
+    "AR",
+    "GARCH11",
+    "EulerMaruyama",
 ]
 
 
@@ -91,14 +95,12 @@ def get_steps(
     inferred_steps = None
     if shape is not None:
         shape = to_tuple(shape)
-        if shape[-1] is not ...:
-            inferred_steps = shape[-1] - step_shape_offset
+        inferred_steps = shape[-1] - step_shape_offset
 
     if inferred_steps is None and dims is not None:
         dims = convert_dims(dims)
-        if dims[-1] is not ...:
-            model = modelcontext(None)
-            inferred_steps = model.dim_lengths[dims[-1]] - step_shape_offset
+        model = modelcontext(None)
+        inferred_steps = model.dim_lengths[dims[-1]] - step_shape_offset
 
     if inferred_steps is None and observed is not None:
         observed = convert_observed_data(observed)
@@ -114,109 +116,133 @@ def get_steps(
     return inferred_steps
 
 
-class GaussianRandomWalkRV(RandomVariable):
-    """
-    GaussianRandomWalk Random Variable
+class RandomWalkRV(SymbolicRandomVariable):
+    """RandomWalk Variable"""
+
+    default_output = 0
+    _print_name = ("RandomWalk", "\\operatorname{RandomWalk}")
+
+
+class RandomWalk(Distribution):
+    r"""RandomWalk Distribution
+
+    TODO: Expand docstrings
     """
 
-    name = "GaussianRandomWalk"
-    ndim_supp = 1
-    ndims_params = [0, 0, 0, 0]
-    dtype = "floatX"
-    _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
+    rv_type = RandomWalkRV
 
-    def make_node(self, rng, size, dtype, mu, sigma, init_dist, steps):
-        steps = at.as_tensor_variable(steps)
+    def __new__(cls, *args, steps=None, **kwargs):
+        steps = get_steps(
+            steps=steps,
+            shape=None,  # Shape will be checked in `cls.dist`
+            dims=kwargs.get("dims", None),
+            observed=kwargs.get("observed", None),
+            step_shape_offset=1,
+        )
+        return super().__new__(cls, *args, steps=steps, **kwargs)
+
+    @classmethod
+    def dist(cls, init_dist, innovation_dist, steps=None, **kwargs) -> at.TensorVariable:
+        steps = get_steps(
+            steps=steps,
+            shape=kwargs.get("shape"),
+            step_shape_offset=1,
+        )
+        if steps is None:
+            raise ValueError("Must specify steps or shape parameter")
+        steps = at.as_tensor_variable(intX(steps))
+
+        if not (
+            isinstance(init_dist, at.TensorVariable)
+            and init_dist.owner is not None
+            and isinstance(init_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
+            # TODO: Lift univariate constraint on init_dist
+            and init_dist.owner.op.ndim_supp == 0
+        ):
+            raise TypeError("init_dist must be a univariate distribution variable")
+        check_dist_not_registered(init_dist)
+
+        if not (
+            isinstance(innovation_dist, at.TensorVariable)
+            and init_dist.owner is not None
+            and isinstance(init_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
+            # TODO: Lift univariate constraint on inovvation_dist
+            and init_dist.owner.op.ndim_supp == 0
+        ):
+            raise TypeError("init_dist must be a univariate distribution variable")
+        check_dist_not_registered(init_dist)
+
+        return super().dist([init_dist, innovation_dist, steps], **kwargs)
+
+    @classmethod
+    def rv_op(cls, init_dist, innovation_dist, steps, size=None):
         if not steps.ndim == 0 or not steps.dtype.startswith("int"):
             raise ValueError("steps must be an integer scalar (ndim=0).")
 
-        mu = at.as_tensor_variable(mu)
-        sigma = at.as_tensor_variable(sigma)
-        init_dist = at.as_tensor_variable(init_dist)
-
-        # Resize init distribution
-        size = normalize_size_param(size)
-        # If not explicit, size is determined by the shapes of mu, sigma, and init
-        init_dist_size = (
-            size if not rv_size_is_none(size) else at.broadcast_shape(mu, sigma, init_dist)
-        )
-        init_dist = change_rv_size(init_dist, init_dist_size)
-
-        return super().make_node(rng, size, dtype, mu, sigma, init_dist, steps)
-
-    def _supp_shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
-        steps = dist_params[3]
-
-        return (steps + 1,)
-
-    @classmethod
-    def rng_fn(
-        cls,
-        rng: np.random.RandomState,
-        mu: Union[np.ndarray, float],
-        sigma: Union[np.ndarray, float],
-        init_dist: Union[np.ndarray, float],
-        steps: int,
-        size: Tuple[int],
-    ) -> np.ndarray:
-        """Gaussian Random Walk generator.
-
-        The init value is drawn from the Normal distribution with the same sigma as the
-        innovations.
-
-        Notes
-        -----
-        Currently does not support custom init distribution
-
-        Parameters
-        ----------
-        rng: np.random.RandomState
-           Numpy random number generator
-        mu: array_like of float
-           Random walk mean
-        sigma: array_like of float
-            Standard deviation of innovation (sigma > 0)
-        init_dist: array_like of float
-            Initialization value for GaussianRandomWalk
-        steps: int
-            Length of random walk, must be greater than 1. Returned array will be of size+1 to
-            account as first value is initial value
-        size: tuple of int
-            The number of Random Walk time series generated
-
-        Returns
-        -------
-        ndarray
-        """
-
-        if steps < 1:
-            raise ValueError("Steps must be greater than 0")
-
-        # If size is None then the returned series should be (*implied_dims, 1+steps)
+        # If not explicit, size is determined by the shapes of the input distributions
         if size is None:
-            # broadcast parameters with each other to find implied dims
-            bcast_shape = np.broadcast_shapes(
-                np.asarray(mu).shape,
-                np.asarray(sigma).shape,
-                np.asarray(init_dist).shape,
-            )
-            dist_shape = (*bcast_shape, int(steps))
+            size = at.broadcast_shape(init_dist, innovation_dist[..., 0])
+        innovation_size = tuple(size) + (steps,)
 
-        # If size is None then the returned series should be (*size, 1+steps)
-        else:
-            dist_shape = (*size, int(steps))
+        # Resize input distributions
+        init_dist = change_dist_size(init_dist, size)
+        innovation_dist = change_dist_size(innovation_dist, innovation_size)
 
-        # Add one dimension to the right, so that mu and sigma broadcast safely along
-        # the steps dimension
-        innovations = rng.normal(loc=mu[..., None], scale=sigma[..., None], size=dist_shape)
-        grw = np.concatenate([init_dist[..., None], innovations], axis=-1)
-        return np.cumsum(grw, axis=-1)
+        # Create SymbolicRV
+        init_dist_, innovation_dist_, steps_ = (
+            init_dist.type(),
+            innovation_dist.type(),
+            steps.type(),
+        )
+        grw_ = at.concatenate([init_dist_[..., None], innovation_dist_], axis=-1)
+        grw_ = at.cumsum(grw_, axis=-1)
+        return RandomWalkRV(
+            [init_dist_, innovation_dist_, steps_],
+            # We pass steps_ through just so we can keep a reference to it, even though
+            # it's no longer needed at this point
+            [grw_, steps_],
+            ndim_supp=1,
+        )(init_dist, innovation_dist, steps)
 
 
-gaussianrandomwalk = GaussianRandomWalkRV()
+@_get_measurable_outputs.register(RandomWalkRV)
+def _get_measurable_outputs_random_walk(op, node):
+    # Ignore steps output
+    return [node.default_output()]
 
 
-class GaussianRandomWalk(distribution.Continuous):
+@_change_dist_size.register(RandomWalkRV)
+def change_random_walk_size(op, dist, new_size, expand):
+    init_dist, innovation_dist, steps = dist.owner.inputs
+    if expand:
+        old_size = init_dist.shape
+        new_size = tuple(new_size) + tuple(old_size)
+    return RandomWalk.rv_op(init_dist, innovation_dist, steps, size=new_size)
+
+
+@_moment.register(RandomWalkRV)
+def random_walk_moment(op, rv, init_dist, innovation_dist, steps):
+    grw_moment = at.zeros_like(rv)
+    grw_moment = at.set_subtensor(grw_moment[..., 0], moment(init_dist))
+    grw_moment = at.set_subtensor(grw_moment[..., 1:], moment(innovation_dist))
+    return at.cumsum(grw_moment, axis=-1)
+
+
+@_logprob.register(RandomWalkRV)
+def random_walk_logp(op, values, *inputs, **kwargs):
+    # ALthough Aeppl can derive the logprob of random walks, it does not collapse
+    # what PyMC considers the core dimension of steps. We do it manually here.
+    (value,) = values
+    # Recreate RV and obtain inner graph
+    rv_node = op.make_node(*inputs)
+    rv = clone_replace(
+        op.inner_outputs, replace={u: v for u, v in zip(op.inner_inputs, rv_node.inputs)}
+    )[op.default_output]
+    # Obtain logp via Aeppl of inner graph and collapse steps dimension
+    return logp(rv, value).sum(axis=-1)
+
+
+class GaussianRandomWalk:
     r"""Random Walk with Normal innovations.
 
     Parameters
@@ -236,33 +262,25 @@ class GaussianRandomWalk(distribution.Continuous):
         provided.
     """
 
-    rv_op = gaussianrandomwalk
-
-    def __new__(cls, *args, steps=None, **kwargs):
-        steps = get_steps(
-            steps=steps,
-            shape=None,  # Shape will be checked in `cls.dist`
-            dims=kwargs.get("dims", None),
-            observed=kwargs.get("observed", None),
-            step_shape_offset=1,
+    def __new__(cls, name, mu=0.0, sigma=1.0, *, init_dist=None, steps=None, **kwargs):
+        init_dist, innovation_dist, kwargs = cls.get_dists(
+            mu=mu, sigma=sigma, init_dist=init_dist, **kwargs
         )
-        return super().__new__(cls, *args, steps=steps, **kwargs)
+        return RandomWalk(
+            name, init_dist=init_dist, innovation_dist=innovation_dist, steps=steps, **kwargs
+        )
 
     @classmethod
     def dist(cls, mu=0.0, sigma=1.0, *, init_dist=None, steps=None, **kwargs) -> at.TensorVariable:
-
-        mu = at.as_tensor_variable(floatX(mu))
-        sigma = at.as_tensor_variable(floatX(sigma))
-
-        steps = get_steps(
-            steps=steps,
-            shape=kwargs.get("shape"),
-            step_shape_offset=1,
+        init_dist, innovation_dist, kwargs = cls.get_dists(
+            mu=mu, sigma=sigma, init_dist=init_dist, **kwargs
         )
-        if steps is None:
-            raise ValueError("Must specify steps or shape parameter")
-        steps = at.as_tensor_variable(intX(steps))
+        return RandomWalk.dist(
+            init_dist=init_dist, innovation_dist=innovation_dist, steps=steps, **kwargs
+        )
 
+    @classmethod
+    def get_dists(cls, *, mu, sigma, init_dist, **kwargs):
         if "init" in kwargs:
             warnings.warn(
                 "init parameter is now called init_dist. Using init will raise an error in a future release.",
@@ -278,60 +296,24 @@ class GaussianRandomWalk(distribution.Continuous):
                 UserWarning,
             )
             init_dist = Normal.dist(0, 100)
-        else:
-            if not (
-                isinstance(init_dist, at.TensorVariable)
-                and init_dist.owner is not None
-                and isinstance(init_dist.owner.op, RandomVariable)
-                and init_dist.owner.op.ndim_supp == 0
-            ):
-                raise TypeError("init must be a univariate distribution variable")
-            check_dist_not_registered(init_dist)
 
-        # Ignores logprob of init var because that's accounted for in the logp method
-        init_dist = ignore_logprob(init_dist)
-
-        return super().dist([mu, sigma, init_dist, steps], **kwargs)
-
-    def moment(rv, size, mu, sigma, init_dist, steps):
-        grw_moment = at.zeros_like(rv)
-        grw_moment = at.set_subtensor(grw_moment[..., 0], moment(init_dist))
-        # Add one dimension to the right, so that mu broadcasts safely along the steps
-        # dimension
-        grw_moment = at.set_subtensor(grw_moment[..., 1:], mu[..., None])
-        return at.cumsum(grw_moment, axis=-1)
-
-    def logp(
-        value: at.Variable,
-        mu: at.Variable,
-        sigma: at.Variable,
-        init_dist: at.Variable,
-        steps: at.Variable,
-    ) -> at.TensorVariable:
-        """Calculate log-probability of Gaussian Random Walk distribution at specified value."""
-
-        # Calculate initialization logp
-        init_logp = logp(init_dist, value[..., 0])
-
-        # Make time series stationary around the mean value
-        stationary_series = value[..., 1:] - value[..., :-1]
         # Add one dimension to the right, so that mu and sigma broadcast safely along
         # the steps dimension
-        series_logp = logp(Normal.dist(mu[..., None], sigma[..., None]), stationary_series)
+        mu = at.as_tensor_variable(mu)
+        sigma = at.as_tensor_variable(sigma)
+        innovation_dist = Normal.dist(mu=mu[..., None], sigma=sigma[..., None])
 
-        return check_parameters(
-            init_logp + series_logp.sum(axis=-1),
-            steps > 0,
-            msg="steps > 0",
-        )
+        return init_dist, innovation_dist, kwargs
 
 
-class AutoRegressiveRV(OpFromGraph):
+class AutoRegressiveRV(SymbolicRandomVariable):
     """A placeholder used to specify a log-likelihood for an AR sub-graph."""
 
+    _print_name = ("AR", "\\operatorname{AR}")
     default_output = 1
     ar_order: int
     constant_term: bool
+    _print_name = ("AR", "\\operatorname{AR}")
 
     def __init__(self, *args, ar_order, constant_term, **kwargs):
         self.ar_order = ar_order
@@ -344,7 +326,7 @@ class AutoRegressiveRV(OpFromGraph):
         return {node.inputs[-1]: node.outputs[0]}
 
 
-class AR(SymbolicDistribution):
+class AR(Distribution):
     r"""Autoregressive process with p lags.
 
     .. math::
@@ -404,6 +386,8 @@ class AR(SymbolicDistribution):
 
     """
 
+    rv_type = AutoRegressiveRV
+
     def __new__(cls, name, rho, *args, steps=None, constant=False, ar_order=None, **kwargs):
         rhos = at.atleast_1d(at.as_tensor_variable(floatX(rho)))
         ar_order = cls._get_ar_order(rhos=rhos, constant=constant, ar_order=ar_order)
@@ -450,7 +434,7 @@ class AR(SymbolicDistribution):
 
         if init_dist is not None:
             if not isinstance(init_dist, TensorVariable) or not isinstance(
-                init_dist.owner.op, RandomVariable
+                init_dist.owner.op, (RandomVariable, SymbolicRandomVariable)
             ):
                 raise ValueError(
                     f"Init dist must be a distribution created via the `.dist()` API, "
@@ -523,13 +507,13 @@ class AR(SymbolicDistribution):
         else:
             # In this case the size of the init_dist depends on the parameters shape
             # The last dimension of rho and init_dist does not matter
-            batch_size = at.broadcast_shape(sigma, rhos[..., 0], init_dist[..., 0])
+            batch_size = at.broadcast_shape(sigma, rhos[..., 0], at.atleast_1d(init_dist)[..., 0])
         if init_dist.owner.op.ndim_supp == 0:
             init_dist_size = (*batch_size, ar_order)
         else:
             # In this case the support dimension must cover for ar_order
             init_dist_size = batch_size
-        init_dist = change_rv_size(init_dist, init_dist_size)
+        init_dist = change_dist_size(init_dist, init_dist_size)
 
         # Create OpFromGraph representing random draws form AR process
         # Variables with underscore suffix are dummy inputs into the OpFromGraph
@@ -571,35 +555,26 @@ class AR(SymbolicDistribution):
             outputs=[noise_next_rng, ar_],
             ar_order=ar_order,
             constant_term=constant_term,
-            inline=True,
+            ndim_supp=1,
         )
 
         ar = ar_op(rhos, sigma, init_dist, steps)
         return ar
 
-    @classmethod
-    def change_size(cls, rv, new_size, expand=False):
 
-        if expand:
-            old_size = rv.shape[:-1]
-            new_size = at.concatenate([new_size, old_size])
+@_change_dist_size.register(AutoRegressiveRV)
+def change_ar_size(op, dist, new_size, expand=False):
 
-        op = rv.owner.op
-        return cls.rv_op(
-            *rv.owner.inputs,
-            ar_order=op.ar_order,
-            constant_term=op.constant_term,
-            size=new_size,
-        )
+    if expand:
+        old_size = dist.shape[:-1]
+        new_size = tuple(new_size) + tuple(old_size)
 
-
-MeasurableVariable.register(AutoRegressiveRV)
-
-
-@_get_measurable_outputs.register(AutoRegressiveRV)
-def _get_measurable_outputs_ar(op, node):
-    # This tells Aeppl that the second output is the measurable one
-    return [node.outputs[1]]
+    return AR.rv_op(
+        *dist.owner.inputs[:-1],
+        ar_order=op.ar_order,
+        constant_term=op.constant_term,
+        size=new_size,
+    )
 
 
 @_logprob.register(AutoRegressiveRV)

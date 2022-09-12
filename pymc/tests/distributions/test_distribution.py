@@ -19,13 +19,15 @@ import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
 import pytest
+import scipy.stats as st
 
+from aeppl.abstract import get_measurable_outputs
 from aesara.tensor import TensorVariable
 
 import pymc as pm
 
-from pymc.distributions import MvNormal, MvStudentT, joint_logp, logp
-from pymc.distributions.distribution import _moment, moment
+from pymc.distributions import DiracDelta, Flat, MvNormal, MvStudentT, joint_logp, logp
+from pymc.distributions.distribution import SymbolicRandomVariable, _moment, moment
 from pymc.distributions.shape_utils import to_tuple
 from pymc.tests.distributions.util import assert_moment_is_expected
 
@@ -93,7 +95,7 @@ def test_all_distributions_have_moments():
     dists = (getattr(dist_module, dist) for dist in dist_module.__all__)
     dists = (dist for dist in dists if isinstance(dist, DistributionMeta))
     missing_moments = {
-        dist for dist in dists if type(getattr(dist, "rv_op", None)) not in _moment.registry
+        dist for dist in dists if getattr(dist, "rv_type", None) not in _moment.registry
     }
 
     # Ignore super classes
@@ -101,7 +103,6 @@ def test_all_distributions_have_moments():
         dist_module.Distribution,
         dist_module.Discrete,
         dist_module.Continuous,
-        dist_module.NoDistribution,
         dist_module.DensityDist,
         dist_module.simulator.Simulator,
     }
@@ -111,6 +112,7 @@ def test_all_distributions_have_moments():
         dist_module.timeseries.GARCH11,
         dist_module.timeseries.MvGaussianRandomWalk,
         dist_module.timeseries.MvStudentTRandomWalk,
+        dist_module.timeseries.EulerMaruyama,
     }
 
     # Distributions that have been refactored but don't yet have moments
@@ -302,3 +304,47 @@ class TestDensityDist:
                 match="Cannot safely infer the size of a multivariate random variable's moment.",
             ):
                 evaled_moment = moment(a).eval({mu: mu_val})
+
+    def test_dist(self):
+        mu = 1
+        x = pm.DensityDist.dist(
+            mu,
+            class_name="test",
+            logp=lambda value, mu: pm.logp(pm.Normal.dist(mu), value),
+            random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
+            shape=(3,),
+        )
+
+        test_value = pm.draw(x, random_seed=1)
+        assert np.all(test_value == pm.draw(x, random_seed=1))
+
+        x_logp = pm.logp(x, test_value)
+        assert np.allclose(x_logp.eval(), st.norm(1).logpdf(test_value))
+
+
+class TestSymbolicRandomVarible:
+    def test_inline(self):
+        class TestSymbolicRV(SymbolicRandomVariable):
+            pass
+
+        x = TestSymbolicRV([], [Flat.dist()], ndim_supp=0)()
+
+        # By default, the SymbolicRandomVariable will not be inlined. Because we did not
+        # dispatch a custom logprob function it will raise next
+        with pytest.raises(NotImplementedError):
+            logp(x, 0)
+
+        class TestInlinedSymbolicRV(SymbolicRandomVariable):
+            inline_aeppl = True
+
+        x_inline = TestInlinedSymbolicRV([], [Flat.dist()], ndim_supp=0)()
+        assert np.isclose(logp(x_inline, 0).eval(), 0)
+
+    def test_measurable_outputs(self):
+        class TestSymbolicRV(SymbolicRandomVariable):
+            pass
+
+        next_rng_, dirac_delta_ = DiracDelta.dist(5).owner.outputs
+        next_rng, dirac_delta = TestSymbolicRV([], [next_rng_, dirac_delta_], ndim_supp=0)()
+        node = dirac_delta.owner
+        assert get_measurable_outputs(node.op, node) == [dirac_delta]

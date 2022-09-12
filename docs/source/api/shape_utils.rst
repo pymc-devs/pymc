@@ -20,3 +20,4 @@ This module introduces functions that are made aware of the requested `size_tupl
    broadcast_distribution_samples
    broadcast_dist_samples_to
    rv_size_is_none
+   change_dist_size

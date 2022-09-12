@@ -28,6 +28,7 @@ from pymc.distributions.continuous import Flat, HalfNormal, Normal
 from pymc.distributions.discrete import DiracDelta
 from pymc.distributions.logprob import logp
 from pymc.distributions.multivariate import Dirichlet
+from pymc.distributions.shape_utils import change_dist_size
 from pymc.distributions.timeseries import (
     AR,
     GARCH11,
@@ -38,8 +39,6 @@ from pymc.distributions.timeseries import (
 from pymc.model import Model
 from pymc.sampling import draw, sample, sample_posterior_predictive
 from pymc.tests.distributions.util import (
-    BaseTestDistributionRandom,
-    Nat,
     R,
     Rplus,
     Vector,
@@ -57,11 +56,9 @@ from pymc.tests.helpers import SeededTest, select_by_precision
         (None, (10,), 0, 10, True),
         (None, (10,), 1, 9, True),
         (None, (10, 5), 0, 5, True),
-        (None, (10, ...), 0, None, True),
         (None, None, 0, None, True),
         (10, (10,), 0, 10, True),
         (10, (11,), 1, 10, True),
-        (10, (5, ...), 1, 10, True),
         (10, (5, 5), 0, 5, False),
         (10, (5, 10), 1, 9, False),
     ],
@@ -76,8 +73,8 @@ def test_get_steps(info_source, steps, shape, step_shape_offset, expected_steps,
             dims = None
             coords = {}
         else:
-            dims = tuple(str(i) if shape is not ... else ... for i, shape in enumerate(shape))
-            coords = {str(i): range(shape) for i, shape in enumerate(shape) if shape is not ...}
+            dims = tuple(str(i) for i, shape in enumerate(shape))
+            coords = {str(i): range(shape) for i, shape in enumerate(shape)}
         with Model(coords=coords):
             inferred_steps = get_steps(steps=steps, dims=dims, step_shape_offset=step_shape_offset)
 
@@ -85,9 +82,6 @@ def test_get_steps(info_source, steps, shape, step_shape_offset, expected_steps,
         if shape is None:
             observed = None
         else:
-            if ... in shape:
-                # There is no equivalent to implied dims in observed
-                return
             observed = np.zeros(shape)
         inferred_steps = get_steps(
             steps=steps, observed=observed, step_shape_offset=step_shape_offset
@@ -105,51 +99,20 @@ def test_get_steps(info_source, steps, shape, step_shape_offset, expected_steps,
 
 
 class TestGaussianRandomWalk:
-    class TestGaussianRandomWalkRandom(BaseTestDistributionRandom):
-        # Override default size for test class
-        size = None
-
-        pymc_dist = pm.GaussianRandomWalk
-        pymc_dist_params = {"mu": 1.0, "sigma": 2, "init_dist": pm.DiracDelta.dist(0), "steps": 4}
-        expected_rv_op_params = {
-            "mu": 1.0,
-            "sigma": 2,
-            "init_dist": pm.DiracDelta.dist(0),
-            "steps": 4,
-        }
-
-        checks_to_run = [
-            "check_pymc_params_match_rv_op",
-            "check_rv_inferred_size",
-        ]
-
-        def check_rv_inferred_size(self):
-            steps = self.pymc_dist_params["steps"]
-            sizes_to_check = [None, (), 1, (1,)]
-            sizes_expected = [(steps + 1,), (steps + 1,), (1, steps + 1), (1, steps + 1)]
-
-            for size, expected in zip(sizes_to_check, sizes_expected):
-                pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
-                expected_symbolic = tuple(pymc_rv.shape.eval())
-                assert expected_symbolic == expected
-
-        def test_steps_scalar_check(self):
-            with pytest.raises(ValueError, match="steps must be an integer scalar"):
-                self.pymc_dist.dist(steps=[1], init_dist=pm.DiracDelta.dist(0))
-
     def test_logp(self):
-        def ref_logp(value, mu, sigma, steps):
+        def ref_logp(value, mu, sigma):
             return (
-                st.norm.logpdf(value[0], 0, 100) + st.norm.logpdf(np.diff(value), mu, sigma).sum()
+                st.norm.logpdf(value[0], 0, 100)  # default init_dist has a scale 100
+                + st.norm.logpdf(np.diff(value), mu, sigma).sum()
             )
 
         check_logp(
             pm.GaussianRandomWalk,
             Vector(R, 4),
-            {"mu": R, "sigma": Rplus, "steps": Nat},
+            {"mu": R, "sigma": Rplus},
             ref_logp,
             decimal=select_by_precision(float64=6, float32=1),
-            extra_args={"init_dist": Normal.dist(0, 100)},
+            extra_args={"steps": 3, "init_dist": Normal.dist(0, 100)},
         )
 
     def test_gaussianrandomwalk_inference(self):
@@ -177,34 +140,27 @@ class TestGaussianRandomWalk:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "Initial distribution not specified.*", UserWarning)
             grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init)
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+            assert tuple(grw.owner.inputs[0].shape.eval()) == ()
 
             grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, size=(5,))
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+            assert tuple(grw.owner.inputs[0].shape.eval()) == (5,)
 
             grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=2)
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == ()
+            assert tuple(grw.owner.inputs[0].shape.eval()) == ()
 
             grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=(5, 2))
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == (5,)
+            assert tuple(grw.owner.inputs[0].shape.eval()) == (5,)
 
             grw = pm.GaussianRandomWalk.dist(mu=[0, 0], sigma=1, steps=1, init_dist=init)
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+            assert tuple(grw.owner.inputs[0].shape.eval()) == (2,)
 
             grw = pm.GaussianRandomWalk.dist(mu=0, sigma=[1, 1], steps=1, init_dist=init)
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == (2,)
+            assert tuple(grw.owner.inputs[0].shape.eval()) == (2,)
 
             grw = pm.GaussianRandomWalk.dist(
                 mu=np.zeros((3, 1)), sigma=[1, 1], steps=1, init_dist=init
             )
-            assert tuple(grw.owner.inputs[-2].shape.eval()) == (3, 2)
-
-    def test_shape_ellipsis(self):
-        grw = pm.GaussianRandomWalk.dist(
-            mu=0, sigma=1, steps=5, init_dist=pm.Normal.dist(), shape=(3, ...)
-        )
-        assert tuple(grw.shape.eval()) == (3, 6)
-        assert tuple(grw.owner.inputs[-2].shape.eval()) == (3,)
+            assert tuple(grw.owner.inputs[0].shape.eval()) == (3, 2)
 
     def test_gaussianrandomwalk_broadcasted_by_init_dist(self):
         grw = pm.GaussianRandomWalk.dist(
@@ -219,10 +175,9 @@ class TestGaussianRandomWalk:
         steps = x.owner.inputs[-1]
         assert steps.eval() == 5
 
-    @pytest.mark.parametrize("shape", (None, (5, ...)))
-    def test_missing_steps(self, shape):
+    def test_missing_steps(self):
         with pytest.raises(ValueError, match="Must specify steps or shape parameter"):
-            GaussianRandomWalk.dist(shape=shape, init_dist=Normal.dist(0, 100))
+            GaussianRandomWalk.dist(shape=None, init_dist=Normal.dist(0, 100))
 
     def test_inconsistent_steps_and_shape(self):
         with pytest.raises(AssertionError, match="Steps do not match last shape dimension"):
@@ -515,6 +470,15 @@ class TestAR:
     def test_init_deprecated_arg(self):
         with pytest.warns(FutureWarning, match="init parameter is now called init_dist"):
             pm.AR.dist(rho=[1, 2, 3], init=Normal.dist(), shape=(10,))
+
+    def test_change_dist_size(self):
+        base_dist = pm.AR.dist(rho=[0.5, 0.5], init_dist=pm.Normal.dist(size=(2,)), shape=(3, 10))
+
+        new_dist = change_dist_size(base_dist, (4,))
+        assert new_dist.eval().shape == (4, 10)
+
+        new_dist = change_dist_size(base_dist, (4,), expand=True)
+        assert new_dist.eval().shape == (4, 3, 10)
 
 
 @pytest.mark.xfail(reason="Timeseries not refactored", raises=NotImplementedError)

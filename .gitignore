@@ -44,3 +44,4 @@ pytestdebug.log
 
 # Codespaces
 pythonenv*
+env/
