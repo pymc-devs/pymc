@@ -728,6 +728,24 @@ class ZeroSumNormal(Distribution):
         )(normal_dist, sigma)
 
 
+@_change_dist_size.register(ZeroSumNormalRV)
+def change_zerosum_size(op, normal_dist, new_size, expand=False):
+    normal_dist, sigma = normal_dist.owner.inputs
+    if expand:
+        new_size = tuple(new_size) + tuple(normal_dist.shape)
+    return ZeroSumNormal.rv_op(sigma=sigma, zerosum_axes=op.zerosum_axes, size=new_size)
+
+
+@_moment.register(ZeroSumNormalRV)
+def zerosumnormal_moment(op, rv, *rv_inputs):
+    return at.zeros_like(rv)
+
+
+@_default_transform.register(ZeroSumNormalRV)
+def zerosum_default_transform(op, rv):
+    return ZeroSumTransform(op.zerosum_axes)
+
+
 @_logprob.register(ZeroSumNormalRV)
 def zerosumnormal_logp(op, values, normal_dist, sigma, **kwargs):
     (value,) = values
@@ -746,24 +764,6 @@ def zerosumnormal_logp(op, values, normal_dist, sigma, **kwargs):
     # for now, we assume ZSN is a scalar distribut, which is not correct
     out = pm.logp(normal_dist, value) * _degrees_of_freedom / _full_size
     return check_parameters(out, *zerosums, msg="at.mean(value, axis=zerosum_axes) == 0")
-
-
-@_moment.register(ZeroSumNormalRV)
-def zerosumnormal_moment(op, rv, *rv_inputs):
-    return at.zeros_like(rv)
-
-
-@_change_dist_size.register(ZeroSumNormalRV)
-def change_zerosum_size(op, normal_dist, new_size, expand=False):
-    normal_dist, sigma = normal_dist.owner.inputs
-    if expand:
-        new_size = tuple(new_size) + tuple(normal_dist.shape)
-    return ZeroSumNormal.rv_op(sigma=sigma, zerosum_axes=op.zerosum_axes, size=new_size)
-
-
-@_default_transform.register(ZeroSumNormalRV)
-def zerosum_default_transform(op, rv):
-    return ZeroSumTransform(op.zerosum_axes)
 
 
 class TruncatedNormalRV(RandomVariable):
