@@ -314,19 +314,22 @@ def extend_axis(array, axis):
     return out - norm
 
 
+from numpy.core.numeric import normalize_axis_tuple  # type: ignore
+
+
 def extend_axis_rev(array, axis):
-    if axis < 0:
-        axis = axis % array.ndim
-    assert axis >= 0 and axis < array.ndim
+    # if axis < 0:
+    #     axis = axis % array.ndim
+    # assert axis >= 0 and axis < array.ndim
 
-    # normalized_axis = normalize_axis_tuple(axis, array.ndim)[0]
+    normalized_axis = normalize_axis_tuple(axis, array.ndim)[0]
 
-    n = array.shape[axis]
-    last = at.take(array, [-1], axis=axis)
+    n = array.shape[normalized_axis]
+    last = at.take(array, [-1], axis=normalized_axis)
 
     sum_vals = -last * np.sqrt(n)
     norm = sum_vals / (np.sqrt(n) + n)
-    slice_before = (slice(None, None),) * axis
+    slice_before = (slice(None, None),) * normalized_axis
 
     return array[slice_before + (slice(None, -1),)] + norm
 
