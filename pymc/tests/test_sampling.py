@@ -30,6 +30,7 @@ import xarray as xr
 
 from aesara import Mode, shared
 from aesara.compile import SharedVariable
+from aesara.compile.ops import as_op
 from arviz import InferenceData
 from arviz import from_dict as az_from_dict
 from arviz.tests.helpers import check_multiple_attrs
@@ -42,7 +43,18 @@ from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.distributions import transforms
 from pymc.exceptions import IncorrectArgumentsError, SamplingError
-from pymc.sampling import _get_seeds_per_chain, compile_forward_sampling_function
+from pymc.sampling import (
+    _get_seeds_per_chain,
+    assign_step_methods,
+    compile_forward_sampling_function,
+)
+from pymc.step_methods import (
+    NUTS,
+    BinaryGibbsMetropolis,
+    CategoricalGibbsMetropolis,
+    Metropolis,
+    Slice,
+)
 from pymc.tests.helpers import SeededTest, fast_unstable_sampling_mode
 from pymc.tests.models import simple_init
 
@@ -2471,3 +2483,85 @@ class TestNestedRandom(SeededTest):
             prior_samples=prior_samples,
         )
         assert prior["target"].shape == (prior_samples,) + shape
+
+
+class TestAssignStepMethods:
+    def test_bernoulli(self):
+        """Test bernoulli distribution is assigned binary gibbs metropolis method"""
+        with pm.Model() as model:
+            pm.Bernoulli("x", 0.5)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                steps = assign_step_methods(model, [])
+        assert isinstance(steps, BinaryGibbsMetropolis)
+
+    def test_normal(self):
+        """Test normal distribution is assigned NUTS method"""
+        with pm.Model() as model:
+            pm.Normal("x", 0, 1)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                steps = assign_step_methods(model, [])
+        assert isinstance(steps, NUTS)
+
+    def test_categorical(self):
+        """Test categorical distribution is assigned categorical gibbs metropolis method"""
+        with pm.Model() as model:
+            pm.Categorical("x", np.array([0.25, 0.75]))
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                steps = assign_step_methods(model, [])
+        assert isinstance(steps, BinaryGibbsMetropolis)
+        with pm.Model() as model:
+            pm.Categorical("y", np.array([0.25, 0.70, 0.05]))
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                steps = assign_step_methods(model, [])
+        assert isinstance(steps, CategoricalGibbsMetropolis)
+
+    def test_binomial(self):
+        """Test binomial distribution is assigned metropolis method."""
+        with pm.Model() as model:
+            pm.Binomial("x", 10, 0.5)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                steps = assign_step_methods(model, [])
+        assert isinstance(steps, Metropolis)
+
+    def test_normal_nograd_op(self):
+        """Test normal distribution without an implemented gradient is assigned slice method"""
+        with pm.Model() as model:
+            x = pm.Normal("x", 0, 1)
+
+            # a custom Aesara Op that does not have a grad:
+            is_64 = aesara.config.floatX == "float64"
+            itypes = [at.dscalar] if is_64 else [at.fscalar]
+            otypes = [at.dscalar] if is_64 else [at.fscalar]
+
+            @as_op(itypes, otypes)
+            def kill_grad(x):
+                return x
+
+            data = np.random.normal(size=(100,))
+            pm.Normal("y", mu=kill_grad(x), sigma=1, observed=data.astype(aesara.config.floatX))
+
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                steps = assign_step_methods(model, [])
+        assert isinstance(steps, Slice)
+
+    def test_modify_step_methods(self):
+        """Test step methods can be changed"""
+        # remove nuts from step_methods
+        step_methods = list(pm.STEP_METHODS)
+        step_methods.remove(NUTS)
+        pm.STEP_METHODS = step_methods
+
+        with pm.Model() as model:
+            pm.Normal("x", 0, 1)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                steps = assign_step_methods(model, [])
+        assert not isinstance(steps, NUTS)
+
+        # add back nuts
+        pm.STEP_METHODS = step_methods + [NUTS]
+
+        with pm.Model() as model:
+            pm.Normal("x", 0, 1)
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                steps = assign_step_methods(model, [])
+        assert isinstance(steps, NUTS)
