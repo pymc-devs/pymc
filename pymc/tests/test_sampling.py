@@ -2609,3 +2609,37 @@ class TestType:
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                     pm.sample(draws=10, tune=10, chains=1, step=sampler())
+
+
+class TestShared(SeededTest):
+    def test_sample(self):
+        x = np.random.normal(size=100)
+        y = x + np.random.normal(scale=1e-2, size=100)
+
+        x_pred = np.linspace(-3, 3, 200)
+
+        x_shared = aesara.shared(x)
+
+        with pm.Model() as model:
+            b = pm.Normal("b", 0.0, 10.0)
+            pm.Normal("obs", b * x_shared, np.sqrt(1e-2), observed=y, shape=x_shared.shape)
+            prior_trace0 = pm.sample_prior_predictive(1000)
+
+            idata = pm.sample(1000, tune=1000, chains=1)
+            pp_trace0 = pm.sample_posterior_predictive(idata)
+
+            x_shared.set_value(x_pred)
+            prior_trace1 = pm.sample_prior_predictive(1000)
+            pp_trace1 = pm.sample_posterior_predictive(idata)
+
+        assert prior_trace0.prior["b"].shape == (1, 1000)
+        assert prior_trace0.prior_predictive["obs"].shape == (1, 1000, 100)
+        np.testing.assert_allclose(
+            x, pp_trace0.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
+        )
+
+        assert prior_trace1.prior["b"].shape == (1, 1000)
+        assert prior_trace1.prior_predictive["obs"].shape == (1, 1000, 200)
+        np.testing.assert_allclose(
+            x_pred, pp_trace1.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
+        )

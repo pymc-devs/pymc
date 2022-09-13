@@ -1373,3 +1373,14 @@ def test_missing_symmetric():
     logp_inputs = list(graph_inputs([logp]))
     assert x_obs_vv in logp_inputs
     assert x_unobs_vv in logp_inputs
+
+
+class TestShared(SeededTest):
+    def test_deterministic(self):
+        with pm.Model() as model:
+            data_values = np.array([0.5, 0.4, 5, 2])
+            X = aesara.shared(np.asarray(data_values, dtype=aesara.config.floatX), borrow=True)
+            pm.Normal("y", 0, 1, observed=X)
+            assert np.all(
+                np.isclose(model.compile_logp(sum=False)({}), st.norm().logpdf(data_values))
+            )
