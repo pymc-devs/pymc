@@ -773,7 +773,7 @@ class TestMatchesScipy:
 
     @pytest.mark.skipif(
         condition=(aesara.config.floatX == "float32"),
-        reason="Pymc3 underflows earlier than scipy on float32",
+        reason="PyMC underflows earlier than scipy on float32",
     )
     def test_moyal_logcdf(self):
         check_logcdf(
