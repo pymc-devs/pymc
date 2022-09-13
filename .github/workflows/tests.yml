@@ -64,7 +64,7 @@ jobs:
             pymc/tests/tuning/test_scaling.py
             pymc/tests/tuning/test_starting.py
             pymc/tests/test_shared.py
-            pymc/tests/test_types.py
+            pymc/tests/test_sampling.py
             pymc/tests/distributions/test_dist_math.py
             pymc/tests/distributions/test_transform.py
             pymc/tests/test_parallel_sampling.py
