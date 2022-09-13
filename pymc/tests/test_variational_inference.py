@@ -173,11 +173,6 @@ def test_sample_simple(three_var_approx, request):
     assert trace[0]["three"].shape == (10, 1, 2)
 
 
-@pytest.fixture
-def aevb_initial():
-    return aesara.shared(np.random.rand(3, 7).astype("float32"))
-
-
 @pytest.fixture(
     params=[
         (MeanFieldGroup, {}),
