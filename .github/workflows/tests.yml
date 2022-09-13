@@ -150,7 +150,7 @@ jobs:
           - pymc/tests/test_variational_inference.py pymc/tests/test_initial_point.py
           - pymc/tests/test_model.py pymc/tests/test_step.py
           - pymc/tests/gp/test_cov.py pymc/tests/gp/test_gp.py pymc/tests/gp/test_mean.py pymc/tests/gp/test_util.py pymc/tests/ode/test_ode.py pymc/tests/ode/test_utils.py pymc/tests/test_smc.py pymc/tests/test_parallel_sampling.py
-          - pymc/tests/test_sampling.py pymc/tests/test_posteriors.py
+          - pymc/tests/test_sampling.py pymc/tests/step_methods/test_metropolis.py pymc/tests/step_methods/test_slicer.py pymc/tests/step_methods/hmc/test_nuts.py
 
       fail-fast: false
     runs-on: ${{ matrix.os }}

@@ -27,26 +27,6 @@ class TestNUTSUniform(sf.NutsFixture, sf.UniformFixture):
     atol = 0.05
 
 
-class TestMetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
-    n_samples = 50000
-    tune = 10000
-    burn = 0
-    chains = 4
-    min_n_eff = 10000
-    rtol = 0.1
-    atol = 0.05
-
-
-class TestSliceUniform(sf.SliceFixture, sf.UniformFixture):
-    n_samples = 10000
-    tune = 1000
-    burn = 0
-    chains = 4
-    min_n_eff = 5000
-    rtol = 0.1
-    atol = 0.05
-
-
 class TestNUTSUniform2(TestNUTSUniform):
     step_args = {"target_accept": 0.95}
 
