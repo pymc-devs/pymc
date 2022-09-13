@@ -14,35 +14,23 @@
 
 import pytest
 
-from pymc.step_methods.slicer import Slice
-from pymc.tests import sampler_fixtures as sf
+from pymc.step_methods.hmc import HamiltonianMC
 from pymc.tests.helpers import RVsAssignmentStepsTester, StepMethodTester
 
 
-class TestSliceUniform(sf.SliceFixture, sf.UniformFixture):
-    n_samples = 10000
-    tune = 1000
-    burn = 0
-    chains = 4
-    min_n_eff = 5000
-    rtol = 0.1
-    atol = 0.05
-
-
-class TestStepSlicer(StepMethodTester):
+class TestStepHamiltonianMC(StepMethodTester):
     @pytest.mark.parametrize(
         "step_fn, draws",
         [
-            (lambda *_: Slice(), 2000),
-            (lambda *_: Slice(blocked=True), 2000),
+            (lambda C, _: HamiltonianMC(scaling=C, is_cov=True, blocked=False), 1000),
+            (lambda C, _: HamiltonianMC(scaling=C, is_cov=True), 1000),
         ],
-        ids=str,
     )
     def test_step_continuous(self, step_fn, draws):
         self.step_continuous(step_fn, draws)
 
 
-class TestRVsAssignmentSlicer(RVsAssignmentStepsTester):
-    @pytest.mark.parametrize("step, step_kwargs", [(Slice, {})])
+class TestRVsAssignmentHamiltonianMC(RVsAssignmentStepsTester):
+    @pytest.mark.parametrize("step, step_kwargs", [(HamiltonianMC, {})])
     def test_continuous_steps(self, step, step_kwargs):
         self.continuous_steps(step, step_kwargs)

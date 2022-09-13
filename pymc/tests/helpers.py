@@ -13,6 +13,9 @@
 #   limitations under the License.
 
 import contextlib
+import shutil
+import tempfile
+import warnings
 
 from logging.handlers import BufferingHandler
 
@@ -24,7 +27,11 @@ from aesara.gradient import verify_grad as at_verify_grad
 from aesara.graph.rewriting.basic import in2out
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 
+import pymc as pm
+
 from pymc.aesaraf import at_rng, local_check_parameter_to_ninf_switch, set_at_rng
+from pymc.tests.checks import close_to
+from pymc.tests.models import mv_simple, mv_simple_coarse
 
 
 class SeededTest:
@@ -148,3 +155,66 @@ fast_unstable_sampling_mode = (
         (in2out(local_check_parameter_to_ninf_switch), -1)
     )
 )
+
+
+class StepMethodTester:
+    def setup_class(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def teardown_class(self):
+        shutil.rmtree(self.temp_dir)
+
+    def check_stat(self, check, idata, name):
+        group = idata.posterior
+        for (var, stat, value, bound) in check:
+            s = stat(group[var].sel(chain=0), axis=0)
+            close_to(s, value, bound, name)
+
+    def check_stat_dtype(self, step, idata):
+        # TODO: This check does not confirm the announced dtypes are correct as the
+        #  sampling machinery will convert them automatically.
+        for stats_dtypes in getattr(step, "stats_dtypes", []):
+            for stat, dtype in stats_dtypes.items():
+                if stat == "tune":
+                    continue
+                assert idata.sample_stats[stat].dtype == np.dtype(dtype)
+
+    def step_continuous(self, step_fn, draws):
+        start, model, (mu, C) = mv_simple()
+        unc = np.diag(C) ** 0.5
+        check = (("x", np.mean, mu, unc / 10), ("x", np.std, unc, unc / 10))
+        _, model_coarse, _ = mv_simple_coarse()
+        with model:
+            step = step_fn(C, model_coarse)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "More chains .* than draws .*", UserWarning)
+                idata = pm.sample(
+                    tune=1000,
+                    draws=draws,
+                    chains=1,
+                    step=step,
+                    initvals=start,
+                    model=model,
+                    random_seed=1,
+                )
+            self.check_stat(check, idata, step.__class__.__name__)
+            self.check_stat_dtype(idata, step)
+
+
+class RVsAssignmentStepsTester:
+    """
+    Test that step methods convert input RVs to respective value vars
+    Step methods are tested with one and two variables to cover compound
+    the special branches in `BlockedStep.__new__`
+    """
+
+    def continuous_steps(self, step, step_kwargs):
+        with pm.Model() as m:
+            c1 = pm.HalfNormal("c1")
+            c2 = pm.HalfNormal("c2")
+
+            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+                assert [m.rvs_to_values[c1]] == step([c1], **step_kwargs).vars
+            assert {m.rvs_to_values[c1], m.rvs_to_values[c2]} == set(
+                step([c1, c2], **step_kwargs).vars
+            )
