@@ -61,7 +61,7 @@ def sample_smc(
         independent chains. Defaults to 2000.
     kernel : SMC_kernel, optional
         SMC kernel used. Defaults to :class:`pymc.smc.smc.IMH` (Independent Metropolis Hastings)
-    start : dict, or array of dict, default None
+    start : dict or array of dict, optional
         Starting point in parameter space. It should be a list of dict with length `chains`.
         When None (default) the starting point is sampled from the prior distribution.
     model : Model (optional if in ``with`` context).
