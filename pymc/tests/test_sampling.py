@@ -17,6 +17,7 @@ import unittest.mock as mock
 import warnings
 
 from contextlib import ExitStack as does_not_raise
+from copy import copy
 from typing import Tuple
 
 import aesara
@@ -52,6 +53,7 @@ from pymc.step_methods import (
     NUTS,
     BinaryGibbsMetropolis,
     CategoricalGibbsMetropolis,
+    HamiltonianMC,
     Metropolis,
     Slice,
 )
@@ -2565,3 +2567,45 @@ class TestAssignStepMethods:
             with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, NUTS)
+
+
+class TestType:
+    samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
+
+    def setup_method(self):
+        # save Aesara config object
+        self.aesara_config = copy(aesara.config)
+
+    def teardown_method(self):
+        # restore aesara config
+        aesara.config = self.aesara_config
+
+    @aesara.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
+    def test_float64(self):
+        with pm.Model() as model:
+            x = pm.Normal("x", initval=np.array(1.0, dtype="float64"))
+            obs = pm.Normal("obs", mu=x, sigma=1.0, observed=np.random.randn(5))
+
+        assert x.dtype == "float64"
+        assert obs.dtype == "float64"
+
+        for sampler in self.samplers:
+            with model:
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    pm.sample(draws=10, tune=10, chains=1, step=sampler())
+
+    @aesara.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
+    def test_float32(self):
+        with pm.Model() as model:
+            x = pm.Normal("x", initval=np.array(1.0, dtype="float32"))
+            obs = pm.Normal("obs", mu=x, sigma=1.0, observed=np.random.randn(5).astype("float32"))
+
+        assert x.dtype == "float32"
+        assert obs.dtype == "float32"
+
+        for sampler in self.samplers:
+            with model:
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    pm.sample(draws=10, tune=10, chains=1, step=sampler())
