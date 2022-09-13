@@ -614,20 +614,6 @@ def another_simple_model():
     return _model
 
 
-@pytest.fixture(
-    params=[
-        dict(name="advi", kw=dict(start={})),
-        dict(name="fullrank_advi", kw=dict(start={})),
-        dict(name="svgd", kw=dict(start={})),
-    ],
-    ids=lambda d: d["name"],
-)
-def fit_method_with_object(request, another_simple_model):
-    _select = dict(advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD)
-    with another_simple_model:
-        return _select[request.param["name"]](**request.param["kw"])
-
-
 @pytest.mark.parametrize(
     ["method", "kwargs", "error"],
     [
@@ -658,19 +644,6 @@ def test_fit_fn_text(method, kwargs, error, another_simple_model):
                     fit(10, method=method, **kwargs)
             else:
                 fit(10, method=method, **kwargs)
-
-
-@pytest.fixture(scope="module")
-def aevb_model():
-    with pm.Model() as model:
-        pm.HalfNormal("x", size=(2,), total_size=5)
-        pm.Normal("y", size=(2,))
-    x = model.x
-    y = model.y
-    xr = model.initial_point(0)[model.rvs_to_values[x].name]
-    mu = aesara.shared(xr)
-    rho = aesara.shared(np.zeros_like(xr))
-    return {"model": model, "y": y, "x": x, "replace": dict(mu=mu, rho=rho)}
 
 
 def test_pickle_approx(three_var_approx):
