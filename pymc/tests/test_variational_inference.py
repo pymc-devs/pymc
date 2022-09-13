@@ -189,30 +189,6 @@ def parametric_grouped_approxes(request):
     return request.param
 
 
-@pytest.fixture
-def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
-    one_initial_value = three_var_model.initial_point(0)[three_var_model.one.tag.value_var.name]
-    dsize = np.prod(one_initial_value.shape[1:])
-    cls, kw = parametric_grouped_approxes
-    spec = cls.get_param_spec_for(d=dsize, **kw)
-    params = dict()
-    for k, v in spec.items():
-        if isinstance(k, int):
-            params[k] = dict()
-            for k_i, v_i in v.items():
-                params[k][k_i] = aevb_initial.dot(np.random.rand(7, *v_i).astype("float32"))
-        else:
-            params[k] = aevb_initial.dot(np.random.rand(7, *v).astype("float32"))
-    aevb_g = cls([three_var_model.one], params=params, model=three_var_model, local=True)
-    return [aevb_g, MeanFieldGroup(None, model=three_var_model)]
-
-
-@pytest.fixture
-def three_var_aevb_approx(three_var_model, three_var_aevb_groups):
-    approx = Approximation(three_var_aevb_groups, model=three_var_model)
-    return approx
-
-
 def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
     approx = cls([three_var_model.one], model=three_var_model, **kw)
