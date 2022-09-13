@@ -222,7 +222,7 @@ jobs:
           - |
             pymc/tests/test_parallel_sampling.py
             pymc/tests/test_data.py
-            pymc/tests/test_missing.py
+            pymc/tests/test_model.py
 
           - |
             pymc/tests/test_sampling.py
