@@ -43,7 +43,7 @@ jobs:
             pymc/tests/test_aesaraf.py
             pymc/tests/test_math.py
             pymc/tests/backends/test_ndarray.py
-            pymc/tests/test_hmc.py
+            pymc/tests/step_methods/hmc/test_hmc.py
             pymc/tests/test_func_utils.py
             pymc/tests/distributions/test_shape_utils.py
             pymc/tests/distributions/test_mixture.py
