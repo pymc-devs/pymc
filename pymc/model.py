@@ -1937,11 +1937,52 @@ def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
 
 
 def Deterministic(name, var, model=None, dims=None, auto=False):
-    """Create a named deterministic variable
+    """Create a named deterministic variable.
+
+    Deterministic nodes are only deterministic given all of their inputs, i.e.
+    they don't add randomness to the model.  They are generally used to record
+    an intermediary result.
+
+    Indeed, PyMC allows for arbitrary combinations of random variables, for
+    example in the case of a logistic regression
+
+    .. code:: python
+
+        with pm.Model():
+            alpha = pm.Normal("alpha", 0, 1)
+            intercept = pm.Normal("intercept", 0, 1)
+            p = pm.math.invlogit(alpha * x + intercept)
+            outcome = pm.Bernoulli("outcome", p, observed=outcomes)
+
+
+    but doesn't memorize the fact that the expression ``pm.math.invlogit(alpha *
+    x + intercept)`` has been affected to the variable ``p``.  If the quantity
+    ``p`` is important and one would like to track its value in the sampling
+    trace, then one can use a deterministic node:
+
+    .. code:: python
+
+        with pm.Model():
+            alpha = pm.Normal("alpha", 0, 1)
+            intercept = pm.Normal("intercept", 0, 1)
+            p = pm.Deterministic("p", pm.math.invlogit(alpha * x + intercept))
+            outcome = pm.Bernoulli("outcome", p, observed=outcomes)
+
+    These two models are strictly equivalent from a mathematical point of view.
+    However, in the first case, the inference data will only contain values for
+    the variables ``alpha``, ``intercept`` and ``outcome``.  In the second, it
+    will also contain sampled values of ``p`` for each of the observed points.
 
     Notes
     -----
-    Deterministic nodes are ones that given all the inputs are not random variables
+    Even though adding a Deterministic node forces PyMC to compute this
+    expression, which could have been optimized away otherwise, this doesn't come
+    with a performance cost.  Indeed, Deterministic nodes are computed outside
+    the main computation graph, which can be optimized as though there was no
+    Deterministic nodes.  Whereas the optimized graph can be evaluated thousands
+    of times during a NUTS step, the Deterministic quantities are just
+    computeed once at the end of the step, with the final values of the other
+    random variables.
 
     Parameters
     ----------
