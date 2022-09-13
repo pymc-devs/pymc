@@ -59,8 +59,8 @@ def sample_smc(
     draws : int, default 2000
         The number of samples to draw from the posterior (i.e. last stage). And also the number of
         independent chains. Defaults to 2000.
-    kernel : class, default `pymc.smc.smc.IMH`
-        SMC_Kernel used. Defaults to :class:`pymc.smc.smc.IMH` (Independent Metropolis Hastings)
+    kernel : SMC_kernel, optional
+        SMC kernel used. Defaults to :class:`pymc.smc.smc.IMH` (Independent Metropolis Hastings)
     start : dict, or array of dict, default None
         Starting point in parameter space. It should be a list of dict with length `chains`.
         When None (default) the starting point is sampled from the prior distribution.
