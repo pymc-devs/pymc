@@ -690,7 +690,7 @@ class GARCH11(Distribution):
         init_dist = change_dist_size(init_dist, batch_size)
         # initial_vol = initial_vol * at.ones(batch_size)
 
-        # Create OpFromGraph representing random draws form AR process
+        # Create OpFromGraph representing random draws from GARCH11 process
         # Variables with underscore suffix are dummy inputs into the OpFromGraph
         init_ = init_dist.type()
         initial_vol_ = initial_vol.type()
@@ -701,8 +701,7 @@ class GARCH11(Distribution):
 
         noise_rng = aesara.shared(np.random.default_rng())
 
-        def step(*args):
-            prev_y, prev_sigma, omega, alpha_1, beta_1, rng = args
+        def step(prev_y, prev_sigma, omega, alpha_1, beta_1, rng):
             new_sigma = at.sqrt(
                 omega + alpha_1 * at.square(prev_y) + beta_1 * at.square(prev_sigma)
             )
@@ -761,6 +760,7 @@ def garch11_logp(
         sequences=[value_dimswapped[:-1]],
         outputs_info=[initial_vol],
         non_sequences=[omega, alpha_1, beta_1],
+       strict = True,
     )
     sigma_t = at.concatenate([[initial_vol], vol])
     # Compute and collapse logp across time dimension

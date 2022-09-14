@@ -533,10 +533,11 @@ class TestGARCH11:
         np.testing.assert_allclose(garch_like, reg_like, 10 ** (-decimal))
 
     @pytest.mark.parametrize(
-        "arg_name",
+        "batched_param",
         ["omega", "alpha_1", "beta_1", "initial_vol"],
     )
-    def test_batched_size(self, arg_name):
+    @pytest.mark.parametrize("explicit_shape", (True, False))
+    def test_batched_size(self, explicit_shape, batched_param):
         steps, batch_size = 100, 5
         param_val = np.square(np.random.randn(batch_size))
         init_kwargs = dict(
