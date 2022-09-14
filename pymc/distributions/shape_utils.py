@@ -480,17 +480,13 @@ def convert_size(size: Size) -> Optional[StrongSize]:
     return size
 
 
-def shape_from_dims(
-    dims: StrongDims, shape_implied: Sequence[TensorVariable], model
-) -> StrongShape:
+def shape_from_dims(dims: StrongDims, model) -> StrongShape:
     """Determines shape from a `dims` tuple.
 
     Parameters
     ----------
     dims : array-like
         A vector of dimension names or None.
-    shape_implied : tensor_like of int
-        Shape of RV implied from its inputs alone.
     model : pm.Model
         The current model on stack.
 
@@ -499,20 +495,15 @@ def shape_from_dims(
     dims : tuple of (str or None)
         Names or None for all RV dimensions.
     """
-    ndim_resize = len(dims) - len(shape_implied)
 
-    # Dims must be known already or be inferrable from implied dimensions of the RV
-    unknowndim_resize_dims = set(dims[:ndim_resize]) - set(model.dim_lengths)
-    if unknowndim_resize_dims:
+    # Dims must be known already
+    unknowndim_dims = set(dims) - set(model.dim_lengths)
+    if unknowndim_dims:
         raise KeyError(
-            f"Dimensions {unknowndim_resize_dims} are unknown to the model and cannot be used to specify a `size`."
+            f"Dimensions {unknowndim_dims} are unknown to the model and cannot be used to specify a `shape`."
         )
 
-    # The numeric/symbolic resize tuple can be created using model.RV_dim_lengths
-    return tuple(
-        model.dim_lengths[dname] if dname in model.dim_lengths else shape_implied[i]
-        for i, dname in enumerate(dims)
-    )
+    return tuple(model.dim_lengths[dname] for dname in dims)
 
 
 def find_size(
