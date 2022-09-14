@@ -760,8 +760,8 @@ class TruncatedNormal(BoundedContinuous):
         -------
         TensorVariable
         """
-        is_lower_bounded = not (isinstance(lower, TensorConstant) and np.all(lower.value == -np.inf))
-        is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(upper.value == np.inf))
+        is_lower_bounded = not (isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value)))
+        is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
 
         if is_lower_bounded and is_upper_bounded:
             lcdf_a = normal_lcdf(mu, sigma, lower)
