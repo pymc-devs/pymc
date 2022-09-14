@@ -778,7 +778,7 @@ class TruncatedNormal(BoundedContinuous):
 
         logp = _logprob(normal, (value,), None, None, None, mu, sigma) - norm
         logp = at.switch(
-            at.or_(at.le(value, lower), at.ge(value, upper)),
+            at.or_(at.lt(value, lower), at.gt(value, upper)),
             -np.inf,
             logp,
         )
