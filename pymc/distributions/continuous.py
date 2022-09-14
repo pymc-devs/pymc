@@ -777,11 +777,13 @@ class TruncatedNormal(BoundedContinuous):
             norm = 0.0
 
         logp = _logprob(normal, (value,), None, None, None, mu, sigma) - norm
+        logp = at.switch(
+            at.or_(at.le(value, lower), at.ge(value, upper)),
+            -np.inf,
+            logp,
+        )
+
         bounds = []
-        if not unbounded_lower:
-            bounds.append(value >= lower)
-        if not unbounded_upper:
-            bounds.append(value <= upper)
         if not unbounded_lower and not unbounded_upper:
             bounds.append(lower <= upper)
         return check_parameters(logp, *bounds)
