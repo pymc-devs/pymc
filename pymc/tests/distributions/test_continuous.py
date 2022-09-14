@@ -108,6 +108,18 @@ class TestBoundedContinuous:
         assert lower_interval.value == -2
         assert upper_interval is None
 
+    def test_bounded_value(self):
+        with pm.Model() as model:
+            dist = pm.TruncatedNormal(
+                'bounded_both', mu=1, sigma=2, lower=0, upper=3
+            )
+            value = pm.Deterministic('value', pm.logp(dist, [-2., 1., 4.]))
+
+        values = model.compile_fn(value)({})
+        assert np.isinf(values[0])
+        assert np.isfinite(values[1])
+        assert np.isinf(values[2])
+
     def test_lower_bounded_vector(self):
         bounded_rv_name = "upper_bounded"
         with pm.Model() as model:
