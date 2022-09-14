@@ -108,13 +108,6 @@ class TestBoundedContinuous:
         assert lower_interval.value == -2
         assert upper_interval is None
 
-    def test_bounded_value(self):
-        dist = pm.TruncatedNormal.dist(mu=1, sigma=2, lower=0, upper=3)
-        logp = pm.logp(dist, [-2., 1., 4.]).eval()
-        assert np.isinf(logp[0])
-        assert np.isfinite(logp[1])
-        assert np.isinf(logp[2])
-
     def test_lower_bounded_vector(self):
         bounded_rv_name = "upper_bounded"
         with pm.Model() as model:
@@ -864,6 +857,14 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
             skip_paramdomain_outside_edge_test=True,
         )
+
+        # This is a regression test for #6128: Check that having one out-of-bound value
+        # in an input array does not set all logp values to -inf
+        dist = pm.TruncatedNormal.dist(mu=1, sigma=2, lower=0, upper=3)
+        logp = pm.logp(dist, [-2., 1., 4.]).eval()
+        assert np.isinf(logp[0])
+        assert np.isfinite(logp[1])
+        assert np.isinf(logp[2])
 
     def test_get_tau_sigma(self):
         sigma = np.array(2)
