@@ -742,7 +742,7 @@ def test_shapeerror_from_resize_immutable_dim_from_RV():
     Even if the variable being updated is a SharedVariable and has other
     dimensions that are mutable.
     """
-    with pm.Model() as pmodel:
+    with pm.Model(coords={"fixed": range(3)}) as pmodel:
         pm.Normal("a", mu=[1, 2, 3], dims="fixed")
         assert isinstance(pmodel.dim_lengths["fixed"], TensorVariable)
 
@@ -751,7 +751,8 @@ def test_shapeerror_from_resize_immutable_dim_from_RV():
         # This is fine because the "fixed" dim is not resized
         pmodel.set_data("m", [[1, 2, 3], [3, 4, 5]])
 
-    with pytest.raises(ShapeError, match="was initialized from 'a'"):
+    msg = "The 'm' variable already had 3 coord values defined for its fixed dimension"
+    with pytest.raises(ValueError, match=msg):
         # Can't work because the "fixed" dimension is linked to a
         # TensorVariable with constant shape.
         # Note that the new data tries to change both dimensions
@@ -826,7 +827,7 @@ def test_set_dim():
 
 
 def test_set_dim_with_coords():
-    """Test the concious re-sizing of dims created through add_coord() with coord value."""
+    """Test the conscious re-sizing of dims created through add_coord() with coord value."""
     with pm.Model() as pmodel:
         pmodel.add_coord("mdim", mutable=True, length=2, values=["A", "B"])
         a = pm.Normal("a", dims="mdim")
@@ -902,6 +903,17 @@ def test_set_data_indirect_resize_with_coords():
     # This time with incorrectly sized coord values
     with pytest.raises(ShapeError, match="new coordinate values"):
         pmodel.set_data("mdata", [1, 2], coords=dict(mdim=[1, 2, 3]))
+
+
+def test_set_data_constant_shape_error():
+    with pm.Model() as pmodel:
+        x = pm.Normal("x", size=7)
+        pmodel.add_coord("weekday", length=x.shape[0])
+        pm.MutableData("y", np.arange(7), dims="weekday")
+
+    msg = "because the dimension was initialized from 'x' which is not a shared variable"
+    with pytest.raises(ShapeError, match=msg):
+        pmodel.set_data("y", np.arange(10))
 
 
 def test_model_logpt_deprecation_warning():
