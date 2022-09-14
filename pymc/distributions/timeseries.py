@@ -749,6 +749,7 @@ def garch11_logp(
     op, values, omega, alpha_1, beta_1, initial_vol, init_dist, steps, noise_rng, **kwargs
 ):
     (value,) = values
+    # Move the time axis to the first dimension
     value_dimswapped = value.dimshuffle((value.ndim - 1,) + tuple(range(0, value.ndim - 1)))
     initial_vol = initial_vol * at.ones_like(value_dimswapped[0])
 
@@ -760,11 +761,11 @@ def garch11_logp(
         sequences=[value_dimswapped[:-1]],
         outputs_info=[initial_vol],
         non_sequences=[omega, alpha_1, beta_1],
-       strict = True,
+        strict=True,
     )
     sigma_t = at.concatenate([[initial_vol], vol])
     # Compute and collapse logp across time dimension
-    innov_logp = at.sum(logp(Normal.dist(0, sigma_t), value_dimswapped), axis=-1)
+    innov_logp = at.sum(logp(Normal.dist(0, sigma_t), value_dimswapped), axis=0)
     return innov_logp
 
 

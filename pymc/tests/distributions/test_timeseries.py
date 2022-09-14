@@ -547,19 +547,27 @@ class TestGARCH11:
             initial_vol=2.5,
         )
         kwargs0 = init_kwargs.copy()
-        kwargs0[arg_name] = init_kwargs[arg_name] * param_val
+        kwargs0[batched_param] = init_kwargs[batched_param] * param_val
+        if explicit_shape:
+            kwargs0["shape"] = (batch_size, steps)
+        else:
+            kwargs0["steps"] = steps - 1
         with Model() as t0:
-            y = GARCH11("y", shape=(batch_size, steps), **kwargs0)
+            y = GARCH11("y", **kwargs0)
 
         y_eval = draw(y, draws=2)
         assert y_eval[0].shape == (batch_size, steps)
         assert not np.any(np.isclose(y_eval[0], y_eval[1]))
 
         kwargs1 = init_kwargs.copy()
+        if explicit_shape:
+            kwargs1["shape"] = steps
+        else:
+            kwargs1["steps"] = steps - 1
         with Model() as t1:
             for i in range(batch_size):
-                kwargs1[arg_name] = init_kwargs[arg_name] * param_val[i]
-                GARCH11(f"y_{i}", shape=steps, **kwargs1)
+                kwargs1[batched_param] = init_kwargs[batched_param] * param_val[i]
+                GARCH11(f"y_{i}", **kwargs1)
 
         np.testing.assert_allclose(
             t0.compile_logp()(t0.initial_point()),
@@ -584,7 +592,7 @@ class TestGARCH11:
                 steps=7,
                 size=size,
             )
-        assert_moment_is_expected(model, expected, check_finite_logp=False)
+        assert_moment_is_expected(model, expected, check_finite_logp=True)
 
     def test_change_dist_size(self):
         base_dist = pm.GARCH11.dist(
