@@ -21,7 +21,6 @@ import numpy as np
 
 from aeppl.abstract import _get_measurable_outputs
 from aeppl.logprob import _logprob
-from aesara import scan
 from aesara.graph import FunctionGraph, rewrite_graph
 from aesara.graph.basic import Node, clone_replace
 from aesara.raise_op import Assert
@@ -230,7 +229,7 @@ def random_walk_moment(op, rv, init_dist, innovation_dist, steps):
 
 @_logprob.register(RandomWalkRV)
 def random_walk_logp(op, values, *inputs, **kwargs):
-    # ALthough Aeppl can derive the logprob of random walks, it does not collapse
+    # Although Aeppl can derive the logprob of random walks, it does not collapse
     # what PyMC considers the core dimension of steps. We do it manually here.
     (value,) = values
     # Recreate RV and obtain inner graph
@@ -681,15 +680,15 @@ class GARCH11(Distribution):
 
         return super().dist([omega, alpha_1, beta_1, initial_vol, init_dist, steps], **kwargs)
 
-
     @classmethod
     def rv_op(cls, omega, alpha_1, beta_1, initial_vol, init_dist, steps, size=None):
         if size is not None:
             batch_size = size
         else:
             # In this case the size of the init_dist depends on the parameters shape
-            batch_size = at.broadcast_shape(omega, alpha_1, beta_1, init_dist)
+            batch_size = at.broadcast_shape(omega, alpha_1, beta_1, initial_vol)
         init_dist = change_dist_size(init_dist, batch_size)
+        # initial_vol = initial_vol * at.ones(batch_size)
 
         # Create OpFromGraph representing random draws form AR process
         # Variables with underscore suffix are dummy inputs into the OpFromGraph
@@ -712,13 +711,16 @@ class GARCH11(Distribution):
 
         (y_t, _), innov_updates_ = aesara.scan(
             fn=step,
-            outputs_info=[init_, initial_vol_],
+            outputs_info=[init_, initial_vol_ * at.ones(batch_size)],
             non_sequences=[omega_, alpha_1_, beta_1_, noise_rng],
             n_steps=steps_,
             strict=True,
         )
         (noise_next_rng,) = tuple(innov_updates_.values())
-        garch11_ = at.concatenate([at.atleast_1d(init_), y_t.T], axis=-1)
+
+        garch11_ = at.concatenate([init_[None, ...], y_t], axis=0).dimshuffle(
+            tuple(range(1, y_t.ndim)) + (0,)
+        )
 
         garch11_op = GARCH11RV(
             inputs=[omega_, alpha_1_, beta_1_, initial_vol_, init_, steps_],
@@ -748,20 +750,28 @@ def garch11_logp(
     op, values, omega, alpha_1, beta_1, initial_vol, init_dist, steps, noise_rng, **kwargs
 ):
     (value,) = values
+    value_dimswapped = value.dimshuffle((value.ndim - 1,) + tuple(range(0, value.ndim - 1)))
+    initial_vol = initial_vol * at.ones_like(value_dimswapped[0])
 
     def volatility_update(x, vol, w, a, b):
         return at.sqrt(w + a * at.square(x) + b * at.square(vol))
 
-    vol, _ = scan(
+    vol, _ = aesara.scan(
         fn=volatility_update,
-        sequences=[value[:-1]],
+        sequences=[value_dimswapped[:-1]],
         outputs_info=[initial_vol],
         non_sequences=[omega, alpha_1, beta_1],
     )
     sigma_t = at.concatenate([[initial_vol], vol])
     # Compute and collapse logp across time dimension
-    innov_logp = at.sum(logp(Normal.dist(0, sigma_t), value), axis=-1)
+    innov_logp = at.sum(logp(Normal.dist(0, sigma_t), value_dimswapped), axis=-1)
     return innov_logp
+
+
+@_moment.register(GARCH11RV)
+def garch11_moment(op, rv, omega, alpha_1, beta_1, initial_vol, init_dist, steps, noise_rng):
+    # GARCH(1,1) mean is zero
+    return at.zeros_like(rv)
 
 
 class EulerMaruyama(distribution.Continuous):
