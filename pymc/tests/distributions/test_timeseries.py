@@ -481,56 +481,129 @@ class TestAR:
         assert new_dist.eval().shape == (4, 3, 10)
 
 
-@pytest.mark.xfail(reason="Timeseries not refactored", raises=NotImplementedError)
-def test_GARCH11():
-    # test data ~ N(0, 1)
-    data = np.array(
-        [
-            -1.35078362,
-            -0.81254164,
-            0.28918551,
-            -2.87043544,
-            -0.94353337,
-            0.83660719,
-            -0.23336562,
-            -0.58586298,
-            -1.36856736,
-            -1.60832975,
-            -1.31403141,
-            0.05446936,
-            -0.97213128,
-            -0.18928725,
-            1.62011258,
-            -0.95978616,
-            -2.06536047,
-            0.6556103,
-            -0.27816645,
-            -1.26413397,
-        ]
-    )
-    omega = 0.6
-    alpha_1 = 0.4
-    beta_1 = 0.5
-    initial_vol = np.float64(0.9)
-    vol = np.empty_like(data)
-    vol[0] = initial_vol
-    for i in range(len(data) - 1):
-        vol[i + 1] = np.sqrt(omega + beta_1 * vol[i] ** 2 + alpha_1 * data[i] ** 2)
-
-    with Model() as t:
-        y = GARCH11(
-            "y",
-            omega=omega,
-            alpha_1=alpha_1,
-            beta_1=beta_1,
-            initial_vol=initial_vol,
-            shape=data.shape,
+class TestGARCH11:
+    def test_logp(self):
+        # test data ~ N(0, 1)
+        data = np.array(
+            [
+                -1.35078362,
+                -0.81254164,
+                0.28918551,
+                -2.87043544,
+                -0.94353337,
+                0.83660719,
+                -0.23336562,
+                -0.58586298,
+                -1.36856736,
+                -1.60832975,
+                -1.31403141,
+                0.05446936,
+                -0.97213128,
+                -0.18928725,
+                1.62011258,
+                -0.95978616,
+                -2.06536047,
+                0.6556103,
+                -0.27816645,
+                -1.26413397,
+            ]
         )
-        z = Normal("z", mu=0, sigma=vol, shape=data.shape)
-    garch_like = t["y"].logp({"z": data, "y": data})
-    reg_like = t["z"].logp({"z": data, "y": data})
-    decimal = select_by_precision(float64=7, float32=4)
-    np.testing.assert_allclose(garch_like, reg_like, 10 ** (-decimal))
+        omega = 0.6
+        alpha_1 = 0.4
+        beta_1 = 0.5
+        initial_vol = np.float64(0.9)
+        vol = np.empty_like(data)
+        vol[0] = initial_vol
+        for i in range(len(data) - 1):
+            vol[i + 1] = np.sqrt(omega + beta_1 * vol[i] ** 2 + alpha_1 * data[i] ** 2)
+
+        with Model() as t:
+            y = GARCH11(
+                "y",
+                omega=omega,
+                alpha_1=alpha_1,
+                beta_1=beta_1,
+                initial_vol=initial_vol,
+                shape=data.shape,
+            )
+            z = Normal("z", mu=0, sigma=vol, shape=data.shape)
+        garch_like = t.compile_logp(y)({"y": data})
+        reg_like = t.compile_logp(z)({"z": data})
+        decimal = select_by_precision(float64=7, float32=4)
+        np.testing.assert_allclose(garch_like, reg_like, 10 ** (-decimal))
+
+    @pytest.mark.parametrize(
+        "batched_param",
+        ["omega", "alpha_1", "beta_1", "initial_vol"],
+    )
+    @pytest.mark.parametrize("explicit_shape", (True, False))
+    def test_batched_size(self, explicit_shape, batched_param):
+        steps, batch_size = 100, 5
+        param_val = np.square(np.random.randn(batch_size))
+        init_kwargs = dict(
+            omega=1.25,
+            alpha_1=0.5,
+            beta_1=0.45,
+            initial_vol=2.5,
+        )
+        kwargs0 = init_kwargs.copy()
+        kwargs0[batched_param] = init_kwargs[batched_param] * param_val
+        if explicit_shape:
+            kwargs0["shape"] = (batch_size, steps)
+        else:
+            kwargs0["steps"] = steps - 1
+        with Model() as t0:
+            y = GARCH11("y", **kwargs0)
+
+        y_eval = draw(y, draws=2)
+        assert y_eval[0].shape == (batch_size, steps)
+        assert not np.any(np.isclose(y_eval[0], y_eval[1]))
+
+        kwargs1 = init_kwargs.copy()
+        if explicit_shape:
+            kwargs1["shape"] = steps
+        else:
+            kwargs1["steps"] = steps - 1
+        with Model() as t1:
+            for i in range(batch_size):
+                kwargs1[batched_param] = init_kwargs[batched_param] * param_val[i]
+                GARCH11(f"y_{i}", **kwargs1)
+
+        np.testing.assert_allclose(
+            t0.compile_logp()(t0.initial_point()),
+            t1.compile_logp()(t1.initial_point()),
+        )
+
+    @pytest.mark.parametrize(
+        "size, expected",
+        [
+            (None, np.zeros((2, 8))),
+            ((5, 2), np.zeros((5, 2, 8))),
+        ],
+    )
+    def test_moment(self, size, expected):
+        with Model() as model:
+            GARCH11(
+                "x",
+                omega=1.25,
+                alpha_1=0.5,
+                beta_1=0.45,
+                initial_vol=np.ones(2),
+                steps=7,
+                size=size,
+            )
+        assert_moment_is_expected(model, expected, check_finite_logp=True)
+
+    def test_change_dist_size(self):
+        base_dist = pm.GARCH11.dist(
+            omega=1.25, alpha_1=0.5, beta_1=0.45, initial_vol=1.0, shape=(3, 10)
+        )
+
+        new_dist = change_dist_size(base_dist, (4,))
+        assert new_dist.eval().shape == (4, 10)
+
+        new_dist = change_dist_size(base_dist, (4,), expand=True)
+        assert new_dist.eval().shape == (4, 3, 10)
 
 
 def _gen_sde_path(sde, pars, dt, n, x0):
