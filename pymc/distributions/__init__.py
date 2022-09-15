@@ -56,7 +56,6 @@ from pymc.distributions.continuous import (
     VonMises,
     Wald,
     Weibull,
-    ZeroSumNormal,
 )
 from pymc.distributions.discrete import (
     Bernoulli,
@@ -100,6 +99,7 @@ from pymc.distributions.multivariate import (
     StickBreakingWeights,
     Wishart,
     WishartBartlett,
+    ZeroSumNormal,
 )
 from pymc.distributions.simulator import Simulator
 from pymc.distributions.timeseries import (
@@ -118,7 +118,6 @@ __all__ = [
     "HalfFlat",
     "Normal",
     "TruncatedNormal",
-    "ZeroSumNormal",
     "Beta",
     "Kumaraswamy",
     "Exponential",
@@ -161,6 +160,7 @@ __all__ = [
     "Continuous",
     "Discrete",
     "MvNormal",
+    "ZeroSumNormal",
     "MatrixNormal",
     "KroneckerNormal",
     "MvStudentT",
