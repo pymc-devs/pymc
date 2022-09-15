@@ -32,6 +32,7 @@ from pymc.aesaraf import floatX
 from pymc.distributions import logcdf, logp
 from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.dist_math import clipped_beta_rvs
+from pymc.distributions.shape_utils import change_dist_size
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,
     Circ,
@@ -1895,12 +1896,19 @@ class TestZeroSumNormal:
             with pytest.raises(ValueError, match="repeated axis"):
                 with pm.Model(coords=COORDS) as m:
                     _ = pm.ZeroSumNormal("v", dims=dims, zerosum_axes=zerosum_axes)
-                    s = pm.sample(10, chains=1, tune=100)
         else:
             with pytest.raises(AxisError, match="out of bounds"):
                 with pm.Model(coords=COORDS) as m:
                     _ = pm.ZeroSumNormal("v", dims=dims, zerosum_axes=zerosum_axes)
-                    s = pm.sample(10, chains=1, tune=100)
+
+    def test_zsn_change_dist_size(self):
+        base_dist = pm.ZeroSumNormal.dist(shape=(4, 9))
+
+        new_dist = change_dist_size(base_dist, new_size=(5, 3), expand=False)
+        assert new_dist.eval().shape == (5, 3)
+
+        new_dist = change_dist_size(base_dist, new_size=(5, 3), expand=True)
+        assert new_dist.eval().shape == (5, 3, 4, 9)
 
 
 class TestWald(BaseTestDistributionRandom):
