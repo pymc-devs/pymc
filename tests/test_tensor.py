@@ -2,12 +2,14 @@ import aesara
 import numpy as np
 import pytest
 from aesara import tensor as at
+from aesara.graph import RewriteDatabaseQuery
 from aesara.graph.rewriting.basic import in2out
 from aesara.graph.rewriting.utils import rewrite_graph
 from aesara.tensor.extra_ops import BroadcastTo
 from scipy import stats as st
 
 from aeppl import factorized_joint_logprob, joint_logprob
+from aeppl.rewriting import logprob_rewrites_db
 from aeppl.tensor import naive_bcast_rv_lift
 
 
@@ -213,6 +215,7 @@ def test_join_mixed_ndim_supp():
     [
         (0, 2, 1),  # Swap
         (2, 1, 0),  # Swap
+        (1, 2, 0),  # Swap
         (0, 1, 2, "x"),  # Expand
         ("x", 0, 1, 2),  # Expand
         (
@@ -243,7 +246,12 @@ def test_measurable_dimshuffle(ds_order, multivariate):
         logp_ds_order = ds_order
 
     ref_logp = joint_logprob({base_rv: base_vv}, sum=False).dimshuffle(logp_ds_order)
-    ds_logp = joint_logprob({ds_rv: ds_vv}, sum=False)
+
+    # Disable local_dimshuffle_rv_lift to test fallback Aeppl rewrite
+    ir_rewriter = logprob_rewrites_db.query(
+        RewriteDatabaseQuery(include=["basic"]).excluding("dimshuffle_lift")
+    )
+    ds_logp = joint_logprob({ds_rv: ds_vv}, sum=False, ir_rewriter=ir_rewriter)
     assert ds_logp is not None
 
     ref_logp_fn = aesara.function([base_vv], ref_logp)

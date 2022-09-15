@@ -210,10 +210,11 @@ def logprob_dimshuffle(op, values, base_var, **kwargs):
         undo_ds.insert(dropped_dim, "x")
     value = value.dimshuffle(undo_ds)
 
-    # Then, reshuffle remaining dims
-    undo_ds = op.shuffle
+    # Then, unshuffle remaining dims
+    original_shuffle = list(op.shuffle)
     for dropped_dim in dropped_dims:
-        undo_ds.insert(dropped_dim, dropped_dim)
+        original_shuffle.insert(dropped_dim, dropped_dim)
+    undo_ds = [original_shuffle.index(i) for i in range(len(original_shuffle))]
     value = value.dimshuffle(undo_ds)
 
     raw_logp = logprob(base_var, value)
