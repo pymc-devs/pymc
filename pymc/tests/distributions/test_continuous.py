@@ -1823,8 +1823,14 @@ class TestZeroSumNormal:
     )
     def test_zsn_dims_shape(self, dims, zerosum_axes, shape):
         with pm.Model(coords=COORDS) as m:
-            _ = pm.ZeroSumNormal("v", dims=dims, shape=shape, zerosum_axes=zerosum_axes)
+            v = pm.ZeroSumNormal("v", dims=dims, shape=shape, zerosum_axes=zerosum_axes)
             s = pm.sample(10, chains=1, tune=100)
+
+        # to test forward graph
+        random_samples = pm.draw(
+            v,
+            draws=10,
+        )
 
         assert s.posterior.v.shape == (1, 10, len(COORDS["regions"]), len(COORDS["answers"]))
 
@@ -1833,15 +1839,24 @@ class TestZeroSumNormal:
 
         if isinstance(zerosum_axes[0], str):
             for ax in zerosum_axes:
-                assert np.isclose(
-                    s.posterior.v.mean(dim=ax), 0
-                ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+                for samples in [
+                    s.posterior.v.mean(dim=ax),
+                    random_samples.mean(axis=dims.index(ax) + 1),
+                ]:
+                    assert np.isclose(
+                        samples, 0
+                    ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
 
-            nonzero_ax = list(set(dims).difference(zerosum_axes))
-            if nonzero_ax:
-                assert not np.isclose(
-                    s.posterior.v.mean(dim=nonzero_ax), 0
-                ).all(), f"{nonzero_ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
+            nonzero_axes = list(set(dims).difference(zerosum_axes))
+            if nonzero_axes:
+                for ax in nonzero_axes:
+                    for samples in [
+                        s.posterior.v.mean(dim=ax),
+                        random_samples.mean(axis=dims.index(ax) + 1),
+                    ]:
+                        assert not np.isclose(
+                            samples, 0
+                        ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
 
         else:
             for ax in zerosum_axes:
