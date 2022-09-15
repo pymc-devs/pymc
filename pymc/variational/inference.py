@@ -631,11 +631,7 @@ class ASVGD(ImplicitGradient):
             "is often **underestimated** when using temperature = 1."
         )
         if approx is None:
-            approx = FullRank(
-                model=kwargs.pop("model", None),
-                random_seed=kwargs.pop("random_seed", None),
-                start=kwargs.pop("start", None),
-            )
+            approx = FullRank(model=kwargs.pop("model", None))
         super().__init__(estimator=estimator, approx=approx, kernel=kernel, **kwargs)
 
     def fit(
