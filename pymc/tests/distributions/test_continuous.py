@@ -24,6 +24,7 @@ import scipy.stats as st
 
 from aeppl.logprob import ParameterValueError
 from aesara.compile.mode import Mode
+from numpy import AxisError
 
 import pymc as pm
 
@@ -1802,44 +1803,76 @@ class TestTruncatedNormalUpperArray(BaseTestDistributionRandom):
     ]
 
 
+COORDS = {
+    "regions": ["a", "b", "c"],
+    "answers": ["yes", "no", "whatever", "don't understand question"],
+}
+
+
 class TestZeroSumNormal:
-    COORDS = {
-        "regions": ["a", "b", "c"],
-        "answers": ["yes", "no", "whatever", "don't understand question"],
-    }
-    with pm.Model(coords=COORDS) as m:
-        v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes="answers")
-        s = pm.sample(10)
+    @pytest.mark.parametrize(
+        "dims,zerosum_axes,shape",
+        [
+            (("regions", "answers"), "answers", None),
+            (("regions", "answers"), ("regions", "answers"), None),
+            (("regions", "answers"), 0, None),
+            (("regions", "answers"), -1, None),
+            (("regions", "answers"), (0, 1), None),
+            (None, -2, (len(COORDS["regions"]), len(COORDS["answers"]))),
+        ],
+    )
+    def test_zsn_dims_shape(self, dims, zerosum_axes, shape):
+        with pm.Model(coords=COORDS) as m:
+            _ = pm.ZeroSumNormal("v", dims=dims, shape=shape, zerosum_axes=zerosum_axes)
+            s = pm.sample(10, chains=1, tune=100)
 
-    assert np.isclose(
-        s.posterior.v.mean(dim="answers"), 0
-    ).all(), "A zerosum_axis is not summing to 0 across all axes."
-    assert not np.isclose(
-        s.posterior.v.mean(dim="regions"), 0
-    ).all(), "A non zerosum_axis is nonetheless summing to 0 across all samples."
-    assert s.posterior.v.shape == (4, 10, 3, 4)
+        assert s.posterior.v.shape == (1, 10, len(COORDS["regions"]), len(COORDS["answers"]))
 
-    with pm.Model(coords=COORDS) as m:
-        v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=("regions", "answers"))
-        s = pm.sample(10)
+        if not isinstance(zerosum_axes, (list, tuple)):
+            zerosum_axes = [zerosum_axes]
 
-    assert np.isclose(
-        s.posterior.v.mean(dim="answers"), 0
-    ).all(), "A zerosum_axis is not summing to 0 across all axes."
-    assert np.isclose(
-        s.posterior.v.mean(dim="regions"), 0
-    ).all(), "A zerosum_axis is not summing to 0 across all axes."
+        if isinstance(zerosum_axes[0], str):
+            for ax in zerosum_axes:
+                assert np.isclose(
+                    s.posterior.v.mean(dim=ax), 0
+                ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
 
-    with pm.Model(coords=COORDS) as m:
-        v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=1)
-        s = pm.sample(10)
+            nonzero_ax = list(set(dims).difference(zerosum_axes))
+            if nonzero_ax:
+                assert not np.isclose(
+                    s.posterior.v.mean(dim=nonzero_ax), 0
+                ).all(), f"{nonzero_ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
 
-    assert np.isclose(
-        s.posterior.v.mean(dim="answers"), 0
-    ).all(), "A zerosum_axis is not summing to 0 across all axes."
-    assert not np.isclose(
-        s.posterior.v.mean(dim="regions"), 0
-    ).all(), "A non zerosum_axis is nonetheless summing to 0 across all samples."
+        else:
+            for ax in zerosum_axes:
+                if ax < 0:
+                    assert np.isclose(
+                        s.posterior.v.mean(axis=ax), 0
+                    ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+                else:
+                    ax = ax + 2  # because 'chain' and 'draw' are added as new axes after sampling
+                    assert np.isclose(
+                        s.posterior.v.mean(axis=ax), 0
+                    ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+
+    @pytest.mark.parametrize(
+        "dims,zerosum_axes",
+        [
+            (("regions", "answers"), 2),
+            (("regions", "answers"), (0, -2)),
+        ],
+    )
+    def test_zsn_fail_axis(self, dims, zerosum_axes):
+        if isinstance(zerosum_axes, (list, tuple)):
+            with pytest.raises(ValueError, match="repeated axis"):
+                with pm.Model(coords=COORDS) as m:
+                    _ = pm.ZeroSumNormal("v", dims=dims, zerosum_axes=zerosum_axes)
+                    s = pm.sample(10, chains=1, tune=100)
+        else:
+            with pytest.raises(AxisError, match="out of bounds"):
+                with pm.Model(coords=COORDS) as m:
+                    _ = pm.ZeroSumNormal("v", dims=dims, zerosum_axes=zerosum_axes)
+                    s = pm.sample(10, chains=1, tune=100)
 
 
 class TestWald(BaseTestDistributionRandom):
