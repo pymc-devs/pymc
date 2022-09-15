@@ -965,6 +965,19 @@ class TestMoments:
         assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
+        "shape, zerosum_axes, expected",
+        [
+            ((2, 5), None, np.zeros((2, 5))),
+            ((2, 5, 6), None, np.zeros((2, 5, 6))),
+            ((2, 5, 6), (0, 1), np.zeros((2, 5, 6))),
+        ],
+    )
+    def test_zerosum_normal_moment(self, shape, zerosum_axes, expected):
+        with pm.Model() as model:
+            pm.ZeroSumNormal("x", shape=shape, zerosum_axes=zerosum_axes)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
         "sigma, size, expected",
         [
             (1, None, 1),
@@ -1811,7 +1824,7 @@ COORDS = {
 
 class TestZeroSumNormal:
     @pytest.mark.parametrize(
-        "dims,zerosum_axes,shape",
+        "dims, zerosum_axes, shape",
         [
             (("regions", "answers"), "answers", None),
             (("regions", "answers"), ("regions", "answers"), None),
@@ -1871,7 +1884,7 @@ class TestZeroSumNormal:
                     ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
 
     @pytest.mark.parametrize(
-        "dims,zerosum_axes",
+        "dims, zerosum_axes",
         [
             (("regions", "answers"), 2),
             (("regions", "answers"), (0, -2)),
