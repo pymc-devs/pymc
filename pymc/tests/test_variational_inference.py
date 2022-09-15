@@ -571,6 +571,31 @@ def test_fit_oo(inference, fit_kwargs, simple_model_data):
     np.testing.assert_allclose(np.std(trace.posterior["mu"]), np.sqrt(1.0 / d), rtol=0.2)
 
 
+def test_fit_start(inference_spec, simple_model):
+    mu_init = 17
+    mu_sigma_init = 13
+
+    with simple_model:
+        if type(inference_spec()) == ASVGD:
+            # ASVGD doesn't support the start argument
+            return
+        elif type(inference_spec()) == ADVI:
+            has_start_sigma = True
+        else:
+            has_start_sigma = False
+
+    kw = {"start": {"mu": mu_init}}
+    if has_start_sigma:
+        kw.update({"start_sigma": {"mu": mu_sigma_init}})
+
+    with simple_model:
+        inference = inference_spec(**kw)
+    trace = inference.fit(n=0).sample(10000)
+    np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_init, rtol=0.05)
+    if has_start_sigma:
+        np.testing.assert_allclose(np.std(trace.posterior["mu"]), mu_sigma_init, rtol=0.05)
+
+
 def test_profile(inference):
     inference.run_profiling(n=100).summary()
 
