@@ -861,7 +861,7 @@ class TestMatchesScipy:
         # This is a regression test for #6128: Check that having one out-of-bound value
         # in an input array does not set all logp values to -inf
         dist = pm.TruncatedNormal.dist(mu=1, sigma=2, lower=0, upper=3)
-        logp = pm.logp(dist, [-2., 1., 4.]).eval()
+        logp = pm.logp(dist, [-2.0, 1.0, 4.0]).eval()
         assert np.isinf(logp[0])
         assert np.isfinite(logp[1])
         assert np.isinf(logp[2])
