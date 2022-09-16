@@ -18,6 +18,7 @@ from aeppl.utils import rvs_to_value_vars
 def factorized_joint_logprob(
     rv_values: Dict[TensorVariable, TensorVariable],
     warn_missing_rvs: bool = True,
+    ir_rewriter: Optional[GraphRewriter] = None,
     extra_rewrites: Optional[Union[GraphRewriter, NodeRewriter]] = None,
     **kwargs,
 ) -> Dict[TensorVariable, TensorVariable]:
@@ -66,6 +67,8 @@ def factorized_joint_logprob(
         When ``True``, issue a warning when a `RandomVariable` is found in
         the graph and doesn't have a corresponding value variable specified in
         `rv_values`.
+    ir_rewriter
+        Rewriter that produces the intermediate representation of Measurable Variables.
     extra_rewrites
         Extra rewrites to be applied (e.g. reparameterizations, transforms,
         etc.)
@@ -76,7 +79,7 @@ def factorized_joint_logprob(
     from the respective `RandomVariable`.
 
     """
-    fgraph, rv_values, _ = construct_ir_fgraph(rv_values)
+    fgraph, rv_values, _ = construct_ir_fgraph(rv_values, ir_rewriter=ir_rewriter)
 
     if extra_rewrites is not None:
         extra_rewrites.rewrite(fgraph)

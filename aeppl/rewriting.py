@@ -5,7 +5,7 @@ from aesara.compile.mode import optdb
 from aesara.graph.basic import Variable
 from aesara.graph.features import Feature
 from aesara.graph.fg import FunctionGraph
-from aesara.graph.rewriting.basic import node_rewriter
+from aesara.graph.rewriting.basic import GraphRewriter, node_rewriter
 from aesara.graph.rewriting.db import EquilibriumDB, RewriteDatabaseQuery, SequenceDB
 from aesara.tensor.elemwise import DimShuffle, Elemwise
 from aesara.tensor.extra_ops import BroadcastTo
@@ -251,9 +251,13 @@ logprob_rewrites_db.register(
 
 
 def construct_ir_fgraph(
-    rv_values: Dict[Variable, Variable]
+    rv_values: Dict[Variable, Variable],
+    ir_rewriter: Optional[GraphRewriter] = None,
 ) -> Tuple[FunctionGraph, Dict[Variable, Variable], Dict[Variable, Variable]]:
     r"""Construct a `FunctionGraph` in measurable IR form for the keys in `rv_values`.
+
+    A custom IR rewriter can be specified. By default,
+    `logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]))` is used.
 
     Our measurable IR takes the form of an Aesara graph that is more-or-less
     equivalent to a given Aesara graph (i.e. the keys of `rv_values`) but
@@ -316,7 +320,9 @@ def construct_ir_fgraph(
     rv_remapper = PreserveRVMappings(rv_values)
     fgraph.attach_feature(rv_remapper)
 
-    logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"])).rewrite(fgraph)
+    if ir_rewriter is None:
+        ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]))
+    ir_rewriter.rewrite(fgraph)
 
     if rv_remapper.measurable_conversions:
         # Undo un-valued measurable IR rewrites
