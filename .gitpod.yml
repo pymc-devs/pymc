@@ -1,15 +1,11 @@
-image: ghcr.io/conda/conda-ci:main-linux-python3.9
+image: ghcr.io/mamba-org/micromamba-devcontainer:git-d24ecc1
 tasks:
   - name: initialize
     init: |
-      mkdir -p .vscode
-      echo '{"python.defaultInterpreterPath": "/workspace/pymc/env/bin/python"}' > .vscode/settings.json
-      conda init bash && source ~/.bashrc
-      conda env update -f conda-envs/environment-dev.yml -p /workspace/pymc/env
-      conda activate /workspace/pymc/env
+      micromamba install --yes --name base --file conda-envs/environment-dev.yml
       pip install -e .
-    command: |
-      conda init bash && echo "conda activate /workspace/pymc/env" >> ~/.bashrc && source ~/.bashrc
+    # command: |
+    #   conda init bash && echo "conda activate /workspace/pymc/env" >> ~/.bashrc && source ~/.bashrc
 
 vscode:
   extensions:
