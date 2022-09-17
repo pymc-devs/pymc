@@ -12,6 +12,7 @@ vscode:
   extensions:
     - eamodio.gitlens
     - ms-python.python
+    - ms-pyright.pyright
 
 github:
   prebuilds:
