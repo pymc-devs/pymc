@@ -656,10 +656,10 @@ In addition, Council members are given administrative rights to all repositories
 the [pymc-devs](https://github.com/pymc-devs) organization.
 
 ##### Communication Focused Repositories
-Some repositories on Github may be used primarily for internal knowledge store and communication, rather than content tha tis curated, published, or released _by the project_ for external users.
+Some repositories on Github may be used primarily for internal knowledge store and communication, rather than content that is curated, published, or released _by the project_ for external users.
 
 The permissions of such repositories will be set in order to allow the same participation and access levels we use on private project communication channels like Slack.
-Therefore, similarly to slack, these repositories will be private and write permissions will be given to all recurrent contributors (that is, anyone with access to slack).
+Therefore, similarly to Slack, these repositories will be private and write permissions will be given to all recurrent contributors (that is, anyone with access to Slack).
 
 #### Discourse
 Similar to the above section, Discourse permissions are also mapped to the community team
@@ -718,7 +718,7 @@ provide examples on how to assign permissions:
   * Added to the PyMC_core Discourse group
   * Added to all private communication channels
   * Triage permissions on all repositories
-  * Access to PyMC gmail, drive and grant application platforms (i.e. CZI slack) as they are the main grant writing coordinator
+  * Access to PyMC Gmail, Drive and grant application platforms (i.e. CZI Slack) as they are the main grant writing coordinator
 
 </details>
 
