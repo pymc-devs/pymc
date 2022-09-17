@@ -858,6 +858,14 @@ class TestMatchesScipy:
             skip_paramdomain_outside_edge_test=True,
         )
 
+        # This is a regression test for #6128: Check that having one out-of-bound value
+        # in an input array does not set all logp values to -inf
+        dist = pm.TruncatedNormal.dist(mu=1, sigma=2, lower=0, upper=3)
+        logp = pm.logp(dist, [-2.0, 1.0, 4.0]).eval()
+        assert np.isinf(logp[0])
+        assert np.isfinite(logp[1])
+        assert np.isinf(logp[2])
+
     def test_get_tau_sigma(self):
         sigma = np.array(2)
         npt.assert_almost_equal(get_tau_sigma(sigma=sigma), [1.0 / sigma**2, sigma])
