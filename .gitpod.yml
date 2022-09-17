@@ -1,4 +1,4 @@
-image: ghcr.io/mamba-org/micromamba-devcontainer:git-d24ecc1
+image: ghcr.io/mamba-org/micromamba-devcontainer:git-c50a81d
 tasks:
   - name: initialize
     init: |
