@@ -4,8 +4,8 @@ tasks:
     init: |
       micromamba install --yes --name base --file conda-envs/environment-dev.yml
       pip install -e .
-    # command: |
-    #   conda init bash && echo "conda activate /workspace/pymc/env" >> ~/.bashrc && source ~/.bashrc
+    command: |
+      _dev-init.sh
 
 vscode:
   extensions:
