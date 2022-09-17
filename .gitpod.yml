@@ -2,9 +2,23 @@ image: ghcr.io/mamba-org/micromamba-devcontainer:git-a49ee3e
 tasks:
   - name: initialize
     init: |
+      # General devcontainer initialization, e.g. pre-commit
       _dev-init.sh
+
+      # Create an empty object for .vscode/settings.json if the file doesn't exist
+      mkdir -p .vscode
+      [ -f .vscode/settings.json ] || echo "{}" > .vscode/settings.json
+
+      # Set the default interpreter path
+      jq '.["python.defaultInterpreterPath"] = "/opt/conda/bin/python"' \
+          .vscode/settings.json | sponge .vscode/settings.json
+
+      # Install dependencies
       micromamba install --yes --name base --file conda-envs/environment-dev.yml
+
+      # Install PyMC
       pip install -e .
+
     command: |
       _dev-init.sh
 
