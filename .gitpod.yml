@@ -25,7 +25,7 @@ tasks:
       _dev-init.sh
 
       # Install the hooks in the background if not already installed
-      pre-commit install --install-hooks &
+      pre-commit install --install-hooks
 
 vscode:
   extensions:
