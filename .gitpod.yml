@@ -10,8 +10,10 @@ tasks:
       [ -f .vscode/settings.json ] || echo "{}" > .vscode/settings.json
 
       # Set the default interpreter path
-      jq '.["python.defaultInterpreterPath"] = "/opt/conda/bin/python"' \
-          .vscode/settings.json | sponge .vscode/settings.json
+      jq '
+            .["python.defaultInterpreterPath"] = "/opt/conda/bin/python"
+          | .["python.pythonPath"] = "/opt/conda/bin/python"
+      ' .vscode/settings.json | sponge .vscode/settings.json
 
       # Install dependencies
       micromamba install --yes --name base --file conda-envs/environment-dev.yml
