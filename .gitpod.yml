@@ -20,7 +20,11 @@ tasks:
       pip install -e .
 
     command: |
+      # Reinitialize devcontainer for good measure
       _dev-init.sh
+
+      # Install the hooks in the background if not already installed
+      pre-commit install --install-hooks &
 
 vscode:
   extensions:
