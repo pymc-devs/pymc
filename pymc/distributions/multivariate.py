@@ -2463,6 +2463,8 @@ class ZeroSumNormal(Distribution):
     def dist(cls, sigma=1, zerosum_axes=None, **kwargs):
         if zerosum_axes is None:
             zerosum_axes = [-1]
+        if not isinstance(zerosum_axes, (list, tuple)):
+            zerosum_axes = [zerosum_axes]
 
         sigma = at.as_tensor_variable(floatX(sigma))
         if sigma.ndim > 0:
