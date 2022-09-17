@@ -2,6 +2,7 @@ image: ghcr.io/mamba-org/micromamba-devcontainer:git-0f25eb5
 tasks:
   - name: initialize
     init: |
+      _dev-init.sh
       micromamba install --yes --name base --file conda-envs/environment-dev.yml
       pip install -e .
     command: |
