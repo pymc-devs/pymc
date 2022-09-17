@@ -1415,10 +1415,7 @@ class TestZeroSumNormal:
             s = pm.sample(10, chains=1, tune=100)
 
         # to test forward graph
-        random_samples = pm.draw(
-            v,
-            draws=10,
-        )
+        random_samples = pm.draw(v, draws=10)
 
         assert s.posterior.v.shape == (1, 10, len(COORDS["regions"]), len(COORDS["answers"]))
 
@@ -1475,14 +1472,39 @@ class TestZeroSumNormal:
                 with pm.Model(coords=COORDS) as m:
                     _ = pm.ZeroSumNormal("v", dims=dims, zerosum_axes=zerosum_axes)
 
-    def test_zsn_change_dist_size(self):
-        base_dist = pm.ZeroSumNormal.dist(shape=(4, 9))
+    @pytest.mark.parametrize(
+        "zerosum_axes",
+        [(-1), (-2), (1), ((0, 1)), ((-2, -1))],
+    )
+    def test_zsn_change_dist_size(self, zerosum_axes):
+        base_dist = pm.ZeroSumNormal.dist(shape=(4, 9), zerosum_axes=zerosum_axes)
+        random_samples = pm.draw(base_dist, draws=100)
+
+        if not isinstance(zerosum_axes, (list, tuple)):
+            zerosum_axes = [zerosum_axes]
+        self.assert_zerosum_axes(random_samples, zerosum_axes)
 
         new_dist = change_dist_size(base_dist, new_size=(5, 3), expand=False)
         assert new_dist.eval().shape == (5, 3)
+        random_samples = pm.draw(new_dist, draws=100)
+        self.assert_zerosum_axes(random_samples, zerosum_axes)
 
         new_dist = change_dist_size(base_dist, new_size=(5, 3), expand=True)
         assert new_dist.eval().shape == (5, 3, 4, 9)
+        random_samples = pm.draw(new_dist, draws=100)
+        self.assert_zerosum_axes(random_samples, zerosum_axes)
+
+    def assert_zerosum_axes(self, random_samples, zerosum_axes):
+        for ax in zerosum_axes:
+            if ax < 0:
+                assert np.isclose(
+                    random_samples.mean(axis=ax), 0
+                ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+            else:
+                ax = ax + 1
+                assert np.isclose(
+                    random_samples.mean(axis=ax), 0
+                ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
 
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
