@@ -12,7 +12,6 @@ tasks:
       # Set the default interpreter path
       jq '
             .["python.defaultInterpreterPath"] = "/opt/conda/bin/python"
-          | .["python.pythonPath"] = "/opt/conda/bin/python"
       ' .vscode/settings.json | sponge .vscode/settings.json
 
       # Install dependencies
