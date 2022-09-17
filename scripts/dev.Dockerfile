@@ -18,5 +18,5 @@ RUN : \
     && sudo rm -rf /fake-repo \
     && sudo mkdir --mode=777 /opt/.pre-commit-cache-prebuilt \
     && mv ~/.cache/pre-commit/* /opt/.pre-commit-cache-prebuilt \
-    && chmod a+rwx /opt/.pre-commit-cache-prebuilt \
+    && sudo chmod a+rwx /opt/.pre-commit-cache-prebuilt \
 ;
