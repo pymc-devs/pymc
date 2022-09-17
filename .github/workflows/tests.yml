@@ -8,6 +8,7 @@ on:
       - "*.py"
       - "conda-envs/**"
       - "codecov.yml"
+      - "requirements*.txt"
       - "scripts/*.sh"
   push:
     branches: [main]
