@@ -1,0 +1,57 @@
+name: devcontainer-docker-image
+
+on:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}  # user/reponame
+
+jobs:
+  build-container:
+    runs-on: ubuntu-latest
+
+    # Set permissions for GitHub token
+    # <https://docs.github.com/en/packages/managing-github-packages-using-github-actions-workflows/publishing-and-installing-a-package-with-github-actions#authenticating-to-package-registries-on-github>
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b  # v3.0.2
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@8b122486cedac8393e77aa9734c3528886e4a1a8  # v2.0.0
+
+    - name: Setup Docker buildx
+      uses: docker/setup-buildx-action@dc7b9719a96d48369863986a06765841d7ea23f6  # v2.0.0
+
+    - name: Prepare metadata
+      id: meta
+      uses: docker/metadata-action@69f6fc9d46f2f8bf0d5491e4aabe0bb8c6a4678a  # v4.0.1
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=sha,enable=true,prefix=git-
+          type=raw,value=latest
+
+    - name: Log into registry ${{ env.REGISTRY }}
+      uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b  # v2.0.0
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      id: docker_build
+      uses: docker/build-push-action@e551b19e49efd4e98792db7592c17c09b89db8d8  # v3.0.0
+      with:
+        context: .
+        file: scripts/dev.Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        cache-to: type=inline
