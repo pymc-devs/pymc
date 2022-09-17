@@ -1,4 +1,4 @@
-image: ghcr.io/maresb/pymc:git-324ef13
+image: ghcr.io/maresb/pymc:git-3866b0e
 tasks:
   - name: initialize
     init: |
