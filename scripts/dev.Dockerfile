@@ -5,6 +5,7 @@ RUN : \
     && micromamba install --yes --name base --file /tmp/environment-dev.yml \
     && micromamba clean --all --yes \
     && rm /tmp/environment-dev.yml \
+    && sudo chmod a+rwx /opt/conda \
 ;
 
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
@@ -15,5 +16,7 @@ RUN : \
     && git init \
     && pre-commit install-hooks \
     && sudo rm -rf /fake-repo \
-    && mv ~/.cache/pre-commit /tmp/.pre-commit-cache-prebuilt \
+    && sudo mkdir --mode=777 /opt/.pre-commit-cache-prebuilt \
+    && mv ~/.cache/pre-commit/* /opt/.pre-commit-cache-prebuilt \
+    && chmod a+rwx /opt/.pre-commit-cache-prebuilt \
 ;
