@@ -12,7 +12,6 @@ vscode:
   extensions:
     - eamodio.gitlens
     - ms-python.python
-    - ms-vsliveshare.vsliveshare
 
 github:
   prebuilds:
