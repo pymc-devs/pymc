@@ -14,6 +14,6 @@ RUN : \
     && cd /fake-repo \
     && git init \
     && pre-commit install-hooks \
-    && rm -rf /fake-repo \
+    && sudo rm -rf /fake-repo \
     && mv ~/.cache/pre-commit /tmp/.pre-commit-cache-prebuilt \
 ;
