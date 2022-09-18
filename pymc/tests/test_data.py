@@ -28,7 +28,6 @@ from aesara.tensor.var import TensorVariable
 import pymc as pm
 
 from pymc.aesaraf import GeneratorOp, floatX
-from pymc.exceptions import ShapeError
 from pymc.tests.helpers import SeededTest, select_by_precision
 
 
@@ -370,20 +369,6 @@ class TestData(SeededTest):
             intensity.set_value(floatX(np.ones((4, 5))))
             assert pmodel.dim_lengths["row"].eval() == 4
             assert pmodel.dim_lengths["column"].eval() == 5
-
-    def test_no_resize_of_implied_dimensions(self):
-        with pm.Model() as pmodel:
-            # Imply a dimension through RV params
-            pm.Normal("n", mu=[1, 2, 3], dims="city")
-            # _Use_ the dimension for a data variable
-            inhabitants = pm.MutableData("inhabitants", [100, 200, 300], dims="city")
-
-            # Attempting to re-size the dimension through the data variable would
-            # cause shape problems in InferenceData conversion, because the RV remains (3,).
-            with pytest.raises(
-                ShapeError, match="was initialized from 'n' which is not a shared variable"
-            ):
-                pmodel.set_data("inhabitants", [1, 2, 3, 4])
 
     def test_implicit_coords_series(self):
         pd = pytest.importorskip("pandas")

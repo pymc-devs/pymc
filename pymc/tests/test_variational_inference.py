@@ -576,7 +576,10 @@ def test_fit_start(inference_spec, simple_model):
     mu_sigma_init = 13
 
     with simple_model:
-        if type(inference_spec()) == ADVI:
+        if type(inference_spec()) == ASVGD:
+            # ASVGD doesn't support the start argument
+            return
+        elif type(inference_spec()) == ADVI:
             has_start_sigma = True
         else:
             has_start_sigma = False

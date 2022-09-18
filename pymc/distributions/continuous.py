@@ -760,31 +760,40 @@ class TruncatedNormal(BoundedContinuous):
         -------
         TensorVariable
         """
-        unbounded_lower = isinstance(lower, TensorConstant) and np.all(lower.value == -np.inf)
-        unbounded_upper = isinstance(upper, TensorConstant) and np.all(upper.value == np.inf)
+        is_lower_bounded = not (
+            isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value))
+        )
+        is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
 
-        if not unbounded_lower and not unbounded_upper:
+        if is_lower_bounded and is_upper_bounded:
             lcdf_a = normal_lcdf(mu, sigma, lower)
             lcdf_b = normal_lcdf(mu, sigma, upper)
             lsf_a = normal_lccdf(mu, sigma, lower)
             lsf_b = normal_lccdf(mu, sigma, upper)
             norm = at.switch(lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a))
-        elif not unbounded_lower:
+        elif is_lower_bounded:
             norm = normal_lccdf(mu, sigma, lower)
-        elif not unbounded_upper:
+        elif is_upper_bounded:
             norm = normal_lcdf(mu, sigma, upper)
         else:
             norm = 0.0
 
         logp = _logprob(normal, (value,), None, None, None, mu, sigma) - norm
-        bounds = []
-        if not unbounded_lower:
-            bounds.append(value >= lower)
-        if not unbounded_upper:
-            bounds.append(value <= upper)
-        if not unbounded_lower and not unbounded_upper:
-            bounds.append(lower <= upper)
-        return check_parameters(logp, *bounds)
+
+        if is_lower_bounded:
+            logp = at.switch(value < lower, -np.inf, logp)
+
+        if is_upper_bounded:
+            logp = at.switch(value > upper, -np.inf, logp)
+
+        if is_lower_bounded and is_upper_bounded:
+            logp = check_parameters(
+                logp,
+                at.le(lower, upper),
+                msg="lower_bound <= upper_bound",
+            )
+
+        return logp
 
 
 @_default_transform.register(TruncatedNormal)
