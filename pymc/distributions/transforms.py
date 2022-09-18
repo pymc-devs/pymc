@@ -273,8 +273,7 @@ class Interval(IntervalTransform):
 
 class ZeroSumTransform(RVTransform):
     """
-    Constrains the samples of a Normal distribution to sum to zero
-    along the user-provided ``zerosum_axes``.
+    Constrains any random samples to sum to zero along the user-provided ``zerosum_axes``.
     By default (``zerosum_axes=[-1]``), the sum-to-zero constraint is imposed
     on the last axis.
     """

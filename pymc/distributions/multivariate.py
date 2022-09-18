@@ -2403,10 +2403,16 @@ class ZeroSumNormal(Distribution):
     By default, the last axis is constrained to sum to zero.
     See `zerosum_axes` kwarg for more details.
 
+    .. math:
+
+        ZSN(\sigma) = N(0, \sigma^2 (I - \tfrac{1}{n}J)
+        where $J_{ij} = 1$
+
     Parameters
     ----------
     sigma : tensor_like of float
-        Standard deviation (sigma > 0).
+        Scale parameter (sigma > 0).
+        It's actually the standard deviation of the underlying, unconstrained Normal distribution.
         Defaults to 1 if not specified.
         For now, ``sigma`` has to be a scalar, to ensure the zero-sum constraint.
     zerosum_axes: list or tuple of strings or integers
