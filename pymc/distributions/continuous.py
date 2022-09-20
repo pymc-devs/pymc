@@ -3994,9 +3994,9 @@ class _PolyaGammaLogDistFunc(Op):
         x = at.as_tensor_variable(floatX(x))
         h = at.as_tensor_variable(floatX(h))
         z = at.as_tensor_variable(floatX(z))
-        bshape = broadcast_shape(x, h, z)
-        shape = [False] * len(bshape)
-        return Apply(self, [x, h, z], [at.TensorType(aesara.config.floatX, shape=shape)()])
+        shape = broadcast_shape(x, h, z)
+        broadcastable = [] if not shape else [False] * len(shape)
+        return Apply(self, [x, h, z], [at.TensorType(aesara.config.floatX, broadcastable)()])
 
     def perform(self, node, ins, outs):
         x, h, z = ins[0], ins[1], ins[2]
