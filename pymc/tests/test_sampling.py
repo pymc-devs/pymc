@@ -673,7 +673,7 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(idata, keep_size=True, return_inferencedata=False)
             assert ppc["a"].shape == (nchains, ndraws)
 
-    def test_normal_vector(self, caplog):
+    def test_normal_vector(self):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
@@ -710,7 +710,7 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (12, 2)
 
-    def test_normal_vector_idata(self, caplog):
+    def test_normal_vector_idata(self):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
@@ -726,7 +726,7 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(idata, return_inferencedata=False, keep_size=True)
             assert ppc["a"].shape == (trace.nchains, len(trace), 2)
 
-    def test_exceptions(self, caplog):
+    def test_exceptions(self):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
