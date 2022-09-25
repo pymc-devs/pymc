@@ -10,11 +10,8 @@ from aesara.graph.rewriting.db import EquilibriumDB, RewriteDatabaseQuery, Seque
 from aesara.tensor.elemwise import DimShuffle, Elemwise
 from aesara.tensor.extra_ops import BroadcastTo
 from aesara.tensor.random.rewriting import local_subtensor_rv_lift
-from aesara.tensor.rewriting.basic import (
-    ShapeFeature,
-    register_canonicalize,
-    register_useless,
-)
+from aesara.tensor.rewriting.basic import register_canonicalize, register_useless
+from aesara.tensor.rewriting.shape import ShapeFeature
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
