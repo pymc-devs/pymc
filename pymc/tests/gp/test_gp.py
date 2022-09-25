@@ -113,20 +113,20 @@ class TestGPAdditive:
             gp3 = pm.gp.Marginal(mean_func=self.means[2], cov_func=self.covs[2])
 
             gpsum = gp1 + gp2 + gp3
-            fsum = gpsum.marginal_likelihood("f", self.X, self.y, noise=self.noise)
+            fsum = gpsum.marginal_likelihood("f", self.X, self.y, sigma=self.noise)
             model1_logp = model1.compile_logp()({})
 
         with pm.Model() as model2:
             gptot = pm.gp.Marginal(
                 mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs)
             )
-            fsum = gptot.marginal_likelihood("f", self.X, self.y, noise=self.noise)
+            fsum = gptot.marginal_likelihood("f", self.X, self.y, sigma=self.noise)
             model2_logp = model2.compile_logp()({})
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 
         with model1:
             fp1 = gpsum.conditional(
-                "fp1", self.Xnew, given={"X": self.X, "y": self.y, "noise": self.noise, "gp": gpsum}
+                "fp1", self.Xnew, given={"X": self.X, "y": self.y, "sigma": self.noise, "gp": gpsum}
             )
         with model2:
             fp2 = gptot.conditional("fp2", self.Xnew)
@@ -152,14 +152,14 @@ class TestGPAdditive:
             )
 
             gpsum = gp1 + gp2 + gp3
-            fsum = gpsum.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
+            fsum = gpsum.marginal_likelihood("f", self.X, Xu, self.y, sigma=sigma)
             model1_logp = model1.compile_logp()({})
 
         with pm.Model() as model2:
             gptot = pm.gp.MarginalApprox(
                 mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs), approx=approx
             )
-            fsum = gptot.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
+            fsum = gptot.marginal_likelihood("f", self.X, Xu, self.y, sigma=sigma)
             model2_logp = model2.compile_logp()({})
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 
@@ -233,7 +233,7 @@ class TestGPAdditive:
 
 class TestMarginalVsLatent:
     R"""
-    Compare the logp of models Marginal, noise=0 and Latent.
+    Compare the logp of models Marginal, sigma=0 and Latent.
     """
 
     def setup_method(self):
@@ -245,7 +245,7 @@ class TestMarginalVsLatent:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
             gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
-            f = gp.marginal_likelihood("f", X, y, noise=0.0)
+            f = gp.marginal_likelihood("f", X, y, sigma=0.0)
             p = gp.conditional("p", Xnew)
         self.logp = model.compile_logp()({"p": pnew})
         self.X = X
@@ -422,7 +422,7 @@ class TestMarginalKron:
             cov_func = pm.gp.cov.Kron(self.cov_funcs)
             self.mean = pm.gp.mean.Constant(0.5)
             gp = pm.gp.Marginal(mean_func=self.mean, cov_func=cov_func)
-            f = gp.marginal_likelihood("f", self.X, self.y, noise=self.sigma)
+            f = gp.marginal_likelihood("f", self.X, self.y, sigma=self.sigma)
             p = gp.conditional("p", self.Xnew)
             self.mu, self.cov = gp.predict(self.Xnew)
         self.logp = model.compile_logp()({"p": self.pnew})
