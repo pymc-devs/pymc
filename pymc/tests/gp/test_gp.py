@@ -24,6 +24,78 @@ import pymc as pm
 from pymc.math import cartesian
 
 
+class TestSigmaParams:
+    def setup_method(self):
+        """Common setup."""
+        self.x = np.linspace(-5, 5, 30)[:, None]
+        self.xu = np.linspace(-5, 5, 10)[:, None]
+        self.y = np.random.normal(0.25 * self.x, 0.1)
+
+        with pm.Model() as self.model:
+            cov_func = pm.gp.cov.Linear(1, c=0.0)
+            c = pm.Normal("c", mu=20.0, sigma=100.0)
+            mean_func = pm.gp.mean.Constant(c)
+            self.gp = self.gp_implementation(mean_func=mean_func, cov_func=cov_func)
+            self.sigma = pm.HalfNormal("sigma", sigma=100)
+
+
+class TestMarginalSigmaParams(TestSigmaParams):
+    R"""Tests for the deprecation warnings and raising ValueError."""
+
+    gp_implementation = pm.gp.Marginal
+
+    def test_catch_warnings(self):
+        """Warning from using the old noise parameter."""
+        with self.model:
+            with pytest.warns(FutureWarning):
+                self.gp.marginal_likelihood("lik_noise", X=self.x, y=self.y, noise=self.sigma)
+
+            with pytest.warns(FutureWarning):
+                self.gp.conditional(
+                    "cond_noise",
+                    Xnew=self.x,
+                    given={
+                        "noise": self.sigma,
+                    },
+                )
+
+    def test_raise_value_error(self):
+        """Either both or neither parameter is specified."""
+        with self.model:
+            with pytest.raises(ValueError):
+                self.gp.marginal_likelihood(
+                    "like_both", X=self.x, y=self.y, noise=self.sigma, sigma=self.sigma
+                )
+
+            with pytest.raises(ValueError):
+                self.gp.marginal_likelihood("like_neither", X=self.x, y=self.y)
+
+
+class TestMarginalApproxSigmaParams(TestSigmaParams):
+    R"""Tests for the deprecation warnings and raising ValueError"""
+
+    gp_implementation = pm.gp.MarginalApprox
+
+    def test_catch_warnings(self):
+        """Warning from using the old noise parameter."""
+        with self.model:
+            with pytest.warns(FutureWarning):
+                self.gp.marginal_likelihood(
+                    "lik_noise", X=self.x, Xu=self.xu, y=self.y, noise=self.sigma
+                )
+
+    def test_raise_value_error(self):
+        """Either both or neither parameter is specified."""
+        with self.model:
+            with pytest.raises(ValueError):
+                self.gp.marginal_likelihood(
+                    "like_both", X=self.x, Xu=self.xu, y=self.y, noise=self.sigma, sigma=self.sigma
+                )
+
+            with pytest.raises(ValueError):
+                self.gp.marginal_likelihood("like_neither", X=self.x, Xu=self.xu, y=self.y)
+
+
 class TestMarginalVsMarginalApprox:
     R"""
     Compare test fits of models Marginal and MarginalApprox.
