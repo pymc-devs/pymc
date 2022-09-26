@@ -21,15 +21,35 @@ from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph import Apply
 from aesara.graph.basic import ancestors, walk
 from aesara.scalar.basic import Cast
+from aesara.tensor.basic import get_scalar_constant_value
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
 
 import pymc as pm
 
+from pymc.distributions import Discrete
+from pymc.distributions.discrete import DiracDelta
 from pymc.util import get_default_varnames, get_var_name
 
 VarName = NewType("VarName", str)
+
+
+def check_zip_graph_from_components(components):
+    """
+    This helper function checks if a mixture sub-graph corresponds to a
+    zero-inflated distribution using its components, a list of length two.
+    """
+    if not any(isinstance(var.owner.op, DiracDelta) for var in components):
+        return False
+
+    dirac_delta_idx = 1 - int(isinstance(components[0].owner.op, DiracDelta))
+    dirac_delta = components[dirac_delta_idx]
+    other_comp = components[1 - dirac_delta_idx]
+
+    return (get_scalar_constant_value(dirac_delta.owner.inputs[3]) == 0) and isinstance(
+        other_comp.owner.op, Discrete
+    )
 
 
 class ModelGraph:
@@ -154,16 +174,40 @@ class ModelGraph:
             shape = "box"
             style = "rounded, filled"
             label = f"{var_name}\n~\nMutableData"
-        elif v.owner and isinstance(v.owner.op, RandomVariable):
+        elif v.owner and (v in self.model.basic_RVs):
             shape = "ellipse"
-            if hasattr(v.tag, "observations"):
+            if v in self.model.observed_RVs:
                 # observed RV
                 style = "filled"
             else:
-                shape = "ellipse"
                 style = None
             symbol = v.owner.op.__class__.__name__
-            if symbol.endswith("RV"):
+            if symbol == "MarginalMixtureRV":
+                components = v.owner.inputs[2:]
+                if len(components) == 2:
+                    component_names = [
+                        var.owner.op.__class__.__name__.replace("Unmeasurable", "")[:-2]
+                        for var in components
+                    ]
+                    if check_zip_graph_from_components(components):
+                        # ZeroInflated distribution
+                        component_names.remove("DiracDelta")
+                        symbol = f"ZeroInflated{component_names[0]}"
+                    else:
+                        # X-Y mixture
+                        symbol = f"{'-'.join(component_names)}Mixture"
+                elif len(components) == 1:
+                    # single component dispatch mixture
+                    symbol = f"{components[0].owner.op.__class__.__name__.replace('Unmeasurable', '')[:-2]}Mixture"
+                else:
+                    symbol = symbol[:-2]  # just MarginalMixture
+            elif symbol == "CensoredRV":
+                censored_dist = v.owner.inputs[0]
+                symbol = symbol[:-2] + censored_dist.owner.op.__class__.__name__[:-2]
+            elif symbol == "TruncatedRV":
+                truncated_dist = v.owner.op.base_rv_op
+                symbol = symbol[:-2] + truncated_dist.__class__.__name__[:-2]
+            elif symbol.endswith("RV"):
                 symbol = symbol[:-2]
             label = f"{var_name}\n~\n{symbol}"
         else:
