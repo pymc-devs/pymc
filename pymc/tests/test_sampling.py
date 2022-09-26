@@ -1086,33 +1086,6 @@ class TestSamplePPC(SeededTest):
         assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [x, y, z]")]
         caplog.clear()
 
-    def test_logging_sampled_basic_rvs_posterior_mutable(self, caplog):
-        with pm.Model() as m:
-            x1 = pm.MutableData("x1", 0)
-            y1 = pm.Normal("y1", x1)
-
-            x2 = pm.ConstantData("x2", 0)
-            y2 = pm.Normal("y2", x2)
-
-            z = pm.Normal("z", y1 + y2, observed=0)
-
-        # `y1` will be recomputed because it depends on a `MutableData` whereas `y2` won't
-        # This behavior might change in the future, as it is undesirable when `MutableData`
-        # hasn't changed since sampling
-        idata = az_from_dict(posterior={"y1": np.zeros(5), "y2": np.zeros(5)})
-        with m:
-            pm.sample_posterior_predictive(idata)
-        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y1, z]")]
-        caplog.clear()
-
-        # `y1` should now be resampled regardless of whether it was in the trace or not
-        # as the posterior is no longer revelant!
-        x1.set_value(1)
-        with m:
-            pm.sample_posterior_predictive(idata)
-        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y1, z]")]
-        caplog.clear()
-
     def test_logging_sampled_basic_rvs_posterior_deterministic(self, caplog):
         with pm.Model() as m:
             x = pm.Normal("x")
@@ -1127,6 +1100,131 @@ class TestSamplePPC(SeededTest):
             pm.sample_posterior_predictive(idata, var_names=["x_det", "z"])
         assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y, z]")]
         caplog.clear()
+
+    @staticmethod
+    def make_mock_model():
+        rng = np.random.default_rng(seed=42)
+        data = rng.normal(loc=1, scale=0.2, size=(10, 3))
+        with pm.Model() as model:
+            model.add_coord("name", ["A", "B", "C"], mutable=True)
+            model.add_coord("obs", list(range(10, 20)), mutable=True)
+            offsets = pm.MutableData("offsets", rng.normal(0, 1, size=(10,)))
+            a = pm.Normal("a", mu=0, sigma=1, dims=["name"])
+            b = pm.Normal("b", mu=offsets, sigma=1)
+            mu = pm.Deterministic("mu", a + b[..., None], dims=["obs", "name"])
+            sigma = pm.HalfNormal("sigma", sigma=1, dims=["name"])
+
+            data = pm.MutableData(
+                "y_obs",
+                data,
+                dims=["obs", "name"],
+            )
+            pm.Normal("y", mu=mu, sigma=sigma, observed=data, dims=["obs", "name"])
+        return model
+
+    @pytest.fixture(scope="class")
+    def mock_multitrace(self):
+        with self.make_mock_model():
+            trace = pm.sample(
+                draws=10,
+                tune=10,
+                chains=2,
+                progressbar=False,
+                compute_convergence_checks=False,
+                return_inferencedata=False,
+                random_seed=42,
+            )
+        return trace
+
+    @pytest.fixture(scope="class", params=["MultiTrace", "InferenceData", "Dataset"])
+    def mock_sample_results(self, request, mock_multitrace):
+        kind = request.param
+        trace = mock_multitrace
+        # We rebuild the class to ensure that all dimensions, data and coords start out
+        # the same across params values
+        model = self.make_mock_model()
+        if kind == "MultiTrace":
+            return kind, trace, model
+        else:
+            idata = pm.to_inference_data(
+                trace,
+                save_warmup=False,
+                model=model,
+                log_likelihood=False,
+            )
+            if kind == "Dataset":
+                return kind, idata.posterior, model
+            else:
+                return kind, idata, model
+
+    def test_logging_sampled_basic_rvs_posterior_mutable(self, mock_sample_results, caplog):
+        kind, samples, model = mock_sample_results
+        with model:
+            pm.sample_posterior_predictive(samples)
+        if kind == "MultiTrace":
+            # MultiTrace will only have the actual MCMC posterior samples but no information on
+            # the MutableData and mutable coordinate values, so it will always assume they are volatile
+            # and resample their descendants
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            caplog.clear()
+        elif kind == "InferenceData":
+            # InferenceData has all MCMC posterior samples and the values for both coordinates and
+            # data containers. This enables it to see that no data has changed and it should only
+            # resample the observed variable
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y]")]
+            caplog.clear()
+        elif kind == "Dataset":
+            # Dataset has all MCMC posterior samples and the values of the coordinates. This
+            # enables it to see that the coordinates have not changed, but the MutableData is
+            # assumed volatile by default
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [b, y]")]
+            caplog.clear()
+
+        original_offsets = model["offsets"].get_value()
+        with model:
+            # Changing the MutableData values. This will only be picked up by InferenceData
+            pm.set_data({"offsets": original_offsets + 1})
+            pm.sample_posterior_predictive(samples)
+        if kind == "MultiTrace":
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            caplog.clear()
+        elif kind == "InferenceData":
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [b, y]")]
+            caplog.clear()
+        elif kind == "Dataset":
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [b, y]")]
+            caplog.clear()
+
+        with model:
+            # Changing the mutable coordinates. This will be picked up by InferenceData and Dataset
+            model.set_dim("name", new_length=4, coord_values=["D", "E", "F", "G"])
+            pm.set_data({"offsets": original_offsets, "y_obs": np.zeros((10, 4))})
+            pm.sample_posterior_predictive(samples)
+        if kind == "MultiTrace":
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            caplog.clear()
+        elif kind == "InferenceData":
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, sigma, y]")]
+            caplog.clear()
+        elif kind == "Dataset":
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            caplog.clear()
+
+        with model:
+            # Changing the mutable coordinate values, but not shape, and also changing MutableData.
+            # This will trigger resampling of all variables
+            model.set_dim("name", new_length=3, coord_values=["A", "B", "D"])
+            pm.set_data({"offsets": original_offsets + 1, "y_obs": np.zeros((10, 3))})
+            pm.sample_posterior_predictive(samples)
+        if kind == "MultiTrace":
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            caplog.clear()
+        elif kind == "InferenceData":
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            caplog.clear()
+        elif kind == "Dataset":
+            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            caplog.clear()
 
 
 @pytest.mark.xfail(
@@ -1938,6 +2036,95 @@ class TestCompileForwardSampler:
         assert volatile_rvs == {y, obs}
         assert {i.name for i in self.get_function_inputs(f)} == set()
         assert {i.name for i in self.get_function_roots(f)} == set()
+
+    def test_mutable_coords_volatile(self):
+        rng = np.random.default_rng(seed=42)
+        data = rng.normal(loc=1, scale=0.2, size=(10, 3))
+        with pm.Model() as model:
+            model.add_coord("name", ["A", "B", "C"], mutable=True)
+            model.add_coord("obs", list(range(10, 20)), mutable=True)
+            offsets = pm.MutableData("offsets", rng.normal(0, 1, size=(10,)))
+            a = pm.Normal("a", mu=0, sigma=1, dims=["name"])
+            b = pm.Normal("b", mu=offsets, sigma=1)
+            mu = pm.Deterministic("mu", a + b[..., None], dims=["obs", "name"])
+            sigma = pm.HalfNormal("sigma", sigma=1, dims=["name"])
+
+            data = pm.MutableData(
+                "y_obs",
+                data,
+                dims=["obs", "name"],
+            )
+            y = pm.Normal("y", mu=mu, sigma=sigma, observed=data, dims=["obs", "name"])
+
+        # When no constant_data and constant_coords, all the dependent nodes will be volatile and
+        # resampled
+        f, volatile_rvs = compile_forward_sampling_function(
+            outputs=[y],
+            vars_in_trace=[a, b, mu, sigma],
+            basic_rvs=model.basic_RVs,
+        )
+        assert volatile_rvs == {y, a, b, sigma}
+        assert {i.name for i in self.get_function_inputs(f)} == set()
+        assert {i.name for i in self.get_function_roots(f)} == {"name", "obs", "offsets"}
+
+        # When the constant data has the same values as the shared data, offsets wont be volatile
+        f, volatile_rvs = compile_forward_sampling_function(
+            outputs=[y],
+            vars_in_trace=[a, b, mu, sigma],
+            basic_rvs=model.basic_RVs,
+            constant_data={"offsets": offsets.get_value()},
+        )
+        assert volatile_rvs == {y, a, sigma}
+        assert {i.name for i in self.get_function_inputs(f)} == {"b"}
+        assert {i.name for i in self.get_function_roots(f)} == {"b", "name", "obs"}
+
+        # When we declare constant_coords, the shared variables with matching names wont be volatile
+        f, volatile_rvs = compile_forward_sampling_function(
+            outputs=[y],
+            vars_in_trace=[a, b, mu, sigma],
+            basic_rvs=model.basic_RVs,
+            constant_coords={"name", "obs"},
+        )
+        assert volatile_rvs == {y, b}
+        assert {i.name for i in self.get_function_inputs(f)} == {"a", "sigma"}
+        assert {i.name for i in self.get_function_roots(f)} == {
+            "a",
+            "sigma",
+            "name",
+            "obs",
+            "offsets",
+        }
+
+        # When we have both constant_data and constant_coords, only y will be volatile
+        f, volatile_rvs = compile_forward_sampling_function(
+            outputs=[y],
+            vars_in_trace=[a, b, mu, sigma],
+            basic_rvs=model.basic_RVs,
+            constant_data={"offsets": offsets.get_value()},
+            constant_coords={"name", "obs"},
+        )
+        assert volatile_rvs == {y}
+        assert {i.name for i in self.get_function_inputs(f)} == {"a", "b", "mu", "sigma"}
+        assert {i.name for i in self.get_function_roots(f)} == {"mu", "sigma", "name", "obs"}
+
+        # When constant_data has different values than the shared variable, then
+        # offsets will be volatile
+        f, volatile_rvs = compile_forward_sampling_function(
+            outputs=[y],
+            vars_in_trace=[a, b, mu, sigma],
+            basic_rvs=model.basic_RVs,
+            constant_data={"offsets": offsets.get_value() + 1},
+            constant_coords={"name", "obs"},
+        )
+        assert volatile_rvs == {y, b}
+        assert {i.name for i in self.get_function_inputs(f)} == {"a", "sigma"}
+        assert {i.name for i in self.get_function_roots(f)} == {
+            "a",
+            "sigma",
+            "name",
+            "obs",
+            "offsets",
+        }
 
 
 def test_get_seeds_per_chain():
