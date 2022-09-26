@@ -1847,14 +1847,9 @@ Model._context_class = Model
 
 
 def set_data(new_data, model=None, *, coords=None):
-    """Sets the value of one or more data container variables.
-
-    When doing prediction or posterior predictive sampling, make sure that
-    the random variable acting as the likelihood (`observed` is True) is dynamically
-    resized when the data is updated.  Set the `shape` argument of the random
-    variable acting as the likelihood to the shape of the relevant
-    :class:`pymc.data.MutableData` object, as shown in the example below
-    (the `shape=x.shape` of `obs`).
+    """Sets the value of one or more data container variables.  Note that the shape is also
+    dynamic, it is updated when the value is changed.  See the examples below for two common
+    use-cases that take advantage of this behavior.
 
     Parameters
     ----------
@@ -1867,25 +1862,56 @@ def set_data(new_data, model=None, *, coords=None):
     Examples
     --------
 
-    .. code:: ipython
+    This example shows how to change the shape of the likelihood to correspond automatically with
+    `x`, the predictor in a regression model.
 
-        >>> import pymc as pm
-        >>> with pm.Model() as model:
-        ...     x = pm.MutableData('x', [1., 2., 3.])
-        ...     y = pm.MutableData('y', [1., 2., 3.])
-        ...     beta = pm.Normal('beta', 0, 1)
-        ...     obs = pm.Normal('obs', x * beta, 1, observed=y, shape=x.shape)
-        ...     idata = pm.sample(1000, tune=1000)
+    .. code-block:: python
 
-    Set the value of `x` to predict on new data.
+        import pymc as pm
 
-    .. code:: ipython
+        with pm.Model() as model:
+            x = pm.MutableData('x', [1., 2., 3.])
+            y = pm.MutableData('y', [1., 2., 3.])
+            beta = pm.Normal('beta', 0, 1)
+            obs = pm.Normal('obs', x * beta, 1, observed=y, shape=x.shape)
+            idata = pm.sample()
 
-        >>> with model:
-        ...     pm.set_data({'x': [5., 6., 9., 12., 15.]})
-        ...     y_test = pm.sample_posterior_predictive(idata)
-        >>> y_test.posterior_predictive['obs'].mean(('chain', 'draw'))
-        array([4.6088569 , 5.54128318, 8.32953844, 11.14044852, 13.94178173])
+    Then change the value of `x` to predict on new data.
+
+    .. code-block:: python
+
+        with model:
+            pm.set_data({'x': [5., 6., 9., 12., 15.]})
+            y_test = pm.sample_posterior_predictive(idata)
+
+        print(y_test.posterior_predictive['obs'].mean(('chain', 'draw')))
+
+        >>> array([4.6088569 , 5.54128318, 8.32953844, 11.14044852, 13.94178173])
+
+    This example shows how to reuse the same model without recompiling on a new data set.  The
+    shape of the likelihood, `obs`, automatically tracks the shape of the observed data, `y`.
+
+    .. code-block:: python
+
+        import numpy as np
+        import pymc as pm
+
+        rng = np.random.default_rng()
+        data = rng.normal(loc=1.0, scale=2.0, size=100)
+
+        with pm.Model() as model:
+            y = pm.MutableData('y', data)
+            theta = pm.Normal('theta', mu=0.0, sigma=10.0)
+            obs = pm.Normal('obs', theta, 2.0, observed=y, shape=y.shape)
+            idata = pm.sample()
+
+    Now update the model with a new data set.
+
+    .. code-block:: python
+
+        with model:
+            pm.set_data({'y': rng.normal(loc=1.0, scale=2.0, size=200)})
+            idata = pm.sample()
     """
     model = modelcontext(model)
 

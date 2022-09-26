@@ -592,12 +592,12 @@ def Data(
     :func:`pymc.set_data`.
 
     To set the value of the data container variable, check out
-    :func:`pymc.Model.set_data`.
+    :meth:`pymc.Model.set_data`.
 
     When making predictions or doing posterior predictive sampling, the shape of the
     registered data variable will most likely need to be changed.  If you encounter an
     Aesara shape mismatch error, refer to the documentation for
-    :func:`pymc.model.set_data`.
+    :meth:`pymc.model.set_data`.
 
     For more information, read the notebook :ref:`nb:data_container`.
 
