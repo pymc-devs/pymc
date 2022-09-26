@@ -1149,7 +1149,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             length = len(values)
         if not isinstance(length, Variable):
             if mutable:
-                length = aesara.shared(length)
+                length = aesara.shared(length, name=name)
             else:
                 length = aesara.tensor.constant(length)
         self._dim_lengths[name] = length
