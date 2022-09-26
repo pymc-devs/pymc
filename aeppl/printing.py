@@ -101,7 +101,7 @@ class RandomVariablePrinter:
                 "not the result of a RandomVariable operation" % self.name
             )
 
-        op_name = self.name or getattr(node.op, "print_name", None)
+        op_name = self.name or getattr(node.op, "_print_name", None)
         op_name = op_name or getattr(node.op, "name", None)
 
         if op_name is None:  # pragma: no cover

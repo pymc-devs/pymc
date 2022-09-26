@@ -2,6 +2,7 @@ import textwrap
 
 import aesara
 import aesara.tensor as at
+import pytest
 
 from aeppl.printing import latex_pprint, pprint
 
@@ -208,15 +209,17 @@ def test_tex_print():
     assert latex_pprint(at.vector("M", dtype="uint32")[0:4:2]) == expected.strip()
 
     S_rv = at.random.invgamma(0.5, 0.5, name="S")
-    Y_rv = at.random.normal(0.0, at.sqrt(S_rv), name="Y")
-
+    T_rv = at.random.halfcauchy(1.0, name="T")
+    Y_rv = at.random.normal(T_rv, at.sqrt(S_rv), name="Y")
     expected = textwrap.dedent(
         r"""
     \begin{equation}
       \begin{gathered}
-        S \sim \operatorname{invgamma}\left(0.5, 0.5\right)\,  \in \mathbb{R}
+        T \sim \operatorname{C^{+}}\left(1.0, 1.0\right)\,  \in \mathbb{R}
         \\
-        Y \sim \operatorname{N}\left(0.0, {\sqrt{S}}^{2}\right)\,  \in \mathbb{R}
+        S \sim \operatorname{Gamma^{-1}}\left(0.5, 0.5\right)\,  \in \mathbb{R}
+        \\
+        Y \sim \operatorname{N}\left(T, {\sqrt{S}}^{2}\right)\,  \in \mathbb{R}
       \end{gathered}
       \\
       Y
@@ -224,3 +227,25 @@ def test_tex_print():
     """
     )
     assert latex_pprint(Y_rv) == expected.strip()
+
+
+@pytest.mark.xfail(
+    reason=r"AePPL is not aware of the distributions' support and displays \mathbb{R} by default"
+)
+def test_tex_print_support_dimension():
+    U_rv = at.random.uniform(0, 1, name="U")
+    T_rv = at.random.halfcauchy(U_rv, name="T")
+    expected = textwrap.dedent(
+        r"""
+    \begin{equation}
+      \begin{gathered}
+        U \sim \operatorname{U}\left(1.0, 1.0\right)\,  \in \left[0, 1\right]
+        \\
+        T \sim \operatorname{C^{+}}\left(1.0, 1.0\right)\,  \in \mathbb{R}^{+}
+      \end{gathered}
+      \\
+      T
+    \end{equation}
+    """
+    )
+    assert latex_pprint(T_rv) == expected.strip()
