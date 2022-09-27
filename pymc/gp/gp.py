@@ -39,7 +39,7 @@ __all__ = ["Latent", "Marginal", "TP", "MarginalApprox", "LatentKron", "Marginal
 
 _noise_deprecation_warning = (
     "The 'noise' parameter has been been changed to 'sigma' "
-    "in order to standardize the gp api and will be "
+    "in order to standardize the GP API and will be "
     "deprecated in future releases."
 )
 
@@ -425,10 +425,10 @@ class Marginal(Base):
             fcond = gp.conditional("fcond", Xnew=Xnew)
     """
 
-    def _build_marginal_likelihood(self, X, sigma, jitter):
+    def _build_marginal_likelihood(self, X, noise_func, jitter):
         mu = self.mean_func(X)
         Kxx = self.cov_func(X)
-        Knx = sigma(X)
+        Knx = noise_func(X)
         cov = Kxx + Knx
         return mu, stabilize(cov, jitter)
 
@@ -469,12 +469,11 @@ class Marginal(Base):
         """
         sigma = _handle_sigma_noise_parameters(sigma=sigma, noise=noise)
 
-        if not isinstance(sigma, Covariance):
-            sigma = pm.gp.cov.WhiteNoise(sigma)
-        mu, cov = self._build_marginal_likelihood(X=X, sigma=sigma, jitter=jitter)
+        noise_func = sigma if isinstance(sigma, Covariance) else pm.gp.cov.WhiteNoise(sigma)
+        mu, cov = self._build_marginal_likelihood(X=X, noise_func=noise_func, jitter=jitter)
         self.X = X
         self.y = y
-        self.sigma = sigma
+        self.sigma = noise_func
         if is_observed:
             return pm.MvNormal(name, mu=mu, cov=cov, observed=y, **kwargs)
         else:
@@ -502,18 +501,17 @@ class Marginal(Base):
 
         if all(val in given for val in ["X", "y", "sigma"]):
             X, y, sigma = given["X"], given["y"], given["sigma"]
-            if not isinstance(sigma, Covariance):
-                sigma = pm.gp.cov.WhiteNoise(sigma)
+            noise_func = sigma if isinstance(sigma, Covariance) else pm.gp.cov.WhiteNoise(sigma)
         else:
-            X, y, sigma = self.X, self.y, self.sigma
-        return X, y, sigma, cov_total, mean_total
+            X, y, noise_func = self.X, self.y, self.sigma
+        return X, y, noise_func, cov_total, mean_total
 
     def _build_conditional(
-        self, Xnew, pred_noise, diag, X, y, sigma, cov_total, mean_total, jitter
+        self, Xnew, pred_noise, diag, X, y, noise_func, cov_total, mean_total, jitter
     ):
         Kxx = cov_total(X)
         Kxs = self.cov_func(X, Xnew)
-        Knx = sigma(X)
+        Knx = noise_func(X)
         rxx = y - mean_total(X)
         L = cholesky(stabilize(Kxx, jitter) + Knx)
         A = solve_lower(L, Kxs)
@@ -523,13 +521,13 @@ class Marginal(Base):
             Kss = self.cov_func(Xnew, diag=True)
             var = Kss - at.sum(at.square(A), 0)
             if pred_noise:
-                var += sigma(Xnew, diag=True)
+                var += noise_func(Xnew, diag=True)
             return mu, var
         else:
             Kss = self.cov_func(Xnew)
             cov = Kss - at.dot(at.transpose(A), A)
             if pred_noise:
-                cov += sigma(Xnew)
+                cov += noise_func(Xnew)
             return mu, cov if pred_noise else stabilize(cov, jitter)
 
     def conditional(
