@@ -823,7 +823,7 @@ def find_rng_nodes(
 
 
 def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:
-    """Replace any RNG nodes upsteram of outputs by new RNGs of the same type
+    """Replace any RNG nodes upstream of outputs by new RNGs of the same type
 
     This can be used when combining a pre-existing graph with a cloned one, to ensure
     RNGs are unique across the two graphs.
