@@ -215,7 +215,7 @@ def test_tex_print():
         r"""
     \begin{equation}
       \begin{gathered}
-        T \sim \operatorname{C^{+}}\left(1.0, 1.0\right)\,  \in \mathbb{R}
+        T \sim \operatorname{C^{+}}\left(1, 1\right)\,  \in \mathbb{R}
         \\
         S \sim \operatorname{Gamma^{-1}}\left(0.5, 0.5\right)\,  \in \mathbb{R}
         \\
@@ -239,9 +239,9 @@ def test_tex_print_support_dimension():
         r"""
     \begin{equation}
       \begin{gathered}
-        U \sim \operatorname{U}\left(1.0, 1.0\right)\,  \in \left[0, 1\right]
+        U \sim \operatorname{U}\left(1, 1\right)\,  \in \left[0, 1\right]
         \\
-        T \sim \operatorname{C^{+}}\left(1.0, 1.0\right)\,  \in \mathbb{R}^{+}
+        T \sim \operatorname{C^{+}}\left(1, 1\right)\,  \in \mathbb{R}^{+}
       \end{gathered}
       \\
       T

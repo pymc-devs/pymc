@@ -130,7 +130,6 @@ class RandomVariablePrinter:
             dummy_out.orig_var = output
 
             var_name = pprinter.process(dummy_out, pstate)
-
             if output_latex:
                 dist_format = "%s \\sim %s\\left(%s\\right)"
             else:
@@ -138,6 +137,7 @@ class RandomVariablePrinter:
 
             # Get the shape info for our dummy symbol, if available,
             # and append it to the distribution definition.
+            # TODO: Propagate this change upstream in Aesara's pretty printer.
             if "shape_strings" in preamble_dict:
                 shape_info_str = preamble_dict["shape_strings"].pop(dummy_out)
                 shape_info_str = shape_info_str.lstrip(var_name)
@@ -151,6 +151,17 @@ class RandomVariablePrinter:
                 self.process_param(i, pprinter.process(p, pstate), pstate)
                 for i, p in enumerate(dist_params)
             ]
+
+            # We remove trailing zeros and limit the number of decimals
+            # on floats
+            formatted_params = []
+            for i, p in enumerate(dist_params):
+                f_param = self.process_param(i, pprinter.process(p, pstate), pstate)
+                try:
+                    f_param = f"{float(f_param):2g}".strip()
+                except ValueError:
+                    pass
+                formatted_params.append(f_param)
 
             dist_def_str = dist_format % (
                 var_name,
