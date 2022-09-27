@@ -27,10 +27,8 @@ from aeppl.logprob import logprob as logp_aeppl
 from aeppl.tensor import MeasurableJoin
 from aeppl.transforms import TransformValuesRewrite
 from aesara import tensor as at
-from aesara.graph import FunctionGraph, rewrite_graph
 from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.rewriting.basic import ShapeFeature, topo_constant_folding
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -41,7 +39,8 @@ from aesara.tensor.subtensor import (
 )
 from aesara.tensor.var import TensorVariable
 
-from pymc.aesaraf import floatX
+from pymc.aesaraf import constant_fold, floatX
+from pymc.exceptions import NotConstantValueError
 
 
 def _get_scaling(
@@ -338,12 +337,10 @@ def logprob_join_constant_shapes(op, values, axis, *base_vars, **kwargs):
 
     base_var_shapes = [base_var.shape[axis] for base_var in base_vars]
 
-    shape_fg = FunctionGraph(
-        outputs=base_var_shapes,
-        features=[ShapeFeature()],
-        clone=True,
-    )
-    base_var_shapes = rewrite_graph(shape_fg, custom_opt=topo_constant_folding).outputs
+    try:
+        base_var_shapes = constant_fold(base_var_shapes)
+    except NotConstantValueError:
+        pass
 
     split_values = at.split(
         value,
