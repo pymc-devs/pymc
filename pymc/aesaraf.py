@@ -81,6 +81,7 @@ __all__ = [
     "set_at_rng",
     "at_rng",
     "convert_observed_data",
+    "compile_pymc",
 ]
 
 
