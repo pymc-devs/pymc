@@ -112,9 +112,9 @@ def test_tex_print():
         b \in \mathbb{R}, \,\mu \in \mathbb{R}, \,\sigma \in \mathbb{R}
         \\
         a \sim \operatorname{N}\left(\mu, {\sigma}^{2}\right)\,  \in \mathbb{R}
+        \\
+        (b \odot a)
       \end{gathered}
-      \\
-      (b \odot a)
     \end{equation}
     """
     )
@@ -130,9 +130,9 @@ def test_tex_print():
         b \in \mathbb{R}, \,\mu \in \mathbb{R}, \,\sigma \in \mathbb{R}
         \\
         X \sim \operatorname{N}\left(\mu, {\sigma}^{2}\right)\,  \in \mathbb{R}^{2 \times 1}
+        \\
+        (b \odot X)
       \end{gathered}
-      \\
-      (b \odot X)
     \end{equation}
     """
     )
@@ -157,9 +157,9 @@ def test_tex_print():
         a \sim \operatorname{N}\left(\mu_2, {\sigma_2}^{2}\right)\,  \in \mathbb{R}
         \\
         d \sim \operatorname{N}\left((M \odot a), {\sigma}^{2}\right)\,  \in \mathbb{R}^{N^{d}_{0} \times N^{d}_{1}}
+        \\
+        ((M \odot a) \odot ((b \odot d) + c))
       \end{gathered}
-      \\
-      ((M \odot a) \odot ((b \odot d) + c))
     \end{equation}
     """
     )
@@ -170,9 +170,9 @@ def test_tex_print():
     \begin{equation}
       \begin{gathered}
         b \in \mathbb{Z}, \,c \in \mathbb{Z}, \,M \in \mathbb{R}^{N^{M}_{0} \times N^{M}_{1}}
+        \\
+        M\left[b, \,c\right]
       \end{gathered}
-      \\
-      M\left[b, \,c\right]
     \end{equation}
     """
     )
@@ -187,9 +187,9 @@ def test_tex_print():
     \begin{equation}
       \begin{gathered}
         M \in \mathbb{R}^{N^{M}_{0} \times N^{M}_{1}}
+        \\
+        M\left[1\right]
       \end{gathered}
-      \\
-      M\left[1\right]
     \end{equation}
     """
     )
@@ -200,9 +200,9 @@ def test_tex_print():
     \begin{equation}
       \begin{gathered}
         M \in \mathbb{N}^{N^{M}_{0}}
+        \\
+        M\left[2:4:0\right]
       \end{gathered}
-      \\
-      M\left[2:4:0\right]
     \end{equation}
     """
     )
@@ -220,9 +220,9 @@ def test_tex_print():
         S \sim \operatorname{Gamma^{-1}}\left(0.5, 0.5\right)\,  \in \mathbb{R}
         \\
         Y \sim \operatorname{N}\left(T, {\sqrt{S}}^{2}\right)\,  \in \mathbb{R}
+        \\
+        Y
       \end{gathered}
-      \\
-      Y
     \end{equation}
     """
     )
@@ -242,9 +242,9 @@ def test_tex_print_support_dimension():
         U \sim \operatorname{U}\left(1, 1\right)\,  \in \left[0, 1\right]
         \\
         T \sim \operatorname{C^{+}}\left(1, 1\right)\,  \in \mathbb{R}^{+}
+        \\
+        T
       \end{gathered}
-      \\
-      T
     \end{equation}
     """
     )

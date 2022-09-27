@@ -561,9 +561,12 @@ class PreamblePPrinter(PPrinter):
             preamble_lines.append(newline_str.join(comma_str.join(z) for z in v_new))
 
         if preamble_lines and latex_out:
-            preamble_body = newline_str.join(preamble_lines)
-            preamble_str = f"\\begin{{gathered}}\n{textwrap.indent(preamble_body, indent_str)}\n\\end{{gathered}}"
-            res = newline_str.join([preamble_str] + body_strs)
+            preamble_body = newline_str.join(preamble_lines + body_strs)
+            preamble_str = (
+                f"\\begin{{gathered}}\n{textwrap.indent(preamble_body, indent_str)}"
+                f"\n\\end{{gathered}}"
+            )
+            res = newline_str.join([preamble_str])
         else:
             res = newline_str.join(preamble_lines + body_strs)
 
