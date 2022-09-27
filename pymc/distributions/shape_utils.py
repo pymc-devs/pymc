@@ -706,6 +706,8 @@ def get_support_shape(
         shape / dims / observed. When two sources of support shape information are provided,
         a symbolic Assert is added to ensure they are consistent.
     """
+    if ndim_supp < 1:
+        raise NotImplementedError("ndim_supp must be bigger than 0")
     if support_shape_offset is None:
         support_shape_offset = [0] * ndim_supp
     inferred_support_shape = None
