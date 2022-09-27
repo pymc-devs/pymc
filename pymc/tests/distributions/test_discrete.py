@@ -1042,6 +1042,10 @@ class TestDiscreteUniform(BaseTestDistributionRandom):
         "check_rv_size",
     ]
 
+    def test_implied_degenerate_shape(self):
+        x = pm.DiscreteUniform.dist(0, [1])
+        assert x.eval().shape == (1,)
+
 
 class TestDiracDelta(BaseTestDistributionRandom):
     def diracdelta_rng_fn(self, size, c):

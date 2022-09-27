@@ -18,6 +18,7 @@ import numpy as np
 
 from aesara.tensor.random.basic import (
     RandomVariable,
+    ScipyRandomVariable,
     bernoulli,
     betabinom,
     binomial,
@@ -1117,7 +1118,7 @@ class HyperGeometric(Discrete):
         )
 
 
-class DiscreteUniformRV(RandomVariable):
+class DiscreteUniformRV(ScipyRandomVariable):
     name = "discrete_uniform"
     ndim_supp = 0
     ndims_params = [0, 0]
@@ -1125,7 +1126,7 @@ class DiscreteUniformRV(RandomVariable):
     _print_name = ("DiscreteUniform", "\\operatorname{DiscreteUniform}")
 
     @classmethod
-    def rng_fn(cls, rng, lower, upper, size=None):
+    def rng_fn_scipy(cls, rng, lower, upper, size=None):
         return stats.randint.rvs(lower, upper + 1, size=size, random_state=rng)
 
 
