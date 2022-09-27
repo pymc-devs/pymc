@@ -18,9 +18,10 @@ import aesara
 import numpy as np
 import pytest
 
-from aesara import Mode
 from aesara import tensor as at
+from aesara.compile.mode import Mode
 from aesara.graph import Constant, ancestors
+from aesara.tensor import TensorVariable
 from aesara.tensor.random import normal
 from aesara.tensor.shape import SpecifyShape
 
@@ -36,10 +37,12 @@ from pymc.distributions.shape_utils import (
     convert_shape,
     convert_size,
     get_broadcastable_dist_samples,
+    get_support_shape_1d,
     rv_size_is_none,
     shapes_broadcasting,
     to_tuple,
 )
+from pymc.model import Model
 
 test_shapes = [
     (tuple(), (1,), (4,), (5, 4)),
@@ -622,3 +625,63 @@ def test_change_specify_shape_size_multivariate():
         new_x.eval({batch: 5, supp: 3}).shape == (10, 5, 5, 3)
         with pytest.raises(AssertionError, match=re.escape("expected (None, None, 5, 3)")):
             new_x.eval({batch: 6, supp: 3}).shape == (10, 5, 5, 3)
+
+
+@pytest.mark.parametrize(
+    "steps, shape, step_shape_offset, expected_steps, consistent",
+    [
+        (10, None, 0, 10, True),
+        (10, None, 1, 10, True),
+        (None, (10,), 0, 10, True),
+        (None, (10,), 1, 9, True),
+        (None, (10, 5), 0, 5, True),
+        (None, None, 0, None, True),
+        (10, (10,), 0, 10, True),
+        (10, (11,), 1, 10, True),
+        (10, (5, 5), 0, 5, False),
+        (10, (5, 10), 1, 9, False),
+    ],
+)
+@pytest.mark.parametrize("info_source", ("shape", "dims", "observed"))
+def test_get_support_shape_1d(
+    info_source, steps, shape, step_shape_offset, expected_steps, consistent
+):
+    if info_source == "shape":
+        inferred_steps = get_support_shape_1d(
+            support_shape=steps, shape=shape, support_shape_offset=step_shape_offset
+        )
+
+    elif info_source == "dims":
+        if shape is None:
+            dims = None
+            coords = {}
+        else:
+            dims = tuple(str(i) for i, shape in enumerate(shape))
+            coords = {str(i): range(shape) for i, shape in enumerate(shape)}
+        with Model(coords=coords):
+            inferred_steps = get_support_shape_1d(
+                support_shape=steps, dims=dims, support_shape_offset=step_shape_offset
+            )
+
+    elif info_source == "observed":
+        if shape is None:
+            observed = None
+        else:
+            observed = np.zeros(shape)
+        inferred_steps = get_support_shape_1d(
+            support_shape=steps, observed=observed, support_shape_offset=step_shape_offset
+        )
+
+    if not isinstance(inferred_steps, TensorVariable):
+        assert inferred_steps == expected_steps
+    else:
+        if consistent:
+            assert inferred_steps.eval() == expected_steps
+        else:
+            # check that inferred steps is still correct by ignoring the assert
+            f = aesara.function(
+                [], inferred_steps, mode=Mode().including("local_remove_all_assert")
+            )
+            assert f() == expected_steps
+            with pytest.raises(AssertionError, match="Steps do not match"):
+                inferred_steps.eval()

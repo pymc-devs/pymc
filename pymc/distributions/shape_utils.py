@@ -20,7 +20,7 @@ samples from probability distributions for stochastic nodes in PyMC.
 import warnings
 
 from functools import singledispatch
-from typing import Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -28,10 +28,14 @@ from aesara import config
 from aesara import tensor as at
 from aesara.graph.basic import Variable
 from aesara.graph.op import Op, compute_test_value
+from aesara.raise_op import Assert
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.shape import SpecifyShape
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
+
+from pymc.aesaraf import convert_observed_data
+from pymc.model import modelcontext
 
 __all__ = [
     "to_tuple",
@@ -666,3 +670,100 @@ def change_specify_shape_size(op, ss, new_size, expand) -> TensorVariable:
 
     # specify_shape has a wrong signature https://github.com/aesara-devs/aesara/issues/1164
     return at.specify_shape(new_var, new_shapes)  # type: ignore
+
+
+def get_support_shape(
+    support_shape: Optional[Sequence[Union[int, np.ndarray, TensorVariable]]],
+    *,
+    shape: Optional[Shape] = None,
+    dims: Optional[Dims] = None,
+    observed: Optional[Any] = None,
+    support_shape_offset: Sequence[int] = None,
+    ndim_supp: int = 1,
+):
+    """Extract length of support shapes from shape / dims / observed information
+
+    Parameters
+    ----------
+    support_shape:
+        User-specified support shape for multivariate distribution
+    shape:
+        User-specified shape for multivariate distribution
+    dims:
+        User-specified dims for multivariate distribution
+    observed:
+        User-specified observed data from multivariate distribution
+    support_shape_offset:
+        Difference between last shape dimensions and the length of explicit support shapes in multivariate distribution, defaults to 0.
+        For timeseries, this is shape[-1] = support_shape[-1] + 1
+    ndim_supp:
+        Number of support dimensions of the given multivariate distribution, defaults to 1
+
+    Returns
+    -------
+    support_shape
+        Support shape, if specified directly by user, or inferred from the last dimensions of
+        shape / dims / observed. When two sources of support shape information are provided,
+        a symbolic Assert is added to ensure they are consistent.
+    """
+    if support_shape_offset is None:
+        support_shape_offset = [0] * ndim_supp
+    inferred_support_shape = None
+
+    if shape is not None:
+        shape = to_tuple(shape)
+        assert isinstance(shape, tuple)
+        inferred_support_shape = at.stack(
+            [shape[-i - 1] - support_shape_offset[-i - 1] for i in range(ndim_supp)]
+        )
+
+    if inferred_support_shape is None and dims is not None:
+        dims = convert_dims(dims)
+        assert isinstance(dims, tuple)
+        model = modelcontext(None)
+        inferred_support_shape = at.stack(
+            [
+                model.dim_lengths[dims[-i - 1]] - support_shape_offset[-i - 1]  # type: ignore
+                for i in range(ndim_supp)
+            ]
+        )
+
+    if inferred_support_shape is None and observed is not None:
+        observed = convert_observed_data(observed)
+        inferred_support_shape = at.stack(
+            [observed.shape[-i - 1] - support_shape_offset[-i - 1] for i in range(ndim_supp)]
+        )
+
+    if inferred_support_shape is None:
+        inferred_support_shape = support_shape
+    # If there are two sources of information for the support shapes, assert they are consistent:
+    elif support_shape is not None:
+        inferred_support_shape = Assert(msg="Steps do not match last shape dimension")(
+            inferred_support_shape, at.all(at.eq(inferred_support_shape, support_shape))
+        )
+    return inferred_support_shape
+
+
+def get_support_shape_1d(
+    support_shape: Optional[Union[int, np.ndarray, TensorVariable]],
+    *,
+    shape: Optional[Shape] = None,
+    dims: Optional[Dims] = None,
+    observed: Optional[Any] = None,
+    support_shape_offset: int = 0,
+):
+    """Helper function for cases when you just care about one dimension."""
+    if support_shape is not None:
+        support_shape_tuple = (support_shape,)
+
+    support_shape_tuple = get_support_shape(
+        support_shape_tuple,
+        shape=shape,
+        dims=dims,
+        observed=observed,
+        support_shape_offset=(support_shape_offset,),
+    )
+    if support_shape_tuple is not None:
+        (support_shape,) = support_shape_tuple
+
+    return support_shape

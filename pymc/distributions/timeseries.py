@@ -13,7 +13,7 @@
 #   limitations under the License.
 import warnings
 
-from typing import Any, Optional, Union
+from typing import Optional
 
 import aesara
 import aesara.tensor as at
@@ -24,12 +24,11 @@ from aeppl.logprob import _logprob
 from aesara import scan
 from aesara.graph import FunctionGraph, rewrite_graph
 from aesara.graph.basic import Node, clone_replace
-from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.rewriting.basic import ShapeFeature, topo_constant_folding
 
-from pymc.aesaraf import convert_observed_data, floatX, intX
+from pymc.aesaraf import floatX, intX
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.distribution import (
@@ -40,14 +39,11 @@ from pymc.distributions.distribution import (
 )
 from pymc.distributions.logprob import ignore_logprob, logp
 from pymc.distributions.shape_utils import (
-    Dims,
-    Shape,
     _change_dist_size,
     change_dist_size,
-    convert_dims,
+    get_support_shape_1d,
     to_tuple,
 )
-from pymc.model import modelcontext
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -59,61 +55,6 @@ __all__ = [
     "GARCH11",
     "EulerMaruyama",
 ]
-
-
-def get_steps(
-    steps: Optional[Union[int, np.ndarray, TensorVariable]],
-    *,
-    shape: Optional[Shape] = None,
-    dims: Optional[Dims] = None,
-    observed: Optional[Any] = None,
-    step_shape_offset: int = 0,
-):
-    """Extract number of steps from shape / dims / observed information
-
-    Parameters
-    ----------
-    steps:
-        User specified steps for timeseries distribution
-    shape:
-        User specified shape for timeseries distribution
-    dims:
-        User specified dims for timeseries distribution
-    observed:
-        User specified observed data from timeseries distribution
-    step_shape_offset:
-        Difference between last shape dimension and number of steps in timeseries
-        distribution, defaults to 0
-
-    Returns
-    -------
-    steps
-        Steps, if specified directly by user, or inferred from the last dimension of
-        shape / dims / observed. When two sources of step information are provided,
-        a symbolic Assert is added to ensure they are consistent.
-    """
-    inferred_steps = None
-    if shape is not None:
-        shape = to_tuple(shape)
-        inferred_steps = shape[-1] - step_shape_offset
-
-    if inferred_steps is None and dims is not None:
-        dims = convert_dims(dims)
-        model = modelcontext(None)
-        inferred_steps = model.dim_lengths[dims[-1]] - step_shape_offset
-
-    if inferred_steps is None and observed is not None:
-        observed = convert_observed_data(observed)
-        inferred_steps = observed.shape[-1] - step_shape_offset
-
-    if inferred_steps is None:
-        inferred_steps = steps
-    # If there are two sources of information for the steps, assert they are consistent
-    elif steps is not None:
-        inferred_steps = Assert(msg="Steps do not match last shape dimension")(
-            inferred_steps, at.eq(inferred_steps, steps)
-        )
-    return inferred_steps
 
 
 class RandomWalkRV(SymbolicRandomVariable):
@@ -132,21 +73,21 @@ class RandomWalk(Distribution):
     rv_type = RandomWalkRV
 
     def __new__(cls, *args, steps=None, **kwargs):
-        steps = get_steps(
-            steps=steps,
+        steps = get_support_shape_1d(
+            support_shape=steps,
             shape=None,  # Shape will be checked in `cls.dist`
             dims=kwargs.get("dims", None),
             observed=kwargs.get("observed", None),
-            step_shape_offset=1,
+            support_shape_offset=1,
         )
         return super().__new__(cls, *args, steps=steps, **kwargs)
 
     @classmethod
     def dist(cls, init_dist, innovation_dist, steps=None, **kwargs) -> at.TensorVariable:
-        steps = get_steps(
-            steps=steps,
+        steps = get_support_shape_1d(
+            support_shape=steps,
             shape=kwargs.get("shape"),
-            step_shape_offset=1,
+            support_shape_offset=1,
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
@@ -391,12 +332,12 @@ class AR(Distribution):
     def __new__(cls, name, rho, *args, steps=None, constant=False, ar_order=None, **kwargs):
         rhos = at.atleast_1d(at.as_tensor_variable(floatX(rho)))
         ar_order = cls._get_ar_order(rhos=rhos, constant=constant, ar_order=ar_order)
-        steps = get_steps(
-            steps=steps,
+        steps = get_support_shape_1d(
+            support_shape=steps,
             shape=None,  # Shape will be checked in `cls.dist`
             dims=kwargs.get("dims", None),
             observed=kwargs.get("observed", None),
-            step_shape_offset=ar_order,
+            support_shape_offset=ar_order,
         )
         return super().__new__(
             cls, name, rhos, *args, steps=steps, constant=constant, ar_order=ar_order, **kwargs
@@ -427,7 +368,9 @@ class AR(Distribution):
             init_dist = kwargs.pop("init")
 
         ar_order = cls._get_ar_order(rhos=rhos, constant=constant, ar_order=ar_order)
-        steps = get_steps(steps=steps, shape=kwargs.get("shape", None), step_shape_offset=ar_order)
+        steps = get_support_shape_1d(
+            support_shape=steps, shape=kwargs.get("shape", None), support_shape_offset=ar_order
+        )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
         steps = at.as_tensor_variable(intX(steps), ndim=0)
