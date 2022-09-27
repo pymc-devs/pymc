@@ -21,14 +21,12 @@ import numpy as np
 
 from aeppl.abstract import _get_measurable_outputs
 from aeppl.logprob import _logprob
-from aesara.graph import FunctionGraph, rewrite_graph
 from aesara.graph.basic import Node, clone_replace
 from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.rewriting.basic import ShapeFeature, topo_constant_folding
 
-from pymc.aesaraf import convert_observed_data, floatX, intX
+from pymc.aesaraf import constant_fold, convert_observed_data, floatX, intX
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.distribution import (
@@ -46,6 +44,7 @@ from pymc.distributions.shape_utils import (
     convert_dims,
     to_tuple,
 )
+from pymc.exceptions import NotConstantValueError
 from pymc.model import modelcontext
 from pymc.util import check_dist_not_registered
 
@@ -472,14 +471,9 @@ class AR(Distribution):
             If inferred ar_order cannot be inferred from rhos or if it is less than 1
         """
         if ar_order is None:
-            shape_fg = FunctionGraph(
-                outputs=[rhos.shape[-1]],
-                features=[ShapeFeature()],
-                clone=True,
-            )
-            (folded_shape,) = rewrite_graph(shape_fg, custom_rewrite=topo_constant_folding).outputs
-            folded_shape = getattr(folded_shape, "data", None)
-            if folded_shape is None:
+            try:
+                (folded_shape,) = constant_fold((rhos.shape[-1],))
+            except NotConstantValueError:
                 raise ValueError(
                     "Could not infer ar_order from last dimension of rho. Pass it "
                     "explictily or make sure rho have a static shape"
