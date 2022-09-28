@@ -1401,12 +1401,12 @@ class TestZeroSumNormal:
     @pytest.mark.parametrize(
         "dims, zerosum_axes, shape",
         [
-            (("regions", "answers"), "answers", None),
-            (("regions", "answers"), ("regions", "answers"), None),
-            (("regions", "answers"), 0, None),
-            (("regions", "answers"), -1, None),
-            (("regions", "answers"), (0, 1), None),
-            (None, -2, (len(COORDS["regions"]), len(COORDS["answers"]))),
+            (("regions", "answers"), None, None),
+            (("regions", "answers"), 1, None),
+            (("regions", "answers"), 2, None),
+            (None, None, (len(COORDS["regions"]), len(COORDS["answers"]))),
+            (None, 1, (len(COORDS["regions"]), len(COORDS["answers"]))),
+            (None, 2, (len(COORDS["regions"]), len(COORDS["answers"]))),
         ],
     )
     def test_zsn_dims_shape(self, dims, zerosum_axes, shape):
@@ -1419,41 +1419,27 @@ class TestZeroSumNormal:
 
         assert s.posterior.v.shape == (1, 10, len(COORDS["regions"]), len(COORDS["answers"]))
 
-        if not isinstance(zerosum_axes, (list, tuple)):
-            zerosum_axes = [zerosum_axes]
+        zerosum_axes = np.arange(-v.owner.op.ndim_supp, 0)
+        nonzero_axes = np.arange(v.ndim - v.owner.op.ndim_supp)
 
-        if isinstance(zerosum_axes[0], str):
-            for ax in zerosum_axes:
+        for ax in zerosum_axes:
+            for samples in [
+                s.posterior.v.mean(axis=ax),
+                random_samples.mean(axis=ax),
+            ]:
+                assert np.isclose(
+                    samples, 0
+                ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+
+        if nonzero_axes:
+            for ax in nonzero_axes:
                 for samples in [
-                    s.posterior.v.mean(dim=ax),
-                    random_samples.mean(axis=dims.index(ax) + 1),
+                    s.posterior.v.mean(axis=ax),
+                    random_samples.mean(axis=ax),
                 ]:
-                    assert np.isclose(
+                    assert not np.isclose(
                         samples, 0
-                    ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
-
-            nonzero_axes = list(set(dims).difference(zerosum_axes))
-            if nonzero_axes:
-                for ax in nonzero_axes:
-                    for samples in [
-                        s.posterior.v.mean(dim=ax),
-                        random_samples.mean(axis=dims.index(ax) + 1),
-                    ]:
-                        assert not np.isclose(
-                            samples, 0
-                        ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
-
-        else:
-            for ax in zerosum_axes:
-                if ax < 0:
-                    assert np.isclose(
-                        s.posterior.v.mean(axis=ax), 0
-                    ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
-                else:
-                    ax = ax + 2  # because 'chain' and 'draw' are added as new axes after sampling
-                    assert np.isclose(
-                        s.posterior.v.mean(axis=ax), 0
-                    ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+                    ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
 
     @pytest.mark.parametrize(
         "dims, zerosum_axes",
