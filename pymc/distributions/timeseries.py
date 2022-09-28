@@ -19,7 +19,6 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.abstract import _get_measurable_outputs
 from aeppl.logprob import _logprob
 from aesara.graph.basic import Node, clone_replace
 from aesara.raise_op import Assert
@@ -201,12 +200,6 @@ class RandomWalk(Distribution):
             [grw_, steps_],
             ndim_supp=1,
         )(init_dist, innovation_dist, steps)
-
-
-@_get_measurable_outputs.register(RandomWalkRV)
-def _get_measurable_outputs_random_walk(op, node):
-    # Ignore steps output
-    return [node.default_output()]
 
 
 @_change_dist_size.register(RandomWalkRV)

@@ -339,7 +339,9 @@ class TestSymbolicRandomVarible:
         x_inline = TestInlinedSymbolicRV([], [Flat.dist()], ndim_supp=0)()
         assert np.isclose(logp(x_inline, 0).eval(), 0)
 
-    def test_measurable_outputs(self):
+    def test_measurable_outputs_rng_ignored(self):
+        """Test that any RandomType outputs are ignored as a measurable_outputs"""
+
         class TestSymbolicRV(SymbolicRandomVariable):
             pass
 
@@ -347,3 +349,15 @@ class TestSymbolicRandomVarible:
         next_rng, dirac_delta = TestSymbolicRV([], [next_rng_, dirac_delta_], ndim_supp=0)()
         node = dirac_delta.owner
         assert get_measurable_outputs(node.op, node) == [dirac_delta]
+
+    @pytest.mark.parametrize("default_output_idx", (0, 1))
+    def test_measurable_outputs_default_output(self, default_output_idx):
+        """Test that if provided, a default output is considered the only measurable_output"""
+
+        class TestSymbolicRV(SymbolicRandomVariable):
+            default_output = default_output_idx
+
+        dirac_delta_1_ = DiracDelta.dist(5)
+        dirac_delta_2_ = DiracDelta.dist(10)
+        node = TestSymbolicRV([], [dirac_delta_1_, dirac_delta_2_], ndim_supp=0)().owner
+        assert get_measurable_outputs(node.op, node) == [node.outputs[default_output_idx]]
