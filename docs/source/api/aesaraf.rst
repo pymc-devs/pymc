@@ -16,7 +16,6 @@ Aesara utils
    floatX
    intX
    smartfloatX
-   constant_fold
    CallableTensor
    join_nonshared_inputs
    make_shared_replacements
