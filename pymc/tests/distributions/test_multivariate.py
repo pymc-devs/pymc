@@ -28,7 +28,6 @@ import scipy.stats as st
 from aeppl.logprob import ParameterValueError
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.utils import broadcast_params
-from numpy import AxisError
 
 import pymc as pm
 
@@ -1442,21 +1441,29 @@ class TestZeroSumNormal:
                     ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
 
     @pytest.mark.parametrize(
-        "dims, zerosum_axes",
+        "error, match, shape, support_shape, zerosum_axes",
         [
-            (("regions", "answers"), 2),
-            (("regions", "answers"), (0, -2)),
+            (IndexError, "index out of range", (3, 4, 5), None, 4),
+            (AssertionError, "does not match", (3, 4), 3, None),  # support_shape should be 4
+            (
+                AssertionError,
+                "does not match",
+                (3, 4),
+                (3, 4),
+                None,
+            ),  # doesn't work because zerosum_axes = 1
         ],
     )
-    def test_zsn_fail_axis(self, dims, zerosum_axes):
-        if isinstance(zerosum_axes, (list, tuple)):
-            with pytest.raises(ValueError, match="repeated axis"):
-                with pm.Model(coords=COORDS) as m:
-                    _ = pm.ZeroSumNormal("v", dims=dims, zerosum_axes=zerosum_axes)
-        else:
-            with pytest.raises(AxisError, match="out of bounds"):
-                with pm.Model(coords=COORDS) as m:
-                    _ = pm.ZeroSumNormal("v", dims=dims, zerosum_axes=zerosum_axes)
+    def test_zsn_fail_axis(self, error, match, shape, support_shape, zerosum_axes):
+        with pytest.raises(error, match=match):
+            with pm.Model() as m:
+                _ = pm.ZeroSumNormal(
+                    "v", shape=shape, support_shape=support_shape, zerosum_axes=zerosum_axes
+                )
+
+        # v = pm.ZeroSumNormal("v", support_shape=(3, 4), zerosum_axes=2) # should work
+
+        # v = pm.ZeroSumNormal("v", shape=(3, 4), support_shape=(3, 4), zerosum_axes=2) this should work but doesn't
 
     @pytest.mark.parametrize(
         "zerosum_axes",
