@@ -2437,13 +2437,16 @@ class ZeroSumNormal(Distribution):
             "answers": ["yes", "no", "whatever", "don't understand question"],
         }
         with pm.Model(coords=COORDS) as m:
-    ...:     v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes="answers")
+            # the zero sum axis will be 'answers'
+    ...:    v = pm.ZeroSumNormal("v", dims=("regions", "answers"))
 
         with pm.Model(coords=COORDS) as m:
-    ...:     v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=("regions", "answers"))
+            # the zero sum axes will be 'answers' and 'regions'
+    ...:    v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=2)
 
         with pm.Model(coords=COORDS) as m:
-    ...:     v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=1)
+            # the zero sum axes will be the last two
+    ...:    v = pm.ZeroSumNormal("v", shape=(3, 4, 5), zerosum_axes=2)
     """
     rv_type = ZeroSumNormalRV
 
@@ -2525,18 +2528,13 @@ class ZeroSumNormal(Distribution):
 
     @classmethod
     def rv_op(cls, sigma, zerosum_axes, support_shape, size=None):
-        # if size is None:
-        #     zerosum_axes_ = np.asarray(zerosum_axes)
-        #     # just a placeholder size to infer minimum shape
-        #     size = np.ones(
-        #         max((max(np.abs(zerosum_axes_) - 1), max(zerosum_axes_))) + 1, dtype=int
-        #     ).tolist()
-
-        # check if zerosum_axes is valid
-        # normalize_axis_tuple(zerosum_axes, len(size))
 
         shape = to_tuple(size) + tuple(support_shape)
         normal_dist = ignore_logprob(pm.Normal.dist(sigma=sigma, shape=shape))
+
+        if zerosum_axes > normal_dist.ndim:
+            raise ValueError("Shape of distribution is too small for the number of zerosum axes")
+
         normal_dist_, sigma_, support_shape_ = (
             normal_dist.type(),
             sigma.type(),
@@ -2555,7 +2553,6 @@ class ZeroSumNormal(Distribution):
         )(normal_dist, sigma, support_shape)
 
         # TODO:
-        # write __new__
         # refactor ZSN tests
         # test get_support_shape with 2D
         # test ZSN logp
