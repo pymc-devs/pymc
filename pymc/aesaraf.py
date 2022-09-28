@@ -34,7 +34,7 @@ from aeppl.logprob import CheckParameterValue
 from aesara import scalar
 from aesara.compile.mode import Mode, get_mode
 from aesara.gradient import grad
-from aesara.graph import node_rewriter, rewrite_graph
+from aesara.graph import node_rewriter
 from aesara.graph.basic import (
     Apply,
     Constant,
@@ -55,13 +55,10 @@ from aesara.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
 )
-from aesara.tensor.rewriting.basic import topo_constant_folding
-from aesara.tensor.rewriting.shape import ShapeFeature
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorConstant, TensorVariable
 
-from pymc.exceptions import NotConstantValueError
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
 PotentialShapeType = Union[int, np.ndarray, Sequence[Union[int, Variable]], TensorVariable]
@@ -85,7 +82,6 @@ __all__ = [
     "at_rng",
     "convert_observed_data",
     "compile_pymc",
-    "constant_fold",
 ]
 
 
@@ -975,26 +971,3 @@ def compile_pymc(
         **kwargs,
     )
     return aesara_function
-
-
-def constant_fold(xs: Sequence[TensorVariable]) -> Tuple[np.ndarray, ...]:
-    """Use constant folding to get constant values of a graph.
-
-    Parameters
-    ----------
-    xs: Sequence of TensorVariable
-        The variables that are to be constant folded
-
-    Raises
-    ------
-    NotConstantValueError:
-        If any of the variables cannot be successfully constant folded
-    """
-    fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], clone=True)
-
-    folded_xs = rewrite_graph(fg, custom_rewrite=topo_constant_folding).outputs
-
-    if not all(isinstance(folded_x, Constant) for folded_x in folded_xs):
-        raise NotConstantValueError
-
-    return tuple(folded_x.data for folded_x in folded_xs)

@@ -35,7 +35,6 @@ import pymc as pm
 
 from pymc.aesaraf import (
     compile_pymc,
-    constant_fold,
     convert_observed_data,
     extract_obs_data,
     replace_rng_nodes,
@@ -46,7 +45,6 @@ from pymc.aesaraf import (
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.distributions.transforms import Interval
-from pymc.exceptions import NotConstantValueError
 from pymc.vartypes import int_types
 
 
@@ -612,20 +610,3 @@ def test_reseed_rngs():
             assert rng.get_value()._bit_generator.state == bit_generator.state
         else:
             assert rng.get_value().bit_generator.state == bit_generator.state
-
-
-def test_constant_fold():
-    x = at.random.normal(size=(5,))
-    y = at.arange(x.size)
-
-    res = constant_fold((y, y.shape))
-    assert np.array_equal(res[0], np.arange(5))
-    assert tuple(res[1]) == (5,)
-
-
-def test_constant_fold_error():
-    x = at.vector("x")
-    y = at.arange(x.size)
-
-    with pytest.raises(NotConstantValueError):
-        constant_fold((y, y.shape))
