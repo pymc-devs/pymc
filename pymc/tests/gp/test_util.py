@@ -59,11 +59,11 @@ class TestKmeansInducing:
     def test_kmeans(self):
         X = self.x[:, None]
         Xu = pm.gp.util.kmeans_inducing_points(2, X).flatten()
-        npt.assert_allclose(np.asarray(self.centers), np.sort(Xu), atol=0.1)
+        npt.assert_allclose(np.asarray(self.centers), np.sort(Xu), rtol=0.05)
 
         X = at.as_tensor_variable(self.x[:, None])
         Xu = pm.gp.util.kmeans_inducing_points(2, X).flatten()
-        npt.assert_allclose(np.asarray(self.centers), np.sort(Xu), atol=0.1)
+        npt.assert_allclose(np.asarray(self.centers), np.sort(Xu), rtol=0.05)
 
     def test_kmeans_raises(self):
         with pytest.raises(TypeError):
