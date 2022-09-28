@@ -717,7 +717,7 @@ def get_support_shape(
         shape = to_tuple(shape)
         assert isinstance(shape, tuple)
         inferred_support_shape = at.stack(
-            [shape[-i - 1] - support_shape_offset[-i - 1] for i in range(ndim_supp)]
+            [shape[i] - support_shape_offset[i] for i in np.arange(-ndim_supp, 0)]
         )
 
     if inferred_support_shape is None and dims is not None:
@@ -726,15 +726,15 @@ def get_support_shape(
         model = modelcontext(None)
         inferred_support_shape = at.stack(
             [
-                model.dim_lengths[dims[-i - 1]] - support_shape_offset[-i - 1]  # type: ignore
-                for i in range(ndim_supp)
+                model.dim_lengths[dims[i]] - support_shape_offset[i]  # type: ignore
+                for i in np.arange(-ndim_supp, 0)
             ]
         )
 
     if inferred_support_shape is None and observed is not None:
         observed = convert_observed_data(observed)
         inferred_support_shape = at.stack(
-            [observed.shape[-i - 1] - support_shape_offset[-i - 1] for i in range(ndim_supp)]
+            [observed.shape[i] - support_shape_offset[i] for i in np.arange(-ndim_supp, 0)]
         )
 
     if inferred_support_shape is None:
