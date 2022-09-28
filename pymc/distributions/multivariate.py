@@ -2482,8 +2482,6 @@ class ZeroSumNormal(Distribution):
             ndim_supp=zerosum_axes,
         )
 
-        # print(f"{support_shape.eval() = }")
-
         if support_shape is None:
             if zerosum_axes > 0:
                 raise ValueError("You must specify shape or support_shape parameter")

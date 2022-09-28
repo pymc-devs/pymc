@@ -291,7 +291,7 @@ class ZeroSumTransform(RVTransform):
             By default (``zerosum_axes=[-1]``), the sum-to-zero constraint is imposed
             on the last axis.
         """
-        self.zerosum_axes = zerosum_axes
+        self.zerosum_axes = tuple(int(axis) for axis in zerosum_axes)
 
     def forward(self, value, *rv_inputs):
         for axis in self.zerosum_axes:
