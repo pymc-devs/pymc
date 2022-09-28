@@ -18,6 +18,7 @@
 import warnings
 
 from functools import reduce
+from typing import Optional
 
 import aesara
 import aesara.tensor as at
@@ -36,8 +37,6 @@ from aesara.tensor.random.op import RandomVariable, default_supp_shape_from_para
 from aesara.tensor.random.utils import broadcast_params
 from aesara.tensor.slinalg import Cholesky, SolveTriangular
 from aesara.tensor.type import TensorType
-
-# from numpy.core.numeric import normalize_axis_tuple
 from scipy import linalg, stats
 
 import pymc as pm
@@ -2412,19 +2411,23 @@ class ZeroSumNormal(Distribution):
         It's actually the standard deviation of the underlying, unconstrained Normal distribution.
         Defaults to 1 if not specified.
         For now, ``sigma`` has to be a scalar, to ensure the zero-sum constraint.
-    zerosum_axes: list or tuple of strings or integers
-        Axis (or axes) along which the zero-sum constraint is enforced.
-        Defaults to [-1], i.e the last axis.
-        If strings are passed, then ``dims`` is needed.
-        Otherwise, ``shape`` and ``size`` work as they do for other PyMC distributions.
-    dims: list or tuple of strings, optional
-        The dimension names of the axes.
-        Necessary when ``zerosum_axes`` is specified with strings.
+    zerosum_axes: int, defaults to 1
+        Number of axes along which the zero-sum constraint is enforced, starting from the rightmost position.
+        Defaults to 1, i.e the rightmost axis.
+    dims: sequence of strings, optional
+        Dimension names of the distribution. Works the same as for other PyMC distributions.
+        Necessary if ``shape`` is not passed.
+    shape: tuple of integers, optional
+        Shape of the distribution. Works the same as for other PyMC distributions.
+        Necessary if ``dims`` is not passed.
 
     Warnings
     --------
     ``sigma`` has to be a scalar, to ensure the zero-sum constraint.
     The ability to specifiy a vector of ``sigma`` may be added in future versions.
+
+    ``zerosum_axes`` has to be > 0. If you want the behavior of ``zerosum_axes = 0``,
+    just use ``pm.Normal``.
 
     Examples
     --------
@@ -2444,23 +2447,21 @@ class ZeroSumNormal(Distribution):
     """
     rv_type = ZeroSumNormalRV
 
-    # def __new__(cls, *args, zerosum_axes=None, dims=None, **kwargs):
-    #     dims = convert_dims(dims)
-    #     if zerosum_axes is None:
-    #         zerosum_axes = [-1]
-    #     if not isinstance(zerosum_axes, (list, tuple)):
-    #         zerosum_axes = [zerosum_axes]
+    def __new__(cls, *args, zerosum_axes=None, support_shape=None, dims=None, **kwargs):
+        if dims is not None or kwargs.get("observed") is not None:
+            zerosum_axes = cls.check_zerosum_axes(zerosum_axes)
 
-    #     if isinstance(zerosum_axes[0], str):
-    #         if not dims:
-    #             raise ValueError("You need to specify dims if zerosum_axes are strings.")
-    #         else:
-    #             zerosum_axes_ = []
-    #             for axis in zerosum_axes:
-    #                 zerosum_axes_.append(dims.index(axis))
-    #             zerosum_axes = zerosum_axes_
+            support_shape = get_support_shape(
+                support_shape=support_shape,
+                shape=None,  # Shape will be checked in `cls.dist`
+                dims=dims,
+                observed=kwargs.get("observed", None),
+                ndim_supp=zerosum_axes,
+            )
 
-    #     return super().__new__(cls, *args, zerosum_axes=zerosum_axes, dims=dims, **kwargs)
+        return super().__new__(
+            cls, *args, zerosum_axes=zerosum_axes, support_shape=support_shape, dims=dims, **kwargs
+        )
 
     @classmethod
     def dist(cls, sigma=1, zerosum_axes=None, support_shape=None, **kwargs):
@@ -2480,10 +2481,13 @@ class ZeroSumNormal(Distribution):
             shape=kwargs.get("shape"),
             ndim_supp=zerosum_axes,
         )
+
+        # print(f"{support_shape.eval() = }")
+
         if support_shape is None:
             if zerosum_axes > 0:
                 raise ValueError("You must specify shape or support_shape parameter")
-            # edge case doesn't work for now, because at.stack in get_support_shape fails
+            # edge-case doesn't work for now, because at.stack in get_support_shape fails
             # else:
             #     support_shape = () # because it's just a Normal in that case
         support_shape = at.as_tensor_variable(intX(support_shape))
@@ -2510,6 +2514,16 @@ class ZeroSumNormal(Distribution):
     #         )
     #     check_dist_not_registered(dist)
     #     return super().dist([dist, lower, upper], **kwargs)
+
+    @classmethod
+    def check_zerosum_axes(cls, zerosum_axes: Optional[int]) -> int:
+        if zerosum_axes is None:
+            zerosum_axes = 1
+        if not isinstance(zerosum_axes, int):
+            raise TypeError("zerosum_axes has to be an integer")
+        if not zerosum_axes > 0:
+            raise ValueError("zerosum_axes has to be > 0")
+        return zerosum_axes
 
     @classmethod
     def rv_op(cls, sigma, zerosum_axes, support_shape, size=None):
@@ -2553,11 +2567,14 @@ class ZeroSumNormal(Distribution):
 
 @_change_dist_size.register(ZeroSumNormalRV)
 def change_zerosum_size(op, normal_dist, new_size, expand=False):
+
     normal_dist, sigma, support_shape = normal_dist.owner.inputs
+
     if expand:
         original_shape = tuple(normal_dist.shape)
         old_size = original_shape[len(original_shape) - op.ndim_supp :]
         new_size = tuple(new_size) + old_size
+
     return ZeroSumNormal.rv_op(
         sigma=sigma, zerosum_axes=op.ndim_supp, support_shape=support_shape, size=new_size
     )
@@ -2570,7 +2587,8 @@ def zerosumnormal_moment(op, rv, *rv_inputs):
 
 @_default_transform.register(ZeroSumNormalRV)
 def zerosum_default_transform(op, rv):
-    return ZeroSumTransform(op.zerosum_axes)
+    zerosum_axes = tuple(np.arange(-op.ndim_supp, 0))
+    return ZeroSumTransform(zerosum_axes)
 
 
 @_logprob.register(ZeroSumNormalRV)
@@ -2578,18 +2596,19 @@ def zerosumnormal_logp(op, values, normal_dist, sigma, support_shape, **kwargs):
     (value,) = values
     shape = value.shape
     zerosum_axes = op.ndim_supp
+
     _deg_free_support_shape = at.inc_subtensor(shape[-zerosum_axes:], -1)
     _full_size = at.prod(shape)
     _degrees_of_freedom = at.prod(_deg_free_support_shape)
+
     zerosums = [
         at.all(at.isclose(at.mean(value, axis=-axis - 1), 0, atol=1e-9))
         for axis in range(zerosum_axes)
     ]
+
     out = at.sum(
         pm.logp(normal_dist, value) * _degrees_of_freedom / _full_size,
         axis=tuple(np.arange(-zerosum_axes, 0)),
     )
-    # figure out how dimensionality should be handled for logp
-    # for now, we assume ZSN is a scalar distribut, which is not correct
-    # out = pm.logp(normal_dist, value) * _degrees_of_freedom / _full_size
+
     return check_parameters(out, *zerosums, msg="at.mean(value, axis=zerosum_axes) == 0")

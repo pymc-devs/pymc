@@ -681,7 +681,7 @@ def get_support_shape(
     support_shape_offset: Sequence[int] = None,
     ndim_supp: int = 1,
 ):
-    """Extract length of support shapes from shape / dims / observed information
+    """Extract the support shapes from shape / dims / observed information
 
     Parameters
     ----------
@@ -694,7 +694,8 @@ def get_support_shape(
     observed:
         User-specified observed data from multivariate distribution
     support_shape_offset:
-        Difference between last shape dimensions and the length of explicit support shapes in multivariate distribution, defaults to 0.
+        Difference between last shape dimensions and the length of
+        explicit support shapes in multivariate distribution, defaults to 0.
         For timeseries, this is shape[-1] = support_shape[-1] + 1
     ndim_supp:
         Number of support dimensions of the given multivariate distribution, defaults to 1
@@ -740,9 +741,10 @@ def get_support_shape(
         inferred_support_shape = support_shape
     # If there are two sources of information for the support shapes, assert they are consistent:
     elif support_shape is not None:
-        inferred_support_shape = Assert(msg="Steps do not match last shape dimension")(
+        inferred_support_shape = Assert(msg="support_shape does not match last shape dimension")(
             inferred_support_shape, at.all(at.eq(inferred_support_shape, support_shape))
         )
+
     return inferred_support_shape
 
 
