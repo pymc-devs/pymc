@@ -754,8 +754,8 @@ class TestGARCH11:
             z = Normal("z", mu=0, sigma=vol, shape=data.shape)
         garch_like = t.compile_logp(y)({"y": data})
         reg_like = t.compile_logp(z)({"z": data})
-        decimal = select_by_precision(float64=7, float32=4)
-        np.testing.assert_allclose(garch_like, reg_like, 10 ** (-decimal))
+        rtol = select_by_precision(float64=1e-9, float32=1e-6)
+        np.testing.assert_allclose(garch_like, reg_like, rtol)
 
     @pytest.mark.parametrize(
         "batched_param",

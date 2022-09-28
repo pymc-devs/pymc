@@ -235,14 +235,14 @@ class TestMatchesScipy:
             Rplus,
             {"h": Rplus, "z": R},
             lambda value, h, z: polyagamma_pdf(value, h, z, return_log=True),
-            decimal=select_by_precision(float64=6, float32=-1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-1),
         )
         check_logcdf(
             pm.PolyaGamma,
             Rplus,
             {"h": Rplus, "z": R},
             lambda value, h, z: polyagamma_cdf(value, h, z, return_log=True),
-            decimal=select_by_precision(float64=6, float32=-1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-1),
         )
 
     def test_flat(self):
@@ -269,14 +269,14 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplus},
             lambda value, mu, sigma: st.norm.logpdf(value, mu, sigma),
-            decimal=select_by_precision(float64=6, float32=1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-3),
         )
         check_logcdf(
             pm.Normal,
             R,
             {"mu": R, "sigma": Rplus},
             lambda value, mu, sigma: st.norm.logcdf(value, mu, sigma),
-            decimal=select_by_precision(float64=6, float32=1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-3),
         )
 
     def test_half_normal(self):
@@ -285,7 +285,7 @@ class TestMatchesScipy:
             Rplus,
             {"sigma": Rplus},
             lambda value, sigma: st.halfnorm.logpdf(value, scale=sigma),
-            decimal=select_by_precision(float64=6, float32=-1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-1),
         )
         check_logcdf(
             pm.HalfNormal,
@@ -320,7 +320,7 @@ class TestMatchesScipy:
             Rplus,
             {"mu": Rplus, "alpha": Rplus},
             lambda value, mu, alpha: st.invgauss.logpdf(value, mu=mu, loc=alpha),
-            decimal=select_by_precision(float64=6, float32=1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-2),
         )
 
     def test_wald_logcdf(self):
@@ -443,7 +443,7 @@ class TestMatchesScipy:
             R,
             {"b": Rplus, "kappa": Rplus, "mu": R},
             laplace_asymmetric_logpdf,
-            decimal=select_by_precision(float64=6, float32=2),
+            rtol=select_by_precision(float64=1e-6, float32=1e0),
         )
 
     def test_lognormal(self):
@@ -596,7 +596,7 @@ class TestMatchesScipy:
             Rplus,
             {"mu": Rplus, "sigma": Rplus},
             test_fun,
-            decimal=select_by_precision(float64=4, float32=3),
+            rtol=select_by_precision(float64=1e-6, float32=1e-5),
         )
 
     def test_pareto(self):
@@ -653,7 +653,7 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplusbig, "alpha": R},
             lambda value, alpha, mu, sigma: st.skewnorm.logpdf(value, alpha, mu, sigma),
-            decimal=select_by_precision(float64=5, float32=3),
+            rtol=select_by_precision(float64=1e-7, float32=1e-5),
         )
 
     @pytest.mark.parametrize(
@@ -720,14 +720,14 @@ class TestMatchesScipy:
             R,
             {"mu": R, "s": Rplus},
             lambda value, mu, s: st.logistic.logpdf(value, mu, s),
-            decimal=select_by_precision(float64=6, float32=1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-1),
         )
         check_logcdf(
             pm.Logistic,
             R,
             {"mu": R, "s": Rplus},
             lambda value, mu, s: st.logistic.logcdf(value, mu, s),
-            decimal=select_by_precision(float64=6, float32=1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-1),
         )
 
     def test_logitnormal(self):
@@ -738,7 +738,7 @@ class TestMatchesScipy:
             lambda value, mu, sigma: (
                 st.norm.logpdf(sp.logit(value), mu, sigma) - (np.log(value) + np.log1p(-value))
             ),
-            decimal=select_by_precision(float64=6, float32=1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-1),
         )
 
     @pytest.mark.skipif(
@@ -838,7 +838,7 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig, "upper": Rplusbig},
             scipy_logp,
-            decimal=select_by_precision(float64=6, float32=1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-1),
             skip_paramdomain_outside_edge_test=True,
         )
 
@@ -847,7 +847,7 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplusbig, "upper": Rplusbig},
             ft.partial(scipy_logp, lower=-np.inf),
-            decimal=select_by_precision(float64=6, float32=1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-1),
             skip_paramdomain_outside_edge_test=True,
         )
 
@@ -856,7 +856,7 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig},
             ft.partial(scipy_logp, upper=np.inf),
-            decimal=select_by_precision(float64=6, float32=1),
+            rtol=select_by_precision(float64=1e-6, float32=1e-1),
             skip_paramdomain_outside_edge_test=True,
         )
 
