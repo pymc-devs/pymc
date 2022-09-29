@@ -1418,27 +1418,15 @@ class TestZeroSumNormal:
 
         assert s.posterior.v.shape == (1, 10, len(COORDS["regions"]), len(COORDS["answers"]))
 
-        zerosum_axes = np.arange(-v.owner.op.ndim_supp, 0)
-        nonzero_axes = np.arange(v.ndim - v.owner.op.ndim_supp)
-
-        for ax in zerosum_axes:
-            for samples in [
-                s.posterior.v.mean(axis=ax),
-                random_samples.mean(axis=ax),
-            ]:
-                assert np.isclose(
-                    samples, 0
-                ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
-
-        if nonzero_axes:
-            for ax in nonzero_axes:
-                for samples in [
-                    s.posterior.v.mean(axis=ax),
-                    random_samples.mean(axis=ax),
-                ]:
-                    assert not np.isclose(
-                        samples, 0
-                    ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
+        ndim_supp = v.owner.op.ndim_supp
+        zerosum_axes = np.arange(-ndim_supp, 0)
+        nonzero_axes = np.arange(v.ndim - ndim_supp)
+        for samples in [
+            s.posterior.v,
+            random_samples,
+        ]:
+            self.assert_zerosum_axes(samples, zerosum_axes)
+            self.assert_zerosum_axes(samples, nonzero_axes, check_zerosum_axes=False)
 
     @pytest.mark.parametrize(
         "error, match, shape, support_shape, zerosum_axes",
@@ -1473,6 +1461,7 @@ class TestZeroSumNormal:
         base_dist = pm.ZeroSumNormal.dist(shape=(4, 9), zerosum_axes=zerosum_axes)
         random_samples = pm.draw(base_dist, draws=100)
 
+        zerosum_axes = np.arange(-zerosum_axes, 0)
         self.assert_zerosum_axes(random_samples, zerosum_axes)
 
         new_dist = change_dist_size(base_dist, new_size=(5, 3), expand=False)
@@ -1488,12 +1477,17 @@ class TestZeroSumNormal:
         random_samples = pm.draw(new_dist, draws=100)
         self.assert_zerosum_axes(random_samples, zerosum_axes)
 
-    def assert_zerosum_axes(self, random_samples, zerosum_axes):
-        zerosum_axes = np.arange(-zerosum_axes, 0)
-        for ax in zerosum_axes:
-            assert np.isclose(
-                random_samples.mean(axis=ax), 0
-            ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+    def assert_zerosum_axes(self, random_samples, axes_to_check, check_zerosum_axes=True):
+        if check_zerosum_axes:
+            for ax in axes_to_check:
+                assert np.isclose(
+                    random_samples.mean(axis=ax), 0
+                ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+        else:
+            for ax in axes_to_check:
+                assert not np.isclose(
+                    random_samples.mean(axis=ax), 0
+                ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
 
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
