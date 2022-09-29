@@ -854,7 +854,7 @@ class PosDefMatrix(Op):
     def make_node(self, x):
         x = at.as_tensor_variable(x)
         assert x.ndim == 2
-        o = TensorType(dtype="int8", shape=[])()
+        o = TensorType(dtype="int8", broadcastable=[])()
         return Apply(self, [x], [o])
 
     # Python implementation:

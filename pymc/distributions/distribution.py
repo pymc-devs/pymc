@@ -29,7 +29,7 @@ from aeppl.rewriting import logprob_rewrites_db
 from aesara import tensor as at
 from aesara.compile.builders import OpFromGraph
 from aesara.graph import node_rewriter
-from aesara.graph.basic import Node, Variable, clone_replace
+from aesara.graph.basic import Node, clone_replace
 from aesara.graph.rewriting.basic import in2out
 from aesara.graph.utils import MetaType
 from aesara.tensor.basic import as_tensor_variable
@@ -42,9 +42,6 @@ from pymc.aesaraf import convert_observed_data
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
-    StrongDims,
-    StrongShape,
-    change_dist_size,
     convert_dims,
     convert_shape,
     convert_size,
@@ -152,35 +149,6 @@ def _make_nice_attr_error(oldcode: str, newcode: str):
         raise AttributeError(f"The `{oldcode}` method was removed. Instead use `{newcode}`.`")
 
     return fn
-
-
-def _make_rv_and_resize_shape_from_dims(
-    *,
-    cls,
-    dims: Optional[StrongDims],
-    model,
-    observed,
-    args,
-    **kwargs,
-) -> Tuple[Variable, StrongShape]:
-    """Creates the RV, possibly using dims or observed to determine a resize shape (if needed)."""
-    resize_shape_from_dims = None
-    size_or_shape = kwargs.get("size") or kwargs.get("shape")
-
-    # Preference is given to size or shape. If not specified, we rely on dims and
-    # finally, observed, to determine the shape of the variable. Because dims can be
-    # specified on the fly, we need a two-step process where we first create the RV
-    # without dims information and then resize it.
-    if not size_or_shape and observed is not None:
-        kwargs["shape"] = tuple(observed.shape)
-
-    # Create the RV without dims information
-    rv_out = cls.dist(*args, **kwargs)
-
-    if not size_or_shape and dims is not None:
-        resize_shape_from_dims = shape_from_dims(dims, tuple(rv_out.shape), model)
-
-    return rv_out, resize_shape_from_dims
 
 
 class SymbolicRandomVariable(OpFromGraph):
@@ -311,17 +279,15 @@ class Distribution(metaclass=DistributionMeta):
         if observed is not None:
             observed = convert_observed_data(observed)
 
-        # Create the RV, without taking `dims` into consideration
-        rv_out, resize_shape_from_dims = _make_rv_and_resize_shape_from_dims(
-            cls=cls, dims=dims, model=model, observed=observed, args=args, **kwargs
-        )
+        # Preference is given to size or shape. If not specified, we rely on dims and
+        # finally, observed, to determine the shape of the variable.
+        if not ("size" in kwargs or "shape" in kwargs):
+            if dims is not None:
+                kwargs["shape"] = shape_from_dims(dims, model)
+            elif observed is not None:
+                kwargs["shape"] = tuple(observed.shape)
 
-        # Resize variable based on `dims` information
-        if resize_shape_from_dims:
-            resize_size_from_dims = find_size(
-                shape=resize_shape_from_dims, size=None, ndim_supp=rv_out.owner.op.ndim_supp
-            )
-            rv_out = change_dist_size(dist=rv_out, new_size=resize_size_from_dims, expand=False)
+        rv_out = cls.dist(*args, **kwargs)
 
         rv_out = model.register_rv(
             rv_out,

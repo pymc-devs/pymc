@@ -37,6 +37,26 @@ from pymc.math import cartesian, kron_diag, kron_dot, kron_solve_lower, kron_sol
 __all__ = ["Latent", "Marginal", "TP", "MarginalApprox", "LatentKron", "MarginalKron"]
 
 
+_noise_deprecation_warning = (
+    "The 'noise' parameter has been been changed to 'sigma' "
+    "in order to standardize the GP API and will be "
+    "deprecated in future releases."
+)
+
+
+def _handle_sigma_noise_parameters(sigma, noise):
+    """Helper function for transition of 'noise' parameter to be named 'sigma'."""
+
+    if (sigma is None and noise is None) or (sigma is not None and noise is not None):
+        raise ValueError("'sigma' argument must be specified.")
+
+    if sigma is None:
+        warnings.warn(_noise_deprecation_warning, FutureWarning)
+        return noise
+
+    return sigma
+
+
 class Base:
     R"""
     Base class.
@@ -218,7 +238,7 @@ class Latent(Base):
         Xnew: array-like
             Function input values.
         given: dict
-            Can optionally take as key value pairs: `X`, `y`, `noise`,
+            Can optionally take as key value pairs: `X`, `y`,
             and `gp`.  See the section in the documentation on additive GP
             models in PyMC for more information.
         jitter: scalar
@@ -359,7 +379,7 @@ class TP(Latent):
         return pm.MvStudentT(name, nu=nu2, mu=mu, cov=cov, **kwargs)
 
 
-@conditioned_vars(["X", "y", "noise"])
+@conditioned_vars(["X", "y", "sigma"])
 class Marginal(Base):
     R"""
     Marginal Gaussian process.
@@ -393,7 +413,7 @@ class Marginal(Base):
 
             # Place a GP prior over the function f.
             sigma = pm.HalfCauchy("sigma", beta=3)
-            y_ = gp.marginal_likelihood("y", X=X, y=y, noise=sigma)
+            y_ = gp.marginal_likelihood("y", X=X, y=y, sigma=sigma)
 
         ...
 
@@ -405,15 +425,15 @@ class Marginal(Base):
             fcond = gp.conditional("fcond", Xnew=Xnew)
     """
 
-    def _build_marginal_likelihood(self, X, noise, jitter):
+    def _build_marginal_likelihood(self, X, noise_func, jitter):
         mu = self.mean_func(X)
         Kxx = self.cov_func(X)
-        Knx = noise(X)
+        Knx = noise_func(X)
         cov = Kxx + Knx
         return mu, stabilize(cov, jitter)
 
     def marginal_likelihood(
-        self, name, X, y, noise, jitter=JITTER_DEFAULT, is_observed=True, **kwargs
+        self, name, X, y, sigma=None, noise=None, jitter=JITTER_DEFAULT, is_observed=True, **kwargs
     ):
         R"""
         Returns the marginal likelihood distribution, given the input
@@ -435,9 +455,11 @@ class Marginal(Base):
         y: array-like
             Data that is the sum of the function with the GP prior and Gaussian
             noise.  Must have shape `(n, )`.
-        noise: scalar, Variable, or Covariance
+        sigma: scalar, Variable, or Covariance
             Standard deviation of the Gaussian noise.  Can also be a Covariance for
             non-white noise.
+        noise: scalar, Variable, or Covariance
+            Previous parameterization of `sigma`.
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
@@ -445,13 +467,13 @@ class Marginal(Base):
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
         """
+        sigma = _handle_sigma_noise_parameters(sigma=sigma, noise=noise)
 
-        if not isinstance(noise, Covariance):
-            noise = pm.gp.cov.WhiteNoise(noise)
-        mu, cov = self._build_marginal_likelihood(X, noise, jitter)
+        noise_func = sigma if isinstance(sigma, Covariance) else pm.gp.cov.WhiteNoise(sigma)
+        mu, cov = self._build_marginal_likelihood(X=X, noise_func=noise_func, jitter=jitter)
         self.X = X
         self.y = y
-        self.noise = noise
+        self.sigma = noise_func
         if is_observed:
             return pm.MvNormal(name, mu=mu, cov=cov, observed=y, **kwargs)
         else:
@@ -472,20 +494,24 @@ class Marginal(Base):
         else:
             cov_total = self.cov_func
             mean_total = self.mean_func
-        if all(val in given for val in ["X", "y", "noise"]):
-            X, y, noise = given["X"], given["y"], given["noise"]
-            if not isinstance(noise, Covariance):
-                noise = pm.gp.cov.WhiteNoise(noise)
+
+        if "noise" in given:
+            warnings.warn(_noise_deprecation_warning, FutureWarning)
+            given["sigma"] = given["noise"]
+
+        if all(val in given for val in ["X", "y", "sigma"]):
+            X, y, sigma = given["X"], given["y"], given["sigma"]
+            noise_func = sigma if isinstance(sigma, Covariance) else pm.gp.cov.WhiteNoise(sigma)
         else:
-            X, y, noise = self.X, self.y, self.noise
-        return X, y, noise, cov_total, mean_total
+            X, y, noise_func = self.X, self.y, self.sigma
+        return X, y, noise_func, cov_total, mean_total
 
     def _build_conditional(
-        self, Xnew, pred_noise, diag, X, y, noise, cov_total, mean_total, jitter
+        self, Xnew, pred_noise, diag, X, y, noise_func, cov_total, mean_total, jitter
     ):
         Kxx = cov_total(X)
         Kxs = self.cov_func(X, Xnew)
-        Knx = noise(X)
+        Knx = noise_func(X)
         rxx = y - mean_total(X)
         L = cholesky(stabilize(Kxx, jitter) + Knx)
         A = solve_lower(L, Kxs)
@@ -495,13 +521,13 @@ class Marginal(Base):
             Kss = self.cov_func(Xnew, diag=True)
             var = Kss - at.sum(at.square(A), 0)
             if pred_noise:
-                var += noise(Xnew, diag=True)
+                var += noise_func(Xnew, diag=True)
             return mu, var
         else:
             Kss = self.cov_func(Xnew)
             cov = Kss - at.dot(at.transpose(A), A)
             if pred_noise:
-                cov += noise(Xnew)
+                cov += noise_func(Xnew)
             return mu, cov if pred_noise else stabilize(cov, jitter)
 
     def conditional(
@@ -531,7 +557,7 @@ class Marginal(Base):
             Whether or not observation noise is included in the conditional.
             Default is `False`.
         given: dict
-            Can optionally take as key value pairs: `X`, `y`, `noise`,
+            Can optionally take as key value pairs: `X`, `y`, `sigma`,
             and `gp`.  See the section in the documentation on additive GP
             models in PyMC for more information.
         jitter: scalar
@@ -720,7 +746,9 @@ class MarginalApprox(Marginal):
         quadratic = 0.5 * (at.dot(r, r_l) - at.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
-    def marginal_likelihood(self, name, X, Xu, y, noise=None, jitter=JITTER_DEFAULT, **kwargs):
+    def marginal_likelihood(
+        self, name, X, Xu, y, sigma=None, noise=None, jitter=JITTER_DEFAULT, **kwargs
+    ):
         R"""
         Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
@@ -738,8 +766,10 @@ class MarginalApprox(Marginal):
         y: array-like
             Data that is the sum of the function with the GP prior and Gaussian
             noise.  Must have shape `(n, )`.
-        noise: scalar, Variable
+        sigma: scalar, Variable
             Standard deviation of the Gaussian noise.
+        noise: scalar, Variable
+            Previous parameterization of `sigma`
         jitter: scalar
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
@@ -752,12 +782,11 @@ class MarginalApprox(Marginal):
         self.Xu = Xu
         self.y = y
 
-        if noise is None:
-            raise ValueError("noise argument must be specified")
-        else:
-            self.sigma = noise
+        self.sigma = _handle_sigma_noise_parameters(sigma=sigma, noise=noise)
 
-        approx_loglik = self._build_marginal_likelihood_loglik(y, X, Xu, noise, jitter)
+        approx_loglik = self._build_marginal_likelihood_loglik(
+            y=self.y, X=self.X, Xu=self.Xu, sigma=self.sigma, jitter=jitter
+        )
         pm.Potential(f"marginalapprox_loglik_{name}", approx_loglik, **kwargs)
 
     def _build_conditional(
@@ -828,7 +857,7 @@ class MarginalApprox(Marginal):
             Whether or not observation noise is included in the conditional.
             Default is `False`.
         given: dict
-            Can optionally take as key value pairs: `X`, `Xu`, `y`, `noise`,
+            Can optionally take as key value pairs: `X`, `Xu`, `y`, `sigma`,
             and `gp`.  See the section in the documentation on additive GP
             models in PyMC for more information.
         jitter: scalar

@@ -31,20 +31,21 @@ class TestBound:
     def test_continuous(self):
         with pm.Model() as model:
             dist = pm.Normal.dist(mu=0, sigma=1)
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", "invalid value encountered in add", RuntimeWarning
-                )
-                UnboundedNormal = pm.Bound("unbound", dist, transform=None)
-                InfBoundedNormal = pm.Bound(
-                    "infbound", dist, lower=-np.inf, upper=np.inf, transform=None
-                )
-            LowerNormal = pm.Bound("lower", dist, lower=0, transform=None)
-            UpperNormal = pm.Bound("upper", dist, upper=0, transform=None)
-            BoundedNormal = pm.Bound("bounded", dist, lower=1, upper=10, transform=None)
-            LowerNormalTransform = pm.Bound("lowertrans", dist, lower=1)
-            UpperNormalTransform = pm.Bound("uppertrans", dist, upper=10)
-            BoundedNormalTransform = pm.Bound("boundedtrans", dist, lower=1, upper=10)
+            with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore", "invalid value encountered in add", RuntimeWarning
+                    )
+                    UnboundedNormal = pm.Bound("unbound", dist, transform=None)
+                    InfBoundedNormal = pm.Bound(
+                        "infbound", dist, lower=-np.inf, upper=np.inf, transform=None
+                    )
+                LowerNormal = pm.Bound("lower", dist, lower=0, transform=None)
+                UpperNormal = pm.Bound("upper", dist, upper=0, transform=None)
+                BoundedNormal = pm.Bound("bounded", dist, lower=1, upper=10, transform=None)
+                LowerNormalTransform = pm.Bound("lowertrans", dist, lower=1)
+                UpperNormalTransform = pm.Bound("uppertrans", dist, upper=10)
+                BoundedNormalTransform = pm.Bound("boundedtrans", dist, lower=1, upper=10)
 
         assert joint_logp(LowerNormal, -1).eval() == -np.inf
         assert joint_logp(UpperNormal, 1).eval() == -np.inf
@@ -73,14 +74,15 @@ class TestBound:
     def test_discrete(self):
         with pm.Model() as model:
             dist = pm.Poisson.dist(mu=4)
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", "invalid value encountered in add", RuntimeWarning
-                )
-                UnboundedPoisson = pm.Bound("unbound", dist)
-            LowerPoisson = pm.Bound("lower", dist, lower=1)
-            UpperPoisson = pm.Bound("upper", dist, upper=10)
-            BoundedPoisson = pm.Bound("bounded", dist, lower=1, upper=10)
+            with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore", "invalid value encountered in add", RuntimeWarning
+                    )
+                    UnboundedPoisson = pm.Bound("unbound", dist)
+                LowerPoisson = pm.Bound("lower", dist, lower=1)
+                UpperPoisson = pm.Bound("upper", dist, upper=10)
+                BoundedPoisson = pm.Bound("bounded", dist, lower=1, upper=10)
 
         assert joint_logp(LowerPoisson, 0).eval() == -np.inf
         assert joint_logp(UpperPoisson, 11).eval() == -np.inf
@@ -118,8 +120,9 @@ class TestBound:
         msg = "Observed Bound distributions are not supported"
         with pm.Model() as m:
             x = pm.Normal("x", 0, 1)
-            with pytest.raises(ValueError, match=msg):
-                pm.Bound("bound", x, observed=5)
+            with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                with pytest.raises(ValueError, match=msg):
+                    pm.Bound("bound", x, observed=5)
 
         msg = "Cannot transform discrete variable."
         with pm.Model() as m:
@@ -128,52 +131,60 @@ class TestBound:
                 warnings.filterwarnings(
                     "ignore", "invalid value encountered in add", RuntimeWarning
                 )
-                with pytest.raises(ValueError, match=msg):
-                    pm.Bound("bound", x, transform=pm.distributions.transforms.log)
+                with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                    with pytest.raises(ValueError, match=msg):
+                        pm.Bound("bound", x, transform=pm.distributions.transforms.log)
 
         msg = "Given dims do not exist in model coordinates."
         with pm.Model() as m:
             x = pm.Poisson.dist(0.5)
-            with pytest.raises(ValueError, match=msg):
-                pm.Bound("bound", x, dims="random_dims")
+            with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                with pytest.raises(ValueError, match=msg):
+                    pm.Bound("bound", x, dims="random_dims")
 
         msg = "The dist x was already registered in the current model"
         with pm.Model() as m:
             x = pm.Normal("x", 0, 1)
-            with pytest.raises(ValueError, match=msg):
-                pm.Bound("bound", x)
+            with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                with pytest.raises(ValueError, match=msg):
+                    pm.Bound("bound", x)
 
         msg = "Passing a distribution class to `Bound` is no longer supported"
         with pm.Model() as m:
-            with pytest.raises(ValueError, match=msg):
-                pm.Bound("bound", pm.Normal)
+            with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                with pytest.raises(ValueError, match=msg):
+                    pm.Bound("bound", pm.Normal)
 
         msg = "Bounding of MultiVariate RVs is not yet supported"
         with pm.Model() as m:
             x = pm.MvNormal.dist(np.zeros(3), np.eye(3))
-            with pytest.raises(NotImplementedError, match=msg):
-                pm.Bound("bound", x)
+            with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                with pytest.raises(NotImplementedError, match=msg):
+                    pm.Bound("bound", x)
 
         msg = "must be a Discrete or Continuous distribution subclass"
         with pm.Model() as m:
             x = self.create_invalid_distribution().dist()
-            with pytest.raises(ValueError, match=msg):
-                pm.Bound("bound", x)
+            with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                with pytest.raises(ValueError, match=msg):
+                    pm.Bound("bound", x)
 
     def test_invalid_sampling(self):
         msg = "Cannot sample from a bounded variable"
         with pm.Model() as m:
             dist = pm.Normal.dist(mu=0, sigma=1)
-            BoundedNormal = pm.Bound("bounded", dist, lower=1, upper=10)
+            with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                BoundedNormal = pm.Bound("bounded", dist, lower=1, upper=10)
             with pytest.raises(NotImplementedError, match=msg):
                 pm.sample_prior_predictive()
 
     def test_bound_shapes(self):
         with pm.Model(coords={"sample": np.ones((2, 5))}) as m:
             dist = pm.Normal.dist(mu=0, sigma=1)
-            bound_sized = pm.Bound("boundedsized", dist, lower=1, upper=10, size=(4, 5))
-            bound_shaped = pm.Bound("boundedshaped", dist, lower=1, upper=10, shape=(3, 5))
-            bound_dims = pm.Bound("boundeddims", dist, lower=1, upper=10, dims="sample")
+            with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                bound_sized = pm.Bound("boundedsized", dist, lower=1, upper=10, size=(4, 5))
+                bound_shaped = pm.Bound("boundedshaped", dist, lower=1, upper=10, shape=(3, 5))
+                bound_dims = pm.Bound("boundeddims", dist, lower=1, upper=10, dims="sample")
 
         initial_point = m.initial_point()
         dist_size = initial_point["boundedsized_interval__"].shape
@@ -198,13 +209,16 @@ class TestBound:
     def test_array_bound(self):
         with pm.Model() as model:
             dist = pm.Normal.dist()
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", "invalid value encountered in add", RuntimeWarning
+            with pytest.warns(FutureWarning, match="Bound has been deprecated"):
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore", "invalid value encountered in add", RuntimeWarning
+                    )
+                    LowerPoisson = pm.Bound("lower", dist, lower=[1, None], transform=None)
+                    UpperPoisson = pm.Bound("upper", dist, upper=[np.inf, 10], transform=None)
+                BoundedPoisson = pm.Bound(
+                    "bounded", dist, lower=[1, 2], upper=[9, 10], transform=None
                 )
-                LowerPoisson = pm.Bound("lower", dist, lower=[1, None], transform=None)
-                UpperPoisson = pm.Bound("upper", dist, upper=[np.inf, 10], transform=None)
-            BoundedPoisson = pm.Bound("bounded", dist, lower=[1, 2], upper=[9, 10], transform=None)
 
         first, second = joint_logp(LowerPoisson, [0, 0], sum=False)[0].eval()
         assert first == -np.inf
