@@ -1016,8 +1016,8 @@ class TestMoments:
         "shape, zerosum_axes, expected",
         [
             ((2, 5), None, np.zeros((2, 5))),
-            ((2, 5, 6), None, np.zeros((2, 5, 6))),
-            ((2, 5, 6), (0, 1), np.zeros((2, 5, 6))),
+            ((2, 5, 6), 2, np.zeros((2, 5, 6))),
+            ((2, 5, 6), 3, np.zeros((2, 5, 6))),
         ],
     )
     def test_zerosum_normal_moment(self, shape, zerosum_axes, expected):
