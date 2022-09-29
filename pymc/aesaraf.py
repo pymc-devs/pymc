@@ -34,7 +34,7 @@ from aeppl.logprob import CheckParameterValue
 from aesara import scalar
 from aesara.compile.mode import Mode, get_mode
 from aesara.gradient import grad
-from aesara.graph import node_rewriter
+from aesara.graph import node_rewriter, rewrite_graph
 from aesara.graph.basic import (
     Apply,
     Constant,
@@ -55,10 +55,13 @@ from aesara.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
 )
+from aesara.tensor.rewriting.basic import topo_constant_folding
+from aesara.tensor.rewriting.shape import ShapeFeature
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorConstant, TensorVariable
 
+from pymc.exceptions import NotConstantValueError
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
 PotentialShapeType = Union[int, np.ndarray, Sequence[Union[int, Variable]], TensorVariable]
@@ -81,6 +84,8 @@ __all__ = [
     "set_at_rng",
     "at_rng",
     "convert_observed_data",
+    "compile_pymc",
+    "constant_fold",
 ]
 
 
@@ -523,7 +528,7 @@ def make_shared_replacements(point, vars, model):
     """
     othervars = set(model.value_vars) - set(vars)
     return {
-        var: aesara.shared(point[var.name], var.name + "_shared", shape=var.broadcastable)
+        var: aesara.shared(point[var.name], var.name + "_shared", broadcastable=var.broadcastable)
         for var in othervars
     }
 
@@ -823,7 +828,7 @@ def find_rng_nodes(
 
 
 def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:
-    """Replace any RNG nodes upsteram of outputs by new RNGs of the same type
+    """Replace any RNG nodes upstream of outputs by new RNGs of the same type
 
     This can be used when combining a pre-existing graph with a cloned one, to ensure
     RNGs are unique across the two graphs.
@@ -970,3 +975,30 @@ def compile_pymc(
         **kwargs,
     )
     return aesara_function
+
+
+def constant_fold(
+    xs: Sequence[TensorVariable], raise_not_constant: bool = True
+) -> Tuple[np.ndarray, ...]:
+    """Use constant folding to get constant values of a graph.
+
+    Parameters
+    ----------
+    xs: Sequence of TensorVariable
+        The variables that are to be constant folded
+    raise_not_constant: bool, default True
+        Raises NotConstantValueError if any of the variables cannot be constant folded.
+        This should only be disabled with care, as the graphs are cloned before
+        attempting constant folding, and any old non-shared inputs will not work with
+        the returned outputs
+    """
+    fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], clone=True)
+
+    folded_xs = rewrite_graph(fg, custom_rewrite=topo_constant_folding).outputs
+
+    if raise_not_constant and not all(isinstance(folded_x, Constant) for folded_x in folded_xs):
+        raise NotConstantValueError
+
+    return tuple(
+        folded_x.data if isinstance(folded_x, Constant) else folded_x for folded_x in folded_xs
+    )

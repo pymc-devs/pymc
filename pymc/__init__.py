@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 # pylint: disable=wildcard-import
-__version__ = "4.1.7"
 
 import logging
 
@@ -47,7 +46,7 @@ def __set_compiler_flags():
 
 __set_compiler_flags()
 
-from pymc import gp, ode, sampling
+from pymc import _version, gp, ode, sampling
 from pymc.aesaraf import *
 from pymc.backends import *
 from pymc.blocking import *
@@ -75,3 +74,5 @@ from pymc.step_methods import *
 from pymc.tuning import *
 from pymc.variational import *
 from pymc.vartypes import *
+
+__version__ = _version.get_versions()["version"]

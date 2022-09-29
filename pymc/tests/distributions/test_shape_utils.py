@@ -315,39 +315,16 @@ class TestShapeDimsSize:
             assert pmodel.RV_dims["y"] == ("ddata",)
             assert y.eval().shape == (3,)
 
-    def test_define_dims_on_the_fly(self):
+    def test_define_dims_on_the_fly_raises(self):
+        # Check that trying to use dims that are not pre-specified fails, even if their
+        # length could be inferred from the shape of the variables
+        msg = "Dimensions {'patient'} are unknown to the model"
         with pm.Model() as pmodel:
-            agedata = aesara.shared(np.array([10, 20, 30]))
+            with pytest.raises(KeyError, match=msg):
+                pm.Normal("x", [0, 1, 2], dims=("patient",))
 
-            # Associate the "patient" dim with an implied dimension
-            age = pm.Normal("age", agedata, dims=("patient",))
-            assert "patient" in pmodel.dim_lengths
-            assert pmodel.dim_lengths["patient"].eval() == 3
-
-            # Use the dim to replicate a new RV
-            effect = pm.Normal("effect", 0, dims=("patient",))
-            assert effect.ndim == 1
-            assert effect.eval().shape == (3,)
-
-            # Now change the length of the implied dimension
-            agedata.set_value([1, 2, 3, 4])
-            # The change should propagate all the way through
-            assert effect.eval().shape == (4,)
-
-    def test_define_dims_on_the_fly_from_observed(self):
-        with pm.Model() as pmodel:
-            data = aesara.shared(np.zeros((4, 5)))
-            x = pm.Normal("x", observed=data, dims=("patient", "trials"))
-            assert pmodel.dim_lengths["patient"].eval() == 4
-            assert pmodel.dim_lengths["trials"].eval() == 5
-
-            # Use dim to create a new RV
-            x_noisy = pm.Normal("x_noisy", 0, dims=("patient", "trials"))
-            assert x_noisy.eval().shape == (4, 5)
-
-            # Change data patient dims
-            data.set_value(np.zeros((10, 6)))
-            assert x_noisy.eval().shape == (10, 6)
+            with pytest.raises(KeyError, match=msg):
+                pm.Normal("x", observed=[0, 1, 2], dims=("patient",))
 
     def test_can_resize_data_defined_size(self):
         with pm.Model() as pmodel:

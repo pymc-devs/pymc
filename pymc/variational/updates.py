@@ -276,7 +276,7 @@ def apply_momentum(updates, params=None, momentum=0.9):
     for param in params:
         value = param.get_value(borrow=True)
         velocity = aesara.shared(
-            np.zeros(value.shape, dtype=value.dtype), shape=param.broadcastable
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
         x = momentum * velocity + updates[param]
         updates[velocity] = x - param
@@ -391,7 +391,7 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
     for param in params:
         value = param.get_value(borrow=True)
         velocity = aesara.shared(
-            np.zeros(value.shape, dtype=value.dtype), shape=param.broadcastable
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
         x = momentum * velocity + updates[param] - param
         updates[velocity] = x
@@ -534,7 +534,9 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
-        accu = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.broadcastable)
+        accu = aesara.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
         accu_new = accu + grad**2
         updates[accu] = accu_new
         updates[param] = param - (learning_rate * grad / at.sqrt(accu_new + epsilon))
@@ -660,7 +662,9 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
-        accu = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.broadcastable)
+        accu = aesara.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
         accu_new = rho * accu + (one - rho) * grad**2
         updates[accu] = accu_new
         updates[param] = param - (learning_rate * grad / at.sqrt(accu_new + epsilon))
@@ -751,10 +755,12 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
         # accu: accumulate gradient magnitudes
-        accu = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.broadcastable)
+        accu = aesara.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
         # delta_accu: accumulate update magnitudes (recursively!)
         delta_accu = aesara.shared(
-            np.zeros(value.shape, dtype=value.dtype), shape=param.broadcastable
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
 
         # update accu (as in rmsprop)
@@ -844,8 +850,12 @@ def adam(
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
-        m_prev = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.broadcastable)
-        v_prev = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.broadcastable)
+        m_prev = aesara.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
+        v_prev = aesara.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
         v_t = beta2 * v_prev + (one - beta2) * g_t**2
@@ -928,8 +938,12 @@ def adamax(
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
-        m_prev = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.broadcastable)
-        u_prev = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.broadcastable)
+        m_prev = aesara.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
+        u_prev = aesara.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
         u_t = at.maximum(beta2 * u_prev, abs(g_t))

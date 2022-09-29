@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import logging
 import re
 import unittest.mock as mock
 import warnings
@@ -535,7 +536,7 @@ def test_choose_chains(n_points, tune, expected_length, expected_n_traces):
 @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):
     def test_shared_named(self):
-        G_var = shared(value=np.atleast_2d(1.0), shape=(True, False), name="G")
+        G_var = shared(value=np.atleast_2d(1.0), broadcastable=(True, False), name="G")
 
         with pm.Model():
             theta0 = pm.Normal(
@@ -552,7 +553,7 @@ class TestNamedSampling(SeededTest):
             assert np.isclose(res, 0.0)
 
     def test_shared_unnamed(self):
-        G_var = shared(value=np.atleast_2d(1.0), shape=(True, False))
+        G_var = shared(value=np.atleast_2d(1.0), broadcastable=(True, False))
         with pm.Model():
             theta0 = pm.Normal(
                 "theta0",
@@ -673,7 +674,7 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(idata, keep_size=True, return_inferencedata=False)
             assert ppc["a"].shape == (nchains, ndraws)
 
-    def test_normal_vector(self, caplog):
+    def test_normal_vector(self):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
@@ -710,7 +711,7 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (12, 2)
 
-    def test_normal_vector_idata(self, caplog):
+    def test_normal_vector_idata(self):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
@@ -726,7 +727,7 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(idata, return_inferencedata=False, keep_size=True)
             assert ppc["a"].shape == (trace.nchains, len(trace), 2)
 
-    def test_exceptions(self, caplog):
+    def test_exceptions(self):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
@@ -1022,6 +1023,110 @@ class TestSamplePPC(SeededTest):
             pm.Normal("c", d, sigma=0.01)
             ppc = pm.sample_posterior_predictive(trace, var_names="c", return_inferencedata=True)
         assert np.all(np.abs(ppc.posterior_predictive.c + 4) <= 0.1)
+
+    def test_logging_sampled_basic_rvs_prior(self, caplog):
+        with pm.Model() as m:
+            x = pm.Normal("x")
+            y = pm.Deterministic("y", x + 1)
+            z = pm.Normal("z", y, observed=0)
+
+        with m:
+            pm.sample_prior_predictive(samples=1)
+        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [x, z]")]
+        caplog.clear()
+
+        with m:
+            pm.sample_prior_predictive(samples=1, var_names=["x"])
+        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [x]")]
+        caplog.clear()
+
+    def test_logging_sampled_basic_rvs_posterior(self, caplog):
+        with pm.Model() as m:
+            x = pm.Normal("x")
+            x_det = pm.Deterministic("x_det", x + 1)
+            y = pm.Normal("y", x_det)
+            z = pm.Normal("z", y, observed=0)
+
+        idata = az_from_dict(posterior={"x": np.zeros(5), "x_det": np.ones(5), "y": np.ones(5)})
+        with m:
+            pm.sample_posterior_predictive(idata)
+        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [z]")]
+        caplog.clear()
+
+        with m:
+            pm.sample_posterior_predictive(idata, var_names=["y", "z"])
+        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y, z]")]
+        caplog.clear()
+
+        # Resampling `x` will force resampling of `y`, even if it is in trace
+        with m:
+            pm.sample_posterior_predictive(idata, var_names=["x", "z"])
+        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [x, y, z]")]
+        caplog.clear()
+
+        # Missing deterministic `x_det` does not show in the log, even if it is being
+        # recomputed, only `y` RV shows
+        idata = az_from_dict(posterior={"x": np.zeros(5)})
+        with m:
+            pm.sample_posterior_predictive(idata)
+        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y, z]")]
+        caplog.clear()
+
+        # Missing deterministic `x_det` does not cause recomputation of downstream `y` RV
+        idata = az_from_dict(posterior={"x": np.zeros(5), "y": np.ones(5)})
+        with m:
+            pm.sample_posterior_predictive(idata)
+        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [z]")]
+        caplog.clear()
+
+        # Missing `x` causes sampling of downstream `y` RV, even if it is present in trace
+        idata = az_from_dict(posterior={"y": np.ones(5)})
+        with m:
+            pm.sample_posterior_predictive(idata)
+        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [x, y, z]")]
+        caplog.clear()
+
+    def test_logging_sampled_basic_rvs_posterior_mutable(self, caplog):
+        with pm.Model() as m:
+            x1 = pm.MutableData("x1", 0)
+            y1 = pm.Normal("y1", x1)
+
+            x2 = pm.ConstantData("x2", 0)
+            y2 = pm.Normal("y2", x2)
+
+            z = pm.Normal("z", y1 + y2, observed=0)
+
+        # `y1` will be recomputed because it depends on a `MutableData` whereas `y2` won't
+        # This behavior might change in the future, as it is undesirable when `MutableData`
+        # hasn't changed since sampling
+        idata = az_from_dict(posterior={"y1": np.zeros(5), "y2": np.zeros(5)})
+        with m:
+            pm.sample_posterior_predictive(idata)
+        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y1, z]")]
+        caplog.clear()
+
+        # `y1` should now be resampled regardless of whether it was in the trace or not
+        # as the posterior is no longer revelant!
+        x1.set_value(1)
+        with m:
+            pm.sample_posterior_predictive(idata)
+        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y1, z]")]
+        caplog.clear()
+
+    def test_logging_sampled_basic_rvs_posterior_deterministic(self, caplog):
+        with pm.Model() as m:
+            x = pm.Normal("x")
+            x_det = pm.Deterministic("x_det", x + 1)
+            y = pm.Normal("y", x_det)
+            z = pm.Normal("z", y, observed=0)
+
+        # Explicit resampling a deterministic will lead to resampling of downstream RV `y`
+        # This behavior could change in the future as the posterior of `y` is still valid
+        idata = az_from_dict(posterior={"x": np.zeros(5), "x_det": np.ones(5), "y": np.ones(5)})
+        with m:
+            pm.sample_posterior_predictive(idata, var_names=["x_det", "z"])
+        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y, z]")]
+        caplog.clear()
 
 
 @pytest.mark.xfail(
@@ -1621,11 +1726,12 @@ class TestCompileForwardSampler:
             sigma = pm.HalfNormal("sigma", 0.1)
             obs = pm.Normal("obs", mu, sigma, observed=y, shape=x.shape)
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             [obs],
             vars_in_trace=[alpha, beta, sigma, mu],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"alpha", "beta", "sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {"x", "alpha", "beta", "sigma"}
 
@@ -1639,11 +1745,12 @@ class TestCompileForwardSampler:
             sigma = pm.HalfNormal("sigma", 0.1)
             obs = pm.Normal("obs", mu, sigma, observed=y, shape=x.shape)
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             [obs],
             vars_in_trace=[alpha, beta, sigma, mu],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"alpha", "beta", "sigma", "mu"}
         assert {i.name for i in self.get_function_roots(f)} == {"mu", "sigma"}
 
@@ -1657,22 +1764,24 @@ class TestCompileForwardSampler:
             beta = pm.Normal("beta", 0, 0.1, size=p.shape)
             mu = pm.Deterministic("mu", beta[category])
             sigma = pm.HalfNormal("sigma", 0.1)
-            pm.Normal("obs", mu, sigma, observed=y, shape=mu.shape)
+            obs = pm.Normal("obs", mu, sigma, observed=y, shape=mu.shape)
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=model.observed_RVs,
             vars_in_trace=[beta, mu, sigma],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {category, obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"beta", "sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {"x", "p", "beta", "sigma"}
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=model.observed_RVs,
             vars_in_trace=[beta, mu, sigma],
             basic_rvs=model.basic_RVs,
             givens_dict={category: np.zeros(10, dtype=category.dtype)},
         )
+        assert volatile_rvs == {obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"beta", "sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {
             "x",
@@ -1688,17 +1797,18 @@ class TestCompileForwardSampler:
             mu = pm.Normal("mu", 0, 1)
             nested_mu = pm.Normal("nested_mu", mu, 1, size=10)
             sigma = pm.HalfNormal("sigma", 1)
-            pm.Normal("obs", nested_mu, sigma, observed=y, shape=nested_mu.shape)
+            obs = pm.Normal("obs", nested_mu, sigma, observed=y, shape=nested_mu.shape)
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=model.observed_RVs,
             vars_in_trace=[nested_mu, sigma],  # mu isn't in the trace and will be deemed volatile
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {mu, nested_mu, obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {"sigma"}
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=model.observed_RVs,
             vars_in_trace=[mu, nested_mu, sigma],
             basic_rvs=model.basic_RVs,
@@ -1706,6 +1816,7 @@ class TestCompileForwardSampler:
                 mu: np.array(1.0)
             },  # mu will be considered volatile because it's in givens
         )
+        assert volatile_rvs == {nested_mu, obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {"mu", "sigma"}
 
@@ -1719,27 +1830,30 @@ class TestCompileForwardSampler:
             mix_mu = pm.Mixture("mix_mu", w=w, comp_dists=components)
             obs = pm.Normal("obs", mix_mu, 1, observed=np.ones((5, 3)))
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=[obs],
             vars_in_trace=[mix_mu, mu, w],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"w", "mu", "mix_mu"}
         assert {i.name for i in self.get_function_roots(f)} == {"mix_mu"}
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=[obs],
             vars_in_trace=[mu, w],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {mix_mu, obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"w", "mu"}
         assert {i.name for i in self.get_function_roots(f)} == {"w", "mu"}
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=[obs],
             vars_in_trace=[mix_mu, mu],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {w, mix_mu, obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"mu"}
         assert {i.name for i in self.get_function_roots(f)} == {"mu"}
 
@@ -1749,19 +1863,21 @@ class TestCompileForwardSampler:
             mu = pm.Censored("mu", pm.Normal.dist(mu=latent_mu, sigma=1), lower=-1, upper=1)
             obs = pm.Normal("obs", mu, 1, observed=np.ones((10, 3)))
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=[obs],
             vars_in_trace=[latent_mu, mu],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"latent_mu", "mu"}
         assert {i.name for i in self.get_function_roots(f)} == {"mu"}
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=[obs],
             vars_in_trace=[mu],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {latent_mu, mu, obs}
         assert {i.name for i in self.get_function_inputs(f)} == set()
         assert {i.name for i in self.get_function_roots(f)} == set()
 
@@ -1776,27 +1892,30 @@ class TestCompileForwardSampler:
             chol = pm.Deterministic("chol", chol)
             obs = pm.MvNormal("obs", mu=mu, chol=chol, observed=np.zeros(3))
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=[obs],
             vars_in_trace=[chol_packed, chol],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"chol_packed", "chol"}
         assert {i.name for i in self.get_function_roots(f)} == {"chol"}
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=[obs],
             vars_in_trace=[chol_packed],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"chol_packed"}
         assert {i.name for i in self.get_function_roots(f)} == {"chol_packed"}
 
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=[obs],
             vars_in_trace=[chol],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {chol_packed, obs}
         assert {i.name for i in self.get_function_inputs(f)} == set()
         assert {i.name for i in self.get_function_roots(f)} == set()
 
@@ -1811,11 +1930,12 @@ class TestCompileForwardSampler:
             obs = pm.Normal("obs", y_abs, observed=np.zeros(10))
 
         # y_abs should be resampled even if in the trace, because the source y is missing
-        f = compile_forward_sampling_function(
+        f, volatile_rvs = compile_forward_sampling_function(
             outputs=[obs],
             vars_in_trace=[y_abs],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {y, obs}
         assert {i.name for i in self.get_function_inputs(f)} == set()
         assert {i.name for i in self.get_function_roots(f)} == set()
 

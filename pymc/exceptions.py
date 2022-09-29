@@ -74,3 +74,11 @@ class DtypeError(TypeError):
             super().__init__(f"{message} (expected {expected})")
         else:
             super().__init__(message)
+
+
+class TruncationError(RuntimeError):
+    """Exception for errors generated from truncated graphs"""
+
+
+class NotConstantValueError(ValueError):
+    pass

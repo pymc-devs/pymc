@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 import aesara.tensor as at
 import numpy as np
@@ -182,6 +183,14 @@ class Bound:
         **kwargs,
     ):
 
+        warnings.warn(
+            "Bound has been deprecated in favor of Truncated, and will be removed in a "
+            "future release. If Truncated is not an option, Bound can be implemented by"
+            "adding an IntervalTransform between lower and upper to a continuous "
+            "variable. A Potential that returns negative infinity for values outside "
+            "of the bounds can be used for discrete variables.",
+            FutureWarning,
+        )
         cls._argument_checks(dist, **kwargs)
 
         if dims is not None:

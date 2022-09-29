@@ -10,6 +10,7 @@ Distributions
    distributions/multivariate
    distributions/mixture
    distributions/timeseries
+   distributions/truncated
    distributions/censored
    distributions/simulator
    distributions/transforms

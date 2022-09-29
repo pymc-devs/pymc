@@ -13,19 +13,22 @@
 #   limitations under the License.
 
 import io
+import itertools as it
 
+import aesara
+import aesara.tensor as at
+import cloudpickle
 import numpy as np
 import pytest
+import scipy.stats as st
 
 from aesara import shared
-from aesara.tensor import TensorConstant
 from aesara.tensor.var import TensorVariable
 
 import pymc as pm
 
-from pymc.aesaraf import floatX
-from pymc.exceptions import ShapeError
-from pymc.tests.helpers import SeededTest
+from pymc.aesaraf import GeneratorOp, floatX
+from pymc.tests.helpers import SeededTest, select_by_precision
 
 
 class TestData(SeededTest):
@@ -315,8 +318,8 @@ class TestData(SeededTest):
         # pass coordinates explicitly, use numpy array in Data container
         with pm.Model(coords=coords) as pmodel:
             # Dims created from coords are constant by default
-            assert isinstance(pmodel.dim_lengths["rows"], TensorConstant)
-            assert isinstance(pmodel.dim_lengths["columns"], TensorConstant)
+            assert isinstance(pmodel.dim_lengths["rows"], at.TensorConstant)
+            assert isinstance(pmodel.dim_lengths["columns"], at.TensorConstant)
             pm.MutableData("observations", data, dims=("rows", "columns"))
             # new data with same (!) shape
             pm.set_data({"observations": data + 1})
@@ -366,20 +369,6 @@ class TestData(SeededTest):
             intensity.set_value(floatX(np.ones((4, 5))))
             assert pmodel.dim_lengths["row"].eval() == 4
             assert pmodel.dim_lengths["column"].eval() == 5
-
-    def test_no_resize_of_implied_dimensions(self):
-        with pm.Model() as pmodel:
-            # Imply a dimension through RV params
-            pm.Normal("n", mu=[1, 2, 3], dims="city")
-            # _Use_ the dimension for a data variable
-            inhabitants = pm.MutableData("inhabitants", [100, 200, 300], dims="city")
-
-            # Attempting to re-size the dimension through the data variable would
-            # cause shape problems in InferenceData conversion, because the RV remains (3,).
-            with pytest.raises(
-                ShapeError, match="was initialized from 'n' which is not a shared variable"
-            ):
-                pmodel.set_data("inhabitants", [1, 2, 3, 4])
 
     def test_implicit_coords_series(self):
         pd = pytest.importorskip("pandas")
@@ -432,7 +421,7 @@ class TestData(SeededTest):
         with pm.Model():
             with pytest.warns(UserWarning, match="`mutable` kwarg was not specified"):
                 data = pm.Data("x", [1, 2, 3])
-            assert isinstance(data, TensorConstant)
+            assert isinstance(data, at.TensorConstant)
         pass
 
 
@@ -451,3 +440,331 @@ def test_data_naming():
 def test_get_data():
     data = pm.get_data("radon.csv")
     assert type(data) == io.BytesIO
+
+
+class _DataSampler:
+    """
+    Not for users
+    """
+
+    def __init__(self, data, batchsize=50, random_seed=42, dtype="floatX"):
+        self.dtype = aesara.config.floatX if dtype == "floatX" else dtype
+        self.rng = np.random.RandomState(random_seed)
+        self.data = data
+        self.n = batchsize
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        idx = self.rng.uniform(size=self.n, low=0.0, high=self.data.shape[0] - 1e-16).astype(
+            "int64"
+        )
+        return np.asarray(self.data[idx], self.dtype)
+
+    next = __next__
+
+
+@pytest.fixture(scope="module")
+def datagen():
+    return _DataSampler(np.random.uniform(size=(1000, 10)))
+
+
+def integers():
+    i = 0
+    while True:
+        yield pm.floatX(i)
+        i += 1
+
+
+def integers_ndim(ndim):
+    i = 0
+    while True:
+        yield np.ones((2,) * ndim) * i
+        i += 1
+
+
+@pytest.mark.usefixtures("strict_float32")
+class TestGenerator:
+    def test_basic(self):
+        generator = pm.GeneratorAdapter(integers())
+        gop = GeneratorOp(generator)()
+        assert gop.tag.test_value == np.float32(0)
+        f = aesara.function([], gop)
+        assert f() == np.float32(0)
+        assert f() == np.float32(1)
+        for _ in range(2, 100):
+            f()
+        assert f() == np.float32(100)
+
+    def test_ndim(self):
+        for ndim in range(10):
+            res = list(it.islice(integers_ndim(ndim), 0, 2))
+            generator = pm.GeneratorAdapter(integers_ndim(ndim))
+            gop = GeneratorOp(generator)()
+            f = aesara.function([], gop)
+            assert ndim == res[0].ndim
+            np.testing.assert_equal(f(), res[0])
+            np.testing.assert_equal(f(), res[1])
+
+    def test_cloning_available(self):
+        gop = pm.generator(integers())
+        res = gop**2
+        shared = aesara.shared(pm.floatX(10))
+        res1 = aesara.clone_replace(res, {gop: shared})
+        f = aesara.function([], res1)
+        assert f() == np.float32(100)
+
+    def test_default_value(self):
+        def gen():
+            for i in range(2):
+                yield pm.floatX(np.ones((10, 10)) * i)
+
+        gop = pm.generator(gen(), np.ones((10, 10)) * 10)
+        f = aesara.function([], gop)
+        np.testing.assert_equal(np.ones((10, 10)) * 0, f())
+        np.testing.assert_equal(np.ones((10, 10)) * 1, f())
+        np.testing.assert_equal(np.ones((10, 10)) * 10, f())
+        with pytest.raises(ValueError):
+            gop.set_default(1)
+
+    def test_set_gen_and_exc(self):
+        def gen():
+            for i in range(2):
+                yield pm.floatX(np.ones((10, 10)) * i)
+
+        gop = pm.generator(gen())
+        f = aesara.function([], gop)
+        np.testing.assert_equal(np.ones((10, 10)) * 0, f())
+        np.testing.assert_equal(np.ones((10, 10)) * 1, f())
+        with pytest.raises(StopIteration):
+            f()
+        gop.set_gen(gen())
+        np.testing.assert_equal(np.ones((10, 10)) * 0, f())
+        np.testing.assert_equal(np.ones((10, 10)) * 1, f())
+
+    def test_pickling(self, datagen):
+        gen = pm.generator(datagen)
+        cloudpickle.loads(cloudpickle.dumps(gen))
+        bad_gen = pm.generator(integers())
+        with pytest.raises(TypeError):
+            cloudpickle.dumps(bad_gen)
+
+    def test_gen_cloning_with_shape_change(self, datagen):
+        gen = pm.generator(datagen)
+        gen_r = pm.at_rng().normal(size=gen.shape).T
+        X = gen.dot(gen_r)
+        res, _ = aesara.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
+        assert res.eval().shape == (50,)
+        shared = aesara.shared(datagen.data.astype(gen.dtype))
+        res2 = aesara.clone_replace(res, {gen: shared**2})
+        assert res2.eval().shape == (1000,)
+
+
+def gen1():
+    i = 0
+    while True:
+        yield np.ones((10, 100)) * i
+        i += 1
+
+
+def gen2():
+    i = 0
+    while True:
+        yield np.ones((20, 100)) * i
+        i += 1
+
+
+class TestScaling:
+    """
+    Related to minibatch training
+    """
+
+    def test_density_scaling(self):
+        with pm.Model() as model1:
+            pm.Normal("n", observed=[[1]], total_size=1)
+            p1 = aesara.function([], model1.logp())
+
+        with pm.Model() as model2:
+            pm.Normal("n", observed=[[1]], total_size=2)
+            p2 = aesara.function([], model2.logp())
+        assert p1() * 2 == p2()
+
+    def test_density_scaling_with_generator(self):
+        # We have different size generators
+
+        def true_dens():
+            g = gen1()
+            for i, point in enumerate(g):
+                yield st.norm.logpdf(point).sum() * 10
+
+        t = true_dens()
+        # We have same size models
+        with pm.Model() as model1:
+            pm.Normal("n", observed=gen1(), total_size=100)
+            p1 = aesara.function([], model1.logp())
+
+        with pm.Model() as model2:
+            gen_var = pm.generator(gen2())
+            pm.Normal("n", observed=gen_var, total_size=100)
+            p2 = aesara.function([], model2.logp())
+
+        for i in range(10):
+            _1, _2, _t = p1(), p2(), next(t)
+            decimals = select_by_precision(float64=7, float32=1)
+            np.testing.assert_almost_equal(_1, _t, decimal=decimals)  # Value O(-50,000)
+            np.testing.assert_almost_equal(_1, _2)
+        # Done
+
+    def test_gradient_with_scaling(self):
+        with pm.Model() as model1:
+            genvar = pm.generator(gen1())
+            m = pm.Normal("m")
+            pm.Normal("n", observed=genvar, total_size=1000)
+            grad1 = aesara.function([m.tag.value_var], at.grad(model1.logp(), m.tag.value_var))
+        with pm.Model() as model2:
+            m = pm.Normal("m")
+            shavar = aesara.shared(np.ones((1000, 100)))
+            pm.Normal("n", observed=shavar)
+            grad2 = aesara.function([m.tag.value_var], at.grad(model2.logp(), m.tag.value_var))
+
+        for i in range(10):
+            shavar.set_value(np.ones((100, 100)) * i)
+            g1 = grad1(1)
+            g2 = grad2(1)
+            np.testing.assert_almost_equal(g1, g2)
+
+    def test_multidim_scaling(self):
+        with pm.Model() as model0:
+            pm.Normal("n", observed=[[1, 1], [1, 1]], total_size=[])
+            p0 = aesara.function([], model0.logp())
+
+        with pm.Model() as model1:
+            pm.Normal("n", observed=[[1, 1], [1, 1]], total_size=[2, 2])
+            p1 = aesara.function([], model1.logp())
+
+        with pm.Model() as model2:
+            pm.Normal("n", observed=[[1], [1]], total_size=[2, 2])
+            p2 = aesara.function([], model2.logp())
+
+        with pm.Model() as model3:
+            pm.Normal("n", observed=[[1, 1]], total_size=[2, 2])
+            p3 = aesara.function([], model3.logp())
+
+        with pm.Model() as model4:
+            pm.Normal("n", observed=[[1]], total_size=[2, 2])
+            p4 = aesara.function([], model4.logp())
+
+        with pm.Model() as model5:
+            pm.Normal("n", observed=[[1]], total_size=[2, Ellipsis, 2])
+            p5 = aesara.function([], model5.logp())
+        _p0 = p0()
+        assert (
+            np.allclose(_p0, p1())
+            and np.allclose(_p0, p2())
+            and np.allclose(_p0, p3())
+            and np.allclose(_p0, p4())
+            and np.allclose(_p0, p5())
+        )
+
+    def test_common_errors(self):
+        with pytest.raises(ValueError) as e:
+            with pm.Model() as m:
+                pm.Normal("n", observed=[[1]], total_size=[2, Ellipsis, 2, 2])
+                m.logp()
+        assert "Length of" in str(e.value)
+        with pytest.raises(ValueError) as e:
+            with pm.Model() as m:
+                pm.Normal("n", observed=[[1]], total_size=[2, 2, 2])
+                m.logp()
+        assert "Length of" in str(e.value)
+        with pytest.raises(TypeError) as e:
+            with pm.Model() as m:
+                pm.Normal("n", observed=[[1]], total_size="foo")
+                m.logp()
+        assert "Unrecognized" in str(e.value)
+        with pytest.raises(TypeError) as e:
+            with pm.Model() as m:
+                pm.Normal("n", observed=[[1]], total_size=["foo"])
+                m.logp()
+        assert "Unrecognized" in str(e.value)
+        with pytest.raises(ValueError) as e:
+            with pm.Model() as m:
+                pm.Normal("n", observed=[[1]], total_size=[Ellipsis, Ellipsis])
+                m.logp()
+        assert "Double Ellipsis" in str(e.value)
+
+    def test_mixed1(self):
+        with pm.Model():
+            data = np.random.rand(10, 20, 30, 40, 50)
+            mb = pm.Minibatch(data, [2, None, 20, Ellipsis, 10])
+            pm.Normal("n", observed=mb, total_size=(10, None, 30, Ellipsis, 50))
+
+    def test_mixed2(self):
+        with pm.Model():
+            data = np.random.rand(10, 20, 30, 40, 50)
+            mb = pm.Minibatch(data, [2, None, 20])
+            pm.Normal("n", observed=mb, total_size=(10, None, 30))
+
+    def test_free_rv(self):
+        with pm.Model() as model4:
+            pm.Normal("n", observed=[[1, 1], [1, 1]], total_size=[2, 2])
+            p4 = aesara.function([], model4.logp())
+
+        with pm.Model() as model5:
+            n = pm.Normal("n", total_size=[2, Ellipsis, 2], size=(2, 2))
+            p5 = aesara.function([n.tag.value_var], model5.logp())
+        assert p4() == p5(pm.floatX([[1]]))
+        assert p4() == p5(pm.floatX([[1, 1], [1, 1]]))
+
+
+@pytest.mark.usefixtures("strict_float32")
+class TestMinibatch:
+    data = np.random.rand(30, 10, 40, 10, 50)
+
+    def test_1d(self):
+        mb = pm.Minibatch(self.data, 20)
+        assert mb.eval().shape == (20, 10, 40, 10, 50)
+
+    def test_2d(self):
+        mb = pm.Minibatch(self.data, [(10, 42), (4, 42)])
+        assert mb.eval().shape == (10, 4, 40, 10, 50)
+
+    @pytest.mark.parametrize(
+        "batch_size, expected",
+        [
+            ([(10, 42), None, (4, 42)], (10, 10, 4, 10, 50)),
+            ([(10, 42), Ellipsis, (4, 42)], (10, 10, 40, 10, 4)),
+            ([(10, 42), None, Ellipsis, (4, 42)], (10, 10, 40, 10, 4)),
+            ([10, None, Ellipsis, (4, 42)], (10, 10, 40, 10, 4)),
+        ],
+    )
+    def test_special_batch_size(self, batch_size, expected):
+        mb = pm.Minibatch(self.data, batch_size)
+        assert mb.eval().shape == expected
+
+    def test_cloning_available(self):
+        gop = pm.Minibatch(np.arange(100), 1)
+        res = gop**2
+        shared = aesara.shared(np.array([10]))
+        res1 = aesara.clone_replace(res, {gop: shared})
+        f = aesara.function([], res1)
+        assert f() == np.array([100])
+
+    def test_align(self):
+        m = pm.Minibatch(np.arange(1000), 1, random_seed=1)
+        n = pm.Minibatch(np.arange(1000), 1, random_seed=1)
+        f = aesara.function([], [m, n])
+        n.eval()  # not aligned
+        a, b = zip(*(f() for _ in range(1000)))
+        assert a != b
+        pm.align_minibatches()
+        a, b = zip(*(f() for _ in range(1000)))
+        assert a == b
+        n.eval()  # not aligned
+        pm.align_minibatches([m])
+        a, b = zip(*(f() for _ in range(1000)))
+        assert a != b
+        pm.align_minibatches([m, n])
+        a, b = zip(*(f() for _ in range(1000)))
+        assert a == b

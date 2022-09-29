@@ -199,7 +199,7 @@ class Interval(IntervalTransform):
     lower : int or float, optional
         Lower bound of the interval transform. Must be a constant finite value.
         By default (``lower=None``), the interval is not bounded below.
-    upper : int or float, optinoal
+    upper : int or float, optional
         Upper bound of the interval transform. Must be a constant finite value.
         By default (``upper=None``), the interval is not bounded above.
     bounds_fn : callable, optional
