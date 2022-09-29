@@ -1501,6 +1501,23 @@ class TestZeroSumNormal:
                     random_samples.mean(axis=ax), 0
                 ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
 
+    @pytest.mark.parametrize(
+        "sigma, n",
+        [
+            (5, 3),
+            (2, 6),
+        ],
+    )
+    def test_zsn_variance(self, sigma, n):
+
+        dist = pm.ZeroSumNormal.dist(sigma=sigma, shape=n)
+        random_samples = pm.draw(dist, draws=100_000)
+
+        empirical_var = random_samples.var(axis=0)
+        theoretical_var = sigma**2 * (n - 1) / n
+
+        np.testing.assert_allclose(empirical_var, theoretical_var, rtol=1e-02)
+
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, cov, rng):
