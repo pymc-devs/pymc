@@ -1432,14 +1432,14 @@ class TestZeroSumNormal:
         "error, match, shape, support_shape, zerosum_axes",
         [
             (IndexError, "index out of range", (3, 4, 5), None, 4),
-            (AssertionError, "does not match", (3, 4), 3, None),  # support_shape should be 4
+            (AssertionError, "does not match", (3, 4), (3,), None),  # support_shape should be 4
             (
                 AssertionError,
                 "does not match",
                 (3, 4),
                 (3, 4),
                 None,
-            ),  # doesn't work because zerosum_axes = 1
+            ),  # doesn't work because zerosum_axes = 1 by default
         ],
     )
     def test_zsn_fail_axis(self, error, match, shape, support_shape, zerosum_axes):
@@ -1449,9 +1449,20 @@ class TestZeroSumNormal:
                     "v", shape=shape, support_shape=support_shape, zerosum_axes=zerosum_axes
                 )
 
-        # v = pm.ZeroSumNormal("v", support_shape=(3, 4), zerosum_axes=2) # should work
+    @pytest.mark.parametrize(
+        "shape, support_shape",
+        [
+            (None, (3, 4)),
+            ((3, 4), (3, 4)),
+        ],
+    )
+    def test_zsn_support_shape(self, shape, support_shape):
+        with pm.Model() as m:
+            v = pm.ZeroSumNormal("v", shape=shape, support_shape=support_shape, zerosum_axes=2)
 
-        # v = pm.ZeroSumNormal("v", shape=(3, 4), support_shape=(3, 4), zerosum_axes=2) this should work but doesn't
+        random_samples = pm.draw(v, draws=10)
+        zerosum_axes = np.arange(-2, 0)
+        self.assert_zerosum_axes(random_samples, zerosum_axes)
 
     @pytest.mark.parametrize(
         "zerosum_axes",
@@ -1465,9 +1476,9 @@ class TestZeroSumNormal:
         self.assert_zerosum_axes(random_samples, zerosum_axes)
 
         new_dist = change_dist_size(base_dist, new_size=(5, 3), expand=False)
-        if zerosum_axes == 1:
+        try:
             assert new_dist.eval().shape == (5, 3, 9)
-        elif zerosum_axes == 2:
+        except AssertionError:
             assert new_dist.eval().shape == (5, 3, 4, 9)
         random_samples = pm.draw(new_dist, draws=100)
         self.assert_zerosum_axes(random_samples, zerosum_axes)
