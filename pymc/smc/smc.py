@@ -274,7 +274,7 @@ class SMC_KERNEL(ABC):
 
     def resample(self):
         """Resample particles based on importance weights"""
-        self.resampling_indexes = systematic(self.weights)
+        self.resampling_indexes = systematic_resampling(self.weights, self.rng)
 
         self.tempered_posterior = self.tempered_posterior[self.resampling_indexes]
         self.prior_logp = self.prior_logp[self.resampling_indexes]
@@ -544,7 +544,7 @@ class MH(SMC_KERNEL):
         return stats
 
 
-def systematic(weights):
+def systematic_resampling(weights, rng):
     """
     Systematic resampling.
 
@@ -560,7 +560,7 @@ def systematic(weights):
     """
     lnw = len(weights)
     arange = np.arange(lnw)
-    uniform = (np.random.rand(1) + arange) / lnw
+    uniform = (rng.random(1) + arange) / lnw
 
     idx = 0
     weight_accu = weights[0]
