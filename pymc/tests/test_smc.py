@@ -286,3 +286,11 @@ class TestMHKernel(SeededTest):
                     kernel=pm.smc.MH,
                     return_inferencedata=False,
                 )
+
+
+def test_systematic():
+    rng = np.random.default_rng(seed=34)
+    weights = [0.33, 0.33, 0.33]
+    np.testing.assert_array_equal(pm.smc.systematic_resampling(weights, rng), [0, 1, 2])
+    weights = [0.99, 0.01]
+    np.testing.assert_array_equal(pm.smc.systematic_resampling(weights, rng), [0, 0])
