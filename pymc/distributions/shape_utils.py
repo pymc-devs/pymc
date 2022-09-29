@@ -741,8 +741,13 @@ def get_support_shape(
         inferred_support_shape = support_shape
     # If there are two sources of information for the support shapes, assert they are consistent:
     elif support_shape is not None:
-        inferred_support_shape = Assert(msg="support_shape does not match last shape dimension")(
-            inferred_support_shape, at.all(at.eq(inferred_support_shape, support_shape))
+        inferred_support_shape = at.stack(
+            [
+                Assert(msg="support_shape does not match last shape dimension")(
+                    inferred, at.eq(inferred, explicit)
+                )
+                for inferred, explicit in zip(inferred_support_shape, support_shape)
+            ]
         )
 
     return inferred_support_shape
