@@ -2488,7 +2488,7 @@ class ZeroSumNormal(Distribution):
         if support_shape is None:
             if zerosum_axes > 0:
                 raise ValueError("You must specify dims, shape or support_shape parameter")
-            # edge-case doesn't work for now, because at.stack in get_support_shape fails
+            # TODO: edge-case doesn't work for now, because at.stack in get_support_shape fails
             # else:
             #     support_shape = () # because it's just a Normal in that case
         support_shape = at.as_tensor_variable(intX(support_shape))
@@ -2551,12 +2551,6 @@ class ZeroSumNormal(Distribution):
             outputs=[zerosum_rv_, support_shape_],
             ndim_supp=zerosum_axes,
         )(normal_dist, sigma, support_shape)
-
-        # TODO:
-        # test get_support_shape with 2D
-        # test ZSN logp
-        # test ZSN variance
-        # fix failing Ubuntu test
 
 
 @_change_dist_size.register(ZeroSumNormalRV)
