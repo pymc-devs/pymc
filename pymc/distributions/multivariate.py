@@ -2567,7 +2567,7 @@ def change_zerosum_size(op, normal_dist, new_size, expand=False):
 
     if expand:
         original_shape = tuple(normal_dist.shape)
-        old_size = original_shape[len(original_shape) - op.ndim_supp :]
+        old_size = original_shape[: len(original_shape) - op.ndim_supp]
         new_size = tuple(new_size) + old_size
 
     return ZeroSumNormal.rv_op(
