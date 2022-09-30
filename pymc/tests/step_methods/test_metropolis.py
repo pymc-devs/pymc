@@ -272,6 +272,7 @@ class TestDEMetropolisZ:
                 cores=1,
                 chains=3,
                 discard_tuned_samples=False,
+                random_seed=1,
             )
         for c in idata.posterior.chain:
             # check that the tuned settings changed and were reset
