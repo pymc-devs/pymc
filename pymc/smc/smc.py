@@ -274,9 +274,7 @@ class SMC_KERNEL(ABC):
 
     def resample(self):
         """Resample particles based on importance weights"""
-        self.resampling_indexes = self.rng.choice(
-            np.arange(self.draws), size=self.draws, p=self.weights
-        )
+        self.resampling_indexes = systematic_resampling(self.weights, self.rng)
 
         self.tempered_posterior = self.tempered_posterior[self.resampling_indexes]
         self.prior_logp = self.prior_logp[self.resampling_indexes]
@@ -544,6 +542,36 @@ class MH(SMC_KERNEL):
             }
         )
         return stats
+
+
+def systematic_resampling(weights, rng):
+    """
+    Systematic resampling.
+
+    Parameters
+    ----------
+    weights :
+        The weights should be probabilities and the total sum should be 1.
+
+    Returns
+    -------
+    new_indices: array
+        A vector of indices in the interval 0, ..., len(normalized_weights)
+    """
+    lnw = len(weights)
+    arange = np.arange(lnw)
+    uniform = (rng.random(1) + arange) / lnw
+
+    idx = 0
+    weight_accu = weights[0]
+    new_indices = np.empty(lnw, dtype=int)
+    for i in arange:
+        while uniform[i] > weight_accu:
+            idx += 1
+            weight_accu += weights[idx]
+        new_indices[i] = idx
+
+    return new_indices
 
 
 def _logp_forw(point, out_vars, in_vars, shared):
