@@ -605,7 +605,7 @@ def test_change_specify_shape_size_multivariate():
 
 
 @pytest.mark.parametrize(
-    "steps, shape, step_shape_offset, expected_steps, consistent",
+    "support_shape, shape, support_shape_offset, expected_support_shape, consistent",
     [
         (10, None, 0, 10, True),
         (10, None, 1, 10, True),
@@ -621,11 +621,11 @@ def test_change_specify_shape_size_multivariate():
 )
 @pytest.mark.parametrize("info_source", ("shape", "dims", "observed"))
 def test_get_support_shape_1d(
-    info_source, steps, shape, step_shape_offset, expected_steps, consistent
+    info_source, support_shape, shape, support_shape_offset, expected_support_shape, consistent
 ):
     if info_source == "shape":
-        inferred_steps = get_support_shape_1d(
-            support_shape=steps, shape=shape, support_shape_offset=step_shape_offset
+        inferred_support_shape = get_support_shape_1d(
+            support_shape=support_shape, shape=shape, support_shape_offset=support_shape_offset
         )
 
     elif info_source == "dims":
@@ -633,11 +633,11 @@ def test_get_support_shape_1d(
             dims = None
             coords = {}
         else:
-            dims = tuple(str(i) for i, shape in enumerate(shape))
+            dims = tuple(str(i) for i, _ in enumerate(shape))
             coords = {str(i): range(shape) for i, shape in enumerate(shape)}
         with Model(coords=coords):
-            inferred_steps = get_support_shape_1d(
-                support_shape=steps, dims=dims, support_shape_offset=step_shape_offset
+            inferred_support_shape = get_support_shape_1d(
+                support_shape=support_shape, dims=dims, support_shape_offset=support_shape_offset
             )
 
     elif info_source == "observed":
@@ -645,20 +645,22 @@ def test_get_support_shape_1d(
             observed = None
         else:
             observed = np.zeros(shape)
-        inferred_steps = get_support_shape_1d(
-            support_shape=steps, observed=observed, support_shape_offset=step_shape_offset
+        inferred_support_shape = get_support_shape_1d(
+            support_shape=support_shape,
+            observed=observed,
+            support_shape_offset=support_shape_offset,
         )
 
-    if not isinstance(inferred_steps, TensorVariable):
-        assert inferred_steps == expected_steps
+    if not isinstance(inferred_support_shape, TensorVariable):
+        assert inferred_support_shape == expected_support_shape
     else:
         if consistent:
-            assert inferred_steps.eval() == expected_steps
+            assert inferred_support_shape.eval() == expected_support_shape
         else:
             # check that inferred steps is still correct by ignoring the assert
             f = aesara.function(
-                [], inferred_steps, mode=Mode().including("local_remove_all_assert")
+                [], inferred_support_shape, mode=Mode().including("local_remove_all_assert")
             )
-            assert f() == expected_steps
-            with pytest.raises(AssertionError, match="Steps do not match"):
-                inferred_steps.eval()
+            assert f() == expected_support_shape
+            with pytest.raises(AssertionError, match="support_shape does not match"):
+                inferred_support_shape.eval()

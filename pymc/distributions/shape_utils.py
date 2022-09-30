@@ -755,6 +755,8 @@ def get_support_shape_1d(
     """Helper function for cases when you just care about one dimension."""
     if support_shape is not None:
         support_shape_tuple = (support_shape,)
+    else:
+        support_shape_tuple = None
 
     support_shape_tuple = get_support_shape(
         support_shape_tuple,
