@@ -53,12 +53,31 @@ def _icdf_not_implemented(*args, **kwargs):
     raise NotImplementedError()
 
 
-def test_truncation_specialized_op():
+@pytest.mark.parametrize("shape_info", ("shape", "dims", "observed"))
+def test_truncation_specialized_op(shape_info):
     rng = aesara.shared(np.random.default_rng())
     x = at.random.normal(0, 10, rng=rng, name="x")
 
-    xt = Truncated.dist(x, lower=5, upper=15, shape=(100,))
+    with Model(coords={"dim": range(100)}) as m:
+        if shape_info == "shape":
+            xt = Truncated("xt", dist=x, lower=5, upper=15, shape=(100,))
+        elif shape_info == "dims":
+            xt = Truncated("xt", dist=x, lower=5, upper=15, dims=("dim",))
+        elif shape_info == "observed":
+            xt = Truncated(
+                "xt",
+                dist=x,
+                lower=5,
+                upper=15,
+                observed=np.empty(
+                    100,
+                ),
+            )
+        else:
+            raise ValueError(f"Not a valid shape_info parametrization: {shape_info}")
+
     assert isinstance(xt.owner.op, TruncatedNormalRV)
+    assert xt.shape.eval() == (100,)
 
     # Test RNG is not reused
     assert xt.owner.inputs[0] is not rng

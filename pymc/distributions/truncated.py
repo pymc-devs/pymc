@@ -53,7 +53,7 @@ MeasurableVariable.register(TruncatedRV)
 
 
 @singledispatch
-def _truncated(op: Op, lower, upper, *params):
+def _truncated(op: Op, lower, upper, size, *params):
     """Return the truncated equivalent of another `RandomVariable`."""
     raise NotImplementedError(f"{op} does not have an equivalent truncated version implemented")
 
@@ -150,7 +150,7 @@ class Truncated(Distribution):
 
         # Try to use specialized Op
         try:
-            return _truncated(dist.owner.op, lower, upper, *dist.owner.inputs)
+            return _truncated(dist.owner.op, lower, upper, size, *dist.owner.inputs)
         except NotImplementedError:
             pass
 
@@ -339,7 +339,7 @@ def truncated_logprob(op, values, *inputs, **kwargs):
 
 
 @_truncated.register(NormalRV)
-def _truncated_normal(op, lower, upper, rng, size, dtype, mu, sigma):
+def _truncated_normal(op, lower, upper, size, rng, old_size, dtype, mu, sigma):
     return TruncatedNormal.dist(
         mu=mu,
         sigma=sigma,
