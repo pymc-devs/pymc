@@ -37,6 +37,7 @@ from pymc.distributions.shape_utils import (
     convert_shape,
     convert_size,
     get_broadcastable_dist_samples,
+    get_support_shape,
     get_support_shape_1d,
     rv_size_is_none,
     shapes_broadcasting,
@@ -662,5 +663,81 @@ def test_get_support_shape_1d(
                 [], inferred_support_shape, mode=Mode().including("local_remove_all_assert")
             )
             assert f() == expected_support_shape
+            with pytest.raises(AssertionError, match="support_shape does not match"):
+                inferred_support_shape.eval()
+
+
+@pytest.mark.parametrize(
+    "support_shape, shape, support_shape_offset, expected_support_shape, ndim_supp, consistent",
+    [
+        ((10, 5), None, (0,), (10, 5), 1, True),
+        ((10, 5), None, (1, 1), (10, 5), 1, True),
+        (None, (10, 5), (0,), 5, 1, True),
+        (None, (10, 5), (1,), 4, 1, True),
+        (None, (10, 5, 2), (0,), 2, 1, True),
+        (None, None, None, None, 1, True),
+        ((10, 5), (10, 5), None, (10, 5), 2, True),
+        ((10, 5), (11, 10, 5), None, (10, 5), 2, True),
+        (None, (11, 10, 5), (0, 1, 0), (11, 9, 5), 3, True),
+        ((10, 5), (10, 5, 5), (0,), (5,), 1, False),
+        ((10, 5), (10, 5), (1, 1), (9, 4), 2, False),
+    ],
+)
+@pytest.mark.parametrize("info_source", ("shape", "dims", "observed"))
+def test_get_support_shape(
+    info_source,
+    support_shape,
+    shape,
+    support_shape_offset,
+    expected_support_shape,
+    ndim_supp,
+    consistent,
+):
+    if info_source == "shape":
+        inferred_support_shape = get_support_shape(
+            support_shape=support_shape,
+            shape=shape,
+            support_shape_offset=support_shape_offset,
+            ndim_supp=ndim_supp,
+        )
+
+    elif info_source == "dims":
+        if shape is None:
+            dims = None
+            coords = {}
+        else:
+            dims = tuple(str(i) for i, _ in enumerate(shape))
+            coords = {str(i): range(shape) for i, shape in enumerate(shape)}
+        with Model(coords=coords):
+            inferred_support_shape = get_support_shape(
+                support_shape=support_shape,
+                dims=dims,
+                support_shape_offset=support_shape_offset,
+                ndim_supp=ndim_supp,
+            )
+
+    elif info_source == "observed":
+        if shape is None:
+            observed = None
+        else:
+            observed = np.zeros(shape)
+        inferred_support_shape = get_support_shape(
+            support_shape=support_shape,
+            observed=observed,
+            support_shape_offset=support_shape_offset,
+            ndim_supp=ndim_supp,
+        )
+
+    if not isinstance(inferred_support_shape, TensorVariable):
+        assert inferred_support_shape == expected_support_shape
+    else:
+        if consistent:
+            assert (inferred_support_shape.eval() == expected_support_shape).all()
+        else:
+            # check that inferred support shape is still correct by ignoring the assert
+            f = aesara.function(
+                [], inferred_support_shape, mode=Mode().including("local_remove_all_assert")
+            )
+            assert (f() == expected_support_shape).all()
             with pytest.raises(AssertionError, match="support_shape does not match"):
                 inferred_support_shape.eval()
