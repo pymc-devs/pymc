@@ -14,7 +14,7 @@ A more accessible, user facing deep introduction can be found in [Peadar Coyle's
 Probability distributions in PyMC are implemented as classes that inherit from {class}`~pymc.Continuous` or {class}`~pymc.Discrete`.
 Either of these inherit {class}`~pymc.Distribution` which defines the high level API.
 
-For a detailed introduction on how a new distribution should be implemented check out the {ref}`guide on implementing distributions <developer_guide_implementing_distribution>`.
+For a detailed introduction on how a new distribution should be implemented check out the {ref}`guide on implementing distributions <implementing_distribution>`.
 
 
 ## Reflection
