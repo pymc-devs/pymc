@@ -583,18 +583,20 @@ class GARCH11(Distribution):
     rv_type = GARCH11RV
 
     def __new__(cls, *args, steps=None, **kwargs):
-        steps = get_steps(
-            steps=steps,
+        steps = get_support_shape_1d(
+            support_shape=steps,
             shape=None,  # Shape will be checked in `cls.dist`
             dims=kwargs.get("dims", None),
             observed=kwargs.get("observed", None),
-            step_shape_offset=1,
+            support_shape_offset=1,
         )
         return super().__new__(cls, *args, steps=steps, **kwargs)
 
     @classmethod
     def dist(cls, omega, alpha_1, beta_1, initial_vol, *, steps=None, **kwargs):
-        steps = get_steps(steps=steps, shape=kwargs.get("shape", None), step_shape_offset=1)
+        steps = get_support_shape_1d(
+            support_shape=steps, shape=kwargs.get("shape", None), support_shape_offset=1
+        )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
         steps = at.as_tensor_variable(intX(steps), ndim=0)
