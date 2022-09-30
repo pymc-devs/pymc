@@ -25,7 +25,7 @@ from aesara.graph.basic import Node, clone_replace
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
-from pymc.aesaraf import constant_fold, convert_observed_data, floatX, intX
+from pymc.aesaraf import constant_fold, floatX, intX
 from pymc.distributions import distribution, multivariate
 from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
 from pymc.distributions.distribution import (
@@ -42,7 +42,6 @@ from pymc.distributions.shape_utils import (
     to_tuple,
 )
 from pymc.exceptions import NotConstantValueError
-from pymc.model import modelcontext
 from pymc.util import check_dist_not_registered
 
 __all__ = [
