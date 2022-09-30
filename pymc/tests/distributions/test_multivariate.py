@@ -1399,19 +1399,44 @@ COORDS = {
 
 class TestZeroSumNormal:
     @pytest.mark.parametrize(
-        "dims, zerosum_axes, shape",
+        "dims, zerosum_axes",
         [
-            (("regions", "answers"), None, None),
-            (("regions", "answers"), 1, None),
-            (("regions", "answers"), 2, None),
-            (None, None, (len(COORDS["regions"]), len(COORDS["answers"]))),
-            (None, 1, (len(COORDS["regions"]), len(COORDS["answers"]))),
-            (None, 2, (len(COORDS["regions"]), len(COORDS["answers"]))),
+            (("regions", "answers"), None),
+            (("regions", "answers"), 1),
+            (("regions", "answers"), 2),
         ],
     )
-    def test_zsn_dims_shape(self, dims, zerosum_axes, shape):
+    def test_zsn_dims(self, dims, zerosum_axes):
         with pm.Model(coords=COORDS) as m:
-            v = pm.ZeroSumNormal("v", dims=dims, shape=shape, zerosum_axes=zerosum_axes)
+            v = pm.ZeroSumNormal("v", dims=dims, zerosum_axes=zerosum_axes)
+            s = pm.sample(10, chains=1, tune=100)
+
+        # to test forward graph
+        random_samples = pm.draw(v, draws=10)
+
+        assert s.posterior.v.shape == (1, 10, len(COORDS["regions"]), len(COORDS["answers"]))
+
+        ndim_supp = v.owner.op.ndim_supp
+        zerosum_axes = np.arange(-ndim_supp, 0)
+        nonzero_axes = np.arange(v.ndim - ndim_supp)
+        for samples in [
+            s.posterior.v,
+            random_samples,
+        ]:
+            self.assert_zerosum_axes(samples, zerosum_axes)
+            self.assert_zerosum_axes(samples, nonzero_axes, check_zerosum_axes=False)
+
+    @pytest.mark.parametrize(
+        "zerosum_axes, shape",
+        [
+            (None, (len(COORDS["regions"]), len(COORDS["answers"]))),
+            (1, (len(COORDS["regions"]), len(COORDS["answers"]))),
+            (2, (len(COORDS["regions"]), len(COORDS["answers"]))),
+        ],
+    )
+    def test_zsn_shape(self, shape, zerosum_axes):
+        with pm.Model(coords=COORDS) as m:
+            v = pm.ZeroSumNormal("v", shape=shape, zerosum_axes=zerosum_axes)
             s = pm.sample(10, chains=1, tune=100)
 
         # to test forward graph
