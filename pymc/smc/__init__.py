@@ -12,4 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc.smc.sample_smc import sample_smc
+from pymc.smc.kernels import IMH, MH
+from pymc.smc.sampling import sample_smc
+
+__all__ = ("sample_smc",)

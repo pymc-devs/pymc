@@ -53,8 +53,8 @@ pymc/parallel_sampling.py
 pymc/plots/__init__.py
 pymc/sampling.py
 pymc/smc/__init__.py
-pymc/smc/sample_smc.py
-pymc/smc/smc.py
+pymc/smc/sampling.py
+pymc/smc/kernels.py
 pymc/stats/__init__.py
 pymc/step_methods/__init__.py
 pymc/step_methods/compound.py

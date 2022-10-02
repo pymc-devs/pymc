@@ -24,7 +24,7 @@ import pymc as pm
 
 from pymc.aesaraf import floatX
 from pymc.backends.base import MultiTrace
-from pymc.smc.smc import IMH
+from pymc.smc.kernels import IMH, systematic_resampling
 from pymc.tests.helpers import SeededTest, assert_random_state_equal
 
 
@@ -291,6 +291,6 @@ class TestMHKernel(SeededTest):
 def test_systematic():
     rng = np.random.default_rng(seed=34)
     weights = [0.33, 0.33, 0.33]
-    np.testing.assert_array_equal(pm.smc.systematic_resampling(weights, rng), [0, 1, 2])
+    np.testing.assert_array_equal(systematic_resampling(weights, rng), [0, 1, 2])
     weights = [0.99, 0.01]
-    np.testing.assert_array_equal(pm.smc.systematic_resampling(weights, rng), [0, 0])
+    np.testing.assert_array_equal(systematic_resampling(weights, rng), [0, 0])
