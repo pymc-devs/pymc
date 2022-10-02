@@ -36,7 +36,7 @@ from pymc.parallel_sampling import _cpu_count
 from pymc.smc.smc import IMH
 
 
-def sample_smc(
+def sampling(
     draws=2000,
     kernel=IMH,
     *,
