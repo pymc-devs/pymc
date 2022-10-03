@@ -22,6 +22,16 @@ from aesara.tensor.var import TensorConstant
 
 import pymc as pm
 
+from pymc.distributions import (
+    Cauchy,
+    Censored,
+    GaussianRandomWalk,
+    Mixture,
+    Normal,
+    StudentT,
+    Truncated,
+    ZeroInflatedPoisson,
+)
 from pymc.exceptions import ImputationWarning
 from pymc.model_graph import ModelGraph, model_to_graphviz, model_to_networkx
 from pymc.tests.helpers import SeededTest
@@ -360,3 +370,42 @@ class TestVariableSelection:
         mg = ModelGraph(model_with_different_descendants())
         assert set(mg.vars_to_plot(var_names=var_names)) == set(vars_to_plot)
         assert mg.make_compute_graph(var_names=var_names) == compute_graph
+
+
+@pytest.mark.parametrize(
+    "symbolic_dist, dist_kwargs, display_name",
+    [
+        (ZeroInflatedPoisson, {"psi": 0.5, "mu": 5}, "ZeroInflatedPoisson"),
+        (
+            Censored,
+            {"dist": Normal.dist(Normal.dist(0.0, 5.0), 2.0), "lower": -2, "upper": 2},
+            "CensoredNormal",
+        ),
+        (
+            Mixture,
+            {"w": [0.5, 0.5], "comp_dists": Normal.dist(0.0, 5.0, shape=(2,))},
+            "NormalMixture",
+        ),
+        (
+            Mixture,
+            {"w": [0.5, 0.5], "comp_dists": [Normal.dist(0.0, 5.0), StudentT.dist(7.0)]},
+            "Normal-StudentTMixture",
+        ),
+        (
+            Mixture,
+            {
+                "w": [0.3, 0.45, 0.25],
+                "comp_dists": [Normal.dist(0.0, 5.0), StudentT.dist(7.0), Cauchy.dist(1.0, 1.0)],
+            },
+            "MarginalMixture",
+        ),
+        (GaussianRandomWalk, {"init_dist": Normal.dist(0.0, 5.0), "steps": 10}, "RandomWalk"),
+        (Truncated, {"dist": StudentT.dist(7), "upper": 3.0}, "TruncatedStudentT"),
+    ],
+)
+def test_symbolic_distribution_display(symbolic_dist, dist_kwargs, display_name):
+    with pm.Model() as model:
+        symbolic_dist("x", **dist_kwargs)
+
+    graph = model_to_graphviz(model)
+    assert display_name in graph.source
