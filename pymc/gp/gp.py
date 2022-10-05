@@ -307,7 +307,7 @@ class TP(Latent):
             v = pm.StudentT(name + "_rotated_", mu=0.0, sigma=1.0, nu=self.nu, size=size, **kwargs)
             f = pm.Deterministic(name, mu + cholesky(cov).dot(v), dims=kwargs.get("dims", None))
         else:
-            f = pm.MvStudentT(name, nu=self.nu, mu=mu, cov=cov, **kwargs)
+            f = pm.MvStudentT(name, nu=self.nu, mu=mu, scale=cov, **kwargs)
         return f
 
     def prior(self, name, X, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
@@ -376,7 +376,7 @@ class TP(Latent):
         X = self.X
         f = self.f
         nu2, mu, cov = self._build_conditional(Xnew, X, f, jitter)
-        return pm.MvStudentT(name, nu=nu2, mu=mu, cov=cov, **kwargs)
+        return pm.MvStudentT(name, nu=nu2, mu=mu, scale=cov, **kwargs)
 
 
 @conditioned_vars(["X", "y", "sigma"])

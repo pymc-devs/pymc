@@ -380,7 +380,7 @@ class MvStudentT(Continuous):
     def dist(cls, nu, Sigma=None, mu=None, scale=None, tau=None, chol=None, lower=True, **kwargs):
         if kwargs.get("cov") is not None:
             warnings.warn(
-                "Use the scale argument to specify the scale matrix."
+                "Use the scale argument to specify the scale matrix. "
                 "cov will be removed in future versions.",
                 FutureWarning,
             )

@@ -1049,7 +1049,7 @@ class TestMoments:
     )
     def test_mvstudentt_moment(self, nu, mu, cov, size, expected):
         with pm.Model() as model:
-            x = pm.MvStudentT("x", nu=nu, mu=mu, cov=cov, size=size)
+            x = pm.MvStudentT("x", nu=nu, mu=mu, scale=cov, size=size)
 
         # MvStudentT logp is only impemented for up to 2D variables
         assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
@@ -1369,8 +1369,8 @@ class TestMvNormalMisc:
 
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
-    def mvstudentt_rng_fn(self, size, nu, mu, cov, rng):
-        mv_samples = rng.multivariate_normal(np.zeros_like(mu), cov, size=size)
+    def mvstudentt_rng_fn(self, size, nu, mu, scale, rng):
+        mv_samples = rng.multivariate_normal(np.zeros_like(mu), scale, size=size)
         chi2_samples = rng.chisquare(nu, size=size)
         return (mv_samples / np.sqrt(chi2_samples[:, None] / nu)) + mu
 
@@ -1378,19 +1378,19 @@ class TestMvStudentTCov(BaseTestDistributionRandom):
     pymc_dist_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+        "scale": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
     expected_rv_op_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+        "scale": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
     sizes_to_check = [None, (1), (2, 3)]
     sizes_expected = [(2,), (1, 2), (2, 3, 2)]
     reference_dist_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+        "scale": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
     reference_dist = lambda self: ft.partial(self.mvstudentt_rng_fn, rng=self.get_random_state())
     checks_to_run = [
@@ -1409,29 +1409,29 @@ class TestMvStudentTCov(BaseTestDistributionRandom):
                     "mvstudentt",
                     nu=np.array([1, 2]),
                     mu=np.ones(2),
-                    cov=np.full((2, 2), np.ones(2)),
+                    scale=np.full((2, 2), np.ones(2)),
                 )
 
     def check_mu_broadcast_helper(self):
         """Test that mu is broadcasted to the shape of cov"""
-        x = pm.MvStudentT.dist(nu=4, mu=1, cov=np.eye(3))
+        x = pm.MvStudentT.dist(nu=4, mu=1, scale=np.eye(3))
         mu = x.owner.inputs[4]
         assert mu.eval().shape == (3,)
 
-        x = pm.MvStudentT.dist(nu=4, mu=np.ones(1), cov=np.eye(3))
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones(1), scale=np.eye(3))
         mu = x.owner.inputs[4]
         assert mu.eval().shape == (3,)
 
-        x = pm.MvStudentT.dist(nu=4, mu=np.ones((1, 1)), cov=np.eye(3))
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones((1, 1)), scale=np.eye(3))
         mu = x.owner.inputs[4]
         assert mu.eval().shape == (1, 3)
 
-        x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), cov=np.eye(3))
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), scale=np.eye(3))
         mu = x.owner.inputs[4]
         assert mu.eval().shape == (10, 3)
 
         # Cov is artificually limited to being 2D
-        # x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), cov=np.full((2, 3, 3), np.eye(3)))
+        # x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), scale=np.full((2, 3, 3), np.eye(3)))
         # mu = x.owner.inputs[4]
         # assert mu.eval().shape == (10, 2, 3)
 
@@ -1446,7 +1446,7 @@ class TestMvStudentTChol(BaseTestDistributionRandom):
     expected_rv_op_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "cov": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(),
+        "scale": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(),
     }
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
