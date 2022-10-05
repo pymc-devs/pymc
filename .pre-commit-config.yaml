@@ -13,24 +13,6 @@ repos:
     -   id: requirements-txt-fixer
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
-- repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v0.981
-  hooks:
-    - id: mypy
-      name: Run static type checks
-      language: python
-      entry: python ./scripts/run_mypy.py --verbose
-      additional_dependencies:
-      - pandas
-      - types-cachetools
-      - types-filelock
-      - types-setuptools
-      - arviz
-      - aeppl==0.0.38
-      - aesara==2.8.7
-      always_run: true
-      require_serial: true
-      pass_filenames: false
 - repo: https://github.com/PyCQA/isort
   rev: 5.10.1
   hooks:
