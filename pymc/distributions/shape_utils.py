@@ -734,7 +734,7 @@ def get_support_shape(
     elif support_shape is not None:
         inferred_support_shape = at.stack(
             [
-                Assert(msg="support_shape does not match last shape dimension")(
+                Assert(msg="support_shape does not match respective shape dimension")(
                     inferred, at.eq(inferred, explicit)
                 )
                 for inferred, explicit in zip(inferred_support_shape, support_shape)

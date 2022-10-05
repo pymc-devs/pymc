@@ -123,7 +123,7 @@ class TestGaussianRandomWalk:
 
     def test_inconsistent_steps_and_shape(self):
         with pytest.raises(
-            AssertionError, match="support_shape does not match last shape dimension"
+            AssertionError, match="support_shape does not match respective shape dimension"
         ):
             x = GaussianRandomWalk.dist(steps=12, shape=45, init_dist=Normal.dist(0, 100))
 
