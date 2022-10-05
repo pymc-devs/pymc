@@ -14,3 +14,53 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
     - uses: pre-commit/action@v2.0.0
+  mypy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache conda
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if environment-test.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-py39-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/environment-test.yml') }}
+      - name: Cache multiple paths
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if requirements.txt has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: |
+            ~/.cache/pip
+            $RUNNER_TOOL_CACHE/Python/*
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('requirements.txt') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          mamba-version: "*"
+          activate-environment: pymc-test
+          channel-priority: strict
+          environment-file: conda-envs/environment-test.yml
+          python-version: 3.9
+          use-mamba: true
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Install-pymc and mypy dependencies
+        run: |
+          conda activate pymc-test
+          pip install -e .
+          pip install --pre -U polyagamma
+          pip install mypy types-cachetools
+          python --version
+      - name: Run mypy
+        run: |
+          conda activate pymc-test
+          python ./scripts/run_mypy.py --verbose
