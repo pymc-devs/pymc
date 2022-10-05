@@ -1543,41 +1543,39 @@ class TestZeroSumNormal:
         ],
     )
     def test_zsn_logp(self, sigma, shape, zerosum_axes, mvn_axes):
+        def logp_norm(value, sigma, axes):
+            """
+            Special case of the MvNormal, that's equivalent to the ZSN.
+            Only to test the ZSN logp
+            """
+            axes = [ax if ax >= 0 else value.ndim + ax for ax in axes]
+            if len(set(axes)) < len(axes):
+                raise ValueError("Must specify unique zero sum axes")
+            other_axes = [ax for ax in range(value.ndim) if ax not in axes]
+            new_order = other_axes + axes
+            reshaped_value = np.reshape(
+                np.transpose(value, new_order), [value.shape[ax] for ax in other_axes] + [-1]
+            )
+
+            degrees_of_freedom = np.prod([value.shape[ax] - 1 for ax in axes])
+            full_size = np.prod([value.shape[ax] for ax in axes])
+
+            psdet = (0.5 * np.log(2 * np.pi) + np.log(sigma)) * degrees_of_freedom / full_size
+            exp = 0.5 * (reshaped_value / sigma) ** 2
+            inds = np.ones_like(value, dtype="bool")
+            for ax in axes:
+                inds = np.logical_and(inds, np.abs(np.mean(value, axis=ax, keepdims=True)) < 1e-9)
+            inds = np.reshape(
+                np.transpose(inds, new_order), [value.shape[ax] for ax in other_axes] + [-1]
+            )[..., 0]
+
+            return np.where(inds, np.sum(-psdet - exp, axis=-1), -np.inf)
 
         zsn_dist = pm.ZeroSumNormal.dist(sigma=sigma, shape=shape, zerosum_axes=zerosum_axes)
         zsn_logp = pm.logp(zsn_dist, value=np.zeros(shape)).eval()
-        mvn_logp = self.logp_norm(value=np.zeros(shape), sigma=sigma, axes=mvn_axes)
+        mvn_logp = logp_norm(value=np.zeros(shape), sigma=sigma, axes=mvn_axes)
 
         np.testing.assert_allclose(zsn_logp, mvn_logp)
-
-    def logp_norm(self, value, sigma, axes):
-        """
-        Special case of the MvNormal, that's equivalent to the ZSN.
-        Only to test the ZSN logp
-        """
-        axes = [ax if ax >= 0 else value.ndim + ax for ax in axes]
-        if len(set(axes)) < len(axes):
-            raise ValueError("Must specify unique zero sum axes")
-        other_axes = [ax for ax in range(value.ndim) if ax not in axes]
-        new_order = other_axes + axes
-        reshaped_value = np.reshape(
-            np.transpose(value, new_order), [value.shape[ax] for ax in other_axes] + [-1]
-        )
-
-        degrees_of_freedom = np.prod([value.shape[ax] - 1 for ax in axes])
-        full_size = np.prod([value.shape[ax] for ax in axes])
-
-        ns = value.shape[-1]
-        psdet = (0.5 * np.log(2 * np.pi) + np.log(sigma)) * degrees_of_freedom / full_size
-        exp = 0.5 * (reshaped_value / sigma) ** 2
-        inds = np.ones_like(value, dtype="bool")
-        for ax in axes:
-            inds = np.logical_and(inds, np.abs(np.mean(value, axis=ax, keepdims=True)) < 1e-9)
-        inds = np.reshape(
-            np.transpose(inds, new_order), [value.shape[ax] for ax in other_axes] + [-1]
-        )[..., 0]
-
-        return np.where(inds, np.sum(-psdet - exp, axis=-1), -np.inf)
 
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
