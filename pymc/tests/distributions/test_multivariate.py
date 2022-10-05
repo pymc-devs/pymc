@@ -1388,6 +1388,18 @@ COORDS = {
 
 
 class TestZeroSumNormal:
+    def assert_zerosum_axes(self, random_samples, axes_to_check, check_zerosum_axes=True):
+        if check_zerosum_axes:
+            for ax in axes_to_check:
+                assert np.isclose(
+                    random_samples.mean(axis=ax), 0
+                ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+        else:
+            for ax in axes_to_check:
+                assert not np.isclose(
+                    random_samples.mean(axis=ax), 0
+                ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
+
     @pytest.mark.parametrize(
         "dims, zerosum_axes",
         [
@@ -1503,18 +1515,6 @@ class TestZeroSumNormal:
         assert new_dist.eval().shape == (5, 3, 4, 9)
         random_samples = pm.draw(new_dist, draws=100)
         self.assert_zerosum_axes(random_samples, zerosum_axes)
-
-    def assert_zerosum_axes(self, random_samples, axes_to_check, check_zerosum_axes=True):
-        if check_zerosum_axes:
-            for ax in axes_to_check:
-                assert np.isclose(
-                    random_samples.mean(axis=ax), 0
-                ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
-        else:
-            for ax in axes_to_check:
-                assert not np.isclose(
-                    random_samples.mean(axis=ax), 0
-                ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
 
     @pytest.mark.parametrize(
         "sigma, n",
