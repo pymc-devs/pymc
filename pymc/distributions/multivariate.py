@@ -2468,12 +2468,7 @@ class ZeroSumNormal(Distribution):
 
     @classmethod
     def dist(cls, sigma=1, zerosum_axes=None, support_shape=None, **kwargs):
-        if zerosum_axes is None:
-            zerosum_axes = 1
-        if not isinstance(zerosum_axes, int):
-            raise TypeError("zerosum_axes has to be an integer")
-        if not zerosum_axes > 0:
-            raise ValueError("zerosum_axes has to be > 0")
+        zerosum_axes = cls.check_zerosum_axes(zerosum_axes)
 
         sigma = at.as_tensor_variable(floatX(sigma))
         if sigma.ndim > 0:
@@ -2500,21 +2495,6 @@ class ZeroSumNormal(Distribution):
         return super().dist(
             [sigma], zerosum_axes=zerosum_axes, support_shape=support_shape, **kwargs
         )
-
-    # TODO: This is if we want ZeroSum constraint on other dists than Normal
-    # def dist(cls, dist, lower, upper, **kwargs):
-    #     if not isinstance(dist, TensorVariable) or not isinstance(
-    #         dist.owner.op, (RandomVariable, SymbolicRandomVariable)
-    #     ):
-    #         raise ValueError(
-    #             f"Censoring dist must be a distribution created via the `.dist()` API, got {type(dist)}"
-    #         )
-    #     if dist.owner.op.ndim_supp > 0:
-    #         raise NotImplementedError(
-    #             "Censoring of multivariate distributions has not been implemented yet"
-    #         )
-    #     check_dist_not_registered(dist)
-    #     return super().dist([dist, lower, upper], **kwargs)
 
     @classmethod
     def check_zerosum_axes(cls, zerosum_axes: Optional[int]) -> int:
