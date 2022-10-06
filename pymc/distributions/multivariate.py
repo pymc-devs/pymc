@@ -2438,15 +2438,15 @@ class ZeroSumNormal(Distribution):
         }
         with pm.Model(coords=COORDS) as m:
             # the zero sum axis will be 'answers'
-    ...:    v = pm.ZeroSumNormal("v", dims=("regions", "answers"))
+            v = pm.ZeroSumNormal("v", dims=("regions", "answers"))
 
         with pm.Model(coords=COORDS) as m:
             # the zero sum axes will be 'answers' and 'regions'
-    ...:    v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=2)
+            v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=2)
 
         with pm.Model(coords=COORDS) as m:
             # the zero sum axes will be the last two
-    ...:    v = pm.ZeroSumNormal("v", shape=(3, 4, 5), zerosum_axes=2)
+            v = pm.ZeroSumNormal("v", shape=(3, 4, 5), zerosum_axes=2)
     """
     rv_type = ZeroSumNormalRV
 
