@@ -29,9 +29,9 @@ from scipy.cluster.vq import kmeans
 from pymc.aesaraf import compile_pymc, walk_model
 
 # Avoid circular dependency when importing modelcontext
-from pymc.distributions.distribution import NoDistribution
+from pymc.distributions.distribution import Distribution
 
-assert NoDistribution  # keep both pylint and black happy
+assert Distribution  # keep both pylint and black happy
 from pymc.model import modelcontext
 
 JITTER_DEFAULT = 1e-6
@@ -57,7 +57,7 @@ def replace_with_values(vars_needed, replacements=None, model=None):
     model = modelcontext(model)
 
     inputs, input_names = [], []
-    for rv in walk_model(vars_needed, walk_past_rvs=True):
+    for rv in walk_model(vars_needed):
         if rv in model.named_vars.values() and not isinstance(rv, SharedVariable):
             inputs.append(rv)
             input_names.append(rv.name)

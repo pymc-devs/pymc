@@ -22,10 +22,9 @@ import pandas as pd
 import pytest
 import scipy.sparse as sps
 
-from aeppl.abstract import MeasurableVariable
 from aeppl.logprob import ParameterValueError
 from aesara.compile.builders import OpFromGraph
-from aesara.graph.basic import Constant, Variable, ancestors, equal_computations
+from aesara.graph.basic import Variable, equal_computations
 from aesara.tensor.random.basic import normal, uniform
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
@@ -35,16 +34,19 @@ from aesara.tensor.var import TensorVariable
 import pymc as pm
 
 from pymc.aesaraf import (
-    change_rv_size,
     compile_pymc,
+    constant_fold,
     convert_observed_data,
     extract_obs_data,
+    replace_rng_nodes,
     reseed_rngs,
     rvs_to_value_vars,
     walk_model,
 )
 from pymc.distributions.dist_math import check_parameters
-from pymc.exceptions import ShapeError
+from pymc.distributions.distribution import SymbolicRandomVariable
+from pymc.distributions.transforms import Interval
+from pymc.exceptions import NotConstantValueError
 from pymc.vartypes import int_types
 
 
@@ -80,75 +82,6 @@ def test_pd_as_tensor_variable_multiindex() -> None:
     np_array = np.array([[12.0, 80.0, 30.0, 20.0], [120.0, 700.0, 30.0, 20.0]]).T
     assert isinstance(df.index, pd.MultiIndex)
     np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
-
-
-def test_change_rv_size():
-    loc = at.as_tensor_variable([1, 2])
-    rv = normal(loc=loc)
-    assert rv.ndim == 1
-    assert tuple(rv.shape.eval()) == (2,)
-
-    with pytest.raises(ShapeError, match="must be ≤1-dimensional"):
-        change_rv_size(rv, new_size=[[2, 3]])
-    with pytest.raises(ShapeError, match="must be ≤1-dimensional"):
-        change_rv_size(rv, new_size=at.as_tensor_variable([[2, 3], [4, 5]]))
-
-    rv_new = change_rv_size(rv, new_size=(3,), expand=True)
-    assert rv_new.ndim == 2
-    assert tuple(rv_new.shape.eval()) == (3, 2)
-
-    # Make sure that the shape used to determine the expanded size doesn't
-    # depend on the old `RandomVariable`.
-    rv_new_ancestors = set(ancestors((rv_new,)))
-    assert loc in rv_new_ancestors
-    assert rv not in rv_new_ancestors
-
-    rv_newer = change_rv_size(rv_new, new_size=(4,), expand=True)
-    assert rv_newer.ndim == 3
-    assert tuple(rv_newer.shape.eval()) == (4, 3, 2)
-
-    # Make sure we avoid introducing a `Cast` by converting the new size before
-    # constructing the new `RandomVariable`
-    rv = normal(0, 1)
-    new_size = np.array([4, 3], dtype="int32")
-    rv_newer = change_rv_size(rv, new_size=new_size, expand=False)
-    assert rv_newer.ndim == 2
-    assert isinstance(rv_newer.owner.inputs[1], Constant)
-    assert tuple(rv_newer.shape.eval()) == (4, 3)
-
-    rv = normal(0, 1)
-    new_size = at.as_tensor(np.array([4, 3], dtype="int32"))
-    rv_newer = change_rv_size(rv, new_size=new_size, expand=True)
-    assert rv_newer.ndim == 2
-    assert tuple(rv_newer.shape.eval()) == (4, 3)
-
-    rv = normal(0, 1)
-    new_size = at.as_tensor(2, dtype="int32")
-    rv_newer = change_rv_size(rv, new_size=new_size, expand=True)
-    assert rv_newer.ndim == 1
-    assert tuple(rv_newer.shape.eval()) == (2,)
-
-
-def test_change_rv_size_default_update():
-    rng = aesara.shared(np.random.default_rng(0))
-    x = normal(rng=rng)
-
-    # Test that "traditional" default_update is updated
-    rng.default_update = x.owner.outputs[0]
-    new_x = change_rv_size(x, new_size=(2,))
-    assert rng.default_update is not x.owner.outputs[0]
-    assert rng.default_update is new_x.owner.outputs[0]
-
-    # Test that "non-traditional" default_update is left unchanged
-    next_rng = aesara.shared(np.random.default_rng(1))
-    rng.default_update = next_rng
-    new_x = change_rv_size(x, new_size=(2,))
-    assert rng.default_update is next_rng
-
-    # Test that default_update is not set if there was none before
-    del rng.default_update
-    new_x = change_rv_size(x, new_size=(2,))
-    assert not hasattr(rng, "default_update")
 
 
 class TestBroadcasting:
@@ -341,33 +274,53 @@ def test_pandas_to_array_pandas_index():
 
 
 def test_walk_model():
-    d = at.vector("d")
-    b = at.vector("b")
-    c = uniform(0.0, d)
+    a = at.vector("a")
+    b = uniform(0.0, a, name="b")
+    c = at.log(b)
     c.name = "c"
-    e = at.log(c)
-    a = normal(e, b)
-    a.name = "a"
+    d = at.vector("d")
+    e = normal(c, d, name="e")
 
-    test_graph = at.exp(a + 1)
+    test_graph = at.exp(e + 1)
+
     res = list(walk_model((test_graph,)))
     assert a in res
-    assert c not in res
-
-    res = list(walk_model((test_graph,), walk_past_rvs=True))
-    assert a in res
+    assert b in res
     assert c in res
+    assert d in res
+    assert e in res
 
-    res = list(walk_model((test_graph,), walk_past_rvs=True, stop_at_vars={e}))
-    assert a in res
-    assert c not in res
+    res = list(walk_model((test_graph,), stop_at_vars={c}))
+    assert a not in res
+    assert b not in res
+    assert c in res
+    assert d in res
+    assert e in res
+
+    res = list(walk_model((test_graph,), stop_at_vars={b}))
+    assert a not in res
+    assert b in res
+    assert c in res
+    assert d in res
+    assert e in res
 
 
-def test_rvs_to_value_vars():
+@pytest.mark.parametrize("symbolic_rv", (False, True))
+@pytest.mark.parametrize("apply_transforms", (True, False))
+def test_rvs_to_value_vars(symbolic_rv, apply_transforms):
+
+    # Interval transform between last two arguments
+    interval = Interval(bounds_fn=lambda *args: (args[-2], args[-1]))
 
     with pm.Model() as m:
         a = pm.Uniform("a", 0.0, 1.0)
-        b = pm.Uniform("b", 0, a + 1.0)
+        if symbolic_rv:
+            raw_b = pm.Uniform.dist(0, a + 1.0)
+            b = pm.Censored("b", raw_b, lower=0, upper=a + 1.0, transform=interval)
+            # If not True, another distribution has to be used
+            assert isinstance(b.owner.op, SymbolicRandomVariable)
+        else:
+            b = pm.Uniform("b", 0, a + 1.0, transform=interval)
         c = pm.Normal("c")
         d = at.log(c + b) + 2.0
 
@@ -377,7 +330,7 @@ def test_rvs_to_value_vars():
     b_value_var = m.rvs_to_values[b]
     c_value_var = m.rvs_to_values[c]
 
-    (res,), replaced = rvs_to_value_vars((d,))
+    (res,) = rvs_to_value_vars((d,), apply_transforms=apply_transforms)
 
     assert res.owner.op == at.add
     log_output = res.owner.inputs[0]
@@ -390,9 +343,14 @@ def test_rvs_to_value_vars():
     # with their value variables
     assert c_output == c_value_var
     b_output = log_add_output.owner.inputs[1]
-    assert b_output == b_value_var
+    # When transforms are applied, the input is the back-transformation of the value_var,
+    # otherwise it is the value_var itself
+    if apply_transforms:
+        assert b_output != b_value_var
+    else:
+        assert b_output == b_value_var
 
-    res_ancestors = list(walk_model((res,), walk_past_rvs=True))
+    res_ancestors = list(walk_model((res,)))
     res_rv_ancestors = [
         v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
     ]
@@ -401,19 +359,12 @@ def test_rvs_to_value_vars():
     assert len(res_rv_ancestors) == 0
     assert b_value_var in res_ancestors
     assert c_value_var in res_ancestors
-    assert a_value_var not in res_ancestors
-
-    (res,), replaced = rvs_to_value_vars((d,), apply_transforms=True)
-
-    res_ancestors = list(walk_model((res,), walk_past_rvs=True))
-    res_rv_ancestors = [
-        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
-    ]
-
-    assert len(res_rv_ancestors) == 0
-    assert a_value_var in res_ancestors
-    assert b_value_var in res_ancestors
-    assert c_value_var in res_ancestors
+    # When transforms are used, `d` depends on `a` through the back-transformation of
+    # `b`, otherwise there is no direct connection between `d` and `a`
+    if apply_transforms:
+        assert a_value_var in res_ancestors
+    else:
+        assert a_value_var not in res_ancestors
 
 
 def test_rvs_to_value_vars_nested():
@@ -430,11 +381,32 @@ def test_rvs_to_value_vars_nested():
         before = aesara.clone_replace(m.free_RVs)
 
         # This call would change the model free_RVs in place in #5172
-        res, _ = rvs_to_value_vars(m.potentials, apply_transforms=True)
+        res = rvs_to_value_vars(m.potentials, apply_transforms=True)
 
         after = aesara.clone_replace(m.free_RVs)
 
         assert equal_computations(before, after)
+
+
+def test_rvs_to_value_vars_unvalued_rv():
+    with pm.Model() as m:
+        x = pm.Normal("x")
+        y = pm.Normal.dist(x)
+        z = pm.Normal("z", y)
+        out = z + y
+
+    x_value = m.rvs_to_values[x]
+    z_value = m.rvs_to_values[z]
+
+    (res,) = rvs_to_value_vars((out,))
+
+    assert res.owner.op == at.add
+    assert res.owner.inputs[0] is z_value
+    res_y = res.owner.inputs[1]
+    # Graph should have be cloned, and therefore y and res_y should have different ids
+    assert res_y is not y
+    assert res_y.owner.op == at.random.normal
+    assert res_y.owner.inputs[3] is x_value
 
 
 class TestCompilePyMC:
@@ -528,20 +500,20 @@ class TestCompilePyMC:
     def test_compile_pymc_custom_update_op(self, _):
         """Test that custom MeasurableVariable Op updates are used by compile_pymc"""
 
-        class UnmeasurableOp(OpFromGraph):
+        class NonSymbolicRV(OpFromGraph):
             def update(self, node):
                 return {node.inputs[0]: node.inputs[0] + 1}
 
         dummy_inputs = [at.scalar(), at.scalar()]
         dummy_outputs = [at.add(*dummy_inputs)]
-        dummy_x = UnmeasurableOp(dummy_inputs, dummy_outputs)(aesara.shared(1.0), 1.0)
+        dummy_x = NonSymbolicRV(dummy_inputs, dummy_outputs)(aesara.shared(1.0), 1.0)
 
         # Check that there are no updates at first
         fn = compile_pymc(inputs=[], outputs=dummy_x)
         assert fn() == fn() == 2.0
 
-        # And they are enabled once the Op is registered as Measurable
-        MeasurableVariable.register(UnmeasurableOp)
+        # And they are enabled once the Op is registered as a SymbolicRV
+        SymbolicRandomVariable.register(NonSymbolicRV)
         fn = compile_pymc(inputs=[], outputs=dummy_x)
         assert fn() == 2.0
         assert fn() == 3.0
@@ -572,6 +544,42 @@ class TestCompilePyMC:
         x3_eval, y3_eval = f3()
         assert x3_eval == x2_eval
         assert y3_eval == y2_eval
+
+    def test_multiple_updates_same_variable(self):
+        rng = aesara.shared(np.random.default_rng(), name="rng")
+        x = at.random.normal(rng=rng)
+        y = at.random.normal(rng=rng)
+
+        assert compile_pymc([], [x])
+        assert compile_pymc([], [y])
+        msg = "Multiple update expressions found for the variable rng"
+        with pytest.raises(ValueError, match=msg):
+            compile_pymc([], [x, y])
+
+
+def test_replace_rng_nodes():
+    rng = aesara.shared(np.random.default_rng())
+    x = at.random.normal(rng=rng)
+    x_rng, *x_non_rng_inputs = x.owner.inputs
+
+    cloned_x = x.owner.clone().default_output()
+    cloned_x_rng, *cloned_x_non_rng_inputs = cloned_x.owner.inputs
+
+    # RNG inputs are the same across the two variables
+    assert x_rng is cloned_x_rng
+
+    (new_x,) = replace_rng_nodes([cloned_x])
+    new_x_rng, *new_x_non_rng_inputs = new_x.owner.inputs
+
+    # Variables are still the same
+    assert new_x is cloned_x
+
+    # RNG inputs are not the same as before
+    assert new_x_rng is not x_rng
+
+    # All other inputs are the same as before
+    for non_rng_inputs, new_non_rng_inputs in zip(x_non_rng_inputs, new_x_non_rng_inputs):
+        assert non_rng_inputs is new_non_rng_inputs
 
 
 def test_reseed_rngs():
@@ -604,3 +612,24 @@ def test_reseed_rngs():
             assert rng.get_value()._bit_generator.state == bit_generator.state
         else:
             assert rng.get_value().bit_generator.state == bit_generator.state
+
+
+def test_constant_fold():
+    x = at.random.normal(size=(5,))
+    y = at.arange(x.size)
+
+    res = constant_fold((y, y.shape))
+    assert np.array_equal(res[0], np.arange(5))
+    assert tuple(res[1]) == (5,)
+
+
+def test_constant_fold_raises():
+    size = aesara.shared(5)
+    x = at.random.normal(size=(size,))
+    y = at.arange(x.size)
+
+    with pytest.raises(NotConstantValueError):
+        constant_fold((y, y.shape))
+
+    res = constant_fold((y, y.shape), raise_not_constant=False)
+    assert tuple(res[1].eval()) == (5,)

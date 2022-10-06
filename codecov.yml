@@ -23,6 +23,7 @@ coverage:
 
 ignore:
   - "pymc/tests/*"
+  - "pymc/_version.py"
 
 comment:
   layout: "reach, diff, flags, files"

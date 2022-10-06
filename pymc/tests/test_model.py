@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import pickle
+import threading
 import unittest
 import warnings
 
@@ -26,6 +28,7 @@ import pytest
 import scipy.sparse as sps
 import scipy.stats as st
 
+from aesara.graph import graph_inputs
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.sharedvar import ScalarSharedVariable
@@ -37,8 +40,9 @@ from pymc import Deterministic, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
-from pymc.model import Point, ValueGradFunction
+from pymc.model import Point, ValueGradFunction, modelcontext
 from pymc.tests.helpers import SeededTest
+from pymc.tests.models import simple_model
 
 
 class NewModel(pm.Model):
@@ -443,24 +447,39 @@ def test_tempered_logp_dlogp():
     npt.assert_allclose(func_temp_nograd(x), func_temp(x)[0])
 
 
-def test_model_pickle(tmpdir):
-    """Tests that PyMC models are pickleable"""
-    with pm.Model() as model:
-        x = pm.Normal("x")
-        pm.Normal("y", observed=1)
+class TestPickling:
+    def test_model_pickle(self, tmpdir):
+        """Tests that PyMC models are pickleable"""
+        with pm.Model() as model:
+            x = pm.Normal("x")
+            pm.Normal("y", observed=1)
 
-    cloudpickle.loads(cloudpickle.dumps(model))
+        cloudpickle.loads(cloudpickle.dumps(model))
 
+    def test_model_pickle_deterministic(self, tmpdir):
+        """Tests that PyMC models are pickleable"""
+        with pm.Model() as model:
+            x = pm.Normal("x")
+            z = pm.Normal("z")
+            pm.Deterministic("w", x / z)
+            pm.Normal("y", observed=1)
 
-def test_model_pickle_deterministic(tmpdir):
-    """Tests that PyMC models are pickleable"""
-    with pm.Model() as model:
-        x = pm.Normal("x")
-        z = pm.Normal("z")
-        pm.Deterministic("w", x / z)
-        pm.Normal("y", observed=1)
+        cloudpickle.loads(cloudpickle.dumps(model))
 
-    cloudpickle.loads(cloudpickle.dumps(model))
+    def setup_method(self):
+        _, self.model, _ = simple_model()
+
+    def test_model_roundtrip(self):
+        m = self.model
+        for proto in range(pickle.HIGHEST_PROTOCOL + 1):
+            try:
+                s = cloudpickle.dumps(m, proto)
+                cloudpickle.loads(s)
+            except Exception:
+                raise AssertionError(
+                    "Exception while trying roundtrip with pickle protocol %d:\n" % proto
+                    + "".join(traceback.format_exc())
+                )
 
 
 def test_model_vars():
@@ -724,7 +743,7 @@ def test_shapeerror_from_resize_immutable_dim_from_RV():
     Even if the variable being updated is a SharedVariable and has other
     dimensions that are mutable.
     """
-    with pm.Model() as pmodel:
+    with pm.Model(coords={"fixed": range(3)}) as pmodel:
         pm.Normal("a", mu=[1, 2, 3], dims="fixed")
         assert isinstance(pmodel.dim_lengths["fixed"], TensorVariable)
 
@@ -733,7 +752,8 @@ def test_shapeerror_from_resize_immutable_dim_from_RV():
         # This is fine because the "fixed" dim is not resized
         pmodel.set_data("m", [[1, 2, 3], [3, 4, 5]])
 
-    with pytest.raises(ShapeError, match="was initialized from 'a'"):
+    msg = "The 'm' variable already had 3 coord values defined for its fixed dimension"
+    with pytest.raises(ValueError, match=msg):
         # Can't work because the "fixed" dimension is linked to a
         # TensorVariable with constant shape.
         # Note that the new data tries to change both dimensions
@@ -808,7 +828,7 @@ def test_set_dim():
 
 
 def test_set_dim_with_coords():
-    """Test the concious re-sizing of dims created through add_coord() with coord value."""
+    """Test the conscious re-sizing of dims created through add_coord() with coord value."""
     with pm.Model() as pmodel:
         pmodel.add_coord("mdim", mutable=True, length=2, values=["A", "B"])
         a = pm.Normal("a", dims="mdim")
@@ -884,6 +904,17 @@ def test_set_data_indirect_resize_with_coords():
     # This time with incorrectly sized coord values
     with pytest.raises(ShapeError, match="new coordinate values"):
         pmodel.set_data("mdata", [1, 2], coords=dict(mdim=[1, 2, 3]))
+
+
+def test_set_data_constant_shape_error():
+    with pm.Model() as pmodel:
+        x = pm.Normal("x", size=7)
+        pmodel.add_coord("weekday", length=x.shape[0])
+        pm.MutableData("y", np.arange(7), dims="weekday")
+
+    msg = "because the dimension was initialized from 'x' which is not a shared variable"
+    with pytest.raises(ShapeError, match=msg):
+        pmodel.set_data("y", np.arange(10))
 
 
 def test_model_logpt_deprecation_warning():
@@ -1037,3 +1068,319 @@ def test_model_parent_set_programmatically():
         y = pm.Normal("y")
 
     assert "y" in model.named_vars
+
+
+class TestModelContext:
+    def test_thread_safety(self):
+        """Regression test for issue #1552: Thread safety of model context manager
+
+        This test creates two threads that attempt to construct two
+        unrelated models at the same time.
+        For repeatable testing, the two threads are syncronised such
+        that thread A enters the context manager first, then B,
+        then A attempts to declare a variable while B is still in the context manager.
+        """
+        aInCtxt, bInCtxt, aDone = (threading.Event() for _ in range(3))
+        modelA = pm.Model()
+        modelB = pm.Model()
+
+        def make_model_a():
+            with modelA:
+                aInCtxt.set()
+                bInCtxt.wait()
+                Normal("a", 0, 1)
+            aDone.set()
+
+        def make_model_b():
+            aInCtxt.wait()
+            with modelB:
+                bInCtxt.set()
+                aDone.wait()
+                Normal("b", 0, 1)
+
+        threadA = threading.Thread(target=make_model_a)
+        threadB = threading.Thread(target=make_model_b)
+        threadA.start()
+        threadB.start()
+        threadA.join()
+        threadB.join()
+        # now let's see which model got which variable
+        # previous to #1555, the variables would be swapped:
+        # - B enters it's model context after A, but before a is declared -> a goes into B
+        # - A leaves it's model context before B attempts to declare b. A's context manager
+        #   takes B from the stack, such that b ends up in model A
+        assert (
+            list(modelA.named_vars),
+            list(modelB.named_vars),
+        ) == (["a"], ["b"])
+
+
+def test_mixed_contexts():
+    modelA = pm.Model()
+    modelB = pm.Model()
+    with pytest.raises((ValueError, TypeError)):
+        modelcontext(None)
+    with modelA:
+        with modelB:
+            assert pm.Model.get_context() == modelB
+            assert modelcontext(None) == modelB
+        assert pm.Model.get_context() == modelA
+        assert modelcontext(None) == modelA
+    assert pm.Model.get_context(error_if_none=False) is None
+    with pytest.raises(TypeError):
+        pm.Model.get_context(error_if_none=True)
+    with pytest.raises((ValueError, TypeError)):
+        modelcontext(None)
+
+
+class TestProfile:
+    def setup_method(self):
+        _, self.model, _ = simple_model()
+
+    def test_profile_model(self):
+        assert self.model.profile(self.model.logp()).fct_call_time > 0
+
+    def test_profile_variable(self):
+        rv = self.model.basic_RVs[0]
+        assert self.model.profile(self.model.logp(vars=[rv], sum=False)).fct_call_time
+
+    def test_profile_count(self):
+        count = 1005
+        assert self.model.profile(self.model.logp(), n=count).fct_callcount == count
+
+
+@pytest.fixture(params=["masked", "pandas"])
+def missing_data(request):
+    if request.param == "masked":
+        return np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
+    else:
+        # request.param == "pandas"
+        pd = pytest.importorskip("pandas")
+        return pd.DataFrame([1, 2, np.nan, 4, np.nan])
+
+
+def test_missing(missing_data):
+
+    with pm.Model() as model:
+        x = pm.Normal("x", 1, 1)
+        with pytest.warns(ImputationWarning):
+            _ = pm.Normal("y", x, 1, observed=missing_data)
+
+    assert "y_missing" in model.named_vars
+
+    test_point = model.initial_point()
+    assert not np.isnan(model.compile_logp()(test_point))
+
+    with model:
+        prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
+    assert {"x", "y"} <= set(prior_trace.keys())
+
+
+def test_missing_with_predictors():
+    predictors = np.array([0.5, 1, 0.5, 2, 0.3])
+    data = np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
+    with pm.Model() as model:
+        x = pm.Normal("x", 1, 1)
+        with pytest.warns(ImputationWarning):
+            y = pm.Normal("y", x * predictors, 1, observed=data)
+
+    assert "y_missing" in model.named_vars
+
+    test_point = model.initial_point()
+    assert not np.isnan(model.compile_logp()(test_point))
+
+    with model:
+        prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
+    assert {"x", "y"} <= set(prior_trace.keys())
+
+
+def test_missing_dual_observations():
+    with pm.Model() as model:
+        obs1 = np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
+        obs2 = np.ma.masked_values([-1, -1, 6, -1, 8], value=-1)
+        beta1 = pm.Normal("beta1", 1, 1)
+        beta2 = pm.Normal("beta2", 2, 1)
+        latent = pm.Normal("theta", size=5)
+        with pytest.warns(ImputationWarning):
+            ovar1 = pm.Normal("o1", mu=beta1 * latent, observed=obs1)
+        with pytest.warns(ImputationWarning):
+            ovar2 = pm.Normal("o2", mu=beta2 * latent, observed=obs2)
+
+        prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
+        assert {"beta1", "beta2", "theta", "o1", "o2"} <= set(prior_trace.keys())
+        # TODO: Assert something
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+            trace = pm.sample(chains=1, draws=50)
+
+
+def test_interval_missing_observations():
+    with pm.Model() as model:
+        obs1 = np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
+        obs2 = np.ma.masked_values([-1, -1, 6, -1, 8], value=-1)
+
+        rng = aesara.shared(np.random.RandomState(2323), borrow=True)
+
+        with pytest.warns(ImputationWarning):
+            theta1 = pm.Uniform("theta1", 0, 5, observed=obs1, rng=rng)
+        with pytest.warns(ImputationWarning):
+            theta2 = pm.Normal("theta2", mu=theta1, observed=obs2, rng=rng)
+
+        assert "theta1_observed" in model.named_vars
+        assert "theta1_missing_interval__" in model.named_vars
+        assert not hasattr(
+            model.rvs_to_values[model.named_vars["theta1_observed"]].tag, "transform"
+        )
+
+        prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
+
+        # Make sure the observed + missing combined deterministics have the
+        # same shape as the original observations vectors
+        assert prior_trace["theta1"].shape[-1] == obs1.shape[0]
+        assert prior_trace["theta2"].shape[-1] == obs2.shape[0]
+
+        # Make sure that the observed values are newly generated samples
+        assert np.all(np.var(prior_trace["theta1_observed"], 0) > 0.0)
+        assert np.all(np.var(prior_trace["theta2_observed"], 0) > 0.0)
+
+        # Make sure the missing parts of the combined deterministic matches the
+        # sampled missing and observed variable values
+        assert np.mean(prior_trace["theta1"][:, obs1.mask] - prior_trace["theta1_missing"]) == 0.0
+        assert np.mean(prior_trace["theta1"][:, ~obs1.mask] - prior_trace["theta1_observed"]) == 0.0
+        assert np.mean(prior_trace["theta2"][:, obs2.mask] - prior_trace["theta2_missing"]) == 0.0
+        assert np.mean(prior_trace["theta2"][:, ~obs2.mask] - prior_trace["theta2_observed"]) == 0.0
+
+        assert {"theta1", "theta2"} <= set(prior_trace.keys())
+
+        trace = pm.sample(
+            chains=1, draws=50, compute_convergence_checks=False, return_inferencedata=False
+        )
+
+        assert np.all(0 < trace["theta1_missing"].mean(0))
+        assert np.all(0 < trace["theta2_missing"].mean(0))
+        assert "theta1" not in trace.varnames
+        assert "theta2" not in trace.varnames
+
+        # Make sure that the observed values are newly generated samples and that
+        # the observed and deterministic matche
+        pp_trace = pm.sample_posterior_predictive(
+            trace, return_inferencedata=False, keep_size=False
+        )
+        assert np.all(np.var(pp_trace["theta1"], 0) > 0.0)
+        assert np.all(np.var(pp_trace["theta2"], 0) > 0.0)
+        assert np.mean(pp_trace["theta1"][:, ~obs1.mask] - pp_trace["theta1_observed"]) == 0.0
+        assert np.mean(pp_trace["theta2"][:, ~obs2.mask] - pp_trace["theta2_observed"]) == 0.0
+
+
+def test_double_counting():
+    with pm.Model(check_bounds=False) as m1:
+        x = pm.Gamma("x", 1, 1, size=4)
+
+    logp_val = m1.compile_logp()({"x_log__": np.array([0, 0, 0, 0])})
+    assert logp_val == -4.0
+
+    with pm.Model(check_bounds=False) as m2:
+        with pytest.warns(ImputationWarning):
+            x = pm.Gamma("x", 1, 1, observed=[1, 1, 1, np.nan])
+
+    logp_val = m2.compile_logp()({"x_missing_log__": np.array([0])})
+    assert logp_val == -4.0
+
+
+def test_missing_logp():
+    with pm.Model() as m:
+        theta1 = pm.Normal("theta1", 0, 5, observed=[0, 1, 2, 3, 4])
+        theta2 = pm.Normal("theta2", mu=theta1, observed=[0, 1, 2, 3, 4])
+    m_logp = m.compile_logp()({})
+
+    with pm.Model() as m_missing:
+        with pytest.warns(ImputationWarning):
+            theta1 = pm.Normal("theta1", 0, 5, observed=np.array([0, 1, np.nan, 3, np.nan]))
+            theta2 = pm.Normal(
+                "theta2", mu=theta1, observed=np.array([np.nan, np.nan, 2, np.nan, 4])
+            )
+    m_missing_logp = m_missing.compile_logp()(
+        {"theta1_missing": [2, 4], "theta2_missing": [0, 1, 3]}
+    )
+
+    assert m_logp == m_missing_logp
+
+
+def test_missing_multivariate():
+    """Test model with missing variables whose transform changes base shape still works"""
+
+    with pm.Model() as m_miss:
+        with pytest.raises(
+            NotImplementedError,
+            match="Automatic inputation is only supported for univariate RandomVariables",
+        ):
+            with pytest.warns(ImputationWarning):
+                x = pm.Dirichlet(
+                    "x", a=[1, 2, 3], observed=np.array([[0.3, 0.3, 0.4], [np.nan, np.nan, np.nan]])
+                )
+
+    # TODO: Test can be used when local_subtensor_rv_lift supports multivariate distributions
+    # from pymc.distributions.transforms import simplex
+    #
+    # with pm.Model() as m_unobs:
+    #     x = pm.Dirichlet("x", a=[1, 2, 3])
+    #
+    # inp_vals = simplex.forward(np.array([0.3, 0.3, 0.4])).eval()
+    # assert np.isclose(
+    #     m_miss.compile_logp()({"x_missing_simplex__": inp_vals}),
+    #     m_unobs.compile_logp(jacobian=False)({"x_simplex__": inp_vals}) * 2,
+    # )
+
+
+def test_missing_vector_parameter():
+    with pm.Model() as m:
+        with pytest.warns(ImputationWarning):
+            x = pm.Normal(
+                "x",
+                np.array([-10, 10]),
+                0.1,
+                observed=np.array([[np.nan, 10], [-10, np.nan], [np.nan, np.nan]]),
+            )
+    x_draws = x.eval()
+    assert x_draws.shape == (3, 2)
+    assert np.all(x_draws[:, 0] < 0)
+    assert np.all(x_draws[:, 1] > 0)
+    assert np.isclose(
+        m.compile_logp()({"x_missing": np.array([-10, 10, -10, 10])}),
+        st.norm(scale=0.1).logpdf(0) * 6,
+    )
+
+
+def test_missing_symmetric():
+    """Check that logp works when partially observed variable have equal observed and
+    unobserved dimensions.
+
+    This would fail in a previous implementation because the two variables would be
+    equivalent and one of them would be discarded during MergeOptimization while
+    buling the logp graph
+    """
+    with pm.Model() as m:
+        with pytest.warns(ImputationWarning):
+            x = pm.Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
+
+    x_obs_rv = m["x_observed"]
+    x_obs_vv = m.rvs_to_values[x_obs_rv]
+
+    x_unobs_rv = m["x_missing"]
+    x_unobs_vv = m.rvs_to_values[x_unobs_rv]
+
+    logp = pm.joint_logp([x_obs_rv, x_unobs_rv], {x_obs_rv: x_obs_vv, x_unobs_rv: x_unobs_vv})
+    logp_inputs = list(graph_inputs([logp]))
+    assert x_obs_vv in logp_inputs
+    assert x_unobs_vv in logp_inputs
+
+
+class TestShared(SeededTest):
+    def test_deterministic(self):
+        with pm.Model() as model:
+            data_values = np.array([0.5, 0.4, 5, 2])
+            X = aesara.shared(np.asarray(data_values, dtype=aesara.config.floatX), borrow=True)
+            pm.Normal("y", 0, 1, observed=X)
+            assert np.all(
+                np.isclose(model.compile_logp(sum=False)({}), st.norm().logpdf(data_values))
+            )

@@ -364,7 +364,7 @@ class ValueGradFunction:
         self._extra_vars_shared = {}
         for var, value in extra_vars_and_values.items():
             shared = aesara.shared(
-                value, var.name + "_shared__", shape=[s == 1 for s in value.shape]
+                value, var.name + "_shared__", broadcastable=[s == 1 for s in value.shape]
             )
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
@@ -761,7 +761,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # Replace random variables by their value variables in potential terms
         potential_logps = []
         if potentials:
-            potential_logps, _ = rvs_to_value_vars(potentials, apply_transforms=True)
+            potential_logps = rvs_to_value_vars(potentials)
 
         logp_factors = [None] * len(varlist)
         for logp_order, logp in zip((rv_order + potential_order), (rv_logps + potential_logps)):
@@ -935,7 +935,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Aesara scalar of log-probability of the Potential terms"""
         # Convert random variables in Potential expression into their log-likelihood
         # inputs and apply their transforms, if any
-        potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+        potentials = rvs_to_value_vars(self.potentials)
         if potentials:
             return at.sum([at.sum(factor) for factor in potentials])
         else:
@@ -976,10 +976,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             vars.append(value_var)
 
         # Remove rvs from untransformed values graph
-        untransformed_vars, _ = rvs_to_value_vars(untransformed_vars, apply_transforms=True)
+        untransformed_vars = rvs_to_value_vars(untransformed_vars)
 
         # Remove rvs from deterministics graph
-        deterministics, _ = rvs_to_value_vars(self.deterministics, apply_transforms=True)
+        deterministics = rvs_to_value_vars(self.deterministics)
 
         return vars + untransformed_vars + deterministics
 
@@ -1149,7 +1149,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             length = len(values)
         if not isinstance(length, Variable):
             if mutable:
-                length = aesara.shared(length)
+                length = aesara.shared(length, name=name)
             else:
                 length = aesara.tensor.constant(length)
         self._dim_lengths[name] = length
@@ -1937,11 +1937,52 @@ def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
 
 
 def Deterministic(name, var, model=None, dims=None, auto=False):
-    """Create a named deterministic variable
+    """Create a named deterministic variable.
+
+    Deterministic nodes are only deterministic given all of their inputs, i.e.
+    they don't add randomness to the model.  They are generally used to record
+    an intermediary result.
+
+    Indeed, PyMC allows for arbitrary combinations of random variables, for
+    example in the case of a logistic regression
+
+    .. code:: python
+
+        with pm.Model():
+            alpha = pm.Normal("alpha", 0, 1)
+            intercept = pm.Normal("intercept", 0, 1)
+            p = pm.math.invlogit(alpha * x + intercept)
+            outcome = pm.Bernoulli("outcome", p, observed=outcomes)
+
+
+    but doesn't memorize the fact that the expression ``pm.math.invlogit(alpha *
+    x + intercept)`` has been affected to the variable ``p``.  If the quantity
+    ``p`` is important and one would like to track its value in the sampling
+    trace, then one can use a deterministic node:
+
+    .. code:: python
+
+        with pm.Model():
+            alpha = pm.Normal("alpha", 0, 1)
+            intercept = pm.Normal("intercept", 0, 1)
+            p = pm.Deterministic("p", pm.math.invlogit(alpha * x + intercept))
+            outcome = pm.Bernoulli("outcome", p, observed=outcomes)
+
+    These two models are strictly equivalent from a mathematical point of view.
+    However, in the first case, the inference data will only contain values for
+    the variables ``alpha``, ``intercept`` and ``outcome``.  In the second, it
+    will also contain sampled values of ``p`` for each of the observed points.
 
     Notes
     -----
-    Deterministic nodes are ones that given all the inputs are not random variables
+    Even though adding a Deterministic node forces PyMC to compute this
+    expression, which could have been optimized away otherwise, this doesn't come
+    with a performance cost.  Indeed, Deterministic nodes are computed outside
+    the main computation graph, which can be optimized as though there was no
+    Deterministic nodes.  Whereas the optimized graph can be evaluated thousands
+    of times during a NUTS step, the Deterministic quantities are just
+    computeed once at the end of the step, with the final values of the other
+    random variables.
 
     Parameters
     ----------

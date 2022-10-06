@@ -274,9 +274,7 @@ class SMC_KERNEL(ABC):
 
     def resample(self):
         """Resample particles based on importance weights"""
-        self.resampling_indexes = self.rng.choice(
-            np.arange(self.draws), size=self.draws, p=self.weights
-        )
+        self.resampling_indexes = systematic_resampling(self.weights, self.rng)
 
         self.tempered_posterior = self.tempered_posterior[self.resampling_indexes]
         self.prior_logp = self.prior_logp[self.resampling_indexes]
@@ -546,6 +544,36 @@ class MH(SMC_KERNEL):
         return stats
 
 
+def systematic_resampling(weights, rng):
+    """
+    Systematic resampling.
+
+    Parameters
+    ----------
+    weights :
+        The weights should be probabilities and the total sum should be 1.
+
+    Returns
+    -------
+    new_indices: array
+        A vector of indices in the interval 0, ..., len(normalized_weights)
+    """
+    lnw = len(weights)
+    arange = np.arange(lnw)
+    uniform = (rng.random(1) + arange) / lnw
+
+    idx = 0
+    weight_accu = weights[0]
+    new_indices = np.empty(lnw, dtype=int)
+    for i in arange:
+        while uniform[i] > weight_accu:
+            idx += 1
+            weight_accu += weights[idx]
+        new_indices[i] = idx
+
+    return new_indices
+
+
 def _logp_forw(point, out_vars, in_vars, shared):
     """Compile Aesara function of the model and the input and output variables.
 
@@ -565,7 +593,7 @@ def _logp_forw(point, out_vars, in_vars, shared):
         new_in_vars = []
         for in_var in in_vars:
             if in_var.dtype in discrete_types:
-                float_var = at.TensorType("floatX", in_var.shape)(in_var.name)
+                float_var = at.TensorType("floatX", in_var.broadcastable)(in_var.name)
                 new_in_vars.append(float_var)
                 replace_int_input[in_var] = at.round(float_var).astype(in_var.dtype)
             else:

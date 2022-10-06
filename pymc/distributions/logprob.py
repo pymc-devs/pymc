@@ -17,14 +17,16 @@ from collections.abc import Mapping
 from typing import Dict, List, Optional, Sequence, Union
 
 import aesara
-import aesara.tensor as at
 import numpy as np
 
-from aeppl import factorized_joint_logprob
+from aeppl import factorized_joint_logprob, logprob
 from aeppl.abstract import assign_custom_measurable_outputs
+from aeppl.logprob import _logprob
 from aeppl.logprob import logcdf as logcdf_aeppl
 from aeppl.logprob import logprob as logp_aeppl
+from aeppl.tensor import MeasurableJoin
 from aeppl.transforms import TransformValuesRewrite
+from aesara import tensor as at
 from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import (
@@ -37,7 +39,7 @@ from aesara.tensor.subtensor import (
 )
 from aesara.tensor.var import TensorVariable
 
-from pymc.aesaraf import floatX
+from pymc.aesaraf import constant_fold, floatX
 
 
 def _get_scaling(
@@ -320,3 +322,47 @@ def ignore_logprob(rv: TensorVariable) -> TensorVariable:
         return rv
     new_node = assign_custom_measurable_outputs(node, type_prefix=prefix)
     return new_node.outputs[node.outputs.index(rv)]
+
+
+@_logprob.register(MeasurableJoin)
+def logprob_join_constant_shapes(op, values, axis, *base_vars, **kwargs):
+    """Compute the log-likelihood graph for a `Join`.
+
+    This overrides the implementation in Aeppl, to constant fold the shapes
+    of the base vars so that RandomVariables do not show up in the logp graph,
+    which is a requirement enforced by `pymc.distributions.logprob.joint_logp`
+    """
+    (value,) = values
+
+    base_var_shapes = [base_var.shape[axis] for base_var in base_vars]
+
+    # We don't need the graph to be constant, just to have RandomVariables removed
+    base_var_shapes = constant_fold(base_var_shapes, raise_not_constant=False)
+
+    split_values = at.split(
+        value,
+        splits_size=[base_var_shape for base_var_shape in base_var_shapes],
+        n_splits=len(base_vars),
+        axis=axis,
+    )
+
+    logps = [
+        logprob(base_var, split_value) for base_var, split_value in zip(base_vars, split_values)
+    ]
+
+    if len({logp.ndim for logp in logps}) != 1:
+        raise ValueError(
+            "Joined logps have different number of dimensions, this can happen when "
+            "joining univariate and multivariate distributions",
+        )
+
+    base_vars_ndim_supp = split_values[0].ndim - logps[0].ndim
+    join_logprob = at.concatenate(
+        [
+            at.atleast_1d(logprob(base_var, split_value))
+            for base_var, split_value in zip(base_vars, split_values)
+        ],
+        axis=axis - base_vars_ndim_supp,
+    )
+
+    return join_logprob

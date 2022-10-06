@@ -13,50 +13,34 @@ repos:
     -   id: requirements-txt-fixer
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
-- repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v0.971
-  hooks:
-    - id: mypy
-      name: Run static type checks
-      language: python
-      entry: python ./scripts/run_mypy.py --verbose
-      additional_dependencies:
-      - pandas
-      - types-cachetools
-      - types-filelock
-      - types-setuptools
-      - arviz
-      - aesara==2.8.2
-      - aeppl==0.0.35
-      always_run: true
-      require_serial: true
-      pass_filenames: false
 - repo: https://github.com/PyCQA/isort
   rev: 5.10.1
   hooks:
     - id: isort
       name: isort
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.37.3
+  rev: v2.38.2
   hooks:
     - id: pyupgrade
       args: [--py37-plus]
 - repo: https://github.com/psf/black
-  rev: 22.6.0
+  rev: 22.8.0
   hooks:
     - id: black
     - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.15.0
+  rev: v2.15.3
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
       files: ^pymc/
+      exclude: (?x)(pymc/_version.py)
 - repo: https://github.com/MarcoGorelli/madforhooks
   rev: 0.3.0
   hooks:
     - id: no-print-statements
       files: ^pymc/
+      exclude: (?x)(pymc/_version.py)
 - repo: local
   hooks:
     - id: check-no-tests-are-ignored
@@ -77,6 +61,7 @@ repos:
       entry: from \.[\.\w]* import
       types: [python]
       language: pygrep
+      exclude: (?x)(pymc/_version.py|versioneer.py)
     - id: no-internal-links
       name: Check no links that should be cross-references are in the docs
       description: >-

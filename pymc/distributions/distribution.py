@@ -21,32 +21,34 @@ from abc import ABCMeta
 from functools import singledispatch
 from typing import Callable, Optional, Sequence, Tuple, Union
 
-import aesara
 import numpy as np
 
+from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 from aeppl.logprob import _logcdf, _logprob
+from aeppl.rewriting import logprob_rewrites_db
 from aesara import tensor as at
-from aesara.graph.basic import Variable
+from aesara.compile.builders import OpFromGraph
+from aesara.graph import node_rewriter
+from aesara.graph.basic import Node, clone_replace
+from aesara.graph.rewriting.basic import in2out
+from aesara.graph.utils import MetaType
 from aesara.tensor.basic import as_tensor_variable
-from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.random.type import RandomType
 from aesara.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
-from pymc.aesaraf import change_rv_size, convert_observed_data
+from pymc.aesaraf import convert_observed_data
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
-    Size,
-    StrongDims,
-    StrongShape,
     convert_dims,
     convert_shape,
     convert_size,
     find_size,
     shape_from_dims,
 )
-from pymc.printing import str_for_dist, str_for_symbolic_dist
+from pymc.printing import str_for_dist
 from pymc.util import UNSET
 from pymc.vartypes import string_types
 
@@ -54,10 +56,9 @@ __all__ = [
     "DensityDistRV",
     "DensityDist",
     "Distribution",
-    "SymbolicDistribution",
     "Continuous",
     "Discrete",
-    "NoDistribution",
+    "SymbolicRandomVariable",
 ]
 
 DIST_PARAMETER_TYPES: TypeAlias = Union[np.ndarray, int, float, TensorVariable]
@@ -105,6 +106,7 @@ class DistributionMeta(ABCMeta):
 
         if isinstance(rv_op, RandomVariable):
             rv_type = type(rv_op)
+            clsdict["rv_type"] = rv_type
 
         new_cls = super().__new__(cls, name, bases, clsdict)
 
@@ -149,40 +151,55 @@ def _make_nice_attr_error(oldcode: str, newcode: str):
     return fn
 
 
-def _make_rv_and_resize_shape_from_dims(
-    *,
-    cls,
-    dims: Optional[StrongDims],
-    model,
-    observed,
-    args,
-    **kwargs,
-) -> Tuple[Variable, StrongShape]:
-    """Creates the RV, possibly using dims or observed to determine a resize shape (if needed)."""
-    resize_shape_from_dims = None
-    size_or_shape = kwargs.get("size") or kwargs.get("shape")
+class SymbolicRandomVariable(OpFromGraph):
+    """Symbolic Random Variable
 
-    # Preference is given to size or shape. If not specified, we rely on dims and
-    # finally, observed, to determine the shape of the variable. Because dims can be
-    # specified on the fly, we need a two-step process where we first create the RV
-    # without dims information and then resize it.
-    if not size_or_shape and observed is not None:
-        kwargs["shape"] = tuple(observed.shape)
+    This is a subclasse of `OpFromGraph` which is used to encapsulate the symbolic
+    random graph of complex distributions which are built on top of pure
+    `RandomVariable`s.
 
-    # Create the RV without dims information
-    rv_out = cls.dist(*args, **kwargs)
+    These graphs may vary structurally based on the inputs (e.g., their dimensionality),
+    and usually require that random inputs have specific shapes for correct outputs
+    (e.g., avoiding broadcasting of random inputs). Due to this, most distributions that
+    return SymbolicRandomVariable create their these graphs at runtime via the
+    classmethod `cls.rv_op`, taking care to clone and resize random inputs, if needed.
+    """
 
-    if not size_or_shape and dims is not None:
-        resize_shape_from_dims = shape_from_dims(dims, tuple(rv_out.shape), model)
+    ndim_supp: int = None
+    """Number of support dimensions as in RandomVariables
+    (0 for scalar, 1 for vector, ...)
+     """
 
-    return rv_out, resize_shape_from_dims
+    inline_aeppl: bool = False
+    """Specifies whether the logprob function is derived automatically by introspection
+    of the inner graph.
+
+    If `False`, a logprob function must be dispatched directly to the subclass type.
+    """
+
+    _print_name: Tuple[str, str] = ("Unknown", "\\operatorname{Unknown}")
+    """Tuple of (name, latex name) used for for pretty-printing variables of this type"""
+
+    def __init__(self, *args, ndim_supp, **kwargs):
+        self.ndim_supp = ndim_supp
+        kwargs.setdefault("inline", True)
+        super().__init__(*args, **kwargs)
+
+    def update(self, node: Node):
+        """Symbolic update expression for input random state variables
+
+        Returns a dictionary with the symbolic expressions required for correct updating
+        of random state input variables repeated function evaluations. This is used by
+        `aesaraf.compile_pymc`.
+        """
+        return {}
 
 
 class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
-    rv_class = None
-    rv_op: RandomVariable = None
+    rv_op: [RandomVariable, SymbolicRandomVariable] = None
+    rv_type: MetaType = None
 
     def __new__(
         cls,
@@ -262,17 +279,15 @@ class Distribution(metaclass=DistributionMeta):
         if observed is not None:
             observed = convert_observed_data(observed)
 
-        # Create the RV, without taking `dims` into consideration
-        rv_out, resize_shape_from_dims = _make_rv_and_resize_shape_from_dims(
-            cls=cls, dims=dims, model=model, observed=observed, args=args, **kwargs
-        )
+        # Preference is given to size or shape. If not specified, we rely on dims and
+        # finally, observed, to determine the shape of the variable.
+        if not ("size" in kwargs or "shape" in kwargs):
+            if dims is not None:
+                kwargs["shape"] = shape_from_dims(dims, model)
+            elif observed is not None:
+                kwargs["shape"] = tuple(observed.shape)
 
-        # Resize variable based on `dims` information
-        if resize_shape_from_dims:
-            resize_size_from_dims = find_size(
-                shape=resize_shape_from_dims, size=None, ndim_supp=cls.rv_op.ndim_supp
-            )
-            rv_out = change_rv_size(rv=rv_out, new_size=resize_size_from_dims, expand=False)
+        rv_out = cls.dist(*args, **kwargs)
 
         rv_out = model.register_rv(
             rv_out,
@@ -346,214 +361,55 @@ class Distribution(metaclass=DistributionMeta):
         shape = convert_shape(shape)
         size = convert_size(size)
 
-        create_size = find_size(shape=shape, size=size, ndim_supp=cls.rv_op.ndim_supp)
-        rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
-
-        rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
-        rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
-        rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
-        return rv_out
-
-
-class SymbolicDistribution:
-    """Symbolic statistical distribution
-
-    While traditional PyMC distributions are represented by a single RandomVariable
-    graph, Symbolic distributions correspond to a larger graph that contains one or
-    more RandomVariables and an arbitrary number of deterministic operations, which
-    represent their own kind of distribution.
-
-    The graphs returned by symbolic distributions can be evaluated directly to
-    obtain valid draws and can further be parsed by Aeppl to derive the
-    corresponding logp at runtime.
-
-    Check pymc.distributions.Censored for an example of a symbolic distribution.
-
-    Symbolic distributions must implement the following classmethods:
-    cls.dist
-        Performs input validation and converts optional alternative parametrizations
-        to a canonical parametrization. It should call `super().dist()`, passing a
-        list with the default parameters as the first and only non keyword argument,
-        followed by other keyword arguments like size and rngs, and return the result
-    cls.ndim_supp
-        Returns the support of the symbolic distribution, given the default set of
-        parameters. This may not always be constant, for instance if the symbolic
-        distribution can be defined based on an arbitrary base distribution.
-    cls.rv_op
-        Returns a TensorVariable that represents the symbolic distribution
-        parametrized by a default set of parameters and a size and rngs arguments
-    cls.change_size
-        Returns an equivalent symbolic distribution with a different size. This is
-        analogous to `pymc.aesaraf.change_rv_size` for `RandomVariable`s.
-    """
-
-    def __new__(
-        cls,
-        name: str,
-        *args,
-        dims: Optional[Dims] = None,
-        initval=None,
-        observed=None,
-        total_size=None,
-        transform=UNSET,
-        **kwargs,
-    ) -> TensorVariable:
-        """Adds a TensorVariable corresponding to a PyMC symbolic distribution to the
-        current model.
-
-        Parameters
-        ----------
-        cls : type
-            A distribution class that inherits from SymbolicDistribution.
-        name : str
-            Name for the new model variable.
-        dims : tuple, optional
-            A tuple of dimension names known to the model. When shape is not provided,
-            the shape of dims is used to define the shape of the variable.
-        initval : optional
-            Numeric or symbolic untransformed initial value of matching shape,
-            or one of the following initial value strategies: "moment", "prior".
-            Depending on the sampler's settings, a random jitter may be added to numeric,
-            symbolic or moment-based initial values in the transformed space.
-        observed : optional
-            Observed data to be passed when registering the random variable in the model.
-            When neither shape nor dims is provided, the shape of observed is used to
-            define the shape of the variable.
-            See ``Model.register_rv``.
-        total_size : float, optional
-            See ``Model.register_rv``.
-        transform : optional
-            See ``Model.register_rv``.
-        **kwargs
-            Keyword arguments that will be forwarded to ``.dist()``.
-            Most prominently: ``shape`` and ``size``
-
-        Returns
-        -------
-        var : TensorVariable
-            The created variable, registered in the Model.
-        """
-
-        try:
-            from pymc.model import Model
-
-            model = Model.get_context()
-        except TypeError:
-            raise TypeError(
-                "No model on context stack, which is needed to "
-                "instantiate distributions. Add variable inside "
-                "a 'with model:' block, or use the '.dist' syntax "
-                "for a standalone distribution."
-            )
-
-        if "testval" in kwargs:
-            initval = kwargs.pop("testval")
-            warnings.warn(
-                "The `testval` argument is deprecated; use `initval`.",
-                FutureWarning,
-                stacklevel=2,
-            )
-
-        if not isinstance(name, string_types):
-            raise TypeError(f"Name needs to be a string but got: {name}")
-
-        dims = convert_dims(dims)
-        if observed is not None:
-            observed = convert_observed_data(observed)
-
-        # Create the RV, without taking `dims` into consideration
-        rv_out, resize_shape_from_dims = _make_rv_and_resize_shape_from_dims(
-            cls=cls, dims=dims, model=model, observed=observed, args=args, **kwargs
-        )
-
-        # Resize variable based on `dims` information
-        if resize_shape_from_dims:
-            resize_size_from_dims = find_size(
-                shape=resize_shape_from_dims, size=None, ndim_supp=rv_out.tag.ndim_supp
-            )
-            rv_out = cls.change_size(rv=rv_out, new_size=resize_size_from_dims, expand=False)
-
-        rv_out = model.register_rv(
-            rv_out,
-            name,
-            observed,
-            total_size,
-            dims=dims,
-            transform=transform,
-            initval=initval,
-        )
-        # add in pretty-printing support
-        rv_out.str_repr = types.MethodType(str_for_symbolic_dist, rv_out)
-        rv_out._repr_latex_ = types.MethodType(
-            functools.partial(str_for_symbolic_dist, formatting="latex"), rv_out
-        )
-
-        rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
-        rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
-        rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
-
-        return rv_out
-
-    @classmethod
-    def dist(
-        cls,
-        dist_params,
-        *,
-        shape: Optional[Shape] = None,
-        size: Optional[Size] = None,
-        **kwargs,
-    ) -> TensorVariable:
-        """Creates a TensorVariable corresponding to the `cls` symbolic distribution.
-
-        Parameters
-        ----------
-        dist_params : array-like
-            The inputs to the `RandomVariable` `Op`.
-        shape : int, tuple, Variable, optional
-            A tuple of sizes for each dimension of the new RV.
-        size : int, tuple, Variable, optional
-            For creating the RV like in Aesara/NumPy.
-
-        Returns
-        -------
-        var : TensorVariable
-        """
-
-        if "testval" in kwargs:
-            kwargs.pop("testval")
-            warnings.warn(
-                "The `.dist(testval=...)` argument is deprecated and has no effect. "
-                "Initial values for sampling/optimization can be specified with `initval` in a modelcontext. "
-                "For using Aesara's test value features, you must assign the `.tag.test_value` yourself.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        if "initval" in kwargs:
-            raise TypeError(
-                "Unexpected keyword argument `initval`. "
-                "This argument is not available for the `.dist()` API."
-            )
-
-        if "dims" in kwargs:
-            raise NotImplementedError("The use of a `.dist(dims=...)` API is not supported.")
-        if shape is not None and size is not None:
-            raise ValueError(
-                f"Passing both `shape` ({shape}) and `size` ({size}) is not supported!"
-            )
-
-        shape = convert_shape(shape)
-        size = convert_size(size)
-
-        ndim_supp = cls.ndim_supp(*dist_params)
+        # SymbolicRVs don't have `ndim_supp` until they are created
+        ndim_supp = getattr(cls.rv_op, "ndim_supp", None)
+        if ndim_supp is None:
+            ndim_supp = cls.rv_op(*dist_params, **kwargs).owner.op.ndim_supp
         create_size = find_size(shape=shape, size=size, ndim_supp=ndim_supp)
         rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
-        # This is needed for resizing from dims in `__new__`
-        rv_out.tag.ndim_supp = ndim_supp
 
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
         rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
         return rv_out
+
+
+# Let Aeppl know that the SymbolicRandomVariable has a logprob.
+MeasurableVariable.register(SymbolicRandomVariable)
+
+
+@_get_measurable_outputs.register(SymbolicRandomVariable)
+def _get_measurable_outputs_symbolic_random_variable(op, node):
+    # This tells Aeppl that any non RandomType outputs are measurable
+
+    # Assume that if there is one default_output, that's the only one that is measurable
+    # In the rare case this is not what one wants, a specialized _get_measuarable_outputs
+    # can dispatch for a subclassed Op
+    if op.default_output is not None:
+        return [node.default_output()]
+
+    # Otherwise assume that any outputs that are not of RandomType are measurable
+    return [out for out in node.outputs if not isinstance(out.type, RandomType)]
+
+
+@node_rewriter([SymbolicRandomVariable])
+def inline_symbolic_random_variable(fgraph, node):
+    """
+    This optimization expands the internal graph of a SymbolicRV when obtaining logp
+    from Aeppl, if the flag `inline_aeppl` is True.
+    """
+    op = node.op
+    if op.inline_aeppl:
+        return clone_replace(op.inner_outputs, {u: v for u, v in zip(op.inner_inputs, node.inputs)})
+
+
+# Registered before pre-canonicalization which happens at position=-10
+logprob_rewrites_db.register(
+    "inline_SymbolicRandomVariable",
+    in2out(inline_symbolic_random_variable),
+    "basic",
+    position=-20,
+)
 
 
 @singledispatch
@@ -571,12 +427,6 @@ def moment(rv: TensorVariable) -> TensorVariable:
     return _moment(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
 
 
-@_moment.register(Elemwise)
-def moment_elemwise(op, rv, *dist_params):
-    """For Elemwise Ops, dispatch on respective scalar_op"""
-    return _moment(op.scalar_op, rv, *dist_params)
-
-
 class Discrete(Distribution):
     """Base class for discrete distributions"""
 
@@ -590,13 +440,6 @@ class Discrete(Distribution):
 
 class Continuous(Distribution):
     """Base class for continuous distributions"""
-
-
-class NoDistribution(Distribution):
-    """Base class for artifical distributions
-
-    RandomVariables that share this type are allowed in logprob graphs
-    """
 
 
 class DensityDistRV(RandomVariable):
@@ -616,18 +459,130 @@ class DensityDistRV(RandomVariable):
         return cls._random_fn(*args, rng=rng, size=size)
 
 
-class DensityDist(NoDistribution):
+class DensityDist(Distribution):
     """A distribution that can be used to wrap black-box log density functions.
 
     Creates a Distribution and registers the supplied log density function to be used
     for inference. It is also possible to supply a `random` method in order to be able
     to sample from the prior or posterior predictive distributions.
+
+
+    Parameters
+    ----------
+    name : str
+    dist_params : Tuple
+        A sequence of the distribution's parameter. These will be converted into
+        Aesara tensors internally. These parameters could be other ``TensorVariable``
+        instances created from , optionally created via ``RandomVariable`` ``Op``s.
+    class_name : str
+        Name for the RandomVariable class which will wrap the DensityDist methods.
+        When not specified, it will be given the name of the variable.
+
+        .. warning:: New DensityDists created with the same class_name will override the
+            methods dispatched onto the previous classes. If using DensityDists with
+            different methods across separate models, be sure to use distinct
+            class_names.
+
+    logp : Optional[Callable]
+        A callable that calculates the log density of some given observed ``value``
+        conditioned on certain distribution parameter values. It must have the
+        following signature: ``logp(value, *dist_params)``, where ``value`` is
+        an Aesara tensor that represents the observed value, and ``dist_params``
+        are the tensors that hold the values of the distribution parameters.
+        This function must return an Aesara tensor. If ``None``, a ``NotImplemented``
+        error will be raised when trying to compute the distribution's logp.
+    logcdf : Optional[Callable]
+        A callable that calculates the log cummulative probability of some given observed
+        ``value`` conditioned on certain distribution parameter values. It must have the
+        following signature: ``logcdf(value, *dist_params)``, where ``value`` is
+        an Aesara tensor that represents the observed value, and ``dist_params``
+        are the tensors that hold the values of the distribution parameters.
+        This function must return an Aesara tensor. If ``None``, a ``NotImplemented``
+        error will be raised when trying to compute the distribution's logcdf.
+    random : Optional[Callable]
+        A callable that can be used to generate random draws from the distribution.
+        It must have the following signature: ``random(*dist_params, rng=None, size=None)``.
+        The distribution parameters are passed as positional arguments in the
+        same order as they are supplied when the ``DensityDist`` is constructed.
+        The keyword arguments are ``rnd``, which will provide the random variable's
+        associated :py:class:`~numpy.random.Generator`, and ``size``, that will represent
+        the desired size of the random draw. If ``None``, a ``NotImplemented``
+        error will be raised when trying to draw random samples from the distribution's
+        prior or posterior predictive.
+    moment : Optional[Callable]
+        A callable that can be used to compute the moments of the distribution.
+        It must have the following signature: ``moment(rv, size, *rv_inputs)``.
+        The distribution's :class:`~aesara.tensor.random.op.RandomVariable` is passed
+        as the first argument ``rv``. ``size`` is the random variable's size implied
+        by the ``dims``, ``size`` and parameters supplied to the distribution. Finally,
+        ``rv_inputs`` is the sequence of the distribution parameters, in the same order
+        as they were supplied when the DensityDist was created. If ``None``, a default
+        ``moment`` function will be assigned that will always return 0, or an array
+        of zeros.
+    ndim_supp : int
+        The number of dimensions in the support of the distribution. Defaults to assuming
+        a scalar distribution, i.e. ``ndim_supp = 0``.
+    ndims_params : Optional[Sequence[int]]
+        The list of number of dimensions in the support of each of the distribution's
+        parameters. If ``None``, it is assumed that all parameters are scalars, hence
+        the number of dimensions of their support will be 0.
+    dtype : str
+        The dtype of the distribution. All draws and observations passed into the distribution
+        will be casted onto this dtype.
+    kwargs :
+        Extra keyword arguments are passed to the parent's class ``__new__`` method.
+
+    Examples
+    --------
+        .. code-block:: python
+
+            def logp(value, mu):
+                return -(value - mu)**2
+
+            with pm.Model():
+                mu = pm.Normal('mu',0,1)
+                pm.DensityDist(
+                    'density_dist',
+                    mu,
+                    logp=logp,
+                    observed=np.random.randn(100),
+                )
+                idata = pm.sample(100)
+
+        .. code-block:: python
+
+            def logp(value, mu):
+                return -(value - mu)**2
+
+            def random(mu, rng=None, size=None):
+                return rng.normal(loc=mu, scale=1, size=size)
+
+            with pm.Model():
+                mu = pm.Normal('mu', 0 , 1)
+                dens = pm.DensityDist(
+                    'density_dist',
+                    mu,
+                    logp=logp,
+                    random=random,
+                    observed=np.random.randn(100, 3),
+                    size=(100, 3),
+                )
+                prior = pm.sample_prior_predictive(10).prior_predictive['density_dist']
+            assert prior.shape == (1, 10, 100, 3)
+
     """
 
-    def __new__(
+    rv_type = DensityDistRV
+
+    def __new__(cls, name, *args, **kwargs):
+        kwargs.setdefault("class_name", name)
+        return super().__new__(cls, name, *args, **kwargs)
+
+    @classmethod
+    def dist(
         cls,
-        name: str,
         *dist_params,
+        class_name: str,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
         random: Optional[Callable] = None,
@@ -637,102 +592,6 @@ class DensityDist(NoDistribution):
         dtype: str = "floatX",
         **kwargs,
     ):
-        """
-        Parameters
-        ----------
-        name : str
-        dist_params : Tuple
-            A sequence of the distribution's parameter. These will be converted into
-            Aesara tensors internally. These parameters could be other ``TensorVariable``
-            instances created from , optionally created via ``RandomVariable`` ``Op``s.
-        logp : Optional[Callable]
-            A callable that calculates the log density of some given observed ``value``
-            conditioned on certain distribution parameter values. It must have the
-            following signature: ``logp(value, *dist_params)``, where ``value`` is
-            an Aesara tensor that represents the observed value, and ``dist_params``
-            are the tensors that hold the values of the distribution parameters.
-            This function must return an Aesara tensor. If ``None``, a ``NotImplemented``
-            error will be raised when trying to compute the distribution's logp.
-        logcdf : Optional[Callable]
-            A callable that calculates the log cummulative probability of some given observed
-            ``value`` conditioned on certain distribution parameter values. It must have the
-            following signature: ``logcdf(value, *dist_params)``, where ``value`` is
-            an Aesara tensor that represents the observed value, and ``dist_params``
-            are the tensors that hold the values of the distribution parameters.
-            This function must return an Aesara tensor. If ``None``, a ``NotImplemented``
-            error will be raised when trying to compute the distribution's logcdf.
-        random : Optional[Callable]
-            A callable that can be used to generate random draws from the distribution.
-            It must have the following signature: ``random(*dist_params, rng=None, size=None)``.
-            The distribution parameters are passed as positional arguments in the
-            same order as they are supplied when the ``DensityDist`` is constructed.
-            The keyword arguments are ``rnd``, which will provide the random variable's
-            associated :py:class:`~numpy.random.Generator`, and ``size``, that will represent
-            the desired size of the random draw. If ``None``, a ``NotImplemented``
-            error will be raised when trying to draw random samples from the distribution's
-            prior or posterior predictive.
-        moment : Optional[Callable]
-            A callable that can be used to compute the moments of the distribution.
-            It must have the following signature: ``moment(rv, size, *rv_inputs)``.
-            The distribution's :class:`~aesara.tensor.random.op.RandomVariable` is passed
-            as the first argument ``rv``. ``size`` is the random variable's size implied
-            by the ``dims``, ``size`` and parameters supplied to the distribution. Finally,
-            ``rv_inputs`` is the sequence of the distribution parameters, in the same order
-            as they were supplied when the DensityDist was created. If ``None``, a default
-            ``moment`` function will be assigned that will always return 0, or an array
-            of zeros.
-        ndim_supp : int
-            The number of dimensions in the support of the distribution. Defaults to assuming
-            a scalar distribution, i.e. ``ndim_supp = 0``.
-        ndims_params : Optional[Sequence[int]]
-            The list of number of dimensions in the support of each of the distribution's
-            parameters. If ``None``, it is assumed that all parameters are scalars, hence
-            the number of dimensions of their support will be 0.
-        dtype : str
-            The dtype of the distribution. All draws and observations passed into the distribution
-            will be casted onto this dtype.
-        kwargs :
-            Extra keyword arguments are passed to the parent's class ``__new__`` method.
-
-        Examples
-        --------
-            .. code-block:: python
-
-                def logp(value, mu):
-                    return -(value - mu)**2
-
-                with pm.Model():
-                    mu = pm.Normal('mu',0,1)
-                    pm.DensityDist(
-                        'density_dist',
-                        mu,
-                        logp=logp,
-                        observed=np.random.randn(100),
-                    )
-                    idata = pm.sample(100)
-
-            .. code-block:: python
-
-                def logp(value, mu):
-                    return -(value - mu)**2
-
-                def random(mu, rng=None, size=None):
-                    return rng.normal(loc=mu, scale=1, size=size)
-
-                with pm.Model():
-                    mu = pm.Normal('mu', 0 , 1)
-                    dens = pm.DensityDist(
-                        'density_dist',
-                        mu,
-                        logp=logp,
-                        random=random,
-                        observed=np.random.randn(100, 3),
-                        size=(100, 3),
-                    )
-                    prior = pm.sample_prior_predictive(10).prior_predictive['density_dist']
-                assert prior.shape == (1, 10, 100, 3)
-
-        """
 
         if dist_params is None:
             dist_params = []
@@ -744,34 +603,61 @@ class DensityDist(NoDistribution):
                 "to the API documentation for more information on how to use the "
                 "new DensityDist API."
             )
-        dist_params = [as_tensor_variable(param) for param in dist_params]
+            dist_params = [as_tensor_variable(param) for param in dist_params]
 
         # Assume scalar ndims_params
         if ndims_params is None:
             ndims_params = [0] * len(dist_params)
 
         if logp is None:
-            logp = default_not_implemented(name, "logp")
+            logp = default_not_implemented(class_name, "logp")
 
         if logcdf is None:
-            logcdf = default_not_implemented(name, "logcdf")
+            logcdf = default_not_implemented(class_name, "logcdf")
 
         if moment is None:
             moment = functools.partial(
                 default_moment,
-                rv_name=name,
+                rv_name=class_name,
                 has_fallback=random is not None,
                 ndim_supp=ndim_supp,
             )
 
         if random is None:
-            random = default_not_implemented(name, "random")
+            random = default_not_implemented(class_name, "random")
 
+        return super().dist(
+            dist_params,
+            class_name=class_name,
+            logp=logp,
+            logcdf=logcdf,
+            random=random,
+            moment=moment,
+            ndim_supp=ndim_supp,
+            ndims_params=ndims_params,
+            dtype=dtype,
+            **kwargs,
+        )
+
+    @classmethod
+    def rv_op(
+        cls,
+        *dist_params,
+        class_name: str,
+        logp: Optional[Callable],
+        logcdf: Optional[Callable],
+        random: Optional[Callable],
+        moment: Optional[Callable],
+        ndim_supp: int,
+        ndims_params: Optional[Sequence[int]],
+        dtype: str,
+        **kwargs,
+    ):
         rv_op = type(
-            f"DensityDist_{name}",
+            f"DensityDist_{class_name}",
             (DensityDistRV,),
             dict(
-                name=f"DensityDist_{name}",
+                name=f"DensityDist_{class_name}",
                 inplace=False,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
@@ -799,18 +685,7 @@ class DensityDist(NoDistribution):
         def density_dist_get_moment(op, rv, rng, size, dtype, *dist_params):
             return moment(rv, size, *dist_params)
 
-        cls.rv_op = rv_op
-        return super().__new__(cls, name, *dist_params, **kwargs)
-
-    @classmethod
-    def dist(cls, *args, **kwargs):
-        output = super().dist(args, **kwargs)
-        if cls.rv_op.dtype == "floatX":
-            dtype = aesara.config.floatX
-        else:
-            dtype = cls.rv_op.dtype
-        ndim_supp = cls.rv_op.ndim_supp
-        return output
+        return rv_op(*dist_params, **kwargs)
 
 
 def default_not_implemented(rv_name, method_name):

@@ -17,21 +17,23 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
 from aeppl.logprob import _logcdf, _logprob
 from aeppl.transforms import IntervalTransform
-from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Node, equal_computations
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
-from pymc.aesaraf import change_rv_size
 from pymc.distributions import transforms
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.distribution import SymbolicDistribution, _moment, moment
+from pymc.distributions.distribution import (
+    Distribution,
+    SymbolicRandomVariable,
+    _moment,
+    moment,
+)
 from pymc.distributions.logprob import ignore_logprob, logcdf, logp
-from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.distributions.transforms import _default_transform
 from pymc.util import check_dist_not_registered
 from pymc.vartypes import continuous_types, discrete_types
@@ -39,20 +41,18 @@ from pymc.vartypes import continuous_types, discrete_types
 __all__ = ["Mixture", "NormalMixture"]
 
 
-class MarginalMixtureRV(OpFromGraph):
+class MarginalMixtureRV(SymbolicRandomVariable):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
     default_output = 1
+    _print_name = ("MarginalMixture", "\\operatorname{MarginalMixture}")
 
     def update(self, node: Node):
         # Update for the internal mix_indexes RV
         return {node.inputs[0]: node.outputs[0]}
 
 
-MeasurableVariable.register(MarginalMixtureRV)
-
-
-class Mixture(SymbolicDistribution):
+class Mixture(Distribution):
     R"""
     Mixture log-likelihood
 
@@ -161,6 +161,8 @@ class Mixture(SymbolicDistribution):
             like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
     """
 
+    rv_type = MarginalMixtureRV
+
     @classmethod
     def dist(cls, w, comp_dists, **kwargs):
         if not isinstance(comp_dists, (tuple, list)):
@@ -189,7 +191,7 @@ class Mixture(SymbolicDistribution):
             # TODO: Allow these to not be a RandomVariable as long as we can call `ndim_supp` on them
             #  and resize them
             if not isinstance(dist, TensorVariable) or not isinstance(
-                dist.owner.op, RandomVariable
+                dist.owner.op, (RandomVariable, SymbolicRandomVariable)
             ):
                 raise ValueError(
                     f"Component dist must be a distribution created via the `.dist()` API, got {type(dist)}"
@@ -204,11 +206,6 @@ class Mixture(SymbolicDistribution):
 
         w = at.as_tensor_variable(w)
         return super().dist([w, *comp_dists], **kwargs)
-
-    @classmethod
-    def ndim_supp(cls, weights, *components):
-        # We already checked that all components have the same support dimensionality
-        return components[0].owner.op.ndim_supp
 
     @classmethod
     def rv_op(cls, weights, *components, size=None):
@@ -293,15 +290,11 @@ class Mixture(SymbolicDistribution):
         mix_op = MarginalMixtureRV(
             inputs=[mix_indexes_rng_, weights_, *components_],
             outputs=[mix_indexes_rng_next_, mix_out_],
+            ndim_supp=components[0].owner.op.ndim_supp,
         )
 
         # Create the actual MarginalMixture variable
         mix_out = mix_op(mix_indexes_rng, weights, *components)
-
-        # Reference nodes to facilitate identification in other classmethods
-        mix_out.tag.weights = weights
-        mix_out.tag.components = components
-        mix_out.tag.choices_rng = mix_indexes_rng
 
         return mix_out
 
@@ -314,33 +307,25 @@ class Mixture(SymbolicDistribution):
             mix_size = components[0].shape[mix_axis]
             size = tuple(size) + (mix_size,)
 
-        return [change_rv_size(component, size) for component in components]
-
-    @classmethod
-    def change_size(cls, rv, new_size, expand=False):
-        weights = rv.tag.weights
-        components = rv.tag.components
-
-        if expand:
-            component = rv.tag.components[0]
-            # Old size is equal to `shape[:-ndim_supp]`, with care needed for `ndim_supp == 0`
-            size_dims = component.ndim - component.owner.op.ndim_supp
-            if len(rv.tag.components) == 1:
-                # If we have a single component, new size should ignore the mixture axis
-                # dimension, as that is not touched by `_resize_components`
-                size_dims -= 1
-            old_size = components[0].shape[:size_dims]
-            new_size = to_tuple(new_size) + tuple(old_size)
-
-        components = cls._resize_components(new_size, *components)
-
-        return cls.rv_op(weights, *components, size=None)
+        return [change_dist_size(component, size) for component in components]
 
 
-@_get_measurable_outputs.register(MarginalMixtureRV)
-def _get_measurable_outputs_MarginalMixtureRV(op, node):
-    # This tells Aeppl that the second output is the measurable one
-    return [node.outputs[1]]
+@_change_dist_size.register(MarginalMixtureRV)
+def change_marginal_mixture_size(op, dist, new_size, expand=False):
+    weights, *components = dist.owner.inputs[1:]
+
+    if expand:
+        component = components[0]
+        # Old size is equal to `shape[:-ndim_supp]`, with care needed for `ndim_supp == 0`
+        size_dims = component.ndim - component.owner.op.ndim_supp
+        if len(components) == 1:
+            # If we have a single component, new size should ignore the mixture axis
+            # dimension, as that is not touched by `_resize_components`
+            size_dims -= 1
+        old_size = components[0].shape[:size_dims]
+        new_size = tuple(new_size) + tuple(old_size)
+
+    return Mixture.rv_op(weights, *components, size=new_size)
 
 
 @_logprob.register(MarginalMixtureRV)
@@ -510,7 +495,7 @@ class NormalMixture:
     ========  =======================================
     Support   :math:`x \in \mathbb{R}`
     Mean      :math:`\sum_{i = 1}^n w_i \mu_i`
-    Variance  :math:`\sum_{i = 1}^n w_i^2 \sigma^2_i`
+    Variance  :math:`\sum_{i = 1}^n w_i (\sigma^2_i + \mu_i^2) - \left(\sum_{i = 1}^n w_i \mu_i\right)^2`
     ========  =======================================
 
     Parameters

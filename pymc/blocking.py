@@ -20,7 +20,7 @@ Classes for working with subsets of parameters.
 import collections
 
 from functools import partial
-from typing import Callable, Dict, Optional, TypeVar
+from typing import Callable, Dict, Generic, Optional, TypeVar
 
 import numpy as np
 
@@ -35,7 +35,7 @@ PointType = Dict[str, np.ndarray]
 RaveledVars = collections.namedtuple("RaveledVars", "data, point_map_info")
 
 
-class Compose:
+class Compose(Generic[T]):
     """
     Compose two functions in a pickleable way
     """

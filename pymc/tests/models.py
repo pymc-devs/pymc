@@ -35,6 +35,13 @@ def simple_model():
     return model.initial_point(), model, (mu, tau**-0.5)
 
 
+def another_simple_model():
+    _, _model, _ = simple_model()
+    with _model:
+        pm.Potential("pot", at.ones((10, 10)))
+    return _model
+
+
 def simple_categorical():
     p = floatX_array([0.1, 0.2, 0.3, 0.4])
     v = floatX_array([0.0, 1.0, 2.0, 3.0])
