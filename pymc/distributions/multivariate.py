@@ -2401,8 +2401,11 @@ class ZeroSumNormal(Distribution):
 
     .. math::
 
-        ZSN(\sigma) = N(0, \sigma^2 (I - \tfrac{1}{n}J)
-        where $J_{ij} = 1$
+        \begin{align*}
+            ZSN(\sigma) = N \Big( 0, \sigma^2 (I - \tfrac{1}{n}J) \Big) \\
+            \text{where} \ ~ J_{ij} = 1 \ ~ \text{and} \\
+            n = \text{nbr of zero-sum axes}
+        \end{align*}
 
     Parameters
     ----------
