@@ -2399,7 +2399,7 @@ class ZeroSumNormal(Distribution):
     By default, the last axis is constrained to sum to zero.
     See `zerosum_axes` kwarg for more details.
 
-    .. math:
+    .. math::
 
         ZSN(\sigma) = N(0, \sigma^2 (I - \tfrac{1}{n}J)
         where $J_{ij} = 1$
@@ -2431,7 +2431,9 @@ class ZeroSumNormal(Distribution):
 
     Examples
     --------
-    .. code-block:: python
+    Define a `ZeroSumNormal` variable, with `sigma=1` and
+    `zerosum_axes=1`  by default::
+
         COORDS = {
             "regions": ["a", "b", "c"],
             "answers": ["yes", "no", "whatever", "don't understand question"],
