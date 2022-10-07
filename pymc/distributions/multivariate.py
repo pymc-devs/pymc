@@ -2422,7 +2422,7 @@ class ZeroSumNormal(Distribution):
         Necessary if ``shape`` is not passed.
     shape: tuple of integers, optional
         Shape of the distribution. Works the same as for other PyMC distributions.
-        Necessary if ``dims`` is not passed.
+        Necessary if ``dims`` or ``observed`` is not passed.
 
     Warnings
     --------

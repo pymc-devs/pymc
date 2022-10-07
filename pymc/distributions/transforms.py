@@ -276,6 +276,13 @@ class ZeroSumTransform(RVTransform):
     Constrains any random samples to sum to zero along the user-provided ``zerosum_axes``.
     By default (``zerosum_axes=[-1]``), the sum-to-zero constraint is imposed
     on the last axis.
+
+    Parameters
+    ----------
+    zerosum_axes : list of ints
+        Must be a list of integers (positive or negative).
+        By default (``zerosum_axes=[-1]``), the sum-to-zero constraint is imposed
+        on the last axis.
     """
 
     name = "zerosum"
@@ -283,14 +290,6 @@ class ZeroSumTransform(RVTransform):
     __props__ = ("zerosum_axes",)
 
     def __init__(self, zerosum_axes):
-        """
-        Parameters
-        ----------
-        zerosum_axes : list of ints
-            Must be a list of integers (positive or negative).
-            By default (``zerosum_axes=[-1]``), the sum-to-zero constraint is imposed
-            on the last axis.
-        """
         self.zerosum_axes = tuple(int(axis) for axis in zerosum_axes)
 
     def forward(self, value, *rv_inputs):
