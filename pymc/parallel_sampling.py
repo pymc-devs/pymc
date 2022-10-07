@@ -389,6 +389,7 @@ Draw = namedtuple("Draw", ["chain", "is_last", "draw_idx", "tuning", "stats", "p
 class ParallelSampler:
     def __init__(
         self,
+        *,
         draws: int,
         tune: int,
         chains: int,
@@ -396,7 +397,6 @@ class ParallelSampler:
         seeds: Sequence["RandomSeed"],
         start_points: Sequence[Dict[str, np.ndarray]],
         step_method,
-        start_chain_num: int = 0,
         progressbar: bool = True,
         mp_ctx=None,
     ):
@@ -420,7 +420,7 @@ class ParallelSampler:
                 tune,
                 step_method,
                 step_method_pickled,
-                chain + start_chain_num,
+                chain,
                 seed,
                 start,
                 mp_ctx,
@@ -434,7 +434,6 @@ class ParallelSampler:
         self._max_active = cores
 
         self._in_context = False
-        self._start_chain_num = start_chain_num
 
         self._progress = None
         self._divergences = 0

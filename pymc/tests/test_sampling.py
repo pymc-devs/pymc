@@ -505,21 +505,6 @@ def test_partial_trace_sample():
         assert "b" not in idata.posterior
 
 
-def test_chain_idx():
-    # see https://github.com/pymc-devs/pymc/issues/4469
-    with pm.Model():
-        mu = pm.Normal("mu")
-        x = pm.Normal("x", mu=mu, sigma=1, observed=np.asarray(3))
-        # note draws-tune must be >100 AND we need an observed RV for this to properly
-        # trigger convergence checks, which is one particular case in which this failed
-        # before
-        idata = pm.sample(draws=150, tune=10, chain_idx=1)
-
-        ppc = pm.sample_posterior_predictive(idata)
-        # TODO FIXME: Assert something.
-        ppc = pm.sample_posterior_predictive(idata, keep_size=True)
-
-
 @pytest.mark.parametrize(
     "n_points, tune, expected_length, expected_n_traces",
     [

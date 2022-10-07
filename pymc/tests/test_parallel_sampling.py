@@ -183,7 +183,16 @@ def test_iterator():
     step = pm.CompoundStep([step1, step2])
 
     start = {"a": floatX(np.array([1.0])), "b_log__": floatX(np.array(2.0))}
-    sampler = ps.ParallelSampler(10, 10, 3, 2, [2, 3, 4], [start] * 3, step, 0, False)
+    sampler = ps.ParallelSampler(
+        draws=10,
+        tune=10,
+        chains=3,
+        cores=2,
+        seeds=[2, 3, 4],
+        start_points=[start] * 3,
+        step_method=step,
+        progressbar=False,
+    )
     with sampler:
         for draw in sampler:
             pass
