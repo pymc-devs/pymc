@@ -21,10 +21,10 @@ from collections import namedtuple
 import numpy as np
 
 from pymc.aesaraf import floatX
-from pymc.backends.report import SamplerWarning, WarningType
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.exceptions import SamplingError
 from pymc.model import Point, modelcontext
+from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import step_sizes
 from pymc.step_methods.arraystep import GradientSharedStep
 from pymc.step_methods.hmc import integration
