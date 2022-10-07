@@ -206,12 +206,3 @@ class SamplerReport:
             report._add_warnings(filter_warns(self._chain_warnings[chain]), chain)
 
         return report
-
-
-def merge_reports(reports):
-    report = SamplerReport()
-    for rep in reports:
-        report._add_warnings(rep._global_warnings)
-        for chain in rep._chain_warnings:
-            report._add_warnings(rep._chain_warnings[chain], chain)
-    return report
