@@ -281,8 +281,6 @@ class ZeroSumTransform(RVTransform):
     ----------
     zerosum_axes : list of ints
         Must be a list of integers (positive or negative).
-        By default (``zerosum_axes=[-1]``), the sum-to-zero constraint is imposed
-        on the last axis.
     """
 
     name = "zerosum"
