@@ -123,37 +123,6 @@ class TestMultiTrace(bf.ModelBackendSetupTestCase):
         with pytest.raises(ValueError):
             base.MultiTrace([self.strace0, self.strace1])
 
-    def test_merge_traces_no_traces(self):
-        with pytest.raises(ValueError):
-            base.merge_traces([])
-
-    def test_merge_traces_diff_lengths(self):
-        with self.model:
-            strace0 = self.backend(self.name)
-            strace0.setup(self.draws, 1)
-            for i in range(self.draws):
-                strace0.record(self.test_point)
-            strace0.close()
-        mtrace0 = base.MultiTrace([self.strace0])
-
-        with self.model:
-            strace1 = self.backend(self.name)
-            strace1.setup(2 * self.draws, 1)
-            for i in range(2 * self.draws):
-                strace1.record(self.test_point)
-            strace1.close()
-        mtrace1 = base.MultiTrace([strace1])
-
-        with pytest.raises(ValueError):
-            base.merge_traces([mtrace0, mtrace1])
-
-    def test_merge_traces_nonunique(self):
-        mtrace0 = base.MultiTrace([self.strace0])
-        mtrace1 = base.MultiTrace([self.strace1])
-
-        with pytest.raises(ValueError):
-            base.merge_traces([mtrace0, mtrace1])
-
 
 class TestMultiTrace_add_remove_values(bf.ModelBackendSampledTestCase):
     name = None
