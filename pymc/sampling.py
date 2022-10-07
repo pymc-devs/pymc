@@ -70,6 +70,7 @@ from pymc.initial_point import (
 )
 from pymc.model import Model, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
+from pymc.stats.convergence import run_convergence_checks
 from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
@@ -682,7 +683,7 @@ def sample(
     _log.info(
         f'Sampling {n_chains} chain{"s" if n_chains > 1 else ""} for {n_tune:_d} tune and {n_draws:_d} draw iterations '
         f"({n_tune*n_chains:_d} + {n_draws*n_chains:_d} draws total) "
-        f"took {mtrace.report.t_sampling:.0f} seconds."
+        f"took {t_sampling:.0f} seconds."
     )
     mtrace.report._log_summary()
 
@@ -700,7 +701,8 @@ def sample(
                     stacklevel=2,
                 )
             else:
-                mtrace.report._run_convergence_checks(idata, model)
+                convergence_warnings = run_convergence_checks(idata, model)
+                mtrace.report._add_warnings(convergence_warnings)
 
         if return_inferencedata:
             return idata

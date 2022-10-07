@@ -17,8 +17,8 @@ from collections import namedtuple
 import numpy as np
 
 from pymc.aesaraf import floatX
-from pymc.backends.report import SamplerWarning, WarningType
 from pymc.math import logbern
+from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods.arraystep import Competence
 from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
 from pymc.step_methods.hmc.integration import IntegrationError
