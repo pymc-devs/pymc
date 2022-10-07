@@ -274,8 +274,6 @@ class Interval(IntervalTransform):
 class ZeroSumTransform(RVTransform):
     """
     Constrains any random samples to sum to zero along the user-provided ``zerosum_axes``.
-    By default (``zerosum_axes=[-1]``), the sum-to-zero constraint is imposed
-    on the last axis.
 
     Parameters
     ----------
