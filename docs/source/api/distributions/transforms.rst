@@ -33,6 +33,7 @@ Specific Transform Classes
     LogExpM1
     Ordered
     SumTo1
+    ZeroSumTransform
 
 
 Transform Composition Classes
