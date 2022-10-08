@@ -27,8 +27,8 @@ from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
 from pymc.aesaraf import constant_fold, floatX, intX
-from pymc.distributions import distribution, multivariate
-from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
+from pymc.distributions import distribution
+from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.distribution import (
     Distribution,
     SymbolicRandomVariable,
@@ -36,12 +36,12 @@ from pymc.distributions.distribution import (
     moment,
 )
 from pymc.distributions.logprob import ignore_logprob, logp
+from pymc.distributions.multivariate import MvNormal, MvStudentT
 from pymc.distributions.shape_utils import (
     _change_dist_size,
     change_dist_size,
     get_support_shape,
     get_support_shape_1d,
-    to_tuple,
 )
 from pymc.exceptions import NotConstantValueError
 from pymc.util import check_dist_not_registered
@@ -297,6 +297,118 @@ class GaussianRandomWalk(PredefinedRandomWalk):
         sigma = at.as_tensor_variable(sigma)
         innovation_dist = Normal.dist(mu=mu, sigma=sigma)
 
+        return init_dist, innovation_dist, kwargs
+
+
+class MvGaussianRandomWalk(PredefinedRandomWalk):
+    r"""Random Walk with Multivariate Normal innovations
+
+    Parameters
+    ----------
+    mu: tensor_like of float
+        innovation drift
+    cov: tensor_like of float
+        pos def matrix, innovation covariance matrix
+    tau: tensor_like of float
+        pos def matrix, inverse covariance matrix
+    chol: tensor_like of float
+        Cholesky decomposition of covariance matrix
+    lower : bool, default=True
+        Whether the cholesky fatcor is given as a lower triangular matrix.
+    init_dist: distribution
+        Unnamed multivariate distribution of the initial value. Unnamed refers to distributions
+         created with the ``.dist()`` API.
+
+         .. warning:: init_dist will be cloned, rendering them independent of the ones passed as input.
+
+    steps : int, optional
+        Number of steps in Random Walk (steps > 0). Only needed if shape is not
+        provided.
+
+    Notes
+    -----
+    Only one of cov, tau or chol is required.
+
+    """
+
+    @classmethod
+    def get_dists(cls, mu, *, cov=None, tau=None, chol=None, lower=True, init_dist=None, **kwargs):
+        if "init" in kwargs:
+            warnings.warn(
+                "init parameter is now called init_dist. Using init will raise an error "
+                "in a future release.",
+                FutureWarning,
+            )
+            init_dist = kwargs.pop("init")
+
+        if init_dist is None:
+            warnings.warn(
+                "Initial distribution not specified, defaulting to `MvNormal.dist(0, I*100)`."
+                "You can specify an init_dist manually to suppress this warning.",
+                UserWarning,
+            )
+            init_dist = MvNormal.dist(at.zeros_like(mu.shape[-1]), at.eye(mu.shape[-1]) * 100)
+
+        innovation_dist = MvNormal.dist(mu=mu, cov=cov, tau=tau, chol=chol, lower=lower)
+        return init_dist, innovation_dist, kwargs
+
+
+class MvStudentTRandomWalk(PredefinedRandomWalk):
+    r"""Multivariate Random Walk with StudentT innovations
+
+    Parameters
+    ----------
+    nu: int
+        degrees of freedom
+    mu: tensor_like of float
+        innovation drift
+    scale: tensor_like of float
+        pos def matrix, innovation covariance matrix
+    tau: tensor_like of float
+        pos def matrix, inverse covariance matrix
+    chol: tensor_like of float
+        Cholesky decomposition of covariance matrix
+    lower : bool, default=True
+        Whether the cholesky fatcor is given as a lower triangular matrix.
+    init_dist: distribution
+        Unnamed multivariate distribution of the initial value. Unnamed refers to distributions
+         created with the ``.dist()`` API.
+
+         .. warning:: init_dist will be cloned, rendering them independent of the ones passed as input.
+
+    steps : int, optional
+        Number of steps in Random Walk (steps > 0). Only needed if shape is not
+        provided.
+
+    Notes
+    -----
+    Only one of cov, tau or chol is required.
+
+    """
+
+    @classmethod
+    def get_dists(
+        cls, *, nu, mu, scale=None, tau=None, chol=None, lower=True, init_dist=None, **kwargs
+    ):
+        if "init" in kwargs:
+            warnings.warn(
+                "init parameter is now called init_dist. Using init will raise an error "
+                "in a future release.",
+                FutureWarning,
+            )
+            init_dist = kwargs.pop("init")
+
+        if init_dist is None:
+            warnings.warn(
+                "Initial distribution not specified, defaulting to `MvNormal.dist(0, I*100)`."
+                "You can specify an init_dist manually to suppress this warning.",
+                UserWarning,
+            )
+            init_dist = MvNormal.dist(at.zeros_like(mu.shape[-1]), at.eye(mu.shape[-1]) * 100)
+
+        innovation_dist = MvStudentT.dist(
+            nu=nu, mu=mu, scale=scale, tau=tau, chol=chol, lower=lower, cov=kwargs.pop("cov", None)
+        )
         return init_dist, innovation_dist, kwargs
 
 
@@ -817,171 +929,3 @@ class EulerMaruyama(distribution.Continuous):
 
     def _distr_parameters_for_repr(self):
         return ["dt"]
-
-
-class MvGaussianRandomWalk(distribution.Continuous):
-    r"""
-    Multivariate Random Walk with Normal innovations
-
-    Parameters
-    ----------
-    mu: tensor
-        innovation drift, defaults to 0.0
-    cov: tensor
-        pos def matrix, innovation covariance matrix
-    tau: tensor
-        pos def matrix, inverse covariance matrix
-    chol: tensor
-        Cholesky decomposition of covariance matrix
-    init: distribution
-        distribution for initial value (Defaults to Flat())
-
-    Notes
-    -----
-    Only one of cov, tau or chol is required.
-
-    """
-
-    def __new__(cls, *args, **kwargs):
-        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
-
-    @classmethod
-    def dist(cls, *args, **kwargs):
-        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
-
-    def __init__(
-        self, mu=0.0, cov=None, tau=None, chol=None, lower=True, init=None, *args, **kwargs
-    ):
-        super().__init__(*args, **kwargs)
-
-        self.init = init or Flat.dist()
-        self.innovArgs = (mu, cov, tau, chol, lower)
-        self.innov = multivariate.MvNormal.dist(*self.innovArgs, shape=self.shape)
-        self.mean = at.as_tensor_variable(0.0)
-
-    def logp(self, x):
-        """
-        Calculate log-probability of Multivariate Gaussian
-        Random Walk distribution at specified value.
-
-        Parameters
-        ----------
-        x: numeric
-            Value for which log-probability is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
-        if x.ndim == 1:
-            x = x[np.newaxis, :]
-
-        x_im1 = x[:-1]
-        x_i = x[1:]
-
-        return self.init.logp_sum(x[0]) + self.innov.logp_sum(x_i - x_im1)
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "cov"]
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from MvGaussianRandomWalk.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int or tuple of ints, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-
-
-        Examples
-        -------
-
-        .. code-block:: python
-
-            with pm.Model():
-                mu = np.array([1.0, 0.0])
-                cov = np.array([[1.0, 0.0],
-                                [0.0, 2.0]])
-
-                # draw one sample from a 2-dimensional Gaussian random walk with 10 timesteps
-                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random()
-
-                # draw three samples from a 2-dimensional Gaussian random walk with 10 timesteps
-                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=3)
-
-                # draw four samples from a 2-dimensional Gaussian random walk with 10 timesteps,
-                # indexed with a (2, 2) array
-                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=(2, 2))
-
-        """
-
-        # for each draw specified by the size input, we need to draw time_steps many
-        # samples from MvNormal.
-
-        size = to_tuple(size)
-        multivariate_samples = self.innov.random(point=point, size=size)
-        # this has shape (size, self.shape)
-        if len(self.shape) == 2:
-            # have time dimension in first slot of shape. Therefore the time
-            # component can be accessed with the index equal to the length of size.
-            time_axis = len(size)
-            multivariate_samples = multivariate_samples.cumsum(axis=time_axis)
-            if time_axis != 0:
-                # this for loop covers the case where size is a tuple
-                for idx in np.ndindex(size):
-                    multivariate_samples[idx] = (
-                        multivariate_samples[idx] - multivariate_samples[idx][0]
-                    )
-            else:
-                # size was passed as None
-                multivariate_samples = multivariate_samples - multivariate_samples[0]
-
-        # if the above statement fails, then only a spatial dimension was passed in for self.shape.
-        # Therefore don't subtract off the initial value since otherwise you get all zeros
-        # as your output.
-        return multivariate_samples
-
-
-class MvStudentTRandomWalk(MvGaussianRandomWalk):
-    r"""
-    Multivariate Random Walk with StudentT innovations
-
-    Parameters
-    ----------
-    nu: degrees of freedom
-    mu: tensor
-        innovation drift, defaults to 0.0
-    cov: tensor
-        pos def matrix, innovation covariance matrix
-    tau: tensor
-        pos def matrix, inverse covariance matrix
-    chol: tensor
-        Cholesky decomposition of covariance matrix
-    init: distribution
-        distribution for initial value (Defaults to Flat())
-    """
-
-    def __new__(cls, *args, **kwargs):
-        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
-
-    @classmethod
-    def dist(cls, *args, **kwargs):
-        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
-
-    def __init__(self, nu, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.nu = at.as_tensor_variable(nu)
-        self.innov = multivariate.MvStudentT.dist(self.nu, None, *self.innovArgs)
-
-    def _distr_parameters_for_repr(self):
-        return ["nu", "mu", "cov"]
