@@ -218,7 +218,7 @@ class TestSamplesBroadcasting:
                 broadcast_dist_samples_to(to_shape, samples, size=size)
 
 
-class TestShapeDimsSize:
+class TestSizeShapeDimsObserved:
     @pytest.mark.parametrize("param_shape", [(), (2,)])
     @pytest.mark.parametrize("batch_shape", [(), (3,)])
     @pytest.mark.parametrize(
@@ -464,6 +464,13 @@ class TestShapeDimsSize:
         # Confirm that the rng is properly offset, otherwise the second value of the first
         # draw, would match the first value of the second draw
         assert fn()[1] != fn()[0]
+
+    def test_explicit_size_shape_none(self):
+        with pm.Model() as m:
+            x = pm.Normal("x", shape=None, observed=[1, 2, 3])
+            y = pm.Normal("y", size=None, observed=[1, 2, 3, 4])
+        assert x.shape.eval().item() == 3
+        assert y.shape.eval().item() == 4
 
 
 def test_rv_size_is_none():
