@@ -1466,7 +1466,13 @@ class TestZeroSumNormal:
     @pytest.mark.parametrize(
         "error, match, shape, support_shape, zerosum_axes",
         [
-            (IndexError, "index out of range", (3, 4, 5), None, 4),
+            (
+                ValueError,
+                "Number of shape dimensions is too small for ndim_supp of 4",
+                (3, 4, 5),
+                None,
+                4,
+            ),
             (AssertionError, "does not match", (3, 4), (3,), None),  # support_shape should be 4
             (
                 AssertionError,
