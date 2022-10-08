@@ -82,6 +82,19 @@ class TestRandomWalk:
             ):
                 RandomWalk("rw", init_dist=init_dist, innovation_dist=innovation, steps=5)
 
+    def test_change_size(self):
+        init_dist = Normal.dist()
+        innovation_dist = Normal.dist()
+
+        # size = 5
+        rw = RandomWalk.dist(init_dist=init_dist, innovation_dist=innovation_dist, shape=(5, 100))
+
+        new_rw = change_dist_size(rw, new_size=(7,))
+        assert tuple(new_rw.shape.eval()) == (7, 100)
+
+        new_rw = change_dist_size(rw, new_size=(4, 3), expand=True)
+        assert tuple(new_rw.shape.eval()) == (4, 3, 5, 100)
+
 
 class TestGaussianRandomWalk:
     def test_logp(self):

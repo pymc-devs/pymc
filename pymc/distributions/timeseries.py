@@ -118,7 +118,7 @@ class RandomWalk(Distribution):
 
         # If not explicit, size is determined by the shapes of the input distributions
         if size is None:
-            size = at.broadcast_shape(init_dist, innovation_dist[..., 0])
+            size = at.broadcast_shape(init_dist, at.atleast_1d(innovation_dist)[..., 0])
         innovation_size = tuple(size) + (steps,)
 
         # Resize input distributions
