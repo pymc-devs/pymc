@@ -252,6 +252,39 @@ def dataset_to_point_list(
     return cast(List[Dict[str, np.ndarray]], points), stacked_dims
 
 
+def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
+    """Returns a new ``InferenceData`` object with the "warning" stat removed from sample stats groups.
+
+    This function should be applied to an ``InferenceData`` object obtained with
+    ``pm.sample(keep_warning_stat=True)`` before trying to ``.to_netcdf()`` or ``.to_zarr()`` it.
+    """
+    nidata = arviz.InferenceData(attrs=idata.attrs)
+    for gname, group in idata.items():
+        if "sample_stat" in gname:
+            group = group.drop_vars(names=["warning", "warning_dim_0"], errors="ignore")
+        nidata.add_groups({gname: group}, coords=group.coords, dims=group.dims)
+    return nidata
+
+
+def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tuple[int, int]:
+    """Extract and return number of chains and samples in xarray or arviz traces."""
+    dataset: xarray.Dataset
+    if isinstance(data, xarray.Dataset):
+        dataset = data
+    elif isinstance(data, arviz.InferenceData):
+        dataset = data["posterior"]
+    else:
+        raise ValueError(
+            "Argument must be xarray Dataset or arviz InferenceData. Got %s",
+            data.__class__,
+        )
+
+    coords = dataset.coords
+    nchains = coords["chain"].sizes["chain"]
+    nsamples = coords["draw"].sizes["draw"]
+    return nchains, nsamples
+
+
 def hashable(a=None) -> int:
     """
     Hashes many kinds of objects, including some that are unhashable through the builtin `hash` function.

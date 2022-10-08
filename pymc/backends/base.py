@@ -78,10 +78,6 @@ class BaseTrace(ABC):
         self.chain = None
         self._is_base_setup = False
         self.sampler_vars = None
-        self._warnings = []
-
-    def _add_warnings(self, warnings):
-        self._warnings.extend(warnings)
 
     # Sampling methods
 
@@ -288,9 +284,6 @@ class MultiTrace:
             self._straces[strace.chain] = strace
 
         self._report = SamplerReport()
-        for strace in straces:
-            if hasattr(strace, "_warnings"):
-                self._report._add_warnings(strace._warnings, strace.chain)
 
     def __repr__(self):
         template = "<{}: {} chains, {} iterations, {} variables>"

@@ -18,7 +18,7 @@ import numpy as np
 
 from pymc.aesaraf import floatX
 from pymc.math import logbern
-from pymc.stats.convergence import SamplerWarning, WarningType
+from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods.arraystep import Competence
 from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
 from pymc.step_methods.hmc.integration import IntegrationError
@@ -114,6 +114,8 @@ class NUTS(BaseHMC):
             "largest_eigval": np.float64,
             "smallest_eigval": np.float64,
             "index_in_trajectory": np.int64,
+            "reached_max_treedepth": bool,
+            "warning": SamplerWarning,
         }
     ]
 
@@ -189,6 +191,7 @@ class NUTS(BaseHMC):
 
         tree = _Tree(len(p0), self.integrator, start, step_size, self.Emax)
 
+        reached_max_treedepth = False
         for _ in range(max_treedepth):
             direction = logbern(np.log(0.5)) * 2 - 1
             divergence_info, turning = tree.extend(direction)
@@ -196,11 +199,11 @@ class NUTS(BaseHMC):
             if divergence_info or turning:
                 break
         else:
-            if not self.tune:
-                self._reached_max_treedepth += 1
+            reached_max_treedepth = not self.tune
 
         stats = tree.stats()
         accept_stat = stats["mean_tree_accept"]
+        stats["reached_max_treedepth"] = reached_max_treedepth
         return HMCStepData(tree.proposal, accept_stat, divergence_info, stats)
 
     @staticmethod
@@ -211,20 +214,6 @@ class NUTS(BaseHMC):
         if var.dtype in continuous_types and has_grad:
             return Competence.PREFERRED
         return Competence.INCOMPATIBLE
-
-    def warnings(self):
-        warnings = super().warnings()
-        n_samples = self._samples_after_tune
-        n_treedepth = self._reached_max_treedepth
-
-        if n_samples > 0 and n_treedepth / float(n_samples) > 0.05:
-            msg = (
-                "The chain reached the maximum tree depth. Increase "
-                "max_treedepth, increase target_accept or reparameterize."
-            )
-            warn = SamplerWarning(WarningType.TREEDEPTH, msg, "warn")
-            warnings.append(warn)
-        return warnings
 
 
 # A proposal for the next position

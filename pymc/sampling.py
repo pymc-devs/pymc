@@ -70,12 +70,13 @@ from pymc.initial_point import (
 )
 from pymc.model import Model, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
-from pymc.stats.convergence import run_convergence_checks
+from pymc.stats.convergence import SamplerWarning, log_warning, run_convergence_checks
 from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
     dataset_to_point_list,
+    drop_warning_stat,
     get_default_varnames,
     get_untransformed_name,
     is_transformed_name,
@@ -323,6 +324,7 @@ def sample(
     jitter_max_retries: int = 10,
     *,
     return_inferencedata: bool = True,
+    keep_warning_stat: bool = False,
     idata_kwargs: dict = None,
     mp_ctx=None,
     **kwargs,
@@ -393,6 +395,13 @@ def sample(
         `MultiTrace` (False). Defaults to `True`.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
+    keep_warning_stat : bool
+        If ``True`` the "warning" stat emitted by, for example, HMC samplers will be kept
+        in the returned ``idata.sample_stat`` group.
+        This leads to the ``idata`` not supporting ``.to_netcdf()`` or ``.to_zarr()`` and
+        should only be set to ``True`` if you intend to use the "warning" objects right away.
+        Defaults to ``False`` such that ``pm.drop_warning_stat`` is applied automatically,
+        making the ``InferenceData`` compatible with saving.
     mp_ctx : multiprocessing.context.BaseContent
         A multiprocessing context for parallel sampling.
         See multiprocessing documentation for details.
@@ -699,6 +708,10 @@ def sample(
                 mtrace.report._add_warnings(convergence_warnings)
 
         if return_inferencedata:
+            # By default we drop the "warning" stat which contains `SamplerWarning`
+            # objects that can not be stored with `.to_netcdf()`.
+            if not keep_warning_stat:
+                return drop_warning_stat(idata)
             return idata
     return mtrace
 
@@ -1048,32 +1061,26 @@ def _iter_sample(
             if step.generates_stats:
                 point, stats = step.step(point)
                 strace.record(point, stats)
+                log_warning_stats(stats)
                 diverging = i > tune and stats and stats[0].get("diverging")
             else:
                 point = step.step(point)
                 strace.record(point)
             if callback is not None:
-                warns = getattr(step, "warnings", None)
                 callback(
                     trace=strace,
-                    draw=Draw(chain, i == draws, i, i < tune, stats, point, warns),
+                    draw=Draw(chain, i == draws, i, i < tune, stats, point),
                 )
 
             yield strace, diverging
     except KeyboardInterrupt:
         strace.close()
-        if hasattr(step, "warnings"):
-            warns = step.warnings()
-            strace._add_warnings(warns)
         raise
     except BaseException:
         strace.close()
         raise
     else:
         strace.close()
-        if hasattr(step, "warnings"):
-            warns = step.warnings()
-            strace._add_warnings(warns)
 
 
 class PopulationStepper:
@@ -1356,6 +1363,7 @@ def _iter_population(
                     if steppers[c].generates_stats:
                         points[c], stats = updates[c]
                         strace.record(points[c], stats)
+                        log_warning_stats(stats)
                     else:
                         points[c] = updates[c]
                         strace.record(points[c])
@@ -1513,21 +1521,16 @@ def _mp_sample(
             with sampler:
                 for draw in sampler:
                     strace = traces[draw.chain]
-                    if draw.stats is not None:
-                        strace.record(draw.point, draw.stats)
-                    else:
-                        strace.record(draw.point)
+                    strace.record(draw.point, draw.stats)
+                    log_warning_stats(draw.stats)
                     if draw.is_last:
                         strace.close()
-                        if draw.warnings is not None:
-                            strace._add_warnings(draw.warnings)
 
                     if callback is not None:
                         callback(trace=trace, draw=draw)
 
         except ps.ParallelSamplingError as error:
             strace = traces[error._chain]
-            strace._add_warnings(error._warnings)
             for strace in traces:
                 strace.close()
 
@@ -1544,6 +1547,22 @@ def _mp_sample(
     finally:
         for strace in traces:
             strace.close()
+
+
+def log_warning_stats(stats: Sequence[Dict[str, Any]]):
+    """Logs 'warning' stats if present."""
+    if stats is None:
+        return
+
+    for sts in stats:
+        warn = sts.get("warning", None)
+        if warn is None:
+            continue
+        if isinstance(warn, SamplerWarning):
+            log_warning(warn)
+        else:
+            _log.warning(warn)
+    return
 
 
 def _choose_chains(traces: Sequence[BaseTrace], tune: int) -> Tuple[List[BaseTrace], int]:
