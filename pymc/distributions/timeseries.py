@@ -102,13 +102,12 @@ class RandomWalk(Distribution):
 
         if not (
             isinstance(innovation_dist, at.TensorVariable)
-            and init_dist.owner is not None
-            and isinstance(init_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
-            # TODO: Lift univariate constraint on inovvation_dist
-            and init_dist.owner.op.ndim_supp == 0
+            and innovation_dist.owner is not None
+            and isinstance(innovation_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
+            and innovation_dist.owner.op.ndim_supp == 0
         ):
-            raise TypeError("init_dist must be a univariate distribution variable")
-        check_dist_not_registered(init_dist)
+            raise TypeError("innovation_dist must be a univariate distribution variable")
+        check_dist_not_registered(innovation_dist)
 
         return super().dist([init_dist, innovation_dist, steps], **kwargs)
 

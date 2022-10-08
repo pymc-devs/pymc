@@ -27,7 +27,13 @@ from pymc.distributions.discrete import DiracDelta
 from pymc.distributions.logprob import logp
 from pymc.distributions.multivariate import Dirichlet
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
-from pymc.distributions.timeseries import AR, GARCH11, EulerMaruyama, GaussianRandomWalk
+from pymc.distributions.timeseries import (
+    AR,
+    GARCH11,
+    EulerMaruyama,
+    GaussianRandomWalk,
+    RandomWalk,
+)
 from pymc.model import Model
 from pymc.sampling import draw, sample, sample_posterior_predictive
 from pymc.tests.distributions.util import (
@@ -38,6 +44,43 @@ from pymc.tests.distributions.util import (
     check_logp,
 )
 from pymc.tests.helpers import SeededTest, select_by_precision
+
+
+class TestRandomWalk:
+    def test_dists_types(self):
+        init_dist = Normal.dist()
+        innovation_dist = Normal.dist()
+
+        with pytest.raises(
+            TypeError,
+            match="init_dist must be a univariate distribution variable",
+        ):
+            RandomWalk.dist(init_dist=5, innovation_dist=innovation_dist, steps=5)
+
+        with pytest.raises(
+            TypeError,
+            match="innovation_dist must be a univariate distribution variable",
+        ):
+            RandomWalk.dist(init_dist=init_dist, innovation_dist=5, steps=5)
+
+    def test_dists_not_registered_check(self):
+        with Model():
+            init = Normal("init")
+            innovation = Normal("innovation")
+
+            init_dist = Normal.dist()
+            innovation_dist = Normal.dist()
+            with pytest.raises(
+                ValueError,
+                match="The dist init was already registered in the current model",
+            ):
+                RandomWalk("rw", init_dist=init, innovation_dist=innovation_dist, steps=5)
+
+            with pytest.raises(
+                ValueError,
+                match="The dist innovation was already registered in the current model",
+            ):
+                RandomWalk("rw", init_dist=init_dist, innovation_dist=innovation, steps=5)
 
 
 class TestGaussianRandomWalk:
