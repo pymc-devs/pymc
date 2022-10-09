@@ -58,7 +58,6 @@ jobs:
           conda activate pymc-test
           pip install -e .
           pip install --pre -U polyagamma
-          pip install mypy types-cachetools
           python --version
       - name: Run mypy
         run: |

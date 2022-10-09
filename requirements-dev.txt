@@ -10,6 +10,7 @@ fastprogress>=0.2.0
 h5py>=2.7
 ipython>=7.16
 jupyter-sphinx
+mypy
 myst-nb
 numpy>=1.15.0
 numpydoc
@@ -26,5 +27,6 @@ sphinx-notfound-page
 sphinx-remove-toctrees
 sphinx>=1.5
 sphinxext-rediraffe
+types-cachetools
 typing-extensions>=3.7.4
 watermark
