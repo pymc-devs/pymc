@@ -33,8 +33,6 @@ from aesara.tensor.var import TensorConstant, TensorVariable
 
 import pymc as pm
 
-from pymc.aesaraf import convert_observed_data
-
 __all__ = [
     "get_data",
     "GeneratorAdapter",
@@ -668,9 +666,10 @@ def Data(
         )
     name = model.name_for(name)
 
-    # `convert_observed_data` takes care of parameter `value` and
-    # transforms it to something digestible for Aesara.
-    arr = convert_observed_data(value)
+    # Conversion to floatX is important to avoid having another conversion when the variable
+    # is used for observed somewhere.  This breaks identification of the pm.Data variables
+    # as observed data, which is a Problem for model_to_graphviz and posterior predictive sampling.
+    arr = pm.floatX(value)
 
     if mutable is None:
         warnings.warn(
