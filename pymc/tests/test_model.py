@@ -1138,11 +1138,11 @@ class TestProfile:
         _, self.model, _ = simple_model()
 
     def test_profile_model(self):
-        assert self.model.profile(self.model.logp()).fct_call_time > 0
+        assert self.model.profile(self.model.logp(), n=3000).fct_call_time > 0
 
     def test_profile_variable(self):
         rv = self.model.basic_RVs[0]
-        assert self.model.profile(self.model.logp(vars=[rv], sum=False)).fct_call_time
+        assert self.model.profile(self.model.logp(vars=[rv], sum=False), n=3000).fct_call_time > 0
 
     def test_profile_count(self):
         count = 1005
