@@ -162,7 +162,7 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
             "These files did not fail before, so please check the above output"
             f" for errors in {unexpected_failing} and fix them."
         )
-        print("!!!!!!!!!")
+        print("You can run `python scripts/run_mypy.py --verbose` to reproduce this test locally.")
         sys.exit(1)
 
     if unexpected_passing == {"pymc/sampling_jax.py"}:
