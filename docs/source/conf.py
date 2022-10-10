@@ -257,6 +257,7 @@ html_theme_options = {
     "navbar_start": ["navbar-logo", "navbar-version"],
     "navbar_end": ["navbar-icon-links.html"],
     "page_sidebar_items": ["page-toc", "edit-this-page", "donate"],
+    "header_links_before_dropdown": 6,
     "search_bar_text": "Search...",
     "use_edit_page_button": True,
     "google_analytics_id": "UA-176578023-1",
