@@ -8,11 +8,12 @@ To build docs on Windows we recommend running inside a Docker container.
 To build the docs, run these commands at PyMC repository root:
 
 ```bash
-$ pip install -r requirements-dev.txt  # Make sure the dev requirements are installed
-$ pip install numpyro  # Make sure `sampling_jax` docs can be built
-$ make clean  # clean built docs from previous runs and intermediate outputs
-$ make html   # Build docs
-$ python -m http.server --directory docs/_build/  # Render docs
+pip install -r requirements-dev.txt  # Make sure the dev requirements are installed
+pip install numpyro  # Make sure `sampling_jax` docs can be built
+pip install -e .  # Install local pymc version as installable package
+make clean  # clean built docs from previous runs and intermediate outputs
+make html   # Build docs
+python -m http.server --directory docs/_build/  # Render docs
 ```
 
 Check the printed URL where docs are being served and open it.
