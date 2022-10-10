@@ -255,7 +255,7 @@ html_theme_options = {
     "logo_link": "https://www.pymc.io",
     "show_prev_next": False,
     "navbar_start": ["navbar-logo", "navbar-version"],
-    "navbar_end": ["search-field.html", "navbar-icon-links.html"],
+    "navbar_end": ["navbar-icon-links.html"],
     "page_sidebar_items": ["page-toc", "edit-this-page", "donate"],
     "search_bar_text": "Search...",
     "use_edit_page_button": True,
