@@ -11,229 +11,453 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import itertools as it
-import warnings
-
 import aesara
 import numpy as np
 import pytest
 import scipy.stats as st
 
-from aesara.tensor import TensorVariable
+from aesara.tensor.random.op import RandomVariable
 
 import pymc as pm
 
+from pymc import MutableData
 from pymc.aesaraf import floatX
-from pymc.distributions.continuous import Flat, HalfNormal, Normal
+from pymc.distributions.continuous import Exponential, Flat, HalfNormal, Normal, Uniform
 from pymc.distributions.discrete import DiracDelta
 from pymc.distributions.logprob import logp
-from pymc.distributions.multivariate import Dirichlet
+from pymc.distributions.multivariate import (
+    Dirichlet,
+    LKJCholeskyCov,
+    MvNormal,
+    MvStudentT,
+)
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.distributions.timeseries import (
     AR,
     GARCH11,
     EulerMaruyama,
     GaussianRandomWalk,
-    get_steps,
+    MvGaussianRandomWalk,
+    MvStudentTRandomWalk,
+    RandomWalk,
 )
 from pymc.model import Model
 from pymc.sampling import draw, sample, sample_posterior_predictive
-from pymc.tests.distributions.util import (
-    R,
-    Rplus,
-    Vector,
-    assert_moment_is_expected,
-    check_logp,
-)
-from pymc.tests.helpers import SeededTest, select_by_precision
+from pymc.tests.distributions.util import assert_moment_is_expected
+from pymc.tests.helpers import select_by_precision
 
 
-@pytest.mark.parametrize(
-    "steps, shape, step_shape_offset, expected_steps, consistent",
-    [
-        (10, None, 0, 10, True),
-        (10, None, 1, 10, True),
-        (None, (10,), 0, 10, True),
-        (None, (10,), 1, 9, True),
-        (None, (10, 5), 0, 5, True),
-        (None, None, 0, None, True),
-        (10, (10,), 0, 10, True),
-        (10, (11,), 1, 10, True),
-        (10, (5, 5), 0, 5, False),
-        (10, (5, 10), 1, 9, False),
-    ],
-)
-@pytest.mark.parametrize("info_source", ("shape", "dims", "observed"))
-def test_get_steps(info_source, steps, shape, step_shape_offset, expected_steps, consistent):
-    if info_source == "shape":
-        inferred_steps = get_steps(steps=steps, shape=shape, step_shape_offset=step_shape_offset)
+class TestRandomWalk:
+    def test_dists_types(self):
+        init_dist = Normal.dist()
+        innovation_dist = Normal.dist()
 
-    elif info_source == "dims":
-        if shape is None:
-            dims = None
-            coords = {}
-        else:
-            dims = tuple(str(i) for i, shape in enumerate(shape))
-            coords = {str(i): range(shape) for i, shape in enumerate(shape)}
-        with Model(coords=coords):
-            inferred_steps = get_steps(steps=steps, dims=dims, step_shape_offset=step_shape_offset)
+        with pytest.raises(
+            TypeError,
+            match="init_dist must be a distribution variable",
+        ):
+            RandomWalk.dist(init_dist=5, innovation_dist=innovation_dist, steps=5)
 
-    elif info_source == "observed":
-        if shape is None:
-            observed = None
-        else:
-            observed = np.zeros(shape)
-        inferred_steps = get_steps(
-            steps=steps, observed=observed, step_shape_offset=step_shape_offset
-        )
+        with pytest.raises(
+            TypeError,
+            match="innovation_dist must be a distribution variable",
+        ):
+            RandomWalk.dist(init_dist=init_dist, innovation_dist=5, steps=5)
 
-    if not isinstance(inferred_steps, TensorVariable):
-        assert inferred_steps == expected_steps
-    else:
-        if consistent:
-            assert inferred_steps.eval() == expected_steps
-        else:
-            assert inferred_steps.owner.inputs[0].eval() == expected_steps
-            with pytest.raises(AssertionError, match="Steps do not match"):
-                inferred_steps.eval()
+        init_dist = MvNormal.dist([0], [[1]])
+        innovation_dist = Normal.dist(size=(1,))
+        with pytest.raises(
+            TypeError,
+            match="init_dist and innovation_dist must have the same support dimensionality",
+        ):
+            RandomWalk.dist(init_dist=init_dist, innovation_dist=innovation_dist, steps=5)
 
+    def test_dists_not_registered_check(self):
+        with Model():
+            init = Normal("init")
+            innovation = Normal("innovation")
 
-class TestGaussianRandomWalk:
-    def test_logp(self):
-        def ref_logp(value, mu, sigma):
-            return (
-                st.norm.logpdf(value[0], 0, 100)  # default init_dist has a scale 100
-                + st.norm.logpdf(np.diff(value), mu, sigma).sum()
-            )
+            init_dist = Normal.dist()
+            innovation_dist = Normal.dist()
+            with pytest.raises(
+                ValueError,
+                match="The dist init was already registered in the current model",
+            ):
+                RandomWalk("rw", init_dist=init, innovation_dist=innovation_dist, steps=5)
 
-        check_logp(
-            pm.GaussianRandomWalk,
-            Vector(R, 4),
-            {"mu": R, "sigma": Rplus},
-            ref_logp,
-            decimal=select_by_precision(float64=6, float32=1),
-            extra_args={"steps": 3, "init_dist": Normal.dist(0, 100)},
-        )
-
-    def test_gaussianrandomwalk_inference(self):
-        mu, sigma, steps = 2, 1, 1000
-        obs = np.concatenate([[0], np.random.normal(mu, sigma, size=steps)]).cumsum()
-
-        with pm.Model():
-            _mu = pm.Uniform("mu", -10, 10)
-            _sigma = pm.Uniform("sigma", 0, 10)
-
-            obs_data = pm.MutableData("obs_data", obs)
-            grw = GaussianRandomWalk(
-                "grw", _mu, _sigma, steps=steps, observed=obs_data, init_dist=Normal.dist(0, 100)
-            )
-
-            trace = pm.sample(chains=1)
-
-        recovered_mu = trace.posterior["mu"].mean()
-        recovered_sigma = trace.posterior["sigma"].mean()
-        np.testing.assert_allclose([mu, sigma], [recovered_mu, recovered_sigma], atol=0.2)
-
-    @pytest.mark.parametrize("init", [None, pm.Normal.dist()])
-    def test_gaussian_random_walk_init_dist_shape(self, init):
-        """Test that init_dist is properly resized"""
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "Initial distribution not specified.*", UserWarning)
-            grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init)
-            assert tuple(grw.owner.inputs[0].shape.eval()) == ()
-
-            grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, size=(5,))
-            assert tuple(grw.owner.inputs[0].shape.eval()) == (5,)
-
-            grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=2)
-            assert tuple(grw.owner.inputs[0].shape.eval()) == ()
-
-            grw = pm.GaussianRandomWalk.dist(mu=0, sigma=1, steps=1, init_dist=init, shape=(5, 2))
-            assert tuple(grw.owner.inputs[0].shape.eval()) == (5,)
-
-            grw = pm.GaussianRandomWalk.dist(mu=[0, 0], sigma=1, steps=1, init_dist=init)
-            assert tuple(grw.owner.inputs[0].shape.eval()) == (2,)
-
-            grw = pm.GaussianRandomWalk.dist(mu=0, sigma=[1, 1], steps=1, init_dist=init)
-            assert tuple(grw.owner.inputs[0].shape.eval()) == (2,)
-
-            grw = pm.GaussianRandomWalk.dist(
-                mu=np.zeros((3, 1)), sigma=[1, 1], steps=1, init_dist=init
-            )
-            assert tuple(grw.owner.inputs[0].shape.eval()) == (3, 2)
-
-    def test_gaussianrandomwalk_broadcasted_by_init_dist(self):
-        grw = pm.GaussianRandomWalk.dist(
-            mu=0, sigma=1, steps=4, init_dist=pm.Normal.dist(size=(2, 3))
-        )
-        assert tuple(grw.shape.eval()) == (2, 3, 5)
-        assert grw.eval().shape == (2, 3, 5)
-
-    @pytest.mark.parametrize("shape", ((6,), (3, 6)))
-    def test_inferred_steps_from_shape(self, shape):
-        x = GaussianRandomWalk.dist(shape=shape, init_dist=Normal.dist(0, 100))
-        steps = x.owner.inputs[-1]
-        assert steps.eval() == 5
-
-    def test_missing_steps(self):
-        with pytest.raises(ValueError, match="Must specify steps or shape parameter"):
-            GaussianRandomWalk.dist(shape=None, init_dist=Normal.dist(0, 100))
-
-    def test_inconsistent_steps_and_shape(self):
-        with pytest.raises(AssertionError, match="Steps do not match last shape dimension"):
-            x = GaussianRandomWalk.dist(steps=12, shape=45, init_dist=Normal.dist(0, 100))
-
-    def test_inferred_steps_from_dims(self):
-        with pm.Model(coords={"batch": range(5), "steps": range(20)}):
-            x = GaussianRandomWalk("x", dims=("batch", "steps"), init_dist=Normal.dist(0, 100))
-        steps = x.owner.inputs[-1]
-        assert steps.eval() == 19
-
-    def test_inferred_steps_from_observed(self):
-        with pm.Model():
-            x = GaussianRandomWalk("x", observed=np.zeros(10), init_dist=Normal.dist(0, 100))
-        steps = x.owner.inputs[-1]
-        assert steps.eval() == 9
+            with pytest.raises(
+                ValueError,
+                match="The dist innovation was already registered in the current model",
+            ):
+                RandomWalk("rw", init_dist=init_dist, innovation_dist=innovation, steps=5)
 
     @pytest.mark.parametrize(
-        "init",
+        "init_dist, innovation_dist, steps, size, shape, "
+        "init_dist_size, innovation_dist_size, rw_shape",
+        [
+            (Normal.dist(), Normal.dist(), 1, None, None, 1, 1, (2,)),
+            (Normal.dist(), Normal.dist(), 1, None, (2,), 1, 1, (2,)),
+            (Normal.dist(), Normal.dist(), 3, (5,), None, 5, 5 * 3, (5, 4)),
+            (Normal.dist(), Normal.dist(), 3, None, (5, 4), 5, 5 * 3, (5, 4)),
+            (Normal.dist(), Normal.dist(mu=np.zeros(3)), 1, None, None, 3, 3, (3, 2)),
+            (
+                Normal.dist(),
+                Normal.dist(mu=np.zeros((3, 1)), sigma=np.ones(2)),
+                4,
+                None,
+                None,
+                3 * 2,
+                3 * 2 * 4,
+                (3, 2, 5),
+            ),
+            (Normal.dist(size=(2, 3)), Normal.dist(), 4, None, None, 2 * 3, 2 * 3 * 4, (2, 3, 5)),
+            (Dirichlet.dist(np.ones(3)), Dirichlet.dist(np.ones(3)), 1, None, None, 3, 3, (2, 3)),
+            (Dirichlet.dist(np.ones(3)), Dirichlet.dist(np.ones(3)), 1, None, (2, 3), 3, 3, (2, 3)),
+            (
+                Dirichlet.dist(np.ones(3)),
+                Dirichlet.dist(np.ones(3)),
+                4,
+                (6,),
+                None,
+                6 * 3,
+                6 * 4 * 3,
+                (6, 5, 3),
+            ),
+            (
+                Dirichlet.dist(np.ones(3)),
+                Dirichlet.dist(np.ones(3)),
+                4,
+                None,
+                (6, 5, 3),
+                6 * 3,
+                6 * 4 * 3,
+                (6, 5, 3),
+            ),
+            (
+                Dirichlet.dist(np.ones(3)),
+                Dirichlet.dist(np.ones((4, 3))),
+                1,
+                None,
+                None,
+                4 * 3,
+                4 * 3,
+                (4, 2, 3),
+            ),
+            (
+                Dirichlet.dist(np.ones((2, 3))),
+                Dirichlet.dist(np.ones(3)),
+                4,
+                None,
+                None,
+                2 * 3,
+                2 * 4 * 3,
+                (2, 5, 3),
+            ),
+        ],
+    )
+    def test_dist_sizes(
+        self,
+        init_dist,
+        innovation_dist,
+        steps,
+        size,
+        shape,
+        init_dist_size,
+        innovation_dist_size,
+        rw_shape,
+    ):
+        """Test that init and innovation dists are properly resized"""
+        rw = RandomWalk.dist(
+            steps=steps,
+            init_dist=init_dist,
+            innovation_dist=innovation_dist,
+            size=size,
+            shape=shape,
+        )
+        init_dist, innovation_dist = rw.owner.inputs[:2]
+        # Check the inputs are pure RandomVariable's (and not e.g., Broadcasts)
+        assert isinstance(init_dist.owner.op, RandomVariable)
+        assert isinstance(innovation_dist.owner.op, RandomVariable)
+        assert init_dist.size.eval() == init_dist_size
+        assert innovation_dist.size.eval() == innovation_dist_size
+        assert tuple(rw.shape.eval()) == rw_shape
+
+    def test_change_size_univariate(self):
+        init_dist = Normal.dist()
+        innovation_dist = Normal.dist()
+
+        # size = 5
+        rw = RandomWalk.dist(init_dist=init_dist, innovation_dist=innovation_dist, shape=(5, 100))
+
+        new_rw = change_dist_size(rw, new_size=(7,))
+        assert tuple(new_rw.shape.eval()) == (7, 100)
+
+        new_rw = change_dist_size(rw, new_size=(4, 3), expand=True)
+        assert tuple(new_rw.shape.eval()) == (4, 3, 5, 100)
+
+    def test_change_size_multivariate(self):
+        init_dist = Dirichlet.dist([1, 1, 1])
+        innovation_dist = Dirichlet.dist([1, 1, 1])
+
+        # size = 5
+        rw = RandomWalk.dist(
+            init_dist=init_dist, innovation_dist=innovation_dist, shape=(5, 100, 3)
+        )
+
+        new_rw = change_dist_size(rw, new_size=(7,))
+        assert tuple(new_rw.shape.eval()) == (7, 100, 3)
+
+        new_rw = change_dist_size(rw, new_size=(4, 3), expand=True)
+        assert tuple(new_rw.shape.eval()) == (4, 3, 5, 100, 3)
+
+    @pytest.mark.parametrize(
+        "init_dist, innovation_dist, shape, steps",
+        [
+            (Normal.dist(), Normal.dist(), (5, 3), 2),
+            (Dirichlet.dist([1, 1, 1]), Dirichlet.dist([1, 1, 1]), (5, 3), 4),
+        ],
+    )
+    @pytest.mark.parametrize("steps_source", ("shape", "dims", "observed"))
+    def test_infer_steps(self, init_dist, innovation_dist, shape, steps, steps_source):
+        shape_source_kwargs = dict(shape=None, dims=None, observed=None)
+        if steps_source == "shape":
+            shape_source_kwargs["shape"] = shape
+        elif steps_source == "dims":
+            shape_source_kwargs["dims"] = [f"dim{i}" for i in range(len(shape))]
+        elif steps_source == "observed":
+            shape_source_kwargs["observed"] = np.zeros(shape)
+        else:
+            raise ValueError
+
+        coords = {f"dim{i}": range(s) for i, s in enumerate(shape)}
+        with Model(coords=coords):
+            x = RandomWalk(
+                "x", init_dist=init_dist, innovation_dist=innovation_dist, **shape_source_kwargs
+            )
+        inferred_steps = x.owner.inputs[-1]
+        assert inferred_steps.eval().item() == steps
+
+    def test_infer_steps_error(self):
+        with pytest.raises(ValueError, match="Must specify steps or shape parameter"):
+            RandomWalk.dist(init_dist=Normal.dist(), innovation_dist=Normal.dist())
+
+    @pytest.mark.parametrize(
+        "init_dist, innovation_dist, steps, shape",
+        [
+            (Normal.dist(), Normal.dist(), 12, (13, 42)),
+            (Dirichlet.dist([1, 1, 1]), Dirichlet.dist([1, 1, 1]), 12, (13, 42, 3)),
+        ],
+    )
+    def test_inconsistent_steps_and_shape(self, init_dist, innovation_dist, steps, shape):
+        with pytest.raises(
+            AssertionError, match="support_shape does not match respective shape dimension"
+        ):
+            RandomWalk.dist(
+                init_dist=init_dist,
+                innovation_dist=innovation_dist,
+                steps=steps,
+                shape=shape,
+            ).eval()
+
+    @pytest.mark.parametrize(
+        "init_dist",
         [
             pm.HalfNormal.dist(sigma=2),
             pm.StudentT.dist(nu=4, mu=1, sigma=0.5),
         ],
     )
-    def test_gaussian_random_walk_init_dist_logp(self, init):
-        grw = pm.GaussianRandomWalk.dist(init_dist=init, steps=1)
+    def test_init_logp_univariate(self, init_dist):
+        rw = RandomWalk.dist(init_dist=init_dist, innovation_dist=Normal.dist(), steps=1)
         assert np.isclose(
-            pm.logp(grw, [0, 0]).eval(),
-            pm.logp(init, 0).eval() + st.norm.logpdf(0),
+            pm.logp(rw, [0, 0]).eval(),
+            pm.logp(init_dist, 0).eval() + st.norm.logpdf(0),
         )
 
     @pytest.mark.parametrize(
-        "mu, sigma, init_dist, steps, size, expected",
+        "init_dist",
         [
-            (0, 1, Normal.dist(1), 10, None, np.ones((11,))),
-            (1, 1, Normal.dist(0), 10, (2,), np.full((2, 11), np.arange(11))),
-            (1, 1, Normal.dist([0, 1]), 10, None, np.vstack((np.arange(11), np.arange(11) + 1))),
-            (0, [1, 1], Normal.dist(0), 10, None, np.zeros((2, 11))),
+            MvNormal.dist(mu=[1, 2, 3], cov=np.eye(3) * 1.5),
+            MvStudentT.dist(nu=4, mu=[1, 2, 3], scale=np.eye(3) * 0.5),
+        ],
+    )
+    def test_init_logp_multivariate(self, init_dist):
+        rw = RandomWalk.dist(
+            init_dist=init_dist,
+            innovation_dist=MvNormal.dist(np.zeros(3), np.eye(3)),
+            steps=1,
+        )
+        assert np.isclose(
+            pm.logp(rw, np.zeros((2, 3))).eval(),
+            pm.logp(init_dist, np.zeros(3)).eval()
+            + st.multivariate_normal.logpdf(np.zeros(3)).sum(),
+        )
+
+    def test_innovation_logp_univariate(self):
+        steps = 5
+        dist = RandomWalk.dist(
+            init_dist=Normal.dist(0, 1),
+            innovation_dist=Normal.dist(1, 1),
+            shape=(steps,),
+        )
+        assert np.isclose(
+            logp(dist, np.arange(5)).eval(),
+            logp(Normal.dist(0, 1), 0).eval() * steps,
+        )
+
+    def test_innovation_logp_multivariate(self):
+        steps = 5
+        dist = RandomWalk.dist(
+            init_dist=MvNormal.dist(np.zeros(3), cov=np.eye(3)),
+            innovation_dist=MvNormal.dist(mu=np.ones(3), cov=np.eye(3)),
+            shape=(steps, 3),
+        )
+        assert np.isclose(
+            logp(dist, np.full((3, 5), np.arange(5)).T).eval(),
+            logp(MvNormal.dist(np.zeros(3), cov=np.eye(3)), np.zeros(3)).eval() * steps,
+        )
+
+    @pytest.mark.parametrize(
+        "init_dist, innovation_dist, steps, size, expected, check_finite_logp",
+        [
+            (Normal.dist(-10), Normal.dist(1), 9, None, np.arange(-10, 0), True),
             (
-                [1, -1],
-                1,
-                Normal.dist(0),
-                10,
-                (4, 2),
-                np.full((4, 2, 11), np.vstack((np.arange(11), -np.arange(11)))),
+                Normal.dist(-10),
+                Normal.dist(1),
+                9,
+                (5, 3),
+                np.full((5, 3, 10), np.arange(-10, 0)),
+                True,
+            ),
+            (
+                Normal.dist([-10, 0]),
+                Normal.dist(1),
+                9,
+                None,
+                np.concatenate(
+                    [[np.arange(-10, 0)], [np.arange(0, 10)]],
+                    axis=0,
+                ),
+                True,
+            ),
+            (
+                MvNormal.dist([-10, 0, 10], np.eye(3)),
+                MvNormal.dist([1, 2, 3], np.eye(3)),
+                9,
+                None,
+                np.concatenate(
+                    [[np.arange(-10, 0, 1)], [np.arange(0, 20, 2)], [np.arange(10, 40, 3)]],
+                    axis=0,
+                ).T,
+                True,
+            ),
+            (
+                MvNormal.dist([-10, 0, 10], np.eye(3)),
+                MvNormal.dist([1, 2, 3], np.eye(3)),
+                9,
+                (5, 4),
+                np.full(
+                    (5, 4, 10, 3),
+                    np.concatenate(
+                        [[np.arange(-10, 0, 1)], [np.arange(0, 20, 2)], [np.arange(10, 40, 3)]],
+                        axis=0,
+                    ).T,
+                ),
+                False,  # MvNormal logp only supports 2D values
             ),
         ],
     )
-    def test_moment(self, mu, sigma, init_dist, steps, size, expected):
+    def test_moment(self, init_dist, innovation_dist, steps, size, expected, check_finite_logp):
         with Model() as model:
-            GaussianRandomWalk("x", mu=mu, sigma=sigma, init_dist=init_dist, steps=steps, size=size)
-        assert_moment_is_expected(model, expected)
+            RandomWalk(
+                "x", init_dist=init_dist, innovation_dist=innovation_dist, steps=steps, size=size
+            )
+        assert_moment_is_expected(model, expected, check_finite_logp=check_finite_logp)
 
-    def test_init_deprecated_arg(self):
+
+class TestPredefinedRandomWalk:
+    def test_gaussian(self):
+        x = GaussianRandomWalk.dist(mu=0, sigma=1, init_dist=Flat.dist(), steps=5)
+        init_dist, innovation_dist = x.owner.inputs[:2]
+        assert isinstance(init_dist.owner.op, Flat)
+        assert isinstance(innovation_dist.owner.op, Normal)
+
+    def test_gaussian_inference(self):
+        mu, sigma, steps = 2, 1, 1000
+        obs = np.concatenate([[0], np.random.normal(mu, sigma, size=steps)]).cumsum()
+
+        with Model():
+            _mu = Uniform("mu", -10, 10)
+            _sigma = Uniform("sigma", 0, 10)
+
+            obs_data = MutableData("obs_data", obs)
+            grw = GaussianRandomWalk(
+                "grw", _mu, _sigma, steps=steps, observed=obs_data, init_dist=Normal.dist(0, 100)
+            )
+
+            trace = sample(chains=1)
+
+        recovered_mu = trace.posterior["mu"].mean()
+        recovered_sigma = trace.posterior["sigma"].mean()
+        np.testing.assert_allclose([mu, sigma], [recovered_mu, recovered_sigma], atol=0.2)
+
+    @pytest.mark.parametrize("param", ["cov", "chol", "tau"])
+    def test_mvgaussian(self, param):
+        x = MvGaussianRandomWalk.dist(
+            mu=np.ones(3),
+            **{param: np.eye(3)},
+            init_dist=Dirichlet.dist(np.ones(3)),
+            steps=5,
+        )
+        init_dist, innovation_dist = x.owner.inputs[:2]
+        assert isinstance(init_dist.owner.op, Dirichlet)
+        assert isinstance(innovation_dist.owner.op, MvNormal)
+
+    @pytest.mark.parametrize("param", ("chol", "cov"))
+    def test_mvgaussian_with_chol_cov_rv(self, param):
+        with pm.Model() as model:
+            mu = Normal("mu", 0.0, 1.0, shape=3)
+            sd_dist = Exponential.dist(1.0, shape=3)
+            # pylint: disable=unpacking-non-sequence
+            chol, corr, stds = LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            # pylint: enable=unpacking-non-sequence
+            if param == "chol":
+                mv = MvGaussianRandomWalk("mv", mu, chol=chol, shape=(10, 7, 3))
+            elif param == "cov":
+                mv = MvGaussianRandomWalk("mv", mu, cov=pm.math.dot(chol, chol.T), shape=(10, 7, 3))
+            else:
+                raise ValueError
+        assert draw(mv, draws=5).shape == (5, 10, 7, 3)
+
+    @pytest.mark.parametrize("param", ["cov", "chol", "tau"])
+    def test_mvstudentt(self, param):
+        x = MvStudentTRandomWalk.dist(
+            nu=4,
+            mu=np.ones(3),
+            **{param: np.eye(3)},
+            init_dist=Dirichlet.dist(np.ones(3)),
+            steps=5,
+        )
+        init_dist, innovation_dist = x.owner.inputs[:2]
+        assert isinstance(init_dist.owner.op, Dirichlet)
+        assert isinstance(innovation_dist.owner.op, MvStudentT)
+
+    @pytest.mark.parametrize(
+        "distribution, init_dist, build_kwargs",
+        [
+            (GaussianRandomWalk, Normal.dist(), dict()),
+            (MvGaussianRandomWalk, Dirichlet.dist(np.ones(3)), dict(mu=np.zeros(3), tau=np.eye(3))),
+            (
+                MvStudentTRandomWalk,
+                Dirichlet.dist(np.ones(3)),
+                dict(nu=4, mu=np.zeros(3), tau=np.eye(3)),
+            ),
+        ],
+    )
+    def test_init_deprecated_arg(self, distribution, init_dist, build_kwargs):
         with pytest.warns(FutureWarning, match="init parameter is now called init_dist"):
-            pm.GaussianRandomWalk.dist(init=Normal.dist(), shape=(10,))
+            distribution.dist(init=init_dist, steps=10, **build_kwargs)
 
 
 class TestAR:
@@ -615,7 +839,7 @@ def _gen_sde_path(sde, pars, dt, n, x0):
     return np.array(xs)
 
 
-@pytest.mark.xfail(reason="Timeseries not refactored", raises=NotImplementedError)
+@pytest.mark.xfail(reason="Euleryama not refactored", raises=NotImplementedError)
 def test_linear():
     lam = -0.78
     sig2 = 5e-3
@@ -640,79 +864,3 @@ def test_linear():
     assert (lo < lam) and (lam < hi)
     lo, hi = np.percentile(ppc["zh"], p95, axis=0)
     assert ((lo < z) * (z < hi)).mean() > 0.95
-
-
-def generate_shapes(include_params=False):
-    # fmt: off
-    mudim_as_event = [
-        [None, 1, 3, 10, (10, 3), 100],
-        [(3,)],
-        [(1,), (3,)],
-        ["cov", "chol", "tau"]
-    ]
-    # fmt: on
-    mudim_as_dist = [
-        [None, 1, 3, 10, (10, 3), 100],
-        [(10, 3)],
-        [(1,), (3,), (1, 1), (1, 3), (10, 1), (10, 3)],
-        ["cov", "chol", "tau"],
-    ]
-    if not include_params:
-        del mudim_as_event[-1]
-        del mudim_as_dist[-1]
-    data = it.chain(it.product(*mudim_as_event), it.product(*mudim_as_dist))
-    return data
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestMvGaussianRandomWalk(SeededTest):
-    @pytest.mark.parametrize(
-        ["sample_shape", "dist_shape", "mu_shape", "param"],
-        generate_shapes(include_params=True),
-        ids=str,
-    )
-    def test_with_np_arrays(self, sample_shape, dist_shape, mu_shape, param):
-        dist = pm.MvGaussianRandomWalk.dist(
-            mu=np.ones(mu_shape), **{param: np.eye(3)}, shape=dist_shape
-        )
-        output_shape = to_tuple(sample_shape) + dist_shape
-        assert dist.random(size=sample_shape).shape == output_shape
-
-    @pytest.mark.parametrize(
-        ["sample_shape", "dist_shape", "mu_shape"],
-        generate_shapes(include_params=False),
-        ids=str,
-    )
-    def test_with_chol_rv(self, sample_shape, dist_shape, mu_shape):
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
-            sd_dist = pm.Exponential.dist(1.0, shape=3)
-            # pylint: disable=unpacking-non-sequence
-            chol, corr, stds = pm.LKJCholeskyCov(
-                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
-            )
-            # pylint: enable=unpacking-non-sequence
-            mv = pm.MvGaussianRandomWalk("mv", mu, chol=chol, shape=dist_shape)
-            prior = pm.sample_prior_predictive(samples=sample_shape)
-
-        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
-
-    @pytest.mark.xfail
-    @pytest.mark.parametrize(
-        ["sample_shape", "dist_shape", "mu_shape"],
-        generate_shapes(include_params=False),
-        ids=str,
-    )
-    def test_with_cov_rv(self, sample_shape, dist_shape, mu_shape):
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
-            sd_dist = pm.Exponential.dist(1.0, shape=3)
-            # pylint: disable=unpacking-non-sequence
-            chol, corr, stds = pm.LKJCholeskyCov(
-                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
-            )
-            # pylint: enable=unpacking-non-sequence
-            mv = pm.MvGaussianRandomWalk("mv", mu, cov=pm.math.dot(chol, chol.T), shape=dist_shape)
-            prior = pm.sample_prior_predictive(samples=sample_shape)
-
-        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape

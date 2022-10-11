@@ -90,7 +90,7 @@ pr_tutorial
 :maxdepth: 1
 :caption: How-to guides
 
-developer_guide_implementing_distribution
+implementing_distribution
 build_docs
 running_the_test_suite
 review_pr_pymc_examples

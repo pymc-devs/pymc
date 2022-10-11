@@ -70,6 +70,7 @@ from pymc.initial_point import (
 )
 from pymc.model import Model, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
+from pymc.stats.convergence import run_convergence_checks
 from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
@@ -311,7 +312,6 @@ def sample(
     n_init: int = 200_000,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     trace: Optional[Union[BaseTrace, List[str]]] = None,
-    chain_idx: int = 0,
     chains: Optional[int] = None,
     cores: Optional[int] = None,
     tune: int = 1000,
@@ -353,9 +353,6 @@ def sample(
     trace : backend or list
         This should be a backend instance, or a list of variables to track.
         If None or a list of variables, the NDArray backend is used.
-    chain_idx : int
-        Chain number used to store sample in backend. If ``chains`` is greater than one, chain
-        numbers will start here.
     chains : int
         The number of chains to sample. Running independent chains is important for some
         convergence statistics and can also reveal multiple modes in the posterior. If ``None``,
@@ -569,7 +566,6 @@ def sample(
         "step": step,
         "start": initial_points,
         "trace": trace,
-        "chain": chain_idx,
         "chains": chains,
         "tune": tune,
         "progressbar": progressbar,
@@ -658,7 +654,7 @@ def sample(
     # count the number of tune/draw iterations that happened
     # ideally via the "tune" statistic, but not all samplers record it!
     if "tune" in mtrace.stat_names:
-        stat = mtrace.get_sampler_stats("tune", chains=chain_idx)
+        stat = mtrace.get_sampler_stats("tune", chains=0)
         # when CompoundStep is used, the stat is 2 dimensional!
         if len(stat.shape) == 2:
             stat = stat[:, 0]
@@ -682,7 +678,7 @@ def sample(
     _log.info(
         f'Sampling {n_chains} chain{"s" if n_chains > 1 else ""} for {n_tune:_d} tune and {n_draws:_d} draw iterations '
         f"({n_tune*n_chains:_d} + {n_draws*n_chains:_d} draws total) "
-        f"took {mtrace.report.t_sampling:.0f} seconds."
+        f"took {t_sampling:.0f} seconds."
     )
     mtrace.report._log_summary()
 
@@ -700,7 +696,8 @@ def sample(
                     stacklevel=2,
                 )
             else:
-                mtrace.report._run_convergence_checks(idata, model)
+                convergence_warnings = run_convergence_checks(idata, model)
+                mtrace.report._add_warnings(convergence_warnings)
 
         if return_inferencedata:
             return idata
@@ -734,7 +731,6 @@ def _check_start_shape(model, start: PointType):
 
 def _sample_many(
     draws: int,
-    chain: int,
     chains: int,
     start: Sequence[PointType],
     random_seed: Optional[Sequence[RandomSeed]],
@@ -748,8 +744,6 @@ def _sample_many(
     ----------
     draws: int
         The number of samples to draw
-    chain: int
-        Number of the first chain in the sequence.
     chains: int
         Total number of chains to sample.
     start: list
@@ -768,7 +762,7 @@ def _sample_many(
     for i in range(chains):
         trace = _sample(
             draws=draws,
-            chain=chain + i,
+            chain=i,
             start=start[i],
             step=step,
             random_seed=None if random_seed is None else random_seed[i],
@@ -791,7 +785,6 @@ def _sample_many(
 
 def _sample_population(
     draws: int,
-    chain: int,
     chains: int,
     start: Sequence[PointType],
     random_seed: RandomSeed,
@@ -808,8 +801,6 @@ def _sample_population(
     ----------
     draws : int
         The number of samples to draw
-    chain : int
-        The number of the first chain in the population
     chains : int
         The total number of chains in the population
     start : list
@@ -832,7 +823,6 @@ def _sample_population(
     """
     sampling = _prepare_iter_population(
         draws,
-        [chain + c for c in range(chains)],
         step,
         start,
         parallelize,
@@ -952,8 +942,7 @@ def iter_sample(
         This should be a backend instance, or a list of variables to track.
         If None or a list of variables, the NDArray backend is used.
     chain : int, optional
-        Chain number used to store sample in backend. If ``cores`` is greater than one, chain numbers
-        will start here.
+        Chain number used to store sample in backend.
     tune : int, optional
         Number of iterations to tune (defaults to 0).
     model : Model (optional if in ``with`` context)
@@ -1008,8 +997,7 @@ def _iter_sample(
         This should be a backend instance, or a list of variables to track.
         If None or a list of variables, the NDArray backend is used.
     chain : int, optional
-        Chain number used to store sample in backend. If ``cores`` is greater than one, chain numbers
-        will start here.
+        Chain number used to store sample in backend.
     tune : int, optional
         Number of iterations to tune (defaults to 0).
     model : Model (optional if in ``with`` context)
@@ -1247,7 +1235,6 @@ class PopulationStepper:
 
 def _prepare_iter_population(
     draws: int,
-    chains: list,
     step,
     start: Sequence[PointType],
     parallelize: bool,
@@ -1262,8 +1249,6 @@ def _prepare_iter_population(
     ----------
     draws : int
         The number of samples to draw
-    chains : list
-        The chain numbers in the population
     step : function
         Step function (should be or contain a population step method)
     start : list
@@ -1282,8 +1267,7 @@ def _prepare_iter_population(
     _iter_population : generator
         Yields traces of all chains at the same time
     """
-    # chains contains the chain numbers, but for indexing we need indices...
-    nchains = len(chains)
+    nchains = len(start)
     model = modelcontext(model)
     draws = int(draws)
 
@@ -1327,7 +1311,7 @@ def _prepare_iter_population(
             trace=None,
             model=model,
         )
-        for c in chains
+        for c in range(nchains)
     ]
 
     # 4. configure the PopulationStepper (expensive call)
@@ -1457,7 +1441,6 @@ def _mp_sample(
     step,
     chains: int,
     cores: int,
-    chain: int,
     random_seed: Sequence[RandomSeed],
     start: Sequence[PointType],
     progressbar: bool = True,
@@ -1482,8 +1465,6 @@ def _mp_sample(
         The number of chains to sample.
     cores : int
         The number of chains to run in parallel.
-    chain : int
-        Number of the first chain.
     random_seed : list of random seeds
         Random seeds for each chain.
     start : list
@@ -1520,26 +1501,25 @@ def _mp_sample(
             trace=trace,
             model=model,
         )
-        for chain_number in range(chain, chain + chains)
+        for chain_number in range(chains)
     ]
 
     sampler = ps.ParallelSampler(
-        draws,
-        tune,
-        chains,
-        cores,
-        random_seed,
-        start,
-        step,
-        chain,
-        progressbar,
+        draws=draws,
+        tune=tune,
+        chains=chains,
+        cores=cores,
+        seeds=random_seed,
+        start_points=start,
+        step_method=step,
+        progressbar=progressbar,
         mp_ctx=mp_ctx,
     )
     try:
         try:
             with sampler:
                 for draw in sampler:
-                    strace = traces[draw.chain - chain]
+                    strace = traces[draw.chain]
                     if strace.supports_sampler_stats and draw.stats is not None:
                         strace.record(draw.point, draw.stats)
                     else:
@@ -1553,7 +1533,7 @@ def _mp_sample(
                         callback(trace=trace, draw=draw)
 
         except ps.ParallelSamplingError as error:
-            strace = traces[error._chain - chain]
+            strace = traces[error._chain]
             strace._add_warnings(error._warnings)
             for strace in traces:
                 strace.close()
@@ -1998,18 +1978,12 @@ def sample_posterior_predictive(
     _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
     ppc_trace_t = _DefaultTrace(samples)
     try:
-        if isinstance(_trace, MultiTrace):
-            # trace dict is unordered, but we want to return ppc samples in
-            # a predictable ordering, so sort the chain indices
-            chain_idx_mapping = sorted(_trace._straces.keys())
         for idx in indices:
             if nchain > 1:
                 # the trace object will either be a MultiTrace (and have _straces)...
                 if hasattr(_trace, "_straces"):
                     chain_idx, point_idx = np.divmod(idx, len_trace)
                     chain_idx = chain_idx % nchain
-                    # chain indices might not always start at 0, convert to proper index
-                    chain_idx = chain_idx_mapping[chain_idx]
                     param = cast(MultiTrace, _trace)._straces[chain_idx].point(point_idx)
                 # ... or a PointList
                 else:

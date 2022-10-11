@@ -21,12 +21,11 @@ import logging
 import warnings
 
 from abc import ABC
-from typing import List
 
 import aesara.tensor as at
 import numpy as np
 
-from pymc.backends.report import SamplerReport, merge_reports
+from pymc.backends.report import SamplerReport
 from pymc.model import modelcontext
 from pymc.util import get_var_name
 
@@ -568,43 +567,6 @@ class MultiTrace:
             chains = self.chains
 
         return itl.chain.from_iterable(self._straces[chain] for chain in chains)
-
-
-def merge_traces(mtraces: List[MultiTrace]) -> MultiTrace:
-    """Merge MultiTrace objects.
-
-    Parameters
-    ----------
-    mtraces: list of MultiTraces
-        Each instance should have unique chain numbers.
-
-    Raises
-    ------
-    A ValueError is raised if any traces have overlapping chain numbers,
-    or if chains are of different lengths.
-
-    Returns
-    -------
-    A MultiTrace instance with merged chains
-    """
-    if len(mtraces) == 0:
-        raise ValueError("Cannot merge an empty set of traces.")
-    base_mtrace = mtraces[0]
-    chain_len = len(base_mtrace)
-    # check base trace
-    if any(
-        len(st) != chain_len for _, st in base_mtrace._straces.items()
-    ):  # pylint: disable=line-too-long
-        raise ValueError("Chains are of different lengths.")
-    for new_mtrace in mtraces[1:]:
-        for new_chain, strace in new_mtrace._straces.items():
-            if new_chain in base_mtrace._straces:
-                raise ValueError("Chains are not unique.")
-            if len(strace) != chain_len:
-                raise ValueError("Chains are of different lengths.")
-            base_mtrace._straces[new_chain] = strace
-    base_mtrace._report = merge_reports([trace.report for trace in mtraces])
-    return base_mtrace
 
 
 def _squeeze_cat(results, combine, squeeze):

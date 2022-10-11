@@ -11,9 +11,11 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import abc
 import warnings
 
-from typing import Any, Optional, Union
+from abc import ABCMeta
+from typing import Optional
 
 import aesara
 import aesara.tensor as at
@@ -21,13 +23,12 @@ import numpy as np
 
 from aeppl.logprob import _logprob
 from aesara.graph.basic import Node, clone_replace
-from aesara.raise_op import Assert
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
-from pymc.aesaraf import constant_fold, convert_observed_data, floatX, intX
-from pymc.distributions import distribution, multivariate
-from pymc.distributions.continuous import Flat, Normal, get_tau_sigma
+from pymc.aesaraf import constant_fold, floatX, intX
+from pymc.distributions import distribution
+from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.distribution import (
     Distribution,
     SymbolicRandomVariable,
@@ -35,16 +36,14 @@ from pymc.distributions.distribution import (
     moment,
 )
 from pymc.distributions.logprob import ignore_logprob, logp
+from pymc.distributions.multivariate import MvNormal, MvStudentT
 from pymc.distributions.shape_utils import (
-    Dims,
-    Shape,
     _change_dist_size,
     change_dist_size,
-    convert_dims,
-    to_tuple,
+    get_support_shape,
+    get_support_shape_1d,
 )
 from pymc.exceptions import NotConstantValueError
-from pymc.model import modelcontext
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -56,61 +55,6 @@ __all__ = [
     "GARCH11",
     "EulerMaruyama",
 ]
-
-
-def get_steps(
-    steps: Optional[Union[int, np.ndarray, TensorVariable]],
-    *,
-    shape: Optional[Shape] = None,
-    dims: Optional[Dims] = None,
-    observed: Optional[Any] = None,
-    step_shape_offset: int = 0,
-):
-    """Extract number of steps from shape / dims / observed information
-
-    Parameters
-    ----------
-    steps:
-        User specified steps for timeseries distribution
-    shape:
-        User specified shape for timeseries distribution
-    dims:
-        User specified dims for timeseries distribution
-    observed:
-        User specified observed data from timeseries distribution
-    step_shape_offset:
-        Difference between last shape dimension and number of steps in timeseries
-        distribution, defaults to 0
-
-    Returns
-    -------
-    steps
-        Steps, if specified directly by user, or inferred from the last dimension of
-        shape / dims / observed. When two sources of step information are provided,
-        a symbolic Assert is added to ensure they are consistent.
-    """
-    inferred_steps = None
-    if shape is not None:
-        shape = to_tuple(shape)
-        inferred_steps = shape[-1] - step_shape_offset
-
-    if inferred_steps is None and dims is not None:
-        dims = convert_dims(dims)
-        model = modelcontext(None)
-        inferred_steps = model.dim_lengths[dims[-1]] - step_shape_offset
-
-    if inferred_steps is None and observed is not None:
-        observed = convert_observed_data(observed)
-        inferred_steps = observed.shape[-1] - step_shape_offset
-
-    if inferred_steps is None:
-        inferred_steps = steps
-    # If there are two sources of information for the steps, assert they are consistent
-    elif steps is not None:
-        inferred_steps = Assert(msg="Steps do not match last shape dimension")(
-            inferred_steps, at.eq(inferred_steps, steps)
-        )
-    return inferred_steps
 
 
 class RandomWalkRV(SymbolicRandomVariable):
@@ -128,62 +72,108 @@ class RandomWalk(Distribution):
 
     rv_type = RandomWalkRV
 
-    def __new__(cls, *args, steps=None, **kwargs):
-        steps = get_steps(
+    def __new__(cls, *args, innovation_dist, steps=None, **kwargs):
+        steps = cls.get_steps(
+            innovation_dist=innovation_dist,
             steps=steps,
             shape=None,  # Shape will be checked in `cls.dist`
-            dims=kwargs.get("dims", None),
-            observed=kwargs.get("observed", None),
-            step_shape_offset=1,
+            dims=kwargs.get("dims"),
+            observed=kwargs.get("observed"),
         )
-        return super().__new__(cls, *args, steps=steps, **kwargs)
+
+        return super().__new__(cls, *args, innovation_dist=innovation_dist, steps=steps, **kwargs)
 
     @classmethod
     def dist(cls, init_dist, innovation_dist, steps=None, **kwargs) -> at.TensorVariable:
-        steps = get_steps(
+        if not (
+            isinstance(init_dist, at.TensorVariable)
+            and init_dist.owner is not None
+            and isinstance(init_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
+        ):
+            raise TypeError("init_dist must be a distribution variable")
+        check_dist_not_registered(init_dist)
+
+        if not (
+            isinstance(innovation_dist, at.TensorVariable)
+            and innovation_dist.owner is not None
+            and isinstance(innovation_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
+        ):
+            raise TypeError("innovation_dist must be a distribution variable")
+        check_dist_not_registered(innovation_dist)
+
+        if init_dist.owner.op.ndim_supp != innovation_dist.owner.op.ndim_supp:
+            raise TypeError(
+                "init_dist and innovation_dist must have the same support dimensionality"
+            )
+
+        steps = cls.get_steps(
+            innovation_dist=innovation_dist,
             steps=steps,
             shape=kwargs.get("shape"),
-            step_shape_offset=1,
+            dims=None,
+            observed=None,
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
         steps = at.as_tensor_variable(intX(steps))
 
-        if not (
-            isinstance(init_dist, at.TensorVariable)
-            and init_dist.owner is not None
-            and isinstance(init_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
-            # TODO: Lift univariate constraint on init_dist
-            and init_dist.owner.op.ndim_supp == 0
-        ):
-            raise TypeError("init_dist must be a univariate distribution variable")
-        check_dist_not_registered(init_dist)
+        return super().dist([init_dist, innovation_dist, steps], **kwargs)
 
+    @classmethod
+    def get_steps(cls, innovation_dist, steps, shape, dims, observed):
+        # We need to know the ndim_supp of the innovation_dist
         if not (
             isinstance(innovation_dist, at.TensorVariable)
-            and init_dist.owner is not None
-            and isinstance(init_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
-            # TODO: Lift univariate constraint on inovvation_dist
-            and init_dist.owner.op.ndim_supp == 0
+            and innovation_dist.owner is not None
+            and isinstance(innovation_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
         ):
-            raise TypeError("init_dist must be a univariate distribution variable")
-        check_dist_not_registered(init_dist)
+            raise TypeError("innovation_dist must be a distribution variable")
 
-        return super().dist([init_dist, innovation_dist, steps], **kwargs)
+        dist_ndim_supp = innovation_dist.owner.op.ndim_supp
+        dist_shape = tuple(innovation_dist.shape)
+        support_shape = None
+        if steps is not None:
+            support_shape = (steps,) + (dist_shape[len(dist_shape) - dist_ndim_supp :])
+        support_shape = get_support_shape(
+            support_shape=support_shape,
+            shape=shape,
+            dims=dims,
+            observed=observed,
+            support_shape_offset=1,
+            ndim_supp=dist_ndim_supp + 1,
+        )
+        if support_shape is not None:
+            steps = support_shape[-dist_ndim_supp - 1]
+        return steps
 
     @classmethod
     def rv_op(cls, init_dist, innovation_dist, steps, size=None):
         if not steps.ndim == 0 or not steps.dtype.startswith("int"):
             raise ValueError("steps must be an integer scalar (ndim=0).")
 
+        dist_ndim_supp = init_dist.owner.op.ndim_supp
+        init_dist_shape = tuple(init_dist.shape)
+        init_dist_batch_shape = init_dist_shape[: len(init_dist_shape) - dist_ndim_supp]
+        innovation_dist_shape = tuple(innovation_dist.shape)
+        innovation_batch_shape = innovation_dist_shape[
+            : len(innovation_dist_shape) - dist_ndim_supp
+        ]
+
+        ndim_supp = dist_ndim_supp + 1
+
         # If not explicit, size is determined by the shapes of the input distributions
         if size is None:
-            size = at.broadcast_shape(init_dist, innovation_dist[..., 0])
-        innovation_size = tuple(size) + (steps,)
+            size = at.broadcast_shape(
+                init_dist_batch_shape, innovation_batch_shape, arrays_are_shapes=True
+            )
 
-        # Resize input distributions
-        init_dist = change_dist_size(init_dist, size)
-        innovation_dist = change_dist_size(innovation_dist, innovation_size)
+        # Resize input distributions. We will size them to (T, B, S) in order
+        # to safely take random draws. We later swap the steps dimension so
+        # that the final distribution will follow (B, T, S)
+        # init_dist must have shape (1, B, S)
+        init_dist = change_dist_size(init_dist, (1, *size))
+        # innovation_dist must have shape (T-1, B, S)
+        innovation_dist = change_dist_size(innovation_dist, (steps, *size))
 
         # Create SymbolicRV
         init_dist_, innovation_dist_, steps_ = (
@@ -191,14 +181,22 @@ class RandomWalk(Distribution):
             innovation_dist.type(),
             steps.type(),
         )
-        grw_ = at.concatenate([init_dist_[..., None], innovation_dist_], axis=-1)
-        grw_ = at.cumsum(grw_, axis=-1)
+        # Aeppl can only infer the logp of a dimshuffled variables, if the dimshuffle is
+        # done directly on top of a RandomVariable. Because of this we dimshuffle the
+        # distributions and only then concatenate them, instead of the other way around.
+        # shape = (B, 1, S)
+        init_dist_dimswapped_ = at.moveaxis(init_dist_, 0, -ndim_supp)
+        # shape = (B, T-1, S)
+        innovation_dist_dimswapped_ = at.moveaxis(innovation_dist_, 0, -ndim_supp)
+        # shape = (B, T, S)
+        grw_ = at.concatenate([init_dist_dimswapped_, innovation_dist_dimswapped_], axis=-ndim_supp)
+        grw_ = at.cumsum(grw_, axis=-ndim_supp)
         return RandomWalkRV(
             [init_dist_, innovation_dist_, steps_],
             # We pass steps_ through just so we can keep a reference to it, even though
             # it's no longer needed at this point
             [grw_, steps_],
-            ndim_supp=1,
+            ndim_supp=ndim_supp,
         )(init_dist, innovation_dist, steps)
 
 
@@ -206,17 +204,24 @@ class RandomWalk(Distribution):
 def change_random_walk_size(op, dist, new_size, expand):
     init_dist, innovation_dist, steps = dist.owner.inputs
     if expand:
-        old_size = init_dist.shape
+        old_shape = tuple(dist.shape)
+        old_size = old_shape[: len(old_shape) - op.ndim_supp]
         new_size = tuple(new_size) + tuple(old_size)
     return RandomWalk.rv_op(init_dist, innovation_dist, steps, size=new_size)
 
 
 @_moment.register(RandomWalkRV)
 def random_walk_moment(op, rv, init_dist, innovation_dist, steps):
-    grw_moment = at.zeros_like(rv)
-    grw_moment = at.set_subtensor(grw_moment[..., 0], moment(init_dist))
-    grw_moment = at.set_subtensor(grw_moment[..., 1:], moment(innovation_dist))
-    return at.cumsum(grw_moment, axis=-1)
+    # shape = (1, B, S)
+    init_moment = moment(init_dist)
+    # shape = (T-1, B, S)
+    innovation_moment = moment(innovation_dist)
+    # shape = (T, B, S)
+    grw_moment = at.concatenate([init_moment, innovation_moment], axis=0)
+    grw_moment = at.cumsum(grw_moment, axis=0)
+    # shape = (B, T, S)
+    grw_moment = at.moveaxis(grw_moment, 0, -op.ndim_supp)
+    return grw_moment
 
 
 @_logprob.register(RandomWalkRV)
@@ -233,7 +238,25 @@ def random_walk_logp(op, values, *inputs, **kwargs):
     return logp(rv, value).sum(axis=-1)
 
 
-class GaussianRandomWalk:
+class PredefinedRandomWalk(ABCMeta):
+    """Base class for predefined RandomWalk distributions"""
+
+    def __new__(cls, name, *args, **kwargs):
+        init_dist, innovation_dist, kwargs = cls.get_dists(*args, **kwargs)
+        return RandomWalk(name, init_dist=init_dist, innovation_dist=innovation_dist, **kwargs)
+
+    @classmethod
+    def dist(cls, *args, **kwargs) -> at.TensorVariable:
+        init_dist, innovation_dist, kwargs = cls.get_dists(*args, **kwargs)
+        return RandomWalk.dist(init_dist=init_dist, innovation_dist=innovation_dist, **kwargs)
+
+    @classmethod
+    @abc.abstractmethod
+    def get_dists(cls, *args, **kwargs):
+        pass
+
+
+class GaussianRandomWalk(PredefinedRandomWalk):
     r"""Random Walk with Normal innovations.
 
     Parameters
@@ -246,32 +269,15 @@ class GaussianRandomWalk:
         Unnamed univariate distribution of the initial value. Unnamed refers to distributions
          created with the ``.dist()`` API.
 
-        .. warning:: init will be cloned, rendering them independent of the ones passed as input.
+        .. warning:: init_dist will be cloned, rendering them independent of the ones passed as input.
 
     steps : int, optional
         Number of steps in Gaussian Random Walk (steps > 0). Only needed if shape is not
         provided.
     """
 
-    def __new__(cls, name, mu=0.0, sigma=1.0, *, init_dist=None, steps=None, **kwargs):
-        init_dist, innovation_dist, kwargs = cls.get_dists(
-            mu=mu, sigma=sigma, init_dist=init_dist, **kwargs
-        )
-        return RandomWalk(
-            name, init_dist=init_dist, innovation_dist=innovation_dist, steps=steps, **kwargs
-        )
-
     @classmethod
-    def dist(cls, mu=0.0, sigma=1.0, *, init_dist=None, steps=None, **kwargs) -> at.TensorVariable:
-        init_dist, innovation_dist, kwargs = cls.get_dists(
-            mu=mu, sigma=sigma, init_dist=init_dist, **kwargs
-        )
-        return RandomWalk.dist(
-            init_dist=init_dist, innovation_dist=innovation_dist, steps=steps, **kwargs
-        )
-
-    @classmethod
-    def get_dists(cls, *, mu, sigma, init_dist, **kwargs):
+    def get_dists(cls, mu=0.0, sigma=1.0, *, init_dist=None, **kwargs):
         if "init" in kwargs:
             warnings.warn(
                 "init parameter is now called init_dist. Using init will raise an error in a future release.",
@@ -279,7 +285,6 @@ class GaussianRandomWalk:
             )
             init_dist = kwargs.pop("init")
 
-        # If no scalar distribution is passed then initialize with a Normal of same mu and sigma
         if init_dist is None:
             warnings.warn(
                 "Initial distribution not specified, defaulting to `Normal.dist(0, 100)`."
@@ -288,12 +293,122 @@ class GaussianRandomWalk:
             )
             init_dist = Normal.dist(0, 100)
 
-        # Add one dimension to the right, so that mu and sigma broadcast safely along
-        # the steps dimension
         mu = at.as_tensor_variable(mu)
         sigma = at.as_tensor_variable(sigma)
-        innovation_dist = Normal.dist(mu=mu[..., None], sigma=sigma[..., None])
+        innovation_dist = Normal.dist(mu=mu, sigma=sigma)
 
+        return init_dist, innovation_dist, kwargs
+
+
+class MvGaussianRandomWalk(PredefinedRandomWalk):
+    r"""Random Walk with Multivariate Normal innovations
+
+    Parameters
+    ----------
+    mu: tensor_like of float
+        innovation drift
+    cov: tensor_like of float
+        pos def matrix, innovation covariance matrix
+    tau: tensor_like of float
+        pos def matrix, inverse covariance matrix
+    chol: tensor_like of float
+        Cholesky decomposition of covariance matrix
+    lower : bool, default=True
+        Whether the cholesky fatcor is given as a lower triangular matrix.
+    init_dist: distribution
+        Unnamed multivariate distribution of the initial value. Unnamed refers to distributions
+         created with the ``.dist()`` API.
+
+         .. warning:: init_dist will be cloned, rendering them independent of the ones passed as input.
+
+    steps : int, optional
+        Number of steps in Random Walk (steps > 0). Only needed if shape is not
+        provided.
+
+    Notes
+    -----
+    Only one of cov, tau or chol is required.
+
+    """
+
+    @classmethod
+    def get_dists(cls, mu, *, cov=None, tau=None, chol=None, lower=True, init_dist=None, **kwargs):
+        if "init" in kwargs:
+            warnings.warn(
+                "init parameter is now called init_dist. Using init will raise an error "
+                "in a future release.",
+                FutureWarning,
+            )
+            init_dist = kwargs.pop("init")
+
+        if init_dist is None:
+            warnings.warn(
+                "Initial distribution not specified, defaulting to `MvNormal.dist(0, I*100)`."
+                "You can specify an init_dist manually to suppress this warning.",
+                UserWarning,
+            )
+            init_dist = MvNormal.dist(at.zeros_like(mu.shape[-1]), at.eye(mu.shape[-1]) * 100)
+
+        innovation_dist = MvNormal.dist(mu=mu, cov=cov, tau=tau, chol=chol, lower=lower)
+        return init_dist, innovation_dist, kwargs
+
+
+class MvStudentTRandomWalk(PredefinedRandomWalk):
+    r"""Multivariate Random Walk with StudentT innovations
+
+    Parameters
+    ----------
+    nu: int
+        degrees of freedom
+    mu: tensor_like of float
+        innovation drift
+    scale: tensor_like of float
+        pos def matrix, innovation covariance matrix
+    tau: tensor_like of float
+        pos def matrix, inverse covariance matrix
+    chol: tensor_like of float
+        Cholesky decomposition of covariance matrix
+    lower : bool, default=True
+        Whether the cholesky fatcor is given as a lower triangular matrix.
+    init_dist: distribution
+        Unnamed multivariate distribution of the initial value. Unnamed refers to distributions
+         created with the ``.dist()`` API.
+
+         .. warning:: init_dist will be cloned, rendering them independent of the ones passed as input.
+
+    steps : int, optional
+        Number of steps in Random Walk (steps > 0). Only needed if shape is not
+        provided.
+
+    Notes
+    -----
+    Only one of cov, tau or chol is required.
+
+    """
+
+    @classmethod
+    def get_dists(
+        cls, *, nu, mu, scale=None, tau=None, chol=None, lower=True, init_dist=None, **kwargs
+    ):
+        if "init" in kwargs:
+            warnings.warn(
+                "init parameter is now called init_dist. Using init will raise an error "
+                "in a future release.",
+                FutureWarning,
+            )
+            init_dist = kwargs.pop("init")
+
+        if init_dist is None:
+            warnings.warn(
+                "Initial distribution not specified, defaulting to `MvNormal.dist(0, I*100)`."
+                "You can specify an init_dist manually to suppress this warning.",
+                UserWarning,
+            )
+            init_dist = MvNormal.dist(at.zeros_like(mu.shape[-1]), at.eye(mu.shape[-1]) * 100)
+
+        innovation_dist = MvStudentT.dist(
+            nu=nu, mu=mu, scale=scale, tau=tau, chol=chol, lower=lower, cov=kwargs.pop("cov", None)
+        )
         return init_dist, innovation_dist, kwargs
 
 
@@ -381,12 +496,12 @@ class AR(Distribution):
     def __new__(cls, name, rho, *args, steps=None, constant=False, ar_order=None, **kwargs):
         rhos = at.atleast_1d(at.as_tensor_variable(floatX(rho)))
         ar_order = cls._get_ar_order(rhos=rhos, constant=constant, ar_order=ar_order)
-        steps = get_steps(
-            steps=steps,
+        steps = get_support_shape_1d(
+            support_shape=steps,
             shape=None,  # Shape will be checked in `cls.dist`
             dims=kwargs.get("dims", None),
             observed=kwargs.get("observed", None),
-            step_shape_offset=ar_order,
+            support_shape_offset=ar_order,
         )
         return super().__new__(
             cls, name, rhos, *args, steps=steps, constant=constant, ar_order=ar_order, **kwargs
@@ -417,7 +532,9 @@ class AR(Distribution):
             init_dist = kwargs.pop("init")
 
         ar_order = cls._get_ar_order(rhos=rhos, constant=constant, ar_order=ar_order)
-        steps = get_steps(steps=steps, shape=kwargs.get("shape", None), step_shape_offset=ar_order)
+        steps = get_support_shape_1d(
+            support_shape=steps, shape=kwargs.get("shape", None), support_shape_offset=ar_order
+        )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
         steps = at.as_tensor_variable(intX(steps), ndim=0)
@@ -640,18 +757,20 @@ class GARCH11(Distribution):
     rv_type = GARCH11RV
 
     def __new__(cls, *args, steps=None, **kwargs):
-        steps = get_steps(
-            steps=steps,
+        steps = get_support_shape_1d(
+            support_shape=steps,
             shape=None,  # Shape will be checked in `cls.dist`
             dims=kwargs.get("dims", None),
             observed=kwargs.get("observed", None),
-            step_shape_offset=1,
+            support_shape_offset=1,
         )
         return super().__new__(cls, *args, steps=steps, **kwargs)
 
     @classmethod
     def dist(cls, omega, alpha_1, beta_1, initial_vol, *, steps=None, **kwargs):
-        steps = get_steps(steps=steps, shape=kwargs.get("shape", None), step_shape_offset=1)
+        steps = get_support_shape_1d(
+            support_shape=steps, shape=kwargs.get("shape", None), support_shape_offset=1
+        )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
         steps = at.as_tensor_variable(intX(steps), ndim=0)
@@ -810,171 +929,3 @@ class EulerMaruyama(distribution.Continuous):
 
     def _distr_parameters_for_repr(self):
         return ["dt"]
-
-
-class MvGaussianRandomWalk(distribution.Continuous):
-    r"""
-    Multivariate Random Walk with Normal innovations
-
-    Parameters
-    ----------
-    mu: tensor
-        innovation drift, defaults to 0.0
-    cov: tensor
-        pos def matrix, innovation covariance matrix
-    tau: tensor
-        pos def matrix, inverse covariance matrix
-    chol: tensor
-        Cholesky decomposition of covariance matrix
-    init: distribution
-        distribution for initial value (Defaults to Flat())
-
-    Notes
-    -----
-    Only one of cov, tau or chol is required.
-
-    """
-
-    def __new__(cls, *args, **kwargs):
-        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
-
-    @classmethod
-    def dist(cls, *args, **kwargs):
-        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
-
-    def __init__(
-        self, mu=0.0, cov=None, tau=None, chol=None, lower=True, init=None, *args, **kwargs
-    ):
-        super().__init__(*args, **kwargs)
-
-        self.init = init or Flat.dist()
-        self.innovArgs = (mu, cov, tau, chol, lower)
-        self.innov = multivariate.MvNormal.dist(*self.innovArgs, shape=self.shape)
-        self.mean = at.as_tensor_variable(0.0)
-
-    def logp(self, x):
-        """
-        Calculate log-probability of Multivariate Gaussian
-        Random Walk distribution at specified value.
-
-        Parameters
-        ----------
-        x: numeric
-            Value for which log-probability is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
-        if x.ndim == 1:
-            x = x[np.newaxis, :]
-
-        x_im1 = x[:-1]
-        x_i = x[1:]
-
-        return self.init.logp_sum(x[0]) + self.innov.logp_sum(x_i - x_im1)
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "cov"]
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from MvGaussianRandomWalk.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int or tuple of ints, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-
-
-        Examples
-        -------
-
-        .. code-block:: python
-
-            with pm.Model():
-                mu = np.array([1.0, 0.0])
-                cov = np.array([[1.0, 0.0],
-                                [0.0, 2.0]])
-
-                # draw one sample from a 2-dimensional Gaussian random walk with 10 timesteps
-                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random()
-
-                # draw three samples from a 2-dimensional Gaussian random walk with 10 timesteps
-                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=3)
-
-                # draw four samples from a 2-dimensional Gaussian random walk with 10 timesteps,
-                # indexed with a (2, 2) array
-                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=(2, 2))
-
-        """
-
-        # for each draw specified by the size input, we need to draw time_steps many
-        # samples from MvNormal.
-
-        size = to_tuple(size)
-        multivariate_samples = self.innov.random(point=point, size=size)
-        # this has shape (size, self.shape)
-        if len(self.shape) == 2:
-            # have time dimension in first slot of shape. Therefore the time
-            # component can be accessed with the index equal to the length of size.
-            time_axis = len(size)
-            multivariate_samples = multivariate_samples.cumsum(axis=time_axis)
-            if time_axis != 0:
-                # this for loop covers the case where size is a tuple
-                for idx in np.ndindex(size):
-                    multivariate_samples[idx] = (
-                        multivariate_samples[idx] - multivariate_samples[idx][0]
-                    )
-            else:
-                # size was passed as None
-                multivariate_samples = multivariate_samples - multivariate_samples[0]
-
-        # if the above statement fails, then only a spatial dimension was passed in for self.shape.
-        # Therefore don't subtract off the initial value since otherwise you get all zeros
-        # as your output.
-        return multivariate_samples
-
-
-class MvStudentTRandomWalk(MvGaussianRandomWalk):
-    r"""
-    Multivariate Random Walk with StudentT innovations
-
-    Parameters
-    ----------
-    nu: degrees of freedom
-    mu: tensor
-        innovation drift, defaults to 0.0
-    cov: tensor
-        pos def matrix, innovation covariance matrix
-    tau: tensor
-        pos def matrix, inverse covariance matrix
-    chol: tensor
-        Cholesky decomposition of covariance matrix
-    init: distribution
-        distribution for initial value (Defaults to Flat())
-    """
-
-    def __new__(cls, *args, **kwargs):
-        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
-
-    @classmethod
-    def dist(cls, *args, **kwargs):
-        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
-
-    def __init__(self, nu, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.nu = at.as_tensor_variable(nu)
-        self.innov = multivariate.MvStudentT.dist(self.nu, None, *self.innovArgs)
-
-    def _distr_parameters_for_repr(self):
-        return ["nu", "mu", "cov"]

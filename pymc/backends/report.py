@@ -13,63 +13,28 @@
 #   limitations under the License.
 
 import dataclasses
-import enum
 import logging
 
-from typing import Any, Optional
+from typing import Optional
 
 import arviz
 
-from pymc.util import get_untransformed_name, is_transformed_name
+from pymc.stats.convergence import (
+    _LEVELS,
+    SamplerWarning,
+    log_warnings,
+    run_convergence_checks,
+)
 
 logger = logging.getLogger("pymc")
-
-
-@enum.unique
-class WarningType(enum.Enum):
-    # For HMC and NUTS
-    DIVERGENCE = 1
-    TUNING_DIVERGENCE = 2
-    DIVERGENCES = 3
-    TREEDEPTH = 4
-    # Problematic sampler parameters
-    BAD_PARAMS = 5
-    # Indications that chains did not converge, eg Rhat
-    CONVERGENCE = 6
-    BAD_ACCEPTANCE = 7
-    BAD_ENERGY = 8
-
-
-@dataclasses.dataclass
-class SamplerWarning:
-    kind: WarningType
-    message: str
-    level: str
-    step: Optional[int] = None
-    exec_info: Optional[Any] = None
-    extra: Optional[Any] = None
-    divergence_point_source: Optional[dict] = None
-    divergence_point_dest: Optional[dict] = None
-    divergence_info: Optional[Any] = None
-
-
-_LEVELS = {
-    "info": logging.INFO,
-    "error": logging.ERROR,
-    "warn": logging.WARN,
-    "debug": logging.DEBUG,
-    "critical": logging.CRITICAL,
-}
 
 
 class SamplerReport:
     """Bundle warnings, convergence stats and metadata of a sampling run."""
 
     def __init__(self):
-        self._chain_warnings = {}
-        self._global_warnings = []
-        self._ess = None
-        self._rhat = None
+        self._chain_warnings: Dict[int, List[SamplerWarning]] = {}
+        self._global_warnings: List[SamplerWarning] = []
         self._n_tune = None
         self._n_draws = None
         self._t_sampling = None
@@ -109,65 +74,7 @@ class SamplerReport:
             raise ValueError("Serious convergence issues during sampling.")
 
     def _run_convergence_checks(self, idata: arviz.InferenceData, model):
-        if not hasattr(idata, "posterior"):
-            msg = "No posterior samples. Unable to run convergence checks"
-            warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info", None, None, None)
-            self._add_warnings([warn])
-            return
-
-        if idata["posterior"].sizes["chain"] == 1:
-            msg = (
-                "Only one chain was sampled, this makes it impossible to "
-                "run some convergence checks"
-            )
-            warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info")
-            self._add_warnings([warn])
-            return
-
-        elif idata["posterior"].sizes["chain"] < 4:
-            msg = (
-                "We recommend running at least 4 chains for robust computation of "
-                "convergence diagnostics"
-            )
-            warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info")
-            self._add_warnings([warn])
-            return
-
-        valid_name = [rv.name for rv in model.free_RVs + model.deterministics]
-        varnames = []
-        for rv in model.free_RVs:
-            rv_name = rv.name
-            if is_transformed_name(rv_name):
-                rv_name2 = get_untransformed_name(rv_name)
-                rv_name = rv_name2 if rv_name2 in valid_name else rv_name
-            if rv_name in idata["posterior"]:
-                varnames.append(rv_name)
-
-        self._ess = ess = arviz.ess(idata, var_names=varnames)
-        self._rhat = rhat = arviz.rhat(idata, var_names=varnames)
-
-        warnings = []
-        rhat_max = max(val.max() for val in rhat.values())
-        if rhat_max > 1.01:
-            msg = (
-                "The rhat statistic is larger than 1.01 for some "
-                "parameters. This indicates problems during sampling. "
-                "See https://arxiv.org/abs/1903.08008 for details"
-            )
-            warn = SamplerWarning(WarningType.CONVERGENCE, msg, "info", extra=rhat)
-            warnings.append(warn)
-
-        eff_min = min(val.min() for val in ess.values())
-        eff_per_chain = eff_min / idata["posterior"].sizes["chain"]
-        if eff_per_chain < 100:
-            msg = (
-                "The effective sample size per chain is smaller than 100 for some parameters. "
-                " A higher number is needed for reliable rhat and ess computation. "
-                "See https://arxiv.org/abs/1903.08008 for details"
-            )
-            warn = SamplerWarning(WarningType.CONVERGENCE, msg, "error", extra=ess)
-            warnings.append(warn)
-
+        warnings = run_convergence_checks(idata, model)
         self._add_warnings(warnings)
 
     def _add_warnings(self, warnings, chain=None):
@@ -178,15 +85,9 @@ class SamplerReport:
         warn_list.extend(warnings)
 
     def _log_summary(self):
-        def log_warning(warn):
-            level = _LEVELS[warn.level]
-            logger.log(level, warn.message)
-
         for chain, warns in self._chain_warnings.items():
-            for warn in warns:
-                log_warning(warn)
-        for warn in self._global_warnings:
-            log_warning(warn)
+            log_warnings(warns)
+        log_warnings(self._global_warnings)
 
     def _slice(self, start, stop, step):
         report = SamplerReport()
@@ -206,12 +107,3 @@ class SamplerReport:
             report._add_warnings(filter_warns(self._chain_warnings[chain]), chain)
 
         return report
-
-
-def merge_reports(reports):
-    report = SamplerReport()
-    for rep in reports:
-        report._add_warnings(rep._global_warnings)
-        for chain in rep._chain_warnings:
-            report._add_warnings(rep._chain_warnings[chain], chain)
-    return report

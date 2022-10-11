@@ -281,7 +281,7 @@ class Distribution(metaclass=DistributionMeta):
 
         # Preference is given to size or shape. If not specified, we rely on dims and
         # finally, observed, to determine the shape of the variable.
-        if not ("size" in kwargs or "shape" in kwargs):
+        if kwargs.get("size") is None and kwargs.get("shape") is None:
             if dims is not None:
                 kwargs["shape"] = shape_from_dims(dims, model)
             elif observed is not None:

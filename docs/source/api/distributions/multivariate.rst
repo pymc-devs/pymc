@@ -8,6 +8,7 @@ Multivariate
 
    MvNormal
    MvStudentT
+   ZeroSumNormal
    Dirichlet
    Multinomial
    DirichletMultinomial

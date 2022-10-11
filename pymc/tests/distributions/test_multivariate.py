@@ -1009,6 +1009,19 @@ class TestMoments:
         assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
 
     @pytest.mark.parametrize(
+        "shape, zerosum_axes, expected",
+        [
+            ((2, 5), None, np.zeros((2, 5))),
+            ((2, 5, 6), 2, np.zeros((2, 5, 6))),
+            ((2, 5, 6), 3, np.zeros((2, 5, 6))),
+        ],
+    )
+    def test_zerosum_normal_moment(self, shape, zerosum_axes, expected):
+        with pm.Model() as model:
+            pm.ZeroSumNormal("x", shape=shape, zerosum_axes=zerosum_axes)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
         "mu, size, expected",
         [
             (
@@ -1049,7 +1062,7 @@ class TestMoments:
     )
     def test_mvstudentt_moment(self, nu, mu, cov, size, expected):
         with pm.Model() as model:
-            x = pm.MvStudentT("x", nu=nu, mu=mu, cov=cov, size=size)
+            x = pm.MvStudentT("x", nu=nu, mu=mu, scale=cov, size=size)
 
         # MvStudentT logp is only impemented for up to 2D variables
         assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
@@ -1368,9 +1381,219 @@ class TestMvNormalMisc:
         assert prior_pred["X"].shape == (1, N, 2)
 
 
+class TestZeroSumNormal:
+    coords = {
+        "regions": ["a", "b", "c"],
+        "answers": ["yes", "no", "whatever", "don't understand question"],
+    }
+
+    def assert_zerosum_axes(self, random_samples, axes_to_check, check_zerosum_axes=True):
+        if check_zerosum_axes:
+            for ax in axes_to_check:
+                assert np.isclose(
+                    random_samples.mean(axis=ax), 0
+                ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+        else:
+            for ax in axes_to_check:
+                assert not np.isclose(
+                    random_samples.mean(axis=ax), 0
+                ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
+
+    @pytest.mark.parametrize(
+        "dims, zerosum_axes",
+        [
+            (("regions", "answers"), None),
+            (("regions", "answers"), 1),
+            (("regions", "answers"), 2),
+        ],
+    )
+    def test_zsn_dims(self, dims, zerosum_axes):
+        with pm.Model(coords=self.coords) as m:
+            v = pm.ZeroSumNormal("v", dims=dims, zerosum_axes=zerosum_axes)
+            s = pm.sample(10, chains=1, tune=100)
+
+        # to test forward graph
+        random_samples = pm.draw(v, draws=10)
+
+        assert s.posterior.v.shape == (
+            1,
+            10,
+            len(self.coords["regions"]),
+            len(self.coords["answers"]),
+        )
+
+        ndim_supp = v.owner.op.ndim_supp
+        zerosum_axes = np.arange(-ndim_supp, 0)
+        nonzero_axes = np.arange(v.ndim - ndim_supp)
+        for samples in [
+            s.posterior.v,
+            random_samples,
+        ]:
+            self.assert_zerosum_axes(samples, zerosum_axes)
+            self.assert_zerosum_axes(samples, nonzero_axes, check_zerosum_axes=False)
+
+    @pytest.mark.parametrize(
+        "zerosum_axes",
+        (None, 1, 2),
+    )
+    def test_zsn_shape(self, zerosum_axes):
+        shape = (len(self.coords["regions"]), len(self.coords["answers"]))
+
+        with pm.Model(coords=self.coords) as m:
+            v = pm.ZeroSumNormal("v", shape=shape, zerosum_axes=zerosum_axes)
+            s = pm.sample(10, chains=1, tune=100)
+
+        # to test forward graph
+        random_samples = pm.draw(v, draws=10)
+
+        assert s.posterior.v.shape == (
+            1,
+            10,
+            len(self.coords["regions"]),
+            len(self.coords["answers"]),
+        )
+
+        ndim_supp = v.owner.op.ndim_supp
+        zerosum_axes = np.arange(-ndim_supp, 0)
+        nonzero_axes = np.arange(v.ndim - ndim_supp)
+        for samples in [
+            s.posterior.v,
+            random_samples,
+        ]:
+            self.assert_zerosum_axes(samples, zerosum_axes)
+            self.assert_zerosum_axes(samples, nonzero_axes, check_zerosum_axes=False)
+
+    @pytest.mark.parametrize(
+        "error, match, shape, support_shape, zerosum_axes",
+        [
+            (
+                ValueError,
+                "Number of shape dimensions is too small for ndim_supp of 4",
+                (3, 4, 5),
+                None,
+                4,
+            ),
+            (AssertionError, "does not match", (3, 4), (3,), None),  # support_shape should be 4
+            (
+                AssertionError,
+                "does not match",
+                (3, 4),
+                (3, 4),
+                None,
+            ),  # doesn't work because zerosum_axes = 1 by default
+        ],
+    )
+    def test_zsn_fail_axis(self, error, match, shape, support_shape, zerosum_axes):
+        with pytest.raises(error, match=match):
+            with pm.Model() as m:
+                _ = pm.ZeroSumNormal(
+                    "v", shape=shape, support_shape=support_shape, zerosum_axes=zerosum_axes
+                )
+
+    @pytest.mark.parametrize(
+        "shape, support_shape",
+        [
+            (None, (3, 4)),
+            ((3, 4), (3, 4)),
+        ],
+    )
+    def test_zsn_support_shape(self, shape, support_shape):
+        with pm.Model() as m:
+            v = pm.ZeroSumNormal("v", shape=shape, support_shape=support_shape, zerosum_axes=2)
+
+        random_samples = pm.draw(v, draws=10)
+        zerosum_axes = np.arange(-2, 0)
+        self.assert_zerosum_axes(random_samples, zerosum_axes)
+
+    @pytest.mark.parametrize(
+        "zerosum_axes",
+        [1, 2],
+    )
+    def test_zsn_change_dist_size(self, zerosum_axes):
+        base_dist = pm.ZeroSumNormal.dist(shape=(4, 9), zerosum_axes=zerosum_axes)
+        random_samples = pm.draw(base_dist, draws=100)
+
+        zerosum_axes = np.arange(-zerosum_axes, 0)
+        self.assert_zerosum_axes(random_samples, zerosum_axes)
+
+        new_dist = change_dist_size(base_dist, new_size=(5, 3), expand=False)
+        try:
+            assert new_dist.eval().shape == (5, 3, 9)
+        except AssertionError:
+            assert new_dist.eval().shape == (5, 3, 4, 9)
+        random_samples = pm.draw(new_dist, draws=100)
+        self.assert_zerosum_axes(random_samples, zerosum_axes)
+
+        new_dist = change_dist_size(base_dist, new_size=(5, 3), expand=True)
+        assert new_dist.eval().shape == (5, 3, 4, 9)
+        random_samples = pm.draw(new_dist, draws=100)
+        self.assert_zerosum_axes(random_samples, zerosum_axes)
+
+    @pytest.mark.parametrize(
+        "sigma, n",
+        [
+            (5, 3),
+            (2, 6),
+        ],
+    )
+    def test_zsn_variance(self, sigma, n):
+
+        dist = pm.ZeroSumNormal.dist(sigma=sigma, shape=(100_000, n))
+        random_samples = pm.draw(dist)
+
+        empirical_var = random_samples.var(axis=0)
+        theoretical_var = sigma**2 * (n - 1) / n
+
+        np.testing.assert_allclose(empirical_var, theoretical_var, atol=0.4)
+
+    @pytest.mark.parametrize(
+        "sigma, shape, zerosum_axes, mvn_axes",
+        [
+            (5, 3, None, [-1]),
+            (2, 6, None, [-1]),
+            (5, (7, 3), None, [-1]),
+            (5, (2, 7, 3), 2, [1, 2]),
+        ],
+    )
+    def test_zsn_logp(self, sigma, shape, zerosum_axes, mvn_axes):
+        def logp_norm(value, sigma, axes):
+            """
+            Special case of the MvNormal, that's equivalent to the ZSN.
+            Only to test the ZSN logp
+            """
+            axes = [ax if ax >= 0 else value.ndim + ax for ax in axes]
+            if len(set(axes)) < len(axes):
+                raise ValueError("Must specify unique zero sum axes")
+            other_axes = [ax for ax in range(value.ndim) if ax not in axes]
+            new_order = other_axes + axes
+            reshaped_value = np.reshape(
+                np.transpose(value, new_order), [value.shape[ax] for ax in other_axes] + [-1]
+            )
+
+            degrees_of_freedom = np.prod([value.shape[ax] - 1 for ax in axes])
+            full_size = np.prod([value.shape[ax] for ax in axes])
+
+            psdet = (0.5 * np.log(2 * np.pi) + np.log(sigma)) * degrees_of_freedom / full_size
+            exp = 0.5 * (reshaped_value / sigma) ** 2
+            inds = np.ones_like(value, dtype="bool")
+            for ax in axes:
+                inds = np.logical_and(inds, np.abs(np.mean(value, axis=ax, keepdims=True)) < 1e-9)
+            inds = np.reshape(
+                np.transpose(inds, new_order), [value.shape[ax] for ax in other_axes] + [-1]
+            )[..., 0]
+
+            return np.where(inds, np.sum(-psdet - exp, axis=-1), -np.inf)
+
+        zsn_dist = pm.ZeroSumNormal.dist(sigma=sigma, shape=shape, zerosum_axes=zerosum_axes)
+        zsn_logp = pm.logp(zsn_dist, value=np.zeros(shape)).eval()
+        mvn_logp = logp_norm(value=np.zeros(shape), sigma=sigma, axes=mvn_axes)
+
+        np.testing.assert_allclose(zsn_logp, mvn_logp)
+
+
 class TestMvStudentTCov(BaseTestDistributionRandom):
-    def mvstudentt_rng_fn(self, size, nu, mu, cov, rng):
-        mv_samples = rng.multivariate_normal(np.zeros_like(mu), cov, size=size)
+    def mvstudentt_rng_fn(self, size, nu, mu, scale, rng):
+        mv_samples = rng.multivariate_normal(np.zeros_like(mu), scale, size=size)
         chi2_samples = rng.chisquare(nu, size=size)
         return (mv_samples / np.sqrt(chi2_samples[:, None] / nu)) + mu
 
@@ -1378,19 +1601,19 @@ class TestMvStudentTCov(BaseTestDistributionRandom):
     pymc_dist_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+        "scale": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
     expected_rv_op_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+        "scale": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
     sizes_to_check = [None, (1), (2, 3)]
     sizes_expected = [(2,), (1, 2), (2, 3, 2)]
     reference_dist_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
+        "scale": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
     reference_dist = lambda self: ft.partial(self.mvstudentt_rng_fn, rng=self.get_random_state())
     checks_to_run = [
@@ -1409,29 +1632,29 @@ class TestMvStudentTCov(BaseTestDistributionRandom):
                     "mvstudentt",
                     nu=np.array([1, 2]),
                     mu=np.ones(2),
-                    cov=np.full((2, 2), np.ones(2)),
+                    scale=np.full((2, 2), np.ones(2)),
                 )
 
     def check_mu_broadcast_helper(self):
         """Test that mu is broadcasted to the shape of cov"""
-        x = pm.MvStudentT.dist(nu=4, mu=1, cov=np.eye(3))
+        x = pm.MvStudentT.dist(nu=4, mu=1, scale=np.eye(3))
         mu = x.owner.inputs[4]
         assert mu.eval().shape == (3,)
 
-        x = pm.MvStudentT.dist(nu=4, mu=np.ones(1), cov=np.eye(3))
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones(1), scale=np.eye(3))
         mu = x.owner.inputs[4]
         assert mu.eval().shape == (3,)
 
-        x = pm.MvStudentT.dist(nu=4, mu=np.ones((1, 1)), cov=np.eye(3))
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones((1, 1)), scale=np.eye(3))
         mu = x.owner.inputs[4]
         assert mu.eval().shape == (1, 3)
 
-        x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), cov=np.eye(3))
+        x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), scale=np.eye(3))
         mu = x.owner.inputs[4]
         assert mu.eval().shape == (10, 3)
 
         # Cov is artificually limited to being 2D
-        # x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), cov=np.full((2, 3, 3), np.eye(3)))
+        # x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), scale=np.full((2, 3, 3), np.eye(3)))
         # mu = x.owner.inputs[4]
         # assert mu.eval().shape == (10, 2, 3)
 
@@ -1446,7 +1669,7 @@ class TestMvStudentTChol(BaseTestDistributionRandom):
     expected_rv_op_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "cov": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(),
+        "scale": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(),
     }
     checks_to_run = ["check_pymc_params_match_rv_op"]
 

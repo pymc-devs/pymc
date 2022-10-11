@@ -99,6 +99,7 @@ from pymc.distributions.multivariate import (
     StickBreakingWeights,
     Wishart,
     WishartBartlett,
+    ZeroSumNormal,
 )
 from pymc.distributions.simulator import Simulator
 from pymc.distributions.timeseries import (
@@ -116,8 +117,8 @@ __all__ = [
     "Uniform",
     "Flat",
     "HalfFlat",
-    "TruncatedNormal",
     "Normal",
+    "TruncatedNormal",
     "Beta",
     "Kumaraswamy",
     "Exponential",
@@ -160,6 +161,7 @@ __all__ = [
     "Continuous",
     "Discrete",
     "MvNormal",
+    "ZeroSumNormal",
     "MatrixNormal",
     "KroneckerNormal",
     "MvStudentT",

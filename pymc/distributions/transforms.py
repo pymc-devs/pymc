@@ -27,6 +27,10 @@ from aeppl.transforms import (
 from aesara.graph import Op
 from aesara.tensor import TensorVariable
 
+# ignore mypy error because it somehow considers that
+# "numpy.core.numeric has no attribute normalize_axis_tuple"
+from numpy.core.numeric import normalize_axis_tuple  # type: ignore
+
 __all__ = [
     "RVTransform",
     "simplex",
@@ -39,6 +43,7 @@ __all__ = [
     "circular",
     "CholeskyCovPacked",
     "Chain",
+    "ZeroSumTransform",
 ]
 
 
@@ -264,6 +269,60 @@ class Interval(IntervalTransform):
                 return lower, upper
 
         super().__init__(args_fn=bounds_fn)
+
+
+class ZeroSumTransform(RVTransform):
+    """
+    Constrains any random samples to sum to zero along the user-provided ``zerosum_axes``.
+
+    Parameters
+    ----------
+    zerosum_axes : list of ints
+        Must be a list of integers (positive or negative).
+    """
+
+    name = "zerosum"
+
+    __props__ = ("zerosum_axes",)
+
+    def __init__(self, zerosum_axes):
+        self.zerosum_axes = tuple(int(axis) for axis in zerosum_axes)
+
+    def forward(self, value, *rv_inputs):
+        for axis in self.zerosum_axes:
+            value = extend_axis_rev(value, axis=axis)
+        return value
+
+    def backward(self, value, *rv_inputs):
+        for axis in self.zerosum_axes:
+            value = extend_axis(value, axis=axis)
+        return value
+
+    def log_jac_det(self, value, *rv_inputs):
+        return at.constant(0.0)
+
+
+def extend_axis(array, axis):
+    n = array.shape[axis] + 1
+    sum_vals = array.sum(axis, keepdims=True)
+    norm = sum_vals / (np.sqrt(n) + n)
+    fill_val = norm - sum_vals / np.sqrt(n)
+
+    out = at.concatenate([array, fill_val], axis=axis)
+    return out - norm
+
+
+def extend_axis_rev(array, axis):
+    normalized_axis = normalize_axis_tuple(axis, array.ndim)[0]
+
+    n = array.shape[normalized_axis]
+    last = at.take(array, [-1], axis=normalized_axis)
+
+    sum_vals = -last * np.sqrt(n)
+    norm = sum_vals / (np.sqrt(n) + n)
+    slice_before = (slice(None, None),) * normalized_axis
+
+    return array[slice_before + (slice(None, -1),)] + norm
 
 
 log_exp_m1 = LogExpM1()

@@ -505,21 +505,6 @@ def test_partial_trace_sample():
         assert "b" not in idata.posterior
 
 
-def test_chain_idx():
-    # see https://github.com/pymc-devs/pymc/issues/4469
-    with pm.Model():
-        mu = pm.Normal("mu")
-        x = pm.Normal("x", mu=mu, sigma=1, observed=np.asarray(3))
-        # note draws-tune must be >100 AND we need an observed RV for this to properly
-        # trigger convergence checks, which is one particular case in which this failed
-        # before
-        idata = pm.sample(draws=150, tune=10, chain_idx=1)
-
-        ppc = pm.sample_posterior_predictive(idata)
-        # TODO FIXME: Assert something.
-        ppc = pm.sample_posterior_predictive(idata, keep_size=True)
-
-
 @pytest.mark.parametrize(
     "n_points, tune, expected_length, expected_n_traces",
     [
@@ -550,7 +535,7 @@ def test_choose_chains(n_points, tune, expected_length, expected_n_traces):
 @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):
     def test_shared_named(self):
-        G_var = shared(value=np.atleast_2d(1.0), broadcastable=(True, False), name="G")
+        G_var = shared(value=np.atleast_2d(1.0), shape=(1, None), name="G")
 
         with pm.Model():
             theta0 = pm.Normal(
@@ -567,7 +552,7 @@ class TestNamedSampling(SeededTest):
             assert np.isclose(res, 0.0)
 
     def test_shared_unnamed(self):
-        G_var = shared(value=np.atleast_2d(1.0), broadcastable=(True, False))
+        G_var = shared(value=np.atleast_2d(1.0), shape=(1, None))
         with pm.Model():
             theta0 = pm.Normal(
                 "theta0",
