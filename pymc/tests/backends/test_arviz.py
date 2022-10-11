@@ -89,7 +89,7 @@ class TestDataPyMC:
         with data.model:
             prior = pm.sample_prior_predictive(return_inferencedata=False)
             posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, keep_size=True, return_inferencedata=False
+                data.obj, return_inferencedata=False
             )
 
             idata = to_inference_data(
@@ -111,7 +111,7 @@ class TestDataPyMC:
     ) -> Tuple[InferenceData, Dict[str, np.ndarray]]:
         with data.model:
             posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, keep_size=True, return_inferencedata=False
+                data.obj, return_inferencedata=False
             )
             idata = predictions_to_inference_data(
                 posterior_predictive,
@@ -190,7 +190,7 @@ class TestDataPyMC:
     def test_posterior_predictive_keep_size(self, data, chains, draws, eight_schools_params):
         with data.model:
             posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, keep_size=True, return_inferencedata=False
+                data.obj, return_inferencedata=False
             )
             inference_data = to_inference_data(
                 trace=data.obj,
@@ -203,26 +203,6 @@ class TestDataPyMC:
         assert np.all(
             [obs_s == s for obs_s, s in zip(shape, (chains, draws, eight_schools_params["J"]))]
         )
-
-    def test_posterior_predictive_warning(self, data, eight_schools_params, caplog):
-        with data.model:
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", ".*smaller than nchains times ndraws.*", UserWarning
-                )
-                posterior_predictive = pm.sample_posterior_predictive(
-                    data.obj, 370, return_inferencedata=False, keep_size=False
-                )
-            with pytest.warns(UserWarning, match="shape of variables"):
-                inference_data = to_inference_data(
-                    trace=data.obj,
-                    posterior_predictive=posterior_predictive,
-                    coords={"school": np.arange(eight_schools_params["J"])},
-                    dims={"theta": ["school"], "eta": ["school"]},
-                )
-
-        shape = inference_data.posterior_predictive.obs.shape
-        assert np.all([obs_s == s for obs_s, s in zip(shape, (1, 370, eight_schools_params["J"]))])
 
     def test_posterior_predictive_thinned(self, data):
         with data.model:
