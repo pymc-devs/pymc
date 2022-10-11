@@ -1601,6 +1601,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             except KeyError:
                 raise e
 
+    def __contains__(self, key):
+        return key in self.named_vars or self.name_for(key) in self.named_vars
+
     def compile_fn(
         self,
         outs: Sequence[Variable],
