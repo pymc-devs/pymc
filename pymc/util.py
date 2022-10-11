@@ -14,9 +14,8 @@
 
 import functools
 
-from typing import Dict, List, Tuple, Union, cast
+from typing import Dict, List, cast
 
-import arviz
 import cloudpickle
 import numpy as np
 import xarray
@@ -244,26 +243,7 @@ def dataset_to_point_list(ds: xarray.Dataset, sample_dims: List) -> List[Dict[st
         for i in range(stacked_ds.dims["__pp_aux_dim__"])
     ]
     # use the list of points
-    return cast(List[Dict[str, np.ndarray]], points)
-
-
-def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tuple[int, int]:
-    """Extract and return number of chains and samples in xarray or arviz traces."""
-    dataset: xarray.Dataset
-    if isinstance(data, xarray.Dataset):
-        dataset = data
-    elif isinstance(data, arviz.InferenceData):
-        dataset = data["posterior"]
-    else:
-        raise ValueError(
-            "Argument must be xarray Dataset or arviz InferenceData. Got %s",
-            data.__class__,
-        )
-
-    coords = dataset.coords
-    nchains = coords["chain"].sizes["chain"]
-    nsamples = coords["draw"].sizes["draw"]
-    return nchains, nsamples
+    return cast(List[Dict[str, np.ndarray]], points), stacked_ds["__pp_aux_dim__"]
 
 
 def hashable(a=None) -> int:
