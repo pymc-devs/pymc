@@ -1269,8 +1269,12 @@ def test_interval_missing_observations():
         )
         assert np.all(np.var(pp_trace["theta1"], 0) > 0.0)
         assert np.all(np.var(pp_trace["theta2"], 0) > 0.0)
-        assert np.mean(pp_trace["theta1"][:, ~obs1.mask] - pp_trace["theta1_observed"]) == 0.0
-        assert np.mean(pp_trace["theta2"][:, ~obs2.mask] - pp_trace["theta2_observed"]) == 0.0
+        assert np.isclose(
+            np.mean(pp_trace["theta1"][:, ~obs1.mask] - pp_trace["theta1_observed"]), 0
+        )
+        assert np.isclose(
+            np.mean(pp_trace["theta2"][:, ~obs2.mask] - pp_trace["theta2_observed"]), 0
+        )
 
 
 def test_double_counting():
