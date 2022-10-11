@@ -1048,11 +1048,8 @@ def _iter_sample(
                 step = stop_tuning(step)
             if step.generates_stats:
                 point, stats = step.step(point)
-                if strace.supports_sampler_stats:
-                    strace.record(point, stats)
-                    diverging = i > tune and stats and stats[0].get("diverging")
-                else:
-                    strace.record(point)
+                strace.record(point, stats)
+                diverging = i > tune and stats and stats[0].get("diverging")
             else:
                 point = step.step(point)
                 strace.record(point)
@@ -1359,10 +1356,7 @@ def _iter_population(
                 for c, strace in enumerate(traces):
                     if steppers[c].generates_stats:
                         points[c], stats = updates[c]
-                        if strace.supports_sampler_stats:
-                            strace.record(points[c], stats)
-                        else:
-                            strace.record(points[c])
+                        strace.record(points[c], stats)
                     else:
                         points[c] = updates[c]
                         strace.record(points[c])
@@ -1428,7 +1422,7 @@ def _init_trace(
     else:
         strace = _choose_backend(None, model=model)
 
-    if step.generates_stats and strace.supports_sampler_stats:
+    if step.generates_stats:
         strace.setup(expected_length, chain_number, step.stats_dtypes)
     else:
         strace.setup(expected_length, chain_number)
@@ -1520,7 +1514,7 @@ def _mp_sample(
             with sampler:
                 for draw in sampler:
                     strace = traces[draw.chain]
-                    if strace.supports_sampler_stats and draw.stats is not None:
+                    if draw.stats is not None:
                         strace.record(draw.point, draw.stats)
                     else:
                         strace.record(draw.point)

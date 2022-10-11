@@ -41,8 +41,6 @@ class NDArray(base.BaseTrace):
         `model.unobserved_RVs` is used.
     """
 
-    supports_sampler_stats = True
-
     def __init__(self, name=None, model=None, vars=None, test_point=None):
         super().__init__(name, model, vars, test_point)
         self.draw_idx = 0
