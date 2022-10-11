@@ -637,7 +637,6 @@ class TestSamplePPC(SeededTest):
             trace = pm.sample(
                 draws=ndraws,
                 chains=nchains,
-                return_inferencedata=False,
             )
 
         with model:
@@ -656,11 +655,13 @@ class TestSamplePPC(SeededTest):
             assert ppc["a"].shape == (nchains, ndraws)
 
             # test default case
-            ppc = pm.sample_posterior_predictive(trace, var_names=["a"], return_inferencedata=False)
+            ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
             assert "a" in ppc
             assert ppc["a"].shape == (nchains, ndraws)
             # mu's standard deviation may have changed thanks to a's observed
-            _, pval = stats.kstest(ppc["a"] - trace["mu"], stats.norm(loc=0, scale=1).cdf)
+            _, pval = stats.kstest(
+                (ppc["a"] - trace.posterior["mu"]).values.flatten(), stats.norm(loc=0, scale=1).cdf
+            )
             assert pval > 0.001
 
     def test_normal_scalar_idata(self):
@@ -754,7 +755,7 @@ class TestSamplePPC(SeededTest):
                 1000,
             )
             scale = np.sqrt(1 + 0.2**2)
-            _, pval = stats.kstest(ppc["b"], stats.norm(scale=scale).cdf)
+            _, pval = stats.kstest(ppc["b"].flatten(), stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
     def test_model_not_drawable_prior(self):
