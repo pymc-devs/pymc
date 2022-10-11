@@ -1592,7 +1592,7 @@ def get_vars_in_point_list(trace, model):
         names_in_trace = list(trace[0])
     else:
         names_in_trace = trace.varnames
-    vars_in_trace = [model[v] for v in names_in_trace]
+    vars_in_trace = [model[v] for v in names_in_trace if v in model]
     return vars_in_trace
 
 
