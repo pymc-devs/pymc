@@ -190,21 +190,10 @@ class HSGP(Base):
         self._set_boundary(X)
         omega, phi, m_star = self._eigendecomposition(X, self.L, self.m, self.D)
         psd = self.cov_func.psd(omega)
-
-        if self.drop_first:
-            self.beta = pm.Normal(f"{name}_coeffs_", size=m_star - 1)
-            self.f = pm.Deterministic(
-                name,
-                self.mean_func(X) + at.squeeze(at.dot(phi[:, 1:], self.beta * at.sqrt(psd[1:]))),
-                dims=dims,
-            )
-        else:
-            self.beta = pm.Normal(f"{name}_coeffs_", size=m_star)
-            self.f = pm.Deterministic(
-                name,
-                self.mean_func(X) + at.squeeze(at.dot(phi, self.beta * at.sqrt(psd))),
-                dims=dims,
-            )
+        self.beta = pm.Normal(f"{name}_coeffs_", size=m_star)
+        self.f = pm.Deterministic(
+            name, self.mean_func(X) + at.squeeze(at.dot(phi, self.beta * psd)), dims=dims
+        )
         return self.f
 
     def _build_conditional(self, name, Xnew):
@@ -228,4 +217,4 @@ class HSGP(Base):
             Dimension name for the GP random variable.
         """
         fnew = self._build_conditional(name, Xnew)
-        return pm.Deterministic(name, fnew, dims)
+        return pm.Deterministic(name, fnew, dims=dims)
