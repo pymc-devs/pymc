@@ -256,7 +256,9 @@ html_theme_options = {
             "icon": "fab fa-discourse",
         },
     ],
-    "logo_link": "https://www.pymc.io",
+    "logo": {
+        "link": "https://www.pymc.io",
+        },
     "show_prev_next": False,
     "navbar_start": ["navbar-logo", "navbar-version"],
     "navbar_end": ["search-field.html", "navbar-icon-links.html"],
