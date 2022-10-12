@@ -53,6 +53,7 @@ from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
 from typing_extensions import TypeAlias
+from xarray_einstats.einops import rearrange
 
 import pymc as pm
 
@@ -1842,7 +1843,7 @@ def sample_posterior_predictive(
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
     idata = None
-    stacked_dim = None
+    stacked_dims = None
     if isinstance(trace, InferenceData):
         _constant_data = getattr(trace, "constant_data", None)
         if _constant_data is not None:
@@ -1852,7 +1853,7 @@ def sample_posterior_predictive(
         trace = trace["posterior"]
     if isinstance(trace, xarray.Dataset):
         trace_coords.update({str(k): v.data for k, v in trace.coords.items()})
-        _trace, stacked_dim = dataset_to_point_list(trace, sample_dims)
+        _trace, stacked_dims = dataset_to_point_list(trace, sample_dims)
         nchain = 1
     elif isinstance(trace, MultiTrace):
         _trace = trace
@@ -1979,11 +1980,16 @@ def sample_posterior_predictive(
     converter.nchains = nchain
     converter.ndraws = len_trace
     idata_pp = converter.to_inference_data()
-    if stacked_dim is not None:
+    if stacked_dims is not None:
         pp_ds = idata_pp.posterior_predictive
-        pp_ds = pp_ds.squeeze("chain").rename(draw="__pp_aux_dim__")
-        pp_ds["__pp_aux_dim__"] = stacked_dim
-        pp_ds = pp_ds.unstack("__pp_aux_dim__")
+        pp_ds = pp_ds.squeeze("chain", drop=True).rename(draw="__pp_aux_dim__")
+        pp_ds = rearrange(
+            pp_ds,
+            in_dims=[{"__pp_aux_dim__": sample_dims}],
+            out_dims=sample_dims,
+            **{dim_name: len(coords) for dim_name, coords in stacked_dims.items()},
+        ).transpose(*[dim_name for dim_name in stacked_dims.keys()], ...)
+        pp_ds = pp_ds.assign_coords(stacked_dims)
 
     if extend_inferencedata:
         idata.extend(idata_pp)

@@ -22,6 +22,7 @@ import xarray
 
 from aesara.compile import SharedVariable
 from cachetools import LRUCache, cachedmethod
+from xarray_einstats.einops import rearrange
 
 
 class _UnsetType:
@@ -236,14 +237,16 @@ def dataset_to_point_list(ds: xarray.Dataset, sample_dims: List) -> List[Dict[st
     for vn in var_names:
         if not isinstance(vn, str):
             raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
-    stacked_ds = ds.stack(__pp_aux_dim__=sample_dims)
-    stacked_dict = {vn: v.values for vn, v in stacked_ds.items()}
+    stacked_dims = {dim_name: ds[dim_name] for dim_name in sample_dims}
+    stacked_dict = {
+        vn: rearrange(da, [{"__pp_aux_dim__": sample_dims}]).values for vn, da in ds.items()
+    }
     points = [
         {vn: stacked_dict[vn][..., i] for vn in var_names}
-        for i in range(stacked_ds.dims["__pp_aux_dim__"])
+        for i in range(np.product([len(coords) for coords in stacked_dims.values()]))
     ]
     # use the list of points
-    return cast(List[Dict[str, np.ndarray]], points), stacked_ds["__pp_aux_dim__"]
+    return cast(List[Dict[str, np.ndarray]], points), stacked_dims
 
 
 def hashable(a=None) -> int:
