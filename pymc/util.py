@@ -14,7 +14,7 @@
 
 import functools
 
-from typing import Dict, List, cast
+from typing import Any, Dict, List, Tuple, cast
 
 import cloudpickle
 import numpy as np
@@ -230,7 +230,9 @@ def biwrap(wrapper):
     return enhanced
 
 
-def dataset_to_point_list(ds: xarray.Dataset, sample_dims: List) -> List[Dict[str, np.ndarray]]:
+def dataset_to_point_list(
+    ds: xarray.Dataset, sample_dims: List
+) -> Tuple[List[Dict[str, np.ndarray]], Dict[str, Any]]:
     # All keys of the dataset must be a str
     var_names = list(ds.keys())
     for vn in var_names:
