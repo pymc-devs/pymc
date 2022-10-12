@@ -1791,6 +1791,10 @@ def sample_posterior_predictive(
         generally be the model used to generate the ``trace``, but it doesn't need to be.
     var_names : Iterable[str]
         Names of variables for which to compute the posterior predictive samples.
+    sample_dims : list of str, optional
+        Dimensions over which to loop and generate posterior predictive samples.
+        When `sample_dims` is ``None`` (default) both "chain" and "draw" are considered sample
+        dimensions. Only taken into account when `trace` is InferenceData or Dataset.
     random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     progressbar : bool
@@ -1827,6 +1831,14 @@ def sample_posterior_predictive(
         thinned_idata = idata.sel(draw=slice(None, None, 5))
         with model:
             idata.extend(pymc.sample_posterior_predictive(thinned_idata))
+
+    Generate 5 posterior predictive samples per posterior sample.
+
+    .. code:: python
+
+        expanded_data = idata.posterior.expand_dims(pred_id=5)
+        with model:
+            idata.extend(pymc.sample_posterior_predictive(expanded_data))
     """
 
     _trace: Union[MultiTrace, PointList]

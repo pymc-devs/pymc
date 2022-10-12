@@ -1625,14 +1625,14 @@ class TestSamplePosteriorPredictive:
             pp = pm.sample_posterior_predictive(post, var_names=["d"], sample_dims=["sample"])
             assert "sample" in pp.posterior_predictive
             assert len(pp.posterior_predictive["sample"]) == len(post["sample"])
-            post = post.expand_dims(pp_dim=5)
+            post = post.expand_dims(pred_id=5)
             pp = pm.sample_posterior_predictive(
-                post, var_names=["d"], sample_dims=["sample", "pp_dim"]
+                post, var_names=["d"], sample_dims=["sample", "pred_id"]
             )
             assert "sample" in pp.posterior_predictive
-            assert "pp_dim" in pp.posterior_predictive
+            assert "pred_id" in pp.posterior_predictive
             assert len(pp.posterior_predictive["sample"]) == len(post["sample"])
-            assert len(pp.posterior_predictive["pp_dim"]) == 5
+            assert len(pp.posterior_predictive["pred_id"]) == 5
 
 
 class TestDraw(SeededTest):
