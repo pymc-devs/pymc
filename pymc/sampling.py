@@ -1841,7 +1841,7 @@ def sample_posterior_predictive(
     trace_coords: Dict[str, np.ndarray] = {}
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
-    idata = None
+    idata: Optional[InferenceData] = None
     stacked_dims = None
     if isinstance(trace, InferenceData):
         _constant_data = getattr(trace, "constant_data", None)
@@ -1986,7 +1986,7 @@ def sample_posterior_predictive(
         return pm.predictions_to_inference_data(ppc_trace, **ikwargs)
     idata_pp = pm.to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
 
-    if extend_inferencedata:
+    if extend_inferencedata and idata is not None:
         idata.extend(idata_pp)
         return idata
     return idata_pp
