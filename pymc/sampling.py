@@ -53,7 +53,6 @@ from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
 from typing_extensions import TypeAlias
-from xarray_einstats.einops import rearrange
 
 import pymc as pm
 
@@ -1966,30 +1965,26 @@ def sample_posterior_predictive(
     ppc_trace = ppc_trace_t.trace_dict
 
     for k, ary in ppc_trace.items():
-        ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
+        if stacked_dims is not None:
+            ppc_trace[k] = ary.reshape(
+                (*[len(coord) for coord in stacked_dims.values()], *ary.shape[1:])
+            )
+        else:
+            ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
 
     if not return_inferencedata:
         return ppc_trace
     ikwargs: Dict[str, Any] = dict(model=model, **idata_kwargs)
+    ikwargs.setdefault("sample_dims", sample_dims)
+    if stacked_dims is not None:
+        coords = ikwargs.get("coords", {})
+        ikwargs["coords"] = {**stacked_dims, **coords}
     if predictions:
         if extend_inferencedata:
             ikwargs.setdefault("idata_orig", idata)
             ikwargs.setdefault("inplace", True)
         return pm.predictions_to_inference_data(ppc_trace, **ikwargs)
-    converter = pm.backends.arviz.InferenceDataConverter(posterior_predictive=ppc_trace, **ikwargs)
-    converter.nchains = nchain
-    converter.ndraws = len_trace
-    idata_pp = converter.to_inference_data()
-    if stacked_dims is not None:
-        pp_ds = idata_pp.posterior_predictive
-        pp_ds = pp_ds.squeeze("chain", drop=True).rename(draw="__pp_aux_dim__")
-        pp_ds = rearrange(
-            pp_ds,
-            in_dims=[{"__pp_aux_dim__": sample_dims}],
-            out_dims=sample_dims,
-            **{dim_name: len(coords) for dim_name, coords in stacked_dims.items()},
-        ).transpose(*[dim_name for dim_name in stacked_dims.keys()], ...)
-        pp_ds = pp_ds.assign_coords(stacked_dims)
+    idata_pp = pm.to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
 
     if extend_inferencedata:
         idata.extend(idata_pp)

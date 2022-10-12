@@ -1618,6 +1618,22 @@ class TestSamplePosteriorPredictive:
 
         assert np.all(pp["y"] == np.arange(5) * 2)
 
+    def test_sample_dims(self, point_list_arg_bug_fixture):
+        pmodel, trace = point_list_arg_bug_fixture
+        with pmodel:
+            post = pm.to_inference_data(trace).posterior.stack(sample=["chain", "draw"])
+            pp = pm.sample_posterior_predictive(post, var_names=["d"], sample_dims=["sample"])
+            assert "sample" in pp.posterior_predictive
+            assert len(pp.posterior_predictive["sample"]) == len(post["sample"])
+            post = post.expand_dims(pp_dim=5)
+            pp = pm.sample_posterior_predictive(
+                post, var_names=["d"], sample_dims=["sample", "pp_dim"]
+            )
+            assert "sample" in pp.posterior_predictive
+            assert "pp_dim" in pp.posterior_predictive
+            assert len(pp.posterior_predictive["sample"]) == len(post["sample"])
+            assert len(pp.posterior_predictive["pp_dim"]) == 5
+
 
 class TestDraw(SeededTest):
     def test_univariate(self):

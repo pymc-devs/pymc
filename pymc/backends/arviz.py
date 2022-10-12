@@ -7,6 +7,7 @@ from typing import (  # pylint: disable=unused-import
     Any,
     Dict,
     Iterable,
+    List,
     Mapping,
     Optional,
     Sequence,
@@ -15,7 +16,6 @@ from typing import (  # pylint: disable=unused-import
 )
 
 import numpy as np
-import xarray as xr
 
 from aesara.graph.basic import Constant
 from aesara.tensor.sharedvar import SharedVariable
@@ -162,6 +162,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         predictions=None,
         coords: Optional[CoordSpec] = None,
         dims: Optional[DimSpec] = None,
+        sample_dims: Optional[List] = None,
         model=None,
         save_warmup: Optional[bool] = None,
     ):
@@ -223,6 +224,9 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 for var_name, dims in self.model.RV_dims.items()
             }
             self.dims = {**model_dims, **self.dims}
+        if sample_dims is None:
+            sample_dims = ["chain", "draw"]
+        self.sample_dims = sample_dims
 
         self.observations = find_observations(self.model)
 
@@ -419,36 +423,31 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             ),
         )
 
-    def translate_posterior_predictive_dict_to_xarray(self, dct, kind) -> xr.Dataset:
-        """Take Dict of variables to numpy ndarrays (samples) and translate into dataset."""
-        data = {}
-        warning_vars = []
-        for k, ary in dct.items():
-            if (ary.shape[0] == self.nchains) and (ary.shape[1] == self.ndraws):
-                data[k] = ary
-            else:
-                data[k] = np.expand_dims(ary, 0)
-                warning_vars.append(k)
-        if warning_vars:
-            warnings.warn(
-                f"The shape of variables {', '.join(warning_vars)} in {kind} group is not compatible "
-                "with number of chains and draws. The automatic dimension naming might not have worked. "
-                "This can also mean that some draws or even whole chains are not represented.",
-                UserWarning,
-            )
-        return dict_to_dataset(data, library=pymc, coords=self.coords, dims=self.dims)
+        return dict_to_dataset(
+            data, library=pymc, coords=self.coords, dims=self.dims, default_dims=self.sample_dims
+        )
 
     @requires(["posterior_predictive"])
     def posterior_predictive_to_xarray(self):
         """Convert posterior_predictive samples to xarray."""
-        return self.translate_posterior_predictive_dict_to_xarray(
-            self.posterior_predictive, "posterior_predictive"
+        data = self.posterior_predictive
+        dims = {
+            var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data.keys()
+        }
+        return dict_to_dataset(
+            data, library=pymc, coords=self.coords, dims=dims, default_dims=self.sample_dims
         )
 
     @requires(["predictions"])
     def predictions_to_xarray(self):
         """Convert predictions (out of sample predictions) to xarray."""
-        return self.translate_posterior_predictive_dict_to_xarray(self.predictions, "predictions")
+        data = self.predictions
+        dims = {
+            var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data.keys()
+        }
+        return dict_to_dataset(
+            data, library=pymc, coords=self.coords, dims=dims, default_dims=self.sample_dims
+        )
 
     def priors_to_xarray(self):
         """Convert prior samples (and if possible prior predictive too) to xarray."""
@@ -537,6 +536,7 @@ def to_inference_data(
     log_likelihood: Union[bool, Iterable[str]] = True,
     coords: Optional[CoordSpec] = None,
     dims: Optional[DimSpec] = None,
+    sample_dims: Optional[List] = None,
     model: Optional["Model"] = None,
     save_warmup: Optional[bool] = None,
 ) -> InferenceData:
@@ -586,6 +586,7 @@ def to_inference_data(
         log_likelihood=log_likelihood,
         coords=coords,
         dims=dims,
+        sample_dims=sample_dims,
         model=model,
         save_warmup=save_warmup,
     ).to_inference_data()
@@ -599,6 +600,7 @@ def predictions_to_inference_data(
     model: Optional["Model"] = None,
     coords: Optional[CoordSpec] = None,
     dims: Optional[DimSpec] = None,
+    sample_dims: Optional[List] = None,
     idata_orig: Optional[InferenceData] = None,
     inplace: bool = False,
 ) -> InferenceData:
@@ -644,6 +646,7 @@ def predictions_to_inference_data(
         model=model,
         coords=coords,
         dims=dims,
+        sample_dims=sample_dims,
         log_likelihood=False,
     )
     if hasattr(idata_orig, "posterior"):
