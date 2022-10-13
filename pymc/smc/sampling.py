@@ -65,7 +65,7 @@ def sample_smc(
         Starting point in parameter space. It should be a list of dict with length `chains`.
         When None (default) the starting point is sampled from the prior distribution.
     model : Model (optional if in ``with`` context).
-    random_seed :  int, array_like of int, RandomState or Generator, optional
+    random_seed :  int, array_like of int, RandomState or numpy_Generator, optional
         Random seed(s) used by the sampling steps. If a list, tuple or array of ints
         is passed, each entry will be used to seed each chain. A ValueError will be
         raised if the length does not match the number of chains.
