@@ -43,7 +43,7 @@ from pymc.vartypes import discrete_types
 class SMC_KERNEL(ABC):
     """Base class for the Sequential Monte Carlo kernels.
 
-    To create a new kernel you should subclass from this.
+    To create a new SMC kernel you should subclass from this.
 
     Before sampling, the following methods are called once in order:
 
@@ -132,6 +132,7 @@ class SMC_KERNEL(ABC):
         threshold=0.5,
     ):
         """
+        Initialize the SMC_kernel class.
 
         Parameters
         ----------
@@ -148,6 +149,11 @@ class SMC_KERNEL(ABC):
             Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
             the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
             It should be between 0 and 1.
+
+        Attributes
+        ----------
+        self.var_info : dict
+            Dictionary that contains information about model variables shape and size.
 
         """
 
