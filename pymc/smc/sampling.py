@@ -88,10 +88,11 @@ def sample_smc(
         Whether or not to display a progress bar in the command line.
     **kernel_kwargs : dict, optional
         Keyword arguments passed to the SMC_kernel. The default IMH kernel takes the following keywords:
-            threshold : float, default 0.5
-                Determines the change of beta from stage to stage, i.e. indirectly the number of stages,
-                the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
-                It should be between 0 and 1.
+        
+        threshold : float, default 0.5
+          Determines the change of beta from stage to stage, i.e. indirectly the number of stages,
+          the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
+          It should be between 0 and 1.
             correlation_threshold : float, default 0.01
                 The lower the value the higher the number of MCMC steps computed automatically.
                 Defaults to 0.01. It should be between 0 and 1.
