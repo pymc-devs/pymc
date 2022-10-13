@@ -1,0 +1,8 @@
+# Add 'maintenance` label to any change to *.yml files
+maintenance:
+- any: ['**.yml', '']
+
+# Add "no releasenotes" label if only the pre-commit config changed
+no releasenotes:
+- any: []
+  all: ['.pre-commit-config.yml']
