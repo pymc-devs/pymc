@@ -32,7 +32,12 @@ from aesara.raise_op import Assert
 from aesara.sparse.basic import sp_sum
 from aesara.tensor import gammaln, sigmoid
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
-from aesara.tensor.random.basic import dirichlet, multinomial, multivariate_normal
+from aesara.tensor.random.basic import (
+    DirichletRV,
+    MvNormalRV,
+    multinomial,
+    multivariate_normal,
+)
 from aesara.tensor.random.op import RandomVariable, default_supp_shape_from_params
 from aesara.tensor.random.utils import broadcast_params
 from aesara.tensor.slinalg import Cholesky, SolveTriangular
@@ -190,6 +195,13 @@ def quaddist_tau(delta, chol_mat):
     return quaddist, logdet, ok
 
 
+class PyMCMvNormalRV(MvNormalRV):
+    _print_name = ("MvNormal", "\\operatorname{MvNormal}")
+
+
+pymc_multivariate_normal = PyMCMvNormalRV()
+
+
 class MvNormal(Continuous):
     r"""
     Multivariate normal log-likelihood.
@@ -254,7 +266,8 @@ class MvNormal(Continuous):
         vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
         vals = pm.Deterministic('vals', at.dot(chol, vals_raw.T).T)
     """
-    rv_op = multivariate_normal
+    rv_op = pymc_multivariate_normal
+    rv_type = MvNormalRV
 
     @classmethod
     def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
@@ -436,6 +449,13 @@ class MvStudentT(Continuous):
         )
 
 
+class PyMCDirichletRV(DirichletRV):
+    _print_name = ("Dirichlet", "\\operator{Dirichlet}")
+
+
+pymc_dirichlet = PyMCDirichletRV()
+
+
 class Dirichlet(SimplexContinuous):
     r"""
     Dirichlet log-likelihood.
@@ -460,7 +480,8 @@ class Dirichlet(SimplexContinuous):
         Concentration parameters (a > 0). The number of categories is given by the
         length of the last axis.
     """
-    rv_op = dirichlet
+    rv_op = pymc_dirichlet
+    rv_type = DirichletRV
 
     @classmethod
     def dist(cls, a, **kwargs):

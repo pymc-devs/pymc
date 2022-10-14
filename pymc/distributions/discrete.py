@@ -17,16 +17,16 @@ import aesara.tensor as at
 import numpy as np
 
 from aesara.tensor.random.basic import (
+    GeometricRV,
+    HyperGeometricRV,
+    NegBinomialRV,
+    PoissonRV,
     RandomVariable,
     ScipyRandomVariable,
     bernoulli,
     betabinom,
     binomial,
     categorical,
-    geometric,
-    hypergeometric,
-    nbinom,
-    poisson,
 )
 from scipy import stats
 
@@ -560,6 +560,13 @@ class DiscreteWeibull(Discrete):
         return check_parameters(res, 0 < q, q < 1, 0 < beta, msg="0 < q < 1, beta > 0")
 
 
+class PyMCPoissonRV(PoissonRV):
+    _print_name = ("Poisson", "\\operatorname{Poisson}")
+
+
+pymc_poisson = PyMCPoissonRV()
+
+
 class Poisson(Discrete):
     R"""
     Poisson log-likelihood.
@@ -605,7 +612,8 @@ class Poisson(Discrete):
     The Poisson distribution can be derived as a limiting case of the
     binomial distribution.
     """
-    rv_op = poisson
+    rv_op = pymc_poisson
+    rv_type = PoissonRV
 
     @classmethod
     def dist(cls, mu, *args, **kwargs):
@@ -672,6 +680,13 @@ class Poisson(Discrete):
         )
 
         return check_parameters(res, 0 <= mu, msg="mu >= 0")
+
+
+class PyMCNegativeBinomialRV(NegBinomialRV):
+    _print_name = ("NegBinom", "\\operatorname{NegBinom}")
+
+
+pymc_nbinom = PyMCNegativeBinomialRV()
 
 
 class NegativeBinomial(Discrete):
@@ -746,7 +761,8 @@ class NegativeBinomial(Discrete):
     n : tensor_like of float
         Alternative number of target success trials (n > 0)
     """
-    rv_op = nbinom
+    rv_op = pymc_nbinom
+    rv_type = NegBinomialRV
 
     @classmethod
     def dist(cls, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
@@ -847,6 +863,13 @@ class NegativeBinomial(Discrete):
         )
 
 
+class PyMCGeometricRV(GeometricRV):
+    _print_name = ("Geometric", "\\operatorname{Geometric}")
+
+
+pymc_geometric = PyMCGeometricRV()
+
+
 class Geometric(Discrete):
     R"""
     Geometric log-likelihood.
@@ -886,7 +909,8 @@ class Geometric(Discrete):
         Probability of success on an individual trial (0 < p <= 1).
     """
 
-    rv_op = geometric
+    rv_op = pymc_geometric
+    rv_type = GeometricRV
 
     @classmethod
     def dist(cls, p, *args, **kwargs):
@@ -956,6 +980,13 @@ class Geometric(Discrete):
         )
 
 
+class PyMCHyperGeometricRV(HyperGeometricRV):
+    _print_name = ("HyperGeometric", "\\operatorname{HyperGeometric}")
+
+
+pymc_hypergeometric = PyMCHyperGeometricRV()
+
+
 class HyperGeometric(Discrete):
     R"""
     Discrete hypergeometric distribution.
@@ -1004,7 +1035,8 @@ class HyperGeometric(Discrete):
         Number of samples drawn from the population (0 <= n <= N)
     """
 
-    rv_op = hypergeometric
+    rv_op = pymc_hypergeometric
+    rv_type = HyperGeometricRV
 
     @classmethod
     def dist(cls, N, k, n, *args, **kwargs):
