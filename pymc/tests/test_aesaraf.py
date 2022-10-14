@@ -25,7 +25,7 @@ import scipy.sparse as sps
 from aeppl.logprob import ParameterValueError
 from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Variable, equal_computations
-from aesara.tensor.random.basic import NormalRV, normal, uniform
+from aesara.tensor.random.basic import normal, uniform
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.var import RandomStateSharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -405,7 +405,7 @@ def test_rvs_to_value_vars_unvalued_rv():
     res_y = res.owner.inputs[1]
     # Graph should have be cloned, and therefore y and res_y should have different ids
     assert res_y is not y
-    assert isinstance(res_y.owner.op, NormalRV)
+    assert res_y.owner.op == at.random.normal
     assert res_y.owner.inputs[3] is x_value
 
 
