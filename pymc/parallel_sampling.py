@@ -406,8 +406,9 @@ class ParallelSampler:
 
         if mp_ctx is None or isinstance(mp_ctx, str):
             # Closes issue https://github.com/pymc-devs/pymc/issues/3849
+            # Related issue https://github.com/pymc-devs/pymc/issues/5339
             if platform.system() == "Darwin":
-                mp_ctx = "forkserver"
+                mp_ctx = "fork"
             mp_ctx = multiprocessing.get_context(mp_ctx)
 
         step_method_pickled = None
