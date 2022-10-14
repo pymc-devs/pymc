@@ -57,7 +57,7 @@ from aesara.tensor.random.var import (
 )
 from aesara.tensor.rewriting.basic import topo_constant_folding
 from aesara.tensor.rewriting.shape import ShapeFeature
-from aesara.tensor.sharedvar import SharedVariable
+from aesara.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorConstant, TensorVariable
 
@@ -537,9 +537,9 @@ def join_nonshared_inputs(
     point: Dict[str, np.ndarray],
     xs: List[TensorVariable],
     vars: List[TensorVariable],
-    shared,
+    shared: Dict[TensorVariable, TensorSharedVariable],
     make_shared: bool = False,
-):
+) -> Tuple[List[TensorVariable], TensorVariable]:
     """
     Takes a list of Aesara Variables and joins their non shared inputs into a single input.
 
@@ -548,11 +548,34 @@ def join_nonshared_inputs(
     point: a sample point
     xs: list of Aesara tensors
     vars: list of variables to join
+    shared: dict of TensorVariable and their associated TensorSharedVariable.
+        See return of pm.aesaraf.make_shared_replacements
+    make_shared: bool
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        initial_point = model.initial_point()
+        all_model_variables = pm.aesaraf.inputvars(model.value_vars)
+        # Will be empty here since nothing to replace
+        shared = pm.aesara.make_shared_replacements(
+            point=initial_point,
+            vars=all_model_variables,
+            model=model,
+        )
+        [logp0], inarray0 = pm.aesara.join_nonshared_inputs(
+            point=initial_point,
+            xs=[model.logp()],
+            vars=all_model_variables,
+            shared=shared,
+        )
 
     Returns
     -------
-    tensors, inarray
-    tensors: list of same tensors but with inarray as input
+    xs_special, inarray
+    xs_special: list of same tensors but with inarray as input
     inarray: vector of inputs
     """
     if not vars:
@@ -572,7 +595,7 @@ def join_nonshared_inputs(
     if aesara.config.compute_test_value != "off":
         inarray.tag.test_value = joined.tag.test_value
 
-    replace = {}
+    replace: Dict[TensorVariable, TensorSharedVariable] = {}
     last_idx = 0
     for var in vars:
         shape = point[var.name].shape
