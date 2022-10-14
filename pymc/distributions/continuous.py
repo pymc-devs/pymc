@@ -35,22 +35,21 @@ from aesara.tensor.extra_ops import broadcast_shape
 from aesara.tensor.math import tanh
 from aesara.tensor.random.basic import (
     BetaRV,
-    CauchyRV,
-    HalfCauchyRV,
-    HalfNormalRV,
-    LogNormalRV,
-    NormalRV,
-    UniformRV,
+    cauchy,
     chisquare,
     exponential,
     gamma,
     gumbel,
+    halfcauchy,
+    halfnormal,
     invgamma,
     laplace,
     logistic,
+    lognormal,
     normal,
     pareto,
     triangular,
+    uniform,
     vonmises,
 )
 from aesara.tensor.random.op import RandomVariable
@@ -253,13 +252,6 @@ def get_tau_sigma(tau=None, sigma=None):
     return floatX(tau), floatX(sigma)
 
 
-class PyMCUniformRV(UniformRV):
-    _print_name = ("Uniform", "\\operatorname{Uniform}")
-
-
-pymc_uniform = PyMCUniformRV()
-
-
 class Uniform(BoundedContinuous):
     r"""
     Continuous uniform log-likelihood.
@@ -303,8 +295,7 @@ class Uniform(BoundedContinuous):
     upper : tensor_like of float, default 1
         Upper limit.
     """
-    rv_op = pymc_uniform
-    rv_type = UniformRV
+    rv_op = uniform
     bound_args_indices = (3, 4)  # Lower, Upper
 
     @classmethod
@@ -488,13 +479,6 @@ class HalfFlat(PositiveContinuous):
         return at.switch(at.lt(value, np.inf), -np.inf, at.switch(at.eq(value, np.inf), 0, -np.inf))
 
 
-class PyMCNormalRV(NormalRV):
-    _print_name = ("Normal", "\\operatorname{Normal}")
-
-
-pymc_normal = PyMCNormalRV()
-
-
 class Normal(Continuous):
     r"""
     Univariate normal log-likelihood.
@@ -560,8 +544,7 @@ class Normal(Continuous):
         with pm.Model():
             x = pm.Normal('x', mu=0, tau=1/23)
     """
-    rv_op = pymc_normal
-    rv_type = NormalRV
+    rv_op = normal
 
     @classmethod
     def dist(cls, mu=0, sigma=None, tau=None, **kwargs):
@@ -818,13 +801,6 @@ def truncated_normal_default_transform(op, rv):
     return bounded_cont_transform(op, rv, TruncatedNormal.bound_args_indices)
 
 
-class PyMCHalfNormalRV(HalfNormalRV):
-    _print_name = ("HalfNormal", "\\operatorname{HalfNormal}")
-
-
-pymc_halfnormal = PyMCHalfNormalRV()
-
-
 class HalfNormal(PositiveContinuous):
     r"""
     Half-normal log-likelihood.
@@ -891,8 +867,7 @@ class HalfNormal(PositiveContinuous):
         with pm.Model():
             x = pm.HalfNormal('x', tau=1/15)
     """
-    rv_op = pymc_halfnormal
-    rv_type = HalfNormalRV
+    rv_op = halfnormal
 
     @classmethod
     def dist(cls, sigma=None, tau=None, *args, **kwargs):
@@ -1715,13 +1690,6 @@ class AsymmetricLaplace(Continuous):
         return check_parameters(res, 0 < b, 0 < kappa, msg="b > 0, kappa > 0")
 
 
-class PyMCLogNormalRV(LogNormalRV):
-    _print_name = ("LogNormal", "\\operatorname{LogNormal}")
-
-
-pymc_lognormal = PyMCLogNormalRV()
-
-
 class LogNormal(PositiveContinuous):
     r"""
     Log-normal log-likelihood.
@@ -1790,8 +1758,7 @@ class LogNormal(PositiveContinuous):
             x = pm.LogNormal('x', mu=2, tau=1/100)
     """
 
-    rv_op = pymc_lognormal
-    rv_type = LogNormalRV
+    rv_op = lognormal
 
     @classmethod
     def dist(cls, mu=0, sigma=None, tau=None, *args, **kwargs):
@@ -2082,13 +2049,6 @@ def pareto_default_transform(op, rv):
     return bounded_cont_transform(op, rv, Pareto.bound_args_indices)
 
 
-class PyMCCauchyRV(CauchyRV):
-    _print_name = ("Cauchy", "\\operatorname{Cauchy}")
-
-
-pymc_cauchy = PyMCCauchyRV()
-
-
 class Cauchy(Continuous):
     r"""
     Cauchy log-likelihood.
@@ -2135,8 +2095,7 @@ class Cauchy(Continuous):
     beta : tensor_like of float
         Scale parameter > 0.
     """
-    rv_op = pymc_cauchy
-    rv_type = CauchyRV
+    rv_op = cauchy
 
     @classmethod
     def dist(cls, alpha, beta, *args, **kwargs):
@@ -2172,13 +2131,6 @@ class Cauchy(Continuous):
             0 < beta,
             msg="beta > 0",
         )
-
-
-class PyMCHalfCauchyRV(HalfCauchyRV):
-    _print_name = ("HalfCauchy", "\\operatorname{HalfCauchy}")
-
-
-pymc_halfcauchy = PyMCHalfCauchyRV()
 
 
 class HalfCauchy(PositiveContinuous):
@@ -2220,8 +2172,7 @@ class HalfCauchy(PositiveContinuous):
     beta : tensor_like of float
         Scale parameter (beta > 0).
     """
-    rv_op = pymc_halfcauchy
-    rv_type = HalfCauchyRV
+    rv_op = halfcauchy
 
     @classmethod
     def dist(cls, beta, *args, **kwargs):
@@ -3991,7 +3942,7 @@ class PolyaGammaRV(RandomVariable):
     ndim_supp = 0
     ndims_params = [0, 0]
     dtype = "floatX"
-    _print_name = ("PolyaGamma", "\\operatorname{PolyaGamma}")
+    _print_name = ("PG", "\\operatorname{PG}")
 
     def __call__(self, h=1.0, z=0.0, size=None, **kwargs):
         return super().__call__(h, z, size=size, **kwargs)
