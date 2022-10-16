@@ -630,8 +630,8 @@ class TestSamplePPC(SeededTest):
             ppc0 = pm.sample_posterior_predictive(
                 10 * [model.initial_point()], return_inferencedata=False
             )
-            # # deprecated argument is not introduced to fast version [2019/08/20:rpg]
-            ppc = pm.sample_posterior_predictive(trace, var_names=["a"], return_inferencedata=False)
+            assert "a" in ppc0
+            assert len(ppc0["a"][0]) == 10
             # test empty ppc
             ppc = pm.sample_posterior_predictive(trace, var_names=[], return_inferencedata=False)
             assert len(ppc) == 0
@@ -646,6 +646,8 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (nchains, ndraws)
             # mu's standard deviation may have changed thanks to a's observed
+            # If you observe this test failing, please report it in
+            # the github issue https://github.com/pymc-devs/pymc/issues/6211
             _, pval = stats.kstest(
                 (ppc["a"] - trace.posterior["mu"]).values.flatten(), stats.norm(loc=0, scale=1).cdf
             )
