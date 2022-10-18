@@ -830,37 +830,37 @@ class TestGARCH11:
         assert new_dist.eval().shape == (4, 3, 10)
 
 
-def _gen_sde_path(sde, pars, dt, n, x0):
-    xs = [x0]
-    wt = np.random.normal(size=(n,) if isinstance(x0, float) else (n, x0.size))
-    for i in range(n):
-        f, g = sde(xs[-1], *pars)
-        xs.append(xs[-1] + f * dt + np.sqrt(dt) * g * wt[i])
-    return np.array(xs)
+class TestEulerMaruyama:
 
+    def _gen_sde_path(self, sde, pars, dt, n, x0):
+        xs = [x0]
+        wt = np.random.normal(size=(n,) if isinstance(x0, float) else (n, x0.size))
+        for i in range(n):
+            f, g = sde(xs[-1], *pars)
+            xs.append(xs[-1] + f * dt + np.sqrt(dt) * g * wt[i])
+        return np.array(xs)
 
-@pytest.mark.xfail(reason="Euleryama not refactored", raises=NotImplementedError)
-def test_linear():
-    lam = -0.78
-    sig2 = 5e-3
-    N = 300
-    dt = 1e-1
-    sde = lambda x, lam: (lam * x, sig2)
-    x = floatX(_gen_sde_path(sde, (lam,), dt, N, 5.0))
-    z = x + np.random.randn(x.size) * sig2
-    # build model
-    with Model() as model:
-        lamh = Flat("lamh")
-        xh = EulerMaruyama("xh", dt, sde, (lamh,), shape=N + 1, initval=x)
-        Normal("zh", mu=xh, sigma=sig2, observed=z)
-    # invert
-    with model:
-        trace = sample(init="advi+adapt_diag", chains=1)
+    def test_linear(self):
+        lam = -0.78
+        sig2 = 5e-3
+        N = 300
+        dt = 1e-1
+        sde = lambda x, lam: (lam * x, sig2)
+        x = floatX(self._gen_sde_path(sde, (lam,), dt, N, 5.0))
+        z = x + np.random.randn(x.size) * sig2
+        # build model
+        with Model() as model:
+            lamh = Flat("lamh")
+            xh = EulerMaruyama("xh", dt, sde, (lamh,), steps=N, initval=x)
+            Normal("zh", mu=xh, sigma=sig2, observed=z)
+        # invert
+        with model:
+            trace = sample(chains=1)
 
-    ppc = sample_posterior_predictive(trace, model=model)
+        ppc = sample_posterior_predictive(trace, model=model)
 
-    p95 = [2.5, 97.5]
-    lo, hi = np.percentile(trace[lamh], p95, axis=0)
-    assert (lo < lam) and (lam < hi)
-    lo, hi = np.percentile(ppc["zh"], p95, axis=0)
-    assert ((lo < z) * (z < hi)).mean() > 0.95
+        p95 = [2.5, 97.5]
+        lo, hi = np.percentile(trace.posterior["lamh"], p95, axis=[0, 1])
+        assert (lo < lam) and (lam < hi)
+        lo, hi = np.percentile(ppc.posterior_predictive["zh"], p95, axis=[0, 1])
+        assert ((lo < z) * (z < hi)).mean() > 0.95
