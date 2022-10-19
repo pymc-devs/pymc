@@ -980,7 +980,7 @@ class EulerMaruyama(Distribution):
             batch_size = at.broadcast_shape(*sde_pars, init_dist)
         init_dist = change_dist_size(init_dist, batch_size)
 
-        # Create OpFromGraph representing random draws form AR process
+        # Create OpFromGraph representing random draws from SDE process
         # Variables with underscore suffix are dummy inputs into the OpFromGraph
         init_ = init_dist.type()
         sde_pars_ = [x.type() for x in sde_pars]
@@ -1044,14 +1044,16 @@ def eulermaruyama_logp(op, values, init_dist, steps, *sde_pars_noise_arg, **kwar
     (x,) = values
     # noise arg is unused, but is needed to make the logp signature match the rv_op signature
     *sde_pars, _ = sde_pars_noise_arg
+    # sde_fn is user provided and likely not broadcastable to additional time dimension,
+    # since the input x is now [..., t], we need to broadcast each input to [..., None]
+    # below as best effort attempt to make it work
+    sde_pars_broadcast = [x[..., None] for x in sde_pars]
     xtm1 = x[..., :-1]
     xt = x[..., 1:]
-    f, g = op.sde_fn(xtm1, *sde_pars)
+    f, g = op.sde_fn(xtm1, *sde_pars_broadcast)
     mu = xtm1 + op.dt * f
     sigma = at.sqrt(op.dt) * g
     # Compute and collapse logp across time dimension
     sde_logp = at.sum(logp(Normal.dist(mu, sigma), xt), axis=-1)
-    init_logp = logp(init_dist, x[..., :1])
-    if init_dist.owner.op.ndim_supp == 0:
-        init_logp = at.sum(init_logp, axis=-1)
+    init_logp = logp(init_dist, x[..., 0])
     return init_logp + sde_logp

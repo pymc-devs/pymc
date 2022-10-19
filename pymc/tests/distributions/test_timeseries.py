@@ -859,11 +859,13 @@ class TestEulerMaruyama:
             for i in range(batch_size):
                 sde_pars_slice = sde_pars.copy()
                 sde_pars_slice[batched_param] = sde_pars[batched_param][i]
-                EulerMaruyama(f"y_{i}", dt=0.02, sde_fn=sde_fn, sde_pars=sde_pars, **kwargs)
+                EulerMaruyama(f"y_{i}", dt=0.02, sde_fn=sde_fn, sde_pars=sde_pars_slice, **kwargs)
 
+        t0_init = t0.initial_point()
+        t1_init = {f"y_{i}": t0_init["y"][i] for i in range(batch_size)}
         np.testing.assert_allclose(
-            t0.compile_logp()(t0.initial_point()),
-            t1.compile_logp()(t1.initial_point()),
+            t0.compile_logp()(t0_init),
+            t1.compile_logp()(t1_init),
         )
 
     def test_change_dist_size1(self):
