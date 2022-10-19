@@ -541,19 +541,26 @@ def join_nonshared_inputs(
     make_shared: bool = False,
 ) -> Tuple[List[TensorVariable], TensorVariable]:
     """
-    Takes a list of Aesara Variables and joins their non shared inputs into a single input.
+    Takes a list of TensorVariables and joins their non shared inputs into a single input.
 
     Parameters
     ----------
-    point: a sample point
-    xs: list of Aesara tensors
-    vars: list of variables to join
-    shared: dict of TensorVariable and their associated TensorSharedVariable.
-        See return of pm.aesaraf.make_shared_replacements
-    make_shared: bool
+    point: a sample point associated with a model and variable inputs
+    xs: list of TensorVariable to replace subgraphs with vars and shared
+    vars: list of TensorVariable to reshape, join, and return as inarray
+    shared: dict of TensorVariable and their associated TensorSharedVariable in
+        subgraph replacement
+    make_shared: bool flag to use point argument to build subgraphs of xs_special
+
+    Returns
+    -------
+    xs_special, inarray
+    xs_special: list of same xs TensorVariables but with inarray and shared in subgraphs
+    inarray: TensorVariable built from vars argument
 
     Examples
     --------
+    Join all model variables with none being shared with respect to model logp.
 
     .. code-block:: python
 
@@ -572,11 +579,22 @@ def join_nonshared_inputs(
             shared=shared,
         )
 
-    Returns
-    -------
-    xs_special, inarray
-    xs_special: list of same tensors but with inarray as input
-    inarray: vector of inputs
+    Same as above but with first model variable being shared.
+
+    .. code-block:: python
+
+        variable_subset = all_model_variable[1:]
+        shared_subset = pm.aesara.make_shared_replacements(
+            point=initial_point,
+            vars=variable_subset,
+            model=model,
+        )
+        [logp0], inarray0 = pm.aesara.join_nonshared_inputs(
+            point=initial_point,
+            xs=[model.logp()],
+            vars=variable_subset,
+            shared=shared_subset,
+        )
     """
     if not vars:
         raise ValueError("Empty list of variables.")
@@ -587,8 +605,6 @@ def join_nonshared_inputs(
         tensor_type = joined.type
         inarray = tensor_type("inarray")
     else:
-        if point is None:
-            raise ValueError("A point is required when `make_shared` is True")
         joined_values = np.concatenate([point[var.name].ravel() for var in vars])
         inarray = aesara.shared(joined_values, "inarray")
 
