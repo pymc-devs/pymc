@@ -172,3 +172,20 @@ class TestStrAndLatexRepr:
                         assert segment in model_text
                 else:
                     assert text in model_text
+
+
+def test_latex_repr_nested():
+    with Model() as model:
+        normal_dist = Normal.dist(mu=0.0, sigma=1.0)
+        censored_normal = Censored("censored_normal", normal_dist, lower=-1, upper=1)
+        latex_repr = model.str_repr(formatting="latex")
+
+    expected = """\
+    $$
+    \\begin{array}{rcl}
+    \\text{censored_normal} &\\sim & \\operatorname{Censored}(\\operatorname{N}(0,~1),~-1,~1)
+    \\end{array}
+    $$"""
+    assert [line.strip() for line in latex_repr.split("\n")] == [
+        line.strip() for line in expected.split("\n")
+    ]

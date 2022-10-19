@@ -105,7 +105,7 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
         return ""
     if "latex" in formatting:
         rv_reprs = [
-            rv_repr.replace(r"\sim", r"&\sim &").strip("$")
+            rv_repr.replace(r"\sim", r"&\sim &").replace(r"\$", "").strip("$")
             for rv_repr in rv_reprs
             if rv_repr is not None
         ]
@@ -182,7 +182,10 @@ def _str_for_input_rv(var: Variable, formatting: str) -> str:
         else str_for_dist(var, formatting=formatting, include_params=True)
     )
     if "latex" in formatting:
-        return r"\text{" + _latex_escape(_str) + "}"
+        print_name = _latex_escape(_str)
+        if "operatorname" not in _str:
+            print_name = r"\text{" + print_name + "}"
+        return print_name
     else:
         return _str
 
