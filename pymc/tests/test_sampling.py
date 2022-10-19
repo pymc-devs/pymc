@@ -625,27 +625,23 @@ class TestSamplePPC(SeededTest):
                 chains=nchains,
             )
 
-        random_state = self.get_random_state()
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
-                10 * [model.initial_point()], return_inferencedata=False, random_seed=random_state
+                10 * [model.initial_point()], return_inferencedata=False
             )
             assert "a" in ppc0
             assert len(ppc0["a"][0]) == 10
             # test empty ppc
-            ppc = pm.sample_posterior_predictive(
-                trace, var_names=[], return_inferencedata=False, random_seed=random_state
-            )
+            ppc = pm.sample_posterior_predictive(trace, var_names=[], return_inferencedata=False)
             assert len(ppc) == 0
 
             # test keep_size parameter
-            ppc = pm.sample_posterior_predictive(
-                trace, return_inferencedata=False, random_seed=random_state
-            )
+            ppc = pm.sample_posterior_predictive(trace, return_inferencedata=False)
             assert ppc["a"].shape == (nchains, ndraws)
 
             # test default case
+            random_state = self.get_random_state()
             idata_ppc = pm.sample_posterior_predictive(
                 trace, var_names=["a"], random_seed=random_state
             )
