@@ -27,7 +27,6 @@ from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
 from pymc.aesaraf import constant_fold, floatX, intX
-from pymc.distributions import distribution
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.distribution import (
     Distribution,
@@ -461,7 +460,7 @@ class AR(Distribution):
         process.
     init_dist : unnamed distribution, optional
         Scalar or vector distribution for initial values. Unnamed refers to distributions
-         created with the ``.dist()`` API. Distributions should have shape (*shape[:-1], ar_order).
+        created with the ``.dist()`` API. Distributions should have shape (*shape[:-1], ar_order).
         If not, it will be automatically resized. Defaults to pm.Normal.dist(0, 100, shape=...).
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
@@ -914,7 +913,7 @@ class EulerMaruyama(Distribution):
         parameters of the SDE, passed as ``*args`` to ``sde_fn``
     init_dist : unnamed distribution, optional
         Scalar or vector distribution for initial values. Unnamed refers to distributions
-         created with the ``.dist()`` API. Distributions should have shape (*shape[:-1], ar_order).
+        created with the ``.dist()`` API. Distributions should have shape (*shape[:-1]).
         If not, it will be automatically resized. Defaults to pm.Normal.dist(0, 100, shape=...).
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
@@ -953,7 +952,7 @@ class EulerMaruyama(Distribution):
                     f"Init dist must be a distribution created via the `.dist()` API, "
                     f"got {type(init_dist)}"
                 )
-                check_dist_not_registered(init_dist)
+            check_dist_not_registered(init_dist)
             if init_dist.owner.op.ndim_supp > 1:
                 raise ValueError(
                     "Init distribution must have a scalar or vector support dimension, ",
@@ -970,17 +969,15 @@ class EulerMaruyama(Distribution):
         # Tell Aeppl to ignore init_dist, as it will be accounted for in the logp term
         init_dist = ignore_logprob(init_dist)
 
-        return super().dist([dt, sde_fn, sde_pars, init_dist, steps], **kwargs)
+        return super().dist([init_dist, steps, sde_pars, dt, sde_fn], **kwargs)
 
     @classmethod
-    def rv_op(cls, dt, sde_fn, sde_pars, init_dist, steps, size=None):
-        # Init dist should have shape (*size, ar_order)
+    def rv_op(cls, init_dist, steps, sde_pars, dt, sde_fn, size=None):
+        # Init dist should have shape (*size,)
         if size is not None:
             batch_size = size
         else:
-            # In this case the size of the init_dist depends on the parameters shape
-            # The last dimension of rho and init_dist does not matter
-            batch_size = at.broadcast_shape(*sde_pars, at.atleast_1d(init_dist)[..., 0])
+            batch_size = at.broadcast_shape(*sde_pars, init_dist)
         init_dist = change_dist_size(init_dist, batch_size)
 
         # Create OpFromGraph representing random draws form AR process
@@ -1022,6 +1019,24 @@ class EulerMaruyama(Distribution):
 
         eulermaruyama = eulermaruyama_op(init_dist, steps, *sde_pars)
         return eulermaruyama
+
+
+@_change_dist_size.register(EulerMaruyamaRV)
+def change_eulermaruyama_size(op, dist, new_size, expand=False):
+
+    if expand:
+        old_size = dist.shape[:-1]
+        new_size = tuple(new_size) + tuple(old_size)
+
+    init_dist, steps, *sde_pars, _ = dist.owner.inputs
+    return EulerMaruyama.rv_op(
+        init_dist,
+        steps,
+        sde_pars,
+        dt=op.dt,
+        sde_fn=op.sde_fn,
+        size=new_size,
+    )
 
 
 @_logprob.register(EulerMaruyamaRV)
