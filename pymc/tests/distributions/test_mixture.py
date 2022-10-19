@@ -329,17 +329,13 @@ class TestMixture(SeededTest):
 
     def test_component_choice_random(self):
         """Test that mixture choices change over evaluations"""
-        p_first_component = 0.5
-        n_draws = 200
         with Model() as m:
-            weights = [p_first_component, 1.0 - p_first_component]
+            weights = [0.5, 0.5]
             components = [Normal.dist(-10, 0.01), Normal.dist(10, 0.01)]
             mix = Mixture.dist(weights, components)
-        draws = draw(mix, draws=n_draws, random_seed=self.get_random_state())
-        k_first_component = np.sum(draws < 0)
-        # The number of draws from the first component should follow a binomial distribution
-        result_binomtest = st.binomtest(k_first_component, n_draws, p_first_component)
-        assert result_binomtest.pvalue > 0.01
+        draws = draw(mix, draws=10, random_seed=self.get_random_state())
+        # Probability of coming from same component 10 times is 0.5**10
+        assert np.unique(draws > 0).size == 2
 
     @pytest.mark.parametrize(
         "comp_dists",
