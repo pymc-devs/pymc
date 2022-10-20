@@ -605,10 +605,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def isroot(self):
         return self.parent is None
 
-    @property
-    def ndim(self):
-        return sum(var.ndim for var in self.value_vars)
-
     def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
         """Compile an Aesara function that computes logp and gradient.
 
