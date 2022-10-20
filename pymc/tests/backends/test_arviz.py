@@ -622,18 +622,14 @@ class TestDataPyMC:
             pm.Uniform("p", 0, 1)
 
             # First check that the default is to exclude the transformed variables
-            inference_data = pm.sample(
-                500,
-                chains=2,
-                return_inferencedata=True,
-            )
+            sample_kwargs = dict(tune=5, draws=7, chains=2, cores=1)
+            inference_data = pm.sample(**sample_kwargs, step=pm.Metropolis())
             assert "p_interval__" not in inference_data.posterior
 
             # Now check that they are included when requested
             inference_data = pm.sample(
-                500,
-                chains=2,
-                return_inferencedata=True,
+                **sample_kwargs,
+                step=pm.Metropolis(),
                 idata_kwargs={"include_transformed": True},
             )
             assert "p_interval__" in inference_data.posterior
