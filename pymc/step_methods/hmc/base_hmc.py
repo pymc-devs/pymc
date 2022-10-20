@@ -31,6 +31,7 @@ from pymc.step_methods.arraystep import GradientSharedStep
 from pymc.step_methods.hmc import integration
 from pymc.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
 from pymc.tuning import guess_scaling
+from pymc.util import get_value_vars_from_user_vars
 
 logger = logging.getLogger("pymc")
 
@@ -91,8 +92,7 @@ class BaseHMC(GradientSharedStep):
         if vars is None:
             vars = self._model.continuous_value_vars
         else:
-            vars = [self._model.rvs_to_values.get(var, var) for var in vars]
-
+            vars = get_value_vars_from_user_vars(vars, self._model)
         super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **aesara_kwargs)
 
         self.adapt_step_size = adapt_step_size

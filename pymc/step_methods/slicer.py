@@ -17,10 +17,10 @@
 import numpy as np
 import numpy.random as nr
 
-from pymc.aesaraf import inputvars
 from pymc.blocking import RaveledVars
 from pymc.model import modelcontext
 from pymc.step_methods.arraystep import ArrayStep, Competence
+from pymc.util import get_value_vars_from_user_vars
 from pymc.vartypes import continuous_types
 
 __all__ = ["Slice"]
@@ -65,8 +65,7 @@ class Slice(ArrayStep):
         if vars is None:
             vars = self.model.continuous_value_vars
         else:
-            vars = [self.model.rvs_to_values.get(var, var) for var in vars]
-        vars = inputvars(vars)
+            vars = get_value_vars_from_user_vars(vars, self.model)
 
         super().__init__(vars, [self.model.compile_logp()], **kwargs)
 

@@ -21,6 +21,7 @@ import cloudpickle
 import numpy as np
 import xarray
 
+from aesara import Variable
 from aesara.compile import SharedVariable
 from cachetools import LRUCache, cachedmethod
 
@@ -441,3 +442,42 @@ def _get_seeds_per_chain(
         )
 
     return random_state
+
+
+def get_value_vars_from_user_vars(
+    vars: Union[Variable, Sequence[Variable]], model
+) -> List[Variable]:
+    """This function converts user "vars" input into value variables
+
+    More often than not, users will pass random variables, and we will extract the
+    respective value variables, but we also allow for the input to already be value
+    variables, in case the function is called internally or by a "super-user"
+
+    Returns
+    -------
+    value_vars: list of TensorVariable
+        List of model value variables that correspond to the input vars
+
+    Raises
+    ------
+    ValueError:
+        If any of the provided variables do not correspond to any model value variable
+    """
+    if not isinstance(vars, Sequence):
+        # Single var was passed
+        value_vars = [model.rvs_to_values.get(vars, vars)]
+    else:
+        value_vars = [model.rvs_to_values.get(var, var) for var in vars]
+
+    # Check that we only have value vars from the model
+    model_value_vars = model.value_vars
+    notin = [v for v in value_vars if v not in model_value_vars]
+    if notin:
+        notin = list(map(get_var_name, notin))
+        # We mention random variables, even though the input may be a wrong value variable
+        # because most users don't know about that duality
+        raise ValueError(
+            "The following variables are not random variables in the model: " + str(notin)
+        )
+
+    return value_vars

@@ -28,6 +28,7 @@ from pymc.util import (
     _get_seeds_per_chain,
     dataset_to_point_list,
     drop_warning_stat,
+    get_value_vars_from_user_vars,
     hash_key,
     hashable,
     locally_cachedmethod,
@@ -236,3 +237,32 @@ def test_get_seeds_per_chain():
 
     with pytest.raises(ValueError, match=re.escape("The `seeds` must be array-like")):
         _get_seeds_per_chain({1: 1, 2: 2}, 2)
+
+
+def test_get_value_vars_from_user_vars():
+    with pm.Model() as model1:
+        x1 = pm.Normal("x1", mu=0, sigma=1)
+        y1 = pm.Normal("y1", mu=0, sigma=1)
+
+    x1_value = model1.rvs_to_values[x1]
+    y1_value = model1.rvs_to_values[y1]
+    assert get_value_vars_from_user_vars([x1, y1], model1) == [x1_value, y1_value]
+    assert get_value_vars_from_user_vars([x1], model1) == [x1_value]
+    # The next line does not wrap the variable in a list on purpose, to test the
+    # utility function can handle those as promised
+    assert get_value_vars_from_user_vars(x1_value, model1) == [x1_value]
+
+    with pm.Model() as model2:
+        x2 = pm.Normal("x2", mu=0, sigma=1)
+        y2 = pm.Normal("y2", mu=0, sigma=1)
+        det2 = pm.Deterministic("det2", x2 + y2)
+
+    prefix = "The following variables are not random variables in the model:"
+    with pytest.raises(ValueError, match=rf"{prefix} \['x2', 'y2'\]"):
+        get_value_vars_from_user_vars([x2, y2], model1)
+    with pytest.raises(ValueError, match=rf"{prefix} \['x2'\]"):
+        get_value_vars_from_user_vars([x2, y1], model1)
+    with pytest.raises(ValueError, match=rf"{prefix} \['x2'\]"):
+        get_value_vars_from_user_vars([x2], model1)
+    with pytest.raises(ValueError, match=rf"{prefix} \['det2'\]"):
+        get_value_vars_from_user_vars([det2], model2)

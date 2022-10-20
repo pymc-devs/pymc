@@ -30,11 +30,10 @@ from scipy.optimize import minimize
 
 import pymc as pm
 
-from pymc.aesaraf import inputvars
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
-from pymc.util import get_default_varnames, get_var_name
+from pymc.util import get_default_varnames, get_value_vars_from_user_vars
 from pymc.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
@@ -96,11 +95,9 @@ def find_MAP(
         if not vars:
             raise ValueError("Model has no unobserved continuous variables.")
     else:
-        vars = [model.rvs_to_values.get(var, var) for var in vars]
+        vars = get_value_vars_from_user_vars(vars, model)
 
-    vars = inputvars(vars)
     disc_vars = list(typefilter(vars, discrete_types))
-    allinmodel(vars, model)
     ipfn = make_initial_point_fn(
         model=model,
         jitter_rvs=set(),
@@ -180,13 +177,6 @@ def find_MAP(
 
 def allfinite(x):
     return np.all(isfinite(x))
-
-
-def allinmodel(vars, model):
-    notin = [v for v in vars if v not in model.value_vars]
-    if notin:
-        notin = list(map(get_var_name, notin))
-        raise ValueError("Some variables not in the model: " + str(notin))
 
 
 class CostFuncWrapper:
