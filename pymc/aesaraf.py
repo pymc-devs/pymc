@@ -572,9 +572,10 @@ def join_nonshared_inputs(
 
     Examples
     --------
-    Join the inputs of a simple Aesara graph
+    Join the inputs of a simple Aesara graph.
 
     .. code-block:: python
+
         import aesara.tensor as at
         import numpy as np
 
