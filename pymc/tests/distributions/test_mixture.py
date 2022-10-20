@@ -333,7 +333,7 @@ class TestMixture(SeededTest):
             weights = [0.5, 0.5]
             components = [Normal.dist(-10, 0.01), Normal.dist(10, 0.01)]
             mix = Mixture.dist(weights, components)
-        draws = draw(mix, draws=200, random_seed=self.get_random_state())
+        draws = draw(mix, draws=20, random_seed=self.get_random_state())
         # Probability of coming from same component 200 times is 0.5**200
         assert np.unique(draws > 0).size == 2
 
