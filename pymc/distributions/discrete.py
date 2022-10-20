@@ -1465,7 +1465,7 @@ class ZeroInflatedPoisson:
 
         f(x \mid \psi, \mu) = \left\{ \begin{array}{l}
             (1-\psi) + \psi e^{-\mu}, \text{if } x = 0 \\
-            \psi \frac{e^{-\mu}\mu^x}{x!}, \text{if } x=1,2,3,\ldots
+            \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
             \end{array} \right.
 
     .. plot::
