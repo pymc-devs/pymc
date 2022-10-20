@@ -126,11 +126,11 @@ class TestStrAndLatexRepr:
                 r"$\text{beta} \sim \operatorname{N}(0,~10)$",
                 r"$\text{Z} \sim \operatorname{N}(f(),~f())$",
                 r"$\text{nb_with_p_n} \sim \operatorname{NB}(10,~\text{nbp})$",
-                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\text{\$\operatorname{DiracDelta}(0)\$},~\text{\$\operatorname{Pois}(5)\$})$",
+                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5))$",
                 (
                     r"$\text{nested_mix} \sim \operatorname{MarginalMixture}(\text{<constant>},"
-                    r"~\text{\$\operatorname{MarginalMixture}(f(),~\text{\\$\operatorname{DiracDelta}(0)\\$},~\text{\\$\operatorname{Pois}(5)\\$})\$},"
-                    r"~\text{\$\operatorname{Censored}(\text{\\$\operatorname{Bern}(0.5)\\$},~-1,~1)\$})$"
+                    r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5)),"
+                    r"~\operatorname{Censored}(\operatorname{Bern}(0.5),~-1,~1))$"
                 ),
                 r"$\text{Y_obs} \sim \operatorname{N}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
