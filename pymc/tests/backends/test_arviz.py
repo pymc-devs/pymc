@@ -279,7 +279,7 @@ class TestDataPyMC:
         np.testing.assert_array_equal(idata.observed_data.coords["date"], coords["date"])
         np.testing.assert_array_equal(idata.observed_data.coords["city"], coords["city"])
 
-    def test_ovewrite_model_coords_dims(self):
+    def test_overwrite_model_coords_dims(self):
         """Check coords and dims from model object can be partially overwritten."""
         dim1 = ["a", "b"]
         new_dim1 = ["c", "d"]
@@ -616,6 +616,23 @@ class TestDataPyMC:
             with pm.Model() as pmodel:
                 var = at.as_tensor([1, 2, 3])
                 pmodel.register_rv(var, name="time", dims=("time",))
+
+    def test_include_transformed(self):
+        with pm.Model():
+            pm.Uniform("p", 0, 1)
+
+            # First check that the default is to exclude the transformed variables
+            sample_kwargs = dict(tune=5, draws=7, chains=2, cores=1)
+            inference_data = pm.sample(**sample_kwargs, step=pm.Metropolis())
+            assert "p_interval__" not in inference_data.posterior
+
+            # Now check that they are included when requested
+            inference_data = pm.sample(
+                **sample_kwargs,
+                step=pm.Metropolis(),
+                idata_kwargs={"include_transformed": True},
+            )
+            assert "p_interval__" in inference_data.posterior
 
 
 class TestPyMCWarmupHandling:
