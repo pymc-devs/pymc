@@ -693,10 +693,10 @@ class TestAR:
 
     def test_init_deprecated_arg(self):
         with pytest.warns(FutureWarning, match="init parameter is now called init_dist"):
-            pm.AR.dist(rho=[1, 2, 3], init=Normal.dist(), shape=(10,))
+            AR.dist(rho=[1, 2, 3], init=Normal.dist(), shape=(10,))
 
     def test_change_dist_size(self):
-        base_dist = pm.AR.dist(rho=[0.5, 0.5], init_dist=pm.Normal.dist(size=(2,)), shape=(3, 10))
+        base_dist = AR.dist(rho=[0.5, 0.5], init_dist=pm.Normal.dist(size=(2,)), shape=(3, 10))
 
         new_dist = change_dist_size(base_dist, (4,))
         assert new_dist.eval().shape == (4, 10)
@@ -819,7 +819,7 @@ class TestGARCH11:
         assert_moment_is_expected(model, expected, check_finite_logp=True)
 
     def test_change_dist_size(self):
-        base_dist = pm.GARCH11.dist(
+        base_dist = GARCH11.dist(
             omega=1.25, alpha_1=0.5, beta_1=0.45, initial_vol=1.0, shape=(3, 10)
         )
 

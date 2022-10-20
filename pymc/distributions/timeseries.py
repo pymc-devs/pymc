@@ -267,7 +267,7 @@ class GaussianRandomWalk(PredefinedRandomWalk):
         sigma > 0, innovation standard deviation.
     init_dist : Distribution
         Unnamed univariate distribution of the initial value. Unnamed refers to distributions
-         created with the ``.dist()`` API.
+        created with the ``.dist()`` API.
 
         .. warning:: init_dist will be cloned, rendering them independent of the ones passed as input.
 
@@ -547,7 +547,7 @@ class AR(Distribution):
                     f"Init dist must be a distribution created via the `.dist()` API, "
                     f"got {type(init_dist)}"
                 )
-                check_dist_not_registered(init_dist)
+            check_dist_not_registered(init_dist)
             if init_dist.owner.op.ndim_supp > 1:
                 raise ValueError(
                     "Init distribution must have a scalar or vector support dimension, ",
@@ -617,7 +617,7 @@ class AR(Distribution):
             init_dist_size = batch_size
         init_dist = change_dist_size(init_dist, init_dist_size)
 
-        # Create OpFromGraph representing random draws form AR process
+        # Create OpFromGraph representing random draws from AR process
         # Variables with underscore suffix are dummy inputs into the OpFromGraph
         init_ = init_dist.type()
         rhos_ = rhos.type()
