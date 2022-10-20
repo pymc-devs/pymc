@@ -1028,17 +1028,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.free_RVs + self.deterministics
 
     @property
-    def independent_vars(self):
-        """List of all variables that are non-stochastic inputs to the model.
-
-        These are the actual random variable terms that make up the
-        "sample-space" graph (i.e. you can sample these graphs by compiling them
-        with `aesara.function`).  If you want the corresponding log-likelihood terms,
-        use `var.tag.value_var`.
-        """
-        return inputvars(self.unobserved_RVs)
-
-    @property
     def disc_vars(self):
         """All the discrete variables in the model"""
         return list(typefilter(self.value_vars, discrete_types))
