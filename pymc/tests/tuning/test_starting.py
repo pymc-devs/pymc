@@ -22,7 +22,7 @@ from pymc.tests import models
 from pymc.tests.checks import close_to
 from pymc.tests.helpers import select_by_precision
 from pymc.tests.models import non_normal, simple_arbitrary_det, simple_model
-from pymc.tuning import find_MAP, starting
+from pymc.tuning import find_MAP
 
 
 @pytest.mark.parametrize("bounded", [False, True])
@@ -147,28 +147,3 @@ def test_find_MAP_issue_4488():
     assert not set.difference({"x_missing", "x_missing_log__", "y"}, set(map_estimate.keys()))
     np.testing.assert_allclose(map_estimate["x_missing"], 0.2, rtol=1e-4, atol=1e-4)
     np.testing.assert_allclose(map_estimate["y"], [2.0, map_estimate["x_missing"][0] + 1])
-
-
-def test_allinmodel():
-    model1 = pm.Model()
-    model2 = pm.Model()
-    with model1:
-        x1 = pm.Normal("x1", mu=0, sigma=1)
-        y1 = pm.Normal("y1", mu=0, sigma=1)
-    with model2:
-        x2 = pm.Normal("x2", mu=0, sigma=1)
-        y2 = pm.Normal("y2", mu=0, sigma=1)
-
-    x1 = model1.rvs_to_values[x1]
-    y1 = model1.rvs_to_values[y1]
-    x2 = model2.rvs_to_values[x2]
-    y2 = model2.rvs_to_values[y2]
-
-    starting.allinmodel([x1, y1], model1)
-    starting.allinmodel([x1], model1)
-    with pytest.raises(ValueError, match=r"Some variables not in the model: \['x2', 'y2'\]"):
-        starting.allinmodel([x2, y2], model1)
-    with pytest.raises(ValueError, match=r"Some variables not in the model: \['x2'\]"):
-        starting.allinmodel([x2, y1], model1)
-    with pytest.raises(ValueError, match=r"Some variables not in the model: \['x2'\]"):
-        starting.allinmodel([x2], model1)

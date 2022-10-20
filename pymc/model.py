@@ -69,6 +69,7 @@ from pymc.util import (
     UNSET,
     WithMemoization,
     get_transformed_name,
+    get_value_vars_from_user_vars,
     get_var_name,
     treedict,
     treelist,
@@ -617,6 +618,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if grad_vars is None:
             grad_vars = self.continuous_value_vars
         else:
+            grad_vars = get_value_vars_from_user_vars(grad_vars, self)
             for i, var in enumerate(grad_vars):
                 if var.dtype not in continuous_types:
                     raise ValueError(f"Can only compute the gradient of continuous types: {var}")

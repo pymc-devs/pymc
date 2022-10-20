@@ -56,6 +56,8 @@ __all__ = [
     "MultivariateNormalProposal",
 ]
 
+from pymc.util import get_value_vars_from_user_vars
+
 # Available proposal distributions for Metropolis
 
 
@@ -176,9 +178,7 @@ class Metropolis(ArrayStepShared):
         if vars is None:
             vars = model.value_vars
         else:
-            vars = [model.rvs_to_values.get(var, var) for var in vars]
-
-        vars = pm.inputvars(vars)
+            vars = get_value_vars_from_user_vars(vars, model)
 
         initial_values_shape = [initial_values[v.name].shape for v in vars]
         if S is None:
@@ -394,7 +394,7 @@ class BinaryMetropolis(ArrayStep):
         self.steps_until_tune = tune_interval
         self.accepted = 0
 
-        vars = [model.rvs_to_values.get(var, var) for var in vars]
+        vars = get_value_vars_from_user_vars(vars, model)
 
         if not all([v.dtype in pm.discrete_types for v in vars]):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
@@ -484,8 +484,9 @@ class BinaryGibbsMetropolis(ArrayStep):
         # transition probabilities
         self.transit_p = transit_p
 
+        vars = get_value_vars_from_user_vars(vars, model)
+
         initial_point = model.initial_point()
-        vars = [model.rvs_to_values.get(var, var) for var in vars]
         self.dim = sum(initial_point[v.name].size for v in vars)
 
         if order == "random":
@@ -566,8 +567,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         model = pm.modelcontext(model)
 
-        vars = [model.rvs_to_values.get(var, var) for var in vars]
-        vars = pm.inputvars(vars)
+        vars = get_value_vars_from_user_vars(vars, model)
 
         initial_point = model.initial_point()
 
@@ -777,8 +777,7 @@ class DEMetropolis(PopulationArrayStepShared):
         if vars is None:
             vars = model.continuous_value_vars
         else:
-            vars = [model.rvs_to_values.get(var, var) for var in vars]
-        vars = pm.inputvars(vars)
+            vars = get_value_vars_from_user_vars(vars, model)
 
         if S is None:
             S = np.ones(initial_values_size)
@@ -928,8 +927,7 @@ class DEMetropolisZ(ArrayStepShared):
         if vars is None:
             vars = model.continuous_value_vars
         else:
-            vars = [model.rvs_to_values.get(var, var) for var in vars]
-        vars = pm.inputvars(vars)
+            vars = get_value_vars_from_user_vars(vars, model)
 
         if S is None:
             S = np.ones(initial_values_size)
