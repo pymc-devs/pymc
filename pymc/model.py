@@ -976,6 +976,32 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return vars + untransformed_vars + deterministics
 
     @property
+    def disc_vars(self):
+        warnings.warn(
+            "Model.disc_vars has been deprecated. Use Model.discrete_value_vars instead.",
+            FutureWarning,
+        )
+        return self.discrete_value_vars
+
+    @property
+    def discrete_value_vars(self):
+        """All the discrete value variables in the model"""
+        return list(typefilter(self.value_vars, discrete_types))
+
+    @property
+    def cont_vars(self):
+        warnings.warn(
+            "Model.cont_vars has been deprecated. Use Model.continuous_value_vars instead.",
+            FutureWarning,
+        )
+        return self.continuous_value_vars
+
+    @property
+    def continuous_value_vars(self):
+        """All the continuous value variables in the model"""
+        return list(typefilter(self.value_vars, continuous_types))
+
+    @property
     def basic_RVs(self):
         """List of random variables the model is defined in terms of
         (which excludes deterministics).
@@ -1018,16 +1044,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         use `var.tag.value_var`.
         """
         return self.free_RVs + self.deterministics
-
-    @property
-    def disc_vars(self):
-        """All the discrete variables in the model"""
-        return list(typefilter(self.value_vars, discrete_types))
-
-    @property
-    def cont_vars(self):
-        """All the continuous variables in the model"""
-        return list(typefilter(self.value_vars, continuous_types))
 
     @property
     def test_point(self) -> Dict[str, np.ndarray]:
