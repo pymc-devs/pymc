@@ -261,11 +261,11 @@ def replace_rvs_in_graphs(
 
 
 def rvs_to_value_vars(
-    graphs: Iterable[TensorVariable],
+    graphs: Iterable[Variable],
     apply_transforms: bool = True,
-    initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
+    initial_replacements: Optional[Dict[Variable, Variable]] = None,
     **kwargs,
-) -> List[TensorVariable]:
+) -> List[Variable]:
     """Clone and replace random variables in graphs with their value variables.
 
     This will *not* recompute test values in the resulting graphs.
