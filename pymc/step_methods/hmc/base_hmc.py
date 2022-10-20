@@ -88,7 +88,7 @@ class BaseHMC(GradientSharedStep):
         self._model = modelcontext(model)
 
         if vars is None:
-            vars = self._model.cont_vars
+            vars = self._model.continuous_value_vars
         else:
             vars = [self._model.rvs_to_values.get(var, var) for var in vars]
 
