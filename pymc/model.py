@@ -688,13 +688,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         return self.model.compile_fn(self.d2logp(vars=vars, jacobian=jacobian))
 
-    def logpt(self, *args, **kwargs):
-        warnings.warn(
-            "Model.logpt has been deprecated. Use Model.logp instead.",
-            FutureWarning,
-        )
-        return self.logp(*args, **kwargs)
-
     def logp(
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
@@ -769,13 +762,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         logp_scalar.name = logp_scalar_name
         return logp_scalar
 
-    def dlogpt(self, *args, **kwargs):
-        warnings.warn(
-            "Model.dlogpt has been deprecated. Use Model.dlogp instead.",
-            FutureWarning,
-        )
-        return self.dlogp(*args, **kwargs)
-
     def dlogp(
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
@@ -813,13 +799,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         cost = self.logp(jacobian=jacobian)
         return gradient(cost, value_vars)
-
-    def d2logpt(self, *args, **kwargs):
-        warnings.warn(
-            "Model.d2logpt has been deprecated. Use Model.d2logp instead.",
-            FutureWarning,
-        )
-        return self.d2logp(*args, **kwargs)
 
     def d2logp(
         self,
@@ -860,26 +839,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return hessian(cost, value_vars)
 
     @property
-    def datalogpt(self):
-        warnings.warn(
-            "Model.datalogpt has been deprecated. Use Model.datalogp instead.",
-            FutureWarning,
-        )
-        return self.datalogp
-
-    @property
     def datalogp(self) -> Variable:
         """Aesara scalar of log-probability of the observed variables and
         potential terms"""
         return self.observedlogp + self.potentiallogp
-
-    @property
-    def varlogpt(self):
-        warnings.warn(
-            "Model.varlogpt has been deprecated. Use Model.varlogp instead.",
-            FutureWarning,
-        )
-        return self.varlogp
 
     @property
     def varlogp(self) -> Variable:
@@ -888,39 +851,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.logp(vars=self.free_RVs)
 
     @property
-    def varlogp_nojact(self):
-        warnings.warn(
-            "Model.varlogp_nojact has been deprecated. Use Model.varlogp_nojac instead.",
-            FutureWarning,
-        )
-        return self.varlogp_nojac
-
-    @property
     def varlogp_nojac(self) -> Variable:
         """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic) without jacobian term."""
         return self.logp(vars=self.free_RVs, jacobian=False)
 
     @property
-    def observedlogpt(self):
-        warnings.warn(
-            "Model.observedlogpt has been deprecated. Use Model.observedlogp instead.",
-            FutureWarning,
-        )
-        return self.observedlogp
-
-    @property
     def observedlogp(self) -> Variable:
         """Aesara scalar of log-probability of the observed variables"""
         return self.logp(vars=self.observed_RVs)
-
-    @property
-    def potentiallogpt(self):
-        warnings.warn(
-            "Model.potentiallogpt has been deprecated. Use Model.potentiallogp instead.",
-            FutureWarning,
-        )
-        return self.potentiallogp
 
     @property
     def potentiallogp(self) -> Variable:
@@ -932,14 +871,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             return at.sum([at.sum(factor) for factor in potentials])
         else:
             return at.constant(0.0)
-
-    @property
-    def vars(self):
-        warnings.warn(
-            "Model.vars has been deprecated. Use Model.value_vars instead.",
-            FutureWarning,
-        )
-        return self.value_vars
 
     @property
     def value_vars(self):
@@ -1012,6 +943,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
         use `var.tag.value_var`.
         """
         return self.free_RVs + self.observed_RVs
+
+    @property
+    def unobserved_RVs(self):
+        """List of all random variables, including deterministic ones.
+
+        These are the actual random variable terms that make up the
+        "sample-space" graph (i.e. you can sample these graphs by compiling them
+        with `aesara.function`).  If you want the corresponding log-likelihood terms,
+        use `var.tag.value_var`.
+        """
+        return self.free_RVs + self.deterministics
 
     @property
     def RV_dims(self) -> Dict[str, Tuple[Union[str, None], ...]]:
@@ -1317,6 +1259,34 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 self._coords[dname] = tuple(new_coords)
 
         shared_object.set_value(values)
+
+    def initial_point(self, seed=None) -> Dict[str, np.ndarray]:
+        """Computes the initial point of the model.
+
+        Returns
+        -------
+        ip : dict
+            Maps names of transformed variables to numeric initial values in the transformed space.
+        """
+        fn = make_initial_point_fn(model=self, return_transformed=True)
+        return Point(fn(seed), model=self)
+
+    @property
+    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
+        """Maps transformed variables to initial value placeholders.
+
+        Keys are the random variables (as returned by e.g. ``pm.Uniform()``) and
+        values are the numeric/symbolic initial values, strings denoting the strategy to get them, or None.
+        """
+        return self._initial_values
+
+    def set_initval(self, rv_var, initval):
+        """Sets an initial value (strategy) for a random variable."""
+        if initval is not None and not isinstance(initval, (Variable, str)):
+            # Convert scalars or array-like inputs to ndarrays
+            initval = rv_var.type.filter(initval)
+
+        self.initial_values[rv_var] = initval
 
     def register_rv(
         self, rv_var, name, data=None, total_size=None, dims=None, transform=UNSET, initval=None
@@ -1760,13 +1730,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     f"Starting values:\n{elem}\n\n"
                     f"Initial evaluation results:\n{initial_eval}"
                 )
-
-    def check_test_point(self, *args, **kwargs):
-        warnings.warn(
-            "`Model.check_test_point` has been deprecated. Use `Model.point_logps` instead.",
-            FutureWarning,
-        )
-        return self.point_logps(*args, **kwargs)
 
     def point_logps(self, point=None, round_vals=2):
         """Computes the log probability of `point` for all random variables in the model.
