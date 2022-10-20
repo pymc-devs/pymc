@@ -847,7 +847,10 @@ class TestEulerMaruyama:
         sde_pars = [1.0, 2.0, 0.1]
         sde_pars[batched_param] = sde_pars[batched_param] * param_val
         with Model() as t0:
-            y = EulerMaruyama("y", dt=0.02, sde_fn=sde_fn, sde_pars=sde_pars, **kwargs)
+            init_dist = pm.Normal.dist(0, 10, shape=(batch_size,))
+            y = EulerMaruyama(
+                "y", dt=0.02, sde_fn=sde_fn, sde_pars=sde_pars, init_dist=init_dist, **kwargs
+            )
 
         y_eval = draw(y, draws=2)
         assert y_eval[0].shape == (batch_size, steps)
@@ -859,7 +862,15 @@ class TestEulerMaruyama:
             for i in range(batch_size):
                 sde_pars_slice = sde_pars.copy()
                 sde_pars_slice[batched_param] = sde_pars[batched_param][i]
-                EulerMaruyama(f"y_{i}", dt=0.02, sde_fn=sde_fn, sde_pars=sde_pars_slice, **kwargs)
+                init_dist = pm.Normal.dist(0, 10)
+                EulerMaruyama(
+                    f"y_{i}",
+                    dt=0.02,
+                    sde_fn=sde_fn,
+                    sde_pars=sde_pars_slice,
+                    init_dist=init_dist,
+                    **kwargs,
+                )
 
         t0_init = t0.initial_point()
         t1_init = {f"y_{i}": t0_init["y"][i] for i in range(batch_size)}
@@ -872,7 +883,13 @@ class TestEulerMaruyama:
         def sde1(x, k, d, s):
             return (k - d * x, s)
 
-        base_dist = EulerMaruyama.dist(dt=0.01, sde_fn=sde1, sde_pars=(1, 2, 0.1), shape=(5, 10))
+        base_dist = EulerMaruyama.dist(
+            dt=0.01,
+            sde_fn=sde1,
+            sde_pars=(1, 2, 0.1),
+            init_dist=pm.Normal.dist(0, 10),
+            shape=(5, 10),
+        )
 
         new_dist = change_dist_size(base_dist, (4,))
         assert new_dist.eval().shape == (4, 10)
@@ -885,7 +902,9 @@ class TestEulerMaruyama:
             N = 500.0
             return s * p * (1 - p) / (1 + s * p), pm.math.sqrt(p * (1 - p) / N)
 
-        base_dist = EulerMaruyama.dist(dt=0.01, sde_fn=sde2, sde_pars=(0.1,), shape=(3, 10))
+        base_dist = EulerMaruyama.dist(
+            dt=0.01, sde_fn=sde2, sde_pars=(0.1,), init_dist=pm.Normal.dist(0, 10), shape=(3, 10)
+        )
 
         new_dist = change_dist_size(base_dist, (4,))
         assert new_dist.eval().shape == (4, 10)
@@ -913,7 +932,9 @@ class TestEulerMaruyama:
         # build model
         with Model() as model:
             lamh = Flat("lamh")
-            xh = EulerMaruyama("xh", dt, sde, (lamh,), steps=N, initval=x)
+            xh = EulerMaruyama(
+                "xh", dt, sde, (lamh,), steps=N, initval=x, init_dist=pm.Normal.dist(0, 10)
+            )
             Normal("zh", mu=xh, sigma=sig2, observed=z)
         # invert
         with model:

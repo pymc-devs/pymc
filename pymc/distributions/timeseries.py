@@ -912,8 +912,8 @@ class EulerMaruyama(Distribution):
     sde_pars: tuple
         parameters of the SDE, passed as ``*args`` to ``sde_fn``
     init_dist : unnamed distribution, optional
-        Scalar or vector distribution for initial values. Unnamed refers to distributions
-        created with the ``.dist()`` API. Distributions should have shape (*shape[:-1]).
+        Scalar distribution for initial values. Unnamed refers to distributions created with
+        the ``.dist()`` API. Distributions should have shape (*shape[:-1]).
         If not, it will be automatically resized. Defaults to pm.Normal.dist(0, 100, shape=...).
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
@@ -953,9 +953,9 @@ class EulerMaruyama(Distribution):
                     f"got {type(init_dist)}"
                 )
             check_dist_not_registered(init_dist)
-            if init_dist.owner.op.ndim_supp > 1:
+            if init_dist.owner.op.ndim_supp > 0:
                 raise ValueError(
-                    "Init distribution must have a scalar or vector support dimension, ",
+                    "Init distribution must have a scalar support dimension, ",
                     f"got ndim_supp={init_dist.owner.op.ndim_supp}.",
                 )
         else:
