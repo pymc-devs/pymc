@@ -1060,7 +1060,9 @@ def delta_logp(
     vars: List[at.TensorVariable],
     shared: Dict[at.TensorVariable, at.sharedvar.TensorSharedVariable],
 ) -> aesara.compile.Function:
-    [logp0], inarray0 = join_nonshared_inputs(point=point, xs=[logp], vars=vars, shared=shared)
+    [logp0], inarray0 = join_nonshared_inputs(
+        point=point, outputs=[logp], inputs=vars, shared_inputs=shared
+    )
 
     tensor_type = inarray0.type
     inarray1 = tensor_type("inarray1")

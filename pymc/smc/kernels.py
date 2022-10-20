@@ -603,7 +603,7 @@ def _logp_forw(point, out_vars, in_vars, shared):
         in_vars = new_in_vars
 
     out_list, inarray0 = join_nonshared_inputs(
-        point=point, xs=out_vars, vars=in_vars, shared=shared
+        point=point, outputs=out_vars, inputs=in_vars, shared_inputs=shared
     )
     f = compile_pymc([inarray0], out_list[0])
     f.trust_input = True

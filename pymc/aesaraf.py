@@ -535,94 +535,155 @@ def make_shared_replacements(point, vars, model):
 
 def join_nonshared_inputs(
     point: Dict[str, np.ndarray],
-    xs: List[TensorVariable],
-    vars: List[TensorVariable],
-    shared: Dict[TensorVariable, TensorSharedVariable],
-    make_shared: bool = False,
+    outputs: List[TensorVariable],
+    inputs: List[TensorVariable],
+    shared_inputs: Union[Dict[TensorVariable, TensorSharedVariable], None] = None,
+    make_inputs_shared: bool = False,
 ) -> Tuple[List[TensorVariable], TensorVariable]:
     """
-    Takes a list of TensorVariables and joins their non shared inputs into a single input.
+    Create new outputs and input TensorVariables where the non-shared inputs are joined
+    in a single raveled vector input.
 
     Parameters
     ----------
-    point: a sample point associated with a model and variable inputs
-    xs: list of TensorVariable to replace subgraphs with vars and shared
-    vars: list of TensorVariable to reshape, join, and return as inarray
-    shared: dict of TensorVariable and their associated TensorSharedVariable in
-        subgraph replacement
-    make_shared: bool flag to use point argument to build subgraphs of xs_special
+    point: dictionary of variable names to numerical values
+        Dictionary that maps each input variable name to a numerical variable. The values
+        are used to extract the shape of each input variable to establish a correct
+        mapping between joined and original inputs. The shape of each variable is
+        assumed to be fixed.
+    outputs: list of TensorVariable
+        List of output TensorVariables whose non-shared inputs will be replaced
+        by a joined vector input.
+    inputs: list of TensorVariable
+        List of input TensorVariables which will be replaced by a joined vector input.
+    shared_inputs: dict of TensorVariable to TensorSharedVariable, optional
+        Dict of TensorVariable and their associated TensorSharedVariable in
+        subgraph replacement.
+    make_inputs_shared: bool, defaults to False
+        Whether to make the joined vector input a shared variable.
 
     Returns
     -------
-    xs_special, inarray
-    xs_special: list of same xs TensorVariables but with inarray and shared in subgraphs
-    inarray: TensorVariable built from vars argument
+    new_outputs, joined_inputs
+    new_outputs: list of TensorVariable
+        List of new outputs `outputs` TensorVariables that depend on `joined_inputs` and new shared variables as inputs.
+    joined_inputs: TensorVariable
+        Joined input vector TensorVariable for the `new_outputs`
 
     Examples
     --------
-    Join all model variables with none being shared with respect to model logp.
+    Join the inputs of a simple Aesara graph
 
     .. code-block:: python
+        import aesara.tensor as at
+        import numpy as np
+
+        from pymc.aesaraf import join_nonshared_inputs
+
+        # Original non-shared inputs
+        x = at.scalar("x")
+        y = at.vector("y")
+        # Orignal output
+        out = x + y
+        print(out.eval({x: np.array(1), y: np.array([1, 2, 3])})) # [2, 3, 4]
+
+        # New output and inputs
+        [new_out], joined_inputs = join_nonshared_inputs(
+            point={
+                "x": np.zeros(()),
+                "y": np.zeros(3),
+            },
+            outputs=[out],
+            inputs=[x, y],
+        )
+        print(new_out.eval({
+            joined_inputs: np.array([1, 1, 2, 3]),
+        })) # [2, 3, 4]
+
+    Join the input value variables of a model logp.
+
+    .. code-block:: python
+
+        import pymc as pm
+
+        with pm.Model() as model:
+            mu_pop = pm.Normal("mu_pop")
+            sigma_pop = pm.HalfNormal("sigma_pop")
+            mu = pm.Normal("mu", mu_pop, sigma_pop, shape=(3, ))
+
+            y = pm.Normal("y", mu, 1.0, observed=[0, 1, 2])
+
+        print(model.compile_logp()({
+            "mu_pop": 0,
+            "sigma_pop_log__": 1,
+            "mu": [0, 1, 2],
+        })) # -12.691227342634292
 
         initial_point = model.initial_point()
-        all_model_variables = pm.aesaraf.inputvars(model.value_vars)
-        # Will be empty here since nothing to replace
-        shared = pm.aesara.make_shared_replacements(
+        inputs = model.value_vars
+
+        [logp], joined_inputs = join_nonshared_inputs(
             point=initial_point,
-            vars=all_model_variables,
-            model=model,
-        )
-        [logp0], inarray0 = pm.aesara.join_nonshared_inputs(
-            point=initial_point,
-            xs=[model.logp()],
-            vars=all_model_variables,
-            shared=shared,
+            outputs=[model.logp()],
+            inputs=inputs,
         )
 
-    Same as above but with first model variable being shared.
+        print(logp.eval({
+            joined_inputs: [0, 1, 0, 1, 2],
+        }))
+
+    Same as above but with the `mu_pop` value variable being shared.
 
     .. code-block:: python
 
-        variable_subset = all_model_variable[1:]
-        shared_subset = pm.aesara.make_shared_replacements(
+        from aesara import shared
+
+        mu_pop_input, *other_inputs = inputs
+        shared_mu_pop_input = shared(0.0)
+
+        [logp], other_joined_inputs = join_nonshared_inputs(
             point=initial_point,
-            vars=variable_subset,
-            model=model,
+            outputs=[model.logp()],
+            inputs=other_inputs,
+            shared_inputs={
+                mu_pop_input: shared_mu_pop_input
+            },
         )
-        [logp0], inarray0 = pm.aesara.join_nonshared_inputs(
-            point=initial_point,
-            xs=[model.logp()],
-            vars=variable_subset,
-            shared=shared_subset,
-        )
+
+        print(logp.eval({
+            other_joined_inputs: [1, 0, 1, 2],
+        })) # -12.691227342634292
     """
-    if not vars:
-        raise ValueError("Empty list of variables.")
+    if not inputs:
+        raise ValueError("Empty list of input variables.")
 
-    joined = at.concatenate([var.ravel() for var in vars])
+    raveled_inputs = at.concatenate([var.ravel() for var in inputs])
 
-    if not make_shared:
-        tensor_type = joined.type
-        inarray = tensor_type("inarray")
+    if not make_inputs_shared:
+        tensor_type = raveled_inputs.type
+        joined_inputs = tensor_type("joined_inputs")
     else:
-        joined_values = np.concatenate([point[var.name].ravel() for var in vars])
-        inarray = aesara.shared(joined_values, "inarray")
+        joined_values = np.concatenate([point[var.name].ravel() for var in inputs])
+        joined_inputs = aesara.shared(joined_values, "joined_inputs")
 
     if aesara.config.compute_test_value != "off":
-        inarray.tag.test_value = joined.tag.test_value
+        joined_inputs.tag.test_value = raveled_inputs.tag.test_value
 
-    replace: Dict[TensorVariable, TensorSharedVariable] = {}
+    replace: Dict[TensorVariable, TensorVariable] = {}
     last_idx = 0
-    for var in vars:
+    for var in inputs:
         shape = point[var.name].shape
         arr_len = np.prod(shape, dtype=int)
-        replace[var] = inarray[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
+        replace[var] = joined_inputs[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
         last_idx += arr_len
 
-    replace.update(shared)
+    if shared_inputs is not None:
+        replace.update(shared_inputs)
 
-    xs_special = [aesara.clone_replace(x, replace, rebuild_strict=False) for x in xs]
-    return xs_special, inarray
+    new_outputs = [
+        aesara.clone_replace(output, replace, rebuild_strict=False) for output in outputs
+    ]
+    return new_outputs, joined_inputs
 
 
 class PointFunc:
