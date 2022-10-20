@@ -164,9 +164,11 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         dims: Optional[DimSpec] = None,
         model=None,
         save_warmup: Optional[bool] = None,
+        include_transformed: bool = False,
     ):
 
         self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
+        self.include_transformed = include_transformed
         self.trace = trace
 
         # this permits us to get the model from command-line argument or from with model:
@@ -311,7 +313,9 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
     @requires("trace")
     def posterior_to_xarray(self):
         """Convert the posterior to an xarray dataset."""
-        var_names = get_default_varnames(self.trace.varnames, include_transformed=False)
+        var_names = get_default_varnames(
+            self.trace.varnames, include_transformed=self.include_transformed
+        )
         data = {}
         data_warmup = {}
         for var_name in var_names:
@@ -539,6 +543,7 @@ def to_inference_data(
     dims: Optional[DimSpec] = None,
     model: Optional["Model"] = None,
     save_warmup: Optional[bool] = None,
+    include_transformed: bool = False,
 ) -> InferenceData:
     """Convert pymc data into an InferenceData object.
 
@@ -571,6 +576,9 @@ def to_inference_data(
     save_warmup : bool, optional
         Save warmup iterations InferenceData object. If not defined, use default
         defined by the rcParams.
+    include_transformed : bool, optional
+        Save the transformed parameters in the InferenceData object. By default, these are
+        not saved.
 
     Returns
     -------
@@ -588,6 +596,7 @@ def to_inference_data(
         dims=dims,
         model=model,
         save_warmup=save_warmup,
+        include_transformed=include_transformed,
     ).to_inference_data()
 
 
