@@ -184,8 +184,7 @@ def test_truncation_discrete_random(op_type, lower, upper):
             # Rejections sampling with probability = (1 - p ** max_n_steps) ** sample_size =
             # = (1 - 0.2 ** 3) ** 500 = 0.018
             # Still, this probability can be too high to make this test pass with any seed.
-            random_seed = 2297228
-            draw(xt, random_seed=np.random.RandomState(random_seed))
+            draw(xt, random_seed=2297228)
 
 
 @pytest.mark.parametrize("lower, upper", [(2, np.inf), (2, 5), (-np.inf, 5)])
