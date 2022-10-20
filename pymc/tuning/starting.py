@@ -18,12 +18,14 @@ Created on Mar 12, 2011
 @author: johnsalvatier
 """
 import sys
+import warnings
 
-from typing import Optional
+from typing import Optional, Sequence
 
 import aesara.gradient as tg
 import numpy as np
 
+from aesara import Variable
 from fastprogress.fastprogress import ProgressBar, progress_bar
 from numpy import isfinite
 from scipy.optimize import minimize
@@ -41,7 +43,7 @@ __all__ = ["find_MAP"]
 
 def find_MAP(
     start=None,
-    vars=None,
+    vars: Optional[Sequence[Variable]] = None,
     method="L-BFGS-B",
     return_raw=False,
     include_transformed=True,
@@ -61,20 +63,23 @@ def find_MAP(
     Parameters
     ----------
     start: `dict` of parameter values (Defaults to `model.initial_point`)
-    vars: list
-        List of variables to optimize and set to optimum (Defaults to all continuous).
-    method: string or callable
-        Optimization algorithm (Defaults to 'L-BFGS-B' unless
-        discrete variables are specified in `vars`, then
-        `Powell` which will perform better).  For instructions on use of a callable,
-        refer to SciPy's documentation of `optimize.minimize`.
-    return_raw: bool
-        Whether to return the full output of scipy.optimize.minimize (Defaults to `False`)
+        These values will be fixed and used for any free RandomVariables that are
+        not being optimized.
+    vars: list of TensorVariable
+        List of free RandomVariables to optimize the posterior with respect to.
+        Defaults to all continuous RVs in a model. The respective value variables
+        may also be passed instead.
+    method: string or callable, optional
+        Optimization algorithm. Defaults to 'L-BFGS-B' unless discrete variables are
+        specified in `vars`, then `Powell` which will perform better. For instructions
+        on use of a callable, refer to SciPy's documentation of `optimize.minimize`.
+    return_raw: bool, optional defaults to False
+        Whether to return the full output of scipy.optimize.minimize
     include_transformed: bool, optional defaults to True
-        Flag for reporting automatically transformed variables in addition
-        to original variables.
+        Flag for reporting automatically unconstrained transformed values in addition
+        to the constrained values
     progressbar: bool, optional defaults to True
-        Whether or not to display a progress bar in the command line.
+        Whether to display a progress bar in the command line.
     maxeval: int, optional, defaults to 5000
         The maximum number of times the posterior distribution is evaluated.
     model: Model (optional if in `with` context)
@@ -95,7 +100,21 @@ def find_MAP(
         if not vars:
             raise ValueError("Model has no unobserved continuous variables.")
     else:
-        vars = get_value_vars_from_user_vars(vars, model)
+        try:
+            vars = get_value_vars_from_user_vars(vars, model)
+        except ValueError as exc:
+            # Accomodate case where user passed non-pure RV nodes
+            vars = pm.inputvars(pm.aesaraf.rvs_to_value_vars(vars))
+            if vars:
+                # Make sure they belong to current model again...
+                vars = get_value_vars_from_user_vars(vars, model)
+                warnings.warn(
+                    "Intermediate variables (such as Deterministic or Potential) were passed. "
+                    "find_MAP will optimize the underlying free_RVs instead.",
+                    UserWarning,
+                )
+            else:
+                raise exc
 
     disc_vars = list(typefilter(vars, discrete_types))
     ipfn = make_initial_point_fn(

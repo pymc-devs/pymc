@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import re
+
 import numpy as np
 import pytest
 
@@ -147,3 +149,16 @@ def test_find_MAP_issue_4488():
     assert not set.difference({"x_missing", "x_missing_log__", "y"}, set(map_estimate.keys()))
     np.testing.assert_allclose(map_estimate["x_missing"], 0.2, rtol=1e-4, atol=1e-4)
     np.testing.assert_allclose(map_estimate["y"], [2.0, map_estimate["x_missing"][0] + 1])
+
+
+def test_find_MAP_warning_non_free_RVs():
+    with pm.Model() as m:
+        x = pm.Normal("x")
+        y = pm.Normal("y")
+        det = pm.Deterministic("det", x + y)
+        pm.Normal("z", det, 1e-5, observed=100)
+
+        msg = "Intermediate variables (such as Deterministic or Potential) were passed"
+        with pytest.warns(UserWarning, match=re.escape(msg)):
+            r = pm.find_MAP(vars=[det])
+        np.testing.assert_allclose([r["x"], r["y"], r["det"]], [50, 50, 100])
