@@ -614,7 +614,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             `alpha` can be changed using `ValueGradFunction.set_weights([alpha])`.
         """
         if grad_vars is None:
-            grad_vars = [self.rvs_to_values[v] for v in typefilter(self.free_RVs, continuous_types)]
+            grad_vars = self.continuous_value_vars
         else:
             for i, var in enumerate(grad_vars):
                 if var.dtype not in continuous_types:
@@ -626,10 +626,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
             costs = [self.logp()]
 
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
-        extra_vars = [self.rvs_to_values.get(var, var) for var in self.free_RVs]
         ip = self.initial_point(0)
         extra_vars_and_values = {
-            var: ip[var.name] for var in extra_vars if var in input_vars and var not in grad_vars
+            var: ip[var.name]
+            for var in self.value_vars
+            if var in input_vars and var not in grad_vars
         }
         return ValueGradFunction(costs, grad_vars, extra_vars_and_values, **kwargs)
 
