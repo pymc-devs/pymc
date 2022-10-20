@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import collections
 import functools
 import threading
 import types
@@ -65,7 +64,6 @@ from pymc.distributions.logprob import _get_scaling
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
 from pymc.initial_point import make_initial_point_fn
-from pymc.math import flatten_list
 from pymc.util import (
     UNSET,
     WithMemoization,
@@ -85,8 +83,6 @@ __all__ = [
     "Point",
     "compile_fn",
 ]
-
-FlatView = collections.namedtuple("FlatView", "input, replacements")
 
 
 class InstanceMethod:
@@ -1662,49 +1658,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             f(**point)
 
         return f.profile
-
-    def flatten(self, vars=None, order=None, inputvar=None):
-        """Flattens model's input and returns:
-
-        Parameters
-        ----------
-        vars: list of variables or None
-            if None, then all model.free_RVs are used for flattening input
-        order: list of variable names
-            Optional, use predefined ordering
-        inputvar: at.vector
-            Optional, use predefined inputvar
-
-        Returns
-        -------
-        flat_view
-        """
-        if vars is None:
-            vars = self.value_vars
-        if order is not None:
-            var_map = {v.name: v for v in vars}
-            vars = [var_map[n] for n in order]
-
-        if inputvar is None:
-            inputvar = at.vector("flat_view", dtype=aesara.config.floatX)
-            if aesara.config.compute_test_value != "off":
-                if vars:
-                    inputvar.tag.test_value = flatten_list(vars).tag.test_value
-                else:
-                    inputvar.tag.test_value = np.asarray([], inputvar.dtype)
-
-        replacements = {}
-        last_idx = 0
-        for var in vars:
-            arr_len = at.prod(var.shape, dtype="int64")
-            replacements[self.named_vars[var.name]] = (
-                inputvar[last_idx : (last_idx + arr_len)].reshape(var.shape).astype(var.dtype)
-            )
-            last_idx += arr_len
-
-        flat_view = FlatView(inputvar, replacements)
-
-        return flat_view
 
     def update_start_vals(self, a: Dict[str, np.ndarray], b: Dict[str, np.ndarray]):
         r"""Update point `a` with `b`, without overwriting existing keys.
