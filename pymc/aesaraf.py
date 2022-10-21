@@ -584,7 +584,7 @@ def join_nonshared_inputs(
         # Original non-shared inputs
         x = at.scalar("x")
         y = at.vector("y")
-        # Orignal output
+        # Original output
         out = x + y
         print(out.eval({x: np.array(1), y: np.array([1, 2, 3])})) # [2, 3, 4]
 
