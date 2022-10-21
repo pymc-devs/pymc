@@ -174,18 +174,18 @@ class TestStrAndLatexRepr:
                     assert text in model_text
 
 
-def test_latex_repr_nested():
-    with Model() as model:
-        normal_dist = Normal.dist(mu=0.0, sigma=1.0)
-        censored_normal = Censored("censored_normal", normal_dist, lower=-1, upper=1)
-        latex_repr = model.str_repr(formatting="latex")
+def test_model_latex_repr_nested():
+    with Model() as mixture_model:
+        comp_1 = ZeroInflatedPoisson.dist(0.5, 5)
+        comp_2 = Censored.dist(Bernoulli.dist(0.5), -1, 1)
+        nested_mix = Mixture("nested_mix", [0.5, 0.5], [comp_1, comp_2])
 
-    expected = """\
-    $$
-    \\begin{array}{rcl}
-    \\text{censored_normal} &\\sim & \\operatorname{Censored}(\\operatorname{N}(0,~1),~-1,~1)
-    \\end{array}
-    $$"""
-    assert [line.strip() for line in latex_repr.split("\n")] == [
-        line.strip() for line in expected.split("\n")
+    latex_repr = mixture_model.str_repr(formatting="latex")
+    expected = [
+        "$$",
+        "\\begin{array}{rcl}",
+        "\\text{nested_mix} &\\sim & \\operatorname{MarginalMixture}(\\text{<constant>},~\\operatorname{MarginalMixture}(f(),~\\operatorname{DiracDelta}(0),~\\operatorname{Pois}(5)),~\\operatorname{Censored}(\\operatorname{Bern}(0.5),~-1,~1))",
+        "\\end{array}",
+        "$$",
     ]
+    assert [line.strip() for line in latex_repr.split("\n")] == expected
