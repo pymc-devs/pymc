@@ -92,59 +92,59 @@ class TestStrAndLatexRepr:
         self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
         self.expected = {
             ("plain", True): [
-                r"alpha ~ N(0, 10)",
-                r"sigma ~ N**+(0, 1)",
+                r"alpha ~ Normal(0, 10)",
+                r"sigma ~ HalfNormal(0, 1)",
                 r"mu ~ Deterministic(f(beta, alpha))",
-                r"beta ~ N(0, 10)",
-                r"Z ~ N(f(), f())",
-                r"nb_with_p_n ~ NB(10, nbp)",
-                r"zip ~ MarginalMixture(f(), DiracDelta(0), Pois(5))",
+                r"beta ~ Normal(0, 10)",
+                r"Z ~ MvNormal(f(), f())",
+                r"nb_with_p_n ~ NegBinom(10, nbp)",
+                r"zip ~ MarginalMixture(f(), DiracDelta(0), Poisson(5))",
                 (
                     r"nested_mix ~ MarginalMixture(<constant>, "
-                    r"MarginalMixture(f(), DiracDelta(0), Pois(5)), "
+                    r"MarginalMixture(f(), DiracDelta(0), Poisson(5)), "
                     r"Censored(Bern(0.5), -1, 1))"
                 ),
-                r"Y_obs ~ N(mu, sigma)",
+                r"Y_obs ~ Normal(mu, sigma)",
                 r"pot ~ Potential(f(beta, alpha))",
             ],
             ("plain", False): [
-                r"alpha ~ N",
-                r"sigma ~ N**+",
+                r"alpha ~ Normal",
+                r"sigma ~ HalfNormal",
                 r"mu ~ Deterministic",
-                r"beta ~ N",
-                r"Z ~ N",
-                r"nb_with_p_n ~ NB",
+                r"beta ~ Normal",
+                r"Z ~ MvNormal",
+                r"nb_with_p_n ~ NegBinom",
                 r"zip ~ MarginalMixture",
                 r"nested_mix ~ MarginalMixture",
-                r"Y_obs ~ N",
+                r"Y_obs ~ Normal",
                 r"pot ~ Potential",
             ],
             ("latex", True): [
-                r"$\text{alpha} \sim \operatorname{N}(0,~10)$",
-                r"$\text{sigma} \sim \operatorname{N^{+}}(0,~1)$",
+                r"$\text{alpha} \sim \operatorname{Normal}(0,~10)$",
+                r"$\text{sigma} \sim \operatorname{HalfNormal}(0,~1)$",
                 r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{beta},~\text{alpha}))$",
-                r"$\text{beta} \sim \operatorname{N}(0,~10)$",
-                r"$\text{Z} \sim \operatorname{N}(f(),~f())$",
-                r"$\text{nb_with_p_n} \sim \operatorname{NB}(10,~\text{nbp})$",
-                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5))$",
+                r"$\text{beta} \sim \operatorname{Normal}(0,~10)$",
+                r"$\text{Z} \sim \operatorname{MvNormal}(f(),~f())$",
+                r"$\text{nb_with_p_n} \sim \operatorname{NegBinom}(10,~\text{nbp})$",
+                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5))$",
                 (
                     r"$\text{nested_mix} \sim \operatorname{MarginalMixture}(\text{<constant>},"
-                    r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5)),"
+                    r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5)),"
                     r"~\operatorname{Censored}(\operatorname{Bern}(0.5),~-1,~1))$"
                 ),
-                r"$\text{Y_obs} \sim \operatorname{N}(\text{mu},~\text{sigma})$",
+                r"$\text{Y_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
             ],
             ("latex", False): [
-                r"$\text{alpha} \sim \operatorname{N}$",
-                r"$\text{sigma} \sim \operatorname{N^{+}}$",
+                r"$\text{alpha} \sim \operatorname{Normal}$",
+                r"$\text{sigma} \sim \operatorname{HalfNormal}$",
                 r"$\text{mu} \sim \operatorname{Deterministic}$",
-                r"$\text{beta} \sim \operatorname{N}$",
-                r"$\text{Z} \sim \operatorname{N}$",
-                r"$\text{nb_with_p_n} \sim \operatorname{NB}$",
+                r"$\text{beta} \sim \operatorname{Normal}$",
+                r"$\text{Z} \sim \operatorname{MvNormal}$",
+                r"$\text{nb_with_p_n} \sim \operatorname{NegBinom}$",
                 r"$\text{zip} \sim \operatorname{MarginalMixture}$",
                 r"$\text{nested_mix} \sim \operatorname{MarginalMixture}$",
-                r"$\text{Y_obs} \sim \operatorname{N}$",
+                r"$\text{Y_obs} \sim \operatorname{Normal}$",
                 r"$\text{pot} \sim \operatorname{Potential}$",
             ],
         }
@@ -184,7 +184,7 @@ def test_model_latex_repr_nested():
     expected = [
         "$$",
         "\\begin{array}{rcl}",
-        "\\text{nested_mix} &\\sim & \\operatorname{MarginalMixture}(\\text{<constant>},~\\operatorname{MarginalMixture}(f(),~\\operatorname{DiracDelta}(0),~\\operatorname{Pois}(5)),~\\operatorname{Censored}(\\operatorname{Bern}(0.5),~-1,~1))",
+        "\\text{nested_mix} &\\sim & \\operatorname{MarginalMixture}(\\text{<constant>},~\\operatorname{MarginalMixture}(f(),~\\operatorname{DiracDelta}(0),~\\operatorname{Poisson}(5)),~\\operatorname{Censored}(\\operatorname{Bern}(0.5),~-1,~1))",
         "\\end{array}",
         "$$",
     ]

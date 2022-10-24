@@ -773,7 +773,7 @@ class DEMetropolis(PopulationArrayStepShared):
         initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
-            vars = model.cont_vars
+            vars = model.continuous_value_vars
         else:
             vars = [model.rvs_to_values.get(var, var) for var in vars]
         vars = pm.inputvars(vars)
@@ -924,7 +924,7 @@ class DEMetropolisZ(ArrayStepShared):
         initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
-            vars = model.cont_vars
+            vars = model.continuous_value_vars
         else:
             vars = [model.rvs_to_values.get(var, var) for var in vars]
         vars = pm.inputvars(vars)
