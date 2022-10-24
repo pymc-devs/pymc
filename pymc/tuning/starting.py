@@ -92,7 +92,7 @@ def find_MAP(
     model = modelcontext(model)
 
     if vars is None:
-        vars = model.cont_vars
+        vars = model.continuous_value_vars
         if not vars:
             raise ValueError("Model has no unobserved continuous variables.")
     else:

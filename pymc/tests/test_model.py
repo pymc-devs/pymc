@@ -482,15 +482,14 @@ class TestPickling:
                 )
 
 
-def test_model_vars():
+def test_model_value_vars():
     with pm.Model() as model:
         a = pm.Normal("a")
         pm.Normal("x", a)
 
-    with pytest.warns(FutureWarning):
-        old_vars = model.vars
-
-    assert old_vars == model.value_vars
+    value_vars = model.value_vars
+    assert len(value_vars) == 2
+    assert set(value_vars) == set(pm.inputvars(model.logp()))
 
 
 def test_model_var_maps():
@@ -589,8 +588,7 @@ def test_point_logps():
         a = pm.Uniform("a")
         pm.Normal("x", a)
 
-    with pytest.warns(FutureWarning):
-        logp_vals = model.check_test_point()
+    logp_vals = model.point_logps()
 
     assert "x" in logp_vals.keys()
     assert "a" in logp_vals.keys()
@@ -917,34 +915,16 @@ def test_set_data_constant_shape_error():
         pmodel.set_data("y", np.arange(10))
 
 
-def test_model_logpt_deprecation_warning():
+def test_model_deprecation_warning():
     with pm.Model() as m:
         x = pm.Normal("x", 0, 1, size=2)
         y = pm.LogNormal("y", 0, 1, size=2)
 
     with pytest.warns(FutureWarning):
-        m.logpt()
+        m.disc_vars
 
     with pytest.warns(FutureWarning):
-        m.dlogpt()
-
-    with pytest.warns(FutureWarning):
-        m.d2logpt()
-
-    with pytest.warns(FutureWarning):
-        m.datalogpt
-
-    with pytest.warns(FutureWarning):
-        m.varlogpt
-
-    with pytest.warns(FutureWarning):
-        m.observedlogpt
-
-    with pytest.warns(FutureWarning):
-        m.potentiallogpt
-
-    with pytest.warns(FutureWarning):
-        m.varlogp_nojact
+        m.cont_vars
 
 
 @pytest.mark.parametrize("jacobian", [True, False])
