@@ -28,6 +28,7 @@ from pymc.distributions import (
     GaussianRandomWalk,
     Mixture,
     Normal,
+    RandomWalk,
     StudentT,
     Truncated,
     ZeroInflatedPoisson,
@@ -399,8 +400,21 @@ class TestVariableSelection:
             },
             "MarginalMixture",
         ),
-        (GaussianRandomWalk, {"init_dist": Normal.dist(0.0, 5.0), "steps": 10}, "RandomWalk"),
+        (
+            GaussianRandomWalk,
+            {"init_dist": Normal.dist(0.0, 5.0), "steps": 10},
+            "GaussianRandomWalk",
+        ),
         (Truncated, {"dist": StudentT.dist(7), "upper": 3.0}, "TruncatedStudentT"),
+        (
+            RandomWalk,
+            {
+                "innovation_dist": pm.StudentT.dist(7),
+                "init_dist": pm.Normal.dist(0, 1),
+                "steps": 10,
+            },
+            "StudentTRandomWalk",
+        ),
     ],
 )
 def test_symbolic_distribution_display(symbolic_dist, dist_kwargs, display_name):

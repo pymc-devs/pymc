@@ -181,14 +181,11 @@ class ModelGraph:
                 style = "filled"
             else:
                 style = None
-            symbol = v.owner.op.__class__.__name__
-            if symbol == "MarginalMixtureRV":
+            symbol = v.owner.op._print_name[0]
+            if symbol == "MarginalMixture":
                 components = v.owner.inputs[2:]
                 if len(components) == 2:
-                    component_names = [
-                        var.owner.op.__class__.__name__.replace("Unmeasurable", "")[:-2]
-                        for var in components
-                    ]
+                    component_names = [var.owner.op._print_name[0] for var in components]
                     if check_zip_graph_from_components(components):
                         # ZeroInflated distribution
                         component_names.remove("DiracDelta")
@@ -198,17 +195,21 @@ class ModelGraph:
                         symbol = f"{'-'.join(component_names)}Mixture"
                 elif len(components) == 1:
                     # single component dispatch mixture
-                    symbol = f"{components[0].owner.op.__class__.__name__.replace('Unmeasurable', '')[:-2]}Mixture"
+                    symbol = f"{components[0].owner.op._print_name[0]}Mixture"
                 else:
                     symbol = symbol[:-2]  # just MarginalMixture
-            elif symbol == "CensoredRV":
+            elif symbol == "Censored":
                 censored_dist = v.owner.inputs[0]
-                symbol = symbol[:-2] + censored_dist.owner.op.__class__.__name__[:-2]
-            elif symbol == "TruncatedRV":
+                symbol = symbol + censored_dist.owner.op._print_name[0]
+            elif symbol == "Truncated":
                 truncated_dist = v.owner.op.base_rv_op
-                symbol = symbol[:-2] + truncated_dist.__class__.__name__[:-2]
-            elif symbol.endswith("RV"):
-                symbol = symbol[:-2]
+                symbol = symbol + truncated_dist._print_name[0]
+            elif symbol == "RandomWalk":
+                innovation_dist = v.owner.inputs[1].owner.op._print_name[0]
+                if innovation_dist == "Normal":
+                    symbol = "Gaussian" + symbol
+                else:
+                    symbol = innovation_dist + symbol
             label = f"{var_name}\n~\n{symbol}"
         else:
             shape = "box"
