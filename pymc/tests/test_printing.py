@@ -3,6 +3,7 @@ import numpy as np
 from pymc import Bernoulli, Censored, Mixture
 from pymc.aesaraf import floatX
 from pymc.distributions import (
+    Dirichlet,
     DirichletMultinomial,
     HalfNormal,
     KroneckerNormal,
@@ -55,7 +56,8 @@ class TestStrAndLatexRepr:
             # Nested SymbolicRV
             comp_1 = ZeroInflatedPoisson.dist(0.5, 5)
             comp_2 = Censored.dist(Bernoulli.dist(0.5), -1, 1)
-            nested_mix = Mixture("nested_mix", [0.5, 0.5], [comp_1, comp_2])
+            w = Dirichlet("w", [1, 1])
+            nested_mix = Mixture("nested_mix", w, [comp_1, comp_2])
 
             # Expected value of outcome
             mu = Deterministic("mu", floatX(alpha + dot(X, b)))
@@ -86,7 +88,7 @@ class TestStrAndLatexRepr:
             # add a potential as well
             pot = Potential("pot", mu**2)
 
-        self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, nested_mix, Y_obs, pot]
+        self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, w, nested_mix, Y_obs, pot]
         self.deterministics_or_potentials = [mu, pot]
         # tuples of (formatting, include_params
         self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
@@ -99,8 +101,9 @@ class TestStrAndLatexRepr:
                 r"Z ~ MvNormal(f(), f())",
                 r"nb_with_p_n ~ NegBinom(10, nbp)",
                 r"zip ~ MarginalMixture(f(), DiracDelta(0), Poisson(5))",
+                r"w ~ Dirichlet(<constant>)",
                 (
-                    r"nested_mix ~ MarginalMixture(<constant>, "
+                    r"nested_mix ~ MarginalMixture(w, "
                     r"MarginalMixture(f(), DiracDelta(0), Poisson(5)), "
                     r"Censored(Bern(0.5), -1, 1))"
                 ),
@@ -115,6 +118,7 @@ class TestStrAndLatexRepr:
                 r"Z ~ MvNormal",
                 r"nb_with_p_n ~ NegBinom",
                 r"zip ~ MarginalMixture",
+                r"w ~ Dirichlet",
                 r"nested_mix ~ MarginalMixture",
                 r"Y_obs ~ Normal",
                 r"pot ~ Potential",
@@ -127,8 +131,9 @@ class TestStrAndLatexRepr:
                 r"$\text{Z} \sim \operatorname{MvNormal}(f(),~f())$",
                 r"$\text{nb_with_p_n} \sim \operatorname{NegBinom}(10,~\text{nbp})$",
                 r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\text{\$\operatorname{DiracDelta}(0)\$},~\text{\$\operatorname{Poisson}(5)\$})$",
+                r"$\text{w} \sim \operatorname{Dirichlet}(\text{<constant>})$",
                 (
-                    r"$\text{nested_mix} \sim \operatorname{MarginalMixture}(\text{<constant>},"
+                    r"$\text{nested_mix} \sim \operatorname{MarginalMixture}(\text{w},"
                     r"~\text{\$\operatorname{MarginalMixture}(f(),~\text{\\$\operatorname{DiracDelta}(0)\\$},~\text{\\$\operatorname{Poisson}(5)\\$})\$},"
                     r"~\text{\$\operatorname{Censored}(\text{\\$\operatorname{Bern}(0.5)\\$},~-1,~1)\$})$"
                 ),
@@ -143,6 +148,7 @@ class TestStrAndLatexRepr:
                 r"$\text{Z} \sim \operatorname{MvNormal}$",
                 r"$\text{nb_with_p_n} \sim \operatorname{NegBinom}$",
                 r"$\text{zip} \sim \operatorname{MarginalMixture}$",
+                r"$\text{w} \sim \operatorname{Dirichlet}$",
                 r"$\text{nested_mix} \sim \operatorname{MarginalMixture}$",
                 r"$\text{Y_obs} \sim \operatorname{Normal}$",
                 r"$\text{pot} \sim \operatorname{Potential}$",
