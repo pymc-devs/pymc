@@ -620,6 +620,7 @@ class TestShapeEvaluation:
         assert shapes["untransformed"] == (1, 2)
         assert shapes["transformed"] == (7,)
         assert shapes["transformed_interval__"] == (7,)
+        assert shapes["observed"] == (3,)
         assert shapes["lognorm"] == (3,)
         assert shapes["lognorm_log__"] == (3,)
         assert shapes["from_dims"] == (3, 4)

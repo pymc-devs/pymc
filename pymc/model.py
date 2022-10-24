@@ -1659,7 +1659,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         )
 
     def eval_rv_shapes(self) -> Dict[str, Tuple[int, ...]]:
-        """Evaluates shapes of untransformed AND transformed free variables.
+        """Evaluates shapes of untransformed AND transformed random variables.
 
         Returns
         -------
@@ -1668,7 +1668,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         names = []
         outputs = []
-        for rv in self.free_RVs:
+        for rv in self.basic_RVs:
             rv_var = self.rvs_to_values[rv]
             transform = getattr(rv_var.tag, "transform", None)
             if transform is not None:
@@ -1679,7 +1679,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         f = aesara.function(
             inputs=[],
             outputs=outputs,
-            givens=[(obs, obs.tag.observations) for obs in self.observed_RVs],
             mode=aesara.compile.mode.FAST_COMPILE,
             on_unused_input="ignore",
         )
