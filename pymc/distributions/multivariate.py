@@ -450,7 +450,7 @@ class MvStudentT(Continuous):
 
 
 class PyMCDirichletRV(DirichletRV):
-    _print_name = ("Dirichlet", "\\operator{Dirichlet}")
+    _print_name = ("Dirichlet", "\\operatorname{Dirichlet}")
 
 
 pymc_dirichlet = PyMCDirichletRV()
