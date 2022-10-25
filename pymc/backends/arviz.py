@@ -431,9 +431,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
     def posterior_predictive_to_xarray(self):
         """Convert posterior_predictive samples to xarray."""
         data = self.posterior_predictive
-        dims = {
-            var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data.keys()
-        }
+        dims = {var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data}
         return dict_to_dataset(
             data, library=pymc, coords=self.coords, dims=dims, default_dims=self.sample_dims
         )
@@ -442,9 +440,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
     def predictions_to_xarray(self):
         """Convert predictions (out of sample predictions) to xarray."""
         data = self.predictions
-        dims = {
-            var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data.keys()
-        }
+        dims = {var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data}
         return dict_to_dataset(
             data, library=pymc, coords=self.coords, dims=dims, default_dims=self.sample_dims
         )
