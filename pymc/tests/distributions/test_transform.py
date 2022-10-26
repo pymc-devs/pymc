@@ -598,6 +598,8 @@ def test_discrete_trafo():
         with pytest.raises(ValueError) as err:
             pm.Binomial("a", n=5, p=0.5, transform="log")
         err.match("Transformations for discrete distributions")
+
+
 def test_transforms_ordered():
     with pm.Model() as model:
         pm.Normal(

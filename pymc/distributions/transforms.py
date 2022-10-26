@@ -74,6 +74,9 @@ class LogExpM1(RVTransform):
 class Ordered(RVTransform):
     name = "ordered"
 
+    def __init__(self, ndim_supp=0):
+        self.ndim_supp = ndim_supp
+
     def backward(self, value, *inputs):
         x = at.zeros(value.shape)
         x = at.inc_subtensor(x[..., 0], value[..., 0])
@@ -87,7 +90,10 @@ class Ordered(RVTransform):
         return y
 
     def log_jac_det(self, value, *inputs):
-        return at.sum(value[..., 1:], axis=-1, keepdims=True)
+        if self.ndim_supp == 0:
+            return at.sum(value[..., 1:], axis=-1, keepdims=True)
+        else:
+            return at.sum(value[..., 1:], axis=-1)
 
 
 class SumTo1(RVTransform):
