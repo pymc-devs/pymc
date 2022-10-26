@@ -537,7 +537,7 @@ def join_nonshared_inputs(
     point: Dict[str, np.ndarray],
     outputs: List[TensorVariable],
     inputs: List[TensorVariable],
-    shared_inputs: Union[Dict[TensorVariable, TensorSharedVariable], None] = None,
+    shared_inputs: Optional[Dict[TensorVariable, TensorSharedVariable]] = None,
     make_inputs_shared: bool = False,
 ) -> Tuple[List[TensorVariable], TensorVariable]:
     """
@@ -546,7 +546,7 @@ def join_nonshared_inputs(
 
     Parameters
     ----------
-    point: dictionary of variable names to numerical values
+    point: dict of {str : array_like}
         Dictionary that maps each input variable name to a numerical variable. The values
         are used to extract the shape of each input variable to establish a correct
         mapping between joined and original inputs. The shape of each variable is
@@ -564,7 +564,6 @@ def join_nonshared_inputs(
 
     Returns
     -------
-    new_outputs, joined_inputs
     new_outputs: list of TensorVariable
         List of new outputs `outputs` TensorVariables that depend on `joined_inputs` and new shared variables as inputs.
     joined_inputs: TensorVariable
@@ -590,7 +589,7 @@ def join_nonshared_inputs(
 
         # New output and inputs
         [new_out], joined_inputs = join_nonshared_inputs(
-            point={
+            point={ # Only shapes matter
                 "x": np.zeros(()),
                 "y": np.zeros(3),
             },
@@ -631,7 +630,7 @@ def join_nonshared_inputs(
 
         print(logp.eval({
             joined_inputs: [0, 1, 0, 1, 2],
-        }))
+        })) # -12.691227342634292
 
     Same as above but with the `mu_pop` value variable being shared.
 
