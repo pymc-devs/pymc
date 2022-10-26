@@ -1,6 +1,6 @@
 import numpy as np
 
-from pymc import Bernoulli, Censored, Mixture
+from pymc import Bernoulli, Censored, HalfCauchy, Mixture, StudentT
 from pymc.aesaraf import floatX
 from pymc.distributions import (
     Dirichlet,
@@ -180,17 +180,40 @@ class TestStrAndLatexRepr:
                     assert text in model_text
 
 
-def test_model_latex_repr_nested():
-    with Model() as mixture_model:
-        comp_1 = ZeroInflatedPoisson.dist(0.5, 5)
-        comp_2 = Censored.dist(Bernoulli.dist(0.5), -1, 1)
-        nested_mix = Mixture("nested_mix", [0.5, 0.5], [comp_1, comp_2])
+def test_model_latex_repr_three_levels_model():
+    with Model() as censored_model:
+        mu = Normal("mu", 0.0, 5.0)
+        sigma = HalfCauchy("sigma", 2.5)
+        normal_dist = Normal.dist(mu=mu, sigma=sigma)
+        censored_normal = Censored(
+            "censored_normal", normal_dist, lower=-2.0, upper=2.0, observed=[1, 0, 0.5]
+        )
 
-    latex_repr = mixture_model.str_repr(formatting="latex")
+    latex_repr = censored_model.str_repr(formatting="latex")
     expected = [
         "$$",
         "\\begin{array}{rcl}",
-        "\\text{nested_mix} &\\sim & \\operatorname{MarginalMixture}(\\text{<constant>},~\\operatorname{MarginalMixture}(f(),~\\operatorname{DiracDelta}(0),~\\operatorname{Poisson}(5)),~\\operatorname{Censored}(\\operatorname{Bern}(0.5),~-1,~1))",
+        "\\text{mu} &\\sim & \\operatorname{Normal}(0,~5)\\\\\\text{sigma} &\\sim & "
+        "\\operatorname{HalfCauchy}(0,~2.5)\\\\\\text{censored_normal} &\\sim & "
+        "\\operatorname{Censored}(\\operatorname{Normal}(\\text{mu},~\\text{sigma}),~-2,~2)",
+        "\\end{array}",
+        "$$",
+    ]
+    assert [line.strip() for line in latex_repr.split("\n")] == expected
+
+
+def test_model_latex_repr_mixture_model():
+    with Model() as mix_model:
+        w = Dirichlet("w", [1, 1])
+        mix = Mixture("mix", w=w, comp_dists=[Normal.dist(0.0, 5.0), StudentT.dist(7.0)])
+
+    latex_repr = mix_model.str_repr(formatting="latex")
+    expected = [
+        "$$",
+        "\\begin{array}{rcl}",
+        "\\text{w} &\\sim & "
+        "\\operatorname{Dirichlet}(\\text{<constant>})\\\\\\text{mix} &\\sim & "
+        "\\operatorname{MarginalMixture}(\\text{w},~\\operatorname{Normal}(0,~5),~\\operatorname{StudentT}(7,~0,~1))",
         "\\end{array}",
         "$$",
     ]
