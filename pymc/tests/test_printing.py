@@ -134,7 +134,7 @@ class TestStrAndLatexRepr:
                 r"$\text{w} \sim \operatorname{Dirichlet}(\text{<constant>})$",
                 (
                     r"$\text{nested_mix} \sim \operatorname{MarginalMixture}(\text{w},"
-                    r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0)},~\operatorname{Poisson}(5)),"
+                    r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5)),"
                     r"~\operatorname{Censored}(\operatorname{Bern}(0.5),~-1,~1))$"
                 ),
                 r"$\text{Y_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
