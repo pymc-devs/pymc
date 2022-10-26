@@ -333,8 +333,8 @@ class TestMixture(SeededTest):
             weights = [0.5, 0.5]
             components = [Normal.dist(-10, 0.01), Normal.dist(10, 0.01)]
             mix = Mixture.dist(weights, components)
-        draws = draw(mix, draws=10)
-        # Probability of coming from same component 10 times is 0.5**10
+        draws = draw(mix, draws=20, random_seed=self.get_random_state())
+        # Probability of coming from same component 20 times is 0.5**20
         assert np.unique(draws > 0).size == 2
 
     @pytest.mark.parametrize(

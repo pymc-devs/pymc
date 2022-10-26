@@ -630,8 +630,8 @@ class TestSamplePPC(SeededTest):
             ppc0 = pm.sample_posterior_predictive(
                 10 * [model.initial_point()], return_inferencedata=False
             )
-            # # deprecated argument is not introduced to fast version [2019/08/20:rpg]
-            ppc = pm.sample_posterior_predictive(trace, var_names=["a"], return_inferencedata=False)
+            assert "a" in ppc0
+            assert len(ppc0["a"][0]) == 10
             # test empty ppc
             ppc = pm.sample_posterior_predictive(trace, var_names=[], return_inferencedata=False)
             assert len(ppc) == 0
@@ -641,7 +641,10 @@ class TestSamplePPC(SeededTest):
             assert ppc["a"].shape == (nchains, ndraws)
 
             # test default case
-            idata_ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
+            random_state = self.get_random_state()
+            idata_ppc = pm.sample_posterior_predictive(
+                trace, var_names=["a"], random_seed=random_state
+            )
             ppc = idata_ppc.posterior_predictive
             assert "a" in ppc
             assert ppc["a"].shape == (nchains, ndraws)

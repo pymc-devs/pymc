@@ -63,7 +63,7 @@ class Slice(ArrayStep):
         self.iter_limit = iter_limit
 
         if vars is None:
-            vars = self.model.cont_vars
+            vars = self.model.continuous_value_vars
         else:
             vars = [self.model.rvs_to_values.get(var, var) for var in vars]
         vars = inputvars(vars)

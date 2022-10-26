@@ -210,7 +210,7 @@ def replace_rvs_in_graphs(
     replacement_fn: Callable[[TensorVariable], Dict[TensorVariable, TensorVariable]],
     initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
     **kwargs,
-) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
+) -> Tuple[List[TensorVariable], Dict[TensorVariable, TensorVariable]]:
     """Replace random variables in graphs
 
     This will *not* recompute test values.
@@ -265,7 +265,7 @@ def rvs_to_value_vars(
     apply_transforms: bool = True,
     initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
     **kwargs,
-) -> TensorVariable:
+) -> List[TensorVariable]:
     """Clone and replace random variables in graphs with their value variables.
 
     This will *not* recompute test values in the resulting graphs.

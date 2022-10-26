@@ -15,7 +15,7 @@ import abc
 import warnings
 
 from abc import ABCMeta
-from typing import Optional
+from typing import Callable, Optional
 
 import aesara
 import aesara.tensor as at
@@ -27,7 +27,6 @@ from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
 
 from pymc.aesaraf import constant_fold, floatX, intX
-from pymc.distributions import distribution
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.distribution import (
     Distribution,
@@ -267,7 +266,7 @@ class GaussianRandomWalk(PredefinedRandomWalk):
         sigma > 0, innovation standard deviation.
     init_dist : Distribution
         Unnamed univariate distribution of the initial value. Unnamed refers to distributions
-         created with the ``.dist()`` API.
+        created with the ``.dist()`` API.
 
         .. warning:: init_dist will be cloned, rendering them independent of the ones passed as input.
 
@@ -461,7 +460,7 @@ class AR(Distribution):
         process.
     init_dist : unnamed distribution, optional
         Scalar or vector distribution for initial values. Unnamed refers to distributions
-         created with the ``.dist()`` API. Distributions should have shape (*shape[:-1], ar_order).
+        created with the ``.dist()`` API. Distributions should have shape (*shape[:-1], ar_order).
         If not, it will be automatically resized. Defaults to pm.Normal.dist(0, 100, shape=...).
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
@@ -547,7 +546,7 @@ class AR(Distribution):
                     f"Init dist must be a distribution created via the `.dist()` API, "
                     f"got {type(init_dist)}"
                 )
-                check_dist_not_registered(init_dist)
+            check_dist_not_registered(init_dist)
             if init_dist.owner.op.ndim_supp > 1:
                 raise ValueError(
                     "Init distribution must have a scalar or vector support dimension, ",
@@ -617,7 +616,7 @@ class AR(Distribution):
             init_dist_size = batch_size
         init_dist = change_dist_size(init_dist, init_dist_size)
 
-        # Create OpFromGraph representing random draws form AR process
+        # Create OpFromGraph representing random draws from AR process
         # Variables with underscore suffix are dummy inputs into the OpFromGraph
         init_ = init_dist.type()
         rhos_ = rhos.type()
@@ -881,7 +880,26 @@ def garch11_moment(op, rv, omega, alpha_1, beta_1, initial_vol, init_dist, steps
     return at.zeros_like(rv)
 
 
-class EulerMaruyama(distribution.Continuous):
+class EulerMaruyamaRV(SymbolicRandomVariable):
+    """A placeholder used to specify a log-likelihood for a EulerMaruyama sub-graph."""
+
+    default_output = 1
+    dt: float
+    sde_fn: Callable
+    _print_name = ("EulerMaruyama", "\\operatorname{EulerMaruyama}")
+
+    def __init__(self, *args, dt, sde_fn, **kwargs):
+        self.dt = dt
+        self.sde_fn = sde_fn
+        super().__init__(*args, **kwargs)
+
+    def update(self, node: Node):
+        """Return the update mapping for the noise RV."""
+        # Since noise is a shared variable it shows up as the last node input
+        return {node.inputs[-1]: node.outputs[0]}
+
+
+class EulerMaruyama(Distribution):
     r"""
     Stochastic differential equation discretized with the Euler-Maruyama method.
 
@@ -893,39 +911,149 @@ class EulerMaruyama(distribution.Continuous):
         function returning the drift and diffusion coefficients of SDE
     sde_pars: tuple
         parameters of the SDE, passed as ``*args`` to ``sde_fn``
+    init_dist : unnamed distribution, optional
+        Scalar distribution for initial values. Unnamed refers to distributions created with
+        the ``.dist()`` API. Distributions should have shape (*shape[:-1]).
+        If not, it will be automatically resized. Defaults to pm.Normal.dist(0, 100, shape=...).
+
+        .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
     """
 
-    def __new__(cls, *args, **kwargs):
-        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
+    rv_type = EulerMaruyamaRV
+
+    def __new__(cls, name, dt, sde_fn, *args, steps=None, **kwargs):
+        dt = at.as_tensor_variable(floatX(dt))
+        steps = get_support_shape_1d(
+            support_shape=steps,
+            shape=None,  # Shape will be checked in `cls.dist`
+            dims=kwargs.get("dims", None),
+            observed=kwargs.get("observed", None),
+            support_shape_offset=1,
+        )
+        return super().__new__(cls, name, dt, sde_fn, *args, steps=steps, **kwargs)
 
     @classmethod
-    def dist(cls, *args, **kwargs):
-        raise NotImplementedError(f"{cls.__name__} has not yet been ported to PyMC 4.0.")
+    def dist(cls, dt, sde_fn, sde_pars, *, init_dist=None, steps=None, **kwargs):
+        steps = get_support_shape_1d(
+            support_shape=steps, shape=kwargs.get("shape", None), support_shape_offset=1
+        )
+        if steps is None:
+            raise ValueError("Must specify steps or shape parameter")
+        steps = at.as_tensor_variable(intX(steps), ndim=0)
 
-    def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
-        super().__init__(*args, **kwds)
-        self.dt = dt = at.as_tensor_variable(dt)
-        self.sde_fn = sde_fn
-        self.sde_pars = sde_pars
+        dt = at.as_tensor_variable(floatX(dt))
+        sde_pars = [at.as_tensor_variable(x) for x in sde_pars]
 
-    def logp(self, x):
-        """
-        Calculate log-probability of EulerMaruyama distribution at specified value.
+        if init_dist is not None:
+            if not isinstance(init_dist, TensorVariable) or not isinstance(
+                init_dist.owner.op, (RandomVariable, SymbolicRandomVariable)
+            ):
+                raise ValueError(
+                    f"Init dist must be a distribution created via the `.dist()` API, "
+                    f"got {type(init_dist)}"
+                )
+            check_dist_not_registered(init_dist)
+            if init_dist.owner.op.ndim_supp > 0:
+                raise ValueError(
+                    "Init distribution must have a scalar support dimension, ",
+                    f"got ndim_supp={init_dist.owner.op.ndim_supp}.",
+                )
+        else:
+            warnings.warn(
+                "Initial distribution not specified, defaulting to "
+                "`Normal.dist(0, 100, shape=...)`. You can specify an init_dist "
+                "manually to suppress this warning.",
+                UserWarning,
+            )
+            init_dist = Normal.dist(0, 100, shape=sde_pars[0].shape)
+        # Tell Aeppl to ignore init_dist, as it will be accounted for in the logp term
+        init_dist = ignore_logprob(init_dist)
 
-        Parameters
-        ----------
-        x: numeric
-            Value for which log-probability is calculated.
+        return super().dist([init_dist, steps, sde_pars, dt, sde_fn], **kwargs)
 
-        Returns
-        -------
-        TensorVariable
-        """
-        xt = x[:-1]
-        f, g = self.sde_fn(x[:-1], *self.sde_pars)
-        mu = xt + self.dt * f
-        sigma = at.sqrt(self.dt) * g
-        return at.sum(Normal.dist(mu=mu, sigma=sigma).logp(x[1:]))
+    @classmethod
+    def rv_op(cls, init_dist, steps, sde_pars, dt, sde_fn, size=None):
+        # Init dist should have shape (*size,)
+        if size is not None:
+            batch_size = size
+        else:
+            batch_size = at.broadcast_shape(*sde_pars, init_dist)
+        init_dist = change_dist_size(init_dist, batch_size)
 
-    def _distr_parameters_for_repr(self):
-        return ["dt"]
+        # Create OpFromGraph representing random draws from SDE process
+        # Variables with underscore suffix are dummy inputs into the OpFromGraph
+        init_ = init_dist.type()
+        sde_pars_ = [x.type() for x in sde_pars]
+        steps_ = steps.type()
+
+        noise_rng = aesara.shared(np.random.default_rng())
+
+        def step(*prev_args):
+            prev_y, *prev_sde_pars, rng = prev_args
+            f, g = sde_fn(prev_y, *prev_sde_pars)
+            mu = prev_y + dt * f
+            sigma = at.sqrt(dt) * g
+            next_rng, next_y = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
+            return next_y, {rng: next_rng}
+
+        y_t, innov_updates_ = aesara.scan(
+            fn=step,
+            outputs_info=[init_],
+            non_sequences=sde_pars_ + [noise_rng],
+            n_steps=steps_,
+            strict=True,
+        )
+        (noise_next_rng,) = tuple(innov_updates_.values())
+
+        sde_out_ = at.concatenate([init_[None, ...], y_t], axis=0).dimshuffle(
+            tuple(range(1, y_t.ndim)) + (0,)
+        )
+
+        eulermaruyama_op = EulerMaruyamaRV(
+            inputs=[init_, steps_] + sde_pars_,
+            outputs=[noise_next_rng, sde_out_],
+            dt=dt,
+            sde_fn=sde_fn,
+            ndim_supp=1,
+        )
+
+        eulermaruyama = eulermaruyama_op(init_dist, steps, *sde_pars)
+        return eulermaruyama
+
+
+@_change_dist_size.register(EulerMaruyamaRV)
+def change_eulermaruyama_size(op, dist, new_size, expand=False):
+
+    if expand:
+        old_size = dist.shape[:-1]
+        new_size = tuple(new_size) + tuple(old_size)
+
+    init_dist, steps, *sde_pars, _ = dist.owner.inputs
+    return EulerMaruyama.rv_op(
+        init_dist,
+        steps,
+        sde_pars,
+        dt=op.dt,
+        sde_fn=op.sde_fn,
+        size=new_size,
+    )
+
+
+@_logprob.register(EulerMaruyamaRV)
+def eulermaruyama_logp(op, values, init_dist, steps, *sde_pars_noise_arg, **kwargs):
+    (x,) = values
+    # noise arg is unused, but is needed to make the logp signature match the rv_op signature
+    *sde_pars, _ = sde_pars_noise_arg
+    # sde_fn is user provided and likely not broadcastable to additional time dimension,
+    # since the input x is now [..., t], we need to broadcast each input to [..., None]
+    # below as best effort attempt to make it work
+    sde_pars_broadcast = [x[..., None] for x in sde_pars]
+    xtm1 = x[..., :-1]
+    xt = x[..., 1:]
+    f, g = op.sde_fn(xtm1, *sde_pars_broadcast)
+    mu = xtm1 + op.dt * f
+    sigma = at.sqrt(op.dt) * g
+    # Compute and collapse logp across time dimension
+    sde_logp = at.sum(logp(Normal.dist(mu, sigma), xt), axis=-1)
+    init_logp = logp(init_dist, x[..., 0])
+    return init_logp + sde_logp
