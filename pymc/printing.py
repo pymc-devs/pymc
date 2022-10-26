@@ -227,7 +227,7 @@ def _str_for_expression(var: Variable, formatting: str) -> str:
 
 
 def _latex_text_format(text: str) -> str:
-    if "operatorname" in text:
+    if r"\operatorname{" in text:
         return text
     else:
         return r"\text{" + text + "}"
