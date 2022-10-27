@@ -546,27 +546,27 @@ def join_nonshared_inputs(
 
     Parameters
     ----------
-    point: dict of {str : array_like}
+    point : Point
         Dictionary that maps each input variable name to a numerical variable. The values
         are used to extract the shape of each input variable to establish a correct
         mapping between joined and original inputs. The shape of each variable is
         assumed to be fixed.
-    outputs: list of TensorVariable
+    outputs : list of TensorVariable
         List of output TensorVariables whose non-shared inputs will be replaced
         by a joined vector input.
-    inputs: list of TensorVariable
+    inputs : list of TensorVariable
         List of input TensorVariables which will be replaced by a joined vector input.
-    shared_inputs: dict of {TensorVariable : TensorSharedVariable}, optional
+    shared_inputs : dict of {TensorVariable : TensorSharedVariable}, optional
         Dict of TensorVariable and their associated TensorSharedVariable in
         subgraph replacement.
-    make_inputs_shared: bool, defaults to False
+    make_inputs_shared : bool, default False
         Whether to make the joined vector input a shared variable.
 
     Returns
     -------
-    new_outputs: list of TensorVariable
+    new_outputs : list of TensorVariable
         List of new outputs `outputs` TensorVariables that depend on `joined_inputs` and new shared variables as inputs.
-    joined_inputs: TensorVariable
+    joined_inputs : TensorVariable
         Joined input vector TensorVariable for the `new_outputs`
 
     Examples
