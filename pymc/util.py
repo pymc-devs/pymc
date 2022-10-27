@@ -14,9 +14,8 @@
 
 import functools
 
-from typing import Dict, Hashable, List, Tuple, Union, cast
+from typing import Any, Dict, List, Tuple, cast
 
-import arviz
 import cloudpickle
 import numpy as np
 import xarray
@@ -231,38 +230,26 @@ def biwrap(wrapper):
     return enhanced
 
 
-def dataset_to_point_list(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
+def dataset_to_point_list(
+    ds: xarray.Dataset, sample_dims: List
+) -> Tuple[List[Dict[str, np.ndarray]], Dict[str, Any]]:
     # All keys of the dataset must be a str
-    for vn in ds.keys():
+    var_names = list(ds.keys())
+    for vn in var_names:
         if not isinstance(vn, str):
             raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
-    # make dicts
-    points: List[Dict[Hashable, np.ndarray]] = []
-    da: "xarray.DataArray"
-    for c in ds.chain:
-        for d in ds.draw:
-            points.append({vn: da.sel(chain=c, draw=d).values for vn, da in ds.items()})
+    num_sample_dims = len(sample_dims)
+    stacked_dims = {dim_name: ds[dim_name] for dim_name in sample_dims}
+    ds = ds.transpose(*sample_dims, ...)
+    stacked_dict = {
+        vn: da.values.reshape((-1, *da.shape[num_sample_dims:])) for vn, da in ds.items()
+    }
+    points = [
+        {vn: stacked_dict[vn][i, ...] for vn in var_names}
+        for i in range(np.product([len(coords) for coords in stacked_dims.values()]))
+    ]
     # use the list of points
-    return cast(List[Dict[str, np.ndarray]], points)
-
-
-def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tuple[int, int]:
-    """Extract and return number of chains and samples in xarray or arviz traces."""
-    dataset: xarray.Dataset
-    if isinstance(data, xarray.Dataset):
-        dataset = data
-    elif isinstance(data, arviz.InferenceData):
-        dataset = data["posterior"]
-    else:
-        raise ValueError(
-            "Argument must be xarray Dataset or arviz InferenceData. Got %s",
-            data.__class__,
-        )
-
-    coords = dataset.coords
-    nchains = coords["chain"].sizes["chain"]
-    nsamples = coords["draw"].sizes["draw"]
-    return nchains, nsamples
+    return cast(List[Dict[str, np.ndarray]], points), stacked_dims
 
 
 def hashable(a=None) -> int:

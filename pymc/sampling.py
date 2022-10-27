@@ -75,7 +75,6 @@ from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
-    chains_and_samples,
     dataset_to_point_list,
     get_default_varnames,
     get_untransformed_name,
@@ -1765,6 +1764,7 @@ def sample_posterior_predictive(
     trace,
     model: Optional[Model] = None,
     var_names: Optional[List[str]] = None,
+    sample_dims: Optional[List[str]] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
     return_inferencedata: bool = True,
@@ -1785,6 +1785,10 @@ def sample_posterior_predictive(
         generally be the model used to generate the ``trace``, but it doesn't need to be.
     var_names : Iterable[str]
         Names of variables for which to compute the posterior predictive samples.
+    sample_dims : list of str, optional
+        Dimensions over which to loop and generate posterior predictive samples.
+        When `sample_dims` is ``None`` (default) both "chain" and "draw" are considered sample
+        dimensions. Only taken into account when `trace` is InferenceData or Dataset.
     random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     progressbar : bool
@@ -1821,6 +1825,14 @@ def sample_posterior_predictive(
         thinned_idata = idata.sel(draw=slice(None, None, 5))
         with model:
             idata.extend(pymc.sample_posterior_predictive(thinned_idata))
+
+    Generate 5 posterior predictive samples per posterior sample.
+
+    .. code:: python
+
+        expanded_data = idata.posterior.expand_dims(pred_id=5)
+        with model:
+            idata.extend(pymc.sample_posterior_predictive(expanded_data))
     """
 
     _trace: Union[MultiTrace, PointList]
@@ -1829,36 +1841,34 @@ def sample_posterior_predictive(
         idata_kwargs = {}
     else:
         idata_kwargs = idata_kwargs.copy()
+    if sample_dims is None:
+        sample_dims = ["chain", "draw"]
     constant_data: Dict[str, np.ndarray] = {}
     trace_coords: Dict[str, np.ndarray] = {}
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
+    idata: Optional[InferenceData] = None
+    stacked_dims = None
     if isinstance(trace, InferenceData):
-        idata_kwargs["coords"].setdefault("draw", trace["posterior"]["draw"])
-        idata_kwargs["coords"].setdefault("chain", trace["posterior"]["chain"])
         _constant_data = getattr(trace, "constant_data", None)
         if _constant_data is not None:
             trace_coords.update({str(k): v.data for k, v in _constant_data.coords.items()})
             constant_data.update({str(k): v.data for k, v in _constant_data.items()})
-        trace_coords.update({str(k): v.data for k, v in trace["posterior"].coords.items()})
-        _trace = dataset_to_point_list(trace["posterior"])
-        nchain, len_trace = chains_and_samples(trace)
-    elif isinstance(trace, xarray.Dataset):
-        idata_kwargs["coords"].setdefault("draw", trace["draw"])
-        idata_kwargs["coords"].setdefault("chain", trace["chain"])
+        idata = trace
+        trace = trace["posterior"]
+    if isinstance(trace, xarray.Dataset):
         trace_coords.update({str(k): v.data for k, v in trace.coords.items()})
-        _trace = dataset_to_point_list(trace)
-        nchain, len_trace = chains_and_samples(trace)
+        _trace, stacked_dims = dataset_to_point_list(trace, sample_dims)
+        nchain = 1
     elif isinstance(trace, MultiTrace):
         _trace = trace
         nchain = _trace.nchains
-        len_trace = len(_trace)
     elif isinstance(trace, list) and all(isinstance(x, dict) for x in trace):
         _trace = trace
         nchain = 1
-        len_trace = len(_trace)
     else:
         raise TypeError(f"Unsupported type for `trace` argument: {type(trace)}.")
+    len_trace = len(_trace)
 
     if isinstance(_trace, MultiTrace):
         samples = sum(len(v) for v in _trace._straces.values())
@@ -1961,23 +1971,30 @@ def sample_posterior_predictive(
     ppc_trace = ppc_trace_t.trace_dict
 
     for k, ary in ppc_trace.items():
-        ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
+        if stacked_dims is not None:
+            ppc_trace[k] = ary.reshape(
+                (*[len(coord) for coord in stacked_dims.values()], *ary.shape[1:])
+            )
+        else:
+            ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
 
     if not return_inferencedata:
         return ppc_trace
     ikwargs: Dict[str, Any] = dict(model=model, **idata_kwargs)
+    ikwargs.setdefault("sample_dims", sample_dims)
+    if stacked_dims is not None:
+        coords = ikwargs.get("coords", {})
+        ikwargs["coords"] = {**stacked_dims, **coords}
     if predictions:
         if extend_inferencedata:
-            ikwargs.setdefault("idata_orig", trace)
+            ikwargs.setdefault("idata_orig", idata)
             ikwargs.setdefault("inplace", True)
         return pm.predictions_to_inference_data(ppc_trace, **ikwargs)
-    converter = pm.backends.arviz.InferenceDataConverter(posterior_predictive=ppc_trace, **ikwargs)
-    converter.nchains = nchain
-    converter.ndraws = len_trace
-    idata_pp = converter.to_inference_data()
-    if extend_inferencedata:
-        trace.extend(idata_pp)
-        return trace
+    idata_pp = pm.to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
+
+    if extend_inferencedata and idata is not None:
+        idata.extend(idata_pp)
+        return idata
     return idata_pp
 
 

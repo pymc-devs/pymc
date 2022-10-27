@@ -7,7 +7,7 @@ dependencies:
 # Base dependencies (see install guide for Windows)
 - aeppl=0.0.38
 - aesara=2.8.7
-- arviz>=0.12.0
+- arviz>=0.13.0
 - blas
 - cachetools>=4.2.1
 - cloudpickle
