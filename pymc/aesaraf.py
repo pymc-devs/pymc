@@ -556,7 +556,7 @@ def join_nonshared_inputs(
         by a joined vector input.
     inputs: list of TensorVariable
         List of input TensorVariables which will be replaced by a joined vector input.
-    shared_inputs: dict of TensorVariable to TensorSharedVariable, optional
+    shared_inputs: dict of {TensorVariable : TensorSharedVariable}, optional
         Dict of TensorVariable and their associated TensorSharedVariable in
         subgraph replacement.
     make_inputs_shared: bool, defaults to False
