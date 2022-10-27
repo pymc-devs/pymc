@@ -579,11 +579,11 @@ def _logp_forw(point, out_vars, in_vars, shared):
 
     Parameters
     ----------
-    out_vars: List
+    out_vars : list
         containing :class:`pymc.Distribution` for the output variables
-    in_vars: List
+    in_vars : list
         containing :class:`pymc.Distribution` for the input variables
-    shared: List
+    shared : list
         containing :class:`aesara.tensor.Tensor` for depended shared data
     """
 
