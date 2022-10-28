@@ -336,10 +336,17 @@ log_exp_m1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.LogExpM1`
 for use in the ``transform`` argument of a random variable."""
 
-ordered = Ordered()
-ordered.__doc__ = """
+univariate_ordered = Ordered(ndim_supp=0)
+univariate_ordered.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.Ordered`
-for use in the ``transform`` argument of a random variable."""
+for use in the ``transform`` argument of a univariate random variable."""
+
+multivariate_ordered = Ordered(ndim_supp=1)
+multivariate_ordered.__doc__ = """
+Instantiation of :class:`pymc.distributions.transforms.Ordered`
+for use in the ``transform`` argument of a multivariate random variable."""
+
+ordered = univariate_ordered
 
 log = LogTransform()
 log.__doc__ = """

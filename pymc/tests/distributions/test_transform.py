@@ -327,7 +327,7 @@ class TestElementWiseLogp(SeededTest):
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
         # Original distribution is univariate
         if x.owner.op.ndim_supp == 0:
-            assert model.logp(x, sum=False)[0].ndim == x.ndim == (jacob_det.ndim + 1)
+            assert model.logp(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
         # Original distribution is multivariate
         else:
             assert model.logp(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
@@ -569,7 +569,11 @@ class TestElementWiseLogp(SeededTest):
     def test_mvnormal_ordered(self, mu, cov, size, shape):
         initval = np.sort(np.random.randn(*shape))
         model = self.build_model(
-            pm.MvNormal, {"mu": mu, "cov": cov}, size=size, initval=initval, transform=tr.ordered
+            pm.MvNormal,
+            {"mu": mu, "cov": cov},
+            size=size,
+            initval=initval,
+            transform=tr.multivariate_ordered,
         )
         self.check_vectortransform_elementwise_logp(model)
 
