@@ -14,7 +14,7 @@
 
 import functools
 
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, Dict, List, Tuple, Union, cast
 
 import arviz
 import cloudpickle
