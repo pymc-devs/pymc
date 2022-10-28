@@ -59,13 +59,6 @@ class CompoundStep:
                 point = method.step(point)
             return point
 
-    def warnings(self):
-        warns = []
-        for method in self.methods:
-            if hasattr(method, "warnings"):
-                warns.extend(method.warnings())
-        return warns
-
     def stop_tuning(self):
         for method in self.methods:
             method.stop_tuning()

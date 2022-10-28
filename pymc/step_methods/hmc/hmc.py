@@ -14,6 +14,7 @@
 
 import numpy as np
 
+from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods.arraystep import Competence
 from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
 from pymc.step_methods.hmc.integration import IntegrationError, State
@@ -53,6 +54,7 @@ class HamiltonianMC(BaseHMC):
             "perf_counter_start": np.float64,
             "largest_eigval": np.float64,
             "smallest_eigval": np.float64,
+            "warning": SamplerWarning,
         }
     ]
 

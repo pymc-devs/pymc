@@ -56,6 +56,7 @@ pymc/smc/__init__.py
 pymc/smc/sample_smc.py
 pymc/smc/smc.py
 pymc/stats/__init__.py
+pymc/stats/convergence.py
 pymc/step_methods/__init__.py
 pymc/step_methods/compound.py
 pymc/step_methods/hmc/__init__.py

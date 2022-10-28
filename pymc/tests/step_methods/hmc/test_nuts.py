@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import logging
 import sys
 import warnings
 
@@ -121,29 +122,17 @@ class TestNutsCheckTrace:
                 pm.sample(cores=2, random_seed=1)
             error.match("Initial evaluation")
 
-    def test_linalg(self, caplog):
+    def test_emits_energy_warnings(self, caplog):
         with pm.Model():
             a = pm.Normal("a", size=2, initval=floatX(np.zeros(2)))
             a = at.switch(a > 0, np.inf, a)
             b = at.slinalg.solve(floatX(np.eye(2)), a, check_finite=False)
             pm.Normal("c", mu=b, size=2, initval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                trace = pm.sample(20, tune=5, chains=2, return_inferencedata=False, random_seed=526)
-            warns = [msg.msg for msg in caplog.records]
-            assert np.any(trace["diverging"])
-            assert (
-                any("divergence after tuning" in warn for warn in warns)
-                or any("divergences after tuning" in warn for warn in warns)
-                or any("only diverging samples" in warn for warn in warns)
-            )
-
-            with pytest.raises(ValueError) as error:
-                trace.report.raise_ok()
-            error.match("issues during sampling")
-
-            assert not trace.report.ok
+            # The logger name must be specified for DEBUG level capturing to work
+            with caplog.at_level(logging.DEBUG, logger="pymc"):
+                idata = pm.sample(20, tune=5, chains=2, random_seed=526)
+            assert any("Energy change" in w.msg for w in caplog.records)
 
     def test_sampler_stats(self):
         with pm.Model() as model:
@@ -168,12 +157,19 @@ class TestNutsCheckTrace:
             "perf_counter_diff",
             "perf_counter_start",
             "process_time_diff",
+            "reached_max_treedepth",
             "index_in_trajectory",
             "largest_eigval",
             "smallest_eigval",
+            "warning",
         }
         assert trace.stat_names == expected_stat_names
         for varname in trace.stat_names:
+            if varname == "warning":
+                # Warnings don't squeeze reliably.
+                # But once we stop squeezing alltogether that's going to be OK.
+                # See https://github.com/pymc-devs/pymc/issues/6207
+                continue
             assert trace.get_sampler_stats(varname).shape == (10,)
 
         # Assert model logp is computed correctly: computing post-sampling
