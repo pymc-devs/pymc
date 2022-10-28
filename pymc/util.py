@@ -16,6 +16,7 @@ import functools
 
 from typing import Any, Dict, List, Tuple, cast
 
+import arviz
 import cloudpickle
 import numpy as np
 import xarray
