@@ -2065,8 +2065,10 @@ def sample_posterior_predictive_w(
         weighted models (default), or a dictionary with variable names as keys, and samples as
         numpy arrays.
     """
-    raise FutureWarning("The function `sample_posterior_predictive_w` has been removed in PyMC 4.3.0. "
-                        "Switch to `arviz.stats.weight_predictions`")
+    raise FutureWarning(
+        "The function `sample_posterior_predictive_w` has been removed in PyMC 4.3.0. "
+        "Switch to `arviz.stats.weight_predictions`"
+    )
 
 
 def sample_prior_predictive(
