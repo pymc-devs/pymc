@@ -75,10 +75,10 @@ class HSGP(Base):
             # last two.
             cov_func = pm.gp.cov.ExpQuad(3, ls=0.1, active_dims=[1, 2])
 
-            # Specify the HSGP.  Use 10 basis vectors across each active dimension, [1, 2]  for a
-            # total of 10 * 10 = 100.  The input X is normally distributed, so use a boundary
-            # condition that should easily contain all the points, from -6 to 6 in each dimension.
-            gp = pmx.gp.HSGP(n_basis=[10, 10], L=[6, 6], cov_func=cov_func)
+            # Specify the HSGP.  Use 50 basis vectors across each active dimension, [1, 2]  for a
+            # total of 50 * 50 = 2500.  The range of the data is inferred from X, and the boundary
+            # condition multiplier `c` uses 4 * half range.
+            gp = pm.gp.HSGP(m=[50, 50], c=4.0, cov_func=cov_func)
 
             # Place a GP prior over the function f.
             f = gp.prior("f", X=X)
@@ -112,7 +112,7 @@ class HSGP(Base):
     ):
         arg_err_msg = (
             "`m` and L, if provided, must be lists or tuples, with one element per active "
-            "dimension."
+            "dimension of the kernel or covariance function."
         )
         try:
             if len(m) != cov_func.D:
