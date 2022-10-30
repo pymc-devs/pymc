@@ -104,6 +104,9 @@ class SumTo1(RVTransform):
 
     name = "sumto1"
 
+    def __init__(self, ndim_supp=0):
+        self.ndim_supp = ndim_supp
+
     def backward(self, value, *inputs):
         remaining = 1 - at.sum(value[..., :], axis=-1, keepdims=True)
         return at.concatenate([value[..., :], remaining], axis=-1)
@@ -113,7 +116,10 @@ class SumTo1(RVTransform):
 
     def log_jac_det(self, value, *inputs):
         y = at.zeros(value.shape)
-        return at.sum(y, axis=-1, keepdims=True)
+        if self.ndim_supp == 0:
+            return at.sum(y, axis=-1, keepdims=True)
+        else:
+            return at.sum(y, axis=-1)
 
 
 class CholeskyCovPacked(RVTransform):
