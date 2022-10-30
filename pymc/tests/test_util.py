@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import arviz
 import numpy as np
 import pytest
 import xarray
@@ -24,6 +25,7 @@ from pymc.distributions.transforms import RVTransform
 from pymc.util import (
     UNSET,
     dataset_to_point_list,
+    drop_warning_stat,
     hash_key,
     hashable,
     locally_cachedmethod,
@@ -154,7 +156,7 @@ def test_unset_repr(capsys):
 def test_dataset_to_point_list():
     ds = xarray.Dataset()
     ds["A"] = xarray.DataArray([[1, 2, 3]] * 2, dims=("chain", "draw"))
-    pl = dataset_to_point_list(ds)
+    pl, _ = dataset_to_point_list(ds, sample_dims=["chain", "draw"])
     assert isinstance(pl, list)
     assert len(pl) == 6
     assert isinstance(pl[0], dict)
@@ -163,4 +165,36 @@ def test_dataset_to_point_list():
     # Check that non-str keys are caught
     ds[3] = xarray.DataArray([1, 2, 3])
     with pytest.raises(ValueError, match="must be str"):
-        dataset_to_point_list(ds)
+        dataset_to_point_list(ds, sample_dims=["chain", "draw"])
+
+
+def test_drop_warning_stat():
+    idata = arviz.from_dict(
+        sample_stats={
+            "a": np.ones((2, 5, 4)),
+            "warning": np.ones((2, 5, 3), dtype=object),
+        },
+        warmup_sample_stats={
+            "a": np.ones((2, 5, 4)),
+            "warning": np.ones((2, 5, 3), dtype=object),
+        },
+        attrs=dict(version="0.1.2"),
+        coords={
+            "adim": [0, 1, None, 3],
+            "warning_dim_0": list("ABC"),
+        },
+        dims={"a": ["adim"], "warning": ["warning_dim_0"]},
+        save_warmup=True,
+    )
+
+    new = drop_warning_stat(idata)
+
+    assert new is not idata
+    assert new.attrs.get("version") == "0.1.2"
+
+    for gname in ["sample_stats", "warmup_sample_stats"]:
+        ss = new.get(gname)
+        assert isinstance(ss, xarray.Dataset), gname
+        assert "a" in ss
+        assert "warning" not in ss
+        assert "warning_dim_0" not in ss

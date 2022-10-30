@@ -320,7 +320,7 @@ def test_ignore_logprob_basic():
     new_x = ignore_logprob(x)
     assert new_x is not x
     assert isinstance(new_x.owner.op, Normal)
-    assert type(new_x.owner.op).__name__ == "UnmeasurablePyMCNormalRV"
+    assert type(new_x.owner.op).__name__ == "UnmeasurableNormalRV"
     # Confirm that it does not have measurable output
     assert get_measurable_outputs(new_x.owner.op, new_x.owner) is None
 

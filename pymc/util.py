@@ -14,7 +14,7 @@
 
 import functools
 
-from typing import Dict, Hashable, List, Tuple, Union, cast
+from typing import Any, Dict, List, Tuple, Union, cast
 
 import arviz
 import cloudpickle
@@ -231,19 +231,40 @@ def biwrap(wrapper):
     return enhanced
 
 
-def dataset_to_point_list(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
+def dataset_to_point_list(
+    ds: xarray.Dataset, sample_dims: List
+) -> Tuple[List[Dict[str, np.ndarray]], Dict[str, Any]]:
     # All keys of the dataset must be a str
-    for vn in ds.keys():
+    var_names = list(ds.keys())
+    for vn in var_names:
         if not isinstance(vn, str):
             raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
-    # make dicts
-    points: List[Dict[Hashable, np.ndarray]] = []
-    da: "xarray.DataArray"
-    for c in ds.chain:
-        for d in ds.draw:
-            points.append({vn: da.sel(chain=c, draw=d).values for vn, da in ds.items()})
+    num_sample_dims = len(sample_dims)
+    stacked_dims = {dim_name: ds[dim_name] for dim_name in sample_dims}
+    ds = ds.transpose(*sample_dims, ...)
+    stacked_dict = {
+        vn: da.values.reshape((-1, *da.shape[num_sample_dims:])) for vn, da in ds.items()
+    }
+    points = [
+        {vn: stacked_dict[vn][i, ...] for vn in var_names}
+        for i in range(np.product([len(coords) for coords in stacked_dims.values()]))
+    ]
     # use the list of points
-    return cast(List[Dict[str, np.ndarray]], points)
+    return cast(List[Dict[str, np.ndarray]], points), stacked_dims
+
+
+def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
+    """Returns a new ``InferenceData`` object with the "warning" stat removed from sample stats groups.
+
+    This function should be applied to an ``InferenceData`` object obtained with
+    ``pm.sample(keep_warning_stat=True)`` before trying to ``.to_netcdf()`` or ``.to_zarr()`` it.
+    """
+    nidata = arviz.InferenceData(attrs=idata.attrs)
+    for gname, group in idata.items():
+        if "sample_stat" in gname:
+            group = group.drop_vars(names=["warning", "warning_dim_0"], errors="ignore")
+        nidata.add_groups({gname: group}, coords=group.coords, dims=group.dims)
+    return nidata
 
 
 def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tuple[int, int]:

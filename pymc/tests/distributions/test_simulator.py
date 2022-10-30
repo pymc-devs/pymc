@@ -31,7 +31,7 @@ import pymc as pm
 from pymc import floatX
 from pymc.aesaraf import compile_pymc
 from pymc.initial_point import make_initial_point_fn
-from pymc.smc.smc import IMH
+from pymc.smc.kernels import IMH
 from pymc.tests.helpers import SeededTest
 
 

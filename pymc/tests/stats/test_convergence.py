@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2022 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -12,7 +12,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc.smc.kernels import IMH, MH
-from pymc.smc.sampling import sample_smc
+import arviz
+import numpy as np
 
-__all__ = ("sample_smc",)
+from pymc.stats import convergence
+
+
+def test_warn_divergences():
+    idata = arviz.from_dict(
+        sample_stats={
+            "diverging": np.array([[1, 0, 1, 0], [0, 0, 0, 0]]).astype(bool),
+        }
+    )
+    warns = convergence.warn_divergences(idata)
+    assert len(warns) == 1
+    assert "2 divergences after tuning" in warns[0].message

@@ -70,13 +70,13 @@ from pymc.initial_point import (
 )
 from pymc.model import Model, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
-from pymc.stats.convergence import run_convergence_checks
+from pymc.stats.convergence import SamplerWarning, log_warning, run_convergence_checks
 from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
-    chains_and_samples,
     dataset_to_point_list,
+    drop_warning_stat,
     get_default_varnames,
     get_untransformed_name,
     is_transformed_name,
@@ -324,6 +324,7 @@ def sample(
     jitter_max_retries: int = 10,
     *,
     return_inferencedata: bool = True,
+    keep_warning_stat: bool = False,
     idata_kwargs: dict = None,
     mp_ctx=None,
     **kwargs,
@@ -394,6 +395,13 @@ def sample(
         `MultiTrace` (False). Defaults to `True`.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
+    keep_warning_stat : bool
+        If ``True`` the "warning" stat emitted by, for example, HMC samplers will be kept
+        in the returned ``idata.sample_stat`` group.
+        This leads to the ``idata`` not supporting ``.to_netcdf()`` or ``.to_zarr()`` and
+        should only be set to ``True`` if you intend to use the "warning" objects right away.
+        Defaults to ``False`` such that ``pm.drop_warning_stat`` is applied automatically,
+        making the ``InferenceData`` compatible with saving.
     mp_ctx : multiprocessing.context.BaseContent
         A multiprocessing context for parallel sampling.
         See multiprocessing documentation for details.
@@ -700,6 +708,10 @@ def sample(
                 mtrace.report._add_warnings(convergence_warnings)
 
         if return_inferencedata:
+            # By default we drop the "warning" stat which contains `SamplerWarning`
+            # objects that can not be stored with `.to_netcdf()`.
+            if not keep_warning_stat:
+                return drop_warning_stat(idata)
             return idata
     return mtrace
 
@@ -1049,32 +1061,26 @@ def _iter_sample(
             if step.generates_stats:
                 point, stats = step.step(point)
                 strace.record(point, stats)
+                log_warning_stats(stats)
                 diverging = i > tune and stats and stats[0].get("diverging")
             else:
                 point = step.step(point)
                 strace.record(point)
             if callback is not None:
-                warns = getattr(step, "warnings", None)
                 callback(
                     trace=strace,
-                    draw=Draw(chain, i == draws, i, i < tune, stats, point, warns),
+                    draw=Draw(chain, i == draws, i, i < tune, stats, point),
                 )
 
             yield strace, diverging
     except KeyboardInterrupt:
         strace.close()
-        if hasattr(step, "warnings"):
-            warns = step.warnings()
-            strace._add_warnings(warns)
         raise
     except BaseException:
         strace.close()
         raise
     else:
         strace.close()
-        if hasattr(step, "warnings"):
-            warns = step.warnings()
-            strace._add_warnings(warns)
 
 
 class PopulationStepper:
@@ -1357,6 +1363,7 @@ def _iter_population(
                     if steppers[c].generates_stats:
                         points[c], stats = updates[c]
                         strace.record(points[c], stats)
+                        log_warning_stats(stats)
                     else:
                         points[c] = updates[c]
                         strace.record(points[c])
@@ -1514,21 +1521,16 @@ def _mp_sample(
             with sampler:
                 for draw in sampler:
                     strace = traces[draw.chain]
-                    if draw.stats is not None:
-                        strace.record(draw.point, draw.stats)
-                    else:
-                        strace.record(draw.point)
+                    strace.record(draw.point, draw.stats)
+                    log_warning_stats(draw.stats)
                     if draw.is_last:
                         strace.close()
-                        if draw.warnings is not None:
-                            strace._add_warnings(draw.warnings)
 
                     if callback is not None:
                         callback(trace=trace, draw=draw)
 
         except ps.ParallelSamplingError as error:
             strace = traces[error._chain]
-            strace._add_warnings(error._warnings)
             for strace in traces:
                 strace.close()
 
@@ -1545,6 +1547,22 @@ def _mp_sample(
     finally:
         for strace in traces:
             strace.close()
+
+
+def log_warning_stats(stats: Sequence[Dict[str, Any]]):
+    """Logs 'warning' stats if present."""
+    if stats is None:
+        return
+
+    for sts in stats:
+        warn = sts.get("warning", None)
+        if warn is None:
+            continue
+        if isinstance(warn, SamplerWarning):
+            log_warning(warn)
+        else:
+            _log.warning(warn)
+    return
 
 
 def _choose_chains(traces: Sequence[BaseTrace], tune: int) -> Tuple[List[BaseTrace], int]:
@@ -1765,6 +1783,7 @@ def sample_posterior_predictive(
     trace,
     model: Optional[Model] = None,
     var_names: Optional[List[str]] = None,
+    sample_dims: Optional[List[str]] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
     return_inferencedata: bool = True,
@@ -1785,6 +1804,10 @@ def sample_posterior_predictive(
         generally be the model used to generate the ``trace``, but it doesn't need to be.
     var_names : Iterable[str]
         Names of variables for which to compute the posterior predictive samples.
+    sample_dims : list of str, optional
+        Dimensions over which to loop and generate posterior predictive samples.
+        When `sample_dims` is ``None`` (default) both "chain" and "draw" are considered sample
+        dimensions. Only taken into account when `trace` is InferenceData or Dataset.
     random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     progressbar : bool
@@ -1821,6 +1844,14 @@ def sample_posterior_predictive(
         thinned_idata = idata.sel(draw=slice(None, None, 5))
         with model:
             idata.extend(pymc.sample_posterior_predictive(thinned_idata))
+
+    Generate 5 posterior predictive samples per posterior sample.
+
+    .. code:: python
+
+        expanded_data = idata.posterior.expand_dims(pred_id=5)
+        with model:
+            idata.extend(pymc.sample_posterior_predictive(expanded_data))
     """
 
     _trace: Union[MultiTrace, PointList]
@@ -1829,36 +1860,34 @@ def sample_posterior_predictive(
         idata_kwargs = {}
     else:
         idata_kwargs = idata_kwargs.copy()
+    if sample_dims is None:
+        sample_dims = ["chain", "draw"]
     constant_data: Dict[str, np.ndarray] = {}
     trace_coords: Dict[str, np.ndarray] = {}
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
+    idata: Optional[InferenceData] = None
+    stacked_dims = None
     if isinstance(trace, InferenceData):
-        idata_kwargs["coords"].setdefault("draw", trace["posterior"]["draw"])
-        idata_kwargs["coords"].setdefault("chain", trace["posterior"]["chain"])
         _constant_data = getattr(trace, "constant_data", None)
         if _constant_data is not None:
             trace_coords.update({str(k): v.data for k, v in _constant_data.coords.items()})
             constant_data.update({str(k): v.data for k, v in _constant_data.items()})
-        trace_coords.update({str(k): v.data for k, v in trace["posterior"].coords.items()})
-        _trace = dataset_to_point_list(trace["posterior"])
-        nchain, len_trace = chains_and_samples(trace)
-    elif isinstance(trace, xarray.Dataset):
-        idata_kwargs["coords"].setdefault("draw", trace["draw"])
-        idata_kwargs["coords"].setdefault("chain", trace["chain"])
+        idata = trace
+        trace = trace["posterior"]
+    if isinstance(trace, xarray.Dataset):
         trace_coords.update({str(k): v.data for k, v in trace.coords.items()})
-        _trace = dataset_to_point_list(trace)
-        nchain, len_trace = chains_and_samples(trace)
+        _trace, stacked_dims = dataset_to_point_list(trace, sample_dims)
+        nchain = 1
     elif isinstance(trace, MultiTrace):
         _trace = trace
         nchain = _trace.nchains
-        len_trace = len(_trace)
     elif isinstance(trace, list) and all(isinstance(x, dict) for x in trace):
         _trace = trace
         nchain = 1
-        len_trace = len(_trace)
     else:
         raise TypeError(f"Unsupported type for `trace` argument: {type(trace)}.")
+    len_trace = len(_trace)
 
     if isinstance(_trace, MultiTrace):
         samples = sum(len(v) for v in _trace._straces.values())
@@ -1961,23 +1990,30 @@ def sample_posterior_predictive(
     ppc_trace = ppc_trace_t.trace_dict
 
     for k, ary in ppc_trace.items():
-        ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
+        if stacked_dims is not None:
+            ppc_trace[k] = ary.reshape(
+                (*[len(coord) for coord in stacked_dims.values()], *ary.shape[1:])
+            )
+        else:
+            ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
 
     if not return_inferencedata:
         return ppc_trace
     ikwargs: Dict[str, Any] = dict(model=model, **idata_kwargs)
+    ikwargs.setdefault("sample_dims", sample_dims)
+    if stacked_dims is not None:
+        coords = ikwargs.get("coords", {})
+        ikwargs["coords"] = {**stacked_dims, **coords}
     if predictions:
         if extend_inferencedata:
-            ikwargs.setdefault("idata_orig", trace)
+            ikwargs.setdefault("idata_orig", idata)
             ikwargs.setdefault("inplace", True)
         return pm.predictions_to_inference_data(ppc_trace, **ikwargs)
-    converter = pm.backends.arviz.InferenceDataConverter(posterior_predictive=ppc_trace, **ikwargs)
-    converter.nchains = nchain
-    converter.ndraws = len_trace
-    idata_pp = converter.to_inference_data()
-    if extend_inferencedata:
-        trace.extend(idata_pp)
-        return trace
+    idata_pp = pm.to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
+
+    if extend_inferencedata and idata is not None:
+        idata.extend(idata_pp)
+        return idata
     return idata_pp
 
 
@@ -2029,127 +2065,10 @@ def sample_posterior_predictive_w(
         weighted models (default), or a dictionary with variable names as keys, and samples as
         numpy arrays.
     """
-    raise NotImplementedError(f"sample_posterior_predictive_w has not yet been ported to PyMC 4.0.")
-
-    if isinstance(traces[0], InferenceData):
-        n_samples = [
-            trace.posterior.sizes["chain"] * trace.posterior.sizes["draw"] for trace in traces
-        ]
-        traces = [dataset_to_point_list(trace.posterior) for trace in traces]
-    elif isinstance(traces[0], xarray.Dataset):
-        n_samples = [trace.sizes["chain"] * trace.sizes["draw"] for trace in traces]
-        traces = [dataset_to_point_list(trace) for trace in traces]
-    else:
-        n_samples = [len(i) * i.nchains for i in traces]
-
-    if models is None:
-        models = [modelcontext(models)] * len(traces)
-
-    if random_seed is not None:
-        (random_seed,) = _get_seeds_per_chain(random_seed, 1)
-
-    for model in models:
-        if model.potentials:
-            warnings.warn(
-                "The effect of Potentials on other parameters is ignored during posterior predictive sampling. "
-                "This is likely to lead to invalid or biased predictive samples.",
-                UserWarning,
-                stacklevel=2,
-            )
-            break
-
-    if weights is None:
-        weights = [1] * len(traces)
-
-    if len(traces) != len(weights):
-        raise ValueError("The number of traces and weights should be the same")
-
-    if len(models) != len(weights):
-        raise ValueError("The number of models and weights should be the same")
-
-    length_morv = len(models[0].observed_RVs)
-    if any(len(i.observed_RVs) != length_morv for i in models):
-        raise ValueError("The number of observed RVs should be the same for all models")
-
-    weights = np.asarray(weights)
-    p = weights / np.sum(weights)
-
-    min_tr = min(n_samples)
-
-    n = (min_tr * p).astype("int")
-    # ensure n sum up to min_tr
-    idx = np.argmax(n)
-    n[idx] = n[idx] + min_tr - np.sum(n)
-    trace = []
-    for i, j in enumerate(n):
-        tr = traces[i]
-        len_trace = len(tr)
-        try:
-            nchain = tr.nchains
-        except AttributeError:
-            nchain = 1
-
-        indices = np.random.randint(0, nchain * len_trace, j)
-        if nchain > 1:
-            chain_idx, point_idx = np.divmod(indices, len_trace)
-            for cidx, pidx in zip(chain_idx, point_idx):
-                trace.append(tr._straces[cidx].point(pidx))
-        else:
-            for idx in indices:
-                trace.append(tr[idx])
-
-    obs = [x for m in models for x in m.observed_RVs]
-    variables = np.repeat(obs, n)
-
-    lengths = list({np.atleast_1d(observed).shape for observed in obs})
-
-    size: List[Optional[Tuple[int, ...]]] = []
-    if len(lengths) == 1:
-        size = [None] * len(variables)
-    elif len(lengths) > 2:
-        raise ValueError("Observed variables could not be broadcast together")
-    else:
-        x = np.zeros(shape=lengths[0])
-        y = np.zeros(shape=lengths[1])
-        b = np.broadcast(x, y)
-        for var in variables:
-            # XXX: This needs to be refactored
-            shape = None  # np.shape(np.atleast_1d(var.distribution.default()))
-            if shape != b.shape:
-                size.append(b.shape)
-            else:
-                size.append(None)
-    len_trace = len(trace)
-
-    if samples is None:
-        samples = len_trace
-
-    indices = np.random.randint(0, len_trace, samples)
-
-    if progressbar:
-        indices = progress_bar(indices, total=samples, display=progressbar)
-
-    try:
-        ppcl: Dict[str, list] = defaultdict(list)
-        for idx in indices:
-            param = trace[idx]
-            var = variables[idx]
-            # TODO sample_posterior_predictive_w is currently only work for model with
-            # one observed.
-            # XXX: This needs to be refactored
-            # ppc[var.name].append(draw_values([var], point=param, size=size[idx])[0])
-            raise NotImplementedError()
-
-    except KeyboardInterrupt:
-        pass
-    else:
-        ppcd = {k: np.asarray(v) for k, v in ppcl.items()}
-        if not return_inferencedata:
-            return ppcd
-        ikwargs: Dict[str, Any] = dict(model=models)
-        if idata_kwargs:
-            ikwargs.update(idata_kwargs)
-        return pm.to_inference_data(posterior_predictive=ppcd, **ikwargs)
+    raise FutureWarning(
+        "The function `sample_posterior_predictive_w` has been removed in PyMC 4.3.0. "
+        "Switch to `arviz.stats.weight_predictions`"
+    )
 
 
 def sample_prior_predictive(

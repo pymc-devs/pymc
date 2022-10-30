@@ -102,9 +102,9 @@ class DistributionMeta(ABCMeta):
             clsdict["random"] = _random
 
         rv_op = clsdict.setdefault("rv_op", None)
-        rv_type = clsdict.setdefault("rv_type", None)
+        rv_type = None
 
-        if rv_type is None and isinstance(rv_op, RandomVariable):
+        if isinstance(rv_op, RandomVariable):
             rv_type = type(rv_op)
             clsdict["rv_type"] = rv_type
 
