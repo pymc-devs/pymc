@@ -194,8 +194,8 @@ def test_model_latex_repr_three_levels_model():
         "$$",
         "\\begin{array}{rcl}",
         "\\text{mu} &\\sim & \\operatorname{N}(0,~5)\\\\\\text{sigma} &\\sim & "
-        "\\operatorname{HalfCauchy}(0,~2.5)\\\\\\text{censored_normal} &\\sim & "
-        "\\operatorname{Censored}(\\operatorname{Normal}(\\text{mu},~\\text{sigma}),~-2,~2)",
+        "\\operatorname{C^{+}}(0,~2.5)\\\\\\text{censored_normal} &\\sim & "
+        "\\operatorname{Censored}(\\operatorname{N}(\\text{mu},~\\text{sigma}),~-2,~2)",
         "\\end{array}",
         "$$",
     ]
