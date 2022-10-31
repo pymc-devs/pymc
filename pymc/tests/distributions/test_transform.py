@@ -327,7 +327,7 @@ class TestElementWiseLogp(SeededTest):
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
         # Original distribution is univariate
         if x.owner.op.ndim_supp == 0:
-            assert model.logp(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
+            assert model.logp(x, sum=False)[0].ndim == x.ndim == (jacob_det.ndim + 1)
         # Original distribution is multivariate
         else:
             assert model.logp(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
@@ -573,7 +573,7 @@ class TestElementWiseLogp(SeededTest):
             {"mu": mu, "cov": cov},
             size=size,
             initval=initval,
-            transform=tr.multivariate_ordered,
+            transform=tr.ordered,
         )
         self.check_vectortransform_elementwise_logp(model)
 
@@ -607,11 +607,11 @@ def test_discrete_trafo():
 def test_transforms_ordered():
     with pm.Model() as model:
         pm.Normal(
-            "x",
+            "x_univariate",
             mu=[-3, -1, 1, 2],
             sigma=1,
             size=(10, 4),
-            transform=pm.distributions.transforms.ordered,
+            transform=tr.univariate_ordered,
         )
 
     log_prob = model.point_logps()
@@ -625,7 +625,7 @@ def test_transforms_sumto1():
             mu=[-3, -1, 1, 2],
             sigma=1,
             size=(10, 4),
-            transform=pm.distributions.transforms.sum_to_1,
+            transform=tr.univariate_sum_to_1,
         )
 
     log_prob = model.point_logps()
