@@ -42,7 +42,9 @@ from pymc.distributions.timeseries import (
     RandomWalk,
 )
 from pymc.model import Model
-from pymc.sampling import draw, sample, sample_posterior_predictive
+from pymc.sampling import sample
+from pymc.sampling_predictive import sample_posterior_predictive
+from pymc.sampling_utils import draw
 from pymc.tests.distributions.util import assert_moment_is_expected
 from pymc.tests.helpers import select_by_precision
 
