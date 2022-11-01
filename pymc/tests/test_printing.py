@@ -1,6 +1,6 @@
 import numpy as np
 
-from pymc import Bernoulli, Censored, Mixture
+from pymc import Bernoulli, Censored, HalfCauchy, Mixture, StudentT
 from pymc.aesaraf import floatX
 from pymc.distributions import (
     Dirichlet,
@@ -130,12 +130,12 @@ class TestStrAndLatexRepr:
                 r"$\text{beta} \sim \operatorname{N}(0,~10)$",
                 r"$\text{Z} \sim \operatorname{N}(f(),~f())$",
                 r"$\text{nb_with_p_n} \sim \operatorname{NB}(10,~\text{nbp})$",
-                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\text{\$\operatorname{DiracDelta}(0)\$},~\text{\$\operatorname{Pois}(5)\$})$",
+                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5))$",
                 r"$\text{w} \sim \operatorname{Dir}(\text{<constant>})$",
                 (
                     r"$\text{nested_mix} \sim \operatorname{MarginalMixture}(\text{w},"
-                    r"~\text{\$\operatorname{MarginalMixture}(f(),~\text{\\$\operatorname{DiracDelta}(0)\\$},~\text{\\$\operatorname{Pois}(5)\\$})\$},"
-                    r"~\text{\$\operatorname{Censored}(\text{\\$\operatorname{Bern}(0.5)\\$},~-1,~1)\$})$"
+                    r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5)),"
+                    r"~\operatorname{Censored}(\operatorname{Bern}(0.5),~-1,~1))$"
                 ),
                 r"$\text{Y_obs} \sim \operatorname{N}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
@@ -178,3 +178,43 @@ class TestStrAndLatexRepr:
                         assert segment in model_text
                 else:
                     assert text in model_text
+
+
+def test_model_latex_repr_three_levels_model():
+    with Model() as censored_model:
+        mu = Normal("mu", 0.0, 5.0)
+        sigma = HalfCauchy("sigma", 2.5)
+        normal_dist = Normal.dist(mu=mu, sigma=sigma)
+        censored_normal = Censored(
+            "censored_normal", normal_dist, lower=-2.0, upper=2.0, observed=[1, 0, 0.5]
+        )
+
+    latex_repr = censored_model.str_repr(formatting="latex")
+    expected = [
+        "$$",
+        "\\begin{array}{rcl}",
+        "\\text{mu} &\\sim & \\operatorname{N}(0,~5)\\\\\\text{sigma} &\\sim & "
+        "\\operatorname{C^{+}}(0,~2.5)\\\\\\text{censored_normal} &\\sim & "
+        "\\operatorname{Censored}(\\operatorname{N}(\\text{mu},~\\text{sigma}),~-2,~2)",
+        "\\end{array}",
+        "$$",
+    ]
+    assert [line.strip() for line in latex_repr.split("\n")] == expected
+
+
+def test_model_latex_repr_mixture_model():
+    with Model() as mix_model:
+        w = Dirichlet("w", [1, 1])
+        mix = Mixture("mix", w=w, comp_dists=[Normal.dist(0.0, 5.0), StudentT.dist(7.0)])
+
+    latex_repr = mix_model.str_repr(formatting="latex")
+    expected = [
+        "$$",
+        "\\begin{array}{rcl}",
+        "\\text{w} &\\sim & "
+        "\\operatorname{Dir}(\\text{<constant>})\\\\\\text{mix} &\\sim & "
+        "\\operatorname{MarginalMixture}(\\text{w},~\\operatorname{N}(0,~5),~\\operatorname{StudentT}(7,~0,~1))",
+        "\\end{array}",
+        "$$",
+    ]
+    assert [line.strip() for line in latex_repr.split("\n")] == expected

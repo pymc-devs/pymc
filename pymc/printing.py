@@ -58,7 +58,7 @@ def str_for_dist(
 
     if "latex" in formatting:
         if print_name is not None:
-            print_name = r"\text{" + _latex_escape(dist.name) + "}"
+            print_name = r"\text{" + _latex_escape(dist.name.strip("$")) + "}"
 
         op_name = (
             dist.owner.op._print_name[1]
@@ -67,9 +67,11 @@ def str_for_dist(
         )
         if include_params:
             if print_name:
-                return r"${} \sim {}({})$".format(print_name, op_name, ",~".join(dist_args))
+                return r"${} \sim {}({})$".format(
+                    print_name, op_name, ",~".join([d.strip("$") for d in dist_args])
+                )
             else:
-                return r"${}({})$".format(op_name, ",~".join(dist_args))
+                return r"${}({})$".format(op_name, ",~".join([d.strip("$") for d in dist_args]))
 
         else:
             if print_name:
@@ -138,7 +140,7 @@ def str_for_potential_or_deterministic(
     LaTeX or plain, optionally with distribution parameter values included."""
     print_name = var.name if var.name is not None else "<unnamed>"
     if "latex" in formatting:
-        print_name = r"\text{" + _latex_escape(print_name) + "}"
+        print_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
         if include_params:
             return rf"${print_name} \sim \operatorname{{{dist_name}}}({_str_for_expression(var, formatting=formatting)})$"
         else:
@@ -182,7 +184,7 @@ def _str_for_input_rv(var: Variable, formatting: str) -> str:
         else str_for_dist(var, formatting=formatting, include_params=True)
     )
     if "latex" in formatting:
-        return r"\text{" + _latex_escape(_str) + "}"
+        return _latex_text_format(_latex_escape(_str.strip("$")))
     else:
         return _str
 
@@ -215,9 +217,20 @@ def _str_for_expression(var: Variable, formatting: str) -> str:
     names = [x.name for x in parents]
 
     if "latex" in formatting:
-        return r"f(" + ",~".join([r"\text{" + _latex_escape(n) + "}" for n in names]) + ")"
+        return (
+            r"f("
+            + ",~".join([_latex_text_format(_latex_escape(n.strip("$"))) for n in names])
+            + ")"
+        )
     else:
-        return r"f(" + ", ".join(names) + ")"
+        return r"f(" + ", ".join([n.strip("$") for n in names]) + ")"
+
+
+def _latex_text_format(text: str) -> str:
+    if r"\operatorname{" in text:
+        return text
+    else:
+        return r"\text{" + text + "}"
 
 
 def _latex_escape(text: str) -> str:
