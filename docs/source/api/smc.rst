@@ -12,7 +12,7 @@ Sequential Monte Carlo
 SMC kernels
 -----------
 
-.. currentmodule:: pymc.smc.smc
+.. currentmodule:: pymc.smc.kernels
 .. autosummary::
    :toctree: generated/
 

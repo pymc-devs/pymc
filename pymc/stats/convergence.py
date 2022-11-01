@@ -68,7 +68,7 @@ def run_convergence_checks(idata: arviz.InferenceData, model) -> List[SamplerWar
         warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info")
         return [warn]
 
-    warnings = []
+    warnings: List[SamplerWarning] = []
     valid_name = [rv.name for rv in model.free_RVs + model.deterministics]
     varnames = []
     for rv in model.free_RVs:
@@ -104,11 +104,60 @@ def run_convergence_checks(idata: arviz.InferenceData, model) -> List[SamplerWar
         warn = SamplerWarning(WarningType.CONVERGENCE, msg, "error", extra=ess)
         warnings.append(warn)
 
+    warnings += warn_divergences(idata)
+    warnings += warn_treedepth(idata)
+
+    return warnings
+
+
+def warn_divergences(idata: arviz.InferenceData) -> List[SamplerWarning]:
+    """Checks sampler stats and creates a list of warnings about divergences."""
+    sampler_stats = idata.get("sample_stats", None)
+    if sampler_stats is None:
+        return []
+
+    diverging = sampler_stats.get("diverging", None)
+    if diverging is None:
+        return []
+
+    # Warn about divergences
+    n_div = int(diverging.sum())
+    if n_div == 0:
+        return []
+    warning = SamplerWarning(
+        WarningType.DIVERGENCES,
+        f"There were {n_div} divergences after tuning. Increase `target_accept` or reparameterize.",
+        "error",
+    )
+    return [warning]
+
+
+def warn_treedepth(idata: arviz.InferenceData) -> List[SamplerWarning]:
+    """Checks sampler stats and creates a list of warnings about tree depth."""
+    sampler_stats = idata.get("sample_stats", None)
+    if sampler_stats is None:
+        return []
+
+    treedepth = sampler_stats.get("tree_depth", None)
+    if treedepth is None:
+        return []
+
+    warnings = []
+    for c in treedepth.chain:
+        if sum(treedepth.sel(chain=c)) / treedepth.sizes["draw"] > 0.05:
+            warnings.append(
+                SamplerWarning(
+                    WarningType.TREEDEPTH,
+                    f"Chain {c} reached the maximum tree depth."
+                    " Increase `max_treedepth`, increase `target_accept` or reparameterize.",
+                    "warn",
+                )
+            )
     return warnings
 
 
 def log_warning(warn: SamplerWarning):
-    level = _LEVELS[warn.level]
+    level = _LEVELS.get(warn.level, logging.WARNING)
     logger.log(level, warn.message)
 
 

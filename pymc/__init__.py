@@ -72,6 +72,7 @@ from pymc.smc import *
 from pymc.stats import *
 from pymc.step_methods import *
 from pymc.tuning import *
+from pymc.util import drop_warning_stat
 from pymc.variational import *
 from pymc.vartypes import *
 

@@ -40,12 +40,9 @@ logger = logging.getLogger("pymc")
 
 
 class ParallelSamplingError(Exception):
-    def __init__(self, message, chain, warnings=None):
+    def __init__(self, message, chain):
         super().__init__(message)
-        if warnings is None:
-            warnings = []
         self._chain = chain
-        self._warnings = warnings
 
 
 # Taken from https://hg.python.org/cpython/rev/c4f92b597074
@@ -74,8 +71,8 @@ def rebuild_exc(exc, tb):
 
 
 # Messages
-# ('writing_done', is_last, sample_idx, tuning, stats, warns)
-# ('error', warnings, *exception_info)
+# ('writing_done', is_last, sample_idx, tuning, stats)
+# ('error', *exception_info)
 
 # ('abort', reason)
 # ('write_next',)
@@ -133,7 +130,7 @@ class _Process:
             e = ExceptionWithTraceback(e, e.__traceback__)
             # Send is not blocking so we have to force a wait for the abort
             # message
-            self._msg_pipe.send(("error", None, e))
+            self._msg_pipe.send(("error", e))
             self._wait_for_abortion()
         finally:
             self._msg_pipe.close()
@@ -181,9 +178,8 @@ class _Process:
                 try:
                     point, stats = self._compute_point()
                 except SamplingError as e:
-                    warns = self._collect_warnings()
                     e = ExceptionWithTraceback(e, e.__traceback__)
-                    self._msg_pipe.send(("error", warns, e))
+                    self._msg_pipe.send(("error", e))
             else:
                 return
 
@@ -193,11 +189,7 @@ class _Process:
             elif msg[0] == "write_next":
                 self._write_point(point)
                 is_last = draw + 1 == self._draws + self._tune
-                if is_last:
-                    warns = self._collect_warnings()
-                else:
-                    warns = None
-                self._msg_pipe.send(("writing_done", is_last, draw, tuning, stats, warns))
+                self._msg_pipe.send(("writing_done", is_last, draw, tuning, stats))
                 draw += 1
             else:
                 raise ValueError("Unknown message " + msg[0])
@@ -209,12 +201,6 @@ class _Process:
             point = self._step_method.step(self._point)
             stats = None
         return point, stats
-
-    def _collect_warnings(self):
-        if hasattr(self._step_method, "warnings"):
-            return self._step_method.warnings()
-        else:
-            return []
 
 
 def _run_process(*args):
@@ -308,11 +294,13 @@ class ProcessAdapter:
             except Exception:
                 pass
             if message is not None and message[0] == "error":
-                warns, old_error = message[1:]
-                if warns is not None:
-                    error = ParallelSamplingError(str(old_error), self.chain, warns)
+                old_error = message[1]
+                if old_error is not None:
+                    error = ParallelSamplingError(
+                        f"Chain {self.chain} failed with: {old_error}", self.chain
+                    )
                 else:
-                    error = RuntimeError("Chain %s failed." % self.chain)
+                    error = RuntimeError(f"Chain {self.chain} failed.")
                 raise error from old_error
             raise
 
@@ -345,11 +333,13 @@ class ProcessAdapter:
         msg = ready[0].recv()
 
         if msg[0] == "error":
-            warns, old_error = msg[1:]
-            if warns is not None:
-                error = ParallelSamplingError(str(old_error), proc.chain, warns)
+            old_error = msg[1]
+            if old_error is not None:
+                error = ParallelSamplingError(
+                    f"Chain {proc.chain} failed with: {old_error}", proc.chain
+                )
             else:
-                error = RuntimeError("Chain %s failed." % proc.chain)
+                error = RuntimeError(f"Chain {proc.chain} failed.")
             raise error from old_error
         elif msg[0] == "writing_done":
             proc._readable = True
@@ -383,7 +373,7 @@ class ProcessAdapter:
                 process.join()
 
 
-Draw = namedtuple("Draw", ["chain", "is_last", "draw_idx", "tuning", "stats", "point", "warnings"])
+Draw = namedtuple("Draw", ["chain", "is_last", "draw_idx", "tuning", "stats", "point"])
 
 
 class ParallelSampler:
@@ -466,7 +456,7 @@ class ParallelSampler:
 
         while self._active:
             draw = ProcessAdapter.recv_draw(self._active)
-            proc, is_last, draw, tuning, stats, warns = draw
+            proc, is_last, draw, tuning, stats = draw
             self._total_draws += 1
             if not tuning and stats and stats[0].get("diverging"):
                 self._divergences += 1
@@ -491,7 +481,7 @@ class ParallelSampler:
             if not is_last:
                 proc.write_next()
 
-            yield Draw(proc.chain, is_last, draw, tuning, stats, point, warns)
+            yield Draw(proc.chain, is_last, draw, tuning, stats, point)
 
     def __enter__(self):
         self._in_context = True
