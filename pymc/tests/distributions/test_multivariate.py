@@ -41,7 +41,7 @@ from pymc.distributions.multivariate import (
 )
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.math import kronecker
-from pymc.sampling_utils import draw
+from pymc.sampling_forward import draw
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,
     Domain,
