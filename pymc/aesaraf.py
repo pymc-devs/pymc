@@ -546,7 +546,7 @@ def join_nonshared_inputs(
 
     Parameters
     ----------
-    point : Point
+    point : dict of {str : array_like}
         Dictionary that maps each input variable name to a numerical variable. The values
         are used to extract the shape of each input variable to establish a correct
         mapping between joined and original inputs. The shape of each variable is
