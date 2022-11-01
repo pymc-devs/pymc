@@ -56,10 +56,7 @@ from pymc.distributions.transforms import _default_transform
 from pymc.math import expand_packed_triangular
 from pymc.model import Model
 from pymc.sampling import sample
-from pymc.sampling_predictive import (
-    sample_posterior_predictive,
-    sample_prior_predictive,
-)
+from pymc.sampling_forward import sample_posterior_predictive, sample_prior_predictive
 from pymc.sampling_utils import draw
 from pymc.step_methods import Metropolis
 from pymc.tests.distributions.util import (

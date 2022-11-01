@@ -52,7 +52,7 @@ pymc/ode/utils.py
 pymc/parallel_sampling.py
 pymc/plots/__init__.py
 pymc/sampling.py
-pymc/sampling_predictive.py
+pymc/sampling_forward.py
 pymc/sampling_utils.py
 pymc/smc/__init__.py
 pymc/smc/sampling.py

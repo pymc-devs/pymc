@@ -59,7 +59,7 @@ jobs:
             pymc/tests/distributions/test_censored.py
             pymc/tests/distributions/test_simulator.py
             pymc/tests/distributions/test_truncated.py
-            pymc/tests/test_sampling_predictive.py
+            pymc/tests/test_sampling_forward.py
             pymc/tests/stats/test_convergence.py
 
           - |
