@@ -579,11 +579,11 @@ def _logp_forw(point, out_vars, in_vars, shared):
 
     Parameters
     ----------
-    out_vars: List
+    out_vars : list
         containing :class:`pymc.Distribution` for the output variables
-    in_vars: List
+    in_vars : list
         containing :class:`pymc.Distribution` for the input variables
-    shared: List
+    shared : list
         containing :class:`aesara.tensor.Tensor` for depended shared data
     """
 
@@ -602,7 +602,9 @@ def _logp_forw(point, out_vars, in_vars, shared):
         out_vars = clone_replace(out_vars, replace_int_input, rebuild_strict=False)
         in_vars = new_in_vars
 
-    out_list, inarray0 = join_nonshared_inputs(point, out_vars, in_vars, shared)
+    out_list, inarray0 = join_nonshared_inputs(
+        point=point, outputs=out_vars, inputs=in_vars, shared_inputs=shared
+    )
     f = compile_pymc([inarray0], out_list[0])
     f.trust_input = True
     return f
