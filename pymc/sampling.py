@@ -46,12 +46,18 @@ from pymc.initial_point import (
 )
 from pymc.model import Model, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
-from pymc.sampling_utils import RandomSeed, RandomState, _get_seeds_per_chain
 from pymc.stats.convergence import SamplerWarning, log_warning, run_convergence_checks
 from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
-from pymc.util import drop_warning_stat, get_untransformed_name, is_transformed_name
+from pymc.util import (
+    RandomSeed,
+    RandomState,
+    _get_seeds_per_chain,
+    drop_warning_stat,
+    get_untransformed_name,
+    is_transformed_name,
+)
 from pymc.vartypes import discrete_types
 
 sys.setrecursionlimit(10000)

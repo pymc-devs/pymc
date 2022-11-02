@@ -53,8 +53,13 @@ from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
 from pymc.model import Model, modelcontext
-from pymc.sampling_utils import RandomState, _get_seeds_per_chain
-from pymc.util import dataset_to_point_list, get_default_varnames, point_wrapper
+from pymc.util import (
+    RandomState,
+    _get_seeds_per_chain,
+    dataset_to_point_list,
+    get_default_varnames,
+    point_wrapper,
+)
 
 __all__ = (
     "compile_forward_sampling_function",

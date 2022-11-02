@@ -21,7 +21,7 @@ import time
 import traceback
 
 from collections import namedtuple
-from typing import TYPE_CHECKING, Dict, List, Sequence
+from typing import Dict, List, Sequence
 
 import cloudpickle
 import numpy as np
@@ -31,10 +31,7 @@ from fastprogress.fastprogress import progress_bar
 from pymc import aesaraf
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-
-# Avoid circular import
-if TYPE_CHECKING:
-    from pymc.sampling import RandomSeed
+from pymc.util import RandomSeed
 
 logger = logging.getLogger("pymc")
 

@@ -70,8 +70,12 @@ from pymc.backends import NDArray
 from pymc.blocking import DictToArrayBijection
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
-from pymc.sampling_utils import RandomState, _get_seeds_per_chain
-from pymc.util import WithMemoization, locally_cachedmethod
+from pymc.util import (
+    RandomState,
+    WithMemoization,
+    _get_seeds_per_chain,
+    locally_cachedmethod,
+)
 from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
 

@@ -8,7 +8,6 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from pymc.initial_point import StartDict
 from pymc.sampling import _init_jitter
-from pymc.sampling_utils import RandomSeed, _get_seeds_per_chain
 
 xla_flags = os.getenv("XLA_FLAGS", "")
 xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
@@ -33,7 +32,7 @@ from arviz.data.base import make_attrs
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations
-from pymc.util import get_default_varnames
+from pymc.util import RandomSeed, _get_seeds_per_chain, get_default_varnames
 
 warnings.warn("This module is experimental.")
 
