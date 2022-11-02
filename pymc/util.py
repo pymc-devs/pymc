@@ -14,7 +14,7 @@
 
 import functools
 
-from typing import Any, Dict, List, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 
 import arviz
 import cloudpickle
@@ -387,3 +387,57 @@ def point_wrapper(core_function):
         return core_function(**input_point)
 
     return wrapped
+
+
+RandomSeed = Optional[Union[int, Sequence[int], np.ndarray]]
+RandomState = Union[RandomSeed, np.random.RandomState, np.random.Generator]
+
+
+def _get_seeds_per_chain(
+    random_state: RandomState,
+    chains: int,
+) -> Union[Sequence[int], np.ndarray]:
+    """Obtain or validate specified integer seeds per chain.
+
+    This function process different possible sources of seeding and returns one integer
+    seed per chain:
+    1. If the input is an integer and a single chain is requested, the input is
+        returned inside a tuple.
+    2. If the input is a sequence or NumPy array with as many entries as chains,
+        the input is returned.
+    3. If the input is an integer and multiple chains are requested, new unique seeds
+        are generated from NumPy default Generator seeded with that integer.
+    4. If the input is None new unique seeds are generated from an unseeded NumPy default
+        Generator.
+    5. If a RandomState or Generator is provided, new unique seeds are generated from it.
+
+    Raises
+    ------
+    ValueError
+        If none of the conditions above are met
+    """
+
+    def _get_unique_seeds_per_chain(integers_fn):
+        seeds = []
+        while len(set(seeds)) != chains:
+            seeds = [int(seed) for seed in integers_fn(2**30, dtype=np.int64, size=chains)]
+        return seeds
+
+    if random_state is None or isinstance(random_state, int):
+        if chains == 1 and isinstance(random_state, int):
+            return (random_state,)
+        return _get_unique_seeds_per_chain(np.random.default_rng(random_state).integers)
+    if isinstance(random_state, np.random.Generator):
+        return _get_unique_seeds_per_chain(random_state.integers)
+    if isinstance(random_state, np.random.RandomState):
+        return _get_unique_seeds_per_chain(random_state.randint)
+
+    if not isinstance(random_state, (list, tuple, np.ndarray)):
+        raise ValueError(f"The `seeds` must be array-like. Got {type(random_state)} instead.")
+
+    if len(random_state) != chains:
+        raise ValueError(
+            f"Number of seeds ({len(random_state)}) does not match the number of chains ({chains})."
+        )
+
+    return random_state
