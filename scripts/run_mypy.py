@@ -53,7 +53,6 @@ pymc/parallel_sampling.py
 pymc/plots/__init__.py
 pymc/sampling.py
 pymc/sampling_forward.py
-pymc/sampling_utils.py
 pymc/smc/__init__.py
 pymc/smc/sampling.py
 pymc/smc/kernels.py
