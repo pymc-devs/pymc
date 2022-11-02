@@ -35,7 +35,10 @@ import pymc as pm
 
 from pymc.aesaraf import compile_pymc
 from pymc.backends.base import MultiTrace
-from pymc.sampling_forward import compile_forward_sampling_function
+from pymc.sampling_forward import (
+    compile_forward_sampling_function,
+    get_vars_in_point_list,
+)
 from pymc.tests.helpers import SeededTest, fast_unstable_sampling_mode
 
 
@@ -1635,3 +1638,24 @@ class TestNestedRandom(SeededTest):
             prior_samples=prior_samples,
         )
         assert prior["target"].shape == (prior_samples,) + shape
+
+
+def test_get_vars_in_point_list():
+    with pm.Model() as modelA:
+        pm.Normal("a", 0, 1)
+        pm.Normal("b", 0, 1)
+    with pm.Model() as modelB:
+        a = pm.Normal("a", 0, 1)
+        pm.Normal("c", 0, 1)
+
+    point_list = [{"a": 0, "b": 0}]
+    vars_in_trace = get_vars_in_point_list(point_list, modelB)
+    assert set(vars_in_trace) == {a}
+
+    strace = pm.backends.NDArray(model=modelB, vars=modelA.free_RVs)
+    strace.setup(1, 1)
+    strace.values = point_list[0]
+    strace.draw_idx = 1
+    trace = MultiTrace([strace])
+    vars_in_trace = get_vars_in_point_list(trace, modelB)
+    assert set(vars_in_trace) == {a}

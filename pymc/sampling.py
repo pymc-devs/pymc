@@ -46,12 +46,7 @@ from pymc.initial_point import (
 )
 from pymc.model import Model, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
-from pymc.sampling_utils import (
-    RandomSeed,
-    RandomState,
-    _get_seeds_per_chain,
-    all_continuous,
-)
+from pymc.sampling_utils import RandomSeed, RandomState, _get_seeds_per_chain
 from pymc.stats.convergence import SamplerWarning, log_warning, run_convergence_checks
 from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
@@ -206,6 +201,17 @@ def _print_step_hierarchy(s: Step, level: int = 0) -> None:
             ]
         )
         _log.info(">" * level + f"{s.__class__.__name__}: [{varnames}]")
+
+
+def all_continuous(vars):
+    """Check that vars not include discrete variables, excepting observed RVs."""
+
+    vars_ = [var for var in vars if not hasattr(var.tag, "observations")]
+
+    if any([(var.dtype in discrete_types) for var in vars_]):
+        return False
+    else:
+        return True
 
 
 def sample(

@@ -16,10 +16,7 @@ import re
 import numpy as np
 import pytest
 
-import pymc as pm
-
-from pymc.backends.base import MultiTrace
-from pymc.sampling_utils import _get_seeds_per_chain, get_vars_in_point_list
+from pymc.sampling_utils import _get_seeds_per_chain
 
 
 def test_get_seeds_per_chain():
@@ -56,24 +53,3 @@ def test_get_seeds_per_chain():
 
     with pytest.raises(ValueError, match=re.escape("The `seeds` must be array-like")):
         _get_seeds_per_chain({1: 1, 2: 2}, 2)
-
-
-def test_get_vars_in_point_list():
-    with pm.Model() as modelA:
-        pm.Normal("a", 0, 1)
-        pm.Normal("b", 0, 1)
-    with pm.Model() as modelB:
-        a = pm.Normal("a", 0, 1)
-        pm.Normal("c", 0, 1)
-
-    point_list = [{"a": 0, "b": 0}]
-    vars_in_trace = get_vars_in_point_list(point_list, modelB)
-    assert set(vars_in_trace) == {a}
-
-    strace = pm.backends.NDArray(model=modelB, vars=modelA.free_RVs)
-    strace.setup(1, 1)
-    strace.values = point_list[0]
-    strace.draw_idx = 1
-    trace = MultiTrace([strace])
-    vars_in_trace = get_vars_in_point_list(trace, modelB)
-    assert set(vars_in_trace) == {a}

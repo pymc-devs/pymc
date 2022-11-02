@@ -44,20 +44,16 @@ from aesara.tensor.random.var import (
 from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
+from typing_extensions import TypeAlias
 
 import pymc as pm
 
 from pymc.aesaraf import compile_pymc
 from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import MultiTrace
+from pymc.blocking import PointType
 from pymc.model import Model, modelcontext
-from pymc.sampling_utils import (
-    ArrayLike,
-    PointList,
-    RandomState,
-    _get_seeds_per_chain,
-    get_vars_in_point_list,
-)
+from pymc.sampling_utils import RandomState, _get_seeds_per_chain
 from pymc.util import dataset_to_point_list, get_default_varnames, point_wrapper
 
 __all__ = (
@@ -69,7 +65,20 @@ __all__ = (
 )
 
 
+ArrayLike: TypeAlias = Union[np.ndarray, List[float]]
+PointList: TypeAlias = List[PointType]
+
 _log = logging.getLogger("pymc")
+
+
+def get_vars_in_point_list(trace, model):
+    """Get the list of Variable instances in the model that have values stored in the trace."""
+    if not isinstance(trace, MultiTrace):
+        names_in_trace = list(trace[0])
+    else:
+        names_in_trace = trace.varnames
+    vars_in_trace = [model[v] for v in names_in_trace if v in model]
+    return vars_in_trace
 
 
 def compile_forward_sampling_function(

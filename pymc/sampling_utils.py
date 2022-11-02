@@ -14,7 +14,7 @@
 
 """Helper functions for MCMC, prior and posterior predictive sampling."""
 
-from typing import List, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
 
 import numpy as np
 
@@ -22,11 +22,7 @@ from typing_extensions import TypeAlias
 
 from pymc.backends.base import BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray
-from pymc.initial_point import PointType
-from pymc.vartypes import discrete_types
 
-ArrayLike: TypeAlias = Union[np.ndarray, List[float]]
-PointList: TypeAlias = List[PointType]
 Backend: TypeAlias = Union[BaseTrace, MultiTrace, NDArray]
 
 RandomSeed = Optional[Union[int, Sequence[int], np.ndarray]]
@@ -34,17 +30,6 @@ RandomState = Union[RandomSeed, np.random.RandomState, np.random.Generator]
 
 
 __all__ = ()
-
-
-def all_continuous(vars):
-    """Check that vars not include discrete variables, excepting observed RVs."""
-
-    vars_ = [var for var in vars if not hasattr(var.tag, "observations")]
-
-    if any([(var.dtype in discrete_types) for var in vars_]):
-        return False
-    else:
-        return True
 
 
 def _get_seeds_per_chain(
@@ -95,13 +80,3 @@ def _get_seeds_per_chain(
         )
 
     return random_state
-
-
-def get_vars_in_point_list(trace, model):
-    """Get the list of Variable instances in the model that have values stored in the trace."""
-    if not isinstance(trace, MultiTrace):
-        names_in_trace = list(trace[0])
-    else:
-        names_in_trace = trace.varnames
-    vars_in_trace = [model[v] for v in names_in_trace if v in model]
-    return vars_in_trace
