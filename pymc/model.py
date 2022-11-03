@@ -1450,7 +1450,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             observed_rv_var.tag.observations = nonmissing_data
 
             self.create_value_var(observed_rv_var, transform=None, value_var=nonmissing_data)
-            self.add_random_variable(observed_rv_var, dims)
+            self.add_random_variable(observed_rv_var)
             self.observed_RVs.append(observed_rv_var)
 
             # Create deterministic that combines observed and missing

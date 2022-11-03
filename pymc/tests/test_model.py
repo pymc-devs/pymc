@@ -1365,6 +1365,18 @@ class TestImputationMissingData:
         assert x_obs_vv in logp_inputs
         assert x_unobs_vv in logp_inputs
 
+    def test_dims(self):
+        """Test that we don't propagate dims to the subcomponents of a partially
+        observed RV
+
+        See https://github.com/pymc-devs/pymc/issues/6177
+        """
+        data = np.array([np.nan] * 3 + [0] * 7)
+        with pm.Model(coords={"observed": range(10)}) as model:
+            with pytest.warns(ImputationWarning):
+                x = pm.Normal("x", observed=data, dims=("observed",))
+        assert model.RV_dims == {"x": ("observed",)}
+
 
 class TestShared(SeededTest):
     def test_deterministic(self):
