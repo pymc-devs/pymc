@@ -548,14 +548,14 @@ class TestMatchesScipy:
 
     def test_multinomial_negative_p(self):
         # test passing a list/numpy with negative p raises an immediate error
-        with pytest.raises(ValueError, match="[-1, 1, 1]"):
+        with pytest.raises(ValueError, match="Negative `p` parameters are not valid"):
             with pm.Model() as model:
                 x = pm.Multinomial("x", n=5, p=[-1, 1, 1])
 
     def test_multinomial_p_not_normalized(self):
         # test UserWarning is raised for p vals that sum to more than 1
         # and normaliation is triggered
-        with pytest.warns(UserWarning, match="[5]"):
+        with pytest.warns(UserWarning, match="They will be automatically rescaled"):
             with pm.Model() as m:
                 x = pm.Multinomial("x", n=5, p=[1, 1, 1, 1, 1])
         # test stored p-vals have been normalised
@@ -564,18 +564,23 @@ class TestMatchesScipy:
     def test_multinomial_negative_p_symbolic(self):
         # Passing symbolic negative p does not raise an immediate error, but evaluating
         # logp raises a ParameterValueError
+        value = np.array([[1, 1, 1]])
+
+        x = at.scalar("x")
+        invalid_dist = pm.Multinomial.dist(n=1, p=[x, x, x])
+
         with pytest.raises(ParameterValueError):
-            value = np.array([[1, 1, 1]])
-            invalid_dist = pm.Multinomial.dist(n=1, p=at.as_tensor_variable([-1, 0.5, 0.5]))
-            pm.logp(invalid_dist, value).eval()
+            pm.logp(invalid_dist, value).eval({x: -1 / 3})
 
     def test_multinomial_p_not_normalized_symbolic(self):
         # Passing symbolic p that do not add up to on does not raise any warning, but evaluating
         # logp raises a ParameterValueError
+        value = np.array([[1, 1, 1]])
+
+        x = at.scalar("x")
+        invalid_dist = pm.Multinomial.dist(n=1, p=(x, x, x))
         with pytest.raises(ParameterValueError):
-            value = np.array([[1, 1, 1]])
-            invalid_dist = pm.Multinomial.dist(n=1, p=at.as_tensor_variable([1, 0.5, 0.5]))
-            pm.logp(invalid_dist, value).eval()
+            pm.logp(invalid_dist, value).eval({x: 0.5})
 
     @pytest.mark.parametrize("n", [(10), ([10, 11]), ([[5, 6], [10, 11]])])
     @pytest.mark.parametrize(
