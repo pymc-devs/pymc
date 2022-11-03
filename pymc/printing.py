@@ -16,7 +16,8 @@ import itertools
 
 from typing import Union
 
-from aesara.graph.basic import walk
+from aesara.compile import SharedVariable
+from aesara.graph.basic import Constant, walk
 from aesara.tensor.basic import TensorVariable, Variable
 from aesara.tensor.elemwise import DimShuffle
 from aesara.tensor.random.basic import RandomVariable
@@ -24,7 +25,6 @@ from aesara.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
 )
-from aesara.tensor.var import TensorConstant
 
 from pymc.model import Model
 
@@ -163,7 +163,7 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
             # in case other code overrides str_repr, fallback
             return False
 
-    if isinstance(var, TensorConstant):
+    if isinstance(var, (Constant, SharedVariable)):
         return _str_for_constant(var, formatting)
     elif isinstance(
         var.owner.op, (RandomVariable, SymbolicRandomVariable)
@@ -189,15 +189,22 @@ def _str_for_input_rv(var: Variable, formatting: str) -> str:
         return _str
 
 
-def _str_for_constant(var: TensorConstant, formatting: str) -> str:
-    if len(var.data.shape) == 0:
-        return f"{var.data:.3g}"
-    elif len(var.data.shape) == 1 and var.data.shape[0] == 1:
-        return f"{var.data[0]:.3g}"
-    elif "latex" in formatting:
-        return r"\text{<constant>}"
+def _str_for_constant(var: Union[Constant, SharedVariable], formatting: str) -> str:
+    if isinstance(var, Constant):
+        var_data = var.data
+        var_type = "constant"
     else:
-        return r"<constant>"
+        var_data = var.get_value()
+        var_type = "shared"
+
+    if len(var_data.shape) == 0:
+        return f"{var_data:.3g}"
+    elif len(var_data.shape) == 1 and var_data.shape[0] == 1:
+        return f"{var_data[0]:.3g}"
+    elif "latex" in formatting:
+        return rf"\text{{<{var_type}>}}"
+    else:
+        return rf"<{var_type}>"
 
 
 def _str_for_expression(var: Variable, formatting: str) -> str:
