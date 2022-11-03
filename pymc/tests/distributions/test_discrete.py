@@ -469,6 +469,15 @@ class TestMatchesScipy:
             {"n": NatSmall, "p": Unit, "psi": Unit},
         )
 
+    @pytest.mark.parametrize("n", [2, 3, 4])
+    def test_categorical(self, n):
+        check_logp(
+            pm.Categorical,
+            Domain(range(n), dtype="int64", edges=(0, n)),
+            {"p": Simplex(n)},
+            lambda value, p: categorical_logpdf(value, p),
+        )
+
     @aesara.config.change_flags(compute_test_value="raise")
     def test_categorical_bounds(self):
         with pm.Model():
@@ -495,6 +504,14 @@ class TestMatchesScipy:
             with pm.Model():
                 x = pm.Categorical("x", p=p)
 
+    def test_categorical_p_not_normalized(self):
+        # test UserWarning is raised for p vals that sum to more than 1
+        # and normaliation is triggered
+        with pytest.warns(UserWarning, match="[5]"):
+            with pm.Model() as m:
+                x = pm.Categorical("x", p=[1, 1, 1, 1, 1])
+        assert np.isclose(m.x.owner.inputs[3].sum().eval(), 1.0)
+
     def test_categorical_negative_p_symbolic(self):
         with pytest.raises(ParameterValueError):
             value = np.array([[1, 1, 1]])
@@ -506,23 +523,6 @@ class TestMatchesScipy:
             value = np.array([[1, 1, 1]])
             invalid_dist = pm.Categorical.dist(p=at.as_tensor_variable([2, 2, 2]))
             pm.logp(invalid_dist, value).eval()
-
-    @pytest.mark.parametrize("n", [2, 3, 4])
-    def test_categorical(self, n):
-        check_logp(
-            pm.Categorical,
-            Domain(range(n), dtype="int64", edges=(0, n)),
-            {"p": Simplex(n)},
-            lambda value, p: categorical_logpdf(value, p),
-        )
-
-    def test_categorical_p_not_normalized(self):
-        # test UserWarning is raised for p vals that sum to more than 1
-        # and normaliation is triggered
-        with pytest.warns(UserWarning, match="[5]"):
-            with pm.Model() as m:
-                x = pm.Categorical("x", p=[1, 1, 1, 1, 1])
-        assert np.isclose(m.x.owner.inputs[3].sum().eval(), 1.0)
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedlogistic(self, n):
