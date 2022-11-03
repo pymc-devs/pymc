@@ -232,6 +232,36 @@ def model_observation_dtype_casting():
     return model, compute_graph, plates
 
 
+def model_non_random_variable_rvs():
+    """Test that node types are not inferred based on the variable Op type, but
+    model properties
+
+    See https://github.com/pymc-devs/pymc/issues/5766
+    """
+    with pm.Model() as model:
+        mu = pm.Normal(name="mu", mu=0.0, sigma=5.0)
+
+        y_raw = pm.Normal.dist(mu)
+        y = pm.math.clip(y_raw, -3, 3)
+        model.register_rv(y, name="y")
+
+        z_raw = pm.Normal.dist(y, shape=(5,))
+        z = pm.math.clip(z_raw, -1, 1)
+        model.register_rv(z, name="z", data=[0] * 5)
+
+    compute_graph = {
+        "mu": set(),
+        "y": {"mu"},
+        "z": {"y"},
+    }
+    plates = {
+        "": {"mu", "y"},
+        "5": {"z"},
+    }
+
+    return model, compute_graph, plates
+
+
 class BaseModelGraphTest(SeededTest):
     model_func = None
 
@@ -360,3 +390,7 @@ class TestVariableSelection:
         mg = ModelGraph(model_with_different_descendants())
         assert set(mg.vars_to_plot(var_names=var_names)) == set(vars_to_plot)
         assert mg.make_compute_graph(var_names=var_names) == compute_graph
+
+
+class TestModelNonRandomVariableRVs(BaseModelGraphTest):
+    model_func = model_non_random_variable_rvs
