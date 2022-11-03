@@ -17,8 +17,33 @@ from pymc.math import dot
 from pymc.model import Deterministic, Model, Potential
 
 
-# TODO: This test is a bit too monolithic
-class TestStrAndLatexRepr:
+class BaseTestStrAndLatexRepr:
+    def test__repr_latex_(self):
+        for distribution, tex in zip(self.distributions, self.expected[("latex", True)]):
+            assert distribution._repr_latex_() == tex
+
+        model_tex = self.model._repr_latex_()
+
+        # make sure each variable is in the model
+        for tex in self.expected[("latex", True)]:
+            for segment in tex.strip("$").split(r"\sim"):
+                assert segment in model_tex
+
+    def test_str_repr(self):
+        for str_format in self.formats:
+            for dist, text in zip(self.distributions, self.expected[str_format]):
+                assert dist.str_repr(*str_format) == text
+
+            model_text = self.model.str_repr(*str_format)
+            for text in self.expected[str_format]:
+                if str_format[0] == "latex":
+                    for segment in text.strip("$").split(r"\sim"):
+                        assert segment in model_text
+                else:
+                    assert text in model_text
+
+
+class TestMonolith(BaseTestStrAndLatexRepr):
     def setup_class(self):
         # True parameter values
         alpha, sigma = 1, 1
@@ -90,7 +115,7 @@ class TestStrAndLatexRepr:
 
         self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, w, nested_mix, Y_obs, pot]
         self.deterministics_or_potentials = [mu, pot]
-        # tuples of (formatting, include_params
+        # tuples of (formatting, include_params)
         self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
         self.expected = {
             ("plain", True): [
@@ -154,30 +179,6 @@ class TestStrAndLatexRepr:
                 r"$\text{pot} \sim \operatorname{Potential}$",
             ],
         }
-
-    def test__repr_latex_(self):
-        for distribution, tex in zip(self.distributions, self.expected[("latex", True)]):
-            assert distribution._repr_latex_() == tex
-
-        model_tex = self.model._repr_latex_()
-
-        # make sure each variable is in the model
-        for tex in self.expected[("latex", True)]:
-            for segment in tex.strip("$").split(r"\sim"):
-                assert segment in model_tex
-
-    def test_str_repr(self):
-        for str_format in self.formats:
-            for dist, text in zip(self.distributions, self.expected[str_format]):
-                assert dist.str_repr(*str_format) == text
-
-            model_text = self.model.str_repr(*str_format)
-            for text in self.expected[str_format]:
-                if str_format[0] == "latex":
-                    for segment in text.strip("$").split(r"\sim"):
-                        assert segment in model_text
-                else:
-                    assert text in model_text
 
 
 def test_model_latex_repr_three_levels_model():
