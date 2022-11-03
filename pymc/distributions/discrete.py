@@ -16,6 +16,7 @@ import warnings
 import aesara.tensor as at
 import numpy as np
 
+from aesara.tensor import TensorConstant
 from aesara.tensor.random.basic import (
     RandomVariable,
     ScipyRandomVariable,
@@ -1285,17 +1286,21 @@ class Categorical(Discrete):
         if logit_p is not None:
             p = pm.math.softmax(logit_p, axis=-1)
 
-        if isinstance(p, np.ndarray) or isinstance(p, list):
-            if (np.asarray(p) < 0).any():
-                raise ValueError(f"Negative `p` parameters are not valid, got: {p}")
-            p_sum = np.sum([p], axis=-1)
-            if not np.all(np.isclose(p_sum, 1.0)):
+        p = at.as_tensor_variable(p)
+        if isinstance(p, TensorConstant):
+            p_ = np.asarray(p.data)
+            if np.any(p_ < 0):
+                raise ValueError(f"Negative `p` parameters are not valid, got: {p_}")
+            p_sum_ = np.sum([p_], axis=-1)
+            if not np.all(np.isclose(p_sum_, 1.0)):
                 warnings.warn(
-                    f"`p` parameters sum to {p_sum}, instead of 1.0. They will be automatically rescaled. You can rescale them directly to get rid of this warning.",
+                    f"`p` parameters sum to {p_sum_}, instead of 1.0. "
+                    "They will be automatically rescaled. "
+                    "You can rescale them directly to get rid of this warning.",
                     UserWarning,
                 )
-                p = p / at.sum(p, axis=-1, keepdims=True)
-        p = at.as_tensor_variable(floatX(p))
+                p_ = p_ / at.sum(p_, axis=-1, keepdims=True)
+                p = at.as_tensor_variable(p_)
         return super().dist([p], **kwargs)
 
     def moment(rv, size, p):
@@ -1341,7 +1346,11 @@ class Categorical(Discrete):
         )
 
         return check_parameters(
-            res, at.all(p_ >= 0, axis=-1), at.all(p <= 1, axis=-1), msg="0 <= p <=1"
+            res,
+            p_ >= 0,
+            p_ <= 1,
+            at.isclose(at.sum(p, axis=-1), 1),
+            msg="0 <= p <=1, sum(p) = 1",
         )
 
 
