@@ -1377,6 +1377,19 @@ class TestImputationMissingData:
                 x = pm.Normal("x", observed=data, dims=("observed",))
         assert model.RV_dims == {"x": ("observed",)}
 
+    def test_error_non_random_variable(self):
+        data = np.array([np.nan] * 3 + [0] * 7)
+        with pm.Model() as model:
+            msg = "x of type <class 'pymc.distributions.censored.CensoredRV'> is not supported"
+            with pytest.raises(NotImplementedError, match=msg):
+                x = pm.Censored(
+                    "x",
+                    pm.Normal.dist(),
+                    lower=0,
+                    upper=10,
+                    observed=data,
+                )
+
 
 class TestShared(SeededTest):
     def test_deterministic(self):
