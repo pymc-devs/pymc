@@ -181,6 +181,48 @@ class TestMonolith(BaseTestStrAndLatexRepr):
         }
 
 
+class TestData(BaseTestStrAndLatexRepr):
+    def setup_class(self):
+        with Model() as self.model:
+            import pymc as pm
+
+            with pm.Model() as model:
+                a = pm.Normal("a", pm.MutableData("a_data", (2,)))
+                b = pm.Normal("b", pm.MutableData("b_data", (2, 3)))
+                c = pm.Normal("c", pm.ConstantData("c_data", (2,)))
+                d = pm.Normal("d", pm.ConstantData("d_data", (2, 3)))
+
+        self.distributions = [a, b, c, d]
+        # tuples of (formatting, include_params)
+        self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
+        self.expected = {
+            ("plain", True): [
+                r"a ~ N(2, 1)",
+                r"b ~ N(<shared>, 1)",
+                r"c ~ N(2, 1)",
+                r"d ~ N(<constant>, 1)",
+            ],
+            ("plain", False): [
+                r"a ~ N",
+                r"b ~ N",
+                r"c ~ N",
+                r"d ~ N",
+            ],
+            ("latex", True): [
+                r"$\text{a} \sim \operatorname{N}(2,~1)$",
+                r"$\text{b} \sim \operatorname{N}(\text{<shared>},~1)$",
+                r"$\text{c} \sim \operatorname{N}(2,~1)$",
+                r"$\text{d} \sim \operatorname{N}(\text{<constant>},~1)$",
+            ],
+            ("latex", False): [
+                r"$\text{a} \sim \operatorname{N}$",
+                r"$\text{b} \sim \operatorname{N}$",
+                r"$\text{c} \sim \operatorname{N}$",
+                r"$\text{d} \sim \operatorname{N}$",
+            ],
+        }
+
+
 def test_model_latex_repr_three_levels_model():
     with Model() as censored_model:
         mu = Normal("mu", 0.0, 5.0)
