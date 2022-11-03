@@ -268,7 +268,9 @@ def find_measurable_transforms(
     if isinstance(node.op, MeasurableVariable):
         return None  # pragma: no cover
 
-    rv_map_feature: PreserveRVMappings = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(
+        fgraph, "preserve_rv_mappings", None
+    )
     if rv_map_feature is None:
         return None  # pragma: no cover
 

@@ -149,7 +149,9 @@ def find_measurable_stacks(
     if isinstance(node.op, (MeasurableMakeVector, MeasurableJoin)):
         return None  # pragma: no cover
 
-    rv_map_feature: PreserveRVMappings = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(
+        fgraph, "preserve_rv_mappings", None
+    )
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -235,7 +237,9 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuf
     if isinstance(node.op, MeasurableDimShuffle):
         return None  # pragma: no cover
 
-    rv_map_feature: PreserveRVMappings = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(
+        fgraph, "preserve_rv_mappings", None
+    )
 
     if rv_map_feature is None:
         return None  # pragma: no cover

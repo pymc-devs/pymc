@@ -1,5 +1,5 @@
 from functools import singledispatch
-from typing import Tuple
+from typing import Sequence
 
 import aesara.tensor as at
 import aesara.tensor.random.basic as arb
@@ -84,7 +84,7 @@ def icdf(rv, value, **kwargs):
 @singledispatch
 def _logprob(
     op: Op,
-    values: Tuple[TensorVariable],
+    values: Sequence[TensorVariable],
     *inputs: TensorVariable,
     **kwargs,
 ):
