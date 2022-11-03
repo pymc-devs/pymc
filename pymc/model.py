@@ -44,6 +44,7 @@ from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.scalar import Cast
 from aesara.tensor.elemwise import Elemwise
+from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.rewriting import local_subtensor_rv_lift
 from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
@@ -1405,9 +1406,16 @@ class Model(WithMemoization, metaclass=ContextMeta):
             )
             warnings.warn(impute_message, ImputationWarning)
 
+            if not isinstance(rv_var.owner.op, RandomVariable):
+                raise NotImplementedError(
+                    "Automatic inputation is only supported for univariate RandomVariables."
+                    f" {rv_var} of type {type(rv_var.owner.op)} is not supported."
+                )
+
             if rv_var.owner.op.ndim_supp > 0:
                 raise NotImplementedError(
-                    f"Automatic inputation is only supported for univariate RandomVariables, but {rv_var} is multivariate"
+                    f"Automatic inputation is only supported for univariate "
+                    f"RandomVariables, but {rv_var} is multivariate"
                 )
 
             # We can get a random variable comprised of only the unobserved
