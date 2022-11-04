@@ -55,7 +55,7 @@ class HSGP(Base):
         that `X` is in `[-S, S]`.  `L` is the calculated as `c * S`.  One of `c` or `L` must be
         provided.  Further information can be found in Ruitort-Mayol et. al.
     drop_first: bool
-        Default `False`.  Sometimes the first basis vector is quite "flat" and very similar to
+        Default `False`. Sometimes the first basis vector is quite "flat" and very similar to
         the intercept term.  When there is an intercept in the model, ignoring the first basis
         vector may improve sampling.
     cov_func: None, 2D array, or instance of Covariance
@@ -106,6 +106,7 @@ class HSGP(Base):
         m: Sequence[int],
         L: Optional[Sequence[float]] = None,
         c: float = 1.5,
+        drop_first=False,
         *,
         mean_func: Mean = Zero(),
         cov_func: Optional[Covariance] = None,
@@ -129,6 +130,7 @@ class HSGP(Base):
                 "domain."
             )
 
+        self.drop_first = drop_first
         self.m = m
         self.L = L
         self.c = c
@@ -190,10 +192,19 @@ class HSGP(Base):
         self._set_boundary(X)
         omega, phi, m_star = self._eigendecomposition(X, self.L, self.m, self.D)
         psd = self.cov_func.psd(omega)
-        self.beta = pm.Normal(f"{name}_coeffs_", size=m_star)
-        self.f = pm.Deterministic(
-            name, self.mean_func(X) + at.squeeze(at.dot(phi, self.beta * psd)), dims=dims
-        )
+
+        if self.drop_first:
+            self.beta = pm.Normal(f"{name}_coeffs_", size=m_star - 1)
+            self.f = pm.Deterministic(
+                name,
+                self.mean_func(X) + at.squeeze(at.dot(phi[:, 1:], self.beta * psd[1:])),
+                dims=dims,
+            )
+        else:
+            self.beta = pm.Normal(f"{name}_coeffs_", size=m_star)
+            self.f = pm.Deterministic(
+                name, self.mean_func(X) + at.squeeze(at.dot(phi, self.beta * psd)), dims=dims
+            )
         return self.f
 
     def _build_conditional(self, name, Xnew):
