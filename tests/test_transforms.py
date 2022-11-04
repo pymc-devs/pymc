@@ -176,7 +176,7 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
 
     a = at_dist(*dist_params, size=size)
     a.name = "a"
-    a_value_var = a.clone()
+    a_value_var = at.tensor(a.dtype, shape=(None,) * a.ndim)
     a_value_var.name = "a_value"
 
     b = at.random.normal(a, 1.0)
