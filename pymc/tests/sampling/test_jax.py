@@ -384,7 +384,7 @@ def test_idata_contains_stats(sampler_name: str):
 
     with pm.Model():
         pm.Normal("a")
-        idata = sampler(draws=10, tune=10)
+        idata = sampler(tune=50, draws=50)
 
     stats = idata.get("sample_stats")
     assert stats is not None
