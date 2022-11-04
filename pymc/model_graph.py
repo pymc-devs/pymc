@@ -154,13 +154,11 @@ class ModelGraph:
             shape = "box"
             style = "rounded, filled"
             label = f"{var_name}\n~\nMutableData"
-        elif v.owner and isinstance(v.owner.op, RandomVariable):
+        elif v in self.model.basic_RVs:
             shape = "ellipse"
-            if hasattr(v.tag, "observations"):
-                # observed RV
+            if v in self.model.observed_RVs:
                 style = "filled"
             else:
-                shape = "ellipse"
                 style = None
             symbol = v.owner.op.__class__.__name__
             if symbol.endswith("RV"):

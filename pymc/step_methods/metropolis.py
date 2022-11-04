@@ -13,11 +13,13 @@
 #   limitations under the License.
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+import aesara
 import numpy as np
 import numpy.random as nr
 import scipy.linalg
 import scipy.special
 
+from aesara import tensor as at
 from aesara.graph.fg import MissingInputError
 from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
 
@@ -773,7 +775,7 @@ class DEMetropolis(PopulationArrayStepShared):
         initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
-            vars = model.cont_vars
+            vars = model.continuous_value_vars
         else:
             vars = [model.rvs_to_values.get(var, var) for var in vars]
         vars = pm.inputvars(vars)
@@ -924,7 +926,7 @@ class DEMetropolisZ(ArrayStepShared):
         initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
-            vars = model.cont_vars
+            vars = model.continuous_value_vars
         else:
             vars = [model.rvs_to_values.get(var, var) for var in vars]
         vars = pm.inputvars(vars)
@@ -1052,8 +1054,15 @@ def sample_except(limit, excluded):
     return candidate
 
 
-def delta_logp(point, logp, vars, shared):
-    [logp0], inarray0 = join_nonshared_inputs(point, [logp], vars, shared)
+def delta_logp(
+    point: Dict[str, np.ndarray],
+    logp: at.TensorVariable,
+    vars: List[at.TensorVariable],
+    shared: Dict[at.TensorVariable, at.sharedvar.TensorSharedVariable],
+) -> aesara.compile.Function:
+    [logp0], inarray0 = join_nonshared_inputs(
+        point=point, outputs=[logp], inputs=vars, shared_inputs=shared
+    )
 
     tensor_type = inarray0.type
     inarray1 = tensor_type("inarray1")

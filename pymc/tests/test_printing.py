@@ -1,8 +1,9 @@
 import numpy as np
 
-from pymc import Bernoulli, Censored, Mixture
+from pymc import Bernoulli, Censored, HalfCauchy, Mixture, StudentT
 from pymc.aesaraf import floatX
 from pymc.distributions import (
+    Dirichlet,
     DirichletMultinomial,
     HalfNormal,
     KroneckerNormal,
@@ -16,8 +17,33 @@ from pymc.math import dot
 from pymc.model import Deterministic, Model, Potential
 
 
-# TODO: This test is a bit too monolithic
-class TestStrAndLatexRepr:
+class BaseTestStrAndLatexRepr:
+    def test__repr_latex_(self):
+        for distribution, tex in zip(self.distributions, self.expected[("latex", True)]):
+            assert distribution._repr_latex_() == tex
+
+        model_tex = self.model._repr_latex_()
+
+        # make sure each variable is in the model
+        for tex in self.expected[("latex", True)]:
+            for segment in tex.strip("$").split(r"\sim"):
+                assert segment in model_tex
+
+    def test_str_repr(self):
+        for str_format in self.formats:
+            for dist, text in zip(self.distributions, self.expected[str_format]):
+                assert dist.str_repr(*str_format) == text
+
+            model_text = self.model.str_repr(*str_format)
+            for text in self.expected[str_format]:
+                if str_format[0] == "latex":
+                    for segment in text.strip("$").split(r"\sim"):
+                        assert segment in model_text
+                else:
+                    assert text in model_text
+
+
+class TestMonolith(BaseTestStrAndLatexRepr):
     def setup_class(self):
         # True parameter values
         alpha, sigma = 1, 1
@@ -55,7 +81,8 @@ class TestStrAndLatexRepr:
             # Nested SymbolicRV
             comp_1 = ZeroInflatedPoisson.dist(0.5, 5)
             comp_2 = Censored.dist(Bernoulli.dist(0.5), -1, 1)
-            nested_mix = Mixture("nested_mix", [0.5, 0.5], [comp_1, comp_2])
+            w = Dirichlet("w", [1, 1])
+            nested_mix = Mixture("nested_mix", w, [comp_1, comp_2])
 
             # Expected value of outcome
             mu = Deterministic("mu", floatX(alpha + dot(X, b)))
@@ -86,9 +113,9 @@ class TestStrAndLatexRepr:
             # add a potential as well
             pot = Potential("pot", mu**2)
 
-        self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, nested_mix, Y_obs, pot]
+        self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, w, nested_mix, Y_obs, pot]
         self.deterministics_or_potentials = [mu, pot]
-        # tuples of (formatting, include_params
+        # tuples of (formatting, include_params)
         self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
         self.expected = {
             ("plain", True): [
@@ -99,8 +126,9 @@ class TestStrAndLatexRepr:
                 r"Z ~ N(f(), f())",
                 r"nb_with_p_n ~ NB(10, nbp)",
                 r"zip ~ MarginalMixture(f(), DiracDelta(0), Pois(5))",
+                r"w ~ Dir(<constant>)",
                 (
-                    r"nested_mix ~ MarginalMixture(<constant>, "
+                    r"nested_mix ~ MarginalMixture(w, "
                     r"MarginalMixture(f(), DiracDelta(0), Pois(5)), "
                     r"Censored(Bern(0.5), -1, 1))"
                 ),
@@ -115,6 +143,7 @@ class TestStrAndLatexRepr:
                 r"Z ~ N",
                 r"nb_with_p_n ~ NB",
                 r"zip ~ MarginalMixture",
+                r"w ~ Dir",
                 r"nested_mix ~ MarginalMixture",
                 r"Y_obs ~ N",
                 r"pot ~ Potential",
@@ -126,11 +155,12 @@ class TestStrAndLatexRepr:
                 r"$\text{beta} \sim \operatorname{N}(0,~10)$",
                 r"$\text{Z} \sim \operatorname{N}(f(),~f())$",
                 r"$\text{nb_with_p_n} \sim \operatorname{NB}(10,~\text{nbp})$",
-                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\text{\$\operatorname{DiracDelta}(0)\$},~\text{\$\operatorname{Pois}(5)\$})$",
+                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5))$",
+                r"$\text{w} \sim \operatorname{Dir}(\text{<constant>})$",
                 (
-                    r"$\text{nested_mix} \sim \operatorname{MarginalMixture}(\text{<constant>},"
-                    r"~\text{\$\operatorname{MarginalMixture}(f(),~\text{\\$\operatorname{DiracDelta}(0)\\$},~\text{\\$\operatorname{Pois}(5)\\$})\$},"
-                    r"~\text{\$\operatorname{Censored}(\text{\\$\operatorname{Bern}(0.5)\\$},~-1,~1)\$})$"
+                    r"$\text{nested_mix} \sim \operatorname{MarginalMixture}(\text{w},"
+                    r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5)),"
+                    r"~\operatorname{Censored}(\operatorname{Bern}(0.5),~-1,~1))$"
                 ),
                 r"$\text{Y_obs} \sim \operatorname{N}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
@@ -143,32 +173,91 @@ class TestStrAndLatexRepr:
                 r"$\text{Z} \sim \operatorname{N}$",
                 r"$\text{nb_with_p_n} \sim \operatorname{NB}$",
                 r"$\text{zip} \sim \operatorname{MarginalMixture}$",
+                r"$\text{w} \sim \operatorname{Dir}$",
                 r"$\text{nested_mix} \sim \operatorname{MarginalMixture}$",
                 r"$\text{Y_obs} \sim \operatorname{N}$",
                 r"$\text{pot} \sim \operatorname{Potential}$",
             ],
         }
 
-    def test__repr_latex_(self):
-        for distribution, tex in zip(self.distributions, self.expected[("latex", True)]):
-            assert distribution._repr_latex_() == tex
 
-        model_tex = self.model._repr_latex_()
+class TestData(BaseTestStrAndLatexRepr):
+    def setup_class(self):
+        with Model() as self.model:
+            import pymc as pm
 
-        # make sure each variable is in the model
-        for tex in self.expected[("latex", True)]:
-            for segment in tex.strip("$").split(r"\sim"):
-                assert segment in model_tex
+            with pm.Model() as model:
+                a = pm.Normal("a", pm.MutableData("a_data", (2,)))
+                b = pm.Normal("b", pm.MutableData("b_data", (2, 3)))
+                c = pm.Normal("c", pm.ConstantData("c_data", (2,)))
+                d = pm.Normal("d", pm.ConstantData("d_data", (2, 3)))
 
-    def test_str_repr(self):
-        for str_format in self.formats:
-            for dist, text in zip(self.distributions, self.expected[str_format]):
-                assert dist.str_repr(*str_format) == text
+        self.distributions = [a, b, c, d]
+        # tuples of (formatting, include_params)
+        self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
+        self.expected = {
+            ("plain", True): [
+                r"a ~ N(2, 1)",
+                r"b ~ N(<shared>, 1)",
+                r"c ~ N(2, 1)",
+                r"d ~ N(<constant>, 1)",
+            ],
+            ("plain", False): [
+                r"a ~ N",
+                r"b ~ N",
+                r"c ~ N",
+                r"d ~ N",
+            ],
+            ("latex", True): [
+                r"$\text{a} \sim \operatorname{N}(2,~1)$",
+                r"$\text{b} \sim \operatorname{N}(\text{<shared>},~1)$",
+                r"$\text{c} \sim \operatorname{N}(2,~1)$",
+                r"$\text{d} \sim \operatorname{N}(\text{<constant>},~1)$",
+            ],
+            ("latex", False): [
+                r"$\text{a} \sim \operatorname{N}$",
+                r"$\text{b} \sim \operatorname{N}$",
+                r"$\text{c} \sim \operatorname{N}$",
+                r"$\text{d} \sim \operatorname{N}$",
+            ],
+        }
 
-            model_text = self.model.str_repr(*str_format)
-            for text in self.expected[str_format]:
-                if str_format[0] == "latex":
-                    for segment in text.strip("$").split(r"\sim"):
-                        assert segment in model_text
-                else:
-                    assert text in model_text
+
+def test_model_latex_repr_three_levels_model():
+    with Model() as censored_model:
+        mu = Normal("mu", 0.0, 5.0)
+        sigma = HalfCauchy("sigma", 2.5)
+        normal_dist = Normal.dist(mu=mu, sigma=sigma)
+        censored_normal = Censored(
+            "censored_normal", normal_dist, lower=-2.0, upper=2.0, observed=[1, 0, 0.5]
+        )
+
+    latex_repr = censored_model.str_repr(formatting="latex")
+    expected = [
+        "$$",
+        "\\begin{array}{rcl}",
+        "\\text{mu} &\\sim & \\operatorname{N}(0,~5)\\\\\\text{sigma} &\\sim & "
+        "\\operatorname{C^{+}}(0,~2.5)\\\\\\text{censored_normal} &\\sim & "
+        "\\operatorname{Censored}(\\operatorname{N}(\\text{mu},~\\text{sigma}),~-2,~2)",
+        "\\end{array}",
+        "$$",
+    ]
+    assert [line.strip() for line in latex_repr.split("\n")] == expected
+
+
+def test_model_latex_repr_mixture_model():
+    with Model() as mix_model:
+        w = Dirichlet("w", [1, 1])
+        mix = Mixture("mix", w=w, comp_dists=[Normal.dist(0.0, 5.0), StudentT.dist(7.0)])
+
+    latex_repr = mix_model.str_repr(formatting="latex")
+    expected = [
+        "$$",
+        "\\begin{array}{rcl}",
+        "\\text{w} &\\sim & "
+        "\\operatorname{Dir}(\\text{<constant>})\\\\\\text{mix} &\\sim & "
+        "\\operatorname{MarginalMixture}(\\text{w},~\\operatorname{N}(0,~5),~\\operatorname{StudentT}(7,~0,~1))",
+        "\\end{array}",
+        "$$",
+    ]
+    assert [line.strip() for line in latex_repr.split("\n")] == expected

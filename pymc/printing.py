@@ -16,7 +16,8 @@ import itertools
 
 from typing import Union
 
-from aesara.graph.basic import walk
+from aesara.compile import SharedVariable
+from aesara.graph.basic import Constant, walk
 from aesara.tensor.basic import TensorVariable, Variable
 from aesara.tensor.elemwise import DimShuffle
 from aesara.tensor.random.basic import RandomVariable
@@ -24,7 +25,6 @@ from aesara.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
 )
-from aesara.tensor.var import TensorConstant
 
 from pymc.model import Model
 
@@ -58,7 +58,7 @@ def str_for_dist(
 
     if "latex" in formatting:
         if print_name is not None:
-            print_name = r"\text{" + _latex_escape(dist.name) + "}"
+            print_name = r"\text{" + _latex_escape(dist.name.strip("$")) + "}"
 
         op_name = (
             dist.owner.op._print_name[1]
@@ -67,9 +67,11 @@ def str_for_dist(
         )
         if include_params:
             if print_name:
-                return r"${} \sim {}({})$".format(print_name, op_name, ",~".join(dist_args))
+                return r"${} \sim {}({})$".format(
+                    print_name, op_name, ",~".join([d.strip("$") for d in dist_args])
+                )
             else:
-                return r"${}({})$".format(op_name, ",~".join(dist_args))
+                return r"${}({})$".format(op_name, ",~".join([d.strip("$") for d in dist_args]))
 
         else:
             if print_name:
@@ -138,7 +140,7 @@ def str_for_potential_or_deterministic(
     LaTeX or plain, optionally with distribution parameter values included."""
     print_name = var.name if var.name is not None else "<unnamed>"
     if "latex" in formatting:
-        print_name = r"\text{" + _latex_escape(print_name) + "}"
+        print_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
         if include_params:
             return rf"${print_name} \sim \operatorname{{{dist_name}}}({_str_for_expression(var, formatting=formatting)})$"
         else:
@@ -161,7 +163,7 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
             # in case other code overrides str_repr, fallback
             return False
 
-    if isinstance(var, TensorConstant):
+    if isinstance(var, (Constant, SharedVariable)):
         return _str_for_constant(var, formatting)
     elif isinstance(
         var.owner.op, (RandomVariable, SymbolicRandomVariable)
@@ -182,20 +184,27 @@ def _str_for_input_rv(var: Variable, formatting: str) -> str:
         else str_for_dist(var, formatting=formatting, include_params=True)
     )
     if "latex" in formatting:
-        return r"\text{" + _latex_escape(_str) + "}"
+        return _latex_text_format(_latex_escape(_str.strip("$")))
     else:
         return _str
 
 
-def _str_for_constant(var: TensorConstant, formatting: str) -> str:
-    if len(var.data.shape) == 0:
-        return f"{var.data:.3g}"
-    elif len(var.data.shape) == 1 and var.data.shape[0] == 1:
-        return f"{var.data[0]:.3g}"
-    elif "latex" in formatting:
-        return r"\text{<constant>}"
+def _str_for_constant(var: Union[Constant, SharedVariable], formatting: str) -> str:
+    if isinstance(var, Constant):
+        var_data = var.data
+        var_type = "constant"
     else:
-        return r"<constant>"
+        var_data = var.get_value()
+        var_type = "shared"
+
+    if len(var_data.shape) == 0:
+        return f"{var_data:.3g}"
+    elif len(var_data.shape) == 1 and var_data.shape[0] == 1:
+        return f"{var_data[0]:.3g}"
+    elif "latex" in formatting:
+        return rf"\text{{<{var_type}>}}"
+    else:
+        return rf"<{var_type}>"
 
 
 def _str_for_expression(var: Variable, formatting: str) -> str:
@@ -215,9 +224,20 @@ def _str_for_expression(var: Variable, formatting: str) -> str:
     names = [x.name for x in parents]
 
     if "latex" in formatting:
-        return r"f(" + ",~".join([r"\text{" + _latex_escape(n) + "}" for n in names]) + ")"
+        return (
+            r"f("
+            + ",~".join([_latex_text_format(_latex_escape(n.strip("$"))) for n in names])
+            + ")"
+        )
     else:
-        return r"f(" + ", ".join(names) + ")"
+        return r"f(" + ", ".join([n.strip("$") for n in names]) + ")"
+
+
+def _latex_text_format(text: str) -> str:
+    if r"\operatorname{" in text:
+        return text
+    else:
+        return r"\text{" + text + "}"
 
 
 def _latex_escape(text: str) -> str:

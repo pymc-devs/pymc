@@ -51,7 +51,6 @@ class ModelBackendSetupTestCase:
         if not hasattr(self, "sampler_vars"):
             self.sampler_vars = None
         if self.sampler_vars is not None:
-            assert self.strace.supports_sampler_stats
             self.strace.setup(self.draws, self.chain, self.sampler_vars)
         else:
             self.strace.setup(self.draws, self.chain)
@@ -110,11 +109,7 @@ class StatsTestCase:
         with pytest.raises((ValueError, TypeError)):
             strace.setup(self.draws, self.chain, bad_vars)
         strace.setup(self.draws, self.chain, good_vars)
-        if strace.supports_sampler_stats:
-            assert strace.stat_names == {"a"}
-        else:
-            with pytest.raises((ValueError, TypeError)):
-                strace.setup(self.draws, self.chain, good_vars)
+        assert strace.stat_names == {"a"}
 
     def teardown_method(self):
         if self.name is not None:

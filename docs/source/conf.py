@@ -20,10 +20,6 @@ import os
 import sys
 from pathlib import Path
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 import pymc  # isort:skip
 
 # -- General configuration ------------------------------------------------
@@ -256,11 +252,14 @@ html_theme_options = {
             "icon": "fab fa-discourse",
         },
     ],
-    "logo_link": "https://www.pymc.io",
+    "logo": {
+        "link": "https://www.pymc.io",
+    },
     "show_prev_next": False,
     "navbar_start": ["navbar-logo", "navbar-version"],
-    "navbar_end": ["search-field.html", "navbar-icon-links.html"],
+    "navbar_end": ["navbar-icon-links.html"],
     "page_sidebar_items": ["page-toc", "edit-this-page", "donate"],
+    "header_links_before_dropdown": 6,
     "search_bar_text": "Search...",
     "use_edit_page_button": True,
     "google_analytics_id": "UA-176578023-1",

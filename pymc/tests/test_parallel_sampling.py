@@ -14,6 +14,7 @@
 import multiprocessing
 import os
 import platform
+import sys
 import warnings
 
 import aesara
@@ -74,7 +75,7 @@ at_vector = TensorType(aesara.config.floatX, [False])
 @as_op([at_vector, at.iscalar], [at_vector])
 def _crash_remote_process(a, master_pid):
     if os.getpid() != master_pid:
-        os.exit(0)
+        sys.exit(0)
     return 2 * np.array(a)
 
 
@@ -86,7 +87,7 @@ def test_remote_pipe_closed():
         pm.Normal("y", mu=_crash_remote_process(x, at_pid), shape=2)
 
         step = pm.Metropolis()
-        with pytest.raises(RuntimeError, match="Chain [0-9] failed"):
+        with pytest.raises(ps.ParallelSamplingError, match="Chain [0-9] failed with") as ex:
             pm.sample(step=step, mp_ctx="spawn", tune=2, draws=2, cores=2, chains=2)
 
 

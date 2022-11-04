@@ -14,7 +14,7 @@
 
 import functools
 
-from typing import Dict, Hashable, List, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 
 import arviz
 import cloudpickle
@@ -231,19 +231,40 @@ def biwrap(wrapper):
     return enhanced
 
 
-def dataset_to_point_list(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
+def dataset_to_point_list(
+    ds: xarray.Dataset, sample_dims: List
+) -> Tuple[List[Dict[str, np.ndarray]], Dict[str, Any]]:
     # All keys of the dataset must be a str
-    for vn in ds.keys():
+    var_names = list(ds.keys())
+    for vn in var_names:
         if not isinstance(vn, str):
             raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
-    # make dicts
-    points: List[Dict[Hashable, np.ndarray]] = []
-    da: "xarray.DataArray"
-    for c in ds.chain:
-        for d in ds.draw:
-            points.append({vn: da.sel(chain=c, draw=d).values for vn, da in ds.items()})
+    num_sample_dims = len(sample_dims)
+    stacked_dims = {dim_name: ds[dim_name] for dim_name in sample_dims}
+    ds = ds.transpose(*sample_dims, ...)
+    stacked_dict = {
+        vn: da.values.reshape((-1, *da.shape[num_sample_dims:])) for vn, da in ds.items()
+    }
+    points = [
+        {vn: stacked_dict[vn][i, ...] for vn in var_names}
+        for i in range(np.product([len(coords) for coords in stacked_dims.values()]))
+    ]
     # use the list of points
-    return cast(List[Dict[str, np.ndarray]], points)
+    return cast(List[Dict[str, np.ndarray]], points), stacked_dims
+
+
+def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
+    """Returns a new ``InferenceData`` object with the "warning" stat removed from sample stats groups.
+
+    This function should be applied to an ``InferenceData`` object obtained with
+    ``pm.sample(keep_warning_stat=True)`` before trying to ``.to_netcdf()`` or ``.to_zarr()`` it.
+    """
+    nidata = arviz.InferenceData(attrs=idata.attrs)
+    for gname, group in idata.items():
+        if "sample_stat" in gname:
+            group = group.drop_vars(names=["warning", "warning_dim_0"], errors="ignore")
+        nidata.add_groups({gname: group}, coords=group.coords, dims=group.dims)
+    return nidata
 
 
 def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tuple[int, int]:
@@ -366,3 +387,57 @@ def point_wrapper(core_function):
         return core_function(**input_point)
 
     return wrapped
+
+
+RandomSeed = Optional[Union[int, Sequence[int], np.ndarray]]
+RandomState = Union[RandomSeed, np.random.RandomState, np.random.Generator]
+
+
+def _get_seeds_per_chain(
+    random_state: RandomState,
+    chains: int,
+) -> Union[Sequence[int], np.ndarray]:
+    """Obtain or validate specified integer seeds per chain.
+
+    This function process different possible sources of seeding and returns one integer
+    seed per chain:
+    1. If the input is an integer and a single chain is requested, the input is
+        returned inside a tuple.
+    2. If the input is a sequence or NumPy array with as many entries as chains,
+        the input is returned.
+    3. If the input is an integer and multiple chains are requested, new unique seeds
+        are generated from NumPy default Generator seeded with that integer.
+    4. If the input is None new unique seeds are generated from an unseeded NumPy default
+        Generator.
+    5. If a RandomState or Generator is provided, new unique seeds are generated from it.
+
+    Raises
+    ------
+    ValueError
+        If none of the conditions above are met
+    """
+
+    def _get_unique_seeds_per_chain(integers_fn):
+        seeds = []
+        while len(set(seeds)) != chains:
+            seeds = [int(seed) for seed in integers_fn(2**30, dtype=np.int64, size=chains)]
+        return seeds
+
+    if random_state is None or isinstance(random_state, int):
+        if chains == 1 and isinstance(random_state, int):
+            return (random_state,)
+        return _get_unique_seeds_per_chain(np.random.default_rng(random_state).integers)
+    if isinstance(random_state, np.random.Generator):
+        return _get_unique_seeds_per_chain(random_state.integers)
+    if isinstance(random_state, np.random.RandomState):
+        return _get_unique_seeds_per_chain(random_state.randint)
+
+    if not isinstance(random_state, (list, tuple, np.ndarray)):
+        raise ValueError(f"The `seeds` must be array-like. Got {type(random_state)} instead.")
+
+    if len(random_state) != chains:
+        raise ValueError(
+            f"Number of seeds ({len(random_state)}) does not match the number of chains ({chains})."
+        )
+
+    return random_state

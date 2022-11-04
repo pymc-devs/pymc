@@ -22,46 +22,22 @@ import warnings
 
 from collections import defaultdict
 from copy import copy
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union, cast
 
 import aesara.gradient as tg
 import cloudpickle
 import numpy as np
-import xarray
 
-from aesara import tensor as at
-from aesara.graph.basic import Apply, Constant, Variable, general_toposort, walk
-from aesara.graph.fg import FunctionGraph
-from aesara.tensor.random.var import (
-    RandomGeneratorSharedVariable,
-    RandomStateSharedVariable,
-)
-from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
 from typing_extensions import TypeAlias
 
 import pymc as pm
 
-from pymc.aesaraf import compile_pymc
-from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
-from pymc.exceptions import IncorrectArgumentsError, SamplingError
+from pymc.exceptions import SamplingError
 from pymc.initial_point import (
     PointType,
     StartDict,
@@ -70,17 +46,17 @@ from pymc.initial_point import (
 )
 from pymc.model import Model, modelcontext
 from pymc.parallel_sampling import Draw, _cpu_count
-from pymc.stats.convergence import run_convergence_checks
+from pymc.stats.convergence import SamplerWarning, log_warning, run_convergence_checks
 from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
-    chains_and_samples,
-    dataset_to_point_list,
-    get_default_varnames,
+    RandomSeed,
+    RandomState,
+    _get_seeds_per_chain,
+    drop_warning_stat,
     get_untransformed_name,
     is_transformed_name,
-    point_wrapper,
 )
 from pymc.vartypes import discrete_types
 
@@ -89,22 +65,11 @@ sys.setrecursionlimit(10000)
 __all__ = [
     "sample",
     "iter_sample",
-    "compile_forward_sampling_function",
-    "sample_posterior_predictive",
-    "sample_posterior_predictive_w",
     "init_nuts",
-    "sample_prior_predictive",
-    "draw",
 ]
 
 Step: TypeAlias = Union[BlockedStep, CompoundStep]
 
-ArrayLike: TypeAlias = Union[np.ndarray, List[float]]
-PointList: TypeAlias = List[PointType]
-Backend: TypeAlias = Union[BaseTrace, MultiTrace, NDArray]
-
-RandomSeed = Optional[Union[int, Sequence[int], np.ndarray]]
-RandomState = Union[RandomSeed, np.random.RandomState, np.random.Generator]
 
 _log = logging.getLogger("pymc")
 
@@ -255,56 +220,6 @@ def all_continuous(vars):
         return True
 
 
-def _get_seeds_per_chain(
-    random_state: RandomState,
-    chains: int,
-) -> Union[Sequence[int], np.ndarray]:
-    """Obtain or validate specified integer seeds per chain.
-
-    This function process different possible sources of seeding and returns one integer
-    seed per chain:
-    1. If the input is an integer and a single chain is requested, the input is
-        returned inside a tuple.
-    2. If the input is a sequence or NumPy array with as many entries as chains,
-        the input is returned.
-    3. If the input is an integer and multiple chains are requested, new unique seeds
-        are generated from NumPy default Generator seeded with that integer.
-    4. If the input is None new unique seeds are generated from an unseeded NumPy default
-        Generator.
-    5. If a RandomState or Generator is provided, new unique seeds are generated from it.
-
-    Raises
-    ------
-    ValueError
-        If none of the conditions above are met
-    """
-
-    def _get_unique_seeds_per_chain(integers_fn):
-        seeds = []
-        while len(set(seeds)) != chains:
-            seeds = [int(seed) for seed in integers_fn(2**30, dtype=np.int64, size=chains)]
-        return seeds
-
-    if random_state is None or isinstance(random_state, int):
-        if chains == 1 and isinstance(random_state, int):
-            return (random_state,)
-        return _get_unique_seeds_per_chain(np.random.default_rng(random_state).integers)
-    if isinstance(random_state, np.random.Generator):
-        return _get_unique_seeds_per_chain(random_state.integers)
-    if isinstance(random_state, np.random.RandomState):
-        return _get_unique_seeds_per_chain(random_state.randint)
-
-    if not isinstance(random_state, (list, tuple, np.ndarray)):
-        raise ValueError(f"The `seeds` must be array-like. Got {type(random_state)} instead.")
-
-    if len(random_state) != chains:
-        raise ValueError(
-            f"Number of seeds ({len(random_state)}) does not match the number of chains ({chains})."
-        )
-
-    return random_state
-
-
 def sample(
     draws: int = 1000,
     step=None,
@@ -324,6 +239,7 @@ def sample(
     jitter_max_retries: int = 10,
     *,
     return_inferencedata: bool = True,
+    keep_warning_stat: bool = False,
     idata_kwargs: dict = None,
     mp_ctx=None,
     **kwargs,
@@ -394,6 +310,13 @@ def sample(
         `MultiTrace` (False). Defaults to `True`.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
+    keep_warning_stat : bool
+        If ``True`` the "warning" stat emitted by, for example, HMC samplers will be kept
+        in the returned ``idata.sample_stat`` group.
+        This leads to the ``idata`` not supporting ``.to_netcdf()`` or ``.to_zarr()`` and
+        should only be set to ``True`` if you intend to use the "warning" objects right away.
+        Defaults to ``False`` such that ``pm.drop_warning_stat`` is applied automatically,
+        making the ``InferenceData`` compatible with saving.
     mp_ctx : multiprocessing.context.BaseContent
         A multiprocessing context for parallel sampling.
         See multiprocessing documentation for details.
@@ -700,6 +623,10 @@ def sample(
                 mtrace.report._add_warnings(convergence_warnings)
 
         if return_inferencedata:
+            # By default we drop the "warning" stat which contains `SamplerWarning`
+            # objects that can not be stored with `.to_netcdf()`.
+            if not keep_warning_stat:
+                return drop_warning_stat(idata)
             return idata
     return mtrace
 
@@ -1048,36 +975,27 @@ def _iter_sample(
                 step = stop_tuning(step)
             if step.generates_stats:
                 point, stats = step.step(point)
-                if strace.supports_sampler_stats:
-                    strace.record(point, stats)
-                    diverging = i > tune and stats and stats[0].get("diverging")
-                else:
-                    strace.record(point)
+                strace.record(point, stats)
+                log_warning_stats(stats)
+                diverging = i > tune and stats and stats[0].get("diverging")
             else:
                 point = step.step(point)
                 strace.record(point)
             if callback is not None:
-                warns = getattr(step, "warnings", None)
                 callback(
                     trace=strace,
-                    draw=Draw(chain, i == draws, i, i < tune, stats, point, warns),
+                    draw=Draw(chain, i == draws, i, i < tune, stats, point),
                 )
 
             yield strace, diverging
     except KeyboardInterrupt:
         strace.close()
-        if hasattr(step, "warnings"):
-            warns = step.warnings()
-            strace._add_warnings(warns)
         raise
     except BaseException:
         strace.close()
         raise
     else:
         strace.close()
-        if hasattr(step, "warnings"):
-            warns = step.warnings()
-            strace._add_warnings(warns)
 
 
 class PopulationStepper:
@@ -1359,10 +1277,8 @@ def _iter_population(
                 for c, strace in enumerate(traces):
                     if steppers[c].generates_stats:
                         points[c], stats = updates[c]
-                        if strace.supports_sampler_stats:
-                            strace.record(points[c], stats)
-                        else:
-                            strace.record(points[c])
+                        strace.record(points[c], stats)
+                        log_warning_stats(stats)
                     else:
                         points[c] = updates[c]
                         strace.record(points[c])
@@ -1428,7 +1344,7 @@ def _init_trace(
     else:
         strace = _choose_backend(None, model=model)
 
-    if step.generates_stats and strace.supports_sampler_stats:
+    if step.generates_stats:
         strace.setup(expected_length, chain_number, step.stats_dtypes)
     else:
         strace.setup(expected_length, chain_number)
@@ -1520,21 +1436,16 @@ def _mp_sample(
             with sampler:
                 for draw in sampler:
                     strace = traces[draw.chain]
-                    if strace.supports_sampler_stats and draw.stats is not None:
-                        strace.record(draw.point, draw.stats)
-                    else:
-                        strace.record(draw.point)
+                    strace.record(draw.point, draw.stats)
+                    log_warning_stats(draw.stats)
                     if draw.is_last:
                         strace.close()
-                        if draw.warnings is not None:
-                            strace._add_warnings(draw.warnings)
 
                     if callback is not None:
                         callback(trace=trace, draw=draw)
 
         except ps.ParallelSamplingError as error:
             strace = traces[error._chain]
-            strace._add_warnings(error._warnings)
             for strace in traces:
                 strace.close()
 
@@ -1551,6 +1462,22 @@ def _mp_sample(
     finally:
         for strace in traces:
             strace.close()
+
+
+def log_warning_stats(stats: Sequence[Dict[str, Any]]):
+    """Logs 'warning' stats if present."""
+    if stats is None:
+        return
+
+    for sts in stats:
+        warn = sts.get("warning", None)
+        if warn is None:
+            continue
+        if isinstance(warn, SamplerWarning):
+            log_warning(warn)
+        else:
+            _log.warning(warn)
+    return
 
 
 def _choose_chains(traces: Sequence[BaseTrace], tune: int) -> Tuple[List[BaseTrace], int]:
@@ -1584,795 +1511,6 @@ def stop_tuning(step):
     """Stop tuning the current step method."""
     step.stop_tuning()
     return step
-
-
-def get_vars_in_point_list(trace, model):
-    """Get the list of Variable instances in the model that have values stored in the trace."""
-    if not isinstance(trace, MultiTrace):
-        names_in_trace = list(trace[0])
-    else:
-        names_in_trace = trace.varnames
-    vars_in_trace = [model[v] for v in names_in_trace]
-    return vars_in_trace
-
-
-def compile_forward_sampling_function(
-    outputs: List[Variable],
-    vars_in_trace: List[Variable],
-    basic_rvs: Optional[List[Variable]] = None,
-    givens_dict: Optional[Dict[Variable, Any]] = None,
-    constant_data: Optional[Dict[str, np.ndarray]] = None,
-    constant_coords: Optional[Set[str]] = None,
-    **kwargs,
-) -> Tuple[Callable[..., Union[np.ndarray, List[np.ndarray]]], Set[Variable]]:
-    """Compile a function to draw samples, conditioned on the values of some variables.
-
-    The goal of this function is to walk the aesara computational graph from the list
-    of output nodes down to the root nodes, and then compile a function that will produce
-    values for these output nodes. The compiled function will take as inputs the subset of
-    variables in the ``vars_in_trace`` that are deemed to not be **volatile**.
-
-    Volatile variables are variables whose values could change between runs of the
-    compiled function or after inference has been run. These variables are:
-
-    - Variables in the outputs list
-    - ``SharedVariable`` instances that are not ``RandomStateSharedVariable`` or ``RandomGeneratorSharedVariable``, and whose values changed with respect to what they were at inference time
-    - Variables that are in the `basic_rvs` list but not in the ``vars_in_trace`` list
-    - Variables that are keys in the ``givens_dict``
-    - Variables that have volatile inputs
-
-    Concretely, this function can be used to compile a function to sample from the
-    posterior predictive distribution of a model that has variables that are conditioned
-    on ``MutableData`` instances. The variables that depend on the mutable data that have changed
-    will be considered volatile, and as such, they wont be included as inputs into the compiled
-    function. This means that if they have values stored in the posterior, these values will be
-    ignored and new values will be computed (in the case of deterministics and potentials) or
-    sampled (in the case of random variables).
-
-    This function also enables a way to impute values for any variable in the computational
-    graph that produces the desired outputs: the ``givens_dict``. This dictionary can be used
-    to set the ``givens`` argument of the aesara function compilation. This will essentially
-    replace a node in the computational graph with any other expression that has the same
-    type as the desired node. Passing variables in the givens_dict is considered an intervention
-    that might lead to different variable values from those that could have been seen during
-    inference, as such, **any variable that is passed in the ``givens_dict`` will be considered
-    volatile**.
-
-    Parameters
-    ----------
-    outputs : List[aesara.graph.basic.Variable]
-        The list of variables that will be returned by the compiled function
-    vars_in_trace : List[aesara.graph.basic.Variable]
-        The list of variables that are assumed to have values stored in the trace
-    basic_rvs : Optional[List[aesara.graph.basic.Variable]]
-        A list of random variables that are defined in the model. This list (which could be the
-        output of ``model.basic_RVs``) should have a reference to the variables that should
-        be considered as random variable instances. This includes variables that have
-        a ``RandomVariable`` owner op, but also unpure random variables like Mixtures, or
-        Censored distributions.
-    givens_dict : Optional[Dict[aesara.graph.basic.Variable, Any]]
-        A dictionary that maps tensor variables to the values that should be used to replace them
-        in the compiled function. The types of the key and value should match or an error will be
-        raised during compilation.
-    constant_data : Optional[Dict[str, numpy.ndarray]]
-        A dictionary that maps the names of ``MutableData`` or ``ConstantData`` instances to their
-        corresponding values at inference time. If a model was created with ``MutableData``, these
-        are stored as ``SharedVariable`` with the name of the data variable and a value equal to
-        the initial data. At inference time, this information is stored in ``InferenceData``
-        objects under the ``constant_data`` group, which allows us to check whether a
-        ``SharedVariable`` instance changed its values after inference or not. If the values have
-        changed, then the ``SharedVariable`` is assumed to be volatile. If it has not changed, then
-        the ``SharedVariable`` is assumed to not be volatile. If a ``SharedVariable`` is not found
-        in either ``constant_data`` or ``constant_coords``, then it is assumed to be volatile.
-        Setting ``constant_data`` to ``None`` is equivalent to passing an empty dictionary.
-    constant_coords : Optional[Set[str]]
-        A set with the names of the mutable coordinates that have not changed their shape after
-        inference. If a model was created with mutable coordinates, these are stored as
-        ``SharedVariable`` with the name of the coordinate and a value equal to the length of said
-        coordinate. This set let's us check if a ``SharedVariable`` is a mutated coordinate, in
-        which case, it is considered volatile. If a ``SharedVariable`` is not found
-        in either ``constant_data`` or ``constant_coords``, then it is assumed to be volatile.
-        Setting ``constant_coords`` to ``None`` is equivalent to passing an empty set.
-
-    Returns
-    -------
-    function: Callable
-        Compiled forward sampling Aesara function
-    volatile_basic_rvs: Set of Variable
-        Set of all basic_rvs that were considered volatile and will be resampled when
-        the function is evaluated
-    """
-    if givens_dict is None:
-        givens_dict = {}
-
-    if basic_rvs is None:
-        basic_rvs = []
-
-    if constant_data is None:
-        constant_data = {}
-    if constant_coords is None:
-        constant_coords = set()
-
-    # We define a helper function to check if shared values match to an array
-    def shared_value_matches(var):
-        try:
-            old_array_value = constant_data[var.name]
-        except KeyError:
-            return var.name in constant_coords
-        current_shared_value = var.get_value(borrow=True)
-        return np.array_equal(old_array_value, current_shared_value)
-
-    # We need a function graph to walk the clients and propagate the volatile property
-    fg = FunctionGraph(outputs=outputs, clone=False)
-
-    # Walk the graph from inputs to outputs and tag the volatile variables
-    nodes: List[Variable] = general_toposort(
-        fg.outputs, deps=lambda x: x.owner.inputs if x.owner else []
-    )
-    volatile_nodes: Set[Any] = set()
-    for node in nodes:
-        if (
-            node in fg.outputs
-            or node in givens_dict
-            or (  # SharedVariables, except RandomState/Generators
-                isinstance(node, SharedVariable)
-                and not isinstance(node, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
-                and not shared_value_matches(node)
-            )
-            or (  # Basic RVs that are not in the trace
-                node in basic_rvs and node not in vars_in_trace
-            )
-            or (  # Variables that have any volatile input
-                node.owner and any(inp in volatile_nodes for inp in node.owner.inputs)
-            )
-        ):
-            volatile_nodes.add(node)
-
-    # Collect the function inputs by walking the graph from the outputs. Inputs will be:
-    # 1. Random variables that are not volatile
-    # 2. Variables that have no owner and are not constant or shared
-    inputs = []
-
-    def expand(node):
-        if (
-            (
-                node.owner is None and not isinstance(node, (Constant, SharedVariable))
-            )  # Variables without owners that are not constant or shared
-            or node in vars_in_trace  # Variables in the trace
-        ) and node not in volatile_nodes:
-            # This test will include variables without owners, and that are not constant
-            # or shared, because these nodes will never be considered volatile
-            inputs.append(node)
-        if node.owner:
-            return node.owner.inputs
-
-    # walk produces a generator, so we have to actually exhaust the generator in a list to walk
-    # the entire graph
-    list(walk(fg.outputs, expand))
-
-    # Populate the givens list
-    givens = [
-        (
-            node,
-            value
-            if isinstance(value, (Variable, Apply))
-            else at.constant(value, dtype=getattr(node, "dtype", None), name=node.name),
-        )
-        for node, value in givens_dict.items()
-    ]
-
-    return (
-        compile_pymc(inputs, fg.outputs, givens=givens, on_unused_input="ignore", **kwargs),
-        set(basic_rvs) & (volatile_nodes - set(givens_dict)),  # Basic RVs that will be resampled
-    )
-
-
-def sample_posterior_predictive(
-    trace,
-    samples: Optional[int] = None,
-    model: Optional[Model] = None,
-    var_names: Optional[List[str]] = None,
-    keep_size: Optional[bool] = None,
-    random_seed: RandomState = None,
-    progressbar: bool = True,
-    return_inferencedata: bool = True,
-    extend_inferencedata: bool = False,
-    predictions: bool = False,
-    idata_kwargs: dict = None,
-    compile_kwargs: dict = None,
-) -> Union[InferenceData, Dict[str, np.ndarray]]:
-    """Generate posterior predictive samples from a model given a trace.
-
-    Parameters
-    ----------
-    trace : backend, list, xarray.Dataset, arviz.InferenceData, or MultiTrace
-        Trace generated from MCMC sampling, or a list of dicts (eg. points or from find_MAP()),
-        or xarray.Dataset (eg. InferenceData.posterior or InferenceData.prior)
-    samples : int
-        Number of posterior predictive samples to generate. Defaults to one posterior predictive
-        sample per posterior sample, that is, the number of draws times the number of chains.
-
-        It is not recommended to modify this value; when modified, some chains may not be
-        represented in the posterior predictive sample. Instead, in cases when generating
-        posterior predictive samples is too expensive to do it once per posterior sample,
-        the recommended approach is to thin the ``trace`` argument
-        before passing it to ``sample_posterior_predictive``. In such cases it
-        might be advisable to set ``extend_inferencedata`` to ``False`` and extend
-        the inferencedata manually afterwards.
-    model : Model (optional if in ``with`` context)
-        Model to be used to generate the posterior predictive samples. It will
-        generally be the model used to generate the ``trace``, but it doesn't need to be.
-    var_names : Iterable[str]
-        Names of variables for which to compute the posterior predictive samples.
-    keep_size : bool, default True
-        Force posterior predictive sample to have the same shape as posterior and sample stats
-        data: ``(nchains, ndraws, ...)``. Overrides samples parameter.
-    random_seed : int, RandomState or Generator, optional
-        Seed for the random number generator.
-    progressbar : bool
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
-    return_inferencedata : bool, default True
-        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
-    extend_inferencedata : bool, default False
-        Whether to automatically use :meth:`arviz.InferenceData.extend` to add the posterior predictive samples to
-        ``trace`` or not. If True, ``trace`` is modified inplace but still returned.
-    predictions : bool, default False
-        Choose the function used to convert the samples to inferencedata. See ``idata_kwargs``
-        for more details.
-    idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data` if ``predictions=False`` or to
-        :func:`pymc.predictions_to_inference_data` otherwise.
-    compile_kwargs: dict, optional
-        Keyword arguments for :func:`pymc.aesaraf.compile_pymc`.
-
-    Returns
-    -------
-    arviz.InferenceData or Dict
-        An ArviZ ``InferenceData`` object containing the posterior predictive samples (default), or
-        a dictionary with variable names as keys, and samples as numpy arrays.
-
-    Examples
-    --------
-    Thin a sampled inferencedata by keeping 1 out of every 5 draws
-    before passing it to sample_posterior_predictive
-
-    .. code:: python
-
-        thinned_idata = idata.sel(draw=slice(None, None, 5))
-        with model:
-            idata.extend(pymc.sample_posterior_predictive(thinned_idata))
-    """
-
-    _trace: Union[MultiTrace, PointList]
-    nchain: int
-    if idata_kwargs is None:
-        idata_kwargs = {}
-    else:
-        idata_kwargs = idata_kwargs.copy()
-    constant_data: Dict[str, np.ndarray] = {}
-    trace_coords: Dict[str, np.ndarray] = {}
-    if "coords" not in idata_kwargs:
-        idata_kwargs["coords"] = {}
-    if isinstance(trace, InferenceData):
-        idata_kwargs["coords"].setdefault("draw", trace["posterior"]["draw"])
-        idata_kwargs["coords"].setdefault("chain", trace["posterior"]["chain"])
-        _constant_data = getattr(trace, "constant_data", None)
-        if _constant_data is not None:
-            trace_coords.update({str(k): v.data for k, v in _constant_data.coords.items()})
-            constant_data.update({str(k): v.data for k, v in _constant_data.items()})
-        trace_coords.update({str(k): v.data for k, v in trace["posterior"].coords.items()})
-        _trace = dataset_to_point_list(trace["posterior"])
-        nchain, len_trace = chains_and_samples(trace)
-    elif isinstance(trace, xarray.Dataset):
-        idata_kwargs["coords"].setdefault("draw", trace["draw"])
-        idata_kwargs["coords"].setdefault("chain", trace["chain"])
-        trace_coords.update({str(k): v.data for k, v in trace.coords.items()})
-        _trace = dataset_to_point_list(trace)
-        nchain, len_trace = chains_and_samples(trace)
-    elif isinstance(trace, MultiTrace):
-        _trace = trace
-        nchain = _trace.nchains
-        len_trace = len(_trace)
-    elif isinstance(trace, list) and all(isinstance(x, dict) for x in trace):
-        _trace = trace
-        nchain = 1
-        len_trace = len(_trace)
-    else:
-        raise TypeError(f"Unsupported type for `trace` argument: {type(trace)}.")
-
-    if keep_size is None:
-        # This will allow users to set return_inferencedata=False and
-        # automatically get the old behaviour instead of needing to
-        # set both return_inferencedata and keep_size to False
-        keep_size = return_inferencedata
-
-    if keep_size and samples is not None:
-        raise IncorrectArgumentsError(
-            "Should not specify both keep_size and samples arguments. "
-            "See the docstring of the samples argument for more details."
-        )
-
-    if samples is None:
-        if isinstance(_trace, MultiTrace):
-            samples = sum(len(v) for v in _trace._straces.values())
-        elif isinstance(_trace, list):
-            # this is a list of points
-            samples = len(_trace)
-        else:
-            raise TypeError(
-                "Do not know how to compute number of samples for trace argument of type %s"
-                % type(_trace)
-            )
-
-    assert samples is not None
-    if samples < len_trace * nchain:
-        warnings.warn(
-            "samples parameter is smaller than nchains times ndraws, some draws "
-            "and/or chains may not be represented in the returned posterior "
-            "predictive sample",
-            stacklevel=2,
-        )
-
-    model = modelcontext(model)
-
-    if model.potentials:
-        warnings.warn(
-            "The effect of Potentials on other parameters is ignored during posterior predictive sampling. "
-            "This is likely to lead to invalid or biased predictive samples.",
-            UserWarning,
-            stacklevel=2,
-        )
-
-    constant_coords = set()
-    for dim, coord in trace_coords.items():
-        current_coord = model.coords.get(dim, None)
-        if (
-            current_coord is not None
-            and len(coord) == len(current_coord)
-            and np.all(coord == current_coord)
-        ):
-            constant_coords.add(dim)
-
-    if var_names is not None:
-        vars_ = [model[x] for x in var_names]
-    else:
-        vars_ = model.observed_RVs + model.auto_deterministics
-
-    indices = np.arange(samples)
-    if progressbar:
-        indices = progress_bar(indices, total=samples, display=progressbar)
-
-    vars_to_sample = list(get_default_varnames(vars_, include_transformed=False))
-
-    if not vars_to_sample:
-        if return_inferencedata and not extend_inferencedata:
-            return InferenceData()
-        elif return_inferencedata and extend_inferencedata:
-            return trace
-        return {}
-
-    vars_in_trace = get_vars_in_point_list(_trace, model)
-
-    if random_seed is not None:
-        (random_seed,) = _get_seeds_per_chain(random_seed, 1)
-
-    if compile_kwargs is None:
-        compile_kwargs = {}
-    compile_kwargs.setdefault("allow_input_downcast", True)
-    compile_kwargs.setdefault("accept_inplace", True)
-
-    _sampler_fn, volatile_basic_rvs = compile_forward_sampling_function(
-        outputs=vars_to_sample,
-        vars_in_trace=vars_in_trace,
-        basic_rvs=model.basic_RVs,
-        givens_dict=None,
-        random_seed=random_seed,
-        constant_data=constant_data,
-        constant_coords=constant_coords,
-        **compile_kwargs,
-    )
-    sampler_fn = point_wrapper(_sampler_fn)
-    # All model variables have a name, but mypy does not know this
-    _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
-    ppc_trace_t = _DefaultTrace(samples)
-    try:
-        for idx in indices:
-            if nchain > 1:
-                # the trace object will either be a MultiTrace (and have _straces)...
-                if hasattr(_trace, "_straces"):
-                    chain_idx, point_idx = np.divmod(idx, len_trace)
-                    chain_idx = chain_idx % nchain
-                    param = cast(MultiTrace, _trace)._straces[chain_idx].point(point_idx)
-                # ... or a PointList
-                else:
-                    param = cast(PointList, _trace)[idx % (len_trace * nchain)]
-            # there's only a single chain, but the index might hit it multiple times if
-            # the number of indices is greater than the length of the trace.
-            else:
-                param = _trace[idx % len_trace]
-
-            values = sampler_fn(**param)
-
-            for k, v in zip(vars_, values):
-                ppc_trace_t.insert(k.name, v, idx)
-    except KeyboardInterrupt:
-        pass
-
-    ppc_trace = ppc_trace_t.trace_dict
-    if keep_size:
-        for k, ary in ppc_trace.items():
-            ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
-
-    if not return_inferencedata:
-        return ppc_trace
-    ikwargs: Dict[str, Any] = dict(model=model, **idata_kwargs)
-    if predictions:
-        if extend_inferencedata:
-            ikwargs.setdefault("idata_orig", trace)
-            ikwargs.setdefault("inplace", True)
-        return pm.predictions_to_inference_data(ppc_trace, **ikwargs)
-    converter = pm.backends.arviz.InferenceDataConverter(posterior_predictive=ppc_trace, **ikwargs)
-    converter.nchains = nchain
-    converter.ndraws = len_trace
-    idata_pp = converter.to_inference_data()
-    if extend_inferencedata:
-        trace.extend(idata_pp)
-        return trace
-    return idata_pp
-
-
-def sample_posterior_predictive_w(
-    traces,
-    samples: Optional[int] = None,
-    models: Optional[List[Model]] = None,
-    weights: Optional[ArrayLike] = None,
-    random_seed: RandomState = None,
-    progressbar: bool = True,
-    return_inferencedata: bool = True,
-    idata_kwargs: dict = None,
-):
-    """Generate weighted posterior predictive samples from a list of models and
-    a list of traces according to a set of weights.
-
-    Parameters
-    ----------
-    traces : list or list of lists
-        List of traces generated from MCMC sampling (xarray.Dataset, arviz.InferenceData, or
-        MultiTrace), or a list of list containing dicts from find_MAP() or points. The number of
-        traces should be equal to the number of weights.
-    samples : int, optional
-        Number of posterior predictive samples to generate. Defaults to the
-        length of the shorter trace in traces.
-    models : list of Model
-        List of models used to generate the list of traces. The number of models should be equal to
-        the number of weights and the number of observed RVs should be the same for all models.
-        By default a single model will be inferred from ``with`` context, in this case results will
-        only be meaningful if all models share the same distributions for the observed RVs.
-    weights : array-like, optional
-        Individual weights for each trace. Default, same weight for each model.
-    random_seed : int, RandomState or Generator, optional
-        Seed for the random number generator.
-    progressbar : bool, optional default True
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
-    return_inferencedata : bool
-        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
-        Defaults to True.
-    idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data`
-
-    Returns
-    -------
-    arviz.InferenceData or Dict
-        An ArviZ ``InferenceData`` object containing the posterior predictive samples from the
-        weighted models (default), or a dictionary with variable names as keys, and samples as
-        numpy arrays.
-    """
-    raise NotImplementedError(f"sample_posterior_predictive_w has not yet been ported to PyMC 4.0.")
-
-    if isinstance(traces[0], InferenceData):
-        n_samples = [
-            trace.posterior.sizes["chain"] * trace.posterior.sizes["draw"] for trace in traces
-        ]
-        traces = [dataset_to_point_list(trace.posterior) for trace in traces]
-    elif isinstance(traces[0], xarray.Dataset):
-        n_samples = [trace.sizes["chain"] * trace.sizes["draw"] for trace in traces]
-        traces = [dataset_to_point_list(trace) for trace in traces]
-    else:
-        n_samples = [len(i) * i.nchains for i in traces]
-
-    if models is None:
-        models = [modelcontext(models)] * len(traces)
-
-    if random_seed is not None:
-        (random_seed,) = _get_seeds_per_chain(random_seed, 1)
-
-    for model in models:
-        if model.potentials:
-            warnings.warn(
-                "The effect of Potentials on other parameters is ignored during posterior predictive sampling. "
-                "This is likely to lead to invalid or biased predictive samples.",
-                UserWarning,
-                stacklevel=2,
-            )
-            break
-
-    if weights is None:
-        weights = [1] * len(traces)
-
-    if len(traces) != len(weights):
-        raise ValueError("The number of traces and weights should be the same")
-
-    if len(models) != len(weights):
-        raise ValueError("The number of models and weights should be the same")
-
-    length_morv = len(models[0].observed_RVs)
-    if any(len(i.observed_RVs) != length_morv for i in models):
-        raise ValueError("The number of observed RVs should be the same for all models")
-
-    weights = np.asarray(weights)
-    p = weights / np.sum(weights)
-
-    min_tr = min(n_samples)
-
-    n = (min_tr * p).astype("int")
-    # ensure n sum up to min_tr
-    idx = np.argmax(n)
-    n[idx] = n[idx] + min_tr - np.sum(n)
-    trace = []
-    for i, j in enumerate(n):
-        tr = traces[i]
-        len_trace = len(tr)
-        try:
-            nchain = tr.nchains
-        except AttributeError:
-            nchain = 1
-
-        indices = np.random.randint(0, nchain * len_trace, j)
-        if nchain > 1:
-            chain_idx, point_idx = np.divmod(indices, len_trace)
-            for cidx, pidx in zip(chain_idx, point_idx):
-                trace.append(tr._straces[cidx].point(pidx))
-        else:
-            for idx in indices:
-                trace.append(tr[idx])
-
-    obs = [x for m in models for x in m.observed_RVs]
-    variables = np.repeat(obs, n)
-
-    lengths = list({np.atleast_1d(observed).shape for observed in obs})
-
-    size: List[Optional[Tuple[int, ...]]] = []
-    if len(lengths) == 1:
-        size = [None] * len(variables)
-    elif len(lengths) > 2:
-        raise ValueError("Observed variables could not be broadcast together")
-    else:
-        x = np.zeros(shape=lengths[0])
-        y = np.zeros(shape=lengths[1])
-        b = np.broadcast(x, y)
-        for var in variables:
-            # XXX: This needs to be refactored
-            shape = None  # np.shape(np.atleast_1d(var.distribution.default()))
-            if shape != b.shape:
-                size.append(b.shape)
-            else:
-                size.append(None)
-    len_trace = len(trace)
-
-    if samples is None:
-        samples = len_trace
-
-    indices = np.random.randint(0, len_trace, samples)
-
-    if progressbar:
-        indices = progress_bar(indices, total=samples, display=progressbar)
-
-    try:
-        ppcl: Dict[str, list] = defaultdict(list)
-        for idx in indices:
-            param = trace[idx]
-            var = variables[idx]
-            # TODO sample_posterior_predictive_w is currently only work for model with
-            # one observed.
-            # XXX: This needs to be refactored
-            # ppc[var.name].append(draw_values([var], point=param, size=size[idx])[0])
-            raise NotImplementedError()
-
-    except KeyboardInterrupt:
-        pass
-    else:
-        ppcd = {k: np.asarray(v) for k, v in ppcl.items()}
-        if not return_inferencedata:
-            return ppcd
-        ikwargs: Dict[str, Any] = dict(model=models)
-        if idata_kwargs:
-            ikwargs.update(idata_kwargs)
-        return pm.to_inference_data(posterior_predictive=ppcd, **ikwargs)
-
-
-def sample_prior_predictive(
-    samples: int = 500,
-    model: Optional[Model] = None,
-    var_names: Optional[Iterable[str]] = None,
-    random_seed: RandomState = None,
-    return_inferencedata: bool = True,
-    idata_kwargs: dict = None,
-    compile_kwargs: dict = None,
-) -> Union[InferenceData, Dict[str, np.ndarray]]:
-    """Generate samples from the prior predictive distribution.
-
-    Parameters
-    ----------
-    samples : int
-        Number of samples from the prior predictive to generate. Defaults to 500.
-    model : Model (optional if in ``with`` context)
-    var_names : Iterable[str]
-        A list of names of variables for which to compute the prior predictive
-        samples. Defaults to both observed and unobserved RVs. Transformed values
-        are not included unless explicitly defined in var_names.
-    random_seed : int, RandomState or Generator, optional
-        Seed for the random number generator.
-    return_inferencedata : bool
-        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
-        Defaults to True.
-    idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data`
-    compile_kwargs: dict, optional
-        Keyword arguments for :func:`pymc.aesaraf.compile_pymc`.
-
-    Returns
-    -------
-    arviz.InferenceData or Dict
-        An ArviZ ``InferenceData`` object containing the prior and prior predictive samples (default),
-        or a dictionary with variable names as keys and samples as numpy arrays.
-    """
-    model = modelcontext(model)
-
-    if model.potentials:
-        warnings.warn(
-            "The effect of Potentials on other parameters is ignored during prior predictive sampling. "
-            "This is likely to lead to invalid or biased predictive samples.",
-            UserWarning,
-            stacklevel=2,
-        )
-
-    if var_names is None:
-        prior_pred_vars = model.observed_RVs + model.auto_deterministics
-        prior_vars = (
-            get_default_varnames(model.unobserved_RVs, include_transformed=True) + model.potentials
-        )
-        vars_: Set[str] = {var.name for var in prior_vars + prior_pred_vars}
-    else:
-        vars_ = set(var_names)
-
-    names = sorted(get_default_varnames(vars_, include_transformed=False))
-    vars_to_sample = [model[name] for name in names]
-
-    # Any variables from var_names that are missing must be transformed variables.
-    # Misspelled variables would have raised a KeyError above.
-    missing_names = vars_.difference(names)
-    for name in sorted(missing_names):
-        transformed_value_var = model[name]
-        rv_var = model.values_to_rvs[transformed_value_var]
-        transform = transformed_value_var.tag.transform
-        transformed_rv_var = transform.forward(rv_var, *rv_var.owner.inputs)
-
-        names.append(name)
-        vars_to_sample.append(transformed_rv_var)
-
-        # If the user asked for the transformed variable in var_names, but not the
-        # original RV, we add it manually here
-        if rv_var.name not in names:
-            names.append(rv_var.name)
-            vars_to_sample.append(rv_var)
-
-    if random_seed is not None:
-        (random_seed,) = _get_seeds_per_chain(random_seed, 1)
-
-    if compile_kwargs is None:
-        compile_kwargs = {}
-    compile_kwargs.setdefault("allow_input_downcast", True)
-    compile_kwargs.setdefault("accept_inplace", True)
-
-    sampler_fn, volatile_basic_rvs = compile_forward_sampling_function(
-        vars_to_sample,
-        vars_in_trace=[],
-        basic_rvs=model.basic_RVs,
-        givens_dict=None,
-        random_seed=random_seed,
-        **compile_kwargs,
-    )
-
-    # All model variables have a name, but mypy does not know this
-    _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
-    values = zip(*(sampler_fn() for i in range(samples)))
-
-    data = {k: np.stack(v) for k, v in zip(names, values)}
-    if data is None:
-        raise AssertionError("No variables sampled: attempting to sample %s" % names)
-
-    prior: Dict[str, np.ndarray] = {}
-    for var_name in vars_:
-        if var_name in data:
-            prior[var_name] = data[var_name]
-
-    if not return_inferencedata:
-        return prior
-    ikwargs: Dict[str, Any] = dict(model=model)
-    if idata_kwargs:
-        ikwargs.update(idata_kwargs)
-    return pm.to_inference_data(prior=prior, **ikwargs)
-
-
-def draw(
-    vars: Union[Variable, Sequence[Variable]],
-    draws: int = 1,
-    random_seed: RandomState = None,
-    **kwargs,
-) -> Union[np.ndarray, List[np.ndarray]]:
-    """Draw samples for one variable or a list of variables
-
-    Parameters
-    ----------
-    vars : TensorVariable or iterable of TensorVariable
-        A variable or a list of variables for which to draw samples.
-    draws : int, default 1
-        Number of samples needed to draw.
-    random_seed : int, RandomState or numpy_Generator, optional
-        Seed for the random number generator.
-    **kwargs : dict, optional
-        Keyword arguments for :func:`pymc.aesaraf.compile_pymc`.
-
-    Returns
-    -------
-    list of ndarray
-        A list of numpy arrays.
-
-    Examples
-    --------
-        .. code-block:: python
-
-            import pymc as pm
-
-            # Draw samples for one variable
-            with pm.Model():
-                x = pm.Normal("x")
-            x_draws = pm.draw(x, draws=100)
-            print(x_draws.shape)
-
-            # Draw 1000 samples for several variables
-            with pm.Model():
-                x = pm.Normal("x")
-                y = pm.Normal("y", shape=10)
-                z = pm.Uniform("z", shape=5)
-            num_draws = 1000
-            # Draw samples of a list variables
-            draws = pm.draw([x, y, z], draws=num_draws)
-            assert draws[0].shape == (num_draws,)
-            assert draws[1].shape == (num_draws, 10)
-            assert draws[2].shape == (num_draws, 5)
-    """
-    if random_seed is not None:
-        (random_seed,) = _get_seeds_per_chain(random_seed, 1)
-
-    draw_fn = compile_pymc(inputs=[], outputs=vars, random_seed=random_seed, **kwargs)
-
-    if draws == 1:
-        return draw_fn()
-
-    # Single variable output
-    if not isinstance(vars, (list, tuple)):
-        cast(Callable[[], np.ndarray], draw_fn)
-        return np.stack([draw_fn() for _ in range(draws)])
-
-    # Multiple variable output
-    cast(Callable[[], List[np.ndarray]], draw_fn)
-    drawn_values = zip(*(draw_fn() for _ in range(draws)))
-    return [np.stack(v) for v in drawn_values]
 
 
 def _init_jitter(

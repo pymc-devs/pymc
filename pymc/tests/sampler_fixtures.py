@@ -149,6 +149,7 @@ class BaseSampler(SeededTest):
                 cores=cls.chains,
                 return_inferencedata=False,
                 compute_convergence_checks=False,
+                random_seed=cls.random_seed,
             )
         cls.samples = {}
         for var in cls.model.unobserved_RVs:

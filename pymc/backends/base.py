@@ -52,8 +52,6 @@ class BaseTrace(ABC):
         use different test point that might be with changed variables shapes
     """
 
-    supports_sampler_stats = False
-
     def __init__(self, name, model=None, vars=None, test_point=None):
         self.name = name
 
@@ -80,17 +78,10 @@ class BaseTrace(ABC):
         self.chain = None
         self._is_base_setup = False
         self.sampler_vars = None
-        self._warnings = []
-
-    def _add_warnings(self, warnings):
-        self._warnings.extend(warnings)
 
     # Sampling methods
 
     def _set_sampler_vars(self, sampler_vars):
-        if sampler_vars is not None and not self.supports_sampler_stats:
-            raise ValueError("Backend does not support sampler stats.")
-
         if self._is_base_setup and self.sampler_vars != sampler_vars:
             raise ValueError("Can't change sampler_vars")
 
@@ -117,9 +108,7 @@ class BaseTrace(ABC):
         chain: int
             Chain number
         sampler_vars: list of dictionaries (name -> dtype), optional
-            Diagnostics / statistics for each sampler. Before passing this
-            to a backend, you should check, that the `supports_sampler_state`
-            flag is set.
+            Diagnostics / statistics for each sampler
         """
         self._set_sampler_vars(sampler_vars)
         self._is_base_setup = True
@@ -190,9 +179,6 @@ class BaseTrace(ABC):
         a numpy array of shape (m, n), where `m` is the number of
         such samplers, and `n` is the number of samples.
         """
-        if not self.supports_sampler_stats:
-            raise ValueError("This backend does not support sampler stats")
-
         if sampler_idx is not None:
             return self._get_sampler_stats(stat_name, sampler_idx, burn, thin)
 
@@ -232,13 +218,11 @@ class BaseTrace(ABC):
 
     @property
     def stat_names(self):
-        if self.supports_sampler_stats:
-            names = set()
-            for vars in self.sampler_vars or []:
-                names.update(vars.keys())
-            return names
-        else:
-            return set()
+        names = set()
+        for vars in self.sampler_vars or []:
+            names.update(vars.keys())
+
+        return names
 
 
 class MultiTrace:
@@ -300,9 +284,6 @@ class MultiTrace:
             self._straces[strace.chain] = strace
 
         self._report = SamplerReport()
-        for strace in straces:
-            if hasattr(strace, "_warnings"):
-                self._report._add_warnings(strace._warnings, strace.chain)
 
     def __repr__(self):
         template = "<{}: {} chains, {} iterations, {} variables>"
@@ -356,7 +337,7 @@ class MultiTrace:
             return self.get_sampler_stats(var, burn=burn, thin=thin)
         raise KeyError("Unknown variable %s" % var)
 
-    _attrs = {"_straces", "varnames", "chains", "stat_names", "supports_sampler_stats", "_report"}
+    _attrs = {"_straces", "varnames", "chains", "stat_names", "_report"}
 
     def __getattr__(self, name):
         # Avoid infinite recursion when called before __init__

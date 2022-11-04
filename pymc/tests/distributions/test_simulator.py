@@ -31,7 +31,7 @@ import pymc as pm
 from pymc import floatX
 from pymc.aesaraf import compile_pymc
 from pymc.initial_point import make_initial_point_fn
-from pymc.smc.smc import IMH
+from pymc.smc.kernels import IMH
 from pymc.tests.helpers import SeededTest
 
 
@@ -80,9 +80,7 @@ class TestSimulator(SeededTest):
         with self.SMABC_test:
             trace = pm.sample_smc(draws=1000, chains=1, return_inferencedata=False)
             pr_p = pm.sample_prior_predictive(1000, return_inferencedata=False)
-            po_p = pm.sample_posterior_predictive(
-                trace, keep_size=False, return_inferencedata=False
-            )
+            po_p = pm.sample_posterior_predictive(trace, return_inferencedata=False)
 
         assert abs(self.data.mean() - trace["a"].mean()) < 0.05
         assert abs(self.data.std() - trace["b"].mean()) < 0.05
@@ -91,7 +89,7 @@ class TestSimulator(SeededTest):
         assert abs(0 - pr_p["s"].mean()) < 0.15
         assert abs(1.4 - pr_p["s"].std()) < 0.10
 
-        assert po_p["s"].shape == (1000, 1000)
+        assert po_p["s"].shape == (1, 1000, 1000)
         assert abs(self.data.mean() - po_p["s"].mean()) < 0.10
         assert abs(self.data.std() - po_p["s"].std()) < 0.10
 

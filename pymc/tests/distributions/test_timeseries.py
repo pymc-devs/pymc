@@ -42,7 +42,8 @@ from pymc.distributions.timeseries import (
     RandomWalk,
 )
 from pymc.model import Model
-from pymc.sampling import draw, sample, sample_posterior_predictive
+from pymc.sampling import sample
+from pymc.sampling_forward import draw, sample_posterior_predictive
 from pymc.tests.distributions.util import assert_moment_is_expected
 from pymc.tests.helpers import select_by_precision
 
@@ -693,10 +694,10 @@ class TestAR:
 
     def test_init_deprecated_arg(self):
         with pytest.warns(FutureWarning, match="init parameter is now called init_dist"):
-            pm.AR.dist(rho=[1, 2, 3], init=Normal.dist(), shape=(10,))
+            AR.dist(rho=[1, 2, 3], init=Normal.dist(), shape=(10,))
 
     def test_change_dist_size(self):
-        base_dist = pm.AR.dist(rho=[0.5, 0.5], init_dist=pm.Normal.dist(size=(2,)), shape=(3, 10))
+        base_dist = AR.dist(rho=[0.5, 0.5], init_dist=pm.Normal.dist(size=(2,)), shape=(3, 10))
 
         new_dist = change_dist_size(base_dist, (4,))
         assert new_dist.eval().shape == (4, 10)
@@ -819,7 +820,7 @@ class TestGARCH11:
         assert_moment_is_expected(model, expected, check_finite_logp=True)
 
     def test_change_dist_size(self):
-        base_dist = pm.GARCH11.dist(
+        base_dist = GARCH11.dist(
             omega=1.25, alpha_1=0.5, beta_1=0.45, initial_vol=1.0, shape=(3, 10)
         )
 
@@ -830,37 +831,120 @@ class TestGARCH11:
         assert new_dist.eval().shape == (4, 3, 10)
 
 
-def _gen_sde_path(sde, pars, dt, n, x0):
-    xs = [x0]
-    wt = np.random.normal(size=(n,) if isinstance(x0, float) else (n, x0.size))
-    for i in range(n):
-        f, g = sde(xs[-1], *pars)
-        xs.append(xs[-1] + f * dt + np.sqrt(dt) * g * wt[i])
-    return np.array(xs)
+class TestEulerMaruyama:
+    @pytest.mark.parametrize("batched_param", [1, 2])
+    @pytest.mark.parametrize("explicit_shape", (True, False))
+    def test_batched_size(self, explicit_shape, batched_param):
+        steps, batch_size = 100, 5
+        param_val = np.square(np.random.randn(batch_size))
+        if explicit_shape:
+            kwargs = {"shape": (batch_size, steps)}
+        else:
+            kwargs = {"steps": steps - 1}
 
+        def sde_fn(x, k, d, s):
+            return (k - d * x, s)
 
-@pytest.mark.xfail(reason="Euleryama not refactored", raises=NotImplementedError)
-def test_linear():
-    lam = -0.78
-    sig2 = 5e-3
-    N = 300
-    dt = 1e-1
-    sde = lambda x, lam: (lam * x, sig2)
-    x = floatX(_gen_sde_path(sde, (lam,), dt, N, 5.0))
-    z = x + np.random.randn(x.size) * sig2
-    # build model
-    with Model() as model:
-        lamh = Flat("lamh")
-        xh = EulerMaruyama("xh", dt, sde, (lamh,), shape=N + 1, initval=x)
-        Normal("zh", mu=xh, sigma=sig2, observed=z)
-    # invert
-    with model:
-        trace = sample(init="advi+adapt_diag", chains=1)
+        sde_pars = [1.0, 2.0, 0.1]
+        sde_pars[batched_param] = sde_pars[batched_param] * param_val
+        with Model() as t0:
+            init_dist = pm.Normal.dist(0, 10, shape=(batch_size,))
+            y = EulerMaruyama(
+                "y", dt=0.02, sde_fn=sde_fn, sde_pars=sde_pars, init_dist=init_dist, **kwargs
+            )
 
-    ppc = sample_posterior_predictive(trace, model=model)
+        y_eval = draw(y, draws=2)
+        assert y_eval[0].shape == (batch_size, steps)
+        assert not np.any(np.isclose(y_eval[0], y_eval[1]))
 
-    p95 = [2.5, 97.5]
-    lo, hi = np.percentile(trace[lamh], p95, axis=0)
-    assert (lo < lam) and (lam < hi)
-    lo, hi = np.percentile(ppc["zh"], p95, axis=0)
-    assert ((lo < z) * (z < hi)).mean() > 0.95
+        if explicit_shape:
+            kwargs["shape"] = steps
+        with Model() as t1:
+            for i in range(batch_size):
+                sde_pars_slice = sde_pars.copy()
+                sde_pars_slice[batched_param] = sde_pars[batched_param][i]
+                init_dist = pm.Normal.dist(0, 10)
+                EulerMaruyama(
+                    f"y_{i}",
+                    dt=0.02,
+                    sde_fn=sde_fn,
+                    sde_pars=sde_pars_slice,
+                    init_dist=init_dist,
+                    **kwargs,
+                )
+
+        t0_init = t0.initial_point()
+        t1_init = {f"y_{i}": t0_init["y"][i] for i in range(batch_size)}
+        np.testing.assert_allclose(
+            t0.compile_logp()(t0_init),
+            t1.compile_logp()(t1_init),
+        )
+
+    def test_change_dist_size1(self):
+        def sde1(x, k, d, s):
+            return (k - d * x, s)
+
+        base_dist = EulerMaruyama.dist(
+            dt=0.01,
+            sde_fn=sde1,
+            sde_pars=(1, 2, 0.1),
+            init_dist=pm.Normal.dist(0, 10),
+            shape=(5, 10),
+        )
+
+        new_dist = change_dist_size(base_dist, (4,))
+        assert new_dist.eval().shape == (4, 10)
+
+        new_dist = change_dist_size(base_dist, (4,), expand=True)
+        assert new_dist.eval().shape == (4, 5, 10)
+
+    def test_change_dist_size2(self):
+        def sde2(p, s):
+            N = 500.0
+            return s * p * (1 - p) / (1 + s * p), pm.math.sqrt(p * (1 - p) / N)
+
+        base_dist = EulerMaruyama.dist(
+            dt=0.01, sde_fn=sde2, sde_pars=(0.1,), init_dist=pm.Normal.dist(0, 10), shape=(3, 10)
+        )
+
+        new_dist = change_dist_size(base_dist, (4,))
+        assert new_dist.eval().shape == (4, 10)
+
+        new_dist = change_dist_size(base_dist, (4,), expand=True)
+        assert new_dist.eval().shape == (4, 3, 10)
+
+    def test_linear_model(self):
+        lam = -0.78
+        sig2 = 5e-3
+        N = 300
+        dt = 1e-1
+
+        def _gen_sde_path(sde, pars, dt, n, x0):
+            xs = [x0]
+            wt = np.random.normal(size=(n,) if isinstance(x0, float) else (n, x0.size))
+            for i in range(n):
+                f, g = sde(xs[-1], *pars)
+                xs.append(xs[-1] + f * dt + np.sqrt(dt) * g * wt[i])
+            return np.array(xs)
+
+        sde = lambda x, lam: (lam * x, sig2)
+        x = floatX(_gen_sde_path(sde, (lam,), dt, N, 5.0))
+        z = x + np.random.randn(x.size) * sig2
+        # build model
+        with Model() as model:
+            lamh = Flat("lamh")
+            xh = EulerMaruyama(
+                "xh", dt, sde, (lamh,), steps=N, initval=x, init_dist=pm.Normal.dist(0, 10)
+            )
+            Normal("zh", mu=xh, sigma=sig2, observed=z)
+        # invert
+        with model:
+            trace = sample(chains=1)
+
+        ppc = sample_posterior_predictive(trace, model=model)
+
+        p95 = [2.5, 97.5]
+        lo, hi = np.percentile(trace.posterior["lamh"], p95, axis=[0, 1])
+        assert (lo < lam) and (lam < hi)
+        lo, hi = np.percentile(ppc.posterior_predictive["zh"], p95, axis=[0, 1])
+        assert ((lo < z) * (z < hi)).mean() > 0.95

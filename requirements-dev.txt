@@ -3,7 +3,7 @@
 
 aeppl==0.0.38
 aesara==2.8.7
-arviz>=0.12.0
+arviz>=0.13.0
 cachetools>=4.2.1
 cloudpickle
 fastprogress>=0.2.0
@@ -17,7 +17,7 @@ numpydoc
 pandas>=0.24.0
 polyagamma
 pre-commit>=2.8.0
-pydata-sphinx-theme<0.10.1
+pydata-sphinx-theme>=0.11.0
 pytest-cov>=2.5
 pytest>=3.0
 scipy>=1.4.1

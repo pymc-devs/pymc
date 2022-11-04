@@ -7,7 +7,7 @@ dependencies:
 # Base dependencies (see install guide for Windows)
 - aeppl=0.0.38
 - aesara=2.8.7
-- arviz>=0.12.0
+- arviz>=0.13.0
 - blas
 - cachetools>=4.2.1
 - cloudpickle
@@ -25,7 +25,7 @@ dependencies:
 - myst-nb
 - numpydoc
 - pre-commit>=2.8.0
-- pydata-sphinx-theme<0.10.1
+- pydata-sphinx-theme>=0.11.0
 - pytest-cov>=2.5
 - pytest>=3.0
 - sphinx-autobuild>=0.7

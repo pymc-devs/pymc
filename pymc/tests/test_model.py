@@ -482,15 +482,14 @@ class TestPickling:
                 )
 
 
-def test_model_vars():
+def test_model_value_vars():
     with pm.Model() as model:
         a = pm.Normal("a")
         pm.Normal("x", a)
 
-    with pytest.warns(FutureWarning):
-        old_vars = model.vars
-
-    assert old_vars == model.value_vars
+    value_vars = model.value_vars
+    assert len(value_vars) == 2
+    assert set(value_vars) == set(pm.inputvars(model.logp()))
 
 
 def test_model_var_maps():
@@ -589,8 +588,7 @@ def test_point_logps():
         a = pm.Uniform("a")
         pm.Normal("x", a)
 
-    with pytest.warns(FutureWarning):
-        logp_vals = model.check_test_point()
+    logp_vals = model.point_logps()
 
     assert "x" in logp_vals.keys()
     assert "a" in logp_vals.keys()
@@ -917,34 +915,16 @@ def test_set_data_constant_shape_error():
         pmodel.set_data("y", np.arange(10))
 
 
-def test_model_logpt_deprecation_warning():
+def test_model_deprecation_warning():
     with pm.Model() as m:
         x = pm.Normal("x", 0, 1, size=2)
         y = pm.LogNormal("y", 0, 1, size=2)
 
     with pytest.warns(FutureWarning):
-        m.logpt()
+        m.disc_vars
 
     with pytest.warns(FutureWarning):
-        m.dlogpt()
-
-    with pytest.warns(FutureWarning):
-        m.d2logpt()
-
-    with pytest.warns(FutureWarning):
-        m.datalogpt
-
-    with pytest.warns(FutureWarning):
-        m.varlogpt
-
-    with pytest.warns(FutureWarning):
-        m.observedlogpt
-
-    with pytest.warns(FutureWarning):
-        m.potentiallogpt
-
-    with pytest.warns(FutureWarning):
-        m.varlogp_nojact
+        m.cont_vars
 
 
 @pytest.mark.parametrize("jacobian", [True, False])
@@ -1159,220 +1139,256 @@ def missing_data(request):
         return pd.DataFrame([1, 2, np.nan, 4, np.nan])
 
 
-def test_missing(missing_data):
+class TestImputationMissingData:
+    "Test for Missing Data imputation"
 
-    with pm.Model() as model:
-        x = pm.Normal("x", 1, 1)
-        with pytest.warns(ImputationWarning):
-            _ = pm.Normal("y", x, 1, observed=missing_data)
-
-    assert "y_missing" in model.named_vars
-
-    test_point = model.initial_point()
-    assert not np.isnan(model.compile_logp()(test_point))
-
-    with model:
-        prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
-    assert {"x", "y"} <= set(prior_trace.keys())
-
-
-def test_missing_with_predictors():
-    predictors = np.array([0.5, 1, 0.5, 2, 0.3])
-    data = np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
-    with pm.Model() as model:
-        x = pm.Normal("x", 1, 1)
-        with pytest.warns(ImputationWarning):
-            y = pm.Normal("y", x * predictors, 1, observed=data)
-
-    assert "y_missing" in model.named_vars
-
-    test_point = model.initial_point()
-    assert not np.isnan(model.compile_logp()(test_point))
-
-    with model:
-        prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
-    assert {"x", "y"} <= set(prior_trace.keys())
-
-
-def test_missing_dual_observations():
-    with pm.Model() as model:
-        obs1 = np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
-        obs2 = np.ma.masked_values([-1, -1, 6, -1, 8], value=-1)
-        beta1 = pm.Normal("beta1", 1, 1)
-        beta2 = pm.Normal("beta2", 2, 1)
-        latent = pm.Normal("theta", size=5)
-        with pytest.warns(ImputationWarning):
-            ovar1 = pm.Normal("o1", mu=beta1 * latent, observed=obs1)
-        with pytest.warns(ImputationWarning):
-            ovar2 = pm.Normal("o2", mu=beta2 * latent, observed=obs2)
-
-        prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
-        assert {"beta1", "beta2", "theta", "o1", "o2"} <= set(prior_trace.keys())
-        # TODO: Assert something
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-            trace = pm.sample(chains=1, draws=50)
-
-
-def test_interval_missing_observations():
-    with pm.Model() as model:
-        obs1 = np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
-        obs2 = np.ma.masked_values([-1, -1, 6, -1, 8], value=-1)
-
-        rng = aesara.shared(np.random.RandomState(2323), borrow=True)
-
-        with pytest.warns(ImputationWarning):
-            theta1 = pm.Uniform("theta1", 0, 5, observed=obs1, rng=rng)
-        with pytest.warns(ImputationWarning):
-            theta2 = pm.Normal("theta2", mu=theta1, observed=obs2, rng=rng)
-
-        assert "theta1_observed" in model.named_vars
-        assert "theta1_missing_interval__" in model.named_vars
-        assert not hasattr(
-            model.rvs_to_values[model.named_vars["theta1_observed"]].tag, "transform"
-        )
-
-        prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
-
-        # Make sure the observed + missing combined deterministics have the
-        # same shape as the original observations vectors
-        assert prior_trace["theta1"].shape[-1] == obs1.shape[0]
-        assert prior_trace["theta2"].shape[-1] == obs2.shape[0]
-
-        # Make sure that the observed values are newly generated samples
-        assert np.all(np.var(prior_trace["theta1_observed"], 0) > 0.0)
-        assert np.all(np.var(prior_trace["theta2_observed"], 0) > 0.0)
-
-        # Make sure the missing parts of the combined deterministic matches the
-        # sampled missing and observed variable values
-        assert np.mean(prior_trace["theta1"][:, obs1.mask] - prior_trace["theta1_missing"]) == 0.0
-        assert np.mean(prior_trace["theta1"][:, ~obs1.mask] - prior_trace["theta1_observed"]) == 0.0
-        assert np.mean(prior_trace["theta2"][:, obs2.mask] - prior_trace["theta2_missing"]) == 0.0
-        assert np.mean(prior_trace["theta2"][:, ~obs2.mask] - prior_trace["theta2_observed"]) == 0.0
-
-        assert {"theta1", "theta2"} <= set(prior_trace.keys())
-
-        trace = pm.sample(
-            chains=1, draws=50, compute_convergence_checks=False, return_inferencedata=False
-        )
-
-        assert np.all(0 < trace["theta1_missing"].mean(0))
-        assert np.all(0 < trace["theta2_missing"].mean(0))
-        assert "theta1" not in trace.varnames
-        assert "theta2" not in trace.varnames
-
-        # Make sure that the observed values are newly generated samples and that
-        # the observed and deterministic matche
-        pp_trace = pm.sample_posterior_predictive(
-            trace, return_inferencedata=False, keep_size=False
-        )
-        assert np.all(np.var(pp_trace["theta1"], 0) > 0.0)
-        assert np.all(np.var(pp_trace["theta2"], 0) > 0.0)
-        assert np.mean(pp_trace["theta1"][:, ~obs1.mask] - pp_trace["theta1_observed"]) == 0.0
-        assert np.mean(pp_trace["theta2"][:, ~obs2.mask] - pp_trace["theta2_observed"]) == 0.0
-
-
-def test_double_counting():
-    with pm.Model(check_bounds=False) as m1:
-        x = pm.Gamma("x", 1, 1, size=4)
-
-    logp_val = m1.compile_logp()({"x_log__": np.array([0, 0, 0, 0])})
-    assert logp_val == -4.0
-
-    with pm.Model(check_bounds=False) as m2:
-        with pytest.warns(ImputationWarning):
-            x = pm.Gamma("x", 1, 1, observed=[1, 1, 1, np.nan])
-
-    logp_val = m2.compile_logp()({"x_missing_log__": np.array([0])})
-    assert logp_val == -4.0
-
-
-def test_missing_logp():
-    with pm.Model() as m:
-        theta1 = pm.Normal("theta1", 0, 5, observed=[0, 1, 2, 3, 4])
-        theta2 = pm.Normal("theta2", mu=theta1, observed=[0, 1, 2, 3, 4])
-    m_logp = m.compile_logp()({})
-
-    with pm.Model() as m_missing:
-        with pytest.warns(ImputationWarning):
-            theta1 = pm.Normal("theta1", 0, 5, observed=np.array([0, 1, np.nan, 3, np.nan]))
-            theta2 = pm.Normal(
-                "theta2", mu=theta1, observed=np.array([np.nan, np.nan, 2, np.nan, 4])
-            )
-    m_missing_logp = m_missing.compile_logp()(
-        {"theta1_missing": [2, 4], "theta2_missing": [0, 1, 3]}
-    )
-
-    assert m_logp == m_missing_logp
-
-
-def test_missing_multivariate():
-    """Test model with missing variables whose transform changes base shape still works"""
-
-    with pm.Model() as m_miss:
-        with pytest.raises(
-            NotImplementedError,
-            match="Automatic inputation is only supported for univariate RandomVariables",
-        ):
+    def test_missing_basic(self, missing_data):
+        with pm.Model() as model:
+            x = pm.Normal("x", 1, 1)
             with pytest.warns(ImputationWarning):
-                x = pm.Dirichlet(
-                    "x", a=[1, 2, 3], observed=np.array([[0.3, 0.3, 0.4], [np.nan, np.nan, np.nan]])
-                )
+                _ = pm.Normal("y", x, 1, observed=missing_data)
 
-    # TODO: Test can be used when local_subtensor_rv_lift supports multivariate distributions
-    # from pymc.distributions.transforms import simplex
-    #
-    # with pm.Model() as m_unobs:
-    #     x = pm.Dirichlet("x", a=[1, 2, 3])
-    #
-    # inp_vals = simplex.forward(np.array([0.3, 0.3, 0.4])).eval()
-    # assert np.isclose(
-    #     m_miss.compile_logp()({"x_missing_simplex__": inp_vals}),
-    #     m_unobs.compile_logp(jacobian=False)({"x_simplex__": inp_vals}) * 2,
-    # )
+        assert "y_missing" in model.named_vars
 
+        test_point = model.initial_point()
+        assert not np.isnan(model.compile_logp()(test_point))
 
-def test_missing_vector_parameter():
-    with pm.Model() as m:
-        with pytest.warns(ImputationWarning):
-            x = pm.Normal(
-                "x",
-                np.array([-10, 10]),
-                0.1,
-                observed=np.array([[np.nan, 10], [-10, np.nan], [np.nan, np.nan]]),
+        with model:
+            ipr = pm.sample_prior_predictive()
+        assert {"x", "y"} <= set(ipr.prior.keys())
+
+    def test_missing_with_predictors(self):
+        predictors = np.array([0.5, 1, 0.5, 2, 0.3])
+        data = np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
+        with pm.Model() as model:
+            x = pm.Normal("x", 1, 1)
+            with pytest.warns(ImputationWarning):
+                y = pm.Normal("y", x * predictors, 1, observed=data)
+
+        assert "y_missing" in model.named_vars
+
+        test_point = model.initial_point()
+        assert not np.isnan(model.compile_logp()(test_point))
+
+        with model:
+            ipr = pm.sample_prior_predictive()
+        assert {"x", "y"} <= set(ipr.prior.keys())
+
+    def test_missing_dual_observations(self):
+        with pm.Model() as model:
+            obs1 = np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
+            obs2 = np.ma.masked_values([-1, -1, 6, -1, 8], value=-1)
+            beta1 = pm.Normal("beta1", 1, 1)
+            beta2 = pm.Normal("beta2", 2, 1)
+            latent = pm.Normal("theta", size=5)
+            with pytest.warns(ImputationWarning):
+                ovar1 = pm.Normal("o1", mu=beta1 * latent, observed=obs1)
+            with pytest.warns(ImputationWarning):
+                ovar2 = pm.Normal("o2", mu=beta2 * latent, observed=obs2)
+
+            prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
+            assert {"beta1", "beta2", "theta", "o1", "o2"} <= set(prior_trace.keys())
+            # TODO: Assert something
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = pm.sample(chains=1, tune=5, draws=50)
+
+    def test_interval_missing_observations(self):
+        with pm.Model() as model:
+            obs1 = np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
+            obs2 = np.ma.masked_values([-1, -1, 6, -1, 8], value=-1)
+
+            rng = aesara.shared(np.random.RandomState(2323), borrow=True)
+
+            with pytest.warns(ImputationWarning):
+                theta1 = pm.Uniform("theta1", 0, 5, observed=obs1, rng=rng)
+            with pytest.warns(ImputationWarning):
+                theta2 = pm.Normal("theta2", mu=theta1, observed=obs2, rng=rng)
+
+            assert "theta1_observed" in model.named_vars
+            assert "theta1_missing_interval__" in model.named_vars
+            assert not hasattr(
+                model.rvs_to_values[model.named_vars["theta1_observed"]].tag, "transform"
             )
-    x_draws = x.eval()
-    assert x_draws.shape == (3, 2)
-    assert np.all(x_draws[:, 0] < 0)
-    assert np.all(x_draws[:, 1] > 0)
-    assert np.isclose(
-        m.compile_logp()({"x_missing": np.array([-10, 10, -10, 10])}),
-        st.norm(scale=0.1).logpdf(0) * 6,
-    )
 
+            prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
 
-def test_missing_symmetric():
-    """Check that logp works when partially observed variable have equal observed and
-    unobserved dimensions.
+            # Make sure the observed + missing combined deterministics have the
+            # same shape as the original observations vectors
+            assert prior_trace["theta1"].shape[-1] == obs1.shape[0]
+            assert prior_trace["theta2"].shape[-1] == obs2.shape[0]
 
-    This would fail in a previous implementation because the two variables would be
-    equivalent and one of them would be discarded during MergeOptimization while
-    buling the logp graph
-    """
-    with pm.Model() as m:
-        with pytest.warns(ImputationWarning):
-            x = pm.Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
+            # Make sure that the observed values are newly generated samples
+            assert np.all(np.var(prior_trace["theta1_observed"], 0) > 0.0)
+            assert np.all(np.var(prior_trace["theta2_observed"], 0) > 0.0)
 
-    x_obs_rv = m["x_observed"]
-    x_obs_vv = m.rvs_to_values[x_obs_rv]
+            # Make sure the missing parts of the combined deterministic matches the
+            # sampled missing and observed variable values
+            assert (
+                np.mean(prior_trace["theta1"][:, obs1.mask] - prior_trace["theta1_missing"]) == 0.0
+            )
+            assert (
+                np.mean(prior_trace["theta1"][:, ~obs1.mask] - prior_trace["theta1_observed"])
+                == 0.0
+            )
+            assert (
+                np.mean(prior_trace["theta2"][:, obs2.mask] - prior_trace["theta2_missing"]) == 0.0
+            )
+            assert (
+                np.mean(prior_trace["theta2"][:, ~obs2.mask] - prior_trace["theta2_observed"])
+                == 0.0
+            )
 
-    x_unobs_rv = m["x_missing"]
-    x_unobs_vv = m.rvs_to_values[x_unobs_rv]
+            assert {"theta1", "theta2"} <= set(prior_trace.keys())
 
-    logp = pm.joint_logp([x_obs_rv, x_unobs_rv], {x_obs_rv: x_obs_vv, x_unobs_rv: x_unobs_vv})
-    logp_inputs = list(graph_inputs([logp]))
-    assert x_obs_vv in logp_inputs
-    assert x_unobs_vv in logp_inputs
+            trace = pm.sample(
+                chains=1, draws=50, compute_convergence_checks=False, return_inferencedata=False
+            )
+
+            assert np.all(0 < trace["theta1_missing"].mean(0))
+            assert np.all(0 < trace["theta2_missing"].mean(0))
+            assert "theta1" not in trace.varnames
+            assert "theta2" not in trace.varnames
+
+            # Make sure that the observed values are newly generated samples and that
+            # the observed and deterministic matche
+            pp_idata = pm.sample_posterior_predictive(trace)
+            pp_trace = pp_idata.posterior_predictive.stack(sample=["chain", "draw"]).transpose(
+                "sample", ...
+            )
+            assert np.all(np.var(pp_trace["theta1"], 0) > 0.0)
+            assert np.all(np.var(pp_trace["theta2"], 0) > 0.0)
+            assert np.isclose(
+                np.mean(pp_trace["theta1"][:, ~obs1.mask] - pp_trace["theta1_observed"]), 0
+            )
+            assert np.isclose(
+                np.mean(pp_trace["theta2"][:, ~obs2.mask] - pp_trace["theta2_observed"]), 0
+            )
+
+    def test_missing_logp1(self):
+        with pm.Model(check_bounds=False) as m1:
+            x = pm.Gamma("x", 1, 1, size=4)
+
+        logp_val = m1.compile_logp()({"x_log__": np.array([0, 0, 0, 0])})
+        assert logp_val == -4.0
+
+        with pm.Model(check_bounds=False) as m2:
+            with pytest.warns(ImputationWarning):
+                x = pm.Gamma("x", 1, 1, observed=[1, 1, 1, np.nan])
+
+        logp_val = m2.compile_logp()({"x_missing_log__": np.array([0])})
+        assert logp_val == -4.0
+
+    def test_missing_logp2(self):
+        with pm.Model() as m:
+            theta1 = pm.Normal("theta1", 0, 5, observed=[0, 1, 2, 3, 4])
+            theta2 = pm.Normal("theta2", mu=theta1, observed=[0, 1, 2, 3, 4])
+        m_logp = m.compile_logp()({})
+
+        with pm.Model() as m_missing:
+            with pytest.warns(ImputationWarning):
+                theta1 = pm.Normal("theta1", 0, 5, observed=np.array([0, 1, np.nan, 3, np.nan]))
+                theta2 = pm.Normal(
+                    "theta2", mu=theta1, observed=np.array([np.nan, np.nan, 2, np.nan, 4])
+                )
+        m_missing_logp = m_missing.compile_logp()(
+            {"theta1_missing": [2, 4], "theta2_missing": [0, 1, 3]}
+        )
+
+        assert m_logp == m_missing_logp
+
+    def test_missing_multivariate(self):
+        """Test model with missing variables whose transform changes base shape still works"""
+
+        with pm.Model() as m_miss:
+            with pytest.raises(
+                NotImplementedError,
+                match="Automatic inputation is only supported for univariate RandomVariables",
+            ):
+                with pytest.warns(ImputationWarning):
+                    x = pm.Dirichlet(
+                        "x",
+                        a=[1, 2, 3],
+                        observed=np.array([[0.3, 0.3, 0.4], [np.nan, np.nan, np.nan]]),
+                    )
+
+        # TODO: Test can be used when local_subtensor_rv_lift supports multivariate distributions
+        # from pymc.distributions.transforms import simplex
+        #
+        # with pm.Model() as m_unobs:
+        #     x = pm.Dirichlet("x", a=[1, 2, 3])
+        #
+        # inp_vals = simplex.forward(np.array([0.3, 0.3, 0.4])).eval()
+        # assert np.isclose(
+        #     m_miss.compile_logp()({"x_missing_simplex__": inp_vals}),
+        #     m_unobs.compile_logp(jacobian=False)({"x_simplex__": inp_vals}) * 2,
+        # )
+
+    def test_missing_vector_parameter(self):
+        with pm.Model() as m:
+            with pytest.warns(ImputationWarning):
+                x = pm.Normal(
+                    "x",
+                    np.array([-10, 10]),
+                    0.1,
+                    observed=np.array([[np.nan, 10], [-10, np.nan], [np.nan, np.nan]]),
+                )
+        x_draws = x.eval()
+        assert x_draws.shape == (3, 2)
+        assert np.all(x_draws[:, 0] < 0)
+        assert np.all(x_draws[:, 1] > 0)
+        assert np.isclose(
+            m.compile_logp()({"x_missing": np.array([-10, 10, -10, 10])}),
+            st.norm(scale=0.1).logpdf(0) * 6,
+        )
+
+    def test_missing_symmetric(self):
+        """Check that logp works when partially observed variable have equal observed and
+        unobserved dimensions.
+
+        This would fail in a previous implementation because the two variables would be
+        equivalent and one of them would be discarded during MergeOptimization while
+        buling the logp graph
+        """
+        with pm.Model() as m:
+            with pytest.warns(ImputationWarning):
+                x = pm.Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
+
+        x_obs_rv = m["x_observed"]
+        x_obs_vv = m.rvs_to_values[x_obs_rv]
+
+        x_unobs_rv = m["x_missing"]
+        x_unobs_vv = m.rvs_to_values[x_unobs_rv]
+
+        logp = pm.joint_logp([x_obs_rv, x_unobs_rv], {x_obs_rv: x_obs_vv, x_unobs_rv: x_unobs_vv})
+        logp_inputs = list(graph_inputs([logp]))
+        assert x_obs_vv in logp_inputs
+        assert x_unobs_vv in logp_inputs
+
+    def test_dims(self):
+        """Test that we don't propagate dims to the subcomponents of a partially
+        observed RV
+
+        See https://github.com/pymc-devs/pymc/issues/6177
+        """
+        data = np.array([np.nan] * 3 + [0] * 7)
+        with pm.Model(coords={"observed": range(10)}) as model:
+            with pytest.warns(ImputationWarning):
+                x = pm.Normal("x", observed=data, dims=("observed",))
+        assert model.RV_dims == {"x": ("observed",)}
+
+    def test_error_non_random_variable(self):
+        data = np.array([np.nan] * 3 + [0] * 7)
+        with pm.Model() as model:
+            msg = "x of type <class 'pymc.distributions.censored.CensoredRV'> is not supported"
+            with pytest.raises(NotImplementedError, match=msg):
+                x = pm.Censored(
+                    "x",
+                    pm.Normal.dist(),
+                    lower=0,
+                    upper=10,
+                    observed=data,
+                )
 
 
 class TestShared(SeededTest):

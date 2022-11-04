@@ -68,10 +68,12 @@ from pymc.model_graph import model_to_graphviz, model_to_networkx
 from pymc.plots import *
 from pymc.printing import *
 from pymc.sampling import *
+from pymc.sampling_forward import *
 from pymc.smc import *
 from pymc.stats import *
 from pymc.step_methods import *
 from pymc.tuning import *
+from pymc.util import drop_warning_stat
 from pymc.variational import *
 from pymc.vartypes import *
 

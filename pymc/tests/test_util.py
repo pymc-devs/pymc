@@ -11,7 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import re
 
+import arviz
 import numpy as np
 import pytest
 import xarray
@@ -23,7 +25,9 @@ import pymc as pm
 from pymc.distributions.transforms import RVTransform
 from pymc.util import (
     UNSET,
+    _get_seeds_per_chain,
     dataset_to_point_list,
+    drop_warning_stat,
     hash_key,
     hashable,
     locally_cachedmethod,
@@ -154,7 +158,7 @@ def test_unset_repr(capsys):
 def test_dataset_to_point_list():
     ds = xarray.Dataset()
     ds["A"] = xarray.DataArray([[1, 2, 3]] * 2, dims=("chain", "draw"))
-    pl = dataset_to_point_list(ds)
+    pl, _ = dataset_to_point_list(ds, sample_dims=["chain", "draw"])
     assert isinstance(pl, list)
     assert len(pl) == 6
     assert isinstance(pl[0], dict)
@@ -163,4 +167,72 @@ def test_dataset_to_point_list():
     # Check that non-str keys are caught
     ds[3] = xarray.DataArray([1, 2, 3])
     with pytest.raises(ValueError, match="must be str"):
-        dataset_to_point_list(ds)
+        dataset_to_point_list(ds, sample_dims=["chain", "draw"])
+
+
+def test_drop_warning_stat():
+    idata = arviz.from_dict(
+        sample_stats={
+            "a": np.ones((2, 5, 4)),
+            "warning": np.ones((2, 5, 3), dtype=object),
+        },
+        warmup_sample_stats={
+            "a": np.ones((2, 5, 4)),
+            "warning": np.ones((2, 5, 3), dtype=object),
+        },
+        attrs=dict(version="0.1.2"),
+        coords={
+            "adim": [0, 1, None, 3],
+            "warning_dim_0": list("ABC"),
+        },
+        dims={"a": ["adim"], "warning": ["warning_dim_0"]},
+        save_warmup=True,
+    )
+
+    new = drop_warning_stat(idata)
+
+    assert new is not idata
+    assert new.attrs.get("version") == "0.1.2"
+
+    for gname in ["sample_stats", "warmup_sample_stats"]:
+        ss = new.get(gname)
+        assert isinstance(ss, xarray.Dataset), gname
+        assert "a" in ss
+        assert "warning" not in ss
+        assert "warning_dim_0" not in ss
+
+
+def test_get_seeds_per_chain():
+    ret = _get_seeds_per_chain(None, chains=1)
+    assert len(ret) == 1 and isinstance(ret[0], int)
+
+    ret = _get_seeds_per_chain(None, chains=2)
+    assert len(ret) == 2 and isinstance(ret[0], int)
+
+    ret = _get_seeds_per_chain(5, chains=1)
+    assert ret == (5,)
+
+    ret = _get_seeds_per_chain(5, chains=3)
+    assert len(ret) == 3 and isinstance(ret[0], int) and not any(r == 5 for r in ret)
+
+    rng = np.random.default_rng(123)
+    expected_ret = rng.integers(2**30, dtype=np.int64, size=1)
+    rng = np.random.default_rng(123)
+    ret = _get_seeds_per_chain(rng, chains=1)
+    assert ret == expected_ret
+
+    rng = np.random.RandomState(456)
+    expected_ret = rng.randint(2**30, dtype=np.int64, size=2)
+    rng = np.random.RandomState(456)
+    ret = _get_seeds_per_chain(rng, chains=2)
+    assert np.all(ret == expected_ret)
+
+    for expected_ret in ([0, 1, 2], (0, 1, 2, 3), np.arange(5)):
+        ret = _get_seeds_per_chain(expected_ret, chains=len(expected_ret))
+        assert ret is expected_ret
+
+        with pytest.raises(ValueError, match="does not match the number of chains"):
+            _get_seeds_per_chain(expected_ret, chains=len(expected_ret) + 1)
+
+    with pytest.raises(ValueError, match=re.escape("The `seeds` must be array-like")):
+        _get_seeds_per_chain({1: 1, 2: 2}, 2)

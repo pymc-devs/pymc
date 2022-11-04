@@ -89,7 +89,7 @@ class TestDataPyMC:
         with data.model:
             prior = pm.sample_prior_predictive(return_inferencedata=False)
             posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, keep_size=True, return_inferencedata=False
+                data.obj, return_inferencedata=False
             )
 
             idata = to_inference_data(
@@ -111,7 +111,7 @@ class TestDataPyMC:
     ) -> Tuple[InferenceData, Dict[str, np.ndarray]]:
         with data.model:
             posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, keep_size=True, return_inferencedata=False
+                data.obj, return_inferencedata=False
             )
             idata = predictions_to_inference_data(
                 posterior_predictive,
@@ -190,7 +190,7 @@ class TestDataPyMC:
     def test_posterior_predictive_keep_size(self, data, chains, draws, eight_schools_params):
         with data.model:
             posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, keep_size=True, return_inferencedata=False
+                data.obj, return_inferencedata=False
             )
             inference_data = to_inference_data(
                 trace=data.obj,
@@ -203,26 +203,6 @@ class TestDataPyMC:
         assert np.all(
             [obs_s == s for obs_s, s in zip(shape, (chains, draws, eight_schools_params["J"]))]
         )
-
-    def test_posterior_predictive_warning(self, data, eight_schools_params, caplog):
-        with data.model:
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", ".*smaller than nchains times ndraws.*", UserWarning
-                )
-                posterior_predictive = pm.sample_posterior_predictive(
-                    data.obj, 370, return_inferencedata=False, keep_size=False
-                )
-            with pytest.warns(UserWarning, match="shape of variables"):
-                inference_data = to_inference_data(
-                    trace=data.obj,
-                    posterior_predictive=posterior_predictive,
-                    coords={"school": np.arange(eight_schools_params["J"])},
-                    dims={"theta": ["school"], "eta": ["school"]},
-                )
-
-        shape = inference_data.posterior_predictive.obs.shape
-        assert np.all([obs_s == s for obs_s, s in zip(shape, (1, 370, eight_schools_params["J"]))])
 
     def test_posterior_predictive_thinned(self, data):
         with data.model:
@@ -299,7 +279,7 @@ class TestDataPyMC:
         np.testing.assert_array_equal(idata.observed_data.coords["date"], coords["date"])
         np.testing.assert_array_equal(idata.observed_data.coords["city"], coords["city"])
 
-    def test_ovewrite_model_coords_dims(self):
+    def test_overwrite_model_coords_dims(self):
         """Check coords and dims from model object can be partially overwritten."""
         dim1 = ["a", "b"]
         new_dim1 = ["c", "d"]
@@ -636,6 +616,23 @@ class TestDataPyMC:
             with pm.Model() as pmodel:
                 var = at.as_tensor([1, 2, 3])
                 pmodel.register_rv(var, name="time", dims=("time",))
+
+    def test_include_transformed(self):
+        with pm.Model():
+            pm.Uniform("p", 0, 1)
+
+            # First check that the default is to exclude the transformed variables
+            sample_kwargs = dict(tune=5, draws=7, chains=2, cores=1)
+            inference_data = pm.sample(**sample_kwargs, step=pm.Metropolis())
+            assert "p_interval__" not in inference_data.posterior
+
+            # Now check that they are included when requested
+            inference_data = pm.sample(
+                **sample_kwargs,
+                step=pm.Metropolis(),
+                idata_kwargs={"include_transformed": True},
+            )
+            assert "p_interval__" in inference_data.posterior
 
 
 class TestPyMCWarmupHandling:

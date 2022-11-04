@@ -29,5 +29,7 @@ jobs:
             pre-commit autoupdate || (exit 0);
             pre-commit run -a || (exit 0);
           COMMIT_MESSAGE: "⬆️ UPGRADE: Autoupdate pre-commit config"
+          COMMIT_NAME: "pymc-bot"
+          COMMIT_EMAIL: "pymc-devs@users.noreply.github.com"
           PR_BRANCH_NAME: "pre-commit-config-update-${PR_ID}"
           PR_TITLE: "⬆️ UPGRADE: Autoupdate pre-commit config"
