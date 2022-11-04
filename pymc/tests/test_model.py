@@ -1154,8 +1154,8 @@ class TestImputationMissingData:
         assert not np.isnan(model.compile_logp()(test_point))
 
         with model:
-            prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
-        assert {"x", "y"} <= set(prior_trace.keys())
+            ipr = pm.sample_prior_predictive()
+        assert {"x", "y"} <= set(ipr.prior.keys())
 
     def test_missing_with_predictors(self):
         predictors = np.array([0.5, 1, 0.5, 2, 0.3])
@@ -1171,8 +1171,8 @@ class TestImputationMissingData:
         assert not np.isnan(model.compile_logp()(test_point))
 
         with model:
-            prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
-        assert {"x", "y"} <= set(prior_trace.keys())
+            ipr = pm.sample_prior_predictive()
+        assert {"x", "y"} <= set(ipr.prior.keys())
 
     def test_missing_dual_observations(self):
         with pm.Model() as model:
@@ -1191,7 +1191,7 @@ class TestImputationMissingData:
             # TODO: Assert something
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                trace = pm.sample(chains=1, draws=50)
+                trace = pm.sample(chains=1, tune=5, draws=50)
 
     def test_interval_missing_observations(self):
         with pm.Model() as model:
