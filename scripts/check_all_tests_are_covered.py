@@ -30,14 +30,14 @@ def find_testfiles():
 
 
 def from_yaml():
-    """Determins how often each test file is run per platform and floatX setting.
+    """Determines how often each test file is run per platform and floatX setting.
 
     An exception is raised if tests run multiple times with the same configuration.
     """
     # First collect the matrix definitions from testing workflows
     matrices = {}
     for wf in ["tests.yml"]:
-        wfname = wf.strip(".yml")
+        wfname = wf.rstrip(".yml")
         wfdef = yaml.safe_load(open(Path(".github", "workflows", wf)))
         for jobname, jobdef in wfdef["jobs"].items():
             matrix = jobdef.get("strategy", {}).get("matrix", {})
@@ -74,22 +74,21 @@ def from_yaml():
                 # Windows jobs need \ in line breaks within the test-subset!
                 # The following checks that these trailing \ are present in
                 # all items except the last.
-                nlines = len(lines)
-                for l, line in enumerate(lines):
-                    if l < nlines - 1 and not line.endswith(" \\"):
+                if lines and lines[-1].endswith(" \\"):
+                    raise Exception(
+                        f"Last entry '{line}' in Windows test subset should end WITHOUT ' \\'."
+                    )
+                for line in lines[:-1]:
+                    if not line.endswith(" \\"):
                         raise Exception(f"Missing ' \\' after '{line}' in Windows test-subset.")
-                    elif l == nlines - 1 and line.endswith(" \\"):
-                        raise Exception(
-                            f"Last entry '{line}' in Windows test subset should end WITHOUT ' \\'."
-                        )
-                    testfiles[l] = line.strip(" \\")
+                lines = [line.rstrip(" \\") for line in lines]
 
             # Unpack lines with >1 item
             testfiles = []
             for line in lines:
                 testfiles += line.split(" ")
 
-            ignored = {item.strip("--ignore=") for item in testfiles if item.startswith("--ignore")}
+            ignored = {item[8:].lstrip(" =") for item in testfiles if item.startswith("--ignore")}
             included = {item for item in testfiles if item and not item.startswith("--ignore")}
 
             if ignored and not included:
