@@ -45,7 +45,7 @@ from pymc.initial_point import (
     make_initial_point_fns_per_chain,
 )
 from pymc.model import Model, modelcontext
-from pymc.parallel_sampling import Draw, _cpu_count
+from pymc.sampling.parallel import Draw, _cpu_count
 from pymc.stats.convergence import SamplerWarning, log_warning, run_convergence_checks
 from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
@@ -1404,7 +1404,7 @@ def _mp_sample(
     mtrace : pymc.backends.base.MultiTrace
         A ``MultiTrace`` object that contains the samples for all chains.
     """
-    import pymc.parallel_sampling as ps
+    import pymc.sampling.parallel as ps
 
     # We did draws += tune in pm.sample
     draws -= tune
