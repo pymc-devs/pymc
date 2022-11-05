@@ -493,33 +493,6 @@ def test_partial_trace_sample():
         assert "b" not in idata.posterior
 
 
-@pytest.mark.parametrize(
-    "n_points, tune, expected_length, expected_n_traces",
-    [
-        ((5, 2, 2), 0, 2, 3),
-        ((6, 1, 1), 1, 6, 1),
-    ],
-)
-def test_choose_chains(n_points, tune, expected_length, expected_n_traces):
-    with pm.Model() as model:
-        a = pm.Normal("a", mu=0, sigma=1)
-        trace_0 = NDArray(model)
-        trace_1 = NDArray(model)
-        trace_2 = NDArray(model)
-        trace_0.setup(n_points[0], 1)
-        trace_1.setup(n_points[1], 1)
-        trace_2.setup(n_points[2], 1)
-        for _ in range(n_points[0]):
-            trace_0.record({"a": 0})
-        for _ in range(n_points[1]):
-            trace_1.record({"a": 0})
-        for _ in range(n_points[2]):
-            trace_2.record({"a": 0})
-        traces, length = pm.sampling.mcmc._choose_chains([trace_0, trace_1, trace_2], tune=tune)
-    assert length == expected_length
-    assert expected_n_traces == len(traces)
-
-
 @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):
     def test_shared_named(self):

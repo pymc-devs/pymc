@@ -21,6 +21,7 @@ import logging
 import warnings
 
 from abc import ABC
+from typing import List, Sequence, Tuple, cast
 
 import aesara.tensor as at
 import numpy as np
@@ -561,3 +562,30 @@ def _squeeze_cat(results, combine, squeeze):
         if squeeze and len(results) == 1:
             results = results[0]
     return results
+
+
+def _choose_chains(traces: Sequence[BaseTrace], tune: int) -> Tuple[List[BaseTrace], int]:
+    """
+    Filter and slice traces such that (n_traces * len(shortest_trace)) is maximized.
+
+    We get here after a ``KeyboardInterrupt``, and so the different
+    traces have different lengths. We therefore pick the number of
+    traces such that (number of traces) * (length of shortest trace)
+    is maximised.
+    """
+    if not traces:
+        raise ValueError("No traces to slice.")
+
+    lengths = [max(0, len(trace) - tune) for trace in traces]
+    if not sum(lengths):
+        raise ValueError("Not enough samples to build a trace.")
+
+    idxs = np.argsort(lengths)
+    l_sort = np.array(lengths)[idxs]
+
+    use_until = cast(int, np.argmax(l_sort * np.arange(1, l_sort.shape[0] + 1)[::-1]))
+    final_length = l_sort[use_until]
+
+    take_idx = cast(Sequence[int], idxs[use_until:])
+    sliced_traces = [traces[idx] for idx in take_idx]
+    return sliced_traces, final_length + tune
