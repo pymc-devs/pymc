@@ -31,7 +31,6 @@ from arviz import InferenceData
 
 import pymc as pm
 
-from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.distributions import transforms
 from pymc.exceptions import SamplingError
@@ -484,13 +483,12 @@ def test_empty_model():
         error.match("any free variables")
 
 
-def test_partial_trace_sample():
+def test_partial_trace_unsupported():
     with pm.Model() as model:
         a = pm.Normal("a", mu=0, sigma=1)
         b = pm.Normal("b", mu=0, sigma=1)
-        idata = pm.sample(trace=[a])
-        assert "a" in idata.posterior
-        assert "b" not in idata.posterior
+        with pytest.raises(DeprecationWarning, match="removed support"):
+            pm.sample(trace=[a])
 
 
 @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
@@ -546,31 +544,23 @@ class TestNamedSampling(SeededTest):
             assert np.isclose(res, 0.0)
 
 
-class TestChooseBackend:
-    def test_choose_backend_none(self):
-        with mock.patch("pymc.sampling.mcmc.NDArray") as nd:
-            pm.sampling.mcmc._choose_backend(None)
-        assert nd.called
-
-    def test_choose_backend_list_of_variables(self):
-        with mock.patch("pymc.sampling.mcmc.NDArray") as nd:
-            pm.sampling.mcmc._choose_backend(["var1", "var2"])
-        nd.assert_called_with(vars=["var1", "var2"])
-
-    def test_errors_and_warnings(self):
-        with pm.Model():
+class TestInitTrace:
+    def test_init_trace_continuation_unsupported(self):
+        with pm.Model() as pmodel:
             A = pm.Normal("A")
             B = pm.Uniform("B")
             strace = pm.backends.ndarray.NDArray(vars=[A, B])
             strace.setup(10, 0)
-
-            with pytest.raises(ValueError, match="from existing MultiTrace"):
-                pm.sampling.mcmc._choose_backend(trace=MultiTrace([strace]))
-
             strace.record({"A": 2, "B_interval__": 0.1})
             assert len(strace) == 1
             with pytest.raises(ValueError, match="Continuation of traces"):
-                pm.sampling.mcmc._choose_backend(trace=strace)
+                pm.sampling.mcmc._init_trace(
+                    expected_length=20,
+                    step=pm.Metropolis(),
+                    chain_number=0,
+                    trace=strace,
+                    model=pmodel,
+                )
 
 
 def check_exec_nuts_init(method):

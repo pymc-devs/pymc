@@ -226,7 +226,7 @@ def sample(
     init: str = "auto",
     n_init: int = 200_000,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
-    trace: Optional[Union[BaseTrace, List[str]]] = None,
+    trace: Optional[BaseTrace] = None,
     chains: Optional[int] = None,
     cores: Optional[int] = None,
     tune: int = 1000,
@@ -266,9 +266,9 @@ def sample(
         Dict or list of dicts with initial value strategies to use instead of the defaults from
         `Model.initial_values`. The keys should be names of transformed random variables.
         Initialization methods for NUTS (see ``init`` keyword) can overwrite the default.
-    trace : backend or list
-        This should be a backend instance, or a list of variables to track.
-        If None or a list of variables, the NDArray backend is used.
+    trace : backend, optional
+        A backend instance or None.
+        If None, the NDArray backend is used.
     chains : int
         The number of chains to sample. Running independent chains is important for some
         convergence statistics and can also reveal multiple modes in the posterior. If ``None``,
@@ -401,6 +401,11 @@ def sample(
             kwargs["nuts"]["target_accept"] = kwargs.pop("target_accept")
         else:
             kwargs = {"nuts": {"target_accept": kwargs.pop("target_accept")}}
+    if isinstance(trace, list):
+        raise DeprecationWarning(
+            "We have removed support for partial traces because it simplified things."
+            " Please open an issue if & why this is a problem for you."
+        )
 
     model = modelcontext(model)
     if not model.free_RVs:
@@ -776,7 +781,7 @@ def _sample(
     start: PointType,
     draws: int,
     step=None,
-    trace: Optional[Union[BaseTrace, List[str]]] = None,
+    trace: Optional[BaseTrace] = None,
     tune: int,
     model: Optional[Model] = None,
     callback=None,
@@ -801,9 +806,9 @@ def _sample(
         The number of samples to draw
     step : function
         Step function
-    trace : backend or list
-        This should be a backend instance, or a list of variables to track.
-        If None or a list of variables, the NDArray backend is used.
+    trace : backend, optional
+        A backend instance or None.
+        If None, the NDArray backend is used.
     tune : int
         Number of iterations to tune.
     model : Model (optional if in ``with`` context)
@@ -902,7 +907,7 @@ def _iter_sample(
     draws: int,
     step,
     start: PointType,
-    trace: Optional[Union[BaseTrace, List[str]]] = None,
+    trace: Optional[BaseTrace] = None,
     chain: int = 0,
     tune: int = 0,
     model=None,
@@ -920,9 +925,9 @@ def _iter_sample(
     start : dict
         Starting point in parameter space (or partial point).
         Must contain numeric (transformed) initial values for all (transformed) free variables.
-    trace : backend or list
-        This should be a backend instance, or a list of variables to track.
-        If None or a list of variables, the NDArray backend is used.
+    trace : backend, optional
+        A backend instance or None.
+        If None, the NDArray backend is used.
     chain : int, optional
         Chain number used to store sample in backend.
     tune : int, optional
@@ -1301,48 +1306,24 @@ def _iter_population(
                 steppers[c].report._finalize(strace)
 
 
-def _choose_backend(trace: Optional[Union[BaseTrace, List[str]]], **kwds) -> BaseTrace:
-    """Selects or creates a NDArray trace backend for a particular chain.
-
-    Parameters
-    ----------
-    trace : BaseTrace, list, or None
-        This should be a BaseTrace, or list of variables to track.
-        If None or a list of variables, the NDArray backend is used.
-    **kwds :
-        keyword arguments to forward to the backend creation
-
-    Returns
-    -------
-    trace : BaseTrace
-        The incoming, or a brand new trace object.
-    """
-    if isinstance(trace, BaseTrace) and len(trace) > 0:
-        raise ValueError("Continuation of traces is no longer supported.")
-    if isinstance(trace, MultiTrace):
-        raise ValueError("Starting from existing MultiTrace objects is no longer supported.")
-
-    if isinstance(trace, BaseTrace):
-        return trace
-    if trace is None:
-        return NDArray(**kwds)
-
-    return NDArray(vars=trace, **kwds)
-
-
 def _init_trace(
     *,
     expected_length: int,
     step: Step,
     chain_number: int,
-    trace: Optional[Union[BaseTrace, List[str]]],
+    trace: Optional[BaseTrace],
     model,
 ) -> BaseTrace:
     """Extracted helper function to create trace backends for each chain."""
-    if trace is not None:
-        strace = _choose_backend(copy(trace), model=model)
+    strace: BaseTrace
+    if trace is None:
+        strace = NDArray(model=model)
+    elif isinstance(trace, BaseTrace):
+        if len(trace) > 0:
+            raise ValueError("Continuation of traces is no longer supported.")
+        strace = copy(trace)
     else:
-        strace = _choose_backend(None, model=model)
+        raise NotImplementedError(f"Unsupported `trace`: {trace}")
 
     if step.generates_stats:
         strace.setup(expected_length, chain_number, step.stats_dtypes)
@@ -1360,7 +1341,7 @@ def _mp_sample(
     random_seed: Sequence[RandomSeed],
     start: Sequence[PointType],
     progressbar: bool = True,
-    trace: Optional[Union[BaseTrace, List[str]]] = None,
+    trace: Optional[BaseTrace] = None,
     model=None,
     callback=None,
     discard_tuned_samples: bool = True,
@@ -1388,9 +1369,9 @@ def _mp_sample(
         Dicts must contain numeric (transformed) initial values for all (transformed) free variables.
     progressbar : bool
         Whether or not to display a progress bar in the command line.
-    trace : BaseTrace, list, or None
-        This should be a backend instance, or a list of variables to track
-        If None or a list of variables, the NDArray backend is used.
+    trace : BaseTrace, optional
+        A backend instance, or None.
+        If None, the NDArray backend is used.
     model : Model (optional if in ``with`` context)
     callback : Callable
         A function which gets called for every sample from the trace of a chain. The function is
