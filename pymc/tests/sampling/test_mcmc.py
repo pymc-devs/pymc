@@ -544,25 +544,6 @@ class TestNamedSampling(SeededTest):
             assert np.isclose(res, 0.0)
 
 
-class TestInitTrace:
-    def test_init_trace_continuation_unsupported(self):
-        with pm.Model() as pmodel:
-            A = pm.Normal("A")
-            B = pm.Uniform("B")
-            strace = pm.backends.ndarray.NDArray(vars=[A, B])
-            strace.setup(10, 0)
-            strace.record({"A": 2, "B_interval__": 0.1})
-            assert len(strace) == 1
-            with pytest.raises(ValueError, match="Continuation of traces"):
-                pm.sampling.mcmc._init_trace(
-                    expected_length=20,
-                    step=pm.Metropolis(),
-                    chain_number=0,
-                    trace=strace,
-                    model=pmodel,
-                )
-
-
 def check_exec_nuts_init(method):
     with pm.Model() as model:
         pm.Normal("a", mu=0, sigma=1, size=2)
