@@ -972,7 +972,7 @@ def _iter_sample(
             if i == 0 and hasattr(step, "iter_count"):
                 step.iter_count = 0
             if i == tune:
-                step = stop_tuning(step)
+                step.stop_tuning()
             if step.generates_stats:
                 point, stats = step.step(point)
                 strace.record(point, stats)
@@ -1109,7 +1109,7 @@ class PopulationStepper:
                     break
                 tune_stop, population = incoming
                 if tune_stop:
-                    stop_tuning(stepper)
+                    stepper.stop_tuning()
                 # forward the population to the PopulationArrayStepShared objects
                 # This is necessary because due to the process fork, the population
                 # object is no longer shared between the steppers.
@@ -1146,7 +1146,7 @@ class PopulationStepper:
         else:
             for c in range(self.nchains):
                 if tune_stop:
-                    self._steppers[c] = stop_tuning(self._steppers[c])
+                    self._steppers[c].stop_tuning()
                 updates[c] = self._steppers[c].step(population[c])
         return updates
 
@@ -1505,12 +1505,6 @@ def _choose_chains(traces: Sequence[BaseTrace], tune: int) -> Tuple[List[BaseTra
     take_idx = cast(Sequence[int], idxs[use_until:])
     sliced_traces = [traces[idx] for idx in take_idx]
     return sliced_traces, final_length + tune
-
-
-def stop_tuning(step):
-    """Stop tuning the current step method."""
-    step.stop_tuning()
-    return step
 
 
 def _init_jitter(
