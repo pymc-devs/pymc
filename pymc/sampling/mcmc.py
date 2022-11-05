@@ -34,8 +34,8 @@ from typing_extensions import TypeAlias
 
 import pymc as pm
 
+from pymc.backends import _init_trace
 from pymc.backends.base import BaseTrace, MultiTrace, _choose_chains
-from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import (
@@ -960,7 +960,7 @@ def _iter_sample(
 
     strace: BaseTrace = _init_trace(
         expected_length=draws + tune,
-        step=step,
+        stats_dtypes=step.stats_dtypes,
         chain_number=chain,
         trace=trace,
         model=model,
@@ -985,7 +985,7 @@ def _iter_sample(
                 diverging = i > tune and stats and stats[0].get("diverging")
             else:
                 point = step.step(point)
-                strace.record(point)
+                strace.record(point, [])
             if callback is not None:
                 callback(
                     trace=strace,
@@ -1229,7 +1229,7 @@ def _prepare_iter_population(
     traces: List[BaseTrace] = [
         _init_trace(
             expected_length=draws + tune,
-            step=steppers[c],
+            stats_dtypes=steppers[c].stats_dtypes,
             chain_number=c,
             trace=None,
             model=model,
@@ -1306,32 +1306,6 @@ def _iter_population(
                 steppers[c].report._finalize(strace)
 
 
-def _init_trace(
-    *,
-    expected_length: int,
-    step: Step,
-    chain_number: int,
-    trace: Optional[BaseTrace],
-    model,
-) -> BaseTrace:
-    """Extracted helper function to create trace backends for each chain."""
-    strace: BaseTrace
-    if trace is None:
-        strace = NDArray(model=model)
-    elif isinstance(trace, BaseTrace):
-        if len(trace) > 0:
-            raise ValueError("Continuation of traces is no longer supported.")
-        strace = copy(trace)
-    else:
-        raise NotImplementedError(f"Unsupported `trace`: {trace}")
-
-    if step.generates_stats:
-        strace.setup(expected_length, chain_number, step.stats_dtypes)
-    else:
-        strace.setup(expected_length, chain_number)
-    return strace
-
-
 def _mp_sample(
     draws: int,
     tune: int,
@@ -1393,7 +1367,7 @@ def _mp_sample(
     traces = [
         _init_trace(
             expected_length=draws + tune,
-            step=step,
+            stats_dtypes=step.stats_dtypes,
             chain_number=chain_number,
             trace=trace,
             model=model,
