@@ -16,6 +16,14 @@ from numpyro.infer import MCMC
 
 import pymc as pm
 
+
+def test_old_import_route():
+    import pymc.sampling.jax as new_sj
+    import pymc.sampling_jax as old_sj
+
+    assert set(new_sj.__all__) <= set(dir(old_sj))
+
+
 with pytest.warns(UserWarning, match="module is experimental"):
     from pymc.sampling.jax import (
         _get_batched_jittered_initial_points,

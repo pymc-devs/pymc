@@ -50,6 +50,7 @@ pymc/ode/__init__.py
 pymc/ode/ode.py
 pymc/ode/utils.py
 pymc/plots/__init__.py
+pymc/sampling_jax.py
 pymc/sampling/__init__.py
 pymc/sampling/forward.py
 pymc/sampling/mcmc.py

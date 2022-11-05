@@ -37,6 +37,14 @@ from pymc.util import RandomSeed, _get_seeds_per_chain, get_default_varnames
 warnings.warn("This module is experimental.")
 
 
+__all__ = (
+    "get_jaxified_graph",
+    "get_jaxified_logp",
+    "sample_blackjax_nuts",
+    "sample_numpyro_nuts",
+)
+
+
 @jax_funcify.register(Assert)
 @jax_funcify.register(CheckParameterValue)
 @jax_funcify.register(SpecifyShape)
