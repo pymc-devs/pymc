@@ -396,7 +396,6 @@ def test_idata_contains_stats(sampler_name: str):
         "acceptance_rate": (n_chains, n_draws),
         "diverging": (n_chains, n_draws),
         "energy": (n_chains, n_draws),
-        "n_steps": (n_chains, n_draws),
         "tree_depth": (n_chains, n_draws),
         "lp": (n_chains, n_draws),
     }
@@ -406,9 +405,12 @@ def test_idata_contains_stats(sampler_name: str):
         stat_vars = expected_stat_vars | blackjax_special_vars
     # Stats only expected for numpyro nuts
     elif sampler_name == "sample_numpyro_nuts":
-        numpyro_special_vars = {"step_size": (n_chains, n_draws)}
+        numpyro_special_vars = {
+            "step_size": (n_chains, n_draws),
+            "n_steps": (n_chains, n_draws),
+        }
         stat_vars = expected_stat_vars | numpyro_special_vars
     # test existence and dimensionality
     for stat_var, stat_var_dims in stat_vars.items():
-        assert stat_var in stats
+        assert stat_var in stats.variables
         assert stats.get(stat_var).values.shape == stat_var_dims
