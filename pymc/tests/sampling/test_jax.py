@@ -17,7 +17,7 @@ from numpyro.infer import MCMC
 import pymc as pm
 
 with pytest.warns(UserWarning, match="module is experimental"):
-    from pymc.sampling_jax import (
+    from pymc.sampling.jax import (
         _get_batched_jittered_initial_points,
         _get_log_likelihood,
         _numpyro_nuts_defaults,

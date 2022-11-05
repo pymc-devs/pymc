@@ -66,7 +66,8 @@ from pymc.aesaraf import (
     reseed_rngs,
     rvs_to_value_vars,
 )
-from pymc.backends import NDArray
+from pymc.backends.base import MultiTrace
+from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
@@ -1477,7 +1478,7 @@ class Approximation(WithMemoization):
         finally:
             trace.close()
 
-        trace = pm.sampling.MultiTrace([trace])
+        trace = MultiTrace([trace])
         if not return_inferencedata:
             return trace
         else:

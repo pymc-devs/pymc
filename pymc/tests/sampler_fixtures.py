@@ -178,7 +178,7 @@ class NutsFixture(BaseSampler):
         if hasattr(cls, "step_args"):
             args.update(cls.step_args)
         if "scaling" not in args:
-            _, step = pm.sampling.init_nuts(n_init=10000, **args)
+            _, step = pm.sampling.mcmc.init_nuts(n_init=10000, **args)
         else:
             step = pm.NUTS(**args)
         return step

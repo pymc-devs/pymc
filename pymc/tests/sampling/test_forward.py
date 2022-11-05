@@ -35,7 +35,7 @@ import pymc as pm
 
 from pymc.aesaraf import compile_pymc
 from pymc.backends.base import MultiTrace
-from pymc.sampling_forward import (
+from pymc.sampling.forward import (
     compile_forward_sampling_function,
     get_vars_in_point_list,
 )

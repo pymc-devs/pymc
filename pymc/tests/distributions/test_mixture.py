@@ -55,12 +55,12 @@ from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.math import expand_packed_triangular
 from pymc.model import Model
-from pymc.sampling import sample
-from pymc.sampling_forward import (
+from pymc.sampling.forward import (
     draw,
     sample_posterior_predictive,
     sample_prior_predictive,
 )
+from pymc.sampling.mcmc import sample
 from pymc.step_methods import Metropolis
 from pymc.tests.distributions.util import (
     Domain,

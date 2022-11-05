@@ -35,7 +35,7 @@ from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.distributions import transforms
 from pymc.exceptions import SamplingError
-from pymc.sampling import assign_step_methods
+from pymc.sampling.mcmc import assign_step_methods
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import (
     NUTS,
@@ -57,7 +57,7 @@ class TestInitNuts(SeededTest):
     def test_checks_seeds_kwarg(self):
         with self.model:
             with pytest.raises(ValueError, match="Number of seeds"):
-                pm.sampling.init_nuts(chains=2, random_seed=[1])
+                pm.sampling.mcmc.init_nuts(chains=2, random_seed=[1])
 
 
 class TestSample(SeededTest):
@@ -208,7 +208,7 @@ class TestSample(SeededTest):
 
     def test_iter_sample(self):
         with self.model:
-            samps = pm.sampling.iter_sample(
+            samps = pm.sampling.mcmc.iter_sample(
                 draws=5,
                 step=self.step,
                 start=self.start,
@@ -255,7 +255,7 @@ class TestSample(SeededTest):
         with self.model:
             tune = 50
             chains = 2
-            start, step = pm.sampling.init_nuts(chains=chains, random_seed=[1, 2])
+            start, step = pm.sampling.mcmc.init_nuts(chains=chains, random_seed=[1, 2])
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 pm.sample(draws=2, tune=tune, chains=chains, step=step, initvals=start, cores=1)
@@ -346,11 +346,11 @@ class TestSample(SeededTest):
     )
     def test_sample_start_bad_shape(self, start, error):
         with pytest.raises(error):
-            pm.sampling._check_start_shape(self.model, start)
+            pm.sampling.mcmc._check_start_shape(self.model, start)
 
     @pytest.mark.parametrize("start", [{"x": np.array([1, 1])}, {"x": [10, 10]}, {"x": [-10, -10]}])
     def test_sample_start_good_shape(self, start):
-        pm.sampling._check_start_shape(self.model, start)
+        pm.sampling.mcmc._check_start_shape(self.model, start)
 
     def test_sample_callback(self):
         callback = mock.Mock()
@@ -515,7 +515,7 @@ def test_choose_chains(n_points, tune, expected_length, expected_n_traces):
             trace_1.record({"a": 0})
         for _ in range(n_points[2]):
             trace_2.record({"a": 0})
-        traces, length = pm.sampling._choose_chains([trace_0, trace_1, trace_2], tune=tune)
+        traces, length = pm.sampling.mcmc._choose_chains([trace_0, trace_1, trace_2], tune=tune)
     assert length == expected_length
     assert expected_n_traces == len(traces)
 
@@ -575,29 +575,29 @@ class TestNamedSampling(SeededTest):
 
 class TestChooseBackend:
     def test_choose_backend_none(self):
-        with mock.patch("pymc.sampling.NDArray") as nd:
-            pm.sampling._choose_backend(None)
+        with mock.patch("pymc.sampling.mcmc.NDArray") as nd:
+            pm.sampling.mcmc._choose_backend(None)
         assert nd.called
 
     def test_choose_backend_list_of_variables(self):
-        with mock.patch("pymc.sampling.NDArray") as nd:
-            pm.sampling._choose_backend(["var1", "var2"])
+        with mock.patch("pymc.sampling.mcmc.NDArray") as nd:
+            pm.sampling.mcmc._choose_backend(["var1", "var2"])
         nd.assert_called_with(vars=["var1", "var2"])
 
     def test_errors_and_warnings(self):
         with pm.Model():
             A = pm.Normal("A")
             B = pm.Uniform("B")
-            strace = pm.sampling.NDArray(vars=[A, B])
+            strace = pm.backends.ndarray.NDArray(vars=[A, B])
             strace.setup(10, 0)
 
             with pytest.raises(ValueError, match="from existing MultiTrace"):
-                pm.sampling._choose_backend(trace=MultiTrace([strace]))
+                pm.sampling.mcmc._choose_backend(trace=MultiTrace([strace]))
 
             strace.record({"A": 2, "B_interval__": 0.1})
             assert len(strace) == 1
             with pytest.raises(ValueError, match="Continuation of traces"):
-                pm.sampling._choose_backend(trace=strace)
+                pm.sampling.mcmc._choose_backend(trace=strace)
 
 
 def check_exec_nuts_init(method):
@@ -657,7 +657,7 @@ def test_init_jitter(initval, jitter_max_retries, expectation):
         # Starting value is negative (invalid) when np.random.rand returns 0 (jitter = -1)
         # and positive (valid) when it returns 1 (jitter = 1)
         with mock.patch("numpy.random.Generator.uniform", side_effect=[-1, -1, -1, 1, -1]):
-            start = pm.sampling._init_jitter(
+            start = pm.sampling.mcmc._init_jitter(
                 model=m,
                 initvals=None,
                 seeds=[1],
@@ -704,7 +704,7 @@ def test_log_warning_stats(caplog):
     stats = [s1, s2]
 
     with caplog.at_level(logging.WARNING):
-        pm.sampling.log_warning_stats(stats)
+        pm.sampling.mcmc.log_warning_stats(stats)
 
     # We have a list of stats dicts, because there might be several samplers involved.
     assert "too low" in caplog.records[0].message
@@ -716,7 +716,7 @@ def test_log_warning_stats_knows_SamplerWarning(caplog):
     stats = [dict(warning=SamplerWarning(WarningType.BAD_ENERGY, "Not that interesting", "debug"))]
 
     with caplog.at_level(logging.DEBUG, logger="pymc"):
-        pm.sampling.log_warning_stats(stats)
+        pm.sampling.mcmc.log_warning_stats(stats)
 
     assert "Not that interesting" in caplog.records[0].message
 
