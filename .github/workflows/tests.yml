@@ -42,6 +42,7 @@ jobs:
             pymc/tests/distributions/test_logprob.py
             pymc/tests/test_aesaraf.py
             pymc/tests/test_math.py
+            pymc/tests/backends/test_base.py
             pymc/tests/backends/test_ndarray.py
             pymc/tests/step_methods/hmc/test_hmc.py
             pymc/tests/test_func_utils.py
