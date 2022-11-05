@@ -2,7 +2,7 @@ import dataclasses
 import enum
 import logging
 
-from typing import Any, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 import arviz
 
@@ -164,3 +164,19 @@ def log_warning(warn: SamplerWarning):
 def log_warnings(warnings: Sequence[SamplerWarning]):
     for warn in warnings:
         log_warning(warn)
+
+
+def log_warning_stats(stats: Sequence[Dict[str, Any]]):
+    """Logs 'warning' stats if present."""
+    if stats is None:
+        return
+
+    for sts in stats:
+        warn = sts.get("warning", None)
+        if warn is None:
+            continue
+        if isinstance(warn, SamplerWarning):
+            log_warning(warn)
+        else:
+            logger.warning(warn)
+    return
