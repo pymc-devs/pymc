@@ -671,29 +671,6 @@ def test_step_args():
     npt.assert_allclose(idata1.sample_stats.scaling, 0)
 
 
-def test_log_warning_stats(caplog):
-    s1 = dict(warning="Temperature too low!")
-    s2 = dict(warning="Temperature too high!")
-    stats = [s1, s2]
-
-    with caplog.at_level(logging.WARNING):
-        pm.sampling.mcmc.log_warning_stats(stats)
-
-    # We have a list of stats dicts, because there might be several samplers involved.
-    assert "too low" in caplog.records[0].message
-    assert "too high" in caplog.records[1].message
-
-
-def test_log_warning_stats_knows_SamplerWarning(caplog):
-    """Checks that SamplerWarning "warning" stats get special treatment."""
-    stats = [dict(warning=SamplerWarning(WarningType.BAD_ENERGY, "Not that interesting", "debug"))]
-
-    with caplog.at_level(logging.DEBUG, logger="pymc"):
-        pm.sampling.mcmc.log_warning_stats(stats)
-
-    assert "Not that interesting" in caplog.records[0].message
-
-
 class ApolypticMetropolis(pm.Metropolis):
     """A stepper that warns in every iteration."""
 

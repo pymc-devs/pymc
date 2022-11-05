@@ -22,7 +22,7 @@ import warnings
 
 from collections import defaultdict
 from copy import copy
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Iterator, List, Optional, Sequence, Tuple, Union
 
 import aesara.gradient as tg
 import cloudpickle
@@ -46,7 +46,7 @@ from pymc.initial_point import (
 )
 from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import Draw, _cpu_count
-from pymc.stats.convergence import SamplerWarning, log_warning, run_convergence_checks
+from pymc.stats.convergence import log_warning_stats, run_convergence_checks
 from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
@@ -1462,22 +1462,6 @@ def _mp_sample(
     finally:
         for strace in traces:
             strace.close()
-
-
-def log_warning_stats(stats: Sequence[Dict[str, Any]]):
-    """Logs 'warning' stats if present."""
-    if stats is None:
-        return
-
-    for sts in stats:
-        warn = sts.get("warning", None)
-        if warn is None:
-            continue
-        if isinstance(warn, SamplerWarning):
-            log_warning(warn)
-        else:
-            _log.warning(warn)
-    return
 
 
 def _init_jitter(
