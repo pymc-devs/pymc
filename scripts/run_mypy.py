@@ -55,6 +55,7 @@ pymc/sampling/__init__.py
 pymc/sampling/forward.py
 pymc/sampling/mcmc.py
 pymc/sampling/parallel.py
+pymc/sampling/population.py
 pymc/smc/__init__.py
 pymc/smc/sampling.py
 pymc/smc/kernels.py
