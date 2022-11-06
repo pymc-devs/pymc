@@ -131,40 +131,7 @@ class TestMetropolis:
                 assert not step.elemwise_update
 
 
-class TestPopulationSamplers:
-
-    steppers = [DEMetropolis]
-
-    def test_checks_population_size(self):
-        """Test that population samplers check the population size."""
-        with pm.Model() as model:
-            n = pm.Normal("n", mu=0, sigma=1)
-            for stepper in TestPopulationSamplers.steppers:
-                step = stepper()
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                    with pytest.raises(ValueError):
-                        pm.sample(draws=10, tune=10, chains=1, cores=1, step=step)
-                    # don't parallelize to make test faster
-                    pm.sample(draws=10, tune=10, chains=4, cores=1, step=step)
-
-    def test_demcmc_warning_on_small_populations(self):
-        """Test that a warning is raised when n_chains <= n_dims"""
-        with pm.Model() as model:
-            pm.Normal("n", mu=0, sigma=1, size=(2, 3))
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                with pytest.warns(UserWarning) as record:
-                    pm.sample(
-                        draws=5,
-                        tune=5,
-                        chains=6,
-                        step=DEMetropolis(),
-                        # make tests faster by not parallelizing; disable convergence warning
-                        cores=1,
-                        compute_convergence_checks=False,
-                    )
-
+class TestDEMetropolis:
     def test_demcmc_tune_parameter(self):
         """Tests that validity of the tune setting is checked"""
         with pm.Model() as model:
@@ -181,30 +148,6 @@ class TestPopulationSamplers:
 
             with pytest.raises(ValueError):
                 DEMetropolis(tune="foo")
-
-    def test_nonparallelized_chains_are_random(self):
-        with pm.Model() as model:
-            x = pm.Normal("x", 0, 1)
-            for stepper in TestPopulationSamplers.steppers:
-                step = stepper()
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                    idata = pm.sample(chains=4, cores=1, draws=20, tune=0, step=DEMetropolis())
-                samples = idata.posterior["x"].values[:, 5]
-
-                assert len(set(samples)) == 4, f"Parallelized {stepper} chains are identical."
-
-    def test_parallelized_chains_are_random(self):
-        with pm.Model() as model:
-            x = pm.Normal("x", 0, 1)
-            for stepper in TestPopulationSamplers.steppers:
-                step = stepper()
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                    idata = pm.sample(chains=4, cores=4, draws=20, tune=0, step=DEMetropolis())
-                samples = idata.posterior["x"].values[:, 5]
-
-                assert len(set(samples)) == 4, f"Parallelized {stepper} chains are identical."
 
 
 class TestDEMetropolisZ:
