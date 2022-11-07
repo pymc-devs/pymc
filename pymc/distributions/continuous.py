@@ -2055,10 +2055,6 @@ class InverseGamma(PositiveContinuous):
 
         return alpha, beta
 
-    @classmethod
-    def _distr_parameters_for_repr(self):
-        return ["alpha", "beta"]
-
     def logcdf(value, alpha, beta):
         res = at.switch(
             at.lt(value, 0),
@@ -2801,9 +2797,6 @@ class Gumbel(Continuous):
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
         return mean
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "beta"]
 
     def logcdf(value, mu, beta):
         res = -at.exp(-(value - mu) / beta)
