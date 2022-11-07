@@ -140,20 +140,6 @@ class Binomial(Discrete):
         return mean
 
     def logp(value, n, p):
-        r"""
-        Calculate log-probability of Binomial distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         res = at.switch(
             at.or_(at.lt(value, 0), at.gt(value, n)),
             -np.inf,
@@ -163,20 +149,6 @@ class Binomial(Discrete):
         return check_parameters(res, 0 <= n, 0 <= p, p <= 1, msg="n >= 0, 0 <= p <= 1")
 
     def logcdf(value, n, p):
-        """
-        Compute the log of the cumulative distribution function for Binomial distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         value = at.floor(value)
 
         res = at.switch(
@@ -271,19 +243,6 @@ class BetaBinomial(Discrete):
         return mean
 
     def logp(value, n, alpha, beta):
-        r"""
-        Calculate log-probability of BetaBinomial distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.switch(
             at.or_(at.lt(value, 0), at.gt(value, n)),
             -np.inf,
@@ -292,19 +251,6 @@ class BetaBinomial(Discrete):
         return check_parameters(res, n >= 0, alpha > 0, beta > 0, msg="n >= 0, alpha > 0, beta > 0")
 
     def logcdf(value, n, alpha, beta):
-        """
-        Compute the log of the cumulative distribution function for BetaBinomial distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value for which log CDF is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
         # logcdf can only handle scalar values at the moment
         if np.ndim(value):
             raise TypeError(
@@ -396,20 +342,6 @@ class Bernoulli(Discrete):
         return at.switch(p < 0.5, 0, 1)
 
     def logp(value, p):
-        r"""
-        Calculate log-probability of Bernoulli distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         res = at.switch(
             at.or_(at.lt(value, 0), at.gt(value, 1)),
             -np.inf,
@@ -419,20 +351,6 @@ class Bernoulli(Discrete):
         return check_parameters(res, p >= 0, p <= 1, msg="0 <= p <= 1")
 
     def logcdf(value, p):
-        """
-        Compute the log of the cumulative distribution function for Bernoulli distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.switch(
             at.lt(value, 0),
             -np.inf,
@@ -515,20 +433,6 @@ class DiscreteWeibull(Discrete):
         return median
 
     def logp(value, q, beta):
-        r"""
-        Calculate log-probability of DiscreteWeibull distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         res = at.switch(
             at.lt(value, 0),
             -np.inf,
@@ -538,21 +442,6 @@ class DiscreteWeibull(Discrete):
         return check_parameters(res, 0 < q, q < 1, 0 < beta, msg="0 < q < 1, beta > 0")
 
     def logcdf(value, q, beta):
-        """
-        Compute the log of the cumulative distribution function for Discrete Weibull distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         res = at.switch(
             at.lt(value, 0),
             -np.inf,
@@ -620,19 +509,6 @@ class Poisson(Discrete):
         return mu
 
     def logp(value, mu):
-        r"""
-        Calculate log-probability of Poisson distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
         logprob = at.switch(
             at.lt(value, 0),
             -np.inf,
@@ -647,20 +523,6 @@ class Poisson(Discrete):
         return check_parameters(logprob, mu >= 0, msg="mu >= 0")
 
     def logcdf(value, mu):
-        """
-        Compute the log of the cumulative distribution function for Poisson distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         value = at.floor(value)
         # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
         safe_mu = at.switch(at.lt(mu, 0), 0, mu)
@@ -783,19 +645,6 @@ class NegativeBinomial(Discrete):
         return mu
 
     def logp(value, n, p):
-        r"""
-        Calculate log-probability of NegativeBinomial distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
         alpha = n
         mu = alpha * (1 - p) / p
 
@@ -820,20 +669,6 @@ class NegativeBinomial(Discrete):
         return at.switch(at.gt(alpha, 1e10), logp(Poisson.dist(mu=mu), value), negbinom)
 
     def logcdf(value, n, p):
-        """
-        Compute the log of the cumulative distribution function for NegativeBinomial distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.switch(
             at.lt(value, 0),
             -np.inf,
@@ -901,20 +736,6 @@ class Geometric(Discrete):
         return mean
 
     def logp(value, p):
-        r"""
-        Calculate log-probability of Geometric distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         res = at.switch(
             at.lt(value, 1),
             -np.inf,
@@ -929,21 +750,6 @@ class Geometric(Discrete):
         )
 
     def logcdf(value, p):
-        """
-        Compute the log of the cumulative distribution function for Geometric distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         res = at.switch(
             at.lt(value, 0),
             -np.inf,
@@ -1022,24 +828,6 @@ class HyperGeometric(Discrete):
         return mode
 
     def logp(value, good, bad, n):
-        r"""
-        Calculate log-probability of HyperGeometric distribution at specified value.
-
-        Parameters
-        ----------
-        value : numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-        good : integer, array_like or TensorVariable
-            Number of successful individuals in the population. Alias for parameter :math:`k`.
-        bad : integer, array_like or TensorVariable
-            Number of unsuccessful individuals in the population. Alias for :math:`N-k`.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         tot = good + bad
         result = (
             betaln(good + 1, 1)
@@ -1066,25 +854,6 @@ class HyperGeometric(Discrete):
         return check_parameters(res, lower <= upper, msg="lower <= upper")
 
     def logcdf(value, good, bad, n):
-        """
-        Compute the log of the cumulative distribution function for HyperGeometric distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : numeric
-            Value for which log CDF is calculated.
-        good : integer
-            Number of successful individuals in the population. Alias for parameter :math:`k`.
-        bad : integer
-            Number of unsuccessful individuals in the population. Alias for :math:`N-k`.
-        n : integer
-            Number of samples drawn from the population (0 <= n <= N)
-
-        Returns
-        -------
-        TensorVariable
-        """
         # logcdf can only handle scalar values at the moment
         if np.ndim(value):
             raise TypeError(
@@ -1189,19 +958,6 @@ class DiscreteUniform(Discrete):
         return mode
 
     def logp(value, lower, upper):
-        r"""
-        Calculate log-probability of DiscreteUniform distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.switch(
             at.or_(at.lt(value, lower), at.gt(value, upper)),
             -np.inf,
@@ -1210,21 +966,6 @@ class DiscreteUniform(Discrete):
         return check_parameters(res, lower <= upper, msg="lower <= upper")
 
     def logcdf(value, lower, upper):
-        """
-        Compute the log of the cumulative distribution function for Discrete uniform distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         res = at.switch(
             at.le(value, lower),
             -np.inf,
@@ -1310,16 +1051,6 @@ class Categorical(Discrete):
         return mode
 
     def logp(value, p):
-        r"""
-        Calculate log-probability of Categorical distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or `TensorVariable`
-
-        """
         k = at.shape(p)[-1]
         p_ = p
         value_clip = at.clip(value, 0, k - 1)
@@ -1401,19 +1132,6 @@ class DiracDelta(Discrete):
         return c
 
     def logp(value, c):
-        r"""
-        Calculate log-probability of DiracDelta distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
         return at.switch(
             at.eq(value, c),
             at.zeros_like(value),
