@@ -146,7 +146,13 @@ class Binomial(Discrete):
             binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
         )
 
-        return check_parameters(res, 0 <= n, 0 <= p, p <= 1, msg="n >= 0, 0 <= p <= 1")
+        return check_parameters(
+            res,
+            n >= 0,
+            0 <= p,
+            p <= 1,
+            msg="n >= 0, 0 <= p <= 1",
+        )
 
     def logcdf(value, n, p):
         value = at.floor(value)
@@ -163,7 +169,7 @@ class Binomial(Discrete):
 
         return check_parameters(
             res,
-            0 <= n,
+            n >= 0,
             0 <= p,
             p <= 1,
             msg="n >= 0, 0 <= p <= 1",
@@ -248,7 +254,13 @@ class BetaBinomial(Discrete):
             -np.inf,
             binomln(n, value) + betaln(value + alpha, n - value + beta) - betaln(alpha, beta),
         )
-        return check_parameters(res, n >= 0, alpha > 0, beta > 0, msg="n >= 0, alpha > 0, beta > 0")
+        return check_parameters(
+            res,
+            n >= 0,
+            alpha > 0,
+            beta > 0,
+            msg="n >= 0, alpha > 0, beta > 0",
+        )
 
     def logcdf(value, n, alpha, beta):
         # logcdf can only handle scalar values at the moment
@@ -273,7 +285,13 @@ class BetaBinomial(Discrete):
                 0,
             ),
         )
-        return check_parameters(res, 0 <= n, 0 < alpha, 0 < beta, msg="n >= 0, alpha > 0, beta > 0")
+        return check_parameters(
+            res,
+            n >= 0,
+            alpha > 0,
+            beta > 0,
+            msg="n >= 0, alpha > 0, beta > 0",
+        )
 
 
 class Bernoulli(Discrete):
@@ -348,7 +366,12 @@ class Bernoulli(Discrete):
             at.switch(value, at.log(p), at.log1p(-p)),
         )
 
-        return check_parameters(res, p >= 0, p <= 1, msg="0 <= p <= 1")
+        return check_parameters(
+            res,
+            0 <= p,
+            p <= 1,
+            msg="0 <= p <= 1",
+        )
 
     def logcdf(value, p):
         res = at.switch(
@@ -360,7 +383,12 @@ class Bernoulli(Discrete):
                 0,
             ),
         )
-        return check_parameters(res, 0 <= p, p <= 1, msg="0 <= p <= 1")
+        return check_parameters(
+            res,
+            0 <= p,
+            p <= 1,
+            msg="0 <= p <= 1",
+        )
 
 
 class DiscreteWeibullRV(RandomVariable):
@@ -448,7 +476,13 @@ class DiscreteWeibull(Discrete):
             at.log(at.power(q, at.power(value, beta)) - at.power(q, at.power(value + 1, beta))),
         )
 
-        return check_parameters(res, 0 < q, q < 1, 0 < beta, msg="0 < q < 1, beta > 0")
+        return check_parameters(
+            res,
+            0 < q,
+            q < 1,
+            beta > 0,
+            msg="0 < q < 1, beta > 0",
+        )
 
     def logcdf(value, q, beta):
         res = at.switch(
@@ -456,7 +490,13 @@ class DiscreteWeibull(Discrete):
             -np.inf,
             at.log1p(-at.power(q, at.power(value + 1, beta))),
         )
-        return check_parameters(res, 0 < q, q < 1, 0 < beta, msg="0 < q < 1, beta > 0")
+        return check_parameters(
+            res,
+            0 < q,
+            q < 1,
+            beta > 0,
+            msg="0 < q < 1, beta > 0",
+        )
 
 
 class Poisson(Discrete):
@@ -518,18 +558,22 @@ class Poisson(Discrete):
         return mu
 
     def logp(value, mu):
-        logprob = at.switch(
+        res = at.switch(
             at.lt(value, 0),
             -np.inf,
             logpow(mu, value) - factln(value) - mu,
         )
         # Return zero when mu and value are both zero
-        logprob = at.switch(
+        res = at.switch(
             at.eq(mu, 0) * at.eq(value, 0),
             0,
-            logprob,
+            res,
         )
-        return check_parameters(logprob, mu >= 0, msg="mu >= 0")
+        return check_parameters(
+            res,
+            mu >= 0,
+            msg="mu >= 0",
+        )
 
     def logcdf(value, mu):
         value = at.floor(value)
@@ -543,7 +587,11 @@ class Poisson(Discrete):
             at.log(at.gammaincc(safe_value + 1, safe_mu)),
         )
 
-        return check_parameters(res, 0 <= mu, msg="mu >= 0")
+        return check_parameters(
+            res,
+            mu >= 0,
+            msg="mu >= 0",
+        )
 
 
 class NegativeBinomial(Discrete):
@@ -685,10 +733,10 @@ class NegativeBinomial(Discrete):
         )
         return check_parameters(
             res,
-            0 < n,
+            n > 0,
             0 <= p,
             p <= 1,
-            msg="0 < n, 0 <= p <= 1",
+            msg="n > 0, 0 <= p <= 1",
         )
 
 
@@ -860,7 +908,11 @@ class HyperGeometric(Discrete):
             ),
         )
 
-        return check_parameters(res, lower <= upper, msg="lower <= upper")
+        return check_parameters(
+            res,
+            lower <= upper,
+            msg="lower <= upper",
+        )
 
     def logcdf(value, good, bad, n):
         # logcdf can only handle scalar values at the moment
@@ -888,10 +940,10 @@ class HyperGeometric(Discrete):
 
         return check_parameters(
             res,
-            0 < N,
+            N > 0,
             0 <= good,
-            0 <= n,
             good <= N,
+            0 <= n,
             n <= N,
             msg="N > 0, 0 <= good <= N, 0 <= n <= N",
         )
@@ -973,7 +1025,11 @@ class DiscreteUniform(Discrete):
             -np.inf,
             at.fill(value, -at.log(upper - lower + 1)),
         )
-        return check_parameters(res, lower <= upper, msg="lower <= upper")
+        return check_parameters(
+            res,
+            lower <= upper,
+            msg="lower <= upper",
+        )
 
     def logcdf(value, lower, upper):
         res = at.switch(
@@ -986,7 +1042,11 @@ class DiscreteUniform(Discrete):
             ),
         )
 
-        return check_parameters(res, lower <= upper, msg="lower <= upper")
+        return check_parameters(
+            res,
+            lower <= upper,
+            msg="lower <= upper",
+        )
 
 
 class Categorical(Discrete):
@@ -1089,7 +1149,7 @@ class Categorical(Discrete):
 
         return check_parameters(
             res,
-            p_ >= 0,
+            0 <= p_,
             p_ <= 1,
             at.isclose(at.sum(p, axis=-1), 1),
             msg="0 <= p <=1, sum(p) = 1",

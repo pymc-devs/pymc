@@ -498,7 +498,7 @@ class Normal(Continuous):
     def logcdf(value, mu, sigma):
         return check_parameters(
             normal_lcdf(mu, sigma, value),
-            0 < sigma,
+            sigma > 0,
             msg="sigma > 0",
         )
 
@@ -790,7 +790,7 @@ class HalfNormal(PositiveContinuous):
 
         return check_parameters(
             logcdf,
-            0 < sigma,
+            sigma > 0,
             msg="sigma > 0",
         )
 
@@ -965,7 +965,11 @@ class Wald(PositiveContinuous):
         )
 
         return check_parameters(
-            logcdf, 0 < mu, 0 < lam, 0 <= alpha, msg="mu > 0, lam > 0, alpha >= 0"
+            logcdf,
+            mu > 0,
+            lam > 0,
+            alpha >= 0,
+            msg="mu > 0, lam > 0, alpha >= 0",
         )
 
 
@@ -1088,8 +1092,8 @@ class Beta(UnitContinuous):
 
         return check_parameters(
             logcdf,
-            0 < alpha,
-            0 < beta,
+            alpha > 0,
+            beta > 0,
             msg="alpha > 0, beta > 0",
         )
 
@@ -1265,7 +1269,11 @@ class Exponential(PositiveContinuous):
             at.log1mexp(-lam * value),
         )
 
-        return check_parameters(res, 0 <= lam, msg="lam >= 0")
+        return check_parameters(
+            res,
+            lam >= 0,
+            msg="lam >= 0",
+        )
 
 
 class Laplace(Continuous):
@@ -1341,7 +1349,7 @@ class Laplace(Continuous):
 
         return check_parameters(
             res,
-            0 < b,
+            b > 0,
             msg="b > 0",
         )
 
@@ -1423,7 +1431,12 @@ class AsymmetricLaplace(Continuous):
             -value * b * at.sgn(value) * (kappa ** at.sgn(value))
         )
 
-        return check_parameters(res, 0 < b, 0 < kappa, msg="b > 0, kappa > 0")
+        return check_parameters(
+            res,
+            b > 0,
+            kappa > 0,
+            msg="b > 0, kappa > 0",
+        )
 
 
 class LogNormal(PositiveContinuous):
@@ -1518,7 +1531,11 @@ class LogNormal(PositiveContinuous):
             normal_lcdf(mu, sigma, at.log(value)),
         )
 
-        return check_parameters(res, 0 < sigma, msg="sigma > 0")
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
 
 
 Lognormal = LogNormal
@@ -1629,7 +1646,12 @@ class StudentT(Continuous):
             - (nu + 1.0) / 2.0 * at.log1p(lam * (value - mu) ** 2 / nu)
         )
 
-        return check_parameters(res, lam > 0, nu > 0, msg="lam > 0, nu > 0")
+        return check_parameters(
+            res,
+            lam > 0,
+            nu > 0,
+            msg="lam > 0, nu > 0",
+        )
 
     def logcdf(value, nu, mu, sigma):
         _, sigma = get_tau_sigma(sigma=sigma)
@@ -1640,7 +1662,12 @@ class StudentT(Continuous):
 
         res = at.log(at.betainc(nu / 2.0, nu / 2.0, x))
 
-        return check_parameters(res, 0 < nu, 0 < sigma, msg="nu > 0, sigma > 0")
+        return check_parameters(
+            res,
+            nu > 0,
+            sigma > 0,
+            msg="nu > 0, sigma > 0",
+        )
 
 
 class Pareto(BoundedContinuous):
@@ -1718,7 +1745,12 @@ class Pareto(BoundedContinuous):
             ),
         )
 
-        return check_parameters(res, 0 < alpha, 0 < m, msg="alpha > 0, m > 0")
+        return check_parameters(
+            res,
+            alpha > 0,
+            m > 0,
+            msg="alpha > 0, m > 0",
+        )
 
 
 @_default_transform.register(Pareto)
@@ -1791,7 +1823,7 @@ class Cauchy(Continuous):
         res = at.log(0.5 + at.arctan((value - alpha) / beta) / np.pi)
         return check_parameters(
             res,
-            0 < beta,
+            beta > 0,
             msg="beta > 0",
         )
 
@@ -1854,7 +1886,11 @@ class HalfCauchy(PositiveContinuous):
             at.log(2 * at.arctan((value - loc) / beta) / np.pi),
         )
 
-        return check_parameters(res, 0 < beta, msg="beta > 0")
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
 
 
 class Gamma(PositiveContinuous):
@@ -2062,7 +2098,12 @@ class InverseGamma(PositiveContinuous):
             at.log(at.gammaincc(alpha, beta / value)),
         )
 
-        return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
 
 
 class ChiSquared(PositiveContinuous):
@@ -2210,7 +2251,12 @@ class Weibull(PositiveContinuous):
             at.log1mexp(-a),
         )
 
-        return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
 
     def logp(value, alpha, beta):
         res = (
@@ -2220,7 +2266,12 @@ class Weibull(PositiveContinuous):
             - at.pow(value / beta, alpha)
         )
         res = at.switch(at.ge(value, 0.0), res, -np.inf)
-        return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
 
 
 class HalfStudentTRV(RandomVariable):
@@ -2327,7 +2378,12 @@ class HalfStudentT(PositiveContinuous):
             res,
         )
 
-        return check_parameters(res, sigma > 0, nu > 0, msg="sigma > 0, nu > 0")
+        return check_parameters(
+            res,
+            sigma > 0,
+            nu > 0,
+            msg="sigma > 0, nu > 0",
+        )
 
 
 class ExGaussianRV(RandomVariable):
@@ -2442,8 +2498,8 @@ class ExGaussian(Continuous):
         )
         return check_parameters(
             res,
-            0 < sigma,
-            0 < nu,
+            sigma > 0,
+            nu > 0,
             msg="nu > 0, sigma > 0",
         )
 
@@ -2462,7 +2518,12 @@ class ExGaussian(Continuous):
             normal_lcdf(mu, sigma, value),
         )
 
-        return check_parameters(res, 0 < sigma, 0 < nu, msg="sigma > 0, nu > 0")
+        return check_parameters(
+            res,
+            sigma > 0,
+            nu > 0,
+            msg="sigma > 0, nu > 0",
+        )
 
 
 class VonMises(CircularContinuous):
@@ -2630,7 +2691,11 @@ class SkewNormal(Continuous):
             + (-tau * (value - mu) ** 2 + at.log(tau / np.pi / 2.0)) / 2.0
         )
 
-        return check_parameters(res, tau > 0, msg="tau > 0")
+        return check_parameters(
+            res,
+            tau > 0,
+            msg="tau > 0",
+        )
 
 
 class Triangular(BoundedContinuous):
@@ -2801,7 +2866,11 @@ class Gumbel(Continuous):
     def logcdf(value, mu, beta):
         res = -at.exp(-(value - mu) / beta)
 
-        return check_parameters(res, 0 < beta, msg="beta > 0")
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
 
 
 class RiceRV(RandomVariable):
@@ -2998,7 +3067,7 @@ class Logistic(Continuous):
 
         return check_parameters(
             res,
-            0 < s,
+            s > 0,
             msg="s > 0",
         )
 
@@ -3327,14 +3396,18 @@ class Moyal(Continuous):
     def logp(value, mu, sigma):
         scaled = (value - mu) / sigma
         res = -(1 / 2) * (scaled + at.exp(-scaled)) - at.log(sigma) - (1 / 2) * at.log(2 * np.pi)
-        return check_parameters(res, 0 < sigma, msg="sigma > 0")
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
 
     def logcdf(value, mu, sigma):
         scaled = (value - mu) / sigma
         res = at.log(at.erfc(at.exp(-scaled / 2) * (2**-0.5)))
         return check_parameters(
             res,
-            0 < sigma,
+            sigma > 0,
             msg="sigma > 0",
         )
 
