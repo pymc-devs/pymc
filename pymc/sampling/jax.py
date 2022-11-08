@@ -440,11 +440,12 @@ def sample_blackjax_nuts(
         log_likelihood=log_likelihood,
         observed_data=find_observations(model),
         constant_data=find_constants(model),
+        sample_stats=mcmc_stats,
         coords=coords,
         dims=dims,
         attrs=make_attrs(attrs, library=blackjax),
     )
-    az_trace = to_trace(posterior=posterior, sample_stats=mcmc_stats, **idata_kwargs)
+    az_trace = to_trace(posterior=posterior, **idata_kwargs)
 
     return az_trace
 
