@@ -35,7 +35,7 @@ from pymc.aesaraf import (
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
 from pymc.model import Point, modelcontext
-from pymc.sampling_forward import sample_prior_predictive
+from pymc.sampling.forward import sample_prior_predictive
 from pymc.step_methods.metropolis import MultivariateNormalProposal
 from pymc.vartypes import discrete_types
 

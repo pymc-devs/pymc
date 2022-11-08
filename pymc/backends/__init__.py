@@ -60,7 +60,34 @@ Loading a saved backend
 Saved backends can be loaded using `arviz.from_netcdf`
 
 """
+from copy import copy
+from typing import Dict, List, Optional
+
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
+from pymc.backends.base import BaseTrace
 from pymc.backends.ndarray import NDArray, point_list_to_multitrace
 
 __all__ = ["to_inference_data", "predictions_to_inference_data"]
+
+
+def _init_trace(
+    *,
+    expected_length: int,
+    chain_number: int,
+    stats_dtypes: List[Dict[str, type]],
+    trace: Optional[BaseTrace],
+    model,
+) -> BaseTrace:
+    """Initializes a trace backend for a chain."""
+    strace: BaseTrace
+    if trace is None:
+        strace = NDArray(model=model)
+    elif isinstance(trace, BaseTrace):
+        if len(trace) > 0:
+            raise ValueError("Continuation of traces is no longer supported.")
+        strace = copy(trace)
+    else:
+        raise NotImplementedError(f"Unsupported `trace`: {trace}")
+
+    strace.setup(expected_length, chain_number, stats_dtypes)
+    return strace

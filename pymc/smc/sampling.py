@@ -32,7 +32,7 @@ import pymc
 from pymc.backends.arviz import dict_to_dataset, to_inference_data
 from pymc.backends.base import MultiTrace
 from pymc.model import modelcontext
-from pymc.parallel_sampling import _cpu_count
+from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
 
 

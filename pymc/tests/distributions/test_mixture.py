@@ -55,12 +55,12 @@ from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.math import expand_packed_triangular
 from pymc.model import Model
-from pymc.sampling import sample
-from pymc.sampling_forward import (
+from pymc.sampling.forward import (
     draw,
     sample_posterior_predictive,
     sample_prior_predictive,
 )
+from pymc.sampling.mcmc import sample
 from pymc.step_methods import Metropolis
 from pymc.tests.distributions.util import (
     Domain,
@@ -1009,12 +1009,12 @@ class TestMixtureSameFamily(SeededTest):
     @pytest.mark.parametrize("batch_shape", [(3, 4), (20,)], ids=str)
     def test_with_multinomial(self, batch_shape):
         p = np.random.uniform(size=(*batch_shape, self.mixture_comps, 3))
+        p /= p.sum(axis=-1, keepdims=True)
         n = 100 * np.ones((*batch_shape, 1))
         w = np.ones(self.mixture_comps) / self.mixture_comps
         mixture_axis = len(batch_shape)
         with Model() as model:
-            with pytest.warns(UserWarning, match="parameters sum up to"):
-                comp_dists = Multinomial.dist(p=p, n=n, shape=(*batch_shape, self.mixture_comps, 3))
+            comp_dists = Multinomial.dist(p=p, n=n, shape=(*batch_shape, self.mixture_comps, 3))
             mixture = Mixture(
                 "mixture",
                 w=w,

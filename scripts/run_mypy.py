@@ -49,10 +49,13 @@ pymc/math.py
 pymc/ode/__init__.py
 pymc/ode/ode.py
 pymc/ode/utils.py
-pymc/parallel_sampling.py
 pymc/plots/__init__.py
-pymc/sampling.py
-pymc/sampling_forward.py
+pymc/sampling_jax.py
+pymc/sampling/__init__.py
+pymc/sampling/forward.py
+pymc/sampling/mcmc.py
+pymc/sampling/parallel.py
+pymc/sampling/population.py
 pymc/smc/__init__.py
 pymc/smc/sampling.py
 pymc/smc/kernels.py
@@ -167,10 +170,10 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
         print("You can run `python scripts/run_mypy.py --verbose` to reproduce this test locally.")
         sys.exit(1)
 
-    if unexpected_passing == {"pymc/sampling_jax.py"}:
-        print("Letting you know that 'pymc/sampling_jax.py' unexpectedly passed.")
+    if unexpected_passing == {"pymc/sampling/jax.py"}:
+        print("Letting you know that 'pymc/sampling/jax.py' unexpectedly passed.")
         print("But this file is known to sometimes pass and sometimes not.")
-        print("Unless you tried to resolve problems in sampling_jax.py just ignore this message.")
+        print("Unless you tried to resolve problems in sampling/jax.py just ignore this message.")
     elif unexpected_passing:
         print("!!!!!!!!!")
         print(f"{len(unexpected_passing)} files unexpectedly passed the type checks:")

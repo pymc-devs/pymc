@@ -27,7 +27,7 @@ from aesara.compile.ops import as_op
 from aesara.tensor.type import TensorType
 
 import pymc as pm
-import pymc.parallel_sampling as ps
+import pymc.sampling.parallel as ps
 
 from pymc.aesaraf import floatX
 

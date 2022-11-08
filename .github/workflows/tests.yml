@@ -42,6 +42,7 @@ jobs:
             pymc/tests/distributions/test_logprob.py
             pymc/tests/test_aesaraf.py
             pymc/tests/test_math.py
+            pymc/tests/backends/test_base.py
             pymc/tests/backends/test_ndarray.py
             pymc/tests/step_methods/hmc/test_hmc.py
             pymc/tests/test_func_utils.py
@@ -59,16 +60,17 @@ jobs:
             pymc/tests/distributions/test_censored.py
             pymc/tests/distributions/test_simulator.py
             pymc/tests/distributions/test_truncated.py
-            pymc/tests/test_sampling_forward.py
+            pymc/tests/sampling/test_forward.py
+            pymc/tests/sampling/test_population.py
             pymc/tests/stats/test_convergence.py
 
           - |
             pymc/tests/tuning/test_scaling.py
             pymc/tests/tuning/test_starting.py
-            pymc/tests/test_sampling.py
             pymc/tests/distributions/test_dist_math.py
             pymc/tests/distributions/test_transform.py
-            pymc/tests/test_parallel_sampling.py
+            pymc/tests/sampling/test_mcmc.py
+            pymc/tests/sampling/test_parallel.py
             pymc/tests/test_printing.py
 
           - |
@@ -150,8 +152,8 @@ jobs:
         test-subset:
           - pymc/tests/variational/test_approximations.py pymc/tests/variational/test_callbacks.py pymc/tests/variational/test_inference.py pymc/tests/variational/test_opvi.py pymc/tests/test_initial_point.py
           - pymc/tests/test_model.py pymc/tests/step_methods/test_compound.py pymc/tests/step_methods/hmc/test_hmc.py
-          - pymc/tests/gp/test_cov.py pymc/tests/gp/test_gp.py pymc/tests/gp/test_mean.py pymc/tests/gp/test_util.py pymc/tests/ode/test_ode.py pymc/tests/ode/test_utils.py pymc/tests/smc/test_smc.py pymc/tests/test_parallel_sampling.py
-          - pymc/tests/test_sampling.py pymc/tests/step_methods/test_metropolis.py pymc/tests/step_methods/test_slicer.py pymc/tests/step_methods/hmc/test_nuts.py
+          - pymc/tests/gp/test_cov.py pymc/tests/gp/test_gp.py pymc/tests/gp/test_mean.py pymc/tests/gp/test_util.py pymc/tests/ode/test_ode.py pymc/tests/ode/test_utils.py pymc/tests/smc/test_smc.py pymc/tests/sampling/test_parallel.py
+          - pymc/tests/sampling/test_mcmc.py pymc/tests/step_methods/test_metropolis.py pymc/tests/step_methods/test_slicer.py pymc/tests/step_methods/hmc/test_nuts.py
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -221,12 +223,12 @@ jobs:
         python-version: ["3.9"]
         test-subset:
           - |
-            pymc/tests/test_parallel_sampling.py
+            pymc/tests/sampling/test_parallel.py
             pymc/tests/test_data.py
             pymc/tests/test_model.py
 
           - |
-            pymc/tests/test_sampling.py
+            pymc/tests/sampling/test_mcmc.py
 
           - |
             pymc/tests/backends/test_arviz.py
@@ -294,7 +296,7 @@ jobs:
         floatx: [float64]
         python-version: ["3.9"]
         test-subset:
-          - pymc/tests/test_sampling_jax.py
+          - pymc/tests/sampling/test_jax.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
@@ -363,7 +365,7 @@ jobs:
         floatx: [float32]
         python-version: ["3.10"]
         test-subset:
-        - pymc/tests/test_sampling.py pymc/tests/ode/test_ode.py pymc/tests/ode/test_utils.py
+        - pymc/tests/sampling/test_mcmc.py pymc/tests/ode/test_ode.py pymc/tests/ode/test_utils.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
