@@ -208,7 +208,6 @@ def walk_model(
 def replace_rvs_in_graphs(
     graphs: Iterable[TensorVariable],
     replacement_fn: Callable[[TensorVariable], Dict[TensorVariable, TensorVariable]],
-    initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
     **kwargs,
 ) -> Tuple[List[TensorVariable], Dict[TensorVariable, TensorVariable]]:
     """Replace random variables in graphs
@@ -226,8 +225,6 @@ def replace_rvs_in_graphs(
     that were made.
     """
     replacements = {}
-    if initial_replacements:
-        replacements.update(initial_replacements)
 
     def expand_replace(var):
         new_nodes = []
@@ -263,7 +260,6 @@ def replace_rvs_in_graphs(
 def rvs_to_value_vars(
     graphs: Iterable[Variable],
     apply_transforms: bool = True,
-    initial_replacements: Optional[Dict[Variable, Variable]] = None,
     **kwargs,
 ) -> List[Variable]:
     """Clone and replace random variables in graphs with their value variables.
@@ -276,9 +272,6 @@ def rvs_to_value_vars(
         The graphs in which to perform the replacements.
     apply_transforms
         If ``True``, apply each value variable's transform.
-    initial_replacements
-        A ``dict`` containing the initial replacements to be made.
-
     """
 
     def populate_replacements(
@@ -311,15 +304,9 @@ def rvs_to_value_vars(
     equiv = clone_get_equiv(inputs, graphs, False, False, {})
     graphs = [equiv[n] for n in graphs]
 
-    if initial_replacements:
-        initial_replacements = {
-            equiv.get(k, k): equiv.get(v, v) for k, v in initial_replacements.items()
-        }
-
     graphs, _ = replace_rvs_in_graphs(
         graphs,
         replacement_fn=populate_replacements,
-        initial_replacements=initial_replacements,
         **kwargs,
     )
 
