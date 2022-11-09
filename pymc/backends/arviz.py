@@ -47,7 +47,7 @@ def find_observations(model: "Model") -> Dict[str, Var]:
     """If there are observations available, return them as a dictionary."""
     observations = {}
     for obs in model.observed_RVs:
-        aux_obs = getattr(obs.tag, "observations", None)
+        aux_obs = model.rvs_to_values.get(obs, None)
         if aux_obs is not None:
             try:
                 obs_data = extract_obs_data(aux_obs)
@@ -261,7 +261,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
 
         if isinstance(var.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1)):
             try:
-                obs_data = extract_obs_data(var.tag.observations)
+                obs_data = extract_obs_data(self.model.rvs_to_values[var])
             except TypeError:
                 warnings.warn(f"Could not extract data from symbolic observation {var}")
 

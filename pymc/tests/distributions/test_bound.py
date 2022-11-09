@@ -22,8 +22,6 @@ from aesara.tensor.random.op import RandomVariable
 
 import pymc as pm
 
-from pymc.distributions import joint_logp
-
 
 class TestBound:
     """Tests for pm.Bound distribution"""
@@ -47,29 +45,38 @@ class TestBound:
                 UpperNormalTransform = pm.Bound("uppertrans", dist, upper=10)
                 BoundedNormalTransform = pm.Bound("boundedtrans", dist, lower=1, upper=10)
 
-        assert joint_logp(LowerNormal, -1).eval() == -np.inf
-        assert joint_logp(UpperNormal, 1).eval() == -np.inf
-        assert joint_logp(BoundedNormal, 0).eval() == -np.inf
-        assert joint_logp(BoundedNormal, 11).eval() == -np.inf
+        assert model.compile_fn(model.logp(LowerNormal), point_fn=False)(-1) == -np.inf
+        assert model.compile_fn(model.logp(UpperNormal), point_fn=False)(1) == -np.inf
+        assert model.compile_fn(model.logp(BoundedNormal), point_fn=False)(0) == -np.inf
+        assert model.compile_fn(model.logp(BoundedNormal), point_fn=False)(11) == -np.inf
 
-        assert joint_logp(UnboundedNormal, 0).eval() != -np.inf
-        assert joint_logp(UnboundedNormal, 11).eval() != -np.inf
-        assert joint_logp(InfBoundedNormal, 0).eval() != -np.inf
-        assert joint_logp(InfBoundedNormal, 11).eval() != -np.inf
+        assert model.compile_fn(model.logp(UnboundedNormal), point_fn=False)(0) != -np.inf
+        assert model.compile_fn(model.logp(UnboundedNormal), point_fn=False)(11) != -np.inf
+        assert model.compile_fn(model.logp(InfBoundedNormal), point_fn=False)(0) != -np.inf
+        assert model.compile_fn(model.logp(InfBoundedNormal), point_fn=False)(11) != -np.inf
 
-        value = model.rvs_to_values[LowerNormalTransform]
-        assert joint_logp(LowerNormalTransform, value).eval({value: -1}) != -np.inf
-        value = model.rvs_to_values[UpperNormalTransform]
-        assert joint_logp(UpperNormalTransform, value).eval({value: 1}) != -np.inf
-        value = model.rvs_to_values[BoundedNormalTransform]
-        assert joint_logp(BoundedNormalTransform, value).eval({value: 0}) != -np.inf
-        assert joint_logp(BoundedNormalTransform, value).eval({value: 11}) != -np.inf
+        assert model.compile_fn(model.logp(LowerNormalTransform), point_fn=False)(-1) != -np.inf
+        assert model.compile_fn(model.logp(UpperNormalTransform), point_fn=False)(1) != -np.inf
+        assert model.compile_fn(model.logp(BoundedNormalTransform), point_fn=False)(0) != -np.inf
+        assert model.compile_fn(model.logp(BoundedNormalTransform), point_fn=False)(11) != -np.inf
 
         ref_dist = pm.Normal.dist(mu=0, sigma=1)
-        assert np.allclose(joint_logp(UnboundedNormal, 5).eval(), joint_logp(ref_dist, 5).eval())
-        assert np.allclose(joint_logp(LowerNormal, 5).eval(), joint_logp(ref_dist, 5).eval())
-        assert np.allclose(joint_logp(UpperNormal, -5).eval(), joint_logp(ref_dist, 5).eval())
-        assert np.allclose(joint_logp(BoundedNormal, 5).eval(), joint_logp(ref_dist, 5).eval())
+        assert np.allclose(
+            model.compile_fn(model.logp(UnboundedNormal), point_fn=False)(5),
+            pm.logp(ref_dist, 5).eval(),
+        )
+        assert np.allclose(
+            model.compile_fn(model.logp(LowerNormal), point_fn=False)(5),
+            pm.logp(ref_dist, 5).eval(),
+        )
+        assert np.allclose(
+            model.compile_fn(model.logp(UpperNormal), point_fn=False)(-5),
+            pm.logp(ref_dist, 5).eval(),
+        )
+        assert np.allclose(
+            model.compile_fn(model.logp(BoundedNormal), point_fn=False)(5),
+            pm.logp(ref_dist, 5).eval(),
+        )
 
     def test_discrete(self):
         with pm.Model() as model:
@@ -84,19 +91,31 @@ class TestBound:
                 UpperPoisson = pm.Bound("upper", dist, upper=10)
                 BoundedPoisson = pm.Bound("bounded", dist, lower=1, upper=10)
 
-        assert joint_logp(LowerPoisson, 0).eval() == -np.inf
-        assert joint_logp(UpperPoisson, 11).eval() == -np.inf
-        assert joint_logp(BoundedPoisson, 0).eval() == -np.inf
-        assert joint_logp(BoundedPoisson, 11).eval() == -np.inf
+        assert model.compile_fn(model.logp(LowerPoisson), point_fn=False)(0) == -np.inf
+        assert model.compile_fn(model.logp(UpperPoisson), point_fn=False)(11) == -np.inf
+        assert model.compile_fn(model.logp(BoundedPoisson), point_fn=False)(0) == -np.inf
+        assert model.compile_fn(model.logp(BoundedPoisson), point_fn=False)(11) == -np.inf
 
-        assert joint_logp(UnboundedPoisson, 0).eval() != -np.inf
-        assert joint_logp(UnboundedPoisson, 11).eval() != -np.inf
+        assert model.compile_fn(model.logp(UnboundedPoisson), point_fn=False)(0) != -np.inf
+        assert model.compile_fn(model.logp(UnboundedPoisson), point_fn=False)(11) != -np.inf
 
         ref_dist = pm.Poisson.dist(mu=4)
-        assert np.allclose(joint_logp(UnboundedPoisson, 5).eval(), joint_logp(ref_dist, 5).eval())
-        assert np.allclose(joint_logp(LowerPoisson, 5).eval(), joint_logp(ref_dist, 5).eval())
-        assert np.allclose(joint_logp(UpperPoisson, 5).eval(), joint_logp(ref_dist, 5).eval())
-        assert np.allclose(joint_logp(BoundedPoisson, 5).eval(), joint_logp(ref_dist, 5).eval())
+        assert np.allclose(
+            model.compile_fn(model.logp(UnboundedPoisson), point_fn=False)(5),
+            pm.logp(ref_dist, 5).eval(),
+        )
+        assert np.allclose(
+            model.compile_fn(model.logp(LowerPoisson), point_fn=False)(5),
+            pm.logp(ref_dist, 5).eval(),
+        )
+        assert np.allclose(
+            model.compile_fn(model.logp(UpperPoisson), point_fn=False)(5),
+            pm.logp(ref_dist, 5).eval(),
+        )
+        assert np.allclose(
+            model.compile_fn(model.logp(BoundedPoisson), point_fn=False)(5),
+            pm.logp(ref_dist, 5).eval(),
+        )
 
     def create_invalid_distribution(self):
         class MyNormal(RandomVariable):
@@ -220,18 +239,26 @@ class TestBound:
                     "bounded", dist, lower=[1, 2], upper=[9, 10], transform=None
                 )
 
-        first, second = joint_logp(LowerPoisson, [0, 0], sum=False)[0].eval()
+        first, second = model.compile_fn(model.logp(LowerPoisson, sum=False)[0], point_fn=False)(
+            [0, 0]
+        )
         assert first == -np.inf
         assert second != -np.inf
 
-        first, second = joint_logp(UpperPoisson, [11, 11], sum=False)[0].eval()
+        first, second = model.compile_fn(model.logp(UpperPoisson, sum=False)[0], point_fn=False)(
+            [11, 11]
+        )
         assert first != -np.inf
         assert second == -np.inf
 
-        first, second = joint_logp(BoundedPoisson, [1, 1], sum=False)[0].eval()
+        first, second = model.compile_fn(model.logp(BoundedPoisson, sum=False)[0], point_fn=False)(
+            [1, 1]
+        )
         assert first != -np.inf
         assert second == -np.inf
 
-        first, second = joint_logp(BoundedPoisson, [10, 10], sum=False)[0].eval()
+        first, second = model.compile_fn(model.logp(BoundedPoisson, sum=False)[0], point_fn=False)(
+            [10, 10]
+        )
         assert first == -np.inf
         assert second != -np.inf

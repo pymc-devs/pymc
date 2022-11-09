@@ -25,7 +25,7 @@ from aeppl.logprob import _logprob
 from aeppl.logprob import logcdf as logcdf_aeppl
 from aeppl.logprob import logprob as logp_aeppl
 from aeppl.tensor import MeasurableJoin
-from aeppl.transforms import TransformValuesRewrite
+from aeppl.transforms import RVTransform, TransformValuesRewrite
 from aesara import tensor as at
 from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.tensor.random.op import RandomVariable
@@ -33,10 +33,10 @@ from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import constant_fold, floatX
 
+TOTAL_SIZE = Union[int, Sequence[int], None]
 
-def _get_scaling(
-    total_size: Optional[Union[int, Sequence[int]]], shape, ndim: int
-) -> TensorVariable:
+
+def _get_scaling(total_size: TOTAL_SIZE, shape, ndim: int) -> TensorVariable:
     """
     Gets scaling constant for logp.
 
@@ -104,12 +104,26 @@ def _get_scaling(
     return at.as_tensor(coef, dtype=aesara.config.floatX)
 
 
-def joint_logpt(*args, **kwargs):
-    warnings.warn(
-        "joint_logpt has been deprecated. Use joint_logp instead.",
-        FutureWarning,
-    )
-    return joint_logp(*args, **kwargs)
+def _check_no_rvs(logp_terms: Sequence[TensorVariable]):
+    # Raise if there are unexpected RandomVariables in the logp graph
+    # Only SimulatorRVs are allowed
+    from pymc.distributions.simulator import SimulatorRV
+
+    unexpected_rv_nodes = [
+        node
+        for node in aesara.graph.ancestors(logp_terms)
+        if (
+            node.owner
+            and isinstance(node.owner.op, RandomVariable)
+            and not isinstance(node.owner.op, SimulatorRV)
+        )
+    ]
+    if unexpected_rv_nodes:
+        raise ValueError(
+            f"Random variables detected in the logp graph: {unexpected_rv_nodes}.\n"
+            "This can happen when DensityDist logp or Interval transform functions "
+            "reference nonlocal variables."
+        )
 
 
 def joint_logp(
@@ -151,6 +165,10 @@ def joint_logp(
         Sum the log-likelihood or return each term as a separate list item.
 
     """
+    warnings.warn(
+        "joint_logp has been deprecated, use model.logp instead",
+        FutureWarning,
+    )
     # TODO: In future when we drop support for tag.value_var most of the following
     # logic can be removed and logp can just be a wrapper function that calls aeppl's
     # joint_logprob directly.
@@ -223,32 +241,14 @@ def joint_logp(
         **kwargs,
     )
 
-    # Raise if there are unexpected RandomVariables in the logp graph
-    # Only SimulatorRVs are allowed
-    from pymc.distributions.simulator import SimulatorRV
-
-    unexpected_rv_nodes = [
-        node
-        for node in aesara.graph.ancestors(list(temp_logp_var_dict.values()))
-        if (
-            node.owner
-            and isinstance(node.owner.op, RandomVariable)
-            and not isinstance(node.owner.op, SimulatorRV)
-        )
-    ]
-    if unexpected_rv_nodes:
-        raise ValueError(
-            f"Random variables detected in the logp graph: {unexpected_rv_nodes}.\n"
-            "This can happen when DensityDist logp or Interval transform functions "
-            "reference nonlocal variables."
-        )
-
     # aeppl returns the logp for every single value term we provided to it. This includes
     # the extra values we plugged in above, so we filter those we actually wanted in the
     # same order they were given in.
     logp_var_dict = {}
     for value_var in rv_values.values():
         logp_var_dict[value_var] = temp_logp_var_dict[value_var]
+
+    _check_no_rvs(list(logp_var_dict.values()))
 
     if scaling:
         for value_var in logp_var_dict.keys():
@@ -261,6 +261,52 @@ def joint_logp(
         logp_var = list(logp_var_dict.values())
 
     return logp_var
+
+
+def _joint_logp(
+    rvs: Sequence[TensorVariable],
+    *,
+    rvs_to_values: Dict[TensorVariable, TensorVariable],
+    rvs_to_transforms: Dict[TensorVariable, RVTransform],
+    jacobian: bool = True,
+    rvs_to_total_sizes: Dict[TensorVariable, TOTAL_SIZE],
+    **kwargs,
+) -> List[TensorVariable]:
+    """Thin wrapper around aeppl.factorized_joint_logprob, extended with PyMC specific
+    concerns such as transforms, jacobian, and scaling"""
+
+    transform_rewrite = None
+    values_to_transforms = {
+        rvs_to_values[rv]: transform
+        for rv, transform in rvs_to_transforms.items()
+        if transform is not None
+    }
+    if values_to_transforms:
+        # There seems to be an incorrect type hint in TransformValuesRewrite
+        transform_rewrite = TransformValuesRewrite(values_to_transforms)  # type: ignore
+
+    temp_logp_terms = factorized_joint_logprob(
+        rvs_to_values,
+        extra_rewrites=transform_rewrite,
+        use_jacobian=jacobian,
+        **kwargs,
+    )
+
+    # aeppl returns the logp for every single value term we provided to it. This includes
+    # the extra values we plugged in above, so we filter those we actually wanted in the
+    # same order they were given in.
+    logp_terms = {}
+    for rv in rvs:
+        value_var = rvs_to_values[rv]
+        logp_term = temp_logp_terms[value_var]
+        total_size = rvs_to_total_sizes.get(rv, None)
+        if total_size is not None:
+            scaling = _get_scaling(total_size, value_var.shape, value_var.ndim)
+            logp_term *= scaling
+        logp_terms[value_var] = logp_term
+
+    _check_no_rvs(list(logp_terms.values()))
+    return list(logp_terms.values())
 
 
 def logp(rv: TensorVariable, value) -> TensorVariable:

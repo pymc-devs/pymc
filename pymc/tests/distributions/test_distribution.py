@@ -26,7 +26,7 @@ from aesara.tensor import TensorVariable
 
 import pymc as pm
 
-from pymc.distributions import DiracDelta, Flat, MvNormal, MvStudentT, joint_logp, logp
+from pymc.distributions import DiracDelta, Flat, MvNormal, MvStudentT, logp
 from pymc.distributions.distribution import SymbolicRandomVariable, _moment, moment
 from pymc.distributions.shape_utils import to_tuple
 from pymc.tests.distributions.util import assert_moment_is_expected
@@ -215,14 +215,13 @@ class TestDensityDist:
 
             mu = pm.Normal("mu", size=supp_shape)
             a = pm.DensityDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
-        mu_val = npr.normal(loc=0, scale=1, size=supp_shape).astype(aesara.config.floatX)
-        a_val = npr.normal(loc=mu_val, scale=1, size=to_tuple(size) + (supp_shape,)).astype(
-            aesara.config.floatX
-        )
-        log_densityt = joint_logp(a, a.tag.value_var, sum=False)[0]
-        assert log_densityt.eval(
-            {a.tag.value_var: a_val, mu.tag.value_var: mu_val},
-        ).shape == to_tuple(size)
+
+        mu_test_value = npr.normal(loc=0, scale=1, size=supp_shape).astype(aesara.config.floatX)
+        a_test_value = npr.normal(
+            loc=mu_test_value, scale=1, size=to_tuple(size) + (supp_shape,)
+        ).astype(aesara.config.floatX)
+        log_densityf = model.compile_logp(vars=[a], sum=False)
+        assert log_densityf({"a": a_test_value, "mu": mu_test_value})[0].shape == to_tuple(size)
 
     @pytest.mark.parametrize(
         "moment, size, expected",

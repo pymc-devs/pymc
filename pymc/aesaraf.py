@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 from typing import (
     Callable,
     Dict,
@@ -31,6 +33,7 @@ import pandas as pd
 import scipy.sparse as sps
 
 from aeppl.logprob import CheckParameterValue
+from aeppl.transforms import RVTransform
 from aesara import scalar
 from aesara.compile.mode import Mode, get_mode
 from aesara.gradient import grad
@@ -205,7 +208,7 @@ def walk_model(
     yield from walk(graphs, expand, bfs=False)
 
 
-def replace_rvs_in_graphs(
+def _replace_rvs_in_graphs(
     graphs: Iterable[TensorVariable],
     replacement_fn: Callable[[TensorVariable], Dict[TensorVariable, TensorVariable]],
     **kwargs,
@@ -282,6 +285,10 @@ def rvs_to_value_vars(
     apply_transforms
         If ``True``, apply each value variable's transform.
     """
+    warnings.warn(
+        "rvs_to_value_vars is deprecated. Use model.replace_rvs_by_values instead",
+        FutureWarning,
+    )
 
     def populate_replacements(
         random_var: TensorVariable, replacements: Dict[TensorVariable, TensorVariable]
@@ -313,9 +320,72 @@ def rvs_to_value_vars(
     equiv = clone_get_equiv(inputs, graphs, False, False, {})
     graphs = [equiv[n] for n in graphs]
 
-    graphs, _ = replace_rvs_in_graphs(
+    graphs, _ = _replace_rvs_in_graphs(
         graphs,
         replacement_fn=populate_replacements,
+        **kwargs,
+    )
+
+    return graphs
+
+
+def replace_rvs_by_values(
+    graphs: Sequence[TensorVariable],
+    *,
+    rvs_to_values: Dict[TensorVariable, TensorVariable],
+    rvs_to_transforms: Dict[TensorVariable, RVTransform],
+    **kwargs,
+) -> List[TensorVariable]:
+    """Clone and replace random variables in graphs with their value variables.
+
+    This will *not* recompute test values in the resulting graphs.
+
+    Parameters
+    ----------
+    graphs
+        The graphs in which to perform the replacements.
+    rvs_to_values
+        Mapping between the original graph RVs and respective value variables
+    rvs_to_transforms
+        Mapping between the original graph RVs and respective value transforms
+    """
+
+    # Clone original graphs so that we don't modify variables in place
+    inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
+    equiv = clone_get_equiv(inputs, graphs, False, False, {})
+    graphs = [equiv[n] for n in graphs]
+
+    # Get needed mappings for equivalent cloned variables
+    equiv_rvs_to_values = {}
+    equiv_rvs_to_transforms = {}
+    for rv, value in rvs_to_values.items():
+        equiv_rv = equiv.get(rv, rv)
+        equiv_rvs_to_values[equiv_rv] = equiv.get(value, value)
+        equiv_rvs_to_transforms[equiv_rv] = rvs_to_transforms[rv]
+
+    def poulate_replacements(rv, replacements):
+        # Populate replacements dict with {rv: value} pairs indicating which graph
+        # RVs should be replaced by what value variables.
+
+        # No value variable to replace RV with
+        value = equiv_rvs_to_values.get(rv, None)
+        if value is None:
+            return []
+
+        transform = equiv_rvs_to_transforms.get(rv, None)
+        if transform is not None:
+            # We want to replace uses of the RV by the back-transformation of its value
+            value = transform.backward(value, *rv.owner.inputs)
+            value.name = rv.name
+
+        replacements[rv] = value
+        # Also walk the graph of the value variable to make any additional
+        # replacements if that is not a simple input variable
+        return [value]
+
+    graphs, _ = _replace_rvs_in_graphs(
+        graphs,
+        replacement_fn=poulate_replacements,
         **kwargs,
     )
 

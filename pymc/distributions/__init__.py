@@ -16,7 +16,6 @@ from pymc.distributions.logprob import (  # isort:skip
     logcdf,
     logp,
     joint_logp,
-    joint_logpt,
 )
 
 from pymc.distributions.bound import Bound
@@ -199,7 +198,6 @@ __all__ = [
     "Censored",
     "CAR",
     "PolyaGamma",
-    "joint_logpt",
     "joint_logp",
     "logp",
     "logcdf",
