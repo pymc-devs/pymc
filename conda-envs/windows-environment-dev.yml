@@ -35,5 +35,5 @@ dependencies:
 - sphinx>=1.5
 - watermark
 - sphinx-remove-toctrees
-- mypy
+- mypy=0.982
 - types-cachetools
