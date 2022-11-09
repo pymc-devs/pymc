@@ -39,6 +39,7 @@ from pymc.aesaraf import (
     convert_observed_data,
     extract_obs_data,
     replace_rng_nodes,
+    replace_rvs_by_values,
     reseed_rngs,
     rvs_to_value_vars,
     walk_model,
@@ -99,7 +100,7 @@ class TestBroadcasting:
         )
         assert (
             test_model.test1.broadcastable
-            == replacement[test_model.test1.tag.value_var].broadcastable
+            == replacement[test_model.rvs_to_values[test_model.test1]].broadcastable
         )
 
     def test_metropolis_sampling(self):
@@ -535,10 +536,13 @@ def test_constant_fold_raises():
 class TestReplaceRVsByValues:
     @pytest.mark.parametrize("symbolic_rv", (False, True))
     @pytest.mark.parametrize("apply_transforms", (True, False))
-    def test_basic(self, symbolic_rv, apply_transforms):
+    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
+    def test_basic(self, symbolic_rv, apply_transforms, test_deprecated_fn):
 
         # Interval transform between last two arguments
-        interval = Interval(bounds_fn=lambda *args: (args[-2], args[-1]))
+        interval = (
+            Interval(bounds_fn=lambda *args: (args[-2], args[-1])) if apply_transforms else None
+        )
 
         with pm.Model() as m:
             a = pm.Uniform("a", 0.0, 1.0)
@@ -553,12 +557,20 @@ class TestReplaceRVsByValues:
             d = at.log(c + b) + 2.0
 
         a_value_var = m.rvs_to_values[a]
-        assert a_value_var.tag.transform
+        assert m.rvs_to_transforms[a] is not None
 
         b_value_var = m.rvs_to_values[b]
         c_value_var = m.rvs_to_values[c]
 
-        (res,) = rvs_to_value_vars((d,), apply_transforms=apply_transforms)
+        if test_deprecated_fn:
+            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
+                (res,) = rvs_to_value_vars((d,), apply_transforms=apply_transforms)
+        else:
+            (res,) = replace_rvs_by_values(
+                (d,),
+                rvs_to_values=m.rvs_to_values,
+                rvs_to_transforms=m.rvs_to_transforms,
+            )
 
         assert res.owner.op == at.add
         log_output = res.owner.inputs[0]
@@ -594,7 +606,8 @@ class TestReplaceRVsByValues:
         else:
             assert a_value_var not in res_ancestors
 
-    def test_unvalued_rv(self):
+    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
+    def test_unvalued_rv(self, test_deprecated_fn):
         with pm.Model() as m:
             x = pm.Normal("x")
             y = pm.Normal.dist(x)
@@ -604,7 +617,15 @@ class TestReplaceRVsByValues:
         x_value = m.rvs_to_values[x]
         z_value = m.rvs_to_values[z]
 
-        (res,) = rvs_to_value_vars((out,))
+        if test_deprecated_fn:
+            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
+                (res,) = rvs_to_value_vars((out,))
+        else:
+            (res,) = replace_rvs_by_values(
+                (out,),
+                rvs_to_values=m.rvs_to_values,
+                rvs_to_transforms=m.rvs_to_transforms,
+            )
 
         assert res.owner.op == at.add
         assert res.owner.inputs[0] is z_value
@@ -614,7 +635,8 @@ class TestReplaceRVsByValues:
         assert res_y.owner.op == at.random.normal
         assert res_y.owner.inputs[3] is x_value
 
-    def test_no_change_inplace(self):
+    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
+    def test_no_change_inplace(self, test_deprecated_fn):
         # Test that calling rvs_to_value_vars in models with nested transformations
         # does not change the original rvs in place. See issue #5172
         with pm.Model() as m:
@@ -625,17 +647,25 @@ class TestReplaceRVsByValues:
             pm.Potential("two_pot", two)
             pm.Potential("one_pot", one)
 
-            before = aesara.clone_replace(m.free_RVs)
+        before = aesara.clone_replace(m.free_RVs)
 
-            # This call would change the model free_RVs in place in #5172
-            res = rvs_to_value_vars(m.potentials, apply_transforms=True)
+        # This call would change the model free_RVs in place in #5172
+        if test_deprecated_fn:
+            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
+                rvs_to_value_vars(m.potentials)
+        else:
+            replace_rvs_by_values(
+                m.potentials,
+                rvs_to_values=m.rvs_to_values,
+                rvs_to_transforms=m.rvs_to_transforms,
+            )
 
-            after = aesara.clone_replace(m.free_RVs)
+        after = aesara.clone_replace(m.free_RVs)
+        assert equal_computations(before, after)
 
-            assert equal_computations(before, after)
-
+    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
     @pytest.mark.parametrize("reversed", (False, True))
-    def test_interdependent_transformed_rvs(self, reversed):
+    def test_interdependent_transformed_rvs(self, reversed, test_deprecated_fn):
         # Test that nested transformed variables, whose transformed values depend on other
         # RVs are properly replaced
         with pm.Model() as m:
@@ -651,7 +681,15 @@ class TestReplaceRVsByValues:
         if reversed:
             rvs = rvs[::-1]
 
-        transform_values = rvs_to_value_vars(rvs)
+        if test_deprecated_fn:
+            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
+                transform_values = rvs_to_value_vars(rvs)
+        else:
+            transform_values = replace_rvs_by_values(
+                rvs,
+                rvs_to_values=m.rvs_to_values,
+                rvs_to_transforms=m.rvs_to_transforms,
+            )
 
         for transform_value in transform_values:
             assert_no_rvs(transform_value)

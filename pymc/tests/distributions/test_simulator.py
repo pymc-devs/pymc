@@ -196,15 +196,8 @@ class TestSimulator(SeededTest):
         assert self.count_rvs(m.logp()) == 2
 
         # Check that the logps use the correct methods
-        a_val = m.rvs_to_values[a]
-        sim1_val = m.rvs_to_values[sim1]
-        logp_sim1 = pm.joint_logp(sim1, sim1_val)
-        logp_sim1_fn = aesara.function([a_val], logp_sim1)
-
-        b_val = m.rvs_to_values[b]
-        sim2_val = m.rvs_to_values[sim2]
-        logp_sim2 = pm.joint_logp(sim2, sim2_val)
-        logp_sim2_fn = aesara.function([b_val], logp_sim2)
+        logp_sim1_fn = m.compile_fn(m.logp(sim1), point_fn=False)
+        logp_sim2_fn = m.compile_fn(m.logp(sim2), point_fn=False)
 
         assert any(
             node for node in logp_sim1_fn.maker.fgraph.toposort() if isinstance(node.op, SortOp)

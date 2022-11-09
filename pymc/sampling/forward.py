@@ -388,7 +388,7 @@ def sample_prior_predictive(
     for name in sorted(missing_names):
         transformed_value_var = model[name]
         rv_var = model.values_to_rvs[transformed_value_var]
-        transform = transformed_value_var.tag.transform
+        transform = model.rvs_to_transforms[rv_var]
         transformed_rv_var = transform.forward(rv_var, *rv_var.owner.inputs)
 
         names.append(name)

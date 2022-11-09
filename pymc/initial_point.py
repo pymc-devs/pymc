@@ -20,6 +20,7 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
+from aeppl.transforms import RVTransform
 from aesara.graph.basic import Variable
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.var import TensorVariable
@@ -43,9 +44,7 @@ def convert_str_to_rv_dict(
         if isinstance(key, str):
             if is_transformed_name(key):
                 rv = model[get_untransformed_name(key)]
-                initvals[rv] = model.rvs_to_values[rv].tag.transform.backward(
-                    initval, *rv.owner.inputs
-                )
+                initvals[rv] = model.rvs_to_transforms[rv].backward(initval, *rv.owner.inputs)
             else:
                 initvals[model[key]] = initval
         else:
@@ -158,7 +157,7 @@ def make_initial_point_fn(
 
     initial_values = make_initial_point_expression(
         free_rvs=model.free_RVs,
-        rvs_to_values=model.rvs_to_values,
+        rvs_to_transforms=model.rvs_to_transforms,
         initval_strategies=initval_strats,
         jitter_rvs=jitter_rvs,
         default_strategy=default_strategy,
@@ -172,7 +171,7 @@ def make_initial_point_fn(
 
     varnames = []
     for var in model.free_RVs:
-        transform = getattr(model.rvs_to_values[var].tag, "transform", None)
+        transform = model.rvs_to_transforms[var]
         if transform is not None and return_transformed:
             name = get_transformed_name(var.name, transform)
         else:
@@ -197,7 +196,7 @@ def make_initial_point_fn(
 def make_initial_point_expression(
     *,
     free_rvs: Sequence[TensorVariable],
-    rvs_to_values: Dict[TensorVariable, TensorVariable],
+    rvs_to_transforms: Dict[TensorVariable, RVTransform],
     initval_strategies: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]],
     jitter_rvs: Set[TensorVariable] = None,
     default_strategy: str = "moment",
@@ -265,7 +264,7 @@ def make_initial_point_expression(
         else:
             value = at.as_tensor(strategy, dtype=variable.dtype).astype(variable.dtype)
 
-        transform = getattr(rvs_to_values[variable].tag, "transform", None)
+        transform = rvs_to_transforms.get(variable, None)
 
         if transform is not None:
             value = transform.forward(value, *variable.owner.inputs)

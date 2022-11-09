@@ -104,10 +104,8 @@ def find_MAP(
             vars = get_value_vars_from_user_vars(vars, model)
         except ValueError as exc:
             # Accomodate case where user passed non-pure RV nodes
-            vars = pm.inputvars(pm.aesaraf.rvs_to_value_vars(vars))
+            vars = pm.inputvars(model.replace_rvs_by_values(vars))
             if vars:
-                # Make sure they belong to current model again...
-                vars = get_value_vars_from_user_vars(vars, model)
                 warnings.warn(
                     "Intermediate variables (such as Deterministic or Potential) were passed. "
                     "find_MAP will optimize the underlying free_RVs instead.",

@@ -24,7 +24,7 @@ import pymc as pm
 import pymc.distributions.transforms as tr
 
 from pymc.aesaraf import floatX, jacobian
-from pymc.distributions import joint_logp
+from pymc.distributions.logprob import _joint_logp
 from pymc.tests.checks import close_to, close_to_logical
 from pymc.tests.distributions.util import (
     Circ,
@@ -276,32 +276,49 @@ class TestElementWiseLogp(SeededTest):
 
     def check_transform_elementwise_logp(self, model):
         x = model.free_RVs[0]
-        x_val_transf = x.tag.value_var
+        x_val_transf = model.rvs_to_values[x]
 
         pt = model.initial_point(0)
         test_array_transf = floatX(np.random.randn(*pt[x_val_transf.name].shape))
-        transform = x_val_transf.tag.transform
+        transform = model.rvs_to_transforms[x]
         test_array_untransf = transform.backward(test_array_transf, *x.owner.inputs).eval()
 
         # Create input variable with same dimensionality as untransformed test_array
         x_val_untransf = at.constant(test_array_untransf).type()
 
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
-        assert joint_logp(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
+        assert model.logp(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
 
-        v1 = joint_logp(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
-        v2 = joint_logp(x, x_val_untransf, transformed=False).eval(
-            {x_val_untransf: test_array_untransf}
+        v1 = (
+            _joint_logp(
+                (x,),
+                rvs_to_values={x: x_val_transf},
+                rvs_to_transforms={x: transform},
+                rvs_to_total_sizes={},
+                jacobian=False,
+            )[0]
+            .sum()
+            .eval({x_val_transf: test_array_transf})
+        )
+        v2 = (
+            _joint_logp(
+                (x,),
+                rvs_to_values={x: x_val_untransf},
+                rvs_to_transforms={},
+                rvs_to_total_sizes={},
+            )[0]
+            .sum()
+            .eval({x_val_untransf: test_array_untransf})
         )
         close_to(v1, v2, tol)
 
     def check_vectortransform_elementwise_logp(self, model):
         x = model.free_RVs[0]
-        x_val_transf = x.tag.value_var
+        x_val_transf = model.rvs_to_values[x]
 
         pt = model.initial_point(0)
         test_array_transf = floatX(np.random.randn(*pt[x_val_transf.name].shape))
-        transform = x_val_transf.tag.transform
+        transform = model.rvs_to_transforms[x]
         test_array_untransf = transform.backward(test_array_transf, *x.owner.inputs).eval()
 
         # Create input variable with same dimensionality as untransformed test_array
@@ -310,14 +327,31 @@ class TestElementWiseLogp(SeededTest):
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
         # Original distribution is univariate
         if x.owner.op.ndim_supp == 0:
-            assert joint_logp(x, sum=False)[0].ndim == x.ndim == (jacob_det.ndim + 1)
+            assert model.logp(x, sum=False)[0].ndim == x.ndim == (jacob_det.ndim + 1)
         # Original distribution is multivariate
         else:
-            assert joint_logp(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
+            assert model.logp(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
 
-        a = joint_logp(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
-        b = joint_logp(x, x_val_untransf, transformed=False).eval(
-            {x_val_untransf: test_array_untransf}
+        a = (
+            _joint_logp(
+                (x,),
+                rvs_to_values={x: x_val_transf},
+                rvs_to_transforms={x: transform},
+                rvs_to_total_sizes={},
+                jacobian=False,
+            )[0]
+            .sum()
+            .eval({x_val_transf: test_array_transf})
+        )
+        b = (
+            _joint_logp(
+                (x,),
+                rvs_to_values={x: x_val_untransf},
+                rvs_to_transforms={},
+                rvs_to_total_sizes={},
+            )[0]
+            .sum()
+            .eval({x_val_untransf: test_array_untransf})
         )
         # Hack to get relative tolerance
         close_to(a, b, np.abs(0.5 * (a + b) * tol))
@@ -544,7 +578,7 @@ def test_triangular_transform():
     with pm.Model() as m:
         x = pm.Triangular("x", lower=0, c=1, upper=2)
 
-    transform = x.tag.value_var.tag.transform
+    transform = m.rvs_to_transforms[x]
     assert np.isclose(transform.backward(-np.inf, *x.owner.inputs).eval(), 0)
     assert np.isclose(transform.backward(np.inf, *x.owner.inputs).eval(), 2)
 

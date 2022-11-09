@@ -73,7 +73,7 @@ class TestBoundedContinuous:
         interval_rv = model.named_vars[f"{rv_name}_interval__"]
         rv = model.named_vars[rv_name]
         dist_params = rv.owner.inputs
-        lower_interval, upper_interval = interval_rv.tag.transform.args_fn(*rv.owner.inputs)
+        lower_interval, upper_interval = model.rvs_to_transforms[rv].args_fn(*rv.owner.inputs)
         return (
             dist_params,
             lower_interval,

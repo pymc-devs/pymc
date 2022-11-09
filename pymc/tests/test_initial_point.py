@@ -25,12 +25,12 @@ from pymc.distributions.distribution import moment
 from pymc.initial_point import make_initial_point_fn, make_initial_point_fns_per_chain
 
 
-def transform_fwd(rv, expected_untransformed):
-    return rv.tag.value_var.tag.transform.forward(expected_untransformed, *rv.owner.inputs).eval()
+def transform_fwd(rv, expected_untransformed, model):
+    return model.rvs_to_transforms[rv].forward(expected_untransformed, *rv.owner.inputs).eval()
 
 
-def transform_back(rv, transformed) -> np.ndarray:
-    return rv.tag.value_var.tag.transform.backward(transformed, *rv.owner.inputs).eval()
+def transform_back(rv, transformed, model) -> np.ndarray:
+    return model.rvs_to_transforms[rv].backward(transformed, *rv.owner.inputs).eval()
 
 
 class TestInitvalAssignment:
@@ -48,7 +48,7 @@ class TestInitvalAssignment:
             with pytest.warns(FutureWarning, match="`testval` argument is deprecated"):
                 rv = pm.Uniform("u", 0, 1, testval=0.75)
                 initial_point = pmodel.initial_point(seed=0)
-                assert initial_point["u_interval__"] == transform_fwd(rv, 0.75)
+                assert initial_point["u_interval__"] == transform_fwd(rv, 0.75, model=pmodel)
                 assert not hasattr(rv.tag, "test_value")
         pass
 
@@ -163,7 +163,7 @@ class TestInitvalEvaluation:
         # Moment of the HalfFlat is 1, but HalfFlat is log-transformed by default
         # so the transformed initial value with jitter will be zero plus a jitter between [-1, 1].
         b_transformed = iv["B_log__"]
-        b_untransformed = transform_back(B, b_transformed)
+        b_untransformed = transform_back(B, b_transformed, model=pmodel)
         assert b_transformed != 0
         assert -1 < b_transformed < 1
         # C is centered on 0 + untransformed initval of B
