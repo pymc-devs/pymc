@@ -185,8 +185,10 @@ class TestMatchesScipy:
         # Custom logp / logcdf check for invalid parameters
         invalid_dist = pm.Uniform.dist(lower=1, upper=0)
         with aesara.config.change_flags(mode=Mode("py")):
-            assert logp(invalid_dist, np.array(0.5)).eval() == -np.inf
-            assert logcdf(invalid_dist, np.array(2.0)).eval() == -np.inf
+            with pytest.raises(ParameterValueError):
+                logp(invalid_dist, np.array(0.5)).eval()
+            with pytest.raises(ParameterValueError):
+                logcdf(invalid_dist, np.array(0.5)).eval()
 
     def test_triangular(self):
         check_logp(
