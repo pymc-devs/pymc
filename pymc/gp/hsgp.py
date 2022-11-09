@@ -194,15 +194,14 @@ class HSGP(Base):
         psd = self.cov_func.psd(omega)
 
         if self.drop_first:
-            print('dropping first')
             self.beta = pm.Normal(f"{name}_coeffs_", size=m_star - 1)
             self.f = pm.Deterministic(
-                    name, self.mean_func(X) + at.squeeze(at.dot(phi[:, 1:], self.beta * psd[1:])), dims=dims
+                name, self.mean_func(X) + at.squeeze(at.dot(phi[:, 1:], self.beta * at.sqrt(psd[1:]))), dims=dims
             )
         else:
             self.beta = pm.Normal(f"{name}_coeffs_", size=m_star)
             self.f = pm.Deterministic(
-                name, self.mean_func(X) + at.squeeze(at.dot(phi, self.beta * psd)), dims=dims
+                name, self.mean_func(X) + at.squeeze(at.dot(phi, self.beta * at.sqrt(psd))), dims=dims
             )
         return self.f
 
