@@ -28,5 +28,5 @@ dependencies:
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
 - pytest>=3.0
-- mypy
+- mypy=0.982
 - types-cachetools
