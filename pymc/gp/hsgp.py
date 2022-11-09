@@ -203,7 +203,9 @@ class HSGP(Base):
         else:
             self.beta = pm.Normal(f"{name}_coeffs_", size=m_star)
             self.f = pm.Deterministic(
-                name, self.mean_func(X) + at.squeeze(at.dot(phi, self.beta * psd)), dims=dims
+                name,
+                self.mean_func(X) + at.squeeze(at.dot(phi, self.beta * at.sqrt(psd))),
+                dims=dims,
             )
         return self.f
 
