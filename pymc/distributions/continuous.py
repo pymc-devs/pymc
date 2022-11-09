@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+# Contains code from Aeppl, Copyright (c) 2021-2022, Aesara Developers.
+
 # coding: utf-8
 """
 A collection of common probability distributions for stochastic
@@ -26,7 +28,7 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.logprob import _logprob, logcdf
+from aeppl.logprob import _logprob, logcdf, logprob
 from aesara.graph.basic import Apply, Variable
 from aesara.graph.op import Op
 from aesara.raise_op import Assert
@@ -311,15 +313,34 @@ class Uniform(BoundedContinuous):
             moment = at.full(size, moment)
         return moment
 
+    def logp(value, lower, upper):
+        res = at.switch(
+            at.bitwise_and(at.ge(value, lower), at.le(value, upper)),
+            at.fill(value, -at.log(upper - lower)),
+            -np.inf,
+        )
+
+        return check_parameters(
+            res,
+            lower <= upper,
+            msg="lower <= upper",
+        )
+
     def logcdf(value, lower, upper):
-        return at.switch(
-            at.lt(value, lower) | at.lt(upper, lower),
+        res = at.switch(
+            at.lt(value, lower),
             -np.inf,
             at.switch(
                 at.lt(value, upper),
                 at.log(value - lower) - at.log(upper - lower),
                 0,
             ),
+        )
+
+        return check_parameters(
+            res,
+            lower <= upper,
+            msg="lower <= upper",
         )
 
 
@@ -494,6 +515,14 @@ class Normal(Continuous):
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
         return mu
+
+    def logp(value, mu, sigma):
+        res = -0.5 * at.pow((value - mu) / sigma, 2) - at.log(at.sqrt(2.0 * np.pi)) - at.log(sigma)
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
 
     def logcdf(value, mu, sigma):
         return check_parameters(
@@ -779,6 +808,15 @@ class HalfNormal(PositiveContinuous):
         if not rv_size_is_none(size):
             moment = at.full(size, moment)
         return moment
+
+    def logp(value, loc, sigma):
+        res = -0.5 * at.pow((value - loc) / sigma, 2) + at.log(at.sqrt(2.0 / np.pi)) - at.log(sigma)
+        res = at.switch(at.ge(value, loc), res, -np.inf)
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
 
     def logcdf(value, loc, sigma):
         z = zvalue(value, mu=loc, sigma=sigma)
@@ -1079,6 +1117,20 @@ class Beta(UnitContinuous):
 
         return alpha, beta
 
+    def logp(value, alpha, beta):
+        res = (
+            at.switch(at.eq(alpha, 1.0), 0.0, (alpha - 1.0) * at.log(value))
+            + at.switch(at.eq(beta, 1.0), 0.0, (beta - 1.0) * at.log1p(-value))
+            - (at.gammaln(alpha) + at.gammaln(beta) - at.gammaln(alpha + beta))
+        )
+        res = at.switch(at.bitwise_and(at.ge(value, 0.0), at.le(value, 1.0)), res, -np.inf)
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
+
     def logcdf(value, alpha, beta):
         logcdf = at.switch(
             at.lt(value, 0),
@@ -1261,6 +1313,15 @@ class Exponential(PositiveContinuous):
             mu = at.full(size, mu)
         return mu
 
+    def logp(value, mu):
+        res = -at.log(mu) - value / mu
+        res = at.switch(at.ge(value, 0.0), res, -np.inf)
+        return check_parameters(
+            res,
+            mu >= 0,
+            msg="mu >= 0",
+        )
+
     def logcdf(value, mu):
         lam = at.reciprocal(mu)
         res = at.switch(
@@ -1333,6 +1394,14 @@ class Laplace(Continuous):
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
         return mu
+
+    def logp(value, mu, b):
+        res = -at.log(2 * b) - at.abs(value - mu) / b
+        return check_parameters(
+            res,
+            b > 0,
+            msg="b > 0",
+        )
 
     def logcdf(value, mu, b):
         y = (value - mu) / b
@@ -1523,6 +1592,20 @@ class LogNormal(PositiveContinuous):
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
         return mean
+
+    def logp(value, mu, sigma):
+        res = (
+            -0.5 * at.pow((at.log(value) - mu) / sigma, 2)
+            - 0.5 * at.log(2.0 * np.pi)
+            - at.log(sigma)
+            - at.log(value)
+        )
+        res = at.switch(at.gt(value, 0.0), res, -np.inf)
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
 
     def logcdf(value, mu, sigma):
         res = at.switch(
@@ -1732,6 +1815,16 @@ class Pareto(BoundedContinuous):
             median = at.full(size, median)
         return median
 
+    def logp(value, alpha, m):
+        res = at.log(alpha) + logpow(m, alpha) - logpow(value, alpha + 1.0)
+        res = at.switch(at.ge(value, m), res, -np.inf)
+        return check_parameters(
+            res,
+            alpha > 0,
+            m > 0,
+            msg="alpha > 0, m > 0",
+        )
+
     def logcdf(value, alpha, m):
         arg = (m / value) ** alpha
 
@@ -1819,6 +1912,14 @@ class Cauchy(Continuous):
             alpha = at.full(size, alpha)
         return alpha
 
+    def logp(value, alpha, beta):
+        res = -at.log(np.pi) - at.log(beta) - at.log1p(at.pow((value - alpha) / beta, 2))
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
+
     def logcdf(value, alpha, beta):
         res = at.log(0.5 + at.arctan((value - alpha) / beta) / np.pi)
         return check_parameters(
@@ -1878,6 +1979,15 @@ class HalfCauchy(PositiveContinuous):
         if not rv_size_is_none(size):
             beta = at.full(size, beta)
         return beta
+
+    def logp(value, loc, beta):
+        res = at.log(2) + logprob(Cauchy.dist(loc, beta), value)
+        res = at.switch(at.ge(value, loc), res, -np.inf)
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
 
     def logcdf(value, loc, beta):
         res = at.switch(
@@ -1990,6 +2100,17 @@ class Gamma(PositiveContinuous):
             mean = at.full(size, mean)
         return mean
 
+    def logp(value, alpha, inv_beta):
+        beta = at.reciprocal(inv_beta)
+        res = -at.gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1)
+        res = at.switch(at.ge(value, 0.0), res, -np.inf)
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
+
     def logcdf(value, alpha, inv_beta):
         beta = at.reciprocal(inv_beta)
         res = at.switch(
@@ -2091,6 +2212,16 @@ class InverseGamma(PositiveContinuous):
 
         return alpha, beta
 
+    def logp(value, alpha, beta):
+        res = -at.gammaln(alpha) + logpow(beta, alpha) - beta / value + logpow(value, -alpha - 1)
+        res = at.switch(at.ge(value, 0.0), res, -np.inf)
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
+
     def logcdf(value, alpha, beta):
         res = at.switch(
             at.lt(value, 0),
@@ -2157,6 +2288,9 @@ class ChiSquared(PositiveContinuous):
         if not rv_size_is_none(size):
             moment = at.full(size, moment)
         return moment
+
+    def logp(value, nu):
+        return logprob(Gamma.dist(alpha=nu / 2, beta=0.5), value)
 
     def logcdf(value, nu):
         return logcdf(Gamma.dist(alpha=nu / 2, beta=0.5), value)
@@ -2586,6 +2720,15 @@ class VonMises(CircularContinuous):
             mu = at.full(size, mu)
         return mu
 
+    def logp(value, mu, kappa):
+        res = kappa * at.cos(mu - value) - at.log(2 * np.pi) - at.log(at.i0(kappa))
+        res = at.switch(at.bitwise_and(at.ge(value, -np.pi), at.le(value, np.pi)), res, -np.inf)
+        return check_parameters(
+            res,
+            kappa > 0,
+            msg="kappa > 0",
+        )
+
 
 class SkewNormalRV(RandomVariable):
     name = "skewnormal"
@@ -2771,6 +2914,20 @@ class Triangular(BoundedContinuous):
             mean = at.full(size, mean)
         return mean
 
+    def logp(value, lower, c, upper):
+        res = at.switch(
+            at.lt(value, c),
+            at.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
+            at.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
+        )
+        res = at.switch(at.bitwise_and(at.le(lower, value), at.le(value, upper)), res, -np.inf)
+        return check_parameters(
+            res,
+            lower <= c,
+            c <= upper,
+            msg="lower <= c <= upper",
+        )
+
     def logcdf(value, lower, c, upper):
         res = at.switch(
             at.le(value, lower),
@@ -2862,6 +3019,15 @@ class Gumbel(Continuous):
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
         return mean
+
+    def logp(value, mu, beta):
+        z = (value - mu) / beta
+        res = -z - at.exp(-z) - at.log(beta)
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
 
     def logcdf(value, mu, beta):
         res = -at.exp(-(value - mu) / beta)
@@ -3061,6 +3227,15 @@ class Logistic(Continuous):
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
         return mu
+
+    def logp(value, mu, s):
+        z = (value - mu) / s
+        res = -z - at.log(s) - 2.0 * at.log1p(at.exp(-z))
+        return check_parameters(
+            res,
+            s > 0,
+            msg="s > 0",
+        )
 
     def logcdf(value, mu, s):
         res = -at.log1pexp(-(value - mu) / s)
