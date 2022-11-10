@@ -67,6 +67,7 @@ from pymc.initial_point import make_initial_point_fn
 from pymc.util import (
     UNSET,
     WithMemoization,
+    _add_future_warning_tag,
     get_transformed_name,
     get_value_vars_from_user_vars,
     get_var_name,
@@ -1314,6 +1315,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         name = self.name_for(name)
         rv_var.name = name
+        _add_future_warning_tag(rv_var)
         rv_var.tag.total_size = total_size
         self.rvs_to_total_sizes[rv_var] = total_size
 
@@ -1495,6 +1497,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if aesara.config.compute_test_value != "off":
             value_var.tag.test_value = rv_var.tag.test_value
 
+        _add_future_warning_tag(value_var)
         rv_var.tag.value_var = value_var
 
         # Make the value variable a transformed value variable,

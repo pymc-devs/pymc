@@ -41,10 +41,12 @@ from pymc import Deterministic, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
 from pymc.distributions.logprob import _joint_logp
+from pymc.distributions.transforms import log
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.model import Point, ValueGradFunction, modelcontext
 from pymc.tests.helpers import SeededTest
 from pymc.tests.models import simple_model
+from pymc.util import _FutureWarningValidatingScratchpad
 
 
 class NewModel(pm.Model):
@@ -1406,3 +1408,59 @@ class TestShared(SeededTest):
             assert np.all(
                 np.isclose(model.compile_logp(sum=False)({}), st.norm().logpdf(data_values))
             )
+
+
+def test_tag_future_warning_model():
+    # Test no unexpected warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+
+        model = pm.Model()
+
+        x = at.random.normal()
+        x.tag.something_else = "5"
+        x.tag.test_value = 0
+        assert not isinstance(x.tag, _FutureWarningValidatingScratchpad)
+
+        # Test that model changes the tag type, but copies exsiting contents
+        x = model.register_rv(x, name="x", transform=log)
+        assert isinstance(x.tag, _FutureWarningValidatingScratchpad)
+        assert x.tag.something_else == "5"
+        assert x.tag.test_value == 0
+
+        # Test expected warnings
+        with pytest.warns(FutureWarning, match="model.rvs_to_values"):
+            x_value = x.tag.value_var
+
+        assert isinstance(x_value.tag, _FutureWarningValidatingScratchpad)
+        with pytest.warns(FutureWarning, match="model.rvs_to_transforms"):
+            transform = x_value.tag.transform
+        assert transform is log
+
+        with pytest.raises(AttributeError):
+            x.tag.observations
+
+        with pytest.warns(FutureWarning, match="model.rvs_to_total_sizes"):
+            total_size = x.tag.total_size
+        assert total_size is None
+
+        # Cloning a node will keep the same tag type and contents
+        y = x.owner.clone().default_output()
+        assert y is not x
+        assert y.tag is not x.tag
+        assert isinstance(y.tag, _FutureWarningValidatingScratchpad)
+        y = model.register_rv(y, name="y", data=5)
+        assert isinstance(y.tag, _FutureWarningValidatingScratchpad)
+
+        # Test expected warnings
+        with pytest.warns(FutureWarning, match="model.rvs_to_values"):
+            y_value = y.tag.value_var
+        with pytest.warns(FutureWarning, match="model.rvs_to_values"):
+            y_obs = y.tag.observations
+        assert y_value is y_obs
+        assert y_value.eval() == 5
+
+        assert isinstance(y_value.tag, _FutureWarningValidatingScratchpad)
+        with pytest.warns(FutureWarning, match="model.rvs_to_total_sizes"):
+            total_size = y.tag.total_size
+        assert total_size is None

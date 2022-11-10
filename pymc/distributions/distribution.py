@@ -49,7 +49,7 @@ from pymc.distributions.shape_utils import (
     shape_from_dims,
 )
 from pymc.printing import str_for_dist
-from pymc.util import UNSET
+from pymc.util import UNSET, _add_future_warning_tag
 from pymc.vartypes import string_types
 
 __all__ = [
@@ -371,6 +371,7 @@ class Distribution(metaclass=DistributionMeta):
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
         rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
+        _add_future_warning_tag(rv_out)
         return rv_out
 
 
