@@ -462,7 +462,7 @@ discrete_weibull = DiscreteWeibullRV()
 
 
 class DiscreteWeibull(Discrete):
-    R"""Discrete Weibull log-likelihood
+    R"""Discrete Weibull log-likelihood.
 
     The discrete Weibull distribution is a flexible model of count data that
     can handle both over- and under-dispersion.
@@ -471,6 +471,7 @@ class DiscreteWeibull(Discrete):
     .. math:: f(x \mid q, \beta) = q^{x^{\beta}} - q^{(x + 1)^{\beta}}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -499,6 +500,14 @@ class DiscreteWeibull(Discrete):
     Mean      :math:`\mu = \sum_{x = 1}^{\infty} q^{x^{\beta}}`
     Variance  :math:`2 \sum_{x = 1}^{\infty} x q^{x^{\beta}} - \mu - \mu^2`
     ========  ======================
+
+    Parameters
+    ----------
+    q : tensor_like of float
+        Shape parameter (0 < q < 1).
+    beta : tensor_like of float
+        Shape parameter (beta > 0).
+
     """
     rv_op = discrete_weibull
 
