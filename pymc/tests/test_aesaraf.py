@@ -305,110 +305,6 @@ def test_walk_model():
     assert e in res
 
 
-@pytest.mark.parametrize("symbolic_rv", (False, True))
-@pytest.mark.parametrize("apply_transforms", (True, False))
-def test_rvs_to_value_vars(symbolic_rv, apply_transforms):
-
-    # Interval transform between last two arguments
-    interval = Interval(bounds_fn=lambda *args: (args[-2], args[-1]))
-
-    with pm.Model() as m:
-        a = pm.Uniform("a", 0.0, 1.0)
-        if symbolic_rv:
-            raw_b = pm.Uniform.dist(0, a + 1.0)
-            b = pm.Censored("b", raw_b, lower=0, upper=a + 1.0, transform=interval)
-            # If not True, another distribution has to be used
-            assert isinstance(b.owner.op, SymbolicRandomVariable)
-        else:
-            b = pm.Uniform("b", 0, a + 1.0, transform=interval)
-        c = pm.Normal("c")
-        d = at.log(c + b) + 2.0
-
-    a_value_var = m.rvs_to_values[a]
-    assert a_value_var.tag.transform
-
-    b_value_var = m.rvs_to_values[b]
-    c_value_var = m.rvs_to_values[c]
-
-    (res,) = rvs_to_value_vars((d,), apply_transforms=apply_transforms)
-
-    assert res.owner.op == at.add
-    log_output = res.owner.inputs[0]
-    assert log_output.owner.op == at.log
-    log_add_output = res.owner.inputs[0].owner.inputs[0]
-    assert log_add_output.owner.op == at.add
-    c_output = log_add_output.owner.inputs[0]
-
-    # We make sure that the random variables were replaced
-    # with their value variables
-    assert c_output == c_value_var
-    b_output = log_add_output.owner.inputs[1]
-    # When transforms are applied, the input is the back-transformation of the value_var,
-    # otherwise it is the value_var itself
-    if apply_transforms:
-        assert b_output != b_value_var
-    else:
-        assert b_output == b_value_var
-
-    res_ancestors = list(walk_model((res,)))
-    res_rv_ancestors = [
-        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
-    ]
-
-    # There shouldn't be any `RandomVariable`s in the resulting graph
-    assert len(res_rv_ancestors) == 0
-    assert b_value_var in res_ancestors
-    assert c_value_var in res_ancestors
-    # When transforms are used, `d` depends on `a` through the back-transformation of
-    # `b`, otherwise there is no direct connection between `d` and `a`
-    if apply_transforms:
-        assert a_value_var in res_ancestors
-    else:
-        assert a_value_var not in res_ancestors
-
-
-def test_rvs_to_value_vars_nested():
-    # Test that calling rvs_to_value_vars in models with nested transformations
-    # does not change the original rvs in place. See issue #5172
-    with pm.Model() as m:
-        one = pm.LogNormal("one", mu=0)
-        two = pm.LogNormal("two", mu=at.log(one))
-
-        # We add potentials or deterministics that are not in topological order
-        pm.Potential("two_pot", two)
-        pm.Potential("one_pot", one)
-
-        before = aesara.clone_replace(m.free_RVs)
-
-        # This call would change the model free_RVs in place in #5172
-        res = rvs_to_value_vars(m.potentials, apply_transforms=True)
-
-        after = aesara.clone_replace(m.free_RVs)
-
-        assert equal_computations(before, after)
-
-
-def test_rvs_to_value_vars_unvalued_rv():
-    with pm.Model() as m:
-        x = pm.Normal("x")
-        y = pm.Normal.dist(x)
-        z = pm.Normal("z", y)
-        out = z + y
-
-    x_value = m.rvs_to_values[x]
-    z_value = m.rvs_to_values[z]
-
-    (res,) = rvs_to_value_vars((out,))
-
-    assert res.owner.op == at.add
-    assert res.owner.inputs[0] is z_value
-    res_y = res.owner.inputs[1]
-    # Graph should have be cloned, and therefore y and res_y should have different ids
-    assert res_y is not y
-    assert res_y.owner.op == at.random.normal
-    assert res_y.owner.inputs[3] is x_value
-
-
 class TestCompilePyMC:
     def test_check_bounds_flag(self):
         """Test that CheckParameterValue Ops are replaced or removed when using compile_pymc"""
@@ -633,3 +529,106 @@ def test_constant_fold_raises():
 
     res = constant_fold((y, y.shape), raise_not_constant=False)
     assert tuple(res[1].eval()) == (5,)
+
+
+class TestReplaceRVsByValues:
+    @pytest.mark.parametrize("symbolic_rv", (False, True))
+    @pytest.mark.parametrize("apply_transforms", (True, False))
+    def test_basic(self, symbolic_rv, apply_transforms):
+
+        # Interval transform between last two arguments
+        interval = Interval(bounds_fn=lambda *args: (args[-2], args[-1]))
+
+        with pm.Model() as m:
+            a = pm.Uniform("a", 0.0, 1.0)
+            if symbolic_rv:
+                raw_b = pm.Uniform.dist(0, a + 1.0)
+                b = pm.Censored("b", raw_b, lower=0, upper=a + 1.0, transform=interval)
+                # If not True, another distribution has to be used
+                assert isinstance(b.owner.op, SymbolicRandomVariable)
+            else:
+                b = pm.Uniform("b", 0, a + 1.0, transform=interval)
+            c = pm.Normal("c")
+            d = at.log(c + b) + 2.0
+
+        a_value_var = m.rvs_to_values[a]
+        assert a_value_var.tag.transform
+
+        b_value_var = m.rvs_to_values[b]
+        c_value_var = m.rvs_to_values[c]
+
+        (res,) = rvs_to_value_vars((d,), apply_transforms=apply_transforms)
+
+        assert res.owner.op == at.add
+        log_output = res.owner.inputs[0]
+        assert log_output.owner.op == at.log
+        log_add_output = res.owner.inputs[0].owner.inputs[0]
+        assert log_add_output.owner.op == at.add
+        c_output = log_add_output.owner.inputs[0]
+
+        # We make sure that the random variables were replaced
+        # with their value variables
+        assert c_output == c_value_var
+        b_output = log_add_output.owner.inputs[1]
+        # When transforms are applied, the input is the back-transformation of the value_var,
+        # otherwise it is the value_var itself
+        if apply_transforms:
+            assert b_output != b_value_var
+        else:
+            assert b_output == b_value_var
+
+        res_ancestors = list(walk_model((res,)))
+        res_rv_ancestors = [
+            v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
+        ]
+
+        # There shouldn't be any `RandomVariable`s in the resulting graph
+        assert len(res_rv_ancestors) == 0
+        assert b_value_var in res_ancestors
+        assert c_value_var in res_ancestors
+        # When transforms are used, `d` depends on `a` through the back-transformation of
+        # `b`, otherwise there is no direct connection between `d` and `a`
+        if apply_transforms:
+            assert a_value_var in res_ancestors
+        else:
+            assert a_value_var not in res_ancestors
+
+    def test_unvalued_rv(self):
+        with pm.Model() as m:
+            x = pm.Normal("x")
+            y = pm.Normal.dist(x)
+            z = pm.Normal("z", y)
+            out = z + y
+
+        x_value = m.rvs_to_values[x]
+        z_value = m.rvs_to_values[z]
+
+        (res,) = rvs_to_value_vars((out,))
+
+        assert res.owner.op == at.add
+        assert res.owner.inputs[0] is z_value
+        res_y = res.owner.inputs[1]
+        # Graph should have be cloned, and therefore y and res_y should have different ids
+        assert res_y is not y
+        assert res_y.owner.op == at.random.normal
+        assert res_y.owner.inputs[3] is x_value
+
+    def test_no_change_inplace(self):
+        # Test that calling rvs_to_value_vars in models with nested transformations
+        # does not change the original rvs in place. See issue #5172
+        with pm.Model() as m:
+            one = pm.LogNormal("one", mu=0)
+            two = pm.LogNormal("two", mu=at.log(one))
+
+            # We add potentials or deterministics that are not in topological order
+            pm.Potential("two_pot", two)
+            pm.Potential("one_pot", one)
+
+            before = aesara.clone_replace(m.free_RVs)
+
+            # This call would change the model free_RVs in place in #5172
+            res = rvs_to_value_vars(m.potentials, apply_transforms=True)
+
+            after = aesara.clone_replace(m.free_RVs)
+
+            assert equal_computations(before, after)
