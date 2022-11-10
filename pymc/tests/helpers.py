@@ -24,8 +24,10 @@ import numpy as np
 import numpy.random as nr
 
 from aesara.gradient import verify_grad as at_verify_grad
+from aesara.graph import ancestors
 from aesara.graph.rewriting.basic import in2out
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
+from aesara.tensor.random.op import RandomVariable
 
 import pymc as pm
 
@@ -218,3 +220,8 @@ class RVsAssignmentStepsTester:
             assert {m.rvs_to_values[c1], m.rvs_to_values[c2]} == set(
                 step([c1, c2], **step_kwargs).vars
             )
+
+
+def assert_no_rvs(var):
+    assert not any(isinstance(v.owner.op, RandomVariable) for v in ancestors([var]) if v.owner)
+    return var

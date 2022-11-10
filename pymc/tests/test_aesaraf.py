@@ -47,6 +47,7 @@ from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.distributions.transforms import Interval
 from pymc.exceptions import NotConstantValueError
+from pymc.tests.helpers import assert_no_rvs
 from pymc.vartypes import int_types
 
 
@@ -632,3 +633,56 @@ class TestReplaceRVsByValues:
             after = aesara.clone_replace(m.free_RVs)
 
             assert equal_computations(before, after)
+
+    @pytest.mark.parametrize("reversed", (False, True))
+    def test_interdependent_transformed_rvs(self, reversed):
+        # Test that nested transformed variables, whose transformed values depend on other
+        # RVs are properly replaced
+        with pm.Model() as m:
+            transform = pm.distributions.transforms.Interval(
+                bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
+            )
+            x = pm.Uniform("x", lower=0, upper=1, transform=transform)
+            y = pm.Uniform("y", lower=0, upper=x, transform=transform)
+            z = pm.Uniform("z", lower=0, upper=y, transform=transform)
+            w = pm.Uniform("w", lower=0, upper=z, transform=transform)
+
+        rvs = [x, y, z, w]
+        if reversed:
+            rvs = rvs[::-1]
+
+        transform_values = rvs_to_value_vars(rvs)
+
+        for transform_value in transform_values:
+            assert_no_rvs(transform_value)
+
+        if reversed:
+            transform_values = transform_values[::-1]
+        transform_values_fn = m.compile_fn(transform_values, point_fn=False)
+
+        x_interval_test_value = np.random.rand()
+        y_interval_test_value = np.random.rand()
+        z_interval_test_value = np.random.rand()
+        w_interval_test_value = np.random.rand()
+
+        # The 3 Nones correspond to unused rng, dtype and size arguments
+        expected_x = transform.backward(x_interval_test_value, None, None, None, 0, 1).eval()
+        expected_y = transform.backward(
+            y_interval_test_value, None, None, None, 0, expected_x
+        ).eval()
+        expected_z = transform.backward(
+            z_interval_test_value, None, None, None, 0, expected_y
+        ).eval()
+        expected_w = transform.backward(
+            w_interval_test_value, None, None, None, 0, expected_z
+        ).eval()
+
+        np.testing.assert_allclose(
+            transform_values_fn(
+                x_interval__=x_interval_test_value,
+                y_interval__=y_interval_test_value,
+                z_interval__=z_interval_test_value,
+                w_interval__=w_interval_test_value,
+            ),
+            [expected_x, expected_y, expected_z, expected_w],
+        )

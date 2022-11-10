@@ -52,12 +52,7 @@ from pymc.distributions.logprob import (
     logp,
 )
 from pymc.model import Model, Potential
-from pymc.tests.helpers import select_by_precision
-
-
-def assert_no_rvs(var):
-    assert not any(isinstance(v.owner.op, RandomVariable) for v in ancestors([var]) if v.owner)
-    return var
+from pymc.tests.helpers import assert_no_rvs, select_by_precision
 
 
 def test_get_scaling():
