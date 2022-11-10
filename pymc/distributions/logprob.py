@@ -29,14 +29,6 @@ from aeppl.transforms import TransformValuesRewrite
 from aesara import tensor as at
 from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.subtensor import (
-    AdvancedIncSubtensor,
-    AdvancedIncSubtensor1,
-    AdvancedSubtensor,
-    AdvancedSubtensor1,
-    IncSubtensor,
-    Subtensor,
-)
 from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import constant_fold, floatX
@@ -110,16 +102,6 @@ def _get_scaling(
             "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
         )
     return at.as_tensor(coef, dtype=aesara.config.floatX)
-
-
-subtensor_types = (
-    AdvancedIncSubtensor,
-    AdvancedIncSubtensor1,
-    AdvancedSubtensor,
-    AdvancedSubtensor1,
-    IncSubtensor,
-    Subtensor,
-)
 
 
 def joint_logpt(*args, **kwargs):
