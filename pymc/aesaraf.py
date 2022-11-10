@@ -236,6 +236,7 @@ def replace_rvs_in_graphs(
             new_nodes.extend(replacement_fn(var, replacements))
         return new_nodes
 
+    # This iteration populates the replacements
     for var in walk_model(graphs, expand_fn=expand_replace, **kwargs):
         pass
 
@@ -250,7 +251,15 @@ def replace_rvs_in_graphs(
             clone=False,
         )
 
-        fg.replace_all(replacements.items(), import_missing=True)
+        # replacements have to be done in reverse topological order so that nested
+        # expressions get recursively replaced correctly
+        toposort = fg.toposort()
+        sorted_replacements = sorted(
+            tuple(replacements.items()),
+            key=lambda pair: toposort.index(pair[0].owner),
+            reverse=True,
+        )
+        fg.replace_all(sorted_replacements, import_missing=True)
 
         graphs = list(fg.outputs)
 
