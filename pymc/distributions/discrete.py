@@ -1144,13 +1144,14 @@ discrete_uniform = DiscreteUniformRV()
 
 
 class DiscreteUniform(Discrete):
-    R"""
-    Discrete uniform distribution.
+    R"""Discrete uniform distribution.
+    
     The pmf of this distribution is
 
     .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower+1}
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1177,9 +1178,9 @@ class DiscreteUniform(Discrete):
 
     Parameters
     ----------
-    lower: int
+    lower : tensor_like of int
         Lower limit.
-    upper: int
+    upper : tensor_like of int
         Upper limit (upper > lower).
     """
 
