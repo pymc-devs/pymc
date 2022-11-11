@@ -51,6 +51,7 @@ from aesara.tensor.var import TensorConstant, TensorVariable
 
 from pymc.aesaraf import (
     PointFunc,
+    SeedSequenceSeed,
     compile_pymc,
     convert_observed_data,
     gradient,
@@ -995,16 +996,21 @@ class Model(WithMemoization, metaclass=ContextMeta):
         )
         return self.initial_point()
 
-    def initial_point(self, seed=None) -> Dict[str, np.ndarray]:
+    def initial_point(self, random_seed: SeedSequenceSeed = None) -> Dict[str, np.ndarray]:
         """Computes the initial point of the model.
+
+        Parameters
+        ----------
+        random_seed : SeedSequenceSeed, default None
+            Seed(s) for generating initial point from the model. Used in pymc.aesaraf.reseed_rng
 
         Returns
         -------
-        ip : dict
+        ip : dict of {str : array_like}
             Maps names of transformed variables to numeric initial values in the transformed space.
         """
         fn = make_initial_point_fn(model=self, return_transformed=True)
-        return Point(fn(seed), model=self)
+        return Point(fn(random_seed), model=self)
 
     @property
     def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
@@ -1258,34 +1264,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 self._coords[dname] = tuple(new_coords)
 
         shared_object.set_value(values)
-
-    def initial_point(self, seed=None) -> Dict[str, np.ndarray]:
-        """Computes the initial point of the model.
-
-        Returns
-        -------
-        ip : dict
-            Maps names of transformed variables to numeric initial values in the transformed space.
-        """
-        fn = make_initial_point_fn(model=self, return_transformed=True)
-        return Point(fn(seed), model=self)
-
-    @property
-    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
-        """Maps transformed variables to initial value placeholders.
-
-        Keys are the random variables (as returned by e.g. ``pm.Uniform()``) and
-        values are the numeric/symbolic initial values, strings denoting the strategy to get them, or None.
-        """
-        return self._initial_values
-
-    def set_initval(self, rv_var, initval):
-        """Sets an initial value (strategy) for a random variable."""
-        if initval is not None and not isinstance(initval, (Variable, str)):
-            # Convert scalars or array-like inputs to ndarrays
-            initval = rv_var.type.filter(initval)
-
-        self.initial_values[rv_var] = initval
 
     def register_rv(
         self, rv_var, name, data=None, total_size=None, dims=None, transform=UNSET, initval=None
