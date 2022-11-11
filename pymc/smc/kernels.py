@@ -198,7 +198,7 @@ class SMC_KERNEL(ABC):
 
         """
         # Create dictionary that stores original variables shape and size
-        initial_point = self.model.initial_point(seed=self.rng.integers(2**30))
+        initial_point = self.model.initial_point(random_seed=self.rng.integers(2**30))
         for v in self.variables:
             self.var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
         # Create particles bijection map

@@ -989,9 +989,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     @property
     def test_point(self) -> Dict[str, np.ndarray]:
-        """Deprecated alias for `Model.initial_point(seed=None)`."""
+        """Deprecated alias for `Model.initial_point(random_seed=None)`."""
         warnings.warn(
-            "`Model.test_point` has been deprecated. Use `Model.initial_point(seed=None)`.",
+            "`Model.test_point` has been deprecated. Use `Model.initial_point(random_seed=None)`.",
             FutureWarning,
         )
         return self.initial_point()
@@ -1002,7 +1002,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         Parameters
         ----------
         random_seed : SeedSequenceSeed, default None
-            Seed(s) for generating initial point from the model. Used in pymc.aesaraf.reseed_rng
+            Seed(s) for generating initial point from the model. Used in pymc.aesaraf.reseed_rngs
 
         Returns
         -------

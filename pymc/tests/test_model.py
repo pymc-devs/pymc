@@ -355,7 +355,7 @@ class TestValueGradFunction(unittest.TestCase):
 
         assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
 
-        pnt = m.initial_point(seed=None).copy()
+        pnt = m.initial_point(random_seed=None).copy()
         del pnt["x2_missing"]
 
         res = [gf(DictToArrayBijection.map(Point(pnt, model=m))) for i in range(5)]
