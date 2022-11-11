@@ -919,9 +919,12 @@ class TestEulerMaruyama:
         N = 300
         dt = 1e-1
 
+        RANDOM_SEED = 42
+        numpy_rng = np.random.default_rng(RANDOM_SEED)
+
         def _gen_sde_path(sde, pars, dt, n, x0):
             xs = [x0]
-            wt = np.random.normal(size=(n,) if isinstance(x0, float) else (n, x0.size))
+            wt = numpy_rng.normal(size=(n,) if isinstance(x0, float) else (n, x0.size))
             for i in range(n):
                 f, g = sde(xs[-1], *pars)
                 xs.append(xs[-1] + f * dt + np.sqrt(dt) * g * wt[i])
@@ -929,7 +932,7 @@ class TestEulerMaruyama:
 
         sde = lambda x, lam: (lam * x, sig2)
         x = floatX(_gen_sde_path(sde, (lam,), dt, N, 5.0))
-        z = x + np.random.randn(x.size) * sig2
+        z = x + numpy_rng.standard_normal(size=x.size) * sig2
         # build model
         with Model() as model:
             lamh = Flat("lamh")
@@ -939,9 +942,9 @@ class TestEulerMaruyama:
             Normal("zh", mu=xh, sigma=sig2, observed=z)
         # invert
         with model:
-            trace = sample(chains=1)
+            trace = sample(chains=1, random_seed=RANDOM_SEED)
 
-        ppc = sample_posterior_predictive(trace, model=model)
+        ppc = sample_posterior_predictive(trace, model=model, random_seed=RANDOM_SEED)
 
         p95 = [2.5, 97.5]
         lo, hi = np.percentile(trace.posterior["lamh"], p95, axis=[0, 1])
