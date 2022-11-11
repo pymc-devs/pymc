@@ -1145,7 +1145,7 @@ discrete_uniform = DiscreteUniformRV()
 
 class DiscreteUniform(Discrete):
     R"""Discrete uniform distribution.
-    
+
     The pmf of this distribution is
 
     .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower+1}
