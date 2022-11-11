@@ -621,12 +621,12 @@ class TestScaling:
             genvar = pm.generator(gen1())
             m = pm.Normal("m")
             pm.Normal("n", observed=genvar, total_size=1000)
-            grad1 = aesara.function([m.tag.value_var], at.grad(model1.logp(), m.tag.value_var))
+            grad1 = model1.compile_fn(model1.dlogp(vars=m), point_fn=False)
         with pm.Model() as model2:
             m = pm.Normal("m")
             shavar = aesara.shared(np.ones((1000, 100)))
             pm.Normal("n", observed=shavar)
-            grad2 = aesara.function([m.tag.value_var], at.grad(model2.logp(), m.tag.value_var))
+            grad2 = model2.compile_fn(model2.dlogp(vars=m), point_fn=False)
 
         for i in range(10):
             shavar.set_value(np.ones((100, 100)) * i)
@@ -709,11 +709,11 @@ class TestScaling:
     def test_free_rv(self):
         with pm.Model() as model4:
             pm.Normal("n", observed=[[1, 1], [1, 1]], total_size=[2, 2])
-            p4 = aesara.function([], model4.logp())
+            p4 = model4.compile_fn(model4.logp(), point_fn=False)
 
         with pm.Model() as model5:
             n = pm.Normal("n", total_size=[2, Ellipsis, 2], size=(2, 2))
-            p5 = aesara.function([n.tag.value_var], model5.logp())
+            p5 = model5.compile_fn(model5.logp(), point_fn=False)
         assert p4() == p5(pm.floatX([[1]]))
         assert p4() == p5(pm.floatX([[1, 1], [1, 1]]))
 

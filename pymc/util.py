@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import functools
+import warnings
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 
@@ -23,6 +24,7 @@ import xarray
 
 from aesara import Variable
 from aesara.compile import SharedVariable
+from aesara.graph.utils import ValidatingScratchpad
 from cachetools import LRUCache, cachedmethod
 
 
@@ -481,3 +483,32 @@ def get_value_vars_from_user_vars(
         )
 
     return value_vars
+
+
+class _FutureWarningValidatingScratchpad(ValidatingScratchpad):
+    def __getattribute__(self, name):
+        for deprecated_names, alternative in (
+            (("value_var", "observations"), "model.rvs_to_values[rv]"),
+            (("transform",), "model.rvs_to_transforms[rv]"),
+            (("total_size",), "model.rvs_to_total_sizes[rv]"),
+        ):
+            if name in deprecated_names:
+                try:
+                    super().__getattribute__(name)
+                except AttributeError:
+                    pass
+                else:
+                    warnings.warn(
+                        f"The tag attribute {name} is deprecated. Use {alternative} instead",
+                        FutureWarning,
+                    )
+        return super().__getattribute__(name)
+
+
+def _add_future_warning_tag(var) -> None:
+    old_tag = var.tag
+    if not isinstance(old_tag, _FutureWarningValidatingScratchpad):
+        new_tag = _FutureWarningValidatingScratchpad("test_value", var.type.filter)
+        for k, v in old_tag.__dict__.items():
+            new_tag.__dict__.setdefault(k, v)
+        var.tag = new_tag

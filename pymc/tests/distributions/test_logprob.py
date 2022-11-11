@@ -45,19 +45,13 @@ from pymc.distributions.continuous import (
 from pymc.distributions.discrete import Bernoulli
 from pymc.distributions.logprob import (
     _get_scaling,
+    _joint_logp,
     ignore_logprob,
-    joint_logp,
-    joint_logpt,
     logcdf,
     logp,
 )
 from pymc.model import Model, Potential
-from pymc.tests.helpers import select_by_precision
-
-
-def assert_no_rvs(var):
-    assert not any(isinstance(v.owner.op, RandomVariable) for v in ancestors([var]) if v.owner)
-    return var
+from pymc.tests.helpers import assert_no_rvs, select_by_precision
 
 
 def test_get_scaling():
@@ -117,25 +111,24 @@ def test_joint_logp_basic():
         b = Uniform("b", b_l, b_l + 1.0)
 
     a_value_var = m.rvs_to_values[a]
-    assert a_value_var.tag.transform
+    assert m.rvs_to_transforms[a]
 
     b_value_var = m.rvs_to_values[b]
-    assert b_value_var.tag.transform
+    assert m.rvs_to_transforms[b]
 
     c_value_var = m.rvs_to_values[c]
 
-    b_logp = joint_logp(b, b_value_var, sum=False)
-
-    with pytest.warns(FutureWarning):
-        b_logpt = joint_logpt(b, b_value_var, sum=False)
-
-    res_ancestors = list(walk_model(b_logp))
-    res_rv_ancestors = [
-        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
-    ]
+    (b_logp,) = _joint_logp(
+        (b,),
+        rvs_to_values=m.rvs_to_values,
+        rvs_to_transforms=m.rvs_to_transforms,
+        rvs_to_total_sizes={},
+    )
 
     # There shouldn't be any `RandomVariable`s in the resulting graph
-    assert len(res_rv_ancestors) == 0
+    assert_no_rvs(b_logp)
+
+    res_ancestors = list(walk_model((b_logp,)))
     assert b_value_var in res_ancestors
     assert c_value_var in res_ancestors
     assert a_value_var in res_ancestors
@@ -171,7 +164,12 @@ def test_joint_logp_incsubtensor(indices, size):
     a_idx_value_var = a_idx.type()
     a_idx_value_var.name = "a_idx_value"
 
-    a_idx_logp = joint_logp(a_idx, {a_idx: a_value_var}, sum=False)
+    a_idx_logp = _joint_logp(
+        (a_idx,),
+        rvs_to_values={a_idx: a_value_var},
+        rvs_to_transforms={},
+        rvs_to_total_sizes={},
+    )
 
     logp_vals = a_idx_logp[0].eval({a_value_var: a_val})
 
@@ -213,7 +211,12 @@ def test_joint_logp_subtensor():
     I_value_var = I_rv.type()
     I_value_var.name = "I_value"
 
-    A_idx_logps = joint_logp(A_idx, {A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False)
+    A_idx_logps = _joint_logp(
+        (A_idx, I_rv),
+        rvs_to_values={A_idx: A_idx_value_var, I_rv: I_value_var},
+        rvs_to_transforms={},
+        rvs_to_total_sizes={},
+    )
     A_idx_logp = at.add(*A_idx_logps)
 
     logp_vals_fn = aesara.function([A_idx_value_var, I_value_var], A_idx_logp)
@@ -342,7 +345,12 @@ def test_ignore_logprob_model():
         match="Found a random variable that was neither among the observations "
         "nor the conditioned variables",
     ):
-        assert joint_logp([y], {y: y.type()})
+        _joint_logp(
+            [y],
+            rvs_to_values={y: y.type()},
+            rvs_to_transforms={},
+            rvs_to_total_sizes={},
+        )
 
     # The above warning should go away with ignore_logprob.
     with Model() as m:
@@ -350,7 +358,12 @@ def test_ignore_logprob_model():
         y = DensityDist("y", x, logp=logp)
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        assert joint_logp([y], {y: y.type()})
+        assert _joint_logp(
+            [y],
+            rvs_to_values={y: y.type()},
+            rvs_to_transforms={},
+            rvs_to_total_sizes={},
+        )
 
 
 def test_hierarchical_logp():
@@ -363,8 +376,8 @@ def test_hierarchical_logp():
     ops = {a.owner.op for a in logp_ancestors if a.owner}
     assert len(ops) > 0
     assert not any(isinstance(o, RandomVariable) for o in ops)
-    assert x.tag.value_var in logp_ancestors
-    assert y.tag.value_var in logp_ancestors
+    assert m.rvs_to_values[x] in logp_ancestors
+    assert m.rvs_to_values[y] in logp_ancestors
 
 
 def test_hierarchical_obs_logp():

@@ -210,11 +210,8 @@ def _print_step_hierarchy(s: Step, level: int = 0) -> None:
 
 
 def all_continuous(vars):
-    """Check that vars not include discrete variables, excepting observed RVs."""
-
-    vars_ = [var for var in vars if not hasattr(var.tag, "observations")]
-
-    if any([(var.dtype in discrete_types) for var in vars_]):
+    """Check that vars not include discrete variables"""
+    if any([(var.dtype in discrete_types) for var in vars]):
         return False
     else:
         return True

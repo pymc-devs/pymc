@@ -26,10 +26,11 @@ from aesara.tensor import TensorVariable
 
 import pymc as pm
 
-from pymc.distributions import DiracDelta, Flat, MvNormal, MvStudentT, joint_logp, logp
+from pymc.distributions import DiracDelta, Flat, MvNormal, MvStudentT, logp
 from pymc.distributions.distribution import SymbolicRandomVariable, _moment, moment
-from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.tests.distributions.util import assert_moment_is_expected
+from pymc.util import _FutureWarningValidatingScratchpad
 
 
 class TestBugfixes:
@@ -215,14 +216,13 @@ class TestDensityDist:
 
             mu = pm.Normal("mu", size=supp_shape)
             a = pm.DensityDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
-        mu_val = npr.normal(loc=0, scale=1, size=supp_shape).astype(aesara.config.floatX)
-        a_val = npr.normal(loc=mu_val, scale=1, size=to_tuple(size) + (supp_shape,)).astype(
-            aesara.config.floatX
-        )
-        log_densityt = joint_logp(a, a.tag.value_var, sum=False)[0]
-        assert log_densityt.eval(
-            {a.tag.value_var: a_val, mu.tag.value_var: mu_val},
-        ).shape == to_tuple(size)
+
+        mu_test_value = npr.normal(loc=0, scale=1, size=supp_shape).astype(aesara.config.floatX)
+        a_test_value = npr.normal(
+            loc=mu_test_value, scale=1, size=to_tuple(size) + (supp_shape,)
+        ).astype(aesara.config.floatX)
+        log_densityf = model.compile_logp(vars=[a], sum=False)
+        assert log_densityf({"a": a_test_value, "mu": mu_test_value})[0].shape == to_tuple(size)
 
     @pytest.mark.parametrize(
         "moment, size, expected",
@@ -359,3 +359,40 @@ class TestSymbolicRandomVarible:
         dirac_delta_2_ = DiracDelta.dist(10)
         node = TestSymbolicRV([], [dirac_delta_1_, dirac_delta_2_], ndim_supp=0)().owner
         assert get_measurable_outputs(node.op, node) == [node.outputs[default_output_idx]]
+
+
+def test_tag_future_warning_dist():
+    # Test no unexpected warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+
+        x = pm.Normal.dist()
+        assert isinstance(x.tag, _FutureWarningValidatingScratchpad)
+
+        x.tag.banana = "banana"
+        assert x.tag.banana == "banana"
+
+        # Check we didn't break test_value filtering
+        x.tag.test_value = np.array(1)
+        assert x.tag.test_value == 1
+        with pytest.raises(TypeError, match="Wrong number of dimensions"):
+            x.tag.test_value = np.array([1, 1])
+        assert x.tag.test_value == 1
+
+        # No warning if deprecated attribute is not present
+        with pytest.raises(AttributeError):
+            x.tag.value_var
+
+        # Warning if present
+        x.tag.value_var = "1"
+        with pytest.warns(FutureWarning, match="Use model.rvs_to_values"):
+            value_var = x.tag.value_var
+        assert value_var == "1"
+
+        # Check that PyMC method that copies tag contents does not erase special tag
+        new_x = change_dist_size(x, new_size=5)
+        assert new_x.tag is not x.tag
+        assert isinstance(new_x.tag, _FutureWarningValidatingScratchpad)
+        with pytest.warns(FutureWarning, match="Use model.rvs_to_values"):
+            value_var = new_x.tag.value_var
+        assert value_var == "1"

@@ -79,8 +79,8 @@ class ModelGraph:
                 raise ValueError(f"{var_name} is not in this model.")
 
             for model_var in self.var_list:
-                if hasattr(model_var.tag, "observations"):
-                    if model_var.tag.observations == self.model[var_name]:
+                if model_var in self.model.observed_RVs:
+                    if self.model.rvs_to_values[model_var] == self.model[var_name]:
                         selected_names.add(model_var.name)
 
         selected_ancestors = set(
@@ -91,8 +91,8 @@ class ModelGraph:
         )
 
         for var in selected_ancestors.copy():
-            if hasattr(var.tag, "observations"):
-                selected_ancestors.add(var.tag.observations)
+            if var in self.model.observed_RVs:
+                selected_ancestors.add(self.model.rvs_to_values[var])
 
         # ordering of self._all_var_names is important
         return [var.name for var in selected_ancestors]
@@ -108,8 +108,8 @@ class ModelGraph:
             parent_name = self.get_parent_names(var)
             input_map[var_name] = input_map[var_name].union(parent_name)
 
-            if hasattr(var.tag, "observations"):
-                obs_node = var.tag.observations
+            if var in self.model.observed_RVs:
+                obs_node = self.model.rvs_to_values[var]
 
                 # loop created so that the elif block can go through this again
                 # and remove any intermediate ops, notably dtype casting, to observations

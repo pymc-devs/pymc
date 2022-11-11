@@ -143,9 +143,9 @@ class ModelBackendSampledTestCase:
         cls.test_point, cls.model, _ = models.beta_bernoulli(cls.shape)
 
         if hasattr(cls, "write_partial_chain") and cls.write_partial_chain is True:
-            cls.chain_vars = [v.tag.value_var for v in cls.model.unobserved_RVs[1:]]
+            cls.chain_vars = [cls.model.rvs_to_values[v] for v in cls.model.unobserved_RVs[1:]]
         else:
-            cls.chain_vars = [v.tag.value_var for v in cls.model.unobserved_RVs]
+            cls.chain_vars = [cls.model.rvs_to_values[v] for v in cls.model.unobserved_RVs]
 
         with cls.model:
             strace0 = cls.backend(cls.name, vars=cls.chain_vars)

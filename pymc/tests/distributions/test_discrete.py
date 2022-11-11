@@ -30,7 +30,7 @@ from aesara.tensor import TensorVariable
 import pymc as pm
 
 from pymc.aesaraf import floatX
-from pymc.distributions import joint_logp, logcdf, logp
+from pymc.distributions import logcdf, logp
 from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,
@@ -574,8 +574,8 @@ def test_orderedlogistic_dimensions(shape):
             p=p,
             observed=obs,
         )
-    ologp = joint_logp(ol, np.ones_like(obs), sum=True).eval() * loge
-    clogp = joint_logp(c, np.ones_like(obs), sum=True).eval() * loge
+    ologp = pm.logp(ol, np.ones_like(obs)).sum().eval() * loge
+    clogp = pm.logp(c, np.ones_like(obs)).sum().eval() * loge
     expected = -np.prod((size,) + shape)
 
     assert c.owner.inputs[3].ndim == (len(shape) + 1)

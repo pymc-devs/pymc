@@ -31,7 +31,6 @@ from pymc.aesaraf import (
     floatX,
     join_nonshared_inputs,
     replace_rng_nodes,
-    rvs_to_value_vars,
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.step_methods.arraystep import (
@@ -585,7 +584,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
             if isinstance(distr, CategoricalRV):
                 k_graph = rv_var.owner.inputs[3].shape[-1]
-                (k_graph,) = rvs_to_value_vars((k_graph,))
+                (k_graph,) = model.replace_rvs_by_values((k_graph,))
                 k = model.compile_fn(k_graph, inputs=model.value_vars, on_unused_input="ignore")(
                     initial_point
                 )

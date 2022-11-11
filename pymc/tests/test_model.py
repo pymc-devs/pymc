@@ -28,6 +28,7 @@ import pytest
 import scipy.sparse as sps
 import scipy.stats as st
 
+from aeppl.transforms import IntervalTransform
 from aesara.graph import graph_inputs
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
@@ -39,10 +40,13 @@ import pymc as pm
 from pymc import Deterministic, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
+from pymc.distributions.logprob import _joint_logp
+from pymc.distributions.transforms import log
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.model import Point, ValueGradFunction, modelcontext
 from pymc.tests.helpers import SeededTest
 from pymc.tests.models import simple_model
+from pymc.util import _FutureWarningValidatingScratchpad
 
 
 class NewModel(pm.Model):
@@ -495,10 +499,22 @@ def test_model_value_vars():
 def test_model_var_maps():
     with pm.Model() as model:
         a = pm.Uniform("a")
-        x = pm.Normal("x", a)
+        x = pm.Normal("x", a, total_size=5)
 
-    assert model.rvs_to_values == {a: a.tag.value_var, x: x.tag.value_var}
-    assert model.values_to_rvs == {a.tag.value_var: a, x.tag.value_var: x}
+    assert set(model.rvs_to_values.keys()) == {a, x}
+    a_value = model.rvs_to_values[a]
+    x_value = model.rvs_to_values[x]
+    assert a_value.owner is None
+    assert x_value.owner is None
+    assert model.values_to_rvs == {a_value: a, x_value: x}
+
+    assert set(model.rvs_to_transforms.keys()) == {a, x}
+    assert isinstance(model.rvs_to_transforms[a], IntervalTransform)
+    assert model.rvs_to_transforms[x] is None
+
+    assert set(model.rvs_to_total_sizes.keys()) == {a, x}
+    assert model.rvs_to_total_sizes[a] is None
+    assert model.rvs_to_total_sizes[x] == 5
 
 
 def test_make_obs_var():
@@ -531,12 +547,12 @@ def test_make_obs_var():
 
     dense_output = fake_model.make_obs_var(fake_distribution, dense_input, None, None)
     assert dense_output == fake_distribution
-    assert isinstance(dense_output.tag.observations, TensorConstant)
+    assert isinstance(fake_model.rvs_to_values[dense_output], TensorConstant)
     del fake_model.named_vars[fake_distribution.name]
 
     sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None)
     assert sparse_output == fake_distribution
-    assert sparse.basic._is_sparse_variable(sparse_output.tag.observations)
+    assert sparse.basic._is_sparse_variable(fake_model.rvs_to_values[sparse_output])
     del fake_model.named_vars[fake_distribution.name]
 
     # Here the RandomVariable is split into observed/imputed and a Deterministic is returned
@@ -567,8 +583,7 @@ def test_initial_point():
     with pytest.warns(FutureWarning), model:
         b = pm.Uniform("b", testval=b_initval)
 
-    b_value_var = model.rvs_to_values[b]
-    b_initval_trans = b_value_var.tag.transform.forward(b_initval, *b.owner.inputs).eval()
+    b_initval_trans = model.rvs_to_transforms[b].forward(b_initval, *b.owner.inputs).eval()
 
     y_initval = np.array(-2.4, dtype=aesara.config.floatX)
 
@@ -635,12 +650,8 @@ class TestCheckStartVals(SeededTest):
             b = pm.Uniform("b", lower=2.0, upper=3.0)
 
         start = {
-            "a_interval__": model.rvs_to_values[a]
-            .tag.transform.forward(0.3, *a.owner.inputs)
-            .eval(),
-            "b_interval__": model.rvs_to_values[b]
-            .tag.transform.forward(2.1, *b.owner.inputs)
-            .eval(),
+            "a_interval__": model.rvs_to_transforms[a].forward(0.3, *a.owner.inputs).eval(),
+            "b_interval__": model.rvs_to_transforms[b].forward(2.1, *b.owner.inputs).eval(),
         }
         model.check_start_vals(start)
 
@@ -651,9 +662,7 @@ class TestCheckStartVals(SeededTest):
 
         start = {
             "a_interval__": np.nan,
-            "b_interval__": model.rvs_to_values[b]
-            .tag.transform.forward(2.1, *b.owner.inputs)
-            .eval(),
+            "b_interval__": model.rvs_to_transforms[b].forward(2.1, *b.owner.inputs).eval(),
         }
         with pytest.raises(pm.exceptions.SamplingError):
             model.check_start_vals(start)
@@ -664,12 +673,8 @@ class TestCheckStartVals(SeededTest):
             b = pm.Uniform("b", lower=2.0, upper=3.0)
 
         start = {
-            "a_interval__": model.rvs_to_values[a]
-            .tag.transform.forward(0.3, *a.owner.inputs)
-            .eval(),
-            "b_interval__": model.rvs_to_values[b]
-            .tag.transform.forward(2.1, *b.owner.inputs)
-            .eval(),
+            "a_interval__": model.rvs_to_transforms[a].forward(0.3, *a.owner.inputs).eval(),
+            "b_interval__": model.rvs_to_transforms[b].forward(2.1, *b.owner.inputs).eval(),
             "c": 1.0,
         }
         with pytest.raises(KeyError):
@@ -1207,9 +1212,7 @@ class TestImputationMissingData:
 
             assert "theta1_observed" in model.named_vars
             assert "theta1_missing_interval__" in model.named_vars
-            assert not hasattr(
-                model.rvs_to_values[model.named_vars["theta1_observed"]].tag, "transform"
-            )
+            assert model.rvs_to_transforms[model.named_vars["theta1_observed"]] is None
 
             prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
 
@@ -1348,7 +1351,7 @@ class TestImputationMissingData:
 
         This would fail in a previous implementation because the two variables would be
         equivalent and one of them would be discarded during MergeOptimization while
-        buling the logp graph
+        building the logp graph
         """
         with pm.Model() as m:
             with pytest.warns(ImputationWarning):
@@ -1360,8 +1363,13 @@ class TestImputationMissingData:
         x_unobs_rv = m["x_missing"]
         x_unobs_vv = m.rvs_to_values[x_unobs_rv]
 
-        logp = pm.joint_logp([x_obs_rv, x_unobs_rv], {x_obs_rv: x_obs_vv, x_unobs_rv: x_unobs_vv})
-        logp_inputs = list(graph_inputs([logp]))
+        logp = _joint_logp(
+            [x_obs_rv, x_unobs_rv],
+            rvs_to_values={x_obs_rv: x_obs_vv, x_unobs_rv: x_unobs_vv},
+            rvs_to_transforms={},
+            rvs_to_total_sizes={},
+        )
+        logp_inputs = list(graph_inputs(logp))
         assert x_obs_vv in logp_inputs
         assert x_unobs_vv in logp_inputs
 
@@ -1400,3 +1408,59 @@ class TestShared(SeededTest):
             assert np.all(
                 np.isclose(model.compile_logp(sum=False)({}), st.norm().logpdf(data_values))
             )
+
+
+def test_tag_future_warning_model():
+    # Test no unexpected warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+
+        model = pm.Model()
+
+        x = at.random.normal()
+        x.tag.something_else = "5"
+        x.tag.test_value = 0
+        assert not isinstance(x.tag, _FutureWarningValidatingScratchpad)
+
+        # Test that model changes the tag type, but copies exsiting contents
+        x = model.register_rv(x, name="x", transform=log)
+        assert isinstance(x.tag, _FutureWarningValidatingScratchpad)
+        assert x.tag.something_else == "5"
+        assert x.tag.test_value == 0
+
+        # Test expected warnings
+        with pytest.warns(FutureWarning, match="model.rvs_to_values"):
+            x_value = x.tag.value_var
+
+        assert isinstance(x_value.tag, _FutureWarningValidatingScratchpad)
+        with pytest.warns(FutureWarning, match="model.rvs_to_transforms"):
+            transform = x_value.tag.transform
+        assert transform is log
+
+        with pytest.raises(AttributeError):
+            x.tag.observations
+
+        with pytest.warns(FutureWarning, match="model.rvs_to_total_sizes"):
+            total_size = x.tag.total_size
+        assert total_size is None
+
+        # Cloning a node will keep the same tag type and contents
+        y = x.owner.clone().default_output()
+        assert y is not x
+        assert y.tag is not x.tag
+        assert isinstance(y.tag, _FutureWarningValidatingScratchpad)
+        y = model.register_rv(y, name="y", data=5)
+        assert isinstance(y.tag, _FutureWarningValidatingScratchpad)
+
+        # Test expected warnings
+        with pytest.warns(FutureWarning, match="model.rvs_to_values"):
+            y_value = y.tag.value_var
+        with pytest.warns(FutureWarning, match="model.rvs_to_values"):
+            y_obs = y.tag.observations
+        assert y_value is y_obs
+        assert y_value.eval() == 5
+
+        assert isinstance(y_value.tag, _FutureWarningValidatingScratchpad)
+        with pytest.warns(FutureWarning, match="model.rvs_to_total_sizes"):
+            total_size = y.tag.total_size
+        assert total_size is None

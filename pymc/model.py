@@ -56,18 +56,18 @@ from pymc.aesaraf import (
     gradient,
     hessian,
     inputvars,
-    rvs_to_value_vars,
+    replace_rvs_by_values,
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
-from pymc.distributions import joint_logp
-from pymc.distributions.logprob import _get_scaling
+from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
 from pymc.initial_point import make_initial_point_fn
 from pymc.util import (
     UNSET,
     WithMemoization,
+    _add_future_warning_tag,
     get_transformed_name,
     get_value_vars_from_user_vars,
     get_var_name,
@@ -555,6 +555,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.named_vars = treedict(parent=self.parent.named_vars)
             self.values_to_rvs = treedict(parent=self.parent.values_to_rvs)
             self.rvs_to_values = treedict(parent=self.parent.rvs_to_values)
+            self.rvs_to_transforms = treedict(parent=self.parent.rvs_to_transforms)
+            self.rvs_to_total_sizes = treedict(parent=self.parent.rvs_to_total_sizes)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
             self.auto_deterministics = treelist(parent=self.parent.auto_deterministics)
@@ -567,6 +569,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.named_vars = treedict()
             self.values_to_rvs = treedict()
             self.rvs_to_values = treedict()
+            self.rvs_to_transforms = treedict()
+            self.rvs_to_total_sizes = treedict()
             self.free_RVs = treelist()
             self.observed_RVs = treelist()
             self.auto_deterministics = treelist()
@@ -725,13 +729,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         # We need to separate random variables from potential terms, and remember their
         # original order so that we can merge them together in the same order at the end
-        rv_values = {}
+        rvs = []
         potentials = []
         rv_order, potential_order = [], []
         for i, var in enumerate(varlist):
-            value_var = self.rvs_to_values.get(var)
-            if value_var is not None:
-                rv_values[var] = value_var
+            rv = self.values_to_rvs.get(var, var)
+            if rv in self.basic_RVs:
+                rvs.append(rv)
                 rv_order.append(i)
             else:
                 if var in self.potentials:
@@ -743,14 +747,20 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     )
 
         rv_logps: List[TensorVariable] = []
-        if rv_values:
-            rv_logps = joint_logp(list(rv_values.keys()), rv_values, sum=False, jacobian=jacobian)
+        if rvs:
+            rv_logps = _joint_logp(
+                rvs=rvs,
+                rvs_to_values=self.rvs_to_values,
+                rvs_to_transforms=self.rvs_to_transforms,
+                rvs_to_total_sizes=self.rvs_to_total_sizes,
+                jacobian=jacobian,
+            )
             assert isinstance(rv_logps, list)
 
         # Replace random variables by their value variables in potential terms
         potential_logps = []
         if potentials:
-            potential_logps = rvs_to_value_vars(potentials)
+            potential_logps = self.replace_rvs_by_values(potentials)
 
         logp_factors = [None] * len(varlist)
         for logp_order, logp in zip((rv_order + potential_order), (rv_logps + potential_logps)):
@@ -870,7 +880,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Aesara scalar of log-probability of the Potential terms"""
         # Convert random variables in Potential expression into their log-likelihood
         # inputs and apply their transforms, if any
-        potentials = rvs_to_value_vars(self.potentials)
+        potentials = self.replace_rvs_by_values(self.potentials)
         if potentials:
             return at.sum([at.sum(factor) for factor in potentials])
         else:
@@ -890,23 +900,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
         log-likelihood graph
         """
         vars = []
-        untransformed_vars = []
+        transformed_rvs = []
         for rv in self.free_RVs:
             value_var = self.rvs_to_values[rv]
-            transform = getattr(value_var.tag, "transform", None)
+            transform = self.rvs_to_transforms[rv]
             if transform is not None:
-                # We need to create and add an un-transformed version of
-                # each transformed variable
-                untrans_value_var = transform.backward(value_var, *rv.owner.inputs)
-                untrans_value_var.name = rv.name
-                untransformed_vars.append(untrans_value_var)
+                transformed_rvs.append(rv)
             vars.append(value_var)
 
         # Remove rvs from untransformed values graph
-        untransformed_vars = rvs_to_value_vars(untransformed_vars)
+        untransformed_vars = self.replace_rvs_by_values(transformed_rvs)
 
         # Remove rvs from deterministics graph
-        deterministics = rvs_to_value_vars(self.deterministics)
+        deterministics = self.replace_rvs_by_values(self.deterministics)
 
         return vars + untransformed_vars + deterministics
 
@@ -944,7 +950,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         These are the actual random variable terms that make up the
         "sample-space" graph (i.e. you can sample these graphs by compiling them
         with `aesara.function`).  If you want the corresponding log-likelihood terms,
-        use `var.tag.value_var`.
+        use `model.value_vars` instead.
         """
         return self.free_RVs + self.observed_RVs
 
@@ -955,7 +961,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         These are the actual random variable terms that make up the
         "sample-space" graph (i.e. you can sample these graphs by compiling them
         with `aesara.function`).  If you want the corresponding log-likelihood terms,
-        use `var.tag.value_var`.
+        use `var.unobserved_value_vars` instead.
         """
         return self.free_RVs + self.deterministics
 
@@ -979,17 +985,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         The values are typically instances of ``TensorVariable`` or ``ScalarSharedVariable``.
         """
         return self._dim_lengths
-
-    @property
-    def unobserved_RVs(self):
-        """List of all random variables, including deterministic ones.
-
-        These are the actual random variable terms that make up the
-        "sample-space" graph (i.e. you can sample these graphs by compiling them
-        with `aesara.function`).  If you want the corresponding log-likelihood terms,
-        use `var.tag.value_var`.
-        """
-        return self.free_RVs + self.deterministics
 
     @property
     def test_point(self) -> Dict[str, np.ndarray]:
@@ -1320,8 +1315,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         name = self.name_for(name)
         rv_var.name = name
+        _add_future_warning_tag(rv_var)
         rv_var.tag.total_size = total_size
-        rv_var.tag.scaling = _get_scaling(total_size, shape=rv_var.shape, ndim=rv_var.ndim)
+        self.rvs_to_total_sizes[rv_var] = total_size
 
         # Associate previously unknown dimension names with
         # the length of the corresponding RV dimension.
@@ -1389,7 +1385,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             if test_value is not None:
                 # We try to reuse the old test value
-                rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.tag.test_value.shape)
+                rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.shape)
             else:
                 rv_var.tag.test_value = data
 
@@ -1501,6 +1497,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if aesara.config.compute_test_value != "off":
             value_var.tag.test_value = rv_var.tag.test_value
 
+        _add_future_warning_tag(value_var)
         rv_var.tag.value_var = value_var
 
         # Make the value variable a transformed value variable,
@@ -1516,7 +1513,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     value_var, *rv_var.owner.inputs
                 ).tag.test_value
             self.named_vars[value_var.name] = value_var
-
+        self.rvs_to_transforms[rv_var] = transform
         self.rvs_to_values[rv_var] = value_var
         self.values_to_rvs[value_var] = rv_var
 
@@ -1582,9 +1579,29 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def __contains__(self, key):
         return key in self.named_vars or self.name_for(key) in self.named_vars
 
+    def replace_rvs_by_values(
+        self,
+        graphs: Sequence[TensorVariable],
+        **kwargs,
+    ) -> List[TensorVariable]:
+        """Clone and replace random variables in graphs with their value variables.
+
+        This will *not* recompute test values in the resulting graphs.
+
+        Parameters
+        ----------
+        graphs
+            The graphs in which to perform the replacements.
+        """
+        return replace_rvs_by_values(
+            graphs,
+            rvs_to_values=self.rvs_to_values,
+            rvs_to_transforms=self.rvs_to_transforms,
+        )
+
     def compile_fn(
         self,
-        outs: Sequence[Variable],
+        outs: Union[Variable, Sequence[Variable]],
         *,
         inputs: Optional[Sequence[Variable]] = None,
         mode=None,
@@ -1679,8 +1696,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         names = []
         outputs = []
         for rv in self.free_RVs:
-            rv_var = self.rvs_to_values[rv]
-            transform = getattr(rv_var.tag, "transform", None)
+            transform = self.rvs_to_transforms[rv]
             if transform is not None:
                 names.append(get_transformed_name(rv.name, transform))
                 outputs.append(transform.forward(rv, *rv.owner.inputs).shape)
@@ -1689,7 +1705,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         f = aesara.function(
             inputs=[],
             outputs=outputs,
-            givens=[(obs, obs.tag.observations) for obs in self.observed_RVs],
+            givens=[(obs, self.rvs_to_values[obs]) for obs in self.observed_RVs],
             mode=aesara.compile.mode.FAST_COMPILE,
             on_unused_input="ignore",
         )
@@ -1851,15 +1867,22 @@ def set_data(new_data, model=None, *, coords=None):
 
 
 def compile_fn(
-    outs, mode=None, point_fn: bool = True, model: Optional[Model] = None, **kwargs
+    outs: Union[Variable, Sequence[Variable]],
+    *,
+    inputs: Optional[Sequence[Variable]] = None,
+    mode=None,
+    point_fn: bool = True,
+    model: Optional[Model] = None,
+    **kwargs,
 ) -> Union[PointFunc, Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
-    """Compiles an Aesara function which returns ``outs`` and takes values of model
-    vars as a dict as an argument.
+    """Compiles an Aesara function
 
     Parameters
     ----------
     outs
         Aesara variable or iterable of Aesara variables.
+    inputs
+        Aesara input variables, defaults to aesaraf.inputvars(outs).
     mode
         Aesara compilation mode, default=None.
     point_fn : bool
@@ -1870,10 +1893,17 @@ def compile_fn(
 
     Returns
     -------
-    Compiled Aesara function as point function.
+    Compiled Aesara function
     """
+
     model = modelcontext(model)
-    return model.compile_fn(outs, mode=mode, point_fn=point_fn, **kwargs)
+    return model.compile_fn(
+        outs,
+        inputs=inputs,
+        mode=mode,
+        point_fn=point_fn,
+        **kwargs,
+    )
 
 
 def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
@@ -1998,7 +2028,6 @@ def Potential(name, var, model=None):
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
-    var.tag.scaling = 1.0
     model.potentials.append(var)
     model.add_random_variable(var)
 
