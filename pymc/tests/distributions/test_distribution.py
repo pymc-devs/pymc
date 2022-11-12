@@ -148,6 +148,21 @@ class TestDensityDist:
 
         assert obs.eval().shape == (100,) + size
 
+    def test_density_dist_with_random_invalid_observed(self):
+        with pytest.raises(
+            TypeError,
+            match="The observed parameter should be of type `pd.Series`, `np.array`, or `pm.Data`",
+        ):
+            size = (3,)
+            with pm.Model() as model:
+                mu = pm.Normal("mu", 0, 1)
+                pm.DensityDist(
+                    "density_dist",
+                    mu,
+                    random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
+                    observed={"values": np.random.randn(100, *size)},
+                )
+
     def test_density_dist_without_random(self):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0, 1)
