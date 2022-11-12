@@ -32,7 +32,7 @@ logger = logging.getLogger("pymc")
 class SamplerReport:
     """Bundle warnings, convergence stats and metadata of a sampling run."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._chain_warnings: Dict[int, List[SamplerWarning]] = {}
         self._global_warnings: List[SamplerWarning] = []
         self._n_tune = None
