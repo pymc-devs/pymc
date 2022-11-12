@@ -77,7 +77,7 @@ class KSDObjective(ObjectiveFunction):
 
     @aesara.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
-        op = self.op  # type: KSD
+        op: KSD = self.op
         grad = op.apply(self.tf)
         if self.approx.all_histograms:
             z = self.approx.joint_histogram
