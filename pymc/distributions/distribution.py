@@ -579,7 +579,7 @@ class DensityDist(Distribution):
         kwargs.setdefault("class_name", name)
         if isinstance(kwargs.get("observed", None), dict):
             raise TypeError(
-                "The observed parameter should be of type `pd.Series`, " "`np.array`, or `pm.Data`."
+                "The observed parameter should be of type `pd.Series`, `np.array`, or `pm.Data`."
             )
         return super().__new__(cls, name, *args, **kwargs)
 
