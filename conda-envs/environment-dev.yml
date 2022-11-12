@@ -38,5 +38,5 @@ dependencies:
 - watermark
 - polyagamma
 - sphinx-remove-toctrees
-- mypy=0.982
+- mypy
 - types-cachetools
