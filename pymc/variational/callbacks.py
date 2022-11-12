@@ -74,7 +74,7 @@ class CheckParametersConvergence(Callback):
         self.prev = None
         self.tolerance = tolerance
 
-    def __call__(self, approx, _, i):
+    def __call__(self, approx, _, i) -> None:
         if self.prev is None:
             self.prev = self.flatten_shared(approx.params)
             return
