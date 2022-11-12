@@ -12,11 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import annotations
+
 import logging
 import time
 
 from abc import abstractmethod
-from typing import Any, NamedTuple, Optional
+from typing import Any, NamedTuple
 
 import numpy as np
 
@@ -165,7 +167,7 @@ class BaseHMC(GradientSharedStep):
 
         start = self.integrator.compute_state(q0, p0)
 
-        warning: Optional[SamplerWarning] = None
+        warning: SamplerWarning | None = None
         if not np.isfinite(start.energy):
             model = self._model
             check_test_point_dict = model.point_logps()
