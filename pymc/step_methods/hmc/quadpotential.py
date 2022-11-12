@@ -14,6 +14,8 @@
 
 import warnings
 
+from typing import overload
+
 import aesara
 import numpy as np
 import scipy.linalg
@@ -94,7 +96,17 @@ class PositiveDefiniteError(ValueError):
 
 
 class QuadPotential:
-    def velocity(self, x, out=None):
+    dtype: np.dtype
+
+    @overload
+    def velocity(self, x: np.ndarray, out: None) -> np.ndarray:
+        ...
+
+    @overload
+    def velocity(self, x: np.ndarray, out: np.ndarray) -> None:
+        ...
+
+    def velocity(self, x: np.ndarray, out: np.ndarray | None = None) -> np.ndarray | None:
         """Compute the current velocity at a position in parameter space."""
         raise NotImplementedError("Abstract method")
 

@@ -17,10 +17,9 @@ pymc.blocking
 
 Classes for working with subsets of parameters.
 """
-import collections
 
 from functools import partial
-from typing import Callable, Dict, Generic, Optional, TypeVar
+from typing import Callable, Dict, Generic, NamedTuple, Optional, TypeVar
 
 import numpy as np
 
@@ -32,7 +31,9 @@ PointType = Dict[str, np.ndarray]
 
 # `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
 # each of the raveled variables.
-RaveledVars = collections.namedtuple("RaveledVars", "data, point_map_info")
+class RaveledVars(NamedTuple):
+    data: np.ndarray
+    point_map_info: tuple[tuple[str, tuple[int, ...], np.dtype], ...]
 
 
 class Compose(Generic[T]):
