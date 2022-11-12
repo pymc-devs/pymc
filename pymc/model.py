@@ -987,48 +987,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         return self._dim_lengths
 
-    @property
-    def test_point(self) -> Dict[str, np.ndarray]:
-        """Deprecated alias for `Model.initial_point(random_seed=None)`."""
-        warnings.warn(
-            "`Model.test_point` has been deprecated. Use `Model.initial_point(random_seed=None)`.",
-            FutureWarning,
-        )
-        return self.initial_point()
-
-    def initial_point(self, random_seed: SeedSequenceSeed = None) -> Dict[str, np.ndarray]:
-        """Computes the initial point of the model.
-
-        Parameters
-        ----------
-        random_seed : SeedSequenceSeed, default None
-            Seed(s) for generating initial point from the model. Used in pymc.aesaraf.reseed_rngs
-
-        Returns
-        -------
-        ip : dict of {str : array_like}
-            Maps names of transformed variables to numeric initial values in the transformed space.
-        """
-        fn = make_initial_point_fn(model=self, return_transformed=True)
-        return Point(fn(random_seed), model=self)
-
-    @property
-    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
-        """Maps transformed variables to initial value placeholders.
-
-        Keys are the random variables (as returned by e.g. ``pm.Uniform()``) and
-        values are the numeric/symbolic initial values, strings denoting the strategy to get them, or None.
-        """
-        return self._initial_values
-
-    def set_initval(self, rv_var, initval):
-        """Sets an initial value (strategy) for a random variable."""
-        if initval is not None and not isinstance(initval, (Variable, str)):
-            # Convert scalars or array-like inputs to ndarrays
-            initval = rv_var.type.filter(initval)
-
-        self.initial_values[rv_var] = initval
-
     def shape_from_dims(self, dims):
         shape = []
         if len(set(dims)) != len(dims):
@@ -1142,6 +1100,48 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self._coords[name] = tuple(coord_values)
         self.dim_lengths[name].set_value(new_length)
         return
+
+    @property
+    def test_point(self) -> Dict[str, np.ndarray]:
+        """Deprecated alias for `Model.initial_point(random_seed=None)`."""
+        warnings.warn(
+            "`Model.test_point` has been deprecated. Use `Model.initial_point(random_seed=None)`.",
+            FutureWarning,
+        )
+        return self.initial_point()
+
+    def initial_point(self, random_seed: SeedSequenceSeed = None) -> Dict[str, np.ndarray]:
+        """Computes the initial point of the model.
+
+        Parameters
+        ----------
+        random_seed : SeedSequenceSeed, default None
+            Seed(s) for generating initial point from the model. Passed into :func:`pymc.aesaraf.reseed_rngs`
+
+        Returns
+        -------
+        ip : dict of {str : array_like}
+            Maps names of transformed variables to numeric initial values in the transformed space.
+        """
+        fn = make_initial_point_fn(model=self, return_transformed=True)
+        return Point(fn(random_seed), model=self)
+
+    @property
+    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
+        """Maps transformed variables to initial value placeholders.
+
+        Keys are the random variables (as returned by e.g. ``pm.Uniform()``) and
+        values are the numeric/symbolic initial values, strings denoting the strategy to get them, or None.
+        """
+        return self._initial_values
+
+    def set_initval(self, rv_var, initval):
+        """Sets an initial value (strategy) for a random variable."""
+        if initval is not None and not isinstance(initval, (Variable, str)):
+            # Convert scalars or array-like inputs to ndarrays
+            initval = rv_var.type.filter(initval)
+
+        self.initial_values[rv_var] = initval
 
     def set_data(
         self,
