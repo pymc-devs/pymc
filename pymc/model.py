@@ -1101,15 +1101,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self.dim_lengths[name].set_value(new_length)
         return
 
-    @property
-    def test_point(self) -> Dict[str, np.ndarray]:
-        """Deprecated alias for `Model.initial_point(random_seed=None)`."""
-        warnings.warn(
-            "`Model.test_point` has been deprecated. Use `Model.initial_point(random_seed=None)`.",
-            FutureWarning,
-        )
-        return self.initial_point()
-
     def initial_point(self, random_seed: SeedSequenceSeed = None) -> Dict[str, np.ndarray]:
         """Computes the initial point of the model.
 
