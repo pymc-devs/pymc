@@ -26,9 +26,9 @@ class State(NamedTuple):
     q: RaveledVars
     p: RaveledVars
     v: np.ndarray
-    q_grad: Any
-    energy: Any
-    model_logp: Any
+    q_grad: np.ndarray
+    energy: float
+    model_logp: float
     index_in_trajectory: int
 
 
