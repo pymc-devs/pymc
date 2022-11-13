@@ -262,12 +262,12 @@ class _Tree:
         self.left = self.right = start
         self.proposal = Proposal(start.q.data, start.q_grad, start.energy, start.model_logp, 0)
         self.depth = 0
-        self.log_size = 0
+        self.log_size = 0.0
         self.log_accept_sum = -np.inf
         self.mean_tree_accept = 0.0
         self.n_proposals = 0
         self.p_sum = start.p.data.copy()
-        self.max_energy_change = 0
+        self.max_energy_change = 0.0
 
     def extend(self, direction):
         """Double the treesize by extending the tree in the given direction.
