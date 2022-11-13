@@ -573,8 +573,6 @@ def test_initial_point():
         a = pm.Uniform("a")
         x = pm.Normal("x", a)
 
-    assert all(var.name in initial_point for var in model.value_vars)
-
     b_initval = np.array(0.3, dtype=aesara.config.floatX)
 
     with pytest.warns(FutureWarning), model:
