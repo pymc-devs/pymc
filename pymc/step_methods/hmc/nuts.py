@@ -257,7 +257,7 @@ class _Tree:
         self.start = start
         self.step_size = step_size
         self.Emax = Emax
-        self.start_energy = np.array(start.energy)
+        self.start_energy = start.energy
 
         self.left = self.right = start
         self.proposal = Proposal(start.q.data, start.q_grad, start.energy, start.model_logp, 0)
