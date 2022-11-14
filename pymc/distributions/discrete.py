@@ -1140,7 +1140,7 @@ class DiscreteUniformRV(ScipyRandomVariable):
         return stats.randint.rvs(lower, upper + 1, size=size, random_state=rng)
 
 
-discrete_uniform = DiscreteUniformRV()
+discrete_uniform = RV()
 
 
 class DiscreteUniform(Discrete):
