@@ -1093,7 +1093,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             len_cvals = len(coord_values)
             if len_cvals != new_length:
                 raise ShapeError(
-                    f"Length of new coordinate values does not match the new dimension length.",
+                    "Length of new coordinate values does not match the new dimension length.",
                     actual=len_cvals,
                     expected=new_length,
                 )
