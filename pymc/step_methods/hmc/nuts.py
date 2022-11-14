@@ -232,7 +232,7 @@ Subtree = namedtuple(
 class _Tree:
     def __init__(
         self,
-        ndim,
+        ndim: int,
         integrator: integration.CpuLeapfrogIntegrator,
         start: State,
         step_size: float,
