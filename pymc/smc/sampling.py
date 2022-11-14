@@ -33,7 +33,7 @@ from pymc.backends.base import MultiTrace
 from pymc.model import modelcontext
 from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
-from pymc.util import _get_seeds_per_chain
+from pymc.util import RandomState, _get_seeds_per_chain
 
 
 def sample_smc(
@@ -42,7 +42,7 @@ def sample_smc(
     *,
     start=None,
     model=None,
-    random_seed=None,
+    random_seed: RandomState = None,
     chains=None,
     cores=None,
     compute_convergence_checks=True,
@@ -64,8 +64,10 @@ def sample_smc(
         Starting point in parameter space. It should be a list of dict with length `chains`.
         When None (default) the starting point is sampled from the prior distribution.
     model: Model (optional if in ``with`` context)).
-    random_seed: int
-        random seed
+    random_seed : int, array-like of int, RandomState or Generator, optional
+        Random seed(s) used by the sampling steps. If a list, tuple or array of ints
+        is passed, each entry will be used to seed each chain. A ValueError will be
+        raised if the length does not match the number of chains.
     chains : int
         The number of chains to sample. Running independent chains is important for some
         convergence statistics. If ``None`` (default), then set to either ``cores`` or 2, whichever
