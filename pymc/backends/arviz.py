@@ -30,7 +30,6 @@ from pymc.model import modelcontext
 from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
-    from typing import Set  # pylint: disable=ungrouped-imports
 
     from pymc.backends.base import MultiTrace  # pylint: disable=invalid-name
     from pymc.model import Model
