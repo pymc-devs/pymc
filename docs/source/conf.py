@@ -237,7 +237,6 @@ html_theme_options = {
     "logo": {
         "link": "https://www.pymc.io",
     },
-    "navbar_start": ["navbar-logo", "navbar-version"],
 }
 html_context = {
     "github_user": "pymc-devs",
