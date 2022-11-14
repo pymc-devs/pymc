@@ -63,9 +63,9 @@ __all__ = [
 
 DIST_PARAMETER_TYPES: TypeAlias = Union[np.ndarray, int, float, TensorVariable]
 
-vectorized_ppc = contextvars.ContextVar(
+vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.ContextVar(
     "vectorized_ppc", default=None
-)  # type: contextvars.ContextVar[Optional[Callable]]
+)
 
 PLATFORM = sys.platform
 

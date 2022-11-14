@@ -301,7 +301,7 @@ class Minibatch(TensorVariable):
         >>> assert x.eval().shape == (2, 20, 20, 40, 10)
     """
 
-    RNG = collections.defaultdict(list)  # type: Dict[str, List[Any]]
+    RNG: Dict[str, List[Any]] = collections.defaultdict(list)
 
     @aesara.config.change_flags(compute_test_value="raise")
     def __init__(
