@@ -1292,7 +1292,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # the length of the corresponding RV dimension.
         if dims is not None:
             for d, dname in enumerate(dims):
-                if not dname in self.dim_lengths:
+                if dname not in self.dim_lengths:
                     self.add_coord(dname, values=None, length=rv_var.shape[d])
 
         if data is None:
