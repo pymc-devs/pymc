@@ -17,10 +17,10 @@ pymc.blocking
 
 Classes for working with subsets of parameters.
 """
-import collections
+from __future__ import annotations
 
 from functools import partial
-from typing import Callable, Dict, Generic, Optional, TypeVar
+from typing import Callable, Dict, Generic, NamedTuple, TypeVar
 
 import numpy as np
 
@@ -32,7 +32,9 @@ PointType = Dict[str, np.ndarray]
 
 # `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
 # each of the raveled variables.
-RaveledVars = collections.namedtuple("RaveledVars", "data, point_map_info")
+class RaveledVars(NamedTuple):
+    data: np.ndarray
+    point_map_info: tuple[tuple[str, tuple[int, ...], np.dtype], ...]
 
 
 class Compose(Generic[T]):
@@ -69,7 +71,7 @@ class DictToArrayBijection:
     @staticmethod
     def rmap(
         array: RaveledVars,
-        start_point: Optional[PointType] = None,
+        start_point: PointType | None = None,
     ) -> PointType:
         """Map 1D concatenated array to a dictionary of variables in their original spaces.
 
@@ -100,7 +102,7 @@ class DictToArrayBijection:
 
     @classmethod
     def mapf(
-        cls, f: Callable[[PointType], T], start_point: Optional[PointType] = None
+        cls, f: Callable[[PointType], T], start_point: PointType | None = None
     ) -> Callable[[RaveledVars], T]:
         """Create a callable that first maps back to ``dict`` inputs and then applies a function.
 

@@ -45,6 +45,8 @@ References
     https://arxiv.org/abs/1610.09033 (2016)
 """
 
+from __future__ import annotations
+
 import collections
 import itertools
 import warnings
@@ -181,7 +183,7 @@ class ObjectiveFunction:
         OPVI TestFunction
     """
 
-    def __init__(self, op, tf):
+    def __init__(self, op: Operator, tf: TestFunction):
         self.op = op
         self.tf = tf
 
@@ -962,7 +964,9 @@ class Group(WithMemoization):
         raise NotImplementedError
 
     @aesara.config.change_flags(compute_test_value="off")
-    def set_size_and_deterministic(self, node, s, d, more_replacements=None):
+    def set_size_and_deterministic(
+        self, node: Variable, s, d: bool, more_replacements: dict | None = None
+    ) -> list[Variable]:
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
 
