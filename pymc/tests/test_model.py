@@ -355,7 +355,7 @@ class TestValueGradFunction(unittest.TestCase):
 
         assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
 
-        pnt = m.initial_point(seed=None).copy()
+        pnt = m.initial_point(random_seed=None).copy()
         del pnt["x2_missing"]
 
         res = [gf(DictToArrayBijection.map(Point(pnt, model=m))) for i in range(5)]
@@ -572,11 +572,6 @@ def test_initial_point():
     with pm.Model() as model:
         a = pm.Uniform("a")
         x = pm.Normal("x", a)
-
-    with pytest.warns(FutureWarning):
-        initial_point = model.test_point
-
-    assert all(var.name in initial_point for var in model.value_vars)
 
     b_initval = np.array(0.3, dtype=aesara.config.floatX)
 
