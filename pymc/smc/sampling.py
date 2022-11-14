@@ -18,7 +18,6 @@ import time
 import warnings
 
 from collections import defaultdict
-from collections.abc import Iterable
 from itertools import repeat
 
 import cloudpickle
