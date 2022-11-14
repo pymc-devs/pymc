@@ -1257,6 +1257,7 @@ class Categorical(Discrete):
     .. math:: f(x \mid p) = p_x
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1550,6 +1551,7 @@ class ZeroInflatedBinomial:
             \end{array} \right.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1625,6 +1627,7 @@ class ZeroInflatedNegativeBinomial:
        \right.
 
     .. plot::
+        :context: close-figs
 
         import matplotlib.pyplot as plt
         import numpy as np
