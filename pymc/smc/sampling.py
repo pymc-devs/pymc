@@ -34,6 +34,7 @@ from pymc.backends.base import MultiTrace
 from pymc.model import modelcontext
 from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
+from pymc.util import _get_seeds_per_chain
 
 
 def sample_smc(
@@ -183,20 +184,7 @@ def sample_smc(
     else:
         cores = min(chains, cores)
 
-    if random_seed == -1:
-        raise FutureWarning(
-            f"random_seed should be a non-negative integer or None, got: {random_seed}"
-            "This will raise a ValueError in the Future"
-        )
-        random_seed = None
-    if isinstance(random_seed, int) or random_seed is None:
-        rng = np.random.default_rng(seed=random_seed)
-        random_seed = list(rng.integers(2**30, size=chains))
-    elif isinstance(random_seed, Iterable):
-        if len(random_seed) != chains:
-            raise ValueError(f"Length of seeds ({len(seeds)}) must match number of chains {chains}")
-    else:
-        raise TypeError("Invalid value for `random_seed`. Must be tuple, list, int or None")
+    random_seed = _get_seeds_per_chain(random_state=random_seed, chains=chains)
 
     model = modelcontext(model)
 
