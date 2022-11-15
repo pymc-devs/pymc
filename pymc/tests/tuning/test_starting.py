@@ -42,7 +42,7 @@ def test_mle_jacobian(bounded):
 def test_tune_not_inplace():
     orig_scaling = np.array([0.001, 0.1])
     returned_scaling = tune(orig_scaling, acc_rate=0.6)
-    assert not returned_scaling is orig_scaling
+    assert returned_scaling is not orig_scaling
     assert np.all(orig_scaling == np.array([0.001, 0.1]))
 
 

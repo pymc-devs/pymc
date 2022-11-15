@@ -188,7 +188,7 @@ class ContextMeta(type):
         on the stack, or ``None``. If ``error_if_none`` is True (default),
         raise a ``TypeError`` instead of returning ``None``."""
         try:
-            candidate = cls.get_contexts()[-1]  # type: Optional[T]
+            candidate: Optional[T] = cls.get_contexts()[-1]
         except IndexError as e:
             # Calling code expects to get a TypeError if the entity
             # is unfound, and there's too much to fix.
@@ -1093,7 +1093,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             len_cvals = len(coord_values)
             if len_cvals != new_length:
                 raise ShapeError(
-                    f"Length of new coordinate values does not match the new dimension length.",
+                    "Length of new coordinate values does not match the new dimension length.",
                     actual=len_cvals,
                     expected=new_length,
                 )
@@ -1292,7 +1292,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # the length of the corresponding RV dimension.
         if dims is not None:
             for d, dname in enumerate(dims):
-                if not dname in self.dim_lengths:
+                if dname not in self.dim_lengths:
                     self.add_coord(dname, values=None, length=rv_var.shape[d])
 
         if data is None:

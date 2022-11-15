@@ -301,7 +301,7 @@ class Minibatch(TensorVariable):
         >>> assert x.eval().shape == (2, 20, 20, 40, 10)
     """
 
-    RNG = collections.defaultdict(list)  # type: Dict[str, List[Any]]
+    RNG: Dict[str, List[Any]] = collections.defaultdict(list)
 
     @aesara.config.change_flags(compute_test_value="raise")
     def __init__(
@@ -708,7 +708,7 @@ def Data(
             xshape = x.shape
         # Register new dimension lengths
         for d, dname in enumerate(dims):
-            if not dname in model.dim_lengths:
+            if dname not in model.dim_lengths:
                 model.add_coord(
                     name=dname,
                     # Note: Coordinate values can't be taken from

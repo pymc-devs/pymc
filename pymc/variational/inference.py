@@ -258,7 +258,7 @@ class Inference:
                 )
         else:
             if n == 0:
-                logger.info(f"Initialization only")
+                logger.info("Initialization only")
             elif n < 10:
                 logger.info(f"Finished [100%]: Loss = {scores[-1]:,.5g}")
             else:

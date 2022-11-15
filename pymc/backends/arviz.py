@@ -26,14 +26,11 @@ from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
 import pymc
 
 from pymc.aesaraf import extract_obs_data
-from pymc.model import modelcontext
+from pymc.model import Model, modelcontext
 from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
-    from typing import Set  # pylint: disable=ungrouped-imports
-
     from pymc.backends.base import MultiTrace  # pylint: disable=invalid-name
-    from pymc.model import Model
 
 ___all__ = [""]
 
@@ -145,12 +142,10 @@ class _DefaultTrace:
 class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
     """Encapsulate InferenceData specific logic."""
 
-    model = None  # type: Optional[Model]
-    nchains = None  # type: int
-    ndraws = None  # type: int
-    posterior_predictive = None  # Type: Optional[Mapping[str, np.ndarray]]
-    predictions = None  # Type: Optional[Mapping[str, np.ndarray]]
-    prior = None  # Type: Optional[Mapping[str, np.ndarray]]
+    model: Optional[Model] = None
+    posterior_predictive: Optional[Mapping[str, np.ndarray]] = None
+    predictions: Optional[Mapping[str, np.ndarray]] = None
+    prior: Optional[Mapping[str, np.ndarray]] = None
 
     def __init__(
         self,

@@ -13,6 +13,7 @@
 #   limitations under the License.
 import pickle
 import threading
+import traceback
 import unittest
 import warnings
 
@@ -406,7 +407,7 @@ def test_multiple_observed_rv():
     assert not model["x"] == model["mu"]
     assert model["x"] == model["x"]
     assert model["x"] in model.observed_RVs
-    assert not model["x"] in model.value_vars
+    assert model["x"] not in model.value_vars
 
 
 def test_tempered_logp_dlogp():

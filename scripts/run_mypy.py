@@ -144,7 +144,7 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
     all_files = {
         str(fp).replace(str(DP_ROOT), "").strip(os.sep).replace(os.sep, "/")
         for fp in DP_ROOT.glob("pymc/**/*.py")
-        if not "tests" in str(fp)
+        if "tests" not in str(fp)
     }
     failing = set(df.reset_index().file.str.replace(os.sep, "/", regex=False))
     if not failing.issubset(all_files):

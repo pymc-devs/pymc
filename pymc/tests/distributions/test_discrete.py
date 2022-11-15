@@ -69,7 +69,7 @@ def categorical_logpdf(value, p):
     if value >= 0 and value <= len(p):
         return floatX(np.log(np.moveaxis(p, -1, 0)[value]))
     else:
-        return -inf
+        return -np.inf
 
 
 def invlogit(x, eps=sys.float_info.epsilon):

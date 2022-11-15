@@ -136,7 +136,7 @@ def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
     Xw = X / scaling
 
     if "k_or_guess" in kmeans_kwargs:
-        warn.UserWarning("Use `n_inducing` to set the `k_or_guess` parameter instead.")
+        warnings.warn("Use `n_inducing` to set the `k_or_guess` parameter instead.")
 
     Xu, distortion = kmeans(Xw, k_or_guess=n_inducing, **kmeans_kwargs)
     return Xu * scaling

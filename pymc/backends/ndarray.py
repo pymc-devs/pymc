@@ -85,7 +85,7 @@ class NDArray(base.BaseTrace):
         if self._stats is None:
             self._stats = []
             for sampler in sampler_vars:
-                data = dict()  # type: Dict[str, np.ndarray]
+                data: Dict[str, np.ndarray] = dict()
                 self._stats.append(data)
                 for varname, dtype in sampler.items():
                     data[varname] = np.zeros(draws, dtype=dtype)
