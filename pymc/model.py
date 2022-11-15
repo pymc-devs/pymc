@@ -1464,28 +1464,37 @@ class Model(WithMemoization, metaclass=ContextMeta):
         this branch of the conditional.
 
         """
-        if value_var is None:
+
+        # Make the value variable a transformed value variable,
+        # if there's an applicable transform
+        if transform is UNSET:
+            if rv_var.owner is None:
+                transform = None
+            else:
+                transform = _default_transform(rv_var.owner.op, rv_var)
+
+        if value_var is not None:
+            if transform is not None:
+                raise ValueError("Cannot use transform when providing a pre-defined value_var")
+        elif transform is None:
+            # Create value variable with the same type as the RV
             value_var = rv_var.type()
             value_var.name = rv_var.name
-
-        if aesara.config.compute_test_value != "off":
-            value_var.tag.test_value = rv_var.tag.test_value
+            if aesara.config.compute_test_value != "off":
+                value_var.tag.test_value = rv_var.tag.test_value
+        else:
+            # Create value variable with the same type as the transformed RV
+            value_var = transform.forward(rv_var, *rv_var.owner.inputs).type()
+            value_var.name = f"{rv_var.name}_{transform.name}__"
+            value_var.tag.transform = transform
+            if aesara.config.compute_test_value != "off":
+                value_var.tag.test_value = transform.forward(
+                    rv_var, *rv_var.owner.inputs
+                ).tag.test_value
 
         _add_future_warning_tag(value_var)
         rv_var.tag.value_var = value_var
 
-        # Make the value variable a transformed value variable,
-        # if there's an applicable transform
-        if transform is UNSET and rv_var.owner:
-            transform = _default_transform(rv_var.owner.op, rv_var)
-
-        if transform is not None and transform is not UNSET:
-            value_var.tag.transform = transform
-            value_var.name = f"{value_var.name}_{transform.name}__"
-            if aesara.config.compute_test_value != "off":
-                value_var.tag.test_value = transform.forward(
-                    value_var, *rv_var.owner.inputs
-                ).tag.test_value
         self.rvs_to_transforms[rv_var] = transform
         self.rvs_to_values[rv_var] = value_var
         self.values_to_rvs[value_var] = rv_var
