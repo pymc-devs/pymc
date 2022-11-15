@@ -145,13 +145,18 @@ class TestDensityDist:
                 random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
                 observed=np.random.randn(100, *size),
             )
-
         assert obs.eval().shape == (100,) + size
 
     def test_density_dist_with_random_invalid_observed(self):
         with pytest.raises(
             TypeError,
-            match="The observed parameter should be of type `pd.Series`, `np.array`, or `pm.Data`",
+            match=(
+                "Since ``v4.0.0`` the ``observed`` parameter should be of type"
+                " ``pd.Series``, ``np.array``, or ``pm.Data``."
+                " Previous versions allowed passing distribution parameters as"
+                " a dictionary in ``observed``, in the current version these "
+                "parameters are positional arguments."
+            ),
         ):
             size = (3,)
             with pm.Model() as model:
