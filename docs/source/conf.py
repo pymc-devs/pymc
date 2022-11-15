@@ -110,8 +110,12 @@ author = "PyMC contributors"
 version = pymc.__version__
 if os.environ.get("READTHEDOCS", False):
     rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
-    if "." not in rtd_version and rtd_version.lower() != "stable":
+    if rtd_version.lower() == "stable":
+        version = pymc.__version__.split("+")[0]
+    elif rtd_version.lower() == "latest":
         version = "dev"
+    else:
+        version = rtd_version
 else:
     rtd_version = "local"
 # The full version, including alpha/beta/rc tags.
@@ -222,7 +226,7 @@ def setup(app):
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "pydata_sphinx_theme"
+html_theme = "pymc_sphinx_theme"
 
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -230,39 +234,9 @@ html_theme = "pydata_sphinx_theme"
 # documentation.
 
 html_theme_options = {
-    "icon_links": [
-        {
-            "name": "GitHub",
-            "url": "https://github.com/pymc-devs/pymc",
-            "icon": "fab fa-github-square",
-        },
-        {
-            "name": "Twitter",
-            "url": "https://twitter.com/pymc_devs",
-            "icon": "fab fa-twitter-square",
-        },
-        {
-            "name": "YouTube",
-            "url": "https://www.youtube.com/c/PyMCDevelopers",
-            "icon": "fab fa-youtube",
-        },
-        {
-            "name": "Discourse",
-            "url": "https://discourse.pymc.io",
-            "icon": "fab fa-discourse",
-        },
-    ],
     "logo": {
         "link": "https://www.pymc.io",
     },
-    "show_prev_next": False,
-    "navbar_start": ["navbar-logo", "navbar-version"],
-    "navbar_end": ["navbar-icon-links.html"],
-    "page_sidebar_items": ["page-toc", "edit-this-page", "donate"],
-    "header_links_before_dropdown": 6,
-    "search_bar_text": "Search...",
-    "use_edit_page_button": True,
-    "google_analytics_id": "UA-176578023-1",
 }
 html_context = {
     "github_user": "pymc-devs",
@@ -294,8 +268,7 @@ html_favicon = "../logos/PyMC.ico"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["../logos", "_static"]
-html_css_files = ["custom.css"]
+html_static_path = ["../logos"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -311,9 +284,6 @@ html_css_files = ["custom.css"]
 # html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {
-    "**": ["sidebar-nav-bs.html"],
-}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
