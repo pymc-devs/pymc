@@ -577,6 +577,14 @@ class DensityDist(Distribution):
 
     def __new__(cls, name, *args, **kwargs):
         kwargs.setdefault("class_name", name)
+        if isinstance(kwargs.get("observed", None), dict):
+            raise TypeError(
+                "Since ``v4.0.0`` the ``observed`` parameter should be of type"
+                " ``pd.Series``, ``np.array``, or ``pm.Data``."
+                " Previous versions allowed passing distribution parameters as"
+                " a dictionary in ``observed``, in the current version these "
+                "parameters are positional arguments."
+            )
         return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
