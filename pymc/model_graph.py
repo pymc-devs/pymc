@@ -355,7 +355,7 @@ def model_to_networkx(
 
         model_to_networkx(schools)
     """
-    if not "plain" in formatting:
+    if "plain" not in formatting:
 
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
 
@@ -419,7 +419,7 @@ def model_to_graphviz(
 
         model_to_graphviz(schools)
     """
-    if not "plain" in formatting:
+    if "plain" not in formatting:
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
     if formatting != "plain":
         warnings.warn(

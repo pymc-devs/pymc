@@ -27,7 +27,6 @@ dependencies:
 - myst-nb
 - numpydoc
 - pre-commit>=2.8.0
-- pydata-sphinx-theme>=0.11.0
 - pytest-cov>=2.5
 - pytest>=3.0
 - sphinx-copybutton
@@ -38,5 +37,7 @@ dependencies:
 - watermark
 - polyagamma
 - sphinx-remove-toctrees
-- mypy=0.982
+- mypy=0.990
 - types-cachetools
+- pip:
+  - git+https://github.com/pymc-devs/pymc-sphinx-theme

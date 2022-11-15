@@ -12,6 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import annotations
+
+from typing import Any
+
 import numpy as np
 
 from pymc.stats.convergence import SamplerWarning
@@ -119,7 +123,7 @@ class HamiltonianMC(BaseHMC):
         self.path_length = path_length
         self.max_steps = max_steps
 
-    def _hamiltonian_step(self, start, p0, step_size):
+    def _hamiltonian_step(self, start, p0, step_size: float) -> HMCStepData:
         n_steps = max(1, int(self.path_length / step_size))
         n_steps = min(self.max_steps, n_steps)
 
@@ -156,7 +160,7 @@ class HamiltonianMC(BaseHMC):
             end = state
             accepted = True
 
-        stats = {
+        stats: dict[str, Any] = {
             "path_length": self.path_length,
             "n_steps": n_steps,
             "accept": accept_stat,
