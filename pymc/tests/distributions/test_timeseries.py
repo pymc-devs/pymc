@@ -876,7 +876,7 @@ class TestEulerMaruyama:
                     **kwargs,
                 )
 
-        t0_init = t0.initial_point(seed=RANDOM_SEED)
+        t0_init = t0.initial_point(random_seed=RANDOM_SEED)
         t1_init = {f"y_{i}": t0_init["y"][i] for i in range(batch_size)}
         np.testing.assert_allclose(
             t0.compile_logp()(t0_init),
