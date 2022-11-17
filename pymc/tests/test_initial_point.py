@@ -86,7 +86,7 @@ class TestInitvalEvaluation:
             assert ip["B2_interval__"] == 0
 
             # Modify initval of L and re-evaluate
-            pmodel.initial_values[U] = 9.9
+            pmodel.rvs_to_initial_values[U] = 9.9
             ip = pmodel.initial_point(random_seed=0)
             assert ip["B1_interval__"] < 0
             assert ip["B2_interval__"] == 0
@@ -108,7 +108,7 @@ class TestInitvalEvaluation:
         ip_vals = list(make_initial_point_fn(model=pmodel, return_transformed=False)(0).values())
         assert np.allclose(ip_vals, [1, 2, 4, 8, 16, 32], rtol=1e-3)
 
-        pmodel.initial_values[four] = 1
+        pmodel.rvs_to_initial_values[four] = 1
 
         ip_vals = list(make_initial_point_fn(model=pmodel, return_transformed=True)(0).values())
         assert np.allclose(np.exp(ip_vals), [1, 2, 4, 1, 2, 4], rtol=1e-3)

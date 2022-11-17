@@ -550,8 +550,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
 
-        self._initial_values: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]] = {}
-
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
             self.named_vars_to_dims = treedict(parent=self.parent.named_vars_to_dims)
@@ -559,6 +557,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.rvs_to_values = treedict(parent=self.parent.rvs_to_values)
             self.rvs_to_transforms = treedict(parent=self.parent.rvs_to_transforms)
             self.rvs_to_total_sizes = treedict(parent=self.parent.rvs_to_total_sizes)
+            self.rvs_to_initial_values = treedict(parent=self.parent.rvs_to_initial_values)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
             self.auto_deterministics = treelist(parent=self.parent.auto_deterministics)
@@ -573,6 +572,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.rvs_to_values = treedict()
             self.rvs_to_transforms = treedict()
             self.rvs_to_total_sizes = treedict()
+            self.rvs_to_initial_values = treedict()
             self.free_RVs = treelist()
             self.observed_RVs = treelist()
             self.auto_deterministics = treelist()
@@ -1128,7 +1128,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         Keys are the random variables (as returned by e.g. ``pm.Uniform()``) and
         values are the numeric/symbolic initial values, strings denoting the strategy to get them, or None.
         """
-        return self._initial_values
+        warnings.warn(
+            "Model.initial_values is deprecated. Use Model.rvs_to_initial_values instead."
+        )
+        return self.rvs_to_initial_values
 
     def set_initval(self, rv_var, initval):
         """Sets an initial value (strategy) for a random variable."""
@@ -1136,7 +1139,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # Convert scalars or array-like inputs to ndarrays
             initval = rv_var.type.filter(initval)
 
-        self.initial_values[rv_var] = initval
+        self.rvs_to_initial_values[rv_var] = initval
 
     def set_data(
         self,
