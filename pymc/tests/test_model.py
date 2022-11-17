@@ -1195,21 +1195,29 @@ class TestImputationMissingData:
                 trace = pm.sample(chains=1, tune=5, draws=50)
 
     def test_interval_missing_observations(self):
+        rng = np.random.default_rng(1198)
+
         with pm.Model() as model:
             obs1 = np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
             obs2 = np.ma.masked_values([-1, -1, 6, -1, 8], value=-1)
 
-            rng = aesara.shared(np.random.RandomState(2323), borrow=True)
-
             with pytest.warns(ImputationWarning):
-                theta1 = pm.Uniform("theta1", 0, 5, observed=obs1, rng=rng)
+                theta1 = pm.Uniform("theta1", 0, 5, observed=obs1)
             with pytest.warns(ImputationWarning):
-                theta2 = pm.Normal("theta2", mu=theta1, observed=obs2, rng=rng)
+                theta2 = pm.Normal("theta2", mu=theta1, observed=obs2)
 
             assert isinstance(model.rvs_to_transforms[model["theta1_missing"]], IntervalTransform)
             assert model.rvs_to_transforms[model["theta1_observed"]] is None
 
-            prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
+            prior_trace = pm.sample_prior_predictive(random_seed=rng, return_inferencedata=False)
+            assert set(prior_trace.keys()) == {
+                "theta1",
+                "theta1_observed",
+                "theta1_missing",
+                "theta2",
+                "theta2_observed",
+                "theta2_missing",
+            }
 
             # Make sure the observed + missing combined deterministics have the
             # same shape as the original observations vectors
@@ -1237,23 +1245,47 @@ class TestImputationMissingData:
                 == 0.0
             )
 
-            assert {"theta1", "theta2"} <= set(prior_trace.keys())
-
             trace = pm.sample(
-                chains=1, draws=50, compute_convergence_checks=False, return_inferencedata=False
+                chains=1,
+                draws=50,
+                compute_convergence_checks=False,
+                return_inferencedata=False,
+                random_seed=rng,
             )
+            assert set(trace.varnames) == {
+                "theta1",
+                "theta1_missing",
+                "theta1_missing_interval__",
+                "theta2",
+                "theta2_missing",
+            }
 
+            # Make sure that the missing values are newly generated samples and that
+            # the observed and deterministic match
             assert np.all(0 < trace["theta1_missing"].mean(0))
             assert np.all(0 < trace["theta2_missing"].mean(0))
-            assert "theta1" not in trace.varnames
-            assert "theta2" not in trace.varnames
+            assert np.isclose(np.mean(trace["theta1"][:, obs1.mask] - trace["theta1_missing"]), 0)
+            assert np.isclose(np.mean(trace["theta2"][:, obs2.mask] - trace["theta2_missing"]), 0)
 
-            # Make sure that the observed values are newly generated samples and that
-            # the observed and deterministic matche
-            pp_idata = pm.sample_posterior_predictive(trace)
+            # Make sure that the observed values are unchanged
+            assert np.allclose(np.var(trace["theta1"][:, ~obs1.mask], 0), 0.0)
+            assert np.allclose(np.var(trace["theta2"][:, ~obs2.mask], 0), 0.0)
+            np.testing.assert_array_equal(trace["theta1"][0][~obs1.mask], obs1[~obs1.mask])
+            np.testing.assert_array_equal(trace["theta2"][0][~obs2.mask], obs1[~obs2.mask])
+
+            pp_idata = pm.sample_posterior_predictive(trace, random_seed=rng)
             pp_trace = pp_idata.posterior_predictive.stack(sample=["chain", "draw"]).transpose(
                 "sample", ...
             )
+            assert set(pp_trace.keys()) == {
+                "theta1",
+                "theta1_observed",
+                "theta2",
+                "theta2_observed",
+            }
+
+            # Make sure that the observed values are newly generated samples and that
+            # the observed and deterministic match
             assert np.all(np.var(pp_trace["theta1"], 0) > 0.0)
             assert np.all(np.var(pp_trace["theta2"], 0) > 0.0)
             assert np.isclose(

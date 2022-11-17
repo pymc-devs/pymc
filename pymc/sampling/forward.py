@@ -35,7 +35,14 @@ import numpy as np
 import xarray
 
 from aesara import tensor as at
-from aesara.graph.basic import Apply, Constant, Variable, general_toposort, walk
+from aesara.graph.basic import (
+    Apply,
+    Constant,
+    Variable,
+    ancestors,
+    general_toposort,
+    walk,
+)
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.var import (
     RandomGeneratorSharedVariable,
@@ -324,6 +331,18 @@ def draw(
     return [np.stack(v) for v in drawn_values]
 
 
+def observed_dependent_deterministics(model: Model):
+    """Find deterministics that depend directly on observed variables"""
+    deterministics = model.deterministics
+    observed_rvs = set(model.observed_RVs)
+    blockers = model.basic_RVs
+    return [
+        deterministic
+        for deterministic in deterministics
+        if observed_rvs & set(ancestors([deterministic], blockers=blockers))
+    ]
+
+
 def sample_prior_predictive(
     samples: int = 500,
     model: Optional[Model] = None,
@@ -371,10 +390,7 @@ def sample_prior_predictive(
         )
 
     if var_names is None:
-        vars_: Set[str] = {
-            var.name
-            for var in model.basic_RVs + model.deterministics + model.auto_deterministics
-        }
+        vars_: Set[str] = {var.name for var in model.basic_RVs + model.deterministics}
     else:
         vars_ = set(var_names)
 
@@ -570,7 +586,7 @@ def sample_posterior_predictive(
     if var_names is not None:
         vars_ = [model[x] for x in var_names]
     else:
-        vars_ = model.observed_RVs + model.auto_deterministics
+        vars_ = model.observed_RVs + observed_dependent_deterministics(model)
 
     indices = np.arange(samples)
     if progressbar:
