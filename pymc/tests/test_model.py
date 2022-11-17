@@ -1206,9 +1206,8 @@ class TestImputationMissingData:
             with pytest.warns(ImputationWarning):
                 theta2 = pm.Normal("theta2", mu=theta1, observed=obs2, rng=rng)
 
-            assert "theta1_observed" in model.named_vars
-            assert "theta1_missing_interval__" in model.named_vars
-            assert model.rvs_to_transforms[model.named_vars["theta1_observed"]] is None
+            assert isinstance(model.rvs_to_transforms[model["theta1_missing"]], IntervalTransform)
+            assert model.rvs_to_transforms[model["theta1_observed"]] is None
 
             prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
 
