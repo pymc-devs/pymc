@@ -133,7 +133,7 @@ def make_initial_point_fn(
 
     sdict_overrides = convert_str_to_rv_dict(model, overrides or {})
     initval_strats = {
-        **model.initial_values,
+        **model.rvs_to_initial_values,
         **sdict_overrides,
     }
 

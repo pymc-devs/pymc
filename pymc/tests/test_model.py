@@ -586,11 +586,11 @@ def test_initial_point():
     with model:
         y = pm.Normal("y", initval=y_initval)
 
-    assert a in model.initial_values
-    assert x in model.initial_values
-    assert model.initial_values[b] == b_initval
+    assert a in model.rvs_to_initial_values
+    assert x in model.rvs_to_initial_values
+    assert model.rvs_to_initial_values[b] == b_initval
     assert model.initial_point(0)["b_interval__"] == b_initval_trans
-    assert model.initial_values[y] == y_initval
+    assert model.rvs_to_initial_values[y] == y_initval
 
 
 def test_point_logps():
