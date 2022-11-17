@@ -33,8 +33,9 @@ from pymc.aesaraf import (
 )
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
+from pymc.initial_point import make_initial_point_expression
 from pymc.model import Point, modelcontext
-from pymc.sampling.forward import sample_prior_predictive
+from pymc.sampling.forward import draw
 from pymc.step_methods.metropolis import MultivariateNormalProposal
 from pymc.vartypes import discrete_types
 
@@ -182,13 +183,20 @@ class SMC_KERNEL(ABC):
                 "ignore", category=UserWarning, message="The effect of Potentials"
             )
 
-            result = sample_prior_predictive(
-                self.draws,
-                var_names=[v.name for v in self.model.unobserved_value_vars],
-                model=self.model,
-                return_inferencedata=False,
+            model = self.model
+            prior_expression = make_initial_point_expression(
+                free_rvs=model.free_RVs,
+                rvs_to_transforms=model.rvs_to_transforms,
+                initval_strategies={},
+                default_strategy="prior",
+                return_transformed=True,
             )
-        return cast(Dict[str, np.ndarray], result)
+            prior_values = draw(prior_expression, draws=self.draws, random_seed=self.rng)
+
+            names = [model.rvs_to_values[rv].name for rv in model.free_RVs]
+            dict_prior = {k: np.stack(v) for k, v in zip(names, prior_values)}
+
+        return cast(Dict[str, np.ndarray], dict_prior)
 
     def _initialize_kernel(self):
         """Create variables and logp function necessary to run kernel
@@ -325,12 +333,11 @@ class SMC_KERNEL(ABC):
         for i in range(lenght_pos):
             value = []
             size = 0
-            for varname in varnames:
-                shape, new_size = self.var_info[varname]
+            for var in self.variables:
+                shape, new_size = self.var_info[var.name]
                 var_samples = self.tempered_posterior[i][size : size + new_size]
                 # Round discrete variable samples. The rounded values were the ones
                 # actually used in the logp evaluations (see logp_forw)
-                var = self.model[varname]
                 if var.dtype in discrete_types:
                     var_samples = np.round(var_samples).astype(var.dtype)
                 value.append(var_samples.reshape(shape))

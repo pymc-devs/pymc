@@ -1480,7 +1480,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 value_var.tag.test_value = transform.forward(
                     value_var, *rv_var.owner.inputs
                 ).tag.test_value
-            self.named_vars[value_var.name] = value_var
         self.rvs_to_transforms[rv_var] = transform
         self.rvs_to_values[rv_var] = value_var
         self.values_to_rvs[value_var] = rv_var
@@ -1704,14 +1703,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
         None
         """
         start_points = [start] if isinstance(start, dict) else start
+
+        value_names_to_dtypes = {value.name: value.dtype for value in self.value_vars}
+        value_names_set = set(value_names_to_dtypes.keys())
         for elem in start_points:
 
             for k, v in elem.items():
-                elem[k] = np.asarray(v, dtype=self[k].dtype)
+                elem[k] = np.asarray(v, dtype=value_names_to_dtypes[k])
 
-            if not set(elem.keys()).issubset(self.named_vars.keys()):
-                extra_keys = ", ".join(set(elem.keys()) - set(self.named_vars.keys()))
-                valid_keys = ", ".join(self.named_vars.keys())
+            if not set(elem.keys()).issubset(value_names_set):
+                extra_keys = ", ".join(set(elem.keys()) - value_names_set)
+                valid_keys = ", ".join(value_names_set)
                 raise KeyError(
                     "Some start parameters do not appear in the model!\n"
                     f"Valid keys are: {valid_keys}, but {extra_keys} was supplied"

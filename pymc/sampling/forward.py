@@ -343,7 +343,7 @@ def sample_prior_predictive(
     var_names : Iterable[str]
         A list of names of variables for which to compute the prior predictive
         samples. Defaults to both observed and unobserved RVs. Transformed values
-        are not included unless explicitly defined in var_names.
+        are not allowed.
     random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     return_inferencedata : bool
@@ -382,23 +382,10 @@ def sample_prior_predictive(
     names = sorted(get_default_varnames(vars_, include_transformed=False))
     vars_to_sample = [model[name] for name in names]
 
-    # Any variables from var_names that are missing must be transformed variables.
-    # Misspelled variables would have raised a KeyError above.
+    # Any variables from var_names still missing are assumed to be transformed variables.
     missing_names = vars_.difference(names)
-    for name in sorted(missing_names):
-        transformed_value_var = model[name]
-        rv_var = model.values_to_rvs[transformed_value_var]
-        transform = model.rvs_to_transforms[rv_var]
-        transformed_rv_var = transform.forward(rv_var, *rv_var.owner.inputs)
-
-        names.append(name)
-        vars_to_sample.append(transformed_rv_var)
-
-        # If the user asked for the transformed variable in var_names, but not the
-        # original RV, we add it manually here
-        if rv_var.name not in names:
-            names.append(rv_var.name)
-            vars_to_sample.append(rv_var)
+    if missing_names:
+        raise ValueError(f"Unrecognized var_names: {missing_names}")
 
     if random_seed is not None:
         (random_seed,) = _get_seeds_per_chain(random_seed, 1)

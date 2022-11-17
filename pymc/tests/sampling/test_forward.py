@@ -1175,51 +1175,13 @@ class TestSamplePriorPredictive(SeededTest):
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_prior_predictive(samples=5)
 
-    def test_transformed_vars(self):
-        # Test that prior predictive returns transformation of RVs when these are
-        # passed explicitly in `var_names`
-
-        def ub_interval_forward(x, ub):
-            # Interval transform assuming lower bound is zero
-            return np.log(x - 0) - np.log(ub - x)
-
+    def test_transformed_vars_not_supported(self):
         with pm.Model() as model:
             ub = pm.HalfNormal("ub", 10)
             x = pm.Uniform("x", 0, ub)
 
-            prior = pm.sample_prior_predictive(
-                var_names=["ub", "ub_log__", "x", "x_interval__"],
-                samples=10,
-                random_seed=123,
-            )
-
-        # Check values are correct
-        assert np.allclose(prior.prior["ub_log__"].data, np.log(prior.prior["ub"].data))
-        assert np.allclose(
-            prior.prior["x_interval__"].data,
-            ub_interval_forward(prior.prior["x"].data, prior.prior["ub"].data),
-        )
-
-        # Check that it works when the original RVs are not mentioned in var_names
-        with pm.Model() as model_transformed_only:
-            ub = pm.HalfNormal("ub", 10)
-            x = pm.Uniform("x", 0, ub)
-
-            prior_transformed_only = pm.sample_prior_predictive(
-                var_names=["ub_log__", "x_interval__"],
-                samples=10,
-                random_seed=123,
-            )
-        assert (
-            "ub" not in prior_transformed_only.prior.data_vars
-            and "x" not in prior_transformed_only.prior.data_vars
-        )
-        assert np.allclose(
-            prior.prior["ub_log__"].data, prior_transformed_only.prior["ub_log__"].data
-        )
-        assert np.allclose(
-            prior.prior["x_interval__"], prior_transformed_only.prior["x_interval__"].data
-        )
+            with pytest.raises(ValueError, match="Unrecognized var_names"):
+                pm.sample_prior_predictive(var_names=["ub", "ub_log__", "x", "x_interval__"])
 
     def test_issue_4490(self):
         # Test that samples do not depend on var_name order or, more fundamentally,
