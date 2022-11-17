@@ -215,12 +215,11 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         }
 
         self.dims = {} if dims is None else dims
-        if hasattr(self.model, "RV_dims"):
-            model_dims = {
-                var_name: [dim for dim in dims if dim is not None]
-                for var_name, dims in self.model.RV_dims.items()
-            }
-            self.dims = {**model_dims, **self.dims}
+        model_dims = {
+            var_name: [dim for dim in dims if dim is not None]
+            for var_name, dims in self.model.named_vars_to_dims.items()
+        }
+        self.dims = {**model_dims, **self.dims}
         if sample_dims is None:
             sample_dims = ["chain", "draw"]
         self.sample_dims = sample_dims

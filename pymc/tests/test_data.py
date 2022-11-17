@@ -331,7 +331,7 @@ class TestData(SeededTest):
         assert pmodel.dim_lengths["rows"].eval() == 5
         assert "columns" in pmodel.coords
         assert pmodel.coords["columns"] == ("C1", "C2", "C3", "C4", "C5", "C6", "C7")
-        assert pmodel.RV_dims == {"observations": ("rows", "columns")}
+        assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
         assert "columns" in pmodel.dim_lengths
         assert pmodel.dim_lengths["columns"].eval() == 7
 
@@ -382,7 +382,7 @@ class TestData(SeededTest):
 
         assert "date" in pmodel.coords
         assert len(pmodel.coords["date"]) == 22
-        assert pmodel.RV_dims == {"sales": ("date",)}
+        assert pmodel.named_vars_to_dims == {"sales": ("date",)}
 
     def test_implicit_coords_dataframe(self):
         pd = pytest.importorskip("pandas")
@@ -402,7 +402,7 @@ class TestData(SeededTest):
 
         assert "rows" in pmodel.coords
         assert "columns" in pmodel.coords
-        assert pmodel.RV_dims == {"observations": ("rows", "columns")}
+        assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
 
     def test_data_kwargs(self):
         strict_value = True

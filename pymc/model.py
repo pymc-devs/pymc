@@ -554,6 +554,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
+            self.named_vars_to_dims = treedict(parent=self.parent.named_vars_to_dims)
             self.values_to_rvs = treedict(parent=self.parent.values_to_rvs)
             self.rvs_to_values = treedict(parent=self.parent.rvs_to_values)
             self.rvs_to_transforms = treedict(parent=self.parent.rvs_to_transforms)
@@ -564,10 +565,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.deterministics = treelist(parent=self.parent.deterministics)
             self.potentials = treelist(parent=self.parent.potentials)
             self._coords = self.parent._coords
-            self._RV_dims = treedict(parent=self.parent._RV_dims)
             self._dim_lengths = self.parent._dim_lengths
         else:
             self.named_vars = treedict()
+            self.named_vars_to_dims = treedict()
             self.values_to_rvs = treedict()
             self.rvs_to_values = treedict()
             self.rvs_to_transforms = treedict()
@@ -578,7 +579,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.deterministics = treelist()
             self.potentials = treelist()
             self._coords = {}
-            self._RV_dims = treedict()
             self._dim_lengths = {}
         self.add_coords(coords)
 
@@ -972,7 +972,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Entries in the tuples may be ``None``, if the RV dimension was not given a name.
         """
-        return self._RV_dims
+        warnings.warn(
+            "Model.RV_dims is deprecated. User Model.named_vars_to_dims instead.",
+            FutureWarning,
+        )
+        return self.named_vars_to_dims
 
     @property
     def coords(self) -> Dict[str, Union[Tuple, None]]:
@@ -1167,7 +1171,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if isinstance(values, list):
             values = np.array(values)
         values = convert_observed_data(values)
-        dims = self.RV_dims.get(name, None) or ()
+        dims = self.named_vars_to_dims.get(name, None) or ()
         coords = coords or {}
 
         if values.ndim != shared_object.ndim:
@@ -1297,7 +1301,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if observed is None:
             self.free_RVs.append(rv_var)
             self.create_value_var(rv_var, transform)
-            self.add_random_variable(rv_var, dims)
+            self.add_named_variable(rv_var, dims)
             self.set_initval(rv_var, initval)
         else:
             if (
@@ -1424,7 +1428,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             observed_rv_var.tag.observations = nonmissing_data
 
             self.create_value_var(observed_rv_var, transform=None, value_var=nonmissing_data)
-            self.add_random_variable(observed_rv_var)
+            self.add_named_variable(observed_rv_var)
             self.observed_RVs.append(observed_rv_var)
 
             # Create deterministic that combines observed and missing
@@ -1440,7 +1444,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 data = at.as_tensor_variable(data, name=name)
             rv_var.tag.observations = data
             self.create_value_var(rv_var, transform=None, value_var=data)
-            self.add_random_variable(rv_var, dims)
+            self.add_named_variable(rv_var, dims)
             self.observed_RVs.append(rv_var)
 
         return rv_var
@@ -1486,8 +1490,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return value_var
 
-    def add_random_variable(self, var, dims: Optional[Tuple[Union[str, None], ...]] = None):
-        """Add a random variable to the named variables of the model."""
+    def add_named_variable(self, var, dims: Optional[Tuple[Union[str, None], ...]] = None):
+        """Add a random graph variable to the named variables of the model.
+
+        This can include several types of variables such basic_RVs, Data, Deterministics,
+        and Potentials.
+        """
         if self.named_vars.tree_contains(var.name):
             raise ValueError(f"Variable name {var.name} already exists.")
 
@@ -1499,7 +1507,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     raise ValueError(f"Dimension {dim} is not specified in `coords`.")
             if any(var.name == dim for dim in dims):
                 raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
-            self._RV_dims[var.name] = dims
+            self.named_vars_to_dims[var.name] = dims
 
         self.named_vars[var.name] = var
         if not hasattr(self, self.name_of(var.name)):
@@ -1967,7 +1975,7 @@ def Deterministic(name, var, model=None, dims=None, auto=False):
         model.auto_deterministics.append(var)
     else:
         model.deterministics.append(var)
-    model.add_random_variable(var, dims)
+    model.add_named_variable(var, dims)
 
     from pymc.printing import str_for_potential_or_deterministic
 
@@ -1999,7 +2007,7 @@ def Potential(name, var, model=None):
     model = modelcontext(model)
     var.name = model.name_for(name)
     model.potentials.append(var)
-    model.add_random_variable(var)
+    model.add_named_variable(var)
 
     from pymc.printing import str_for_potential_or_deterministic
 

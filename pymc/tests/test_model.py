@@ -726,7 +726,7 @@ def test_nested_model_coords():
         e = pm.Normal("e", a[None] + d[:, None], dims=("dim2", "dim1"))
     assert m1.coords is m2.coords
     assert m1.dim_lengths is m2.dim_lengths
-    assert set(m2.RV_dims) < set(m1.RV_dims)
+    assert set(m2.named_vars_to_dims) < set(m1.named_vars_to_dims)
 
 
 def test_shapeerror_from_set_data_dimensionality():
@@ -1378,7 +1378,7 @@ class TestImputationMissingData:
         with pm.Model(coords={"observed": range(10)}) as model:
             with pytest.warns(ImputationWarning):
                 x = pm.Normal("x", observed=data, dims=("observed",))
-        assert model.RV_dims == {"x": ("observed",)}
+        assert model.named_vars_to_dims == {"x": ("observed",)}
 
     def test_error_non_random_variable(self):
         data = np.array([np.nan] * 3 + [0] * 7)

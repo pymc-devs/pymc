@@ -371,11 +371,10 @@ def sample_prior_predictive(
         )
 
     if var_names is None:
-        prior_pred_vars = model.observed_RVs + model.auto_deterministics
-        prior_vars = (
-            get_default_varnames(model.unobserved_RVs, include_transformed=True) + model.potentials
-        )
-        vars_: Set[str] = {var.name for var in prior_vars + prior_pred_vars}
+        vars_: Set[str] = {
+            var.name
+            for var in model.basic_RVs + model.deterministics + model.auto_deterministics
+        }
     else:
         vars_ = set(var_names)
 

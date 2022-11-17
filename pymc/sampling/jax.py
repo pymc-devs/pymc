@@ -343,13 +343,10 @@ def sample_blackjax_nuts(
         if cvals is not None
     }
 
-    if hasattr(model, "RV_dims"):
-        dims = {
-            var_name: [dim for dim in dims if dim is not None]
-            for var_name, dims in model.RV_dims.items()
-        }
-    else:
-        dims = {}
+    dims = {
+        var_name: [dim for dim in dims if dim is not None]
+        for var_name, dims in model.named_vars_to_dims.items()
+    }
 
     (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
@@ -559,13 +556,10 @@ def sample_numpyro_nuts(
         if cvals is not None
     }
 
-    if hasattr(model, "RV_dims"):
-        dims = {
-            var_name: [dim for dim in dims if dim is not None]
-            for var_name, dims in model.RV_dims.items()
-        }
-    else:
-        dims = {}
+    dims = {
+        var_name: [dim for dim in dims if dim is not None]
+        for var_name, dims in model.named_vars_to_dims.items()
+    }
 
     (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 

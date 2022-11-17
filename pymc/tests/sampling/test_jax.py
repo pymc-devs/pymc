@@ -235,7 +235,7 @@ def test_idata_kwargs(
 
     posterior = idata.get("posterior")
     assert posterior is not None
-    x_dim_expected = idata_kwargs.get("dims", model_test_idata_kwargs.RV_dims)["x"][0]
+    x_dim_expected = idata_kwargs.get("dims", model_test_idata_kwargs.named_vars_to_dims)["x"][0]
     assert x_dim_expected is not None
     assert posterior["x"].dims[-1] == x_dim_expected
 
