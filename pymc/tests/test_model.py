@@ -1445,7 +1445,7 @@ def test_tag_future_warning_model():
         assert y is not x
         assert y.tag is not x.tag
         assert isinstance(y.tag, _FutureWarningValidatingScratchpad)
-        y = model.register_rv(y, name="y", data=5)
+        y = model.register_rv(y, name="y", observed=5)
         assert isinstance(y.tag, _FutureWarningValidatingScratchpad)
 
         # Test expected warnings

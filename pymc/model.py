@@ -1257,7 +1257,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         shared_object.set_value(values)
 
     def register_rv(
-        self, rv_var, name, data=None, total_size=None, dims=None, transform=UNSET, initval=None
+        self, rv_var, name, observed=None, total_size=None, dims=None, transform=UNSET, initval=None
     ):
         """Register an (un)observed random variable with the model.
 
@@ -1266,9 +1266,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         rv_var: TensorVariable
         name: str
             Intended name for the model variable.
-        data: array_like (optional)
-            If data is provided, the variable is observed. If None,
-            the variable is unobserved.
+        observed: array_like (optional)
+            Data values for observed variables.
         total_size: scalar
             upscales logp of variable with ``coef = total_size/var.shape[0]``
         dims: tuple
@@ -1295,31 +1294,31 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 if dname not in self.dim_lengths:
                     self.add_coord(dname, values=None, length=rv_var.shape[d])
 
-        if data is None:
+        if observed is None:
             self.free_RVs.append(rv_var)
             self.create_value_var(rv_var, transform)
             self.add_random_variable(rv_var, dims)
             self.set_initval(rv_var, initval)
         else:
             if (
-                isinstance(data, Variable)
-                and not isinstance(data, (GenTensorVariable, Minibatch))
-                and data.owner is not None
+                isinstance(observed, Variable)
+                and not isinstance(observed, (GenTensorVariable, Minibatch))
+                and observed.owner is not None
                 # The only Aesara operation we allow on observed data is type casting
                 # Although we could allow for any graph that does not depend on other RVs
                 and not (
-                    isinstance(data.owner.op, Elemwise)
-                    and isinstance(data.owner.op.scalar_op, Cast)
+                    isinstance(observed.owner.op, Elemwise)
+                    and isinstance(observed.owner.op.scalar_op, Cast)
                 )
             ):
                 raise TypeError(
                     "Variables that depend on other nodes cannot be used for observed data."
-                    f"The data variable was: {data}"
+                    f"The data variable was: {observed}"
                 )
 
             # `rv_var` is potentially changed by `make_obs_var`,
             # for example into a new graph for imputation of missing data.
-            rv_var = self.make_obs_var(rv_var, data, dims, transform)
+            rv_var = self.make_obs_var(rv_var, observed, dims, transform)
 
         return rv_var
 
