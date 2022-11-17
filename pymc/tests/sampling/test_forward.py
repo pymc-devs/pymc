@@ -38,6 +38,7 @@ from pymc.backends.base import MultiTrace
 from pymc.sampling.forward import (
     compile_forward_sampling_function,
     get_vars_in_point_list,
+    observed_dependent_deterministics,
 )
 from pymc.tests.helpers import SeededTest, fast_unstable_sampling_mode
 
@@ -1621,3 +1622,19 @@ def test_get_vars_in_point_list():
     trace = MultiTrace([strace])
     vars_in_trace = get_vars_in_point_list(trace, modelB)
     assert set(vars_in_trace) == {a}
+
+
+def test_observed_dependent_deterministics():
+    with pm.Model() as m:
+        free = pm.Normal("free")
+        obs = pm.Normal("obs", observed=1)
+
+        det_free = pm.Deterministic("det_free", free + 1)
+        det_free2 = pm.Deterministic("det_free2", det_free + 1)
+
+        det_obs = pm.Deterministic("det_obs", obs + 1)
+        det_obs2 = pm.Deterministic("det_obs2", det_obs + 1)
+
+        det_mixed = pm.Deterministic("det_mixed", free + obs)
+
+    assert set(observed_dependent_deterministics(m)) == {det_obs, det_obs2, det_mixed}

@@ -560,7 +560,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.rvs_to_initial_values = treedict(parent=self.parent.rvs_to_initial_values)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
-            self.auto_deterministics = treelist(parent=self.parent.auto_deterministics)
             self.deterministics = treelist(parent=self.parent.deterministics)
             self.potentials = treelist(parent=self.parent.potentials)
             self._coords = self.parent._coords
@@ -575,7 +574,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.rvs_to_initial_values = treedict()
             self.free_RVs = treelist()
             self.observed_RVs = treelist()
-            self.auto_deterministics = treelist()
             self.deterministics = treelist()
             self.potentials = treelist()
             self._coords = {}
@@ -1435,10 +1433,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.observed_RVs.append(observed_rv_var)
 
             # Create deterministic that combines observed and missing
+            # Note: This can widely increase memory consumption during sampling for large datasets
             rv_var = at.zeros(data.shape)
             rv_var = at.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
             rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
-            rv_var = Deterministic(name, rv_var, self, dims, auto=True)
+            rv_var = Deterministic(name, rv_var, self, dims)
 
         else:
             if sps.issparse(data):
@@ -1911,7 +1910,7 @@ def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
     }
 
 
-def Deterministic(name, var, model=None, dims=None, auto=False):
+def Deterministic(name, var, model=None, dims=None):
     """Create a named deterministic variable.
 
     Deterministic nodes are only deterministic given all of their inputs, i.e.
@@ -1974,10 +1973,7 @@ def Deterministic(name, var, model=None, dims=None, auto=False):
     """
     model = modelcontext(model)
     var = var.copy(model.name_for(name))
-    if auto:
-        model.auto_deterministics.append(var)
-    else:
-        model.deterministics.append(var)
+    model.deterministics.append(var)
     model.add_named_variable(var, dims)
 
     from pymc.printing import str_for_potential_or_deterministic
