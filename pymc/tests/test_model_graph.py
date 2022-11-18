@@ -247,7 +247,7 @@ def model_non_random_variable_rvs():
 
         z_raw = pm.Normal.dist(y, shape=(5,))
         z = pm.math.clip(z_raw, -1, 1)
-        model.register_rv(z, name="z", data=[0] * 5)
+        model.register_rv(z, name="z", observed=[0] * 5)
 
     compute_graph = {
         "mu": set(),

@@ -70,7 +70,6 @@ except ImportError:  # pragma: no cover
 
 class TestBoundedContinuous:
     def get_dist_params_and_interval_bounds(self, model, rv_name):
-        interval_rv = model.named_vars[f"{rv_name}_interval__"]
         rv = model.named_vars[rv_name]
         dist_params = rv.owner.inputs
         lower_interval, upper_interval = model.rvs_to_transforms[rv].args_fn(*rv.owner.inputs)

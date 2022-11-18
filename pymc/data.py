@@ -718,6 +718,6 @@ def Data(
                     length=xshape[d],
                 )
 
-    model.add_random_variable(x, dims=dims)
+    model.add_named_variable(x, dims=dims)
 
     return x

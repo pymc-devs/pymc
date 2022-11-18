@@ -120,7 +120,7 @@ class treedict(dict):
     update = withparent(dict.update)
 
     def tree_contains(self, item):
-        # needed for `add_random_variable` method
+        # needed for `add_named_variable` method
         if isinstance(self.parent, treedict):
             return dict.__contains__(self, item) or self.parent.tree_contains(item)
         elif isinstance(self.parent, dict):

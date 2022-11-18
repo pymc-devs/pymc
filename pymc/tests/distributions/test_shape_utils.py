@@ -288,7 +288,7 @@ class TestSizeShapeDimsObserved:
             # The shape and dims tuples correspond to each other.
             # Note: No checks are performed that implied shape (x), shape and dims actually match.
             y = pm.Normal("y", mu=x, shape=(2, 3), dims=("dshape", "ddata"))
-            assert pmodel.RV_dims["y"] == ("dshape", "ddata")
+            assert pmodel.named_vars_to_dims["y"] == ("dshape", "ddata")
 
             assert "dshape" in pmodel.dim_lengths
             assert y.eval().shape == (2, 3)
@@ -301,7 +301,7 @@ class TestSizeShapeDimsObserved:
             # Size does not include support dims, so this test must use a dist with support dims.
             kwargs = dict(name="y", size=(2, 3), mu=at.ones((3, 4)), cov=at.eye(4))
             y = pm.MvNormal(**kwargs, dims=("dsize", "ddata", "dsupport"))
-            assert pmodel.RV_dims["y"] == ("dsize", "ddata", "dsupport")
+            assert pmodel.named_vars_to_dims["y"] == ("dsize", "ddata", "dsupport")
 
             assert "dsize" in pmodel.dim_lengths
             assert y.eval().shape == (2, 3, 4)
@@ -313,7 +313,7 @@ class TestSizeShapeDimsObserved:
 
             # Note: No checks are performed that observed and dims actually match.
             y = pm.Normal("y", observed=[0, 0, 0], dims="ddata")
-            assert pmodel.RV_dims["y"] == ("ddata",)
+            assert pmodel.named_vars_to_dims["y"] == ("ddata",)
             assert y.eval().shape == (3,)
 
     def test_define_dims_on_the_fly_raises(self):

@@ -37,12 +37,7 @@ from pymc.backends import _init_trace
 from pymc.backends.base import BaseTrace, MultiTrace, _choose_chains
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-from pymc.initial_point import (
-    PointType,
-    StartDict,
-    filter_rvs_to_jitter,
-    make_initial_point_fns_per_chain,
-)
+from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import Draw, _cpu_count
 from pymc.sampling.population import _sample_population
@@ -476,7 +471,7 @@ def sample(
         ipfns = make_initial_point_fns_per_chain(
             model=model,
             overrides=initvals,
-            jitter_rvs=filter_rvs_to_jitter(step),
+            jitter_rvs=set(),
             chains=chains,
         )
         initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed_list)]
