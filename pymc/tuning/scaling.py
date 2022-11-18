@@ -43,7 +43,7 @@ def fixed_hessian(point, model=None):
     return rval
 
 
-def find_hessian(point, vars=None, model=None):
+def find_hessian(point, vars=None, model=None, negate_output=True):
     """
     Returns Hessian of logp at the point passed.
 
@@ -55,11 +55,11 @@ def find_hessian(point, vars=None, model=None):
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
-    H = model.compile_d2logp(vars)
+    H = model.compile_d2logp(vars, negate_output=negate_output)
     return H(Point(point, filter_model_vars=True, model=model))
 
 
-def find_hessian_diag(point, vars=None, model=None):
+def find_hessian_diag(point, vars=None, model=None, negate_output=True):
     """
     Returns Hessian of logp at the point passed.
 
@@ -71,14 +71,14 @@ def find_hessian_diag(point, vars=None, model=None):
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
-    H = model.compile_fn(hessian_diag(model.logp(), vars))
+    H = model.compile_fn(hessian_diag(model.logp(), vars, negate_output=negate_output))
     return H(Point(point, model=model))
 
 
 def guess_scaling(point, vars=None, model=None, scaling_bound=1e-8):
     model = modelcontext(model)
     try:
-        h = find_hessian_diag(point, vars, model=model)
+        h = -find_hessian_diag(point, vars, model=model, negate_output=False)
     except NotImplementedError:
         h = fixed_hessian(point, model=model)
     return adjust_scaling(h, scaling_bound)

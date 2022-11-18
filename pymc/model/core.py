@@ -658,6 +658,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
+        negate_output=True,
         **compile_kwargs,
     ) -> PointFunc:
         """Compiled log probability density hessian function.
@@ -670,7 +671,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.compile_fn(self.d2logp(vars=vars, jacobian=jacobian), **compile_kwargs)
+        return self.model.compile_fn(
+            self.d2logp(vars=vars, jacobian=jacobian, negate_output=negate_output),
+            **compile_kwargs,
+        )
 
     def logp(
         self,
@@ -794,6 +798,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
+        negate_output=True,
     ) -> Variable:
         """Hessian of the models log-probability w.r.t. ``vars``.
 
@@ -827,7 +832,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         cost = self.logp(jacobian=jacobian)
         cost = rewrite_pregrad(cost)
-        return hessian(cost, value_vars)
+        return hessian(cost, value_vars, negate_output=negate_output)
 
     @property
     def datalogp(self) -> Variable:

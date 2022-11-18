@@ -1012,16 +1012,16 @@ def test_model_d2logp(jacobian):
     test_vals = np.array([0.0, -1.0])
     state = {"x": test_vals, "y_log__": test_vals}
 
-    expected_x_d2logp = expected_y_d2logp = np.eye(2)
+    expected_x_d2logp = expected_y_d2logp = -np.eye(2)
 
-    dlogps = m.compile_d2logp(jacobian=jacobian)(state)
+    dlogps = m.compile_d2logp(jacobian=jacobian, negate_output=False)(state)
     assert np.all(np.isclose(dlogps[:2, :2], expected_x_d2logp))
     assert np.all(np.isclose(dlogps[2:, 2:], expected_y_d2logp))
 
-    x_dlogp2 = m.compile_d2logp(vars=[x], jacobian=jacobian)(state)
+    x_dlogp2 = m.compile_d2logp(vars=[x], jacobian=jacobian, negate_output=False)(state)
     assert np.all(np.isclose(x_dlogp2, expected_x_d2logp))
 
-    y_dlogp2 = m.compile_d2logp(vars=[y], jacobian=jacobian)(state)
+    y_dlogp2 = m.compile_d2logp(vars=[y], jacobian=jacobian, negate_output=False)(state)
     assert np.all(np.isclose(y_dlogp2, expected_y_d2logp))
 
 

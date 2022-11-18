@@ -352,8 +352,17 @@ def jacobian_diag(f, x):
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
-def hessian(f, vars=None):
-    return -jacobian(gradient(f, vars), vars)
+def hessian(f, vars=None, negate_output=True):
+    res = jacobian(gradient(f, vars), vars)
+    if negate_output:
+        warnings.warn(
+            "hessian will stop negating the output in a future version of PyMC.\n"
+            "To suppress this warning set `negate_output=False`",
+            FutureWarning,
+            stacklevel=2,
+        )
+        res = -res
+    return res
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
@@ -368,12 +377,21 @@ def hessian_diag1(f, v):
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
-def hessian_diag(f, vars=None):
+def hessian_diag(f, vars=None, negate_output=True):
     if vars is None:
         vars = cont_inputs(f)
 
     if vars:
-        return -pt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+        res = pt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+        if negate_output:
+            warnings.warn(
+                "hessian_diag will stop negating the output in a future version of PyMC.\n"
+                "To suppress this warning set `negate_output=False`",
+                FutureWarning,
+                stacklevel=2,
+            )
+            res = -res
+        return res
     else:
         return empty_gradient
 

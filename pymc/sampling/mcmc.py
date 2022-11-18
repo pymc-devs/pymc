@@ -1461,7 +1461,7 @@ def init_nuts(
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "map":
         start = pm.find_MAP(include_transformed=True, seed=random_seed_list[0])
-        cov = pm.find_hessian(point=start)
+        cov = -pm.find_hessian(point=start, negate_output=False)
         initial_points = [start] * chains
         potential = quadpotential.QuadPotentialFull(cov)
     elif init == "adapt_full":
