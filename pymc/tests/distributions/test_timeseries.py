@@ -856,7 +856,7 @@ class TestEulerMaruyama:
                 "y", dt=0.02, sde_fn=sde_fn, sde_pars=sde_pars, init_dist=init_dist, **kwargs
             )
 
-        y_eval = draw(y, draws=2, random_seed=RANDOM_SEED)
+        y_eval = draw(y, draws=2, random_seed=numpy_rng)
         assert y_eval[0].shape == (batch_size, steps)
         assert np.any(~np.isclose(y_eval[0], y_eval[1]))
 
@@ -945,9 +945,9 @@ class TestEulerMaruyama:
             Normal("zh", mu=xh, sigma=sig2, observed=z)
         # invert
         with model:
-            trace = sample(chains=1, random_seed=RANDOM_SEED)
+            trace = sample(chains=1, random_seed=numpy_rng)
 
-        ppc = sample_posterior_predictive(trace, model=model, random_seed=RANDOM_SEED)
+        ppc = sample_posterior_predictive(trace, model=model, random_seed=numpy_rng)
 
         p95 = [2.5, 97.5]
         lo, hi = np.percentile(trace.posterior["lamh"], p95, axis=[0, 1])
