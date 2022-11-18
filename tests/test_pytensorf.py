@@ -25,7 +25,7 @@ import scipy.sparse as sps
 from pytensor import scan, shared
 from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
-from pytensor.graph.basic import Variable
+from pytensor.graph.basic import Variable, equal_computations
 from pytensor.tensor.random.basic import normal, uniform
 from pytensor.tensor.random.var import RandomStateSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -43,6 +43,8 @@ from pymc.pytensorf import (
     constant_fold,
     convert_observed_data,
     extract_obs_data,
+    hessian,
+    hessian_diag,
     replace_rng_nodes,
     replace_vars_in_graphs,
     reseed_rngs,
@@ -726,3 +728,17 @@ def test_replace_vars_in_graphs_nested_reference():
     assert np.abs(x.eval()) < 1
     # Confirm the original `y` variable is not changed in place
     assert np.abs(y.eval()) < 1
+
+
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("func", (hessian, hessian_diag))
+def test_hessian_sign_change_warning(func):
+    x = pt.vector("x")
+    f = (x**2).sum()
+    with pytest.warns(
+        FutureWarning,
+        match="will stop negating the output",
+    ):
+        res_neg = func(f, vars=[x])
+    res = func(f, vars=[x], negate_output=False)
+    assert equal_computations([res_neg], [-res])
