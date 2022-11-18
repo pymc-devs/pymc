@@ -39,7 +39,6 @@ class HamiltonianMC(BaseHMC):
 
     name = "hmc"
     default_blocked = True
-    generates_stats = True
     stats_dtypes = [
         {
             "step_size": np.float64,

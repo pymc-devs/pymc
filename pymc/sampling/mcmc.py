@@ -912,14 +912,10 @@ def _iter_sample(
                 step.iter_count = 0
             if i == tune:
                 step.stop_tuning()
-            if step.generates_stats:
-                point, stats = step.step(point)
-                strace.record(point, stats)
-                log_warning_stats(stats)
-                diverging = i > tune and stats and stats[0].get("diverging")
-            else:
-                point = step.step(point)
-                strace.record(point, [])
+            point, stats = step.step(point)
+            strace.record(point, stats)
+            log_warning_stats(stats)
+            diverging = i > tune and stats and stats[0].get("diverging")
             if callback is not None:
                 callback(
                     trace=strace,

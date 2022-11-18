@@ -23,7 +23,7 @@ from typing import Any, NamedTuple
 import numpy as np
 
 from pymc.aesaraf import floatX
-from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.blocking import DictToArrayBijection, RaveledVars, StatsType
 from pymc.exceptions import SamplingError
 from pymc.model import Point, modelcontext
 from pymc.stats.convergence import SamplerWarning, WarningType
@@ -157,7 +157,7 @@ class BaseHMC(GradientSharedStep):
         Subclasses must overwrite this abstract method and return an `HMCStepData` object.
         """
 
-    def astep(self, q0: RaveledVars) -> tuple[RaveledVars, list[dict[str, Any]]]:
+    def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
         """Perform a single HMC iteration."""
         perf_start = time.perf_counter()
         process_start = time.process_time()
