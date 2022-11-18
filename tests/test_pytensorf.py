@@ -47,6 +47,8 @@ from pymc.pytensorf import (
     constant_fold,
     convert_observed_data,
     extract_obs_data,
+    hessian,
+    hessian_diag,
     replace_rng_nodes,
     replace_rvs_by_values,
     reseed_rngs,
@@ -878,3 +880,17 @@ class TestReplaceRVsByValues:
         [new_x], _ = _replace_vars_in_graphs([x], replacement_fn=replacement_fn)
 
         assert new_x.eval() > 50
+
+
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("func", (hessian, hessian_diag))
+def test_hessian_sign_change_warning(func):
+    x = pt.vector("x")
+    f = (x**2).sum()
+    with pytest.warns(
+        FutureWarning,
+        match="will stop negating the output",
+    ):
+        res_neg = func(f, vars=[x])
+    res = func(f, vars=[x], negate_output=False)
+    assert equal_computations([res_neg], [-res])
