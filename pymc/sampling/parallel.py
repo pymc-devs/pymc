@@ -173,7 +173,7 @@ class _Process:
 
             if draw < self._draws + self._tune:
                 try:
-                    point, stats = self._compute_point()
+                    point, stats = self._step_method.step(self._point)
                 except SamplingError as e:
                     e = ExceptionWithTraceback(e, e.__traceback__)
                     self._msg_pipe.send(("error", e))
@@ -190,14 +190,6 @@ class _Process:
                 draw += 1
             else:
                 raise ValueError("Unknown message " + msg[0])
-
-    def _compute_point(self):
-        if self._step_method.generates_stats:
-            point, stats = self._step_method.step(self._point)
-        else:
-            point = self._step_method.step(self._point)
-            stats = None
-        return point, stats
 
 
 def _run_process(*args):

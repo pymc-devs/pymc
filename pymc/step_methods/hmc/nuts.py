@@ -97,7 +97,6 @@ class NUTS(BaseHMC):
     name = "nuts"
 
     default_blocked = True
-    generates_stats = True
     stats_dtypes = [
         {
             "depth": np.int64,

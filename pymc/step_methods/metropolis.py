@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import aesara
 import numpy as np
@@ -38,6 +38,7 @@ from pymc.step_methods.arraystep import (
     ArrayStepShared,
     Competence,
     PopulationArrayStepShared,
+    StatsType,
     metrop_select,
 )
 
@@ -126,7 +127,6 @@ class Metropolis(ArrayStepShared):
     name = "metropolis"
 
     default_blocked = False
-    generates_stats = True
     stats_dtypes = [
         {
             "accept": np.float64,
@@ -244,7 +244,7 @@ class Metropolis(ArrayStepShared):
         self.accepted_sum[:] = 0
         return
 
-    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
 
         point_map_info = q0.point_map_info
         q0 = q0.data
@@ -374,7 +374,6 @@ class BinaryMetropolis(ArrayStep):
 
     name = "binary_metropolis"
 
-    generates_stats = True
     stats_dtypes = [
         {
             "accept": np.float64,
@@ -400,8 +399,8 @@ class BinaryMetropolis(ArrayStep):
 
         super().__init__(vars, [model.compile_logp()])
 
-    def astep(self, q0: RaveledVars, logp) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
-
+    def astep(self, q0: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+        logp = args[0]
         logp_q0 = logp(q0)
         point_map_info = q0.point_map_info
         q0 = q0.data
@@ -502,8 +501,8 @@ class BinaryGibbsMetropolis(ArrayStep):
 
         super().__init__(vars, [model.compile_logp()])
 
-    def astep(self, q0: RaveledVars, logp: Callable[[RaveledVars], np.ndarray]) -> RaveledVars:
-
+    def astep(self, q0: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+        logp: Callable[[RaveledVars], np.ndarray] = args[0]
         order = self.order
         if self.shuffle_dims:
             nr.shuffle(order)
@@ -522,7 +521,7 @@ class BinaryGibbsMetropolis(ArrayStep):
                 if accepted:
                     logp_curr = logp_prop
 
-        return q
+        return q, []
 
     @staticmethod
     def competence(var):
@@ -616,10 +615,10 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         super().__init__(vars, [model.compile_logp()])
 
-    def astep_unif(self, q0: RaveledVars, logp) -> RaveledVars:
-
-        point_map_info = q0.point_map_info
-        q0 = q0.data
+    def astep_unif(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+        logp = args[0]
+        point_map_info = apoint.point_map_info
+        q0 = apoint.data
 
         dimcats = self.dimcats
         if self.shuffle_dims:
@@ -635,12 +634,12 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if accepted:
                 logp_curr = logp_prop
 
-        return q
+        return q, []
 
-    def astep_prop(self, q0: RaveledVars, logp) -> RaveledVars:
-
-        point_map_info = q0.point_map_info
-        q0 = q0.data
+    def astep_prop(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+        logp = args[0]
+        point_map_info = apoint.point_map_info
+        q0 = apoint.data
 
         dimcats = self.dimcats
         if self.shuffle_dims:
@@ -652,9 +651,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
         for dim, k in dimcats:
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
 
-        return q
+        return q, []
 
-    def astep(self, q0, logp):
+    def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
         raise NotImplementedError()
 
     def metropolis_proportional(self, q, logp, logp_curr, dim, k):
@@ -744,7 +743,6 @@ class DEMetropolis(PopulationArrayStepShared):
     name = "DEMetropolis"
 
     default_blocked = True
-    generates_stats = True
     stats_dtypes = [
         {
             "accept": np.float64,
@@ -804,7 +802,7 @@ class DEMetropolis(PopulationArrayStepShared):
         self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
         super().__init__(vars, shared)
 
-    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
 
         point_map_info = q0.point_map_info
         q0 = q0.data
@@ -894,7 +892,6 @@ class DEMetropolisZ(ArrayStepShared):
     name = "DEMetropolisZ"
 
     default_blocked = True
-    generates_stats = True
     stats_dtypes = [
         {
             "accept": np.float64,
@@ -974,7 +971,7 @@ class DEMetropolisZ(ArrayStepShared):
             setattr(self, attr, initial_value)
         return
 
-    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
 
         point_map_info = q0.point_map_info
         q0 = q0.data
