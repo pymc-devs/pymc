@@ -273,7 +273,7 @@ class GradientSharedStep(ArrayStepShared):
         return super().step(point)
 
 
-def metrop_select(mr, q, q0):
+def metrop_select(mr: np.ndarray, q: np.ndarray, q0: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Perform rejection/acceptance step for Metropolis class samplers.
 
     Returns the new sample q if a uniform random number is less than the

@@ -35,7 +35,7 @@ import scipy.sparse as sps
 from aeppl.logprob import CheckParameterValue
 from aeppl.transforms import RVTransform
 from aesara import scalar
-from aesara.compile.mode import Mode, get_mode
+from aesara.compile import Function, Mode, get_mode
 from aesara.gradient import grad
 from aesara.graph import node_rewriter, rewrite_graph
 from aesara.graph.basic import (
@@ -1044,7 +1044,7 @@ def compile_pymc(
     random_seed: SeedSequenceSeed = None,
     mode=None,
     **kwargs,
-) -> Callable[..., Union[np.ndarray, List[np.ndarray]]]:
+) -> Function:
     """Use ``aesara.function`` with specialized pymc rewrites always enabled.
 
     This function also ensures shared RandomState/Generator used by RandomVariables
