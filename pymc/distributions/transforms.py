@@ -75,6 +75,11 @@ class Ordered(RVTransform):
     name = "ordered"
 
     def __init__(self, ndim_supp=0):
+        if ndim_supp > 1:
+            raise ValueError(
+                f"For Ordered transformation number of core dimensions"
+                f"(ndim_supp) must not exceed 1 but is {ndim_supp}"
+            )
         self.ndim_supp = ndim_supp
 
     def backward(self, value, *inputs):
@@ -105,6 +110,11 @@ class SumTo1(RVTransform):
     name = "sumto1"
 
     def __init__(self, ndim_supp=0):
+        if ndim_supp > 1:
+            raise ValueError(
+                f"For SumTo1 transformation number of core dimensions"
+                f"(ndim_supp) must not exceed 1 but is {ndim_supp}"
+            )
         self.ndim_supp = ndim_supp
 
     def backward(self, value, *inputs):
@@ -352,11 +362,6 @@ multivariate_ordered.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.Ordered`
 for use in the ``transform`` argument of a multivariate random variable."""
 
-ordered = Ordered(ndim_supp=1)
-ordered.__doc__ = """
-Instantiation of :class:`pymc.distributions.transforms.Ordered`
-for use in the ``transform`` argument. """
-
 
 log = LogTransform()
 log.__doc__ = """
@@ -372,11 +377,6 @@ multivariate_sum_to_1 = SumTo1(ndim_supp=1)
 multivariate_sum_to_1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.SumTo1`
 for use in the ``transform`` argument of a multivariate random variable."""
-
-sum_to_1 = SumTo1(ndim_supp=1)
-sum_to_1.__doc__ = """
-Instantiation of :class:`pymc.distributions.transforms.SumTo1`
-for use in the ``transform`` argument of a random variable."""
 
 circular = CircularTransform()
 circular.__doc__ = """
