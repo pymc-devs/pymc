@@ -56,52 +56,54 @@ def sample_smc(
 
     Parameters
     ----------
-    draws: int
+    draws : int, default 2000
         The number of samples to draw from the posterior (i.e. last stage). And also the number of
         independent chains. Defaults to 2000.
-    kernel: SMC Kernel used. Defaults to pm.smc.IMH (Independent Metropolis Hastings)
-    start: dict, or array of dict
+    kernel : SMC_kernel, optional
+        SMC kernel used. Defaults to :class:`pymc.smc.smc.IMH` (Independent Metropolis Hastings)
+    start : dict or array of dict, optional
         Starting point in parameter space. It should be a list of dict with length `chains`.
         When None (default) the starting point is sampled from the prior distribution.
-    model: Model (optional if in ``with`` context)).
-    random_seed : int, array-like of int, RandomState or Generator, optional
+    model : Model (optional if in ``with`` context).
+    random_seed :  int, array_like of int, RandomState or numpy_Generator, optional
         Random seed(s) used by the sampling steps. If a list, tuple or array of ints
         is passed, each entry will be used to seed each chain. A ValueError will be
         raised if the length does not match the number of chains.
-    chains : int
+    chains : int, optional
         The number of chains to sample. Running independent chains is important for some
         convergence statistics. If ``None`` (default), then set to either ``cores`` or 2, whichever
         is larger.
-    cores : int
+    cores : int, default None
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
         system.
-    compute_convergence_checks : bool
+    compute_convergence_checks : bool, default True
         Whether to compute sampler statistics like ``R hat`` and ``effective_n``.
         Defaults to ``True``.
-    return_inferencedata : bool, default=True
-        Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
+    return_inferencedata : bool, default True
+        Whether to return the trace as an InferenceData (True) object or a MultiTrace (False).
         Defaults to ``True``.
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data`
-    progressbar : bool, optional default=True
+        Keyword arguments for :func:`pymc.to_inference_data`.
+    progressbar : bool, optional, default True
         Whether or not to display a progress bar in the command line.
-    **kernel_kwargs: keyword arguments passed to the SMC kernel.
-        The default IMH kernel takes the following keywords:
-            threshold: float
-                Determines the change of beta from stage to stage, i.e. indirectly the number of stages,
-                the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
-                It should be between 0 and 1.
-            correlation_threshold: float
+    **kernel_kwargs : dict, optional
+        Keyword arguments passed to the SMC_kernel. The default IMH kernel takes the following keywords:
+
+        threshold : float, default 0.5
+          Determines the change of beta from stage to stage, i.e. indirectly the number of stages,
+          the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
+          It should be between 0 and 1.
+            correlation_threshold : float, default 0.01
                 The lower the value the higher the number of MCMC steps computed automatically.
                 Defaults to 0.01. It should be between 0 and 1.
-        Keyword arguments for other kernels should be checked in the respective docstrings
+        Keyword arguments for other kernels should be checked in the respective docstrings.
 
     Notes
     -----
     SMC works by moving through successive stages. At each stage the inverse temperature
     :math:`\beta` is increased a little bit (starting from 0 up to 1). When :math:`\beta` = 0
-    we have the prior distribution and when :math:`\beta` =1 we have the posterior distribution.
-    So in more general terms we are always computing samples from a tempered posterior that we can
+    we have the prior distribution and when :math:`\beta = 1` we have the posterior distribution.
+    So in more general terms, we are always computing samples from a tempered posterior that we can
     write as:
 
     .. math::
@@ -113,12 +115,12 @@ def sample_smc(
      1. Initialize :math:`\beta` at zero and stage at zero.
      2. Generate N samples :math:`S_{\beta}` from the prior (because when :math `\beta = 0` the
         tempered posterior is the prior).
-     3. Increase :math:`\beta` in order to make the effective sample size equals some predefined
+     3. Increase :math:`\beta` in order to make the effective sample size equal some predefined
         value (we use :math:`Nt`, where :math:`t` is 0.5 by default).
      4. Compute a set of N importance weights W. The weights are computed as the ratio of the
         likelihoods of a sample at stage i+1 and stage i.
      5. Obtain :math:`S_{w}` by re-sampling according to W.
-     6. Use W to compute the mean and covariance for the proposal distribution, a MVNormal.
+     6. Use W to compute the mean and covariance for the proposal distribution, a MvNormal.
      7. Run N independent MCMC chains, starting each one from a different sample
         in :math:`S_{w}`. For the IMH kernel, the mean of the proposal distribution is the
         mean of the previous posterior stage and not the current point in parameter space.
@@ -130,15 +132,15 @@ def sample_smc(
 
     References
     ----------
-    .. [Minson2013] Minson, S. E. and Simons, M. and Beck, J. L., (2013),
-        Bayesian inversion for finite fault earthquake source models I- Theory and algorithm.
-        Geophysical Journal International, 2013, 194(3), pp.1701-1726,
+    .. [Minson2013] Minson, S. E., Simons, M., and Beck, J. L. (2013).
+        "Bayesian inversion for finite fault earthquake source models I- Theory and algorithm."
+        Geophysical Journal International, 2013, 194(3), pp.1701-1726.
         `link <https://gji.oxfordjournals.org/content/194/3/1701.full>`__
 
-    .. [Ching2007] Ching, J. and Chen, Y. (2007).
-        Transitional Markov Chain Monte Carlo Method for Bayesian Model Updating, Model Class
-        Selection, and Model Averaging. J. Eng. Mech., 10.1061/(ASCE)0733-9399(2007)133:7(816),
-        816-832. `link <http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399
+    .. [Ching2007] Ching, J., and Chen, Y. (2007).
+        "Transitional Markov Chain Monte Carlo Method for Bayesian Model Updating, Model Class
+        Selection, and Model Averaging." J. Eng. Mech., 2007, 133(7), pp. 816-832. doi:10.1061/(ASCE)0733-9399(2007)133:7(816).
+        `link <http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399
         %282007%29133:7%28816%29>`__
     """
 

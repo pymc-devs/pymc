@@ -41,7 +41,7 @@ from pymc.vartypes import discrete_types
 
 
 class SMC_KERNEL(ABC):
-    """Base class for the Sequential Monte Carlo kernels
+    """Base class for the Sequential Monte Carlo kernels.
 
     To create a new SMC kernel you should subclass from this.
 
@@ -53,73 +53,73 @@ class SMC_KERNEL(ABC):
             to sampling from the prior distribution. This method is only called
             if `start` is not specified.
 
-        _initialize_kernel: default
+        _initialize_kernel : default
             Creates initial population of particles in the variable
             `self.tempered_posterior` and populates the `self.var_info` dictionary
             with information about model variables shape and size as
-            {var.name : (var.shape, var.size)
+            {var.name : (var.shape, var.size)}.
 
-            The functions self.prior_logp_func and self.likelihood_logp_func are
+            The functions `self.prior_logp_func` and `self.likelihood_logp_func` are
             created in this step. These expect a 1D numpy array with the summed
             sizes of each raveled model variable (in the order specified in
-            model.inial_point).
+            :meth:`pymc.Model.initial_point`).
 
             Finally, this method computes the log prior and log likelihood for
-            the initial particles, and saves them in self.prior_logp and
-            self.likelihood_logp.
+            the initial particles, and saves them in `self.prior_logp` and
+            `self.likelihood_logp`.
 
             This method should not be modified.
 
-        setup_kernel: optional
+        setup_kernel : optional
             May include any logic that should be performed before sampling
             starts.
 
     During each sampling stage the following methods are called in order:
 
-        update_beta_and_weights: default
-            The inverse temperature self.beta is updated based on the self.likelihood_logp
-            and `threshold` parameter
+        update_beta_and_weights : default
+            The inverse temperature self.beta is updated based on the `self.likelihood_logp`
+            and `threshold` parameter.
 
-            The importance self.weights of each particle are computed from the old and newly
-            selected inverse temperature
+            The importance `self.weights` of each particle are computed from the old and newly
+            selected inverse temperature.
 
             The iteration number stored in `self.iteration` is updated by this method.
 
-            Finally the model log_marginal_likelihood of the tempered posterior
-            is updated from these weights
+            Finally the model `log_marginal_likelihood` of the tempered posterior
+            is updated from these weights.
 
-        resample: default
-            The particles in self.posterior are sampled with replacement based
-            on self.weights, and the used resampling indexes are saved in
+        resample : default
+            The particles in `self.posterior` are sampled with replacement based
+            on `self.weights`, and the used resampling indexes are saved in
             `self.resampling_indexes`.
 
-            The arrays self.prior_logp, self.likelihood_logp are rearranged according
-            to the order of the resampled particles. self.tempered_posterior_logp
-            is computed from these and the current self.beta
+            The arrays `self.prior_logp` and `self.likelihood_logp` are rearranged according
+            to the order of the resampled particles. `self.tempered_posterior_logp`
+            is computed from these and the current `self.beta`.
 
-        tune: optional
-            May include logic that should be performed before every mutation step
+        tune : optional
+            May include logic that should be performed before every mutation step.
 
-        mutate: REQUIRED
-            Mutate particles in self.tempered_posterior
+        mutate : REQUIRED
+            Mutate particles in `self.tempered_posterior`.
 
-            This method is further responsible to update the self.prior_logp,
-            self.likelihod_logp and self.tempered_posterior_logp, corresponding
-            to each mutated particle
+            This method is further responsible to update the `self.prior_logp`,
+            `self.likelihod_logp` and `self.tempered_posterior_logp`, corresponding
+            to each mutated particle.
 
-        sample_stats: default
+        sample_stats : default
             Returns important sampling_stats at the end of each stage in a dictionary
-            format. This will be saved in the final InferenceData objcet under `sample_stats`.
+            format. This will be saved in the final InferenceData object under `sample_stats`.
 
     Finally, at the end of sampling the following methods are called:
 
-        _posterior_to_trace: default
+        _posterior_to_trace : default
             Convert final population of particles to a posterior trace object.
             This method should not be modified.
 
-        sample_settings: default:
+        sample_settings : default
             Returns important sample_settings at the end of sampling in a dictionary
-            format. This will be saved in the final InferenceData objcet under `sample_stats`.
+            format. This will be saved in the final InferenceData object under `sample_stats`.
 
     """
 
@@ -132,22 +132,28 @@ class SMC_KERNEL(ABC):
         threshold=0.5,
     ):
         """
+        Initialize the SMC_kernel class.
 
         Parameters
         ----------
-        draws: int
-            The number of samples to draw from the posterior (i.e. last stage). And also the number of
+        draws : int, default 2000
+            The number of samples to draw from the posterior (i.e. last stage). Also the number of
             independent chains. Defaults to 2000.
-        start: dict, or array of dict
+        start : dict, or array of dict, default None
             Starting point in parameter space. It should be a list of dict with length `chains`.
             When None (default) the starting point is sampled from the prior distribution.
-        model: Model (optional if in ``with`` context)).
-        random_seed: int
+        model : Model (optional if in ``with`` context).
+        random_seed : int, array_like of int, RandomState or Generator, optional
             Value used to initialize the random number generator.
-        threshold: float
+        threshold : float, default 0.5
             Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
             the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
             It should be between 0 and 1.
+
+        Attributes
+        ----------
+        self.var_info : dict
+            Dictionary that contains information about model variables shape and size.
 
         """
 
@@ -199,7 +205,7 @@ class SMC_KERNEL(ABC):
         return cast(Dict[str, np.ndarray], dict_prior)
 
     def _initialize_kernel(self):
-        """Create variables and logp function necessary to run kernel
+        """Create variables and logp function necessary to run SMC kernel
 
         This method should not be overwritten. If needed, use `setup_kernel`
         instead.
@@ -301,7 +307,7 @@ class SMC_KERNEL(ABC):
     def sample_stats(self) -> Dict:
         """Stats to be saved at the end of each stage
 
-        These stats will be saved under `sample_stats` in the final InferenceData.
+        These stats will be saved under `sample_stats` in the final InferenceData object.
         """
         return {
             "log_marginal_likelihood": self.log_marginal_likelihood if self.beta == 1 else np.nan,
@@ -309,9 +315,9 @@ class SMC_KERNEL(ABC):
         }
 
     def sample_settings(self) -> Dict:
-        """Kernel settings to be saved once at the end of sampling
+        """SMC_kernel settings to be saved once at the end of sampling.
 
-        These stats will be saved under `sample_stats` in the final InferenceData.
+        These stats will be saved under `sample_stats` in the final InferenceData object.
 
         """
         return {
@@ -347,15 +353,19 @@ class SMC_KERNEL(ABC):
 
 
 class IMH(SMC_KERNEL):
-    """Independent Metropolis-Hastings SMC kernel"""
+    """Independent Metropolis-Hastings SMC_kernel"""
 
     def __init__(self, *args, correlation_threshold=0.01, **kwargs):
         """
         Parameters
         ----------
-        correlation_threshold: float
-            The lower the value the higher the number of IMH steps computed automatically.
+        correlation_threshold : float, default 0.01
+            The lower the value, the higher the number of IMH steps computed automatically.
             Defaults to 0.01. It should be between 0 and 1.
+        **kwargs : dict, optional
+            Keyword arguments passed to the SMC_kernel.  Refer to SMC_kernel documentation for a
+        list of all possible arguments.
+
         """
         super().__init__(*args, **kwargs)
         self.correlation_threshold = correlation_threshold
@@ -449,15 +459,19 @@ class Pearson:
 
 
 class MH(SMC_KERNEL):
-    """Metropolis-Hastings SMC kernel"""
+    """Metropolis-Hastings SMC_kernel"""
 
     def __init__(self, *args, correlation_threshold=0.01, **kwargs):
         """
         Parameters
         ----------
-        correlation_threshold: float
-            The lower the value the higher the number of MH steps computed automatically.
+        correlation_threshold : float, default 0.01
+            The lower the value, the higher the number of MH steps computed automatically.
             Defaults to 0.01. It should be between 0 and 1.
+        **kwargs : dict, optional
+            Keyword arguments passed to the SMC_kernel.  Refer to SMC_kernel documentation for a
+            list of all possible arguments.
+
         """
         super().__init__(*args, **kwargs)
         self.correlation_threshold = correlation_threshold
@@ -468,7 +482,7 @@ class MH(SMC_KERNEL):
 
     def setup_kernel(self):
         """Proposal dist is just a Multivariate Normal with unit identity covariance.
-        Dimension specific scaling is provided by self.proposal_scales and set in self.tune()
+        Dimension specific scaling is provided by `self.proposal_scales` and set in `self.tune()`
         """
         ndim = self.tempered_posterior.shape[1]
         self.proposal_scales = np.full(self.draws, min(1, 2.38**2 / ndim))
@@ -586,11 +600,11 @@ def _logp_forw(point, out_vars, in_vars, shared):
     Parameters
     ----------
     out_vars : list
-        containing :class:`pymc.Distribution` for the output variables
+        Containing Distribution for the output variables
     in_vars : list
-        containing :class:`pymc.Distribution` for the input variables
+        Containing Distribution for the input variables
     shared : list
-        containing :class:`aesara.tensor.Tensor` for depended shared data
+        Containing TensorVariable for depended shared data
     """
 
     # Replace integer inputs with rounded float inputs
