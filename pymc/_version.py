@@ -43,7 +43,7 @@ def get_config():
     cfg = VersioneerConfig()
     cfg.VCS = "git"
     cfg.style = "pep440"
-    cfg.tag_prefix = "rel-"
+    cfg.tag_prefix = "v"
     cfg.parentdir_prefix = "None"
     cfg.versionfile_source = "pymc/_version.py"
     cfg.verbose = False
