@@ -905,11 +905,11 @@ class EulerMaruyama(Distribution):
 
     Parameters
     ----------
-    dt: float
+    dt : float
         time step of discretization
-    sde_fn: callable
+    sde_fn : callable
         function returning the drift and diffusion coefficients of SDE
-    sde_pars: tuple
+    sde_pars : tuple
         parameters of the SDE, passed as ``*args`` to ``sde_fn``
     init_dist : unnamed distribution, optional
         Scalar distribution for initial values. Unnamed refers to distributions created with

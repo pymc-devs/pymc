@@ -835,8 +835,11 @@ class TestEulerMaruyama:
     @pytest.mark.parametrize("batched_param", [1, 2])
     @pytest.mark.parametrize("explicit_shape", (True, False))
     def test_batched_size(self, explicit_shape, batched_param):
+        RANDOM_SEED = 42
+        numpy_rng = np.random.default_rng(RANDOM_SEED)
+
         steps, batch_size = 100, 5
-        param_val = np.square(np.random.randn(batch_size))
+        param_val = np.square(numpy_rng.standard_normal(batch_size))
         if explicit_shape:
             kwargs = {"shape": (batch_size, steps)}
         else:
@@ -853,7 +856,7 @@ class TestEulerMaruyama:
                 "y", dt=0.02, sde_fn=sde_fn, sde_pars=sde_pars, init_dist=init_dist, **kwargs
             )
 
-        y_eval = draw(y, draws=2)
+        y_eval = draw(y, draws=2, random_seed=numpy_rng)
         assert y_eval[0].shape == (batch_size, steps)
         assert not np.any(np.isclose(y_eval[0], y_eval[1]))
 
@@ -873,7 +876,7 @@ class TestEulerMaruyama:
                     **kwargs,
                 )
 
-        t0_init = t0.initial_point()
+        t0_init = t0.initial_point(random_seed=RANDOM_SEED)
         t1_init = {f"y_{i}": t0_init["y"][i] for i in range(batch_size)}
         np.testing.assert_allclose(
             t0.compile_logp()(t0_init),
@@ -919,9 +922,12 @@ class TestEulerMaruyama:
         N = 300
         dt = 1e-1
 
+        RANDOM_SEED = 42
+        numpy_rng = np.random.default_rng(RANDOM_SEED)
+
         def _gen_sde_path(sde, pars, dt, n, x0):
             xs = [x0]
-            wt = np.random.normal(size=(n,) if isinstance(x0, float) else (n, x0.size))
+            wt = numpy_rng.normal(size=(n,) if isinstance(x0, float) else (n, x0.size))
             for i in range(n):
                 f, g = sde(xs[-1], *pars)
                 xs.append(xs[-1] + f * dt + np.sqrt(dt) * g * wt[i])
@@ -929,7 +935,7 @@ class TestEulerMaruyama:
 
         sde = lambda x, lam: (lam * x, sig2)
         x = floatX(_gen_sde_path(sde, (lam,), dt, N, 5.0))
-        z = x + np.random.randn(x.size) * sig2
+        z = x + numpy_rng.standard_normal(size=x.size) * sig2
         # build model
         with Model() as model:
             lamh = Flat("lamh")
@@ -939,9 +945,9 @@ class TestEulerMaruyama:
             Normal("zh", mu=xh, sigma=sig2, observed=z)
         # invert
         with model:
-            trace = sample(chains=1)
+            trace = sample(chains=1, random_seed=numpy_rng)
 
-        ppc = sample_posterior_predictive(trace, model=model)
+        ppc = sample_posterior_predictive(trace, model=model, random_seed=numpy_rng)
 
         p95 = [2.5, 97.5]
         lo, hi = np.percentile(trace.posterior["lamh"], p95, axis=[0, 1])
