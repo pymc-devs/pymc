@@ -858,7 +858,7 @@ class TestEulerMaruyama:
 
         y_eval = draw(y, draws=2, random_seed=numpy_rng)
         assert y_eval[0].shape == (batch_size, steps)
-        assert np.any(~np.isclose(y_eval[0], y_eval[1]))
+        assert not np.any(np.isclose(y_eval[0], y_eval[1]))
 
         if explicit_shape:
             kwargs["shape"] = steps
