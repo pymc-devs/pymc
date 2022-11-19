@@ -64,6 +64,7 @@ pymc/stats/convergence.py
 pymc/step_methods/__init__.py
 pymc/step_methods/arraystep.py
 pymc/step_methods/compound.py
+pymc/step_methods/metropolis.py
 pymc/step_methods/hmc/__init__.py
 pymc/step_methods/hmc/base_hmc.py
 pymc/step_methods/hmc/hmc.py
