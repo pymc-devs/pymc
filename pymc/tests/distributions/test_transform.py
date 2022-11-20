@@ -147,6 +147,9 @@ def test_sum_to_1():
     check_jacobian_det(
         tr.univariate_sum_to_1, Vector(Unit, 2), at.dvector, np.array([0, 0]), lambda x: x[:-1]
     )
+    check_jacobian_det(
+        tr.multivariate_sum_to_1, Vector(Unit, 2), at.dvector, np.array([0, 0]), lambda x: x[:-1]
+    )
 
 
 def test_log():
@@ -249,6 +252,9 @@ def test_ordered():
 
     check_jacobian_det(
         tr.univariate_ordered, Vector(R, 2), at.dvector, np.array([0, 0]), elemwise=False
+    )
+    check_jacobian_det(
+        tr.multivariate_ordered, Vector(R, 2), at.dvector, np.array([0, 0]), elemwise=False
     )
 
     vals = get_values(tr.univariate_ordered, Vector(R, 3), at.dvector, np.zeros(3))
@@ -617,29 +623,93 @@ def test_discrete_trafo():
         err.match("Transformations for discrete distributions")
 
 
-def test_transforms_ordered():
+def test_2d_univariate_ordered():
     with pm.Model() as model:
-        pm.Normal(
-            "x_univariate",
+        x_1d = pm.Normal(
+            "x_1d",
+            mu=[-3, -1, 1, 2],
+            sigma=1,
+            size=(4,),
+            transform=tr.univariate_ordered,
+        )
+        x_2d = pm.Normal(
+            "x_2d",
             mu=[-3, -1, 1, 2],
             sigma=1,
             size=(10, 4),
             transform=tr.univariate_ordered,
         )
 
-    log_prob = model.point_logps()
-    np.testing.assert_allclose(list(log_prob.values()), np.array([18.69]))
+    log_p = model.compile_logp(sum=False)(
+        {"x_1d_ordered__": np.zeros((4,)), "x_2d_ordered__": np.zeros((10, 4))}
+    )
+    np.testing.assert_allclose(np.tile(log_p[0], (10, 1)), log_p[1])
 
 
-def test_transforms_sumto1():
+def test_2d_multivariate_ordered():
     with pm.Model() as model:
-        pm.Normal(
-            "x",
+        x_1d = pm.MvNormal(
+            "x_1d",
+            mu=[-1, 1],
+            cov=np.eye(2),
+            initval=[-1, 1],
+            transform=tr.multivariate_ordered,
+        )
+        x_2d = pm.MvNormal(
+            "x_2d",
+            mu=[-1, 1],
+            cov=np.eye(2),
+            size=2,
+            initval=[[-1, 1], [-1, 1]],
+            transform=tr.multivariate_ordered,
+        )
+
+    log_p = model.compile_logp(sum=False)(
+        {"x_1d_ordered__": np.zeros((2,)), "x_2d_ordered__": np.zeros((2, 2))}
+    )
+    np.testing.assert_allclose(log_p[0], log_p[1])
+
+
+def test_2d_univariate_sum_to_1():
+    with pm.Model() as model:
+        x_1d = pm.Normal(
+            "x_1d",
+            mu=[-3, -1, 1, 2],
+            sigma=1,
+            size=(4,),
+            transform=tr.univariate_sum_to_1,
+        )
+        x_2d = pm.Normal(
+            "x_2d",
             mu=[-3, -1, 1, 2],
             sigma=1,
             size=(10, 4),
             transform=tr.univariate_sum_to_1,
         )
 
-    log_prob = model.point_logps()
-    np.testing.assert_allclose(list(log_prob.values()), np.array([-56.76]))
+    log_p = model.compile_logp(sum=False)(
+        {"x_1d_sumto1__": np.zeros(3), "x_2d_sumto1__": np.zeros((10, 3))}
+    )
+    np.testing.assert_allclose(np.tile(log_p[0], (10, 1)), log_p[1])
+
+
+def test_2d_multivariate_sum_to_1():
+    with pm.Model() as model:
+        x_1d = pm.MvNormal(
+            "x_1d",
+            mu=[-1, 1],
+            cov=np.eye(2),
+            transform=tr.multivariate_sum_to_1,
+        )
+        x_2d = pm.MvNormal(
+            "x_2d",
+            mu=[-1, 1],
+            cov=np.eye(2),
+            size=2,
+            transform=tr.multivariate_sum_to_1,
+        )
+
+    log_p = model.compile_logp(sum=False)(
+        {"x_1d_sumto1__": np.zeros(1), "x_2d_sumto1__": np.zeros((2, 1))}
+    )
+    np.testing.assert_allclose(log_p[0], log_p[1])

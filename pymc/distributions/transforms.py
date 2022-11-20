@@ -37,9 +37,11 @@ __all__ = [
     "logodds",
     "Interval",
     "log_exp_m1",
+    "ordered",
     "univariate_ordered",
     "multivariate_ordered",
     "log",
+    "sum_to_1",
     "univariate_sum_to_1",
     "multivariate_sum_to_1",
     "circular",
@@ -364,6 +366,11 @@ multivariate_ordered.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.Ordered`
 for use in the ``transform`` argument of a multivariate random variable."""
 
+# backwards compatibility
+ordered = Ordered(ndim_supp=1)
+ordered.__doc__ = """
+Instantiation of :class:`pymc.distributions.transforms.Ordered`
+for use in the ``transform`` argument. """
 
 log = LogTransform()
 log.__doc__ = """
@@ -379,6 +386,12 @@ multivariate_sum_to_1 = SumTo1(ndim_supp=1)
 multivariate_sum_to_1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.SumTo1`
 for use in the ``transform`` argument of a multivariate random variable."""
+
+# backwards compatibility
+sum_to_1 = SumTo1(ndim_supp=1)
+sum_to_1.__doc__ = """
+Instantiation of :class:`pymc.distributions.transforms.SumTo1`
+for use in the ``transform`` argument of a random variable."""
 
 circular = CircularTransform()
 circular.__doc__ = """
