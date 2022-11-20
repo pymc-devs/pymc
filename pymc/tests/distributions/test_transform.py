@@ -144,6 +144,9 @@ def test_sum_to_1():
     check_vector_transform(tr.univariate_sum_to_1, Simplex(2))
     check_vector_transform(tr.univariate_sum_to_1, Simplex(4))
 
+    with pytest.raises(ValueError, match=r"\(ndim_supp\) must not exceed 1"):
+        tr.SumTo1(2)
+
     check_jacobian_det(
         tr.univariate_sum_to_1, Vector(Unit, 2), at.dvector, np.array([0, 0]), lambda x: x[:-1]
     )
@@ -249,6 +252,9 @@ def test_circular():
 
 def test_ordered():
     check_vector_transform(tr.univariate_ordered, SortedVector(6))
+
+    with pytest.raises(ValueError, match=r"\(ndim_supp\) must not exceed 1"):
+        tr.Ordered(2)
 
     check_jacobian_det(
         tr.univariate_ordered, Vector(R, 2), at.dvector, np.array([0, 0]), elemwise=False
