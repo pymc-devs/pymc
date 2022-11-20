@@ -147,6 +147,9 @@ exclude_patterns = [
 
 # myst config
 nb_execution_mode = "force"
+nb_execution_allow_errors = False
+nb_execution_raise_on_error = True
+nb_execution_timeout = 300
 nb_kernel_rgx_aliases = {".*": "python3"}
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "substitution"]
 myst_substitutions = {
