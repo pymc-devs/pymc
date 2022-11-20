@@ -9,6 +9,5 @@ Distribution utilities
     Distribution
     Discrete
     Continuous
-    NoDistribution
     DensityDist
     SymbolicRandomVariable
