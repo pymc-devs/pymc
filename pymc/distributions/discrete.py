@@ -878,7 +878,11 @@ class HyperGeometric(Discrete):
         return super().dist([good, bad, n], *args, **kwargs)
 
     def moment(rv, size, good, bad, n):
-        N, k = good + bad, good
+        # Cast to float because the intX can be int8
+        # which could trigger an integer overflow below.
+        n = floatX(n)
+        k = floatX(good)
+        N = k + floatX(bad)
         mode = at.floor((n + 1) * (k + 1) / (N + 2))
         if not rv_size_is_none(size):
             mode = at.full(size, mode)
@@ -1014,6 +1018,8 @@ class DiscreteUniform(Discrete):
         return super().dist([lower, upper], **kwargs)
 
     def moment(rv, size, lower, upper):
+        upper = floatX(upper)
+        lower = floatX(lower)
         mode = at.maximum(at.floor((upper + lower) / 2.0), lower)
         if not rv_size_is_none(size):
             mode = at.full(size, mode)

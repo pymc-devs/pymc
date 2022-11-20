@@ -579,7 +579,7 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
 
     assert moment.shape == expected.shape
     assert expected.shape == random_draw.shape
-    assert np.allclose(moment, expected)
+    np.testing.assert_allclose(moment, expected, atol=1e-10)
 
     if check_finite_logp:
         logp_moment = (
