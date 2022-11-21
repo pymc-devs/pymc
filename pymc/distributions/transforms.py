@@ -370,7 +370,9 @@ for use in the ``transform`` argument of a multivariate random variable."""
 ordered = Ordered(ndim_supp=1)
 ordered.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.Ordered`
-for use in the ``transform`` argument. """
+for use in the ``transform`` argument of a random variable.
+This instantiation is for backwards compatibility only.
+Please use `univariate_ordererd` or `multivariate_ordered` instead."""
 
 log = LogTransform()
 log.__doc__ = """
@@ -391,7 +393,9 @@ for use in the ``transform`` argument of a multivariate random variable."""
 sum_to_1 = SumTo1(ndim_supp=1)
 sum_to_1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.SumTo1`
-for use in the ``transform`` argument of a random variable."""
+for use in the ``transform`` argument of a random variable.
+This instantiation is for backwards compatibility only.
+Please use `univariate_sum_to_1` or `multivariate_sum_to_1` instead."""
 
 circular = CircularTransform()
 circular.__doc__ = """
