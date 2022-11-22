@@ -241,34 +241,38 @@ class Interval(IntervalTransform):
 
     Examples
     --------
+
+    Create an interval transform between -1 and +1
+
     .. code-block:: python
 
-        # Create an interval transform between -1 and +1
         with pm.Model():
             interval = pm.distributions.transforms.Interval(lower=-1, upper=1)
             x = pm.Normal("x", transform=interval)
 
+    Create a lower-bounded interval transform at 0, using a callable
+
     .. code-block:: python
 
-        # Create an interval transform between -1 and +1 using a callable
-        def get_bounds(rng, size, dtype, loc, scale):
+        def get_bounds(rng, size, dtype, mu, sigma):
             return 0, None
 
         with pm.Model():
             interval = pm.distributions.transforms.Interval(bouns_fn=get_bounds)
             x = pm.Normal("x", transform=interval)
 
+    Create a lower-bounded interval transform that depends on a distribution parameter
+
     .. code-block:: python
 
-        # Create a lower bounded interval transform based on a distribution parameter
-        def get_bounds(rng, size, dtype, loc, scale):
-            return loc, None
+        def get_bounds(rng, size, dtype, mu, sigma):
+            return mu - 1, None
 
         interval = pm.distributions.transforms.Interval(bounds_fn=get_bounds)
 
         with pm.Model():
-            loc = pm.Normal("loc")
-            x = pm.Normal("x", mu=loc, sigma=2, transform=interval)
+            mu = pm.Normal("mu")
+            x = pm.Normal("x", mu=mu, sigma=2, transform=interval)
     """
 
     def __init__(self, lower=None, upper=None, *, bounds_fn=None):
