@@ -500,7 +500,7 @@ def test_model_value_vars():
 def test_model_var_maps():
     with pm.Model() as model:
         a = pm.Uniform("a")
-        x = pm.Normal("x", a, total_size=5)
+        x = pm.Normal("x", a)
 
     assert set(model.rvs_to_values.keys()) == {a, x}
     a_value = model.rvs_to_values[a]
@@ -512,10 +512,7 @@ def test_model_var_maps():
     assert set(model.rvs_to_transforms.keys()) == {a, x}
     assert isinstance(model.rvs_to_transforms[a], IntervalTransform)
     assert model.rvs_to_transforms[x] is None
-
-    assert set(model.rvs_to_total_sizes.keys()) == {a, x}
-    assert model.rvs_to_total_sizes[a] is None
-    assert model.rvs_to_total_sizes[x] == 5
+    assert model.observed_rvs_to_total_sizes == {}
 
 
 def test_make_obs_var():
@@ -538,27 +535,28 @@ def test_make_obs_var():
         # Create the testval attribute simply for the sake of model testing
         fake_distribution.name = input_name
 
+    kwargs = dict(total_size=None, dims=None, transform=None)
     # The function requires data and RV dimensionality to be compatible
     with pytest.raises(ShapeError, match="Dimensionality of data and RV don't match."):
-        fake_model.make_obs_var(fake_distribution, np.ones((3, 3, 1)), None, None)
+        fake_model.make_obs_var(fake_distribution, np.ones((3, 3, 1)), **kwargs)
 
     # Check function behavior using the various inputs
     # dense, sparse: Ensure that the missing values are appropriately set to None
     # masked: a deterministic variable is returned
 
-    dense_output = fake_model.make_obs_var(fake_distribution, dense_input, None, None)
+    dense_output = fake_model.make_obs_var(fake_distribution, dense_input, **kwargs)
     assert dense_output == fake_distribution
     assert isinstance(fake_model.rvs_to_values[dense_output], TensorConstant)
     del fake_model.named_vars[fake_distribution.name]
 
-    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None)
+    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, **kwargs)
     assert sparse_output == fake_distribution
     assert sparse.basic._is_sparse_variable(fake_model.rvs_to_values[sparse_output])
     del fake_model.named_vars[fake_distribution.name]
 
     # Here the RandomVariable is split into observed/imputed and a Deterministic is returned
     with pytest.warns(ImputationWarning):
-        masked_output = fake_model.make_obs_var(fake_distribution, masked_array_input, None, None)
+        masked_output = fake_model.make_obs_var(fake_distribution, masked_array_input, **kwargs)
     assert masked_output != fake_distribution
     assert not isinstance(masked_output, RandomVariable)
     # Ensure it has missing values
@@ -699,6 +697,29 @@ def test_set_initval():
         y = pm.Normal("y", x, 1)
 
     assert y in model.initial_values
+
+
+class TestTotalSize:
+    def test_total_size_univariate(self):
+        with pm.Model() as m:
+            x = pm.Normal("x", observed=[0, 0], total_size=7)
+        assert m.observed_rvs_to_total_sizes[x] == 7
+
+        m.compile_logp()({}) == st.norm().logpdf(0) * 7
+
+    def test_total_size_multivariate(self):
+        with pm.Model() as m:
+            x = pm.MvNormal("x", np.ones(3), np.eye(3), observed=np.zeros((2, 3)), total_size=7)
+        assert m.observed_rvs_to_total_sizes[x] == 7
+
+        m.compile_logp()({}) == st.multivariate_normal.logpdf(
+            np.zeros(3), np.ones(3), np.eye(3)
+        ) * 7
+
+    def test_total_size_error(self):
+        with pm.Model():
+            with pytest.raises(ValueError, match="total_size can only be used for observed RVs"):
+                pm.Normal("x", total_size=7)
 
 
 def test_datalogp_multiple_shapes():
@@ -1425,6 +1446,18 @@ class TestImputationMissingData:
                     observed=data,
                 )
 
+    def test_rvs_to_total_sizes(self):
+        with pm.Model() as m:
+            x = pm.Normal("x", observed=[np.nan, 0, 1])
+        assert m["x"] not in m.observed_rvs_to_total_sizes
+        assert m["x_missing"] not in m.observed_rvs_to_total_sizes
+        assert m.observed_rvs_to_total_sizes[m["x_observed"]] is None
+
+    def test_total_size_not_supported(self):
+        with pm.Model() as m:
+            with pytest.raises(NotImplementedError):
+                x = pm.Normal("x", observed=[np.nan, 0, 1], total_size=5)
+
 
 class TestShared(SeededTest):
     def test_deterministic(self):
@@ -1467,16 +1500,15 @@ def test_tag_future_warning_model():
         with pytest.raises(AttributeError):
             x.tag.observations
 
-        with pytest.warns(FutureWarning, match="model.rvs_to_total_sizes"):
+        with pytest.raises(AttributeError):
             total_size = x.tag.total_size
-        assert total_size is None
 
         # Cloning a node will keep the same tag type and contents
         y = x.owner.clone().default_output()
         assert y is not x
         assert y.tag is not x.tag
         assert isinstance(y.tag, _FutureWarningValidatingScratchpad)
-        y = model.register_rv(y, name="y", observed=5)
+        y = model.register_rv(y, name="y", observed=5, total_size=7)
         assert isinstance(y.tag, _FutureWarningValidatingScratchpad)
 
         # Test expected warnings
@@ -1486,8 +1518,7 @@ def test_tag_future_warning_model():
             y_obs = y.tag.observations
         assert y_value is y_obs
         assert y_value.eval() == 5
-
+        with pytest.warns(FutureWarning, match="model.observed_rvs_to_total_sizes"):
+            y_total_size = y.tag.total_size
+        assert y_total_size == 7
         assert isinstance(y_value.tag, _FutureWarningValidatingScratchpad)
-        with pytest.warns(FutureWarning, match="model.rvs_to_total_sizes"):
-            total_size = y.tag.total_size
-        assert total_size is None

@@ -1046,7 +1046,9 @@ class Group(WithMemoization):
         t = self.to_flat_input(
             at.max(
                 [
-                    _get_scaling(self.model.rvs_to_total_sizes.get(v, None), v.shape, v.ndim)
+                    _get_scaling(
+                        self.model.observed_rvs_to_total_sizes.get(v, None), v.shape, v.ndim
+                    )
                     for v in self.group
                 ]
             )
@@ -1184,7 +1186,7 @@ class Approximation(WithMemoization):
             self.collect("symbolic_normalizing_constant")
             + [
                 _get_scaling(
-                    self.model.rvs_to_total_sizes.get(obs, None),
+                    self.model.observed_rvs_to_total_sizes.get(obs, None),
                     obs.shape,
                     obs.ndim,
                 )

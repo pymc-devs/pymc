@@ -490,7 +490,7 @@ class _FutureWarningValidatingScratchpad(ValidatingScratchpad):
         for deprecated_names, alternative in (
             (("value_var", "observations"), "model.rvs_to_values[rv]"),
             (("transform",), "model.rvs_to_transforms[rv]"),
-            (("total_size",), "model.rvs_to_total_sizes[rv]"),
+            (("total_size",), "model.observed_rvs_to_total_sizes[rv]"),
         ):
             if name in deprecated_names:
                 try:
