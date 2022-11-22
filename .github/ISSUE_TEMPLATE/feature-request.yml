@@ -1,0 +1,61 @@
+# This issue template was adapted from the NumPy project
+# under the BSD 3-Clause "New" or "Revised" License.
+# Copyright (c) 2005-2022, NumPy Developers.
+# All rights reserved.
+
+name: Feature request
+description: Make a specific, well-motivated proposal for a feature.
+title: "ENH: <Please write a comprehensive title after the 'ENH: ' prefix>"
+labels: [enhancements]
+
+
+body:
+- type: markdown
+  attributes:
+    value: >
+      If you're looking to request a new feature or change in functionality,
+      including adding or changing the meaning of arguments to an existing
+      function, please post your idea first as a [Discussion](https://github.com/pymc-devs/pymc/discussions)
+      to validate it and bring attention to it. After validation,
+      you can open this issue for a more technical developer discussion.
+      Check the [Contributor Guide](https://github.com/pymc-devs/pymc/blob/main/CONTRIBUTING.md)
+      if you need more information.
+
+- type: textarea
+  attributes:
+    label: "Link to a discussion"
+  descrition: >
+    Link to the discussion about this feature request in
+    [Discussions](https://github.com/pymc-devs/pymc/discussions)
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: "Before"
+  descrition: >
+    Please fill the code snippet: How did you workaround your problem or frequent use?
+    Leave empty if you found no workaround.
+  validations:
+    required: false
+  render: python
+
+- type: textarea
+  attributes:
+    label: "After"
+  descrition: >
+    How you see it implemented with a high level API without going into details
+  validations:
+    required: false
+  render: python
+
+- type: textarea
+  attributes:
+    label: "Context for the issue:"
+    description: |
+      Please explain how this issue affects your work, why it should be prioritized
+      or add any information that did not fit Before After template.
+    placeholder: |
+      << your explanation here >>
+  validations:
+    required: false
