@@ -24,7 +24,7 @@ body:
 
 - type: textarea
   attributes:
-    label: "Reproduce the code example:"
+    label: "Reproduceable code example:"
     description: >
       A short code example that reproduces the problem/missing feature. It
       should be self-contained, i.e., can be copy-pasted into the Python
