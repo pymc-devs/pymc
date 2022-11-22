@@ -24,30 +24,30 @@ body:
 - type: textarea
   attributes:
     label: "Link to a discussion"
-  descrition: >
-    Link to the discussion about this feature request in
-    [Discussions](https://github.com/pymc-devs/pymc/discussions)
+    description: >
+      Link to the discussion about this feature request in
+      [Discussions](https://github.com/pymc-devs/pymc/discussions)
   validations:
     required: true
 
 - type: textarea
   attributes:
     label: "Before"
-  descrition: >
-    Please fill the code snippet: How did you workaround your problem or frequent use?
-    Leave empty if you found no workaround.
+    description: >
+      Please fill the code snippet: How did you workaround your problem or frequent use?
+      Leave empty if you found no workaround.
+    render: python
   validations:
     required: false
-  render: python
 
 - type: textarea
   attributes:
     label: "After"
-  descrition: >
-    How you see it implemented with a high level API without going into details
+    description: >
+      How you see it implemented with a high level API without going into details
+    render: python
   validations:
     required: false
-  render: python
 
 - type: textarea
   attributes:
