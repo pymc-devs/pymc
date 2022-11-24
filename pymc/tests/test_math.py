@@ -280,8 +280,8 @@ def test_invlogit_deprecation_warning():
 @pytest.mark.parametrize(
     "aesara_function, pymc_wrapper",
     [
-        (at.nnet.softmax, softmax),
-        (at.nnet.logsoftmax, log_softmax),
+        (at.special.softmax, softmax),
+        (at.special.log_softmax, log_softmax),
     ],
 )
 def test_softmax_logsoftmax_no_warnings(aesara_function, pymc_wrapper):

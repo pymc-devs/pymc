@@ -1052,7 +1052,7 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False
     >>> x = at.matrix()
     >>> y = at.ivector()
     >>> l_in = InputLayer((5, 10))
-    >>> l1 = DenseLayer(l_in, num_units=7, nonlinearity=at.nnet.softmax)
+    >>> l1 = DenseLayer(l_in, num_units=7, nonlinearity=at.special.softmax)
     >>> output = lasagne.layers.get_output(l1, x)
     >>> cost = at.mean(at.nnet.categorical_crossentropy(output, y))
     >>> all_params = lasagne.layers.get_all_params(l1)
