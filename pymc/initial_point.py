@@ -20,12 +20,12 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.transforms import RVTransform
 from aesara.graph.basic import Variable
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs
+from pymc.logprob.transforms import RVTransform
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
 StartDict = Dict[Union[Variable, str], Union[np.ndarray, Variable, str]]

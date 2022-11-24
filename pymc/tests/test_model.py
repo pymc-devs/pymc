@@ -29,7 +29,6 @@ import pytest
 import scipy.sparse as sps
 import scipy.stats as st
 
-from aeppl.transforms import IntervalTransform
 from aesara.graph import graph_inputs
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
@@ -44,6 +43,7 @@ from pymc.distributions import Normal, transforms
 from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.transforms import log
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
+from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
 from pymc.tests.helpers import SeededTest
 from pymc.tests.models import simple_model

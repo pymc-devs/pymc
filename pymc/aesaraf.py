@@ -32,8 +32,6 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sps
 
-from aeppl.logprob import CheckParameterValue
-from aeppl.transforms import RVTransform
 from aesara import scalar
 from aesara.compile import Function, Mode, get_mode
 from aesara.gradient import grad
@@ -65,6 +63,8 @@ from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorConstant, TensorVariable
 
 from pymc.exceptions import NotConstantValueError
+from pymc.logprob.transforms import RVTransform
+from pymc.logprob.utils import CheckParameterValue
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
 PotentialShapeType = Union[int, np.ndarray, Sequence[Union[int, Variable]], TensorVariable]
@@ -944,7 +944,7 @@ def largest_common_dtype(tensors):
 
 @node_rewriter(tracks=[CheckParameterValue])
 def local_remove_check_parameter(fgraph, node):
-    """Rewrite that removes Aeppl's CheckParameterValue
+    """Rewrite that removes CheckParameterValue
 
     This is used when compile_rv_inplace
     """
@@ -1068,13 +1068,13 @@ def compile_pymc(
         Ensures that compiled functions containing random variables will produce new
         samples on each call.
     local_check_parameter_to_ninf_switch
-        Replaces Aeppl's CheckParameterValue assertions is logp expressions with Switches
+        Replaces CheckParameterValue assertions is logp expressions with Switches
         that return -inf in place of the assert.
 
     Optional rewrites
     -----------------
     local_remove_check_parameter
-        Replaces Aeppl's CheckParameterValue assertions is logp expressions. This is used
+        Replaces CheckParameterValue assertions is logp expressions. This is used
         as an alteranative to the default local_check_parameter_to_ninf_switch whenenver
         this function is called within a model context and the model `check_bounds` flag
         is set to False.

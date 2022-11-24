@@ -5,7 +5,6 @@ channels:
 - defaults
 dependencies:
 # Base dependencies
-- aeppl=0.0.38
 - aesara=2.8.7
 - arviz>=0.13.0
 - blas
@@ -29,3 +28,5 @@ dependencies:
 - pytest>=3.0
 - mypy=0.990
 - types-cachetools
+- pip:
+  - numdifftools>=0.9.40

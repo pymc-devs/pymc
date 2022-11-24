@@ -18,7 +18,6 @@ import numpy.testing as npt
 import pytest
 import scipy.special
 
-from aeppl.logprob import ParameterValueError
 from aesara import config, function
 from aesara.tensor.random.basic import multinomial
 from scipy import interpolate, stats
@@ -37,6 +36,7 @@ from pymc.distributions.dist_math import (
     incomplete_beta,
     multigammaln,
 )
+from pymc.logprob.utils import ParameterValueError
 from pymc.tests.checks import close_to
 from pymc.tests.helpers import verify_grad
 
