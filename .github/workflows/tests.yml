@@ -50,8 +50,6 @@ jobs:
             pymc/tests/distributions/test_mixture.py
 
           - |
-            pymc/tests/distributions/test_distribution.py
-            pymc/tests/distributions/test_discrete.py
             pymc/tests/distributions/test_continuous.py
             pymc/tests/distributions/test_multivariate.py
 
@@ -59,11 +57,12 @@ jobs:
             pymc/tests/distributions/test_bound.py
             pymc/tests/distributions/test_censored.py
             pymc/tests/distributions/test_simulator.py
-            pymc/tests/distributions/test_truncated.py
             pymc/tests/sampling/test_forward.py
             pymc/tests/sampling/test_population.py
             pymc/tests/stats/test_convergence.py
             pymc/tests/stats/test_log_likelihood.py
+            pymc/tests/distributions/test_distribution.py
+            pymc/tests/distributions/test_discrete.py
 
           - |
             pymc/tests/tuning/test_scaling.py
@@ -87,6 +86,7 @@ jobs:
             pymc/tests/step_methods/hmc/test_quadpotential.py
 
           - |
+            pymc/tests/distributions/test_truncated.py
             pymc/tests/logprob/test_abstract.py
             pymc/tests/logprob/test_censoring.py
             pymc/tests/logprob/test_composite_logprob.py
