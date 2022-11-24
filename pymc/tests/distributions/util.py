@@ -13,7 +13,6 @@ import pytest
 import scipy.special as sp
 import scipy.stats as st
 
-from aeppl.logprob import ParameterValueError
 from aesara.compile.mode import Mode
 
 import pymc as pm
@@ -23,6 +22,7 @@ from pymc.distributions import logcdf, logp
 from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
+from pymc.logprob.utils import ParameterValueError
 from pymc.tests.helpers import SeededTest, select_by_precision
 
 

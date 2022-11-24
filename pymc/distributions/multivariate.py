@@ -25,7 +25,6 @@ import aesara.tensor as at
 import numpy as np
 import scipy
 
-from aeppl.logprob import _logprob
 from aesara.graph.basic import Apply, Constant, Variable
 from aesara.graph.op import Op
 from aesara.raise_op import Assert
@@ -69,6 +68,7 @@ from pymc.distributions.shape_utils import (
     to_tuple,
 )
 from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
+from pymc.logprob.abstract import _logprob
 from pymc.math import kron_diag, kron_dot
 from pymc.util import check_dist_not_registered
 
