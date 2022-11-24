@@ -358,10 +358,11 @@ class TestTP:
     """
 
     def setup_method(self):
-        X = np.random.randn(20, 3)
-        y = np.random.randn(20)
-        Xnew = np.random.randn(30, 3)
-        pnew = np.random.randn(30)
+        rng = np.random.default_rng(20221125)
+        X = rng.standard_normal(size=(20, 3))
+        y = rng.standard_normal(size=(20,))
+        Xnew = rng.standard_normal(size=(30, 3))
+        pnew = rng.standard_normal(size=(30,))
 
         with pm.Model() as model1:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
@@ -414,6 +415,7 @@ class TestLatentKron:
     """
 
     def setup_method(self):
+        rng = np.random.default_rng(20221125)
         self.Xs = [
             np.linspace(0, 1, 7)[:, None],
             np.linspace(0, 1, 5)[:, None],
@@ -422,9 +424,13 @@ class TestLatentKron:
         self.X = cartesian(*self.Xs)
         self.N = np.prod([len(X) for X in self.Xs])
         self.y = np.random.randn(self.N) * 0.1
-        self.Xnews = (np.random.randn(5, 1), np.random.randn(5, 1), np.random.randn(5, 1))
+        self.Xnews = (
+            rng.standard_normal(size=(5, 1)),
+            rng.standard_normal(size=(5, 1)),
+            rng.standard_normal(size=(5, 1)),
+        )
         self.Xnew = np.concatenate(self.Xnews, axis=1)
-        self.pnew = np.random.randn(len(self.Xnew))
+        self.pnew = rng.standard_normal(size=(len(self.Xnew),))
         ls = 0.2
         with pm.Model() as latent_model:
             self.cov_funcs = (
