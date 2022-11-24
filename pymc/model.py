@@ -1212,15 +1212,29 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         "or define it via a `pm.MutableData` variable."
                     )
                 elif length_tensor.owner is not None:
-                    # The dimension was created from a model variable.
+                    # The dimension was created from another variable:
+                    length_tensor_origin = length_tensor.owner.inputs[0]
                     # Get a handle on the tensor from which this dimension length was
                     # obtained by doing subindexing on the shape as in `.shape[i]`.
-                    # Needed to check if it was another shared variable.
+                    if isinstance(length_tensor_origin, TensorConstant):
+                        raise ShapeError(
+                            f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
+                            f"because the dimension length is tied to a {length_tensor_origin}. "
+                            f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
+                            f"for example by another model variable.",
+                            actual=new_length,
+                            expected=old_length,
+                        )
+
+                    # The shape entry this dimension is tied to is not a TensorConstant.
+                    # Whether the dimension can be resized depends on the kind of Variable the shape belongs to.
                     # TODO: Consider checking the graph is what we are assuming it is
                     # isinstance(length_tensor.owner.op, Subtensor)
                     # isinstance(length_tensor.owner.inputs[0].owner.op, Shape)
-                    length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
+                    length_belongs_to = length_tensor_origin.owner.inputs[0]
+
                     if length_belongs_to is shared_object:
+                        # This is the shared variable that's being updated!
                         # No surprise it's changing.
                         pass
                     elif isinstance(length_belongs_to, SharedVariable):

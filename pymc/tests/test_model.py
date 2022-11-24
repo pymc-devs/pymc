@@ -216,8 +216,8 @@ class TestObserved:
             x1 = pm.Normal("x1", observed=X_)
             x2 = pm.Normal("x2", observed=X)
 
-        assert x1.type == X.type
-        assert x2.type == X.type
+        assert x1.type.dtype == X.type.dtype
+        assert x2.type.dtype == X.type.dtype
 
 
 def test_duplicate_vars():
@@ -935,7 +935,7 @@ def test_set_data_constant_shape_error():
         pmodel.add_coord("weekday", length=x.shape[0])
         pm.MutableData("y", np.arange(7), dims="weekday")
 
-    msg = "because the dimension was initialized from 'x' which is not a shared variable"
+    msg = "because the dimension length is tied to a TensorConstant"
     with pytest.raises(ShapeError, match=msg):
         pmodel.set_data("y", np.arange(10))
 
