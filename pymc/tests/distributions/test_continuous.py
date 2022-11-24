@@ -1647,6 +1647,19 @@ class TestAsymmetricLaplace(BaseTestDistributionRandom):
     ]
 
 
+class TestAsymmetricLaplaceQ(BaseTestDistributionRandom):
+    pymc_dist = pm.AsymmetricLaplace
+
+    pymc_dist_params = {"mu": 0.0, "b": 2.0, "q": 0.9}
+    expected_kappa = pymc_dist.get_kappa(None, pymc_dist_params["q"])
+    expected_rv_op_params = {
+        "b": pymc_dist_params["b"],
+        "kappa": expected_kappa,
+        "mu": pymc_dist_params["mu"],
+    }
+    checks_to_run = ["check_pymc_params_match_rv_op"]
+
+
 class TestExGaussian(BaseTestDistributionRandom):
     def exgaussian_rng_fn(self, mu, sigma, nu, size, normal_rng_fct, exponential_rng_fct):
         return normal_rng_fct(mu, sigma, size=size) + exponential_rng_fct(scale=nu, size=size)

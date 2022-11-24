@@ -1465,6 +1465,13 @@ class AsymmetricLaplace(Continuous):
     Variance  :math:`\frac{1+\kappa^{4}}{b^2\kappa^2 }`
     ========  ========================
 
+    AsymmetricLaplace distribution can be parameterized either in terms of kappa
+    or q. The link between the two parametrizations is given by
+
+    .. math::
+
+       \kappa = \sqrt(\frac{q}{1-q})
+
     Parameters
     ----------
     kappa : tensor_like of float
@@ -1473,19 +1480,40 @@ class AsymmetricLaplace(Continuous):
         Location parameter.
     b : tensor_like of float
         Scale parameter (b > 0).
+    q : tensor_like of float
+        Symmetry parameter (0 < q < 1).
+
+    Notes
+    -----
+    The parametrization in terms of q is useful for quantile regression with q being the quantile
+    of interest.
     """
     rv_op = asymmetriclaplace
 
     @classmethod
-    def dist(cls, kappa, mu, b, *args, **kwargs):
+    def dist(cls, kappa=None, mu=None, b=None, q=None, *args, **kwargs):
+        kappa = cls.get_kappa(kappa, q)
         b = at.as_tensor_variable(floatX(b))
         kappa = at.as_tensor_variable(floatX(kappa))
-        mu = mu = at.as_tensor_variable(floatX(mu))
-
-        # mean = mu - (kappa - 1 / kappa) / b
-        # variance = (1 + kappa ** 4) / (kappa ** 2 * b ** 2)
+        mu = at.as_tensor_variable(floatX(mu))
 
         return super().dist([b, kappa, mu], *args, **kwargs)
+
+    @classmethod
+    def get_kappa(cls, kappa=None, q=None):
+        if kappa is not None and q is not None:
+            raise ValueError(
+                "Incompatible parameterization. Either use "
+                "kappa or q to specify the distribution."
+            )
+        elif q is not None:
+            if isinstance(q, Variable):
+                q = check_parameters(q, q > 0, q < 1, msg="0 < q < 1")
+            else:
+                assert np.all((np.asarray(q) > 0) | (np.asarray(q) < 1))
+            kappa = (q / (1 - q)) ** 0.5
+
+        return kappa
 
     def moment(rv, size, b, kappa, mu):
         mean = mu - (kappa - 1 / kappa) / b
