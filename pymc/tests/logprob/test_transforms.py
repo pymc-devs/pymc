@@ -45,6 +45,7 @@ from numdifftools import Jacobian
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import equal_computations
 from pytensor.graph.fg import FunctionGraph
+from pytensor.scan import scan
 
 from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob.abstract import MeasurableVariable, _get_measurable_outputs, _logprob
@@ -781,3 +782,56 @@ def test_invalid_broadcasted_transform_rv_fails():
     logp = joint_logprob({y_rv: y_vv})
     logp.eval({y_vv: [0, 0, 0, 0], loc: [0, 0, 0, 0]})
     assert False, "Should have failed before"
+
+
+def test_scan_transform():
+    """Test that Scan valued variables can be transformed"""
+
+    init = at.random.beta(1, 1, name="init")
+    init_vv = init.clone()
+
+    innov, _ = scan(
+        fn=lambda prev_innov: at.random.beta(prev_innov * 10, (1 - prev_innov) * 10),
+        outputs_info=[init],
+        n_steps=4,
+    )
+    innov.name = "innov"
+    innov_vv = innov.clone()
+
+    tr = TransformValuesRewrite(
+        {
+            init_vv: LogOddsTransform(),
+            innov_vv: LogOddsTransform(),
+        }
+    )
+    logp = factorized_joint_logprob(
+        {init: init_vv, innov: innov_vv}, extra_rewrites=tr, use_jacobian=True
+    )[innov_vv]
+    logp_fn = pytensor.function([init_vv, innov_vv], logp, on_unused_input="ignore")
+
+    # Create an unrolled scan graph as reference
+    innov = []
+    prev_innov = init
+    for i in range(4):
+        next_innov = at.random.beta(prev_innov * 10, (1 - prev_innov) * 10, name=f"innov[i]")
+        innov.append(next_innov)
+        prev_innov = next_innov
+    innov = at.stack(innov)
+    innov.name = "innov"
+
+    tr = TransformValuesRewrite(
+        {
+            init_vv: LogOddsTransform(),
+            innov_vv: LogOddsTransform(),
+        }
+    )
+    ref_logp = factorized_joint_logprob(
+        {init: init_vv, innov: innov_vv}, extra_rewrites=tr, use_jacobian=True
+    )[innov_vv]
+    ref_logp_fn = pytensor.function([init_vv, innov_vv], ref_logp, on_unused_input="ignore")
+
+    test_point = {
+        "init": np.array(-0.5),
+        "innov": np.full((4,), -0.5),
+    }
+    np.testing.assert_allclose(logp_fn(**test_point), ref_logp_fn(**test_point))

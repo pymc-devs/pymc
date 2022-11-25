@@ -459,8 +459,6 @@ def find_measurable_scans(fgraph, node):
 
             # We're going to set those values on our `new_val_var` so that it can
             # serve as a complete replacement for the old input `outer_input_var`.
-            # from pytensor.graph import clone_replace
-            #
             new_val_var = outer_input_var.owner.clone_with_new_inputs(
                 [new_val_var] + outer_input_var.owner.inputs[1:]
             ).default_output()
