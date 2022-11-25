@@ -129,11 +129,24 @@ MeasurableVariable.register(MeasurableMakeVector)
 
 
 @_logprob.register(MeasurableMakeVector)
-def logprob_make_vector(op, values, *base_vars, **kwargs):
+def logprob_make_vector(op, values, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for a `MeasurableMakeVector`."""
+    # TODO: Sort out this circular dependency issue
+    from pymc.pytensorf import replace_rvs_by_values
+
     (value,) = values
 
-    return at.stack([logprob(base_var, value[i]) for i, base_var in enumerate(base_vars)])
+    base_rvs_to_values = {base_rv: value[i] for i, base_rv in enumerate(base_rvs)}
+    for i, (base_rv, value) in enumerate(base_rvs_to_values.items()):
+        base_rv.name = f"base_rv[{i}]"
+        value.name = f"value[{i}]"
+
+    logps = [logprob(base_rv, value) for base_rv, value in base_rvs_to_values.items()]
+
+    # If the stacked variables depend on each other, we have to replace them by the respective values
+    logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_values)
+
+    return at.stack(logps)
 
 
 class MeasurableJoin(Join):
@@ -144,27 +157,28 @@ MeasurableVariable.register(MeasurableJoin)
 
 
 @_logprob.register(MeasurableJoin)
-def logprob_join(op, values, axis, *base_vars, **kwargs):
+def logprob_join(op, values, axis, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for a `Join`."""
+    # TODO: Find better way to avoid circular dependency
+    from pymc.pytensorf import constant_fold, replace_rvs_by_values
+
     (value,) = values
 
-    base_var_shapes = [base_var.shape[axis] for base_var in base_vars]
-
-    # TODO: Find better way to avoid circular dependency
-    from pymc.pytensorf import constant_fold
+    base_rv_shapes = [base_var.shape[axis] for base_var in base_rvs]
 
     # We don't need the graph to be constant, just to have RandomVariables removed
-    base_var_shapes = constant_fold(base_var_shapes, raise_not_constant=False)
+    base_rv_shapes = constant_fold(base_rv_shapes, raise_not_constant=False)
 
     split_values = at.split(
         value,
-        splits_size=base_var_shapes,
-        n_splits=len(base_vars),
+        splits_size=base_rv_shapes,
+        n_splits=len(base_rvs),
         axis=axis,
     )
 
+    base_rvs_to_split_values = {base_rv: value for base_rv, value in zip(base_rvs, split_values)}
     logps = [
-        logprob(base_var, split_value) for base_var, split_value in zip(base_vars, split_values)
+        logprob(base_var, split_value) for base_var, split_value in base_rvs_to_split_values.items()
     ]
 
     if len({logp.ndim for logp in logps}) != 1:
@@ -173,12 +187,12 @@ def logprob_join(op, values, axis, *base_vars, **kwargs):
             "joining univariate and multivariate distributions",
         )
 
+    # If the stacked variables depend on each other, we have to replace them by the respective values
+    logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_split_values)
+
     base_vars_ndim_supp = split_values[0].ndim - logps[0].ndim
     join_logprob = at.concatenate(
-        [
-            at.atleast_1d(logprob(base_var, split_value))
-            for base_var, split_value in zip(base_vars, split_values)
-        ],
+        [at.atleast_1d(logp) for logp in logps],
         axis=axis - base_vars_ndim_supp,
     )
 
@@ -199,6 +213,8 @@ def find_measurable_stacks(
     if rv_map_feature is None:
         return None  # pragma: no cover
 
+    rvs_to_values = rv_map_feature.rv_values
+
     stack_out = node.outputs[0]
 
     is_join = isinstance(node.op, Join)
@@ -211,18 +227,40 @@ def find_measurable_stacks(
     if not all(
         base_var.owner
         and isinstance(base_var.owner.op, MeasurableVariable)
-        and base_var not in rv_map_feature.rv_values
+        and base_var not in rvs_to_values
         for base_var in base_vars
     ):
         return None  # pragma: no cover
 
     # Make base_vars unmeasurable
-    base_vars = [assign_custom_measurable_outputs(base_var.owner) for base_var in base_vars]
+    base_to_unmeasurable_vars = {
+        base_var: assign_custom_measurable_outputs(base_var.owner).outputs[
+            base_var.owner.outputs.index(base_var)
+        ]
+        for base_var in base_vars
+    }
+
+    def replacement_fn(var, replacements):
+        if var in base_to_unmeasurable_vars:
+            replacements[var] = base_to_unmeasurable_vars[var]
+        # We don't want to clone valued nodes. Assigning a var to itself in the
+        # replacements prevents this
+        elif var in rvs_to_values:
+            replacements[var] = var
+
+        return []
+
+    # TODO: Fix this import circularity!
+    from pymc.pytensorf import _replace_rvs_in_graphs
+
+    unmeasurable_base_vars, _ = _replace_rvs_in_graphs(
+        graphs=base_vars, replacement_fn=replacement_fn
+    )
 
     if is_join:
-        measurable_stack = MeasurableJoin()(axis, *base_vars)
+        measurable_stack = MeasurableJoin()(axis, *unmeasurable_base_vars)
     else:
-        measurable_stack = MeasurableMakeVector(node.op.dtype)(*base_vars)
+        measurable_stack = MeasurableMakeVector(node.op.dtype)(*unmeasurable_base_vars)
 
     measurable_stack.name = stack_out.name
 
