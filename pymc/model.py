@@ -1498,6 +1498,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         This can include several types of variables such basic_RVs, Data, Deterministics,
         and Potentials.
         """
+        if var.name is None:
+            raise ValueError("Variable is unnamed.")
         if self.named_vars.tree_contains(var.name):
             raise ValueError(f"Variable name {var.name} already exists.")
 
@@ -1507,7 +1509,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             for dim in dims:
                 if dim not in self.coords and dim is not None:
                     raise ValueError(f"Dimension {dim} is not specified in `coords`.")
-            if any(var.name == dim for dim in dims):
+            if any(var.name == dim for dim in dims if dim is not None):
                 raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
             self.named_vars_to_dims[var.name] = dims
 
