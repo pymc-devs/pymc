@@ -61,6 +61,9 @@ class BaseTrace(ABC):
         if vars is None:
             vars = model.unobserved_value_vars
 
+        unnamed_vars = {var for var in vars if var.name is None}
+        if unnamed_vars:
+            raise Exception(f"Can't trace unnamed variables: {unnamed_vars}")
         self.vars = vars
         self.varnames = [var.name for var in vars]
         self.fn = model.compile_fn(vars, inputs=model.value_vars, on_unused_input="ignore")
