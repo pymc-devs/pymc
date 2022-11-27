@@ -32,6 +32,17 @@ from pymc.util import get_default_varnames, get_var_name
 VarName = NewType("VarName", str)
 
 
+__all__ = (
+    "ModelGraph",
+    "model_to_graphviz",
+    "model_to_networkx",
+)
+
+
+def fast_eval(var):
+    return function([], var, mode="FAST_COMPILE")()
+
+
 class ModelGraph:
     def __init__(self, model):
         self.model = model
@@ -183,9 +194,6 @@ class ModelGraph:
         else:
             graph.node(var_name.replace(":", "&"), **kwargs)
 
-    def _eval(self, var):
-        return function([], var, mode="FAST_COMPILE")()
-
     def get_plates(self, var_names: Optional[Iterable[VarName]] = None) -> Dict[str, Set[VarName]]:
         """Rough but surprisingly accurate plate detection.
 
@@ -202,11 +210,11 @@ class ModelGraph:
             v = self.model[var_name]
             if var_name in self.model.named_vars_to_dims:
                 plate_label = " x ".join(
-                    f"{d} ({self._eval(self.model.dim_lengths[d])})"
+                    f"{d} ({fast_eval(self.model.dim_lengths[d])})"
                     for d in self.model.named_vars_to_dims[var_name]
                 )
             else:
-                plate_label = " x ".join(map(str, self._eval(v.shape)))
+                plate_label = " x ".join(map(str, fast_eval(v.shape)))
             plates[plate_label].add(var_name)
 
         return plates
