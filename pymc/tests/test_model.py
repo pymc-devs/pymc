@@ -844,6 +844,30 @@ def test_set_dim_with_coords():
     assert pmodel.coords["mdim"] == ("A", "B", "C")
 
 
+def test_add_named_variable_checks_dim_name():
+    with pm.Model() as pmodel:
+        rv = pm.Normal.dist(mu=[1, 2])
+
+        # Checks that vars are named
+        with pytest.raises(ValueError, match="is unnamed"):
+            pmodel.add_named_variable(rv)
+        rv.name = "nomnom"
+
+        # Coords must be available already
+        with pytest.raises(ValueError, match="not specified in `coords`"):
+            pmodel.add_named_variable(rv, dims="nomnom")
+        pmodel.add_coord("nomnom", [1, 2])
+
+        # No name collisions
+        with pytest.raises(ValueError, match="same name as"):
+            pmodel.add_named_variable(rv, dims="nomnom")
+
+        # This should work (regression test against #6335)
+        rv2 = rv[:, None]
+        rv2.name = "yumyum"
+        pmodel.add_named_variable(rv2, dims=("nomnom", None))
+
+
 def test_set_data_indirect_resize():
     with pm.Model() as pmodel:
         pmodel.add_coord("mdim", mutable=True, length=2)
