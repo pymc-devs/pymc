@@ -14,7 +14,7 @@
 import warnings
 
 from collections import defaultdict
-from typing import Dict, Iterable, List, NewType, Optional, Set
+from typing import Dict, Iterable, List, NewType, Optional, Sequence, Set
 
 from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
@@ -30,6 +30,17 @@ import pymc as pm
 from pymc.util import get_default_varnames, get_var_name
 
 VarName = NewType("VarName", str)
+
+
+__all__ = (
+    "ModelGraph",
+    "model_to_graphviz",
+    "model_to_networkx",
+)
+
+
+def fast_eval(var):
+    return function([], var, mode="FAST_COMPILE")()
 
 
 class ModelGraph:
@@ -183,9 +194,6 @@ class ModelGraph:
         else:
             graph.node(var_name.replace(":", "&"), **kwargs)
 
-    def _eval(self, var):
-        return function([], var, mode="FAST_COMPILE")()
-
     def get_plates(self, var_names: Optional[Iterable[VarName]] = None) -> Dict[str, Set[VarName]]:
         """Rough but surprisingly accurate plate detection.
 
@@ -198,18 +206,32 @@ class ModelGraph:
         """
         plates = defaultdict(set)
 
+        # TODO: Evaluate all RV shapes and dim_length at once.
+        #       This should help to find discrepancies, and
+        #       avoids unncessary function compiles for deetermining labels.
+
         for var_name in self.vars_to_plot(var_names):
             v = self.model[var_name]
+            shape: Sequence[int] = fast_eval(v.shape)
+            dim_labels = []
             if var_name in self.model.named_vars_to_dims:
-                plate_label = " x ".join(
-                    f"{d} ({self._eval(self.model.dim_lengths[d])})"
-                    for d in self.model.named_vars_to_dims[var_name]
-                )
+                # The RV is associated with `dims` information.
+                for d, dname in enumerate(self.model.named_vars_to_dims[var_name]):
+                    if dname is None:
+                        # Unnamed dimension in a `dims` tuple!
+                        dlen = shape[d]
+                        dname = f"{var_name}_dim{d}"
+                    else:
+                        dlen = fast_eval(self.model.dim_lengths[dname])
+                    dim_labels.append(f"{dname} ({dlen})")
+                plate_label = " x ".join(dim_labels)
             else:
-                plate_label = " x ".join(map(str, self._eval(v.shape)))
+                # The RV has no `dims` information.
+                dim_labels = map(str, shape)
+                plate_label = " x ".join(map(str, shape))
             plates[plate_label].add(var_name)
 
-        return plates
+        return dict(plates)
 
     def make_graph(self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
         """Make graphviz Digraph of PyMC model
