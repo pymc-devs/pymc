@@ -166,6 +166,8 @@ def beta_mu_sigma(value, mu, sigma):
     else:
         return -np.inf
 
+def beta_mu_nu(value, mu, nu):
+    return st.beta.logpdf(value, mu * nu, (1 - mu) * nu)
 
 class TestMatchesScipy:
     def test_uniform(self):
@@ -372,6 +374,12 @@ class TestMatchesScipy:
             Unit,
             {"mu": Unit, "sigma": Rplus},
             beta_mu_sigma,
+        )
+        check_logp(
+            pm.Beta,
+            Unit,
+            {"mu": Unit, "nu": Rplus},
+            beta_mu_nu,
         )
 
     @pytest.mark.skipif(
