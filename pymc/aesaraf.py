@@ -376,6 +376,9 @@ def replace_rvs_by_values(
         if transform is not None:
             # We want to replace uses of the RV by the back-transformation of its value
             value = transform.backward(value, *rv.owner.inputs)
+            # The value may have a less precise type than the rv. In this case
+            # filter_variable will add a SpecifyShape to ensure they are consistent
+            value = rv.type.filter_variable(value, allow_convert=True)
             value.name = rv.name
 
         replacements[rv] = value
