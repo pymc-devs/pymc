@@ -38,6 +38,7 @@ from pymc.backends.base import MultiTrace
 from pymc.sampling.forward import (
     compile_forward_sampling_function,
     get_vars_in_point_list,
+    observed_dependent_deterministics,
 )
 from pymc.tests.helpers import SeededTest, fast_unstable_sampling_mode
 
@@ -330,7 +331,7 @@ class TestCompileForwardSampler:
     def test_non_random_model_variable(self):
         with pm.Model() as model:
             # A user may register non-pure RandomVariables that can nevertheless be
-            # sampled, as long as a custom logprob is dispatched or Aeppl can infer
+            # sampled, as long as a custom logprob is dispatched or we can infer
             # its logprob (which is the case for `clip`)
             y = at.clip(pm.Normal.dist(), -1, 1)
             y = model.register_rv(y, name="y")
@@ -1175,51 +1176,13 @@ class TestSamplePriorPredictive(SeededTest):
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_prior_predictive(samples=5)
 
-    def test_transformed_vars(self):
-        # Test that prior predictive returns transformation of RVs when these are
-        # passed explicitly in `var_names`
-
-        def ub_interval_forward(x, ub):
-            # Interval transform assuming lower bound is zero
-            return np.log(x - 0) - np.log(ub - x)
-
+    def test_transformed_vars_not_supported(self):
         with pm.Model() as model:
             ub = pm.HalfNormal("ub", 10)
             x = pm.Uniform("x", 0, ub)
 
-            prior = pm.sample_prior_predictive(
-                var_names=["ub", "ub_log__", "x", "x_interval__"],
-                samples=10,
-                random_seed=123,
-            )
-
-        # Check values are correct
-        assert np.allclose(prior.prior["ub_log__"].data, np.log(prior.prior["ub"].data))
-        assert np.allclose(
-            prior.prior["x_interval__"].data,
-            ub_interval_forward(prior.prior["x"].data, prior.prior["ub"].data),
-        )
-
-        # Check that it works when the original RVs are not mentioned in var_names
-        with pm.Model() as model_transformed_only:
-            ub = pm.HalfNormal("ub", 10)
-            x = pm.Uniform("x", 0, ub)
-
-            prior_transformed_only = pm.sample_prior_predictive(
-                var_names=["ub_log__", "x_interval__"],
-                samples=10,
-                random_seed=123,
-            )
-        assert (
-            "ub" not in prior_transformed_only.prior.data_vars
-            and "x" not in prior_transformed_only.prior.data_vars
-        )
-        assert np.allclose(
-            prior.prior["ub_log__"].data, prior_transformed_only.prior["ub_log__"].data
-        )
-        assert np.allclose(
-            prior.prior["x_interval__"], prior_transformed_only.prior["x_interval__"].data
-        )
+            with pytest.raises(ValueError, match="Unrecognized var_names"):
+                pm.sample_prior_predictive(var_names=["ub", "ub_log__", "x", "x_interval__"])
 
     def test_issue_4490(self):
         # Test that samples do not depend on var_name order or, more fundamentally,
@@ -1659,3 +1622,19 @@ def test_get_vars_in_point_list():
     trace = MultiTrace([strace])
     vars_in_trace = get_vars_in_point_list(trace, modelB)
     assert set(vars_in_trace) == {a}
+
+
+def test_observed_dependent_deterministics():
+    with pm.Model() as m:
+        free = pm.Normal("free")
+        obs = pm.Normal("obs", observed=1)
+
+        det_free = pm.Deterministic("det_free", free + 1)
+        det_free2 = pm.Deterministic("det_free2", det_free + 1)
+
+        det_obs = pm.Deterministic("det_obs", obs + 1)
+        det_obs2 = pm.Deterministic("det_obs2", det_obs + 1)
+
+        det_mixed = pm.Deterministic("det_mixed", free + obs)
+
+    assert set(observed_dependent_deterministics(m)) == {det_obs, det_obs2, det_mixed}

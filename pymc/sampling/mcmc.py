@@ -37,12 +37,7 @@ from pymc.backends import _init_trace
 from pymc.backends.base import BaseTrace, MultiTrace, _choose_chains
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-from pymc.initial_point import (
-    PointType,
-    StartDict,
-    filter_rvs_to_jitter,
-    make_initial_point_fns_per_chain,
-)
+from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import Draw, _cpu_count
 from pymc.sampling.population import _sample_population
@@ -210,11 +205,8 @@ def _print_step_hierarchy(s: Step, level: int = 0) -> None:
 
 
 def all_continuous(vars):
-    """Check that vars not include discrete variables, excepting observed RVs."""
-
-    vars_ = [var for var in vars if not hasattr(var.tag, "observations")]
-
-    if any([(var.dtype in discrete_types) for var in vars_]):
+    """Check that vars not include discrete variables"""
+    if any([(var.dtype in discrete_types) for var in vars]):
         return False
     else:
         return True
@@ -479,7 +471,7 @@ def sample(
         ipfns = make_initial_point_fns_per_chain(
             model=model,
             overrides=initvals,
-            jitter_rvs=filter_rvs_to_jitter(step),
+            jitter_rvs=set(),
             chains=chains,
         )
         initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed_list)]
@@ -920,14 +912,10 @@ def _iter_sample(
                 step.iter_count = 0
             if i == tune:
                 step.stop_tuning()
-            if step.generates_stats:
-                point, stats = step.step(point)
-                strace.record(point, stats)
-                log_warning_stats(stats)
-                diverging = i > tune and stats and stats[0].get("diverging")
-            else:
-                point = step.step(point)
-                strace.record(point, [])
+            point, stats = step.step(point)
+            strace.record(point, stats)
+            log_warning_stats(stats)
+            diverging = i > tune and stats and stats[0].get("diverging")
             if callback is not None:
                 callback(
                     trace=strace,

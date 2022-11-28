@@ -8,7 +8,8 @@ Sequential Monte Carlo
 
     sample_smc
 
-(smc_kernels)=
+.. _smc_kernels:
+
 SMC kernels
 -----------
 

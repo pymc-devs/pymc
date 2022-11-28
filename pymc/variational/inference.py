@@ -49,12 +49,12 @@ class Inference:
 
     Parameters
     ----------
-    op: Operator class
-    approx: Approximation class or instance
-    tf: TestFunction instance
-    model: Model
+    op : Operator class    #:class:`~pymc.variational.operators`
+    approx : Approximation class or instance    #:class:`~pymc.variational.approximations`
+    tf : TestFunction instance  #?
+    model : Model
         PyMC Model
-    kwargs: kwargs passed to :class:`Operator`
+    kwargs : kwargs passed to :class:`Operator` #:class:`~pymc.variational.operators`, optional
     """
 
     def __init__(self, op, approx, tf, **kwargs):
@@ -96,18 +96,18 @@ class Inference:
 
         Parameters
         ----------
-        n: int
+        n : int
             number of iterations
-        score: bool
+        score : bool
             evaluate loss on each iteration or not
-        callbacks: list[function: (Approximation, losses, i) -> None]
+        callbacks : list[function: (Approximation, losses, i) -> None]
             calls provided functions after each iteration step
-        progressbar: bool
+        progressbar : bool
             whether to show progressbar or not
 
         Other Parameters
         ----------------
-        obj_n_mc: `int`
+        obj_n_mc: int
             Number of monte carlo samples used for approximation of objective gradients
         tf_n_mc: `int`
             Number of monte carlo samples used for approximation of test function gradients
@@ -258,7 +258,7 @@ class Inference:
                 )
         else:
             if n == 0:
-                logger.info(f"Initialization only")
+                logger.info("Initialization only")
             elif n < 10:
                 logger.info(f"Finished [100%]: Loss = {scores[-1]:,.5g}")
             else:

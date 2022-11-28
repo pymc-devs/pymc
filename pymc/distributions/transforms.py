@@ -16,7 +16,14 @@ from functools import singledispatch
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.transforms import (
+from aesara.graph import Op
+from aesara.tensor import TensorVariable
+
+# ignore mypy error because it somehow considers that
+# "numpy.core.numeric has no attribute normalize_axis_tuple"
+from numpy.core.numeric import normalize_axis_tuple  # type: ignore
+
+from pymc.logprob.transforms import (
     CircularTransform,
     IntervalTransform,
     LogOddsTransform,
@@ -24,12 +31,6 @@ from aeppl.transforms import (
     RVTransform,
     SimplexTransform,
 )
-from aesara.graph import Op
-from aesara.tensor import TensorVariable
-
-# ignore mypy error because it somehow considers that
-# "numpy.core.numeric has no attribute normalize_axis_tuple"
-from numpy.core.numeric import normalize_axis_tuple  # type: ignore
 
 __all__ = [
     "RVTransform",
@@ -38,8 +39,12 @@ __all__ = [
     "Interval",
     "log_exp_m1",
     "ordered",
+    "univariate_ordered",
+    "multivariate_ordered",
     "log",
     "sum_to_1",
+    "univariate_sum_to_1",
+    "multivariate_sum_to_1",
     "circular",
     "CholeskyCovPacked",
     "Chain",
@@ -74,6 +79,14 @@ class LogExpM1(RVTransform):
 class Ordered(RVTransform):
     name = "ordered"
 
+    def __init__(self, ndim_supp=0):
+        if ndim_supp > 1:
+            raise ValueError(
+                f"For Ordered transformation number of core dimensions"
+                f"(ndim_supp) must not exceed 1 but is {ndim_supp}"
+            )
+        self.ndim_supp = ndim_supp
+
     def backward(self, value, *inputs):
         x = at.zeros(value.shape)
         x = at.inc_subtensor(x[..., 0], value[..., 0])
@@ -87,7 +100,10 @@ class Ordered(RVTransform):
         return y
 
     def log_jac_det(self, value, *inputs):
-        return at.sum(value[..., 1:], axis=-1)
+        if self.ndim_supp == 0:
+            return at.sum(value[..., 1:], axis=-1, keepdims=True)
+        else:
+            return at.sum(value[..., 1:], axis=-1)
 
 
 class SumTo1(RVTransform):
@@ -98,6 +114,14 @@ class SumTo1(RVTransform):
 
     name = "sumto1"
 
+    def __init__(self, ndim_supp=0):
+        if ndim_supp > 1:
+            raise ValueError(
+                f"For SumTo1 transformation number of core dimensions"
+                f"(ndim_supp) must not exceed 1 but is {ndim_supp}"
+            )
+        self.ndim_supp = ndim_supp
+
     def backward(self, value, *inputs):
         remaining = 1 - at.sum(value[..., :], axis=-1, keepdims=True)
         return at.concatenate([value[..., :], remaining], axis=-1)
@@ -107,7 +131,10 @@ class SumTo1(RVTransform):
 
     def log_jac_det(self, value, *inputs):
         y = at.zeros(value.shape)
-        return at.sum(y, axis=-1)
+        if self.ndim_supp == 0:
+            return at.sum(y, axis=-1, keepdims=True)
+        else:
+            return at.sum(y, axis=-1)
 
 
 class CholeskyCovPacked(RVTransform):
@@ -181,17 +208,17 @@ class Chain(RVTransform):
 
 simplex = SimplexTransform()
 simplex.__doc__ = """
-Instantiation of :class:`aeppl.transforms.SimplexTransform`
+Instantiation of :class:`pymc.logprob.transforms.SimplexTransform`
 for use in the ``transform`` argument of a random variable."""
 
 logodds = LogOddsTransform()
 logodds.__doc__ = """
-Instantiation of :class:`aeppl.transforms.LogOddsTransform`
+Instantiation of :class:`pymc.logprob.transforms.LogOddsTransform`
 for use in the ``transform`` argument of a random variable."""
 
 
 class Interval(IntervalTransform):
-    """Wrapper around  :class:`aeppl.transforms.IntervalTransform` for use in the
+    """Wrapper around  :class:`pymc.logprob.transforms.IntervalTransform` for use in the
     ``transform`` argument of a random variable.
 
     Parameters
@@ -215,34 +242,38 @@ class Interval(IntervalTransform):
 
     Examples
     --------
+
+    Create an interval transform between -1 and +1
+
     .. code-block:: python
 
-        # Create an interval transform between -1 and +1
         with pm.Model():
             interval = pm.distributions.transforms.Interval(lower=-1, upper=1)
             x = pm.Normal("x", transform=interval)
 
+    Create a lower-bounded interval transform at 0, using a callable
+
     .. code-block:: python
 
-        # Create an interval transform between -1 and +1 using a callable
-        def get_bounds(rng, size, dtype, loc, scale):
+        def get_bounds(rng, size, dtype, mu, sigma):
             return 0, None
 
         with pm.Model():
             interval = pm.distributions.transforms.Interval(bouns_fn=get_bounds)
             x = pm.Normal("x", transform=interval)
 
+    Create a lower-bounded interval transform that depends on a distribution parameter
+
     .. code-block:: python
 
-        # Create a lower bounded interval transform based on a distribution parameter
-        def get_bounds(rng, size, dtype, loc, scale):
-            return loc, None
+        def get_bounds(rng, size, dtype, mu, sigma):
+            return mu - 1, None
 
         interval = pm.distributions.transforms.Interval(bounds_fn=get_bounds)
 
         with pm.Model():
-            loc = pm.Normal("loc")
-            x = pm.Normal("x", mu=loc, sigma=2, transform=interval)
+            mu = pm.Normal("mu")
+            x = pm.Normal("x", mu=mu, sigma=2, transform=interval)
     """
 
     def __init__(self, lower=None, upper=None, *, bounds_fn=None):
@@ -330,22 +361,48 @@ log_exp_m1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.LogExpM1`
 for use in the ``transform`` argument of a random variable."""
 
-ordered = Ordered()
+univariate_ordered = Ordered(ndim_supp=0)
+univariate_ordered.__doc__ = """
+Instantiation of :class:`pymc.distributions.transforms.Ordered`
+for use in the ``transform`` argument of a univariate random variable."""
+
+multivariate_ordered = Ordered(ndim_supp=1)
+multivariate_ordered.__doc__ = """
+Instantiation of :class:`pymc.distributions.transforms.Ordered`
+for use in the ``transform`` argument of a multivariate random variable."""
+
+# backwards compatibility
+ordered = Ordered(ndim_supp=1)
 ordered.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.Ordered`
-for use in the ``transform`` argument of a random variable."""
+for use in the ``transform`` argument of a random variable.
+This instantiation is for backwards compatibility only.
+Please use `univariate_ordererd` or `multivariate_ordered` instead."""
 
 log = LogTransform()
 log.__doc__ = """
-Instantiation of :class:`aeppl.transforms.LogTransform`
+Instantiation of :class:`pymc.logprob.transforms.LogTransform`
 for use in the ``transform`` argument of a random variable."""
 
-sum_to_1 = SumTo1()
+univariate_sum_to_1 = SumTo1(ndim_supp=0)
+univariate_sum_to_1.__doc__ = """
+Instantiation of :class:`pymc.distributions.transforms.SumTo1`
+for use in the ``transform`` argument of a univariate random variable."""
+
+multivariate_sum_to_1 = SumTo1(ndim_supp=1)
+multivariate_sum_to_1.__doc__ = """
+Instantiation of :class:`pymc.distributions.transforms.SumTo1`
+for use in the ``transform`` argument of a multivariate random variable."""
+
+# backwards compatibility
+sum_to_1 = SumTo1(ndim_supp=1)
 sum_to_1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.SumTo1`
-for use in the ``transform`` argument of a random variable."""
+for use in the ``transform`` argument of a random variable.
+This instantiation is for backwards compatibility only.
+Please use `univariate_sum_to_1` or `multivariate_sum_to_1` instead."""
 
 circular = CircularTransform()
 circular.__doc__ = """
-Instantiation of :class:`aeppl.transforms.CircularTransform`
+Instantiation of :class:`pymc.logprob.transforms.CircularTransform`
 for use in the ``transform`` argument of a random variable."""

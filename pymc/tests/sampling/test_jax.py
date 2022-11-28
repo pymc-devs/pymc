@@ -235,7 +235,7 @@ def test_idata_kwargs(
 
     posterior = idata.get("posterior")
     assert posterior is not None
-    x_dim_expected = idata_kwargs.get("dims", model_test_idata_kwargs.RV_dims)["x"][0]
+    x_dim_expected = idata_kwargs.get("dims", model_test_idata_kwargs.named_vars_to_dims)["x"][0]
     assert x_dim_expected is not None
     assert posterior["x"].dims[-1] == x_dim_expected
 
@@ -365,3 +365,52 @@ def test_numpyro_nuts_kwargs_are_used(mocked: mock.MagicMock):
     assert nuts_sampler._adapt_step_size == adapt_step_size
     assert nuts_sampler._adapt_mass_matrix
     assert nuts_sampler._target_accept_prob == target_accept
+
+
+@pytest.mark.parametrize(
+    "sampler_name",
+    [
+        "sample_blackjax_nuts",
+        "sample_numpyro_nuts",
+    ],
+)
+def test_idata_contains_stats(sampler_name: str):
+    """Tests whether sampler statistics were written to sample_stats
+    group of InferenceData"""
+    if sampler_name == "sample_blackjax_nuts":
+        sampler = sample_blackjax_nuts
+    elif sampler_name == "sample_numpyro_nuts":
+        sampler = sample_numpyro_nuts
+
+    with pm.Model():
+        pm.Normal("a")
+        idata = sampler(tune=50, draws=50)
+
+    stats = idata.get("sample_stats")
+    assert stats is not None
+    n_chains = stats.dims["chain"]
+    n_draws = stats.dims["draw"]
+
+    # Stats vars expected for both samplers
+    expected_stat_vars = {
+        "acceptance_rate": (n_chains, n_draws),
+        "diverging": (n_chains, n_draws),
+        "energy": (n_chains, n_draws),
+        "tree_depth": (n_chains, n_draws),
+        "lp": (n_chains, n_draws),
+    }
+    # Stats only expected for blackjax nuts
+    if sampler_name == "sample_blackjax_nuts":
+        blackjax_special_vars = {}
+        stat_vars = expected_stat_vars | blackjax_special_vars
+    # Stats only expected for numpyro nuts
+    elif sampler_name == "sample_numpyro_nuts":
+        numpyro_special_vars = {
+            "step_size": (n_chains, n_draws),
+            "n_steps": (n_chains, n_draws),
+        }
+        stat_vars = expected_stat_vars | numpyro_special_vars
+    # test existence and dimensionality
+    for stat_var, stat_var_dims in stat_vars.items():
+        assert stat_var in stats.variables
+        assert stats.get(stat_var).values.shape == stat_var_dims

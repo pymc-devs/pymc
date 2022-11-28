@@ -35,7 +35,14 @@ import numpy as np
 import xarray
 
 from aesara import tensor as at
-from aesara.graph.basic import Apply, Constant, Variable, general_toposort, walk
+from aesara.graph.basic import (
+    Apply,
+    Constant,
+    Variable,
+    ancestors,
+    general_toposort,
+    walk,
+)
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.var import (
     RandomGeneratorSharedVariable,
@@ -324,6 +331,18 @@ def draw(
     return [np.stack(v) for v in drawn_values]
 
 
+def observed_dependent_deterministics(model: Model):
+    """Find deterministics that depend directly on observed variables"""
+    deterministics = model.deterministics
+    observed_rvs = set(model.observed_RVs)
+    blockers = model.basic_RVs
+    return [
+        deterministic
+        for deterministic in deterministics
+        if observed_rvs & set(ancestors([deterministic], blockers=blockers))
+    ]
+
+
 def sample_prior_predictive(
     samples: int = 500,
     model: Optional[Model] = None,
@@ -343,7 +362,7 @@ def sample_prior_predictive(
     var_names : Iterable[str]
         A list of names of variables for which to compute the prior predictive
         samples. Defaults to both observed and unobserved RVs. Transformed values
-        are not included unless explicitly defined in var_names.
+        are not allowed.
     random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     return_inferencedata : bool
@@ -371,34 +390,17 @@ def sample_prior_predictive(
         )
 
     if var_names is None:
-        prior_pred_vars = model.observed_RVs + model.auto_deterministics
-        prior_vars = (
-            get_default_varnames(model.unobserved_RVs, include_transformed=True) + model.potentials
-        )
-        vars_: Set[str] = {var.name for var in prior_vars + prior_pred_vars}
+        vars_: Set[str] = {var.name for var in model.basic_RVs + model.deterministics}
     else:
         vars_ = set(var_names)
 
     names = sorted(get_default_varnames(vars_, include_transformed=False))
     vars_to_sample = [model[name] for name in names]
 
-    # Any variables from var_names that are missing must be transformed variables.
-    # Misspelled variables would have raised a KeyError above.
+    # Any variables from var_names still missing are assumed to be transformed variables.
     missing_names = vars_.difference(names)
-    for name in sorted(missing_names):
-        transformed_value_var = model[name]
-        rv_var = model.values_to_rvs[transformed_value_var]
-        transform = transformed_value_var.tag.transform
-        transformed_rv_var = transform.forward(rv_var, *rv_var.owner.inputs)
-
-        names.append(name)
-        vars_to_sample.append(transformed_rv_var)
-
-        # If the user asked for the transformed variable in var_names, but not the
-        # original RV, we add it manually here
-        if rv_var.name not in names:
-            names.append(rv_var.name)
-            vars_to_sample.append(rv_var)
+    if missing_names:
+        raise ValueError(f"Unrecognized var_names: {missing_names}")
 
     if random_seed is not None:
         (random_seed,) = _get_seeds_per_chain(random_seed, 1)
@@ -584,7 +586,7 @@ def sample_posterior_predictive(
     if var_names is not None:
         vars_ = [model[x] for x in var_names]
     else:
-        vars_ = model.observed_RVs + model.auto_deterministics
+        vars_ = model.observed_RVs + observed_dependent_deterministics(model)
 
     indices = np.arange(samples)
     if progressbar:

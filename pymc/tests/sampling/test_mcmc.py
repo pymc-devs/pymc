@@ -642,7 +642,7 @@ def test_step_args():
     npt.assert_allclose(idata1.sample_stats.scaling, 0)
 
 
-class ApolypticMetropolis(pm.Metropolis):
+class ApocalypticMetropolis(pm.Metropolis):
     """A stepper that warns in every iteration."""
 
     stats_dtypes = [
@@ -673,7 +673,7 @@ def test_logs_sampler_warnings(caplog, cores):
                 draws=3,
                 cores=cores,
                 chains=cores,
-                step=ApolypticMetropolis(),
+                step=ApocalypticMetropolis(),
                 compute_convergence_checks=False,
                 discard_tuned_samples=False,
                 keep_warning_stat=True,
@@ -702,7 +702,7 @@ def test_keep_warning_stat_setting(keep_warning_stat):
         sample_kwargs["keep_warning_stat"] = True
     with pm.Model():
         pm.Normal("n")
-        idata = pm.sample(step=ApolypticMetropolis(), **sample_kwargs)
+        idata = pm.sample(step=ApocalypticMetropolis(), **sample_kwargs)
 
     if keep_warning_stat:
         assert "warning" in idata.warmup_sample_stats

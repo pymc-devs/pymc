@@ -22,15 +22,15 @@ import pytest
 import scipy.special as sp
 import scipy.stats as st
 
-from aeppl.logprob import ParameterValueError
 from aesara.compile.mode import Mode
 
 import pymc as pm
 
 from pymc.aesaraf import floatX
 from pymc.distributions import logcdf, logp
-from pymc.distributions.continuous import get_tau_sigma, interpolated
+from pymc.distributions.continuous import Normal, get_tau_sigma, interpolated
 from pymc.distributions.dist_math import clipped_beta_rvs
+from pymc.logprob.utils import ParameterValueError
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,
     Circ,
@@ -49,6 +49,7 @@ from pymc.tests.distributions.util import (
     seeded_scipy_distribution_builder,
 )
 from pymc.tests.helpers import select_by_precision
+from pymc.tests.logprob.utils import create_aesara_params, scipy_logprob_tester
 
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
@@ -70,10 +71,9 @@ except ImportError:  # pragma: no cover
 
 class TestBoundedContinuous:
     def get_dist_params_and_interval_bounds(self, model, rv_name):
-        interval_rv = model.named_vars[f"{rv_name}_interval__"]
         rv = model.named_vars[rv_name]
         dist_params = rv.owner.inputs
-        lower_interval, upper_interval = interval_rv.tag.transform.args_fn(*rv.owner.inputs)
+        lower_interval, upper_interval = model.rvs_to_transforms[rv].args_fn(*rv.owner.inputs)
         return (
             dist_params,
             lower_interval,
@@ -186,8 +186,10 @@ class TestMatchesScipy:
         # Custom logp / logcdf check for invalid parameters
         invalid_dist = pm.Uniform.dist(lower=1, upper=0)
         with aesara.config.change_flags(mode=Mode("py")):
-            assert logp(invalid_dist, np.array(0.5)).eval() == -np.inf
-            assert logcdf(invalid_dist, np.array(2.0)).eval() == -np.inf
+            with pytest.raises(ParameterValueError):
+                logp(invalid_dist, np.array(0.5)).eval()
+            with pytest.raises(ParameterValueError):
+                logcdf(invalid_dist, np.array(0.5)).eval()
 
     def test_triangular(self):
         check_logp(
@@ -1646,6 +1648,19 @@ class TestAsymmetricLaplace(BaseTestDistributionRandom):
     ]
 
 
+class TestAsymmetricLaplaceQ(BaseTestDistributionRandom):
+    pymc_dist = pm.AsymmetricLaplace
+
+    pymc_dist_params = {"mu": 0.0, "b": 2.0, "q": 0.9}
+    expected_kappa = pymc_dist.get_kappa(None, pymc_dist_params["q"])
+    expected_rv_op_params = {
+        "b": pymc_dist_params["b"],
+        "kappa": expected_kappa,
+        "mu": pymc_dist_params["mu"],
+    }
+    checks_to_run = ["check_pymc_params_match_rv_op"]
+
+
 class TestExGaussian(BaseTestDistributionRandom):
     def exgaussian_rng_fn(self, mu, sigma, nu, size, normal_rng_fct, exponential_rng_fct):
         return normal_rng_fct(mu, sigma, size=size) + exponential_rng_fct(scale=nu, size=size)
@@ -2234,3 +2249,22 @@ class TestInterpolated(BaseTestDistributionRandom):
                     extra_args={"rng": aesara.shared(rng)},
                     ref_rand=ref_rand,
                 )
+
+
+class TestICDF:
+    @pytest.mark.parametrize(
+        "dist_params, obs, size",
+        [
+            ((0, 1), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), ()),
+            ((-1, 20), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), ()),
+            ((-1, 20), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), (2, 3)),
+        ],
+    )
+    def test_normal_icdf(self, dist_params, obs, size):
+
+        dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+        dist_params = dict(zip(dist_params_at, dist_params))
+
+        x = Normal.dist(*dist_params_at, size=size_at)
+
+        scipy_logprob_tester(x, obs, dist_params, test_fn=st.norm.ppf, test="icdf")

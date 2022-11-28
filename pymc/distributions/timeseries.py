@@ -21,7 +21,6 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.logprob import _logprob
 from aesara.graph.basic import Node, clone_replace
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
@@ -43,6 +42,7 @@ from pymc.distributions.shape_utils import (
     get_support_shape_1d,
 )
 from pymc.exceptions import NotConstantValueError
+from pymc.logprob.abstract import _logprob
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -180,7 +180,7 @@ class RandomWalk(Distribution):
             innovation_dist.type(),
             steps.type(),
         )
-        # Aeppl can only infer the logp of a dimshuffled variables, if the dimshuffle is
+        # We can only infer the logp of a dimshuffled variables, if the dimshuffle is
         # done directly on top of a RandomVariable. Because of this we dimshuffle the
         # distributions and only then concatenate them, instead of the other way around.
         # shape = (B, 1, S)
@@ -225,15 +225,15 @@ def random_walk_moment(op, rv, init_dist, innovation_dist, steps):
 
 @_logprob.register(RandomWalkRV)
 def random_walk_logp(op, values, *inputs, **kwargs):
-    # Although Aeppl can derive the logprob of random walks, it does not collapse
-    # what PyMC considers the core dimension of steps. We do it manually here.
+    # Although we can derive the logprob of random walks, it does not collapse
+    # what we consider the core dimension of steps. We do it manually here.
     (value,) = values
     # Recreate RV and obtain inner graph
     rv_node = op.make_node(*inputs)
     rv = clone_replace(
         op.inner_outputs, replace={u: v for u, v in zip(op.inner_inputs, rv_node.inputs)}
     )[op.default_output]
-    # Obtain logp via Aeppl of inner graph and collapse steps dimension
+    # Obtain logp of the inner graph and collapse steps dimension
     return logp(rv, value).sum(axis=-1)
 
 
@@ -561,7 +561,7 @@ class AR(Distribution):
             )
             init_dist = Normal.dist(0, 100, shape=(*sigma.shape, ar_order))
 
-        # Tell Aeppl to ignore init_dist, as it will be accounted for in the logp term
+        # We can ignore init_dist, as it will be accounted for in the logp term
         init_dist = ignore_logprob(init_dist)
 
         return super().dist([rhos, sigma, init_dist, steps, ar_order, constant], **kwargs)
@@ -780,7 +780,7 @@ class GARCH11(Distribution):
         initial_vol = at.as_tensor_variable(initial_vol)
 
         init_dist = Normal.dist(0, initial_vol)
-        # Tell Aeppl to ignore init_dist, as it will be accounted for in the logp term
+        # We can ignore init_dist, as it will be accounted for in the logp term
         init_dist = ignore_logprob(init_dist)
 
         return super().dist([omega, alpha_1, beta_1, initial_vol, init_dist, steps], **kwargs)
@@ -905,11 +905,11 @@ class EulerMaruyama(Distribution):
 
     Parameters
     ----------
-    dt: float
+    dt : float
         time step of discretization
-    sde_fn: callable
+    sde_fn : callable
         function returning the drift and diffusion coefficients of SDE
-    sde_pars: tuple
+    sde_pars : tuple
         parameters of the SDE, passed as ``*args`` to ``sde_fn``
     init_dist : unnamed distribution, optional
         Scalar distribution for initial values. Unnamed refers to distributions created with
@@ -966,7 +966,7 @@ class EulerMaruyama(Distribution):
                 UserWarning,
             )
             init_dist = Normal.dist(0, 100, shape=sde_pars[0].shape)
-        # Tell Aeppl to ignore init_dist, as it will be accounted for in the logp term
+        # We can ignore init_dist, as it will be accounted for in the logp term
         init_dist = ignore_logprob(init_dist)
 
         return super().dist([init_dist, steps, sde_pars, dt, sde_fn], **kwargs)

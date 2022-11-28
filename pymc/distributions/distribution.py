@@ -23,9 +23,6 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
-from aeppl.logprob import _logcdf, _logprob
-from aeppl.rewriting import logprob_rewrites_db
 from aesara import tensor as at
 from aesara.compile.builders import OpFromGraph
 from aesara.graph import node_rewriter
@@ -48,8 +45,16 @@ from pymc.distributions.shape_utils import (
     find_size,
     shape_from_dims,
 )
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _get_measurable_outputs,
+    _icdf,
+    _logcdf,
+    _logprob,
+)
+from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.printing import str_for_dist
-from pymc.util import UNSET
+from pymc.util import UNSET, _add_future_warning_tag
 from pymc.vartypes import string_types
 
 __all__ = [
@@ -63,9 +68,9 @@ __all__ = [
 
 DIST_PARAMETER_TYPES: TypeAlias = Union[np.ndarray, int, float, TensorVariable]
 
-vectorized_ppc = contextvars.ContextVar(
+vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.ContextVar(
     "vectorized_ppc", default=None
-)  # type: contextvars.ContextVar[Optional[Callable]]
+)
 
 PLATFORM = sys.platform
 
@@ -130,6 +135,14 @@ class DistributionMeta(ABCMeta):
                     dist_params = dist_params[3:]
                     return class_logcdf(value, *dist_params)
 
+            class_icdf = clsdict.get("icdf")
+            if class_icdf:
+
+                @_icdf.register(rv_type)
+                def icdf(op, value, *dist_params, **kwargs):
+                    dist_params = dist_params[3:]
+                    return class_icdf(value, *dist_params)
+
             class_moment = clsdict.get("moment")
             if class_moment:
 
@@ -170,7 +183,7 @@ class SymbolicRandomVariable(OpFromGraph):
     (0 for scalar, 1 for vector, ...)
      """
 
-    inline_aeppl: bool = False
+    inline_logprob: bool = False
     """Specifies whether the logprob function is derived automatically by introspection
     of the inner graph.
 
@@ -371,16 +384,17 @@ class Distribution(metaclass=DistributionMeta):
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
         rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
         rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
+        _add_future_warning_tag(rv_out)
         return rv_out
 
 
-# Let Aeppl know that the SymbolicRandomVariable has a logprob.
+# Let PyMC know that the SymbolicRandomVariable has a logprob.
 MeasurableVariable.register(SymbolicRandomVariable)
 
 
 @_get_measurable_outputs.register(SymbolicRandomVariable)
 def _get_measurable_outputs_symbolic_random_variable(op, node):
-    # This tells Aeppl that any non RandomType outputs are measurable
+    # This tells PyMC that any non RandomType outputs are measurable
 
     # Assume that if there is one default_output, that's the only one that is measurable
     # In the rare case this is not what one wants, a specialized _get_measuarable_outputs
@@ -395,11 +409,11 @@ def _get_measurable_outputs_symbolic_random_variable(op, node):
 @node_rewriter([SymbolicRandomVariable])
 def inline_symbolic_random_variable(fgraph, node):
     """
-    This optimization expands the internal graph of a SymbolicRV when obtaining logp
-    from Aeppl, if the flag `inline_aeppl` is True.
+    This optimization expands the internal graph of a SymbolicRV when obtaining the logp
+    graph, if the flag `inline_logprob` is True.
     """
     op = node.op
-    if op.inline_aeppl:
+    if op.inline_logprob:
         return clone_replace(op.inner_outputs, {u: v for u, v in zip(op.inner_inputs, node.inputs)})
 
 
@@ -576,6 +590,14 @@ class DensityDist(Distribution):
 
     def __new__(cls, name, *args, **kwargs):
         kwargs.setdefault("class_name", name)
+        if isinstance(kwargs.get("observed", None), dict):
+            raise TypeError(
+                "Since ``v4.0.0`` the ``observed`` parameter should be of type"
+                " ``pd.Series``, ``np.array``, or ``pm.Data``."
+                " Previous versions allowed passing distribution parameters as"
+                " a dictionary in ``observed``, in the current version these "
+                "parameters are positional arguments."
+            )
         return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod

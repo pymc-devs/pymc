@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import aesara
 import numpy as np
@@ -31,7 +31,6 @@ from pymc.aesaraf import (
     floatX,
     join_nonshared_inputs,
     replace_rng_nodes,
-    rvs_to_value_vars,
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.step_methods.arraystep import (
@@ -39,6 +38,7 @@ from pymc.step_methods.arraystep import (
     ArrayStepShared,
     Competence,
     PopulationArrayStepShared,
+    StatsType,
     metrop_select,
 )
 
@@ -56,6 +56,8 @@ __all__ = [
     "MultivariateNormalProposal",
 ]
 
+from pymc.util import get_value_vars_from_user_vars
+
 # Available proposal distributions for Metropolis
 
 
@@ -66,38 +68,29 @@ class Proposal:
 
 class NormalProposal(Proposal):
     def __call__(self, rng: Optional[np.random.Generator] = None):
-        if rng is None:
-            rng = nr
-        return rng.normal(scale=self.s)
+        return (rng or nr).normal(scale=self.s)
 
 
 class UniformProposal(Proposal):
     def __call__(self, rng: Optional[np.random.Generator] = None):
-        if rng is None:
-            rng = nr
-        return rng.uniform(low=-self.s, high=self.s, size=len(self.s))
+        return (rng or nr).uniform(low=-self.s, high=self.s, size=len(self.s))
 
 
 class CauchyProposal(Proposal):
     def __call__(self, rng: Optional[np.random.Generator] = None):
-        if rng is None:
-            rng = nr
-        return rng.standard_cauchy(size=np.size(self.s)) * self.s
+        return (rng or nr).standard_cauchy(size=np.size(self.s)) * self.s
 
 
 class LaplaceProposal(Proposal):
     def __call__(self, rng: Optional[np.random.Generator] = None):
-        if rng is None:
-            rng = nr
         size = np.size(self.s)
-        return (rng.standard_exponential(size=size) - rng.standard_exponential(size=size)) * self.s
+        r = rng or nr
+        return (r.standard_exponential(size=size) - r.standard_exponential(size=size)) * self.s
 
 
 class PoissonProposal(Proposal):
     def __call__(self, rng: Optional[np.random.Generator] = None):
-        if rng is None:
-            rng = nr
-        return rng.poisson(lam=self.s, size=np.size(self.s)) - self.s
+        return (rng or nr).poisson(lam=self.s, size=np.size(self.s)) - self.s
 
 
 class MultivariateNormalProposal(Proposal):
@@ -109,13 +102,12 @@ class MultivariateNormalProposal(Proposal):
         self.chol = scipy.linalg.cholesky(s, lower=True)
 
     def __call__(self, num_draws=None, rng: Optional[np.random.Generator] = None):
-        if rng is None:
-            rng = nr
+        rng_ = rng or nr
         if num_draws is not None:
-            b = rng.normal(size=(self.n, num_draws))
+            b = rng_.normal(size=(self.n, num_draws))
             return np.dot(self.chol, b).T
         else:
-            b = rng.normal(size=self.n)
+            b = rng_.normal(size=self.n)
             return np.dot(self.chol, b)
 
 
@@ -125,7 +117,6 @@ class Metropolis(ArrayStepShared):
     name = "metropolis"
 
     default_blocked = False
-    generates_stats = True
     stats_dtypes = [
         {
             "accept": np.float64,
@@ -176,9 +167,7 @@ class Metropolis(ArrayStepShared):
         if vars is None:
             vars = model.value_vars
         else:
-            vars = [model.rvs_to_values.get(var, var) for var in vars]
-
-        vars = pm.inputvars(vars)
+            vars = get_value_vars_from_user_vars(vars, model)
 
         initial_values_shape = [initial_values[v.name].shape for v in vars]
         if S is None:
@@ -245,10 +234,10 @@ class Metropolis(ArrayStepShared):
         self.accepted_sum[:] = 0
         return
 
-    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
 
         point_map_info = q0.point_map_info
-        q0 = q0.data
+        q0d = q0.data
 
         if not self.steps_until_tune and self.tune:
             # Tune scaling parameter
@@ -262,30 +251,30 @@ class Metropolis(ArrayStepShared):
         if self.any_discrete:
             if self.all_discrete:
                 delta = np.round(delta, 0).astype("int64")
-                q0 = q0.astype("int64")
-                q = (q0 + delta).astype("int64")
+                q0d = q0d.astype("int64")
+                q = (q0d + delta).astype("int64")
             else:
                 delta[self.discrete] = np.round(delta[self.discrete], 0)
-                q = q0 + delta
+                q = q0d + delta
         else:
-            q = floatX(q0 + delta)
+            q = floatX(q0d + delta)
 
         if self.elemwise_update:
-            q_temp = q0.copy()
+            q_temp = q0d.copy()
             # Shuffle order of updates (probably we don't need to do this in every step)
             np.random.shuffle(self.enum_dims)
             for i in self.enum_dims:
                 q_temp[i] = q[i]
-                accept_rate_i = self.delta_logp(q_temp, q0)
-                q_temp_, accepted_i = metrop_select(accept_rate_i, q_temp, q0)
+                accept_rate_i = self.delta_logp(q_temp, q0d)
+                q_temp_, accepted_i = metrop_select(accept_rate_i, q_temp, q0d)
                 q_temp[i] = q_temp_[i]
                 self.accept_rate_iter[i] = accept_rate_i
                 self.accepted_iter[i] = accepted_i
                 self.accepted_sum[i] += accepted_i
             q = q_temp
         else:
-            accept_rate = self.delta_logp(q, q0)
-            q, accepted = metrop_select(accept_rate, q, q0)
+            accept_rate = self.delta_logp(q, q0d)
+            q, accepted = metrop_select(accept_rate, q, q0d)
             self.accept_rate_iter = accept_rate
             self.accepted_iter = accepted
             self.accepted_sum += accepted
@@ -375,7 +364,6 @@ class BinaryMetropolis(ArrayStep):
 
     name = "binary_metropolis"
 
-    generates_stats = True
     stats_dtypes = [
         {
             "accept": np.float64,
@@ -394,18 +382,18 @@ class BinaryMetropolis(ArrayStep):
         self.steps_until_tune = tune_interval
         self.accepted = 0
 
-        vars = [model.rvs_to_values.get(var, var) for var in vars]
+        vars = get_value_vars_from_user_vars(vars, model)
 
         if not all([v.dtype in pm.discrete_types for v in vars]):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
 
         super().__init__(vars, [model.compile_logp()])
 
-    def astep(self, q0: RaveledVars, logp) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
-
-        logp_q0 = logp(q0)
-        point_map_info = q0.point_map_info
-        q0 = q0.data
+    def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+        logp = args[0]
+        logp_q0 = logp(apoint)
+        point_map_info = apoint.point_map_info
+        q0 = apoint.data
 
         # Convert adaptive_scale_factor to a jump probability
         p_jump = 1.0 - 0.5**self.scaling
@@ -427,9 +415,7 @@ class BinaryMetropolis(ArrayStep):
             "p_jump": p_jump,
         }
 
-        q_new = RaveledVars(q_new, point_map_info)
-
-        return q_new, [stats]
+        return RaveledVars(q_new, point_map_info), [stats]
 
     @staticmethod
     def competence(var):
@@ -484,8 +470,9 @@ class BinaryGibbsMetropolis(ArrayStep):
         # transition probabilities
         self.transit_p = transit_p
 
+        vars = get_value_vars_from_user_vars(vars, model)
+
         initial_point = model.initial_point()
-        vars = [model.rvs_to_values.get(var, var) for var in vars]
         self.dim = sum(initial_point[v.name].size for v in vars)
 
         if order == "random":
@@ -502,13 +489,13 @@ class BinaryGibbsMetropolis(ArrayStep):
 
         super().__init__(vars, [model.compile_logp()])
 
-    def astep(self, q0: RaveledVars, logp: Callable[[RaveledVars], np.ndarray]) -> RaveledVars:
-
+    def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+        logp: Callable[[RaveledVars], np.ndarray] = args[0]
         order = self.order
         if self.shuffle_dims:
             nr.shuffle(order)
 
-        q = RaveledVars(np.copy(q0.data), q0.point_map_info)
+        q = RaveledVars(np.copy(apoint.data), apoint.point_map_info)
 
         logp_curr = logp(q)
 
@@ -522,7 +509,7 @@ class BinaryGibbsMetropolis(ArrayStep):
                 if accepted:
                     logp_curr = logp_prop
 
-        return q
+        return q, []
 
     @staticmethod
     def competence(var):
@@ -566,8 +553,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         model = pm.modelcontext(model)
 
-        vars = [model.rvs_to_values.get(var, var) for var in vars]
-        vars = pm.inputvars(vars)
+        vars = get_value_vars_from_user_vars(vars, model)
 
         initial_point = model.initial_point()
 
@@ -585,7 +571,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
             if isinstance(distr, CategoricalRV):
                 k_graph = rv_var.owner.inputs[3].shape[-1]
-                (k_graph,) = rvs_to_value_vars((k_graph,))
+                (k_graph,) = model.replace_rvs_by_values((k_graph,))
                 k = model.compile_fn(k_graph, inputs=model.value_vars, on_unused_input="ignore")(
                     initial_point
                 )
@@ -617,10 +603,10 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         super().__init__(vars, [model.compile_logp()])
 
-    def astep_unif(self, q0: RaveledVars, logp) -> RaveledVars:
-
-        point_map_info = q0.point_map_info
-        q0 = q0.data
+    def astep_unif(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+        logp = args[0]
+        point_map_info = apoint.point_map_info
+        q0 = apoint.data
 
         dimcats = self.dimcats
         if self.shuffle_dims:
@@ -636,12 +622,12 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if accepted:
                 logp_curr = logp_prop
 
-        return q
+        return q, []
 
-    def astep_prop(self, q0: RaveledVars, logp) -> RaveledVars:
-
-        point_map_info = q0.point_map_info
-        q0 = q0.data
+    def astep_prop(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+        logp = args[0]
+        point_map_info = apoint.point_map_info
+        q0 = apoint.data
 
         dimcats = self.dimcats
         if self.shuffle_dims:
@@ -653,9 +639,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
         for dim, k in dimcats:
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
 
-        return q
+        return q, []
 
-    def astep(self, q0, logp):
+    def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
         raise NotImplementedError()
 
     def metropolis_proportional(self, q, logp, logp_curr, dim, k):
@@ -745,7 +731,6 @@ class DEMetropolis(PopulationArrayStepShared):
     name = "DEMetropolis"
 
     default_blocked = True
-    generates_stats = True
     stats_dtypes = [
         {
             "accept": np.float64,
@@ -777,8 +762,7 @@ class DEMetropolis(PopulationArrayStepShared):
         if vars is None:
             vars = model.continuous_value_vars
         else:
-            vars = [model.rvs_to_values.get(var, var) for var in vars]
-        vars = pm.inputvars(vars)
+            vars = get_value_vars_from_user_vars(vars, model)
 
         if S is None:
             S = np.ones(initial_values_size)
@@ -806,10 +790,10 @@ class DEMetropolis(PopulationArrayStepShared):
         self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
         super().__init__(vars, shared)
 
-    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
 
         point_map_info = q0.point_map_info
-        q0 = q0.data
+        q0d = q0.data
 
         if not self.steps_until_tune and self.tune:
             if self.tune == "scaling":
@@ -828,10 +812,10 @@ class DEMetropolis(PopulationArrayStepShared):
         r1 = DictToArrayBijection.map(self.population[ir1])
         r2 = DictToArrayBijection.map(self.population[ir2])
         # propose a jump
-        q = floatX(q0 + self.lamb * (r1.data - r2.data) + epsilon)
+        q = floatX(q0d + self.lamb * (r1.data - r2.data) + epsilon)
 
-        accept = self.delta_logp(q, q0)
-        q_new, accepted = metrop_select(accept, q, q0)
+        accept = self.delta_logp(q, q0d)
+        q_new, accepted = metrop_select(accept, q, q0d)
         self.accepted += accepted
 
         self.steps_until_tune -= 1
@@ -844,9 +828,7 @@ class DEMetropolis(PopulationArrayStepShared):
             "accepted": accepted,
         }
 
-        q_new = RaveledVars(q_new, point_map_info)
-
-        return q_new, [stats]
+        return RaveledVars(q_new, point_map_info), [stats]
 
     @staticmethod
     def competence(var, has_grad):
@@ -896,7 +878,6 @@ class DEMetropolisZ(ArrayStepShared):
     name = "DEMetropolisZ"
 
     default_blocked = True
-    generates_stats = True
     stats_dtypes = [
         {
             "accept": np.float64,
@@ -928,8 +909,7 @@ class DEMetropolisZ(ArrayStepShared):
         if vars is None:
             vars = model.continuous_value_vars
         else:
-            vars = [model.rvs_to_values.get(var, var) for var in vars]
-        vars = pm.inputvars(vars)
+            vars = get_value_vars_from_user_vars(vars, model)
 
         if S is None:
             S = np.ones(initial_values_size)
@@ -954,7 +934,7 @@ class DEMetropolisZ(ArrayStepShared):
         self.accepted = 0
 
         # cache local history for the Z-proposals
-        self._history = []
+        self._history: List[np.ndarray] = []
         # remember initial settings before tuning so they can be reset
         self._untuned_settings = dict(
             scaling=self.scaling,
@@ -977,10 +957,10 @@ class DEMetropolisZ(ArrayStepShared):
             setattr(self, attr, initial_value)
         return
 
-    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
 
         point_map_info = q0.point_map_info
-        q0 = q0.data
+        q0d = q0.data
 
         # same tuning scheme as DEMetropolis
         if not self.steps_until_tune and self.tune:
@@ -1007,13 +987,13 @@ class DEMetropolisZ(ArrayStepShared):
             z1 = self._history[iz1]
             z2 = self._history[iz2]
             # propose a jump
-            q = floatX(q0 + self.lamb * (z1 - z2) + epsilon)
+            q = floatX(q0d + self.lamb * (z1 - z2) + epsilon)
         else:
             # propose just with noise in the first 2 iterations
-            q = floatX(q0 + epsilon)
+            q = floatX(q0d + epsilon)
 
-        accept = self.delta_logp(q, q0)
-        q_new, accepted = metrop_select(accept, q, q0)
+        accept = self.delta_logp(q, q0d)
+        q_new, accepted = metrop_select(accept, q, q0d)
         self.accepted += accepted
         self._history.append(q_new)
 
@@ -1027,9 +1007,7 @@ class DEMetropolisZ(ArrayStepShared):
             "accepted": accepted,
         }
 
-        q_new = RaveledVars(q_new, point_map_info)
-
-        return q_new, [stats]
+        return RaveledVars(q_new, point_map_info), [stats]
 
     def stop_tuning(self):
         """At the end of the tuning phase, this method removes the first x% of the history

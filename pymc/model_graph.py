@@ -14,7 +14,7 @@
 import warnings
 
 from collections import defaultdict
-from typing import Dict, Iterable, List, NewType, Optional, Set
+from typing import Dict, Iterable, List, NewType, Optional, Sequence, Set
 
 from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
@@ -30,6 +30,17 @@ import pymc as pm
 from pymc.util import get_default_varnames, get_var_name
 
 VarName = NewType("VarName", str)
+
+
+__all__ = (
+    "ModelGraph",
+    "model_to_graphviz",
+    "model_to_networkx",
+)
+
+
+def fast_eval(var):
+    return function([], var, mode="FAST_COMPILE")()
 
 
 class ModelGraph:
@@ -79,8 +90,8 @@ class ModelGraph:
                 raise ValueError(f"{var_name} is not in this model.")
 
             for model_var in self.var_list:
-                if hasattr(model_var.tag, "observations"):
-                    if model_var.tag.observations == self.model[var_name]:
+                if model_var in self.model.observed_RVs:
+                    if self.model.rvs_to_values[model_var] == self.model[var_name]:
                         selected_names.add(model_var.name)
 
         selected_ancestors = set(
@@ -91,8 +102,8 @@ class ModelGraph:
         )
 
         for var in selected_ancestors.copy():
-            if hasattr(var.tag, "observations"):
-                selected_ancestors.add(var.tag.observations)
+            if var in self.model.observed_RVs:
+                selected_ancestors.add(self.model.rvs_to_values[var])
 
         # ordering of self._all_var_names is important
         return [var.name for var in selected_ancestors]
@@ -108,8 +119,8 @@ class ModelGraph:
             parent_name = self.get_parent_names(var)
             input_map[var_name] = input_map[var_name].union(parent_name)
 
-            if hasattr(var.tag, "observations"):
-                obs_node = var.tag.observations
+            if var in self.model.observed_RVs:
+                obs_node = self.model.rvs_to_values[var]
 
                 # loop created so that the elif block can go through this again
                 # and remove any intermediate ops, notably dtype casting, to observations
@@ -183,9 +194,6 @@ class ModelGraph:
         else:
             graph.node(var_name.replace(":", "&"), **kwargs)
 
-    def _eval(self, var):
-        return function([], var, mode="FAST_COMPILE")()
-
     def get_plates(self, var_names: Optional[Iterable[VarName]] = None) -> Dict[str, Set[VarName]]:
         """Rough but surprisingly accurate plate detection.
 
@@ -198,18 +206,32 @@ class ModelGraph:
         """
         plates = defaultdict(set)
 
+        # TODO: Evaluate all RV shapes and dim_length at once.
+        #       This should help to find discrepancies, and
+        #       avoids unncessary function compiles for deetermining labels.
+
         for var_name in self.vars_to_plot(var_names):
             v = self.model[var_name]
-            if var_name in self.model.RV_dims:
-                plate_label = " x ".join(
-                    f"{d} ({self._eval(self.model.dim_lengths[d])})"
-                    for d in self.model.RV_dims[var_name]
-                )
+            shape: Sequence[int] = fast_eval(v.shape)
+            dim_labels = []
+            if var_name in self.model.named_vars_to_dims:
+                # The RV is associated with `dims` information.
+                for d, dname in enumerate(self.model.named_vars_to_dims[var_name]):
+                    if dname is None:
+                        # Unnamed dimension in a `dims` tuple!
+                        dlen = shape[d]
+                        dname = f"{var_name}_dim{d}"
+                    else:
+                        dlen = fast_eval(self.model.dim_lengths[dname])
+                    dim_labels.append(f"{dname} ({dlen})")
+                plate_label = " x ".join(dim_labels)
             else:
-                plate_label = " x ".join(map(str, self._eval(v.shape)))
+                # The RV has no `dims` information.
+                dim_labels = map(str, shape)
+                plate_label = " x ".join(map(str, shape))
             plates[plate_label].add(var_name)
 
-        return plates
+        return dict(plates)
 
     def make_graph(self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
         """Make graphviz Digraph of PyMC model
@@ -355,7 +377,7 @@ def model_to_networkx(
 
         model_to_networkx(schools)
     """
-    if not "plain" in formatting:
+    if "plain" not in formatting:
 
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
 
@@ -419,7 +441,7 @@ def model_to_graphviz(
 
         model_to_graphviz(schools)
     """
-    if not "plain" in formatting:
+    if "plain" not in formatting:
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
     if formatting != "plain":
         warnings.warn(

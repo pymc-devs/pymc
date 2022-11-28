@@ -17,9 +17,11 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 """
-from collections import namedtuple
 
-import numpy as np
+
+from typing import Tuple
+
+from pymc.blocking import PointType, StatsType
 
 
 class CompoundStep:
@@ -28,36 +30,23 @@ class CompoundStep:
 
     def __init__(self, methods):
         self.methods = list(methods)
-        self.generates_stats = any(method.generates_stats for method in self.methods)
         self.stats_dtypes = []
         for method in self.methods:
-            if method.generates_stats:
-                self.stats_dtypes.extend(method.stats_dtypes)
+            self.stats_dtypes.extend(method.stats_dtypes)
         self.name = (
             f"Compound[{', '.join(getattr(m, 'name', 'UNNAMED_STEP') for m in self.methods)}]"
         )
 
-    def step(self, point):
-        if self.generates_stats:
-            states = []
-            for method in self.methods:
-                if method.generates_stats:
-                    point, state = method.step(point)
-                    states.extend(state)
-                else:
-                    point = method.step(point)
-            # Model logp can only be the logp of the _last_ state, if there is
-            # one. Pop all others (if dict), or set to np.nan (if namedtuple).
-            for state in states[:-1]:
-                if isinstance(state, dict):
-                    state.pop("model_logp", None)
-                elif isinstance(state, namedtuple):
-                    state = state._replace(logp=np.nan)
-            return point, states
-        else:
-            for method in self.methods:
-                point = method.step(point)
-            return point
+    def step(self, point) -> Tuple[PointType, StatsType]:
+        stats = []
+        for method in self.methods:
+            point, sts = method.step(point)
+            stats.extend(sts)
+        # Model logp can only be the logp of the _last_ stats,
+        # if there is one. Pop all others.
+        for sts in stats[:-1]:
+            sts.pop("model_logp", None)
+        return point, stats
 
     def stop_tuning(self):
         for method in self.methods:

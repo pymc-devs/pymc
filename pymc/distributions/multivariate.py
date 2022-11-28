@@ -25,7 +25,6 @@ import aesara.tensor as at
 import numpy as np
 import scipy
 
-from aeppl.logprob import _logprob
 from aesara.graph.basic import Apply, Constant, Variable
 from aesara.graph.op import Op
 from aesara.raise_op import Assert
@@ -69,6 +68,7 @@ from pymc.distributions.shape_utils import (
     to_tuple,
 )
 from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
+from pymc.logprob.abstract import _logprob
 from pymc.math import kron_diag, kron_dot
 from pymc.util import check_dist_not_registered
 
@@ -288,7 +288,11 @@ class MvNormal(Continuous):
         quaddist, logdet, ok = quaddist_parse(value, mu, cov)
         k = floatX(value.shape[-1])
         norm = -0.5 * k * pm.floatX(np.log(2 * np.pi))
-        return check_parameters(norm - 0.5 * quaddist - logdet, ok)
+        return check_parameters(
+            norm - 0.5 * quaddist - logdet,
+            ok,
+            msg="posdef",
+        )
 
 
 class MvStudentTRV(RandomVariable):
@@ -429,11 +433,7 @@ class MvStudentT(Continuous):
         inner = -(nu + k) / 2.0 * at.log1p(quaddist / nu)
         res = norm + inner - logdet
 
-        return check_parameters(
-            res,
-            ok,
-            nu > 0,
-        )
+        return check_parameters(res, ok, nu > 0, msg="posdef, nu > 0")
 
 
 class Dirichlet(SimplexContinuous):
@@ -596,7 +596,7 @@ class Multinomial(Discrete):
         )
         return check_parameters(
             res,
-            p >= 0,
+            0 <= p,
             p <= 1,
             at.isclose(at.sum(p, axis=-1), 1),
             at.ge(n, 0),
@@ -2222,8 +2222,8 @@ class CAR(Continuous):
         logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
         return check_parameters(
             0.5 * (logtau + logdet - logquad),
+            -1 <= alpha,
             alpha <= 1,
-            alpha >= -1,
             tau > 0,
             msg="-1 <= alpha <= 1, tau > 0",
         )
@@ -2591,4 +2591,4 @@ def zerosumnormal_logp(op, values, normal_dist, sigma, support_shape, **kwargs):
         axis=tuple(np.arange(-zerosum_axes, 0)),
     )
 
-    return check_parameters(out, *zerosums, msg="at.mean(value, axis=zerosum_axes) == 0")
+    return check_parameters(out, *zerosums, msg="mean(value, axis=zerosum_axes) = 0")

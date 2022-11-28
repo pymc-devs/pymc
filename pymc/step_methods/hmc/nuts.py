@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import annotations
+
 from collections import namedtuple
 
 import numpy as np
@@ -20,8 +22,9 @@ from pymc.aesaraf import floatX
 from pymc.math import logbern
 from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods.arraystep import Competence
+from pymc.step_methods.hmc import integration
 from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
-from pymc.step_methods.hmc.integration import IntegrationError
+from pymc.step_methods.hmc.integration import IntegrationError, State
 from pymc.vartypes import continuous_types
 
 __all__ = ["NUTS"]
@@ -94,7 +97,6 @@ class NUTS(BaseHMC):
     name = "nuts"
 
     default_blocked = True
-    generates_stats = True
     stats_dtypes = [
         {
             "depth": np.int64,
@@ -227,7 +229,14 @@ Subtree = namedtuple(
 
 
 class _Tree:
-    def __init__(self, ndim, integrator, start, step_size, Emax):
+    def __init__(
+        self,
+        ndim: int,
+        integrator: integration.CpuLeapfrogIntegrator,
+        start: State,
+        step_size: float,
+        Emax: float,
+    ):
         """Binary tree from the NUTS algorithm.
 
         Parameters
@@ -247,17 +256,17 @@ class _Tree:
         self.start = start
         self.step_size = step_size
         self.Emax = Emax
-        self.start_energy = np.array(start.energy)
+        self.start_energy = start.energy
 
         self.left = self.right = start
         self.proposal = Proposal(start.q.data, start.q_grad, start.energy, start.model_logp, 0)
         self.depth = 0
-        self.log_size = 0
+        self.log_size = 0.0
         self.log_accept_sum = -np.inf
         self.mean_tree_accept = 0.0
         self.n_proposals = 0
         self.p_sum = start.p.data.copy()
-        self.max_energy_change = 0
+        self.max_energy_change = 0.0
 
     def extend(self, direction):
         """Double the treesize by extending the tree in the given direction.
@@ -315,16 +324,19 @@ class _Tree:
 
         return diverging, turning
 
-    def _single_step(self, left, epsilon):
+    def _single_step(self, left: State, epsilon: float):
         """Perform a leapfrog step and handle error cases."""
+        right: State | None
+        error: IntegrationError | None
+        error_msg: str | None
         try:
-            # `State` type
             right = self.integrator.step(epsilon, left)
         except IntegrationError as err:
             error_msg = str(err)
             error = err
             right = None
         else:
+            assert right is not None  # since there was no IntegrationError
             # h - H0
             energy_change = right.energy - self.start_energy
             if np.isnan(energy_change):
@@ -354,8 +366,8 @@ class _Tree:
         finally:
             self.n_proposals += 1
         tree = Subtree(None, None, None, None, -np.inf)
-        divergance_info = DivergenceInfo(error_msg, error, left, right)
-        return tree, divergance_info, False
+        divergence_info = DivergenceInfo(error_msg, error, left, right)
+        return tree, divergence_info, False
 
     def _build_subtree(self, left, depth, epsilon):
         if depth == 0:

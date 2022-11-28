@@ -22,7 +22,6 @@ import pandas as pd
 import pytest
 import scipy.sparse as sps
 
-from aeppl.logprob import ParameterValueError
 from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Variable, equal_computations
 from aesara.tensor.random.basic import normal, uniform
@@ -39,6 +38,7 @@ from pymc.aesaraf import (
     convert_observed_data,
     extract_obs_data,
     replace_rng_nodes,
+    replace_rvs_by_values,
     reseed_rngs,
     rvs_to_value_vars,
     walk_model,
@@ -47,6 +47,8 @@ from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.distributions.transforms import Interval
 from pymc.exceptions import NotConstantValueError
+from pymc.logprob.utils import ParameterValueError
+from pymc.tests.helpers import assert_no_rvs
 from pymc.vartypes import int_types
 
 
@@ -98,7 +100,7 @@ class TestBroadcasting:
         )
         assert (
             test_model.test1.broadcastable
-            == replacement[test_model.test1.tag.value_var].broadcastable
+            == replacement[test_model.rvs_to_values[test_model.test1]].broadcastable
         )
 
     def test_metropolis_sampling(self):
@@ -303,110 +305,6 @@ def test_walk_model():
     assert c in res
     assert d in res
     assert e in res
-
-
-@pytest.mark.parametrize("symbolic_rv", (False, True))
-@pytest.mark.parametrize("apply_transforms", (True, False))
-def test_rvs_to_value_vars(symbolic_rv, apply_transforms):
-
-    # Interval transform between last two arguments
-    interval = Interval(bounds_fn=lambda *args: (args[-2], args[-1]))
-
-    with pm.Model() as m:
-        a = pm.Uniform("a", 0.0, 1.0)
-        if symbolic_rv:
-            raw_b = pm.Uniform.dist(0, a + 1.0)
-            b = pm.Censored("b", raw_b, lower=0, upper=a + 1.0, transform=interval)
-            # If not True, another distribution has to be used
-            assert isinstance(b.owner.op, SymbolicRandomVariable)
-        else:
-            b = pm.Uniform("b", 0, a + 1.0, transform=interval)
-        c = pm.Normal("c")
-        d = at.log(c + b) + 2.0
-
-    a_value_var = m.rvs_to_values[a]
-    assert a_value_var.tag.transform
-
-    b_value_var = m.rvs_to_values[b]
-    c_value_var = m.rvs_to_values[c]
-
-    (res,) = rvs_to_value_vars((d,), apply_transforms=apply_transforms)
-
-    assert res.owner.op == at.add
-    log_output = res.owner.inputs[0]
-    assert log_output.owner.op == at.log
-    log_add_output = res.owner.inputs[0].owner.inputs[0]
-    assert log_add_output.owner.op == at.add
-    c_output = log_add_output.owner.inputs[0]
-
-    # We make sure that the random variables were replaced
-    # with their value variables
-    assert c_output == c_value_var
-    b_output = log_add_output.owner.inputs[1]
-    # When transforms are applied, the input is the back-transformation of the value_var,
-    # otherwise it is the value_var itself
-    if apply_transforms:
-        assert b_output != b_value_var
-    else:
-        assert b_output == b_value_var
-
-    res_ancestors = list(walk_model((res,)))
-    res_rv_ancestors = [
-        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
-    ]
-
-    # There shouldn't be any `RandomVariable`s in the resulting graph
-    assert len(res_rv_ancestors) == 0
-    assert b_value_var in res_ancestors
-    assert c_value_var in res_ancestors
-    # When transforms are used, `d` depends on `a` through the back-transformation of
-    # `b`, otherwise there is no direct connection between `d` and `a`
-    if apply_transforms:
-        assert a_value_var in res_ancestors
-    else:
-        assert a_value_var not in res_ancestors
-
-
-def test_rvs_to_value_vars_nested():
-    # Test that calling rvs_to_value_vars in models with nested transformations
-    # does not change the original rvs in place. See issue #5172
-    with pm.Model() as m:
-        one = pm.LogNormal("one", mu=0)
-        two = pm.LogNormal("two", mu=at.log(one))
-
-        # We add potentials or deterministics that are not in topological order
-        pm.Potential("two_pot", two)
-        pm.Potential("one_pot", one)
-
-        before = aesara.clone_replace(m.free_RVs)
-
-        # This call would change the model free_RVs in place in #5172
-        res = rvs_to_value_vars(m.potentials, apply_transforms=True)
-
-        after = aesara.clone_replace(m.free_RVs)
-
-        assert equal_computations(before, after)
-
-
-def test_rvs_to_value_vars_unvalued_rv():
-    with pm.Model() as m:
-        x = pm.Normal("x")
-        y = pm.Normal.dist(x)
-        z = pm.Normal("z", y)
-        out = z + y
-
-    x_value = m.rvs_to_values[x]
-    z_value = m.rvs_to_values[z]
-
-    (res,) = rvs_to_value_vars((out,))
-
-    assert res.owner.op == at.add
-    assert res.owner.inputs[0] is z_value
-    res_y = res.owner.inputs[1]
-    # Graph should have be cloned, and therefore y and res_y should have different ids
-    assert res_y is not y
-    assert res_y.owner.op == at.random.normal
-    assert res_y.owner.inputs[3] is x_value
 
 
 class TestCompilePyMC:
@@ -633,3 +531,196 @@ def test_constant_fold_raises():
 
     res = constant_fold((y, y.shape), raise_not_constant=False)
     assert tuple(res[1].eval()) == (5,)
+
+
+class TestReplaceRVsByValues:
+    @pytest.mark.parametrize("symbolic_rv", (False, True))
+    @pytest.mark.parametrize("apply_transforms", (True, False))
+    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
+    def test_basic(self, symbolic_rv, apply_transforms, test_deprecated_fn):
+
+        # Interval transform between last two arguments
+        interval = (
+            Interval(bounds_fn=lambda *args: (args[-2], args[-1])) if apply_transforms else None
+        )
+
+        with pm.Model() as m:
+            a = pm.Uniform("a", 0.0, 1.0)
+            if symbolic_rv:
+                raw_b = pm.Uniform.dist(0, a + 1.0)
+                b = pm.Censored("b", raw_b, lower=0, upper=a + 1.0, transform=interval)
+                # If not True, another distribution has to be used
+                assert isinstance(b.owner.op, SymbolicRandomVariable)
+            else:
+                b = pm.Uniform("b", 0, a + 1.0, transform=interval)
+            c = pm.Normal("c")
+            d = at.log(c + b) + 2.0
+
+        a_value_var = m.rvs_to_values[a]
+        assert m.rvs_to_transforms[a] is not None
+
+        b_value_var = m.rvs_to_values[b]
+        c_value_var = m.rvs_to_values[c]
+
+        if test_deprecated_fn:
+            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
+                (res,) = rvs_to_value_vars((d,), apply_transforms=apply_transforms)
+        else:
+            (res,) = replace_rvs_by_values(
+                (d,),
+                rvs_to_values=m.rvs_to_values,
+                rvs_to_transforms=m.rvs_to_transforms,
+            )
+
+        assert res.owner.op == at.add
+        log_output = res.owner.inputs[0]
+        assert log_output.owner.op == at.log
+        log_add_output = res.owner.inputs[0].owner.inputs[0]
+        assert log_add_output.owner.op == at.add
+        c_output = log_add_output.owner.inputs[0]
+
+        # We make sure that the random variables were replaced
+        # with their value variables
+        assert c_output == c_value_var
+        b_output = log_add_output.owner.inputs[1]
+        # When transforms are applied, the input is the back-transformation of the value_var,
+        # otherwise it is the value_var itself
+        if apply_transforms:
+            assert b_output != b_value_var
+        else:
+            assert b_output == b_value_var
+
+        res_ancestors = list(walk_model((res,)))
+        res_rv_ancestors = [
+            v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
+        ]
+
+        # There shouldn't be any `RandomVariable`s in the resulting graph
+        assert len(res_rv_ancestors) == 0
+        assert b_value_var in res_ancestors
+        assert c_value_var in res_ancestors
+        # When transforms are used, `d` depends on `a` through the back-transformation of
+        # `b`, otherwise there is no direct connection between `d` and `a`
+        if apply_transforms:
+            assert a_value_var in res_ancestors
+        else:
+            assert a_value_var not in res_ancestors
+
+    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
+    def test_unvalued_rv(self, test_deprecated_fn):
+        with pm.Model() as m:
+            x = pm.Normal("x")
+            y = pm.Normal.dist(x)
+            z = pm.Normal("z", y)
+            out = z + y
+
+        x_value = m.rvs_to_values[x]
+        z_value = m.rvs_to_values[z]
+
+        if test_deprecated_fn:
+            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
+                (res,) = rvs_to_value_vars((out,))
+        else:
+            (res,) = replace_rvs_by_values(
+                (out,),
+                rvs_to_values=m.rvs_to_values,
+                rvs_to_transforms=m.rvs_to_transforms,
+            )
+
+        assert res.owner.op == at.add
+        assert res.owner.inputs[0] is z_value
+        res_y = res.owner.inputs[1]
+        # Graph should have be cloned, and therefore y and res_y should have different ids
+        assert res_y is not y
+        assert res_y.owner.op == at.random.normal
+        assert res_y.owner.inputs[3] is x_value
+
+    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
+    def test_no_change_inplace(self, test_deprecated_fn):
+        # Test that calling rvs_to_value_vars in models with nested transformations
+        # does not change the original rvs in place. See issue #5172
+        with pm.Model() as m:
+            one = pm.LogNormal("one", mu=0)
+            two = pm.LogNormal("two", mu=at.log(one))
+
+            # We add potentials or deterministics that are not in topological order
+            pm.Potential("two_pot", two)
+            pm.Potential("one_pot", one)
+
+        before = aesara.clone_replace(m.free_RVs)
+
+        # This call would change the model free_RVs in place in #5172
+        if test_deprecated_fn:
+            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
+                rvs_to_value_vars(m.potentials)
+        else:
+            replace_rvs_by_values(
+                m.potentials,
+                rvs_to_values=m.rvs_to_values,
+                rvs_to_transforms=m.rvs_to_transforms,
+            )
+
+        after = aesara.clone_replace(m.free_RVs)
+        assert equal_computations(before, after)
+
+    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
+    @pytest.mark.parametrize("reversed", (False, True))
+    def test_interdependent_transformed_rvs(self, reversed, test_deprecated_fn):
+        # Test that nested transformed variables, whose transformed values depend on other
+        # RVs are properly replaced
+        with pm.Model() as m:
+            transform = pm.distributions.transforms.Interval(
+                bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
+            )
+            x = pm.Uniform("x", lower=0, upper=1, transform=transform)
+            y = pm.Uniform("y", lower=0, upper=x, transform=transform)
+            z = pm.Uniform("z", lower=0, upper=y, transform=transform)
+            w = pm.Uniform("w", lower=0, upper=z, transform=transform)
+
+        rvs = [x, y, z, w]
+        if reversed:
+            rvs = rvs[::-1]
+
+        if test_deprecated_fn:
+            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
+                transform_values = rvs_to_value_vars(rvs)
+        else:
+            transform_values = replace_rvs_by_values(
+                rvs,
+                rvs_to_values=m.rvs_to_values,
+                rvs_to_transforms=m.rvs_to_transforms,
+            )
+
+        for transform_value in transform_values:
+            assert_no_rvs(transform_value)
+
+        if reversed:
+            transform_values = transform_values[::-1]
+        transform_values_fn = m.compile_fn(transform_values, point_fn=False)
+
+        x_interval_test_value = np.random.rand()
+        y_interval_test_value = np.random.rand()
+        z_interval_test_value = np.random.rand()
+        w_interval_test_value = np.random.rand()
+
+        # The 3 Nones correspond to unused rng, dtype and size arguments
+        expected_x = transform.backward(x_interval_test_value, None, None, None, 0, 1).eval()
+        expected_y = transform.backward(
+            y_interval_test_value, None, None, None, 0, expected_x
+        ).eval()
+        expected_z = transform.backward(
+            z_interval_test_value, None, None, None, 0, expected_y
+        ).eval()
+        expected_w = transform.backward(
+            w_interval_test_value, None, None, None, 0, expected_z
+        ).eval()
+
+        np.testing.assert_allclose(
+            transform_values_fn(
+                x_interval__=x_interval_test_value,
+                y_interval__=y_interval_test_value,
+                z_interval__=z_interval_test_value,
+                w_interval__=w_interval_test_value,
+            ),
+            [expected_x, expected_y, expected_z, expected_w],
+        )

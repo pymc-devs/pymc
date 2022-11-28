@@ -29,7 +29,7 @@ from pymc.util import check_dist_not_registered
 class CensoredRV(SymbolicRandomVariable):
     """Censored random variable"""
 
-    inline_aeppl = True
+    inline_logprob = True
     _print_name = ("Censored", "\\operatorname{Censored}")
 
 

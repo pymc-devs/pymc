@@ -12,36 +12,50 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import annotations
+
 import logging
 import time
 
 from abc import abstractmethod
-from collections import namedtuple
-from typing import Optional
+from typing import Any, NamedTuple
 
 import numpy as np
 
 from pymc.aesaraf import floatX
-from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.blocking import DictToArrayBijection, RaveledVars, StatsType
 from pymc.exceptions import SamplingError
 from pymc.model import Point, modelcontext
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import step_sizes
 from pymc.step_methods.arraystep import GradientSharedStep
 from pymc.step_methods.hmc import integration
+from pymc.step_methods.hmc.integration import IntegrationError, State
 from pymc.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
 from pymc.tuning import guess_scaling
+from pymc.util import get_value_vars_from_user_vars
 
 logger = logging.getLogger("pymc")
 
-HMCStepData = namedtuple("HMCStepData", "end, accept_stat, divergence_info, stats")
 
-DivergenceInfo = namedtuple("DivergenceInfo", "message, exec_info, state, state_div")
+class DivergenceInfo(NamedTuple):
+    message: str
+    exec_info: IntegrationError | None
+    state: State
+    state_div: State | None
+
+
+class HMCStepData(NamedTuple):
+    end: State
+    accept_stat: int
+    divergence_info: DivergenceInfo | None
+    stats: dict[str, Any]
 
 
 class BaseHMC(GradientSharedStep):
     """Superclass to implement Hamiltonian/hybrid monte carlo."""
 
+    integrator: integration.CpuLeapfrogIntegrator
     default_blocked = True
 
     def __init__(
@@ -91,8 +105,7 @@ class BaseHMC(GradientSharedStep):
         if vars is None:
             vars = self._model.continuous_value_vars
         else:
-            vars = [self._model.rvs_to_values.get(var, var) for var in vars]
-
+            vars = get_value_vars_from_user_vars(vars, self._model)
         super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **aesara_kwargs)
 
         self.adapt_step_size = adapt_step_size
@@ -138,13 +151,13 @@ class BaseHMC(GradientSharedStep):
         self._num_divs_sample = 0
 
     @abstractmethod
-    def _hamiltonian_step(self, start, p0, step_size):
+    def _hamiltonian_step(self, start, p0, step_size) -> HMCStepData:
         """Compute one Hamiltonian trajectory and return the next state.
 
         Subclasses must overwrite this abstract method and return an `HMCStepData` object.
         """
 
-    def astep(self, q0):
+    def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
         """Perform a single HMC iteration."""
         perf_start = time.perf_counter()
         process_start = time.process_time()
@@ -154,6 +167,7 @@ class BaseHMC(GradientSharedStep):
 
         start = self.integrator.compute_state(q0, p0)
 
+        warning: SamplerWarning | None = None
         if not np.isfinite(start.energy):
             model = self._model
             check_test_point_dict = model.point_logps()
@@ -188,7 +202,6 @@ class BaseHMC(GradientSharedStep):
 
         self.step_adapt.update(hmc_step.accept_stat, adapt_step)
         self.potential.update(hmc_step.end.q, hmc_step.end.q_grad, self.tune)
-        warning: Optional[SamplerWarning] = None
         if hmc_step.divergence_info:
             info = hmc_step.divergence_info
             point = None
@@ -221,7 +234,7 @@ class BaseHMC(GradientSharedStep):
 
         self.iter_count += 1
 
-        stats = {
+        stats: dict[str, Any] = {
             "tune": self.tune,
             "diverging": bool(hmc_step.divergence_info),
             "perf_counter_diff": perf_end - perf_start,

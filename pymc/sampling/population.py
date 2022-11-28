@@ -17,7 +17,7 @@
 import logging
 
 from copy import copy
-from typing import Iterator, List, Sequence, Union
+from typing import Iterator, List, Sequence, Tuple, Union
 
 import cloudpickle
 import numpy as np
@@ -31,7 +31,11 @@ from pymc.initial_point import PointType
 from pymc.model import modelcontext
 from pymc.stats.convergence import log_warning_stats
 from pymc.step_methods import CompoundStep
-from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
+from pymc.step_methods.arraystep import (
+    BlockedStep,
+    PopulationArrayStepShared,
+    StatsType,
+)
 from pymc.util import RandomSeed
 
 __all__ = ()
@@ -224,7 +228,7 @@ class PopulationStepper:
             _log.exception(f"ChainWalker{c}")
         return
 
-    def step(self, tune_stop: bool, population):
+    def step(self, tune_stop: bool, population) -> List[Tuple[PointType, StatsType]]:
         """Step the entire population of chains.
 
         Parameters
@@ -239,18 +243,18 @@ class PopulationStepper:
         update : list
             List of (Point, stats) tuples for all chains
         """
-        updates = [None] * self.nchains
+        updates: List[Tuple[PointType, StatsType]] = []
         if self.is_parallelized:
             for c in range(self.nchains):
                 self._primary_ends[c].send((tune_stop, population))
             # Blockingly get the step outcomes
             for c in range(self.nchains):
-                updates[c] = self._primary_ends[c].recv()
+                updates.append(self._primary_ends[c].recv())
         else:
             for c in range(self.nchains):
                 if tune_stop:
                     self._steppers[c].stop_tuning()
-                updates[c] = self._steppers[c].step(population[c])
+                updates.append(self._steppers[c].step(population[c]))
         return updates
 
 
@@ -378,13 +382,9 @@ def _iter_population(
 
                 # apply the update to the points and record to the traces
                 for c, strace in enumerate(traces):
-                    if steppers[c].generates_stats:
-                        points[c], stats = updates[c]
-                        strace.record(points[c], stats)
-                        log_warning_stats(stats)
-                    else:
-                        points[c] = updates[c]
-                        strace.record(points[c])
+                    points[c], stats = updates[c]
+                    strace.record(points[c], stats)
+                    log_warning_stats(stats)
                 # yield the state of all chains in parallel
                 yield traces
     except KeyboardInterrupt:

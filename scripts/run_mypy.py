@@ -45,6 +45,8 @@ pymc/gp/cov.py
 pymc/gp/gp.py
 pymc/gp/mean.py
 pymc/gp/util.py
+pymc/logprob/__init__.py
+pymc/logprob/abstract.py
 pymc/math.py
 pymc/ode/__init__.py
 pymc/ode/ode.py
@@ -62,7 +64,9 @@ pymc/smc/kernels.py
 pymc/stats/__init__.py
 pymc/stats/convergence.py
 pymc/step_methods/__init__.py
+pymc/step_methods/arraystep.py
 pymc/step_methods/compound.py
+pymc/step_methods/metropolis.py
 pymc/step_methods/hmc/__init__.py
 pymc/step_methods/hmc/base_hmc.py
 pymc/step_methods/hmc/hmc.py
@@ -144,7 +148,7 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
     all_files = {
         str(fp).replace(str(DP_ROOT), "").strip(os.sep).replace(os.sep, "/")
         for fp in DP_ROOT.glob("pymc/**/*.py")
-        if not "tests" in str(fp)
+        if "tests" not in str(fp)
     }
     failing = set(df.reset_index().file.str.replace(os.sep, "/", regex=False))
     if not failing.issubset(all_files):
@@ -188,10 +192,6 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
 
 
 if __name__ == "__main__":
-    # Enforce PEP 561 for some important dependencies that
-    # have relevant type hints but don't tell that to mypy.
-    enforce_pep561("aeppl")
-
     parser = argparse.ArgumentParser(description="Run mypy type checks on PyMC codebase.")
     parser.add_argument(
         "--verbose", action="count", default=0, help="Pass this to print mypy output."

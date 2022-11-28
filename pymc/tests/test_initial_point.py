@@ -25,12 +25,12 @@ from pymc.distributions.distribution import moment
 from pymc.initial_point import make_initial_point_fn, make_initial_point_fns_per_chain
 
 
-def transform_fwd(rv, expected_untransformed):
-    return rv.tag.value_var.tag.transform.forward(expected_untransformed, *rv.owner.inputs).eval()
+def transform_fwd(rv, expected_untransformed, model):
+    return model.rvs_to_transforms[rv].forward(expected_untransformed, *rv.owner.inputs).eval()
 
 
-def transform_back(rv, transformed) -> np.ndarray:
-    return rv.tag.value_var.tag.transform.backward(transformed, *rv.owner.inputs).eval()
+def transform_back(rv, transformed, model) -> np.ndarray:
+    return model.rvs_to_transforms[rv].backward(transformed, *rv.owner.inputs).eval()
 
 
 class TestInitvalAssignment:
@@ -47,8 +47,8 @@ class TestInitvalAssignment:
         with pm.Model() as pmodel:
             with pytest.warns(FutureWarning, match="`testval` argument is deprecated"):
                 rv = pm.Uniform("u", 0, 1, testval=0.75)
-                initial_point = pmodel.initial_point(seed=0)
-                assert initial_point["u_interval__"] == transform_fwd(rv, 0.75)
+                initial_point = pmodel.initial_point(random_seed=0)
+                assert initial_point["u_interval__"] == transform_fwd(rv, 0.75, model=pmodel)
                 assert not hasattr(rv.tag, "test_value")
         pass
 
@@ -56,7 +56,7 @@ class TestInitvalAssignment:
         with pm.Model() as pmodel:
             pm.Uniform("x", 0, 1, size=2, initval="unknown")
             with pytest.raises(ValueError, match="Invalid string strategy: unknown"):
-                pmodel.initial_point(seed=0)
+                pmodel.initial_point(random_seed=0)
 
 
 class TestInitvalEvaluation:
@@ -79,15 +79,15 @@ class TestInitvalEvaluation:
             U = pm.Uniform("U", lower=9, upper=10, initval=9.5)
             B1 = pm.Uniform("B1", lower=L, upper=U, initval=5)
             B2 = pm.Uniform("B2", lower=L, upper=U, initval=(L + U) / 2)
-            ip = pmodel.initial_point(seed=0)
+            ip = pmodel.initial_point(random_seed=0)
             assert ip["L_interval__"] == 0
             assert ip["U_interval__"] == 0
             assert ip["B1_interval__"] == 0
             assert ip["B2_interval__"] == 0
 
             # Modify initval of L and re-evaluate
-            pmodel.initial_values[U] = 9.9
-            ip = pmodel.initial_point(seed=0)
+            pmodel.rvs_to_initial_values[U] = 9.9
+            ip = pmodel.initial_point(random_seed=0)
             assert ip["B1_interval__"] < 0
             assert ip["B2_interval__"] == 0
         pass
@@ -108,7 +108,7 @@ class TestInitvalEvaluation:
         ip_vals = list(make_initial_point_fn(model=pmodel, return_transformed=False)(0).values())
         assert np.allclose(ip_vals, [1, 2, 4, 8, 16, 32], rtol=1e-3)
 
-        pmodel.initial_values[four] = 1
+        pmodel.rvs_to_initial_values[four] = 1
 
         ip_vals = list(make_initial_point_fn(model=pmodel, return_transformed=True)(0).values())
         assert np.allclose(np.exp(ip_vals), [1, 2, 4, 1, 2, 4], rtol=1e-3)
@@ -121,11 +121,11 @@ class TestInitvalEvaluation:
             data = aesara.shared(np.arange(4))
             rv = pm.Uniform("u", lower=data, upper=10, initval="prior")
 
-            ip = pmodel.initial_point(seed=0)
+            ip = pmodel.initial_point(random_seed=0)
             assert np.shape(ip["u_interval__"]) == (4,)
 
             data.set_value(np.arange(5))
-            ip = pmodel.initial_point(seed=0)
+            ip = pmodel.initial_point(random_seed=0)
             assert np.shape(ip["u_interval__"]) == (5,)
         pass
 
@@ -134,9 +134,9 @@ class TestInitvalEvaluation:
             pm.Normal("A", initval="prior")
             pm.Uniform("B", initval="prior")
             pm.Normal("C", initval="moment")
-            ip1 = pmodel.initial_point(seed=42)
-            ip2 = pmodel.initial_point(seed=42)
-            ip3 = pmodel.initial_point(seed=15)
+            ip1 = pmodel.initial_point(random_seed=42)
+            ip2 = pmodel.initial_point(random_seed=42)
+            ip3 = pmodel.initial_point(random_seed=15)
             assert ip1 == ip2
             assert ip3 != ip2
         pass
@@ -163,7 +163,7 @@ class TestInitvalEvaluation:
         # Moment of the HalfFlat is 1, but HalfFlat is log-transformed by default
         # so the transformed initial value with jitter will be zero plus a jitter between [-1, 1].
         b_transformed = iv["B_log__"]
-        b_untransformed = transform_back(B, b_transformed)
+        b_untransformed = transform_back(B, b_transformed, model=pmodel)
         assert b_transformed != 0
         assert -1 < b_transformed < 1
         # C is centered on 0 + untransformed initval of B
@@ -285,7 +285,7 @@ class TestMoment:
 def test_pickling_issue_5090():
     with pm.Model() as model:
         pm.Normal("x", initval="prior")
-    ip_before = model.initial_point(seed=5090)
+    ip_before = model.initial_point(random_seed=5090)
     model = cloudpickle.loads(cloudpickle.dumps(model))
-    ip_after = model.initial_point(seed=5090)
+    ip_after = model.initial_point(random_seed=5090)
     assert ip_before["x"] == ip_after["x"]

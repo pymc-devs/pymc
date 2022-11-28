@@ -26,14 +26,11 @@ from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
 import pymc
 
 from pymc.aesaraf import extract_obs_data
-from pymc.model import modelcontext
+from pymc.model import Model, modelcontext
 from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
-    from typing import Set  # pylint: disable=ungrouped-imports
-
     from pymc.backends.base import MultiTrace  # pylint: disable=invalid-name
-    from pymc.model import Model
 
 ___all__ = [""]
 
@@ -47,7 +44,7 @@ def find_observations(model: "Model") -> Dict[str, Var]:
     """If there are observations available, return them as a dictionary."""
     observations = {}
     for obs in model.observed_RVs:
-        aux_obs = getattr(obs.tag, "observations", None)
+        aux_obs = model.rvs_to_values.get(obs, None)
         if aux_obs is not None:
             try:
                 obs_data = extract_obs_data(aux_obs)
@@ -145,12 +142,10 @@ class _DefaultTrace:
 class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
     """Encapsulate InferenceData specific logic."""
 
-    model = None  # type: Optional[Model]
-    nchains = None  # type: int
-    ndraws = None  # type: int
-    posterior_predictive = None  # Type: Optional[Mapping[str, np.ndarray]]
-    predictions = None  # Type: Optional[Mapping[str, np.ndarray]]
-    prior = None  # Type: Optional[Mapping[str, np.ndarray]]
+    model: Optional[Model] = None
+    posterior_predictive: Optional[Mapping[str, np.ndarray]] = None
+    predictions: Optional[Mapping[str, np.ndarray]] = None
+    prior: Optional[Mapping[str, np.ndarray]] = None
 
     def __init__(
         self,
@@ -220,12 +215,11 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         }
 
         self.dims = {} if dims is None else dims
-        if hasattr(self.model, "RV_dims"):
-            model_dims = {
-                var_name: [dim for dim in dims if dim is not None]
-                for var_name, dims in self.model.RV_dims.items()
-            }
-            self.dims = {**model_dims, **self.dims}
+        model_dims = {
+            var_name: [dim for dim in dims if dim is not None]
+            for var_name, dims in self.model.named_vars_to_dims.items()
+        }
+        self.dims = {**model_dims, **self.dims}
         if sample_dims is None:
             sample_dims = ["chain", "draw"]
         self.sample_dims = sample_dims
@@ -261,7 +255,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
 
         if isinstance(var.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1)):
             try:
-                obs_data = extract_obs_data(var.tag.observations)
+                obs_data = extract_obs_data(self.model.rvs_to_values[var])
             except TypeError:
                 warnings.warn(f"Could not extract data from symbolic observation {var}")
 

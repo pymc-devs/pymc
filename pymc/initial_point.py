@@ -25,6 +25,7 @@ from aesara.graph.fg import FunctionGraph
 from aesara.tensor.var import TensorVariable
 
 from pymc.aesaraf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs
+from pymc.logprob.transforms import RVTransform
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
 StartDict = Dict[Union[Variable, str], Union[np.ndarray, Variable, str]]
@@ -43,9 +44,7 @@ def convert_str_to_rv_dict(
         if isinstance(key, str):
             if is_transformed_name(key):
                 rv = model[get_untransformed_name(key)]
-                initvals[rv] = model.rvs_to_values[rv].tag.transform.backward(
-                    initval, *rv.owner.inputs
-                )
+                initvals[rv] = model.rvs_to_transforms[rv].backward(initval, *rv.owner.inputs)
             else:
                 initvals[model[key]] = initval
         else:
@@ -53,29 +52,11 @@ def convert_str_to_rv_dict(
     return initvals
 
 
-def filter_rvs_to_jitter(step) -> Set[TensorVariable]:
-    """Find the set of RVs for which the responsible step methods ask for
-    the addition of jitter to the initial point.
-
-    Parameters
-    ----------
-    step : BlockedStep or CompoundStep
-        One or many step methods that were assigned model variables.
-
-    Returns
-    -------
-    rvs_to_jitter : set
-        The random variables for which jitter should be added.
-    """
-    # TODO: implement this
-    return set()
-
-
 def make_initial_point_fns_per_chain(
     *,
     model,
     overrides: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
-    jitter_rvs: Set[TensorVariable],
+    jitter_rvs: Optional[Set[TensorVariable]] = None,
     chains: int,
 ) -> List[Callable]:
     """Create an initial point function for each chain, as defined by initvals
@@ -88,7 +69,7 @@ def make_initial_point_fns_per_chain(
     overrides : optional, list or dict
         Initial value strategy overrides that should take precedence over the defaults from the model.
         A sequence of None or dicts will be treated as chain-wise strategies and must have the same length as `seeds`.
-    jitter_rvs : set
+    jitter_rvs : set, optional
         Random variable tensors for which U(-1, 1) jitter shall be applied.
         (To the transformed space if applicable.)
 
@@ -152,13 +133,13 @@ def make_initial_point_fn(
 
     sdict_overrides = convert_str_to_rv_dict(model, overrides or {})
     initval_strats = {
-        **model.initial_values,
+        **model.rvs_to_initial_values,
         **sdict_overrides,
     }
 
     initial_values = make_initial_point_expression(
         free_rvs=model.free_RVs,
-        rvs_to_values=model.rvs_to_values,
+        rvs_to_transforms=model.rvs_to_transforms,
         initval_strategies=initval_strats,
         jitter_rvs=jitter_rvs,
         default_strategy=default_strategy,
@@ -172,7 +153,7 @@ def make_initial_point_fn(
 
     varnames = []
     for var in model.free_RVs:
-        transform = getattr(model.rvs_to_values[var].tag, "transform", None)
+        transform = model.rvs_to_transforms[var]
         if transform is not None and return_transformed:
             name = get_transformed_name(var.name, transform)
         else:
@@ -197,7 +178,7 @@ def make_initial_point_fn(
 def make_initial_point_expression(
     *,
     free_rvs: Sequence[TensorVariable],
-    rvs_to_values: Dict[TensorVariable, TensorVariable],
+    rvs_to_transforms: Dict[TensorVariable, RVTransform],
     initval_strategies: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]],
     jitter_rvs: Set[TensorVariable] = None,
     default_strategy: str = "moment",
@@ -265,7 +246,7 @@ def make_initial_point_expression(
         else:
             value = at.as_tensor(strategy, dtype=variable.dtype).astype(variable.dtype)
 
-        transform = getattr(rvs_to_values[variable].tag, "transform", None)
+        transform = rvs_to_transforms.get(variable, None)
 
         if transform is not None:
             value = transform.forward(value, *variable.owner.inputs)

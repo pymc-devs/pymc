@@ -14,6 +14,7 @@
 import warnings
 
 import aesara
+import aesara.tensor as at
 import numpy as np
 import pytest
 
@@ -247,7 +248,7 @@ def model_non_random_variable_rvs():
 
         z_raw = pm.Normal.dist(y, shape=(5,))
         z = pm.math.clip(z_raw, -1, 1)
-        model.register_rv(z, name="z", data=[0] * 5)
+        model.register_rv(z, name="z", observed=[0] * 5)
 
     compute_graph = {
         "mu": set(),
@@ -339,6 +340,18 @@ class TestImputationModel(BaseModelGraphTest):
 
 class TestModelWithDims(BaseModelGraphTest):
     model_func = model_with_dims
+
+    def test_issue_6335_dims_containing_none(self):
+        with pm.Model(coords=dict(time=np.arange(5))) as pmodel:
+            data = at.as_tensor(np.ones((3, 5)))
+            pm.Deterministic("n", data, dims=(None, "time"))
+
+        mg = ModelGraph(pmodel)
+        plates_actual = mg.get_plates()
+        plates_expected = {
+            "n_dim0 (3) x time (5)": {"n"},
+        }
+        assert plates_actual == plates_expected
 
 
 class TestUnnamedObservedNodes(BaseModelGraphTest):

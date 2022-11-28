@@ -13,6 +13,8 @@
 #   limitations under the License.
 
 
+from typing import Union
+
 import aesara
 import aesara.tensor as at
 import numpy as np
@@ -24,7 +26,7 @@ import pymc as pm
 import pymc.distributions.transforms as tr
 
 from pymc.aesaraf import floatX, jacobian
-from pymc.distributions import joint_logp
+from pymc.distributions.logprob import _joint_logp
 from pymc.tests.checks import close_to, close_to_logical
 from pymc.tests.distributions.util import (
     Circ,
@@ -139,10 +141,18 @@ def test_simplex_accuracy():
 
 
 def test_sum_to_1():
-    check_vector_transform(tr.sum_to_1, Simplex(2))
-    check_vector_transform(tr.sum_to_1, Simplex(4))
+    check_vector_transform(tr.univariate_sum_to_1, Simplex(2))
+    check_vector_transform(tr.univariate_sum_to_1, Simplex(4))
 
-    check_jacobian_det(tr.sum_to_1, Vector(Unit, 2), at.dvector, np.array([0, 0]), lambda x: x[:-1])
+    with pytest.raises(ValueError, match=r"\(ndim_supp\) must not exceed 1"):
+        tr.SumTo1(2)
+
+    check_jacobian_det(
+        tr.univariate_sum_to_1, Vector(Unit, 2), at.dvector, np.array([0, 0]), lambda x: x[:-1]
+    )
+    check_jacobian_det(
+        tr.multivariate_sum_to_1, Vector(Unit, 2), at.dvector, np.array([0, 0]), lambda x: x[:-1]
+    )
 
 
 def test_log():
@@ -241,28 +251,36 @@ def test_circular():
 
 
 def test_ordered():
-    check_vector_transform(tr.ordered, SortedVector(6))
+    check_vector_transform(tr.univariate_ordered, SortedVector(6))
 
-    check_jacobian_det(tr.ordered, Vector(R, 2), at.dvector, np.array([0, 0]), elemwise=False)
+    with pytest.raises(ValueError, match=r"\(ndim_supp\) must not exceed 1"):
+        tr.Ordered(2)
 
-    vals = get_values(tr.ordered, Vector(R, 3), at.dvector, np.zeros(3))
+    check_jacobian_det(
+        tr.univariate_ordered, Vector(R, 2), at.dvector, np.array([0, 0]), elemwise=False
+    )
+    check_jacobian_det(
+        tr.multivariate_ordered, Vector(R, 2), at.dvector, np.array([0, 0]), elemwise=False
+    )
+
+    vals = get_values(tr.univariate_ordered, Vector(R, 3), at.dvector, np.zeros(3))
     close_to_logical(np.diff(vals) >= 0, True, tol)
 
 
 def test_chain_values():
-    chain_tranf = tr.Chain([tr.logodds, tr.ordered])
+    chain_tranf = tr.Chain([tr.logodds, tr.univariate_ordered])
     vals = get_values(chain_tranf, Vector(R, 5), at.dvector, np.zeros(5))
     close_to_logical(np.diff(vals) >= 0, True, tol)
 
 
 def test_chain_vector_transform():
-    chain_tranf = tr.Chain([tr.logodds, tr.ordered])
+    chain_tranf = tr.Chain([tr.logodds, tr.univariate_ordered])
     check_vector_transform(chain_tranf, UnitSortedVector(3))
 
 
 @pytest.mark.xfail(reason="Fails due to precision issue. Values just close to expected.")
 def test_chain_jacob_det():
-    chain_tranf = tr.Chain([tr.logodds, tr.ordered])
+    chain_tranf = tr.Chain([tr.logodds, tr.univariate_ordered])
     check_jacobian_det(chain_tranf, Vector(R, 4), at.dvector, np.zeros(4), elemwise=False)
 
 
@@ -276,32 +294,49 @@ class TestElementWiseLogp(SeededTest):
 
     def check_transform_elementwise_logp(self, model):
         x = model.free_RVs[0]
-        x_val_transf = x.tag.value_var
+        x_val_transf = model.rvs_to_values[x]
 
         pt = model.initial_point(0)
         test_array_transf = floatX(np.random.randn(*pt[x_val_transf.name].shape))
-        transform = x_val_transf.tag.transform
+        transform = model.rvs_to_transforms[x]
         test_array_untransf = transform.backward(test_array_transf, *x.owner.inputs).eval()
 
         # Create input variable with same dimensionality as untransformed test_array
         x_val_untransf = at.constant(test_array_untransf).type()
 
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
-        assert joint_logp(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
+        assert model.logp(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
 
-        v1 = joint_logp(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
-        v2 = joint_logp(x, x_val_untransf, transformed=False).eval(
-            {x_val_untransf: test_array_untransf}
+        v1 = (
+            _joint_logp(
+                (x,),
+                rvs_to_values={x: x_val_transf},
+                rvs_to_transforms={x: transform},
+                rvs_to_total_sizes={},
+                jacobian=False,
+            )[0]
+            .sum()
+            .eval({x_val_transf: test_array_transf})
+        )
+        v2 = (
+            _joint_logp(
+                (x,),
+                rvs_to_values={x: x_val_untransf},
+                rvs_to_transforms={},
+                rvs_to_total_sizes={},
+            )[0]
+            .sum()
+            .eval({x_val_untransf: test_array_untransf})
         )
         close_to(v1, v2, tol)
 
     def check_vectortransform_elementwise_logp(self, model):
         x = model.free_RVs[0]
-        x_val_transf = x.tag.value_var
+        x_val_transf = model.rvs_to_values[x]
 
         pt = model.initial_point(0)
         test_array_transf = floatX(np.random.randn(*pt[x_val_transf.name].shape))
-        transform = x_val_transf.tag.transform
+        transform = model.rvs_to_transforms[x]
         test_array_untransf = transform.backward(test_array_transf, *x.owner.inputs).eval()
 
         # Create input variable with same dimensionality as untransformed test_array
@@ -310,14 +345,38 @@ class TestElementWiseLogp(SeededTest):
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
         # Original distribution is univariate
         if x.owner.op.ndim_supp == 0:
-            assert joint_logp(x, sum=False)[0].ndim == x.ndim == (jacob_det.ndim + 1)
+            tr_steps = getattr(transform, "transform_list", [transform])
+            transform_keeps_dim = any(
+                [isinstance(ts, Union[tr.SumTo1, tr.Ordered]) for ts in tr_steps]
+            )
+            if transform_keeps_dim:
+                assert model.logp(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
+            else:
+                assert model.logp(x, sum=False)[0].ndim == x.ndim == (jacob_det.ndim + 1)
         # Original distribution is multivariate
         else:
-            assert joint_logp(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
+            assert model.logp(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
 
-        a = joint_logp(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
-        b = joint_logp(x, x_val_untransf, transformed=False).eval(
-            {x_val_untransf: test_array_untransf}
+        a = (
+            _joint_logp(
+                (x,),
+                rvs_to_values={x: x_val_transf},
+                rvs_to_transforms={x: transform},
+                rvs_to_total_sizes={},
+                jacobian=False,
+            )[0]
+            .sum()
+            .eval({x_val_transf: test_array_transf})
+        )
+        b = (
+            _joint_logp(
+                (x,),
+                rvs_to_values={x: x_val_untransf},
+                rvs_to_transforms={},
+                rvs_to_total_sizes={},
+            )[0]
+            .sum()
+            .eval({x_val_untransf: test_array_untransf})
         )
         # Hack to get relative tolerance
         close_to(a, b, np.abs(0.5 * (a + b) * tol))
@@ -415,7 +474,7 @@ class TestElementWiseLogp(SeededTest):
             {"mu": 0.0, "sigma": 1.0},
             size=3,
             initval=np.asarray([-1.0, 1.0, 4.0]),
-            transform=tr.ordered,
+            transform=tr.univariate_ordered,
         )
         self.check_vectortransform_elementwise_logp(model)
 
@@ -433,7 +492,7 @@ class TestElementWiseLogp(SeededTest):
             {"sigma": sigma},
             size=size,
             initval=initval,
-            transform=tr.Chain([tr.log, tr.ordered]),
+            transform=tr.Chain([tr.log, tr.univariate_ordered]),
         )
         self.check_vectortransform_elementwise_logp(model)
 
@@ -445,7 +504,7 @@ class TestElementWiseLogp(SeededTest):
             {"lam": lam},
             size=size,
             initval=initval,
-            transform=tr.Chain([tr.log, tr.ordered]),
+            transform=tr.Chain([tr.log, tr.univariate_ordered]),
         )
         self.check_vectortransform_elementwise_logp(model)
 
@@ -467,7 +526,7 @@ class TestElementWiseLogp(SeededTest):
             {"alpha": a, "beta": b},
             size=size,
             initval=initval,
-            transform=tr.Chain([tr.logodds, tr.ordered]),
+            transform=tr.Chain([tr.logodds, tr.univariate_ordered]),
         )
         self.check_vectortransform_elementwise_logp(model)
 
@@ -490,7 +549,7 @@ class TestElementWiseLogp(SeededTest):
             {"lower": lower, "upper": upper},
             size=size,
             initval=initval,
-            transform=tr.Chain([interval, tr.ordered]),
+            transform=tr.Chain([interval, tr.univariate_ordered]),
         )
         self.check_vectortransform_elementwise_logp(model)
 
@@ -502,7 +561,7 @@ class TestElementWiseLogp(SeededTest):
             {"mu": mu, "kappa": kappa},
             size=size,
             initval=initval,
-            transform=tr.Chain([tr.circular, tr.ordered]),
+            transform=tr.Chain([tr.circular, tr.univariate_ordered]),
         )
         self.check_vectortransform_elementwise_logp(model)
 
@@ -511,7 +570,7 @@ class TestElementWiseLogp(SeededTest):
         [
             (0.0, 1.0, (2,), tr.simplex),
             (0.5, 5.5, (2, 3), tr.simplex),
-            (np.zeros(3), np.ones(3), (4, 3), tr.Chain([tr.sum_to_1, tr.logodds])),
+            (np.zeros(3), np.ones(3), (4, 3), tr.Chain([tr.univariate_sum_to_1, tr.logodds])),
         ],
     )
     def test_uniform_other(self, lower, upper, size, transform):
@@ -535,7 +594,11 @@ class TestElementWiseLogp(SeededTest):
     def test_mvnormal_ordered(self, mu, cov, size, shape):
         initval = np.sort(np.random.randn(*shape))
         model = self.build_model(
-            pm.MvNormal, {"mu": mu, "cov": cov}, size=size, initval=initval, transform=tr.ordered
+            pm.MvNormal,
+            {"mu": mu, "cov": cov},
+            size=size,
+            initval=initval,
+            transform=tr.multivariate_ordered,
         )
         self.check_vectortransform_elementwise_logp(model)
 
@@ -544,7 +607,7 @@ def test_triangular_transform():
     with pm.Model() as m:
         x = pm.Triangular("x", lower=0, c=1, upper=2)
 
-    transform = x.tag.value_var.tag.transform
+    transform = m.rvs_to_transforms[x]
     assert np.isclose(transform.backward(-np.inf, *x.owner.inputs).eval(), 0)
     assert np.isclose(transform.backward(np.inf, *x.owner.inputs).eval(), 2)
 
@@ -564,3 +627,95 @@ def test_discrete_trafo():
         with pytest.raises(ValueError) as err:
             pm.Binomial("a", n=5, p=0.5, transform="log")
         err.match("Transformations for discrete distributions")
+
+
+def test_2d_univariate_ordered():
+    with pm.Model() as model:
+        x_1d = pm.Normal(
+            "x_1d",
+            mu=[-3, -1, 1, 2],
+            sigma=1,
+            size=(4,),
+            transform=tr.univariate_ordered,
+        )
+        x_2d = pm.Normal(
+            "x_2d",
+            mu=[-3, -1, 1, 2],
+            sigma=1,
+            size=(10, 4),
+            transform=tr.univariate_ordered,
+        )
+
+    log_p = model.compile_logp(sum=False)(
+        {"x_1d_ordered__": np.zeros((4,)), "x_2d_ordered__": np.zeros((10, 4))}
+    )
+    np.testing.assert_allclose(np.tile(log_p[0], (10, 1)), log_p[1])
+
+
+def test_2d_multivariate_ordered():
+    with pm.Model() as model:
+        x_1d = pm.MvNormal(
+            "x_1d",
+            mu=[-1, 1],
+            cov=np.eye(2),
+            initval=[-1, 1],
+            transform=tr.multivariate_ordered,
+        )
+        x_2d = pm.MvNormal(
+            "x_2d",
+            mu=[-1, 1],
+            cov=np.eye(2),
+            size=2,
+            initval=[[-1, 1], [-1, 1]],
+            transform=tr.multivariate_ordered,
+        )
+
+    log_p = model.compile_logp(sum=False)(
+        {"x_1d_ordered__": np.zeros((2,)), "x_2d_ordered__": np.zeros((2, 2))}
+    )
+    np.testing.assert_allclose(log_p[0], log_p[1])
+
+
+def test_2d_univariate_sum_to_1():
+    with pm.Model() as model:
+        x_1d = pm.Normal(
+            "x_1d",
+            mu=[-3, -1, 1, 2],
+            sigma=1,
+            size=(4,),
+            transform=tr.univariate_sum_to_1,
+        )
+        x_2d = pm.Normal(
+            "x_2d",
+            mu=[-3, -1, 1, 2],
+            sigma=1,
+            size=(10, 4),
+            transform=tr.univariate_sum_to_1,
+        )
+
+    log_p = model.compile_logp(sum=False)(
+        {"x_1d_sumto1__": np.zeros(3), "x_2d_sumto1__": np.zeros((10, 3))}
+    )
+    np.testing.assert_allclose(np.tile(log_p[0], (10, 1)), log_p[1])
+
+
+def test_2d_multivariate_sum_to_1():
+    with pm.Model() as model:
+        x_1d = pm.MvNormal(
+            "x_1d",
+            mu=[-1, 1],
+            cov=np.eye(2),
+            transform=tr.multivariate_sum_to_1,
+        )
+        x_2d = pm.MvNormal(
+            "x_2d",
+            mu=[-1, 1],
+            cov=np.eye(2),
+            size=2,
+            transform=tr.multivariate_sum_to_1,
+        )
+
+    log_p = model.compile_logp(sum=False)(
+        {"x_1d_sumto1__": np.zeros(1), "x_2d_sumto1__": np.zeros((2, 1))}
+    )
+    np.testing.assert_allclose(log_p[0], log_p[1])

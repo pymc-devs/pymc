@@ -45,6 +45,8 @@ References
     https://arxiv.org/abs/1610.09033 (2016)
 """
 
+from __future__ import annotations
+
 import collections
 import itertools
 import warnings
@@ -64,11 +66,11 @@ from pymc.aesaraf import (
     find_rng_nodes,
     identity,
     reseed_rngs,
-    rvs_to_value_vars,
 )
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
+from pymc.distributions.logprob import _get_scaling
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
 from pymc.util import (
@@ -181,7 +183,7 @@ class ObjectiveFunction:
         OPVI TestFunction
     """
 
-    def __init__(self, op, tf):
+    def __init__(self, op: Operator, tf: TestFunction):
         self.op = op
         self.tf = tf
 
@@ -962,7 +964,9 @@ class Group(WithMemoization):
         raise NotImplementedError
 
     @aesara.config.change_flags(compute_test_value="off")
-    def set_size_and_deterministic(self, node, s, d, more_replacements=None):
+    def set_size_and_deterministic(
+        self, node: Variable, s, d: bool, more_replacements: dict | None = None
+    ) -> list[Variable]:
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
 
@@ -1039,7 +1043,14 @@ class Group(WithMemoization):
     @node_property
     def symbolic_normalizing_constant(self):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`"""
-        t = self.to_flat_input(at.max([v.tag.scaling for v in self.group]))
+        t = self.to_flat_input(
+            at.max(
+                [
+                    _get_scaling(self.model.rvs_to_total_sizes.get(v, None), v.shape, v.ndim)
+                    for v in self.group
+                ]
+            )
+        )
         t = self.symbolic_single_sample(t)
         return pm.floatX(t)
 
@@ -1171,7 +1182,14 @@ class Approximation(WithMemoization):
         """
         t = at.max(
             self.collect("symbolic_normalizing_constant")
-            + [var.tag.scaling for var in self.model.observed_RVs]
+            + [
+                _get_scaling(
+                    self.model.rvs_to_total_sizes.get(obs, None),
+                    obs.shape,
+                    obs.ndim,
+                )
+                for obs in self.model.observed_RVs
+            ]
         )
         t = at.switch(self._scale_cost_to_minibatch, t, at.constant(1, dtype=t.dtype))
         return pm.floatX(t)
@@ -1391,7 +1409,7 @@ class Approximation(WithMemoization):
             node = aesara.clone_replace(node, more_replacements)
         if not isinstance(node, (list, tuple)):
             node = [node]
-        node = rvs_to_value_vars(node)
+        node = self.model.replace_rvs_by_values(node)
         if not isinstance(node_in, (list, tuple)):
             node = node[0]
         if size is None:
@@ -1464,7 +1482,7 @@ class Approximation(WithMemoization):
 
         if random_seed is not None:
             (random_seed,) = _get_seeds_per_chain(random_seed, 1)
-        samples = self.sample_dict_fn(draws, random_seed=random_seed)  # type: dict
+        samples: dict = self.sample_dict_fn(draws, random_seed=random_seed)
         points = ({name: records[i] for name, records in samples.items()} for i in range(draws))
 
         trace = NDArray(

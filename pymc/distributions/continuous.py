@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+# Contains code from Aeppl, Copyright (c) 2021-2022, Aesara Developers.
+
 # coding: utf-8
 """
 A collection of common probability distributions for stochastic
@@ -20,13 +22,12 @@ nodes in PyMC.
 
 import warnings
 
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
 import aesara
 import aesara.tensor as at
 import numpy as np
 
-from aeppl.logprob import _logprob, logcdf
 from aesara.graph.basic import Apply, Variable
 from aesara.graph.op import Op
 from aesara.raise_op import Assert
@@ -53,7 +54,9 @@ from aesara.tensor.random.basic import (
     vonmises,
 )
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.var import TensorConstant, TensorVariable
+from aesara.tensor.var import TensorConstant
+
+from pymc.logprob.abstract import _logprob, logcdf, logprob
 
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
@@ -311,29 +314,34 @@ class Uniform(BoundedContinuous):
             moment = at.full(size, moment)
         return moment
 
+    def logp(value, lower, upper):
+        res = at.switch(
+            at.bitwise_and(at.ge(value, lower), at.le(value, upper)),
+            at.fill(value, -at.log(upper - lower)),
+            -np.inf,
+        )
+
+        return check_parameters(
+            res,
+            lower <= upper,
+            msg="lower <= upper",
+        )
+
     def logcdf(value, lower, upper):
-        """
-        Compute the log of the cumulative distribution function for Uniform distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        return at.switch(
-            at.lt(value, lower) | at.lt(upper, lower),
+        res = at.switch(
+            at.lt(value, lower),
             -np.inf,
             at.switch(
                 at.lt(value, upper),
                 at.log(value - lower) - at.log(upper - lower),
                 0,
             ),
+        )
+
+        return check_parameters(
+            res,
+            lower <= upper,
+            msg="lower <= upper",
         )
 
 
@@ -378,36 +386,9 @@ class Flat(Continuous):
         return at.zeros(size)
 
     def logp(value):
-        """
-        Calculate log-probability of Flat distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         return at.zeros_like(value)
 
     def logcdf(value):
-        """
-        Compute the log of the cumulative distribution function for Flat distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         return at.switch(
             at.eq(value, -np.inf), -np.inf, at.switch(at.eq(value, np.inf), 0, at.log(0.5))
         )
@@ -446,36 +427,9 @@ class HalfFlat(PositiveContinuous):
         return at.ones(size)
 
     def logp(value):
-        """
-        Calculate log-probability of HalfFlat distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         return at.switch(at.lt(value, 0), -np.inf, at.zeros_like(value))
 
     def logcdf(value):
-        """
-        Compute the log of the cumulative distribution function for HalfFlat distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         return at.switch(at.lt(value, np.inf), -np.inf, at.switch(at.eq(value, np.inf), 0, -np.inf))
 
 
@@ -563,26 +517,23 @@ class Normal(Continuous):
             mu = at.full(size, mu)
         return mu
 
-    def logcdf(value, mu, sigma):
-        """
-        Compute the log of the cumulative distribution function for Normal distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
+    def logp(value, mu, sigma):
+        res = -0.5 * at.pow((value - mu) / sigma, 2) - at.log(at.sqrt(2.0 * np.pi)) - at.log(sigma)
         return check_parameters(
-            normal_lcdf(mu, sigma, value),
-            0 < sigma,
+            res,
+            sigma > 0,
             msg="sigma > 0",
         )
+
+    def logcdf(value, mu, sigma):
+        return check_parameters(
+            normal_lcdf(mu, sigma, value),
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
+    def icdf(value, mu, sigma):
+        return mu + sigma * -np.sqrt(2.0) * at.erfcinv(2 * value)
 
 
 class TruncatedNormalRV(RandomVariable):
@@ -740,26 +691,7 @@ class TruncatedNormal(BoundedContinuous):
 
         return moment
 
-    def logp(
-        value,
-        mu: Union[float, np.ndarray, TensorVariable],
-        sigma: Union[float, np.ndarray, TensorVariable],
-        lower: Union[float, np.ndarray, TensorVariable],
-        upper: Union[float, np.ndarray, TensorVariable],
-    ) -> RandomVariable:
-        """
-        Calculate log-probability of TruncatedNormal distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
+    def logp(value, mu, sigma, lower, upper):
         is_lower_bounded = not (
             isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value))
         )
@@ -881,21 +813,16 @@ class HalfNormal(PositiveContinuous):
             moment = at.full(size, moment)
         return moment
 
+    def logp(value, loc, sigma):
+        res = -0.5 * at.pow((value - loc) / sigma, 2) + at.log(at.sqrt(2.0 / np.pi)) - at.log(sigma)
+        res = at.switch(at.ge(value, loc), res, -np.inf)
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
     def logcdf(value, loc, sigma):
-        """
-        Compute the log of the cumulative distribution function for HalfNormal distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         z = zvalue(value, mu=loc, sigma=sigma)
         logcdf = at.switch(
             at.lt(value, loc),
@@ -905,7 +832,7 @@ class HalfNormal(PositiveContinuous):
 
         return check_parameters(
             logcdf,
-            0 < sigma,
+            sigma > 0,
             msg="sigma > 0",
         )
 
@@ -1007,20 +934,11 @@ class Wald(PositiveContinuous):
     rv_op = wald
 
     @classmethod
-    def dist(
-        cls,
-        mu: Optional[Union[float, np.ndarray]] = None,
-        lam: Optional[Union[float, np.ndarray]] = None,
-        phi: Optional[Union[float, np.ndarray]] = None,
-        alpha: Union[float, np.ndarray] = 0.0,
-        *args,
-        **kwargs,
-    ) -> RandomVariable:
+    def dist(cls, mu=None, lam=None, phi=None, alpha=0.0, **kwargs):
         mu, lam, phi = cls.get_mu_lam_phi(mu, lam, phi)
         alpha = at.as_tensor_variable(floatX(alpha))
         mu = at.as_tensor_variable(floatX(mu))
         lam = at.as_tensor_variable(floatX(lam))
-
         return super().dist([mu, lam, alpha], **kwargs)
 
     def moment(rv, size, mu, lam, alpha):
@@ -1030,9 +948,7 @@ class Wald(PositiveContinuous):
         return mu
 
     @staticmethod
-    def get_mu_lam_phi(
-        mu: Optional[float], lam: Optional[float], phi: Optional[float]
-    ) -> Tuple[Union[float, np.ndarray], Union[float, np.ndarray], Union[float, np.ndarray]]:
+    def get_mu_lam_phi(mu, lam, phi):
         if mu is None:
             if lam is not None and phi is not None:
                 return lam / phi, lam, phi
@@ -1051,31 +967,7 @@ class Wald(PositiveContinuous):
             "mu and lam, mu and phi, or lam and phi."
         )
 
-    def logp(
-        value,
-        mu: Union[float, np.ndarray, TensorVariable],
-        lam: Union[float, np.ndarray, TensorVariable],
-        alpha: Union[float, np.ndarray, TensorVariable],
-    ) -> RandomVariable:
-        """
-        Calculate log-probability of Wald distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-        mu : tensor_like of float
-            Mean of the distribution (mu > 0).
-        lam : tensor_like of float
-            Relative precision (lam > 0).
-        alpha : tensor_like of float
-            Shift/location parameter (alpha >= 0).
-
-        Returns
-        -------
-        TensorVariable
-        """
+    def logp(value, mu, lam, alpha):
         centered_value = value - alpha
         logp = at.switch(
             at.le(centered_value, 0),
@@ -1095,32 +987,7 @@ class Wald(PositiveContinuous):
             msg="mu > 0, lam > 0, alpha >= 0",
         )
 
-    def logcdf(
-        value,
-        mu: Union[float, np.ndarray, TensorVariable],
-        lam: Union[float, np.ndarray, TensorVariable],
-        alpha: Union[float, np.ndarray, TensorVariable],
-    ) -> RandomVariable:
-        """
-        Compute the log of the cumulative distribution function for Wald distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-        mu : tensor_like of float
-            Mean of the distribution (mu > 0).
-        lam : tensor_like of float
-            Relative precision (lam > 0).
-        alpha : tensor_like of float
-            Shift/location parameter (alpha >= 0).
-
-        Returns
-        -------
-        TensorVariable
-        """
+    def logcdf(value, mu, lam, alpha):
         value -= alpha
         q = value / mu
         l = lam * mu
@@ -1140,7 +1007,11 @@ class Wald(PositiveContinuous):
         )
 
         return check_parameters(
-            logcdf, 0 < mu, 0 < lam, 0 <= alpha, msg="mu > 0, lam > 0, alpha >= 0"
+            logcdf,
+            mu > 0,
+            lam > 0,
+            alpha >= 0,
+            msg="mu > 0, lam > 0, alpha >= 0",
         )
 
 
@@ -1250,26 +1121,21 @@ class Beta(UnitContinuous):
 
         return alpha, beta
 
+    def logp(value, alpha, beta):
+        res = (
+            at.switch(at.eq(alpha, 1.0), 0.0, (alpha - 1.0) * at.log(value))
+            + at.switch(at.eq(beta, 1.0), 0.0, (beta - 1.0) * at.log1p(-value))
+            - (at.gammaln(alpha) + at.gammaln(beta) - at.gammaln(alpha + beta))
+        )
+        res = at.switch(at.bitwise_and(at.ge(value, 0.0), at.le(value, 1.0)), res, -np.inf)
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
+
     def logcdf(value, alpha, beta):
-        """
-        Compute the log of the cumulative distribution function for Beta distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-        alpha : tensor_like of float
-            ``alpha`` > 0.
-        beta : tensor_like of float
-            ``beta`` > 0.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         logcdf = at.switch(
             at.lt(value, 0),
             -np.inf,
@@ -1282,8 +1148,8 @@ class Beta(UnitContinuous):
 
         return check_parameters(
             logcdf,
-            0 < alpha,
-            0 < beta,
+            alpha > 0,
+            beta > 0,
             msg="alpha > 0, beta > 0",
         )
 
@@ -1363,19 +1229,6 @@ class Kumaraswamy(UnitContinuous):
         return mean
 
     def logp(value, a, b):
-        """
-        Calculate log-probability of Kumaraswamy distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.log(a) + at.log(b) + (a - 1) * at.log(value) + (b - 1) * at.log(1 - value**a)
         res = at.switch(
             at.or_(at.lt(value, 0), at.gt(value, 1)),
@@ -1390,21 +1243,6 @@ class Kumaraswamy(UnitContinuous):
         )
 
     def logcdf(value, a, b):
-        r"""
-        Compute the log of cumulative distribution function for the Kumaraswamy distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for
-            multiple values are desired the values must be provided in a numpy
-            array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.switch(
             at.lt(value, 0),
             -np.inf,
@@ -1456,10 +1294,6 @@ class Exponential(PositiveContinuous):
     Variance  :math:`\dfrac{1}{\lambda^2}`
     ========  ============================
 
-    Notes
-    -----
-    Logp calculation is defined in `aeppl.logprob <https://github.com/aesara-devs/aeppl/blob/main/aeppl/logprob.py/>`_.
-
     Parameters
     ----------
     lam : tensor_like of float
@@ -1479,22 +1313,16 @@ class Exponential(PositiveContinuous):
             mu = at.full(size, mu)
         return mu
 
+    def logp(value, mu):
+        res = -at.log(mu) - value / mu
+        res = at.switch(at.ge(value, 0.0), res, -np.inf)
+        return check_parameters(
+            res,
+            mu >= 0,
+            msg="mu >= 0",
+        )
+
     def logcdf(value, mu):
-        r"""
-        Compute the log of cumulative distribution function for the Exponential distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like
-            Value(s) for which log CDF is calculated. If the log CDF for
-            multiple values are desired the values must be provided in a numpy
-            array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         lam = at.reciprocal(mu)
         res = at.switch(
             at.lt(value, 0),
@@ -1502,7 +1330,11 @@ class Exponential(PositiveContinuous):
             at.log1mexp(-lam * value),
         )
 
-        return check_parameters(res, 0 <= lam, msg="lam >= 0")
+        return check_parameters(
+            res,
+            lam >= 0,
+            msg="lam >= 0",
+        )
 
 
 class Laplace(Continuous):
@@ -1563,21 +1395,15 @@ class Laplace(Continuous):
             mu = at.full(size, mu)
         return mu
 
+    def logp(value, mu, b):
+        res = -at.log(2 * b) - at.abs(value - mu) / b
+        return check_parameters(
+            res,
+            b > 0,
+            msg="b > 0",
+        )
+
     def logcdf(value, mu, b):
-        """
-        Compute the log of the cumulative distribution function for Laplace distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         y = (value - mu) / b
 
         res = at.switch(
@@ -1592,7 +1418,7 @@ class Laplace(Continuous):
 
         return check_parameters(
             res,
-            0 < b,
+            b > 0,
             msg="b > 0",
         )
 
@@ -1639,6 +1465,13 @@ class AsymmetricLaplace(Continuous):
     Variance  :math:`\frac{1+\kappa^{4}}{b^2\kappa^2 }`
     ========  ========================
 
+    AsymmetricLaplace distribution can be parameterized either in terms of kappa
+    or q. The link between the two parametrizations is given by
+
+    .. math::
+
+       \kappa = \sqrt(\frac{q}{1-q})
+
     Parameters
     ----------
     kappa : tensor_like of float
@@ -1647,19 +1480,40 @@ class AsymmetricLaplace(Continuous):
         Location parameter.
     b : tensor_like of float
         Scale parameter (b > 0).
+    q : tensor_like of float
+        Symmetry parameter (0 < q < 1).
+
+    Notes
+    -----
+    The parametrization in terms of q is useful for quantile regression with q being the quantile
+    of interest.
     """
     rv_op = asymmetriclaplace
 
     @classmethod
-    def dist(cls, kappa, mu, b, *args, **kwargs):
+    def dist(cls, kappa=None, mu=None, b=None, q=None, *args, **kwargs):
+        kappa = cls.get_kappa(kappa, q)
         b = at.as_tensor_variable(floatX(b))
         kappa = at.as_tensor_variable(floatX(kappa))
-        mu = mu = at.as_tensor_variable(floatX(mu))
-
-        # mean = mu - (kappa - 1 / kappa) / b
-        # variance = (1 + kappa ** 4) / (kappa ** 2 * b ** 2)
+        mu = at.as_tensor_variable(floatX(mu))
 
         return super().dist([b, kappa, mu], *args, **kwargs)
+
+    @classmethod
+    def get_kappa(cls, kappa=None, q=None):
+        if kappa is not None and q is not None:
+            raise ValueError(
+                "Incompatible parameterization. Either use "
+                "kappa or q to specify the distribution."
+            )
+        elif q is not None:
+            if isinstance(q, Variable):
+                q = check_parameters(q, q > 0, q < 1, msg="0 < q < 1")
+            else:
+                assert np.all((np.asarray(q) > 0) | (np.asarray(q) < 1))
+            kappa = (q / (1 - q)) ** 0.5
+
+        return kappa
 
     def moment(rv, size, b, kappa, mu):
         mean = mu - (kappa - 1 / kappa) / b
@@ -1669,25 +1523,17 @@ class AsymmetricLaplace(Continuous):
         return mean
 
     def logp(value, b, kappa, mu):
-        """
-        Calculate log-probability of Asymmetric-Laplace distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         value = value - mu
         res = at.log(b / (kappa + (kappa**-1))) + (
             -value * b * at.sgn(value) * (kappa ** at.sgn(value))
         )
 
-        return check_parameters(res, 0 < b, 0 < kappa, msg="b > 0, kappa > 0")
+        return check_parameters(
+            res,
+            b > 0,
+            kappa > 0,
+            msg="b > 0, kappa > 0",
+        )
 
 
 class LogNormal(PositiveContinuous):
@@ -1775,28 +1621,32 @@ class LogNormal(PositiveContinuous):
             mean = at.full(size, mean)
         return mean
 
+    def logp(value, mu, sigma):
+        res = (
+            -0.5 * at.pow((at.log(value) - mu) / sigma, 2)
+            - 0.5 * at.log(2.0 * np.pi)
+            - at.log(sigma)
+            - at.log(value)
+        )
+        res = at.switch(at.gt(value, 0.0), res, -np.inf)
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
     def logcdf(value, mu, sigma):
-        """
-        Compute the log of the cumulative distribution function for LogNormal distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.switch(
             at.le(value, 0),
             -np.inf,
             normal_lcdf(mu, sigma, at.log(value)),
         )
 
-        return check_parameters(res, 0 < sigma, msg="sigma > 0")
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
 
 
 Lognormal = LogNormal
@@ -1898,19 +1748,6 @@ class StudentT(Continuous):
         return mu
 
     def logp(value, nu, mu, sigma):
-        """
-        Calculate log-probability of StudentT distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         lam, _ = get_tau_sigma(sigma=sigma)
 
         res = (
@@ -1920,23 +1757,14 @@ class StudentT(Continuous):
             - (nu + 1.0) / 2.0 * at.log1p(lam * (value - mu) ** 2 / nu)
         )
 
-        return check_parameters(res, lam > 0, nu > 0, msg="lam > 0, nu > 0")
+        return check_parameters(
+            res,
+            lam > 0,
+            nu > 0,
+            msg="lam > 0, nu > 0",
+        )
 
     def logcdf(value, nu, mu, sigma):
-        """
-        Compute the log of the cumulative distribution function for Student's T distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         _, sigma = get_tau_sigma(sigma=sigma)
 
         t = (value - mu) / sigma
@@ -1945,7 +1773,12 @@ class StudentT(Continuous):
 
         res = at.log(at.betainc(nu / 2.0, nu / 2.0, x))
 
-        return check_parameters(res, 0 < nu, 0 < sigma, msg="nu > 0, sigma > 0")
+        return check_parameters(
+            res,
+            nu > 0,
+            sigma > 0,
+            msg="nu > 0, sigma > 0",
+        )
 
 
 class Pareto(BoundedContinuous):
@@ -1998,7 +1831,7 @@ class Pareto(BoundedContinuous):
     bound_args_indices = (4, None)  # lower-bounded by `m`
 
     @classmethod
-    def dist(cls, alpha: float = None, m: float = None, **kwargs) -> RandomVariable:
+    def dist(cls, alpha, m, **kwargs):
         alpha = at.as_tensor_variable(floatX(alpha))
         m = at.as_tensor_variable(floatX(m))
 
@@ -2010,25 +1843,17 @@ class Pareto(BoundedContinuous):
             median = at.full(size, median)
         return median
 
-    def logcdf(
-        value: Union[float, np.ndarray, TensorVariable],
-        alpha: Union[float, np.ndarray, TensorVariable],
-        m: Union[float, np.ndarray, TensorVariable],
-    ):
-        """
-        Compute the log of the cumulative distribution function for Pareto distribution
-        at the specified value.
+    def logp(value, alpha, m):
+        res = at.log(alpha) + logpow(m, alpha) - logpow(value, alpha + 1.0)
+        res = at.switch(at.ge(value, m), res, -np.inf)
+        return check_parameters(
+            res,
+            alpha > 0,
+            m > 0,
+            msg="alpha > 0, m > 0",
+        )
 
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
+    def logcdf(value, alpha, m):
         arg = (m / value) ** alpha
 
         res = at.switch(
@@ -2041,7 +1866,12 @@ class Pareto(BoundedContinuous):
             ),
         )
 
-        return check_parameters(res, 0 < alpha, 0 < m, msg="alpha > 0, m > 0")
+        return check_parameters(
+            res,
+            alpha > 0,
+            m > 0,
+            msg="alpha > 0, m > 0",
+        )
 
 
 @_default_transform.register(Pareto)
@@ -2110,25 +1940,19 @@ class Cauchy(Continuous):
             alpha = at.full(size, alpha)
         return alpha
 
+    def logp(value, alpha, beta):
+        res = -at.log(np.pi) - at.log(beta) - at.log1p(at.pow((value - alpha) / beta, 2))
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
+
     def logcdf(value, alpha, beta):
-        """
-        Compute the log of the cumulative distribution function for Cauchy distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.log(0.5 + at.arctan((value - alpha) / beta) / np.pi)
         return check_parameters(
             res,
-            0 < beta,
+            beta > 0,
             msg="beta > 0",
         )
 
@@ -2184,28 +2008,27 @@ class HalfCauchy(PositiveContinuous):
             beta = at.full(size, beta)
         return beta
 
+    def logp(value, loc, beta):
+        res = at.log(2) + logprob(Cauchy.dist(loc, beta), value)
+        res = at.switch(at.ge(value, loc), res, -np.inf)
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
+
     def logcdf(value, loc, beta):
-        """
-        Compute the log of the cumulative distribution function for HalfCauchy distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.switch(
             at.lt(value, loc),
             -np.inf,
             at.log(2 * at.arctan((value - loc) / beta) / np.pi),
         )
 
-        return check_parameters(res, 0 < beta, msg="beta > 0")
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
 
 
 class Gamma(PositiveContinuous):
@@ -2305,22 +2128,18 @@ class Gamma(PositiveContinuous):
             mean = at.full(size, mean)
         return mean
 
+    def logp(value, alpha, inv_beta):
+        beta = at.reciprocal(inv_beta)
+        res = -at.gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1)
+        res = at.switch(at.ge(value, 0.0), res, -np.inf)
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
+
     def logcdf(value, alpha, inv_beta):
-        """
-        Compute the log of the cumulative distribution function for Gamma distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for
-            multiple values are desired the values must be provided in a numpy
-            array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         beta = at.reciprocal(inv_beta)
         res = at.switch(
             at.lt(value, 0),
@@ -2421,37 +2240,29 @@ class InverseGamma(PositiveContinuous):
 
         return alpha, beta
 
-    @classmethod
-    def _distr_parameters_for_repr(self):
-        return ["alpha", "beta"]
+    def logp(value, alpha, beta):
+        res = -at.gammaln(alpha) + logpow(beta, alpha) - beta / value + logpow(value, -alpha - 1)
+        res = at.switch(at.ge(value, 0.0), res, -np.inf)
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
 
     def logcdf(value, alpha, beta):
-        """
-        Compute the log of the cumulative distribution function for Inverse Gamma
-        distribution at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara
-            tensor.
-        alpha : tensor_like of float
-            Shape parameter (alpha > 0).
-        beta : tensor_like of float
-            Scale parameter (beta > 0).
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.switch(
             at.lt(value, 0),
             -np.inf,
             at.log(at.gammaincc(alpha, beta / value)),
         )
 
-        return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
 
 
 class ChiSquared(PositiveContinuous):
@@ -2506,22 +2317,10 @@ class ChiSquared(PositiveContinuous):
             moment = at.full(size, moment)
         return moment
 
+    def logp(value, nu):
+        return logprob(Gamma.dist(alpha=nu / 2, beta=0.5), value)
+
     def logcdf(value, nu):
-        """
-        Compute the log of the cumulative distribution function for ChiSquared distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for
-            multiple values are desired the values must be provided in a numpy
-            array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         return logcdf(Gamma.dist(alpha=nu / 2, beta=0.5), value)
 
 
@@ -2606,20 +2405,6 @@ class Weibull(PositiveContinuous):
         return mean
 
     def logcdf(value, alpha, beta):
-        r"""
-        Compute the log of the cumulative distribution function for Weibull distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         a = (value / beta) ** alpha
 
         res = at.switch(
@@ -2628,7 +2413,12 @@ class Weibull(PositiveContinuous):
             at.log1mexp(-a),
         )
 
-        return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
 
     def logp(value, alpha, beta):
         res = (
@@ -2638,7 +2428,12 @@ class Weibull(PositiveContinuous):
             - at.pow(value / beta, alpha)
         )
         res = at.switch(at.ge(value, 0.0), res, -np.inf)
-        return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
 
 
 class HalfStudentTRV(RandomVariable):
@@ -2731,20 +2526,6 @@ class HalfStudentT(PositiveContinuous):
         return sigma
 
     def logp(value, nu, sigma):
-        """
-        Calculate log-probability of HalfStudentT distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         res = (
             at.log(2)
             + gammaln((nu + 1.0) / 2.0)
@@ -2759,7 +2540,12 @@ class HalfStudentT(PositiveContinuous):
             res,
         )
 
-        return check_parameters(res, sigma > 0, nu > 0, msg="sigma > 0, nu > 0")
+        return check_parameters(
+            res,
+            sigma > 0,
+            nu > 0,
+            msg="sigma > 0, nu > 0",
+        )
 
 
 class ExGaussianRV(RandomVariable):
@@ -2861,20 +2647,6 @@ class ExGaussian(Continuous):
         return moment
 
     def logp(value, mu, sigma, nu):
-        """
-        Calculate log-probability of ExGaussian distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         # Alogithm is adapted from dexGAUS.R from gamlss
         res = at.switch(
             at.gt(nu, 0.05 * sigma),
@@ -2888,33 +2660,12 @@ class ExGaussian(Continuous):
         )
         return check_parameters(
             res,
-            0 < sigma,
-            0 < nu,
+            sigma > 0,
+            nu > 0,
             msg="nu > 0, sigma > 0",
         )
 
     def logcdf(value, mu, sigma, nu):
-        """
-        Compute the log of the cumulative distribution function for ExGaussian distribution
-        at the specified value.
-
-        References
-        ----------
-        .. [Rigby2005] R.A. Rigby (2005).
-           "Generalized additive models for location, scale and shape"
-           https://doi.org/10.1111/j.1467-9876.2005.00510.x
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         # Alogithm is adapted from pexGAUS.R from gamlss
         res = at.switch(
             at.gt(nu, 0.05 * sigma),
@@ -2929,7 +2680,12 @@ class ExGaussian(Continuous):
             normal_lcdf(mu, sigma, value),
         )
 
-        return check_parameters(res, 0 < sigma, 0 < nu, msg="sigma > 0, nu > 0")
+        return check_parameters(
+            res,
+            sigma > 0,
+            nu > 0,
+            msg="sigma > 0, nu > 0",
+        )
 
 
 class VonMises(CircularContinuous):
@@ -2991,6 +2747,15 @@ class VonMises(CircularContinuous):
         if not rv_size_is_none(size):
             mu = at.full(size, mu)
         return mu
+
+    def logp(value, mu, kappa):
+        res = kappa * at.cos(mu - value) - at.log(2 * np.pi) - at.log(at.i0(kappa))
+        res = at.switch(at.bitwise_and(at.ge(value, -np.pi), at.le(value, np.pi)), res, -np.inf)
+        return check_parameters(
+            res,
+            kappa > 0,
+            msg="kappa > 0",
+        )
 
 
 class SkewNormalRV(RandomVariable):
@@ -3090,19 +2855,6 @@ class SkewNormal(Continuous):
         return mean
 
     def logp(value, mu, sigma, alpha):
-        """
-        Calculate log-probability of SkewNormal distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         tau, _ = get_tau_sigma(sigma=sigma)
 
         res = (
@@ -3110,7 +2862,11 @@ class SkewNormal(Continuous):
             + (-tau * (value - mu) ** 2 + at.log(tau / np.pi / 2.0)) / 2.0
         )
 
-        return check_parameters(res, tau > 0, msg="tau > 0")
+        return check_parameters(
+            res,
+            tau > 0,
+            msg="tau > 0",
+        )
 
 
 class Triangular(BoundedContinuous):
@@ -3186,21 +2942,21 @@ class Triangular(BoundedContinuous):
             mean = at.full(size, mean)
         return mean
 
+    def logp(value, lower, c, upper):
+        res = at.switch(
+            at.lt(value, c),
+            at.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
+            at.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
+        )
+        res = at.switch(at.bitwise_and(at.le(lower, value), at.le(value, upper)), res, -np.inf)
+        return check_parameters(
+            res,
+            lower <= c,
+            c <= upper,
+            msg="lower <= c <= upper",
+        )
+
     def logcdf(value, lower, c, upper):
-        """
-        Compute the log of the cumulative distribution function for Triangular distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.switch(
             at.le(value, lower),
             -np.inf,
@@ -3280,8 +3036,7 @@ class Gumbel(Continuous):
     rv_op = gumbel
 
     @classmethod
-    def dist(cls, mu: float = None, beta: float = None, **kwargs) -> RandomVariable:
-
+    def dist(cls, mu, beta, **kwargs):
         mu = at.as_tensor_variable(floatX(mu))
         beta = at.as_tensor_variable(floatX(beta))
 
@@ -3293,31 +3048,23 @@ class Gumbel(Continuous):
             mean = at.full(size, mean)
         return mean
 
-    def _distr_parameters_for_repr(self):
-        return ["mu", "beta"]
+    def logp(value, mu, beta):
+        z = (value - mu) / beta
+        res = -z - at.exp(-z) - at.log(beta)
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
 
-    def logcdf(
-        value: Union[float, np.ndarray, TensorVariable],
-        mu: Union[float, np.ndarray, TensorVariable],
-        beta: Union[float, np.ndarray, TensorVariable],
-    ) -> TensorVariable:
-        """
-        Compute the log of the cumulative distribution function for Gumbel distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
+    def logcdf(value, mu, beta):
         res = -at.exp(-(value - mu) / beta)
 
-        return check_parameters(res, 0 < beta, msg="beta > 0")
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
 
 
 class RiceRV(RandomVariable):
@@ -3434,19 +3181,6 @@ class Rice(PositiveContinuous):
         return mean
 
     def logp(value, b, sigma):
-        """
-        Calculate log-probability of Rice distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         x = value / sigma
 
         res = at.switch(
@@ -3522,26 +3256,21 @@ class Logistic(Continuous):
             mu = at.full(size, mu)
         return mu
 
+    def logp(value, mu, s):
+        z = (value - mu) / s
+        res = -z - at.log(s) - 2.0 * at.log1p(at.exp(-z))
+        return check_parameters(
+            res,
+            s > 0,
+            msg="s > 0",
+        )
+
     def logcdf(value, mu, s):
-        r"""
-        Compute the log of the cumulative distribution function for Logistic distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = -at.log1pexp(-(value - mu) / s)
 
         return check_parameters(
             res,
-            0 < s,
+            s > 0,
             msg="s > 0",
         )
 
@@ -3626,19 +3355,6 @@ class LogitNormal(UnitContinuous):
         return median
 
     def logp(value, mu, sigma):
-        """
-        Calculate log-probability of LogitNormal distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         tau, _ = get_tau_sigma(sigma=sigma)
 
         res = at.switch(
@@ -3780,19 +3496,6 @@ class Interpolated(BoundedContinuous):
         return moment
 
     def logp(value, x_points, pdf_points, cdf_points):
-        """
-        Calculate log-probability of Interpolated distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         # x_points and pdf_points are expected to be non-symbolic arrays wrapped
         # within a tensor.constant. We use the .data method to retrieve them
         interp = InterpolatedUnivariateSpline(x_points.data, pdf_points.data, k=1, ext="zeros")
@@ -3894,43 +3597,20 @@ class Moyal(Continuous):
         return mean
 
     def logp(value, mu, sigma):
-        """
-        Calculate log-probability of Moyal distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         scaled = (value - mu) / sigma
         res = -(1 / 2) * (scaled + at.exp(-scaled)) - at.log(sigma) - (1 / 2) * at.log(2 * np.pi)
-        return check_parameters(res, 0 < sigma, msg="sigma > 0")
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
 
     def logcdf(value, mu, sigma):
-        """
-        Compute the log of the cumulative distribution function for Moyal distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
         scaled = (value - mu) / sigma
         res = at.log(at.erfc(at.exp(-scaled / 2) * (2**-0.5)))
         return check_parameters(
             res,
-            0 < sigma,
+            sigma > 0,
             msg="sigma > 0",
         )
 
@@ -4108,21 +3788,6 @@ class PolyaGamma(PositiveContinuous):
         return mean
 
     def logp(value, h, z):
-        """
-        Calculate log-probability of Polya-Gamma distribution at specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log-probability is calculated. If the log
-            probabilities for multiple values are desired the values must be
-            provided in a numpy array.
-
-        Returns
-        -------
-        TensorVariable
-        """
-
         res = at.switch(
             at.le(value, 0),
             -np.inf,
@@ -4135,20 +3800,6 @@ class PolyaGamma(PositiveContinuous):
         )
 
     def logcdf(value, h, z):
-        """
-        Compute the log of the cumulative distribution function for the
-        Polya-Gamma distribution at the specified value.
-
-        Parameters
-        ----------
-        value : tensor_like of float
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array.
-
-        Returns
-        -------
-        TensorVariable
-        """
         res = at.switch(
             at.le(value, 0),
             -np.inf,

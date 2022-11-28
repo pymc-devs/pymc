@@ -4,8 +4,6 @@ import numpy as np
 import pytest
 import scipy
 
-from aeppl.logprob import ParameterValueError, _icdf
-from aeppl.transforms import IntervalTransform
 from aesara.tensor.random.basic import GeometricRV, NormalRV
 
 from pymc import Censored, Model, draw, find_MAP, logp
@@ -14,6 +12,9 @@ from pymc.distributions.shape_utils import change_dist_size
 from pymc.distributions.transforms import _default_transform
 from pymc.distributions.truncated import Truncated, TruncatedRV, _truncated
 from pymc.exceptions import TruncationError
+from pymc.logprob.abstract import _icdf
+from pymc.logprob.transforms import IntervalTransform
+from pymc.logprob.utils import ParameterValueError
 from pymc.tests.distributions.util import assert_moment_is_expected
 
 

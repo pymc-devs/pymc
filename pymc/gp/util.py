@@ -31,7 +31,7 @@ from pymc.aesaraf import compile_pymc, walk_model
 # Avoid circular dependency when importing modelcontext
 from pymc.distributions.distribution import Distribution
 
-assert Distribution  # keep both pylint and black happy
+_ = Distribution  # keep both pylint and black happy
 from pymc.model import modelcontext
 
 JITTER_DEFAULT = 1e-6
@@ -136,7 +136,7 @@ def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
     Xw = X / scaling
 
     if "k_or_guess" in kmeans_kwargs:
-        warn.UserWarning("Use `n_inducing` to set the `k_or_guess` parameter instead.")
+        warnings.warn("Use `n_inducing` to set the `k_or_guess` parameter instead.")
 
     Xu, distortion = kmeans(Xw, k_or_guess=n_inducing, **kmeans_kwargs)
     return Xu * scaling

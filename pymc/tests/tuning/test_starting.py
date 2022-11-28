@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import re
+
 import numpy as np
 import pytest
 
@@ -22,7 +24,7 @@ from pymc.tests import models
 from pymc.tests.checks import close_to
 from pymc.tests.helpers import select_by_precision
 from pymc.tests.models import non_normal, simple_arbitrary_det, simple_model
-from pymc.tuning import find_MAP, starting
+from pymc.tuning import find_MAP
 
 
 @pytest.mark.parametrize("bounded", [False, True])
@@ -40,7 +42,7 @@ def test_mle_jacobian(bounded):
 def test_tune_not_inplace():
     orig_scaling = np.array([0.001, 0.1])
     returned_scaling = tune(orig_scaling, acc_rate=0.6)
-    assert not returned_scaling is orig_scaling
+    assert returned_scaling is not orig_scaling
     assert np.all(orig_scaling == np.array([0.001, 0.1]))
 
 
@@ -149,26 +151,14 @@ def test_find_MAP_issue_4488():
     np.testing.assert_allclose(map_estimate["y"], [2.0, map_estimate["x_missing"][0] + 1])
 
 
-def test_allinmodel():
-    model1 = pm.Model()
-    model2 = pm.Model()
-    with model1:
-        x1 = pm.Normal("x1", mu=0, sigma=1)
-        y1 = pm.Normal("y1", mu=0, sigma=1)
-    with model2:
-        x2 = pm.Normal("x2", mu=0, sigma=1)
-        y2 = pm.Normal("y2", mu=0, sigma=1)
+def test_find_MAP_warning_non_free_RVs():
+    with pm.Model() as m:
+        x = pm.Normal("x")
+        y = pm.Normal("y")
+        det = pm.Deterministic("det", x + y)
+        pm.Normal("z", det, 1e-5, observed=100)
 
-    x1 = model1.rvs_to_values[x1]
-    y1 = model1.rvs_to_values[y1]
-    x2 = model2.rvs_to_values[x2]
-    y2 = model2.rvs_to_values[y2]
-
-    starting.allinmodel([x1, y1], model1)
-    starting.allinmodel([x1], model1)
-    with pytest.raises(ValueError, match=r"Some variables not in the model: \['x2', 'y2'\]"):
-        starting.allinmodel([x2, y2], model1)
-    with pytest.raises(ValueError, match=r"Some variables not in the model: \['x2'\]"):
-        starting.allinmodel([x2, y1], model1)
-    with pytest.raises(ValueError, match=r"Some variables not in the model: \['x2'\]"):
-        starting.allinmodel([x2], model1)
+        msg = "Intermediate variables (such as Deterministic or Potential) were passed"
+        with pytest.warns(UserWarning, match=re.escape(msg)):
+            r = pm.find_MAP(vars=[det])
+        np.testing.assert_allclose([r["x"], r["y"], r["det"]], [50, 50, 100])

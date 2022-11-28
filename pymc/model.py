@@ -51,24 +51,26 @@ from aesara.tensor.var import TensorConstant, TensorVariable
 
 from pymc.aesaraf import (
     PointFunc,
+    SeedSequenceSeed,
     compile_pymc,
     convert_observed_data,
     gradient,
     hessian,
     inputvars,
-    rvs_to_value_vars,
+    replace_rvs_by_values,
 )
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
-from pymc.distributions import joint_logp
-from pymc.distributions.logprob import _get_scaling
+from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
 from pymc.initial_point import make_initial_point_fn
 from pymc.util import (
     UNSET,
     WithMemoization,
+    _add_future_warning_tag,
     get_transformed_name,
+    get_value_vars_from_user_vars,
     get_var_name,
     treedict,
     treelist,
@@ -186,7 +188,7 @@ class ContextMeta(type):
         on the stack, or ``None``. If ``error_if_none`` is True (default),
         raise a ``TypeError`` instead of returning ``None``."""
         try:
-            candidate = cls.get_contexts()[-1]  # type: Optional[T]
+            candidate: Optional[T] = cls.get_contexts()[-1]
         except IndexError as e:
             # Calling code expects to get a TypeError if the entity
             # is unfound, and there's too much to fix.
@@ -548,31 +550,33 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
 
-        self._initial_values: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]] = {}
-
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
+            self.named_vars_to_dims = treedict(parent=self.parent.named_vars_to_dims)
             self.values_to_rvs = treedict(parent=self.parent.values_to_rvs)
             self.rvs_to_values = treedict(parent=self.parent.rvs_to_values)
+            self.rvs_to_transforms = treedict(parent=self.parent.rvs_to_transforms)
+            self.rvs_to_total_sizes = treedict(parent=self.parent.rvs_to_total_sizes)
+            self.rvs_to_initial_values = treedict(parent=self.parent.rvs_to_initial_values)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
-            self.auto_deterministics = treelist(parent=self.parent.auto_deterministics)
             self.deterministics = treelist(parent=self.parent.deterministics)
             self.potentials = treelist(parent=self.parent.potentials)
             self._coords = self.parent._coords
-            self._RV_dims = treedict(parent=self.parent._RV_dims)
             self._dim_lengths = self.parent._dim_lengths
         else:
             self.named_vars = treedict()
+            self.named_vars_to_dims = treedict()
             self.values_to_rvs = treedict()
             self.rvs_to_values = treedict()
+            self.rvs_to_transforms = treedict()
+            self.rvs_to_total_sizes = treedict()
+            self.rvs_to_initial_values = treedict()
             self.free_RVs = treelist()
             self.observed_RVs = treelist()
-            self.auto_deterministics = treelist()
             self.deterministics = treelist()
             self.potentials = treelist()
             self._coords = {}
-            self._RV_dims = treedict()
             self._dim_lengths = {}
         self.add_coords(coords)
 
@@ -617,6 +621,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if grad_vars is None:
             grad_vars = self.continuous_value_vars
         else:
+            grad_vars = get_value_vars_from_user_vars(grad_vars, self)
             for i, var in enumerate(grad_vars):
                 if var.dtype not in continuous_types:
                     raise ValueError(f"Can only compute the gradient of continuous types: {var}")
@@ -723,13 +728,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         # We need to separate random variables from potential terms, and remember their
         # original order so that we can merge them together in the same order at the end
-        rv_values = {}
+        rvs = []
         potentials = []
         rv_order, potential_order = [], []
         for i, var in enumerate(varlist):
-            value_var = self.rvs_to_values.get(var)
-            if value_var is not None:
-                rv_values[var] = value_var
+            rv = self.values_to_rvs.get(var, var)
+            if rv in self.basic_RVs:
+                rvs.append(rv)
                 rv_order.append(i)
             else:
                 if var in self.potentials:
@@ -741,14 +746,20 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     )
 
         rv_logps: List[TensorVariable] = []
-        if rv_values:
-            rv_logps = joint_logp(list(rv_values.keys()), rv_values, sum=False, jacobian=jacobian)
+        if rvs:
+            rv_logps = _joint_logp(
+                rvs=rvs,
+                rvs_to_values=self.rvs_to_values,
+                rvs_to_transforms=self.rvs_to_transforms,
+                rvs_to_total_sizes=self.rvs_to_total_sizes,
+                jacobian=jacobian,
+            )
             assert isinstance(rv_logps, list)
 
         # Replace random variables by their value variables in potential terms
         potential_logps = []
         if potentials:
-            potential_logps = rvs_to_value_vars(potentials)
+            potential_logps = self.replace_rvs_by_values(potentials)
 
         logp_factors = [None] * len(varlist)
         for logp_order, logp in zip((rv_order + potential_order), (rv_logps + potential_logps)):
@@ -868,7 +879,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Aesara scalar of log-probability of the Potential terms"""
         # Convert random variables in Potential expression into their log-likelihood
         # inputs and apply their transforms, if any
-        potentials = rvs_to_value_vars(self.potentials)
+        potentials = self.replace_rvs_by_values(self.potentials)
         if potentials:
             return at.sum([at.sum(factor) for factor in potentials])
         else:
@@ -888,23 +899,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
         log-likelihood graph
         """
         vars = []
-        untransformed_vars = []
+        transformed_rvs = []
         for rv in self.free_RVs:
             value_var = self.rvs_to_values[rv]
-            transform = getattr(value_var.tag, "transform", None)
+            transform = self.rvs_to_transforms[rv]
             if transform is not None:
-                # We need to create and add an un-transformed version of
-                # each transformed variable
-                untrans_value_var = transform.backward(value_var, *rv.owner.inputs)
-                untrans_value_var.name = rv.name
-                untransformed_vars.append(untrans_value_var)
+                transformed_rvs.append(rv)
             vars.append(value_var)
 
         # Remove rvs from untransformed values graph
-        untransformed_vars = rvs_to_value_vars(untransformed_vars)
+        untransformed_vars = self.replace_rvs_by_values(transformed_rvs)
 
         # Remove rvs from deterministics graph
-        deterministics = rvs_to_value_vars(self.deterministics)
+        deterministics = self.replace_rvs_by_values(self.deterministics)
 
         return vars + untransformed_vars + deterministics
 
@@ -942,7 +949,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         These are the actual random variable terms that make up the
         "sample-space" graph (i.e. you can sample these graphs by compiling them
         with `aesara.function`).  If you want the corresponding log-likelihood terms,
-        use `var.tag.value_var`.
+        use `model.value_vars` instead.
         """
         return self.free_RVs + self.observed_RVs
 
@@ -953,7 +960,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         These are the actual random variable terms that make up the
         "sample-space" graph (i.e. you can sample these graphs by compiling them
         with `aesara.function`).  If you want the corresponding log-likelihood terms,
-        use `var.tag.value_var`.
+        use `var.unobserved_value_vars` instead.
         """
         return self.free_RVs + self.deterministics
 
@@ -963,7 +970,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Entries in the tuples may be ``None``, if the RV dimension was not given a name.
         """
-        return self._RV_dims
+        warnings.warn(
+            "Model.RV_dims is deprecated. User Model.named_vars_to_dims instead.",
+            FutureWarning,
+        )
+        return self.named_vars_to_dims
 
     @property
     def coords(self) -> Dict[str, Union[Tuple, None]]:
@@ -977,54 +988,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         The values are typically instances of ``TensorVariable`` or ``ScalarSharedVariable``.
         """
         return self._dim_lengths
-
-    @property
-    def unobserved_RVs(self):
-        """List of all random variables, including deterministic ones.
-
-        These are the actual random variable terms that make up the
-        "sample-space" graph (i.e. you can sample these graphs by compiling them
-        with `aesara.function`).  If you want the corresponding log-likelihood terms,
-        use `var.tag.value_var`.
-        """
-        return self.free_RVs + self.deterministics
-
-    @property
-    def test_point(self) -> Dict[str, np.ndarray]:
-        """Deprecated alias for `Model.initial_point(seed=None)`."""
-        warnings.warn(
-            "`Model.test_point` has been deprecated. Use `Model.initial_point(seed=None)`.",
-            FutureWarning,
-        )
-        return self.initial_point()
-
-    def initial_point(self, seed=None) -> Dict[str, np.ndarray]:
-        """Computes the initial point of the model.
-
-        Returns
-        -------
-        ip : dict
-            Maps names of transformed variables to numeric initial values in the transformed space.
-        """
-        fn = make_initial_point_fn(model=self, return_transformed=True)
-        return Point(fn(seed), model=self)
-
-    @property
-    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
-        """Maps transformed variables to initial value placeholders.
-
-        Keys are the random variables (as returned by e.g. ``pm.Uniform()``) and
-        values are the numeric/symbolic initial values, strings denoting the strategy to get them, or None.
-        """
-        return self._initial_values
-
-    def set_initval(self, rv_var, initval):
-        """Sets an initial value (strategy) for a random variable."""
-        if initval is not None and not isinstance(initval, (Variable, str)):
-            # Convert scalars or array-like inputs to ndarrays
-            initval = rv_var.type.filter(initval)
-
-        self.initial_values[rv_var] = initval
 
     def shape_from_dims(self, dims):
         shape = []
@@ -1132,13 +1095,49 @@ class Model(WithMemoization, metaclass=ContextMeta):
             len_cvals = len(coord_values)
             if len_cvals != new_length:
                 raise ShapeError(
-                    f"Length of new coordinate values does not match the new dimension length.",
+                    "Length of new coordinate values does not match the new dimension length.",
                     actual=len_cvals,
                     expected=new_length,
                 )
             self._coords[name] = tuple(coord_values)
         self.dim_lengths[name].set_value(new_length)
         return
+
+    def initial_point(self, random_seed: SeedSequenceSeed = None) -> Dict[str, np.ndarray]:
+        """Computes the initial point of the model.
+
+        Parameters
+        ----------
+        random_seed : SeedSequenceSeed, default None
+            Seed(s) for generating initial point from the model. Passed into :func:`pymc.aesaraf.reseed_rngs`
+
+        Returns
+        -------
+        ip : dict of {str : array_like}
+            Maps names of transformed variables to numeric initial values in the transformed space.
+        """
+        fn = make_initial_point_fn(model=self, return_transformed=True)
+        return Point(fn(random_seed), model=self)
+
+    @property
+    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
+        """Maps transformed variables to initial value placeholders.
+
+        Keys are the random variables (as returned by e.g. ``pm.Uniform()``) and
+        values are the numeric/symbolic initial values, strings denoting the strategy to get them, or None.
+        """
+        warnings.warn(
+            "Model.initial_values is deprecated. Use Model.rvs_to_initial_values instead."
+        )
+        return self.rvs_to_initial_values
+
+    def set_initval(self, rv_var, initval):
+        """Sets an initial value (strategy) for a random variable."""
+        if initval is not None and not isinstance(initval, (Variable, str)):
+            # Convert scalars or array-like inputs to ndarrays
+            initval = rv_var.type.filter(initval)
+
+        self.rvs_to_initial_values[rv_var] = initval
 
     def set_data(
         self,
@@ -1173,7 +1172,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if isinstance(values, list):
             values = np.array(values)
         values = convert_observed_data(values)
-        dims = self.RV_dims.get(name, None) or ()
+        dims = self.named_vars_to_dims.get(name, None) or ()
         coords = coords or {}
 
         if values.ndim != shared_object.ndim:
@@ -1262,36 +1261,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         shared_object.set_value(values)
 
-    def initial_point(self, seed=None) -> Dict[str, np.ndarray]:
-        """Computes the initial point of the model.
-
-        Returns
-        -------
-        ip : dict
-            Maps names of transformed variables to numeric initial values in the transformed space.
-        """
-        fn = make_initial_point_fn(model=self, return_transformed=True)
-        return Point(fn(seed), model=self)
-
-    @property
-    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
-        """Maps transformed variables to initial value placeholders.
-
-        Keys are the random variables (as returned by e.g. ``pm.Uniform()``) and
-        values are the numeric/symbolic initial values, strings denoting the strategy to get them, or None.
-        """
-        return self._initial_values
-
-    def set_initval(self, rv_var, initval):
-        """Sets an initial value (strategy) for a random variable."""
-        if initval is not None and not isinstance(initval, (Variable, str)):
-            # Convert scalars or array-like inputs to ndarrays
-            initval = rv_var.type.filter(initval)
-
-        self.initial_values[rv_var] = initval
-
     def register_rv(
-        self, rv_var, name, data=None, total_size=None, dims=None, transform=UNSET, initval=None
+        self, rv_var, name, observed=None, total_size=None, dims=None, transform=UNSET, initval=None
     ):
         """Register an (un)observed random variable with the model.
 
@@ -1300,9 +1271,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         rv_var: TensorVariable
         name: str
             Intended name for the model variable.
-        data: array_like (optional)
-            If data is provided, the variable is observed. If None,
-            the variable is unobserved.
+        observed: array_like (optional)
+            Data values for observed variables.
         total_size: scalar
             upscales logp of variable with ``coef = total_size/var.shape[0]``
         dims: tuple
@@ -1318,41 +1288,42 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         name = self.name_for(name)
         rv_var.name = name
+        _add_future_warning_tag(rv_var)
         rv_var.tag.total_size = total_size
-        rv_var.tag.scaling = _get_scaling(total_size, shape=rv_var.shape, ndim=rv_var.ndim)
+        self.rvs_to_total_sizes[rv_var] = total_size
 
         # Associate previously unknown dimension names with
         # the length of the corresponding RV dimension.
         if dims is not None:
             for d, dname in enumerate(dims):
-                if not dname in self.dim_lengths:
+                if dname not in self.dim_lengths:
                     self.add_coord(dname, values=None, length=rv_var.shape[d])
 
-        if data is None:
+        if observed is None:
             self.free_RVs.append(rv_var)
             self.create_value_var(rv_var, transform)
-            self.add_random_variable(rv_var, dims)
+            self.add_named_variable(rv_var, dims)
             self.set_initval(rv_var, initval)
         else:
             if (
-                isinstance(data, Variable)
-                and not isinstance(data, (GenTensorVariable, Minibatch))
-                and data.owner is not None
+                isinstance(observed, Variable)
+                and not isinstance(observed, (GenTensorVariable, Minibatch))
+                and observed.owner is not None
                 # The only Aesara operation we allow on observed data is type casting
                 # Although we could allow for any graph that does not depend on other RVs
                 and not (
-                    isinstance(data.owner.op, Elemwise)
-                    and isinstance(data.owner.op.scalar_op, Cast)
+                    isinstance(observed.owner.op, Elemwise)
+                    and isinstance(observed.owner.op.scalar_op, Cast)
                 )
             ):
                 raise TypeError(
                     "Variables that depend on other nodes cannot be used for observed data."
-                    f"The data variable was: {data}"
+                    f"The data variable was: {observed}"
                 )
 
             # `rv_var` is potentially changed by `make_obs_var`,
             # for example into a new graph for imputation of missing data.
-            rv_var = self.make_obs_var(rv_var, data, dims, transform)
+            rv_var = self.make_obs_var(rv_var, observed, dims, transform)
 
         return rv_var
 
@@ -1387,7 +1358,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             if test_value is not None:
                 # We try to reuse the old test value
-                rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.tag.test_value.shape)
+                rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.shape)
             else:
                 rv_var.tag.test_value = data
 
@@ -1458,14 +1429,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
             observed_rv_var.tag.observations = nonmissing_data
 
             self.create_value_var(observed_rv_var, transform=None, value_var=nonmissing_data)
-            self.add_random_variable(observed_rv_var)
+            self.add_named_variable(observed_rv_var)
             self.observed_RVs.append(observed_rv_var)
 
             # Create deterministic that combines observed and missing
+            # Note: This can widely increase memory consumption during sampling for large datasets
             rv_var = at.zeros(data.shape)
             rv_var = at.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
             rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
-            rv_var = Deterministic(name, rv_var, self, dims, auto=True)
+            rv_var = Deterministic(name, rv_var, self, dims)
 
         else:
             if sps.issparse(data):
@@ -1474,7 +1446,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 data = at.as_tensor_variable(data, name=name)
             rv_var.tag.observations = data
             self.create_value_var(rv_var, transform=None, value_var=data)
-            self.add_random_variable(rv_var, dims)
+            self.add_named_variable(rv_var, dims)
             self.observed_RVs.append(rv_var)
 
         return rv_var
@@ -1499,6 +1471,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if aesara.config.compute_test_value != "off":
             value_var.tag.test_value = rv_var.tag.test_value
 
+        _add_future_warning_tag(value_var)
         rv_var.tag.value_var = value_var
 
         # Make the value variable a transformed value variable,
@@ -1513,15 +1486,20 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 value_var.tag.test_value = transform.forward(
                     value_var, *rv_var.owner.inputs
                 ).tag.test_value
-            self.named_vars[value_var.name] = value_var
-
+        self.rvs_to_transforms[rv_var] = transform
         self.rvs_to_values[rv_var] = value_var
         self.values_to_rvs[value_var] = rv_var
 
         return value_var
 
-    def add_random_variable(self, var, dims: Optional[Tuple[Union[str, None], ...]] = None):
-        """Add a random variable to the named variables of the model."""
+    def add_named_variable(self, var, dims: Optional[Tuple[Union[str, None], ...]] = None):
+        """Add a random graph variable to the named variables of the model.
+
+        This can include several types of variables such basic_RVs, Data, Deterministics,
+        and Potentials.
+        """
+        if var.name is None:
+            raise ValueError("Variable is unnamed.")
         if self.named_vars.tree_contains(var.name):
             raise ValueError(f"Variable name {var.name} already exists.")
 
@@ -1531,9 +1509,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             for dim in dims:
                 if dim not in self.coords and dim is not None:
                     raise ValueError(f"Dimension {dim} is not specified in `coords`.")
-            if any(var.name == dim for dim in dims):
+            if any(var.name == dim for dim in dims if dim is not None):
                 raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
-            self._RV_dims[var.name] = dims
+            self.named_vars_to_dims[var.name] = dims
 
         self.named_vars[var.name] = var
         if not hasattr(self, self.name_of(var.name)):
@@ -1580,9 +1558,29 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def __contains__(self, key):
         return key in self.named_vars or self.name_for(key) in self.named_vars
 
+    def replace_rvs_by_values(
+        self,
+        graphs: Sequence[TensorVariable],
+        **kwargs,
+    ) -> List[TensorVariable]:
+        """Clone and replace random variables in graphs with their value variables.
+
+        This will *not* recompute test values in the resulting graphs.
+
+        Parameters
+        ----------
+        graphs
+            The graphs in which to perform the replacements.
+        """
+        return replace_rvs_by_values(
+            graphs,
+            rvs_to_values=self.rvs_to_values,
+            rvs_to_transforms=self.rvs_to_transforms,
+        )
+
     def compile_fn(
         self,
-        outs: Sequence[Variable],
+        outs: Union[Variable, Sequence[Variable]],
         *,
         inputs: Optional[Sequence[Variable]] = None,
         mode=None,
@@ -1677,8 +1675,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         names = []
         outputs = []
         for rv in self.free_RVs:
-            rv_var = self.rvs_to_values[rv]
-            transform = getattr(rv_var.tag, "transform", None)
+            transform = self.rvs_to_transforms[rv]
             if transform is not None:
                 names.append(get_transformed_name(rv.name, transform))
                 outputs.append(transform.forward(rv, *rv.owner.inputs).shape)
@@ -1687,7 +1684,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         f = aesara.function(
             inputs=[],
             outputs=outputs,
-            givens=[(obs, obs.tag.observations) for obs in self.observed_RVs],
+            givens=[(obs, self.rvs_to_values[obs]) for obs in self.observed_RVs],
             mode=aesara.compile.mode.FAST_COMPILE,
             on_unused_input="ignore",
         )
@@ -1718,14 +1715,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
         None
         """
         start_points = [start] if isinstance(start, dict) else start
+
+        value_names_to_dtypes = {value.name: value.dtype for value in self.value_vars}
+        value_names_set = set(value_names_to_dtypes.keys())
         for elem in start_points:
 
             for k, v in elem.items():
-                elem[k] = np.asarray(v, dtype=self[k].dtype)
+                elem[k] = np.asarray(v, dtype=value_names_to_dtypes[k])
 
-            if not set(elem.keys()).issubset(self.named_vars.keys()):
-                extra_keys = ", ".join(set(elem.keys()) - set(self.named_vars.keys()))
-                valid_keys = ", ".join(self.named_vars.keys())
+            if not set(elem.keys()).issubset(value_names_set):
+                extra_keys = ", ".join(set(elem.keys()) - value_names_set)
+                valid_keys = ", ".join(value_names_set)
                 raise KeyError(
                     "Some start parameters do not appear in the model!\n"
                     f"Valid keys are: {valid_keys}, but {extra_keys} was supplied"
@@ -1849,15 +1849,22 @@ def set_data(new_data, model=None, *, coords=None):
 
 
 def compile_fn(
-    outs, mode=None, point_fn: bool = True, model: Optional[Model] = None, **kwargs
+    outs: Union[Variable, Sequence[Variable]],
+    *,
+    inputs: Optional[Sequence[Variable]] = None,
+    mode=None,
+    point_fn: bool = True,
+    model: Optional[Model] = None,
+    **kwargs,
 ) -> Union[PointFunc, Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
-    """Compiles an Aesara function which returns ``outs`` and takes values of model
-    vars as a dict as an argument.
+    """Compiles an Aesara function
 
     Parameters
     ----------
     outs
         Aesara variable or iterable of Aesara variables.
+    inputs
+        Aesara input variables, defaults to aesaraf.inputvars(outs).
     mode
         Aesara compilation mode, default=None.
     point_fn : bool
@@ -1868,10 +1875,17 @@ def compile_fn(
 
     Returns
     -------
-    Compiled Aesara function as point function.
+    Compiled Aesara function
     """
+
     model = modelcontext(model)
-    return model.compile_fn(outs, mode=mode, point_fn=point_fn, **kwargs)
+    return model.compile_fn(
+        outs,
+        inputs=inputs,
+        mode=mode,
+        point_fn=point_fn,
+        **kwargs,
+    )
 
 
 def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
@@ -1898,7 +1912,7 @@ def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
     }
 
 
-def Deterministic(name, var, model=None, dims=None, auto=False):
+def Deterministic(name, var, model=None, dims=None):
     """Create a named deterministic variable.
 
     Deterministic nodes are only deterministic given all of their inputs, i.e.
@@ -1961,11 +1975,8 @@ def Deterministic(name, var, model=None, dims=None, auto=False):
     """
     model = modelcontext(model)
     var = var.copy(model.name_for(name))
-    if auto:
-        model.auto_deterministics.append(var)
-    else:
-        model.deterministics.append(var)
-    model.add_random_variable(var, dims)
+    model.deterministics.append(var)
+    model.add_named_variable(var, dims)
 
     from pymc.printing import str_for_potential_or_deterministic
 
@@ -1996,9 +2007,8 @@ def Potential(name, var, model=None):
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
-    var.tag.scaling = 1.0
     model.potentials.append(var)
-    model.add_random_variable(var)
+    model.add_named_variable(var)
 
     from pymc.printing import str_for_potential_or_deterministic
 

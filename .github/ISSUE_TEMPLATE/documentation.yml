@@ -1,0 +1,29 @@
+# This issue template was adapted from the NumPy project
+# under the BSD 3-Clause "New" or "Revised" License.
+# Copyright (c) 2005-2022, NumPy Developers.
+# All rights reserved.
+
+
+name: Documentation
+description: Report an issue related to the PyMC documentation.
+title: "DOC: <Please write a comprehensive title after the 'DOC: ' prefix>"
+labels: [docs]
+
+body:
+- type: textarea
+  attributes:
+    label: "Issue with current documentation:"
+    description: >
+      Please make sure to leave a reference to the document/code you're
+      referring to. You can also check the development version of the
+      documentation and see if this issue has already been addressed at
+      https://www.pymc.io/projects/docs/en/latest/api.html.
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: "Idea or request for content:"
+    description: >
+      Please describe as clearly as possible what topics you think are missing
+      from the current documentation.

@@ -13,16 +13,16 @@ import pytest
 import scipy.special as sp
 import scipy.stats as st
 
-from aeppl.logprob import ParameterValueError
 from aesara.compile.mode import Mode
 
 import pymc as pm
 
 from pymc.aesaraf import compile_pymc, floatX, intX
 from pymc.distributions import logcdf, logp
-from pymc.distributions.logprob import joint_logp
+from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
+from pymc.logprob.utils import ParameterValueError
 from pymc.tests.helpers import SeededTest, select_by_precision
 
 
@@ -288,9 +288,9 @@ def check_logp(
         for k, v in pt.items():
             rv_var = model.named_vars.get(k)
             nv = param_vars.get(k, rv_var)
-            nv = getattr(nv.tag, "value_var", nv)
+            nv = model.rvs_to_values.get(nv, nv)
 
-            transform = getattr(nv.tag, "transform", None)
+            transform = model.rvs_to_transforms.get(rv_var, None)
             if transform:
                 # todo: the compiled graph behind this should be cached and
                 # reused (if it isn't already).
@@ -582,7 +582,16 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
     assert np.allclose(moment, expected)
 
     if check_finite_logp:
-        logp_moment = joint_logp(model["x"], at.constant(moment), transformed=False).eval()
+        logp_moment = (
+            _joint_logp(
+                (model["x"],),
+                rvs_to_values={model["x"]: at.constant(moment)},
+                rvs_to_transforms={},
+                rvs_to_total_sizes={},
+            )[0]
+            .sum()
+            .eval()
+        )
         assert np.isfinite(logp_moment)
 
 

@@ -14,13 +14,15 @@
 
 # Modified from original implementation by Dominik Wabersich (2013)
 
+from typing import Tuple
+
 import numpy as np
 import numpy.random as nr
 
-from pymc.aesaraf import inputvars
-from pymc.blocking import RaveledVars
+from pymc.blocking import RaveledVars, StatsType
 from pymc.model import modelcontext
 from pymc.step_methods.arraystep import ArrayStep, Competence
+from pymc.util import get_value_vars_from_user_vars
 from pymc.vartypes import continuous_types
 
 __all__ = ["Slice"]
@@ -47,7 +49,6 @@ class Slice(ArrayStep):
 
     name = "slice"
     default_blocked = False
-    generates_stats = True
     stats_dtypes = [
         {
             "nstep_out": int,
@@ -65,13 +66,14 @@ class Slice(ArrayStep):
         if vars is None:
             vars = self.model.continuous_value_vars
         else:
-            vars = [self.model.rvs_to_values.get(var, var) for var in vars]
-        vars = inputvars(vars)
+            vars = get_value_vars_from_user_vars(vars, self.model)
 
         super().__init__(vars, [self.model.compile_logp()], **kwargs)
 
-    def astep(self, q0, logp):
-        q0_val = q0.data
+    def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+        # The arguments are determined by the list passed via `super().__init__(..., fs, ...)`
+        logp = args[0]
+        q0_val = apoint.data
         self.w = np.resize(self.w, len(q0_val))  # this is a repmat
 
         nstep_out = nstep_in = 0
@@ -82,9 +84,9 @@ class Slice(ArrayStep):
 
         # The points are not copied, so it's fine to update them inplace in the
         # loop below
-        q_ra = RaveledVars(q, q0.point_map_info)
-        ql_ra = RaveledVars(ql, q0.point_map_info)
-        qr_ra = RaveledVars(qr, q0.point_map_info)
+        q_ra = RaveledVars(q, apoint.point_map_info)
+        ql_ra = RaveledVars(ql, apoint.point_map_info)
+        qr_ra = RaveledVars(qr, apoint.point_map_info)
 
         for i, wi in enumerate(self.w):
             # uniformly sample from 0 to p(q), but in log space
@@ -143,7 +145,7 @@ class Slice(ArrayStep):
             "nstep_in": nstep_in,
         }
 
-        return q, (stats,)
+        return RaveledVars(q, apoint.point_map_info), [stats]
 
     @staticmethod
     def competence(var, has_grad):

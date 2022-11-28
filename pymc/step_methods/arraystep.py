@@ -14,21 +14,19 @@
 
 from abc import ABC, abstractmethod
 from enum import IntEnum, unique
-from typing import Dict, List, Tuple, TypeVar, Union
+from typing import Callable, Dict, List, Tuple, Union, cast
 
 import numpy as np
 
 from aesara.graph.basic import Variable
 from numpy.random import uniform
 
-from pymc.blocking import DictToArrayBijection, PointType, RaveledVars
+from pymc.blocking import DictToArrayBijection, PointType, RaveledVars, StatsType
 from pymc.model import modelcontext
 from pymc.step_methods.compound import CompoundStep
 from pymc.util import get_var_name
 
 __all__ = ["ArrayStep", "ArrayStepShared", "metrop_select", "Competence"]
-
-StatsType = TypeVar("StatsType")
 
 
 @unique
@@ -49,7 +47,6 @@ class Competence(IntEnum):
 
 class BlockedStep(ABC):
 
-    generates_stats = False
     stats_dtypes: List[Dict[str, type]] = []
     vars: List[Variable] = []
 
@@ -103,7 +100,7 @@ class BlockedStep(ABC):
         return self.__newargs
 
     @abstractmethod
-    def step(point: PointType, *args, **kwargs) -> Union[PointType, Tuple[PointType, StatsType]]:
+    def step(self, point: PointType) -> Tuple[PointType, StatsType]:
         """Perform a single step of the sampler."""
 
     @staticmethod
@@ -146,19 +143,17 @@ class ArrayStep(BlockedStep):
         self.allvars = allvars
         self.blocked = blocked
 
-    def step(self, point: PointType):
+    def step(self, point: PointType) -> Tuple[PointType, StatsType]:
 
-        partial_funcs_and_point = [DictToArrayBijection.mapf(x, start_point=point) for x in self.fs]
+        partial_funcs_and_point: List[Union[Callable, PointType]] = [
+            DictToArrayBijection.mapf(x, start_point=point) for x in self.fs
+        ]
         if self.allvars:
             partial_funcs_and_point.append(point)
 
-        apoint = DictToArrayBijection.map({v.name: point[v.name] for v in self.vars})
-        step_res = self.astep(apoint, *partial_funcs_and_point)
-
-        if self.generates_stats:
-            apoint_new, stats = step_res
-        else:
-            apoint_new = step_res
+        var_dict = {cast(str, v.name): point[cast(str, v.name)] for v in self.vars}
+        apoint = DictToArrayBijection.map(var_dict)
+        apoint_new, stats = self.astep(apoint, *partial_funcs_and_point)
 
         if not isinstance(apoint_new, RaveledVars):
             # We assume that the mapping has stayed the same
@@ -166,15 +161,10 @@ class ArrayStep(BlockedStep):
 
         point_new = DictToArrayBijection.rmap(apoint_new, start_point=point)
 
-        if self.generates_stats:
-            return point_new, stats
-
-        return point_new
+        return point_new, stats
 
     @abstractmethod
-    def astep(
-        self, apoint: RaveledVars, point: PointType, *args
-    ) -> Union[RaveledVars, Tuple[RaveledVars, StatsType]]:
+    def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
         """Perform a single sample step in a raveled and concatenated parameter space."""
 
 
@@ -198,19 +188,15 @@ class ArrayStepShared(BlockedStep):
         self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
 
-    def step(self, point):
+    def step(self, point: PointType) -> Tuple[PointType, StatsType]:
 
         for name, shared_var in self.shared.items():
             shared_var.set_value(point[name])
 
-        q = DictToArrayBijection.map({v.name: point[v.name] for v in self.vars})
+        var_dict = {cast(str, v.name): point[cast(str, v.name)] for v in self.vars}
+        q = DictToArrayBijection.map(var_dict)
 
-        step_res = self.astep(q)
-
-        if self.generates_stats:
-            apoint, stats = step_res
-        else:
-            apoint = step_res
+        apoint, stats = self.astep(q)
 
         if not isinstance(apoint, RaveledVars):
             # We assume that the mapping has stayed the same
@@ -218,10 +204,11 @@ class ArrayStepShared(BlockedStep):
 
         new_point = DictToArrayBijection.rmap(apoint, start_point=point)
 
-        if self.generates_stats:
-            return new_point, stats
+        return new_point, stats
 
-        return new_point
+    @abstractmethod
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
+        """Perform a single sample step in a raveled and concatenated parameter space."""
 
 
 class PopulationArrayStepShared(ArrayStepShared):
@@ -281,12 +268,12 @@ class GradientSharedStep(ArrayStepShared):
 
         super().__init__(vars, func._extra_vars_shared, blocked)
 
-    def step(self, point):
+    def step(self, point) -> Tuple[PointType, StatsType]:
         self._logp_dlogp_func._extra_are_set = True
         return super().step(point)
 
 
-def metrop_select(mr, q, q0):
+def metrop_select(mr: np.ndarray, q: np.ndarray, q0: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Perform rejection/acceptance step for Metropolis class samplers.
 
     Returns the new sample q if a uniform random number is less than the
