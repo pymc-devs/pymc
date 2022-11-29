@@ -148,9 +148,9 @@ jobs:
       - name: Run tests
         run: |
           conda activate pymc-test
-          python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
@@ -220,9 +220,9 @@ jobs:
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
           conda activate pymc-test &&
-          python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 %TEST_SUBSET%
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
@@ -294,9 +294,9 @@ jobs:
           python --version
       - name: Run tests
         run: |
-          python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
@@ -363,9 +363,9 @@ jobs:
           pip install git+https://github.com/blackjax-devs/blackjax.git@0.7.0
       - name: Run tests
         run: |
-          python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           env_vars: TEST_SUBSET
           name: JAX tests - ${{ matrix.os }} ${{ matrix.floatx }}
@@ -431,9 +431,9 @@ jobs:
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
           conda activate pymc-test &&
-          python -m pytest -vv --cov=pymc --cov-report=xml --cov-report term --durations=50 %TEST_SUBSET%
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
