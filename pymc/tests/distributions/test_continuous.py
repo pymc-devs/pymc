@@ -22,15 +22,15 @@ import pytest
 import scipy.special as sp
 import scipy.stats as st
 
-from aeppl.logprob import ParameterValueError
 from aesara.compile.mode import Mode
 
 import pymc as pm
 
 from pymc.aesaraf import floatX
 from pymc.distributions import logcdf, logp
-from pymc.distributions.continuous import get_tau_sigma, interpolated
+from pymc.distributions.continuous import Normal, get_tau_sigma, interpolated
 from pymc.distributions.dist_math import clipped_beta_rvs
+from pymc.logprob.utils import ParameterValueError
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,
     Circ,
@@ -49,6 +49,7 @@ from pymc.tests.distributions.util import (
     seeded_scipy_distribution_builder,
 )
 from pymc.tests.helpers import select_by_precision
+from pymc.tests.logprob.utils import create_aesara_params, scipy_logprob_tester
 
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
@@ -2248,3 +2249,22 @@ class TestInterpolated(BaseTestDistributionRandom):
                     extra_args={"rng": aesara.shared(rng)},
                     ref_rand=ref_rand,
                 )
+
+
+class TestICDF:
+    @pytest.mark.parametrize(
+        "dist_params, obs, size",
+        [
+            ((0, 1), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), ()),
+            ((-1, 20), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), ()),
+            ((-1, 20), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), (2, 3)),
+        ],
+    )
+    def test_normal_icdf(self, dist_params, obs, size):
+
+        dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+        dist_params = dict(zip(dist_params_at, dist_params))
+
+        x = Normal.dist(*dist_params_at, size=size_at)
+
+        scipy_logprob_tester(x, obs, dist_params, test_fn=st.norm.ppf, test="icdf")

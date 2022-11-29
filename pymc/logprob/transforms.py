@@ -1,9 +1,47 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 import abc
+
 from copy import copy
 from functools import partial, singledispatch
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import aesara.tensor as at
+
 from aesara.gradient import DisconnectedType, jacobian
 from aesara.graph.basic import Apply, Node, Variable
 from aesara.graph.features import AlreadyThere, Feature
@@ -19,15 +57,16 @@ from aesara.tensor.rewriting.basic import (
 )
 from aesara.tensor.var import TensorVariable
 
-from aeppl.abstract import (
+from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableVariable,
     _get_measurable_outputs,
+    _logprob,
     assign_custom_measurable_outputs,
+    logprob,
 )
-from aeppl.logprob import _logprob, logprob
-from aeppl.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from aeppl.utils import walk_model
+from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.utils import walk_model
 
 
 @singledispatch
@@ -54,9 +93,7 @@ class TransformedVariable(Op):
         return Apply(self, [tran_value, value], [tran_value.type()])
 
     def perform(self, node, inputs, outputs):
-        raise NotImplementedError(
-            "These `Op`s should be removed from graphs used for computation."
-        )
+        raise NotImplementedError("These `Op`s should be removed from graphs used for computation.")
 
     def connection_pattern(self, node):
         return [[True], [False]]
@@ -96,9 +133,7 @@ class RVTransform(abc.ABC):
         # )
         # return at.log(at.abs(jac))
         phi_inv = self.backward(value, *inputs)
-        return at.log(
-            at.abs(at.nlinalg.det(at.atleast_2d(jacobian(phi_inv, [value])[0])))
-        )
+        return at.log(at.abs(at.nlinalg.det(at.atleast_2d(jacobian(phi_inv, [value])[0]))))
 
 
 class DefaultTransformSentinel:
@@ -162,9 +197,7 @@ def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     if value_var.name and getattr(transform, "name", None):
         new_value_var.name = f"{value_var.name}_{transform.name}"
 
-    rv_map_feature.update_rv_maps(
-        rv_var, new_value_var, trans_node.outputs[rv_var_out_idx]
-    )
+    rv_map_feature.update_rv_maps(rv_var, new_value_var, trans_node.outputs[rv_var_out_idx])
 
     return trans_node.outputs
 
@@ -224,9 +257,7 @@ class MeasurableTransform(MeasurableElemwise):
     transform_elemwise: RVTransform
     measurable_input_idx: int
 
-    def __init__(
-        self, *args, transform: RVTransform, measurable_input_idx: int, **kwargs
-    ):
+    def __init__(self, *args, transform: RVTransform, measurable_input_idx: int, **kwargs):
         self.transform_elemwise = transform
         self.measurable_input_idx = measurable_input_idx
         super().__init__(*args, **kwargs)
@@ -256,9 +287,7 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
 
 
 @node_rewriter([Elemwise])
-def find_measurable_transforms(
-    fgraph: FunctionGraph, node: Node
-) -> Optional[List[Node]]:
+def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
     scalar_op = node.op.scalar_op
     if not isinstance(scalar_op, MeasurableTransform.valid_scalar_types):
@@ -268,9 +297,7 @@ def find_measurable_transforms(
     if isinstance(node.op, MeasurableVariable):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(
-        fgraph, "preserve_rv_mappings", None
-    )
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
 
@@ -418,9 +445,7 @@ class ExpTransform(RVTransform):
 class IntervalTransform(RVTransform):
     name = "interval"
 
-    def __init__(
-        self, args_fn: Callable[..., Tuple[Optional[Variable], Optional[Variable]]]
-    ):
+    def __init__(self, args_fn: Callable[..., Tuple[Optional[Variable], Optional[Variable]]]):
         """
 
         Parameters
@@ -500,9 +525,7 @@ class SimplexTransform(RVTransform):
         N = value.shape[-1] + 1
         sum_value = at.sum(value, -1, keepdims=True)
         value_sum_expanded = value + sum_value
-        value_sum_expanded = at.concatenate(
-            [value_sum_expanded, at.zeros(sum_value.shape)], -1
-        )
+        value_sum_expanded = at.concatenate([value_sum_expanded, at.zeros(sum_value.shape)], -1)
         logsumexp_value_expanded = at.logsumexp(value_sum_expanded, -1, keepdims=True)
         res = at.log(N) + (N * sum_value) - (N * logsumexp_value_expanded)
         return at.sum(res, -1)

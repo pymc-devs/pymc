@@ -22,7 +22,6 @@ import pandas as pd
 import pytest
 import scipy.sparse as sps
 
-from aeppl.logprob import ParameterValueError
 from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Variable, equal_computations
 from aesara.tensor.random.basic import normal, uniform
@@ -48,6 +47,7 @@ from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.distributions.transforms import Interval
 from pymc.exceptions import NotConstantValueError
+from pymc.logprob.utils import ParameterValueError
 from pymc.tests.helpers import assert_no_rvs
 from pymc.vartypes import int_types
 

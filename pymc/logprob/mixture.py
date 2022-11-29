@@ -1,7 +1,44 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 from typing import List, Optional, Tuple, Union, cast
 
 import aesara
 import aesara.tensor as at
+
 from aesara.graph.basic import Apply, Variable
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op, compute_test_value
@@ -29,11 +66,18 @@ from aesara.tensor.type import TensorType
 from aesara.tensor.type_other import NoneConst, NoneTypeT, SliceType
 from aesara.tensor.var import TensorVariable
 
-from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
-from aeppl.logprob import _logprob, logprob
-from aeppl.rewriting import local_lift_DiracDelta, logprob_rewrites_db, subtensor_ops
-from aeppl.tensor import naive_bcast_rv_lift
-from aeppl.utils import get_constant_value
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _logprob,
+    assign_custom_measurable_outputs,
+    logprob,
+)
+from pymc.logprob.rewriting import (
+    local_lift_DiracDelta,
+    logprob_rewrites_db,
+    subtensor_ops,
+)
+from pymc.logprob.tensor import naive_bcast_rv_lift
 
 
 def is_newaxis(x):
@@ -120,9 +164,7 @@ def expand_indices(
 
             s = shape_copy.pop(0)
 
-            if isinstance(idx, slice) or isinstance(
-                getattr(idx, "type", None), SliceType
-            ):
+            if isinstance(idx, slice) or isinstance(getattr(idx, "type", None), SliceType):
                 idx = as_index_literal(idx)
                 idx_slice, _ = get_canonical_form_slice(idx, s)
                 idx = at.arange(idx_slice.start, idx_slice.stop, idx_slice.step)
@@ -189,9 +231,7 @@ class MixtureRV(Op):
         self.out_broadcastable = out_broadcastable
 
     def make_node(self, *inputs):
-        return Apply(
-            self, list(inputs), [TensorType(self.out_dtype, self.out_broadcastable)()]
-        )
+        return Apply(self, list(inputs), [TensorType(self.out_dtype, self.out_broadcastable)()])
 
     def perform(self, node, inputs, outputs):
         raise NotImplementedError("This is a stand-in Op.")  # pragma: no cover
@@ -222,18 +262,17 @@ def get_stack_mixture_vars(
         mixture_rvs = joined_rvs.owner.inputs[1:]
         join_axis = joined_rvs.owner.inputs[0]
         try:
-            join_axis = int(get_constant_value(join_axis))
+            # TODO: Find better solution to avoid this circular dependency
+            from pymc.aesaraf import constant_fold
+
+            join_axis = int(constant_fold((join_axis,))[0])
         except ValueError:
             # TODO: Support symbolic join axes
-            raise NotImplementedError(
-                "Symbolic `Join` axes are not supported in mixtures"
-            )
+            raise NotImplementedError("Symbolic `Join` axes are not supported in mixtures")
 
         join_axis = at.as_tensor(join_axis)
 
-    if not all(
-        rv.owner and isinstance(rv.owner.op, MeasurableVariable) for rv in mixture_rvs
-    ):
+    if not all(rv.owner and isinstance(rv.owner.op, MeasurableVariable) for rv in mixture_rvs):
         # Currently, all mixture components must be `MeasurableVariable` outputs
         # TODO: Allow constants and make them Dirac-deltas
         # raise NotImplementedError(
@@ -337,9 +376,7 @@ def switch_mixture_replace(fgraph, node):
         old_mixture_rv.dtype,
         old_mixture_rv.broadcastable,
     )
-    new_node = mix_op.make_node(
-        *([NoneConst, as_nontensor_scalar(node.inputs[0])] + mixture_rvs)
-    )
+    new_node = mix_op.make_node(*([NoneConst, as_nontensor_scalar(node.inputs[0])] + mixture_rvs))
 
     new_mixture_rv = new_node.default_output()
 
@@ -379,7 +416,10 @@ def logprob_MixtureRV(
             comp_rvs = [comp[None] for comp in comp_rvs]
             original_shape = (len(comp_rvs),)
         else:
-            join_axis_val = get_constant_value(join_axis).item()
+            # TODO: Find better solution to avoid this circular dependency
+            from pymc.aesaraf import constant_fold
+
+            join_axis_val = constant_fold((join_axis,))[0].item()
             original_shape = shape_tuple(comp_rvs[0])
 
         bcast_indices = expand_indices(indices, original_shape)
@@ -389,9 +429,7 @@ def logprob_MixtureRV(
         for m, rv in enumerate(comp_rvs):
             idx_m_on_axis = at.nonzero(at.eq(bcast_indices[join_axis_val], m))
             m_indices = tuple(
-                v[idx_m_on_axis]
-                for i, v in enumerate(bcast_indices)
-                if i != join_axis_val
+                v[idx_m_on_axis] for i, v in enumerate(bcast_indices) if i != join_axis_val
             )
             # Drop superfluous join dimension
             rv = rv[0]

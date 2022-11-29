@@ -21,7 +21,6 @@ import numpy.testing as npt
 import pytest
 import scipy.stats as st
 
-from aeppl.abstract import get_measurable_outputs
 from aesara.tensor import TensorVariable
 
 import pymc as pm
@@ -29,6 +28,7 @@ import pymc as pm
 from pymc.distributions import DiracDelta, Flat, MvNormal, MvStudentT, logp
 from pymc.distributions.distribution import SymbolicRandomVariable, _moment, moment
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
+from pymc.logprob.abstract import get_measurable_outputs
 from pymc.tests.distributions.util import assert_moment_is_expected
 from pymc.util import _FutureWarningValidatingScratchpad
 
@@ -352,7 +352,7 @@ class TestSymbolicRandomVarible:
             logp(x, 0)
 
         class TestInlinedSymbolicRV(SymbolicRandomVariable):
-            inline_aeppl = True
+            inline_logprob = True
 
         x_inline = TestInlinedSymbolicRV([], [Flat.dist()], ndim_supp=0)()
         assert np.isclose(logp(x_inline, 0).eval(), 0)

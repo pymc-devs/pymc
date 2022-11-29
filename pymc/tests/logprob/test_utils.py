@@ -1,53 +1,57 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
+import aesara
 import aesara.tensor as at
 import numpy as np
-from aesara.graph.basic import Constant, ancestors
+import pytest
+
+from aesara import function
+from aesara.compile import get_default_mode
 from aesara.tensor.random.basic import normal, uniform
 
-from aeppl.abstract import MeasurableVariable
-from aeppl.utils import change_rv_size, rvs_to_value_vars, walk_model
-from tests.utils import assert_no_rvs
-
-
-def test_change_rv_size():
-    loc = at.as_tensor_variable([1, 2])
-    rv = normal(loc=loc)
-    assert rv.ndim == 1
-    assert tuple(rv.shape.eval()) == (2,)
-
-    rv_new = change_rv_size(rv, new_size=(3,), expand=True)
-    assert rv_new.ndim == 2
-    assert tuple(rv_new.shape.eval()) == (3, 2)
-
-    # Make sure that the shape used to determine the expanded size doesn't
-    # depend on the old `RandomVariable`.
-    rv_new_ancestors = set(ancestors((rv_new,)))
-    assert loc in rv_new_ancestors
-    assert rv not in rv_new_ancestors
-
-    rv_newer = change_rv_size(rv_new, new_size=(4,), expand=True)
-    assert rv_newer.ndim == 3
-    assert tuple(rv_newer.shape.eval()) == (4, 3, 2)
-
-    # Make sure we avoid introducing a `Cast` by converting the new size before
-    # constructing the new `RandomVariable`
-    rv = normal(0, 1)
-    new_size = np.array([4, 3], dtype="int32")
-    rv_newer = change_rv_size(rv, new_size=new_size, expand=False)
-    assert rv_newer.ndim == 2
-    assert isinstance(rv_newer.owner.inputs[1], Constant)
-    assert tuple(rv_newer.shape.eval()) == (4, 3)
-
-    rv = normal(0, 1)
-    new_size = at.as_tensor(np.array([4, 3], dtype="int32"))
-    rv_newer = change_rv_size(rv, new_size=new_size, expand=True)
-    assert rv_newer.ndim == 2
-    assert tuple(rv_newer.shape.eval()) == (4, 3)
-
-    rv = normal(0, 1)
-    new_size = at.as_tensor(2, dtype="int32")
-    rv_newer = change_rv_size(rv, new_size=new_size, expand=True)
-    assert rv_newer.ndim == 1
-    assert tuple(rv_newer.shape.eval()) == (2,)
+from pymc.logprob.abstract import MeasurableVariable, logprob
+from pymc.logprob.utils import (
+    ParameterValueError,
+    dirac_delta,
+    rvs_to_value_vars,
+    walk_model,
+)
+from pymc.tests.helpers import assert_no_rvs
+from pymc.tests.logprob.utils import create_aesara_params, scipy_logprob_tester
 
 
 def test_walk_model():
@@ -90,9 +94,7 @@ def test_rvs_to_value_vars():
     d = at.log(c + b) + 2.0
 
     initial_replacements = {b: b_value_var, c: c_value_var}
-    (res,), replaced = rvs_to_value_vars(
-        (d,), initial_replacements=initial_replacements
-    )
+    (res,), replaced = rvs_to_value_vars((d,), initial_replacements=initial_replacements)
 
     assert res.owner.op == at.add
     log_output = res.owner.inputs[0]
@@ -134,23 +136,58 @@ def test_rvs_to_value_vars_intermediate_rv():
     d = at.log(c + b) + 2.0
 
     initial_replacements = {a: a_value_var, c: c_value_var}
-    (res,), replaced = rvs_to_value_vars(
-        (d,), initial_replacements=initial_replacements
-    )
+    (res,), replaced = rvs_to_value_vars((d,), initial_replacements=initial_replacements)
 
     # Assert that the only RandomVariable that remains in the graph is `b`
     res_ancestors = list(walk_model((res,), walk_past_rvs=True))
 
     assert (
         len(
-            list(
-                n
-                for n in res_ancestors
-                if n.owner and isinstance(n.owner.op, MeasurableVariable)
-            )
+            list(n for n in res_ancestors if n.owner and isinstance(n.owner.op, MeasurableVariable))
         )
         == 1
     )
 
     assert c_value_var in res_ancestors
     assert a_value_var in res_ancestors
+
+
+def test_CheckParameter():
+    mu = at.constant(0)
+    sigma = at.scalar("sigma")
+    x_rv = at.random.normal(mu, sigma, name="x")
+    x_vv = at.constant(0)
+    x_logp = logprob(x_rv, x_vv)
+
+    x_logp_fn = function([sigma], x_logp)
+    with pytest.raises(ParameterValueError, match="sigma > 0"):
+        x_logp_fn(-1)
+
+
+def test_dirac_delta():
+    fn = aesara.function(
+        [], dirac_delta(at.as_tensor(1)), mode=get_default_mode().excluding("useless")
+    )
+    with pytest.warns(UserWarning, match=".*DiracDelta.*"):
+        assert np.array_equal(fn(), 1)
+
+
+@pytest.mark.parametrize(
+    "dist_params, obs",
+    [
+        ((np.array(0, dtype=np.float64),), np.array([0, 0.5, 1, -1], dtype=np.float64)),
+        ((np.array([0, 0], dtype=np.int64),), np.array(0, dtype=np.int64)),
+    ],
+)
+def test_dirac_delta_logprob(dist_params, obs):
+
+    dist_params_at, obs_at, _ = create_aesara_params(dist_params, obs, ())
+    dist_params = dict(zip(dist_params_at, dist_params))
+
+    x = dirac_delta(*dist_params_at)
+
+    @np.vectorize
+    def scipy_logprob(obs, c):
+        return 0.0 if obs == c else -np.inf
+
+    scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logprob)

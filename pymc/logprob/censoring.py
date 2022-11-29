@@ -1,7 +1,44 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 from typing import List, Optional
 
 import aesara.tensor as at
 import numpy as np
+
 from aesara.graph.basic import Node
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.rewriting.basic import node_rewriter
@@ -10,13 +47,15 @@ from aesara.scalar.basic import clip as scalar_clip
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.var import TensorConstant
 
-from aeppl.abstract import (
+from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableVariable,
+    _logcdf,
+    _logprob,
     assign_custom_measurable_outputs,
 )
-from aeppl.logprob import CheckParameterValue, _logcdf, _logprob, logdiffexp
-from aeppl.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.utils import CheckParameterValue
 
 
 class MeasurableClip(MeasurableElemwise):
@@ -29,9 +68,7 @@ measurable_clip = MeasurableClip(scalar_clip)
 
 
 @node_rewriter(tracks=[Elemwise])
-def find_measurable_clips(
-    fgraph: FunctionGraph, node: Node
-) -> Optional[List[MeasurableClip]]:
+def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableClip]]:
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
 
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
@@ -62,9 +99,7 @@ def find_measurable_clips(
 
     # Make base_var unmeasurable
     unmeasurable_base_var = assign_custom_measurable_outputs(base_var.owner)
-    clipped_rv_node = measurable_clip.make_node(
-        unmeasurable_base_var, lower_bound, upper_bound
-    )
+    clipped_rv_node = measurable_clip.make_node(unmeasurable_base_var, lower_bound, upper_bound)
     clipped_rv = clipped_rv_node.outputs[0]
 
     clipped_rv.name = clipped_var.name
@@ -109,9 +144,7 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
         logcdf.name = f"{base_rv_op}_logcdf"
 
     is_lower_bounded, is_upper_bounded = False, False
-    if not (
-        isinstance(upper_bound, TensorConstant) and np.all(np.isinf(upper_bound.value))
-    ):
+    if not (isinstance(upper_bound, TensorConstant) and np.all(np.isinf(upper_bound.value))):
         is_upper_bounded = True
 
         logccdf = at.log1mexp(logcdf)
@@ -125,10 +158,7 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
             logccdf,
             at.switch(at.gt(value, upper_bound), -np.inf, logprob),
         )
-    if not (
-        isinstance(lower_bound, TensorConstant)
-        and np.all(np.isneginf(lower_bound.value))
-    ):
+    if not (isinstance(lower_bound, TensorConstant) and np.all(np.isneginf(lower_bound.value))):
         is_lower_bounded = True
         logprob = at.switch(
             at.eq(value, lower_bound),
@@ -151,9 +181,7 @@ class MeasurableRound(MeasurableElemwise):
 
 
 @node_rewriter(tracks=[Elemwise])
-def find_measurable_roundings(
-    fgraph: FunctionGraph, node: Node
-) -> Optional[List[MeasurableRound]]:
+def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableRound]]:
 
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
@@ -250,5 +278,8 @@ def round_logprob(op, values, base_rv, **kwargs):
     if base_rv_op.name:
         logcdf_upper.name = f"{base_rv_op}_logcdf_upper"
         logcdf_lower.name = f"{base_rv_op}_logcdf_lower"
+
+    # TODO: Figure out better solution to avoid this circular import
+    from pymc.math import logdiffexp
 
     return logdiffexp(logcdf_upper, logcdf_lower)

@@ -1,9 +1,46 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 from copy import copy
 from typing import Callable, Dict, Iterable, List, Tuple, cast
 
 import aesara
 import aesara.tensor as at
 import numpy as np
+
 from aesara.graph.basic import Variable
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import compute_test_value
@@ -17,10 +54,9 @@ from aesara.tensor.subtensor import Subtensor, indices_from_subtensor
 from aesara.tensor.var import TensorVariable
 from aesara.updates import OrderedUpdates
 
-from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
-from aeppl.joint_logprob import factorized_joint_logprob
-from aeppl.logprob import _logprob
-from aeppl.rewriting import (
+from pymc.logprob.abstract import MeasurableVariable, _get_measurable_outputs, _logprob
+from pymc.logprob.joint_logprob import factorized_joint_logprob
+from pymc.logprob.rewriting import (
     inc_subtensor_ops,
     logprob_rewrites_db,
     measurable_ir_rewrites_db,
@@ -38,9 +74,7 @@ def convert_outer_out_to_in(
     input_scan_args: ScanArgs,
     outer_out_vars: Iterable[TensorVariable],
     new_outer_input_vars: Dict[TensorVariable, TensorVariable],
-    inner_out_fn: Callable[
-        [Dict[TensorVariable, TensorVariable]], Iterable[TensorVariable]
-    ],
+    inner_out_fn: Callable[[Dict[TensorVariable, TensorVariable]], Iterable[TensorVariable]],
 ) -> ScanArgs:
     r"""Convert outer-graph outputs into outer-graph inputs.
 
@@ -133,9 +167,7 @@ def convert_outer_out_to_in(
             new_outer_in_sit_sot = tuple(output_scan_args.outer_in_sit_sot)
             add_nit_sot = True
         elif inner_out_info.name.endswith("sit_sot"):
-            new_inner_in_seqs = (output_scan_args.inner_in_sit_sot[var_idx],) + (
-                new_inner_in_var,
-            )
+            new_inner_in_seqs = (output_scan_args.inner_in_sit_sot[var_idx],) + (new_inner_in_var,)
             new_inner_in_sit_sot = remove(output_scan_args.inner_in_sit_sot, var_idx)
             new_outer_in_sit_sot = remove(output_scan_args.outer_in_sit_sot, var_idx)
             new_inner_in_mit_sot = tuple(output_scan_args.inner_in_mit_sot)
@@ -168,9 +200,7 @@ def convert_outer_out_to_in(
 
         output_scan_args.mit_sot_in_slices = list(new_mit_sot_in_slices)
 
-        taps, new_inner_in_seqs = zip(
-            *sorted(zip(taps, new_inner_in_seqs), key=lambda x: x[0])
-        )
+        taps, new_inner_in_seqs = zip(*sorted(zip(taps, new_inner_in_seqs), key=lambda x: x[0]))
 
         new_inner_in_seqs = tuple(output_scan_args.inner_in_seqs) + tuple(
             reversed(new_inner_in_seqs)
@@ -178,9 +208,7 @@ def convert_outer_out_to_in(
 
         output_scan_args.inner_in_seqs = list(new_inner_in_seqs)
 
-        slice_seqs = zip(
-            -np.asarray(taps), [n if n < 0 else None for n in reversed(taps)]
-        )
+        slice_seqs = zip(-np.asarray(taps), [n if n < 0 else None for n in reversed(taps)])
 
         # XXX: If the caller passes the variables output by `aesara.scan`, it's
         # likely that this will fail, because those variables can sometimes be
@@ -236,19 +264,15 @@ def get_random_outer_outputs(
     ):
         oo_info = scan_args.find_among_fields(oo_var)
         io_type = oo_info.name[(oo_info.name.index("_", 6) + 1) :]
-        inner_out_type = "inner_out_{}".format(io_type)
+        inner_out_type = f"inner_out_{io_type}"
         io_var = getattr(scan_args, inner_out_type)[oo_info.index]
         if io_var.owner and isinstance(io_var.owner.op, MeasurableVariable):
             rv_vars.append((n, oo_var, io_var))
     return rv_vars
 
 
-def construct_scan(
-    scan_args: ScanArgs, **kwargs
-) -> Tuple[List[TensorVariable], OrderedUpdates]:
-    scan_op = Scan(
-        scan_args.inner_inputs, scan_args.inner_outputs, scan_args.info, **kwargs
-    )
+def construct_scan(scan_args: ScanArgs, **kwargs) -> Tuple[List[TensorVariable], OrderedUpdates]:
+    scan_op = Scan(scan_args.inner_inputs, scan_args.inner_outputs, scan_args.info, **kwargs)
     node = scan_op.make_node(*scan_args.outer_inputs)
     updates = OrderedUpdates(zip(scan_args.outer_in_shared, scan_args.outer_out_shared))
     return node.outputs, updates
@@ -264,9 +288,7 @@ def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
     var_indices, rv_vars, io_vars = zip(*rv_outer_outs)
     value_map = {_rv: _val for _rv, _val in zip(rv_vars, values)}
 
-    def create_inner_out_logp(
-        value_map: Dict[TensorVariable, TensorVariable]
-    ) -> TensorVariable:
+    def create_inner_out_logp(value_map: Dict[TensorVariable, TensorVariable]) -> TensorVariable:
         """Create a log-likelihood inner-output for a `Scan`."""
         logp_parts = factorized_joint_logprob(value_map, warn_missing_rvs=False)
         return logp_parts.values()
@@ -409,8 +431,7 @@ def find_measurable_scans(fgraph, node):
             # graph, so we use the shape feature to (hopefully) get the shape
             # without the entire `Scan` itself.
             full_out_shape = tuple(
-                fgraph.shape_feature.get_shape(full_out, i)
-                for i in range(full_out.ndim)
+                fgraph.shape_feature.get_shape(full_out, i) for i in range(full_out.ndim)
             )
             new_val_var = at.empty(full_out_shape, dtype=full_out.dtype)
 
@@ -429,9 +450,7 @@ def find_measurable_scans(fgraph, node):
             # of the entire series).
             var_info = curr_scanargs.find_among_fields(full_out)
             alt_type = var_info.name[(var_info.name.index("_", 6) + 1) :]
-            outer_input_var = getattr(curr_scanargs, f"outer_in_{alt_type}")[
-                var_info.index
-            ]
+            outer_input_var = getattr(curr_scanargs, f"outer_in_{alt_type}")[var_info.index]
 
             # These outer-inputs are using by `aesara.scan.utils.expand_empty`, and
             # are expected to consist of only a single `set_subtensor` call.
@@ -483,9 +502,7 @@ def add_opts_to_inner_graphs(fgraph, node):
         copy_orphans=False,
     )
 
-    logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"])).rewrite(
-        inner_fgraph
-    )
+    logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"])).rewrite(inner_fgraph)
 
     new_outputs = list(inner_fgraph.outputs)
 

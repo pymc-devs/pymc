@@ -1,15 +1,56 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 import aesara
 import aesara.tensor as at
 import numpy as np
 import pytest
+
 from aesara import Mode
 from aesara.raise_op import assert_op
 from aesara.scan.utils import ScanArgs
 
-from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
-from aeppl.logprob import logprob
-from aeppl.scan import construct_scan, convert_outer_out_to_in, get_random_outer_outputs
-from tests.utils import assert_no_rvs
+from pymc.logprob.abstract import logprob
+from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
+from pymc.logprob.scan import (
+    construct_scan,
+    convert_outer_out_to_in,
+    get_random_outer_outputs,
+)
+from pymc.tests.helpers import assert_no_rvs
 
 
 def create_inner_out_logp(value_map):
@@ -22,7 +63,7 @@ def create_inner_out_logp(value_map):
     for old_inner_out_var, new_inner_in_var in value_map.items():
         logp = logprob(old_inner_out_var, new_inner_in_var)
         if new_inner_in_var.name:
-            logp.name = "logp({})".format(new_inner_in_var.name)
+            logp.name = f"logp({new_inner_in_var.name})"
         res.append(logp)
 
     return res

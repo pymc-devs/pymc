@@ -1,15 +1,52 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 import aesara
 import aesara.tensor as at
 import numpy as np
 import pytest
 import scipy as sp
 import scipy.special
+
 from aesara.graph.basic import equal_computations
 from aesara.graph.fg import FunctionGraph
 from numdifftools import Jacobian
 
-from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
-from aeppl.transforms import (
+from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
+from pymc.logprob.transforms import (
     DEFAULT_TRANSFORM,
     ChainedTransform,
     ExpTransform,
@@ -24,7 +61,7 @@ from aeppl.transforms import (
     _default_transformed_rv,
     transformed_variable,
 )
-from tests.utils import assert_no_rvs
+from pymc.tests.helpers import assert_no_rvs
 
 
 class DirichletScipyDist:
@@ -45,8 +82,7 @@ class DirichletScipyDist:
 
     def logpdf(self, value):
         res = np.sum(
-            scipy.special.xlogy(self.alphas - 1, value)
-            - scipy.special.gammaln(self.alphas),
+            scipy.special.xlogy(self.alphas - 1, value) - scipy.special.gammaln(self.alphas),
             axis=-1,
         ) + scipy.special.gammaln(np.sum(self.alphas, axis=-1))
         return res
@@ -76,11 +112,15 @@ class DirichletScipyDist:
             sp.stats.halfnorm,
             (),
         ),
-        (
+        pytest.param(
             at.random.wald,
             (1.5, 10.5),
             lambda mean, scale: sp.stats.invgauss(mean / scale, scale=scale),
             (),
+            marks=pytest.mark.xfail(
+                reason="We don't use Aesara's Wald operator",
+                raises=NotImplementedError,
+            ),
         ),
         (
             at.random.exponential,
@@ -124,11 +164,15 @@ class DirichletScipyDist:
             lambda df: sp.stats.chi2(df),
             (),
         ),
-        (
+        pytest.param(
             at.random.weibull,
             (1.5,),
             lambda c: sp.stats.weibull_min(c),
             (),
+            marks=pytest.mark.xfail(
+                reason="We don't use Aesara's Weibull operator",
+                raises=NotImplementedError,
+            ),
         ),
         (
             at.random.beta,
@@ -185,9 +229,7 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
     b_value_var.name = "b_value"
 
     transform_rewrite = TransformValuesRewrite({a_value_var: DEFAULT_TRANSFORM})
-    res = joint_logprob(
-        {a: a_value_var, b: b_value_var}, extra_rewrites=transform_rewrite
-    )
+    res = joint_logprob({a: a_value_var, b: b_value_var}, extra_rewrites=transform_rewrite)
 
     test_val_rng = np.random.RandomState(3238)
 
@@ -196,12 +238,8 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
     a_trans_op = _default_transformed_rv(a.owner.op, a.owner).op
     transform = a_trans_op.transform
 
-    a_forward_fn = aesara.function(
-        [a_value_var], transform.forward(a_value_var, *a.owner.inputs)
-    )
-    a_backward_fn = aesara.function(
-        [a_value_var], transform.backward(a_value_var, *a.owner.inputs)
-    )
+    a_forward_fn = aesara.function([a_value_var], transform.forward(a_value_var, *a.owner.inputs))
+    a_backward_fn = aesara.function([a_value_var], transform.backward(a_value_var, *a.owner.inputs))
     log_jac_fn = aesara.function(
         [a_value_var],
         transform.log_jac_det(a_value_var, *a.owner.inputs),
@@ -210,9 +248,7 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
 
     for i in range(10):
         a_dist = sp_dist(*dist_params)
-        a_val = a_dist.rvs(size=size, random_state=test_val_rng).astype(
-            a_value_var.dtype
-        )
+        a_val = a_dist.rvs(size=size, random_state=test_val_rng).astype(a_value_var.dtype)
         b_dist = sp.stats.norm(a_val, 1.0)
         b_val = b_dist.rvs(random_state=test_val_rng).astype(b_value_var.dtype)
 
@@ -222,7 +258,7 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
 
             def jacobian_estimate_novec(value):
 
-                dim_diff = a_val.ndim - value.ndim
+                dim_diff = a_val.ndim - value.ndim  # pylint: disable=cell-var-from-loop
                 if dim_diff > 0:
                     # Make sure the dimensions match the expected input
                     # dimensions for the compiled backward transform function
@@ -238,21 +274,15 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
                 n_missing_dims = jacobian_val.shape[0] - jacobian_val.shape[1]
                 if n_missing_dims > 0:
                     missing_bases = np.eye(jacobian_val.shape[0])[..., -n_missing_dims:]
-                    jacobian_val = np.concatenate(
-                        [jacobian_val, missing_bases], axis=-1
-                    )
+                    jacobian_val = np.concatenate([jacobian_val, missing_bases], axis=-1)
 
                 return np.linalg.slogdet(jacobian_val)[-1]
 
-            jacobian_estimate = np.vectorize(
-                jacobian_estimate_novec, signature="(n)->()"
-            )
+            jacobian_estimate = np.vectorize(jacobian_estimate_novec, signature="(n)->()")
 
             exp_log_jac_val = jacobian_estimate(a_trans_value)
         else:
-            jacobian_val = np.atleast_2d(
-                sp.misc.derivative(a_backward_fn, a_trans_value, dx=1e-6)
-            )
+            jacobian_val = np.atleast_2d(sp.misc.derivative(a_backward_fn, a_trans_value, dx=1e-6))
             exp_log_jac_val = np.linalg.slogdet(jacobian_val)[-1]
 
         log_jac_val = log_jac_fn(a_trans_value)

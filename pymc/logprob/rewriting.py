@@ -1,6 +1,43 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 from typing import Dict, Optional, Tuple
 
 import aesara.tensor as at
+
 from aesara.compile.mode import optdb
 from aesara.graph.basic import Variable
 from aesara.graph.features import Feature
@@ -22,9 +59,8 @@ from aesara.tensor.subtensor import (
 )
 from aesara.tensor.var import TensorVariable
 
-from aeppl.abstract import MeasurableVariable
-from aeppl.dists import DiracDelta
-from aeppl.utils import indices_from_subtensor
+from pymc.logprob.abstract import MeasurableVariable
+from pymc.logprob.utils import DiracDelta, indices_from_subtensor
 
 inc_subtensor_ops = (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
 subtensor_ops = (AdvancedSubtensor, AdvancedSubtensor1, Subtensor)
@@ -78,9 +114,7 @@ class PreserveRVMappings(Feature):
 
     def on_attach(self, fgraph):
         if hasattr(fgraph, "preserve_rv_mappings"):
-            raise ValueError(
-                f"{fgraph} already has the `PreserveRVMappings` feature attached."
-            )
+            raise ValueError(f"{fgraph} already has the `PreserveRVMappings` feature attached.")
 
         fgraph.preserve_rv_mappings = self
 
@@ -218,9 +252,7 @@ def incsubtensor_rv_replace(fgraph, node):
 
 logprob_rewrites_db = SequenceDB()
 logprob_rewrites_db.name = "logprob_rewrites_db"
-logprob_rewrites_db.register(
-    "pre-canonicalize", optdb.query("+canonicalize"), -10, "basic"
-)
+logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), -10, "basic")
 
 # These rewrites convert un-measurable variables into their measurable forms,
 # but they need to be reapplied, because some of the measurable forms require
@@ -228,23 +260,15 @@ logprob_rewrites_db.register(
 measurable_ir_rewrites_db = NoCallbackEquilibriumDB()
 measurable_ir_rewrites_db.name = "measurable_ir_rewrites_db"
 
-logprob_rewrites_db.register(
-    "measurable_ir_rewrites", measurable_ir_rewrites_db, -10, "basic"
-)
+logprob_rewrites_db.register("measurable_ir_rewrites", measurable_ir_rewrites_db, -10, "basic")
 
 # These rewrites push random/measurable variables "down", making them closer to
 # (or eventually) the graph outputs.  Often this is done by lifting other `Op`s
 # "up" through the random/measurable variables and into their inputs.
-measurable_ir_rewrites_db.register(
-    "subtensor_lift", local_subtensor_rv_lift, -5, "basic"
-)
-measurable_ir_rewrites_db.register(
-    "incsubtensor_lift", incsubtensor_rv_replace, -5, "basic"
-)
+measurable_ir_rewrites_db.register("subtensor_lift", local_subtensor_rv_lift, -5, "basic")
+measurable_ir_rewrites_db.register("incsubtensor_lift", incsubtensor_rv_replace, -5, "basic")
 
-logprob_rewrites_db.register(
-    "post-canonicalize", optdb.query("+canonicalize"), 10, "basic"
-)
+logprob_rewrites_db.register("post-canonicalize", optdb.query("+canonicalize"), 10, "basic")
 
 
 def construct_ir_fgraph(
@@ -323,9 +347,7 @@ def construct_ir_fgraph(
 
     if rv_remapper.measurable_conversions:
         # Undo un-valued measurable IR rewrites
-        new_to_old = tuple(
-            (v, k) for k, v in rv_remapper.measurable_conversions.items()
-        )
+        new_to_old = tuple((v, k) for k, v in rv_remapper.measurable_conversions.items())
         fgraph.replace_all(new_to_old)
 
     return fgraph, rv_values, memo

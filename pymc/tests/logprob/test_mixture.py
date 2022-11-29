@@ -1,18 +1,56 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 import aesara
 import aesara.tensor as at
 import numpy as np
 import pytest
 import scipy.stats.distributions as sp
+
 from aesara.graph.basic import Variable, equal_computations
 from aesara.tensor.random.basic import CategoricalRV
 from aesara.tensor.shape import shape_tuple
 from aesara.tensor.subtensor import as_index_constant
 
-from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
-from aeppl.mixture import MixtureRV, expand_indices
-from aeppl.rewriting import construct_ir_fgraph
-from tests.test_logprob import scipy_logprob
-from tests.utils import assert_no_rvs
+from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
+from pymc.logprob.mixture import MixtureRV, expand_indices
+from pymc.logprob.rewriting import construct_ir_fgraph
+from pymc.logprob.utils import dirac_delta
+from pymc.tests.helpers import assert_no_rvs
+from pymc.tests.logprob.utils import scipy_logprob
 
 
 def test_mixture_basics():
@@ -156,9 +194,7 @@ def test_hetero_mixture_binomial(p_val, size):
         x_val = norm_sp.rvs(size=size, random_state=test_val_rng)
         y_val = gamma_sp.rvs(size=size, random_state=test_val_rng)
 
-        component_logps = np.stack([norm_sp.logpdf(x_val), gamma_sp.logpdf(y_val)])[
-            i_val
-        ]
+        component_logps = np.stack([norm_sp.logpdf(x_val), gamma_sp.logpdf(y_val)])[i_val]
         exp_obs_logps = component_logps + bern_sp.logpmf(i_val)
 
         m_val = np.stack([x_val, y_val])[i_val]
@@ -688,8 +724,6 @@ def test_expand_indices_newaxis(A_parts, indices):
 
 
 def test_mixture_with_DiracDelta():
-    from aeppl.dists import dirac_delta
-
     srng = at.random.RandomStream(29833)
 
     X_rv = srng.normal(0, 1, name="X")

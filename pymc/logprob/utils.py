@@ -1,105 +1,54 @@
-from typing import (
-    Callable,
-    Dict,
-    Generator,
-    Iterable,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
 
-import aesara.tensor as at
+import warnings
+
+from typing import Callable, Dict, Generator, Iterable, List, Optional, Set, Tuple
+
 import numpy as np
-from aesara import config
-from aesara.graph.basic import Constant, Variable, clone_get_equiv, graph_inputs, walk
+
+from aesara import tensor as at
+from aesara.graph import Apply, Op
+from aesara.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
 from aesara.graph.fg import FunctionGraph
-from aesara.graph.op import compute_test_value
-from aesara.graph.rewriting.utils import rewrite_graph
 from aesara.link.c.type import CType
-from aesara.tensor.rewriting.basic import topo_constant_folding
-from aesara.tensor.rewriting.shape import ShapeFeature
-from aesara.tensor.sharedvar import SharedVariable
-from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
+from aesara.raise_op import CheckAndRaise
 from aesara.tensor.var import TensorVariable
 
-from aeppl.abstract import MeasurableVariable
-
-PotentialShapeType = Union[
-    int,
-    np.ndarray,
-    Tuple[Union[int, Variable], ...],
-    List[Union[int, Variable]],
-    Variable,
-]
-
-
-def change_rv_size(
-    rv_var: TensorVariable,
-    new_size: PotentialShapeType,
-    expand: Optional[bool] = False,
-) -> TensorVariable:
-    """Change or expand the size of a `RandomVariable`.
-
-    Parameters
-    ==========
-    rv_var
-        The `RandomVariable` output.
-    new_size
-        The new size.
-    expand:
-        Expand the existing size by `new_size`.
-
-    """
-    rv_node = rv_var.owner
-    rng, size, dtype, *dist_params = rv_node.inputs
-    name = rv_var.name
-    tag = rv_var.tag
-
-    if expand:
-        if rv_node.op.ndim_supp == 0 and at.get_vector_length(size) == 0:
-            size = rv_node.op._infer_shape(size, dist_params)
-        new_size = tuple(at.atleast_1d(new_size)) + tuple(size)
-
-    # Make sure the new size is a tensor. This helps to not unnecessarily pick
-    # up a `Cast` in some cases
-    new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
-
-    new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
-    rv_var = new_rv_node.outputs[-1]
-    rv_var.name = name
-    for k, v in tag.__dict__.items():
-        rv_var.tag.__dict__.setdefault(k, v)
-
-    if config.compute_test_value != "off":
-        compute_test_value(new_rv_node)
-
-    return rv_var
-
-
-def extract_obs_data(x: TensorVariable) -> np.ndarray:
-    """Extract data from observed symbolic variables.
-
-    Raises
-    ------
-    TypeError
-
-    """
-    if isinstance(x, Constant):
-        return x.data
-    if isinstance(x, SharedVariable):
-        return x.get_value()
-    if x.owner and isinstance(
-        x.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1)
-    ):
-        array_data = extract_obs_data(x.owner.inputs[0])
-        mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
-        mask = np.zeros_like(array_data)
-        mask[mask_idx] = 1
-        return np.ma.MaskedArray(array_data, mask)
-
-    raise TypeError(f"Data cannot be extracted from {x}")
+from pymc.logprob.abstract import MeasurableVariable, _logprob
 
 
 def walk_model(
@@ -242,22 +191,64 @@ def convert_indices(indices, entry):
 def indices_from_subtensor(idx_list, indices):
     """Compute a useable index tuple from the inputs of a ``*Subtensor**`` ``Op``."""
     return tuple(
-        tuple(convert_indices(list(indices), idx) for idx in idx_list)
-        if idx_list
-        else indices
+        tuple(convert_indices(list(indices), idx) for idx in idx_list) if idx_list else indices
     )
 
 
-def get_constant_value(x):
-    """Use constant folding to get a constant value."""
+class ParameterValueError(ValueError):
+    """Exception for invalid parameters values in logprob graphs"""
 
-    axis_fg = FunctionGraph(outputs=[x], features=[ShapeFeature()], clone=True)
 
-    (folded_axis,) = rewrite_graph(
-        axis_fg, custom_rewrite=topo_constant_folding
-    ).outputs
+class CheckParameterValue(CheckAndRaise):
+    """Implements a parameter value check in a logprob graph.
 
-    if not isinstance(folded_axis, Constant):
-        raise ValueError("Could not obtain a constant from constant folding")
+    Raises `ParameterValueError` if the check is not True.
+    """
 
-    return folded_axis.data
+    def __init__(self, msg=""):
+        super().__init__(ParameterValueError, msg)
+
+    def __str__(self):
+        return f"Check{{{self.msg}}}"
+
+
+class DiracDelta(Op):
+    """An `Op` that represents a Dirac-delta distribution."""
+
+    __props__ = ("rtol", "atol")
+
+    def __init__(self, rtol=1e-5, atol=1e-8):
+        self.rtol = rtol
+        self.atol = atol
+
+    def make_node(self, x):
+        x = at.as_tensor(x)
+        return Apply(self, [x], [x.type()])
+
+    def do_constant_folding(self, fgraph, node):
+        # Without this, the `Op` would be removed from the graph during
+        # canonicalization
+        return False
+
+    def perform(self, node, inp, out):
+        (x,) = inp
+        (z,) = out
+        warnings.warn("DiracDelta is a dummy Op that shouldn't be used in a compiled graph")
+        z[0] = x
+
+    def infer_shape(self, fgraph, node, input_shapes):
+        return input_shapes
+
+
+MeasurableVariable.register(DiracDelta)
+
+
+dirac_delta = DiracDelta()
+
+
+@_logprob.register(DiracDelta)
+def diracdelta_logprob(op, values, *inputs, **kwargs):
+    (values,) = values
+    (const_value,) = inputs
+    values, const_value = at.broadcast_arrays(values, const_value)
+    return at.switch(at.isclose(values, const_value, rtol=op.rtol, atol=op.atol), 0.0, -np.inf)

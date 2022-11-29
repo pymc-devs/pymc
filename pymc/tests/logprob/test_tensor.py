@@ -1,6 +1,43 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 import aesara
 import numpy as np
 import pytest
+
 from aesara import tensor as at
 from aesara.graph import RewriteDatabaseQuery
 from aesara.graph.rewriting.basic import in2out
@@ -8,9 +45,9 @@ from aesara.graph.rewriting.utils import rewrite_graph
 from aesara.tensor.extra_ops import BroadcastTo
 from scipy import stats as st
 
-from aeppl import factorized_joint_logprob, joint_logprob
-from aeppl.rewriting import logprob_rewrites_db
-from aeppl.tensor import naive_bcast_rv_lift
+from pymc.logprob import factorized_joint_logprob, joint_logprob
+from pymc.logprob.rewriting import logprob_rewrites_db
+from pymc.logprob.tensor import naive_bcast_rv_lift
 
 
 def test_naive_bcast_rv_lift():
@@ -40,9 +77,7 @@ def test_naive_bcast_rv_lift_valued_var():
     assert y_vv in logp_map
     assert len(logp_map) == 2
     assert np.allclose(logp_map[x_vv].eval({x_vv: 0}), st.norm(0).logpdf(0))
-    assert np.allclose(
-        logp_map[y_vv].eval({x_vv: 0, y_vv: [0, 0]}), st.norm(0).logpdf([0, 0])
-    )
+    assert np.allclose(logp_map[y_vv].eval({x_vv: 0, y_vv: [0, 0]}), st.norm(0).logpdf([0, 0]))
 
 
 def test_measurable_make_vector():
@@ -57,9 +92,7 @@ def test_measurable_make_vector():
     base3_vv = base3_rv.clone()
     y_vv = y_rv.clone()
 
-    ref_logp = joint_logprob(
-        {base1_rv: base1_vv, base2_rv: base2_vv, base3_rv: base3_vv}
-    )
+    ref_logp = joint_logprob({base1_rv: base1_vv, base2_rv: base2_vv, base3_rv: base3_vv})
     make_vector_logp = joint_logprob({y_rv: y_vv}, sum=False)
 
     base1_testval = base1_rv.eval()
@@ -101,9 +134,7 @@ def test_measurable_join_univariate(size1, size2, axis, concatenate):
     base2_vv = base2_rv.clone()
     y_vv = y_rv.clone()
 
-    base_logps = list(
-        factorized_joint_logprob({base1_rv: base1_vv, base2_rv: base2_vv}).values()
-    )
+    base_logps = list(factorized_joint_logprob({base1_rv: base1_vv, base2_rv: base2_vv}).values())
     if concatenate:
         base_logps = at.concatenate(base_logps, axis=axis)
     else:
@@ -137,9 +168,7 @@ def test_measurable_join_univariate(size1, size2, axis, concatenate):
             5,
             0,
             False,
-            marks=pytest.mark.xfail(
-                reason="cannot measure dimshuffled multivariate RVs"
-            ),
+            marks=pytest.mark.xfail(reason="cannot measure dimshuffled multivariate RVs"),
         ),
         pytest.param(
             (2,),
@@ -148,15 +177,11 @@ def test_measurable_join_univariate(size1, size2, axis, concatenate):
             5,
             1,
             False,
-            marks=pytest.mark.xfail(
-                reason="cannot measure dimshuffled multivariate RVs"
-            ),
+            marks=pytest.mark.xfail(reason="cannot measure dimshuffled multivariate RVs"),
         ),
     ],
 )
-def test_measurable_join_multivariate(
-    size1, supp_size1, size2, supp_size2, axis, concatenate
-):
+def test_measurable_join_multivariate(size1, supp_size1, size2, supp_size2, axis, concatenate):
     base1_rv = at.random.multivariate_normal(
         np.zeros(supp_size1), np.eye(supp_size1), size=size1, name="base1"
     )
@@ -172,9 +197,7 @@ def test_measurable_join_multivariate(
     y_vv = y_rv.clone()
     base_logps = [
         at.atleast_1d(logp)
-        for logp in factorized_joint_logprob(
-            {base1_rv: base1_vv, base2_rv: base2_vv}
-        ).values()
+        for logp in factorized_joint_logprob({base1_rv: base1_vv, base2_rv: base2_vv}).values()
     ]
 
     if concatenate:
@@ -203,9 +226,7 @@ def test_join_mixed_ndim_supp():
     y_rv = at.concatenate((base1_rv, base2_rv), axis=0)
 
     y_vv = y_rv.clone()
-    with pytest.raises(
-        ValueError, match="Joined logps have different number of dimensions"
-    ):
+    with pytest.raises(ValueError, match="Joined logps have different number of dimensions"):
         joint_logprob({y_rv: y_vv})
 
 
@@ -260,9 +281,7 @@ def test_measurable_dimshuffle(ds_order, multivariate):
     base_test_value = base_rv.eval()
     ds_test_value = at.constant(base_test_value).dimshuffle(ds_order).eval()
 
-    np.testing.assert_array_equal(
-        ref_logp_fn(base_test_value), ds_logp_fn(ds_test_value)
-    )
+    np.testing.assert_array_equal(ref_logp_fn(base_test_value), ds_logp_fn(ds_test_value))
 
 
 def test_unmeargeable_dimshuffles():

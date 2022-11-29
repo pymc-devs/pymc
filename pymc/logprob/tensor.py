@@ -1,6 +1,43 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 from typing import List, Optional, Union
 
 import aesara
+
 from aesara import tensor as at
 from aesara.graph.op import compute_test_value
 from aesara.graph.rewriting.basic import node_rewriter
@@ -10,9 +47,13 @@ from aesara.tensor.extra_ops import BroadcastTo
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.rewriting import local_dimshuffle_rv_lift, local_rv_size_lift
 
-from aeppl.abstract import MeasurableVariable, assign_custom_measurable_outputs
-from aeppl.logprob import _logprob, logprob
-from aeppl.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _logprob,
+    assign_custom_measurable_outputs,
+    logprob,
+)
+from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 
 
 @node_rewriter([BroadcastTo])
@@ -44,9 +85,7 @@ def naive_bcast_rv_lift(fgraph, node):
         return None  # pragma: no cover
 
     # Do not replace RV if it is associated with a value variable
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(
-        fgraph, "preserve_rv_mappings", None
-    )
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is not None and rv_var in rv_map_feature.rv_values:
         return None
 
@@ -67,9 +106,7 @@ def naive_bcast_rv_lift(fgraph, node):
     new_dist_params = [
         at.broadcast_to(
             param,
-            at.broadcast_shape(
-                tuple(param.shape), tuple(bcast_shape), arrays_are_shapes=True
-            ),
+            at.broadcast_shape(tuple(param.shape), tuple(bcast_shape), arrays_are_shapes=True),
         )
         for param in dist_params
     ]
@@ -93,9 +130,7 @@ def logprob_make_vector(op, values, *base_vars, **kwargs):
     """Compute the log-likelihood graph for a `MeasurableMakeVector`."""
     (value,) = values
 
-    return at.stack(
-        [logprob(base_var, value[i]) for i, base_var in enumerate(base_vars)]
-    )
+    return at.stack([logprob(base_var, value[i]) for i, base_var in enumerate(base_vars)])
 
 
 class MeasurableJoin(Join):
@@ -110,19 +145,26 @@ def logprob_join(op, values, axis, *base_vars, **kwargs):
     """Compute the log-likelihood graph for a `Join`."""
     (value,) = values
 
+    base_var_shapes = [base_var.shape[axis] for base_var in base_vars]
+
+    # TODO: Find better way to avoid circular dependency
+    from pymc.aesaraf import constant_fold
+
+    # We don't need the graph to be constant, just to have RandomVariables removed
+    base_var_shapes = constant_fold(base_var_shapes, raise_not_constant=False)
+
     split_values = at.split(
         value,
-        splits_size=[base_var.shape[axis] for base_var in base_vars],
+        splits_size=base_var_shapes,
         n_splits=len(base_vars),
         axis=axis,
     )
 
     logps = [
-        logprob(base_var, split_value)
-        for base_var, split_value in zip(base_vars, split_values)
+        logprob(base_var, split_value) for base_var, split_value in zip(base_vars, split_values)
     ]
 
-    if len(set(logp.ndim for logp in logps)) != 1:
+    if len({logp.ndim for logp in logps}) != 1:
         raise ValueError(
             "Joined logps have different number of dimensions, this can happen when "
             "joining univariate and multivariate distributions",
@@ -149,9 +191,7 @@ def find_measurable_stacks(
     if isinstance(node.op, (MeasurableMakeVector, MeasurableJoin)):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(
-        fgraph, "preserve_rv_mappings", None
-    )
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -174,9 +214,7 @@ def find_measurable_stacks(
         return None  # pragma: no cover
 
     # Make base_vars unmeasurable
-    base_vars = [
-        assign_custom_measurable_outputs(base_var.owner) for base_var in base_vars
-    ]
+    base_vars = [assign_custom_measurable_outputs(base_var.owner) for base_var in base_vars]
 
     if is_join:
         measurable_stack = MeasurableJoin()(axis, *base_vars)
@@ -237,9 +275,7 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuf
     if isinstance(node.op, MeasurableDimShuffle):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(
-        fgraph, "preserve_rv_mappings", None
-    )
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -264,9 +300,9 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuf
     # Make base_vars unmeasurable
     base_var = assign_custom_measurable_outputs(base_var.owner)
 
-    measurable_dimshuffle = MeasurableDimShuffle(
-        node.op.input_broadcastable, node.op.new_order
-    )(base_var)
+    measurable_dimshuffle = MeasurableDimShuffle(node.op.input_broadcastable, node.op.new_order)(
+        base_var
+    )
     measurable_dimshuffle.name = node.outputs[0].name
 
     return [measurable_dimshuffle]
@@ -283,9 +319,7 @@ measurable_ir_rewrites_db.register(
 )
 
 
-measurable_ir_rewrites_db.register(
-    "broadcast_to_lift", naive_bcast_rv_lift, -5, "basic", "tensor"
-)
+measurable_ir_rewrites_db.register("broadcast_to_lift", naive_bcast_rv_lift, -5, "basic", "tensor")
 
 
 measurable_ir_rewrites_db.register(

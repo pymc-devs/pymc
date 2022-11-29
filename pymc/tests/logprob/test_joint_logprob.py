@@ -1,3 +1,39 @@
+#   Copyright 2022- The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 import warnings
 
 import aesara
@@ -5,6 +41,7 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 import scipy.stats.distributions as sp
+
 from aesara.graph.basic import ancestors, equal_computations
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
@@ -15,10 +52,10 @@ from aesara.tensor.subtensor import (
     Subtensor,
 )
 
-from aeppl.joint_logprob import factorized_joint_logprob, joint_logprob
-from aeppl.logprob import logprob
-from aeppl.utils import rvs_to_value_vars, walk_model
-from tests.utils import assert_no_rvs
+from pymc.logprob.abstract import logprob
+from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
+from pymc.logprob.utils import rvs_to_value_vars, walk_model
+from pymc.tests.helpers import assert_no_rvs
 
 
 def test_joint_logprob_basic():
@@ -119,8 +156,7 @@ def test_joint_logprob_diff_dims():
     logp_val = logp.eval(point)
 
     exp_logp_val = (
-        sp.norm.logpdf(x_val, 0, 1).sum()
-        + sp.norm.logpdf(y_val, M_val.dot(x_val), 1).sum()
+        sp.norm.logpdf(x_val, 0, 1).sum() + sp.norm.logpdf(y_val, M_val.dot(x_val), 1).sum()
     )
     assert exp_logp_val == pytest.approx(logp_val)
 
@@ -149,9 +185,7 @@ def test_joint_logprob_incsubtensor(indices, size):
     y_value_var = Y_rv.clone()
     y_value_var.name = "y"
 
-    assert isinstance(
-        Y_rv.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
-    )
+    assert isinstance(Y_rv.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
 
     Y_rv_logp = joint_logprob({Y_rv: y_value_var}, sum=False)
 
@@ -198,9 +232,7 @@ def test_joint_logprob_subtensor():
 
     A_idx = A_rv[I_rv, at.ogrid[A_rv.shape[-1] :]]
 
-    assert isinstance(
-        A_idx.owner.op, (Subtensor, AdvancedSubtensor, AdvancedSubtensor1)
-    )
+    assert isinstance(A_idx.owner.op, (Subtensor, AdvancedSubtensor, AdvancedSubtensor1))
 
     A_idx_value_var = A_idx.type()
     A_idx_value_var.name = "A_idx_value"

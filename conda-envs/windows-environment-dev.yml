@@ -5,7 +5,6 @@ channels:
 - defaults
 dependencies:
 # Base dependencies (see install guide for Windows)
-- aeppl=0.0.38
 - aesara=2.8.8
 - arviz>=0.13.0
 - blas
@@ -38,3 +37,4 @@ dependencies:
 - types-cachetools
 - pip:
   - git+https://github.com/pymc-devs/pymc-sphinx-theme
+  - numdifftools>=0.9.40

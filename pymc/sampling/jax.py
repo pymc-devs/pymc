@@ -20,7 +20,6 @@ import arviz as az
 import jax
 import numpy as np
 
-from aeppl.logprob import CheckParameterValue
 from aesara.compile import SharedVariable, Supervisor, mode
 from aesara.graph.basic import clone_replace, graph_inputs
 from aesara.graph.fg import FunctionGraph
@@ -32,6 +31,7 @@ from arviz.data.base import make_attrs
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations
+from pymc.logprob.utils import CheckParameterValue
 from pymc.util import RandomSeed, _get_seeds_per_chain, get_default_varnames
 
 warnings.warn("This module is experimental.")
