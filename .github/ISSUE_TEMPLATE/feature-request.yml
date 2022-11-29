@@ -23,15 +23,6 @@ body:
 
 - type: textarea
   attributes:
-    label: "Link to a discussion"
-    description: >
-      Link to the discussion about this feature request in
-      [Discussions](https://github.com/pymc-devs/pymc/discussions)
-  validations:
-    required: true
-
-- type: textarea
-  attributes:
     label: "Before"
     description: >
       Please fill the code snippet: How did you workaround your problem or frequent use?
