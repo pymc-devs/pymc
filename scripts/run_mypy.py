@@ -45,8 +45,6 @@ pymc/gp/cov.py
 pymc/gp/gp.py
 pymc/gp/mean.py
 pymc/gp/util.py
-pymc/logprob/__init__.py
-pymc/logprob/abstract.py
 pymc/math.py
 pymc/ode/__init__.py
 pymc/ode/ode.py
@@ -192,6 +190,10 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
 
 
 if __name__ == "__main__":
+    # Enforce PEP 561 for some important dependencies that
+    # have relevant type hints but don't tell that to mypy.
+    enforce_pep561("aeppl")
+
     parser = argparse.ArgumentParser(description="Run mypy type checks on PyMC codebase.")
     parser.add_argument(
         "--verbose", action="count", default=0, help="Pass this to print mypy output."

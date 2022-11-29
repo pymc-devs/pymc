@@ -4,6 +4,8 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
+from aeppl.abstract import MeasurableVariable
+from aeppl.logprob import _logcdf, _logprob, icdf, logcdf
 from aesara import scan
 from aesara.graph import Op
 from aesara.graph.basic import Node
@@ -24,7 +26,6 @@ from pymc.distributions.distribution import (
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size, to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import TruncationError
-from pymc.logprob.abstract import MeasurableVariable, _logcdf, _logprob, icdf, logcdf
 from pymc.math import logdiffexp
 from pymc.util import check_dist_not_registered
 

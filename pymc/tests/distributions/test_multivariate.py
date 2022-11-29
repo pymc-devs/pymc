@@ -25,6 +25,7 @@ import pytest
 import scipy.special as sp
 import scipy.stats as st
 
+from aeppl.logprob import ParameterValueError
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.utils import broadcast_params
 
@@ -39,7 +40,6 @@ from pymc.distributions.multivariate import (
     quaddist_matrix,
 )
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
-from pymc.logprob.utils import ParameterValueError
 from pymc.math import kronecker
 from pymc.sampling.forward import draw
 from pymc.tests.distributions.util import (

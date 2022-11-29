@@ -85,6 +85,7 @@ repos:
           (?x)(arviz-devs.github.io|
                python.arviz.org|
                aesara.readthedocs.io|
+               aeppl.readthedocs.io|
                pymc-experimental.readthedocs.io|
                docs.pymc.io|
                www.pymc.io|

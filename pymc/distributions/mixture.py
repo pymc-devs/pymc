@@ -17,6 +17,8 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
+from aeppl.logprob import _logcdf, _logprob
+from aeppl.transforms import IntervalTransform
 from aesara.graph.basic import Node, equal_computations
 from aesara.tensor import TensorVariable
 from aesara.tensor.random.op import RandomVariable
@@ -33,8 +35,6 @@ from pymc.distributions.distribution import (
 from pymc.distributions.logprob import ignore_logprob, logcdf, logp
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.distributions.transforms import _default_transform
-from pymc.logprob.abstract import _logcdf, _logprob
-from pymc.logprob.transforms import IntervalTransform
 from pymc.util import check_dist_not_registered
 from pymc.vartypes import continuous_types, discrete_types
 
@@ -254,7 +254,7 @@ class Mixture(Distribution):
         assert weights_ndim_batch == 0
 
         # Component RVs terms are accounted by the Mixture logprob, so they can be
-        # safely ignored in the logprob graph
+        # safely ignored by Aeppl
         components = [ignore_logprob(component) for component in components]
 
         # Create a OpFromGraph that encapsulates the random generating process

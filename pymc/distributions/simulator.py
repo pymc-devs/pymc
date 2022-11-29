@@ -18,6 +18,7 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
+from aeppl.logprob import _logprob
 from aesara.graph.op import Apply, Op
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
@@ -25,7 +26,6 @@ from scipy.spatial import cKDTree
 
 from pymc.aesaraf import floatX
 from pymc.distributions.distribution import Distribution, _moment
-from pymc.logprob.abstract import _logprob
 
 __all__ = ["Simulator"]
 

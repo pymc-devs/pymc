@@ -19,6 +19,7 @@ import numpy as np
 import pytest
 import scipy.stats.distributions as sp
 
+from aeppl.abstract import get_measurable_outputs
 from aesara.graph.basic import ancestors
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import (
@@ -49,7 +50,6 @@ from pymc.distributions.logprob import (
     logcdf,
     logp,
 )
-from pymc.logprob.abstract import get_measurable_outputs
 from pymc.model import Model, Potential
 from pymc.tests.helpers import assert_no_rvs, select_by_precision
 

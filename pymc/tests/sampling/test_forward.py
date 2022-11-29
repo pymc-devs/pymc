@@ -331,7 +331,7 @@ class TestCompileForwardSampler:
     def test_non_random_model_variable(self):
         with pm.Model() as model:
             # A user may register non-pure RandomVariables that can nevertheless be
-            # sampled, as long as a custom logprob is dispatched or we can infer
+            # sampled, as long as a custom logprob is dispatched or Aeppl can infer
             # its logprob (which is the case for `clip`)
             y = at.clip(pm.Normal.dist(), -1, 1)
             y = model.register_rv(y, name="y")

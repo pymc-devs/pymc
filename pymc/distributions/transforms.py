@@ -16,14 +16,7 @@ from functools import singledispatch
 import aesara.tensor as at
 import numpy as np
 
-from aesara.graph import Op
-from aesara.tensor import TensorVariable
-
-# ignore mypy error because it somehow considers that
-# "numpy.core.numeric has no attribute normalize_axis_tuple"
-from numpy.core.numeric import normalize_axis_tuple  # type: ignore
-
-from pymc.logprob.transforms import (
+from aeppl.transforms import (
     CircularTransform,
     IntervalTransform,
     LogOddsTransform,
@@ -31,6 +24,12 @@ from pymc.logprob.transforms import (
     RVTransform,
     SimplexTransform,
 )
+from aesara.graph import Op
+from aesara.tensor import TensorVariable
+
+# ignore mypy error because it somehow considers that
+# "numpy.core.numeric has no attribute normalize_axis_tuple"
+from numpy.core.numeric import normalize_axis_tuple  # type: ignore
 
 __all__ = [
     "RVTransform",
@@ -208,17 +207,17 @@ class Chain(RVTransform):
 
 simplex = SimplexTransform()
 simplex.__doc__ = """
-Instantiation of :class:`pymc.logprob.transforms.SimplexTransform`
+Instantiation of :class:`aeppl.transforms.SimplexTransform`
 for use in the ``transform`` argument of a random variable."""
 
 logodds = LogOddsTransform()
 logodds.__doc__ = """
-Instantiation of :class:`pymc.logprob.transforms.LogOddsTransform`
+Instantiation of :class:`aeppl.transforms.LogOddsTransform`
 for use in the ``transform`` argument of a random variable."""
 
 
 class Interval(IntervalTransform):
-    """Wrapper around  :class:`pymc.logprob.transforms.IntervalTransform` for use in the
+    """Wrapper around  :class:`aeppl.transforms.IntervalTransform` for use in the
     ``transform`` argument of a random variable.
 
     Parameters
@@ -381,7 +380,7 @@ Please use `univariate_ordererd` or `multivariate_ordered` instead."""
 
 log = LogTransform()
 log.__doc__ = """
-Instantiation of :class:`pymc.logprob.transforms.LogTransform`
+Instantiation of :class:`aeppl.transforms.LogTransform`
 for use in the ``transform`` argument of a random variable."""
 
 univariate_sum_to_1 = SumTo1(ndim_supp=0)
@@ -404,5 +403,5 @@ Please use `univariate_sum_to_1` or `multivariate_sum_to_1` instead."""
 
 circular = CircularTransform()
 circular.__doc__ = """
-Instantiation of :class:`pymc.logprob.transforms.CircularTransform`
+Instantiation of :class:`aeppl.transforms.CircularTransform`
 for use in the ``transform`` argument of a random variable."""

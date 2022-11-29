@@ -27,6 +27,7 @@ import numpy as np
 import scipy.linalg
 import scipy.stats
 
+from aeppl.logprob import CheckParameterValue
 from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Apply, Variable
 from aesara.graph.op import Op
@@ -37,7 +38,6 @@ from aesara.tensor.slinalg import Cholesky, SolveTriangular
 
 from pymc.aesaraf import floatX
 from pymc.distributions.shape_utils import to_tuple
-from pymc.logprob.utils import CheckParameterValue
 
 solve_lower = SolveTriangular(lower=True)
 solve_upper = SolveTriangular(lower=False)

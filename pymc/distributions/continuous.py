@@ -28,6 +28,7 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 
+from aeppl.logprob import _logprob, logcdf, logprob
 from aesara.graph.basic import Apply, Variable
 from aesara.graph.op import Op
 from aesara.raise_op import Assert
@@ -55,8 +56,6 @@ from aesara.tensor.random.basic import (
 )
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorConstant
-
-from pymc.logprob.abstract import _logprob, logcdf, logprob
 
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
@@ -531,9 +530,6 @@ class Normal(Continuous):
             sigma > 0,
             msg="sigma > 0",
         )
-
-    def icdf(value, mu, sigma):
-        return mu + sigma * -np.sqrt(2.0) * at.erfcinv(2 * value)
 
 
 class TruncatedNormalRV(RandomVariable):
@@ -1293,6 +1289,10 @@ class Exponential(PositiveContinuous):
     Mean      :math:`\dfrac{1}{\lambda}`
     Variance  :math:`\dfrac{1}{\lambda^2}`
     ========  ============================
+
+    Notes
+    -----
+    Logp calculation is defined in `aeppl.logprob <https://github.com/aesara-devs/aeppl/blob/main/aeppl/logprob.py/>`_.
 
     Parameters
     ----------

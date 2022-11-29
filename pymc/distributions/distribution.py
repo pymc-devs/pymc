@@ -23,6 +23,9 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from aeppl.abstract import MeasurableVariable, _get_measurable_outputs
+from aeppl.logprob import _logcdf, _logprob
+from aeppl.rewriting import logprob_rewrites_db
 from aesara import tensor as at
 from aesara.compile.builders import OpFromGraph
 from aesara.graph import node_rewriter
@@ -45,14 +48,6 @@ from pymc.distributions.shape_utils import (
     find_size,
     shape_from_dims,
 )
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _get_measurable_outputs,
-    _icdf,
-    _logcdf,
-    _logprob,
-)
-from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.printing import str_for_dist
 from pymc.util import UNSET, _add_future_warning_tag
 from pymc.vartypes import string_types
@@ -135,14 +130,6 @@ class DistributionMeta(ABCMeta):
                     dist_params = dist_params[3:]
                     return class_logcdf(value, *dist_params)
 
-            class_icdf = clsdict.get("icdf")
-            if class_icdf:
-
-                @_icdf.register(rv_type)
-                def icdf(op, value, *dist_params, **kwargs):
-                    dist_params = dist_params[3:]
-                    return class_icdf(value, *dist_params)
-
             class_moment = clsdict.get("moment")
             if class_moment:
 
@@ -183,7 +170,7 @@ class SymbolicRandomVariable(OpFromGraph):
     (0 for scalar, 1 for vector, ...)
      """
 
-    inline_logprob: bool = False
+    inline_aeppl: bool = False
     """Specifies whether the logprob function is derived automatically by introspection
     of the inner graph.
 
@@ -388,13 +375,13 @@ class Distribution(metaclass=DistributionMeta):
         return rv_out
 
 
-# Let PyMC know that the SymbolicRandomVariable has a logprob.
+# Let Aeppl know that the SymbolicRandomVariable has a logprob.
 MeasurableVariable.register(SymbolicRandomVariable)
 
 
 @_get_measurable_outputs.register(SymbolicRandomVariable)
 def _get_measurable_outputs_symbolic_random_variable(op, node):
-    # This tells PyMC that any non RandomType outputs are measurable
+    # This tells Aeppl that any non RandomType outputs are measurable
 
     # Assume that if there is one default_output, that's the only one that is measurable
     # In the rare case this is not what one wants, a specialized _get_measuarable_outputs
@@ -409,11 +396,11 @@ def _get_measurable_outputs_symbolic_random_variable(op, node):
 @node_rewriter([SymbolicRandomVariable])
 def inline_symbolic_random_variable(fgraph, node):
     """
-    This optimization expands the internal graph of a SymbolicRV when obtaining the logp
-    graph, if the flag `inline_logprob` is True.
+    This optimization expands the internal graph of a SymbolicRV when obtaining logp
+    from Aeppl, if the flag `inline_aeppl` is True.
     """
     op = node.op
-    if op.inline_logprob:
+    if op.inline_aeppl:
         return clone_replace(op.inner_outputs, {u: v for u, v in zip(op.inner_inputs, node.inputs)})
 
 

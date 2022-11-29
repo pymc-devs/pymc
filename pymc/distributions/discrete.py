@@ -819,9 +819,6 @@ class Geometric(Discrete):
             msg="0 <= p <= 1",
         )
 
-    def icdf(value, p):
-        return at.ceil(at.log1p(-value) / at.log1p(-p)).astype("int64")
-
 
 class HyperGeometric(Discrete):
     R"""
