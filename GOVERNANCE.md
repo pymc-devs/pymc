@@ -175,7 +175,6 @@ Contributors don't need to be part of any dedicated team.
 * Ben Mares
 * Benjamin Vincent (docs - PyMC Labs)
 * Bill Engels (dev)
-* Brandon T. Willard (dev)
 * Chris Fonnesbeck (dev, docs)
 * Christian Luhmann (community)
 * Colin Carroll (dev)
