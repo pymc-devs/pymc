@@ -1,0 +1,5 @@
+name: Developer issue
+description: This template is for developers only!
+
+body:
+- type: textarea
