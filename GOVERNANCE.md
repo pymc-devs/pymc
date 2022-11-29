@@ -819,7 +819,7 @@ extra benefits but those will be related to the conference, not the Project.
 
 * Agustina Arroyuelo (GSoC 2018)
 * Anand Patil
-* Brandon T. Willard (dev)
+* Brandon T. Willard
 * David Huard
 * Demetri Pananos (GSoC 2019)
 * John Salvatier
