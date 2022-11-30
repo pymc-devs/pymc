@@ -1063,7 +1063,7 @@ class Beta(UnitContinuous):
     ========  ==============================================================
 
     Beta distribution can be parameterized either in terms of alpha and
-    beta, mean and standard deviation or mean and sample size. The link between the two
+    beta, mean and standard deviation or mean and sample size. The link between the three
     parametrizations is given by
 
     .. math::
@@ -1071,9 +1071,7 @@ class Beta(UnitContinuous):
        \alpha &= \mu \kappa \\
        \beta  &= (1 - \mu) \kappa
 
-
        \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1
-
 
        \alpha = \mu * \nu
        \beta = (1 - \mu) * \nu
