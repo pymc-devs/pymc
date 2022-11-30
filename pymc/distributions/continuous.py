@@ -1059,10 +1059,11 @@ class Beta(UnitContinuous):
     Support   :math:`x \in (0, 1)`
     Mean      :math:`\dfrac{\alpha}{\alpha + \beta}`
     Variance  :math:`\dfrac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
+    Sample size  :math:`\alpha + \beta`
     ========  ==============================================================
 
     Beta distribution can be parameterized either in terms of alpha and
-    beta or mean and standard deviation. The link between the two
+    beta, mean and standard deviation or mean and sample size. The link between the two
     parametrizations is given by
 
     .. math::
@@ -1070,7 +1071,12 @@ class Beta(UnitContinuous):
        \alpha &= \mu \kappa \\
        \beta  &= (1 - \mu) \kappa
 
+
        \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1
+
+
+       \alpha = \mu * \nu
+       \beta = (1 - \mu) * \nu
 
     Parameters
     ----------
