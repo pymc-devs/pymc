@@ -153,6 +153,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
@@ -225,6 +226,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
@@ -299,6 +301,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
@@ -368,6 +371,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
           name: JAX tests - ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
@@ -436,6 +440,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
