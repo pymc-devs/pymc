@@ -90,7 +90,6 @@ jobs:
             pymc/tests/logprob/test_censoring.py
             pymc/tests/logprob/test_composite_logprob.py
             pymc/tests/logprob/test_cumsum.py
-            pymc/tests/logprob/test_joint_logprob.py
             pymc/tests/logprob/test_mixture.py
             pymc/tests/logprob/test_rewriting.py
             pymc/tests/logprob/test_scan.py
