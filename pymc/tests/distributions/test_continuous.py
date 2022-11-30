@@ -166,9 +166,6 @@ def beta_mu_sigma(value, mu, sigma):
     else:
         return -np.inf
 
-def beta_mu_nu(value, mu, nu):
-    return st.beta.logpdf(value, mu * nu, (1 - mu) * nu)
-
 class TestMatchesScipy:
     def test_uniform(self):
         check_logp(
@@ -374,12 +371,6 @@ class TestMatchesScipy:
             Unit,
             {"mu": Unit, "sigma": Rplus},
             beta_mu_sigma,
-        )
-        check_logp(
-            pm.Beta,
-            Unit,
-            {"mu": Unit, "nu": Rplus},
-            beta_mu_nu,
         )
 
     @pytest.mark.skipif(
@@ -2023,6 +2014,16 @@ class TestBetaMuSigma(BaseTestDistributionRandom):
     pymc_dist_params = {"mu": 0.5, "sigma": 0.25}
     expected_alpha, expected_beta = pm.Beta.get_alpha_beta(
         mu=pymc_dist_params["mu"], sigma=pymc_dist_params["sigma"]
+    )
+    expected_rv_op_params = {"alpha": expected_alpha, "beta": expected_beta}
+    checks_to_run = ["check_pymc_params_match_rv_op"]
+
+
+class TestBetaMuNu(BaseTestDistributionRandom):
+    pymc_dist = pm.Beta
+    pymc_dist_params = {"mu": 0.5, "nu": 3}
+    expected_alpha, expected_beta = pm.Beta.get_alpha_beta(
+        mu=pymc_dist_params["mu"], nu=pymc_dist_params["nu"]
     )
     expected_rv_op_params = {"alpha": expected_alpha, "beta": expected_beta}
     checks_to_run = ["check_pymc_params_match_rv_op"]
