@@ -1212,15 +1212,29 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         "or define it via a `pm.MutableData` variable."
                     )
                 elif length_tensor.owner is not None:
-                    # The dimension was created from a model variable.
+                    # The dimension was created from another variable:
+                    length_tensor_origin = length_tensor.owner.inputs[0]
                     # Get a handle on the tensor from which this dimension length was
                     # obtained by doing subindexing on the shape as in `.shape[i]`.
-                    # Needed to check if it was another shared variable.
+                    if isinstance(length_tensor_origin, TensorConstant):
+                        raise ShapeError(
+                            f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
+                            f"because the dimension length is tied to a {length_tensor_origin}. "
+                            f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
+                            f"for example by another model variable.",
+                            actual=new_length,
+                            expected=old_length,
+                        )
+
+                    # The shape entry this dimension is tied to is not a TensorConstant.
+                    # Whether the dimension can be resized depends on the kind of Variable the shape belongs to.
                     # TODO: Consider checking the graph is what we are assuming it is
                     # isinstance(length_tensor.owner.op, Subtensor)
                     # isinstance(length_tensor.owner.inputs[0].owner.op, Shape)
-                    length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
+                    length_belongs_to = length_tensor_origin.owner.inputs[0]
+
                     if length_belongs_to is shared_object:
+                        # This is the shared variable that's being updated!
                         # No surprise it's changing.
                         pass
                     elif isinstance(length_belongs_to, SharedVariable):
@@ -1464,28 +1478,37 @@ class Model(WithMemoization, metaclass=ContextMeta):
         this branch of the conditional.
 
         """
-        if value_var is None:
+
+        # Make the value variable a transformed value variable,
+        # if there's an applicable transform
+        if transform is UNSET:
+            if rv_var.owner is None:
+                transform = None
+            else:
+                transform = _default_transform(rv_var.owner.op, rv_var)
+
+        if value_var is not None:
+            if transform is not None:
+                raise ValueError("Cannot use transform when providing a pre-defined value_var")
+        elif transform is None:
+            # Create value variable with the same type as the RV
             value_var = rv_var.type()
             value_var.name = rv_var.name
-
-        if aesara.config.compute_test_value != "off":
-            value_var.tag.test_value = rv_var.tag.test_value
+            if aesara.config.compute_test_value != "off":
+                value_var.tag.test_value = rv_var.tag.test_value
+        else:
+            # Create value variable with the same type as the transformed RV
+            value_var = transform.forward(rv_var, *rv_var.owner.inputs).type()
+            value_var.name = f"{rv_var.name}_{transform.name}__"
+            value_var.tag.transform = transform
+            if aesara.config.compute_test_value != "off":
+                value_var.tag.test_value = transform.forward(
+                    rv_var, *rv_var.owner.inputs
+                ).tag.test_value
 
         _add_future_warning_tag(value_var)
         rv_var.tag.value_var = value_var
 
-        # Make the value variable a transformed value variable,
-        # if there's an applicable transform
-        if transform is UNSET and rv_var.owner:
-            transform = _default_transform(rv_var.owner.op, rv_var)
-
-        if transform is not None and transform is not UNSET:
-            value_var.tag.transform = transform
-            value_var.name = f"{value_var.name}_{transform.name}__"
-            if aesara.config.compute_test_value != "off":
-                value_var.tag.test_value = transform.forward(
-                    value_var, *rv_var.owner.inputs
-                ).tag.test_value
         self.rvs_to_transforms[rv_var] = transform
         self.rvs_to_values[rv_var] = value_var
         self.values_to_rvs[value_var] = rv_var

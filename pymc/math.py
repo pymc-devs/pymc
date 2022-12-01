@@ -284,7 +284,7 @@ def softmax(x, axis=None):
     # drops that warning
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        return at.nnet.softmax(x, axis=axis)
+        return at.special.softmax(x, axis=axis)
 
 
 def log_softmax(x, axis=None):
@@ -292,7 +292,7 @@ def log_softmax(x, axis=None):
     # drops that warning
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        return at.nnet.logsoftmax(x, axis=axis)
+        return at.special.log_softmax(x, axis=axis)
 
 
 def logbern(log_p):

@@ -714,7 +714,6 @@ class TestScaling:
         with pm.Model() as model5:
             n = pm.Normal("n", total_size=[2, Ellipsis, 2], size=(2, 2))
             p5 = model5.compile_fn(model5.logp(), point_fn=False)
-        assert p4() == p5(pm.floatX([[1]]))
         assert p4() == p5(pm.floatX([[1, 1], [1, 1]]))
 
 

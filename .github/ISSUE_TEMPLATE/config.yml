@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: PyMC Discourse
     url: https://discourse.pymc.io/
-    about: Ask usage questions about PyMC/PyMC3
+    about: Ask installation and usage questions about PyMC/PyMC3
   - name: Example notebook error report
     url: https://github.com/pymc-devs/pymc-examples/issues
     about: Please report errors or desired extensions to the tutorials and examples here.

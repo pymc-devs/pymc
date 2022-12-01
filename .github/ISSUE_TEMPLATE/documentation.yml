@@ -18,8 +18,6 @@ body:
       referring to. You can also check the development version of the
       documentation and see if this issue has already been addressed at
       https://www.pymc.io/projects/docs/en/latest/api.html.
-  validations:
-    required: true
 
 - type: textarea
   attributes:

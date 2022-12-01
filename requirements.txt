@@ -1,4 +1,4 @@
-aesara==2.8.7
+aesara==2.8.8
 arviz>=0.13.0
 cachetools>=4.2.1
 cloudpickle

@@ -6,7 +6,7 @@
 name: Feature request
 description: Make a specific, well-motivated proposal for a feature.
 title: "ENH: <Please write a comprehensive title after the 'ENH: ' prefix>"
-labels: [enhancements]
+labels: [feature request]
 
 
 body:
@@ -20,15 +20,6 @@ body:
       you can open this issue for a more technical developer discussion.
       Check the [Contributor Guide](https://github.com/pymc-devs/pymc/blob/main/CONTRIBUTING.md)
       if you need more information.
-
-- type: textarea
-  attributes:
-    label: "Link to a discussion"
-    description: >
-      Link to the discussion about this feature request in
-      [Discussions](https://github.com/pymc-devs/pymc/discussions)
-  validations:
-    required: true
 
 - type: textarea
   attributes:
