@@ -58,7 +58,7 @@ from pymc.util import UNSET, _add_future_warning_tag
 from pymc.vartypes import string_types
 
 __all__ = [
-    "DensityDistRV",
+    "CustomDist",
     "DensityDist",
     "Distribution",
     "Continuous",
@@ -456,15 +456,15 @@ class Continuous(Distribution):
     """Base class for continuous distributions"""
 
 
-class DensityDistRV(RandomVariable):
+class CustomDistRV(RandomVariable):
     """
-    Base class for DensityDistRV
+    Base class for CustomDistRV
 
-    This should be subclassed when defining custom DensityDist objects.
+    This should be subclassed when defining CustomDist objects.
     """
 
-    name = "DensityDistRV"
-    _print_name = ("DensityDist", "\\operatorname{DensityDist}")
+    name = "CustomDistRV"
+    _print_name = ("CustomDist", "\\operatorname{CustomDist}")
 
     @classmethod
     def rng_fn(cls, rng, *args):
@@ -473,7 +473,7 @@ class DensityDistRV(RandomVariable):
         return cls._random_fn(*args, rng=rng, size=size)
 
 
-class DensityDist(Distribution):
+class CustomDist(Distribution):
     """A distribution that can be used to wrap black-box log density functions.
 
     Creates a Distribution and registers the supplied log density function to be used
@@ -489,11 +489,11 @@ class DensityDist(Distribution):
         PyTensor tensors internally. These parameters could be other ``TensorVariable``
         instances created from , optionally created via ``RandomVariable`` ``Op``s.
     class_name : str
-        Name for the RandomVariable class which will wrap the DensityDist methods.
+        Name for the RandomVariable class which will wrap the CustomDist methods.
         When not specified, it will be given the name of the variable.
 
-        .. warning:: New DensityDists created with the same class_name will override the
-            methods dispatched onto the previous classes. If using DensityDists with
+        .. warning:: New CustomDists created with the same class_name will override the
+            methods dispatched onto the previous classes. If using CustomDists with
             different methods across separate models, be sure to use distinct
             class_names.
 
@@ -517,7 +517,7 @@ class DensityDist(Distribution):
         A callable that can be used to generate random draws from the distribution.
         It must have the following signature: ``random(*dist_params, rng=None, size=None)``.
         The distribution parameters are passed as positional arguments in the
-        same order as they are supplied when the ``DensityDist`` is constructed.
+        same order as they are supplied when the ``CustomDist`` is constructed.
         The keyword arguments are ``rnd``, which will provide the random variable's
         associated :py:class:`~numpy.random.Generator`, and ``size``, that will represent
         the desired size of the random draw. If ``None``, a ``NotImplemented``
@@ -530,7 +530,7 @@ class DensityDist(Distribution):
         as the first argument ``rv``. ``size`` is the random variable's size implied
         by the ``dims``, ``size`` and parameters supplied to the distribution. Finally,
         ``rv_inputs`` is the sequence of the distribution parameters, in the same order
-        as they were supplied when the DensityDist was created. If ``None``, a default
+        as they were supplied when the CustomDist was created. If ``None``, a default
         ``moment`` function will be assigned that will always return 0, or an array
         of zeros.
     ndim_supp : int
@@ -555,8 +555,8 @@ class DensityDist(Distribution):
 
             with pm.Model():
                 mu = pm.Normal('mu',0,1)
-                pm.DensityDist(
-                    'density_dist',
+                pm.CustomDist(
+                    'custom_dist',
                     mu,
                     logp=logp,
                     observed=np.random.randn(100),
@@ -573,20 +573,19 @@ class DensityDist(Distribution):
 
             with pm.Model():
                 mu = pm.Normal('mu', 0 , 1)
-                dens = pm.DensityDist(
-                    'density_dist',
+                pm.CustomDist(
+                    'custom_dist',
                     mu,
                     logp=logp,
                     random=random,
                     observed=np.random.randn(100, 3),
                     size=(100, 3),
                 )
-                prior = pm.sample_prior_predictive(10).prior_predictive['density_dist']
-            assert prior.shape == (1, 10, 100, 3)
+                prior = pm.sample_prior_predictive(10)
 
     """
 
-    rv_type = DensityDistRV
+    rv_type = CustomDistRV
 
     def __new__(cls, name, *args, **kwargs):
         kwargs.setdefault("class_name", name)
@@ -676,15 +675,15 @@ class DensityDist(Distribution):
         **kwargs,
     ):
         rv_op = type(
-            f"DensityDist_{class_name}",
-            (DensityDistRV,),
+            f"CustomDist_{class_name}",
+            (CustomDistRV,),
             dict(
-                name=f"DensityDist_{class_name}",
+                name=f"CustomDist_{class_name}",
                 inplace=False,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
                 dtype=dtype,
-                # Specifc to DensityDist
+                # Specifc to CustomDist
                 _random_fn=random,
             ),
         )()
@@ -710,9 +709,12 @@ class DensityDist(Distribution):
         return rv_op(*dist_params, **kwargs)
 
 
+DensityDist = CustomDist
+
+
 def default_not_implemented(rv_name, method_name):
     message = (
-        f"Attempted to run {method_name} on the DensityDist '{rv_name}', "
+        f"Attempted to run {method_name} on the CustomDist '{rv_name}', "
         f"but this method had not been provided when the distribution was "
         f"constructed. Please re-build your model and provide a callable "
         f"to '{rv_name}'s {method_name} keyword argument.\n"

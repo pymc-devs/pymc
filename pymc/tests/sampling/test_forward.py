@@ -1135,7 +1135,7 @@ class TestSamplePriorPredictive(SeededTest):
         with pm.Model():
             mu = pm.Normal("mu", 0, 1)
             sigma = pm.HalfNormal("sigma", 1e-6)
-            a = pm.DensityDist(
+            a = pm.CustomDist(
                 "a",
                 mu,
                 sigma,

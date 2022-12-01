@@ -9,5 +9,5 @@ Distribution utilities
     Distribution
     Discrete
     Continuous
-    DensityDist
+    CustomDist
     SymbolicRandomVariable
