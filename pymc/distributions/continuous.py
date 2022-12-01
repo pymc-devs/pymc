@@ -1059,7 +1059,6 @@ class Beta(UnitContinuous):
     Support   :math:`x \in (0, 1)`
     Mean      :math:`\dfrac{\alpha}{\alpha + \beta}`
     Variance  :math:`\dfrac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
-    Sample size  :math:`\alpha + \beta`
     ========  ==============================================================
 
     Beta distribution can be parameterized either in terms of alpha and
