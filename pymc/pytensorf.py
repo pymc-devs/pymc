@@ -1060,6 +1060,46 @@ def reseed_rngs(
         rng.set_value(new_rng, borrow=True)
 
 
+def collect_default_updates(
+    inputs: Sequence[Variable], outputs: Sequence[Variable]
+) -> Dict[Variable, Variable]:
+    """Collect default update expression of RVs between inputs and outputs"""
+
+    # Avoid circular import
+    from pymc.distributions.distribution import SymbolicRandomVariable
+
+    rng_updates = {}
+    output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
+    for random_var in (
+        var
+        for var in vars_between(inputs, output_to_list)
+        if var.owner
+        and isinstance(var.owner.op, (RandomVariable, SymbolicRandomVariable))
+        and var not in inputs
+    ):
+        # All nodes in `vars_between(inputs, outputs)` have owners.
+        # But mypy doesn't know, so we just assert it:
+        assert random_var.owner.op is not None
+        if isinstance(random_var.owner.op, RandomVariable):
+            rng = random_var.owner.inputs[0]
+            if hasattr(rng, "default_update"):
+                update_map = {rng: rng.default_update}
+            else:
+                update_map = {rng: random_var.owner.outputs[0]}
+        else:
+            update_map = random_var.owner.op.update(random_var.owner)
+        # Check that we are not setting different update expressions for the same variables
+        for rng, update in update_map.items():
+            if rng not in rng_updates:
+                rng_updates[rng] = update
+            # When a variable has multiple outputs, it will be called twice with the same
+            # update expression. We don't want to raise in that case, only if the update
+            # expression in different from the one already registered
+            elif rng_updates[rng] is not update:
+                raise ValueError(f"Multiple update expressions found for the variable {rng}")
+    return rng_updates
+
+
 def compile_pymc(
     inputs,
     outputs,
@@ -1101,40 +1141,9 @@ def compile_pymc(
         this function is called within a model context and the model `check_bounds` flag
         is set to False.
     """
-    # Avoid circular import
-    from pymc.distributions.distribution import SymbolicRandomVariable
-
     # Create an update mapping of RandomVariable's RNG so that it is automatically
     # updated after every function call
-    rng_updates = {}
-    output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
-    for random_var in (
-        var
-        for var in vars_between(inputs, output_to_list)
-        if var.owner
-        and isinstance(var.owner.op, (RandomVariable, SymbolicRandomVariable))
-        and var not in inputs
-    ):
-        # All nodes in `vars_between(inputs, outputs)` have owners.
-        # But mypy doesn't know, so we just assert it:
-        assert random_var.owner.op is not None
-        if isinstance(random_var.owner.op, RandomVariable):
-            rng = random_var.owner.inputs[0]
-            if hasattr(rng, "default_update"):
-                update_map = {rng: rng.default_update}
-            else:
-                update_map = {rng: random_var.owner.outputs[0]}
-        else:
-            update_map = random_var.owner.op.update(random_var.owner)
-        # Check that we are not setting different update expressions for the same variables
-        for rng, update in update_map.items():
-            if rng not in rng_updates:
-                rng_updates[rng] = update
-            # When a variable has multiple outputs, it will be called twice with the same
-            # update expression. We don't want to raise in that case, only if the update
-            # expression in different from the one already registered
-            elif rng_updates[rng] is not update:
-                raise ValueError(f"Multiple update expressions found for the variable {rng}")
+    rng_updates = collect_default_updates(inputs, outputs)
 
     # We always reseed random variables as this provides RNGs with no chances of collision
     if rng_updates:
