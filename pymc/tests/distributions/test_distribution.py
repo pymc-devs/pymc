@@ -25,10 +25,17 @@ from pytensor.tensor import TensorVariable
 
 import pymc as pm
 
-from pymc.distributions import DiracDelta, Flat, MvNormal, MvStudentT, logp
-from pymc.distributions.distribution import SymbolicRandomVariable, _moment, moment
+from pymc.distributions import DiracDelta, Flat, MvNormal, MvStudentT, Normal, logp
+from pymc.distributions.distribution import (
+    CustomDist,
+    SymbolicRandomVariable,
+    _moment,
+    moment,
+)
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.logprob.abstract import get_measurable_outputs
+from pymc.model import Model
+from pymc.sampling.mcmc import sample
 from pymc.tests.distributions.util import assert_moment_is_expected
 from pymc.util import _FutureWarningValidatingScratchpad
 
@@ -104,7 +111,7 @@ def test_all_distributions_have_moments():
         dist_module.Distribution,
         dist_module.Discrete,
         dist_module.Continuous,
-        dist_module.DensityDist,
+        dist_module.CustomDist,
         dist_module.simulator.Simulator,
     }
 
@@ -134,20 +141,20 @@ def test_all_distributions_have_moments():
         )
 
 
-class TestDensityDist:
+class TestCustomDist:
     @pytest.mark.parametrize("size", [(), (3,), (3, 2)], ids=str)
-    def test_density_dist_with_random(self, size):
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0, 1)
-            obs = pm.DensityDist(
-                "density_dist",
+    def test_custom_dist_with_random(self, size):
+        with Model() as model:
+            mu = Normal("mu", 0, 1)
+            obs = CustomDist(
+                "custom_dist",
                 mu,
                 random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
                 observed=np.random.randn(100, *size),
             )
         assert obs.eval().shape == (100,) + size
 
-    def test_density_dist_with_random_invalid_observed(self):
+    def test_custom_dist_with_random_invalid_observed(self):
         with pytest.raises(
             TypeError,
             match=(
@@ -159,37 +166,37 @@ class TestDensityDist:
             ),
         ):
             size = (3,)
-            with pm.Model() as model:
-                mu = pm.Normal("mu", 0, 1)
-                pm.DensityDist(
-                    "density_dist",
+            with Model() as model:
+                mu = Normal("mu", 0, 1)
+                CustomDist(
+                    "custom_dist",
                     mu,
                     random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
                     observed={"values": np.random.randn(100, *size)},
                 )
 
-    def test_density_dist_without_random(self):
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0, 1)
-            pm.DensityDist(
-                "density_dist",
+    def test_custom_dist_without_random(self):
+        with Model() as model:
+            mu = Normal("mu", 0, 1)
+            custom_dist = CustomDist(
+                "custom_dist",
                 mu,
                 logp=lambda value, mu: logp(pm.Normal.dist(mu, 1, size=100), value),
                 observed=np.random.randn(100),
                 initval=0,
             )
-            idata = pm.sample(tune=50, draws=100, cores=1, step=pm.Metropolis())
+            idata = sample(tune=50, draws=100, cores=1, step=pm.Metropolis())
 
         with pytest.raises(NotImplementedError):
             pm.sample_posterior_predictive(idata, model=model)
 
     @pytest.mark.parametrize("size", [(), (3,), (3, 2)], ids=str)
-    def test_density_dist_with_random_multivariate(self, size):
+    def test_custom_dist_with_random_multivariate(self, size):
         supp_shape = 5
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0, 1, size=supp_shape)
-            obs = pm.DensityDist(
-                "density_dist",
+        with Model() as model:
+            mu = Normal("mu", 0, 1, size=supp_shape)
+            obs = CustomDist(
+                "custom_dist",
                 mu,
                 random=lambda mu, rng=None, size=None: rng.multivariate_normal(
                     mean=mu, cov=np.eye(len(mu)), size=size
@@ -201,41 +208,41 @@ class TestDensityDist:
 
         assert obs.eval().shape == (100,) + size + (supp_shape,)
 
-    def test_serialize_density_dist(self):
+    def test_serialize_custom_dist(self):
         def func(x):
             return -2 * (x**2).sum()
 
         def random(rng, size):
             return rng.uniform(-2, 2, size=size)
 
-        with pm.Model():
-            pm.Normal("x")
-            y = pm.DensityDist("y", logp=func, random=random)
+        with Model():
+            Normal("x")
+            y = CustomDist("y", logp=func, random=random)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                pm.sample(draws=5, tune=1, mp_ctx="spawn")
+                sample(draws=5, tune=1, mp_ctx="spawn")
 
         import cloudpickle
 
         cloudpickle.loads(cloudpickle.dumps(y))
 
-    def test_density_dist_old_api_error(self):
-        with pm.Model():
+    def test_custom_dist_old_api_error(self):
+        with Model():
             with pytest.raises(
                 TypeError, match="The DensityDist API has changed, you are using the old API"
             ):
-                pm.DensityDist("a", lambda x: x)
+                CustomDist("a", lambda x: x)
 
     @pytest.mark.parametrize("size", [None, (), (2,)], ids=str)
-    def test_density_dist_multivariate_logp(self, size):
+    def test_custom_dist_multivariate_logp(self, size):
         supp_shape = 5
-        with pm.Model() as model:
+        with Model() as model:
 
             def logp(value, mu):
                 return pm.MvNormal.logp(value, mu, at.eye(mu.shape[0]))
 
-            mu = pm.Normal("mu", size=supp_shape)
-            a = pm.DensityDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
+            mu = Normal("mu", size=supp_shape)
+            a = CustomDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
 
         mu_test_value = npr.normal(loc=0, scale=1, size=supp_shape).astype(pytensor.config.floatX)
         a_test_value = npr.normal(
@@ -253,37 +260,35 @@ class TestDensityDist:
             ("custom_moment", (2, 5), np.full((2, 5), 5)),
         ],
     )
-    def test_density_dist_default_moment_univariate(self, moment, size, expected):
+    def test_custom_dist_default_moment_univariate(self, moment, size, expected):
         if moment == "custom_moment":
             moment = lambda rv, size, *rv_inputs: 5 * at.ones(size, dtype=rv.dtype)
         with pm.Model() as model:
-            pm.DensityDist("x", moment=moment, size=size)
+            x = CustomDist("x", moment=moment, size=size)
         assert_moment_is_expected(model, expected, check_finite_logp=False)
 
     @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
-    def test_density_dist_custom_moment_univariate(self, size):
+    def test_custom_dist_custom_moment_univariate(self, size):
         def density_moment(rv, size, mu):
             return (at.ones(size) * mu).astype(rv.dtype)
 
         mu_val = np.array(np.random.normal(loc=2, scale=1)).astype(pytensor.config.floatX)
-        with pm.Model():
-            mu = pm.Normal("mu")
-            a = pm.DensityDist("a", mu, moment=density_moment, size=size)
+        with Model():
+            mu = Normal("mu")
+            a = CustomDist("a", mu, moment=density_moment, size=size)
         evaled_moment = moment(a).eval({mu: mu_val})
         assert evaled_moment.shape == to_tuple(size)
         assert np.all(evaled_moment == mu_val)
 
     @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
-    def test_density_dist_custom_moment_multivariate(self, size):
+    def test_custom_dist_custom_moment_multivariate(self, size):
         def density_moment(rv, size, mu):
             return (at.ones(size)[..., None] * mu).astype(rv.dtype)
 
         mu_val = np.random.normal(loc=2, scale=1, size=5).astype(pytensor.config.floatX)
-        with pm.Model():
-            mu = pm.Normal("mu", size=5)
-            a = pm.DensityDist(
-                "a", mu, moment=density_moment, ndims_params=[1], ndim_supp=1, size=size
-            )
+        with Model():
+            mu = Normal("mu", size=5)
+            a = CustomDist("a", mu, moment=density_moment, ndims_params=[1], ndim_supp=1, size=size)
         evaled_moment = moment(a).eval({mu: mu_val})
         assert evaled_moment.shape == to_tuple(size) + (5,)
         assert np.all(evaled_moment == mu_val)
@@ -298,7 +303,7 @@ class TestDensityDist:
             (False, (2,)),
         ],
     )
-    def test_density_dist_default_moment_multivariate(self, with_random, size):
+    def test_custom_dist_default_moment_multivariate(self, with_random, size):
         def _random(mu, rng=None, size=None):
             return rng.normal(mu, scale=1, size=to_tuple(size) + mu.shape)
 
@@ -308,9 +313,9 @@ class TestDensityDist:
             random = None
 
         mu_val = np.random.normal(loc=2, scale=1, size=5).astype(pytensor.config.floatX)
-        with pm.Model():
-            mu = pm.Normal("mu", size=5)
-            a = pm.DensityDist("a", mu, random=random, ndims_params=[1], ndim_supp=1, size=size)
+        with Model():
+            mu = Normal("mu", size=5)
+            a = CustomDist("a", mu, random=random, ndims_params=[1], ndim_supp=1, size=size)
         if with_random:
             evaled_moment = moment(a).eval({mu: mu_val})
             assert evaled_moment.shape == to_tuple(size) + (5,)
@@ -324,7 +329,7 @@ class TestDensityDist:
 
     def test_dist(self):
         mu = 1
-        x = pm.DensityDist.dist(
+        x = pm.CustomDist.dist(
             mu,
             class_name="test",
             logp=lambda value, mu: pm.logp(pm.Normal.dist(mu), value),

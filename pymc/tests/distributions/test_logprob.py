@@ -32,7 +32,7 @@ from pytensor.tensor.subtensor import (
 
 import pymc as pm
 
-from pymc import DensityDist
+from pymc.distributions import CustomDist
 from pymc.distributions.continuous import (
     HalfFlat,
     LogNormal,
@@ -309,7 +309,7 @@ def test_model_unchanged_logprob_access():
 def test_unexpected_rvs():
     with Model() as model:
         x = Normal("x")
-        y = DensityDist("y", logp=lambda *args: x)
+        y = CustomDist("y", logp=lambda *args: x)
 
     with pytest.raises(ValueError, match="^Random variables detected in the logp graph"):
         model.logp()
@@ -339,7 +339,7 @@ def test_ignore_logprob_model():
 
     with Model() as m:
         x = Normal.dist()
-        y = DensityDist("y", x, logp=logp)
+        y = CustomDist("y", x, logp=logp)
     with pytest.warns(
         UserWarning,
         match="Found a random variable that was neither among the observations "
@@ -355,7 +355,7 @@ def test_ignore_logprob_model():
     # The above warning should go away with ignore_logprob.
     with Model() as m:
         x = ignore_logprob(Normal.dist())
-        y = DensityDist("y", x, logp=logp)
+        y = CustomDist("y", x, logp=logp)
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         assert _joint_logp(
