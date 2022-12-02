@@ -53,7 +53,13 @@ from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, Minibatch
 from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.transforms import _default_transform
-from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
+from pymc.exceptions import (
+    BlockModelAccessError,
+    ImputationWarning,
+    SamplingError,
+    ShapeError,
+    ShapeWarning,
+)
 from pymc.initial_point import make_initial_point_fn
 from pymc.pytensorf import (
     PointFunc,
@@ -195,6 +201,8 @@ class ContextMeta(type):
             if error_if_none:
                 raise TypeError(f"No {cls} on context stack")
             return None
+        if isinstance(candidate, BlockModelAccess):
+            raise BlockModelAccessError(candidate.error_msg_on_access)
         return candidate
 
     def get_contexts(cls) -> List[T]:
@@ -1796,6 +1804,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
 # this is really disgusting, but it breaks a self-loop: I can't pass Model
 # itself as context class init arg.
 Model._context_class = Model
+
+
+class BlockModelAccess(Model):
+    """This class can be used to prevent user access to Model contexts"""
+
+    def __init__(self, *args, error_msg_on_access="Model access is blocked", **kwargs):
+        self.error_msg_on_access = error_msg_on_access
 
 
 def set_data(new_data, model=None, *, coords=None):

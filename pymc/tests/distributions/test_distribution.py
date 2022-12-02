@@ -45,6 +45,7 @@ from pymc.distributions.distribution import (
 )
 from pymc.distributions.shape_utils import change_dist_size, rv_size_is_none, to_tuple
 from pymc.distributions.transforms import log
+from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.abstract import get_measurable_outputs, logcdf
 from pymc.model import Model
 from pymc.sampling import draw, sample
@@ -478,6 +479,17 @@ class TestCustomSymbolicDist:
         new_lognormal = change_dist_size(lognormal, new_size=(2, 5), expand=True)
         assert isinstance(new_lognormal.owner.op, CustomSymbolicDistRV)
         assert tuple(new_lognormal.shape.eval()) == (2, 5, 10)
+
+    def test_error_model_access(self):
+        def random(size):
+            return pm.Flat("Flat", size=size)
+
+        with pm.Model() as m:
+            with pytest.raises(
+                BlockModelAccessError,
+                match="Model variables cannot be created in the random function",
+            ):
+                CustomDist("custom_dist", random=random)
 
 
 class TestSymbolicRandomVarible:
