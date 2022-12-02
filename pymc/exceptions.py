@@ -82,3 +82,7 @@ class TruncationError(RuntimeError):
 
 class NotConstantValueError(ValueError):
     pass
+
+
+class BlockModelAccessError(RuntimeError):
+    pass
