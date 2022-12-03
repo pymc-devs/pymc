@@ -15,10 +15,10 @@
 import io
 import itertools as it
 
-import pytensor
-import pytensor.tensor as at
 import cloudpickle
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.stats as st
 

@@ -14,10 +14,10 @@
 
 import warnings
 
-import pytensor
 import arviz as az
 import numpy as np
 import numpy.testing as npt
+import pytensor
 import pytest
 
 import pymc as pm

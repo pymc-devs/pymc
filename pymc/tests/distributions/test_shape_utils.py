@@ -14,8 +14,8 @@
 import re
 import warnings
 
-import pytensor
 import numpy as np
+import pytensor
 import pytest
 
 from pytensor import tensor as at
@@ -355,7 +355,8 @@ class TestSizeShapeDimsObserved:
         with pm.Model() as model:
             # The `observed` is a broadcastable column vector
             obs = [
-                at.as_tensor_variable(np.ones((3, 1), dtype=pytensor.config.floatX)) for _ in range(4)
+                at.as_tensor_variable(np.ones((3, 1), dtype=pytensor.config.floatX))
+                for _ in range(4)
             ]
             assert all(obs_.broadcastable == (False, True) for obs_ in obs)
 

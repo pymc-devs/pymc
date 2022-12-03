@@ -11,10 +11,10 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import pytensor
-import pytensor.tensor as at
 import numpy as np
 import numpy.testing as npt
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.special
 
@@ -24,7 +24,6 @@ from scipy import interpolate, stats
 
 import pymc as pm
 
-from pymc.pytensorf import floatX
 from pymc.distributions import Discrete
 from pymc.distributions.dist_math import (
     MvNormalLogp,
@@ -37,6 +36,7 @@ from pymc.distributions.dist_math import (
     multigammaln,
 )
 from pymc.logprob.utils import ParameterValueError
+from pymc.pytensorf import floatX
 from pymc.tests.checks import close_to
 from pymc.tests.helpers import verify_grad
 

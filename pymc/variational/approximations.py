@@ -12,13 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytensor
 import numpy as np
+import pytensor
 
+from arviz import InferenceData
 from pytensor import tensor as at
 from pytensor.graph.basic import Variable
 from pytensor.tensor.var import TensorVariable
-from arviz import InferenceData
 
 import pymc as pm
 

@@ -17,11 +17,11 @@ import warnings
 
 from functools import partial, reduce
 
+import numpy as np
 import pytensor
 import pytensor.sparse
 import pytensor.tensor as at
 import pytensor.tensor.slinalg  # pylint: disable=unused-import
-import numpy as np
 import scipy as sp
 import scipy.sparse  # pylint: disable=unused-import
 
@@ -80,7 +80,6 @@ try:
     from pytensor.tensor.basic import extract_diag
 except ImportError:
     from pytensor.tensor.nlinalg import extract_diag
-
 
 from pytensor.tensor.nlinalg import det, matrix_dot, matrix_inverse, trace
 from scipy.linalg import block_diag as scipy_block_diag

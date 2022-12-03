@@ -14,10 +14,10 @@
 
 import functools as ft
 
-import pytensor
-import pytensor.tensor as at
 import numpy as np
 import numpy.testing as npt
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.special as sp
 import scipy.stats as st
@@ -26,11 +26,11 @@ from pytensor.compile.mode import Mode
 
 import pymc as pm
 
-from pymc.pytensorf import floatX
 from pymc.distributions import logcdf, logp
 from pymc.distributions.continuous import Normal, get_tau_sigma, interpolated
 from pymc.distributions.dist_math import clipped_beta_rvs
 from pymc.logprob.utils import ParameterValueError
+from pymc.pytensorf import floatX
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,
     Circ,

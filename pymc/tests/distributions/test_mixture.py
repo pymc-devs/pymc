@@ -16,18 +16,17 @@ import warnings
 
 from contextlib import ExitStack as does_not_raise
 
-import pytensor
 import numpy as np
+import pytensor
 import pytest
 import scipy.stats as st
 
+from numpy.testing import assert_allclose
 from pytensor import tensor as at
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
-from numpy.testing import assert_allclose
 from scipy.special import logsumexp
 
-from pymc.pytensorf import floatX
 from pymc.distributions import (
     Categorical,
     Dirichlet,
@@ -55,6 +54,7 @@ from pymc.distributions.transforms import _default_transform
 from pymc.logprob.transforms import IntervalTransform, LogTransform, SimplexTransform
 from pymc.math import expand_packed_triangular
 from pymc.model import Model
+from pymc.pytensorf import floatX
 from pymc.sampling.forward import (
     draw,
     sample_posterior_predictive,

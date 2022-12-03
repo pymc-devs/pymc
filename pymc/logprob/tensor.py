@@ -45,7 +45,10 @@ from pytensor.tensor.basic import Join, MakeVector
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.extra_ops import BroadcastTo
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.random.rewriting import local_dimshuffle_rv_lift, local_rv_size_lift
+from pytensor.tensor.random.rewriting import (
+    local_dimshuffle_rv_lift,
+    local_rv_size_lift,
+)
 
 from pymc.logprob.abstract import (
     MeasurableVariable,

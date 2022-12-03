@@ -3,16 +3,16 @@ import warnings
 from typing import Any, Callable, Dict, Optional
 from unittest import mock
 
-import pytensor
-import pytensor.tensor as at
 import arviz as az
 import jax
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 
+from numpyro.infer import MCMC
 from pytensor.compile import SharedVariable
 from pytensor.graph import graph_inputs
-from numpyro.infer import MCMC
 
 import pymc as pm
 

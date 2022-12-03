@@ -36,9 +36,9 @@
 
 import warnings
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 import pytest
 import scipy.stats.distributions as sp
 

@@ -14,18 +14,18 @@
 
 import logging
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 
 from pytensor.graph.op import Apply, Op
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorVariable
 from scipy.spatial import cKDTree
 
-from pymc.pytensorf import floatX
 from pymc.distributions.distribution import Distribution, _moment
 from pymc.logprob.abstract import _logprob
+from pymc.pytensorf import floatX
 
 __all__ = ["Simulator"]
 
@@ -366,6 +366,8 @@ def create_distance_op_from_fn(fn):
 
         def perform(self, node, inputs, outputs):
             eps, obs_data, sim_data = inputs
-            outputs[0][0] = np.atleast_1d(fn(eps, obs_data, sim_data)).astype(pytensor.config.floatX)
+            outputs[0][0] = np.atleast_1d(fn(eps, obs_data, sim_data)).astype(
+                pytensor.config.floatX
+            )
 
     return Distance()

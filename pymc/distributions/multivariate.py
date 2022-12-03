@@ -20,9 +20,9 @@ import warnings
 from functools import reduce
 from typing import Optional
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 import scipy
 
 from pytensor.graph.basic import Apply, Constant, Variable
@@ -40,7 +40,6 @@ from scipy import linalg, stats
 
 import pymc as pm
 
-from pymc.pytensorf import floatX, intX
 from pymc.distributions import transforms
 from pymc.distributions.continuous import BoundedContinuous, ChiSquared, Normal
 from pymc.distributions.dist_math import (
@@ -70,6 +69,7 @@ from pymc.distributions.shape_utils import (
 from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
 from pymc.logprob.abstract import _logprob
 from pymc.math import kron_diag, kron_dot
+from pymc.pytensorf import floatX, intX
 from pymc.util import check_dist_not_registered
 
 __all__ = [

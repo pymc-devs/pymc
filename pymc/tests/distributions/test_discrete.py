@@ -16,9 +16,9 @@ import functools as ft
 import sys
 import warnings
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 import pytest
 import scipy.special as sp
 import scipy.stats as st
@@ -28,10 +28,10 @@ from pytensor.tensor import TensorVariable
 
 import pymc as pm
 
-from pymc.pytensorf import floatX
 from pymc.distributions import logcdf, logp
 from pymc.distributions.discrete import Geometric, _OrderedLogistic, _OrderedProbit
 from pymc.logprob.utils import ParameterValueError
+from pymc.pytensorf import floatX
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,
     Bool,

@@ -13,8 +13,8 @@
 #   limitations under the License.
 import warnings
 
-import pytensor
 import numpy as np
+import pytensor
 import pytest
 import scipy.stats as st
 
@@ -29,8 +29,8 @@ from pytensor.tensor.sort import SortOp
 import pymc as pm
 
 from pymc import floatX
-from pymc.pytensorf import compile_pymc
 from pymc.initial_point import make_initial_point_fn
+from pymc.pytensorf import compile_pymc
 from pymc.smc.kernels import IMH
 from pymc.tests.helpers import SeededTest
 

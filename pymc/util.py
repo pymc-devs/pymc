@@ -22,10 +22,10 @@ import cloudpickle
 import numpy as np
 import xarray
 
+from cachetools import LRUCache, cachedmethod
 from pytensor import Variable
 from pytensor.compile import SharedVariable
 from pytensor.graph.utils import ValidatingScratchpad
-from cachetools import LRUCache, cachedmethod
 
 
 class _UnsetType:

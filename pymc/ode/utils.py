@@ -12,9 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 
 
 def make_sens_ic(n_states, n_theta, floatX):

@@ -22,10 +22,10 @@ from typing import Any, NamedTuple
 
 import numpy as np
 
-from pymc.pytensorf import floatX
 from pymc.blocking import DictToArrayBijection, RaveledVars, StatsType
 from pymc.exceptions import SamplingError
 from pymc.model import Point, modelcontext
+from pymc.pytensorf import floatX
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import step_sizes
 from pymc.step_methods.arraystep import GradientSharedStep

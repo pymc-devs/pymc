@@ -47,7 +47,6 @@ def __set_compiler_flags():
 __set_compiler_flags()
 
 from pymc import _version, gp, ode, sampling
-from pymc.pytensorf import *
 from pymc.backends import *
 from pymc.blocking import *
 from pymc.data import *
@@ -68,6 +67,7 @@ from pymc.model import *
 from pymc.model_graph import model_to_graphviz, model_to_networkx
 from pymc.plots import *
 from pymc.printing import *
+from pymc.pytensorf import *
 from pymc.sampling import *
 from pymc.smc import *
 from pymc.stats import *

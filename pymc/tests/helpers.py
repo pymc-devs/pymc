@@ -19,9 +19,9 @@ import warnings
 
 from logging.handlers import BufferingHandler
 
-import pytensor
 import numpy as np
 import numpy.random as nr
+import pytensor
 
 from pytensor.gradient import verify_grad as at_verify_grad
 from pytensor.graph import ancestors

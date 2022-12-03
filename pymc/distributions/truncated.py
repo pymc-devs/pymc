@@ -1,8 +1,8 @@
 from functools import singledispatch
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 
 from pytensor import scan
 from pytensor.graph import Op

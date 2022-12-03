@@ -34,8 +34,8 @@ from pytensor.tensor.shape import SpecifyShape
 from pytensor.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
-from pymc.pytensorf import convert_observed_data
 from pymc.model import modelcontext
+from pymc.pytensorf import convert_observed_data
 
 __all__ = [
     "to_tuple",
@@ -48,8 +48,8 @@ __all__ = [
     "change_dist_size",
 ]
 
-from pymc.pytensorf import PotentialShapeType
 from pymc.exceptions import ShapeError
+from pymc.pytensorf import PotentialShapeType
 from pymc.util import _add_future_warning_tag
 
 

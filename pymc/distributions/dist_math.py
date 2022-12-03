@@ -21,9 +21,9 @@ import warnings
 
 from typing import Iterable
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 import scipy.linalg
 import scipy.stats
 
@@ -35,9 +35,9 @@ from pytensor.tensor import gammaln
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.slinalg import Cholesky, SolveTriangular
 
-from pymc.pytensorf import floatX
 from pymc.distributions.shape_utils import to_tuple
 from pymc.logprob.utils import CheckParameterValue
+from pymc.pytensorf import floatX
 
 solve_lower = SolveTriangular(lower=True)
 solve_upper = SolveTriangular(lower=False)

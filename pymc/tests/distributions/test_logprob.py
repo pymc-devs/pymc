@@ -13,9 +13,9 @@
 #   limitations under the License.
 import warnings
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 import pytest
 import scipy.stats.distributions as sp
 
@@ -33,7 +33,6 @@ from pytensor.tensor.subtensor import (
 import pymc as pm
 
 from pymc import DensityDist
-from pymc.pytensorf import floatX, walk_model
 from pymc.distributions.continuous import (
     HalfFlat,
     LogNormal,
@@ -51,6 +50,7 @@ from pymc.distributions.logprob import (
 )
 from pymc.logprob.abstract import get_measurable_outputs
 from pymc.model import Model, Potential
+from pymc.pytensorf import floatX, walk_model
 from pymc.tests.helpers import assert_no_rvs, select_by_precision
 
 

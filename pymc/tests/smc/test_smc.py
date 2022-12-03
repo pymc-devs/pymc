@@ -13,8 +13,8 @@
 #   limitations under the License.
 import warnings
 
-import pytensor.tensor as at
 import numpy as np
+import pytensor.tensor as at
 import pytest
 import scipy.stats as st
 
@@ -22,8 +22,8 @@ from arviz.data.inference_data import InferenceData
 
 import pymc as pm
 
-from pymc.pytensorf import floatX
 from pymc.backends.base import MultiTrace
+from pymc.pytensorf import floatX
 from pymc.smc.kernels import IMH, systematic_resampling
 from pymc.tests.helpers import SeededTest, assert_random_state_equal
 

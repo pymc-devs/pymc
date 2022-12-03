@@ -34,8 +34,8 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import pytensor
 import numpy as np
+import pytensor
 import pytest
 
 from pytensor import tensor as at

@@ -14,13 +14,12 @@
 
 import warnings
 
-import pytensor
-import pytensor.tensor as at
 import numpy as np
 import numpy.testing as npt
+import pytensor
+import pytensor.tensor as at
 import pytest
 
-from pymc.pytensorf import floatX
 from pymc.math import (
     LogDet,
     cartesian,
@@ -39,6 +38,7 @@ from pymc.math import (
     probit,
     softmax,
 )
+from pymc.pytensorf import floatX
 from pymc.tests.helpers import SeededTest, verify_grad
 
 

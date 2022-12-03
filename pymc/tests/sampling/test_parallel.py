@@ -17,10 +17,10 @@ import platform
 import sys
 import warnings
 
-import pytensor
-import pytensor.tensor as at
 import cloudpickle
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 
 from pytensor.compile.ops import as_op
