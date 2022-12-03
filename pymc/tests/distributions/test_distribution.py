@@ -416,3 +416,23 @@ def test_tag_future_warning_dist():
         with pytest.warns(FutureWarning, match="Use model.rvs_to_values"):
             value_var = new_x.tag.value_var
         assert value_var == "1"
+
+
+def test_autonaming():
+    """Test that random variable ends up with same name as assignment variable"""
+    d = {}
+    with pm.Model() as m:
+        x = pm.Normal(0.0, 1.0)
+        d[2] = pm.Normal(0.0, 1.0)
+
+    assert x.name == "x"
+    assert m["x"] == x
+    assert d[2].name == "d[2]"
+    assert m["d[2]"] == d[2]
+
+
+def test_autonaming_noname():
+    """Test that autonaming fails if no assignment can be found"""
+    with pytest.raises(TypeError, match="Name could not be inferred for variable"):
+        with pm.Model():
+            pm.Normal()

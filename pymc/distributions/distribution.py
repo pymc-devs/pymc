@@ -22,6 +22,7 @@ from functools import singledispatch
 from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
+import opcode
 
 from aesara import tensor as at
 from aesara.compile.builders import OpFromGraph
@@ -164,6 +165,45 @@ def _make_nice_attr_error(oldcode: str, newcode: str):
     return fn
 
 
+# Helper function from pyprob
+def _extract_target_of_assignment(depth):
+    frame = sys._getframe(depth)
+    code = frame.f_code
+    next_instruction = code.co_code[frame.f_lasti + 2]
+    instruction_arg = code.co_code[frame.f_lasti + 3]
+    instruction_name = opcode.opname[next_instruction]
+    if instruction_name == "STORE_FAST":
+        return code.co_varnames[instruction_arg]
+    elif instruction_name in ["STORE_NAME", "STORE_GLOBAL"]:
+        return code.co_names[instruction_arg]
+    elif (
+        instruction_name in ["LOAD_FAST", "LOAD_NAME", "LOAD_GLOBAL"]
+        and opcode.opname[code.co_code[frame.f_lasti + 4]] in ["LOAD_CONST", "LOAD_FAST"]
+        and opcode.opname[code.co_code[frame.f_lasti + 6]] == "STORE_SUBSCR"
+    ):
+        if instruction_name == "LOAD_FAST":
+            base_name = code.co_varnames[instruction_arg]
+        else:
+            base_name = code.co_names[instruction_arg]
+
+        second_instruction = opcode.opname[code.co_code[frame.f_lasti + 4]]
+        second_arg = code.co_code[frame.f_lasti + 5]
+        if second_instruction == "LOAD_CONST":
+            value = code.co_consts[second_arg]
+        elif second_instruction == "LOAD_FAST":
+            var_name = code.co_varnames[second_arg]
+            value = frame.f_locals[var_name]
+        else:
+            value = None
+        if value is not None:
+            index_name = repr(value)
+            return base_name + "[" + index_name + "]"
+        else:
+            return None
+    else:
+        return None
+
+
 class SymbolicRandomVariable(OpFromGraph):
     """Symbolic Random Variable
 
@@ -216,7 +256,6 @@ class Distribution(metaclass=DistributionMeta):
 
     def __new__(
         cls,
-        name: str,
         *args,
         rng=None,
         dims: Optional[Dims] = None,
@@ -234,8 +273,6 @@ class Distribution(metaclass=DistributionMeta):
         ----------
         cls : type
             A PyMC distribution.
-        name : str
-            Name for the new model variable.
         rng : optional
             Random number generator to use with the RandomVariable.
         dims : tuple, optional
@@ -277,6 +314,19 @@ class Distribution(metaclass=DistributionMeta):
                 "for a standalone distribution."
             )
 
+        if "name" in kwargs:
+            name = kwargs.pop("name")
+        elif len(args) > 0 and isinstance(args[0], string_types):
+            name = args[0]
+            args = args[1:]
+        else:
+            name = _extract_target_of_assignment(2)
+            if name is None:
+                raise TypeError("Name could not be inferred for variable")
+
+        if not isinstance(name, string_types):
+            raise TypeError(f"Name needs to be a string but got: {name}")
+
         if "testval" in kwargs:
             initval = kwargs.pop("testval")
             warnings.warn(
@@ -284,9 +334,6 @@ class Distribution(metaclass=DistributionMeta):
                 FutureWarning,
                 stacklevel=2,
             )
-
-        if not isinstance(name, string_types):
-            raise TypeError(f"Name needs to be a string but got: {name}")
 
         dims = convert_dims(dims)
         if observed is not None:
