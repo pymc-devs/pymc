@@ -16,25 +16,25 @@ import warnings
 
 from typing import Tuple
 
-import pytensor
-import pytensor.tensor as at
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
+import pytensor
+import pytensor.tensor as at
 import pytest
 import xarray as xr
 
-from pytensor import Mode, shared
-from pytensor.compile import SharedVariable
 from arviz import InferenceData
 from arviz import from_dict as az_from_dict
 from arviz.tests.helpers import check_multiple_attrs
+from pytensor import Mode, shared
+from pytensor.compile import SharedVariable
 from scipy import stats
 
 import pymc as pm
 
-from pymc.pytensorf import compile_pymc
 from pymc.backends.base import MultiTrace
+from pymc.pytensorf import compile_pymc
 from pymc.sampling.forward import (
     compile_forward_sampling_function,
     get_vars_in_point_list,

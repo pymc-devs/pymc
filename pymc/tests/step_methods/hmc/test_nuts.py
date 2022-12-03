@@ -16,14 +16,14 @@ import logging
 import sys
 import warnings
 
-import pytensor.tensor as at
 import numpy as np
+import pytensor.tensor as at
 import pytest
 
 import pymc as pm
 
-from pymc.pytensorf import floatX
 from pymc.exceptions import SamplingError
+from pymc.pytensorf import floatX
 from pymc.step_methods.hmc import NUTS
 from pymc.tests import sampler_fixtures as sf
 from pymc.tests.helpers import RVsAssignmentStepsTester, StepMethodTester

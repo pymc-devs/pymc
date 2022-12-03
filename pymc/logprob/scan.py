@@ -37,9 +37,9 @@
 from copy import copy
 from typing import Callable, Dict, Iterable, List, Tuple, cast
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 
 from pytensor.graph.basic import Variable
 from pytensor.graph.fg import FunctionGraph

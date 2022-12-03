@@ -18,9 +18,9 @@ from functools import reduce
 from numbers import Number
 from operator import add, mul
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 
 from pytensor.graph.basic import Variable
 from pytensor.tensor.sharedvar import TensorSharedVariable

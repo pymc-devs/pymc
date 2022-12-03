@@ -36,8 +36,8 @@
 
 from typing import List, Optional
 
-import pytensor.tensor as at
 import numpy as np
+import pytensor.tensor as at
 
 from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph

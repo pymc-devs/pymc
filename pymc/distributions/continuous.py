@@ -24,9 +24,9 @@ import warnings
 
 from typing import List, Optional, Union
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
@@ -76,7 +76,6 @@ from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
 
-from pymc.pytensorf import floatX
 from pymc.distributions import transforms
 from pymc.distributions.dist_math import (
     SplineWrapper,
@@ -93,6 +92,7 @@ from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.distributions.transforms import _default_transform
 from pymc.math import invlogit, logdiffexp, logit
+from pymc.pytensorf import floatX
 
 __all__ = [
     "Uniform",

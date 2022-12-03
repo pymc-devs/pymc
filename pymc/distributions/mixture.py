@@ -13,9 +13,9 @@
 #   limitations under the License.
 import warnings
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 
 from pytensor.graph.basic import Node, equal_computations
 from pytensor.tensor import TensorVariable

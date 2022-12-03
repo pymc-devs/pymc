@@ -3,14 +3,14 @@ import warnings
 
 from typing import Dict, Tuple
 
-import pytensor.tensor as at
 import numpy as np
+import pytensor.tensor as at
 import pytest
 
-from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from arviz import InferenceData
 from arviz.tests.helpers import check_multiple_attrs
 from numpy import ma
+from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 
 import pymc as pm
 

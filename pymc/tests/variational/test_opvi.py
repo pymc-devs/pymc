@@ -14,8 +14,8 @@
 
 import functools as ft
 
-import pytensor.tensor as at
 import numpy as np
+import pytensor.tensor as at
 import pytest
 
 import pymc as pm

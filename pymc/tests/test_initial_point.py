@@ -11,10 +11,10 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import pytensor
-import pytensor.tensor as at
 import cloudpickle
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 
 from pytensor.tensor.random.op import RandomVariable

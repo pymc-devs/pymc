@@ -14,9 +14,9 @@
 
 import logging
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 import scipy
 
 from pytensor.graph.basic import Apply

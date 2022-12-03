@@ -13,14 +13,13 @@
 #   limitations under the License.
 import warnings
 
-import pytensor.tensor as at
 import numpy as np
+import pytensor.tensor as at
 
 from pytensor.tensor import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorVariable
 
-from pymc.pytensorf import floatX, intX
 from pymc.distributions.continuous import BoundedContinuous, bounded_cont_transform
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import Continuous, Discrete
@@ -28,6 +27,7 @@ from pymc.distributions.logprob import ignore_logprob, logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.model import modelcontext
+from pymc.pytensorf import floatX, intX
 from pymc.util import check_dist_not_registered
 
 __all__ = ["Bound"]

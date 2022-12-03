@@ -13,12 +13,12 @@
 #   limitations under the License.
 from unittest import mock
 
-import pytensor
-import pytensor.tensor as at
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
 import pandas as pd
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.sparse as sps
 
@@ -32,6 +32,11 @@ from pytensor.tensor.var import TensorVariable
 
 import pymc as pm
 
+from pymc.distributions.dist_math import check_parameters
+from pymc.distributions.distribution import SymbolicRandomVariable
+from pymc.distributions.transforms import Interval
+from pymc.exceptions import NotConstantValueError
+from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
     compile_pymc,
     constant_fold,
@@ -43,11 +48,6 @@ from pymc.pytensorf import (
     rvs_to_value_vars,
     walk_model,
 )
-from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.distribution import SymbolicRandomVariable
-from pymc.distributions.transforms import Interval
-from pymc.exceptions import NotConstantValueError
-from pymc.logprob.utils import ParameterValueError
 from pymc.tests.helpers import assert_no_rvs
 from pymc.vartypes import int_types
 

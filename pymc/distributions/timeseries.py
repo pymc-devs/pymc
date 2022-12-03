@@ -17,15 +17,14 @@ import warnings
 from abc import ABCMeta
 from typing import Callable, Optional
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 
 from pytensor.graph.basic import Node, clone_replace
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 
-from pymc.pytensorf import constant_fold, floatX, intX
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.distribution import (
     Distribution,
@@ -43,6 +42,7 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import _logprob
+from pymc.pytensorf import constant_fold, floatX, intX
 from pymc.util import check_dist_not_registered
 
 __all__ = [

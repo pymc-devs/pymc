@@ -13,9 +13,9 @@
 #   limitations under the License.
 from typing import Callable, Dict, List, Optional, Tuple
 
-import pytensor
 import numpy as np
 import numpy.random as nr
+import pytensor
 import scipy.linalg
 import scipy.special
 
@@ -25,6 +25,7 @@ from pytensor.tensor.random.basic import BernoulliRV, CategoricalRV
 
 import pymc as pm
 
+from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.pytensorf import (
     CallableTensor,
     compile_pymc,
@@ -32,7 +33,6 @@ from pymc.pytensorf import (
     join_nonshared_inputs,
     replace_rng_nodes,
 )
-from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.step_methods.arraystep import (
     ArrayStep,
     ArrayStepShared,

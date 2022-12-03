@@ -15,19 +15,19 @@
 
 from typing import Dict, List, Sequence, Union
 
-import pytensor
 import numpy as np
+import pytensor
 
 from pytensor import tensor as at
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorVariable
 
-from pymc.pytensorf import floatX
 from pymc.logprob.abstract import assign_custom_measurable_outputs
 from pymc.logprob.abstract import logcdf as logcdf_logprob
 from pymc.logprob.abstract import logprob as logp_logprob
 from pymc.logprob.joint_logprob import factorized_joint_logprob
 from pymc.logprob.transforms import RVTransform, TransformValuesRewrite
+from pymc.pytensorf import floatX
 
 TOTAL_SIZE = Union[int, Sequence[int], None]
 

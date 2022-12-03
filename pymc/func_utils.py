@@ -13,8 +13,8 @@
 #   limitations under the License.
 from typing import Callable, Dict, Optional, Union
 
-import pytensor.tensor as aet
 import numpy as np
+import pytensor.tensor as aet
 
 from pytensor.gradient import NullTypeGradError
 from scipy import optimize

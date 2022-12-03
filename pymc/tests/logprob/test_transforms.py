@@ -34,16 +34,16 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 import pytest
 import scipy as sp
 import scipy.special
 
+from numdifftools import Jacobian
 from pytensor.graph.basic import equal_computations
 from pytensor.graph.fg import FunctionGraph
-from numdifftools import Jacobian
 
 from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
 from pymc.logprob.transforms import (
@@ -239,7 +239,9 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
     transform = a_trans_op.transform
 
     a_forward_fn = pytensor.function([a_value_var], transform.forward(a_value_var, *a.owner.inputs))
-    a_backward_fn = pytensor.function([a_value_var], transform.backward(a_value_var, *a.owner.inputs))
+    a_backward_fn = pytensor.function(
+        [a_value_var], transform.backward(a_value_var, *a.owner.inputs)
+    )
     log_jac_fn = pytensor.function(
         [a_value_var],
         transform.log_jac_det(a_value_var, *a.owner.inputs),

@@ -15,9 +15,9 @@
 
 from typing import Union
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 import pytest
 
 from pytensor.tensor.var import TensorConstant
@@ -25,8 +25,8 @@ from pytensor.tensor.var import TensorConstant
 import pymc as pm
 import pymc.distributions.transforms as tr
 
-from pymc.pytensorf import floatX, jacobian
 from pymc.distributions.logprob import _joint_logp
+from pymc.pytensorf import floatX, jacobian
 from pymc.tests.checks import close_to, close_to_logical
 from pymc.tests.distributions.util import (
     Circ,

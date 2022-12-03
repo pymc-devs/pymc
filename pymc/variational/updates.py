@@ -111,9 +111,9 @@ Taken from the Lasagne project: http://lasagne.readthedocs.io/en/latest/
 from collections import OrderedDict
 from functools import partial
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 
 import pymc as pm
 
@@ -749,7 +749,9 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
         # accu: accumulate gradient magnitudes
         accu = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
         # delta_accu: accumulate update magnitudes (recursively!)
-        delta_accu = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
+        delta_accu = pytensor.shared(
+            np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape
+        )
 
         # update accu (as in rmsprop)
         accu_new = rho * accu + (one - rho) * grad**2

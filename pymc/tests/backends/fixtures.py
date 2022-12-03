@@ -16,9 +16,9 @@ import collections
 import os
 import shutil
 
-import pytensor
 import numpy as np
 import numpy.testing as npt
+import pytensor
 import pytest
 
 from pymc.backends import base

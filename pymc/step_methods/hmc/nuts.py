@@ -18,8 +18,8 @@ from collections import namedtuple
 
 import numpy as np
 
-from pymc.pytensorf import floatX
 from pymc.math import logbern
+from pymc.pytensorf import floatX
 from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods.arraystep import Competence
 from pymc.step_methods.hmc import integration

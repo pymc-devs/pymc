@@ -1,7 +1,6 @@
 import numpy as np
 
 from pymc import Bernoulli, Censored, HalfCauchy, Mixture, StudentT
-from pymc.pytensorf import floatX
 from pymc.distributions import (
     Dirichlet,
     DirichletMultinomial,
@@ -15,6 +14,7 @@ from pymc.distributions import (
 )
 from pymc.math import dot
 from pymc.model import Deterministic, Model, Potential
+from pymc.pytensorf import floatX
 
 
 class BaseTestStrAndLatexRepr:

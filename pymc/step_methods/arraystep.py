@@ -18,8 +18,8 @@ from typing import Callable, Dict, List, Tuple, Union, cast
 
 import numpy as np
 
-from pytensor.graph.basic import Variable
 from numpy.random import uniform
+from pytensor.graph.basic import Variable
 
 from pymc.blocking import DictToArrayBijection, PointType, RaveledVars, StatsType
 from pymc.model import modelcontext

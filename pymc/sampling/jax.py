@@ -15,11 +15,12 @@ os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={10
 
 from datetime import datetime
 
-import pytensor.tensor as at
 import arviz as az
 import jax
 import numpy as np
+import pytensor.tensor as at
 
+from arviz.data.base import make_attrs
 from pytensor.compile import SharedVariable, Supervisor, mode
 from pytensor.graph.basic import clone_replace, graph_inputs
 from pytensor.graph.fg import FunctionGraph
@@ -27,7 +28,6 @@ from pytensor.link.jax.dispatch import jax_funcify
 from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.shape import SpecifyShape
-from arviz.data.base import make_attrs
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations

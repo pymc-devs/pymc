@@ -16,11 +16,11 @@ import functools as ft
 import re
 import warnings
 
-import pytensor
-import pytensor.tensor as at
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.special as sp
 import scipy.stats as st
@@ -30,7 +30,6 @@ from pytensor.tensor.random.utils import broadcast_params
 
 import pymc as pm
 
-from pymc.pytensorf import compile_pymc, floatX, intX
 from pymc.distributions import logp
 from pymc.distributions.multivariate import (
     _LKJCholeskyCov,
@@ -41,6 +40,7 @@ from pymc.distributions.multivariate import (
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.logprob.utils import ParameterValueError
 from pymc.math import kronecker
+from pymc.pytensorf import compile_pymc, floatX, intX
 from pymc.sampling.forward import draw
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,

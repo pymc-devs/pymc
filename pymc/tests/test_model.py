@@ -17,14 +17,14 @@ import traceback
 import unittest
 import warnings
 
-import pytensor
-import pytensor.sparse as sparse
-import pytensor.tensor as at
 import arviz as az
 import cloudpickle
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
+import pytensor
+import pytensor.sparse as sparse
+import pytensor.tensor as at
 import pytest
 import scipy.sparse as sps
 import scipy.stats as st

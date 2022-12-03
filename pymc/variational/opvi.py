@@ -51,14 +51,20 @@ import collections
 import itertools
 import warnings
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 
 from pytensor.graph.basic import Variable
 
 import pymc as pm
 
+from pymc.backends.base import MultiTrace
+from pymc.backends.ndarray import NDArray
+from pymc.blocking import DictToArrayBijection
+from pymc.distributions.logprob import _get_scaling
+from pymc.initial_point import make_initial_point_fn
+from pymc.model import modelcontext
 from pymc.pytensorf import (
     SeedSequenceSeed,
     at_rng,
@@ -67,12 +73,6 @@ from pymc.pytensorf import (
     identity,
     reseed_rngs,
 )
-from pymc.backends.base import MultiTrace
-from pymc.backends.ndarray import NDArray
-from pymc.blocking import DictToArrayBijection
-from pymc.distributions.logprob import _get_scaling
-from pymc.initial_point import make_initial_point_fn
-from pymc.model import modelcontext
 from pymc.util import (
     RandomState,
     WithMemoization,

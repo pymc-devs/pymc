@@ -18,16 +18,16 @@ import warnings
 from contextlib import ExitStack as does_not_raise
 from copy import copy
 
-import pytensor
-import pytensor.tensor as at
 import numpy as np
 import numpy.testing as npt
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.special
 
+from arviz import InferenceData
 from pytensor import shared
 from pytensor.compile.ops import as_op
-from arviz import InferenceData
 
 import pymc as pm
 

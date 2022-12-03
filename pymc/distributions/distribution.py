@@ -35,7 +35,6 @@ from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
-from pymc.pytensorf import convert_observed_data
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
@@ -54,6 +53,7 @@ from pymc.logprob.abstract import (
 )
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.printing import str_for_dist
+from pymc.pytensorf import convert_observed_data
 from pymc.util import UNSET, _add_future_warning_tag
 from pymc.vartypes import string_types
 

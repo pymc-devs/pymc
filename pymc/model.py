@@ -33,10 +33,10 @@ from typing import (
     cast,
 )
 
+import numpy as np
 import pytensor
 import pytensor.sparse as sparse
 import pytensor.tensor as at
-import numpy as np
 import scipy.sparse as sps
 
 from pytensor.compile.sharedvalue import SharedVariable
@@ -49,6 +49,12 @@ from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.sharedvar import ScalarSharedVariable
 from pytensor.tensor.var import TensorConstant, TensorVariable
 
+from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.data import GenTensorVariable, Minibatch
+from pymc.distributions.logprob import _joint_logp
+from pymc.distributions.transforms import _default_transform
+from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
+from pymc.initial_point import make_initial_point_fn
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
@@ -59,12 +65,6 @@ from pymc.pytensorf import (
     inputvars,
     replace_rvs_by_values,
 )
-from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.data import GenTensorVariable, Minibatch
-from pymc.distributions.logprob import _joint_logp
-from pymc.distributions.transforms import _default_transform
-from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
-from pymc.initial_point import make_initial_point_fn
 from pymc.util import (
     UNSET,
     WithMemoization,

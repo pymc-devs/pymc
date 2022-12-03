@@ -18,8 +18,8 @@ import warnings
 
 from typing import overload
 
-import pytensor
 import numpy as np
+import pytensor
 import scipy.linalg
 
 from numpy.random import normal

@@ -14,8 +14,8 @@
 
 import warnings
 
-import pytensor.tensor as at
 import numpy as np
+import pytensor.tensor as at
 
 from pytensor.tensor.nlinalg import eigh
 

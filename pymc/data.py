@@ -22,9 +22,9 @@ import warnings
 from copy import copy
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 
+import numpy as np
 import pytensor
 import pytensor.tensor as at
-import numpy as np
 
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Apply

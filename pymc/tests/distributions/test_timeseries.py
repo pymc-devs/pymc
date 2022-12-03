@@ -11,8 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import pytensor
 import numpy as np
+import pytensor
 import pytest
 import scipy.stats as st
 
@@ -21,7 +21,6 @@ from pytensor.tensor.random.op import RandomVariable
 import pymc as pm
 
 from pymc import MutableData
-from pymc.pytensorf import floatX
 from pymc.distributions.continuous import Exponential, Flat, HalfNormal, Normal, Uniform
 from pymc.distributions.discrete import DiracDelta
 from pymc.distributions.logprob import logp
@@ -42,6 +41,7 @@ from pymc.distributions.timeseries import (
     RandomWalk,
 )
 from pymc.model import Model
+from pymc.pytensorf import floatX
 from pymc.sampling.forward import draw, sample_posterior_predictive
 from pymc.sampling.mcmc import sample
 from pymc.tests.distributions.util import assert_moment_is_expected

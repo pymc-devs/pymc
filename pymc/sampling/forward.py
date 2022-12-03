@@ -34,6 +34,8 @@ from typing import (
 import numpy as np
 import xarray
 
+from arviz import InferenceData
+from fastprogress.fastprogress import progress_bar
 from pytensor import tensor as at
 from pytensor.graph.basic import (
     Apply,
@@ -49,17 +51,15 @@ from pytensor.tensor.random.var import (
     RandomStateSharedVariable,
 )
 from pytensor.tensor.sharedvar import SharedVariable
-from arviz import InferenceData
-from fastprogress.fastprogress import progress_bar
 from typing_extensions import TypeAlias
 
 import pymc as pm
 
-from pymc.pytensorf import compile_pymc
 from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
 from pymc.model import Model, modelcontext
+from pymc.pytensorf import compile_pymc
 from pymc.util import (
     RandomState,
     _get_seeds_per_chain,

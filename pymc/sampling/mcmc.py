@@ -24,8 +24,8 @@ from collections import defaultdict
 from copy import copy
 from typing import Iterator, List, Optional, Sequence, Tuple, Union
 
-import pytensor.gradient as tg
 import numpy as np
+import pytensor.gradient as tg
 
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
