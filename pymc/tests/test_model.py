@@ -17,9 +17,9 @@ import traceback
 import unittest
 import warnings
 
-import aesara
-import aesara.sparse as sparse
-import aesara.tensor as at
+import pytensor
+import pytensor.sparse as sparse
+import pytensor.tensor as at
 import arviz as az
 import cloudpickle
 import numpy as np
@@ -29,11 +29,11 @@ import pytest
 import scipy.sparse as sps
 import scipy.stats as st
 
-from aesara.graph import graph_inputs
-from aesara.tensor import TensorVariable
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.sharedvar import ScalarSharedVariable
-from aesara.tensor.var import TensorConstant
+from pytensor.graph import graph_inputs
+from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.sharedvar import ScalarSharedVariable
+from pytensor.tensor.var import TensorConstant
 
 import pymc as pm
 
@@ -211,7 +211,7 @@ class TestObserved:
 
     def test_observed_type(self):
         X_ = pm.floatX(np.random.randn(100, 5))
-        X = pm.floatX(aesara.shared(X_))
+        X = pm.floatX(pytensor.shared(X_))
         with pm.Model():
             x1 = pm.Normal("x1", observed=X_)
             x2 = pm.Normal("x2", observed=X)
@@ -364,10 +364,10 @@ class TestValueGradFunction(unittest.TestCase):
         # Assert that all the elements of res are equal
         assert res[1:] == res[:-1]
 
-    def test_aesara_switch_broadcast_edge_cases_1(self):
+    def test_pytensor_switch_broadcast_edge_cases_1(self):
         # Tests against two subtle issues related to a previous bug in Theano
         # where `tt.switch` would not always broadcast tensors with single
-        # values https://github.com/pymc-devs/aesara/issues/270
+        # values https://github.com/pymc-devs/pytensor/issues/270
 
         # Known issue 1: https://github.com/pymc-devs/pymc/issues/4389
         data = pm.floatX(np.zeros(10))
@@ -380,7 +380,7 @@ class TestValueGradFunction(unittest.TestCase):
             np.log(0.5) * 10,
         )
 
-    def test_aesara_switch_broadcast_edge_cases_2(self):
+    def test_pytensor_switch_broadcast_edge_cases_2(self):
         # Known issue 2: https://github.com/pymc-devs/pymc/issues/4417
         # fmt: off
         data = np.array([
@@ -414,7 +414,7 @@ def test_tempered_logp_dlogp():
     with pm.Model() as model:
         pm.Normal("x")
         pm.Normal("y", observed=1)
-        pm.Potential("z", at.constant(-1.0, dtype=aesara.config.floatX))
+        pm.Potential("z", at.constant(-1.0, dtype=pytensor.config.floatX))
 
     func = model.logp_dlogp_function()
     func.set_extra_values({})
@@ -523,7 +523,7 @@ def test_make_obs_var():
     Check returned values for `data` given known inputs to `as_tensor()`.
 
     Note that ndarrays should return a TensorConstant and sparse inputs
-    should return a Sparse Aesara object.
+    should return a Sparse PyTensor object.
     """
     # Create the various inputs to the function
     input_name = "testing_inputs"
@@ -574,14 +574,14 @@ def test_initial_point():
         a = pm.Uniform("a")
         x = pm.Normal("x", a)
 
-    b_initval = np.array(0.3, dtype=aesara.config.floatX)
+    b_initval = np.array(0.3, dtype=pytensor.config.floatX)
 
     with pytest.warns(FutureWarning), model:
         b = pm.Uniform("b", testval=b_initval)
 
     b_initval_trans = model.rvs_to_transforms[b].forward(b_initval, *b.owner.inputs).eval()
 
-    y_initval = np.array(-2.4, dtype=aesara.config.floatX)
+    y_initval = np.array(-2.4, dtype=pytensor.config.floatX)
 
     with model:
         y = pm.Normal("y", initval=y_initval)
@@ -1058,11 +1058,11 @@ def test_compile_fn():
     np.testing.assert_allclose(result_compute, result_expect)
 
 
-def test_model_aesara_config():
-    assert aesara.config.mode != "JAX"
-    with pm.Model(aesara_config=dict(mode="JAX")) as model:
-        assert aesara.config.mode == "JAX"
-    assert aesara.config.mode != "JAX"
+def test_model_pytensor_config():
+    assert pytensor.config.mode != "JAX"
+    with pm.Model(pytensor_config=dict(mode="JAX")) as model:
+        assert pytensor.config.mode == "JAX"
+    assert pytensor.config.mode != "JAX"
 
 
 def test_model_parent_set_programmatically():
@@ -1454,7 +1454,7 @@ class TestShared(SeededTest):
     def test_deterministic(self):
         with pm.Model() as model:
             data_values = np.array([0.5, 0.4, 5, 2])
-            X = aesara.shared(np.asarray(data_values, dtype=aesara.config.floatX), borrow=True)
+            X = pytensor.shared(np.asarray(data_values, dtype=pytensor.config.floatX), borrow=True)
             pm.Normal("y", 0, 1, observed=X)
             assert np.all(
                 np.isclose(model.compile_logp(sum=False)({}), st.norm().logpdf(data_values))

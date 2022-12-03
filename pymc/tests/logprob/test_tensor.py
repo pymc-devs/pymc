@@ -34,15 +34,15 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import aesara
+import pytensor
 import numpy as np
 import pytest
 
-from aesara import tensor as at
-from aesara.graph import RewriteDatabaseQuery
-from aesara.graph.rewriting.basic import in2out
-from aesara.graph.rewriting.utils import rewrite_graph
-from aesara.tensor.extra_ops import BroadcastTo
+from pytensor import tensor as at
+from pytensor.graph import RewriteDatabaseQuery
+from pytensor.graph.rewriting.basic import in2out
+from pytensor.graph.rewriting.utils import rewrite_graph
+from pytensor.tensor.extra_ops import BroadcastTo
 from scipy import stats as st
 
 from pymc.logprob import factorized_joint_logprob, joint_logprob
@@ -230,7 +230,7 @@ def test_join_mixed_ndim_supp():
         joint_logprob({y_rv: y_vv})
 
 
-@aesara.config.change_flags(cxx="")
+@pytensor.config.change_flags(cxx="")
 @pytest.mark.parametrize(
     "ds_order",
     [
@@ -275,8 +275,8 @@ def test_measurable_dimshuffle(ds_order, multivariate):
     ds_logp = joint_logprob({ds_rv: ds_vv}, sum=False, ir_rewriter=ir_rewriter)
     assert ds_logp is not None
 
-    ref_logp_fn = aesara.function([base_vv], ref_logp)
-    ds_logp_fn = aesara.function([ds_vv], ds_logp)
+    ref_logp_fn = pytensor.function([base_vv], ref_logp)
+    ds_logp_fn = pytensor.function([ds_vv], ds_logp)
 
     base_test_value = base_rv.eval()
     ds_test_value = at.constant(base_test_value).dimshuffle(ds_order).eval()

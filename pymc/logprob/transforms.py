@@ -40,22 +40,22 @@ from copy import copy
 from functools import partial, singledispatch
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
-import aesara.tensor as at
+import pytensor.tensor as at
 
-from aesara.gradient import DisconnectedType, jacobian
-from aesara.graph.basic import Apply, Node, Variable
-from aesara.graph.features import AlreadyThere, Feature
-from aesara.graph.fg import FunctionGraph
-from aesara.graph.op import Op
-from aesara.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
-from aesara.scalar import Add, Exp, Log, Mul
-from aesara.tensor.elemwise import Elemwise
-from aesara.tensor.rewriting.basic import (
+from pytensor.gradient import DisconnectedType, jacobian
+from pytensor.graph.basic import Apply, Node, Variable
+from pytensor.graph.features import AlreadyThere, Feature
+from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.op import Op
+from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
+from pytensor.scalar import Add, Exp, Log, Mul
+from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.rewriting.basic import (
     register_specialize,
     register_stabilize,
     register_useless,
 )
-from aesara.tensor.var import TensorVariable
+from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,

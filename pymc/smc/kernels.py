@@ -18,14 +18,14 @@ import warnings
 from abc import ABC
 from typing import Dict, cast
 
-import aesara.tensor as at
+import pytensor.tensor as at
 import numpy as np
 
-from aesara.graph.basic import clone_replace
+from pytensor.graph.basic import clone_replace
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
-from pymc.aesaraf import (
+from pymc.pytensorf import (
     compile_pymc,
     floatX,
     join_nonshared_inputs,
@@ -595,7 +595,7 @@ def systematic_resampling(weights, rng):
 
 
 def _logp_forw(point, out_vars, in_vars, shared):
-    """Compile Aesara function of the model and the input and output variables.
+    """Compile PyTensor function of the model and the input and output variables.
 
     Parameters
     ----------

@@ -40,7 +40,7 @@ jobs:
           - |
             pymc/tests/test_util.py
             pymc/tests/distributions/test_logprob.py
-            pymc/tests/test_aesaraf.py
+            pymc/tests/test_pytensorf.py
             pymc/tests/test_math.py
             pymc/tests/backends/test_base.py
             pymc/tests/backends/test_ndarray.py
@@ -102,7 +102,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      AESARA_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
     defaults:
       run:
         shell: bash -l {0}
@@ -173,7 +173,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      AESARA_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
     defaults:
       run:
         shell: cmd
@@ -252,7 +252,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      AESARA_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
     defaults:
       run:
         shell: bash -l {0}
@@ -317,7 +317,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      AESARA_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
     defaults:
       run:
         shell: bash -l {0}
@@ -387,7 +387,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      AESARA_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
     defaults:
       run:
         shell: cmd

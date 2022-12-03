@@ -4,7 +4,7 @@ orphan: true
 
 # PyMC Developer Guide
 
-{doc}`PyMC <index>` is a Python package for Bayesian statistical modeling built on top of {doc}`Aesara <aesara:index>`.
+{doc}`PyMC <index>` is a Python package for Bayesian statistical modeling built on top of {doc}`PyTensor <pytensor:index>`.
 This document aims to explain the design and implementation of probabilistic programming in PyMC, with comparisons to other PPLs like TensorFlow Probability (TFP) and Pyro.
 A user-facing API introduction can be found in the {ref}`API quickstart <pymc_overview>`.
 A more accessible, user facing deep introduction can be found in [Peadar Coyle's probabilistic programming primer](https://github.com/springcoil/probabilisticprogrammingprimer).
@@ -34,8 +34,8 @@ $$
 z \sim \text{Normal}(0, 5)
 $$
 
-A call to a {class}`~pymc.Distribution` constructor as shown above returns an Aesara {class}`~aesara.tensor.TensorVariable`, which is a symbolic representation of the model variable and the graph of inputs it depends on.
-Under the hood, the variables are created through the {meth}`~pymc.Distribution.dist` API, which calls the {class}`~aesara.tensor.random.basic.RandomVariable` {class}`~aesara.graph.op.Op` corresponding to the distribution.
+A call to a {class}`~pymc.Distribution` constructor as shown above returns an PyTensor {class}`~pytensor.tensor.TensorVariable`, which is a symbolic representation of the model variable and the graph of inputs it depends on.
+Under the hood, the variables are created through the {meth}`~pymc.Distribution.dist` API, which calls the {class}`~pytensor.tensor.random.basic.RandomVariable` {class}`~pytensor.graph.op.Op` corresponding to the distribution.
 
 At a high level of abstraction, the idea behind ``RandomVariable`` ``Op``s is to create symbolic variables (``TensorVariable``s) that can be associated with the properties of a probability distribution.
 For example, the ``RandomVariable`` ``Op`` which becomes part of the symbolic computation graph is associated with the random number generators or probability mass/density functions of the distribution.
@@ -46,8 +46,8 @@ In the example above, where the ``TensorVariable`` ``z`` is created to be {math}
 with pm.Model():
     z = pm.Normal("z", 0, 5)
 print(type(z.owner.op))
-# ==> aesara.tensor.random.basic.NormalRV
-isinstance(z.owner.op, aesara.tensor.random.basic.RandomVariable)
+# ==> pytensor.tensor.random.basic.NormalRV
+isinstance(z.owner.op, pytensor.tensor.random.basic.RandomVariable)
 # ==> True
 ```
 
@@ -71,12 +71,12 @@ ln(0.070413) &= -2.6533
 \end{aligned}
 $$
 
-In the probabilistic programming context, this enables PyMC and its backend libraries aeppl and Aesara to create and evaluate computation graphs to compute, for example log-prior or log-likelihood values.
+In the probabilistic programming context, this enables PyMC and its backend PyTensor to create and evaluate computation graphs to compute, for example log-prior or log-likelihood values.
 
 
 ## PyMC in Comparison
 
-Within the PyMC model context, random variables are essentially Aesara tensors that can be used in all kinds of operations as if they were NumPy arrays.
+Within the PyMC model context, random variables are essentially PyTensor tensors that can be used in all kinds of operations as if they were NumPy arrays.
 This is different compared to TFP and pyro, where one needs to be more explicit about the conversion from random variables to tensors.
 
 Consider the following examples, which implement the below model.
@@ -92,8 +92,8 @@ $$
 
 ```python
 with pm.Model() as model:
-    z = pm.Normal('z', mu=0., sigma=5.)             # ==> aesara.tensor.var.TensorVariable
-    x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> aesara.tensor.var.TensorVariable
+    z = pm.Normal('z', mu=0., sigma=5.)             # ==> pytensor.tensor.var.TensorVariable
+    x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> pytensor.tensor.var.TensorVariable
 # The log-prior of z=2.5
 pm.logp(z, 2.5).eval()                              # ==> -2.65337645
 # ???????
@@ -134,7 +134,7 @@ model_logp                                       # ==> -6.6973152
 
 ## Behind the scenes of the ``logp`` function
 
-The ``logp`` function is straightforward - it is an Aesara function within each distribution.
+The ``logp`` function is straightforward - it is an PyTensor function within each distribution.
 It has the following signature:
 
 :::{warning}
@@ -145,21 +145,21 @@ The code block is outdated.
 def logp(self, value):
     # GET PARAMETERS
     param1, param2, ... = self.params1, self.params2, ...
-    # EVALUATE LOG-LIKELIHOOD FUNCTION, all inputs are (or array that could be convert to) Aesara tensor
+    # EVALUATE LOG-LIKELIHOOD FUNCTION, all inputs are (or array that could be convert to) PyTensor tensor
     total_log_prob = f(param1, param2, ..., value)
     return total_log_prob
 ```
 
-In the ``logp`` method, parameters and values are either Aesara tensors, or could be converted to tensors.
-It is rather convenient as the evaluation of logp is represented as a tensor (``RV.logpt``), and when we linked different ``logp`` together (e.g., summing all ``RVs.logpt`` to get the model total logp) the dependence  is taken care of by Aesara when the graph is built and compiled.
+In the ``logp`` method, parameters and values are either PyTensor tensors, or could be converted to tensors.
+It is rather convenient as the evaluation of logp is represented as a tensor (``RV.logpt``), and when we linked different ``logp`` together (e.g., summing all ``RVs.logpt`` to get the model total logp) the dependence  is taken care of by PyTensor when the graph is built and compiled.
 Again, since the compiled function depends on the nodes that already in the graph, whenever you want to generate a new function that takes new input tensors you either need to regenerate the graph with the appropriate dependencies, or replace the node by editing the existing graph.
-In PyMC we use the second approach by using ``aesara.clone_replace()`` when it is needed.
+In PyMC we use the second approach by using ``pytensor.clone_replace()`` when it is needed.
 
 As explained above, distribution in a ``pm.Model()`` context automatically turn into a tensor with distribution property (PyMC random variable).
 To get the logp of a free\_RV is just evaluating the ``logp()`` [on itself](https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/model.py#L1212-L1213):
 
 ```python
-# self is a aesara.tensor with a distribution attached
+# self is a pytensor.tensor with a distribution attached
 self.logp_sum_unscaledt = distribution.logp_sum(self)
 self.logp_nojac_unscaledt = distribution.logp_nojac(self)
 ```
@@ -214,7 +214,7 @@ Thus, we have two equivalent ways of adding random variable to a model:
 with pm.Model() as m:
     x = pm.Normal('x', mu=0., sigma=1.)
 
-print(type(x))                              # ==> <class 'aesara.tensor.var.TensorVariable'>
+print(type(x))                              # ==> <class 'pytensor.tensor.var.TensorVariable'>
 print(m.free_RVs)                           # ==> [x]
 print(logpt(x, 5.0))                        # ==> Elemwise{switch,no_inplace}.0
 print(logpt(x, 5.).eval({}))                # ==> -13.418938533204672
@@ -259,7 +259,7 @@ possible (see also in
 
 
 Now, back to ``model.RV(...)`` - things returned from ``model.RV(...)``
-are Aesara tensor variables, and it is clear from looking at
+are PyTensor tensor variables, and it is clear from looking at
 ``TransformedRV``:
 
 .. code:: python
@@ -277,7 +277,7 @@ as for ``FreeRV`` and ``ObservedRV``, they are ``TensorVariable``\s with
 
 ``Factor`` basically `enable and assign the
 logp <https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/model.py#L195-L276>`__
-(representated as a tensor also) property to an Aesara tensor (thus
+(representated as a tensor also) property to an PyTensor tensor (thus
 making it a random variable). For a ``TransformedRV``, it transforms the
 distribution into a ``TransformedDistribution``, and then ``model.Var`` is
 called again to added the RV associated with the
@@ -317,9 +317,9 @@ In a way, ``pm.Model`` is a tape machine that records what is being added to the
 * deterministics
 * potentials
 * missing\_values
-The model context then computes some simple model properties, builds a bijection mapping that transforms between dictionary and numpy/Aesara ndarray, thus allowing the ``logp``/``dlogp`` functions to have two equivalent versions:
+The model context then computes some simple model properties, builds a bijection mapping that transforms between dictionary and numpy/PyTensor ndarray, thus allowing the ``logp``/``dlogp`` functions to have two equivalent versions:
 One takes a ``dict`` as input and the other takes an ``ndarray`` as input.
-More importantly, a ``pm.Model()`` contains methods to compile Aesara functions that take Random Variables (that are also initialised within the same model) as input, for example:
+More importantly, a ``pm.Model()`` contains methods to compile PyTensor functions that take Random Variables (that are also initialised within the same model) as input, for example:
 
 ```python
 with pm.Model() as m:
@@ -365,7 +365,7 @@ The model collects all the random variables (everything in ``model.free_RVs`` an
 ```python
 @property
 def logpt(self):
-    """Aesara scalar of log-probability of the model"""
+    """PyTensor scalar of log-probability of the model"""
     with self:
         factors = [var.logpt for var in self.basic_RVs] + self.potentials
         logp = at.sum([at.sum(factor) for factor in factors])
@@ -373,10 +373,10 @@ def logpt(self):
         return logp
 ```
 
-which returns an Aesara tensor that its value depends on the free parameters in the model (i.e., its parent nodes from the Aesara graph).
+which returns an PyTensor tensor that its value depends on the free parameters in the model (i.e., its parent nodes from the PyTensor graph).
 You can evaluate or compile into a python callable (that you can pass numpy as input args).
-Note that the logp tensor depends on its input in the Aesara graph, thus you cannot pass new tensor to generate a logp function.
-For similar reason, in PyMC we do graph copying a lot using aesara.clone_replace to replace the inputs to a tensor.
+Note that the logp tensor depends on its input in the PyTensor graph, thus you cannot pass new tensor to generate a logp function.
+For similar reason, in PyMC we do graph copying a lot using pytensor.clone_replace to replace the inputs to a tensor.
 
 ```python
 with pm.Model() as m:
@@ -388,7 +388,7 @@ print(m.basic_RVs)    # ==> [z, x, y]
 print(m.free_RVs)     # ==> [z, x]
 
 type(m.logpt)
-# aesara.tensor.var.TensorVariable
+# pytensor.tensor.var.TensorVariable
 
 m.logpt.eval({x: np.random.randn(*x.tag.test_value.shape) for x in m.free_RVs})
 # array(-51.25369126)
@@ -410,8 +410,8 @@ def logp_dlogp_function(self, grad_vars=None, **kwargs):
     return ValueGradFunction(self.logpt, grad_vars, extra_vars, **kwargs)
 ```
 
-``ValueGradFunction`` is a callable class which isolates part of the Aesara graph to compile additional Aesara functions.
-PyMC relies on ``aesara.clone_replace`` to copy the ``model.logpt`` and replace its input.
+``ValueGradFunction`` is a callable class which isolates part of the PyTensor graph to compile additional PyTensor functions.
+PyMC relies on ``pytensor.clone_replace`` to copy the ``model.logpt`` and replace its input.
 It does not edit or rewrite the graph directly.
 
 The important parts of the above function is highlighted and commented.
@@ -465,16 +465,16 @@ func_conditional(input_array2)
 
 So why is this necessary?
 One can imagine that we just compile one logp function, and do bookkeeping ourselves.
-For example, we can build the logp function in Aesara directly:
+For example, we can build the logp function in PyTensor directly:
 
 ```python
-import aesara
-func = aesara.function(m.free_RVs, m.logpt)
+import pytensor
+func = pytensor.function(m.free_RVs, m.logpt)
 func(*inputlist)
 # array(-51.0769075)
 
-logpt_grad = aesara.grad(m.logpt, m.free_RVs)
-func_d = aesara.function(m.free_RVs, logpt_grad)
+logpt_grad = pytensor.grad(m.logpt, m.free_RVs)
+func_d = pytensor.function(m.free_RVs, logpt_grad)
 func_d(*inputlist)
 # [array([ 0.74230226,  0.01658948,  1.38606194,  0.11253699, -1.07003284,
 #          2.64302891,  1.12497754, -0.35967542, -1.18117557, -1.11489642]),
@@ -486,13 +486,13 @@ func_d(*inputlist)
 Similarly, build a conditional logp:
 
 ```python
-shared = aesara.shared(inputlist[1])
-func2 = aesara.function([m.free_RVs[0]], m.logpt, givens=[(m.free_RVs[1], shared)])
+shared = pytensor.shared(inputlist[1])
+func2 = pytensor.function([m.free_RVs[0]], m.logpt, givens=[(m.free_RVs[1], shared)])
 print(func2(inputlist[0]))
 # -51.07690750130328
 
-logpt_grad2 = aesara.grad(m.logpt, m.free_RVs[0])
-func_d2 = aesara.function([m.free_RVs[0]], logpt_grad2, givens=[(m.free_RVs[1], shared)])
+logpt_grad2 = pytensor.grad(m.logpt, m.free_RVs[0])
+func_d2 = pytensor.function([m.free_RVs[0]], logpt_grad2, givens=[(m.free_RVs[1], shared)])
 print(func_d2(inputlist[0]))
 # [ 0.74230226  0.01658948  1.38606194  0.11253699 -1.07003284  2.64302891
 #   1.12497754 -0.35967542 -1.18117557 -1.11489642]
@@ -502,7 +502,7 @@ The above also gives the same logp and gradient as the output from ``model.logp_
 But the difficulty is to compile everything into a single function:
 
 ```python
-func_logp_and_grad = aesara.function(m.free_RVs, [m.logpt, logpt_grad])
+func_logp_and_grad = pytensor.function(m.free_RVs, [m.logpt, logpt_grad])
 # ==> ERROR
 ```
 
@@ -511,15 +511,15 @@ We want to have a function that return the evaluation and its gradient re each i
 We can of course wrap 2 functions - one for logp one for dlogp - and output a list.
 But that would mean we need to call 2 functions.
 In addition, when we write code using python logic to do bookkeeping when we build our conditional logp.
-Using ``aesara.clone_replace``, we always have the input to the Aesara function being a 1d vector (instead of a list of RV that each can have very different shape), thus it is very easy to do matrix operation like rotation etc.
+Using ``pytensor.clone_replace``, we always have the input to the PyTensor function being a 1d vector (instead of a list of RV that each can have very different shape), thus it is very easy to do matrix operation like rotation etc.
 
 ### Notes
-The current setup is quite powerful, as the Aesara compiled function is fairly fast to compile and to call.
+The current setup is quite powerful, as the PyTensor compiled function is fairly fast to compile and to call.
 Also, when we are repeatedly calling a conditional logp function, external RV only need to reset once.
-However, there are still significant overheads when we are passing values between Aesara graph and NumPy.
+However, there are still significant overheads when we are passing values between PyTensor graph and NumPy.
 That is the reason we often see no advantage in using GPU, because the data is copying between GPU and CPU at each function call - and for a small model, the result is a slower inference under GPU than CPU.
 
-Also, ``aesara.clone_replace`` is too convenient (PyMC internal joke is that it is like a drug - very addictive).
+Also, ``pytensor.clone_replace`` is too convenient (PyMC internal joke is that it is like a drug - very addictive).
 If all the operation happens in the graph (including the conditioning and setting value), I see no need to isolate part of the graph (via graph copying or graph rewriting) for building model and running inference.
 
 Moreover, if we are limiting to the problem that we can solved most confidently - model with all continous unknown parameters that could be sampled with dynamic HMC, there is even less need to think about graph cloning/rewriting.
@@ -559,13 +559,13 @@ Moreover, transition kernels in TFP do not flatten the tensors, see eg docstring
 
 #### Dynamic HMC
 We love NUTS, or to be more precise Dynamic HMC with complex stopping rules.
-This part is actually all done outside of Aesara, for NUTS, it includes:
+This part is actually all done outside of PyTensor, for NUTS, it includes:
 The leapfrog, dual averaging, tunning of mass matrix and step size, the tree building, sampler related statistics like divergence and energy checking.
-We actually have an Aesara version of HMC, but it has never been used, and has been removed from the main repository.
+We actually have an PyTensor version of HMC, but it has never been used, and has been removed from the main repository.
 It can still be found in the [git history](https://github.com/pymc-devs/pymc/pull/3734/commits/0fdae8207fd14f66635f3673ef267b2b8817aa68), though.
 
 #### Variational Inference (VI)
-The design of the VI module takes a different approach than MCMC - it has a functional design, and everything is done within Aesara (i.e., Optimization and building the variational objective).
+The design of the VI module takes a different approach than MCMC - it has a functional design, and everything is done within PyTensor (i.e., Optimization and building the variational objective).
 The base class of variational inference is [pymc.variational.Inference](https://github.com/pymc-devs/pymc/blob/main/pymc/variational/inference.py), where it builds the objective function by calling:
 
 ```python
@@ -615,28 +615,28 @@ def apply(self, f):
 ```
 
 Since the logp and logq are from the approximation, let's dive in further on it (there is another abstraction here - ``Group`` - that allows you to combine approximation into new approximation, but we will skip this for now and only consider ``SingleGroupApproximation`` like ``MeanField``):
-The definition of ``datalogp_norm``, ``logq_norm``, ``varlogp_norm`` are in [variational/opvi](https://github.com/pymc-devs/pymc/blob/main/pymc/variational/opvi.py), strip away the normalizing term, ``datalogp`` and ``varlogp`` are expectation of the variational free\_RVs and data logp - we clone the datalogp and varlogp from the model, replace its input with Aesara tensor that [samples from the variational posterior](https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/variational/opvi.py#L1098-L1111).
+The definition of ``datalogp_norm``, ``logq_norm``, ``varlogp_norm`` are in [variational/opvi](https://github.com/pymc-devs/pymc/blob/main/pymc/variational/opvi.py), strip away the normalizing term, ``datalogp`` and ``varlogp`` are expectation of the variational free\_RVs and data logp - we clone the datalogp and varlogp from the model, replace its input with PyTensor tensor that [samples from the variational posterior](https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/variational/opvi.py#L1098-L1111).
 For ADVI, these samples are from [a Gaussian](https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/variational/approximations.py#L84-L89).
 Note that the samples from the posterior approximations are usually 1 dimension more, so that we can compute the expectation and get the gradient of the expectation (by computing the [expectation of the gradient!](http://blog.shakirm.com/2015/10/machine-learning-trick-of-the-day-4-reparameterisation-tricks/)).
 As for the [`logq`` since it is a Gaussian `it is pretty straightforward to evaluate](https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/variational/approximations.py#L91-L97).
 
 ##### Some challenges and insights from implementing VI.
--  Graph based approach was helpful, but Aesara had no direct access to previously created nodes in the computational graph.
+-  Graph based approach was helpful, but PyTensor had no direct access to previously created nodes in the computational graph.
    You can find a lot of ``@node_property`` usages in implementation.
    This is done to cache nodes.
    TensorFlow has graph utils for that that could potentially help in doing this.
    On the other hand graph management in Tensorflow seemed to more tricky than expected.
    The high level reason is that graph is an add only container.
 -  There were few fixed bugs not obvoius in the first place.
-   Aesara has a tool to manipulate the graph (``aesara.clone_replace``) and this tool requires extremely careful treatment when doing a lot of graph replacements at different level.
--  We coined a term ``aesara.clone_replace`` curse.
+   PyTensor has a tool to manipulate the graph (``pytensor.clone_replace``) and this tool requires extremely careful treatment when doing a lot of graph replacements at different level.
+-  We coined a term ``pytensor.clone_replace`` curse.
    We got extremely dependent on this feature.
    Internal usages are uncountable:
    -  We use this to [vectorize the model](https://github.com/pymc-devs/pymc/blob/main/pymc/model.py#L972) for both MCMC and VI to speed up computations
    -  We use this to [create sampling graph](https://github.com/pymc-devs/pymc/blob/main/pymc/variational/opvi.py#L1483) for VI. This is the case you want posterior predictive as a part of computational graph.
 
 As this is the core of the VI process, we were trying to replicate this pattern in TF.
-However, when ``aesara.clone_replace`` is called, Aesara creates a new part of the graph that can be collected by garbage collector, but TF's graph is add only.
+However, when ``pytensor.clone_replace`` is called, PyTensor creates a new part of the graph that can be collected by garbage collector, but TF's graph is add only.
 So we should solve the problem of replacing input in a different way.
 
 ### Forward sampling
@@ -669,7 +669,7 @@ There are also other error related random sample generation (e.g., [Mixture is c
     -  [Inferencing Linear Mixed Model with EM.ipynb](https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/master/Ports/Inferencing%20Linear%20Mixed%20Model%20with%20EM.ipynb)
     -  [Laplace approximation in  pymc.ipynb](https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/master/Ports/Laplace%20approximation%20in%20pymc.ipynb)
 -  Connecting it to other library within a model
-    -  Using "black box" likelihood function by creating a custom Aesara Op.
+    -  Using "black box" likelihood function by creating a custom PyTensor Op.
     -  Using emcee
 -  Using other library for inference
     -  Connecting to Julia for solving ODE (with gradient for solution that can be used in NUTS)
@@ -684,7 +684,7 @@ I implemented quite a lot of patches for mixture distribution, but still they ar
 
 #### Random methods in numpy
 There is a lot of complex logic for sampling from random variables, and because it is all in Python, we can't transform a sampling graph further.
-Unfortunately, Aesara does not have code to sample from various distributions and we didn't want to write that our own.
+Unfortunately, PyTensor does not have code to sample from various distributions and we didn't want to write that our own.
 
 #### Samplers are in Python
-While having the samplers be written in Python allows for a lot of flexibility and intuitive for experiment (writing e.g. NUTS in Aesara is also very difficult), it comes at a performance penalty and makes sampling on the GPU very inefficient because memory needs to be copied for every logp evaluation.
+While having the samplers be written in Python allows for a lot of flexibility and intuitive for experiment (writing e.g. NUTS in PyTensor is also very difficult), it comes at a performance penalty and makes sampling on the GPU very inefficient because memory needs to be copied for every logp evaluation.

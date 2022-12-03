@@ -13,15 +13,15 @@
 #   limitations under the License.
 import warnings
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
 import pytest
 import scipy.stats as st
 
-from aesara.tensor import TensorVariable
+from pytensor.tensor import TensorVariable
 
 import pymc as pm
 
@@ -237,10 +237,10 @@ class TestDensityDist:
             mu = pm.Normal("mu", size=supp_shape)
             a = pm.DensityDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
 
-        mu_test_value = npr.normal(loc=0, scale=1, size=supp_shape).astype(aesara.config.floatX)
+        mu_test_value = npr.normal(loc=0, scale=1, size=supp_shape).astype(pytensor.config.floatX)
         a_test_value = npr.normal(
             loc=mu_test_value, scale=1, size=to_tuple(size) + (supp_shape,)
-        ).astype(aesara.config.floatX)
+        ).astype(pytensor.config.floatX)
         log_densityf = model.compile_logp(vars=[a], sum=False)
         assert log_densityf({"a": a_test_value, "mu": mu_test_value})[0].shape == to_tuple(size)
 
@@ -265,7 +265,7 @@ class TestDensityDist:
         def density_moment(rv, size, mu):
             return (at.ones(size) * mu).astype(rv.dtype)
 
-        mu_val = np.array(np.random.normal(loc=2, scale=1)).astype(aesara.config.floatX)
+        mu_val = np.array(np.random.normal(loc=2, scale=1)).astype(pytensor.config.floatX)
         with pm.Model():
             mu = pm.Normal("mu")
             a = pm.DensityDist("a", mu, moment=density_moment, size=size)
@@ -278,7 +278,7 @@ class TestDensityDist:
         def density_moment(rv, size, mu):
             return (at.ones(size)[..., None] * mu).astype(rv.dtype)
 
-        mu_val = np.random.normal(loc=2, scale=1, size=5).astype(aesara.config.floatX)
+        mu_val = np.random.normal(loc=2, scale=1, size=5).astype(pytensor.config.floatX)
         with pm.Model():
             mu = pm.Normal("mu", size=5)
             a = pm.DensityDist(
@@ -307,7 +307,7 @@ class TestDensityDist:
         else:
             random = None
 
-        mu_val = np.random.normal(loc=2, scale=1, size=5).astype(aesara.config.floatX)
+        mu_val = np.random.normal(loc=2, scale=1, size=5).astype(pytensor.config.floatX)
         with pm.Model():
             mu = pm.Normal("mu", size=5)
             a = pm.DensityDist("a", mu, random=random, ndims_params=[1], ndim_supp=1, size=size)

@@ -16,16 +16,16 @@ import warnings
 
 from typing import Tuple
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
 import pytest
 import xarray as xr
 
-from aesara import Mode, shared
-from aesara.compile import SharedVariable
+from pytensor import Mode, shared
+from pytensor.compile import SharedVariable
 from arviz import InferenceData
 from arviz import from_dict as az_from_dict
 from arviz.tests.helpers import check_multiple_attrs
@@ -33,7 +33,7 @@ from scipy import stats
 
 import pymc as pm
 
-from pymc.aesaraf import compile_pymc
+from pymc.pytensorf import compile_pymc
 from pymc.backends.base import MultiTrace
 from pymc.sampling.forward import (
     compile_forward_sampling_function,
@@ -98,8 +98,8 @@ class TestDraw(SeededTest):
         x_draws_2 = pm.draw(x, 100)
         assert not np.all(np.isclose(x_draws_1, x_draws_2))
 
-    def test_draw_aesara_function_kwargs(self):
-        sharedvar = aesara.shared(0)
+    def test_draw_pytensor_function_kwargs(self):
+        sharedvar = pytensor.shared(0)
         x = pm.DiracDelta.dist(0.0)
         y = x + sharedvar
         draws = pm.draw(
@@ -116,7 +116,7 @@ class TestCompileForwardSampler:
     def get_function_roots(function):
         return [
             var
-            for var in aesara.graph.basic.graph_inputs(function.maker.fgraph.outputs)
+            for var in pytensor.graph.basic.graph_inputs(function.maker.fgraph.outputs)
             if var.name
         ]
 
@@ -579,7 +579,7 @@ class TestSamplePPC(SeededTest):
         with model:
             mu = pm.HalfFlat("sigma")
             pm.Poisson("foo", mu=mu, observed=data)
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                     idata = pm.sample(tune=10, draws=40, chains=1)
@@ -596,8 +596,8 @@ class TestSamplePPC(SeededTest):
 
         x = rng.randn(100)
         y = x > 0
-        x_shared = aesara.shared(x)
-        y_shared = aesara.shared(y)
+        x_shared = pytensor.shared(x)
+        y_shared = pytensor.shared(y)
         samples = 100
         with pm.Model() as model:
             coeff = pm.Normal("x", mu=0, sigma=1)
@@ -627,8 +627,8 @@ class TestSamplePPC(SeededTest):
     def test_deterministic_of_observed(self):
         rng = np.random.RandomState(8442)
 
-        meas_in_1 = pm.aesaraf.floatX(2 + 4 * rng.randn(10))
-        meas_in_2 = pm.aesaraf.floatX(5 + 4 * rng.randn(10))
+        meas_in_1 = pm.pytensorf.floatX(2 + 4 * rng.randn(10))
+        meas_in_2 = pm.pytensorf.floatX(5 + 4 * rng.randn(10))
         nchains = 2
         with pm.Model() as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 2)
@@ -641,7 +641,7 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 trace = pm.sample(
                     tune=100,
                     draws=100,
@@ -652,7 +652,7 @@ class TestSamplePPC(SeededTest):
                     random_seed=rng,
                 )
 
-            rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-4
+            rtol = 1e-5 if pytensor.config.floatX == "float64" else 1e-4
 
             ppc = pm.sample_posterior_predictive(
                 return_inferencedata=False,
@@ -667,8 +667,8 @@ class TestSamplePPC(SeededTest):
     def test_deterministic_of_observed_modified_interface(self):
         rng = np.random.RandomState(4982)
 
-        meas_in_1 = pm.aesaraf.floatX(2 + 4 * rng.randn(100))
-        meas_in_2 = pm.aesaraf.floatX(5 + 4 * rng.randn(100))
+        meas_in_1 = pm.pytensorf.floatX(2 + 4 * rng.randn(100))
+        meas_in_2 = pm.pytensorf.floatX(5 + 4 * rng.randn(100))
         with pm.Model() as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 1, initval=0)
             sigma_in_1 = pm.HalfNormal("sd_in_1", 1, initval=1)
@@ -680,7 +680,7 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 trace = pm.sample(
                     tune=100,
                     draws=100,
@@ -700,7 +700,7 @@ class TestSamplePPC(SeededTest):
                 var_names=[x.name for x in (model.deterministics + model.basic_RVs)],
             )
 
-            rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-3
+            rtol = 1e-5 if pytensor.config.floatX == "float64" else 1e-3
             npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_variable_type(self):
@@ -708,7 +708,7 @@ class TestSamplePPC(SeededTest):
             mu = pm.HalfNormal("mu", 1)
             a = pm.Normal("a", mu=mu, sigma=2, observed=np.array([1, 2]))
             b = pm.Poisson("b", mu, observed=np.array([1, 2]))
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 trace = pm.sample(
                     tune=10, draws=10, compute_convergence_checks=False, return_inferencedata=False
                 )
@@ -1060,7 +1060,7 @@ class TestSamplePriorPredictive(SeededTest):
         with pm.Model() as dm_model:
             probs = pm.Dirichlet("probs", a=np.ones(6))
             obs = pm.Multinomial("obs", n=100, p=probs, observed=mn_data)
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 burned_trace = pm.sample(
                     tune=10,
                     draws=20,
@@ -1211,8 +1211,8 @@ class TestSamplePriorPredictive(SeededTest):
         assert prior1.prior["c"] == prior2.prior["c"]
         assert prior1.prior["d"] == prior2.prior["d"]
 
-    def test_aesara_function_kwargs(self):
-        sharedvar = aesara.shared(0)
+    def test_pytensor_function_kwargs(self):
+        sharedvar = pytensor.shared(0)
         with pm.Model() as m:
             x = pm.DiracDelta("x", 0)
             y = pm.Deterministic("y", x + sharedvar)
@@ -1258,8 +1258,8 @@ class TestSamplePosteriorPredictive:
             idat = pm.to_inference_data(trace)
             pp = pm.sample_posterior_predictive(idat.posterior, var_names=["d"])
 
-    def test_aesara_function_kwargs(self):
-        sharedvar = aesara.shared(0)
+    def test_pytensor_function_kwargs(self):
+        sharedvar = pytensor.shared(0)
         with pm.Model() as m:
             x = pm.DiracDelta("x", 0.0)
             y = pm.Deterministic("y", x + sharedvar)

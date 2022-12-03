@@ -34,15 +34,15 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import pytest
 import scipy as sp
 import scipy.special
 
-from aesara.graph.basic import equal_computations
-from aesara.graph.fg import FunctionGraph
+from pytensor.graph.basic import equal_computations
+from pytensor.graph.fg import FunctionGraph
 from numdifftools import Jacobian
 
 from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
@@ -118,7 +118,7 @@ class DirichletScipyDist:
             lambda mean, scale: sp.stats.invgauss(mean / scale, scale=scale),
             (),
             marks=pytest.mark.xfail(
-                reason="We don't use Aesara's Wald operator",
+                reason="We don't use PyTensor's Wald operator",
                 raises=NotImplementedError,
             ),
         ),
@@ -170,7 +170,7 @@ class DirichletScipyDist:
             lambda c: sp.stats.weibull_min(c),
             (),
             marks=pytest.mark.xfail(
-                reason="We don't use Aesara's Weibull operator",
+                reason="We don't use PyTensor's Weibull operator",
                 raises=NotImplementedError,
             ),
         ),
@@ -233,14 +233,14 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
 
     test_val_rng = np.random.RandomState(3238)
 
-    logp_vals_fn = aesara.function([a_value_var, b_value_var], res)
+    logp_vals_fn = pytensor.function([a_value_var, b_value_var], res)
 
     a_trans_op = _default_transformed_rv(a.owner.op, a.owner).op
     transform = a_trans_op.transform
 
-    a_forward_fn = aesara.function([a_value_var], transform.forward(a_value_var, *a.owner.inputs))
-    a_backward_fn = aesara.function([a_value_var], transform.backward(a_value_var, *a.owner.inputs))
-    log_jac_fn = aesara.function(
+    a_forward_fn = pytensor.function([a_value_var], transform.forward(a_value_var, *a.owner.inputs))
+    a_backward_fn = pytensor.function([a_value_var], transform.backward(a_value_var, *a.owner.inputs))
+    log_jac_fn = pytensor.function(
         [a_value_var],
         transform.log_jac_det(a_value_var, *a.owner.inputs),
         on_unused_input="ignore",
@@ -595,7 +595,7 @@ def test_exp_transform_rv():
 
     y_vv = y_rv.clone()
     logp = joint_logprob({y_rv: y_vv}, sum=False)
-    logp_fn = aesara.function([y_vv], logp)
+    logp_fn = pytensor.function([y_vv], logp)
 
     y_val = [0.1, 0.3]
     np.testing.assert_allclose(
@@ -611,7 +611,7 @@ def test_log_transform_rv():
 
     y_vv = y_rv.clone()
     logp = joint_logprob({y_rv: y_vv}, sum=False)
-    logp_fn = aesara.function([y_vv], logp)
+    logp_fn = pytensor.function([y_vv], logp)
 
     y_val = [0.1, 0.3]
     np.testing.assert_allclose(
@@ -637,7 +637,7 @@ def test_loc_transform_rv(rv_size, loc_type):
 
     logp = joint_logprob({y_rv: y_vv}, sum=False)
     assert_no_rvs(logp)
-    logp_fn = aesara.function([loc, y_vv], logp)
+    logp_fn = pytensor.function([loc, y_vv], logp)
 
     loc_test_val = np.full(rv_size, 4.0)
     y_test_val = np.full(rv_size, 1.0)
@@ -665,7 +665,7 @@ def test_scale_transform_rv(rv_size, scale_type):
 
     logp = joint_logprob({y_rv: y_vv}, sum=False)
     assert_no_rvs(logp)
-    logp_fn = aesara.function([scale, y_vv], logp)
+    logp_fn = pytensor.function([scale, y_vv], logp)
 
     scale_test_val = np.full(rv_size, 4.0)
     y_test_val = np.full(rv_size, 1.0)
@@ -685,7 +685,7 @@ def test_transformed_rv_and_value():
 
     logp = joint_logprob({y_rv: y_vv}, extra_rewrites=transform_rewrite)
     assert_no_rvs(logp)
-    logp_fn = aesara.function([y_vv], logp)
+    logp_fn = pytensor.function([y_vv], logp)
 
     y_test_val = -5
 

@@ -14,19 +14,19 @@
 
 import warnings
 
-import aesara.tensor as at
+import pytensor.tensor as at
 import numpy as np
 
-from aesara.compile import SharedVariable
-from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
+from pytensor.compile import SharedVariable
+from pytensor.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
     SolveTriangular,
     cholesky,
     solve,
 )
-from aesara.tensor.var import TensorConstant
+from pytensor.tensor.var import TensorConstant
 from scipy.cluster.vq import kmeans
 
-from pymc.aesaraf import compile_pymc, walk_model
+from pymc.pytensorf import compile_pymc, walk_model
 
 # Avoid circular dependency when importing modelcontext
 from pymc.distributions.distribution import Distribution

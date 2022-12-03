@@ -36,16 +36,16 @@
 
 from typing import List, Optional, Union
 
-import aesara
+import pytensor
 
-from aesara import tensor as at
-from aesara.graph.op import compute_test_value
-from aesara.graph.rewriting.basic import node_rewriter
-from aesara.tensor.basic import Join, MakeVector
-from aesara.tensor.elemwise import DimShuffle
-from aesara.tensor.extra_ops import BroadcastTo
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.rewriting import local_dimshuffle_rv_lift, local_rv_size_lift
+from pytensor import tensor as at
+from pytensor.graph.op import compute_test_value
+from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.tensor.basic import Join, MakeVector
+from pytensor.tensor.elemwise import DimShuffle
+from pytensor.tensor.extra_ops import BroadcastTo
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.rewriting import local_dimshuffle_rv_lift, local_rv_size_lift
 
 from pymc.logprob.abstract import (
     MeasurableVariable,
@@ -112,7 +112,7 @@ def naive_bcast_rv_lift(fgraph, node):
     ]
     bcasted_node = lifted_node.op.make_node(rng, size, dtype, *new_dist_params)
 
-    if aesara.config.compute_test_value != "off":
+    if pytensor.config.compute_test_value != "off":
         compute_test_value(bcasted_node)
 
     return [bcasted_node.outputs[1]]
@@ -148,7 +148,7 @@ def logprob_join(op, values, axis, *base_vars, **kwargs):
     base_var_shapes = [base_var.shape[axis] for base_var in base_vars]
 
     # TODO: Find better way to avoid circular dependency
-    from pymc.aesaraf import constant_fold
+    from pymc.pytensorf import constant_fold
 
     # We don't need the graph to be constant, just to have RandomVariables removed
     base_var_shapes = constant_fold(base_var_shapes, raise_not_constant=False)

@@ -24,17 +24,17 @@ from typing import Any, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 
-from aesara import config
-from aesara import tensor as at
-from aesara.graph.basic import Variable
-from aesara.graph.op import Op, compute_test_value
-from aesara.raise_op import Assert
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.shape import SpecifyShape
-from aesara.tensor.var import TensorVariable
+from pytensor import config
+from pytensor import tensor as at
+from pytensor.graph.basic import Variable
+from pytensor.graph.op import Op, compute_test_value
+from pytensor.raise_op import Assert
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.shape import SpecifyShape
+from pytensor.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
-from pymc.aesaraf import convert_observed_data
+from pymc.pytensorf import convert_observed_data
 from pymc.model import modelcontext
 
 __all__ = [
@@ -48,7 +48,7 @@ __all__ = [
     "change_dist_size",
 ]
 
-from pymc.aesaraf import PotentialShapeType
+from pymc.pytensorf import PotentialShapeType
 from pymc.exceptions import ShapeError
 from pymc.util import _add_future_warning_tag
 
@@ -661,7 +661,7 @@ def change_specify_shape_size(op, ss, new_size, expand) -> TensorVariable:
         if ndim_supp > 0:
             new_shapes[-ndim_supp:] = shapes[-ndim_supp:]
 
-    # specify_shape has a wrong signature https://github.com/aesara-devs/aesara/issues/1164
+    # specify_shape has a wrong signature https://github.com/pytensor-devs/pytensor/issues/1164
     return at.specify_shape(new_var, new_shapes)  # type: ignore
 
 

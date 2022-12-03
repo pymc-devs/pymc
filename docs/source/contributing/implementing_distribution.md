@@ -5,7 +5,7 @@ This guide provides an overview on how to implement a distribution for PyMC vers
 It is designed for developers who wish to add a new distribution to the library.
 Users will not be aware of all this complexity and should instead make use of helper methods such as `~pymc.DensityDist`.
 
-PyMC {class}`~pymc.Distribution` builds on top of Aesara's {class}`~aesara.tensor.random.op.RandomVariable`, and implements `logp`, `logcdf` and `moment` methods as well as other initialization and validation helpers.
+PyMC {class}`~pymc.Distribution` builds on top of PyTensor's {class}`~pytensor.tensor.random.op.RandomVariable`, and implements `logp`, `logcdf` and `moment` methods as well as other initialization and validation helpers.
 Most notably `shape/dims/observed` kwargs, alternative parametrizations, and default `transform`.
 
 Here is a summary check-list of the steps needed to implement a new distribution.
@@ -21,11 +21,11 @@ This guide does not attempt to explain the rationale behind the `Distributions` 
 
 ## 1. Creating a new `RandomVariable` `Op`
 
-{class}`~aesara.tensor.random.op.RandomVariable` are responsible for implementing the random sampling methods, which in version 3 of PyMC used to be one of the standard `Distribution` methods, alongside `logp` and `logcdf`.
+{class}`~pytensor.tensor.random.op.RandomVariable` are responsible for implementing the random sampling methods, which in version 3 of PyMC used to be one of the standard `Distribution` methods, alongside `logp` and `logcdf`.
 The `RandomVariable` is also responsible for parameter broadcasting and shape inference.
 
 Before creating a new `RandomVariable` make sure that it is not already offered in the {mod}`NumPy library <numpy.random>`.
-If it is, it should be added to the {doc}`Aesara library <aesara:index>` first and then imported into the PyMC library.
+If it is, it should be added to the {doc}`PyTensor library <pytensor:index>` first and then imported into the PyMC library.
 
 In addition, it might not always be necessary to implement a new `RandomVariable`.
 For example if the new `Distribution` is just a special parametrization of an existing `Distribution`.
@@ -35,8 +35,8 @@ The following snippet illustrates how to create a new `RandomVariable`:
 
 ```python
 
-from aesara.tensor.var import TensorVariable
-from aesara.tensor.random.op import RandomVariable
+from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.random.op import RandomVariable
 from typing import List, Tuple
 
 # Create your own `RandomVariable`...
@@ -52,7 +52,7 @@ class BlahRV(RandomVariable):
     # one a matrix and the other a scalar, `[2, 0]`; etc.)
     ndims_params: List[int] = [0, 0]
 
-    # The NumPy/Aesara dtype for this RV (e.g. `"int32"`, `"int64"`).
+    # The NumPy/PyTensor dtype for this RV (e.g. `"int32"`, `"int64"`).
     # The standard in the library is `"int64"` for discrete variables
     # and `"floatX"` for continuous variables
     dtype: str = "floatX"
@@ -87,10 +87,10 @@ blah = BlahRV()
 
 Some important things to keep in mind:
 
-1. Everything inside the `rng_fn` method is pure Python code (as are the inputs) and should not make use of other `Aesara` symbolic ops. The random method should make use of the `rng` which is a NumPy {class}`~numpy.random.RandomState`, so that samples are reproducible.
+1. Everything inside the `rng_fn` method is pure Python code (as are the inputs) and should not make use of other `PyTensor` symbolic ops. The random method should make use of the `rng` which is a NumPy {class}`~numpy.random.RandomState`, so that samples are reproducible.
 1. Non-default `RandomVariable` dimensions will end up in the `rng_fn` via the `size` kwarg. The `rng_fn` will have to take this into consideration for correct output. `size` is the specification used by NumPy and SciPy and works like PyMC `shape` for univariate distributions, but is different for multivariate distributions. For multivariate distributions the __`size` excludes the `ndim_supp` support dimensions__, whereas the __`shape` of the resulting `TensorVariabe` or `ndarray` includes the support dimensions__. For more context check {ref}`The dimensionality notebook <dimensionality>`.
-1. `Aesara` tries to infer the output shape of the `RandomVariable` (given a user-specified size) by introspection of the `ndim_supp` and `ndim_params` attributes. However, the default method may not work for more complex distributions. In that case, custom `_supp_shape_from_params` (and less probably, `_infer_shape`) should also be implemented in the new `RandomVariable` class. One simple example is seen in the {class}`~pymc.DirichletMultinomialRV` where it was necessary to specify the `rep_param_idx` so that the `default_supp_shape_from_params` helper method can do its job. In more complex cases, it may not suffice to use this default helper. This could happen for instance if the argument values determined the support shape of the distribution, as happens in the `~pymc.distributions.multivarite._LKJCholeskyCovRV`.
-1. It's okay to use the `rng_fn` `classmethods` of other Aesara and PyMC `RandomVariables` inside the new `rng_fn`. For example if you are implementing a negative HalfNormal `RandomVariable`, your `rng_fn` can simply return `- halfnormal.rng_fn(rng, scale, size)`.
+1. `PyTensor` tries to infer the output shape of the `RandomVariable` (given a user-specified size) by introspection of the `ndim_supp` and `ndim_params` attributes. However, the default method may not work for more complex distributions. In that case, custom `_supp_shape_from_params` (and less probably, `_infer_shape`) should also be implemented in the new `RandomVariable` class. One simple example is seen in the {class}`~pymc.DirichletMultinomialRV` where it was necessary to specify the `rep_param_idx` so that the `default_supp_shape_from_params` helper method can do its job. In more complex cases, it may not suffice to use this default helper. This could happen for instance if the argument values determined the support shape of the distribution, as happens in the `~pymc.distributions.multivarite._LKJCholeskyCovRV`.
+1. It's okay to use the `rng_fn` `classmethods` of other PyTensor and PyMC `RandomVariables` inside the new `rng_fn`. For example if you are implementing a negative HalfNormal `RandomVariable`, your `rng_fn` can simply return `- halfnormal.rng_fn(rng, scale, size)`.
 
 *Note: In addition to `size`, the PyMC API also provides `shape`, `dims` and `observed` as alternatives to define a distribution dimensionality, but this is taken care of by {class}`~pymc.Distribution`, and should not require any extra changes.*
 
@@ -98,7 +98,7 @@ For a quick test that your new `RandomVariable` `Op` is working, you can call th
 
 ```python
 
-# blah = aesara.tensor.random.uniform in this example
+# blah = pytensor.tensor.random.uniform in this example
 blah([0, 0], [1, 2], size=(10, 2)).eval()
 
 # array([[0.83674527, 0.76593773],
@@ -129,8 +129,8 @@ Here is how the example continues:
 
 ```python
 
-import aesara.tensor as at
-from pymc.aesaraf import floatX, intX
+import pytensor.tensor as at
+from pymc.pytensorf import floatX, intX
 from pymc.distributions.continuous import PositiveContinuous
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.shape_utils import rv_size_is_none
@@ -352,7 +352,7 @@ There are a couple of details worth keeping in mind:
 1. By default, the first and last values (edges) of the `Domain` are not compared (they are used for other things). If it is important to test the edge of the `Domain`, the edge values can be repeated. This is done by the `Bool`: `Bool = Domain([0, 0, 1, 1], "int64")`
 3. There are some default domains (such as `R` and `Rplus`) that you can use for testing your new distribution, but it's also perfectly fine to create your own domains inside the test function if there is a good reason for it (e.g., when the default values lead too many extreme unlikely combinations that are not very informative about the correctness of the implementation).
 4. By default, a random subset of 100 `param` x `paramdomain` combinations is tested, to keep the test runtime under control. When testing your shiny new distribution, you can temporarily set `n_samples=-1` to force all combinations to be tested. This is important to avoid your `PR` leading to surprising failures in future runs whenever some bad combinations of parameters are randomly tested.
-5. On GitHub some tests run twice, under the `aesara.config.floatX` flags of `"float64"` and `"float32"`. However, the reference Python functions will run in a pure "float64" environment, which means the reference and the PyMC results can diverge quite a lot (e.g., underflowing to `-np.inf` for extreme parameters). You should therefore make sure you test locally in both regimes. A quick and dirty way of doing this is to temporarily add `aesara.config.floatX = "float32"` at the very top of file, immediately after `import aesara`. Remember to set `n_samples=-1` as well to test all combinations. The test output will show what exact parameter values lead to a failure. If you are confident that your implementation is correct, you may opt to tweak the decimal precision with `select_by_precision`, or adjust the tested `Domain` values. In extreme cases, you can mark the test with a conditional `xfail` (if only one of the sub-methods is failing, they should be separated, so that the `xfail` is as narrow as possible):
+5. On GitHub some tests run twice, under the `pytensor.config.floatX` flags of `"float64"` and `"float32"`. However, the reference Python functions will run in a pure "float64" environment, which means the reference and the PyMC results can diverge quite a lot (e.g., underflowing to `-np.inf` for extreme parameters). You should therefore make sure you test locally in both regimes. A quick and dirty way of doing this is to temporarily add `pytensor.config.floatX = "float32"` at the very top of file, immediately after `import pytensor`. Remember to set `n_samples=-1` as well to test all combinations. The test output will show what exact parameter values lead to a failure. If you are confident that your implementation is correct, you may opt to tweak the decimal precision with `select_by_precision`, or adjust the tested `Domain` values. In extreme cases, you can mark the test with a conditional `xfail` (if only one of the sub-methods is failing, they should be separated, so that the `xfail` is as narrow as possible):
 
 ```python
 
@@ -361,7 +361,7 @@ def test_blah_logp(self):
 
 
 @pytest.mark.xfail(
-   condition=(aesara.config.floatX == "float32"),
+   condition=(pytensor.config.floatX == "float32"),
    reason="Fails on float32 due to numerical issues",
 )
 def test_blah_logcdf(self):

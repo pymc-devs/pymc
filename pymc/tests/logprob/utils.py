@@ -36,9 +36,9 @@
 
 import numpy as np
 
-from aesara import tensor as at
-from aesara.graph.basic import walk
-from aesara.graph.op import HasInnerGraph
+from pytensor import tensor as at
+from pytensor.graph.basic import walk
+from pytensor.graph.op import HasInnerGraph
 from scipy import stats as stats
 
 from pymc.logprob.abstract import MeasurableVariable, icdf, logcdf, logprob
@@ -116,7 +116,7 @@ def scipy_logprob(obs, p):
         return np.log(p[obs])
 
 
-def create_aesara_params(dist_params, obs, size):
+def create_pytensor_params(dist_params, obs, size):
     dist_params_at = []
     for p in dist_params:
         p_aet = at.as_tensor(p).type()
@@ -150,25 +150,25 @@ def scipy_logprob_tester(
         test_fn = getattr(stats, name)
 
     if test == "logprob":
-        aesara_res = logprob(rv_var, at.as_tensor(obs))
+        pytensor_res = logprob(rv_var, at.as_tensor(obs))
     elif test == "logcdf":
-        aesara_res = logcdf(rv_var, at.as_tensor(obs))
+        pytensor_res = logcdf(rv_var, at.as_tensor(obs))
     elif test == "icdf":
-        aesara_res = icdf(rv_var, at.as_tensor(obs))
+        pytensor_res = icdf(rv_var, at.as_tensor(obs))
     else:
         raise ValueError(f"test must be one of (logprob, logcdf, icdf), got {test}")
 
-    aesara_res_val = aesara_res.eval(dist_params)
+    pytensor_res_val = pytensor_res.eval(dist_params)
 
     numpy_res = np.asarray(test_fn(obs, *dist_params.values()))
 
-    assert aesara_res.type.numpy_dtype.kind == numpy_res.dtype.kind
+    assert pytensor_res.type.numpy_dtype.kind == numpy_res.dtype.kind
 
     if check_broadcastable:
         numpy_shape = np.shape(numpy_res)
         numpy_bcast = [s == 1 for s in numpy_shape]
-        np.testing.assert_array_equal(aesara_res.type.broadcastable, numpy_bcast)
+        np.testing.assert_array_equal(pytensor_res.type.broadcastable, numpy_bcast)
 
-    np.testing.assert_array_equal(aesara_res_val.shape, numpy_res.shape)
+    np.testing.assert_array_equal(pytensor_res_val.shape, numpy_res.shape)
 
-    np.testing.assert_array_almost_equal(aesara_res_val, numpy_res, 4)
+    np.testing.assert_array_almost_equal(pytensor_res_val, numpy_res, 4)

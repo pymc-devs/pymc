@@ -37,22 +37,22 @@
 from copy import copy
 from typing import Callable, Dict, Iterable, List, Tuple, cast
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 
-from aesara.graph.basic import Variable
-from aesara.graph.fg import FunctionGraph
-from aesara.graph.op import compute_test_value
-from aesara.graph.rewriting.basic import node_rewriter
-from aesara.graph.rewriting.db import RewriteDatabaseQuery
-from aesara.scan.op import Scan
-from aesara.scan.rewriting import scan_eqopt1, scan_eqopt2
-from aesara.scan.utils import ScanArgs
-from aesara.tensor.random.type import RandomType
-from aesara.tensor.subtensor import Subtensor, indices_from_subtensor
-from aesara.tensor.var import TensorVariable
-from aesara.updates import OrderedUpdates
+from pytensor.graph.basic import Variable
+from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.op import compute_test_value
+from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.graph.rewriting.db import RewriteDatabaseQuery
+from pytensor.scan.op import Scan
+from pytensor.scan.rewriting import scan_eqopt1, scan_eqopt2
+from pytensor.scan.utils import ScanArgs
+from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.subtensor import Subtensor, indices_from_subtensor
+from pytensor.tensor.var import TensorVariable
+from pytensor.updates import OrderedUpdates
 
 from pymc.logprob.abstract import MeasurableVariable, _get_measurable_outputs, _logprob
 from pymc.logprob.joint_logprob import factorized_joint_logprob
@@ -210,7 +210,7 @@ def convert_outer_out_to_in(
 
         slice_seqs = zip(-np.asarray(taps), [n if n < 0 else None for n in reversed(taps)])
 
-        # XXX: If the caller passes the variables output by `aesara.scan`, it's
+        # XXX: If the caller passes the variables output by `pytensor.scan`, it's
         # likely that this will fail, because those variables can sometimes be
         # slices of the actual outer-inputs (e.g. `out[1:]` instead of `out`
         # when `taps=[-1]`).
@@ -355,7 +355,7 @@ def find_measurable_scans(fgraph, node):
     # Find the un-output `MeasurableVariable`s created in the inner-graph
     clients: Dict[Variable, List[Variable]] = {}
 
-    local_fgraph_topo = aesara.graph.basic.io_toposort(
+    local_fgraph_topo = pytensor.graph.basic.io_toposort(
         curr_scanargs.inner_inputs,
         [o for o in curr_scanargs.inner_outputs if not isinstance(o.type, RandomType)],
         clients=clients,
@@ -414,7 +414,7 @@ def find_measurable_scans(fgraph, node):
             return None
 
         # We need this for the `clone` in the loop that follows
-        if aesara.config.compute_test_value != "off":
+        if pytensor.config.compute_test_value != "off":
             compute_test_value(node)
 
         # We're going to replace the user's random variable/value variable mappings
@@ -452,14 +452,14 @@ def find_measurable_scans(fgraph, node):
             alt_type = var_info.name[(var_info.name.index("_", 6) + 1) :]
             outer_input_var = getattr(curr_scanargs, f"outer_in_{alt_type}")[var_info.index]
 
-            # These outer-inputs are using by `aesara.scan.utils.expand_empty`, and
+            # These outer-inputs are using by `pytensor.scan.utils.expand_empty`, and
             # are expected to consist of only a single `set_subtensor` call.
             # That's why we can simply replace the first argument of the node.
             assert isinstance(outer_input_var.owner.op, inc_subtensor_ops)
 
             # We're going to set those values on our `new_val_var` so that it can
             # serve as a complete replacement for the old input `outer_input_var`.
-            # from aesara.graph import clone_replace
+            # from pytensor.graph import clone_replace
             #
             new_val_var = outer_input_var.owner.clone_with_new_inputs(
                 [new_val_var] + outer_input_var.owner.inputs[1:]

@@ -26,7 +26,7 @@ Features
 -  **Variational inference**: `ADVI <http://www.jmlr.org/papers/v18/16-107.html>`__
    for fast approximate posterior estimation as well as mini-batch ADVI
    for large data sets.
--  Relies on `Aesara <https://aesara.readthedocs.io/en/latest/>`__ which provides:
+-  Relies on `PyTensor <https://pytensor.readthedocs.io/en/latest/>`__ which provides:
     *  Computation optimization and dynamic C or JAX compilation
     *  NumPy broadcasting and advanced indexing
     *  Linear algebra operators

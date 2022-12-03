@@ -25,7 +25,7 @@ It is easier to start with functionality that is not present in PyMC but
 rather deferred to outside libraries. If seeking to understand any
 of the topics below refer to that specific library
 
-### Aesara
+### PyTensor
 * Gradient computation
 * Random number generation
 * Low level tensor operation definition
@@ -62,7 +62,7 @@ In no particular order they are
 
 * `ContextMeta`: The context manager that enables the `with pm.Model() as model` syntax
 * {class}`~pymc.Factor`: Defines the methods for the various logprobs for models
-* `ValueGrad` which handles the value and gradient and is the main connection point to Aesara
+* `ValueGrad` which handles the value and gradient and is the main connection point to PyTensor
 * `Deterministic` and `Potential`: Definitions for two pieces of functionality useful in some model definitions
 
 ## distributions/
@@ -74,7 +74,7 @@ Important modules to note are
   a random variable distribution from a likelihood distribution.
 
 * `logprob.py`: This contains the log probability logic for the distributions themselves.
-  The log probability calculation is deferred to Aesara
+  The log probability calculation is deferred to PyTensor
 
 * `dist_math.py`: Various convenience operators for distributions.
   This includes mathematical operators such as `logpower` or `all_true`methods.

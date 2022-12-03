@@ -40,12 +40,12 @@ from copy import copy
 from functools import singledispatch
 from typing import Callable, List, Sequence, Tuple
 
-from aesara.graph.basic import Apply, Variable
-from aesara.graph.op import Op
-from aesara.graph.utils import MetaType
-from aesara.tensor import TensorVariable
-from aesara.tensor.elemwise import Elemwise
-from aesara.tensor.random.op import RandomVariable
+from pytensor.graph.basic import Apply, Variable
+from pytensor.graph.op import Op
+from pytensor.graph.utils import MetaType
+from pytensor.tensor import TensorVariable
+from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.random.op import RandomVariable
 
 
 def logprob(rv_var, *rv_values, **kwargs):

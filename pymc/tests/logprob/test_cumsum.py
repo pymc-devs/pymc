@@ -34,8 +34,8 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import pytest
 import scipy.stats as st
@@ -111,7 +111,7 @@ def test_deterministic_cumsum():
     logp = joint_logprob({x_rv: x_vv, y_rv: y_vv})
     assert_no_rvs(logp)
 
-    logp_fn = aesara.function([x_vv, y_vv], logp)
+    logp_fn = pytensor.function([x_vv, y_vv], logp)
     assert np.isclose(
         logp_fn(np.ones(5), np.arange(5) + 1),
         st.norm(1, 1).logpdf(1) * 10,

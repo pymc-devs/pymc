@@ -113,7 +113,7 @@ which allows users to combine covariance functions into new ones, for example:
 
 After the covariance function is defined, it is now a function that is
 evaluated by calling :code:`cov_func(x, x)` (or :code:`mean_func(x)`).  Since
-PyMC is built on top of Aesara, it is relatively easy to define and experiment
+PyMC is built on top of PyTensor, it is relatively easy to define and experiment
 with non-standard covariance and mean functons.  For more information check out
 the tutorial on covariance functions.
 
@@ -158,7 +158,7 @@ other type of random variable.  The first argument is the name of the random
 variable representing the function we are placing the prior over.
 The second argument is the inputs to the function that the prior is over,
 :code:`X`.  The inputs are usually known and present in the data, but they can
-also be PyMC random variables.  If the inputs are an Aesara tensor or a
+also be PyMC random variables.  If the inputs are an PyTensor tensor or a
 PyMC random variable, the :code:`shape` needs to be given.
 
 Usually at this point, inference is performed on the model.  The

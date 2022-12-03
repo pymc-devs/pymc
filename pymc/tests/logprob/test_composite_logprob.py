@@ -34,8 +34,8 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import scipy.stats as st
 
@@ -63,7 +63,7 @@ def test_scalar_clipped_mixture():
 
     logp = joint_logprob({idxs: idxs_vv, mix: mix_vv})
 
-    logp_fn = aesara.function([idxs_vv, mix_vv], logp)
+    logp_fn = pytensor.function([idxs_vv, mix_vv], logp)
     assert logp_fn(0, 0.4) == -np.inf
     assert np.isclose(logp_fn(0, 0.5), st.norm.logcdf(0.5, 1) + np.log(0.6))
     assert np.isclose(logp_fn(0, 1.3), st.norm.logpdf(1.3, 1) + np.log(0.6))
@@ -99,7 +99,7 @@ def test_nested_scalar_mixtures():
     mix12_vv = mix12.clone()
 
     logp = joint_logprob({idxs1: idxs1_vv, idxs2: idxs2_vv, idxs12: idxs12_vv, mix12: mix12_vv})
-    logp_fn = aesara.function([idxs1_vv, idxs2_vv, idxs12_vv, mix12_vv], logp)
+    logp_fn = pytensor.function([idxs1_vv, idxs2_vv, idxs12_vv, mix12_vv], logp)
 
     expected_mu_logpdf = st.norm.logpdf(0) + np.log(0.5) * 3
     assert np.isclose(logp_fn(0, 0, 0, -50), expected_mu_logpdf)
@@ -158,7 +158,7 @@ def test_double_log_transform_rv():
 
     y_vv = y_rv.clone()
     logp = joint_logprob({y_rv: y_vv}, sum=False)
-    logp_fn = aesara.function([y_vv], logp)
+    logp_fn = pytensor.function([y_vv], logp)
 
     log_log_y_val = np.asarray(0.5)
     log_y_val = np.exp(log_log_y_val)
@@ -180,7 +180,7 @@ def test_affine_transform_rv():
 
     logp = joint_logprob({y_rv: y_vv}, sum=False)
     assert_no_rvs(logp)
-    logp_fn = aesara.function([loc, scale, y_vv], logp)
+    logp_fn = pytensor.function([loc, scale, y_vv], logp)
 
     loc_test_val = 4.0
     scale_test_val = np.full(rv_size, 0.5)
@@ -201,7 +201,7 @@ def test_affine_log_transform_rv():
     y_vv = y_rv.clone()
 
     logp = joint_logprob({y_rv: y_vv}, sum=False)
-    logp_fn = aesara.function([a, b, y_vv], logp)
+    logp_fn = pytensor.function([a, b, y_vv], logp)
 
     a_val = -1.5
     b_val = 3.0

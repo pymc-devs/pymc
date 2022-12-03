@@ -17,15 +17,15 @@ from typing import (  # pylint: disable=unused-import
 
 import numpy as np
 
-from aesara.graph.basic import Constant
-from aesara.tensor.sharedvar import SharedVariable
-from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
+from pytensor.graph.basic import Constant
+from pytensor.tensor.sharedvar import SharedVariable
+from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from arviz import InferenceData, concat, rcParams
 from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
 
 import pymc
 
-from pymc.aesaraf import extract_obs_data
+from pymc.pytensorf import extract_obs_data
 from pymc.model import Model, modelcontext
 from pymc.util import get_default_varnames
 

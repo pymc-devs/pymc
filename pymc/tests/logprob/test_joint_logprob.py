@@ -36,14 +36,14 @@
 
 import warnings
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import pytest
 import scipy.stats.distributions as sp
 
-from aesara.graph.basic import ancestors, equal_computations
-from aesara.tensor.subtensor import (
+from pytensor.graph.basic import ancestors, equal_computations
+from pytensor.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
     AdvancedSubtensor,
@@ -220,7 +220,7 @@ def test_joint_logprob_subtensor():
     mu_base = np.power(10, np.arange(np.prod(size))).reshape(size)
     mu = np.stack([mu_base, -mu_base])
     sigma = 0.001
-    rng = aesara.shared(np.random.RandomState(232), borrow=True)
+    rng = pytensor.shared(np.random.RandomState(232), borrow=True)
 
     A_rv = at.random.normal(mu, sigma, rng=rng)
     A_rv.name = "A"
@@ -242,12 +242,12 @@ def test_joint_logprob_subtensor():
 
     A_idx_logp = joint_logprob({A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False)
 
-    logp_vals_fn = aesara.function([A_idx_value_var, I_value_var], A_idx_logp)
+    logp_vals_fn = pytensor.function([A_idx_value_var, I_value_var], A_idx_logp)
 
     # The compiled graph should not contain any `RandomVariables`
     assert_no_rvs(logp_vals_fn.maker.fgraph.outputs[0])
 
-    decimals = 6 if aesara.config.floatX == "float64" else 4
+    decimals = 6 if pytensor.config.floatX == "float64" else 4
 
     test_val_rng = np.random.RandomState(3238)
 

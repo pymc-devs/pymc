@@ -51,15 +51,15 @@ import collections
 import itertools
 import warnings
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 
-from aesara.graph.basic import Variable
+from pytensor.graph.basic import Variable
 
 import pymc as pm
 
-from pymc.aesaraf import (
+from pymc.pytensorf import (
     SeedSequenceSeed,
     at_rng,
     compile_pymc,
@@ -131,21 +131,21 @@ def node_property(f):
 
         def wrapper(fn):
             ff = append_name(f)(fn)
-            f_ = aesara.config.change_flags(compute_test_value="off")(ff)
+            f_ = pytensor.config.change_flags(compute_test_value="off")(ff)
             return property(locally_cachedmethod(f_))
 
         return wrapper
     else:
-        f_ = aesara.config.change_flags(compute_test_value="off")(f)
+        f_ = pytensor.config.change_flags(compute_test_value="off")(f)
         return property(locally_cachedmethod(f_))
 
 
-@aesara.config.change_flags(compute_test_value="ignore")
+@pytensor.config.change_flags(compute_test_value="ignore")
 def try_to_set_test_value(node_in, node_out, s):
     _s = s
     if s is None:
         s = 1
-    s = aesara.compile.view_op(at.as_tensor(s))
+    s = pytensor.compile.view_op(at.as_tensor(s))
     if not isinstance(node_in, (list, tuple)):
         node_in = [node_in]
     if not isinstance(node_out, (list, tuple)):
@@ -162,7 +162,7 @@ def try_to_set_test_value(node_in, node_out, s):
                 o.tag.test_value = tv
 
 
-class ObjectiveUpdates(aesara.OrderedUpdates):
+class ObjectiveUpdates(pytensor.OrderedUpdates):
     """OrderedUpdates extension for storing loss"""
 
     loss = None
@@ -303,7 +303,7 @@ class ObjectiveFunction:
         if self.op.returns_loss:
             updates.loss = obj_target
 
-    @aesara.config.change_flags(compute_test_value="off")
+    @pytensor.config.change_flags(compute_test_value="off")
     def step_function(
         self,
         obj_n_mc=None,
@@ -347,13 +347,13 @@ class ObjectiveFunction:
         score: `bool`
             calculate loss on each step? Defaults to False for speed
         fn_kwargs: `dict`
-            Add kwargs to aesara.function (e.g. `{'profile': True}`)
+            Add kwargs to pytensor.function (e.g. `{'profile': True}`)
         more_replacements: `dict`
             Apply custom replacements before calculating gradients
 
         Returns
         -------
-        `aesara.function`
+        `pytensor.function`
         """
         if fn_kwargs is None:
             fn_kwargs = {}
@@ -376,7 +376,7 @@ class ObjectiveFunction:
             step_fn = compile_pymc([], [], updates=updates, **fn_kwargs)
         return step_fn
 
-    @aesara.config.change_flags(compute_test_value="off")
+    @pytensor.config.change_flags(compute_test_value="off")
     def score_function(
         self, sc_n_mc=None, more_replacements=None, fn_kwargs=None
     ):  # pragma: no cover
@@ -389,11 +389,11 @@ class ObjectiveFunction:
         more_replacements:
             Apply custom replacements before compiling a function
         fn_kwargs: `dict`
-            arbitrary kwargs passed to `aesara.function`
+            arbitrary kwargs passed to `pytensor.function`
 
         Returns
         -------
-        aesara.function
+        pytensor.function
         """
         if fn_kwargs is None:
             fn_kwargs = {}
@@ -404,7 +404,7 @@ class ObjectiveFunction:
         loss = self(sc_n_mc, more_replacements=more_replacements)
         return compile_pymc([], loss, **fn_kwargs)
 
-    @aesara.config.change_flags(compute_test_value="off")
+    @pytensor.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
         if "more_tf_params" in kwargs:
             m = -1.0
@@ -512,7 +512,7 @@ def collect_shared_to_list(params):
         return list(
             t[1]
             for t in sorted(params.items(), key=lambda t: t[0])
-            if isinstance(t[1], aesara.compile.SharedVariable)
+            if isinstance(t[1], pytensor.compile.SharedVariable)
         )
     elif params is None:
         return []
@@ -819,7 +819,7 @@ class Group(WithMemoization):
         """
         return at.vector(name)
 
-    @aesara.config.change_flags(compute_test_value="off")
+    @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         if not group:
             raise GroupError("Got empty group")
@@ -963,7 +963,7 @@ class Group(WithMemoization):
         """
         raise NotImplementedError
 
-    @aesara.config.change_flags(compute_test_value="off")
+    @pytensor.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(
         self, node: Variable, s, d: bool, more_replacements: dict | None = None
     ) -> list[Variable]:
@@ -973,7 +973,7 @@ class Group(WithMemoization):
         Parameters
         ----------
         node: :class:`Variable`
-            Aesara node with symbolically applied VI replacements
+            PyTensor node with symbolically applied VI replacements
         s: scalar
             desired number of samples
         d: bool or int
@@ -986,13 +986,13 @@ class Group(WithMemoization):
         :class:`Variable` with applied replacements, ready to use
         """
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
-        node_out = aesara.clone_replace(node, flat2rand)
+        node_out = pytensor.clone_replace(node, flat2rand)
         try_to_set_test_value(node, node_out, s)
         return node_out
 
     def to_flat_input(self, node):
         """*Dev* - replace vars with flattened view stored in `self.inputs`"""
-        return aesara.clone_replace(node, self.replacements)
+        return pytensor.clone_replace(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node):
         """*Dev* - performs sampling of node applying independent samples from posterior each time.
@@ -1003,9 +1003,9 @@ class Group(WithMemoization):
         random = at.specify_shape(random, self.symbolic_initial.type.shape)
 
         def sample(post, node):
-            return aesara.clone_replace(node, {self.input: post})
+            return pytensor.clone_replace(node, {self.input: post})
 
-        nodes, _ = aesara.scan(sample, random, non_sequences=[node])
+        nodes, _ = pytensor.scan(sample, random, non_sequences=[node])
         return nodes
 
     def symbolic_single_sample(self, node):
@@ -1015,7 +1015,7 @@ class Group(WithMemoization):
         """
         node = self.to_flat_input(node)
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
-        return aesara.clone_replace(node, {self.input: random[0]})
+        return pytensor.clone_replace(node, {self.input: random[0]})
 
     def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
         """*Dev* - creates correct replacements for initial depending on
@@ -1037,7 +1037,7 @@ class Group(WithMemoization):
         initial = self._new_initial(s, d, more_replacements)
         initial = at.specify_shape(initial, self.symbolic_initial.type.shape)
         if more_replacements:
-            initial = aesara.clone_replace(initial, more_replacements)
+            initial = pytensor.clone_replace(initial, more_replacements)
         return {self.symbolic_initial: initial}
 
     @node_property
@@ -1128,7 +1128,7 @@ class Approximation(WithMemoization):
     """
 
     def __init__(self, groups, model=None):
-        self._scale_cost_to_minibatch = aesara.shared(np.int8(1))
+        self._scale_cost_to_minibatch = pytensor.shared(np.int8(1))
         model = modelcontext(model)
         if not model.free_RVs:
             raise TypeError("Model does not have an free RVs")
@@ -1211,7 +1211,7 @@ class Approximation(WithMemoization):
 
     @node_property
     def _sized_symbolic_varlogp_and_datalogp(self):
-        """*Dev* - computes sampled prior term from model via `aesara.scan`"""
+        """*Dev* - computes sampled prior term from model via `pytensor.scan`"""
         varlogp_s, datalogp_s = self.symbolic_sample_over_posterior(
             [self.model.varlogp, self.model.datalogp]
         )
@@ -1219,55 +1219,55 @@ class Approximation(WithMemoization):
 
     @node_property
     def sized_symbolic_varlogp(self):
-        """*Dev* - computes sampled prior term from model via `aesara.scan`"""
+        """*Dev* - computes sampled prior term from model via `pytensor.scan`"""
         return self._sized_symbolic_varlogp_and_datalogp[0]  # shape (s,)
 
     @node_property
     def sized_symbolic_datalogp(self):
-        """*Dev* - computes sampled data term from model via `aesara.scan`"""
+        """*Dev* - computes sampled data term from model via `pytensor.scan`"""
         return self._sized_symbolic_varlogp_and_datalogp[1]  # shape (s,)
 
     @node_property
     def sized_symbolic_logp(self):
-        """*Dev* - computes sampled logP from model via `aesara.scan`"""
+        """*Dev* - computes sampled logP from model via `pytensor.scan`"""
         return self.sized_symbolic_varlogp + self.sized_symbolic_datalogp  # shape (s,)
 
     @node_property
     def logp(self):
-        """*Dev* - computes :math:`E_{q}(logP)` from model via `aesara.scan` that can be optimized later"""
+        """*Dev* - computes :math:`E_{q}(logP)` from model via `pytensor.scan` that can be optimized later"""
         return self.varlogp + self.datalogp
 
     @node_property
     def varlogp(self):
-        """*Dev* - computes :math:`E_{q}(prior term)` from model via `aesara.scan` that can be optimized later"""
+        """*Dev* - computes :math:`E_{q}(prior term)` from model via `pytensor.scan` that can be optimized later"""
         return self.sized_symbolic_varlogp.mean(0)
 
     @node_property
     def datalogp(self):
-        """*Dev* - computes :math:`E_{q}(data term)` from model via `aesara.scan` that can be optimized later"""
+        """*Dev* - computes :math:`E_{q}(data term)` from model via `pytensor.scan` that can be optimized later"""
         return self.sized_symbolic_datalogp.mean(0)
 
     @node_property
     def _single_symbolic_varlogp_and_datalogp(self):
-        """*Dev* - computes sampled prior term from model via `aesara.scan`"""
+        """*Dev* - computes sampled prior term from model via `pytensor.scan`"""
         varlogp, datalogp = self.symbolic_single_sample([self.model.varlogp, self.model.datalogp])
         return varlogp, datalogp
 
     @node_property
     def single_symbolic_varlogp(self):
-        """*Dev* - for single MC sample estimate of :math:`E_{q}(prior term)` `aesara.scan`
+        """*Dev* - for single MC sample estimate of :math:`E_{q}(prior term)` `pytensor.scan`
         is not needed and code can be optimized"""
         return self._single_symbolic_varlogp_and_datalogp[0]
 
     @node_property
     def single_symbolic_datalogp(self):
-        """*Dev* - for single MC sample estimate of :math:`E_{q}(data term)` `aesara.scan`
+        """*Dev* - for single MC sample estimate of :math:`E_{q}(data term)` `pytensor.scan`
         is not needed and code can be optimized"""
         return self._single_symbolic_varlogp_and_datalogp[1]
 
     @node_property
     def single_symbolic_logp(self):
-        """*Dev* - for single MC sample estimate of :math:`E_{q}(logP)` `aesara.scan`
+        """*Dev* - for single MC sample estimate of :math:`E_{q}(logP)` `pytensor.scan`
         is not needed and code can be optimized"""
         return self.single_symbolic_datalogp + self.single_symbolic_varlogp
 
@@ -1318,7 +1318,7 @@ class Approximation(WithMemoization):
         flat2rand.update(more_replacements)
         return flat2rand
 
-    @aesara.config.change_flags(compute_test_value="off")
+    @pytensor.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
@@ -1326,7 +1326,7 @@ class Approximation(WithMemoization):
         Parameters
         ----------
         node: :class:`Variable`
-            Aesara node with symbolically applied VI replacements
+            PyTensor node with symbolically applied VI replacements
         s: scalar
             desired number of samples
         d: bool or int
@@ -1341,16 +1341,16 @@ class Approximation(WithMemoization):
         _node = node
         optimizations = self.get_optimization_replacements(s, d)
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
-        node = aesara.clone_replace(node, optimizations)
-        node = aesara.clone_replace(node, flat2rand)
+        node = pytensor.clone_replace(node, optimizations)
+        node = pytensor.clone_replace(node, flat2rand)
         try_to_set_test_value(_node, node, s)
         return node
 
     def to_flat_input(self, node, more_replacements=None):
         """*Dev* - replace vars with flattened view stored in `self.inputs`"""
         more_replacements = more_replacements or {}
-        node = aesara.clone_replace(node, more_replacements)
-        return aesara.clone_replace(node, self.replacements)
+        node = pytensor.clone_replace(node, more_replacements)
+        return pytensor.clone_replace(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node, more_replacements=None):
         """*Dev* - performs sampling of node applying independent samples from posterior each time.
@@ -1359,9 +1359,9 @@ class Approximation(WithMemoization):
         node = self.to_flat_input(node, more_replacements=more_replacements)
 
         def sample(*post):
-            return aesara.clone_replace(node, dict(zip(self.inputs, post)))
+            return pytensor.clone_replace(node, dict(zip(self.inputs, post)))
 
-        nodes, _ = aesara.scan(sample, self.symbolic_randoms)
+        nodes, _ = pytensor.scan(sample, self.symbolic_randoms)
         return nodes
 
     def symbolic_single_sample(self, node, more_replacements=None):
@@ -1372,11 +1372,11 @@ class Approximation(WithMemoization):
         node = self.to_flat_input(node, more_replacements=more_replacements)
         post = [v[0] for v in self.symbolic_randoms]
         inp = self.inputs
-        return aesara.clone_replace(node, dict(zip(inp, post)))
+        return pytensor.clone_replace(node, dict(zip(inp, post)))
 
     def get_optimization_replacements(self, s, d):
         """*Dev* - optimizations for logP. If sample size is static and equal to 1:
-        then `aesara.scan` MC estimate is replaced with single sample without call to `aesara.scan`.
+        then `pytensor.scan` MC estimate is replaced with single sample without call to `pytensor.scan`.
         """
         repl = collections.OrderedDict()
         # avoid scan if size is constant and equal to one
@@ -1385,13 +1385,13 @@ class Approximation(WithMemoization):
             repl[self.datalogp] = self.single_symbolic_datalogp
         return repl
 
-    @aesara.config.change_flags(compute_test_value="off")
+    @pytensor.config.change_flags(compute_test_value="off")
     def sample_node(self, node, size=None, deterministic=False, more_replacements=None):
         """Samples given node or nodes over shared posterior
 
         Parameters
         ----------
-        node: Aesara Variables (or Aesara expressions)
+        node: PyTensor Variables (or PyTensor expressions)
         size: None or scalar
             number of samples
         more_replacements: `dict`
@@ -1406,7 +1406,7 @@ class Approximation(WithMemoization):
         """
         node_in = node
         if more_replacements:
-            node = aesara.clone_replace(node, more_replacements)
+            node = pytensor.clone_replace(node, more_replacements)
         if not isinstance(node, (list, tuple)):
             node = [node]
         node = self.model.replace_rvs_by_values(node)
@@ -1421,7 +1421,7 @@ class Approximation(WithMemoization):
         return node_out
 
     def rslice(self, name):
-        """*Dev* - vectorized sampling for named random variable without call to `aesara.scan`.
+        """*Dev* - vectorized sampling for named random variable without call to `pytensor.scan`.
         This node still needs :func:`set_size_and_deterministic` to be evaluated
         """
 

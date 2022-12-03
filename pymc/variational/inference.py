@@ -124,7 +124,7 @@ class Inference:
         total_grad_norm_constraint: `float`
             Bounds gradient norm, prevents exploding gradient problem
         fn_kwargs: `dict`
-            Add kwargs to aesara.function (e.g. `{'profile': True}`)
+            Add kwargs to pytensor.function (e.g. `{'profile': True}`)
         more_replacements: `dict`
             Apply custom replacements before calculating gradients
 
@@ -417,7 +417,7 @@ class ADVI(KLqp):
 
         The tensors to which mini-bathced samples are supplied are
         handled separately by using callbacks in :func:`Inference.fit` method
-        that change storage of shared Aesara variable or by :func:`pymc.generator`
+        that change storage of shared PyTensor variable or by :func:`pymc.generator`
         that automatically iterates over minibatches and defined beforehand.
 
     -   (optional) Parameters of deterministic mappings
@@ -717,7 +717,7 @@ def fit(
     total_grad_norm_constraint: `float`
         Bounds gradient norm, prevents exploding gradient problem
     fn_kwargs: `dict`
-        Add kwargs to aesara.function (e.g. `{'profile': True}`)
+        Add kwargs to pytensor.function (e.g. `{'profile': True}`)
     more_replacements: `dict`
         Apply custom replacements before calculating gradients
 

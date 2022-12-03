@@ -24,7 +24,7 @@ from collections import defaultdict
 from copy import copy
 from typing import Iterator, List, Optional, Sequence, Tuple, Union
 
-import aesara.gradient as tg
+import pytensor.gradient as tg
 import numpy as np
 
 from arviz import InferenceData

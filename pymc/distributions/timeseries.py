@@ -17,15 +17,15 @@ import warnings
 from abc import ABCMeta
 from typing import Callable, Optional
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 
-from aesara.graph.basic import Node, clone_replace
-from aesara.tensor import TensorVariable
-from aesara.tensor.random.op import RandomVariable
+from pytensor.graph.basic import Node, clone_replace
+from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.op import RandomVariable
 
-from pymc.aesaraf import constant_fold, floatX, intX
+from pymc.pytensorf import constant_fold, floatX, intX
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.distribution import (
     Distribution,
@@ -572,7 +572,7 @@ class AR(Distribution):
 
         If ar_order is not specified we do constant folding on the shape of rhos
         to retrieve it. For example, this will detect that
-        Normal(size=(5, 3)).shape[-1] == 3, which is not known by Aesara before.
+        Normal(size=(5, 3)).shape[-1] == 3, which is not known by PyTensor before.
 
         Raises
         ------
@@ -629,7 +629,7 @@ class AR(Distribution):
             rhos_bcast_shape_ = (*rhos_bcast_shape_[:-1], rhos_bcast_shape_[-1] + 1)
         rhos_bcast_ = at.broadcast_to(rhos_, rhos_bcast_shape_)
 
-        noise_rng = aesara.shared(np.random.default_rng())
+        noise_rng = pytensor.shared(np.random.default_rng())
 
         def step(*args):
             *prev_xs, reversed_rhos, sigma, rng = args
@@ -641,7 +641,7 @@ class AR(Distribution):
             return new_x, {rng: next_rng}
 
         # We transpose inputs as scan iterates over first dimension
-        innov_, innov_updates_ = aesara.scan(
+        innov_, innov_updates_ = pytensor.scan(
             fn=step,
             outputs_info=[{"initial": init_.T, "taps": range(-ar_order, 0)}],
             non_sequences=[rhos_bcast_.T[::-1], sigma_.T, noise_rng],
@@ -804,7 +804,7 @@ class GARCH11(Distribution):
         beta_1_ = beta_1.type()
         steps_ = steps.type()
 
-        noise_rng = aesara.shared(np.random.default_rng())
+        noise_rng = pytensor.shared(np.random.default_rng())
 
         def step(prev_y, prev_sigma, omega, alpha_1, beta_1, rng):
             new_sigma = at.sqrt(
@@ -813,7 +813,7 @@ class GARCH11(Distribution):
             next_rng, new_y = Normal.dist(mu=0, sigma=new_sigma, rng=rng).owner.outputs
             return (new_y, new_sigma), {rng: next_rng}
 
-        (y_t, _), innov_updates_ = aesara.scan(
+        (y_t, _), innov_updates_ = pytensor.scan(
             fn=step,
             outputs_info=[init_, initial_vol_ * at.ones(batch_size)],
             non_sequences=[omega_, alpha_1_, beta_1_, noise_rng],
@@ -861,7 +861,7 @@ def garch11_logp(
     def volatility_update(x, vol, w, a, b):
         return at.sqrt(w + a * at.square(x) + b * at.square(vol))
 
-    vol, _ = aesara.scan(
+    vol, _ = pytensor.scan(
         fn=volatility_update,
         sequences=[value_dimswapped[:-1]],
         outputs_info=[initial_vol],
@@ -986,7 +986,7 @@ class EulerMaruyama(Distribution):
         sde_pars_ = [x.type() for x in sde_pars]
         steps_ = steps.type()
 
-        noise_rng = aesara.shared(np.random.default_rng())
+        noise_rng = pytensor.shared(np.random.default_rng())
 
         def step(*prev_args):
             prev_y, *prev_sde_pars, rng = prev_args
@@ -996,7 +996,7 @@ class EulerMaruyama(Distribution):
             next_rng, next_y = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
             return next_y, {rng: next_rng}
 
-        y_t, innov_updates_ = aesara.scan(
+        y_t, innov_updates_ = pytensor.scan(
             fn=step,
             outputs_info=[init_],
             non_sequences=sde_pars_ + [noise_rng],

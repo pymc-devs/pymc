@@ -1,7 +1,7 @@
 import numpy as np
 
 from pymc import Bernoulli, Censored, HalfCauchy, Mixture, StudentT
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 from pymc.distributions import (
     Dirichlet,
     DirichletMultinomial,

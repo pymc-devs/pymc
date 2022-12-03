@@ -1,4 +1,4 @@
-Aesara utils
+PyTensor utils
 ************
 
 .. currentmodule:: pymc

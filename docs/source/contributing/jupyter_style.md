@@ -495,7 +495,7 @@ This library should be in your virtual environment if you installed our `require
 
 First, add a Markdown cell with the `## Watermark` title only so it appears in the table of contents. This is the second to last section, above the epilogue/footer.  Then, add a code cell to print the versions of Python and packages used in the notebook. This is the last *code* cell in the notebook.
 
-The `p` flag is optional (or it may need to have different libraries as input), but should be added if Aesara or xarray are not imported explicitly.  This will also be checked by `pre-commit` (because we all forget to do things sometimes 😳).
+The `p` flag is optional (or it may need to have different libraries as input), but should be added if PyTensor or xarray are not imported explicitly.  This will also be checked by `pre-commit` (because we all forget to do things sometimes 😳).
 
 ```markdown
 ## Watermark
@@ -503,7 +503,7 @@ The `p` flag is optional (or it may need to have different libraries as input), 
 
 ```python
 %load_ext watermark
-%watermark -n -u -v -iv -w -p aesara,aeppl,xarray
+%watermark -n -u -v -iv -w -p pytensor,xarray
 ```
 
 
